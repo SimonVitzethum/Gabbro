@@ -90,15 +90,15 @@ theorem eintritt_push {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMasc
 /-! ## 8. The invariant and the engine -/
 
 /-- The frames at and above the entry frame, each with an index `i` of the
-    cost table `T i` it is costed at and of the admission `S i` its callees
-    satisfy, and their total potential. -/
+    cost table `T i` it is costed at, an epilogue price fixed at entry,
+    the admission `S i` its callees satisfy, and their total potential. -/
 inductive Seg {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (pa : Nat) :
     List (RufRahmenG D) → Nat → Prop where
   | nil : Seg T S pa [] 0
-  | cons (r : RufRahmenG D) (i : ι) (rs : List (RufRahmenG D)) (p : Nat)
+  | cons (r : RufRahmenG D) (i : ι) (rs : List (RufRahmenG D)) (p ep : Nat)
       (hok : rufeR (S i) (fun _ => false) true r.rest.2.2.2.2 = true)
       (hb : RestScopeBalance r.rest) (h : Seg T S pa rs p) :
-      Seg T S pa (r :: rs) (potRest (T i) pa r.rest.2.2.2.2 + p)
+      Seg T S pa (r :: rs) (potRest ep (T i) pa r.rest.2.2.2.2 + p)
 
 /-- **The invariant**: thread `f` runs the segment `kopf :: oben` above the
     `k` frames below the entry frame, `n` own steps are counted, and counted
@@ -120,12 +120,12 @@ variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : 
 theorem kinv_eintritt {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : World D}
     {k : Nat} {M : RufMaschineG D} (hE : Eintritt P f g rho s0 k M) (i0 : ι)
     (hok : rufeE (S i0) (fun _ => false) true (P.rumpf g) = true) :
-    KInv T S pa (kostenEnd (T i0) pa (P.rumpf g)) f k M 0 := by
+    KInv T S pa (kostenEnd (kostenEpilog P g) (T i0) pa (P.rumpf g)) f k M 0 := by
   obtain ⟨hk, hl⟩ := hE
-  refine ⟨[], (M.faeden f).stapel, kostenEnd (T i0) pa (P.rumpf g) + 0, rfl, hl, ?_,
+  refine ⟨[], (M.faeden f).stapel, kostenEnd (kostenEpilog P g) (T i0) pa (P.rumpf g) + 0, rfl, hl, ?_,
     by omega⟩
   rw [hk]
-  exact Seg.cons _ i0 [] 0 hok (GRest.scopeChain_eintritt (P := P) _) Seg.nil
+  exact Seg.cons _ i0 [] 0 (kostenEpilog P g) hok (GRest.scopeChain_eintritt (P := P) _) Seg.nil
 
 /-- **The engine step.** A step of any thread keeps the invariant as long
     as the frame is active: a foreign step changes nothing, an own step
@@ -135,7 +135,7 @@ theorem kinv_eintritt {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : Wo
     fits the cost `T i g` counted for it, at the index `nx i g`, whose own
     callees are admitted there. -/
 theorem kinv_schritt
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {B : Nat} {f : Faden} {k : Nat} {M M' : RufMaschineG D} {n : Nat} {g : Faden}
     (hI : KInv T S pa B f k M n) (hs : RufSchrittG P O pa M g M') :
@@ -147,23 +147,23 @@ theorem kinv_schritt
     simp only [if_true]
     obtain ⟨oben, unten, Φ, hst, hul, hseg, hB⟩ := hI
     cases hseg with
-    | cons _ i _ p hok hb hrest =>
-      rcases schrittArt hs hb (T i) (S i) (fun _ => false) true with
+    | cons _ i _ p ep hok hb hrest =>
+      rcases schrittArt hs hb ep (T i) (S i) (fun _ => false) true with
         ⟨hst', hA⟩ | ⟨g', caller', rho, s0, hst', hk', hB'⟩ | ⟨caller, rst, hpop, hst', hC⟩
       · obtain ⟨hok', hpot⟩ := hA hok
         refine ⟨by omega, fun _ => ⟨oben, unten, _, by rw [hst', hst], hul,
-          Seg.cons _ i oben p hok' ((rufSchrittG_scopeMove hs).same hst' hb) hrest, by omega⟩⟩
+          Seg.cons _ i oben p ep hok' ((rufSchrittG_scopeMove hs).same hst' hb) hrest, by omega⟩⟩
       · obtain ⟨hokc, hdir⟩ := hB' hok
         obtain ⟨hZ, hpot⟩ := hdir.resolve_right (fun ⟨_, hn, _⟩ => Bool.false_ne_true hn)
         have h1 := hS1 i g' hZ
         have h2 := hS2 i g' hZ
         refine ⟨by omega, fun _ => ⟨caller' :: oben, unten,
-          kostenEnd (T (nx i g')) pa (P.rumpf g') + (potRest (T i) pa caller'.rest.2.2.2.2 + p),
+          kostenEnd (kostenEpilog P g') (T (nx i g')) pa (P.rumpf g') + (potRest ep (T i) pa caller'.rest.2.2.2.2 + p),
           by rw [hst', hst]; rfl, hul, ?_, by omega⟩⟩
         rw [hk']
-        exact Seg.cons _ (nx i g') _ _ h2 (GRest.scopeChain_eintritt (P := P) _)
-          (Seg.cons _ i oben p hokc ((rufSchrittG_scopeMove hs).push caller' hst' hb) hrest)
-      · have hpos := potRest_pos (T i) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
+        exact Seg.cons _ (nx i g') _ _ (kostenEpilog P g') h2 (GRest.scopeChain_eintritt (P := P) _)
+          (Seg.cons _ i oben p ep hokc ((rufSchrittG_scopeMove hs).push caller' hst' hb) hrest)
+      · have hpos := potRest_pos ep (T i) pa (M.faeden g).kopf.rest.2.2.2.2 (rufSchrittG_arbeitsfaehig hs)
         refine ⟨by omega, fun hk => ?_⟩
         cases oben with
         | nil =>
@@ -178,9 +178,9 @@ theorem kinv_schritt
           simp only [List.cons_append, List.cons.injEq] at hpop
           obtain ⟨rfl, rfl⟩ := hpop
           cases hrest with
-          | cons _ j _ p' hokj hbj hrest' =>
-            obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false) true
-            refine ⟨oben', unten, _, hst', hul, Seg.cons _ j oben' p' (hokc hokj)
+          | cons _ j _ p' epj hokj hbj hrest' =>
+            obtain ⟨hokc, hpotc⟩ := hC epj (T j) (S j) (fun _ => false) true
+            refine ⟨oben', unten, _, hst', hul, Seg.cons _ j oben' p' epj (hokc hokj)
               ((rufSchrittG_scopeMove hs).pop o (oben' ++ unten) (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
             omega
   · simp only [hgf, if_false, Nat.add_zero]

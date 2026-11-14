@@ -44,6 +44,8 @@ def statement (scope : Scope) : SAnw → SurfaceFacts
   | .each binder start _ subject _ _ inv body => gather [optional (expression scope) start,
       expression scope subject, optional (expression (scope.bind [binder])) inv,
       statement (scope.bind [binder]) body]
+  | .boundedLoop raw body => merge (expressions scope (boundedLoopExpressions raw))
+      (statement (scope.bind ((boundedLoopLocals raw).map Prod.fst)) body)
   | .retry _ body | .loop _ body | .waive _ body | .watch _ body | .child body => statement scope body
   | .retires _ => {}
   | .leave _ | .next _ | .step _ _ | .other _ => {}

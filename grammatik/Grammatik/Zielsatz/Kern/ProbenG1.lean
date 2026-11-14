@@ -178,7 +178,7 @@ def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).e
 /-- Both probes pass the checker (with `haupt` declared): a refusal is (b)'s. -/
 theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true := by
   -- The answer-site check uses the well-founded `Ty.decEq` on `g1Erg` and `never`.
-  decide +kernel
+  decide_cbv
 
 /-! ## 3. The oracles -/
 
@@ -187,10 +187,10 @@ def g1Halb : Int := 4602678819172646912
 
 /-- An oracle: `holen` writes nothing and answers the raw word `w`; `temp` answers `t`. -/
 def g1O (w t : Int) : Orakel g1D where
-  wirkt := fun _ σ _ => (σ, w)
-  regLies := fun _ _ => t
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, w)
+  regLiesL := fun _ _ => t
   regSchreib := fun _ _ => ()
-  sichtbar := fun e => (nomatch e)
+  sichtbarL := fun e => (nomatch e)
 
 theorem g1O_gut (w t : Int) : GutO (g1O w t) := fun _ σ _ =>
   ⟨Rahmen.refl _ _ σ, rfl, fun _ _ =>
@@ -228,7 +228,7 @@ theorem g1PR_akzeptiert [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
     rfl
   simp only [Akzeptiert, Bool.and_eq_true]
   repeat' apply And.intro
-  all_goals first | exact checked | decide +kernel
+  all_goals first | exact checked | decide_cbv
 
 /-- The word of `0.5` decodes through the actual word and range guards. -/
 theorem g1_temp_wort (answers : G1FloatAnswers) :
@@ -358,7 +358,7 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     exact (h.logik.2.2.1 g1Holen σ σ₀ u (fun t _ => (t : Empty).elim)
       (fun g _ => (g : Empty).elim)).trans hq
   have hK := (h.logik.1 0 g1Haupt).1.1 (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
-    (g1O_lokal _ _) hAV (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PA) g1Ruf_ohne
+    (g1O_lokal _ _) (axVertragOP_of_O _ hAV) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PA) g1Ruf_ohne
     (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PA_lauf v S (s.welt [])
   exact Bool.false_ne_true (hK.1 σ' () hrun)
@@ -369,7 +369,7 @@ theorem g1PR_widerlegt (answers : G1FloatAnswers) : NutzerWiderlegt g1PR := by
   rintro ⟨P, S, Q, st, s, _, _, _, _, _⟩ hP h
   obtain rfl : P = g1PR := hP
   have hK := (h.logik.1 0 g1Haupt).1.1 (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
-    (g1O_schief_vertrag Q _) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PR)
+    (axVertragOP_of_O _ (g1O_schief_vertrag Q _)) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PR)
     g1Ruf_ohne (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PR_lauf answers S (s.welt [])
   exact Bool.false_ne_true (hK.1 σ' () hrun)

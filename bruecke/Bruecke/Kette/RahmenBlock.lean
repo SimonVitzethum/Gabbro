@@ -1,7 +1,9 @@
 module
-public import Bruecke.Teil.Lokal.Rahmen
+public import Bruecke.Kette.Formen.StatischSchritt
 public import Bruecke.Anweisung.Zweig.Rahmen
 public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Bereich.Rahmen
+public import Bruecke.Anweisung.Schleife.Kopf
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -13,80 +15,20 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
-theorem statisch_schritt_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : Gabbro.Body.Env)
-    {Γ : Ctx} {fn : UFn} {ns : BodyNames} (hΓ : Γ = fn.params.map (·.2)) (st : UStmt) (ss : List UStmt)
-    {Λ Λ' : List (Res (declOf u))} {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
-    (hmem : st ∈ (fnAt u c).body) (hgst : lowStmtL (l := false) u c Γ fn Λ st = .ok ⟨Λ', g⟩) {bB : Gabbro.Body.Stmt}
-    (hx : namedStmt u fn ns st = some bB)
-    (hF : ∀ cname gf, fnSuch u cname = some gf → (∃ args, UStmt.call cname args ∈ st :: ss) →
-      Gabbro.Body.Frame ρB cname (writesU gf))
-    {bs' : List Gabbro.Body.Stmt} (IH : Statisch ρB (writesU (fnAt u c)) bs') :
-    Statisch ρB (writesU (fnAt u c)) (bB :: bs') := by
-  obtain ⟨raw, hx, hn⟩ := namedStmt_some hx
-  rcases stmt_statisch_teilB S c hc hΓ st hmem hgst hx with ⟨cn, idx, fld, ve, rfl, hcn⟩ |
-      ⟨n, ve, rfl, hnwrite⟩ | ⟨cname, ps, es, pre, gf, rfl, hgf, hsub⟩
-  · simp only [renameStep] at hn
-    split at hn
-    · rename_i idx' ve' hi hv
-      cases hn
-      exact .assign _ _ _ _ _ (List.mem_append_left _ hcn) IH
-    · cases hn
-  · simp only [renameStep] at hn
-    cases he : renameScalar (ns.lookup fn) ve with
-    | none => rw [he] at hn; cases hn
-    | some ve' =>
-      rw [he] at hn
-      simp only [Option.map_some, Option.some.injEq] at hn
-      subst bB
-      exact .assignGlobal _ _ _ (List.mem_append_right _ hnwrite) IH
-  · have hcall : ∃ args, UStmt.call cname args ∈ st :: ss := by
-      cases st
-      case call =>
-        simp only [stmtBody] at hx
-        split at hx
-        · simp only [Option.some.injEq] at hx
-          cases hx
-          exact ⟨_, List.mem_cons_self ..⟩
-        · cases hx
-      case assign b f ix v =>
-        simp only [stmtBody] at hx
-        split at hx
-        · simp only [Option.some.injEq] at hx; cases hx
-        · cases hx
-      case assignTab b f ix v _ =>
-        simp only [stmtBody] at hx
-        cases hsv : sideExprG u fn v with
-        | none => rw [hsv] at hx; cases hx
-        | some ve => rw [hsv] at hx; simp at hx
-      case assignGlob n v _ =>
-        simp only [stmtBody] at hx
-        cases he : sideExprG u fn v with
-        | none => rw [he] at hx; cases hx
-        | some e => rw [he] at hx; cases hx
-      all_goals simp only [stmtBody, reduceCtorEq] at hx
-    simp only [renameStep] at hn
-    cases hr : renameStep.renameScalars (ns.lookup fn) es with
-    | none => rw [hr] at hn; cases hn
-    | some es' =>
-      rw [hr] at hn
-      simp only [Option.map_some, Option.some.injEq] at hn
-      subst bB
-      exact .call _ _ _ _ _ (fun t p hp => hF cname gf hgf hcall t p (fun hm => hp (hsub _ hm))) IH
-
 theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : Gabbro.Body.Env) :
-    ∀ (n k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
-      (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ')
+    ∀ (n : Nat) {loopMode : Bool} (k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
+      (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ')
       (rest : List UStmt) (t : List Gabbro.Body.Stmt) (restZ : List UStmt) (used : List String),
       Γ = fn.params.map (·.2) → Sicht u fT fn → (∀ st ∈ ss, st ∈ (fnAt u c).body) →
-      lowSeqL (l := false) u c Γ fn n Λ [] ss = .ok (p, rest) →
+      lowSeqL (l := loopMode) u c Γ fn n Λ [] ss = .ok (p, rest) →
       seqZ u k fT ns ss = some (t, restZ, used) →
-      (∀ cname gf, fnSuch u cname = some gf → (∃ args, UStmt.call cname args ∈ ss) →
+      (∀ cname gf, fnSuch u cname = some gf → (∃ args, CallsIn ss cname args) →
         Gabbro.Body.Frame ρB cname (writesU gf)) →
       restZ = rest ∧ rest <:+ ss ∧ Statisch ρB (writesU (fnAt u c)) t := by
   intro n
   induction n using Nat.strongRecOn with
   | ind n ih =>
-    intro k ss Γ fn fT ns Λ p rest t restZ used hΓ hS hmem hlow hbs hF
+    intro loopMode k ss Γ fn fT ns Λ p rest t restZ used hΓ hS hmem hlow hbs hF
     obtain _ | n := n
     · rw [lowSeqL_zero] at hlow; cases hlow
     obtain _ | k := k
@@ -100,9 +42,9 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
     have hmemss : ∀ st ∈ ss, st ∈ (fnAt u c).body :=
       fun st hm => hmem st (List.mem_cons_of_mem _ hm)
     have hhead : s0 ∈ (fnAt u c).body := hmem s0 (List.mem_cons_self ..)
-    have hFss : ∀ cname gf, fnSuch u cname = some gf → (∃ args, UStmt.call cname args ∈ ss) →
+    have hFss : ∀ cname gf, fnSuch u cname = some gf → (∃ args, CallsIn ss cname args) →
         Gabbro.Body.Frame ρB cname (writesU gf) :=
-      fun cn gf hgf ⟨args, hm⟩ => hF cn gf hgf ⟨args, List.mem_cons_of_mem _ hm⟩
+      fun cn gf hgf ⟨args, hm⟩ => hF cn gf hgf ⟨args, hm.cons _⟩
     cases s0
     case blkEnd | ifElse =>
       first
@@ -130,9 +72,92 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         (by rw [mitBindung_ctx]; exact congrArg (List.cons _) hΓ)
         (hS.bind x (lo, hi) (lo, hi)) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case bindB x v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨eT, heT, rfl, rfl, rfl⟩ := schrittB_bindB hstepT
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindB_ok hlow
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitBindungB x)
+        (fT.mitBindungB x) (ns.push x) q rest ys restZ used
+        (by rw [mitBindungB_ctx]; exact congrArg (List.cons _) hΓ)
+        (hS.bindB x) hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case loopBeg x tab inv =>
+      obtain ⟨rfl, hg, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
+      subst Λ₁
+      cases hst
+      have htEq : tZ = t := by
+        rw [ht] at htZ
+        exact (Except.ok.inj htZ).symm
+      subst tZ
+      obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
+        (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
+        (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
+      subst tailZ
+      have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
+      have hΓi : .index ((declOf u).count t) :: Γ =
+          (fn.mitIndex x t.val ((declOf u).count t)).params.map (·.2) := congrArg (List.cons _) hΓ
+      obtain ⟨_, _, hFrameBody⟩ := ih m (by omega) k ss
+        (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
+        (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tail) allocated
+        hΓi (hS.index x t.val ((declOf u).count t)) hmemss hBodyG hBodyZ hFss
+      have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hΓ hS hmemTail hQ hTailZ
+        (fun g gf hgf ⟨args, hc⟩ => hFss g gf hgf ⟨args, hc.mono (fun _ hm => mem_of_suffix hsuf hm)⟩)
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), .forEach _ _ _ _ hFrameBody IH.2.2⟩
+    case narrowBeg x lo hi =>
+      obtain ⟨e, errorBody, tailZ, ys, hname, hEZ, hYZ, rfl⟩ := seqZ_narrow_some hbs
+      obtain ⟨hn, id, hid, rfl⟩ := narrowName_some hname
+      have hn' : numericParam fn x = true := (hS.1 x).symm.trans hn
+      have hid' : ns.lookup fn x = some id := (BodyNames.lookup_sicht hS ns x).symm.trans hid
+      obtain ⟨j, a, b, v, err, tail, q, hj, hv, hEG, hQG, rfl⟩ := lowSeq_narrow_ok hn' hlow
+      have heq : tail = tailZ := (List.cons.inj (endBodyZ_rest n k ss fn fT ns err
+        (.blkEnd :: tail) (.blkEnd :: tailZ) errorBody hEG hEZ)).2
+      subst tailZ
+      have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans (endBodyZ_suffix k fT ns ss errorBody _ hEZ)
+      have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
+      have hErr := endBodyZ_statisch S hc ρB n k ss fn fT ns err (.blkEnd :: tail)
+        errorBody hΓ hS hmemss hEG hEZ hFss
+      have hΓ' : .int lo hi :: Γ = (fn.mitBindung x (lo, hi)).params.map (·.2) :=
+        congrArg (List.cons _) hΓ
+      have IH := ih n (Nat.lt_succ_self n) k tail (fn.mitBindung x (lo, hi))
+        (fT.mitBindung x (lo, hi)) (ns.push x) q rest ys restZ used hΓ' (hS.bind x (lo, hi) (lo, hi))
+        hmemTail hQG hYZ (fun g gf hgf ⟨args, hc⟩ => hFss g gf hgf ⟨args, hc.mono (fun _ hm => mem_of_suffix hsuf hm)⟩)
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _),
+        .ite _ _ _ _ (.bindName _ _ _ .nil) hErr IH.2.2⟩
+    case bindCall x g args =>
+      obtain ⟨bB, fT', ns', ys, hstep, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨bt, hb, rfl, rfl⟩ := schrittB_bindCall hstep
+      obtain ⟨head, ty, he, hr, q, hk, hq, rfl⟩ := lowSeq_bindCall_ok hlow
+      obtain ⟨ht, sh, hsh⟩ := resultCall_type hk he hb
+      subst bt
+      rw [mitRuf_scalar fn x head.callee hsh] at hq
+      obtain ⟨gf, raw, es, _, hgf, _, _, _, _, rfl⟩ := namedResult_some hb
+      obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
+      have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
+      rw [hf] at hgf
+      cases hgf
+      have hctx : ty :: Γ = (fn.mitTy x ty).params.map (·.2) := by
+        cases ty
+        case int | bool | prod => exact congrArg (List.cons _) hΓ
+        all_goals cases hsh
+      have hsub := lowRufKopf_writes S hc hk (CallsIn.bind hhead)
+      have hframe := hF g (fnAt u head.callee) hf ⟨args, CallsIn.bind (List.mem_cons_self ..)⟩
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitTy x ty)
+        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hctx (hS.bindTy x hsh) hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _),
+        .bindCall _ _ _ _ _ _ (fun t p hp => hframe t p (fun hm => hp (hsub _ hm))) IH.2.2⟩
     case setVar x v =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨-, id, eT, -, -, rfl, rfl, rfl⟩ := schrittB_setVar hstepT
+      obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
+      have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case setVarB x v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨id, eT, -, -, rfl, rfl, rfl⟩ := schrittB_setVarB hstepT
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
@@ -141,6 +166,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       obtain ⟨hx, -, -⟩ := schrittB_stmt hstepN (fun _ _ _ h => by cases h)
         (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+        (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _),
@@ -157,6 +183,14 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         case val sd =>
           simp only [retZ] at hbT
           cases hse : namedSide u fT ns sd with
+          | none => rw [hse] at hbT; cases hbT
+          | some e =>
+            rw [hse] at hbT
+            simp only [Option.map_some, Option.some.injEq] at hbT
+            exact ⟨_, hbT.symm⟩
+        case bool sd =>
+          simp only [retZ] at hbT
+          cases hse : condZ u fT ns sd with
           | none => rw [hse] at hbT; cases hbT
           | some e =>
             rw [hse] at hbT
@@ -180,12 +214,12 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       have hsuf1' : rest1 <:+ ss := (List.suffix_cons _ _).trans hsuf1
       obtain ⟨hr2, hsuf2, hSe⟩ := ih m (by omega) k rest1 fn _ (ns.resume used1) ⟨Λ₁, eb⟩ (.blkEnd :: rest') te
         (.blkEnd :: r2) used2 hΓ hS (fun st hm => hmemss st (mem_of_suffix hsuf1' hm)) hE hEZ
-        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, mem_of_suffix hsuf1' hm⟩)
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf1' h)⟩)
       have h2 : r2 = rest' := (List.cons.inj hr2).2
       rw [h2] at hYZ
       have hsuf2' : rest' <:+ ss := ((List.suffix_cons _ _).trans hsuf2).trans hsuf1'
       obtain ⟨hr3, hsuf3, hSc⟩ := ih (m + 1) (by omega) k rest' fn _ (ns.resume used2) q rest ys restZ used hΓ hS (fun st hm => hmemss st (mem_of_suffix hsuf2' hm)) hq hYZ
-        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, mem_of_suffix hsuf2' hm⟩)
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf2' h)⟩)
       exact ⟨hr3, (hsuf3.trans hsuf2').trans (List.suffix_cons _ _), .ite _ _ _ _ hSt hSe hSc⟩
     all_goals exact absurd hbs (by simp only [seqZ, schrittB, namedStmt, stmtBody, Option.bind_none, Option.map_none, reduceCtorEq, not_false_eq_true])
 

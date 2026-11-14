@@ -63,7 +63,7 @@ theorem popV_kopf (e0 : Ereignis D) {F : RufRahmenG D}
     List.mem_append_right _ List.mem_cons_self
   refine ⟨H ++ [⟨G.1, κ, G.2.1, mk (antwortWelt e0 s1 κ)⟩], HA, antwortWelt e0 s1 κ, hreq,
     funkV_append hf hk _ (Nat.le_refl _), ?_, ?_, hfa, hra,
-    kurzA_mono hka (Nat.le_succ _), ?_, hok' hok, ?_⟩
+    kurzA_mono hka (antwortWelt_rang_le _ _ _), ?_, hok' hok, ?_⟩
   · intro g σ ρ a hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hv g σ ρ a hm
@@ -85,10 +85,10 @@ theorem popV_kopf (e0 : Ereignis D) {F : RufRahmenG D}
         · rw [hr'] at he; cases he
   · intro e hm
     rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_succ_of_lt (hk e hm)
+    · exact Nat.lt_of_lt_of_le (hk e hm) (antwortWelt_rang_le _ _ _)
     · rw [List.mem_singleton] at hm
       subst hm
-      exact Nat.lt_succ_self _
+      exact antwortWelt_rang_lt _ _ _
   · exact ⟨fun t _ => congrFun hW'.1.symm t, fun g _ => congrFun hW'.2.symm g⟩
   · intro R O' hR hA hz
     have hans := hR _ _ _ _ hmem

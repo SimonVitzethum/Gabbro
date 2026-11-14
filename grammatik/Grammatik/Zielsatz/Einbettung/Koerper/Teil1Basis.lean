@@ -41,26 +41,39 @@ theorem ruf_schritt {M : Keys D D'} {σ : World D} {σ' : World D'} (hp : PadOk 
       (∀ Φ, Passt Φ M₁ → E.rufΦ hZ hS pad Φ R' g σ ρa =
         E.antwortR hZ pad g σ (konform_sig hS hk).2.1 (konform_sig hS hk).2.2 (R' f' σ' a')) ∧
       ∀ W, E.Inv hZ M₁ (E.antwortWelt hZ pad σ W) W := by
-  refine ⟨⟨(σ, σ') :: M.haupt, M.atom, (σ, ⟨f', a'⟩) :: M.ruf⟩,
-    ⟨fun _ hq => List.mem_cons_of_mem _ hq, fun _ hq => hq, fun _ hq => List.mem_cons_of_mem _ hq⟩,
+  refine ⟨⟨(σ, σ') :: M.haupt, M.atom, (σ, ⟨f', a'⟩) :: M.ruf, M.orakel⟩,
+    ⟨fun _ hq => List.mem_cons_of_mem _ hq, fun _ hq => hq, fun _ hq => List.mem_cons_of_mem _ hq, fun _ hq => hq⟩,
     fun Φ hP => ?_, fun W => ?_⟩
   · have h1 : Φ.haupt σ = σ' := hP.1 _ List.mem_cons_self
-    have h2 : Φ.ruf σ = some ⟨f', a'⟩ := hP.2.2 _ List.mem_cons_self
+    have h2 : Φ.ruf σ = some ⟨f', a'⟩ := hP.2.2.1 _ List.mem_cons_self
     unfold rufΦ
     rw [h2]
     simp only []
     rw [dif_pos ⟨hr, hk⟩, h1]
-  · exact (h.merke E).merkeRuf E ⟨f', a'⟩ (E.antwortWelt_laenge hZ hp σ W) (E.treu_antwortWelt hZ pad σ W)
+  · exact (h.merke E).merkeRuf E ⟨f', a'⟩ (E.antwortWelt_laenge hZ hp σ W)
+      (by
+        show (spurOhneLese σ.spur).length ≤ (spurOhneLese (pad ++ σ.spur)).length
+        exact rang_append_le pad σ.spur)
+      (E.treu_antwortWelt hZ pad σ W)
 
-/-- An axiom through the keys. -/
+/-- **An axiom through the keys**: the question on both sides, its pair (without reads) as an oracle
+    key; the induced oracle answers as `O'` at the asked `D'`-world. -/
 theorem ax_schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
-    (h : E.Inv hZ M σ σ') (a : D.Ax) (ρa : Env D (D.aparams a)) :
+    (h : E.Inv hZ M σ σ')
+    (a : D.Ax) (ρa : Env D (D.aparams a)) :
     ∃ M₁ : Keys D D', Teil M M₁ ∧
-      (∀ Φ, Passt Φ M₁ → (E.orakelΦ hZ pad Φ O').wirkt a σ ρa =
-        (E.antwortWelt hZ pad σ (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).1,
-          (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).2)) ∧ E.Inv hZ M₁ σ σ' := by
-  obtain ⟨hk, hs, hΦ⟩ := E.schluessel h
-  exact ⟨_, hs, fun Φ hP => by simp only [orakelΦ, hΦ Φ hP], hk⟩
+      (∀ Φ, Passt Φ M₁ → (E.orakelΦ hZ pad Φ O').wirkt a (σ.fragt (.inl a)) ρa =
+        (E.antwortWelt hZ pad (σ.fragt (.inl a)) (O'.wirkt (E.ax a) (σ'.fragt (.inl (E.ax a))) (E.aparamsUm a ρa)).1,
+          (O'.wirkt (E.ax a) (σ'.fragt (.inl (E.ax a))) (E.aparamsUm a ρa)).2)) ∧
+      E.Inv hZ M₁ (σ.fragt (.inl a)) (σ'.fragt (.inl (E.ax a))) := by
+  obtain ⟨hk, hs, hΦ⟩ := E.schluesselF h (.inl a) (.inl (E.ax a))
+  refine ⟨_, hs, fun Φ hP => ?_, hk⟩
+  show (((E.speicherZ hZ (O'.wirkt (E.ax a) ((Φ.orakel (σ.fragt (.inl a)).ohneLese).alsFrage (E.ax a))
+          (E.aparamsUm a ρa)).1.speicher).welt pad).auf (σ.fragt (.inl a)),
+      (O'.wirkt (E.ax a) ((Φ.orakel (σ.fragt (.inl a)).ohneLese).alsFrage (E.ax a)) (E.aparamsUm a ρa)).2) =
+    (((E.speicherZ hZ (O'.wirkt (E.ax a) (σ'.fragt (.inl (E.ax a))) (E.aparamsUm a ρa)).1.speicher).welt pad).auf (σ.fragt (.inl a)),
+      (O'.wirkt (E.ax a) (σ'.fragt (.inl (E.ax a))) (E.aparamsUm a ρa)).2)
+  rw [hΦ Φ hP, World.alsFrage_fragt]
 
 /-- Pointer-free values beside each other are equal through the embedding. -/
 theorem frei_eq {τ : Ty} {v : Wert D τ} {v' : Wert D' (E.tyE τ)} (h : E.VRel hZ τ v v')
@@ -153,11 +166,12 @@ theorem zelle_valE {n : Nat} (v : Wert D (.ref n)) : (E.valE (.ref n) v).zelle =
 @[simp] theorem valE_ref {n : Nat} (v : Wert D (.ref n)) : E.valE (.ref n) v = v := by rfl
 
 theorem orakelΦ_regLies (Φ : Phi D D') (r : D.Reg) (σ : World D) :
-    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.haupt σ) := by rfl
+    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.orakel σ.ohneLese) := by rfl
 
 theorem orakelΦ_sichtbar (Φ : Phi D D') (g : D.Glob) (σ : World D) (h : (D.gtyp g).zeigerfrei = true) :
-    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.haupt σ) := by
-  simp only [orakelΦ, h, if_true]
+    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.orakel σ.ohneLese) := by
+  show (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.orakel σ.ohneLese) else true) = _
+  rw [if_pos h]
 
 theorem orakelΦ_zeiger (Φ : Phi D D') :
     (E.orakelΦ hZ pad Φ O').zeiger = fun _ => Option.none := by rfl

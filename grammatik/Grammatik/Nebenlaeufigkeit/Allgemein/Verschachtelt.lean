@@ -193,10 +193,10 @@ def nvBlock : Block nvD nvV false [] [] [] :=
     (.widen (by decide) (by decide) (.lit 7)) rfl nvDarf) .nil
 
 def nvO : Orakel nvD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def nvR : ∀ f : nvD.Fn, World nvD → Env nvD (nvD.params f) → RufAusgang f := fun _ σ _ => .ok σ ()
 

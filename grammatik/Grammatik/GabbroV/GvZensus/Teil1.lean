@@ -122,6 +122,7 @@ def artAnw : SAnw → String
   | .arm .. => "match-arm"
   | .each .. => "traverse"
   | .retry .. => "retry"
+  | .boundedLoop .. => "bounded loop"
   | .loop .. => "forever"
   | .waive .. => "waive"
   | .trim .. => "narrow"

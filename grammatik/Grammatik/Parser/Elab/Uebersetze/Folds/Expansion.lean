@@ -126,6 +126,7 @@ def foldPlaces : Nat → SExpr → SExpr
   | n + 1, .call name args => .call name (args.map (foldPlaces n))
   | n + 1, .ext kind names args => .ext kind names (args.map (foldPlaces n))
   | _ + 1, e => e
+termination_by structural fuel => fuel
 
 /-- Reject a second table even in a nested operand. Local/constant names are allowed;
     the ordinary readers still check the type, guard and purity of every operand. -/
@@ -138,6 +139,7 @@ def foldOneTable (ctx : UCtx) (table : String) : Nat → SExpr → Bool
   | n + 1, .call _ args | n + 1, .built _ args | n + 1, .ext _ _ args =>
     args.all (foldOneTable ctx table n)
   | _ + 1, _ => true
+termination_by structural fuel => fuel
 
 /-- Detect IEEE operands before selecting the integer interval calculation. -/
 def foldHasFloat (ctx : UCtx) : Nat → SExpr → Bool
@@ -162,6 +164,7 @@ def foldHasFloat (ctx : UCtx) : Nat → SExpr → Bool
   | n + 1, .un _ e => foldHasFloat ctx n e
   | n + 1, .call _ args | n + 1, .built _ args => args.any (foldHasFloat ctx n)
   | _ + 1, _ => false
+termination_by structural fuel => fuel
 
 /-- Generated code contains only the pre-existing binding, traversal, branch and
     assignment forms. Min/max track occupancy independently of their fallback. -/

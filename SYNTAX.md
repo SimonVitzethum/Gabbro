@@ -1,3 +1,23 @@
+### Tuples
+
+`(T1, T2, ...)` and `(e1, e2, ...)` denote tuple types and values with at least two
+elements. Access is zero-based (`t.0`, `t.1`). `let (a, b) = e;` evaluates `e` once;
+`let (a, _) = e;` discards the second field binding. Nested tuple types and expressions
+work; nested patterns are refused with `tuple pattern: nested patterns are unsupported`.
+Use successive flat bindings to destructure nested values. Wrong pattern arity and an
+out-of-range position produce `tuple pattern: arity mismatch` and
+`tuple field: index out of range`. Mutable patterns and duplicate bound names are refused.
+
+`(e)` remains grouping. `()` and singleton tuple types are refused; there is no unit
+value syntax and no trailing comma. Tuple annotations and function signatures provide
+element types; unannotated values use inferred element types. An element whose type
+cannot be inferred requires a tuple annotation.
+
+Each structural element-type list generates one record per unit, retaining integer
+storage widths and sharing transparent aliases. Internal `#tuple:` type names and
+`#tuple-local:` temporaries cannot be source identifiers. Construction, projection and
+destructuring use the existing checked record export and product lowering.
+
 ### Foreign result areas
 
 A C14 target binding may declare `result area REGISTER` immediately after

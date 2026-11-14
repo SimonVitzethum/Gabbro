@@ -32,12 +32,9 @@ theorem globT_alignment_zeuge :
   exact ⟨rfl, rfl, rfl, rfl⟩
 
 def metadataReason : SItemTief → String
-  | .tableT _ provider _ _ _ _ parts _ =>
-    if parts.any (fun | .tInv _ => true | _ => false) then
-      "invariant cost/runs/by duties lack a checked source binding"
-    else if provider.isSome then "table provider duties lack a checked source binding"
+  | .tableT _ provider _ _ _ _ _ _ =>
+    if provider.isSome then "table provider duties lack a checked source binding"
     else "table field/type/placement duties lack a checked source binding"
-  | .groupT .. => "invariant cost/runs/by duties lack a checked source binding"
   | .lockT _ _ _ held reserve _ inv =>
     if (match held with | none | some (.lit _) => false | some _ => true) || reserve.isSome then
       "held-time/reservation/proof duties lack a checked source binding"
@@ -105,11 +102,10 @@ theorem checkConstants_sound (items : List SItemTief)
   check_sound items (by simpa only [checkConstants, used, ↓reduceIte] using accepted)
 
 set_option maxRecDepth 100000 in
-/-- Invariant duties stay unsupported regardless of where the guarded lowering occurs. -/
-theorem invariant_refused_zeuge :
+/-- A table invariant retains its predicate for the canonical reader and return epilogue. -/
+theorem invariant_bound_zeuge :
     check [.tableT "T" none (some (.lit 1)) none none false
-      [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] =
-      .error "source export: invariant cost/runs/by duties lack a checked source binding" := by rfl
+      [.tInv ⟨"valid", .ext .imp [] [.tru, .tru]⟩]] = .ok () := by rfl
 
 set_option maxRecDepth 100000 in
 /-- New forms cannot hide in an allocation failure continuation, child or local type annotation. -/
@@ -187,12 +183,16 @@ theorem reset_zeuge :
     check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.un "-" (.lit 1))], []⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 
-/-- C05 group and table invariants stay refused: every invariant carries mandatory cost, runs and by duties (`SGruppenInv.kosten/online/proof`), but the exporter only reads the predicate over the declared carriers (`uInv`), ignoring all three. No other checked binding exists, so admitting any shape would silently drop them. -/
-theorem groupT_still_refused (g : String) (ts : List String) (vs : List SGruppenInv) : itemMetadata (.groupT g ts vs) = true := by rfl
+/-- C05 predicates are read by `uInv`; carrier resolution, reads and writer locks remain
+    checked there and at lowering. The writer's costs cover the return phase. -/
+theorem groupT_bound (g : String) (ts : List String) (vs : List SGruppenInv) :
+    itemMetadata (.groupT g ts vs) = false := by rfl
 
 set_option maxRecDepth 100000 in
 theorem groupT_zeuge :
-    check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
+    check [.groupT "G" ["T"] [⟨"valid", .ext .imp [] [.tru, .tru]⟩]] = .ok () ∧
+      check [.tableT "T" none (some (.lit 1)) none none false
+        [.tInv ⟨"valid", .ext .imp [] [.tru, .tru]⟩]] = .ok () := by
   exact ⟨rfl, rfl⟩
 
 /-- C12 supports named table spaces;

@@ -23,7 +23,8 @@ public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil4a
   * Types: see `RundlaufTyp` (no `embeds`, raw groups, `entry fn`, rights lists).
   * Names print as `nameTok` (the lexer's token), so the TEXT level (`rundlauf_block_text`) needs
     only name-shaped names (`TokGut`). A name spelled like a word that opens a form where the name
-    stands is outside the class: a `let` binder `mut`; a place head `transition` or a primary word
+    stands is outside the class: a `let` binder `mut` or an internal tuple-pattern encoding
+    (`#tuple-pattern,…`, where `#` is not an identifier character); a place head `transition` or a primary word
     (`true`, `false`, `Some`, `None`, `result`, `old`, `count`, `alloc`, and the refused heads of
     `istKeinPlatz`); a call statement head that is a statement word (`istAnwWort`, with `else`);
     the place of a plain `locks` headed `shared`. A variable `count` is excluded although the

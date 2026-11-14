@@ -72,7 +72,7 @@ theorem bild_rek_zeuge :
       RufLaufG t4P t4O 0 0 M1 M2 ∧
       RandGL 0 [zeugeAufrufer] t4G zeugeRufEnv σm (fun _ => False) t4GRest M2 σ2 zeugeRufEnv := by
   have hRuf0 : RufOkGleich t4P t4O 0 0 (fun _ => False) (rufAt t4P t4O 0 0) (Tief t4P (fun _ => False) 0) :=
-    rufOk_gleich_tief leseblind_t4O 0 (fun _ => False) 0
+    rufOk_gleich_tief (leseblind_t4O.toP _) 0 (fun _ => False) 0
   -- the caller's boundary in front of the call, as in `bild_ruf_zeuge`
   have hG : RandG 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) (.cons t4Ruf t4FRest)
       (RufStartG t4P t4Sp zeugeInit) zeugeWelt Env.nil :=
@@ -98,7 +98,7 @@ theorem bild_rek_zeuge :
   have hG1' : RandGL 0 [zeugeAufrufer] t4G zeugeRufEnv σm (fun _ => False) (.cons t4GSchreib t4GRest) M1
       zeugeRufWelt zeugeRufEnv :=
     hG1
-  obtain ⟨M2, hl2, hG2⟩ := randGL_schritt leseblind_t4O hRuf0 hs hex2 hG1'
+  obtain ⟨M2, hl2, hG2⟩ := randGL_schritt leseblind_t4O.rs hRuf0 hs hex2 hG1'
   exact ⟨hRuf0, σ2, σm, M1, M2, hk, hl1, hw1, hG1, hl2, hG2⟩
 
 /-! ## The witness of the rank discharge -/

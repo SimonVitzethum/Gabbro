@@ -83,7 +83,7 @@ def emitted (mixed : Bool) : List II × Nat :=
 theorem lower (mixed : Bool) :
     lowPost (layout mixed) (functionFrame (program mixed) CgFn.nurGlob)
       (program mixed) CgFn.nurGlob 6 = some (emitted mixed) := by
-  cases mixed <;> decide +kernel
+  cases mixed <;> decide_cbv
 
 def memory (code : List II) : Runner.Mem where
   b a := ((code.flatMap encII)[a.toNat]?).getD 0
@@ -113,11 +113,11 @@ theorem represented [Kern] (mixed : Bool) :
     cases mixed <;> exact ValueAt.ofCellWord (w := 0) (by rfl) (by kernel_rfl) rfl
 
 theorem loaded (mixed : Bool) : CodeAt (memory (emitted mixed).1) 0 (emitted mixed).1 := by
-  apply codeAt_bytes (emitted mixed).1 0 (by cases mixed <;> decide +kernel)
+  apply codeAt_bytes (emitted mixed).1 0 (by cases mixed <;> decide_cbv)
   intro i hi
   refine ⟨rfl, rfl, ?_⟩
   have lengthBound : ((emitted mixed).1.flatMap encII).length < 2 ^ 64 := by
-    cases mixed <;> decide +kernel
+    cases mixed <;> decide_cbv
   simp only [memory, Nat.zero_add, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
 
@@ -127,13 +127,13 @@ theorem pre [Kern] (mixed : Bool) :
   refine ⟨by first | decide | bounded, by first | decide | bounded, frame _, loaded mixed, ?_,
     (fun _ x => nomatch x),
     trivial, wstab_true _ _⟩
-  cases mixed <;> unfold CodeFar <;> decide +kernel
+  cases mixed <;> unfold CodeFar <;> decide_cbv
 
 theorem snapshots [Kern] (mixed : Bool) :
     EntrySnapshots.At (layout mixed) (world mixed ⟨0, by decide, by decide⟩)
       (memory (emitted mixed).1) 8192 (oldCells ((program mixed).ensures CgFn.nurGlob)) 4 := by
   cases mixed <;>
-    exact ⟨ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl, trivial⟩
+    exact ⟨ValueAt.of_enc (w := 0) (by decide) (by decide_cbv) rfl, trivial⟩
 
 /-- All simulation premises hold together, with a real old-global snapshot and two owed predicates. -/
 theorem lowPost_ok_zeuge [Kern] (mixed : Bool) :
@@ -145,12 +145,12 @@ theorem lowPost_ok_zeuge [Kern] (mixed : Bool) :
   refine ⟨by cases mixed <;> decide, by cases mixed <;> decide, ?_⟩
   have result := lowPost_ok (program mixed) CgFn.nurGlob
     (world mixed ⟨0, by decide, by decide⟩) (world mixed ⟨0, by decide, by decide⟩) .nil ()
-    (lower mixed) (by cases mixed <;> decide +kernel) (by decide) (lay mixed) (by bounded)
+    (lower mixed) (by cases mixed <;> decide_cbv) (by decide) (lay mixed) (by bounded)
     (memory (emitted mixed).1) 0 (pre mixed)
     (represented mixed) (snapshots mixed)
   have noFault : returnFault (program mixed) CgFn.nurGlob
       (world mixed ⟨0, by decide, by decide⟩) (world mixed ⟨0, by decide, by decide⟩) .nil () = 0 := by
-    cases mixed <;> decide +kernel
+    cases mixed <;> decide_cbv
   simp only [noFault, ne_eq, not_true_eq_false, ite_false] at result
   obtain ⟨m', star, agree⟩ := result
   have zero : ∀ x : Runner.W, 0 + x = x := fun x => BitVec.zero_add x
@@ -160,7 +160,7 @@ theorem lowPost_ok_zeuge [Kern] (mixed : Bool) :
 /-- Ensures failure wins over a simultaneously false invariant. -/
 theorem ensures_first_zeuge :
     returnFault (program false) CgFn.nurGlob (world false ⟨0, by decide, by decide⟩)
-      (world false ⟨1, by decide, by decide⟩) .nil () = 102 := by decide +kernel
+      (world false ⟨1, by decide, by decide⟩) .nil () = 102 := by decide_cbv
 
 /-- Equal entry/exit globals satisfy ensures; the first declaration is still the first failing group. -/
 theorem first_failure_zeuge (mixed : Bool) :
@@ -173,7 +173,7 @@ theorem first_failure_zeuge (mixed : Bool) :
 /-- The actual function path accepts both carrier sets instead of rejecting every owed group. -/
 theorem lowFun_zeuge (mixed : Bool) :
     (lowFun 1 (program mixed) (fun _ => 0) (layout mixed) CgFn.nurGlob).isSome = true := by
-  cases mixed <;> decide +kernel
+  cases mixed <;> decide_cbv
 
 /-- Raw G invariants may contain old; their evaluation uses the current world. -/
 def ordinaryOld : Programm (D false) := { program false with
@@ -182,7 +182,7 @@ def ordinaryOld : Programm (D false) := { program false with
 theorem ordinary_old_invariant_zeuge :
     (lowFunE 1 ordinaryOld (layout false) (fun _ => "global-writer")
       (fun _ => 0) CgFn.nurGlob).isOk = true := by
-  decide +kernel
+  decide_cbv
 
 /-- A reason-capable declaration keeps the same owed global/mixed predicates. -/
 def reasonD (mixed : Bool) : Deklaration := { D mixed with
@@ -200,10 +200,10 @@ def reasonProgram (mixed : Bool) : Programm (reasonD mixed) where
   rumpf _ := .retWhy ⟨0, Nat.le_of_ble_eq_true rfl⟩ (.refl _)
 
 def reasonOracle (mixed : Bool) : Orakel (reasonD mixed) where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def reasonWorld (mixed : Bool) : World (reasonD mixed) where
   slots _ _ _ := ⟨0, by decide, by decide⟩

@@ -220,7 +220,7 @@ theorem iv_havoc : HavocOk (SperrInv.leer ivD) (fun _ σ => σ) :=
 theorem ivPschlecht_nicht_invGutS :
     ¬ InvGutS ivPschlecht 0 (axWahr ivD) (SperrInv.leer ivD) ivSetze := by
   intro h
-  have h3 := h ivO (gutO_rahmenO ivO_gut) ivO_lokal (axVertragO_wahr ivO) (fun _ σ => σ) iv_havoc
+  have h3 := h ivO (gutO_rahmenO ivO_gut) ivO_lokal (axVertragOP_of_O _ (axVertragO_wahr ivO)) (fun _ σ => σ) iv_havoc
     (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil ivPschlecht))
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil ivPschlecht).1) (ivSp.welt []) .nil rfl _ _ rfl ()
     (List.mem_singleton.mpr rfl) rfl

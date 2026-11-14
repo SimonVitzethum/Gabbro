@@ -98,7 +98,7 @@ def RahmenAlle (u : UProg) (ρB : Gabbro.Body.Env) : Prop :=
 
 theorem reqAmEintritt_wahr {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.length)
     (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f)) : ReqAmEintritt P f σ ρ := by
-  unfold ReqAmEintritt; rw [G.req f]; rfl
+  unfold ReqAmEintritt; rw [G.req f] <;> rfl
 
 /-- The answer a writer's call point enters into the table: the G answer's world written over
     the entry world, the ghost of `w` bumped, and the G answer. -/

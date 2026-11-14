@@ -60,15 +60,58 @@ theorem gleichAuf_worldZ {l : List (D.Tab ⊕ D.Glob)} {σ σ' : World D.mitRuhe
     rw [show σ.globs g = σ'.globs g from h.2 g hg]⟩
 
 theorem rahmenO_zurueck {O' : Orakel D.mitRuhe} (h : RahmenO O') : RahmenO (Orakel.zurueck O') :=
-  fun a σ ρ => rahmen_worldZ (h a (worldR σ) (envR ρ))
+  fun a σ ρ => by
+    rw [wirkt_zurueck_welt]
+    exact rahmen_worldZ (h a (worldR σ) (envR ρ))
 
 theorem regLokal_zurueck {O' : Orakel D.mitRuhe} (h : RegLokal O') :
     RegLokal (Orakel.zurueck O') :=
-  ⟨fun r _ _ hg => h.1 r _ _ (gleichAuf_worldR hg), fun g _ _ hg => h.2 g _ _ (gleichAuf_worldR hg)⟩
+  ⟨fun r _ _ hg => by
+      rw [regLies_zurueck_welt, regLies_zurueck_welt]
+      exact h.1 r _ _ (gleichAuf_worldR hg),
+    fun g _ _ hg => by
+      rw [sichtbar_zurueck_welt, sichtbar_zurueck_welt]
+      exact h.2 g _ _ (gleichAuf_worldR hg)⟩
+
+/-- The software pre is preserved by the idle-root translation, including
+    function-valued arguments and reads of the translated world. -/
+theorem preQ_mitRuhe (P : Programm D) (a : D.Ax) (σ : World D)
+    (ρ : Env D (D.aparams a)) :
+    PreQ P.mitRuhe a (worldR σ) (envR ρ) = PreQ P a σ ρ := by
+  unfold PreQ
+  change (if D.axHerkunft a = some AxOrigin.software then
+    wahr? (eval (worldR σ) (ruE (P.axVertrag a).pre) (worldR σ) (envR ρ)) else true) = _
+  exact congrArg (fun b : Bool =>
+    if D.axHerkunft a = some AxOrigin.software then b else true)
+    (eval_ru σ σ (P.axVertrag a).pre ρ)
+
+/-- The translation back of a question world is the question world of the translation back. -/
+theorem worldZ_fragt (σ : World D.mitRuhe) (a : D.Ax) :
+    worldZ (σ.fragt (.inl a)) = (worldZ σ).fragt (.inl a) := rfl
+
+theorem axVertragOP_zurueck {P : Programm D} {Q : AxEns D} {O' : Orakel D.mitRuhe}
+    (h : AxVertragOP (PreQ P.mitRuhe) (axEnsRuhe Q) O') :
+    AxVertragOP (PreQ P) Q (Orakel.zurueck O') := by
+  intro a σ ρ v hp hv
+  rw [wirkt_zurueck_welt] at hv ⊢
+  change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a)
+    (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).2 = some v at hv
+  have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)
+      (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).2 = some (ergR (D.aerg a) v) := by
+    rw [einpassenErg_ru (Orakel.zurueck O').zeiger O'.zeiger (fun _ => rfl), hv]
+    rfl
+  have hp' : PreQ P.mitRuhe a ((worldR σ).fragt (.inl a)) (envR ρ) = true :=
+    (preQ_mitRuhe P a (σ.fragt (.inl a)) ρ).trans hp
+  have hq := h a (worldR σ) (envR ρ) (ergR (D.aerg a) v) hp' e
+  change Q a (worldZ (O'.wirkt a ((worldR σ).fragt (.inl a)) (envR ρ)).1)
+    (ergZ (D.aerg a) (ergR (D.aerg a) v)) = true at hq
+  rw [ergZ_ergR] at hq
+  exact hq
 
 theorem axVertrag_zurueck {Q : AxEns D} {O' : Orakel D.mitRuhe} (h : AxVertragO (axEnsRuhe Q) O') :
     AxVertragO Q (Orakel.zurueck O') := by
   intro a σ ρ v hv
+  rw [wirkt_zurueck_welt] at hv ⊢
   change einpassenErg (Orakel.zurueck O').zeiger (D.aerg a) (O'.wirkt a (worldR σ) (envR ρ)).2 =
     some v at hv
   have e : einpassenErg (D := D.mitRuhe) O'.zeiger ((D.aerg a).map tyR)

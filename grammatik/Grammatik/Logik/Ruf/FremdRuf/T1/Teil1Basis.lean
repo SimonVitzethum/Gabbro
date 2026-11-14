@@ -150,14 +150,14 @@ def fdQ : AxEns fdD
     value. The reading gate never computes on the passed descriptor:
     its answer is independent of the argument (see `fd_opak`). -/
 def fdO : Orakel fdD where
-  wirkt
-    | true, σ, _ => ((σ.storeSlot () 1 () ⟨5, by decide, by decide⟩).merke
-        (axiomSpur [()] [] true [] σ.haelt), 3)
-    | false, σ, _ => (σ.merke (axiomSpur [()] [] false [] σ.haelt),
+  wirktL
+    | true, σ, _ => ({ σ.storeSlot () 1 () ⟨5, by decide, by decide⟩ with
+        spur := axiomSpur [()] [] true [] σ.haelt }, 3)
+    | false, σ, _ => ({ σ with spur := axiomSpur [()] [] false [] σ.haelt },
         (σ.slots () 0 ()).n)
-  regLies := fun r _ => nomatch r
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-! ## 4. The oracle meets frame and ensures -/
 
@@ -188,14 +188,14 @@ theorem fdO_rahmen_read (σ : World fdD) (ρ : Env fdD (fdD.aparams false)) :
 /-- The handing-out call keeps the held locks: recording only. -/
 theorem fdO_haelt_open (σ : World fdD) (ρ : Env fdD (fdD.aparams true)) :
     (fdO.wirkt true σ ρ).1.haelt = σ.haelt := by
-  show offen (axiomSpur [()] [] true [] σ.haelt ++ σ.spur) = offen σ.spur
-  exact offen_append_zugriffe σ.haelt _ _ (axiomSpur_zugriffMit _ _ _ _ _)
+  show offen (axiomSpur [()] [] true [] σ.ohneLese.haelt ++ σ.spur) = offen σ.spur
+  exact offen_append_zugriffe _ _ _ (axiomSpur_zugriffMit _ _ _ _ _)
 
 /-- The reading call keeps the held locks: recording only. -/
 theorem fdO_haelt_read (σ : World fdD) (ρ : Env fdD (fdD.aparams false)) :
     (fdO.wirkt false σ ρ).1.haelt = σ.haelt := by
-  show offen (axiomSpur [()] [] false [] σ.haelt ++ σ.spur) = offen σ.spur
-  exact offen_append_zugriffe σ.haelt _ _ (axiomSpur_zugriffMit _ _ _ _ _)
+  show offen (axiomSpur [()] [] false [] σ.ohneLese.haelt ++ σ.spur) = offen σ.spur
+  exact offen_append_zugriffe _ _ _ (axiomSpur_zugriffMit _ _ _ _ _)
 
 /-- The single table is the complete domain. -/
 theorem fdTab_mem (t : fdD.Tab) : t ∈ [()] :=

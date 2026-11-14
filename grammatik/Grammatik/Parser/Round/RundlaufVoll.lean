@@ -186,12 +186,14 @@ theorem prim_emb1_gen : ∀ (n : Nat) (Rn : R n) (w : String) (x : SExpr)
     omega
   have hO := ort_platz_all n Rn x ([.zeichen ")"] ++ rest) F'' hs hp (hrs_paren rest) hFp
   obtain rfl | rfl := hw
-  · simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+  · simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary] at ⊢
     simp only [parseEingebaut_ein] at ⊢
     simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
     simp only [hO] at ⊢
     exact eingebaut_ein_ok "sizeof" x rest hp htw
-  · simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+  · simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary] at ⊢
     simp only [parseEingebaut_ein] at ⊢
     simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
     simp only [hO] at ⊢

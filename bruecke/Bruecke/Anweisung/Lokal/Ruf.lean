@@ -49,8 +49,7 @@ theorem lowCallArgOne_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bo
       | (cases h
          simp only [Gabbro.Body.eval]
          rw [hL p _ ‹paramPos fn.params p = .ok _›, Nat.zero_add,
-           nthVal_lowVar _ _ _ _ ρ (by assumption)]
-         rfl)
+           nthVal_lowVar _ _ _ _ ρ (by assumption)] <;> rfl)
   | freshPtr tname w2 =>
     simp only [argExpr] at hb
     cases hq : ptrParam u fn tname with
@@ -115,8 +114,7 @@ theorem lowCallArgOne_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bo
                   rw [uIdxOfSide_expr hix hb]
                   rw [lowIdx_sim hei σ₀ σ ρ s.world s.local' hL]
                   have hτ : Ty.int lo hi = Ty.index ((declOf u).count ⟨num, hlt⟩) := by rw [hLo, hHi]
-                  rw [valOf_eval_heq hτ _ ei ((mpr_heq _ _).trans (mpr_heq _ _)) σ₀ σ ρ]
-                  rfl
+                  rw [valOf_eval_heq hτ _ ei ((mpr_heq _ _).trans (mpr_heq _ _)) σ₀ σ ρ] <;> rfl
             · rw [dif_neg hHi] at h; cases h
           · rw [dif_neg hLo] at h; cases h
         · rw [dif_neg hlt] at h; cases h
@@ -132,8 +130,25 @@ theorem lowCallArgOne_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bo
           cases h
           exact lowWertAt_sim he' hb hA hT σ₀ σ ρ s.world s.local' hW hL
       | _ => simp only [lowCallArgOneL] at h; cases h
-    | _ => simp [ArtSchlicht] at hK
-  | bval _ | oval _ | gval _ | fnref _ => simp [argExpr] at hb
+    | bool => cases τ <;> simp only [lowCallArgOneL] at h <;> cases h
+    | wert =>
+      cases τ <;> simp only [lowCallArgOneL] at h
+      all_goals first
+        | exact lowWertAtE_rec_sim (er := none) h hb hA hT σ₀ σ ρ s.world s.local' hW hL
+        | cases h
+    | opt num | why num | sum num => cases τ <;> simp only [lowCallArgOneL] at h <;> cases h
+    | _ => simp only [ArtSchlicht, Bool.false_eq_true] at hK
+  | bval b =>
+    simp only [argExpr] at hb
+    simp only [lowCallArgOneL] at h
+    -- Reduce the dependent kind/type match before eliminating impossible successes.
+    split at h
+    all_goals first
+      | exact lowEns_raw_sim h hb hA hT σ₀ σ ρ s hW hL
+      | (repeat' split at h
+         all_goals cases h)
+  | oval _ | gval _ | fnref _ => simp only [argExpr, reduceCtorEq] at hb
+
 
 /-- **The argument list**, in every scope. -/
 theorem lowCallArgsAux_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
@@ -173,8 +188,7 @@ theorem lowCallArgsAux_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : B
                 hU hT σ₀ σ ρ s hW hL
               have h2 := lowCallArgsAux_simB c hU hT σ₀ σ ρ s hW hL ks ts' as' rest esB
                 (fun k hk => hKs k (List.mem_cons_of_mem _ hk)) hrest hxs
-              simp only [Gabbro.Body.evalAll, h1, h2]
-              rfl
+              simp only [Gabbro.Body.evalAll, h1, h2] <;> rfl
             · cases hb
       · cases h
 

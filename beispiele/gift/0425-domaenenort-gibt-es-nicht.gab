@@ -28,10 +28,10 @@ table Kappraum count N {
     }
 
     // die Gegenprobe: derselbe Bau, ein Traeger, den es gibt
-    invariant belegte_haben_marke cost O(n) runs offline :
+    invariant belegte_haben_marke :
         forall s in slots of Self : Self.slots[s].belegt;
 
-    invariant ueber_nichts cost O(n) runs offline :
+    invariant ueber_nichts :
         forall s in slots of Gibtsnichtxyz : Self.slots[s].marke == 0;
 }
 

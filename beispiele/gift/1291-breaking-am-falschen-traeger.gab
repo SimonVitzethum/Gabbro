@@ -18,7 +18,7 @@ table Faden count NFAEDEN {
         benutzt : bool,
     }
 
-    invariant faden_frei cost O(1) runs online :
+    invariant faden_frei :
         forall f in slots of Self : Self.slots[f].benutzt == Self.slots[f].benutzt;
 }
 
@@ -29,7 +29,7 @@ table Endpunkt count NKERNE {
         antwortende : option index into Faden,
     }
 
-    invariant antwortpflicht_paarig cost O(1) runs online :
+    invariant antwortpflicht_paarig :
         forall e in slots of Self :
             (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
 }

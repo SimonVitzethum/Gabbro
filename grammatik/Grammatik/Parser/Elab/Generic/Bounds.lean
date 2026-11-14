@@ -29,14 +29,22 @@ def typeParameters (sig : FnSig) : List (String × List String) := sig.generics.
   | .type name bounds => some (name, bounds)
   | _ => none
 
+mutual
 def mentionsParameter (parameters : List (String × List String)) : STyp → Bool
   | .atom name => parameters.any (fun p => strEq p.1 name)
   | .path [name] => parameters.any (fun p => strEq p.1 name)
+  | .tuple types => mentionsParameterList parameters types
   | .ptr _ _ ty | .range ty _ _ _ | .array ty _ | .wrap ty | .embed ty _ _ =>
     mentionsParameter parameters ty
   | .entry _ none => false
   | .entry _ (some result) => mentionsParameter parameters result
   | _ => false
+
+/-- The parameter check over the components of a tuple. -/
+def mentionsParameterList (parameters : List (String × List String)) : List STyp → Bool
+  | [] => false
+  | ty :: rest => mentionsParameter parameters ty || mentionsParameterList parameters rest
+end
 
 /-- An abstract type may use only a written bound. Concrete types are checked at instantiation. -/
 def checkAbstractBound (parameters : List (String × List String)) (ty : STyp)

@@ -2,6 +2,10 @@ module
 public import Bruecke.Kette.Quelle
 public import Bruecke.Pruefung
 public import Grammatik.Parser.Elab.UebersetzePipeline
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -61,6 +65,8 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Bruecke
 
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
+
 def uZ : UProg :=
   { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))], breiten := [] }],
     locks := [],
@@ -74,7 +80,15 @@ def uZ : UProg :=
       { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
         gives := [.fls], body := [.call "h" []], ret := .empty, decreases := none, measureConstants := [] }] }
 
-theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide +kernel
+theorem low_some : (lowerAllg uZ).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 3 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+    rcases choices with rfl | rfl | rfl
+    all_goals constructor <;> cbv
 
 def PZ : Programm (declOf uZ) := ((lowerAllg uZ).toOption.get low_some).1
 def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
@@ -90,7 +104,7 @@ theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
 /-- ... and no rank exists at all. -/
 theorem kein_rang : ∀ rk, ¬ Rang uZ rk := by
   intro rk h
-  have := h ⟨2, by decide⟩ "h" [] (by decide)
+  have := h ⟨2, by decide⟩ "h" [] (CallsIn.discard (by decide))
   exact Nat.lt_irrefl _ this
 
 /-! ## Every duty holds -- by vacuity -/
@@ -137,18 +151,18 @@ theorem h_unhaltbar (ρ : Gabbro.Body.Env)
     (hc : Gabbro.Body.Contract ρ "h" (preProp (wfU uZ) fnH) (postP uZ fnH)) : False := by
   have := hc t0 ⟨wf_t0, rfl⟩
   simp [postP, postU, ensList, ensClause, ensExpr, clauseProp, clauseAux, chain, andAll,
-    resultClause, fnH, uZ, Gabbro.Body.eval] at this
+    resultClause, Bool.false_eq_true, ↓reduceIte, fnH, uZ, Gabbro.Body.eval] at this
 
-/-- No environment keeps `g`'s contract with its (empty) frame: `g` promises slot 0 is 7 without
-    writing it, and at the zero state it is 0. -/
+/-- No environment keeps `g`'s contract with its declared frame: only the private call clock
+    may change, but `g` promises slot 0 is 7 and at the zero state it is 0. -/
 theorem g_unhaltbar (ρ : Gabbro.Body.Env)
     (hc : Gabbro.Body.Contract ρ "g" (preProp (wfU uZ) fnG) (postP uZ fnG))
-    (hf : Gabbro.Body.Frame ρ "g" fnG.puts) : False := by
+    (hf : Gabbro.Body.Frame ρ "g" (writesU fnG)) : False := by
   have := hc t0 ⟨wf_t0, rfl⟩
   have hw : (ρ "g" t0).1.world (.slot "T" 0 "v") = .int 0 :=
-    hf t0 _ (by simp [fnG, uZ, Gabbro.Body.Place.carrier])
-  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr, clauseProp,
-    clauseAux, chain, andAll, resultClause, fnG, uZ, Gabbro.Body.eval, hw, Gabbro.Body.binop] at this
+    hf t0 _ (by simp [writesU, fnG, uZ, Gabbro.Body.Place.carrier, callClock])
+  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+    clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnG, uZ, Gabbro.Body.eval, hw, Gabbro.Body.binop] at this
 
 theorem suche_g : fnSuch uZ "g" = some fnG := rfl
 theorem suche_h : fnSuch uZ "h" = some fnH := rfl
@@ -206,10 +220,10 @@ theorem σ7_0 : ((σ7.slots tT 0 vF : Zahl 0 10)).n = 7 := rfl
 theorem σ7_1 : ((σ7.slots tT 1 vF : Zahl 0 10)).n = 0 := rfl
 
 def O0 : Orakel (declOf uZ) where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- **The handler**: `g` answers normally, leaving the world as it is, exactly where slot 0 holds 7
     -- where `g`'s contract is met; every other call is a hardware stop. -/
@@ -253,8 +267,7 @@ theorem feldZ : ∃ fh : FieldHit uZ tT, fieldHit uZ tT "v" = .ok fh ∧ fh.idx 
 theorem platz {σ : World (declOf uZ)} {w : Gabbro.Body.World} (hW : WGRel uZ σ w) (k : Int) :
     w (.slot "T" k "v") = .int ((σ.slots tT k vF : Zahl 0 10)).n := by
   obtain ⟨fh, hfh, hidx⟩ := feldZ
-  rw [wrel_lies_k uZ hW.1 "T" tT tabZ "v" fh hfh k, hidx]
-  rfl
+  rw [wrel_lies_k uZ hW.1 "T" tT tabZ "v" fh hfh k, hidx] <;> rfl
 
 /-- The handler keeps every contract at its place (and every frame): `g`'s answer is the world
     it was asked in, where slot 0 holds 7. -/
@@ -270,8 +283,8 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     have hv := platz hW 0
     rw [h7] at hv
     have hwf := wf_of_wgrel uZ getragenZ.boolTab hW
-    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr, clauseProp,
-      clauseAux, chain, andAll, resultClause, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
+    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+      clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
     exact ⟨hwf, hv⟩
   · obtain ⟨_, hs, _⟩ := rz_ok h
@@ -338,8 +351,8 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
       simp only [Gabbro.Body.Value.int.injEq] at hp
       exact hp.symm
     rw [h0] at h1
-    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExprG, slotPlace, opOf, idxExpr,
-      clauseProp, clauseAux, chain, andAll, resultClause, fnAt, fI, uZ, Gabbro.Body.eval,
+    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr,
+      clauseProp, clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, fI, uZ, Gabbro.Body.eval,
       Gabbro.Body.binop, s1] at hpost h1
     rw [hpost.2] at h1
     cases h1

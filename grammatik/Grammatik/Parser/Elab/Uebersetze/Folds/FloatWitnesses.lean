@@ -14,7 +14,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
 import all Grammatik.Parser.Elab.Uebersetze.Folds.FloatExpansion
 import all Grammatik.Parser.Elab.Uebersetze.Folds.FloatLiterals
 import all Grammatik.Parser.Elab.Uebersetze.Branches
-import all Grammatik.Parser.Elab.Uebersetze.LoopHeaders
+import all Grammatik.Parser.Elab.Uebersetze.Loops.Headers
 import all Grammatik.Parser.Elab.Uebersetze.Records.Records
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil4

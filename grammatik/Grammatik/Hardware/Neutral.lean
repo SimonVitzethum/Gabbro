@@ -46,11 +46,11 @@ import all Init.Data.String.ToSlice
   answers (the pool's contract, the join order, the exit gate's `noreturn`), stated as a premise next to
   `HardwareAnnahmen`. This file states that exactly and proves it:
 
-    * `GabbroZielZ Z`          -- `GabbroZiel` with one more premise `Z D O` on the oracle (the extra
-                                  named assumptions); the conclusion is word for word `GabbroZiel`'s;
+    * `GabbroZielZ Z`          -- `GabbroZielVoll` with one more premise `Z D O` on the oracle (the extra
+                                  named assumptions); the conclusion is word for word `GabbroZielVoll`'s;
     * `gabbro_ziel_zusatz`     -- for EVERY family `Z`, the statement holds (weakening: more named
                                   assumptions never break the theorem);
-    * `gabbro_ziel_leer`       -- with `Z := True` it IS `GabbroZiel`: a program that uses none of the
+    * `gabbro_ziel_leer`       -- with `Z := True` it IS `GabbroZielVoll`: a program that uses none of the
                                   new forms has the statement of before, equivalence both ways;
     * `AnbieterAnnahme`        -- the pool's contract as a premise over the environment's provider log:
                                   the log is a legal run of the provider machine. It is vacuous for the
@@ -59,14 +59,14 @@ import all Init.Data.String.ToSlice
                                   (`anbieter_verletzt`: two overlapping answers), which is what a pool's
                                   `assume ... falsifier ...` names.
 
-  No `sorry`, no `native_decide`, no new axiom; `gabbro_ziel` is used, not changed.
+  No `sorry`, no `native_decide`, no new axiom; `gabbro_ziel_voll` is used, not changed.
 -/
 
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
 
-/-- `GabbroZiel` with an extra family of named assumptions `Z` on the oracle. Everything else is the
+/-- `GabbroZielVoll` with an extra family of named assumptions `Z` on the oracle. Everything else is the
     statement of `Spec.lean`, word for word. -/
 def GabbroZielZ (Z : ∀ D : Deklaration, Orakel D → Prop) : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
@@ -86,10 +86,10 @@ def GabbroZielZ (Z : ∀ D : Deklaration, Orakel D → Prop) : Prop :=
 /-- **More named assumptions never break the goal theorem.** -/
 theorem gabbro_ziel_zusatz (Z : ∀ D : Deklaration, Orakel D → Prop) : GabbroZielZ Z := by
   intro C D _ E fs ls cs hC hN O hH _ passes sp init hL lebt0 K hK
-  exact gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
+  exact gabbro_ziel_voll C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
 
 /-- **Programs that use none of the new forms have the statement of before.** -/
-theorem gabbro_ziel_leer : GabbroZielZ (fun _ _ => True) ↔ GabbroZiel := by
+theorem gabbro_ziel_leer : GabbroZielZ (fun _ _ => True) ↔ GabbroZielVoll := by
   constructor
   · intro h C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
     exact h C D E fs ls cs hC hN O hH trivial passes sp init hL lebt0 K hK

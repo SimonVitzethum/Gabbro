@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannRegLiesElseFalsch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -111,7 +111,7 @@ theorem akteurSA_dannRegLiesElseFalsch {D : Deklaration} {P : Programm D} {O : O
   obtain ⟨⟨_, hsS⟩, _⟩ := hss
   have hw' : wahr? (eval σ zusage σ (.cons v ρ)) = false := by
     rw [eval_gleichAuf zusage (fun _ h => List.mem_append_right _ h) hg]; exact hw
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     okS_alsBlock sonst k rest.held_iff hks.2.1 hsS hrk, fun R O' U A σ0 hQ hg0 hσ0 => ?_⟩
   have hrl : O'.regLies r (σ0.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
     regLies_gleich (σ := σ0.fragt (.inr (.inl r))) (W := (M.weltVon u).fragt (.inr (.inl r))) hRL hQ r
@@ -124,7 +124,7 @@ theorem akteurSA_dannRegLiesElseFalsch {D : Deklaration} {P : Programm D} {O : O
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannAwaits {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -231,7 +231,7 @@ theorem akteurSA_dannAwaits {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   simp only [blockOrteP, List.cons_subset] at hss
   have hglob : σ.globs g = (((M.weltVon u).fragt (.inr (.inr g))).lese Λ [.inr g]).globs g :=
     hg.2 g (List.mem_append_right _ List.mem_cons_self)
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hss.2, hrest⟩, fun R O' U A σ0 hQ _ hσ0 => ?_⟩
   have hsv : O'.sichtbar g (leseA A (σ0.fragt (.inr (.inr g))) Λ [.inr g]) = true := by
     rw [hσ0, sichtbar_gleich hRL hQ g (List.mem_append_right _ List.mem_cons_self) hg,
@@ -244,7 +244,7 @@ theorem akteurSA_dannAwaits {D : Deklaration} {P : Programm D} {O : Orakel D} {p
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
     {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-    {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
     (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
     (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)

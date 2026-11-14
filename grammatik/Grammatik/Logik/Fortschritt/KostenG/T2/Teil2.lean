@@ -14,7 +14,7 @@ variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : 
 /-- **The engine over a run.** From the entry invariant, along any run on
     which the frame stays active, the own steps never exceed the budget. -/
 theorem kinv_lauf
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {B : Nat} {f : Faden} {k : Nat} {M1 : RufMaschineG D}
     (h0 : KInv T S pa B f k M1 0) :
@@ -36,16 +36,16 @@ theorem kinv_lauf
     exact kinv_schritt T S nx P O pa hS1 hS2 hI hs
 
 /-- **The engine theorem**: a frame entered at index `i0` whose body names
-    only callees admitted at `i0` takes at most `kostenEnd (T i0)` of its
-    body own steps until (and including) its return. -/
+    only callees admitted at `i0` takes at most the body cost, including
+    `kostenEpilog P g`, in own steps until (and including) its return. -/
 theorem rahmen_schritte
-    (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
+    (hS1 : ∀ i g, S i g = true → kostenEnd (kostenEpilog P g) (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)
     {f : Faden} {g : D.Fn} {rho : Env D (D.params g)} {s0 : World D} {k : Nat}
     {M1 M2 : RufMaschineG D} (hE : Eintritt P f g rho s0 k M1) (i0 : ι)
     (hok : rufeE (S i0) (fun _ => false) true (P.rumpf g) = true)
     (run : SegLauf P O pa M1 M2) (hA : aktivVor f k run) :
-    segZaehle run f ≤ kostenEnd (T i0) pa (P.rumpf g) :=
+    segZaehle run f ≤ kostenEnd (kostenEpilog P g) (T i0) pa (P.rumpf g) :=
   (kinv_lauf T S nx P O pa hS1 hS2 (kinv_eintritt T S P pa hE i0 hok) run hA).1
 
 end Motor
@@ -56,7 +56,7 @@ end Motor
     each call counting its callee at depth `n`. -/
 def kostenTief (P : Programm D) (pa : Nat) : Nat → D.Fn → Nat
   | 0, _ => 0
-  | n + 1, g => kostenEnd (kostenTief P pa n) pa (P.rumpf g)
+  | n + 1, g => kostenEnd (kostenEpilog P g) (kostenTief P pa n) pa (P.rumpf g)
 
 /-- The call-depth admission, as a Bool: at depth `n + 1` a function is
     admitted if every direct callee of its body is admitted at depth `n`

@@ -2,6 +2,9 @@ module
 public import Bruecke.Kette.Schritt
 public import Bruecke.Anweisung.Zweig.Schritt
 public import Bruecke.Anweisung.Zweig.Vorrat
+public import Bruecke.Kette.Formen.Ruf
+public import Bruecke.Kette.Formen.Bereich
+public import Bruecke.Anweisung.Schleife.Simulation
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -18,11 +21,11 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (hRR : RespektiertRahmen P R) :
-    ∀ (n k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
-      (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ')
+    ∀ (n : Nat) {loopMode : Bool} (k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
+      (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ')
       (rest : List UStmt) (t : List Gabbro.Body.Stmt) (restZ : List UStmt) (used : List String),
       UmfangB Γ fn ns → Sicht u fT fn → (∀ st ∈ ss, st ∈ (fnAt u c).body) → BindFrischL (protectedNames fn.params fn.kinds) ss →
-      lowSeqL (l := false) u c Γ fn n Λ [] ss = .ok (p, rest) →
+      lowSeqL (l := loopMode) u c Γ fn n Λ [] ss = .ok (p, rest) →
       seqZ u k fT ns ss = some (t, restZ, used) →
       restZ = rest ∧ rest <:+ ss ∧
       ∀ (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State),
@@ -30,7 +33,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
   intro n
   induction n using Nat.strongRecOn with
   | ind n ih =>
-    intro k ss Γ fn fT ns Λ p rest t restZ used hU hS hmem hF hlow hbs
+    intro loopMode k ss Γ fn fT ns Λ p rest t restZ used hU hS hmem hF hlow hbs
     obtain _ | n := n
     · rw [lowSeqL_zero] at hlow; cases hlow
     obtain _ | k := k
@@ -80,7 +83,102 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindMut_named_sim (x := x) hev heB hU S.tab hU.valid σ ρ s hW hL
       exact blockZiel_bind_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
-    case setVar | assign | assignTab | assignGlob | call =>
+    case bindB x v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨eT, heT, rfl, rfl, rfl⟩ := schrittB_bindB hstepT
+      obtain ⟨hx, hF'⟩ := bindFrischL_bindB hF
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindB_ok hlow
+      have heB : condZ u fn ns v = some eT := (condZ_sicht hS ns v).symm.trans heT
+      have hU' : UmfangB (.bool :: Γ) (fn.mitBindungB x) (ns.push x) := hU.bindB hx
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitBindungB x)
+        (fT.mitBindungB x) (ns.push x) q rest ys restZ used hU' (hS.bindB x)
+        hmemss hF' hq hys
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindB_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
+      exact blockZiel_bindB_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
+        (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
+    case loopBeg x tab inv =>
+      obtain ⟨rfl, hg, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
+      subst Λ₁
+      cases hst
+      have htEq : tZ = t := by
+        rw [ht] at htZ
+        exact (Except.ok.inj htZ).symm
+      subst tZ
+      obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
+        (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
+        (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
+      subst tailZ
+      have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
+      have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
+        (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
+      have hUrest := hU.resume (fun z hz => hUsed z (BodyNames.used_push ns x z hz))
+      have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hUrest hS hmemTail
+        (bindFrischL_suffix hF.2 hsuf) hQ hTailZ
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), fun σ ρ s hW hL =>
+        blockZiel_cons_G (stmtZiel_loop_G G S c hc O passes R hRR hU hS hF.1 hmemss hg hBodyG hBodyZ σ ρ s hW hL) (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)⟩
+    case narrowBeg x lo hi =>
+      obtain ⟨e, errorBody, tailZ, ys, hname, hEZ, hYZ, rfl⟩ := seqZ_narrow_some hbs
+      obtain ⟨hn, id, hid, rfl⟩ := narrowName_some hname
+      have hn' : numericParam fn x = true := (hS.1 x).symm.trans hn
+      have hid' : ns.lookup fn x = some id := (BodyNames.lookup_sicht hS ns x).symm.trans hid
+      obtain ⟨j, a, b, v, err, tail, q, hj, hv, hEG, hQG, rfl⟩ := lowSeq_narrow_ok hn' hlow
+      have heq : tail = tailZ := (List.cons.inj (endBodyZ_rest n k ss fn fT ns err
+        (.blkEnd :: tail) (.blkEnd :: tailZ) errorBody hEG hEZ)).2
+      subst tailZ
+      have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans (endBodyZ_suffix k fT ns ss errorBody _ hEZ)
+      have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
+      have hErr := endBodyZ_sim G S c hc O passes R hRR n k ss fn fT ns err
+        (.blkEnd :: tail) errorBody hU hS hmemss hEG hEZ
+      have IH := ih n (Nat.lt_succ_self n) k tail (fn.mitBindung x (lo, hi))
+        (fT.mitBindung x (lo, hi)) (ns.push x) q rest ys restZ used (hU.bind hF.1 (lo, hi))
+        (hS.bind x (lo, hi) (lo, hi)) hmemTail (bindFrischL_suffix hF.2 hsuf) hQG hYZ
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), fun σ ρ s hW hL =>
+        blockZiel_narrow_G hj hv hid' hU hErr (fun σ ρ s hW hL => IH.2.2 σ ρ s hW hL) σ ρ s hW hL⟩
+    case bindCall x g args =>
+      obtain ⟨bB, fT', ns', ys, hstep, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨bt, hbT, rfl, rfl⟩ := schrittB_bindCall hstep
+      obtain ⟨head, ty, he, hr, q, hk, hq, rfl⟩ := lowSeq_bindCall_ok hlow
+      obtain ⟨ht, sh, hsh⟩ := resultCall_type hk he hbT
+      subst bt
+      have hb : namedResult u fn ns x g args = some (bB, ty) :=
+        (namedResult_sicht hS ns x g args).symm.trans hbT
+      rw [mitRuf_scalar fn x head.callee hsh] at hq
+      have hU' := hU.bindTy hF.1 hsh
+      have hF' : BindFrischL (protectedNames (fn.mitTy x ty).params (fn.mitTy x ty).kinds) ss := by
+        rw [protectedNames_mitTy fn x hsh]
+        exact hF.2
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitTy x ty)
+        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hU' (hS.bindTy x hsh) hmemss hF' hq hys
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      cases hR : R head.callee (σ.lese Λ head.args.orte)
+          (evalArgs (σ.lese Λ head.args.orte) head.args (σ.lese Λ head.args.orte) ρ) with
+      | ok σ₁ v =>
+        obtain ⟨A, s₁, hStretch, hW₁, hL₁⟩ :=
+          resultCall_strecke G S hc R hRR hk he hb hhead hU σ σ₁ ρ s hW hL v hR
+        exact blockZiel_bindCall_ok_G hsh head he hr q.2 hR hStretch (IH.2.2 σ₁ _ s₁ hW₁ hL₁)
+      | why σ₁ why =>
+        exact (Nat.not_lt_zero why.val (Nat.lt_of_lt_of_eq why.isLt hr)).elim
+      | logik err =>
+        obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
+        have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
+        have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hf
+        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_⟩
+        · simp only [execBlock, hR] at hh
+          cases hh
+          exact ⟨head.callee, _, _, hd, hR⟩
+        · simp only [execBlock, hR] at hh
+          cases hh
+        · simp only [execBlock, hR] at hh
+          cases hh
+      | hardware err =>
+        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_⟩
+        all_goals simp only [execBlock, hR] at hh; cases hh
+    case setVar | setVarB | assign | assignTab | assignGlob | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       have hF' := bindFrischL_sonst (by rfl) hF

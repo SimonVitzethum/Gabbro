@@ -68,8 +68,9 @@ def zeugeProgramm : List SItemTief := [
     .tOps ["einfuegen", "loeschen"],
     .tTree [("parent", "eltern")],
     .tBusy "belegt",
-    .tInv { name := "klein", kosten := .lit 1, online := true, proof := none,
-            pred := .bin "<" (.variable "n") (.lit 64) }],
+    .tInv {
+      name := "klein"
+      pred := .bin "<" (.variable "n") (.lit 64) }],
   .entryT { name := "tick", vektor := some (.lit 32), via := some "idt", arch := "x86_64",
             regIn := [.binds "rdi" "arg", .reg "rsi"], regOut := [.reg "rax"],
             erhaelt := ["rbx"], kills := ["rcx"], stapel := "kstack", perCpu := true,
@@ -116,7 +117,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     · show _ ≠ []; simp only [ne_eq, reduceCtorEq, not_false_eq_true]
     · exact ⟨by simp only [ne_eq, List.cons_ne_self, not_false_eq_true], by intro k hk; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk; subst hk; exact Or.inl rfl⟩
     · trivial
-    · exact ⟨by decide, .expr _ (by decide), by simp only [reduceCtorEq, false_implies, implies_true]⟩
+    · exact .expr _ (by decide)
   · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
     · intro v hv; cases hv; decide
     · intro x hx; cases hx; decide
@@ -125,13 +126,51 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
   parseTopTief_druck zeugeProgramm zeugeProgramm_gut
 
-set_option maxHeartbeats 2000000 in
+/-- Check names without evaluating keyword lookup twice. -/
+private theorem nameTok_clean (name : String) (h : nameForm name = true) :
+    tokGutB (nameTok name) = true := by
+  cases hk : istSchluessel name <;>
+    simp only [nameTok, hk, Bool.false_eq_true, ite_false, ite_true, tokGutB,
+      h, Bool.not_false, Bool.and_true, Bool.true_and]
+
+/-- Expand only the printer's list structure, then check each distinct short
+    token condition. Raw paths use the general path law, not the scanner. -/
+private theorem zeugeProgramm_tokens : (druckItems zeugeProgramm).all tokGutB = true := by
+  have kern := rohToks_pfad ["kern"] (by simp) (by
+    intro name member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    subst member
+    decide)
+  have target := rohToks_pfad ["kern", "erhoehe"] (by simp) (by
+    intro name member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> decide)
+  simp only [zeugeProgramm, druckItems, druckItem, druckFnSig, druckGenericParams,
+    druckParams, druckParam, druckTyp, druckKonstWert, druckKonstWert.druckKonstWerte,
+    druckKlauseln, druckKlausel, druckEffekte, druckEffekt, druckAnw, druckAnwListe,
+    druckEnde, druckToks, druckToksViele, druckExtToks, druckExtToks.druckQuant,
+    domToks, druckPlaetze, druckGrundFaelle, druckStarts, druckStart,
+    druckTabTeile, druckTabTeil, druckFelder, druckFeld, druckGruppenInv,
+    druckNamen, druckKanten, druckEingang, druckRegBinds, druckRegBind,
+    druckNamenKlammer, kern, target, rohToks_never, pfadToks,
+    strEq_self, List.isEmpty_nil, List.reverse_cons, List.reverse_nil,
+    List.append_nil, List.cons_append, List.nil_append, ite_true,
+    List.all_append, List.all_cons, List.all_nil, Bool.and_true, Bool.true_and,
+    Bool.and_self, Bool.and_eq_true]
+  repeat' apply And.intro
+  all_goals first | apply nameTok_clean; decide | cbv
+
 /-- The witness program from its rendered source text: lexer, then the program reader. -/
 theorem zeugeProgramm_text :
     (match lex (renderText (druckItems zeugeProgramm)) with
       | .ok toks => parseTopTief toks
-      | .error _ => .error "lex") = .ok zeugeProgramm :=
-  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ (by decide +kernel))
+      | .error _ => .error "lex") = .ok zeugeProgramm := by
+  -- Rewrite the lexer before elaborating the program reader's result type.
+  -- Matching a complete round-trip application here can normalize the concrete
+  -- lexer while unifying the dependent match's branches.
+  rewrite [lex_render (druckItems zeugeProgramm)
+    (tokGut_of_all (druckItems zeugeProgramm) zeugeProgramm_tokens)]
+  exact zeugeProgramm_rund
 
 
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,
@@ -163,7 +202,8 @@ def zeugeGeraet : List SItemTief := [
       .emit (.variable "flag") .tru (renderText [.ident "zaehler"])]
       (some (.ret (some (.variable "t"))))),
   .groupT "Gruppe" ["D", "Tab"] [
-    { name := "J", kosten := .lit 1, online := true, proof := none,
+    {
+      name := "J"
       pred := .ext .all ["s", "slots"] [.variable "Tab", .bin ">=" (.variable "s") (.lit 0)] }]]
 
 theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
@@ -202,20 +242,20 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
       rcases hs with rfl | rfl | rfl | rfl | rfl | rfl | rfl
-      · exact .bind _ _ _ _ (by decide) trivial (by decide)
-      · exact .bindElse _ _ _ _ _ (by decide) trivial (by decide) leer
+      · exact .bind _ _ _ _ (by decide) rfl trivial (by decide)
+      · exact .bindElse _ _ _ _ _ (by decide) rfl trivial (by decide) leer
       · exact .set _ _ _ (by decide) (by decide) (by decide)
-      · exact .bind _ _ _ _ (by decide) trivial (by decide)
+      · exact .bind _ _ _ _ (by decide) rfl trivial (by decide)
       · exact .call _ _ (show nameForm _ = true by decide) (by decide) (by decide)
-      · exact .await _ _ _ _ (by decide) trivial (by decide) ⟨[.ident "zaehler"], rfl,
+      · exact .await _ _ _ _ (by decide) rfl trivial (by decide) ⟨[.ident "zaehler"], rfl,
           by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩
       · exact .emit _ _ _ (by decide) (by decide)
           (Or.inr ⟨⟨[.ident "zaehler"], rfl,
             by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩, by decide⟩)
   · refine .groupT _ _ _ (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) ?_
     intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi
-    exact ⟨by decide, .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
-      (.expr _ (by decide)), by simp only [reduceCtorEq, false_implies, implies_true]⟩
+    exact .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
+      (.expr _ (by decide))
 
 /-- The device witness reads back through the whole program reader. -/
 theorem zeugeGeraet_rund : parseTopTief (druckItems zeugeGeraet ++ [.ende]) = .ok zeugeGeraet :=

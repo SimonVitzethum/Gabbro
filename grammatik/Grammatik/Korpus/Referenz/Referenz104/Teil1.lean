@@ -55,10 +55,10 @@ theorem r4P_kostenPasst : kostenPasst r4P 0 r4Decl r4Fs = true := by decide
 /-! ## 4. Oracle, start, and the user obligations -/
 
 def r4O : Orakel r4D where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem r4O_gut : GutO r4O := fun a => nomatch a
 

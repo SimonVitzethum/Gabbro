@@ -156,18 +156,21 @@ def uLiestE : Nat → SExpr → List String
     | .why g _ => [g]
     | .ext _ ws xs => ws ++ xs.flatMap (uLiestE f)
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names a type mentions in its bounds (a bound is a constant expression; a raw or linked type
     mentions none the branch could read). -/
 def uLiestT : Nat → STyp → List String
   | 0, _ => ["*"]
   | f + 1, t => match t with
+    | .tuple elements => elements.flatMap (uLiestT f)
     | .ptr _ _ b | .wrap b => uLiestT f b
     | .range b lo hi _ => uLiestT f b ++ uLiestE f lo ++ uLiestE f hi
     | .array b n => uLiestT f b ++ uLiestE f n
     | .embed b _ x => uLiestT f b ++ (x.map (uLiestE f)).getD []
     | .str n => uLiestE f n
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names an optional type mentions. -/
 def uLiestTO (f : Nat) (ty : Option STyp) : List String := (ty.map (uLiestT f)).getD []
@@ -191,6 +194,7 @@ def uLiestS : Nat → SAnw → List String
       uLiestE f c ++ uLiestS f t ++ ei.flatMap (uLiestS f) ++ (e.map (uLiestS f)).getD []
     | .elsif c b | .trim c _ b | .locks _ c b => uLiestE f c ++ uLiestS f b
     | .cases c as => uLiestE f c ++ as.flatMap (uLiestS f)
+    | .boundedLoop raw b => (boundedLoopExpressions raw).flatMap (uLiestE f) ++ uLiestS f b
     | .arm _ _ b | .retry _ b | .loop _ b | .waive _ b | .watch _ b | .child b => uLiestS f b
     | .each _ o _ s _ r i b =>
       (o.map (uLiestE f)).getD [] ++ uLiestE f s ++ (if strEq r "" then [] else ["*"]) ++
@@ -205,6 +209,7 @@ def uLiestS : Nat → SAnw → List String
       as.flatMap (uLiestS f) ++ (match en with | some (.ret (some v)) => uLiestE f v | _ => [])
     | .other _ => ["*"]
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names a run of statements mentions. -/
 def uLiestL (ss : List SAnw) : List String := ss.flatMap (uLiestS uLiestTiefe)

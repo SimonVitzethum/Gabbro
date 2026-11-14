@@ -43,6 +43,14 @@ def AxVor (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) (a : D.Ax) (σ0 : 
     (ρ : Env D (D.aparams a)) : Prop :=
   wahr? (eval σ0 (ax a).pre σ0 ρ) = true
 
+/-- Recording a question changes neither world read by the interface pre. -/
+theorem axVor_fragt (ax : ∀ a : D.Ax, CallContract D (D.asignatur a))
+    (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    AxVor ax a σ ρ ↔ AxVor ax a (σ.fragt (.inl a)) ρ := by
+  unfold AxVor
+  rw [eval_spurfrei (ax a).pre σ (σ.fragt (.inl a)) σ (σ.fragt (.inl a))
+    rfl rfl rfl rfl ρ]
+
 /-- The interface postcondition on normal return: the contract post over the post
     world and the transported result, with the entry world as `old`. -/
 def AxNach (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) (a : D.Ax) (σ0 : World D)
@@ -89,17 +97,22 @@ theorem vertragANeu_nil (ax : ∀ a : D.Ax, CallContract D (D.asignatur a))
 theorem orakelAus_vertrag_neu {ax : ∀ a : D.Ax, CallContract D (D.asignatur a)} {O : Orakel D}
     (hQ : AxVertragONeu ax O) {HA : List (AxEintrag D)} (hv : VertragANeu ax O.zeiger HA) :
     AxVertragONeu ax (orakelAus O HA) := by
-  intro a σ0 ρ hpre v
-  simp only [orakelAus]
-  split
-  · rename_i hex
-    intro hfit
-    have hpost := hv a (σ0.fragt (.inl a)) ρ _ (Classical.choose_spec hex) v hfit
-    -- Replay keys include the question event; contract expressions do not read it.
-    exact (congrArg wahr? (eval_spurfrei (ax a).post (σ0.fragt (.inl a)) σ0
-      (Classical.choose hex).1 (Classical.choose hex).1 rfl rfl rfl rfl
-      (ergEnv (D.aerg a) v ρ))).symm.trans hpost
-  · exact hQ a σ0 ρ hpre v
+  intro a σ0 ρ hpre v hfit
+  by_cases h : AxFrage HA a (σ0.fragt (.inl a)).ohneLese ρ
+  · obtain ⟨hs, hg, h2⟩ := orakelAus_frage_speicher O HA h
+    have hce := (Classical.choose_spec h).2
+    have hfit' : einpassenErg O.zeiger (D.aerg a) (Classical.choose h).2.2 = some v := by
+      rw [← h2]
+      exact hfit
+    have hpost := hv a _ ρ _ (Classical.choose_spec h).1 v hfit'
+    -- The key world and the call world agree in memory (one erasure), and so do the two answer
+    -- worlds; contract expressions read memory only.
+    exact (congrArg wahr? (eval_spurfrei (ax a).post σ0 (Classical.choose h).1
+      ((orakelAus O HA).wirkt a (σ0.fragt (.inl a)) ρ).1 (Classical.choose h).2.1
+      (World.slots_of_ohneLese hce).symm (World.globs_of_ohneLese hce).symm hs hg
+      (ergEnv (D.aerg a) v ρ))).trans hpost
+  · rw [orakelAus_wirkt_sonst O HA h] at hfit ⊢
+    exact hQ a σ0 ρ hpre v hfit
 
 /-- The recorded answer world agrees with the machine's answer world on the axiom's
     declared carriers, so a local generalized post transfers. -/
@@ -121,8 +134,8 @@ def axPre_of_contract (ax : ∀ a : D.Ax, CallContract D (D.asignatur a)) : AxPr
 
 theorem aufruferPflicht_axVor (ax : ∀ a : D.Ax, CallContract D (D.asignatur a))
     (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
-    AufruferPflicht (axPre_of_contract ax) a σ ρ ↔ AxVor ax a σ ρ :=
-  Iff.rfl
+    AufruferPflicht (axPre_of_contract ax) a σ ρ ↔ AxVor ax a σ ρ := by
+  rfl
 
 /-- The software foreign obligations (C08, premise (b) side, over the history `H`):
     every software item's proved realization establishes the generalized contract

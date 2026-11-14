@@ -15,8 +15,8 @@
                (`vertragsfrei_nurAbstieg`), closed in `rufAt_rufRumpf_pflicht`;
              * everywhere and at every depth for contracts that are valid formulas (`VertragGueltig`), where the
                short-direction induction runs with the empty error set (`rufAt_rufRumpf_gueltig`).
-             All of it carries `Leseblind O` (lead decision: the trace is ghost state, real answers do not depend on
-             read events; it is the named oracle property `LeseblindOK`, `Ruf/RufOkGleich.lean`).
+             All of it carries the program premise `LeseblindP P O` (`Gleich/Ausgang.lean`): read-blind register and
+             visibility answers, and read-blind foreign answers or a program without foreign calls.
 -/
 module
 public import Stage0.Senke.Bild.Gleich.RufAt
@@ -40,7 +40,7 @@ def Vertragsfrei (P : Programm D) (O : Orakel D) (passes n : Nat) (g : D.Fn) (σ
 
 /-- **The exact relation**: where `rufAt` fails no contract check, `rufAt` and `rufRumpf` give the same outcome up to
     `≈`, with no early failure on either side. -/
-theorem rufAt_rufRumpf_genau (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' : World D}
+theorem rufAt_rufRumpf_genau (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' : World D}
     {ρ : Env D (D.params g)} (hV : Vertragsfrei P O passes n g σ ρ) (hσ : WeltGleich σ σ') :
     RufLG (fun _ => False) (rufAt P O passes n g σ ρ) (rufRumpf P O passes n g σ' ρ) := by
   have h := rufAt_rufRumpf_lg (P := P) (O := O) (passes := passes) hO n g σ σ' ρ hσ
@@ -57,7 +57,7 @@ theorem rufAt_rufRumpf_genau (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' : W
 
 /-- **An `ok` of the body run is an `ok` of `rufAt`** with the same value and a `≈` world, where `rufAt` fails no
     contract check. -/
-theorem rufRumpf_ok_rufAt (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
+theorem rufRumpf_ok_rufAt (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
     {ρ : Env D (D.params g)} {v : ErgVal D (D.erg g)} (hV : Vertragsfrei P O passes n g σ ρ)
     (hσ : WeltGleich σ σ') (h : rufRumpf P O passes n g σ' ρ = .ok σ₂ v) :
     ∃ σ₁, rufAt P O passes n g σ ρ = .ok σ₁ v ∧ WeltGleich σ₁ σ₂ := by
@@ -71,7 +71,7 @@ theorem rufRumpf_ok_rufAt (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₂ 
 
 /-- **A reason of the body run is the same reason of `rufAt`**, with a `≈` world, where `rufAt` fails no contract
     check. -/
-theorem rufRumpf_why_rufAt (hO : Leseblind O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
+theorem rufRumpf_why_rufAt (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
     {ρ : Env D (D.params g)} {r : Fin (D.gruende g)} (hV : Vertragsfrei P O passes n g σ ρ)
     (hσ : WeltGleich σ σ') (h : rufRumpf P O passes n g σ' ρ = .why σ₂ r) :
     ∃ σ₁, rufAt P O passes n g σ ρ = .why σ₁ r ∧ WeltGleich σ₁ σ₂ := by
@@ -124,7 +124,7 @@ theorem rufAt_rufRumpf_pflicht {Q : AxEns D} {S : SperrInv D} {U : Umwelt D}
     (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hU : HavocOk S U)
     (hlocks : ∀ f : D.Fn, (P.rumpf f).ohneLocks = true)
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hI : ∀ f : D.Fn, InvGutS P passes Q S f)
-    (hS : ScopesOkProg P) (hO : Leseblind O) (n : Nat) {g : D.Fn} {σ σ' : World D}
+    (hS : ScopesOkProg P) (hO : LeseblindP P O) (n : Nat) {g : D.Fn} {σ σ' : World D}
     {ρ : Env D (D.params g)}
     (hh : HeldB (D.signatur g).boden (Signatur.anfang D (D.signatur g)) σ.haelt)
     (hq : ReqAmEintritt P g σ ρ) (hσ : WeltGleich σ σ') :
@@ -145,7 +145,7 @@ structure VertragGueltig (P : Programm D) : Prop where
 
 /-- **Under valid contracts `rufAt ≈ rufRumpf` exactly**, at every depth and in every world: the short-direction
     induction with the empty error set. -/
-theorem rufAt_rufRumpf_gueltig (hP : VertragGueltig P) (hO : Leseblind O) (n : Nat) :
+theorem rufAt_rufRumpf_gueltig (hP : VertragGueltig P) (hO : LeseblindP P O) (n : Nat) :
     HandlerLG (fun _ => False) (rufAt P O passes n) (rufRumpf P O passes n) :=
   rufAt_rufRumpf_unter (fun _ => False) hO
     (fun g σ ρ hq => absurd ((hP.requires g σ ρ).symm.trans hq) (by decide))

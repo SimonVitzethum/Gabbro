@@ -160,10 +160,10 @@ def oP : Programm oD where
     | .sicht => rumpfSicht
 
 def oO : Orakel oD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem oO_treu : TreuO oO := fun a => nomatch a
 

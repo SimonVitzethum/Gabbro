@@ -54,6 +54,7 @@ def namenO (lok : List String) : Option SExpr → List String
   | some e => namenA lok e
   | none => []
 
+mutual
 /-- **The names a type writes**: named types, paths, the table of an `index into`, and the names in
     range bounds and array lengths. -/
 def namenT : STyp → List String
@@ -62,6 +63,7 @@ def namenT : STyp → List String
       | .error _ => []
       | .ok ts => ts.filterMap fun | .ident name => some name | _ => none)
   | .atom s => [s]
+  | .tuple types => namenTs types
   | .path ps => ["::".intercalate ps]
   | .ptr _ _ t => namenT t
   | .index _ t => [t]
@@ -72,6 +74,12 @@ def namenT : STyp → List String
   | .str e => namenA [] e
   | .entry _ (some t) => namenT t
   | _ => []
+
+/-- The names the components of a tuple write, in order (`flatMap` without nested recursion). -/
+def namenTs : List STyp → List String
+  | [] => []
+  | t :: ts => namenT t ++ namenTs ts
+end
 
 /-- The names of an optional type. -/
 def namenTO : Option STyp → List String

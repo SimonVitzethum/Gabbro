@@ -102,54 +102,25 @@ theorem baum_rund (ks : List (String × String)) (hne : ks ≠ []) (hg : ∀ k �
   simp only [parseBaum, fordereZeichen, strEq_self, ↓reduceIte, hK]
 
 
-/-- A printable group invariant: printable cost and predicate, a raw proof text without `:` and
-    braces. -/
-def InvGut (i : SGruppenInv) : Prop :=
-  gut i.kosten = true ∧ PredGut i.pred ∧
-    ∀ h, i.proof = some h → RohText (fun t => t = .zeichen ":" ∨ t = .zeichen "{" ∨ t = .zeichen "}") h
+/-- A printable group invariant has a printable predicate. -/
+def InvGut (i : SGruppenInv) : Prop := PredGut i.pred
 
 theorem gruppenInv_rund (i : SGruppenInv) (hi : InvGut i) (R : List Token) (F : Nat)
     (hF : 8 * (druckGruppenInv i).length + 60 ≤ F) :
     parseGruppenInv F (druckGruppenInv i ++ R) = .ok (i, R) := by
-  obtain ⟨hk, hp, hpr⟩ := hi
-  obtain ⟨name, kosten, online, proof, pred⟩ := i
-  simp only at hk hp hpr ⊢
-  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc, List.length_cons, List.length_append, List.length_nil, Nat.zero_add] at hF; omega⟩
-  have hon : ∀ X, (Token.wort (if online then "online" else "offline") :: X) =
-      .wort (if online then "online" else "offline") :: X := fun _ => rfl
-  have hm : (strEq (if online then "online" else "offline") "online" ||
-      strEq (if online then "online" else "offline") "offline") = true := by cases online <;> decide
-  have hmo : strEq (if online then "online" else "offline") "online" = online := by cases online <;> decide
-  have hoff : online = false → strEq (if online then "online" else "offline") "offline" = true := by
-    intro h; subst h; decide
-  cases proof with
-  | none =>
-    simp only [druckGruppenInv, List.length_append, List.length_cons, List.length_nil] at hF
-    have hK := ausdruck kosten hk (.zeichen ")" :: .wort "runs" ::
-      .wort (if online then "online" else "offline") :: .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R))
-      (F' + 1) rfl rfl rfl (by omega)
-    have hP := pred_voll pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e),
-      (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e)⟩ F' (by simp only [bP]; omega)
-    simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
-    simp only [parseGruppenInv, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok, nimmKostenO, nameText_ident, fordereZeichen, hK, hmo, Bool.or_eq_true, parseInvRest, hP, ite_eq_left_iff, not_or, Bool.not_eq_true, reduceCtorEq, imp_false, not_and, Bool.not_eq_false]
-    all_goals exact hoff
-  | some h =>
-    obtain ⟨ts, rfl, hts⟩ := hpr _ rfl
-    have hroh := rohToks_render ts (fun t ht => (hts t ht).1)
-    simp only [druckGruppenInv, hroh, List.length_append, List.length_cons, List.length_nil] at hF
-    have hK := ausdruck kosten hk (.zeichen ")" :: .wort "runs" ::
-      .wort (if online then "online" else "offline") :: .wort "by" ::
-        (ts ++ .zeichen ":" :: (druckToks pred ++ .zeichen ";" :: R)))
-      (F' + 1) rfl rfl rfl (by omega)
-    have hP := pred_voll pred hp (.zeichen ";" :: R) ⟨rfl, rfl, rfl, (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e),
-      (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e)⟩ F' (by simp only [bP]; omega)
-    have hN := nimmBisZeichen_roh ":" ts (druckToks pred ++ .zeichen ";" :: R)
-      (fun t ht => ⟨(hts t ht).1, fun e => (hts t ht).2 (Or.inr (Or.inl e)),
-        fun e => (hts t ht).2 (Or.inr (Or.inr e)), fun e => (hts t ht).2 (Or.inl e)⟩)
-    simp only [druckGruppenInv, hroh, List.cons_append, List.nil_append, List.append_assoc,
-      List.singleton_append]
-    simp only [parseGruppenInv, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok, nimmKostenO, nameText_ident, fordereZeichen, hK, hmo, Bool.or_eq_true, parseInvRest, hN, hP, ite_eq_left_iff, not_or, Bool.not_eq_true, reduceCtorEq, imp_false, not_and, Bool.not_eq_false]
-    all_goals exact hoff
+  obtain ⟨name, pred⟩ := i
+  have hp : PredGut pred := hi
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by omega⟩
+  simp only [druckGruppenInv, List.length_append, List.length_cons, List.length_nil] at hF
+  have hP := pred_voll pred hp (.zeichen ";" :: R)
+    ⟨rfl, rfl, rfl,
+      (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e),
+      (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e),
+      (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e)⟩
+    F' (by simp only [bP]; omega)
+  simp only [druckGruppenInv, List.cons_append, List.nil_append, List.append_assoc,
+    parseGruppenInv, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok,
+    parseInvRest, fordereZeichen, hP]
 
 /-- A printable part of a table. -/
 def TeilGut : STabTeil → Prop

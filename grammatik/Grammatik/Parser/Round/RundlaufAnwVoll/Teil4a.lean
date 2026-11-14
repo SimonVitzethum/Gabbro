@@ -94,12 +94,12 @@ theorem ende_bein (e : Option SEnde) (he : EndeOk e) : ∀ s ∈ endeAnw e, AnwB
 theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
   intro r s h
   induction h with
-  | bind m x ty e hx hty he =>
-    exact ⟨anw_bind m x hx ty e hty he, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
-  | bindElse x ty e f b hx hty he _ ihb =>
-    exact ⟨anw_bindElse x hx ty e f b hty he ihb.1, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
-  | bindLib m x ty c hx hty hc =>
-    exact ⟨anw_bindLib m x hx ty c hty hc, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | bind m x ty e hx ht hty he =>
+    exact ⟨anw_bind m x hx ht ty e hty he, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | bindElse x ty e f b hx ht hty he _ ihb =>
+    exact ⟨anw_bindElse x hx ht ty e f b hty he ihb.1, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | bindLib m x ty c hx ht hty hc =>
+    exact ⟨anw_bindLib m x hx ht ty c hty hc, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | set z o w hz ho hw =>
     exact ⟨anw_set z o w hz ho hw, anwKopf_platz _ z hz ⟨_, by simp only [druckAnw, List.append_assoc, List.cons_append, List.nil_append, List.append_cancel_left_eq] <;> rfl⟩⟩
   | shift z a b hz =>
@@ -145,18 +145,18 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
   | next l => exact ⟨anw_next l, anwKopf_wort _ "next" (by decide) ⟨_, rfl⟩⟩
   | emit z w p hz hw hp =>
     exact ⟨anw_emit z w p hz hw hp, anwKopf_platz _ z hz ⟨_, by simp only [druckAnw, List.append_assoc, List.cons_append, List.nil_append, List.append_cancel_left_eq] <;> rfl⟩⟩
-  | await n ty q p hx hty hq hp =>
-    exact ⟨anw_await n hx ty q p hty hq hp, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
-  | swap n ty o k hx hty ho hk =>
-    exact ⟨anw_swap n hx ty o k hty ho hk, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | await n ty q p hx ht hty hq hp =>
+    exact ⟨anw_await n hx ht ty q p hty hq hp, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | swap n ty o k hx ht hty ho hk =>
+    exact ⟨anw_swap n hx ht ty o k hty ho hk, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | step a b => exact ⟨anw_step a b, anwKopf_wort _ "advances" (by decide) ⟨_, rfl⟩⟩
   | retLeer => exact ⟨anw_ret_leer, anwKopf_wort _ "return" (by decide) ⟨_, rfl⟩⟩
   | ret e he => exact ⟨anw_ret e he, anwKopf_wort _ "return" (by decide) ⟨_, rfl⟩⟩
-  | alloc m n ty t w s hx hty hw _ ihs =>
-    exact ⟨anw_alloc m n hx ty t w s hty hw (fun b hb => (ihs b hb).1),
+  | alloc m n ty t w s hx ht hty hw _ ihs =>
+    exact ⟨anw_alloc m n hx ht ty t w s hty hw (fun b hb => (ihs b hb).1),
       anwKopf_wort _ "let" (by decide) (by cases s <;> exact ⟨_, rfl⟩)⟩
-  | allocVon m n ty t hx hty =>
-    exact ⟨anw_allocVon m n hx ty t hty, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | allocVon m n ty t hx ht hty =>
+    exact ⟨anw_allocVon m n hx ht ty t hty, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | reset a rg hrg => exact ⟨anw_reset a rg hrg, anwKopf_wort _ "reset" (by decide) ⟨_, rfl⟩⟩
   | grow a e b he _ ihb =>
     exact ⟨anw_grow a e b he ihb.1 ihb.2, anwKopf_wort _ "grow" (by decide) ⟨_, rfl⟩⟩
@@ -221,7 +221,7 @@ theorem zeugeBlock_gut : AnwGut .block zeugeBlock := by
   intro s hs
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
   rcases hs with rfl | rfl | rfl | rfl | rfl
-  · exact .bind _ _ _ _ (by decide) (.kette (.atom "u32") [] (.atom _ (by decide)) (by simp only [TsGut, List.not_mem_nil, false_implies, implies_true]))
+  · exact .bind _ _ _ _ (by decide) rfl (.kette (.atom "u32") [] (.atom _ (by decide)) (by simp only [TsGut, List.not_mem_nil, false_implies, implies_true]))
       (by decide)
   · exact .set _ _ _ (by decide) (by decide) (by decide)
   · refine .cond _ _ _ _ (by decide) ?_ ?_ ?_

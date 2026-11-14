@@ -23,6 +23,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.ReturnCalls
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+import Grammatik.Parser.Elab.Tuples.Identity
 
 @[expose] public section
 
@@ -123,6 +124,26 @@ attribute [local cbv_opaque] recordCheckCode recordCheckStatements checkSampleSu
   uAnwReihe uAnwReiheCore elabKlauseln expandReturnCall
 attribute [local cbv_eval] record_block_return record_statements_nil substitute_true
   row_nil row_cons core_bind clauses_nil return_variable return_none
+
+-- These witnesses contain an empty gate and a check declaration. Neither item consults the
+-- tuple context. Keep its eager constant/alias/type collection out of proof evaluation.
+private theorem tuple_empty_gate_check (art name : String) (error : Option String)
+    (generics : List SGenericParam) (check : SCheck) :
+    Tuples.expand
+      [.fnT { art, name, params := [], res := none, fehler := error, klauseln := [], generics }
+        (.block [] none), .checkT check] =
+      .ok ([.fnT { art, name, params := [], res := none, fehler := error, klauseln := [], generics }
+        (.block [] none), .checkT check], []) := by
+  apply Tuples.expand_of_mapM_eq_pure
+  intro k
+  have gate := Tuples.expandItem_empty_function k
+    { art, name, params := [], res := none, fehler := error, klauseln := [], generics }
+    rfl rfl rfl
+  have checked := Tuples.expandItem_check k check
+  simp only [List.mapM_cons, List.mapM_nil, gate, checked, pure_bind]
+
+attribute [local cbv_opaque] Tuples.expand Tuples.prepareContext
+attribute [local cbv_eval] tuple_empty_gate_check
 
 -- Infer each complete generated result from its canonical producer, before
 -- inspecting names or resource lists. No unit is reconstructed from projections.

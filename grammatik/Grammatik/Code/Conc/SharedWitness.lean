@@ -30,7 +30,7 @@ def cLayN : Layout cD := { cLay with shared := fun _ => false }
 
 theorem cLayOk : LayoutOk cLay where
   tab := fun _ => rfl
-  fld := fun t f _ => by cases t; cases f; exact ⟨0, by decide +kernel⟩
+  fld := fun t f _ => by cases t; cases f; exact ⟨0, by decide_cbv⟩
   inj := fun _ _ _ _ _ _ => rfl
   tinj := fun _ _ _ => rfl
   gdis := fun t g => by cases t; cases g; decide
@@ -58,35 +58,35 @@ theorem rep_free_witness : Rep cLay wld5 mem0 := by
     subst hk
     cases t
     cases f
-    decide +kernel
+    decide_cbv
   · intro g hs
     cases g
-    exact ⟨⟨Val.ofInt 64 0, by decide +kernel⟩, fun h => absurd h (by decide)⟩
+    exact ⟨⟨Val.ofInt 64 0, by decide_cbv⟩, fun h => absurd h (by decide)⟩
 
 theorem rep_strong_fails : ¬ Rep cLayN wld5 mem0 := by
   intro h
   have := (h.2 () (by decide)).2 rfl
   revert this
-  decide +kernel
+  decide_cbv
 
 theorem shared_read_refused :
     lowerE cLay [] (Gabbro.Grammatik.Expr.glob (D := cD) (Γ := []) (Λ := []) () (fun w hw => absurd hw List.not_mem_nil)) 0
       = none := by
-  decide +kernel
+  decide_cbv
 
 theorem sees_shared_witness :
     Sees.shared cLay mem0 (cLay.ggblk ()) 0 (memTy (cD.gtyp ())) .acq (encM cLay (cD.gtyp ()) (wld5.globs ())) ∧
       mem0.load (cLay.ggblk ()) 0 (memTy (cD.gtyp ())) ≠ some (encM cLay (cD.gtyp ()) (wld5.globs ())) :=
-  ⟨sees_shared_at cLay mem0 () rfl .acq _ (by decide), by decide +kernel⟩
+  ⟨sees_shared_at cLay mem0 () rfl .acq _ (by decide), by decide_cbv⟩
 
 /-! ## The `await` of a shared atomic, instantiated -/
 
 /-- The oracle: every `await` sees the publication; nothing else is used. -/
 def cO : Orakel cD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- The lowering of `let x = g awaits {..}; <nothing>` (entry label 1, continuation 2, counters `0`, `3`). -/
 def cLow : Option (List Block × St) := lowerAwait cLay [] (0, 0) () awRest 1 2 ⟨0, 3⟩
@@ -100,7 +100,7 @@ theorem cLow_eq : cLow = some (cBlks, cSt) := by rfl
 /-- The module: an entry block (label 0), the lowered blocks, the continuation (label 2, a `ret`). -/
 def cMod : Modl := ⟨[], [⟨"f", [], .void, ⟨0, [], [], .jmp 1⟩ :: cBlks ++ [⟨2, [], [], .ret none⟩]⟩]⟩
 
-theorem cBlks_length : cBlks.length = 2 := by decide +kernel
+theorem cBlks_length : cBlks.length = 2 := by decide_cbv
 
 theorem cIn : InM cMod 0 cBlks := by
   intro b hb
@@ -147,7 +147,7 @@ theorem await_shared_zeuge :
     rfl awRest 1 2 ⟨0, 3⟩ cSt cBlks cLow_eq rfl cMod 0 cIn ⟨_, rfl, rfl⟩ ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩ cFn cCall
     wld5 ⟨7, by decide, by decide⟩ .nil mem0 (fun _ => none) [] none rep_free_witness trivial cMem_wf
     (fun x hx => absurd hx List.not_mem_nil)).2
-  simp only [execBlock, cO, if_true] at h
+  simp only [execBlock, Orakel.sichtbar, cO, if_true] at h
   obtain ⟨m', rs', hr, _⟩ := h
   exact ⟨m', rs', hr⟩
 

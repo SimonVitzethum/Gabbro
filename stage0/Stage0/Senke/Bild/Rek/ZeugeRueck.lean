@@ -139,7 +139,7 @@ theorem bild_rueck_zeuge :
       RufLaufG rkP t4O 0 0 M1 M3 ∧
       RandGL 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) rkFRest M3 σ1 Env.nil := by
   have hRuf : RufOkGleich rkP t4O 0 0 (fun _ => False) (rufAt rkP t4O 0 1) (TiefAlle rkP (fun _ => False) 1) :=
-    rufOk_gleich_tiefAlle leseblind_t4O 0 (fun _ => False) 1
+    rufOk_gleich_tiefAlle (leseblind_t4O.toP _) 0 (fun _ => False) 1
   obtain ⟨σ1, v, hG⟩ := rkG_ruf_kehrt zeugeWeltL
   have hex : execStmt t4O 0 (rufAt rkP t4O 0 1) rkRuf zeugeWeltL Env.nil = .ok σ1 Env.nil := by
     -- Keep the read world folded so the symbolic handler return matches.
@@ -161,7 +161,7 @@ theorem bild_rueck_zeuge :
       (.cons (.call t4G zeugeArgs (t4Hp t4F) rfl) rkFRest) (RufStartG rkP t4Sp zeugeInit) zeugeWeltL Env.nil :=
     ⟨zeugeWelt, hw, hG⟩
   -- the call as one step of the caller
-  obtain ⟨M', hl, hG'⟩ := randGL_schritt leseblind_t4O hRuf hs hex hGL
+  obtain ⟨M', hl, hG'⟩ := randGL_schritt leseblind_t4O.rs hRuf hs hex hGL
   -- into the callee
   obtain ⟨M1, σm, hl1, _, hG1⟩ := randGL_ruf_eintritt (P := rkP) (O := t4O) (passes := 0) hGL
   -- the callee's trivial decomposed prefix, and back to the caller
@@ -171,7 +171,7 @@ theorem bild_rueck_zeuge :
       (rufWelt rkP t4G zeugeWeltL [] zeugeArgs) (rufEnv t4G zeugeWeltL [] zeugeArgs Env.nil) (rkP.rumpf t4G)
       (rufWelt rkP t4G zeugeWeltL [] zeugeArgs) (rufEnv t4G zeugeWeltL [] zeugeArgs Env.nil) :=
     Zerlegung.halt _ _ _
-  obtain ⟨M3, hl3, hG3⟩ := randGL_rueck (j := 0) leseblind_t4O (rkG_tiefAlle _ 1) hGL hex hkC hG1
+  obtain ⟨M3, hl3, hG3⟩ := randGL_rueck (j := 0) (leseblind_t4O.toP rkP) (rkG_tiefAlle _ 1) hGL hex hkC hG1
   exact ⟨rkG_tiefAlle _ 1, rkG_nicht_tief _ 1, hRuf, σ1, M', M1, M3, hk, hl, hG', hl1, hl3, hG3⟩
 
 #print axioms rkG_nicht_tief

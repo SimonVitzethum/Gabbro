@@ -230,10 +230,10 @@ def divP : Programm divD where
 /-- The witness oracle: the never-axiom keeps the world, answers raw `0`
     (which never fits `never`); no registers, nothing visible. -/
 def divO : Orakel divD where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The start memory: both slots read `0`. -/
 def divSp0 : Speicher divD :=

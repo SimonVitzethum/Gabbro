@@ -13,8 +13,8 @@ variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
 public theorem dispatchArms_cost (calls : D.Fn → Nat) (passes limit : Nat)
     (cases : List (Option Ty))
     (bodies : (i : Fin cases.length) → Block D V l (ArmCtx Γ (cases.get i)) Λ Λ)
-    (bounded : ∀ i, kostenBlock calls passes (bodies i) ≤ limit) :
-    kostenArms calls passes (dispatchArms cases bodies) ≤ limit := by
+    (bounded : ∀ i, kostenBlock 0 calls passes (bodies i) ≤ limit) :
+    kostenArms 0 calls passes (dispatchArms cases bodies) ≤ limit := by
   revert bodies
   induction cases with
   | nil => intro _ _; exact Nat.zero_le _
@@ -24,8 +24,8 @@ public theorem dispatchArms_cost (calls : D.Fn → Nat) (passes limit : Nat)
     have remaining := ih
       (fun i => bodies ⟨i.val + 1, Nat.succ_lt_succ i.isLt⟩)
       (fun i => bounded ⟨i.val + 1, Nat.succ_lt_succ i.isLt⟩)
-    change max (kostenBlock calls passes (bodies ⟨0, Nat.zero_lt_succ cs.length⟩))
-      (kostenArms calls passes (dispatchArms cs
+    change max (kostenBlock 0 calls passes (bodies ⟨0, Nat.zero_lt_succ cs.length⟩))
+      (kostenArms 0 calls passes (dispatchArms cs
         (fun i => bodies ⟨i.val + 1, Nat.succ_lt_succ i.isLt⟩))) ≤ limit
     omega
 
@@ -35,12 +35,12 @@ public theorem stateStepBody_cost (types : TypeResolution) (f : AsyncFn)
     (state : Expr D Γ Λ (stateType types f))
     (bodies : (i : Fin (stateCases types f).length) →
       Block D V l (ArmCtx Γ ((stateCases types f).get i)) Λ Λ)
-    (bounded : ∀ i, kostenBlock calls passes (bodies i) ≤ limit) :
-    kostenBlock calls passes (stateStepBody types f state bodies) ≤
+    (bounded : ∀ i, kostenBlock 0 calls passes (bodies i) ≤ limit) :
+    kostenBlock 0 calls passes (stateStepBody types f state bodies) ≤
       4 + kostenExpr state + limit := by
   have bound := dispatchArms_cost calls passes limit (stateCases types f) bodies bounded
   change 2 + (1 + kostenExpr state) +
-    kostenArms calls passes (dispatchArms (stateCases types f) bodies) + 1 ≤ _
+    kostenArms 0 calls passes (dispatchArms (stateCases types f) bodies) + 1 ≤ _
   omega
 
 /-- The generated poll's finite G budget includes all retry checks AND its
@@ -52,11 +52,11 @@ public theorem pollBody_cost (types : TypeResolution) (f : AsyncFn)
     (bodies : (i : Fin (stateCases types f).length) →
       Block D V true (ArmCtx Γ ((stateCases types f).get i)) Λ Λ)
     (exhausted : Block D V l Γ Λ Λ)
-    (bounded : ∀ i, kostenBlock calls passes (bodies i) ≤ limit) :
-    kostenBlock calls passes (pollBody types f state finished bodies exhausted) ≤
+    (bounded : ∀ i, kostenBlock 0 calls passes (bodies i) ≤ limit) :
+    kostenBlock 0 calls passes (pollBody types f state finished bodies exhausted) ≤
       5 + (2 * f.body.length + 2) *
         (6 + kostenExpr state + limit + kostenExpr finished) +
-        kostenExpr finished + kostenBlock calls passes exhausted := by
+        kostenExpr finished + kostenBlock 0 calls passes exhausted := by
   have segment := stateStepBody_cost types f calls passes limit state bodies bounded
   have multiplied := Nat.mul_le_mul_left (2 * f.body.length + 2)
     (Nat.add_le_add_right (Nat.add_le_add_right segment (kostenExpr finished)) 2)
@@ -64,8 +64,8 @@ public theorem pollBody_cost (types : TypeResolution) (f : AsyncFn)
       6 + kostenExpr state + limit + kostenExpr finished := by omega
   rw [administrative] at multiplied
   change 2 + (2 * f.body.length + 2) *
-    (kostenBlock calls passes (stateStepBody types f state bodies) + kostenExpr finished + 2) +
-    (2 + kostenExpr finished + kostenBlock calls passes exhausted) + 1 ≤ _
+    (kostenBlock 0 calls passes (stateStepBody types f state bodies) + kostenExpr finished + 2) +
+    (2 + kostenExpr finished + kostenBlock 0 calls passes exhausted) + 1 ≤ _
   omega
 
 /-- Preserve the canonical cost engine's call gate, including its refusal of

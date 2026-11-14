@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Generic.Closure
+import Lean.Elab.Tactic.Cbv
 import all Grammatik.Parser.Elab.Generic.Closure
 import all Grammatik.Parser.Elab.Generic.Substitution
 import all Grammatik.Parser.Elab.Instantiation.Names
@@ -7,6 +8,8 @@ import all Init.Data.String.Basic
 import all Init.Data.String.Defs
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
+
+attribute [local cbv_eval] strEq_apply_eq_decide
 
  theorem two_instances_zeuge :
     instanceClosure (fun _ => .ok []) 2
@@ -20,7 +23,7 @@ namespace Gabbro.Grammatik.Parser.Generic
 
  theorem substituted_bodies_zeuge :
     surfaceType [("T", .atom "u32")] [] (.atom "T") = .atom "u32" ∧
-    surfaceType [("T", .atom "bool")] [] (.atom "T") = .atom "bool" := ⟨rfl, rfl⟩
+    surfaceType [("T", .atom "bool")] [] (.atom "T") = .atom "bool" := by cbv
 
  theorem collision_refused_zeuge :
     checkInstanceNames [instanceName ⟨"identity", ["u32"]⟩]

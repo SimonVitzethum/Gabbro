@@ -109,7 +109,10 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
         pure (head.1 ++ tail.1, max (max head.2 tail.2) (d + valueWords (.arr τ (n + 1))))) := by rfl
 
 @[lowE_eqs] theorem lowE_arrGet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) :
-    lowE (currentOld := currentOld) L (reserved := reserved) (.arrGet a i) d = (if n = 1 then lowE (currentOld := currentOld) L (reserved := reserved) a d else
+    lowE (currentOld := currentOld) L (reserved := reserved) (.arrGet a i) d = (if storedExpr a then
+      arrReadL τ n d (lowStorage (currentOld := currentOld) L (reserved := reserved) a (d + valueWords τ))
+        (lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords τ + 1))
+    else if n = 1 then lowE (currentOld := currentOld) L (reserved := reserved) a d else
       arrGetL τ n d (lowE (currentOld := currentOld) L (reserved := reserved) a d)
         (lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (.arr τ n)))) := by rfl
 

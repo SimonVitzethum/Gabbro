@@ -16,13 +16,14 @@ set_option linter.unusedSectionVars false
 variable {D : Deklaration} {O : Orakel D} {passes : Nat} {Er : Fehlermarke D → Prop}
   {R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {V : Vertrag D}
 
-theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ (b : Block D V l Γ Λ Λ'), BlockKinder O passes Er R₁ R₂ b → BlockLG O passes Er R₁ R₂ b
-  | .nil, _ => by
+theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : LeseblindRS O) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    ∀ (b : Block D V l Γ Λ Λ'),
+      (b.axFrei = true ∨ LeseblindW O) → BlockKinder O passes Er R₁ R₂ b → BlockLG O passes Er R₁ R₂ b
+  | .nil, _, _ => by
       intro σ₁ σ₂ ρ hσ
       simp only [execBlock]
       exact .ok hσ
-  | .cons s _, hk => by
+  | .cons s _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       simp only [execBlock]
@@ -39,13 +40,13 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bind e _, hk => by
+  | .bind e _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execBlock]
       rw [h'.wert' e ρ]
       exact (hk _ _ _ h').schrumpf
-  | .bindCall f args _ _ hr _, hk => by
+  | .bindCall f args _ _ hr _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execBlock]
@@ -60,7 +61,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallInd p args _ _ hr _, hk => by
+  | .bindCallInd p args _ _ hr _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (p.orte ++ args.orte)
       simp only [execBlock]
@@ -79,7 +80,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallElse f args _ _ _ _ _, hk => by
+  | .bindCallElse f args _ _ _ _ _, _, hk => by
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
@@ -95,7 +96,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       | hardware e => exact .hardware e
       | frueh hE => exact .frueh hE
       | fruehH hE => exact .fruehH hE
-  | .bindCallIndElse p args he _ hr _ _, hk => by
+  | .bindCallIndElse p args he _ hr _ _, _, hk => by
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (p.orte ++ args.orte)
@@ -105,12 +106,13 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
         exact (ihr _ _ _ hw).schrumpf
       · intro _ _ _ hw
         exact (ihe _ _ _ hw).schrumpf.zuAusgang
-  | .bindAxiom a args _ _ _ _ _ _, hk => by
+  | .bindAxiom a args _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execBlock]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwort hO a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
+      have hp := paarLG_axiomAntwort hW a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwort O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwort O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
       cases hp with
@@ -118,13 +120,14 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
         cases x with
         | none => exact .hardware _
         | some _ => exact (hk _ _ _ hw).schrumpf
-  | .bindAxiomElse a args _ _ _ _ _ _ _ _, hk => by
+  | .bindAxiomElse a args _ _ _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execBlock]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwortSonst hO a h'
+      have hp := paarLG_axiomAntwortSonst hW a h'
         (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwortSonst O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwortSonst O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
@@ -134,12 +137,13 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
         · exact .hardware _
         · exact (ihr _ _ _ hw).schrumpf
         · exact (ihe _ _ _ hw).schrumpf.zuAusgang
-  | .bindAxiomOpt e a args _ _ _ _ _, hk => by
+  | .bindAxiomOpt e a args _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execBlock]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwort hO a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
+      have hp := paarLG_axiomAntwort hW a h' (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwort O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwort O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
       cases hp with
@@ -147,13 +151,14 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
         cases x with
         | none => exact .hardware _
         | some _ => exact (hk _ _ _ hw).weiterOpt e
-  | .bindAxiomOptElse e a args _ _ _ _ _ _ _, hk => by
+  | .bindAxiomOptElse e a args _ _ _ _ _ _ _, hX, hk => by
+      have hW : LeseblindW O := hX.resolve_left Bool.false_ne_true
       obtain ⟨ihe, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ args.orte
       simp only [execBlock]
       rw [h'.werte args ρ]
-      have hp := paarLG_axiomAntwortSonst hO a h'
+      have hp := paarLG_axiomAntwortSonst hW a h'
         (evalArgs (σ₂.lese Λ args.orte) args (σ₂.lese Λ args.orte) ρ)
       generalize axiomAntwortSonst O a (σ₁.lese Λ args.orte) _ = A at hp ⊢
       generalize axiomAntwortSonst O a (σ₂.lese Λ args.orte) _ = B at hp ⊢
@@ -163,7 +168,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
         · exact .hardware _
         · exact (ihr _ _ _ hw).weiterOpt e
         · exact (ihe _ _ _ hw).schrumpf.zuAusgang
-  | .regRead r _ _, hk => by
+  | .regRead r _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inl r))
       simp only [execBlock]
@@ -171,7 +176,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ₂.fragt (.inr (.inl r)))) with
       | none => exact .hardware _
       | some v => exact AusLG.ite ((hk _ _ (.cons v ρ) hf).schrumpf) (.hardware _)
-  | .regReadElse r _ zusage _ _, hk => by
+  | .regReadElse r _ zusage _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inl r))
@@ -183,20 +188,20 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
           have h'' := hf.lese Λ zusage.orte
           exact AusLG.ite_eq (congrArg wahr? (h''.wert' zusage (.cons v ρ)))
             ((ihr _ _ (.cons v ρ) h'').schrumpf) (ihs _ _ ρ h'').zuAusgang
-  | .awaits g _ _ _ _ _, hk => by
+  | .awaits g _ _ _ _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have hf := hσ.fragt (.inr (.inr g))
       have h'' := hf.lese Λ [.inr g]
       simp only [execBlock]
       rw [hO.sichtbar g _ _ hf, h''.globs]
       exact AusLG.ite ((hk _ _ _ h'').schrumpf) (.hardware _)
-  | .exchange g neu _ _ _, hk => by
+  | .exchange g neu _ _ _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (.inr g :: neu.orte)
       simp only [execBlock]
       rw [h'.globs, h'.wert' neu]
       exact (hk _ _ _ (h'.schreibGlob _ _ _)).schrumpf
-  | .narrow e lo hi _ _, hk => by
+  | .narrow e lo hi _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
@@ -213,7 +218,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
             (eval (σ₂.lese Λ e.orte) e (σ₂.lese Λ e.orte) ρ).n ≤ hi) := hn ▸ h₁
         simp only [execBlock, dif_neg h₁, dif_neg h₂]
         exact (ihs _ _ ρ h').zuAusgang
-  | .narrowRequired e lo hi _, hk => by
+  | .narrowRequired e lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       have hn := congrArg Zahl.n (h'.wert' e ρ)
@@ -229,14 +234,14 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
             (eval (σ₂.lese Λ e.orte) e (σ₂.lese Λ e.orte) ρ).n ≤ hi) := hn ▸ h₁
         simp only [execBlock, dif_neg h₁, dif_neg h₂]
         exact .logik _
-  | .check c _ _, hk => by
+  | .check c _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ c.orte
       simp only [execBlock]
       rw [h'.wert' c ρ]
       exact AusLG.ite (ihr _ _ ρ h') (ihs _ _ ρ h').zuAusgang
-  | .float _ a b lo hi _, hk => by
+  | .float _ a b lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ (a.orte ++ b.orte)
       simp only [execBlock]
@@ -245,14 +250,14 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ h').schrumpf
-  | .floatLit q lo hi _, hk => by
+  | .floatLit q lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       simp only [execBlock]
       generalize gleitPasst lo hi (bruch q) = x
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ hσ).schrumpf
-  | .floatOf e lo hi _, hk => by
+  | .floatOf e lo hi _, _, hk => by
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execBlock]
@@ -261,7 +266,7 @@ theorem block_lg (hR : HandlerLG Er R₁ R₂) (hO : Leseblind O) {l : Bool} {Γ
       cases x with
       | none => exact .logik _
       | some _ => exact (hk _ _ _ h').schrumpf
-  | .floatNarrow e lo hi _ _, hk => by
+  | .floatNarrow e lo hi _ _, _, hk => by
       obtain ⟨ihs, ihr⟩ := hk
       intro σ₁ σ₂ ρ hσ
       have h' := hσ.lese Λ e.orte

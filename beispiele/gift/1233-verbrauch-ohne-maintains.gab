@@ -19,7 +19,7 @@ table Kappenraum count NSLOTS {
         erstes_kind : option index into Kappenraum,
         naechstes   : option index into Kappenraum,
     }
-    invariant frei_ohne_elter cost O(n) runs offline :
+    invariant frei_ohne_elter :
         forall s in slots of Kappenraum :
             !Kappenraum.slots[s].benutzt => Kappenraum.slots[s].elter == None;
 }

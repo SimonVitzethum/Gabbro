@@ -4,6 +4,7 @@ public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil3
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
+public import Grammatik.Kern.Semantik.Semantik.T1.Lese
 
 @[expose] public section
 
@@ -22,16 +23,27 @@ variable {V : Vertrag D}
 def AntwortLeer (D : Deklaration) (e : Option Ty) : Prop :=
   ∀ (z : Int → Option D.Fn) (n : Int), einpassenErg z e n = Option.none
 
-/-- (H1) Was ein Axiom tut: eine neue Welt und eine rohe Antwort. -/
+/-- (H1) **What the outside does**: a foreign body's effect and raw answer, a register's raw answer, the
+    visibility of a publication, the loaded image.
+
+    **Read-blind by construction** (2026-11-13). Every answer is given from the world WITHOUT its read events
+    (`World.ohneLese`, T1/Lese.lean): a read is ghost bookkeeping of the thread that no physical environment can
+    observe, so the class of oracles is the class of environments blind to it. A foreign body answers the world it
+    leaves as a memory and the list of events it adds (the trace of the answered world); machine G puts those events
+    on top of the asking world's whole trace (`Orakel.wirkt`), so the thread's reads stay recorded and the outside
+    cannot unwrite the thread's past. The machine consults only the derived `Orakel.wirkt`, `Orakel.regLies`,
+    `Orakel.sichtbar`; the fields are what an environment provides. -/
 structure Orakel (D : Deklaration) where
-  wirkt : ∀ a : D.Ax, World D → Env D (D.aparams a) → World D × Int
-  /-- Eine Registerlesung: die Maschine antwortet roh. -/
-  regLies : D.Reg → World D → Int
+  /-- A foreign body, answered from the world without reads: the memory it leaves and, as that world's trace, the
+      events it adds; and the raw answer. -/
+  wirktL : ∀ a : D.Ax, World D → Env D (D.aparams a) → World D × Int
+  /-- Eine Registerlesung: die Maschine antwortet roh (aus der Welt ohne Lesungen). -/
+  regLiesL : D.Reg → World D → Int
   /-- Ein Registerschreiben: das Geraet ist nicht Teil der Welt; die Welt bleibt. -/
   regSchreib : D.Reg → Int → Unit
   /-- (A10) Ob ein `awaits` auf `g` die letzte Veroeffentlichung SIEHT -- das Speichermodell
-      der Maschine, als Antwort. -/
-  sichtbar : D.Glob → World D → Bool
+      der Maschine, als Antwort (aus der Welt ohne Lesungen). -/
+  sichtbarL : D.Glob → World D → Bool
   /-- **The loaded image** (G1 repair, 2026-09-15): the function at a code address, for a
       raw answer of `fnptr` type (`zeigerPasst`). Which address a function has is the
       linker's and loader's, not the program's, so it is the machine's answer like every
@@ -39,6 +51,57 @@ structure Orakel (D : Deklaration) where
       some image's answer. Default: no function at any address (a witness oracle that
       answers no pointer). -/
   zeiger : Int → Option D.Fn := fun _ => Option.none
+
+/-- **A foreign call as machine G sees it**: the oracle answers the world without reads; the answered memory, and the
+    answered events on top of the asking world's trace. -/
+def Orakel.wirkt (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) : World D × Int :=
+  ((O.wirktL a σ.ohneLese ρ).1.auf σ, (O.wirktL a σ.ohneLese ρ).2)
+
+/-- **A register read as machine G sees it**: answered from the world without reads. -/
+def Orakel.regLies (O : Orakel D) (r : D.Reg) (σ : World D) : Int := O.regLiesL r σ.ohneLese
+
+/-- **A visibility question as machine G sees it**: answered from the world without reads. -/
+def Orakel.sichtbar (O : Orakel D) (g : D.Glob) (σ : World D) : Bool := O.sichtbarL g σ.ohneLese
+
+/-- The answer of a foreign call depends on the asking world only through its erasure. -/
+theorem Orakel.wirkt_snd (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    (O.wirkt a σ ρ).2 = (O.wirktL a σ.ohneLese ρ).2 := rfl
+
+/-- The answered world: the oracle's memory, its events on top of the asking world's trace. -/
+theorem Orakel.wirkt_fst (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    (O.wirkt a σ ρ).1 = (O.wirktL a σ.ohneLese ρ).1.auf σ := rfl
+
+/-- The trace after a foreign call: the asking world's trace, the answered events on top. -/
+theorem Orakel.wirkt_spur (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    (O.wirkt a σ ρ).1.spur = (O.wirktL a σ.ohneLese ρ).1.spur ++ σ.spur := rfl
+
+/-- **Read-blindness of a foreign call**: two worlds with one erasure get the same answer and the same memory. -/
+theorem Orakel.wirkt_blind (O : Orakel D) (a : D.Ax) {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese)
+    (ρ : Env D (D.aparams a)) :
+    (O.wirkt a σ ρ).2 = (O.wirkt a σ' ρ).2 ∧ (O.wirkt a σ ρ).1.slots = (O.wirkt a σ' ρ).1.slots ∧
+      (O.wirkt a σ ρ).1.globs = (O.wirkt a σ' ρ).1.globs ∧
+      ∃ neu, (O.wirkt a σ ρ).1.spur = neu ++ σ.spur ∧ (O.wirkt a σ' ρ).1.spur = neu ++ σ'.spur := by
+  refine ⟨?_, ?_, ?_, (O.wirktL a σ.ohneLese ρ).1.spur, rfl, ?_⟩
+  · show (O.wirktL a σ.ohneLese ρ).2 = (O.wirktL a σ'.ohneLese ρ).2
+    rw [h]
+  · show (O.wirktL a σ.ohneLese ρ).1.slots = (O.wirktL a σ'.ohneLese ρ).1.slots
+    rw [h]
+  · show (O.wirktL a σ.ohneLese ρ).1.globs = (O.wirktL a σ'.ohneLese ρ).1.globs
+    rw [h]
+  · show (O.wirktL a σ'.ohneLese ρ).1.spur ++ σ'.spur = (O.wirktL a σ.ohneLese ρ).1.spur ++ σ'.spur
+    rw [h]
+
+/-- **Read-blindness of a register read.** -/
+theorem Orakel.regLies_blind (O : Orakel D) (r : D.Reg) {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) :
+    O.regLies r σ = O.regLies r σ' := by
+  show O.regLiesL r σ.ohneLese = O.regLiesL r σ'.ohneLese
+  rw [h]
+
+/-- **Read-blindness of a visibility answer.** -/
+theorem Orakel.sichtbar_blind (O : Orakel D) (g : D.Glob) {σ σ' : World D} (h : σ.ohneLese = σ'.ohneLese) :
+    O.sichtbar g σ = O.sichtbar g σ' := by
+  show O.sichtbarL g σ.ohneLese = O.sichtbarL g σ'.ohneLese
+  rw [h]
 
 /-! ## 5. Die Bedeutung einer Anweisung -/
 

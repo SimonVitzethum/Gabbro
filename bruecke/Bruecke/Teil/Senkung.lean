@@ -71,7 +71,7 @@ theorem post_iff_teil {P : Programm (declOf u)} (G : GesenktC u C P) (f : Fin u.
     intro h
     rw [nthVal_heq (ensCtx_eq u f) E₀ E hE]
     exact ergValOf_nth _ v ρ (by rw [isSome_erg f]; exact h)
-  have hcl := ensList_iff hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).gives cs e0
+  have hcl := ensList_iff (er := (fnAt u f).ergTy) hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).gives cs e0
     hO hcs he0
   have hev : eval σ₀ (P.ensures f) σ' E = eval σ₀ e0 σ' E₀ :=
     eval_heq2 (ensCtx_eq u f).symm rfl _ _ hPe E E₀ hE.symm σ₀ σ'

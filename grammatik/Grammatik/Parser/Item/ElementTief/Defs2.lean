@@ -132,45 +132,20 @@ def parseTrans (f : Nat) (toks : List Token) :
               | .error e => .error e
               | .ok (tr, r) => .ok (tr, r)
 
-/-- The `O` of `cost O(e)`: a name in both lexers (`kw.rs`
-    has no `O` keyword either), so either token shape reads. -/
-def nimmKostenO : List Token → Except String (List Token)
-  | t :: rest => match nameText t with
-    | some s => if strEq s "O" then .ok rest else .error "cost O expected"
-    | none => .error "cost O expected"
-  | [] => .error "cost O expected"
-
+/-- The predicate and terminator of an invariant. -/
 def parseInvRest (f : Nat) (toks : List Token) :
-    Except String ((Option String × SExpr) × List Token) :=
+    Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "by" then match nimmBisZeichen ":" rest 0 with
-        | .error e => .error e
-        | .ok (h, r1) => match fordereZeichen ":" r1 with
-          | .error e => .error e
-          | .ok r2 => match parsePred f r2 with
-            | .error e => .error e
-            | .ok (p, r3) => match fordereZeichen ";" r3 with
-              | .error e => .error e
-              | .ok r => .ok (((some h, p)), r)
-      else match fordereZeichen ":" toks with
-        | .error e => .error e
-        | .ok r1 => match parsePred f r1 with
-          | .error e => .error e
-          | .ok (p, r2) => match fordereZeichen ";" r2 with
-            | .error e => .error e
-            | .ok r => .ok (((none, p)), r)
-    | _ => match fordereZeichen ":" toks with
+  | f + 1 => match fordereZeichen ":" toks with
+    | .error e => .error e
+    | .ok r1 => match parsePred f r1 with
       | .error e => .error e
-      | .ok r1 => match parsePred f r1 with
+      | .ok (p, r2) => match fordereZeichen ";" r2 with
         | .error e => .error e
-        | .ok (p, r2) => match fordereZeichen ";" r2 with
-          | .error e => .error e
-          | .ok r => .ok (((none, p)), r)
+        | .ok r => .ok (p, r)
 
-/-- One invariant: `invariant n cost O(e) runs m [by …] : p ;`. -/
+/-- One invariant: `invariant n : p ;`. -/
 def parseGruppenInv (f : Nat) (toks : List Token) :
     Except String (SGruppenInv × List Token) :=
   match f with
@@ -179,29 +154,11 @@ def parseGruppenInv (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r1 => match nimmName r1 with
       | .error e => .error e
-      | .ok (n, r2) => match nimmWort "cost" r2 with
+      | .ok (n, r2) => match parseInvRest f r2 with
         | .error e => .error e
-        | .ok r3 => match nimmKostenO r3 with
-          | .error e => .error e
-          | .ok r4 => match fordereZeichen "(" r4 with
-            | .error e => .error e
-            | .ok r5 => match parseOr f r5 with
-              | .error e => .error e
-              | .ok (c, r6) => match fordereZeichen ")" r6 with
-                | .error e => .error e
-                | .ok r7 => match nimmWort "runs" r7 with
-                  | .error e => .error e
-                  | .ok r8 => match r8 with
-                    | .wort m :: r9 =>
-                      if strEq m "online" || strEq m "offline" then
-                        match parseInvRest f r9 with
-                        | .error e => .error e
-                        | .ok ((proof, p), r) => .ok
-                          ({ name := n, kosten := c,
-                             online := strEq m "online", proof := proof,
-                             pred := p }, r)
-                      else .error "runs expected"
-                    | _ => .error "runs expected"
+        | .ok (p, r) => .ok ({
+            name := n
+            pred := p }, r)
 
 /-- A `{` … `}` place list (`protects`, `measures`, `reclaims`
     tails; trailing commas allowed). -/

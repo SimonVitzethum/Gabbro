@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Spec.Resolve
 public import Grammatik.Parser.Namen.References
 public import Grammatik.Parser.Lex.Tafel
@@ -99,6 +100,7 @@ def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
         if w.resolveSpecs then throw "dyn.unexpanded-type"
         return .dyn n raw
       | .ptr s r t => do return .ptr s r (← w.type locals f t)
+      | .tuple types => return .tuple (← types.mapM (w.type locals f))
       | .range t lo hi b => do return .range (← w.type locals f t) (← w.expr locals f lo) (← w.expr locals f hi) b
       | .array t n => do return .array (← w.type locals f t) (← w.expr locals f n)
       | .wrap t => do return .wrap (← w.type locals f t)
@@ -107,6 +109,7 @@ def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
       | .entry ps r => do return .entry ps (← r.mapM (w.type locals f))
       | t => do return t)
     w.typeRewrite t
+termination_by structural fuel => fuel
 
 /-- Even a named type reaches the configured type rewrite or refusal. -/
 theorem Walk.type_atom (w : Walk) (locals : Locals) (fuel : Nat) (name : String) :
@@ -143,7 +146,11 @@ def bindings (U : Umfeld) (locals : Locals)
     (infer : Locals → SExpr → Option STyp) : SAnw → Locals
   | .bind _ n t e | .bindQ _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
     match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferTypeMit U locals 128 e)) with
-    | some ty => [(n, ty)]
+    | some ty => match tuplePatternNames n with
+      | none => [(n, ty)]
+      | some names => match canonicalType U.items 128 ty with
+        | .tuple elements => (names.zip elements).filter (fun entry => !strEq entry.1 "_")
+        | _ => []
     | none => []
   | .await n t _ _ | .swap n t _ _ => (t.map fun ty => [(n, ty)]).getD []
   | .alloc _ n t _ _ _ | .allocVon _ n t _ => (t.map fun ty => [(n, ty)]).getD []
@@ -244,6 +251,10 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
         | _ => locals
       return .each n (← start.mapM ex) kind (← ex subject) mode (← w.raw raw locals)
         (← inv.mapM (w.expr inner f)) (← w.statement inner f body)
+    | .boundedLoop raw body =>
+      let raw ← w.raw raw locals
+      let header ← mapBoundedHeaderM ex pure raw
+      return .boundedLoop header (← w.statement (boundedLoopLocals raw ++ locals) f body)
     | .retry raw body => return .retry (← w.raw raw locals) (← st body)
     | .loop raw body => return .loop (← w.raw raw locals) (← st body)
     | .waive ns body => return .waive ns (← st body)

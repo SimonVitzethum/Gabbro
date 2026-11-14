@@ -35,12 +35,14 @@ def containsDynamic (items : List SItemTief) (closed : List Closed) : Nat → ST
   | f + 1, t =>
     if (lookup items closed 128 t).isSome then true else
     match t with
+    | .tuple elements => elements.any (containsDynamic items closed f)
     | .array element _ => containsDynamic items closed f element
     | .atom n =>
       match items.find? (fun | .typeT _ name [] [] (some _) => strEq name n | _ => false) with
       | some (.typeT _ _ _ _ (some body)) => containsDynamic items closed f body
       | _ => false
     | _ => false
+termination_by structural fuel => fuel
 
 def checkCall (items : List SItemTief) (closed : List Closed) (locals : Locals)
     (name : String) (args : List SExpr) : Except String Unit := do

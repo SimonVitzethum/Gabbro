@@ -80,19 +80,21 @@ self-cycle with decreases still compiles and is caught only by the runtime depth
 guard (stop 105).
 
 C05 -- group invariants over tables and globals
-form | result | evidence
-invariant over a table, writer restores, normal return | [N] refused for all: source export: invariant cost/runs/by duties lack a checked source binding (export gate ExportMetadata.check, Export/ExportMetadata.lean:57-61, reason metadataReason :33-40) | c05-table-inv
-group invariant over two tables, one lock | [N] same gate | c05-group-one-lock
-group invariant over two tables, two locks | [N] same gate | c05-group-two-locks
-group over a table and a global (parse-level: globals ARE accepted as members) | [N] same gate | c05-group-global
-read-only observer under a table invariant (gate fires with no writer at all: item-level) | [N] same gate | c05-readonly
-writer omitting one lock (gate fires first; beneath it the checker reports: access without held guard, i.e. U003 is alive) | [N] same gate | c05-missing-lock
-group invariant reading an undeclared global (gate fires first; the undeclared-read check is unreachable) | [N] same gate | c05-undeclared-read
-Missing AT THE COMPILER (user order): (1) the export gate refuses every table
-with an invariant part (.tInv) and every group (.groupT): no C05 form compiles,
-including touch-only-global, restore on normal return, and restore on reason
-return -- none of these are reachable; (2) behind the gate, the Stage-0 return
-epilogue (lowFun gate) is the next wall per the design.
+C05 surface migration (2026-11-13): EXPECTATIONS FROM SOURCE INSPECTION ONLY.
+No compiler, runner or Lean check was run by the implementation sub-agent.
+The old item-level invariant metadata refusal has been removed. The unchanged
+writer-lock and declared-read checks determine the new expectations below.
+form | expected result, pending lead re-measurement | evidence
+invariant over a table, main writes under a block lock only | writer lacks signature-held invariant locks | c05-table-inv
+group invariant over two tables, main holds one lock in a block only | same writer-lock refusal | c05-group-one-lock
+group invariant over two tables, main holds two locks in blocks only | same writer-lock refusal | c05-group-two-locks
+group over a table and a global, main holds the table lock in a block only | same writer-lock refusal | c05-group-global
+read-only observer under a table invariant | result 0 | c05-readonly
+writer omitting one carrier lock | access without held guard | c05-missing-lock
+group invariant reading an undeclared global | an invariant reads a carrier it does not declare | c05-undeclared-read
+The sources only drop invariant clauses. In particular, they do not move locks
+into writer signatures to change admission. Return epilogues remain unchanged;
+ensures fail with stop 102 and owed invariant predicates with stop 103.
 
 C04 -- transition with requires/effects and dynamic stages
 form | result | evidence
@@ -141,6 +143,6 @@ reason variable into the error channel. Untested: record payloads (need C01
 products, a round-3 package).
 
 Refusing functions most forms hit (blockers):
-1. ExportMetadata.check / metadataReason, grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean:33-40 + :57-61 (reported via stage0/Stage0/Diagnose.lean:177) -- blocks all 7 C05 forms.
+1. C05 now reaches the existing writer-lock and declared-read checks; re-measure the migrated sources and expectations before reporting compiler coverage.
 2. uWhys, grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil12.lean:126-139 (refusal at :133) -- blocks the whole open-reason surface (C03).
 3. Value-position count (uWertBody, grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil5Rest.lean:24-55, falls to "value without G form" at :46/:52) together with arrayCarrier (grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil4.lean:285-288, "table unknown: #array-elements:4") -- blocks count composition and elems domains (C13).

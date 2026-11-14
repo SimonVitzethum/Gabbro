@@ -15,7 +15,7 @@ variable {D : Deklaration}
 def kostenPasst [DecidableEq D.Fn] (P : Programm D) (passes : Nat) (decl : D.Fn → Nat)
     (fs : List D.Fn) : Bool :=
   fs.all fun g =>
-    decide (kostenEnd decl passes (P.rumpf g) ≤ decl g) &&
+    decide (kostenEnd (kostenEpilog P g) decl passes (P.rumpf g) ≤ decl g) &&
       rufeE (fun h => fs.contains h) (fun _ => false) true (P.rumpf g)
 
 /-- **TARGET 2 -- `kosten_passt_deklaration`.** If the decidable check
@@ -36,7 +36,7 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
     segZaehle run f ≤ decl g := by
   have hall := List.all_eq_true.mp hK
   have hfs : ∀ h, h ∈ fs →
-      kostenEnd decl passes (P.rumpf h) ≤ decl h ∧
+      kostenEnd (kostenEpilog P h) decl passes (P.rumpf h) ≤ decl h ∧
         rufeE (fun h => fs.contains h) (fun _ => false) true (P.rumpf h) = true := by
     intro h hh
     have := hall h hh
@@ -64,7 +64,7 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
     over the Lean syntax (for the forms where the Lean term determines it,
     `spiegelS`), `zusatz` the remainder, and
 
-      `kostenStmt c pa s ≤ kostenKS c s + zusatzS s`   (`spiegel_stmt`,
+      `kostenStmt ep c pa s ≤ kostenKS c s + zusatzS ep s`   (`spiegel_stmt`,
       likewise for blocks and end blocks), with the SAME callee table `c`.
 
     `zusatz` is, form by form:
@@ -77,7 +77,7 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
     * and the parts the checker does not count at all (FINDINGS below):
       the index expressions of an assignment's TARGET place (F1), the
       `requires` predicate of a failable register read (F4), the subject
-      of a `narrow` (F5), a `traverse` invariant (F6).
+      of a `narrow` (F5), a `traverse` invariant (F6), and return predicates (F10).
 
     FINDINGS for the transfer phase (kosten.rs vs. the Lean model):
     * F1 -- `StmtArt::Zuweisung` counts `1 + ausdruck(wert)` and never
@@ -109,6 +109,9 @@ theorem kosten_passt_deklaration [DecidableEq D.Fn] (P : Programm D) (O : Orakel
     * F9 -- constant expressions cost `0` in kosten.rs (`konst_wert`);
       `kostenExpr` counts their operators. G evaluates every expression in
       the step that uses it, so this only makes the Lean number larger.
+    * F10 -- the historical checker number omits `ensures` and owed invariant
+      predicates. `kostenPasst` includes them; `zusatz` carries them when
+      comparing the G cost with that historical number.
     Not mirrored (no checker number determined by the Lean term): indirect
     calls (F8), `retry` (F2), `forever` (F3), `transition`, `advances`,
     `retires`. Axiom calls are outside `spiegelS` (their checker number is a

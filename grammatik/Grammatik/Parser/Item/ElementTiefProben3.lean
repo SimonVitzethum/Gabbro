@@ -63,18 +63,18 @@ def tt30 : List Token :=
   [.wort "table", .ident "T", .wort "count", .num 4,
    .zeichen "{", .wort "slot", .zeichen "{", .ident "b",
    .zeichen ":", .wort "bool", .zeichen ",", .zeichen "}",
-   .wort "invariant", .ident "inv", .wort "cost", .ident "O",
-   .zeichen "(", .num 1, .zeichen ")", .wort "runs",
-   .wort "online", .zeichen ":", .ident "T", .zeichen ".",
+   .wort "invariant", .ident "inv", .zeichen ":", .ident "T", .zeichen ".",
    .wort "slots", .zeichen "[", .ident "i", .zeichen "]",
    .zeichen ".", .ident "b", .zeichen ";", .zeichen "}",
    .ende]
 theorem t30_lex :
-    lex "table T count 4 { slot { b : bool, } invariant inv cost O(1) runs online : T.slots[i].b; }" =
+    lex "table T count 4 { slot { b : bool, } invariant inv : T.slots[i].b; }" =
       .ok tt30 := by
   decide
 theorem t30 : beqTopTief (parseTopTief tt30)
-    (.ok [.tableT "T" .none (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv { name := "inv", kosten := .lit 1, online := true, proof := .none, pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
+    (.ok [.tableT "T" .none (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv {
+      name := "inv"
+      pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
   decide
 -- The `invariant` member shape is beispiele/0001-tabelle.gab (the
 -- header row); the `pred` is synthetic and quantifier-free --
@@ -124,20 +124,34 @@ def tt34 : List Token :=
   [.wort "group", .ident "Zustellung", .wort "over", .zeichen "{",
    .ident "Endpunkte", .zeichen ",", .ident "Faeden",
    .zeichen "}", .zeichen "{", .wort "invariant",
-   .ident "wartende_haben_grund", .wort "cost", .ident "O",
-   .zeichen "(", .ident "n", .zeichen ")", .wort "runs",
-   .wort "offline", .zeichen ":", .ident "Faeden",
+   .ident "wartende_haben_grund", .zeichen ":", .ident "Faeden",
    .zeichen ".", .wort "slots", .zeichen "[",
    .ident "wartende", .zeichen "]", .zeichen ".",
    .ident "gruende", .zeichen ">", .num 0, .zeichen ";",
    .zeichen "}", .ende]
 theorem t34_lex :
-    lex "group Zustellung over { Endpunkte, Faeden } { invariant wartende_haben_grund cost O(n) runs offline : Faeden.slots[wartende].gruende > 0; }" =
+    lex "group Zustellung over { Endpunkte, Faeden } { invariant wartende_haben_grund : Faeden.slots[wartende].gruende > 0; }" =
       .ok tt34 := by
   decide
 theorem t34 : beqTopTief (parseTopTief tt34)
-    (.ok [.groupT "Zustellung" ["Endpunkte", "Faeden"] [{ name := "wartende_haben_grund", kosten := (.variable "n"), online := false, proof := .none, pred := (.bin ">" (.field (.index (.field (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
+    (.ok [.groupT "Zustellung" ["Endpunkte", "Faeden"] [{
+      name := "wartende_haben_grund"
+      pred := (.bin ">" (.field (.index (.field (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
   decide
+
+/-- Removed invariant clauses fail at the colon, including without a preceding cost clause. -/
+theorem invariant_clauses_refused_zeuge :
+    parseGruppenInv 100 [.wort "invariant", .ident "I", .ident "cost", .ident "O",
+      .zeichen "(", .num 1, .zeichen ")", .zeichen ":", .wort "true", .zeichen ";"] =
+      .error "wanted :" ∧
+    parseGruppenInv 100 [.wort "invariant", .ident "I", .ident "runs", .ident "online",
+      .zeichen ":", .wort "true", .zeichen ";"] = .error "wanted :" ∧
+    parseGruppenInv 100 [.wort "invariant", .ident "I", .ident "runs", .ident "offline",
+      .zeichen ":", .wort "true", .zeichen ";"] = .error "wanted :" ∧
+    parseGruppenInv 100 [.wort "invariant", .ident "I", .wort "by", .wort "induction",
+      .wort "over", .ident "T", .zeichen ":", .wort "true", .zeichen ";"] =
+      .error "wanted :" := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
 -- The `group` frame is beispiele/0017-gruppe-ueber-zwei-sperren.gab:42-47;
 -- the `pred` is simplified (the corpus body quantifies -- see CUTS).
 def tt35 : List Token :=

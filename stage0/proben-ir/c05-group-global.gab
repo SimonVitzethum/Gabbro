@@ -4,7 +4,7 @@ table A count 2 { slot { v : u8, } }
 static mut g : u8 = 0;
 lock L protects { A } rank 0;
 group G over { A, g } {
-    invariant same cost O(1) runs online : forall i in slots of A : A.slots[i].v == g;
+    invariant same : forall i in slots of A : A.slots[i].v == g;
 }
 impl fn main() -> u32 in 0 .. 255 effects { reads A.slots, reads g, writes A.slots, writes g, locks L } {
     locks L {

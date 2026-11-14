@@ -15,7 +15,7 @@ section Schritte
 variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : SperrInv D}
   {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D} {zyk : D.Fn → D.Fn → Bool}
 /-- **One step and the logged reason returns** (as `invGrundLog_schritt`). -/
-theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hIG : ∀ f, InvGutGrundA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
@@ -121,7 +121,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
     | _ => ohneGrundA
 
 /-- **A replayed head at a `return` meets `ensures` and its owed invariants** (as `kopfS_ret`). -/
-theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hI : ∀ f, InvGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -155,7 +155,7 @@ theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
         (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm rest k σ ρ)⟩
 
 /-- Atomic replay establishes the scoped answer at its saved read world before release. -/
-private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hI : ∀ f, InvGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -186,7 +186,7 @@ private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
       rw [hr] at hL
       rw [semHA_scopedWert_falsch S _ _ _ passes _ r e R hret σ ρ hc] at hL
       exact False.elim ((hK F.f).2 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _ (rufAusL_rahmen hv)
+        (orakelAus_vertragOP hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _ (rufAusL_rahmen hv)
         (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq .schleife (zErgG_gleich_logik (ZErgG.folgt_logik hL)))
   have h1 := hpred (rufAusV H) (rufAusV_passt hf)
   rw [hr] at h1
@@ -196,10 +196,10 @@ private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck
     (ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich hsem)))
   have hE := ((hK F.f).1 _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (orakelAus_vertragOP hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' _ hex
   have hInv := (hI F.f) _ (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
+    (orakelAus_vertragOP hQ hqa) _ (umweltAus_ok hS hsp hiu) _ hHA _
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' _ hex
   rw [hrec _ hPX hHA] at hsg hE
   have hgl := mischT_gleichAuf hg he Λ Λ
@@ -218,7 +218,7 @@ private theorem kopfSA_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
 
 /-- A completed saved value replays at the current atomic-rely world.
     Its invariant carriers are stable residual carriers, not released scopes. -/
-theorem kopfSA_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem kopfSA_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hI : ∀ f, InvGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -237,7 +237,7 @@ theorem kopfSA_saved_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   simp only [semHA, weiterHA] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hInv := (hI F.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP hQ hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (umweltAusA Tg HX) hHA
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq σ' v hex
   intro i hi hs
@@ -299,7 +299,7 @@ theorem keinStartGrundGX {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D 
 theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     (S : SperrInv D) {fs : List D.Fn} (K : Faden → D.Fn → Bool) (Tg : D.Tab ⊕ D.Glob → Prop)
     (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : RelyQ P O passes Q Tg (RufStartG P sp init)) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
     (hTA : ∀ c, Tg c → AtomarAusgenommen c) (hTV : ∀ c, Tg c → VertragsFrei P c)
@@ -339,7 +339,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         rw [hfa] at hev
         by_cases ht : t = u
         · subst ht
-          rcases invLogA_schritt hO hRL hQ hS hsp hK hI hFS hTV hFu1.1 hs1 ev hev with h | h
+          rcases invLogA_schritt hO hRL hQ.1 hS hsp hK hI hFS hTV hFu1.1 hs1 ev hev with h | h
           · exact ih' t ev h
           · exact h
         · rw [rufSchrittG_fremd hs1 t ht] at hev
@@ -363,7 +363,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
         rw [hfa] at hev
         by_cases ht : t = u
         · subst ht
-          rcases invGrundLogA_schritt hO hRL hQ hS hsp hK hIG hFS hTV hFu1.1 hs1 ev hev with h | h
+          rcases invGrundLogA_schritt hO hRL hQ.1 hS hsp hK hIG hFS hTV hFu1.1 hs1 ev hev with h | h
           · exact ih' t ev h
           · exact h
         · rw [rufSchrittG_fremd hs1 t ht] at hev
@@ -371,7 +371,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
   · -- the start function's completion
     constructor
     · intro t _ l Γ Λ ρ r e hr' hk
-      exact kopfSA_ret hO hRL hQ hS hsp hK hI hFS hTV ((hZ M hr).1.1 t).1 hr' e hk
+      exact kopfSA_ret hO hRL hQ.1 hS hsp hK hI hFS hTV ((hZ M hr).1.1 t).1 hr' e hk
     · have hgood : ∀ t, fadenAntwortGut P (M.faeden t) := by
         clear hA
         induction hr with
@@ -385,7 +385,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
             intro t l Γ Λ ρ r e R hhead hret
             have hFt := fadenSA_speicher (W' := (mitSpeicher N σ).weltVon t) ((hZ N hn).1.1 t)
               (fun c hc => hσ c (fun ht => hTS c ht _ _ hc))
-            exact kopfSA_scopedRet hO hRL hQ hS hsp hK hI hFS hTV hFt.1 hhead e R hret
+            exact kopfSA_scopedRet hO hRL hQ.1 hS hsp hK hI hFS hTV hFt.1 hhead e R hret
           intro t
           rw [hfa]
           by_cases htu : t = u
@@ -400,7 +400,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
       have saved : EnsAmRueck P (M.faeden t).kopf.f (M.faeden t).kopf.s0 vor
           (M.faeden t).kopf.rho v ∧ InvAmRueck P (M.faeden t).kopf.f vor := by
         simpa only [GRest.antwortGut, antwortGut] using h
-      exact ⟨saved.1, saved.2, kopfSA_saved_inv hO hRL hQ hS hsp hI hFS hTV
+      exact ⟨saved.1, saved.2, kopfSA_saved_inv hO hRL hQ.1 hS hsp hI hFS hTV
         ((hZ M hr).1.1 t).1 v vor hhead⟩
 
 #print axioms Gabbro.Grammatik.ziel_ort_atomar_voll

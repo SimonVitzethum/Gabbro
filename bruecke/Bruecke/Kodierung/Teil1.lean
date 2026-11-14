@@ -38,12 +38,27 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 /-! ## 1. Values -/
 
-/-- A G value as a Body value. Only numbers and truth values have a Body reading the bridge
-    uses; every other type reads as `.absent` (a pointer's value is `()`). -/
+mutual
+/-- Read numbers, booleans and ordered products. Nominal identity is checked by the
+    source lowerer; pointer capabilities and unsupported values read as `.absent`. -/
 def valOf {D : Deklaration} : (τ : Ty) → Wert D τ → Gabbro.Body.Value
   | .int _ _, z => .int (z : Zahl _ _).n
   | .bool, b => .bool (b : Bool)
+  | .opt _, v => match v with
+      | none => .absent
+      | some k => .present k.n
+  | .prod _ fs, v => .record (valOfProd fs v)
+  | .why _, v => .reason (caseLabel v.val)
+  | .sum _, v => .tagged (caseLabel v.1.val) none
   | _, _ => .absent
+termination_by structural ty _ => ty
+
+/-- Read every field, including nested products, without changing declaration order. -/
+def valOfProd {D : Deklaration} : (fs : List Ty) → ProdVal D.Fn D.passt fs → List Gabbro.Body.Value
+  | [], _ => []
+  | ty :: rest, v => valOf ty (ProdVal.hd v) :: valOfProd rest (ProdVal.tl v)
+termination_by structural fs _ => fs
+end
 
 theorem valOf_heq {D : Deklaration} {τ₁ τ₂ : Ty} (h : τ₁ = τ₂) (x₁ : Wert D τ₁) (x₂ : Wert D τ₂)
     (hx : HEq x₁ x₂) : valOf τ₁ x₁ = valOf τ₂ x₂ := by

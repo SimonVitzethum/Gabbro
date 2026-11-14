@@ -37,18 +37,22 @@ def canonicalType (items : List SItemTief) : Nat → STyp → STyp
     | some (.typeT _ _ _ _ (some t)) => canonicalType items f t
     | _ => .atom n
   | f + 1, .ptr s r t => .ptr s r (canonicalType items f t)
+  | f + 1, .tuple types => .tuple (types.map (canonicalType items f))
   | f + 1, .array t n => .array (canonicalType items f t) n
   | f + 1, .range (.atom "u32") (.lit 0) (.lit 4294967295) false => .atom "u32"
   | f + 1, .range t lo hi b => .range (canonicalType items f t) lo hi b
   | f + 1, .wrap t => .wrap (canonicalType items f t)
   | f + 1, .embed t p s => .embed (canonicalType items f t) p s
   | _, t => t
+termination_by structural fuel => fuel
 
+mutual
 /-- A spec type parameter denotes a whole type, recursively in structured types. -/
 def substituteType (env : List (String × STyp)) : STyp → STyp
   | .atom n => ((env.find? fun p => strEq p.1 n).map Prod.snd).getD (.atom n)
   | .path [n] => ((env.find? fun p => strEq p.1 n).map Prod.snd).getD (.path [n])
   | .ptr s r t => .ptr s r (substituteType env t)
+  | .tuple types => .tuple (substituteTypes env types)
   | .range t lo hi b => .range (substituteType env t) lo hi b
   | .array t n => .array (substituteType env t) n
   | .wrap t => .wrap (substituteType env t)
@@ -56,6 +60,21 @@ def substituteType (env : List (String × STyp)) : STyp → STyp
   | .entry ps none => .entry ps none
   | .entry ps (some t) => .entry ps (some (substituteType env t))
   | t => t
+termination_by structural ty => ty
+
+/-- Substitute tuple components in source order. -/
+def substituteTypes (env : List (String × STyp)) : List STyp → List STyp
+  | [] => []
+  | ty :: rest => substituteType env ty :: substituteTypes env rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem substituteTypes_eq_map (env : List (String × STyp)) (ts : List STyp) :
+    substituteTypes env ts = ts.map (substituteType env) := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [substituteTypes, List.map_cons, ih]
 
 /-- Parentheses are absent from `SExpr`; flatten only conjunctions, like `verbund::konjunkte`.
     Ordinary `spec fn` predicates use the same expander as `refines` (`uSpecEin`). -/

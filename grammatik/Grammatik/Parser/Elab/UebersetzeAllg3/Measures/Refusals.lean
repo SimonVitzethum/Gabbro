@@ -158,8 +158,11 @@ theorem unchanged_no_duty_zeuge (passes : Nat) (Q : AxEns (declOf unchanged))
     ¬ MassPflicht unchangedP passes Q S T unchangedM.mass (zykS unchangedP [0]) 0 := by
   intro duty
   let O : Orakel (declOf unchanged) :=
-    ⟨fun a => Fin.elim0 a, fun r => Fin.elim0 r, fun r => Fin.elim0 r,
-      fun g => Fin.elim0 g, fun _ => none⟩
+    { wirktL := fun a => Fin.elim0 a
+      regLiesL := fun r => Fin.elim0 r
+      regSchreib := fun r => Fin.elim0 r
+      sichtbarL := fun g => Fin.elim0 g
+      zeiger := fun _ => none }
   let R : ∀ f : (declOf unchanged).Fn, World (declOf unchanged) →
       Env (declOf unchanged) ((declOf unchanged).params f) → RufAusgang f := fun _ _ _ => .logik .schleife
   have frame : RespektiertRahmen unchangedP R := by
@@ -190,8 +193,11 @@ theorem increasing_no_duty_zeuge (passes : Nat) (Q : AxEns (declOf increasing))
     ¬ MassPflicht increasingP passes Q S T increasingM.mass (zykS increasingP [0]) 0 := by
   intro duty
   let O : Orakel (declOf increasing) :=
-    ⟨fun a => Fin.elim0 a, fun r => Fin.elim0 r, fun r => Fin.elim0 r,
-      fun g => Fin.elim0 g, fun _ => none⟩
+    { wirktL := fun a => Fin.elim0 a
+      regLiesL := fun r => Fin.elim0 r
+      regSchreib := fun r => Fin.elim0 r
+      sichtbarL := fun g => Fin.elim0 g
+      zeiger := fun _ => none }
   let R : ∀ f : (declOf increasing).Fn, World (declOf increasing) →
       Env (declOf increasing) ((declOf increasing).params f) → RufAusgang f := fun _ _ _ => .logik .schleife
   have frame : RespektiertRahmen increasingP R := by

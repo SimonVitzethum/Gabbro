@@ -43,7 +43,7 @@ group Zustellung over { Endpunkte, Faeden } {
     // liest Faeden -- keine `table … invariant` kann das sagen, weil sie nur ueber ihrem
     // eigenen Traeger quantifiziert. `U007` faellt, wenn eine Gruppen-Invariante nur EINEN
     // Traeger nennt: dann gehoert sie an die Tabelle, und die Gruppe waere bloss bequemer.
-    invariant wartende_haben_grund cost O(n) runs offline :
+    invariant wartende_haben_grund :
         forall e in slots of Endpunkte : Endpunkte.slots[e].wartet > 0;
 }
 

@@ -42,7 +42,7 @@ def RueckPost (P : Programm D) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f
 /-- **The obligation of one function, as weakest preconditions.** -/
 def PflichtWP (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T : D.Tab ⊕ D.Glob → Prop)
     (f : D.Fn) : Prop :=
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -50,7 +50,7 @@ def PflichtWP (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (T 
         wpEA (V := vertragVon D f) S O' U A passes R (P.rumpf f) (RueckPost P f σ ρ) σ ρ ∧
         wpEA (V := vertragVon D f) S O' U A passes (torRuf P R) (P.rumpf f)
           (fun eo => ∀ g, eo ≠ .logik (.vorbedingung g)) σ ρ) ∧
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U → ∀ A : AUmwelt D, HavocA T A →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneLogik R →

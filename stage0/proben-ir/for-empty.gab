@@ -1,0 +1,9 @@
+// Neither an empty nor a descending range runs its body, even if that body writes i.
+module ir_for_empty {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut sum : u64 in 0 .. 100 = 0;
+    for i in 2 ..< 2 { sum = 9; i = 2; }
+    for i in 5 ..< 2 { sum = 8; i = 2; }
+    return sum;
+}
+}

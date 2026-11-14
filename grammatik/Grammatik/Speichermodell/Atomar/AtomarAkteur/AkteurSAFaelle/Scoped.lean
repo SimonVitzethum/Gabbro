@@ -77,7 +77,7 @@ theorem fadenSA_scopedWert {z : RufFadenG D} {W : World D}
   refine fadenSA_lese hF hr ρ _ spur' Λ e.orte (fun hok => ?_) (fun σ hg hok => ?_)
   · exact erg_stabilX (hFS _) e (scopedWert_orteSA hok hret)
   · have hv := evalErg_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
-    refine ⟨σ, Nat.le_refl _, ?_, trivial, ?_⟩
+    refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, ?_, trivial, ?_⟩
     · exact GleichAuf.mono (fun _ h => List.mem_append_left _ (stabilS_mono (fun L hL => R.genau.symm.mem_iff.mp (List.mem_append.mpr ((List.mem_append.mp hL).elim Or.inr Or.inl))) h)) hg
     · intro calls O' U A σ0 hQ hg0 hread
       have heq := scopedWert_semSA O' S U A passes calls r e R hret σ0 (W.lese Λ e.orte) ρ
@@ -106,7 +106,7 @@ theorem fadenSA_scopedGrund {z : RufFadenG D} {W : World D}
       exact ZErgG.folgt_of_gleich heq
 
 /-- Release one scope and retain the already evaluated answer. -/
-theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg m zyk z W)
@@ -124,7 +124,7 @@ theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
       rfl)
   refine fadenSA_lokalQ hF hr ρ _ spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', trivial, ?_⟩
   intro calls O' U A _ _ _
   apply ZErgG.folgt_of_eq
@@ -132,7 +132,7 @@ theorem fadenSA_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO
   rfl
 
 /-- A saved value at completed cleanup still satisfies the function contract. -/
-private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f)
@@ -151,7 +151,7 @@ private theorem kopfSA_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertra
   simp only [semHA, weiterHA, scopesInvH, List.all_nil, if_true, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hens := ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP hQ hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (umweltAusA Tg HX) (umweltAusA_ok Tg HX)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex
@@ -187,7 +187,7 @@ private theorem kopfSA_scopedBegr (hE : ¬ Nonempty (Ereignis D))
     exact ⟨σ', hex⟩
 
 /-- Deliver a completed cleanup through the canonical root/callee answer operation. -/
-theorem fadenSA_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f)
     (hFS : ∀ f, FussSX P S lok Tg f)

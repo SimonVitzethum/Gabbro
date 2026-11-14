@@ -109,13 +109,14 @@ def uStartNamen : Nat → SAnw → List String
   | f + 1, .cond _ b ei els => uStartNamen f b ++ ei.flatMap (uStartNamen f) ++ (els.map (uStartNamen f)).getD []
   | f + 1, .elsif _ b => uStartNamen f b
   | f + 1, .each _ _ _ _ _ _ _ b => uStartNamen f b
-  | f + 1, .retry _ b => uStartNamen f b
+  | f + 1, .boundedLoop _ b | f + 1, .retry _ b => uStartNamen f b
   | f + 1, .loop _ b => uStartNamen f b
   | f + 1, .locks _ _ b => uStartNamen f b
   | f + 1, .trim _ _ b => uStartNamen f b
   | f + 1, .cases _ arms => arms.flatMap (uStartNamen f)
   | f + 1, .arm _ _ b => uStartNamen f b
   | _, _ => []
+termination_by structural fuel => fuel
 
 /-- Each root once, in order. -/
 def uOhneDoppelte (xs : List String) : List String :=

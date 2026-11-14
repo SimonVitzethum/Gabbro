@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -114,7 +114,7 @@ theorem akteurSA_dannGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orake
   obtain ⟨_, _, hrS⟩ := teile2 hss
   have hv' : gleitPasst lo hi (eval σ e σ ρ).x = some v := by
     rw [eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ]; exact hv
-  exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  exact ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hkr, hrS, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       rw [semHA_gleitNarrowOk S O' U A passes R e lo hi sonst rest k σ0 ρ v
         (by rw [hσ0]; exact hv'), hσ0])⟩
@@ -122,7 +122,7 @@ theorem akteurSA_dannGleitNarrowOk {D : Deklaration} {P : Programm D} {O : Orake
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannGleitNarrowElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -219,7 +219,7 @@ theorem akteurSA_dannGleitNarrowElse {D : Deklaration} {P : Programm D} {O : Ora
   obtain ⟨_, hsS, _⟩ := teile2 hss
   have hn' : gleitPasst lo hi (eval σ e σ ρ).x = none := by
     rw [eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ]; exact hn
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     okS_alsBlock sonst k rest.held_iff hkS hsS hrk, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_gleitNarrowElse S O' U A passes R e lo hi sonst rest k σ0 ρ
     (by rw [hσ0]; exact hn')

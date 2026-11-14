@@ -35,7 +35,7 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
       simp only [RufMaschineG.weltVon, rufUpdateG_self]
       refine ⟨fadenOk_lokal hF hhead ρ (.aufraeumen a remaining)
         (.gibt L :: (M.faeden u).spur) (fun σ hg hok => ?_), hL⟩
-      refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls => ?_⟩
+      refine ⟨σ.gibt L, World.rang_le_gibt σ L, hg, trivial, fun calls => ?_⟩
       obtain ⟨answer, vor⟩ := a
       cases answer <;> exact ZErg.gleich_refl _
   | rueckFreigabeLetzte ρ a L hhead z ha =>
@@ -43,7 +43,7 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
       have hdone := fadenOk_lokal hF hhead (M.faeden u).kopf.rho
         (.zurueckgekehrt a : GRest D _ false _ _)
         (.gibt L :: (M.faeden u).spur) (W' := (M.weltVon u).gibt L) (fun σ hg hok => by
-          refine ⟨σ.gibt L, Nat.le_succ _, hg, trivial, fun calls => ?_⟩
+          refine ⟨σ.gibt L, World.rang_le_gibt σ L, hg, trivial, fun calls => ?_⟩
           obtain ⟨answer, vor⟩ := a
           cases answer <;> exact ZErg.gleich_refl _)
       refine fadenOk_antwort hK e0 _ hdone hL rfl ?_

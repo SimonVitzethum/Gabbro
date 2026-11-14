@@ -26,12 +26,10 @@ theorem lowStmt_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : Strin
       · rename_i num _
         split
         · rename_i hlt
-          rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)]
-          rfl
+          rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)] <;> rfl
         · rfl
       · rfl
-  simp only [lowStmt, lowStmtL, hn, Option.getD_none]
-  rfl
+  simp only [lowStmt, lowStmtL, hn, Option.getD_none] <;> rfl
 
 theorem lowStmt_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : String) (ix : UIdx)
     (v : USide) (Λ : List (Res (declOf u)) := resOf u c) :
@@ -42,10 +40,8 @@ theorem lowStmt_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : St
     split
     · rfl
     · rename_i t _
-      rw [fieldHitW_none (hT.2 t)]
-      rfl
-  simp only [lowStmt, lowStmtL, hn, Option.getD_none]
-  rfl
+      rw [fieldHitW_none (hT.2 t)] <;> rfl
+  simp only [lowStmt, lowStmtL, hn, Option.getD_none] <;> rfl
 
 theorem lowStmt_call (c : Fin u.fns.length) (g : String) (as : List UArg)
     (Λ : List (Res (declOf u)) := resOf u c) :
@@ -68,6 +64,15 @@ theorem nthVal_int {D : Deklaration} : ∀ {Γ : Ctx} (ρ : Env D Γ) (j : Nat) 
       exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
   | _ :: _, .cons v ρ, j + 1, lo, hi, h => nthVal_int ρ j lo hi (by simpa using h)
 
+theorem nthVal_bool {D : Deklaration} : ∀ {Γ : Ctx} (ρ : Env D Γ) (j : Nat),
+    Γ[j]? = some .bool → ∃ b, nthVal ρ j = .bool b
+  | _, .nil, _, h => by cases h
+  | _ :: _, .cons v ρ, 0, h => by
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at h
+      subst h
+      exact ⟨v, rfl⟩
+  | _ :: _, .cons v ρ, j + 1, h => nthVal_bool ρ j h
+
 theorem eval_conjE (t : Gabbro.Body.State) : ∀ (es : List Gabbro.Body.Expr),
     (∀ e ∈ es, Gabbro.Body.eval t e = some (.bool true)) →
     Gabbro.Body.eval t (conjE es) = some (.bool true)
@@ -76,8 +81,7 @@ theorem eval_conjE (t : Gabbro.Body.State) : ∀ (es : List Gabbro.Body.Expr),
   | e :: e' :: es, h => by
       simp only [conjE, Gabbro.Body.eval]
       rw [h e (List.mem_cons_self ..),
-        eval_conjE t (e' :: es) (fun x hx => h x (List.mem_cons_of_mem _ hx))]
-      rfl
+        eval_conjE t (e' :: es) (fun x hx => h x (List.mem_cons_of_mem _ hx))] <;> rfl
 
 /-- **The callee's precondition holds at its Body entry state**: every declared shape is the
     shape of a typed G value, and a `Held` clause reads `true`. -/
@@ -92,24 +96,16 @@ theorem preExpr_wahr {D : Deklaration} {Γ : Ctx} (fn : UFn) (ρ : Env D Γ) (β
   · unfold shapeConjuncts at he
     rw [List.mem_filterMap] at he
     obtain ⟨q, hq, hqe⟩ := he
-    cases hsh : shapeOfTy q.2 with
-    | none => rw [hsh] at hqe; cases hqe
-    | some sh =>
-      rw [hsh] at hqe
-      simp only [Option.map_some, Option.some.injEq] at hqe
-      subst hqe
-      obtain ⟨jq, hjq⟩ := List.mem_iff_getElem?.mp hq
-      obtain ⟨qn, qτ⟩ := q
-      have hpos := paramPos_of_nodup _ jq qn qτ hN (by rw [hjq])
-      cases qτ with
-      | int lo hi =>
-        simp only [shapeOfTy, Option.some.injEq] at hsh
-        subst hsh
-        obtain ⟨n, hn, hlo, hhi⟩ := nthVal_int ρ jq lo hi (by rw [hΓ]; simp [hjq])
-        simp only [Gabbro.Body.eval]
-        rw [hL qn jq hpos, Nat.zero_add, hn]
-        simp [hlo, hhi]
-      | _ => simp [shapeOfTy] at hsh
+    obtain ⟨jq, hjq⟩ := List.mem_iff_getElem?.mp hq
+    obtain ⟨qn, qτ⟩ := q
+    have hpos := paramPos_of_nodup _ jq qn qτ hN (by rw [hjq])
+    have ht : Γ[jq]? = some qτ := by
+      rw [hΓ, List.getElem?_map, hjq]
+      rfl
+    obtain ⟨v, hv⟩ := nthVal_typed ρ jq qτ ht
+    exact entryCheck_wahr qn qτ v β w
+      ((hL qn jq hpos).trans (by simpa only [Nat.zero_add] using hv)) hqe
+
   · rw [List.mem_map] at he
     obtain ⟨_, _, rfl⟩ := he
     rfl
@@ -281,7 +277,7 @@ theorem stmtsBody_isSome {f : UFn} {ss : List UStmt} {bs : List Gabbro.Body.Stmt
     split at h
     · rename_i x xs hx hxs
       rcases List.mem_cons.mp hm with rfl | hm
-      · rw [hx]; rfl
+      · rw [hx] <;> rfl
       · exact ih hxs st hm
     · cases h
 

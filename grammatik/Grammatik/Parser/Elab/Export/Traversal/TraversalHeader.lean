@@ -72,6 +72,7 @@ def callFree : Nat → SExpr → Bool
   -- `Some` and `None` are keywords: the two constructors of an option, no call.
   | n + 1, .call name args => (name == "Some" || name == "None") && args.all (callFree n)
   | _ + 1, .fnref _ | _ + 1, .ext .. => false
+termination_by structural fuel => fuel
 
 /-- Direct calls, including calls in arguments. Options are constructors, not callees.
     Function pointers and extensions retain their previous refusal. -/
@@ -87,6 +88,7 @@ def expressionCalls : Nat → SExpr → Option (List String)
     let nested ← (args.mapM (expressionCalls n)).map List.flatten
     pure (if name == "Some" || name == "None" then nested else name :: nested)
   | _ + 1, .fnref _ | _ + 1, .ext .. => none
+termination_by structural fuel => fuel
 
 /-- The write an assignment target performs: a static, or a slot field of a table or pointer. -/
 def writeTarget : SExpr → Option SEffekt
@@ -129,6 +131,7 @@ def bodyWrites : Nat → SAnw → Option (List SEffekt)
   -- A section takes its lock: the header must list it, and what the section writes.
   | n + 1, .locks shared lock b => (bodyWrites n b).map fun ws => .locks shared lock :: ws
   | _ + 1, _ => none
+termination_by structural fuel => fuel
 
 /-- The names a statement binds for the rest of its block. -/
 def binders : SAnw → List String
@@ -181,6 +184,7 @@ def bodyCalls : Nat → SAnw → Option (List String)
   | _ + 1, .ret e => (e.toList.mapM (expressionCalls 10000)).map List.flatten
   | _ + 1, .leave _ | _ + 1, .next _ => some []
   | _ + 1, _ => none
+termination_by structural fuel => fuel
 
 /-- Missing signatures cannot certify a call's effects. -/
 abbrev CalleeEffects := String → Option (List SEffekt)
@@ -302,6 +306,8 @@ def eraseCovered (covered : List String → String → SAnw → Bool) : List Str
   | locals, n + 1, .waive a b => .waive a (eraseCovered covered locals n b)
   | locals, n + 1, .locks a b c => .locks a b (eraseCovered covered locals n c)
   | locals, n + 1, .watch a b => .watch a (eraseCovered covered locals n b)
+  | locals, n + 1, .boundedLoop header b =>
+    .boundedLoop header (eraseCovered covered ((boundedLoopLocals header).map Prod.fst ++ locals) n b)
   | locals, n + 1, .retry header b => .retry header (eraseCovered covered locals n b)
   | locals, n + 1, .trim a b c => .trim a b (eraseCovered covered locals n c)
   | locals, n + 1, .cond c a bs b => .cond c (eraseCovered covered locals n a)
@@ -320,5 +326,6 @@ def eraseCovered (covered : List String → String → SAnw → Bool) : List Str
   | locals, n + 1, .alloc m x ty an v (some body) =>
     .alloc m x ty an v (some (eraseCovered covered locals n body))
   | _, _ + 1, s => s
+termination_by structural _ fuel => fuel
 
 end Gabbro.Grammatik.Parser.ExportMetadata

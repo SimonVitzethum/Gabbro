@@ -102,10 +102,10 @@ def world : World D where
   spur := []
 
 def oracle : Orakel D where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r _ := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def calls (f : D.Fn) (_ : World D) (_ : Env D (D.params f)) : RufAusgang f :=
   .logik .schleife

@@ -60,7 +60,7 @@ def ImRueck (B Bc : BodyFrame D) (thr : Faden) (stapel : List (RufRahmenG D)) (r
     body boundary, or inside a decomposed step of the callee's body corresponding to a reachable machine with `Ziel`,
     or in the call's return window (`ImRueck`), between two boundaries that correspond to reachable machines with
     `Ziel`, the second reached from the first. -/
-theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] [LeseblindOK O]
+theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O]
     {passes : Nat} {P : Programm D} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
     (hc : BildCodes Y P passes A C Lm) {S : SperrInv D} {Q : AxEns D} {fs : Aufzaehlung D.Fn}
     (ls : Aufzaehlung D.Lock) {ws : List D.Fn} {Acc : List (Kernzelle.AccumulatorDecl D)}
@@ -105,7 +105,8 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
           (fun M' => RufErreichbarG P O passes (RufStartG P sp init) M' ∧
             Ziel P S O passes (RufStartG P sp init) M') t m' := by
   subst hkj
-  have hO := leseblind_von O
+  haveI : LeseblindOK O := leseblindOK_hardware hH
+  have hO : LeseblindP P O := leseblindP_alle P O
   -- the whole call as one step of the caller
   have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) hO thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false

@@ -93,6 +93,7 @@
 module
 public import Gabbro.Sicherheit.Ausdruck
 public import Gabbro.Sicherheit.Anweisung
+public import Gabbro.Sicherheit.RecordZeuge
 @[expose] public section
 
 

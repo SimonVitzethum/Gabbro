@@ -7,7 +7,7 @@
   A cost table cannot bound measured recursion: Ackermann's `(1, 0)` calls `(0, k)` for every `k`, so no number
   bounds the steps below `(1, 0)`. The bound is a WELL-FOUNDED RANK instead, read off a thread's stack:
 
-  * every frame weighs `((rk f, measure of f at its entry), potRest of its residue)` (`gew`) -- the residue's
+  * every frame weighs `((rk f, measure of f at its entry), potRest 0 of its residue)` (`gew`) -- the residue's
     potential with every call priced `0`, so it falls at every own step of the frame (`schrittArt`);
   * the stack, read from the bottom, is ordered lexicographically with a proper prefix below its extensions
     (`slt`); on stacks whose weights fall from bottom to top (`KetteW`) that order is well-founded
@@ -237,7 +237,7 @@ theorem torS_tor (hvoll : ∀ g, g ∈ fs) {f : D.Fn} {n : Nat} {g : D.Fn} (h : 
 /-- A frame's weight. -/
 def gew (r : RufRahmenG D) : Gewicht :=
   ((rk (RufSchluesselG r).1, m.wert (RufSchluesselG r).1 (RufSchluesselG r).2.2 (RufSchluesselG r).2.1),
-    potRest (fun _ => 0) pa r.rest.2.2.2.2)
+    potRest 0 (fun _ => 0) pa r.rest.2.2.2.2)
 
 /-- **The rank of a thread**: the weights of its stack, read from the bottom. -/
 def rangF (z : RufFadenG D) : List Gewicht := ((z.kopf :: z.stapel).map (gew pa m rk)).reverse

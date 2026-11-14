@@ -1,5 +1,5 @@
 module
-public import Bruecke.Anweisung.Zweig.Uebersetzung
+public import Bruecke.Anweisung.Lokal.Kopf
 @[expose] public section
 
 /-!
@@ -39,31 +39,31 @@ theorem lowStructL_zero {l : Bool} (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf
     lowStructL (l := l) u c Γ fn 0 Λ pe s ss = .error "lower: blocks nested too deep" :=
   rfl
 
-theorem lowSeq_nil {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_nil {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} :
-    lowSeqL (l := false) u c Γ fn (n + 1) Λ pe [] = .ok (⟨Λ, Block.nil⟩, []) :=
+    lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe [] = .ok (⟨Λ, Block.nil⟩, []) :=
   rfl
 
-theorem lowSeq_blkEnd {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_blkEnd {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {ss : List UStmt} :
-    lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (.blkEnd :: ss) =
+    lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (.blkEnd :: ss) =
       .ok (⟨Λ, Block.nil⟩, .blkEnd :: ss) :=
   rfl
 
-theorem lowSeq_ifElse {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_ifElse {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {ss : List UStmt} :
-    lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (.ifElse :: ss) =
+    lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (.ifElse :: ss) =
       .ok (⟨Λ, Block.nil⟩, .ifElse :: ss) :=
   rfl
 
-theorem lowSeq_bind_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_bind_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {x : String} {d : Option (Int × Int)} {v : USide} {ss rest : List UStmt}
-    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (.bind x d v :: ss) = .ok (p, rest)) :
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (.bind x d v :: ss) = .ok (p, rest)) :
     ∃ (ls : LowSide u Γ Λ) (q : Σ Λ' : List (Res (declOf u)),
-        Block (declOf u) (verOf u c) false (.int ls.range.1 ls.range.2 :: Γ) Λ Λ'),
+        Block (declOf u) (verOf u c) loopMode (.int ls.range.1 ls.range.2 :: Γ) Λ Λ'),
       lowBindWert u Γ Λ fn d v = .ok ls ∧
-      lowSeqL (l := false) u c (.int ls.range.1 ls.range.2 :: Γ) (fn.mitBindung x ls.range) n Λ pe
+      lowSeqL (l := loopMode) u c (.int ls.range.1 ls.range.2 :: Γ) (fn.mitBindung x ls.range) n Λ pe
         ss = .ok (q, rest) ∧
       p = ⟨q.1, Block.bind ls.term q.2⟩ := by
   rw [lowSeqL_succ] at h
@@ -72,7 +72,7 @@ theorem lowSeq_bind_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u
   | error e => simp only [hls, Except.bind] at h <;> cases h
   | ok ls =>
     simp only [hls, Except.bind] at h
-    cases hq : lowSeqL (l := false) u c (.int ls.range.1 ls.range.2 :: Γ)
+    cases hq : lowSeqL (l := loopMode) u c (.int ls.range.1 ls.range.2 :: Γ)
         (fn.mitBindung x ls.range) n Λ pe ss with
     | error e => simp only [hq] at h <;> cases h
     | ok res =>
@@ -81,14 +81,14 @@ theorem lowSeq_bind_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u
       cases h
       exact ⟨ls, ⟨Λ', b⟩, rfl, hq, rfl⟩
 
-theorem lowSeq_bindMut_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_bindMut_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {x : String} {lo hi : Int} {v : USide} {ss rest : List UStmt}
-    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (.bindMut x lo hi v :: ss) = .ok (p, rest)) :
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (.bindMut x lo hi v :: ss) = .ok (p, rest)) :
     ∃ (ev : Expr (declOf u) Γ Λ (.int lo hi)) (q : Σ Λ' : List (Res (declOf u)),
-        Block (declOf u) (verOf u c) false (.int lo hi :: Γ) Λ Λ'),
+        Block (declOf u) (verOf u c) loopMode (.int lo hi :: Γ) Λ Λ'),
       lowWertAt u Γ Λ fn lo hi v = .ok ev ∧
-      lowSeqL (l := false) u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe ss =
+      lowSeqL (l := loopMode) u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe ss =
         .ok (q, rest) ∧
       p = ⟨q.1, Block.bind ev q.2⟩ := by
   rw [lowSeqL_succ] at h
@@ -97,7 +97,31 @@ theorem lowSeq_bindMut_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declO
   | error e => simp only [hev, Except.bind] at h <;> cases h
   | ok ev =>
     simp only [hev, Except.bind] at h
-    cases hq : lowSeqL (l := false) u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe ss with
+    cases hq : lowSeqL (l := loopMode) u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe ss with
+    | error e => simp only [hq] at h <;> cases h
+    | ok res =>
+      obtain ⟨⟨Λ', b⟩, r⟩ := res
+      simp only [hq] at h
+      cases h
+      exact ⟨ev, ⟨Λ', b⟩, rfl, rfl, rfl⟩
+
+theorem lowSeq_bindB_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+    {pe : AtTop u c Λ} {x : String} {v : UEns} {ss rest : List UStmt}
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (.bindB x v :: ss) = .ok (p, rest)) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.bool)) (q : Σ Λ' : List (Res (declOf u)),
+        Block (declOf u) (verOf u c) loopMode (.bool :: Γ) Λ Λ'),
+      lowEns u Γ Λ fn none v = .ok ev ∧
+      lowSeqL (l := loopMode) u c (.bool :: Γ) (fn.mitBindungB x) n Λ pe ss =
+        .ok (q, rest) ∧
+      p = ⟨q.1, Block.bind ev q.2⟩ := by
+  rw [lowSeqL_succ] at h
+  simp only [lowSeqStep, lowStufe_seq] at h
+  cases hev : lowEns u Γ Λ fn none v with
+  | error e => simp only [hev, Except.bind] at h <;> cases h
+  | ok ev =>
+    simp only [hev, Except.bind] at h
+    cases hq : lowSeqL (l := loopMode) u c (.bool :: Γ) (fn.mitBindungB x) n Λ pe ss with
     | error e => simp only [hq] at h <;> cases h
     | ok res =>
       obtain ⟨⟨Λ', b⟩, r⟩ := res
@@ -113,25 +137,25 @@ theorem lowSeqStep_einzeln {l : Bool} (R : LowStufe u c) (Γ : Ctx) (fn : UFn)
       (lowStmtL (l := l) u c Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
         (R.seq (l := l) Γ fn Λ₁ pe ss).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r) := by
   cases s
-  case assign | assignTab | assignGlob | call | setVar => rfl
+  case assign | assignTab | assignGlob | call | setVar | setVarB => rfl
   all_goals simp [LeseEinzeln] at hs
 
-theorem lowSeq_einzeln_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_einzeln_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {s : UStmt} {ss rest : List UStmt}
-    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (s :: ss) = .ok (p, rest))
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (s :: ss) = .ok (p, rest))
     (hs : LeseEinzeln s) :
-    ∃ (Λ₁ : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
-      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ₁ Λ'),
-      lowStmtL (l := false) u c Γ fn Λ s = .ok ⟨Λ₁, st⟩ ∧
-      lowSeqL (l := false) u c Γ fn n Λ₁ pe ss = .ok (q, rest) ∧ p = ⟨q.1, Block.cons st q.2⟩ := by
+    ∃ (Λ₁ : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁)
+      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ₁ Λ'),
+      lowStmtL (l := loopMode) u c Γ fn Λ s = .ok ⟨Λ₁, st⟩ ∧
+      lowSeqL (l := loopMode) u c Γ fn n Λ₁ pe ss = .ok (q, rest) ∧ p = ⟨q.1, Block.cons st q.2⟩ := by
   rw [lowSeqL_succ, lowSeqStep_einzeln _ _ _ _ _ _ _ hs] at h
-  cases hst : lowStmtL (l := false) u c Γ fn Λ s with
+  cases hst : lowStmtL (l := loopMode) u c Γ fn Λ s with
   | error e => simp only [hst, Except.bind] at h <;> cases h
   | ok res =>
     obtain ⟨Λ₁, st⟩ := res
     simp only [hst, Except.bind, lowStufe_seq] at h
-    cases hq : lowSeqL (l := false) u c Γ fn n Λ₁ pe ss with
+    cases hq : lowSeqL (l := loopMode) u c Γ fn n Λ₁ pe ss with
     | error e => simp only [hq] at h <;> cases h
     | ok res2 =>
       obtain ⟨⟨Λ₂, b⟩, r⟩ := res2
@@ -139,21 +163,21 @@ theorem lowSeq_einzeln_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declO
       cases h
       exact ⟨Λ₁, st, ⟨Λ₂, b⟩, rfl, hq, rfl⟩
 
-theorem lowSeq_ret_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_ret_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {r0 : URet} {ss rest : List UStmt}
-    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowSeqL (l := false) u c Γ fn (n + 1) Λ [] (.ret r0 :: ss) = .ok (p, rest)) :
-    ∃ (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ)
-      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'),
-      lowRetStmt (l := false) u c Γ fn Λ [] r0 = .ok st ∧
-      lowSeqL (l := false) u c Γ fn n Λ [] ss = .ok (q, rest) ∧ p = ⟨q.1, Block.cons st q.2⟩ := by
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ [] (.ret r0 :: ss) = .ok (p, rest)) :
+    ∃ (st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ)
+      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'),
+      lowRetStmt (l := loopMode) u c Γ fn Λ [] r0 = .ok st ∧
+      lowSeqL (l := loopMode) u c Γ fn n Λ [] ss = .ok (q, rest) ∧ p = ⟨q.1, Block.cons st q.2⟩ := by
   rw [lowSeqL_succ] at h
   simp only [lowSeqStep, lowStufe_seq] at h
-  cases hst : lowRetStmt (l := false) u c Γ fn Λ [] r0 with
+  cases hst : lowRetStmt (l := loopMode) u c Γ fn Λ [] r0 with
   | error e => simp only [hst, Except.bind] at h <;> cases h
   | ok st =>
     simp only [hst, Except.bind] at h
-    cases hq : lowSeqL (l := false) u c Γ fn n Λ [] ss with
+    cases hq : lowSeqL (l := loopMode) u c Γ fn n Λ [] ss with
     | error e => simp only [hq] at h <;> cases h
     | ok res =>
       obtain ⟨⟨Λ', b⟩, r⟩ := res
@@ -161,27 +185,27 @@ theorem lowSeq_ret_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u)
       cases h
       exact ⟨st, ⟨Λ', b⟩, rfl, rfl, rfl⟩
 
-theorem lowSeq_wenn_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowSeq_wenn_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {s : UStmt} {cnd : UEns} {ss rest : List UStmt}
-    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowSeqL (l := false) u c Γ fn (n + 1) Λ pe (s :: ss) = .ok (p, rest))
+    {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe (s :: ss) = .ok (p, rest))
     (hk : s = .ifBeg cnd ∨ s = .ifEnde cnd) :
-    ∃ (Λ₁ : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
+    ∃ (Λ₁ : List (Res (declOf u))) (st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁)
       (rest' : List UStmt)
-      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) false Γ Λ₁ Λ'),
-      lowStructL (l := false) u c Γ fn n Λ pe (.ifBeg cnd) ss = .ok (⟨Λ₁, st⟩, rest') ∧
-      lowSeqL (l := false) u c Γ fn n Λ₁ pe rest' = .ok (q, rest) ∧
+      (q : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ₁ Λ'),
+      lowStructL (l := loopMode) u c Γ fn n Λ pe (.ifBeg cnd) ss = .ok (⟨Λ₁, st⟩, rest') ∧
+      lowSeqL (l := loopMode) u c Γ fn n Λ₁ pe rest' = .ok (q, rest) ∧
       p = ⟨q.1, Block.cons st q.2⟩ := by
   rcases hk with rfl | rfl
   all_goals
     rw [lowSeqL_succ] at h
     simp only [lowSeqStep, lowStufe_seq, lowStufe_struct] at h
-    cases hst : lowStructL (l := false) u c Γ fn n Λ pe (.ifBeg cnd) ss with
+    cases hst : lowStructL (l := loopMode) u c Γ fn n Λ pe (.ifBeg cnd) ss with
     | error e => simp only [hst, Except.bind] at h <;> cases h
     | ok res =>
       obtain ⟨⟨Λ₁, st⟩, rest'⟩ := res
       simp only [hst, Except.bind] at h
-      cases hq : lowSeqL (l := false) u c Γ fn n Λ₁ pe rest' with
+      cases hq : lowSeqL (l := loopMode) u c Γ fn n Λ₁ pe rest' with
       | error e => simp only [hq] at h <;> cases h
       | ok res2 =>
         obtain ⟨⟨Λ₂, b⟩, r⟩ := res2
@@ -191,15 +215,15 @@ theorem lowSeq_wenn_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u
 
 /-- **The conditional of a block**: the condition, the then-block up to `ifElse`, the else-block
     up to `blkEnd`, both ending at the same held marks, one fuel level below. -/
-theorem lowStruct_ite_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+theorem lowStruct_ite_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {cnd : UEns} {ss rest : List UStmt} {Λ₁ : List (Res (declOf u))}
-    {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁}
-    (h : lowStructL (l := false) u c Γ fn (n + 1) Λ pe (.ifBeg cnd) ss = .ok (⟨Λ₁, st⟩, rest)) :
-    ∃ (cv : Expr (declOf u) Γ Λ .bool) (tb eb : Block (declOf u) (verOf u c) false Γ Λ Λ₁)
+    {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
+    (h : lowStructL (l := loopMode) u c Γ fn (n + 1) Λ pe (.ifBeg cnd) ss = .ok (⟨Λ₁, st⟩, rest)) :
+    ∃ (cv : Expr (declOf u) Γ Λ .bool) (tb eb : Block (declOf u) (verOf u c) loopMode Γ Λ Λ₁)
       (rest1 : List UStmt),
       lowEns u Γ Λ fn none cnd = .ok cv ∧
-      lowSeqL (l := false) u c Γ fn n Λ pe ss = .ok (⟨Λ₁, tb⟩, .ifElse :: rest1) ∧
-      lowSeqL (l := false) u c Γ fn n Λ pe rest1 = .ok (⟨Λ₁, eb⟩, .blkEnd :: rest) ∧
+      lowSeqL (l := loopMode) u c Γ fn n Λ pe ss = .ok (⟨Λ₁, tb⟩, .ifElse :: rest1) ∧
+      lowSeqL (l := loopMode) u c Γ fn n Λ pe rest1 = .ok (⟨Λ₁, eb⟩, .blkEnd :: rest) ∧
       st = Stmt.ite cv tb eb := by
   rw [lowStructL_succ] at h
   simp only [lowStructStep, lowStufe_seq] at h
@@ -247,30 +271,30 @@ section Gseite
 variable {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ Λ₁ Λ' : List (Res D)}
 variable (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 
-theorem execBlockZ_nil (σ : World D) (ρ : Env D Γ) :
-    execBlock O passes R (Block.nil : Block D V false Γ Λ Λ) σ ρ = .ok σ ρ := by
+theorem execBlockZ_nil {loopMode : Bool} (σ : World D) (ρ : Env D Γ) :
+    execBlock O passes R (Block.nil : Block D V loopMode Γ Λ Λ) σ ρ = .ok σ ρ := by
   first
     | rfl
     | (simp only [execBlock]; done)
 
-theorem execBlockZ_cons_ok (st : Stmt D V false Γ Λ Λ₁) (rest : Block D V false Γ Λ₁ Λ')
+theorem execBlockZ_cons_ok {loopMode : Bool} (st : Stmt D V loopMode Γ Λ Λ₁) (rest : Block D V loopMode Γ Λ₁ Λ')
     {σ σ₁ : World D} {ρ ρ₁ : Env D Γ} (h : execStmt O passes R st σ ρ = .ok σ₁ ρ₁) :
     execBlock O passes R (Block.cons st rest) σ ρ = execBlock O passes R rest σ₁ ρ₁ := by
   simp only [execBlock, h]
 
-theorem execBlockZ_cons_zurueck (st : Stmt D V false Γ Λ Λ₁) (rest : Block D V false Γ Λ₁ Λ')
+theorem execBlockZ_cons_zurueck {loopMode : Bool} (st : Stmt D V loopMode Γ Λ Λ₁) (rest : Block D V loopMode Γ Λ₁ Λ')
     {σ σ' : World D} {ρ : Env D Γ} {v : ErgVal D V.erg}
     (h : execStmt O passes R st σ ρ = .zurueck σ' v) :
     execBlock O passes R (Block.cons st rest) σ ρ = .zurueck σ' v := by
   simp only [execBlock, h]
 
-theorem execBlockZ_cons_logik (st : Stmt D V false Γ Λ Λ₁) (rest : Block D V false Γ Λ₁ Λ')
+theorem execBlockZ_cons_logik {loopMode : Bool} (st : Stmt D V loopMode Γ Λ Λ₁) (rest : Block D V loopMode Γ Λ₁ Λ')
     {σ : World D} {ρ : Env D Γ} {e : Logik D} (h : execStmt O passes R st σ ρ = .logik e) :
     execBlock O passes R (Block.cons st rest) σ ρ = .logik e := by
   simp only [execBlock, h]
 
 /-- A statement whose outcome is neither `ok`, `logik` nor `zurueck` ends the block with it. -/
-theorem execBlockZ_cons_still (st : Stmt D V false Γ Λ Λ₁) (rest : Block D V false Γ Λ₁ Λ')
+theorem execBlockZ_cons_still {loopMode : Bool} (st : Stmt D V loopMode Γ Λ Λ₁) (rest : Block D V loopMode Γ Λ₁ Λ')
     {σ : World D} {ρ : Env D Γ}
     (h1 : ∀ σ₁ ρ₁, execStmt O passes R st σ ρ ≠ .ok σ₁ ρ₁) :
     execBlock O passes R (Block.cons st rest) σ ρ = execStmt O passes R st σ ρ := by
@@ -278,7 +302,7 @@ theorem execBlockZ_cons_still (st : Stmt D V false Γ Λ Λ₁) (rest : Block D 
   | ok σ₁ ρ₁ => exact absurd hx (h1 σ₁ ρ₁)
   | _ => simp only [execBlock, hx]
 
-theorem execBlockZ_bind {τ : Ty} (e : Expr D Γ Λ τ) (rest : Block D V false (τ :: Γ) Λ Λ')
+theorem execBlockZ_bind {loopMode : Bool} {τ : Ty} (e : Expr D Γ Λ τ) (rest : Block D V loopMode (τ :: Γ) Λ Λ')
     (σ : World D) (ρ : Env D Γ) :
     execBlock O passes R (Block.bind e rest) σ ρ =
       (execBlock O passes R rest (σ.lese Λ e.orte)
@@ -287,7 +311,7 @@ theorem execBlockZ_bind {τ : Ty} (e : Expr D Γ Λ τ) (rest : Block D V false 
     | rfl
     | (simp only [execBlock]; done)
 
-theorem execStmtZ_ite (cv : Expr D Γ Λ .bool) (tb eb : Block D V false Γ Λ Λ₁)
+theorem execStmtZ_ite {loopMode : Bool} (cv : Expr D Γ Λ .bool) (tb eb : Block D V loopMode Γ Λ Λ₁)
     (σ : World D) (ρ : Env D Γ) :
     execStmt O passes R (Stmt.ite cv tb eb) σ ρ =
       if wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ) then
@@ -299,8 +323,8 @@ theorem execStmtZ_ite (cv : Expr D Γ Λ .bool) (tb eb : Block D V false Γ Λ �
 
 end Gseite
 
-theorem schrumpfZ_ok {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
-    {a : Ausgang V false (τ :: Γ)} {σ' : World D} {ρ' : Env D Γ}
+theorem schrumpfZ_ok {loopMode : Bool} {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
+    {a : Ausgang V loopMode (τ :: Γ)} {σ' : World D} {ρ' : Env D Γ}
     (h : a.schrumpf = .ok σ' ρ') : ∃ ρ'' : Env D (τ :: Γ), a = .ok σ' ρ'' ∧ ρ' = ρ''.tail := by
   cases a with
   | ok σ ρ =>
@@ -309,16 +333,16 @@ theorem schrumpfZ_ok {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
     exact ⟨ρ, rfl, rfl⟩
   | _ => simp only [Ausgang.schrumpf, reduceCtorEq] at h
 
-theorem schrumpfZ_logik {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
-    {a : Ausgang V false (τ :: Γ)} {e : Logik D} (h : a.schrumpf = .logik e) : a = .logik e := by
+theorem schrumpfZ_logik {loopMode : Bool} {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
+    {a : Ausgang V loopMode (τ :: Γ)} {e : Logik D} (h : a.schrumpf = .logik e) : a = .logik e := by
   cases a with
   | logik e' =>
     simp only [Ausgang.schrumpf, Ausgang.logik.injEq] at h
     rw [h]
   | _ => simp only [Ausgang.schrumpf, reduceCtorEq] at h
 
-theorem schrumpfZ_zurueck {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
-    {a : Ausgang V false (τ :: Γ)} {σ' : World D} {v : ErgVal D V.erg}
+theorem schrumpfZ_zurueck {loopMode : Bool} {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {τ : Ty}
+    {a : Ausgang V loopMode (τ :: Γ)} {σ' : World D} {v : ErgVal D V.erg}
     (h : a.schrumpf = .zurueck σ' v) : a = .zurueck σ' v :=
   schrumpf_zurueck h
 

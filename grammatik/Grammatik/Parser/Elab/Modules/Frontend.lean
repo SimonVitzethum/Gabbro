@@ -5,7 +5,10 @@ public import Grammatik.Parser.Elab.Modules.MatchNumber
 public import Grammatik.Parser.Elab.Modules.Expansion
 public import Grammatik.Parser.Elab.SourceNormalization
 public import Grammatik.Parser.Elab.Instantiation.Items
+public import Grammatik.Parser.Elab.Instantiation.FreshNamesFast
+public import Grammatik.Parser.Lex.TafelIndex
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Tuples.Frontend
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Modules
 
@@ -32,7 +35,8 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   let members := Uebersetze.uMembers modules.items
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
   let result ← Generic.expandDetailed members modules.literals
-  let target ← Uebersetze.entzuckere result.items
+  let (tupleItems, tupleNames) ← Tuples.expand result.items
+  let target ← Uebersetze.entzuckere tupleItems
   -- Numeric scrutinees are bound once before tagged wildcard expansion and call lifting.
   let target ← MatchNumber.erweitere target
   -- Tagged wildcards become explicit arms before calls in their copied bodies are lifted.
@@ -40,9 +44,43 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   -- Calls inside expressions become bindings before the unit is exported (`CallHoist`).
   let target := CallHoist.hebe target
   let (target, declarationNames) ← exportDeclarationUnitDetailed target
-  let allocated := modules.generatedNames ++ result.generatedNames ++ declarationNames
+  let allocated := modules.generatedNames ++ result.generatedNames ++ tupleNames ++ declarationNames
   let generated := allocated.filter ((outputNames target).contains)
   pure ⟨target, modules.requirements ++ result.requirements, generated⟩
+
+/-- Output provenance filtering uses one immutable name index for the unit. -/
+def retainOutputNames (output allocated : List String) : List String :=
+  let names := Tafel.Index.von (κ := String) (α := String) id output
+  allocated.filter fun (name : String) => (names.finde name).isSome
+
+theorem retainOutputNames_eq (output allocated : List String) :
+    retainOutputNames output allocated = allocated.filter output.contains := by
+  simp only [retainOutputNames, Tafel.Index.finde, List.isSome_find?, id_eq, List.any_beq']
+  rfl
+
+/-- Same phase order and errors, with output-name membership indexed once. -/
+def prepareDetailedRawFast (items : List SItemTief) : Except String Prepared := do
+  let modules ← expandWithRequirements items
+  let members := Uebersetze.uMembers modules.items
+  let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
+  let result ← Generic.expandDetailed members modules.literals
+  let (tupleItems, tupleNames) ← Tuples.expand result.items
+  let target ← Uebersetze.entzuckere tupleItems
+  -- Numeric scrutinees are bound once before tagged wildcard expansion and call lifting.
+  let target ← MatchNumber.erweitere target
+  -- Tagged wildcards become explicit arms before calls in their copied bodies are lifted.
+  let target := MatchWildcard.erweitere target
+  -- Calls inside expressions become bindings before the unit is exported (`CallHoist`).
+  let target := CallHoist.hebe target
+  let (target, declarationNames) ← exportDeclarationUnitDetailed target
+  let allocated := modules.generatedNames ++ result.generatedNames ++ tupleNames ++ declarationNames
+  let generated := retainOutputNames (outputNames target) allocated
+  pure ⟨target, modules.requirements ++ result.requirements, generated⟩
+
+
+@[csimp] theorem prepareDetailedRaw_eq_fast : @prepareDetailedRaw = @prepareDetailedRawFast := by
+  funext items
+  simp only [prepareDetailedRawFast, prepareDetailedRaw, retainOutputNames_eq]
 
 def existingForms (items : List SItemTief) : Bool :=
   ordinary items && !(items.any Generic.genericHeader)
@@ -72,7 +110,7 @@ def prepare (items : List SItemTief) :
 def instantiate (items : List SItemTief) : Except String (List SItemTief) :=
   (prepare items).map Prod.fst
 
-private theorem prepare_valid (source target : List SItemTief) (requirements : List (STyp × String))
+theorem prepare_valid (source target : List SItemTief) (requirements : List (STyp × String))
     (h : prepare source = .ok (target, requirements)) :
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
@@ -87,7 +125,7 @@ private theorem prepare_valid (source target : List SItemTief) (requirements : L
           Except.ok.injEq, Prod.mk.injEq] using h
       exact ⟨result, rfl, returned.1, hv⟩
 
-private theorem instantiate_valid (source target : List SItemTief)
+theorem instantiate_valid (source target : List SItemTief)
     (h : instantiate source = .ok target) :
     ∃ result, prepareDetailedRaw source = .ok result ∧ result.items = target ∧
       validOutput source result = true := by
@@ -100,7 +138,7 @@ private theorem instantiate_valid (source target : List SItemTief)
     subst target
     exact prepare_valid source actual requirements hp
 
-private theorem validOutput_parts (source : List SItemTief) (result : Prepared)
+theorem validOutput_parts (source : List SItemTief) (result : Prepared)
     (h : validOutput source result = true) :
     existingForms result.items = true ∧ Instantiation.ohneGenerik result.items = true ∧
       Instantiation.freshNames (userNames source) result.generatedNames = true ∧

@@ -353,6 +353,8 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
   | .leave, Δ, Δ', s, h, hw, hl => by
       simp only [pruefe] at h; cases h
       left; simp only [step, Ergebnis]; exact ⟨hw, hl⟩
+  | .forEach .., _, _, _, h, _, _ => by cases h
+  | .retry .., _, _, _, h, _, _ => by cases h
 
 theorem pruefeBlock_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P.D Γ)
     (hU : UmgebungOK P Γ ρ) (hS : SchleifenOK P Γ ρ) (erg : Option Shape) :

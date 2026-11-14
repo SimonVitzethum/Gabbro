@@ -57,10 +57,10 @@ def acquired : World D := (entry.nimmt outer).nimmt inner
 def released : World D := (acquired.gibt inner).gibt outer
 
 def oracle : Orakel D where
-  wirkt a := Fin.elim0 a
-  regLies r := Fin.elim0 r
+  wirktL a := Fin.elim0 a
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar g := Fin.elim0 g
+  sichtbarL g := Fin.elim0 g
 
 def noCalls (f : D.Fn) (_ : World D) (_ : Env D (D.params f)) : RufAusgang f :=
   .logik (.abstieg f)

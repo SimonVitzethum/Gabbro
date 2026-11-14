@@ -117,7 +117,9 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         have hd : druckToks (.built w [applySuff (.variable c) suff]) = [.wort w] ++
             ([.zeichen "("] ++ druckToksListe [applySuff (.variable c) suff] ++
               [.zeichen ")"]) := by
-          simp only [druckToks, List.cons_append, List.nil_append]
+          rcases hw with rfl | rfl <;>
+            simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte, List.cons_append,
+              List.nil_append, List.singleton_append, List.append_assoc]
         apply legsB_kopf _ (.wort w) _ (Or.inr ⟨w, rfl⟩) hd
         intro rest' G hrs _ hG
         apply prim_emb1M w c suff rest' G hw hka hsl hp htw hrs
@@ -129,7 +131,8 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         have hb' : groesse b ≤ n := by simp only [groesse, groesseListe] at hs; omega
         have hd : druckToks (.built "aligned" [a, b]) = [.wort "aligned"] ++
             ([.zeichen "("] ++ druckToksListe [a, b] ++ [.zeichen ")"]) := by
-          simp only [druckToks, List.cons_append, List.nil_append]
+          simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte, List.cons_append,
+            List.nil_append, List.singleton_append, List.append_assoc]
         apply legsB_kopf _ (.wort "aligned") _ (Or.inr ⟨_, rfl⟩) hd
         intro rest' G _ _ hG
         apply prim_alignedM (max (fb a) (fb b)) a b rest' G

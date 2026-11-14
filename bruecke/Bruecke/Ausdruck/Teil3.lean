@@ -254,9 +254,23 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           simp only [Gabbro.Body.eval, e1, Gabbro.Body.unop]
           rfl
       · cases hb
+  | .var p, a, a', x, g, hb, h, _ => by
+      simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      simp only [lowEns] at h
+      split at h
+      · cases h
+      · rename_i j hj
+        split at h
+        · cases h
+        · rename_i v hv
+          cases h
+          simp only [Gabbro.Body.eval]
+          rw [hB.par p j hj, nthVal_lowVar Γ _ .bool v ρ hv]
+          rfl
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _, _ | .tabB .., _, _, _, _, hb, _, _
-  | .globB .., _, _, _, _, hb, _, _ | .var .., _, _, _, _, hb, _, _
+  | .globB .., _, _, _, _, hb, _, _
   | .alle .., _, _, _, _, hb, _, _ | .einige .., _, _, _, _, hb, _, _
   | .ergB, _, _, _, _, hb, _, _ | .istSome .., _, _, _, _, hb, _, _
   | .held .., _, _, _, _, hb, _, _ | .imp .., _, _, _, _, hb, _, _
@@ -419,9 +433,13 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i gx hgx
           exact ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ x hx hgx
       · cases hb
+  | .var p, a, a', x, g, hb, h => by
+      simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨_, rfl⟩ := hb
+      exact Zuwachs.refl _ _ _
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _ | .tabB .., _, _, _, _, hb, _
-  | .globB .., _, _, _, _, hb, _ | .var .., _, _, _, _, hb, _
+  | .globB .., _, _, _, _, hb, _
   | .alle .., _, _, _, _, hb, _ | .einige .., _, _, _, _, hb, _
   | .ergB, _, _, _, _, hb, _ | .istSome .., _, _, _, _, hb, _
   | .held .., _, _, _, _, hb, _ | .imp .., _, _, _, _, hb, _

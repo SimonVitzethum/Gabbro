@@ -10,7 +10,7 @@ variable {D : Deklaration}
 
 /-- No zero slip, bind site: a foreign bind costs at least one step even at
     declared `0`. -/
-theorem fremd_kein_null_bind (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
+theorem fremd_kein_null_bind (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
     (V : Vertrag D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
@@ -18,14 +18,14 @@ theorem fremd_kein_null_bind (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (rest : Block D V l (τ :: Γ) Λ Λ') :
-    1 ≤ kostenBlockF (V := V) fa c pa (Block.bindAxiom (V := V) (l := l) a args he hw hg hd hgd rest) := by
+    1 ≤ kostenBlockF ep (V := V) fa c pa (Block.bindAxiom (V := V) (l := l) a args he hw hg hd hgd rest) := by
   simp only [kostenBlockF, kostenBlock]; omega
 
 /-- The depth bound with declared foreign costs on top: the §1 depth cost of
     the body plus the body's foreign costs. -/
 def kostenTiefF (P : Programm D) (fa : D.Ax → Nat) (pa : Nat) : Nat → D.Fn → Nat
   | 0, _ => 0
-  | n + 1, g => kostenEnd (kostenTief P pa n) pa (P.rumpf g) + fremdEnd fa pa (P.rumpf g)
+  | n + 1, g => kostenEnd (kostenEpilog P g) (kostenTief P pa n) pa (P.rumpf g) + fremdEnd fa pa (P.rumpf g)
 
 /-- The foreign-inclusive depth bound covers the §1 depth bound. -/
 theorem kostenTiefF_ge (P : Programm D) (fa : D.Ax → Nat) (pa : Nat) (n : Nat) (g : D.Fn) :
@@ -76,7 +76,7 @@ end Gabbro.Grammatik
     closed list with a declared table: own steps `≤ decl g`.
   * `spiegel_stmt`/`spiegel_block`/`spiegel_end`, `frame_schritte_pruefer`
     (TARGET 3) -- Lean bound `≤` checker number `+ zusatz`, per form; the
-    findings F1-F9 in §11.
+    findings F1-F10 in §11.
   * `eintritt_start`, `eintritt_push` -- every frame begins in `Eintritt`;
     `segLauf_erreichbar`/`erreichbar_segLauf` -- counted runs are exactly
     the reachability derivations.
@@ -85,6 +85,12 @@ end Gabbro.Grammatik
     zero slip; `kostenTiefF_ge`/`fremd_budget_erhalten` -- budget
     preservation over foreign calls, drop-in for `Zielsatz.ZeitAb`
     (`FortschrittG` untouched: foreign edges are `blatt` steps).
+
+  Value-return costs include `kostenEpilog P g`: ensures plus all owed
+  invariant predicates. Scoped value returns carry the same price; reason
+  returns, leave and next do not. Reads/evaluation happen within a G step,
+  so no separate `lese` transition is added. The declared-cost Bool uses
+  this same account.
 
   What the bound does NOT say:
   * WAITING. A step that cannot fire is no step: `dannLocks` needs the lock

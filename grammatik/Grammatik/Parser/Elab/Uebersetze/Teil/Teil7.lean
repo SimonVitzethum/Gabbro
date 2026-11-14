@@ -166,6 +166,7 @@ def anwArt : SAnw → String
   | .bindAxiomOpt .. => "let?" | .bindAxiomOptElse .. => "let? else" | .bindLib .. => "library let" | .set .. => "assignment"
   | .shift .. => "shift" | .call .. => "call" | .lcall .. => "library call" | .cond .. => "if"
   | .elsif .. => "else if" | .cases .. => "match" | .arm .. => "match arm" | .each .. => "traverse"
+  | .boundedLoop .. => "bounded loop"
   | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .trimReq .. => "trim required" | .locks .. => "locks"
   | .watch .. => "watch" | .leave .. => "leave" | .next .. => "next" | .emit .. => "emit" | .await .. => "await"
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
@@ -323,6 +324,7 @@ def uAltErsetze (a : String) : Nat → SExpr → SExpr
   | f + 1, .bin o x y => .bin o (uAltErsetze a f x) (uAltErsetze a f y)
   | f + 1, .call n args => .call n (args.map (uAltErsetze a f))
   | _ + 1, e => e
+termination_by structural fuel => fuel
 
 /-- An exchange as read from its tail: the update binder, the guarded values, the last value, the payload, the
     `awaits` names, and whether it is the compare form (whose binder is the success, a truth value). -/

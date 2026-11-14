@@ -45,12 +45,12 @@ theorem fadenS_ax {z : RufFadenG D} {W : World D}
   have hok' : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) := by
     rw [hr] at hok0; exact hok0
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
-  have hlen : σ.spur.length ≤ ((σ.lese Λ args.orte).fragt (.inl a)).spur.length :=
-    Nat.le_trans (lese_laenge _ _ _) (Nat.le_succ _)
-  have hlen2 : σ.spur.length ≤ (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1).spur.length :=
+  have hlen : σ.rang ≤ ((σ.lese Λ args.orte).fragt (.inl a)).rang :=
+    Nat.le_trans (lese_laenge _ _ _) (World.rang_le_fragt _ _)
+  have hlen2 : σ.rang ≤ (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1).rang :=
     Nat.le_trans hlen (axWeltF_laenge _ _ _)
   have hlt : Nonempty (Ereignis D) →
-      ((σ.lese Λ args.orte).fragt (.inl a)).spur.length < (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1).spur.length :=
+      ((σ.lese Λ args.orte).fragt (.inl a)).rang < (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1).rang :=
     fun hN => frischSpur_laenge hN _
   have hpa : ¬ Nonempty (Ereignis D) → PasstA O (HA ++ [⟨a, (σ.lese Λ args.orte).fragt (.inl a),
       evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ,
@@ -69,8 +69,8 @@ theorem fadenS_ax {z : RufFadenG D} {W : World D}
     kurzVB_mono hk hlen2, ?_, ?_, ?_, ?_,
     hfu, hiu, kurzUB_mono hku hlen2, ?_, hok hok', ?_⟩, hS⟩
   · by_cases hN : Nonempty (Ereignis D)
-    · exact funkA_append hfa (hka.1 hN) _ hlen
-    · exact funkA_of_passtA (hpa hN)
+    · exact funkA_append hfa (hka.1 hN) _ hlen ⟨frischSpur D, rfl⟩
+    · exact funkA_of_passtA hN (hpa hN)
   · intro a' σk ρk x hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hra a' σk ρk x hm
@@ -173,8 +173,8 @@ theorem fadenS_locks {z : RufFadenG D} {W : World D} (hF : FadenS P O passes Q S
   rw [hr] at hg hok
   simp only at hg hok
   obtain ⟨hks, hss, hrest⟩ := okS_dann_cons hok
-  have hlen : σ.spur.length < ((mischU S L σ W.speicher).nimmt L).spur.length := by
-    show σ.spur.length < (Ereignis.nimmt L _ :: σ.spur).length
+  have hlen : σ.rang < ((mischU S L σ W.speicher).nimmt L).rang := by
+    rw [World.rang_nimmt]
     exact Nat.lt_succ_self _
   refine ⟨⟨H, HA, HU ++ [(L, σ, W.speicher)], (mischU S L σ W.speicher).nimmt L, hreq, hf, hv,
     kurzVB_mono hk (Nat.le_of_lt hlen), hfa, hra, hqa, kurzAB_mono hka (Nat.le_of_lt hlen),
@@ -239,7 +239,7 @@ theorem kopfS_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
   rw [he] at h1
   exact (hK F.f).2 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusL H)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusL H)
     (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq e
     (zErgG_gleich_logik (ZErgG.folgt_logik h1))
 
@@ -316,7 +316,7 @@ theorem fadenS_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (fun O' U R σ h => semH_frei_falsch S O' U passes R L k σ ρ h)
   refine fadenS_lokal hF hr ρ k spur' (fun σ hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  exact ⟨σ.gibt L, Nat.le_succ _, gleichAuf_frei hg spur', hok,
+  exact ⟨σ.gibt L, World.rang_le_gibt σ L, gleichAuf_frei hg spur', hok,
     fun R O' U => ZErgG.folgt_of_eq (semH_frei S O' U passes R L k σ ρ hiσ)⟩
 
 /-- **A `leave`/`next` out of a `locks` body keeps the replay**
@@ -342,7 +342,7 @@ theorem fadenS_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   refine fadenS_lokal hF hr ρ _ spur' (fun σ hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS hLΛ hg).trans hW
   obtain ⟨_, _, hk⟩ := hok
-  refine ⟨σ.gibt L, Nat.le_succ _,
+  refine ⟨σ.gibt L, World.rang_le_gibt σ L,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
     ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp only [blockOrteP, Bool.false_eq_true, ↓reduceIte, stmtOrteP, List.append_nil, List.not_mem_nil] at hc, hk⟩,
     fun R O' U => ZErgG.folgt_of_eq (semH_peelFrei S O' U passes R L rest k σ ρ h x hiσ)⟩

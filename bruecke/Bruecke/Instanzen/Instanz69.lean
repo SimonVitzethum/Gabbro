@@ -1,5 +1,4 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0069IntegerConversion
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -176,16 +175,18 @@ theorem kombiniert_meets : kombiniert_meets_statement := by
 
 def kombiniert : UFn := u.fns[0]'(by decide)
 
-example : zuBody u kombiniert = some kombiniert_body := rfl
+theorem kombiniert_body_eq : zuBodyZ u kombiniert = some kombiniert_body := by cbv
 example : preExpr kombiniert = kombiniert_pre := rfl
 example : kombiniert.puts = kombiniert_writes := rfl
 example : (fun s s' r => (postU u wellFormed kombiniert s s' r).getD False) = kombiniert_post := rfl
-example : meetsU u wellFormed kombiniert ((zuBody u kombiniert).getD []) = kombiniert_meets_statement := rfl
+example : meetsU u wellFormed kombiniert ((zuBodyZ u kombiniert).getD []) = kombiniert_meets_statement := by
+  rw [kombiniert_body_eq]
+  rfl
 
 /-- The duty of `kombiniert`: the computed statement, closed by a proof against GabbroV's `Body`. -/
 theorem pflicht_0 : ∃ body, zuBodyZ u (fnAt u ⟨0, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
-  ⟨kombiniert_body, (by kernel_rfl), by rw [wfU_eq]; exact kombiniert_meets⟩
+  ⟨kombiniert_body, kombiniert_body_eq, by rw [wfU_eq]; exact kombiniert_meets⟩
 
 theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
   have duties : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧

@@ -229,13 +229,13 @@ theorem swEffArm : ∀ σ ρ σ' roh, swKbehArm swKArm.nummer swKArm.abi σ ρ �
 theorem swO_trifftArm : ∀ σ ρ, ∃ σ' roh,
     swKbehArm swUArm.nummer swUArm.abi σ ρ σ' roh ∧ swO.wirkt () σ ρ = (σ', roh) := by
   intro σ ρ
-  refine ⟨(σ.storeSlot () (swFd ρ) () ⟨1, by decide, by decide⟩).merke
-      (axiomSpur [()] [] () [] σ.haelt), 0,
-    ⟨rfl, rfl, ?_, ?_, rfl, rfl⟩, rfl⟩
+  refine ⟨(swO.wirkt () σ ρ).1, 0, ⟨rfl, rfl, ?_, ?_, rfl, ?_⟩, rfl⟩
   · exact .inl ⟨by omega, (swLen_bereich ρ).1, rfl⟩
   · exact (rahmen_storeSlot swK.Ek swK.EkG σ () (swFd ρ) ()
       (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192)) rfl).trans
       (rahmen_gleich rfl rfl)
+  · show axiomSpur [()] [] () [] σ.ohneLese.haelt ++ σ.spur = axiomSpur [()] [] () [] σ.haelt ++ σ.spur
+    rw [World.ohneLese_haelt]
 
 /-- **ZEUGE (AArch64):** the pairing holds for the toy `write` through the AArch64 record, the
     record is well-formed under the generic notion, and the program is non-degenerate (a

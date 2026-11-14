@@ -102,6 +102,13 @@ def kostenArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
   | .cons e rest => kostenExpr e + kostenArgs rest
 end
 
+/-- Return predicates evaluated by `rufAt`, in declaration order. Reads and
+    predicate evaluation occur inside a G return step, not as separate
+    transitions; `kostenExpr` charges their primitive operations, including loads. -/
+def kostenEpilog (P : Programm D) (f : D.Fn) : Nat :=
+  kostenExpr (P.ensures f) +
+    ((D.invs.filter (schuldet f)).map (fun i => kostenExpr (P.invariante i))).sum
+
 /-- Cost of a return payload: nothing for `none`, the expression otherwise. -/
 def kostenErg {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} :
     ErgExpr D Γ Λ o → Nat
@@ -121,6 +128,7 @@ theorem entfZ_wahr {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /- **The cost of statements, blocks and end blocks** -- the number of G
     steps a thread may take to run them, parametrised by
+    * `ep : Nat`, the return-predicate price of this function, and
     * `c : D.Fn → Nat`, the cost a call counts for its callee (the callee's
       computed cost one depth down, `kostenTief`, or a declared table,
       `kostenPasst`), and
@@ -132,8 +140,16 @@ theorem entfZ_wahr {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     every G step beyond the leaves (unfold, branch choice, lock take and
     release, `schrumpf`, empty-block close, loop resume) is paid by a
     constant `1` or `2`. The relation to the checker's number is in §10. -/
+/- The mutually recursive costs take the scalar epilogue price explicitly.
+   A `Vertrag` need not identify a unique function, so it cannot recover P/f.
+   Threading this scalar through every return site also preserves the exact
+   `kostenBlock_alsBlock = kostenSonst` equation; a top-level wrapper would
+   miss returns inside blocks and would charge reason exits. Program-level
+   consumers supply `kostenEpilog P f`; local body-only accounts supply 0.
+   Scoped value returns deliver the same value answer after cleanup and owe
+   the same epilogue. `rufAt`'s `.why` arm evaluates no return predicates. -/
 mutual
-def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenStmt (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignThru p _ _ _ i e _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
@@ -143,10 +159,10 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .putBytes _ _ _ _ i _ _ e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignVar _ e => 1 + kostenExpr e
   | .shift _ _ _ i _ _ _ _ _ _ => 1 + kostenExpr i
-  | .ite b t e => 1 + kostenExpr b + max (kostenBlock c pa t) (kostenBlock c pa e)
-  | .onOption o p a => 2 + kostenExpr o + max (kostenBlock c pa p) (kostenBlock c pa a)
-  | .onTag v arms => 2 + kostenExpr v + kostenArms c pa arms
-  | .onWhy r arms => 1 + kostenExpr r + kostenGrundArms c pa arms
+  | .ite b t e => 1 + kostenExpr b + max (kostenBlock ep c pa t) (kostenBlock ep c pa e)
+  | .onOption o p a => 2 + kostenExpr o + max (kostenBlock ep c pa p) (kostenBlock ep c pa a)
+  | .onTag v arms => 2 + kostenExpr v + kostenArms ep c pa arms
+  | .onWhy r arms => 1 + kostenExpr r + kostenGrundArms ep c pa arms
   | .call g args _ _ => 1 + kostenArgs args + c g
   /- Indirect call: the callee is named by a pointer VALUE, so the Lean
       model has no number for it (the checker reads `costs` off the
@@ -154,155 +170,155 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       no cost field). Counted without a callee here and EXCLUDED from the
       bound: the cost engine runs the gates with `ZS = fun _ => false` (see CUTS). -/
   | .callInd p args _ _ => 1 + kostenExpr p + kostenArgs args
-  | .callIndElse p args _ _ _ err => 1 + kostenExpr p + kostenArgs args + (kostenSonst c pa err + 2)
-  | .locks _ _ body => 2 + kostenBlock c pa body
-  | .breaking _ body => 1 + kostenBlock c pa body
+  | .callIndElse p args _ _ _ err => 1 + kostenExpr p + kostenArgs args + (kostenSonst ep c pa err + 2)
+  | .locks _ _ body => 2 + kostenBlock ep c pa body
+  | .breaking _ body => 1 + kostenBlock ep c pa body
   | .traverse t inv body =>
-      2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2)
+      2 + (D.count t).toNat * (kostenBlock ep c pa body + kostenExpr inv + 2)
   -- Each selection pass spends one unit of the fuel installed by `dannVerbrauch`.
   | .consumeTraverse t member edge inv bound mass body =>
-      2 + ((D.count t).toNat + bound.toNat + 1) * (kostenBlock c pa body + kostenExpr member +
+      2 + ((D.count t).toNat + bound.toNat + 1) * (kostenBlock ep c pa body + kostenExpr member +
         kostenExpr edge + kostenExpr inv + kostenExpr mass + 2)
   | .retry n bis body ueber =>
-      2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
-  | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
+      2 + n * (kostenBlock ep c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock ep c pa ueber)
+  | .forever _ inv body => 2 + pa * (kostenBlock ep c pa body + kostenExpr inv + 2)
   | .axiomCall _ args _ _ _ _ _ => 1 + kostenArgs args
-  | .axiomCallElse _ _ args _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst c pa err + 2)
+  | .axiomCallElse _ _ args _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst ep c pa err + 2)
   | .regWrite _ _ e => 1 + kostenExpr e
   | .transition _ _ _ _ _ _ _ => 1
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
   | .advances _ _ _ _ => 1
   | .retires _ _ _ _ => 1
-  | .ret e _ => 1 + kostenErg e
+  | .ret e _ => 1 + kostenErg e + ep
   | .retWhy _ _ => 1
-  | .retScoped e _ => 1 + kostenErg e
+  | .retScoped e _ => 1 + kostenErg e + ep
   | .retWhyScoped _ _ => 1
   | .leave _ => 1
   | .next _ => 1
 
-def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenBlock (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
   | .nil => 1
-  | .cons s rest => kostenStmt c pa s + kostenBlock c pa rest
-  | .bind e rest => 2 + kostenExpr e + kostenBlock c pa rest
-  | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenBlock c pa rest
+  | .cons s rest => kostenStmt ep c pa s + kostenBlock ep c pa rest
+  | .bind e rest => 2 + kostenExpr e + kostenBlock ep c pa rest
+  | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenBlock ep c pa rest
   | .bindCallInd p args _ _ _ rest =>
-      2 + kostenExpr p + kostenArgs args + kostenBlock c pa rest
+      2 + kostenExpr p + kostenArgs args + kostenBlock ep c pa rest
   | .bindCallIndElse p args _ _ _ err rest =>
-      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst ep c pa err + 2) (kostenBlock ep c pa rest + 1)
   | .bindCallElse g args _ _ _ err rest =>
-      2 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
-  | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
+      2 + kostenArgs args + c g + max (kostenSonst ep c pa err + 2) (kostenBlock ep c pa rest + 1)
+  | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock ep c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
-      4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
-  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
+      4 + kostenArgs args + kostenSonst ep c pa err + kostenBlock ep c pa rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenBlock ep c pa rest
   | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
-      4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
-  | .regRead _ _ rest => 2 + kostenBlock c pa rest
+      4 + kostenArgs args + kostenSonst ep c pa err + kostenBlock ep c pa rest
+  | .regRead _ _ rest => 2 + kostenBlock ep c pa rest
   | .regReadElse _ _ zusage sonst rest =>
-      2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
-  | .awaits _ _ _ _ _ rest => 2 + kostenBlock c pa rest
-  | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenBlock c pa rest
+      2 + kostenExpr zusage + max (kostenSonst ep c pa sonst + 1) (kostenBlock ep c pa rest + 1)
+  | .awaits _ _ _ _ _ rest => 2 + kostenBlock ep c pa rest
+  | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenBlock ep c pa rest
   | .narrow e _ _ sonst rest =>
-      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
-  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenBlock c pa rest + 1)
+      2 + kostenExpr e + max (kostenSonst ep c pa sonst + 1) (kostenBlock ep c pa rest + 1)
+  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenBlock ep c pa rest + 1)
   | .check b sonst rest =>
-      1 + kostenExpr b + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest)
-  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenBlock c pa rest
-  | .floatLit _ _ _ rest => 2 + kostenBlock c pa rest
-  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenBlock c pa rest
+      1 + kostenExpr b + max (kostenSonst ep c pa sonst + 1) (kostenBlock ep c pa rest)
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenBlock ep c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenBlock ep c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenBlock ep c pa rest
   | .floatNarrow e _ _ sonst rest =>
-      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
+      2 + kostenExpr e + max (kostenSonst ep c pa sonst + 1) (kostenBlock ep c pa rest + 1)
 
-def kostenArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenArms (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
-  | .cons b rest => max (kostenBlock c pa b) (kostenArms c pa rest)
+  | .cons b rest => max (kostenBlock ep c pa b) (kostenArms ep c pa rest)
 
-def kostenGrundArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenGrundArms (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {n : Nat} : GrundArms D V l Γ Λ Λ' n → Nat
   | .nil => 0
-  | .cons b rest => max (kostenBlock c pa b) (kostenGrundArms c pa rest)
+  | .cons b rest => max (kostenBlock ep c pa b) (kostenGrundArms ep c pa rest)
 
-def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenEnd (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
-  | .ret e _ => 1 + kostenErg e
+  | .ret e _ => 1 + kostenErg e + ep
   | .retWhy _ _ => 1
-  | .retScoped e _ => 1 + kostenErg e
+  | .retScoped e _ => 1 + kostenErg e + ep
   | .retWhyScoped _ _ => 1
   | .leave _ => 1
   | .next _ => 1
-  | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
-  | .bind e rest => 1 + kostenExpr e + kostenEnd c pa rest
-  | .bindCall g args _ _ _ rest => 5 + kostenArgs args + c g + kostenSonst c pa rest
+  | .cons s rest => entfZ s + kostenStmt ep c pa s + kostenEnd ep c pa rest
+  | .bind e rest => 1 + kostenExpr e + kostenEnd ep c pa rest
+  | .bindCall g args _ _ _ rest => 5 + kostenArgs args + c g + kostenSonst ep c pa rest
   | .bindCallElse g args _ _ _ err rest =>
-      5 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
-  | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+      5 + kostenArgs args + c g + max (kostenSonst ep c pa err + 2) (kostenSonst ep c pa rest + 1)
+  | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd ep c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
-      1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
-  | .bindAxiomOpt _ _ args _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+      1 + kostenArgs args + kostenEnd ep c pa err + kostenEnd ep c pa rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 1 + kostenArgs args + kostenEnd ep c pa rest
   | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
-      1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
-  | .regRead _ _ rest => 5 + kostenSonst c pa rest
+      1 + kostenArgs args + kostenEnd ep c pa err + kostenEnd ep c pa rest
+  | .regRead _ _ rest => 5 + kostenSonst ep c pa rest
   | .regReadElse _ _ zusage sonst rest =>
-      5 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .awaits _ _ _ _ _ rest => 5 + kostenSonst c pa rest
-  | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+      5 + kostenExpr zusage + max (kostenSonst ep c pa sonst + 1) (kostenSonst ep c pa rest + 1)
+  | .awaits _ _ _ _ _ rest => 5 + kostenSonst ep c pa rest
+  | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst ep c pa rest
   | .bindCallIndElse p args _ _ _ err rest =>
-      5 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
+      5 + kostenExpr p + kostenArgs args + max (kostenSonst ep c pa err + 2) (kostenSonst ep c pa rest + 1)
   -- unfolded into block position like the other compound end forms: the unfold step and the block's price
-  | .narrow e _ _ sonst rest => 5 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .narrowRequired e _ _ rest => 5 + kostenExpr e + (kostenSonst c pa rest + 1)
-  | .exchange _ neu _ _ rest => 5 + kostenExpr neu + kostenSonst c pa rest
-  | .ite b t e => 4 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
+  | .narrow e _ _ sonst rest => 5 + kostenExpr e + max (kostenSonst ep c pa sonst + 1) (kostenSonst ep c pa rest + 1)
+  | .narrowRequired e _ _ rest => 5 + kostenExpr e + (kostenSonst ep c pa rest + 1)
+  | .exchange _ neu _ _ rest => 5 + kostenExpr neu + kostenSonst ep c pa rest
+  | .ite b t e => 4 + kostenExpr b + max (kostenSonst ep c pa e + 1) (kostenSonst ep c pa t)
 
-  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenEnd c pa rest
-  | .floatLit _ _ _ rest => 2 + kostenEnd c pa rest
-  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenEnd c pa rest
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenEnd ep c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenEnd ep c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenEnd ep c pa rest
   -- Both branches stay in end position, including the narrowing fallback.
   | .floatNarrow e _ _ sonst rest =>
-      2 + kostenExpr e + max (kostenEnd c pa sonst + 1) (kostenEnd c pa rest + 1)
+      2 + kostenExpr e + max (kostenEnd ep c pa sonst + 1) (kostenEnd ep c pa rest + 1)
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
     reaches the enclosing loop. Priced as that block: a compound needs no
     unfold, a `let` pays its `schrumpf` layer, the final statement its
     empty-block tail. -/
-def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def kostenSonst (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
-  | .ret e _ => 2 + kostenErg e
+  | .ret e _ => 2 + kostenErg e + ep
   | .retWhy _ _ => 2
-  | .retScoped e _ => 2 + kostenErg e
+  | .retScoped e _ => 2 + kostenErg e + ep
   | .retWhyScoped _ _ => 2
   | .leave _ => 2
   | .next _ => 2
-  | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
-  | .bind e rest => 2 + kostenExpr e + kostenSonst c pa rest
-  | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenSonst c pa rest
+  | .cons s rest => kostenStmt ep c pa s + kostenSonst ep c pa rest
+  | .bind e rest => 2 + kostenExpr e + kostenSonst ep c pa rest
+  | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenSonst ep c pa rest
   | .bindCallElse g args _ _ _ err rest =>
-      2 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
-  | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+      2 + kostenArgs args + c g + max (kostenSonst ep c pa err + 2) (kostenSonst ep c pa rest + 1)
+  | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst ep c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
-      4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
-  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+      4 + kostenArgs args + kostenSonst ep c pa err + kostenSonst ep c pa rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenSonst ep c pa rest
   | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
-      4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
-  | .regRead _ _ rest => 2 + kostenSonst c pa rest
+      4 + kostenArgs args + kostenSonst ep c pa err + kostenSonst ep c pa rest
+  | .regRead _ _ rest => 2 + kostenSonst ep c pa rest
   | .regReadElse _ _ zusage sonst rest =>
-      2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
-  | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+      2 + kostenExpr zusage + max (kostenSonst ep c pa sonst + 1) (kostenSonst ep c pa rest + 1)
+  | .awaits _ _ _ _ _ rest => 2 + kostenSonst ep c pa rest
+  | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst ep c pa rest
   | .bindCallIndElse p args _ _ _ err rest =>
-      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
-  | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
-  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst c pa rest + 1)
-  | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst ep c pa err + 2) (kostenSonst ep c pa rest + 1)
+  | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst ep c pa sonst + 1) (kostenSonst ep c pa rest + 1)
+  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst ep c pa rest + 1)
+  | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst ep c pa rest
   -- run as `Block.check b e t` (`Endblock.alsBlock`)
-  | .ite b t e => 1 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
-  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenSonst c pa rest
-  | .floatLit _ _ _ rest => 2 + kostenSonst c pa rest
-  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenSonst c pa rest
+  | .ite b t e => 1 + kostenExpr b + max (kostenSonst ep c pa e + 1) (kostenSonst ep c pa t)
+  | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenSonst ep c pa rest
+  | .floatLit _ _ _ rest => 2 + kostenSonst ep c pa rest
+  | .floatOf e _ _ rest => 2 + kostenExpr e + kostenSonst ep c pa rest
   | .floatNarrow e _ _ sonst rest =>
-      2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+      2 + kostenExpr e + max (kostenSonst ep c pa sonst + 1) (kostenSonst ep c pa rest + 1)
 
 end
 

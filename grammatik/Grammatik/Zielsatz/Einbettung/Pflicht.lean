@@ -109,14 +109,19 @@ theorem phiRuf_passt {X : Type} {L : List (World D × X)} (hf : ∀ p ∈ L, ∀
 
 /-- **The maps repeating the keys.** -/
 noncomputable def phiAus (M : Keys D D') (ctx : Speicher D') : Phi D D' :=
-  ⟨E.phiListe M.haupt ctx, E.phiListe M.atom ctx, phiRuf M.ruf⟩
+  ⟨E.phiListe M.haupt ctx, E.phiListe M.atom ctx, phiRuf M.ruf, E.phiListe M.orakel ctx⟩
 
 theorem phiAus_passt {M : Keys D D'} (hk : E.KeyOk hZ M) (ctx : Speicher D') : Passt (E.phiAus M ctx) M :=
-  ⟨E.phiListe_passt hk.2.1 ctx, E.phiListe_passt hk.2.2.2.1 ctx, phiRuf_passt hk.2.2.2.2⟩
+  ⟨E.phiListe_passt hk.2.1 ctx, E.phiListe_passt hk.2.2.2.1 ctx, phiRuf_passt hk.2.2.2.2.1,
+    E.phiListe_passt hk.2.2.2.2.2.2 ctx⟩
 
 theorem phiAus_treu {M : Keys D D'} (hk : E.KeyOk hZ M) (ctx : Speicher D') (σ : World D) :
     E.Treu hZ σ.speicher ((E.phiAus M ctx).haupt σ) :=
   E.phiListe_treu hZ hk.1 ctx σ
+
+theorem phiAus_treuO {M : Keys D D'} (hk : E.KeyOk hZ M) (ctx : Speicher D') (σ : World D) :
+    E.Treu hZ σ.speicher ((E.phiAus M ctx).orakel σ) :=
+  E.phiListe_treu hZ hk.2.2.2.2.2.1 ctx σ
 
 /-! ## Contracts -/
 
@@ -309,7 +314,7 @@ section Klassen
 
 variable {P : Programm D} {P' : Programm D'} (hF : E.Fortsetzung hS P P')
   {pad : List (Ereignis D)} (hp : PadOk pad) (hV : E.RueckVertrag hZ hS pad P P') {Φ : Phi D D'}
-  (hΦ : ∀ σ, E.Treu hZ σ.speicher (Φ.haupt σ))
+  (hΦ : ∀ σ, E.Treu hZ σ.speicher (Φ.haupt σ)) (hΦO : ∀ σ, E.Treu hZ σ.speicher (Φ.orakel σ))
 
 include hF hp hV hΦ in
 /-- **The induced call handler respects the contracts and frames of `P`.** -/
@@ -385,28 +390,30 @@ theorem umweltΦ_ok (S : SperrInv D) {S' : SperrInv D'} (hSL : ∀ L (s s' : Spe
 theorem aumweltΦ_ok (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : HavocA T (E.aumweltΦ hZ Φ T A') :=
   fun X σ => ⟨mischT_spur T X σ _, fun _ hc => mischT_aussen σ _ hc⟩
 
-include hΦ in
+include hΦO in
 /-- The induced oracle respects the axiom frames. -/
 theorem orakelΦ_rahmen {O' : Orakel D'} (hO' : RahmenO O') : RahmenO (E.orakelΦ hZ pad Φ O') := by
   intro a σ ρ
-  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
+  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) ((Φ.orakel σ.ohneLese).alsFrage (E.ax a)) (E.aparamsUm a ρ)
   refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
   · have hw : D'.aschreibt (E.ax a) (E.tab t) = false := by rw [E.aschreibt, E.tabZ_tab]; exact ht
-    have e' : (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).1.slots (E.tab t) = (Φ.haupt σ).slots (E.tab t) :=
-      funext fun k => funext fun f => hr1 (E.tab t) hw k f
+    have e' : (O'.wirkt (E.ax a) ((Φ.orakel σ.ohneLese).alsFrage (E.ax a)) (E.aparamsUm a ρ)).1.slots (E.tab t) = (Φ.orakel σ.ohneLese).slots (E.tab t) :=
+      (funext fun k => funext fun f => hr1 (E.tab t) hw k f).trans
+        (congrFun (World.alsFrage_slots (Φ.orakel σ.ohneLese) (E.ax a)) (E.tab t))
     show (E.speicherZ hZ _).slots t k f = σ.slots t k f
-    rw [E.speicherZ_slots hZ e', E.speicherZ_treu (hΦ σ)]; rfl
+    rw [E.speicherZ_slots hZ e', E.speicherZ_treu (hΦO σ.ohneLese)]; rfl
   · have hw : D'.agschreibt (E.ax a) (E.glob g) = false := by rw [E.agschreibt, E.globZ_glob]; exact hg
-    have e := hr2 (E.glob g) hw
+    have e := (hr2 (E.glob g) hw).trans
+      (congrFun (World.alsFrage_globs (Φ.orakel σ.ohneLese) (E.ax a)) (E.glob g))
     show (E.speicherZ hZ _).globs g = σ.globs g
-    rw [E.speicherZ_globs hZ e, E.speicherZ_treu (hΦ σ)]; rfl
+    rw [E.speicherZ_globs hZ e, E.speicherZ_treu (hΦO σ.ohneLese)]; rfl
 
-include hΦ in
+include hΦO in
 /-- The induced oracle is register-local: the carriers of a register hold no function pointer
     (`AntwortFrei.regFrei`), and the visibility of a pointer-carrying global is constant. -/
 theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.orakelΦ hZ pad Φ O') := by
   refine ⟨fun r σ₁ σ₂ hg => ?_, fun g σ₁ σ₂ hg => ?_⟩
-  · show O'.regLies (E.reg r) (Φ.haupt σ₁) = O'.regLies (E.reg r) (Φ.haupt σ₂)
+  · show O'.regLies (E.reg r) (Φ.orakel σ₁.ohneLese) = O'.regLies (E.reg r) (Φ.orakel σ₂.ohneLese)
     apply hRL.1
     rw [E.rtraeger]
     refine ⟨fun t' ht' => ?_, fun g' hg' => ?_⟩
@@ -414,40 +421,58 @@ theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.ora
       rcases c with t | g
       · simp only [Sum.map_inl, Sum.inl.injEq] at he
         subst he
-        exact E.bild_slots hZ (hΦ σ₁) (hΦ σ₂) (hZ.frei.regFrei r t hc) (hg.1 t hc)
+        exact E.bild_slots hZ (hΦO σ₁.ohneLese) (hΦO σ₂.ohneLese) (hZ.frei.regFrei r t hc) (hg.1 t hc)
       · simp only [Sum.map_inr, reduceCtorEq] at he
     · obtain ⟨c, hc, he⟩ := List.mem_map.mp hg'
       rcases c with t | g
       · simp only [Sum.map_inl, reduceCtorEq] at he
       · simp only [Sum.map_inr, Sum.inr.injEq] at he
         subst he
-        exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) (hZ.frei.regFreiG r g hc) (hg.2 g hc)
-  · show (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ₁) else true) =
-      (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ₂) else true)
+        exact E.bild_globs hZ (hΦO σ₁.ohneLese) (hΦO σ₂.ohneLese) (hZ.frei.regFreiG r g hc) (hg.2 g hc)
+  · show (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.orakel σ₁.ohneLese) else true) =
+      (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.orakel σ₂.ohneLese) else true)
     by_cases hz : (D.gtyp g).zeigerfrei = true
     · simp only [hz, if_true]
       apply hRL.2
       refine ⟨fun t' ht' => by simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at ht', fun g' hg' => ?_⟩
       rw [List.mem_singleton] at hg'
       cases hg'
-      exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) hz (hg.2 g (List.mem_singleton.mpr rfl))
+      exact E.bild_globs hZ (hΦO σ₁.ohneLese) (hΦO σ₂.ohneLese) hz (hg.2 g (List.mem_singleton.mpr rfl))
     · simp only [hz, Bool.false_eq_true, ↓reduceIte]
 
-/-- The induced oracle meets the axiom ensures of `D`, when the `D'`-oracle meets their images. -/
-theorem orakelΦ_axVertrag {O' : Orakel D'} {Q : AxEns D} {Q' : AxEns D'} (hQ' : AxVertragO Q' O')
+include hΦO in
+/-- Conditional summaries transfer at question worlds through the read-erased oracle keys. -/
+theorem orakelΦ_axVertragOP {O' : Orakel D'} {Pre : AxPre D} {Pre' : AxPre D'}
+    {Q : AxEns D} {Q' : AxEns D'} (hQ' : AxVertragOP Pre' Q' O')
+    (hPre : ∀ a (σ : World D) (σ' : World D') (ρ : Env D (D.aparams a)),
+      E.Treu hZ σ.speicher σ' → Pre a σ ρ = true → Pre' (E.ax a) σ' (E.aparamsUm a ρ) = true)
     (hQ : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
       Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v)
-    (hQL : AxEnsLokal Q) : AxVertragO Q (E.orakelΦ hZ pad Φ O') := by
-  intro a σ ρ v hv
+    (hQL : AxEnsLokal Q) : AxVertragOP Pre Q (E.orakelΦ hZ pad Φ O') := by
+  intro a σ0 ρ v hp hv
+  obtain ⟨w0, hw0⟩ := World.alsFrage_frage
+    (Φ.orakel (σ0.fragt (.inl a)).ohneLese) (E.ax a)
+  have hT : E.Treu hZ (σ0.fragt (.inl a)).speicher (w0.fragt (.inl (E.ax a))) := by
+    obtain ⟨h1, h2⟩ := hΦO (σ0.fragt (.inl a)).ohneLese
+    refine ⟨fun t k f => ?_, fun g => ?_⟩
+    · rw [← hw0, World.alsFrage_slots]
+      exact h1 t k f
+    · rw [← hw0, World.alsFrage_globs]
+      exact h2 g
   have hw := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
-    (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 (E.aerg a)
-  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 =
-      some v := hv
+    (O'.wirkt (E.ax a) (w0.fragt (.inl (E.ax a))) (E.aparamsUm a ρ)).2 (E.aerg a)
+  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a)
+      (O'.wirkt (E.ax a) (w0.fragt (.inl (E.ax a))) (E.aparamsUm a ρ)).2 = some v := by
+    rw [← hw0]
+    exact hv
   rw [hv', Option.map_some] at hw
-  have hq := hQ' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ) _ hw
+  have hq := hQ' (E.ax a) w0 (E.aparamsUm a ρ) _
+    (hPre a (σ0.fragt (.inl a)) (w0.fragt (.inl (E.ax a))) ρ hT hp) hw
   rw [hQ] at hq
-  show Q a (E.antwortWelt hZ pad σ _) v = true
-  rw [← hq]
+  show Q a (E.antwortWelt hZ pad (σ0.fragt (.inl a))
+    (O'.wirkt (E.ax a) ((Φ.orakel (σ0.fragt (.inl a)).ohneLese).alsFrage (E.ax a))
+      (E.aparamsUm a ρ)).1) v = true
+  rw [hw0, ← hq]
   exact hQL a _ _ v (fun _ _ => rfl) (fun _ _ => rfl)
 
 end Klassen

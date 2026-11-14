@@ -1,0 +1,11 @@
+// Equal element types share their generated record, including transparent aliases. Exit 7.
+module ir_tuple_structural {
+type Small = u32 in 0 .. 63;
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let mut a : (Small, bool) = (41, false);
+    let b : (u32 in 0 .. 63, bool) = (7, true);
+    a = b;
+    if a.1 { return a.0; }
+    return 0;
+}
+}

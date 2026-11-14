@@ -12,6 +12,7 @@ variable {D : Deklaration}
 
 theorem gutO_mitRuhe {O : Orakel D} (h : GutO O) : GutO O.mitRuhe := by
   intro a σ ρ
+  rw [wirkt_mitRuhe_welt O a σ ρ]
   obtain ⟨h1, h2, h3⟩ := h a (worldZ σ) (envZ ρ)
   have hh : (worldZ σ).haelt = σ.haelt := haelt_worldZ σ
   refine ⟨rahmen_worldR h1, ?_, fun ht hg => ?_⟩
@@ -39,11 +40,17 @@ theorem gutO_mitRuhe {O : Orakel D} (h : GutO O) : GutO O.mitRuhe := by
       exact List.map_congr_left fun e _ => evR_evZ e
 
 theorem regLokal_mitRuhe {O : Orakel D} (h : RegLokal O) : RegLokal O.mitRuhe :=
-  ⟨fun r _ _ hg => h.1 r _ _ (gleichAuf_worldZ hg), fun g _ _ hg => h.2 g _ _ (gleichAuf_worldZ hg)⟩
+  ⟨fun r _ _ hg => by
+      rw [regLies_mitRuhe_welt, regLies_mitRuhe_welt]
+      exact h.1 r _ _ (gleichAuf_worldZ hg),
+    fun g _ _ hg => by
+      rw [sichtbar_mitRuhe_welt, sichtbar_mitRuhe_welt]
+      exact h.2 g _ _ (gleichAuf_worldZ hg)⟩
 
 theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
     AxVertragO (axEnsRuhe Q) O.mitRuhe := by
   intro a σ ρ v hv
+  rw [wirkt_mitRuhe_welt O a σ ρ] at hv ⊢
   change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
     (O.wirkt a (worldZ σ) (envZ ρ)).2 = some v at hv
   rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv
@@ -55,6 +62,31 @@ theorem axVertrag_mitRuhe {Q : AxEns D} {O : Orakel D} (h : AxVertragO Q O) :
       show Q a (worldZ (worldR (O.wirkt a (worldZ σ) (envZ ρ)).1)) (ergZ _ (ergR _ v0)) = true
       rw [worldZ_worldR, ergZ_ergR]
       exact h a _ _ v0 hx
+
+/-- Conditional membership transports to the idle-root oracle without
+    requiring unconditional software summaries. -/
+theorem axVertragOP_mitRuhe {P : Programm D} {Q : AxEns D} {O : Orakel D}
+    (h : AxVertragOP (PreQ P) Q O) :
+    AxVertragOP (PreQ P.mitRuhe) (axEnsRuhe Q) O.mitRuhe := by
+  intro a σ ρ v hp hv
+  have hp0 : PreQ P a ((worldZ σ).fragt (.inl a)) (envZ ρ) = true := by
+    rw [← preQ_mitRuhe P a ((worldZ σ).fragt (.inl a)) (envZ ρ), ← worldZ_fragt, worldR_worldZ,
+      envR_envZ]
+    exact hp
+  rw [wirkt_mitRuhe_welt] at hv
+  change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
+    (O.wirkt a ((worldZ σ).fragt (.inl a)) (envZ ρ)).2 = some v at hv
+  rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv
+  cases hx : einpassenErg O.zeiger (D.aerg a) (O.wirkt a ((worldZ σ).fragt (.inl a)) (envZ ρ)).2 with
+  | none => rw [hx] at hv; cases hv
+  | some v0 =>
+      rw [hx] at hv
+      cases hv
+      rw [wirkt_mitRuhe_welt]
+      show Q a (worldZ (worldR (O.wirkt a ((worldZ σ).fragt (.inl a)) (envZ ρ)).1))
+        (ergZ _ (ergR _ v0)) = true
+      rw [worldZ_worldR, ergZ_ergR]
+      exact h a (worldZ σ) (envZ ρ) v0 hp0 hx
 
 /-- **The hardware assumptions on `O` are the ones on `O.mitRuhe`.** -/
 theorem hardware_mitRuhe {O : Orakel D} {Q : AxEns D} (h : HardwareAnnahmen O Q) :

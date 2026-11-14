@@ -57,10 +57,10 @@ def stepProgram : Programm D where
   rumpf := fun _ => .cons (.ite .tru .nil .nil) (.ret .empty List.Perm.nil)
 
 def stepOracle : Orakel D where
-  wirkt := fun _ w _ => (w, 0)
-  regLies := fun r => nomatch r
+  wirktL := fun _ w _ => ({ w with spur := [] }, 0)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def stepStore : Speicher D :=
   ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩

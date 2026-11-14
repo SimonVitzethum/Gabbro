@@ -164,13 +164,13 @@ def GabbroZielProfil : Prop :=
           ZielFX PE.E.P.mitRuhe PE.E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) PE.E.P PE.E.ws)
             (RufStartG PE.E.P.mitRuhe sp init) (PE.E.arenen.map (·.mitRuhe)) K
 
-/-- **GABBRO_ZIEL FOR A SELECTED, PROFILE-BOUND UNIT, PROVED**: `gabbro_ziel` on `PE.E`. -/
+/-- **GABBRO_ZIEL FOR A SELECTED, PROFILE-BOUND UNIT, PROVED**: `gabbro_ziel_voll` on `PE.E`. -/
 theorem gabbro_ziel_profil : GabbroZielProfil := by
   intro C D _ PE fs ls cs hC hN O hH passes sp init hL lebt0 K hK
   have hC' : C.akzeptiert PE.E fs.1 ls.1 cs.1 = true := by
     simp only [profilAkzeptiert, Bool.and_eq_true] at hC
     exact hC.1
-  exact gabbro_ziel C D PE.E fs ls cs hC' hN O ((profilAnnahmen_iff PE O).mp hH) passes sp init hL lebt0 K hK
+  exact gabbro_ziel_voll C D PE.E fs ls cs hC' hN O ((profilAnnahmen_iff PE O).mp hH) passes sp init hL lebt0 K hK
 
 #print axioms gabbro_ziel_profil
 

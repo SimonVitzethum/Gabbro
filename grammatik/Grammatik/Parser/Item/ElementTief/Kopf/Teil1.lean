@@ -29,20 +29,14 @@ def beqSTransList : List STrans → List STrans → Bool
   | _, _ => false
 
 /- One invariant: SYNTAX.md section 9 `invariant` (table and group
-    share the production). `kosten` is the `O(…)` expression,
-    `online` the `runs` mode and `proof` the raw `by` tail. -/
+    share the production). Its evaluation is covered by the writer's costs. -/
 structure SGruppenInv where
   name : String
-  kosten : SExpr
-  online : Bool
-  proof : Option String
   pred : SExpr
   deriving Repr
 
 def beqSGruppenInv : SGruppenInv → SGruppenInv → Bool
-  | a, b => strEq a.name b.name && beqSExpr a.kosten b.kosten &&
-    (a.online == b.online) && beqOptWort a.proof b.proof &&
-    beqSExpr a.pred b.pred
+  | a, b => strEq a.name b.name && beqSExpr a.pred b.pred
 
 def beqSGruppenInvList : List SGruppenInv → List SGruppenInv → Bool
   | [], [] => true

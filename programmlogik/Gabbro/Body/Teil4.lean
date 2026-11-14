@@ -2,6 +2,7 @@ module
 
 public import Lean
 public import Gabbro.Body.Teil3
+public import Gabbro.Body.Teil10RecRegeln
 
 @[expose] public section
 
@@ -393,6 +394,9 @@ macro "gabbro_simp" : tactic =>
                   Gabbro.Body.finalState, Gabbro.Body.finalValue,
                   Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
                   Gabbro.Body.evalAll, Gabbro.Body.allBelow_true_iff,
+                  Gabbro.Body.eval_recOf, Gabbro.Body.eval_recGet, Gabbro.Body.eval_recSet,
+                  ↓Gabbro.Body.recGet_after_recSet, ↓Gabbro.Body.recGet_frame,
+                  ↓Gabbro.Body.recSet_idempotent, ↓Gabbro.Body.recSet_recGet,
                   ↓Gabbro.Body.eval_and_true_iff, ↓Gabbro.Body.eval_hasShape_true_iff, Gabbro.Body.orBool_true_iff,
                   Gabbro.Body.Contract, Gabbro.Body.Frame, Gabbro.Body.ContractBelow,
                   Gabbro.Body.Below, Gabbro.Body.ContractBelowM, Gabbro.Body.BelowM,
@@ -408,6 +412,9 @@ macro "gabbro_simp" "[" ts:simpLemma,* "]" : tactic =>
                   Gabbro.Body.finalState, Gabbro.Body.finalValue,
                   Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
                   Gabbro.Body.evalAll, Gabbro.Body.allBelow_true_iff,
+                  Gabbro.Body.eval_recOf, Gabbro.Body.eval_recGet, Gabbro.Body.eval_recSet,
+                  ↓Gabbro.Body.recGet_after_recSet, ↓Gabbro.Body.recGet_frame,
+                  ↓Gabbro.Body.recSet_idempotent, ↓Gabbro.Body.recSet_recGet,
                   ↓Gabbro.Body.eval_and_true_iff, ↓Gabbro.Body.eval_hasShape_true_iff, Gabbro.Body.orBool_true_iff,
                   Gabbro.Body.Contract, Gabbro.Body.Frame, Gabbro.Body.ContractBelow,
                   Gabbro.Body.Below, Gabbro.Body.ContractBelowM, Gabbro.Body.BelowM,
@@ -421,6 +428,9 @@ macro "gabbro_simp_hyps" "[" ts:simpLemma,* "]" : tactic =>
                   Gabbro.Body.finalState, Gabbro.Body.finalValue,
                   Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
                   Gabbro.Body.evalAll, Gabbro.Body.allBelow_true_iff,
+                  Gabbro.Body.eval_recOf, Gabbro.Body.eval_recGet, Gabbro.Body.eval_recSet,
+                  ↓Gabbro.Body.recGet_after_recSet, ↓Gabbro.Body.recGet_frame,
+                  ↓Gabbro.Body.recSet_idempotent, ↓Gabbro.Body.recSet_recGet,
                   ↓Gabbro.Body.eval_and_true_iff, ↓Gabbro.Body.eval_hasShape_true_iff, Gabbro.Body.orBool_true_iff,
                   Gabbro.Body.Contract, Gabbro.Body.Frame, Gabbro.Body.ContractBelow,
                   Gabbro.Body.Below, Gabbro.Body.ContractBelowM, Gabbro.Body.BelowM,

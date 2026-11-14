@@ -21,16 +21,16 @@
 
   THE HOLD-TIME PREMISE (`Haltezeit R h k`): on every stretch of the run on
   which thread `u` holds `L`, `u` takes at most `h L` own steps, at most
-  `k L` of them at a `locks` head (nested acquisitions). It is a PREMISE on
-  the run, NOT derived: the checker decides `held <= N ops` (`K002`,
-  kosten.rs `sperrbloecke`) in OPERATIONS with callees at their declared
-  `costs`, and two bridges are missing -- (1) operations to G steps (KostenG
-  TARGET 3 found that G takes steps the checker prices at `0`, findings
-  F1-F9; `spiegel_stmt` goes the other way with a remainder `zusatz`), and
-  (2) a bound for the `locks` BODY as a residue segment: `frame_schritte_
-  beschraenkt` bounds a FRAME from entry to return (`Eintritt`/`aktivVor`),
-  and a `locks` body is not a frame; its potential would have to be carried
-  through the residue `.dann body (.frei L k)` across all 72 rules.
+  `k L` of them at a `locks` head (nested acquisitions). The theorems of this
+  file take it as a premise; since 2026-11-13 it is DERIVED from the
+  checker's hold bounds (`haltezeit_aus`, Halten/Haltezeit.lean, with
+  `h = k = haltSchranke ls N`). The two bridges: (1) the model's check
+  (`haltPasst`, K002) prices a section in `kostenBlock`, the G-step cost of
+  KostenG, with callees at their declared costs (K001, `kostenPasst`), so no
+  operation count has to be bridged; (2) the `locks` body is measured as a
+  residue segment by `potSek L` (the residue up to the release marker of
+  `L`, Halten/PotSek.lean), lowered by every own step of G (`schrittSek`),
+  with the callees above it costed as in `KInv` (`SekInv`).
 
   THE BOUND, recursive over ranks (`wF`, fuel = the number of locks):
     S(L) = h(L)·F + k(L)·Wn(L)          one critical section of `L`

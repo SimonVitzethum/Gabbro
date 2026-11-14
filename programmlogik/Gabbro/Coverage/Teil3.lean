@@ -149,6 +149,7 @@ theorem reason_match_carried : ReasonMatchCarried := by
       | absent => simp only [step, hg]
       | present _ => simp only [step, hg]
       | tagged _ _ => simp only [step, hg]
+      | record _ => simp only [step, hg]
 
 /-- **`return f(a);`** -- the callee's contract fires, the answer returned is the callee's,
     the world is the one the callee left and the caller's locals are untouched. Same
@@ -220,6 +221,7 @@ theorem call_with_error_exit_carried : CallWithErrorExitCarried := by
     | absent => simp only [step, hvs, hpre, hv]
     | present _ => simp only [step, hvs, hpre, hv]
     | tagged _ _ => simp only [step, hvs, hpre, hv]
+    | record _ => simp only [step, hvs, hpre, hv]
 
 /-- **`breaking I { ... }` and `locks S { ... }` change no state of their own.** Both are
     the body's meaning, and both are read as such for a REASON that stands elsewhere: at a

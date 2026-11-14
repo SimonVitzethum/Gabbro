@@ -37,6 +37,8 @@ inductive STyp
   | entry : String → Option STyp → STyp
   /-- Link-time closed spec sum; effect tokens are interpreted after group resolution. -/
   | dyn : String → Option String → STyp
+  /-- Structural surface tuple, materialized as a generated nominal record. -/
+  | tuple : List STyp → STyp
   deriving Repr
 
 -- Shape equality on surface types, as a `Bool`: one recursive
@@ -45,6 +47,7 @@ inductive STyp
 mutual
 def beqSTyp : STyp → STyp → Bool
   | .dyn a es, .dyn b fs => strEq a b && beqOptWort es fs
+  | .tuple as, .tuple bs => beqSTypList as bs
   | .atom a, .atom b => strEq a b
   | .path a, .path b => beqWorte a b
   | .ptr r1 w1 t1, .ptr r2 w2 t2 =>
@@ -267,6 +270,11 @@ def parseTyp (f : Nat) (toks : List Token) :
         | [] => .error "type expected"
         | [a] => parseTypNach f (.atom a) r
         | _ => parseTypNach f (.path segs) r
+    | .zeichen "(" :: .zeichen ")" :: _ => .error "tuple type: at least two elements required"
+    | .zeichen "(" :: rest => do
+      let (types, tail) ← parseTupleTypes f rest
+      if types.length < 2 then throw "tuple type: at least two elements required"
+      pure (.tuple types, tail)
     | .zeichen "{" :: rest => match nimmBereichWorte rest 1 with
       | .error e => .error e
       | .ok (h, r) => .ok (.raw ("{ " ++ h), r)
@@ -280,6 +288,17 @@ def parseTyp (f : Nat) (toks : List Token) :
             | .error e => .error e
             | .ok r => .ok (.array t n, r)
     | _ => .error "type expected"
+/-- Ordered elements of a structural surface tuple type. -/
+def parseTupleTypes : Nat → List Token → Except String (List STyp × List Token)
+  | 0, _ => .error "tuple type: parser fuel exhausted"
+  | f + 1, tokens => do
+    let (ty, rest) ← parseTyp f tokens
+    match rest with
+    | .zeichen "," :: tail =>
+      let (types, rest) ← parseTupleTypes f tail
+      pure (ty :: types, rest)
+    | .zeichen ")" :: tail => pure ([ty], tail)
+    | _ => throw "tuple type: comma or closing parenthesis expected"
 /-- The `in range` / `wrapping` / `embeds` suffixes behind a base
     type (`intty`, `slottype`, `fieldty`). -/
 def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :

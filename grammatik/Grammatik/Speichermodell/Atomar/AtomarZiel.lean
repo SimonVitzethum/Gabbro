@@ -102,7 +102,7 @@ theorem ziel_atomar_w (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Gl
     (Q : AxEns D) (S : SperrInv D) {fs : List D.Fn} (ls : List D.Lock) (K : Faden → D.Fn → Bool)
     (Tg : D.Tab ⊕ D.Glob → Prop) (lok : D.Tab ⊕ D.Glob → Bool) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f))
-    (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+    (hO : GutO O) (hRL : RegLokal O) (hQ : RelyQ P O passes Q Tg (RufStartG P sp init)) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) (hSt : StufenM P) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hls : ∀ L : D.Lock, L ∈ ls)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
@@ -140,7 +140,7 @@ theorem ziel_atomar_w (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Gl
       keineVerklemmung := keine_verklemmungGA hO hSt sp init hLeer ls hls hA
       keinZyklus := kein_warteZyklusGA hO hSt sp init hLeer hA
       fortschritt := fortschrittG_GA hO hSt sp init (startSpur_nodup_leer init hLeer) hA hV.2.2.1
-        (fun t => fadenSA_bereich hO hRL hQ hS hsp hK hFS t
+        (fun t => fadenSA_bereich hO hRL hQ.1 hS hsp hK hFS t
           ((zielInvSA_erreichbarGX P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg
             hWurzel hTA hTV hTS hTO hFragS hFS hlokK hK (fun f => massPflicht_aus P passes Q S Tg Mass.leer f) hStart hsp hex W.g hX).1.1 t))
         hAnt

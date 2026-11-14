@@ -51,7 +51,8 @@ theorem w_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {passes :
 theorem vO_erw (σ : World vD) (ρ : Env vD (vD.aparams ())) :
     Erw σ (vO.wirkt () σ ρ).1 :=
   ⟨_, rfl, fun e he => by
-    simp only [axiomSpur, List.mem_append, List.mem_map, List.mem_filter] at he
+    simp only [Orakel.wirkt, vO, World.auf, axiomSpur, List.mem_append, List.mem_map,
+      List.mem_filter] at he
     rcases he with ⟨t, _, rfl⟩ | ⟨g, _, _⟩
     · rfl
     · exact nomatch g⟩

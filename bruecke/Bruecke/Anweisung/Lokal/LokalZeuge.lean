@@ -2,7 +2,7 @@ module
 public import Bruecke.Anweisung.Lokal.SimulationB
 public import Bruecke.Quelle
 public import Bruecke.Anweisung.Zweig.Benannt
-import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -34,6 +34,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 /-!
@@ -59,7 +62,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def tafel : UTab := { name := "T", count := 1, cols := [("v", (0, 20))] }
 
@@ -84,17 +89,25 @@ def koerper : List Gabbro.Body.Stmt :=
 /-! ## 1. The translation and the decided checks -/
 
 /-- The translation threads the scope: every local reads as a Body name. -/
-theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by kernel_rfl
+theorem zuBodyZ_zeuge : zuBodyZ unit routine = some koerper := by cbv
 
 /-- The old translation refuses the body: it binds. -/
-theorem zuBody_zeuge : zuBody unit routine = none := by kernel_rfl
+theorem zuBody_zeuge : zuBody unit routine = none := by cbv
 
-theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by decide +kernel
+theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    all_goals constructor <;> cbv
 
 theorem checks_zeuge :
     nullB unit = true ∧ stimmigB unit = true ∧ bindFrischAllB unit = true ∧
       rangB unit (rangAuto unit) = true ∧ ohneTransitionB unit = true :=
-  ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  ⟨by cbv, by cbv, by cbv, by cbv, by cbv⟩
 
 /-! ## 2. The duty -/
 
@@ -115,13 +128,13 @@ theorem exec_ret_ok (ρ : Gabbro.Body.Env) (e : Gabbro.Body.Expr) (s : Gabbro.Bo
     Gabbro.Body.exec ρ [.ret (some e)] s = .returned s (some v) := by
   simp only [Gabbro.Body.exec, Gabbro.Body.step, h]
 
-theorem pre_eq : preExpr routine = .hasShape "p" (.intIn 0 10) := by kernel_rfl
+theorem pre_eq : preExpr routine = .hasShape "p" (.intIn 0 10) := by cbv
 
 theorem post_eq (s s' : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     (postU unit (wfU unit) routine s s' r).getD False =
       (wfU unit s' ∧ ∃ x, r = some (.int x) ∧ (0 : Int) ≤ x ∧ x ≤ 20) := rfl
 
-theorem shape_eq : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 20) := by kernel_rfl
+theorem shape_eq : shapeOfUG unit (.slot "T" 0 "v") = some (.intIn 0 20) := by cbv
 
 /-- **The duty of `step`, proved**: from `p ∈ 0..10` the body binds `a = p + 1`, `b = a`, rebinds
     `b = a + 1`, writes `T[0].v = b` and returns `b = p + 2 ∈ 0..20`; the world stays typed. -/

@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_endeBind {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -107,7 +107,7 @@ theorem akteurSA_endeBind {D : Deklaration} {P : Programm D} {O : Orakel D} {pas
   simp only [endblockOrteP, List.append_subset] at hss
   have he' : eval σ e σ ρ = eval ((M.weltVon u).lese Λ e.orte) e ((M.weltVon u).lese Λ e.orte) ρ :=
     eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hss.2⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_endeBind S O' U A passes R e rest σ0 ρ
   rw [hσ0, he'] at h1
@@ -116,7 +116,7 @@ theorem akteurSA_endeBind {D : Deklaration} {P : Programm D} {O : Orakel D} {pas
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannBind {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -214,7 +214,7 @@ theorem akteurSA_dannBind {D : Deklaration} {P : Programm D} {O : Orakel D} {pas
   simp only [blockOrteP, List.append_subset] at hss
   have he' : eval σ e σ ρ = eval ((M.weltVon u).lese Λ e.orte) e ((M.weltVon u).lese Λ e.orte) ρ :=
     eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hss.2, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_dannBind S O' U A passes R e rest k σ0 ρ
   rw [hσ0, he'] at h1
@@ -223,7 +223,7 @@ theorem akteurSA_dannBind {D : Deklaration} {P : Programm D} {O : Orakel D} {pas
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -337,7 +337,7 @@ theorem akteurSA_dannNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel D} 
   have he' : eval σ e σ ρ = eval ((M.weltVon u).lese Λ e.orte) e ((M.weltVon u).lese Λ e.orte) ρ :=
     eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
   have h' : lo' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ hi' := by rw [he']; exact h
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hkr, hrS, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_narrowOk S O' U A passes R e lo' hi' sonst rest k σ0 ρ (by rw [hσ0]; exact h')
   have hz : (⟨(eval (leseA A σ0 Λ e.orte) e (leseA A σ0 Λ e.orte) ρ).n,
@@ -354,7 +354,7 @@ theorem akteurSA_dannNarrowOk {D : Deklaration} {P : Programm D} {O : Orakel D} 
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannNarrowRequired {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -394,7 +394,7 @@ theorem akteurSA_dannNarrowRequired {D : Deklaration} {P : Programm D} {O : Orak
   have he' : eval σ e σ ρ = eval ((M.weltVon u).lese Λ e.orte) e ((M.weltVon u).lese Λ e.orte) ρ :=
     eval_gleichAuf e (fun _ h => List.mem_append_right _ h) hg ρ
   have h' : lo' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ hi' := by rw [he']; exact h
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨hks, hss.2, hrest⟩, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have hread : lo' ≤ (eval (leseA A σ0 Λ e.orte) e (leseA A σ0 Λ e.orte) ρ).n ∧
       (eval (leseA A σ0 Λ e.orte) e (leseA A σ0 Λ e.orte) ρ).n ≤ hi' := by

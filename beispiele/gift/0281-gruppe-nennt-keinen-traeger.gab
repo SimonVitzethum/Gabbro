@@ -11,7 +11,7 @@ table B count 16 { slot { y : u32, } }
 lock LA protects { A, B } rank 1 held <= 40 ops;
 
 group Falsch over { A, LA } {
-    invariant beides cost O(n) runs offline :
+    invariant beides :
         forall a in slots of A : B.slots[A.slots[a].x].y > 0;
 }
 

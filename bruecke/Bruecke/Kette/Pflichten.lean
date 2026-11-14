@@ -1,6 +1,6 @@
 module
 public import Bruecke.Teil.Pflichten
-public import Bruecke.Anweisung.Zweig.Uebersetzung
+public import Bruecke.Anweisung.Lokal.Kopf
 public import Bruecke.Anweisung.Zweig.Benannt
 public import Bruecke.Anweisung.Lokal.SimulationB
 @[expose] public section
@@ -8,8 +8,8 @@ public import Bruecke.Anweisung.Lokal.SimulationB
 /-!
 # One carried chain: local bindings and structured branches
 
-The carried set is closed over the whole flat body, including both branch arms. Integer
-source names may repeat; every non-integer entry keeps its source-name freshness.
+The carried set is closed over the whole flat body, including both branch arms. Integer and
+bool source names may repeat; capability and other protected names retain their freshness.
 The readers allocate distinct Body identifiers and retain the history across all arms.
 -/
 

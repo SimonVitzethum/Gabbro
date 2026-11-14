@@ -20,6 +20,7 @@ public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Kern.Syntax.Syntax.ProduktZucker
+public import Grammatik.Kern.Semantik.Evaluation.Aggregates.Witnesses
 public import Grammatik.Kern.Syntax.Ziel
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
 public import Grammatik.Kern.Syntax.Koernung.Teil2
@@ -137,7 +138,9 @@ public import Grammatik.Zielsatz.Atomar.BeweisTerminierung
 public import Grammatik.Zielsatz.Atomar.TerminierungZeuge
 public import Grammatik.Zielsatz.Atomar.BeweisWarten
 public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Fortschritt.KostenG.BoundedWhile
 public import Grammatik.Logik.Fortschritt.KostenGZeuge
+public import Grammatik.Logik.Fortschritt.KostenG.EpilogZeuge
 public import Grammatik.Proben.AuditFinal
 public import Grammatik.Korpus.Zeugnis.ZeugnisStmt
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll

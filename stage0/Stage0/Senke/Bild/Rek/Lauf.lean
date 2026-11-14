@@ -134,7 +134,7 @@ theorem korrespondenz_rek {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] [Le
     when the caller's boundary corresponds to a reachable machine, the callee's first body boundary corresponds to a
     reachable machine at which every leg of `Ziel` holds, and so does every machine an image state inside the
     callee's decomposed prefix corresponds to (`ImRumpf` with reachability and `Ziel`). -/
-theorem bild_ziel_rek [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] [LeseblindOK O]
+theorem bild_ziel_rek [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O]
     {passes : Nat} {P : Programm D} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
     (hc : BildCodes Y P passes A C Lm) {S : SperrInv D} {Q : AxEns D} {fs : Aufzaehlung D.Fn}
     (ls : Aufzaehlung D.Lock) {ws : List D.Fn} {Acc : List (Kernzelle.AccumulatorDecl D)}

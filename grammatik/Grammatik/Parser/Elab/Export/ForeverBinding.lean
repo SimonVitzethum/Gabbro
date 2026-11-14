@@ -35,7 +35,7 @@ def passS (h : D.Annahme → Option Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) 
   | .retry _ _ body ueber => passB h c Z pa body && passB h c Z pa ueber
   | .forever a _ body =>
     (match h a with
-      | some n => decide (kostenBlock c pa body ≤ n) && rufeB Z (fun _ => false) true body
+      | some n => decide (kostenBlock 0 c pa body ≤ n) && rufeB Z (fun _ => false) true body
       | none => true) && passB h c Z pa body
   | .assignSlot .. => true
   | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true
@@ -135,7 +135,7 @@ def loopHeaders : Nat → SAnw → List String
   | n + 1, .block ss _ => ss.flatMap (loopHeaders n)
   | n + 1, .bindElse _ _ _ _ b | n + 1, .bindAxiomOptElse _ _ _ _ b | n + 1, .callIndElse _ _ _ b
   | n + 1, .callElse _ _ _ b | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b
-  | n + 1, .retry _ b | n + 1, .trim _ _ b | n + 1, .elsif _ b | n + 1, .arm _ _ b
+  | n + 1, .boundedLoop _ b | n + 1, .retry _ b | n + 1, .trim _ _ b | n + 1, .elsif _ b | n + 1, .arm _ _ b
   | n + 1, .each _ _ _ _ _ _ _ b => loopHeaders n b
   | n + 1, .cond _ a bs b =>
     loopHeaders n a ++ bs.flatMap (loopHeaders n) ++ (b.map (loopHeaders n)).getD []
@@ -143,6 +143,7 @@ def loopHeaders : Nat → SAnw → List String
   | n + 1, .loop header b => header :: loopHeaders n b
   | n + 1, .alloc _ _ _ _ _ (some b) => loopHeaders n b
   | _ + 1, _ => []
+termination_by structural fuel => fuel
 
 /-- The declared pass bounds of the source loops: the `progress` assumption and the bound. -/
 def declared (items : List SItemTief) : List (String × Nat) :=

@@ -15,10 +15,10 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
-theorem stmtZiel_ok_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
+theorem stmtZiel_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {ids : List String} {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn}
-    {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁} {σ σ₁ : World (declOf u)}
+    {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁} {σ σ₁ : World (declOf u)}
     {ρ ρ₁ : Env (declOf u) Γ} {s s₁ : Gabbro.Body.State} {x : Gabbro.Body.Stmt}
     {A : List Eintrag} (hex : execStmt O passes R st σ ρ = .ok σ₁ ρ₁)
     (hS : Strecke_G u C A s s₁ [x]) (hW₁ : WGRel u σ₁ s₁.world) (hL₁ : PositionalLRel fn ids 0 ρ₁ s₁.local') :
@@ -29,12 +29,12 @@ theorem stmtZiel_ok_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : N
       cases h
       exact ⟨A, s₁, hS, hW₁, hL₁⟩)⟩
 
-theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
+theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
     (c : Fin u.fns.length) (hc : C c) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (hRR : RespektiertRahmen P R) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ Λ' : List (Res (declOf u))}
-    {st0 : UStmt} {gst : Stmt (declOf u) (verOf u c) false Γ Λ Λ'} {bB : Gabbro.Body.Stmt}
-    (hmem : st0 ∈ (fnAt u c).body) (hs : LeseEinzeln st0) (hgst : lowStmtL (l := false) u c Γ fn Λ st0 = .ok ⟨Λ', gst⟩)
+    {st0 : UStmt} {gst : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ'} {bB : Gabbro.Body.Stmt}
+    (hmem : st0 ∈ (fnAt u c).body) (hs : LeseEinzeln st0) (hgst : lowStmtL (l := loopMode) u c Γ fn Λ st0 = .ok ⟨Λ', gst⟩)
     (hb : schrittB u fn ns st0 = some (bB, fn, ns)) (hU : UmfangB Γ fn ns)
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
@@ -43,7 +43,7 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
   case setVar x v =>
     obtain ⟨hn, id, eT, hid, heT, rfl, -, -⟩ := schrittB_setVar hb
     simp only [lowStmtL] at hgst
-    cases hsv : lowSetVarL (l := false) u c Γ fn Λ x v with
+    cases hsv : lowSetVarL (l := loopMode) u c Γ fn Λ x v with
     | error err => simp only [hsv, Except.map] at hgst <;> cases hgst
     | ok st1 =>
       simp only [hsv, Except.map] at hgst
@@ -52,11 +52,24 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
         lowSetVar_named_sim c hsv hn hid heT hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
         hsl hL'
+  case setVarB x v =>
+    obtain ⟨id, eT, hid, heT, rfl, -, -⟩ := schrittB_setVarB hb
+    simp only [lowStmtL] at hgst
+    cases hsv : lowSetVarBL (l := loopMode) u c Γ fn Λ x v with
+    | error err => simp only [hsv, Except.map] at hgst; cases hgst
+    | ok st1 =>
+      simp only [hsv, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, ρ₁, bv, hex, hsl, hstep, hL'⟩ :=
+        lowSetVarB_named_sim c hsv hid heT hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
+        hsl hL'
   case assign b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assign S.tab c Γ fn Λ b' f i v] at hgst
-    cases stored : lowAssignDurchL (l := false) u c Γ fn Λ b' f i v with
+    cases stored : lowAssignDurchL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
     | ok statement =>
       simp only [stored, Except.map] at hgst
@@ -68,8 +81,9 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
   case assignTab b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assignTab S.tab c Γ fn Λ b' f i v] at hgst
-    cases stored : lowAssignTabL (l := false) u c Γ fn Λ b' f i v with
+    cases stored : lowAssignTabL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
     | ok statement =>
       simp only [stored, Except.map] at hgst
@@ -81,8 +95,9 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
   case assignGlob n v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
     simp only [lowStmtL] at hgst
-    cases stored : lowAssignGlobL (l := false) u c Γ fn Λ n v with
+    cases stored : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v with
     | error err => simp only [stored, Except.map] at hgst; cases hgst
     | ok statement =>
       simp only [stored, Except.map] at hgst
@@ -95,7 +110,8 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
 
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-    have hgst' : lowCallL (l := false) u c Γ fn Λ cname args = .ok ⟨Λ', gst⟩ := hgst
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    have hgst' : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', gst⟩ := hgst
     obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
       lowCall_sim_teilB c hgst' hx hU S.tab (fun d hd =>
         ⟨S.namen d (callee_getragen_teil S hc hmem hd),
@@ -149,7 +165,7 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
             lauf := fun ρB hT hF => by
               have he0 : ρB cname t = e0.aus := hT e0 (List.mem_singleton_self _)
               have hs : Gabbro.Body.step ρB bB s = .running s₁ := by
-                rw [hstep ρB, he0]; rfl
+                rw [hstep ρB, he0] <;> rfl
               simp only [Gabbro.Body.exec, hs] }
         exact stmtZiel_ok_G hex hS hW₁ hL
     · exact ⟨fun e' h => (by rw [hex] at h; cases h; exact ⟨callee, σr, envA, hcc, hR⟩),
@@ -158,9 +174,9 @@ theorem stmtZiel_einzeln_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : G
         fun σ' ρ' h => (by rw [hex] at h; cases h)⟩
   all_goals simp [LeseEinzeln] at hs
 
-theorem stmtZiel_ret_G (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
-    {r : URet} {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowRetStmt (l := false) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
+theorem stmtZiel_ret_G {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
+    {r : URet} {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowRetStmt (l := loopMode) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -176,11 +192,11 @@ theorem stmtZiel_ret_G (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNa
     List.Pairwise.nil, fun ρB _ _ => ⟨s, ?_, hsl⟩⟩
   simp only [Gabbro.Body.exec, hstep ρB]
 
-theorem stmtZiel_ite_G (hT : TabEindeutig u) {c : Fin u.fns.length} {O : Orakel (declOf u)}
+theorem stmtZiel_ite_G {loopMode : Bool} (hT : TabEindeutig u) {c : Fin u.fns.length} {O : Orakel (declOf u)}
     {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {Γ : Ctx} {fn fT : UFn} {ns : BodyNames} {Λ Λ₁ : List (Res (declOf u))} {cnd : UEns}
-    {cv : Expr (declOf u) Γ Λ .bool} {tb eb : Block (declOf u) (verOf u c) false Γ Λ Λ₁}
+    {cv : Expr (declOf u) Γ Λ .bool} {tb eb : Block (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
     {ce : Gabbro.Body.Expr} {tt te : List Gabbro.Body.Stmt}
     (hU : UmfangB Γ fn ns) (hS : Sicht u fT fn) (hcv : lowEns u Γ Λ fn none cnd = .ok cv)
     (hce : condZ u fT ns cnd = some ce)

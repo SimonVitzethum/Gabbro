@@ -57,7 +57,7 @@ theorem step_call (ρ : Gabbro.Body.Env) (g : String) (ps : List String) (es : L
 /-- **The call graph has a rank**: every call goes to a name of strictly smaller rank. Checked
     per unit (`rangB`). -/
 def Rang (u : UProg) (rk : String → Nat) : Prop :=
-  ∀ c : Fin u.fns.length, ∀ cname args, UStmt.call cname args ∈ (fnAt u c).body →
+  ∀ c : Fin u.fns.length, ∀ cname args, CallsIn (fnAt u c).body cname args →
     rk cname < rk (fnAt u c).name
 
 /-- The promise of `gf` as the duty file states it. -/
@@ -97,16 +97,17 @@ theorem mem_sortDedup {y : String} : ∀ {l : List String}, y ∈ sortDedup l �
       · exact List.mem_cons_of_mem _ (mem_sortDedup h)
 
 theorem mem_calleesOf {f : UFn} {g : String} (h : g ∈ calleesOf f) :
-    ∃ args, UStmt.call g args ∈ f.body := by
+    ∃ args, CallsIn f.body g args := by
   have h' := mem_sortDedup h
   rw [List.mem_filterMap] at h'
   obtain ⟨st, hst, hg⟩ := h'
-  cases st
-  case call cn args =>
-    simp only [Option.some.injEq] at hg
-    subst hg
-    exact ⟨args, hst⟩
-  all_goals simp at hg
+  cases hc : directCall st with
+  | none => simp only [hc, Option.map_none, reduceCtorEq] at hg
+  | some p =>
+    obtain ⟨name, args⟩ := p
+    simp only [hc, Option.map_some, Option.some.injEq] at hg
+    subst name
+    exact ⟨args, st, hst, hc⟩
 
 theorem fnSuch_mem {n : String} {gf : UFn} (h : fnSuch u n = some gf) :
     ∃ c : Fin u.fns.length, fnAt u c = gf ∧ gf.name = n := by

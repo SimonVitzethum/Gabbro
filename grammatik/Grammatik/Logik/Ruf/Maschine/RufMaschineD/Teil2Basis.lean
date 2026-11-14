@@ -128,10 +128,10 @@ theorem rufArgsOrteLeerD : rufArgsD.orte = [] := by rfl
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def rufOD : Orakel rufD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- Step 1 fires the `ruf` rule: head matches, locks vacuous, entry world
     is the thread world (no arg reads), evaluated args are `rufRhoD`, no new

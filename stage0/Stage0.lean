@@ -54,6 +54,8 @@ public import Stage0.Senke.Bild.EmittedZiel
 public import Stage0.Senke.Bild.Rest
 public import Stage0.Senke.Bild.Gleich.Lesegleich
 public import Stage0.Senke.Bild.Gleich.LesegleichEig
+public import Stage0.Senke.Bild.Gleich.AxFrei
+public import Stage0.Senke.Bild.Gleich.AxFreiR
 public import Stage0.Senke.Bild.Gleich.Ausgang
 public import Stage0.Senke.Bild.Gleich.Schleifen
 public import Stage0.Senke.Bild.Gleich.Verbrauch
@@ -68,9 +70,11 @@ public import Stage0.Senke.Bild.Gleich.RufAtUmkehr
 public import Stage0.Senke.Bild.Gleich.RufAtZeuge
 public import Stage0.Senke.Bild.Ruf.RufOkGleich
 public import Stage0.Senke.Bild.Ruf.KorrespondenzL
+public import Stage0.Senke.Bild.Ruf.Hardware
 public import Stage0.Senke.Bild.Ruf.ZielL
 public import Stage0.Senke.Bild.Ruf.EmittedZielL
 public import Stage0.Senke.Bild.Ruf.Zeuge
+public import Stage0.Senke.Bild.Ruf.ZeugeHardware
 public import Stage0.Senke.Bild.Rek.Maschine
 public import Stage0.Senke.Bild.Rek.Eintritt
 public import Stage0.Senke.Bild.Rek.Lauf
@@ -86,6 +90,9 @@ public import Stage0.Senke.Bild.Rek.RueckArt
 public import Stage0.Senke.Bild.Rek.Dann
 public import Stage0.Senke.Bild.Rek.DannRueck
 public import Stage0.Senke.Bild.Rek.ZeugeDann
+public import Stage0.Senke.Bild.Rek.EndRB
+public import Stage0.Senke.Bild.Rek.EndRBSatz
+public import Stage0.Senke.Bild.Rek.EndRBVoll
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
@@ -105,6 +112,7 @@ public import Stage0.Senke.Tore.AreaProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
+public import Stage0.Senke.Ausdruck.Aggregat.Stored.Probes
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.TagProben
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.ValueProbe
@@ -163,6 +171,26 @@ public import Stage0.Senke.Sperre.Ticket.GibKette
 public import Stage0.Senke.Sperre.Ticket.Gabe
 public import Stage0.Senke.Sperre.Ticket.Rueck
 public import Stage0.Senke.Sperre.Ticket.RueckLauf
+public import Stage0.Senke.Sperre.Faeden.Abstrakt
+public import Stage0.Senke.Sperre.Faeden.Maschine
+public import Stage0.Senke.Sperre.Faeden.Inv
+public import Stage0.Senke.Sperre.Faeden.InvSchritt
+public import Stage0.Senke.Sperre.Faeden.InvLauf
+public import Stage0.Senke.Sperre.Faeden.Rahmen
+public import Stage0.Senke.Sperre.Faeden.Bild
+public import Stage0.Senke.Sperre.Faeden.Fair
+public import Stage0.Senke.Sperre.Faeden.Fifo
+public import Stage0.Senke.Sperre.Faeden.Potential
+public import Stage0.Senke.Sperre.Faeden.Stau
+public import Stage0.Senke.Sperre.Faeden.Kette
+public import Stage0.Senke.Sperre.Faeden.Leben
+public import Stage0.Senke.Sperre.Faeden.Zeuge
+public import Stage0.Senke.Sperre.Faeden.Karte
+public import Stage0.Senke.Sperre.Faeden.Geist
+public import Stage0.Senke.Sperre.Faeden.GeistLauf
+public import Stage0.Senke.Sperre.Faeden.Fenster
+public import Stage0.Senke.Sperre.Faeden.Transfer
+public import Stage0.Senke.Sperre.Faeden.GeistZeuge
 public import Stage0.Senke.Ausdruck.Old.Pruefer
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
 public import Stage0.CompilerPruefer

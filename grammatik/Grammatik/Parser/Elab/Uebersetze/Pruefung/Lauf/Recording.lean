@@ -77,6 +77,7 @@ def checkSampleSubstitute (bindings : List (SExpr × SExpr)) : Nat → SExpr →
             (args.getLast?.map (checkSampleSubstitute inner fuel)).toList)
         else .ext kind names (args.map recur)
       | other => other
+termination_by structural fuel => fuel
 
 /-- A source-indexed private call that captures actual arguments. Floors are
     separate Bool arguments, evaluated even for a false written verdict; the
@@ -205,6 +206,10 @@ def recordCheckCode (heads : List UFnKopf) (c : SCheck) :
     | .each name start kind subject mode measure invariant branch =>
       let (_, inner, _) ← uLoopExport ctx name start kind subject mode measure invariant
       one inner (.each name start kind subject mode measure invariant) branch
+    | .boundedLoop raw branch =>
+      let header ← readBoundedHeader raw
+      let inner ← uLoopBodyContext ctx header
+      one inner (.boundedLoop raw) branch
     | .retry header branch =>
       one ctx (.retry header) branch
     | .loop header branch =>

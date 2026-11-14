@@ -20,7 +20,7 @@ lock A protects { T } rank RANG held <= 50 ops;
 lock B protects { U } rank RANG held <= 50 ops;
 
 group G over { T, U } {
-    invariant beide cost O(1) runs offline : T.slots[0].v == U.slots[0].v;
+    invariant beide : T.slots[0].v == U.slots[0].v;
 }
 
 }

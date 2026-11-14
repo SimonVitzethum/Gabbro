@@ -88,10 +88,10 @@ def P : Programm D where
       else .widen (by decide) (by decide) (.lit 22))) List.Perm.nil
 
 def O : Orakel D where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def world : World D where
   slots t := nomatch t
@@ -110,11 +110,11 @@ def layout (b : Nat) : Lay D where
 /-- A global pointer is read after each of two distinct runtime stores. -/
 theorem global_call_zeuge :
     (match rufAt P O 1 4 2 world .nil with | .ok _ v => v.n | _ => -1) = 22 := by
-  decide +kernel
+  decide_cbv
 
 def image : Except String (Bild D) := bild 1 P layout [0, 1, 2] Fin.val (fun f => toString f.val) 2 .nil [] 512 0
 
-theorem image_nonempty : image.toOption.isSome = true := by decide +kernel
+theorem image_nonempty : image.toOption.isSome = true := by decide_cbv
 
 def img : Bild D := image.toOption.get image_nonempty
 
@@ -129,7 +129,7 @@ theorem image_eq : image = .ok img := by
 
 /-- Both functions have different, nonzero addresses in an accepted image. -/
 theorem image_zeuge : image = .ok img ∧ img.A 0 ≠ img.A 1 ∧ img.A 0 ≠ 0 := by
-  have h : (image.map fun b => decide (b.A 0 ≠ b.A 1 ∧ b.A 0 ≠ 0)).toOption = some true := by decide +kernel
+  have h : (image.map fun b => decide (b.A 0 ≠ b.A 1 ∧ b.A 0 ≠ 0)).toOption = some true := by decide_cbv
   rw [image_eq] at h
   exact ⟨image_eq, by simpa [Except.map, Except.toOption] using h⟩
 
@@ -158,8 +158,8 @@ theorem refBytes : BytesAt refMem 0 (refCode.flatMap encII) := by
 
 theorem refPre [Kern] : PreS refLayout refMem 0 1024 16 4 refCode (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, ?_, ?_, ?_, trivial, wstab_true _ _⟩
-  · exact codeAt_bytes refCode 0 (by decide +kernel) refBytes
-  · unfold CodeFar; decide +kernel
+  · exact codeAt_bytes refCode 0 (by decide_cbv) refBytes
+  · unfold CodeFar; decide_cbv
   · intro _ x; nomatch x
 
 set_option maxHeartbeats 1200000 in

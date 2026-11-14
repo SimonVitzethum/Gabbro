@@ -13,7 +13,7 @@ const N : u32 = 64;
 
 table Raum count N {
     slot { belegt : bool, rechte : u32, }
-    invariant raum_belegt_zaehlt cost O(n) runs offline :
+    invariant raum_belegt_zaehlt :
         forall s in slots of Self : Self.slots[s].belegt == Self.slots[s].belegt;
 }
 

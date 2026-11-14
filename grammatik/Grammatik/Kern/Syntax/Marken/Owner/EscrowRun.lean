@@ -79,10 +79,10 @@ theorem progE_rumpf_false : progE.rumpf false = callerBodyE := rfl
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def orakelE : Orakel escrowD where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- Start memory: slot 0 holds 0 (the run moves no memory). -/
 def spE : Speicher escrowD :=

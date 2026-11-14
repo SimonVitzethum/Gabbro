@@ -118,10 +118,15 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, _, _, _, .consumeTraverse t member edge inv bound mass body, reserved, sc =>
     Consuming.lower L layout t member edge inv bound mass reserved (counterDepthB body) pr
       (fun kept targets => lowB (reserved := reserved) (sc := sc) passes A L layout ens kept targets body)
-  | _, Γ, _, _, .retry n bis body overflow, reserved, sc => do
-    let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
-    let cu ← lowB (reserved := reserved) (sc := sc) passes A L layout ens pr ex overflow
-    retryC ((frei Γ reserved)) cc cu (fun targets => lowB (reserved := reserved) (sc := sc) passes A L layout ens pr targets body) n
+  | _, Γ, _, _, .retry n bis body overflow, reserved, sc =>
+    let pair := counterPair reserved (counterDepthB body)
+    if layout.internalResult ≤ pair.1 ∧ pair.2 < FB + reserved ∧ pair.1 ∉ pr ∧ pair.2 ∉ pr then do
+      let cc ← lowE (reserved := reserved) L bis (frei Γ reserved)
+      let cu ← lowB (reserved := reserved) (sc := sc) passes A L layout ens pr ex overflow
+      retryC pair.1 pair.2 (frei Γ reserved) n cc cu
+        (fun targets => lowB (reserved := reserved) (sc := sc) passes A L layout ens
+          (pair.1 :: pair.2 :: pr) targets body)
+    else none
   | _, Γ, _, _, .forever _ inv body, reserved, sc =>
     let pair := counterPair reserved (counterDepthB body)
     if layout.internalResult ≤ pair.1 ∧ pair.2 < FB + reserved ∧ pair.1 ∉ pr ∧ pair.2 ∉ pr then do

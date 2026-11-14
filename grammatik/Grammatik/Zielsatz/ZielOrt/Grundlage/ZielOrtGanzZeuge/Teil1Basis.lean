@@ -179,7 +179,8 @@ theorem zO_vertrag (Q : AxEns zD) : AxVertragO Q zO := fun a => nomatch a
     false invariant from its (true) `requires`. -/
 theorem paP_nicht_keineLogik (Q : AxEns zD) (f : zD.Fn) : ¬ KeineLogik paP 0 Q f := by
   intro h
-  exact h zO zO_rahmen zO_lokal (zO_vertrag Q) hwRuf (hwRuf_rahmen paP) hwRuf_ohneLogik
+  exact h zO zO_rahmen zO_lokal (axVertragOP_of_O _ (zO_vertrag Q)) hwRuf
+    (hwRuf_rahmen paP) hwRuf_ohneLogik
     (zSp.welt []) (by cases f <;> exact .nil) rfl .schleife (paP_lauf zO hwRuf f _ _)
 
 /-- **Probe A: the premise of the goal theorem is refuted.** -/

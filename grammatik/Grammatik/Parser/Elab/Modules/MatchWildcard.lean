@@ -67,4 +67,20 @@ def erweitere (items : List SItemTief) : List SItemTief :=
       let r := erweitereItem schemas acc.2 item
       (acc.1 ++ [r.1], r.2)) ([], 0)).1
 
+/-- The shared chunk accumulator avoids copying every preceding declaration. -/
+def erweitereFast (items : List SItemTief) : List SItemTief :=
+  match Uebersetze.uSumSchemas (items.map fun
+      | .taggedByT declaration _ => declaration
+      | item => item) with
+  | .error _ => items
+  | .ok schemas =>
+    (CallHoist.collectSteps (σ := Nat) (α := SItemTief) (β := SItemTief) (fun (nr : Nat) item =>
+      let r := erweitereItem schemas nr item
+      ([r.1], r.2)) items 0).1
+
+
+@[csimp] theorem erweitere_eq_fast : @erweitere = @erweitereFast := by
+  funext items
+  rfl
+
 end Gabbro.Grammatik.Parser.MatchWildcard

@@ -265,10 +265,10 @@ theorem handler_contracts : RespektiertVertraege prog handler := by
     exact decide_eq_true rfl
 
 def oracle : Orakel decl where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 def permissions : RufPasst decl (vertragVon decl true) sig [] where
   hw := fun _ h => h

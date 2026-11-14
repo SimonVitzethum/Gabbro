@@ -84,7 +84,7 @@ theorem library_round_zeuge :
       exact ⟨legs_tok _ rfl, rfl⟩
     · intro rest
       rfl
-  exact ⟨good, anw_lcall call good, anw_bindLib false "value" (by decide) none call trivial good⟩
+  exact ⟨good, anw_lcall call good, anw_bindLib false "value" (by decide) rfl none call trivial good⟩
 
 /-- Two source occurrences keep distinct regions; selecting one cannot reuse the other's input. -/
 theorem library_site_identity_zeuge :

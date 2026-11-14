@@ -1,0 +1,11 @@
+// The range binder shadows the outer i only inside the loop. Exit 10 + 7 = 17.
+module ir_for_scope {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let i : u64 in 0 .. 10 = 7;
+    let mut sum : u64 in 0 .. 100 = 0;
+    for i in 1 ..< 5 {
+        sum = (sum + i) % 100;
+    }
+    return (sum + i) % 100;
+}
+}

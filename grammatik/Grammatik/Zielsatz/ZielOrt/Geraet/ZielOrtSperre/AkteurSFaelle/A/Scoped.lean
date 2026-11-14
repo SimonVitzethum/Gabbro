@@ -123,7 +123,7 @@ theorem fadenS_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO 
       rfl)
   refine fadenS_lokal hF hr ρ _ spur' (fun σ hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  refine ⟨σ.gibt L, Nat.le_succ _,
+  refine ⟨σ.gibt L, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', trivial, ?_⟩
   intro calls O' U
   apply ZErgG.folgt_of_eq
@@ -148,7 +148,7 @@ private theorem kopfS_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertrag
   simp only [semH, weiterH, scopesInvH, List.all_nil, if_true, List.foldl_nil] at h1
   obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck (ZErgG.folgt_zurueck h1)
   have hens := ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
-    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa)
     (umweltAus S sp HU) (umweltAus_ok hS hsp hiu)
     (rufAusV H) (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).1 σ' v hex
   exact ens_transfer hens (GleichAuf.refl _ _)

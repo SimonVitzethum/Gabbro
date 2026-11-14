@@ -12,13 +12,13 @@ set_option maxRecDepth 100000
 def statement : Stmt D (vertragVon D 2) false [.bool] [] [] :=
   .retry 2 (.var .here) (.cons (.assignVar .here .tru) (.cons (.next rfl) .nil)) .nil
 
-def code : List II := ((lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement).getD ([], 0)).1
+def code : List II := ((lowS (reserved := 2) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement).getD ([], 0)).1
 
 def memory : Runner.Mem := { callMem with
   b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * code.length then
       ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else callMem.b a }
 
-theorem lowered : lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) := by
+theorem lowered : lowS (reserved := 2) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 8) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -29,25 +29,45 @@ local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
   else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
 
 theorem code_at : CodeAt memory 2048 code := by
-  have h : ∀ k : Fin code.length, InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
-      code[k.val].o (II.f code[k.val].a) (II.f code[k.val].b) (II.f code[k.val].c) := by
-    apply allFin
-    decide +kernel
-  exact fun k hk => h ⟨k, hk⟩
+  refine codeAt_bytes code 2048 (by decide) ?_
+  intro i hi
+  have length := flatMap_enc_len code
+  have room : 2048 + 16 * code.length < 2 ^ 64 := by decide
+  have small : 2048 + i < 2 ^ 64 := by omega
+  refine ⟨rfl, rfl, ?_⟩
+  simp only [memory, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small,
+    if_pos (by omega : 2048 ≤ 2048 + i ∧ 2048 + i < 2048 + 16 * code.length),
+    Nat.add_sub_cancel_left, List.getElem?_eq_getElem hi, Option.getD_some]
 
 theorem functions_at : PCode memory addresses target 4096 256 := by
-  have h : (List.finRange 3).all (fun f => (List.finRange (target f).length).all (fun k =>
-      decide (InsAt memory (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
-        (target f)[k.val].o (II.f (target f)[k.val].a) (II.f (target f)[k.val].b) (II.f (target f)[k.val].c)))) = true := by
-    decide +kernel
+  have changed : Agree 2048 0 (2 * code.length) callMem memory := by
+    refine ⟨rfl, rfl, ?_⟩
+    intro a outside
+    simp only [memory]
+    split
+    · next inside => exfalso; simp only [inSlots, BitVec.toNat_ofNat, show (2048 : BitVec 64).toNat = 2048 from rfl] at outside; omega
+    · rfl
+  have below : ∀ f : Fin 3, addresses f + 16 * (target f).length ≤ 2048 := by
+    apply allFin
+    decide
   change ∀ f : Fin 3, CodeAt memory (BitVec.ofNat 64 (addresses f)) (target f) ∧
     CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256
-  refine fun f => ⟨fun k hk => ?_, (targets_code f).2⟩
-  exact of_decide_eq_true (List.all_eq_true.mp (List.all_eq_true.mp h f (by simp)) ⟨k, hk⟩ (by simp))
+  intro f
+  refine ⟨(targets_code f).1.agree changed ?_, (targets_code f).2⟩
+  have bound := below f
+  have address := addresses_bound f
+  simp only [CodeFar, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : addresses f < 2 ^ 64),
+    show (2048 : BitVec 64).toNat = 2048 from rfl]
+  constructor
+  · omega
+  · constructor
+    · have room : 2048 + 16 * code.length < 2 ^ 64 := by decide
+      omega
+    · omega
 
 theorem frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem pre [Kern] : PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) := by
+theorem pre [Kern] : PreS callLayout memory 2048 4096 256 7 code (Env.cons (τ := .bool) false Env.nil) 2 := by
   refine ⟨by decide, by decide, frame, code_at, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar; decide +kernel
   · apply envAt_cons
@@ -79,17 +99,17 @@ local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
 /-- The general retry proof has all premises together, and next reaches a true second check. -/
 theorem retry_case_zeuge [Kern] :
-    lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
-    PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) ∧
+    lowS (reserved := 2) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 8) ∧
+    PreS callLayout memory 2048 4096 256 7 code (Env.cons (τ := .bool) false Env.nil) 2 ∧
     WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 [] ∧
     Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world ∧ WeltAt memory callLayout world ∧
     Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ memory
       (2048 + BitVec.ofNat 64 (16 * code.length)) (2048 + BitVec.ofNat 64 (16 * code.length))
       (2048 + BitVec.ofNat 64 (16 * code.length))
-      (execStmt O 1 (rufAt tiny O 1 2) statement world (Env.cons (τ := .bool) false Env.nil)) := by
+      (execStmt O 1 (rufAt tiny O 1 2) statement world (Env.cons (τ := .bool) false Env.nil)) 2 := by
   refine ⟨lowered, pre, call_win, surroundings, head, world_at, ?_⟩
   have h := lowS_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world)
-    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl scopes_nil statement HeldIn.nil code 6
+    (ρ0 := Env.nil) (reserved := 2) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl scopes_nil statement HeldIn.nil code 8
     lowered (by decide) (by decide +kernel) call_win memory 2048 world (Env.cons (τ := .bool) false Env.nil)
     pre (by decide) (by decide) surroundings head world_at (fun _ h => nomatch h)
   simpa using h

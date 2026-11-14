@@ -155,10 +155,10 @@ theorem taP_fuss : fussOrtGB taP taFs = true := by decide
 /-- The oracle: a publication of `flag` is visible exactly when `flag` is
     `1`. No axioms, no registers. -/
 def taO : Orakel taD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g σ => decide ((σ.globs g).n = 1)
+  sichtbarL := fun g σ => decide ((σ.globs g).n = 1)
 
 theorem taO_gut : GutO taO := fun a => nomatch a
 

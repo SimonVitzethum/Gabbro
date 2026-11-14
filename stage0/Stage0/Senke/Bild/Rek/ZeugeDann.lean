@@ -87,7 +87,7 @@ theorem bild_dann_zeuge :
     Zerlegung.halt _ _ _
   -- in and out of the callee
   obtain ⟨M1', _, hl1, hE, hout⟩ := randDannGL_bindCall_ein_aus (P := t4P) (O := t4O) (passes := 0) (j := 0)
-    leseblind_t4O hD hR hg hkC
+    (leseblind_t4O.toP t4P) hD hR hg hkC
   obtain ⟨M', hl', hD'⟩ := hout hE
   exact ⟨hg, M2, M1', M', σ2, v, hl2, hD, hR, hl1, hl', hD'⟩
 

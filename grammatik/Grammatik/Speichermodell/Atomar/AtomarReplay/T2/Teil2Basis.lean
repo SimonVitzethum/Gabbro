@@ -14,7 +14,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : Sperr
 /-- **A push through a read set `os`** (as `pushS_gen`): the read is recorded; the callee's key
     world is the sequential world after the read (it agrees with the machine's entry world on
     the caller's stable carriers and on `os`). -/
-theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
+theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hS : SperrInvOk S)
     {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
     (hFragS : ∀ f, (P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true)
@@ -86,7 +86,7 @@ theorem pushSA_gen (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : 
     (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hctrκ)
   have hsubc : (P.requires g).orte ++ (P.ensures g).orte ⊆ stabilS P S lok z.kopf.f Λc :=
     fun _ h => stabilS_iff (fun L => (hΛc L).symm) (hctr h)
-  have hlen : σ.spur.length ≤ (mischT Tg os (σ.lese Λ os) W.speicher).spur.length :=
+  have hlen : σ.rang ≤ (mischT Tg os (σ.lese Λ os) W.speicher).rang :=
     lese_laenge _ _ _
   refine ⟨⟨⟨[], [], [], [], W.lese Λ os, hreq0, funkV_nil, vertraegeOkR_nil P, massOkV_nil _ _ _, kurzVBA_nil _,
     funkA_nil, rahmenA_nil, vertragA_nil _ Q, kurzAB_nil _, funkU_nil, invU_nil S, kurzUB_nil _,
@@ -138,17 +138,17 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ args.orte W.speicher
   have hgκ := mischT_gleichAuf hg0 (hX hok') Λ Λ
-  have hlen : σ.spur.length ≤ ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length :=
-    Nat.le_trans (lese_laenge _ _ _) (Nat.le_succ _)
-  have hlen2 : σ.spur.length ≤
-      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
+  have hlen : σ.rang ≤ ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).rang :=
+    Nat.le_trans (lese_laenge _ _ _) (World.rang_le_fragt _ _)
+  have hlen2 : σ.rang ≤
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).rang :=
     Nat.le_trans hlen (axWeltF_laenge _ _ _)
-  have hlen3 : ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length ≤
-      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
+  have hlen3 : ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).rang ≤
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).rang :=
     axWeltF_laenge _ _ _
   have hlt : Nonempty (Ereignis D) →
-      ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length <
-      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
+      ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).rang <
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).rang :=
     fun hN => frischSpur_laenge hN _
   have hpa : ¬ Nonempty (Ereignis D) → PasstA O (HA ++ [⟨a,
       (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a),
@@ -170,10 +170,11 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
       (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, xm.2)⟩], HU, HX',
     axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, hreq, hf, hv, hm,
     kurzVBA_mono hk hlen2, ?_, ?_, ?_, ?_,
-    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' (Nat.le_trans (Nat.le_succ _) hlen3)⟩, ?_, hok hok', ?_⟩, hS⟩
+    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' (Nat.le_trans (Nat.le_succ _)
+      (axWeltF_laengeV a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1 :))⟩, ?_, hok hok', ?_⟩, hS⟩
   · by_cases hN : Nonempty (Ereignis D)
-    · exact funkA_append hfa (hka.1 hN) _ hlen
-    · exact funkA_of_passtA (hpa hN)
+    · exact funkA_append hfa (hka.1 hN) _ hlen ⟨frischSpur D, rfl⟩
+    · exact funkA_of_passtA hN (hpa hN)
   · intro a' σk ρk x hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hra a' σk ρk x hm

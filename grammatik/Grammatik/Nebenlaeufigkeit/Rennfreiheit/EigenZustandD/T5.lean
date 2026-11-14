@@ -115,14 +115,14 @@ def V2 : Vertrag D2 :=
     recording `GutO` demands), everything else kept. -/
 def Wflip2 (σ : World D2) : World D2 :=
   { slots := fun _ _ _ => !(σ.slots () 0 ()), globs := fun g => (nomatch g),
-    spur := axiomSpur [()] [] () [] σ.haelt ++ σ.spur }
+    spur := axiomSpur [()] [] () [] σ.ohneLese.haelt ++ σ.spur }
 
 /-- Oracle: flips the slot and records the write event. -/
 def O2 : Orakel D2 where
-  wirkt := fun _ σ _ => (Wflip2 σ, 0)
-  regLies := fun r _ => nomatch r
+  wirktL := fun _ σ _ => ({ Wflip2 σ with spur := axiomSpur [()] [] () [] σ.haelt }, 0)
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- The oracle is good: it writes only the declared (unguarded) table and
     records its write event over complete domains with the empty guard
@@ -148,7 +148,7 @@ theorem O2gut : GutO (D := D2) O2 := by
         · intro g; exact nomatch g
         · intro m st hm; simp only [List.not_mem_nil] at hm
         · intro L hL; simp only [List.not_mem_nil] at hL
-        · rfl
+        · exact congrArg (· ++ σ.spur) (congrArg (axiomSpur _ _ _ _) (World.ohneLese_haelt σ))
 
 /-- The axiom call statement (answer type `none`, so it is a `Stmt`).
     The new guard premises hold: `D2`'s table is UNGUARDED (`braucht = []`),

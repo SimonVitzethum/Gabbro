@@ -70,7 +70,7 @@ table Verzeichnis count N {
     // Namensheuristik ist widerlegt, nicht bezweifelt (`messung/OPS-ERZEUGER.md`).*
     occupied benutzt;
 
-    invariant marke_null_wenn_frei cost O(1) runs online :
+    invariant marke_null_wenn_frei :
         forall s in slots of Self : Self.slots[s].benutzt || Self.slots[s].marke == 0;
 }
 
@@ -159,7 +159,7 @@ table Ordner count N {
 
     occupied benutzt;
 
-    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+    invariant jeder_erreicht_die_wurzel :
         forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
 }
 

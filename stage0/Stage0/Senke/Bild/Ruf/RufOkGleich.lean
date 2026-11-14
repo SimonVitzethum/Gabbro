@@ -16,13 +16,18 @@
              short direction of P2 is used: it needs no user duty and no `HeldB` discipline at the entry (that is
              what `NurAbstieg` would need for the converse direction, which this route does not use).
 
-             **The oracle property** (`LeseblindOK`, lead decision: the trace is ghost state, real answers do not
-             depend on read events) is a named class beside `TorOK` and `SichtOK`, carried by the generalised image
-             theorem as an instance argument.
+             **The oracle premises** (`LeseblindRS`/`LeseblindP`, `Gleich/Ausgang.lean`). The named class
+             `LeseblindOK` beside `TorOK` and `SichtOK` carries the register/visibility half; every oracle of the
+             goal theorem has it (`leseblindOK_regLokal`, `Ruf/Hardware.lean`: it follows from the named hardware
+             assumption `RegLokal`). A single step of the fragment needs nothing more (the fragment has no foreign
+             call, `axFrei_stmtR`); the handler relation for ALL callees (P2) also needs the foreign half or a
+             program without foreign calls (`LeseblindP`), which a program whose bodies lie in the fragment is
+             (`fremdFrei_endR`).
 -/
 module
 public import Stage0.Senke.Bild.Korrespondenz
 public import Stage0.Senke.Bild.Gleich.RufAt
+public import Stage0.Senke.Bild.Gleich.AxFreiR
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8
 @[expose] public section
 
@@ -36,20 +41,24 @@ variable {D : Deklaration}
 
 /-! ## 1. The named oracle property -/
 
-/-- **The named oracle property of the image theorem with calls** (beside `TorOK` and `SichtOK`): the oracle does not
-    look at read events (`Leseblind`: on `≈` worlds its answers agree and its effect worlds are `≈`). The trace is
-    ghost state; the extra read events of `rufAt` exist only in the sequential witness world. -/
+/-- **The named oracle property of the image theorem with calls** (beside `TorOK` and `SichtOK`): register and
+    visibility answers do not look at read events (`LeseblindRS`). The trace is ghost state; the extra read events
+    of `rufAt` exist only in the sequential witness world. It follows from `RegLokal` (`leseblindOK_regLokal`). -/
 class LeseblindOK (O : Orakel D) : Prop where
-  blind : Leseblind O
+  blind : LeseblindRS O
 
 /-- The read-blindness the named property carries. -/
-theorem leseblind_von (O : Orakel D) [h : LeseblindOK O] : Leseblind O :=
+theorem leseblind_von (O : Orakel D) [h : LeseblindOK O] : LeseblindRS O :=
   match h with
   | ⟨b⟩ => b
 
 /-- Every read-blind oracle has the named property. -/
 theorem leseblindOK_von {O : Orakel D} (h : Leseblind O) : LeseblindOK O :=
-  ⟨h⟩
+  ⟨h.rs⟩
+
+/-- **Every oracle has the named property** (the oracle interface is read-blind, `leseblindRS_alle`). -/
+instance leseblindOK_alle (O : Orakel D) : LeseblindOK O :=
+  ⟨leseblindRS_alle O⟩
 
 /-! ## 2. A normal end is related only to a normal end -/
 
@@ -76,19 +85,19 @@ theorem rufOk_aus_gleich {P : Programm D} {O : Orakel D} {passes : Nat} {f : Fad
 
 /-- The body-running handler: `RufOk` gives `RufOkGleich` under a read-blind oracle. -/
 theorem rufOkGleich_rufRumpf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden} {A : D.Lock → Prop}
-    {C : D.Fn → Prop} (hO : Leseblind O) (n : Nat) (h : RufOk P O passes f A (rufRumpf P O passes n) C) :
+    {C : D.Fn → Prop} (hO : LeseblindP P O) (n : Nat) (h : RufOk P O passes f A (rufRumpf P O passes n) C) :
     RufOkGleich P O passes f A (rufRumpf P O passes n) C :=
   rufOk_aus_gleich (rufRumpf_lg (P := P) (passes := passes) (Er := fun _ => True) hO n) h
 
 /-- **THE CALL OBLIGATION OF `rufAt`, UP TO READ EVENTS, AT EVERY DEPTH.** Under a read-blind oracle, the image's
     handler `rufAt n` keeps `RufOkGleich` for every callee admitted at depth `n` (`Tief P A n`): the body run
     `rufRumpf n` is related to it (`rufAt_rufRumpf_lg_alle`, P2) and keeps `RufOk` (`rufOk_tief`). -/
-theorem rufOk_gleich_tief {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Leseblind O) (f : Faden)
+theorem rufOk_gleich_tief {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) (f : Faden)
     (A : D.Lock → Prop) (n : Nat) : RufOkGleich P O passes f A (rufAt P O passes n) (Tief P A n) :=
   ⟨rufRumpf P O passes n, rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO n, rufOk_tief P O passes f A n⟩
 
 /-- Without callees: `rufAt` keeps `RufOkGleich` for the empty callee set (the call-free image theorem). -/
-theorem rufOkGleich_leer {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Leseblind O) (f : Faden)
+theorem rufOkGleich_leer {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) (f : Faden)
     (A : D.Lock → Prop) (n : Nat) : RufOkGleich P O passes f A (rufAt P O passes n) (fun _ => False) :=
   ⟨rufRumpf P O passes n, rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO n,
     rufOk_leer P O passes f A (rufRumpf P O passes n)⟩
@@ -112,7 +121,7 @@ theorem randGL_von {thr : Faden} {stapel : List (RufRahmenG D)} {f : D.Fn} {rho 
 /-- **One statement, machine G, up to read events**: from a boundary `≈` to the sequential world in front of `s`, a
     statement of the G fragment that ends normally under the image's handler `R` (calls of admitted callees
     included) is realised by steps of `thr` alone, to a boundary `≈` to the sequential world behind `s`. -/
-theorem randGL_schritt {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Leseblind O)
+theorem randGL_schritt {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindRS O)
     {R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g} {Cg : D.Fn → Prop} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
     (hRuf : RufOkGleich P O passes thr Agl R Cg) {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -122,7 +131,7 @@ theorem randGL_schritt {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Lese
     ∃ M', RufLaufG P O passes thr M M' ∧ RandGL thr stapel f rho s0 Agl rest M' σ1 ρ1 := by
   obtain ⟨σm, hw, hG⟩ := h
   obtain ⟨R', hRR, hOk⟩ := hRuf
-  have hl := execStmt_lg (passes := passes) hRR hO s hw ρ
+  have hl := execStmt_lg (passes := passes) hRR hO s (Or.inl (axFrei_stmtR hs)) hw ρ
   rw [hex] at hl
   obtain ⟨σm1, hex', hw1⟩ := hl.ok_inv
   obtain ⟨M', hlauf, hG'⟩ := randG_schritt hOk hs hex' hG

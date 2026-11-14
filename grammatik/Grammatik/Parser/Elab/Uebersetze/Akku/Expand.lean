@@ -38,6 +38,7 @@ def uAkkuBinder : Nat → SAnw → List String
       (match els with | none => [] | some b => uAkkuBinder f b)
   | f + 1, .elsif _ b => uAkkuBinder f b
   | f + 1, .cases _ arms => arms.flatMap (uAkkuBinder f)
+  | f + 1, .boundedLoop raw b => (boundedLoopLocals raw).map Prod.fst ++ uAkkuBinder f b
   | f + 1, .retry _ b => uAkkuBinder f b
   | f + 1, .loop _ b => uAkkuBinder f b
   | f + 1, .trim _ _ b => uAkkuBinder f b
@@ -48,6 +49,7 @@ def uAkkuBinder : Nat → SAnw → List String
   | f + 1, .child b => uAkkuBinder f b
   | f + 1, .block ss _ => ss.flatMap (uAkkuBinder f)
   | _, _ => []
+termination_by structural fuel => fuel
 
 /-- No plan name is bound as a local in the unit's bodies or parameters:
     otherwise the rewrite below could misread a shadowed name. -/
@@ -287,6 +289,12 @@ def uAkkuExpandAnwAtom (ps : List AkkuPlan) (ns : List String) : Nat → SAnw �
       match uAkkuExpandEins ps ns f body with
       | .error x => .error x
       | .ok body' => .ok [.each b o k s m raw inv body']
+  | f + 1, .boundedLoop h b =>
+    if (boundedLoopExpressions h).any (uAkkuInExpr 100000 ns) then uAkkuBareRefuse (.variable "")
+    else
+      match uAkkuExpandEins ps ns f b with
+      | .error x => .error x
+      | .ok b' => .ok [.boundedLoop h b']
   | f + 1, .retry h b =>
     match uAkkuExpandEins ps ns f b with
     | .error x => .error x

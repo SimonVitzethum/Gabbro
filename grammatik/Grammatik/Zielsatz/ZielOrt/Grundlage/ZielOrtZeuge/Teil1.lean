@@ -234,10 +234,10 @@ theorem zP_fuss : fussOrtB zP zFs = true := by decide
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def zO : Orakel zD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem zO_gut : GutO zO := by
   intro a

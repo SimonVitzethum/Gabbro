@@ -1,6 +1,7 @@
 /- Shared body traversal for source match rewrites. No expressions or model rules change. -/
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Modules.CallHoist.CollectM
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.MatchBodies
@@ -51,6 +52,9 @@ def walk (rewrite : Rewrite) : Nat → List String → Nat → SAnw →
         | .each a b c d m raw inv bdy => do
           let r ← body [a] nr bdy
           pure (.each a b c d m raw inv r.1, r.2)
+        | .boundedLoop h b => do
+          let r ← body ((boundedLoopLocals h).map Prod.fst) nr b
+          pure (.boundedLoop h r.1, r.2)
         | .retry h b => do
           let r ← body [] nr b
           pure (.retry h r.1, r.2)

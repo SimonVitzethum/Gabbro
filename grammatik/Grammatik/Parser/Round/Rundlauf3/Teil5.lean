@@ -25,7 +25,8 @@ theorem prim_emb1_legs : ∀ (w : String) (x : SExpr)
   obtain rfl | rfl := hw
   · have hF1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-    simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+    simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary] at ⊢
     have hF2 : 1 ≤ F' := by omega
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
     simp only [parseEingebaut_ein] at ⊢
@@ -40,7 +41,8 @@ theorem prim_emb1_legs : ∀ (w : String) (x : SExpr)
     exact eingebaut_ein_ok "sizeof" x rest hpx htw
   · have hF1 : 1 ≤ F := by omega
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-    simp only [druckToks, args_einzeln, List.cons_append, parsePrimary] at ⊢
+    simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary] at ⊢
     have hF2 : 1 ≤ F' := by omega
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
     simp only [parseEingebaut_ein] at ⊢
@@ -68,8 +70,8 @@ theorem prim_aligned_legs : ∀ (a b : SExpr)
   intro a b rest F hLa hLb hrs hF
   have hF1 : 1 ≤ F := by omega
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, args_cons, args_einzeln, List.cons_append,
-    parsePrimary] at ⊢
+  simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+    args_cons, args_einzeln, List.cons_append, parsePrimary] at ⊢
   have hF2 : 1 ≤ F' := by omega
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   simp only [parseEingebaut_zwei] at ⊢
@@ -97,9 +99,8 @@ theorem prim_aligned_legs : ∀ (a b : SExpr)
   simp only [hOa, hOb] at ⊢
 
 -- Builtin tower from a primary leg: the `parseUnary`
--- fall-through on the `wort` head (no prefix arm fires), then
--- `tower_up`. One builder for all three builtins (the head
--- token is always `wort`, whatever the tail).
+-- fall-through on a word or opening parenthesis (no prefix
+-- arm fires), then `tower_up`. This also covers tuple tokens.
 theorem embTower : ∀ (w : String) (xs : List SExpr),
     (∀ (rest' : List Token) (G : Nat), ruhigSuff rest' = true →
       ruhigGleit rest' = true →
@@ -117,12 +118,18 @@ theorem embTower : ∀ (w : String) (xs : List SExpr),
     have hG1 : 1 ≤ G := by omega
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hP' := hP rest' G' hrs hrg (by omega)
-    have hd : druckToks (.built w xs) = [.wort w] ++
-        (([.zeichen "("] ++ druckToksListe xs) ++ [.zeichen ")"]) := by
-      simp only [druckToks, List.cons_append, List.nil_append]
-    simp only [hd, List.append_assoc] at hP' ⊢
-    simp only [List.cons_append, List.nil_append] at hP' ⊢
-    simp only [parseUnary, hP'] at ⊢
+    by_cases ht : strEq w "#tuple" = true
+    · have hd : druckToks (.built w xs) =
+          .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
+        simp only [druckToks, ht, ite_true, List.cons_append, List.nil_append]
+      simp only [hd, List.cons_append] at hP' ⊢
+      exact hP'
+    · have hd : druckToks (.built w xs) =
+          .wort w :: .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
+        simp only [druckToks, ht, Bool.false_eq_true, ↓reduceIte, List.cons_append,
+          List.nil_append, List.singleton_append, List.append_assoc]
+      simp only [hd, List.cons_append] at hP' ⊢
+      simpa only [parseUnary] using hP'
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro rest' G hpf hrs hrg hG
     exact hP rest' G hrs hrg hG

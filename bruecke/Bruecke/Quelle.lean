@@ -58,7 +58,7 @@ instance (u : UProg) : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq
 theorem declOf_kein_atomar (u : UProg) (h : u.globs = []) :
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false := fun g => by
   have h1 : g.val < u.globs.length := g.isLt
-  have h2 : u.globs.length = 0 := by rw [h]; rfl
+  have h2 : u.globs.length = 0 := by rw [h] <;> rfl
   omega
 
 /-- The elaborated program of a source text, if the Lean front end accepts it. -/

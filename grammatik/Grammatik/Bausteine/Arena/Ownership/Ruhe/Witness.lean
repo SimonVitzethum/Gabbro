@@ -115,10 +115,10 @@ theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide
 theorem owner_check : checkProgram E.P FA I fs = true := by decide
 
 def O : Orakel FD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r => nomatch r
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 /-- (c) The oracle clauses hold under the explicitly supplied native CPU contract. -/
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmen O E.Q :=
@@ -154,7 +154,7 @@ theorem besitz_zeuge [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden �
     (hK : FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := FD) E.P E.ws)
       (FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) lebt0) K) :
     OwnInv (liftA FA) (liftI I) K.m :=
-  (gabbro_ziel akzeptiertX_pruefer FD E ⟨fs, fs_voll⟩ ⟨[], ls_voll⟩ ⟨cs, cs_voll⟩ check nutzer O hardware
+  (gabbro_ziel_voll akzeptiertX_pruefer FD E ⟨fs, fs_voll⟩ ⟨[], ls_voll⟩ ⟨cs, cs_voll⟩ check nutzer O hardware
     passes _ _ (laufzeit_voll E) lebt0 K hK).besitz _ (List.Mem.head _)
 
 /-- Non-degenerate: the function's actual run allocates slot `0` and puts it back on the list. -/

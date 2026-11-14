@@ -91,10 +91,10 @@ def program : Programm D where
   rumpf _ := .cons (statement true) (.ret .empty (.refl []))
 
 def oracle : Orakel D where
-  wirkt a := nomatch a
-  regLies r := nomatch r
+  wirktL a := nomatch a
+  regLiesL r := nomatch r
   regSchreib r := nomatch r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 /-- The consuming witness makes no calls. -/
 def calls (f : D.Fn) (_ : World D) (_ : Env D (D.params f)) : RufAusgang f :=

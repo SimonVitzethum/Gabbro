@@ -21,8 +21,8 @@ namespace Gabbro.Grammatik
 
   * `AxPre` -- the gate's declared argument precondition (its `requires`),
     over the call-time world and the passed arguments;
-  * `AxVertragOP Pre Q O` -- the hardware premise restricted to calls that
-    meet it (weaker than `AxVertragO`: `axVertragOP_of_O`);
+  * `AxVertragOPAlle Pre Q O` -- the hardware premise restricted to calls that
+    meet it, at every world (weaker than `AxVertragO`);
   * `AufruferPflicht Pre a σ ρ` -- the caller's obligation at one call site,
     user logic (the `V` obligation `gabbro obligations` counts at every call
     of a gate with `requires`).
@@ -36,29 +36,11 @@ namespace Gabbro.Grammatik
   oracle on every well-formed call (`mitVorbedingung_gleich`).
   `Spec.lean` is unchanged. -/
 
-/-- A per-gate argument precondition: the declared `requires`, over the
-    world at the call and the passed arguments. -/
-abbrev AxPre (D : Deklaration) := ∀ a : D.Ax, World D → Env D (D.aparams a) → Bool
-
-/-- The hardware premise restricted to well-formed calls: whenever the
-    caller met the gate's precondition and the raw answer fits the declared
-    result type, the declared ensures holds. -/
-def AxVertragOP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D) : Prop :=
-  ∀ (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (v : ErgVal D (D.aerg a)),
-    Pre a σ ρ = true →
-    einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ ρ).2 = some v → Q a (O.wirkt a σ ρ).1 v = true
-
 /-- The caller's obligation at one call site: its arguments meet the gate's
     precondition. User logic, not hardware. -/
 def AufruferPflicht {D : Deklaration} (Pre : AxPre D) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : Prop :=
   Pre a σ ρ = true
-
-/-- The restricted premise is weaker: every oracle meeting the full premise
-    meets it, for every precondition. -/
-theorem axVertragOP_of_O {D : Deklaration} (Pre : AxPre D) {Q : AxEns D} {O : Orakel D}
-    (h : AxVertragO Q O) : AxVertragOP Pre Q O :=
-  fun a σ ρ v _ hfit => h a σ ρ v hfit
 
 /-- One gate call under the split premise: the caller's obligation plus the
     restricted hardware premise give the fitting answer's ensures, and the
@@ -67,7 +49,7 @@ theorem axVertragOP_of_O {D : Deklaration} (Pre : AxPre D) {Q : AxEns D} {O : Or
     restate it in the gate's own effect terms. -/
 theorem fremdruf_gate_gilt_pre (g : GateData fdD) (a : fdD.Ax) (O : Orakel fdD)
     (Pre : AxPre fdD) (Q : AxEns fdD)
-    (hO : GutO O) (hQ : AxVertragOP Pre Q O)
+    (hO : GutO O) (hQ : AxVertragOPAlle Pre Q O)
     (hEff : g.eff = fdD.aschreibt a) (hEffG : g.effG = fdD.agschreibt a)
     (σ : World fdD) (ρ : Env fdD (fdD.aparams a))
     (hPflicht : AufruferPflicht Pre a σ ρ)
@@ -85,17 +67,19 @@ theorem fremdruf_gate_gilt_pre (g : GateData fdD) (a : fdD.Ax) (O : Orakel fdD)
     raw word `raus a` (chosen outside the declared result type). -/
 def mitVorbedingung {D : Deklaration} (Pre : AxPre D) (O : Orakel D) (raus : D.Ax → Int) :
     Orakel D :=
-  { O with wirkt := fun a σ ρ =>
-      ((O.wirkt a σ ρ).1, if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) }
+  { O with wirktL := fun a σ ρ =>
+      ((O.wirktL a σ ρ).1, if Pre a σ ρ = true then (O.wirktL a σ ρ).2 else raus a) }
 
 /-- On a well-formed call the re-dressed oracle IS the machine's oracle. -/
 theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     (raus : D.Ax → Int) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
+    (hPre : ∀ a σ ρ, Pre a σ.ohneLese ρ = Pre a σ ρ)
     (h : AufruferPflicht Pre a σ ρ) :
     (mitVorbedingung Pre O raus).wirkt a σ ρ = O.wirkt a σ ρ := by
-  have h' : Pre a σ ρ = true := h
-  show ((O.wirkt a σ ρ).1, if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) =
-    O.wirkt a σ ρ
+  have h' : Pre a σ.ohneLese ρ = true := (hPre a σ ρ).trans h
+  show ((O.wirktL a σ.ohneLese ρ).1.auf σ,
+      if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) =
+    ((O.wirktL a σ.ohneLese ρ).1.auf σ, (O.wirktL a σ.ohneLese ρ).2)
   rw [if_pos h']
 
 /-- **The bridge to premise (c) of `gabbro_ziel`.** Frame, register
@@ -105,17 +89,19 @@ theorem mitVorbedingung_gleich {D : Deklaration} (Pre : AxPre D) (O : Orakel D)
     calls are exactly the ones whose answers no longer fit. -/
 theorem hardware_aus_vertragP [RootNativeFloat.Hardware] {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O : Orakel D)
     (raus : D.Ax → Int)
-    (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOP Pre Q O)
+    (hO : GutO O) (hR : RegLokal O) (hQ : AxVertragOPAlle Pre Q O)
+    (hPre : ∀ a σ ρ, Pre a σ.ohneLese ρ = Pre a σ ρ)
     (hraus : ∀ a, einpassenErg O.zeiger (D.aerg a) (raus a) = none) :
     Zielsatz.HardwareAnnahmen (mitVorbedingung Pre O raus) Q := by
   refine ⟨fun a σ ρ => hO a σ ρ, hR, ?_, inferInstance⟩
   intro a σ ρ v hfit
-  by_cases hp : Pre a σ ρ = true
-  · have e := mitVorbedingung_gleich Pre O raus a σ ρ hp
+  by_cases hp : Pre a σ.ohneLese ρ = true
+  · have hp' : Pre a σ ρ = true := (hPre a σ ρ).symm.trans hp
+    have e := mitVorbedingung_gleich Pre O raus a σ ρ hPre hp'
     rw [e] at hfit ⊢
-    exact hQ a σ ρ v hp hfit
+    exact hQ a σ ρ v hp' hfit
   · have hn : ((mitVorbedingung Pre O raus).wirkt a σ ρ).2 = raus a := by
-      show (if Pre a σ ρ = true then (O.wirkt a σ ρ).2 else raus a) = raus a
+      show (if Pre a σ.ohneLese ρ = true then (O.wirktL a σ.ohneLese ρ).2 else raus a) = raus a
       rw [if_neg hp]
     have hz : (mitVorbedingung Pre O raus).zeiger = O.zeiger := rfl
     rw [hn, hz, hraus a] at hfit
@@ -136,18 +122,22 @@ def fdPre : AxPre fdD
   | true, σ, _ => decide ((σ.slots () 1 ()).n = 0)
   | false, _, ρ => decide (fdKopf ρ = 3)
 
+theorem fdPre_ohneLese (a : fdD.Ax) (σ : World fdD) (ρ : Env fdD (fdD.aparams a)) :
+    fdPre a σ.ohneLese ρ = fdPre a σ ρ := by
+  cases a <;> rfl
+
 /-- An oracle that keeps its contract on well-formed calls only: an open or
     a read with the handed-out descriptor answers as `fdO`; a read with any
     OTHER descriptor answers the slot value plus one -- the kernel's
     garbage for a caller's bug. -/
 def fdObad : Orakel fdD where
-  wirkt
-    | true, σ, ρ => fdO.wirkt true σ ρ
-    | false, σ, ρ => ((fdO.wirkt false σ ρ).1,
-        if fdKopf ρ = 3 then (fdO.wirkt false σ ρ).2 else (σ.slots () 0 ()).n + 1)
-  regLies := fun r _ => nomatch r
+  wirktL
+    | true, σ, ρ => fdO.wirktL true σ ρ
+    | false, σ, ρ => ((fdO.wirktL false σ ρ).1,
+        if fdKopf ρ = 3 then (fdO.wirktL false σ ρ).2 else (σ.slots () 0 ()).n + 1)
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- The bad oracle keeps the frames: its answer worlds are `fdO`'s. -/
 theorem fdObad_gut : GutO fdObad := by
@@ -158,16 +148,16 @@ theorem fdObad_gut : GutO fdObad := by
 
 /-- The bad oracle meets the RESTRICTED premise: on every well-formed call
     it answers as `fdO`, which meets the full one. -/
-theorem fdObad_vertragP : AxVertragOP fdPre fdQ fdObad := by
+theorem fdObad_vertragP : AxVertragOPAlle fdPre fdQ fdObad := by
   intro a σ ρ v hp hfit
   cases a with
   | true => exact fdQ_vertrag true σ ρ v hfit
   | false =>
     have h3 : fdKopf ρ = 3 := of_decide_eq_true hp
     have e : fdObad.wirkt false σ ρ = fdO.wirkt false σ ρ := by
-      show ((fdO.wirkt false σ ρ).1,
-          if fdKopf ρ = 3 then (fdO.wirkt false σ ρ).2 else (σ.slots () 0 ()).n + 1) =
-        fdO.wirkt false σ ρ
+      show ((fdO.wirktL false σ.ohneLese ρ).1.auf σ,
+          if fdKopf ρ = 3 then (fdO.wirktL false σ.ohneLese ρ).2 else (σ.ohneLese.slots () 0 ()).n + 1) =
+        ((fdO.wirktL false σ.ohneLese ρ).1.auf σ, (fdO.wirktL false σ.ohneLese ρ).2)
       rw [if_pos h3]
     rw [e] at hfit ⊢
     exact fdQ_vertrag false σ ρ v hfit

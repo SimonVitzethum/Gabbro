@@ -234,10 +234,10 @@ theorem korpus125_nutzer : Zielsatz.NutzerPflicht kE :=
     carrier, not a device); nothing awaits, so visibility is constantly
     false. -/
 def kO : Orakel kD where
-  wirkt := fun a => (nomatch a)
-  regLies := fun r => (nomatch r)
+  wirktL := fun a => (nomatch a)
+  regLiesL := fun r => (nomatch r)
   regSchreib := fun r _ => (nomatch r)
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 theorem kO_gut : GutO kO := fun a => (nomatch a)
 

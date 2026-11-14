@@ -13,10 +13,10 @@ variable {D : Deklaration}
 private theorem antwortRestG_kosten {V : Vertrag D} (g : D.Fn)
     (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
     (x y : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
-    (ha : antwortRestG g a x = some y) (pa : Nat)
+    (ha : antwortRestG g a x = some y) (pa : Nat) (ep : Nat)
     (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
     (rufeR Z ZS EW x.2.2.2.2 = true → rufeR Z ZS EW y.2.2.2.2 = true) ∧
-      potRest c pa y.2.2.2.2 ≤ potRest c pa x.2.2.2.2 := by
+      potRest ep c pa y.2.2.2.2 ≤ potRest ep c pa x.2.2.2.2 := by
   obtain ⟨l, Γ, Λ, ρ, r⟩ := x
   cases a with
   | inl v =>
@@ -50,20 +50,20 @@ private theorem antwortRestG_kosten {V : Vertrag D} (g : D.Fn)
 theorem rufAntwortG_kosten {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
     (ha : rufAntwortG z vor σ a = some z') (pa : Nat) :
-    (z'.stapel = z.stapel ∧ ∀ (c : D.Fn → Nat) (Z : D.Fn → Bool)
+    (z'.stapel = z.stapel ∧ ∀ (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool)
       (ZS : Nat → Bool) (EW : Bool),
-      rufeR Z ZS EW z'.kopf.rest.2.2.2.2 = true ∧ potRest c pa z'.kopf.rest.2.2.2.2 = 0) ∨
+      rufeR Z ZS EW z'.kopf.rest.2.2.2.2 = true ∧ potRest ep c pa z'.kopf.rest.2.2.2.2 = 0) ∨
     (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
       z.stapel = caller :: rst ∧ z'.stapel = rst ∧
-      ∀ (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool),
+      ∀ (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool),
         (rufeR Z ZS EW caller.rest.2.2.2.2 = true →
           rufeR Z ZS EW z'.kopf.rest.2.2.2.2 = true) ∧
-        potRest c pa z'.kopf.rest.2.2.2.2 ≤ potRest c pa caller.rest.2.2.2.2) := by
+        potRest ep c pa z'.kopf.rest.2.2.2.2 ≤ potRest ep c pa caller.rest.2.2.2.2) := by
   cases hst : z.stapel with
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact Or.inl ⟨rfl, fun _ _ _ _ => ⟨rfl, rfl⟩⟩
+      exact Or.inl ⟨rfl, fun _ _ _ _ _ => ⟨rfl, rfl⟩⟩
   | cons caller rst =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a caller.rest = some r := by
         cases hr : antwortRestG z.kopf.f a caller.rest with
@@ -72,6 +72,6 @@ theorem rufAntwortG_kosten {z z' : RufFadenG D} {vor σ : World D}
       simp [rufAntwortG, hst, hr] at ha
       subst z'
       exact Or.inr ⟨caller, rst, rfl, rfl,
-        fun c Z ZS EW => antwortRestG_kosten _ _ _ _ hr pa c Z ZS EW⟩
+        fun ep c Z ZS EW => antwortRestG_kosten _ _ _ _ hr pa ep c Z ZS EW⟩
 
 end Gabbro.Grammatik

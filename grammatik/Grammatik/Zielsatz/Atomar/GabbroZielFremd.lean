@@ -52,11 +52,11 @@ def GabbroZielFremd : Prop :=
           ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
             (RufStartG E.P.mitRuhe sp init) (E.arenen.map (·.mitRuhe)) K
 
-/-- **The goal with the foreign premise split, PROVED**: from `gabbro_ziel` by recombining the
+/-- **The goal with the foreign premise split, PROVED**: from `gabbro_ziel_voll` by recombining the
     software and hardware parts of the foreign ensures. -/
 theorem gabbro_ziel_fremd : GabbroZielFremd := by
   intro C D _ E fs ls cs hC hN O hSw hHw passes sp init hL lebt0 K hK
-  exact gabbro_ziel C D E fs ls cs hC hN O (hardwareAnnahmen_of_split hHw hSw) passes sp init hL
+  exact gabbro_ziel_voll C D E fs ls cs hC hN O (hardwareAnnahmen_of_split hHw hSw) passes sp init hL
     lebt0 K hK
 
 /-- The statement of before follows: a unit whose items are all software-free needs no software

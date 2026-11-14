@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.TaggedDispatch.Signature
 public import Grammatik.Parser.Spec.Check
+import Lean.Elab.Tactic.Cbv
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -36,6 +37,8 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser
+
+attribute [local cbv_eval] strEq_apply_eq_decide
 
 @[expose] public def dispatchSignature : FnSig :=
   ⟨"spec", "area", [("before", .atom "bool"), ("self", .atom "Self"),
@@ -72,7 +75,7 @@ public theorem tagged_group_every_member_zeuge :
 public theorem tagged_group_missing_member_zeuge :
     (checkTaggedGroup [dispatchSignature]
       [("Circle", some (.atom "u8")), ("Rect", some (.atom "bool"))]
-      [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8"))]⟩]).toOption.isSome = false := by decide +kernel
+      [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8"))]⟩]).toOption.isSome = false := by cbv
 
 public theorem tagged_wrong_parameter_refused_zeuge :
     checkTaggedSignature (.atom "u8") dispatchSignature
@@ -94,7 +97,7 @@ public theorem tagged_nested_receiver_not_dispatched_zeuge :
 
 public theorem tagged_held_refused_zeuge :
     (checkTaggedGroup [{ dispatchSignature with klauseln := [.needs (.call "Held" [.variable "L"])] }]
-      [("Circle", some (.atom "u8"))] dispatchImplementations).toOption.isSome = false := by decide +kernel
+      [("Circle", some (.atom "u8"))] dispatchImplementations).toOption.isSome = false := by cbv
 
 @[expose] public def dispatchConformanceSignature : FnSig :=
   { dispatchSignature with klauseln := [.effs [], .cost (.lit 1)] }
@@ -125,6 +128,7 @@ public theorem tagged_unified_signature_refused_zeuge :
       .error "spec.signature" ∧
     Spec.check (dispatchConformanceItems
       { dispatchConformanceActual (.atom "bool") with fehler := some "Failure" }) =
-      .error "spec.signature" := ⟨rfl, rfl, rfl⟩
+      .error "spec.signature" := by
+  refine ⟨?_, ?_, ?_⟩ <;> cbv
 
 end Gabbro.Grammatik.Parser

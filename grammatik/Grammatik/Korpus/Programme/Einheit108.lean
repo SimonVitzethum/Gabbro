@@ -18,6 +18,7 @@ public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -66,17 +67,20 @@ open Gabbro.Grammatik Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.Uebe
 
 set_option maxRecDepth 100000
 
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
+
 /-! ## 1. Parse -/
 
 abbrev D8 : Deklaration := declOf uExp108
 
 theorem low_some : (lowerAllg uExp108).toOption.isSome = true := by
-  cases lowered : lowerAllg uExp108 with
-  | error error =>
-    have checked := lowerAllg108fragment
-    rw [lowered] at checked
-    cases checked
-  | ok output => rfl
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 2 := bound
+    rcases (by omega : index = 0 ∨ index = 1) with rfl | rfl
+    all_goals constructor <;> cbv
 
 def P8 : Programm D8 := ((lowerAllg uExp108).toOption.get low_some).1
 
@@ -201,6 +205,46 @@ private theorem ptrRefinement8 : PtrVerfeinert P8 := by
     rw [ptrPost8 n bound]
     rfl
 
+/-- Compute checker facts on the certified finite image instead of evaluating
+    the complete lowering again at every use of a program projection. -/
+private theorem image8_eq : P8 = {
+    invariante := fun i => Fin.elim0 i
+    requires := fun _ => .tru
+    ensures := fun _ => .tru
+    rumpf := Fin.cases bodyA8 (Fin.cases bodyC8 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
+    unterbricht := fun _ => false
+    ptrVertrag := ptrVertragOf uExp108
+    axVertrag := fun a => Fin.elim0 a } := by
+  have inv : P8.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
+  have req : P8.requires = fun _ => .tru := funext req8
+  have post : P8.ensures = fun _ => .tru := funext ens8
+  have body : P8.rumpf = Fin.cases bodyA8 (Fin.cases bodyC8 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
+    funext f
+    rcases fn_zwei f with rfl | rfl
+    · exact rumpf_a8
+    · exact rumpf_c8
+  have dispatch : P8.unterbricht = fun _ => false := by
+    have assembled := low8
+    unfold lowerAllg at assembled
+    split at assembled
+    · cases assembled
+    · split at assembled
+      · cases assembled
+      · split at assembled
+        · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
+          rw [same]
+          rfl
+        · cases assembled
+  have ptr : P8.ptrVertrag = ptrVertragOf uExp108 := funext assembly8.2
+  have ax : P8.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
+  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
+  revert inv req post body dispatch ptr ax
+  generalize P8 = P
+  cases P
+  intro inv req post body dispatch ptr ax
+  subst inv req post body dispatch ptr ax
+  rfl
+
 /-! ## 3. Enumerations, unit, checker -/
 
 def fsA : Aufzaehlung D8.Fn := ⟨[a8, c8], fun f => by
@@ -232,7 +276,11 @@ def E8 : Einheit D8 where
   sp0 := sp8
 
 /-- The checker accepts the unit WITH its two concurrent starts. -/
-theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by decide +kernel
+theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by
+  rewrite [akzeptiert_pruefer_eq]
+  change Akzeptiert P8 (SperrInv.leer D8) [a8, c8] [] [.inl t8] [a8, c8] = true
+  rewrite [image8_eq]
+  cbv
 
 /-! ## 4. The user's logic -/
 
@@ -250,9 +298,11 @@ theorem koerperV8 (f : D8.Fn) : KoerperGutV P8 0 f := by
       simp only [bodyC8, execEnd] at hrun
       cases hrun
 
-theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by decide +kernel
+theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by
+  simp only [programmLogikFrei, fsA, List.all_cons, List.all_nil, rumpf_a8, rumpf_c8] <;> cbv
 
-theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by decide +kernel
+theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by
+  simp only [ohneEwigB, fsA, List.all_cons, List.all_nil, rumpf_a8, rumpf_c8] <;> cbv
 
 theorem koerperS8 : ∀ f : D8.Fn, KoerperGutS P8 0 (axWahr D8) (SperrInv.leer D8) f := fun f =>
   koerperGutS_leer ⟨koerperGutRQ_of_R _ (koerperGutR_of_V (koerperV8 f)),
@@ -277,10 +327,10 @@ theorem nutzer8 : NutzerPflicht E8 where
 /-! ## 5. Witness data: the oracle -/
 
 def O8 : Orakel D8 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem hw8 [RootNativeFloat.Hardware] : HardwareAnnahmen O8 E8.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,

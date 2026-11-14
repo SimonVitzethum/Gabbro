@@ -227,10 +227,10 @@ theorem p108_nutzer_ist_stated : G108_disjoint_start_locks_oblig.nutzerPflicht :
 
 /-- The oracle of `gD`: no axiom, register or global exists. -/
 def p108_O : Orakel G108_disjoint_start_locks_oblig.gD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The oracle clauses are discharged; the native CPU contract is supplied explicitly. -/
 theorem p108_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen p108_O G108_disjoint_start_locks_oblig.gE.Q :=

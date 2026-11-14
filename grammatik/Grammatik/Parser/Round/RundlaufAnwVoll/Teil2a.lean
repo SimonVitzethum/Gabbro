@@ -104,8 +104,8 @@ theorem anw_lcall (c : SLibraryCall) (hc : LibraryCallGut c) : AnwBein (.lcall c
   rw [hHead, parseStmt_at, ← hHead]
   simp only [parseLibStmt, hL, fordereZeichen, strEq_self, ↓reduceIte]
 
-theorem anw_bindLib (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (c : SLibraryCall)
-    (hty : TypOptGut ty) (hc : LibraryCallGut c) :
+theorem anw_bindLib (m : Bool) (x : String) (hx : x ≠ "mut") (ht : tuplePatternNames x = none)
+    (ty : Option STyp) (c : SLibraryCall) (hty : TypOptGut ty) (hc : LibraryCallGut c) :
     AnwBein (.bindLib m x ty c) := by
   intro rest F _ hF
   simp only [fbA, druckAnw, druckLibraryCall, List.length_cons, List.length_nil, List.length_append] at hF
@@ -114,7 +114,7 @@ theorem anw_bindLib (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp
       nameTok x :: (druckTypOpt ty ++ .zeichen "=" :: (druckLibraryCall c ++ .zeichen ";" :: rest))) := by
     simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]
   rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
-  rw [parseLet_kopf (F' + 1) m x hx ty _ hty (by
+  rw [parseLet_kopf (F' + 1) m x hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)]
   obtain ⟨F'', hF''⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega⟩
   have hL := libRuf_rund c hc (.zeichen ";" :: rest) F' (by split at hF <;> simp_all only [List.length_cons, List.length_nil, Nat.reduceAdd] <;> omega)
@@ -126,8 +126,9 @@ theorem anw_bindLib (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp
 
 /-! ### `let` forms with a tail -/
 
-theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) (t : String) (w : SExpr) (s : Option SAnw)
-    (hty : TypOptGut ty) (hw : gut w = true) (hs : ∀ b, s = some b → BlockBein b) :
+theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ht : tuplePatternNames n = none)
+    (ty : Option STyp) (t : String) (w : SExpr) (s : Option SAnw) (hty : TypOptGut ty)
+    (hw : gut w = true) (hs : ∀ b, s = some b → BlockBein b) :
     AnwBein (.alloc m n ty t w s) := by
   intro rest F _ hF
   have he : strEq "alloc" "alloc" = true := by decide
@@ -141,7 +142,7 @@ theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) 
       simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc, List.append_nil]
     rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
     rw [show F' + 3 = (F' + 2) + 1 from rfl,
-      parseLet_kopf (F' + 2) m n hx ty _ hty (by
+      parseLet_kopf (F' + 2) m n hx ht ty _ hty (by
         intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.add_zero, Nat.reduceLeDiff] at hF <;> omega)]
     have hW := ausdruck w hw (.zeichen ")" :: .zeichen ";" :: rest) (F' + 1) rfl rfl rfl
       (by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.add_zero, Nat.reduceLeDiff] at hF <;> omega)
@@ -158,7 +159,7 @@ theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) 
       simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]
     rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
     rw [show F' + 3 = (F' + 2) + 1 from rfl,
-      parseLet_kopf (F' + 2) m n hx ty _ hty (by
+      parseLet_kopf (F' + 2) m n hx ht ty _ hty (by
         intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)]
     have hW := ausdruck w hw (.zeichen ")" :: .wort "else" :: (druckAnw b ++ .zeichen ";" :: rest))
       (F' + 1) rfl rfl rfl (by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)
@@ -168,8 +169,8 @@ theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) 
     simp only [parseLetAlloc, bind, Except.bind, nimmName, nameText_nameTok, fordereZeichen, strEq_self,
   ↓reduceIte, hW, hB, pure, Except.pure]
 
-theorem anw_allocVon (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) (t : String)
-    (hty : TypOptGut ty) : AnwBein (.allocVon m n ty t) := by
+theorem anw_allocVon (m : Bool) (n : String) (hx : n ≠ "mut") (ht : tuplePatternNames n = none)
+    (ty : Option STyp) (t : String) (hty : TypOptGut ty) : AnwBein (.allocVon m n ty t) := by
   intro rest F _ hF
   have he : strEq "alloc" "alloc" = true := by decide
   simp only [fbA, druckAnw, List.length_cons, List.length_nil, List.length_append] at hF
@@ -179,12 +180,13 @@ theorem anw_allocVon (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STy
     simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]
   rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
   rw [show F' + 3 = (F' + 2) + 1 from rfl,
-    parseLet_kopf (F' + 2) m n hx ty _ hty (by
+    parseLet_kopf (F' + 2) m n hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)]
   simp only [parseLetNach, he, ite_true, nameText_nameTok]
 
-theorem anw_bindElse (x : String) (hx : x ≠ "mut") (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw)
-    (hty : TypOptGut ty) (he : gut e = true) (hb : BlockBein b) :
+theorem anw_bindElse (x : String) (hx : x ≠ "mut") (ht : tuplePatternNames x = none)
+    (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw) (hty : TypOptGut ty)
+    (he : gut e = true) (hb : BlockBein b) :
     AnwBein (.bindElse x ty e f b) := by
   intro rest F _ hF
   simp only [fbA, druckAnw, List.length_cons, List.length_nil, List.length_append] at hF
@@ -195,7 +197,7 @@ theorem anw_bindElse (x : String) (hx : x ≠ "mut") (ty : Option STyp) (e : SEx
     simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc, Bool.false_eq_true, ↓reduceIte]
   rw [hd, parseStmt_let _ _ (by first | rfl | exact ortsFort_nameTok _ _)]
   rw [show F' + 3 = (F' + 2) + 1 from rfl,
-    parseLet_kopf (F' + 2) false x hx ty _ hty (by
+    parseLet_kopf (F' + 2) false x hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; omega),
     parseLetNach_expr _ _ _ _ e he]
   have hE := ausdruck e he (.wort "else" :: .zeichen "(" :: nameTok f :: .zeichen ")" :: (druckAnw b ++ rest))
@@ -212,8 +214,8 @@ def RohZu (s : String) : Prop :=
 def RohSemi (s : String) : Prop :=
   RohText (fun t => t = .zeichen "{" ∨ t = .zeichen "}" ∨ t = .zeichen ";") s
 
-theorem anw_await (n : String) (hx : n ≠ "mut") (ty : Option STyp) (q : SExpr) (p : String) (hty : TypOptGut ty)
-    (hq : gut q = true) (hp : RohZu p) :
+theorem anw_await (n : String) (hx : n ≠ "mut") (ht : tuplePatternNames n = none)
+    (ty : Option STyp) (q : SExpr) (p : String) (hty : TypOptGut ty) (hq : gut q = true) (hp : RohZu p) :
     AnwBein (.await n ty q p) := by
   intro rest F _ hF
   obtain ⟨ts, rfl, hts⟩ := hp
@@ -227,7 +229,7 @@ theorem anw_await (n : String) (hx : n ≠ "mut") (ty : Option STyp) (q : SExpr)
   ↓reduceIte]
   rw [hd, parseStmt_let _ _ (by first | rfl | exact ortsFort_nameTok _ _)]
   rw [show F' + 3 = (F' + 2) + 1 from rfl,
-    parseLet_kopf (F' + 2) false n hx ty _ hty (by
+    parseLet_kopf (F' + 2) false n hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; omega),
     parseLetNach_expr _ _ _ _ q hq]
   have hQ := ausdruck q hq (.wort "awaits" :: .zeichen "{" :: (ts ++ .zeichen "}" :: .zeichen ";" :: rest))

@@ -8,7 +8,7 @@ static mut grenze : u32 in 0 .. 100 = 100;
 lock A protects { T } rank 1;
 lock B protects { grenze } rank 2;
 group Paar over { T, grenze } {
-    invariant alle_drunter cost O(n) runs online :
+    invariant alle_drunter :
         forall i in slots of T : T.slots[i].v <= grenze;
 }
 impl fn setze(s : u32 in 0 .. 100, g : u32 in 0 .. 100) -> u32 in 0 .. 200

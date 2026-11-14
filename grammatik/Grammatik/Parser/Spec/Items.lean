@@ -7,7 +7,7 @@ public import Grammatik.Parser.Spec.Walk
 namespace Gabbro.Grammatik.Parser.Spec
 
 def Walk.invariant (w : Walk) (i : SGruppenInv) : Except String SGruppenInv := do
-  return { i with kosten := ← w.expr [] 1000 i.kosten, pred := ← w.expr [] 1000 i.pred }
+  return { i with pred := ← w.expr [] 1000 i.pred }
 
 def Walk.field (w : Walk) (f : SFeld) : Except String SFeld := do
   return { f with ftyp := ← w.type [] 1000 f.ftyp, wo := ← f.wo.mapM (w.expr [] 1000) }

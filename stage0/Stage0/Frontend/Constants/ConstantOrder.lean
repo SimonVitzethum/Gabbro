@@ -3,6 +3,7 @@ public import Grammatik.Parser.Elab.Konst.Scopes.ConstantOrder
 public import Stage0.Frontend.AliasOrder
 public import Stage0.Frontend.Guard
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -40,6 +41,8 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+attribute [local cbv_eval] strEq_apply_eq_decide
+
 /-- Both a forward scalar edge and a range-bound edge inhabit the generic cycle exclusion. -/
 theorem ConstantAcyclic.no_cycle_zeuge :
     let items := [SItemTief.constT "ANSWER" (.atom "Bound") (.one (.variable "LIMIT")),
@@ -48,15 +51,15 @@ theorem ConstantAcyclic.no_cycle_zeuge :
     ∃ order : ConstantOrder items, orderConstants items = .ok order ∧
       ¬ Relation.TransGen (fun a b => (a, b) ∈ constantEdges items) (.value "ANSWER") (.value "ANSWER") := by
   dsimp only
-  refine ⟨(orderConstants _).toOption.get (by decide +kernel), ?_, ?_⟩
+  refine ⟨(orderConstants _).toOption.get (by cbv), ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
-  · exact ((orderConstants _).toOption.get (by decide +kernel)).acyclic.no_cycle _
+  · exact ((orderConstants _).toOption.get (by cbv)).acyclic.no_cycle _
 
 /-- Unused cycles cannot be hidden behind a candidate fixed point. -/
 theorem orderConstants_cycle_zeuge :
     orderConstants [SItemTief.constT "A" (.atom "u8") (.one (.variable "B")),
       .constT "B" (.atom "u8") (.one (.variable "A"))] =
-      .error "compile-time dependency cycle at constant A" := by rfl
+      .error "compile-time dependency cycle at constant A" := by cbv
 
 /-- Removing a constructor head retains nested function and original value edges. -/
 theorem option_dependencies_zeuge :
@@ -64,29 +67,29 @@ theorem option_dependencies_zeuge :
       [.function "work", .value "LIMIT"] ∧
     valueReferences (.call "None" []) = [] ∧
     valueReferences (.call "Some" [.lit 1]) (fun name => strEq name "Some") =
-      [.function "Some"] := ⟨rfl, rfl, rfl⟩
+      [.function "Some"] := by cbv
 
 /-- A malformed constructor or an unknown head is never silently removed. -/
 theorem option_wrong_arity_zeuge :
     valueReferences (.call "Some" []) = [.function "Some"] ∧
     valueReferences (.call "Some" [.lit 1, .lit 2]) = [.function "Some"] ∧
     valueReferences (.call "None" [.lit 1]) = [.function "None"] ∧
-    valueReferences (.call "unknown" []) = [.function "unknown"] := ⟨rfl, rfl, rfl, rfl⟩
+    valueReferences (.call "unknown" []) = [.function "unknown"] := by cbv
 
 /-- Constructor operands cannot hide an unresolved call or an unused user cycle. -/
 theorem option_nested_unresolved_zeuge :
     orderConstants [.constT "K" (.atom "u8") (.one (.call "Some" [.call "missing" []]))] =
-      .error "unresolved compile-time dependency: const function missing" := by rfl
+      .error "unresolved compile-time dependency: const function missing" := by cbv
 
 theorem option_nested_cycle_zeuge :
     let fn := SItemTief.fnT ⟨"const", "loop", [], some (.atom "u8"), none, [], []⟩
       (.block [] (some (.ret (some (.call "Some" [.call "loop" []])))))
-    orderConstants [fn] = .error "compile-time dependency cycle at const function loop" := by rfl
+    orderConstants [fn] = .error "compile-time dependency cycle at const function loop" := by cbv
 
 theorem option_declared_cycle_zeuge :
     let fn := SItemTief.fnT ⟨"const", "Some", [("x", .atom "u8")], some (.atom "u8"), none, [], []⟩
       (.block [] (some (.ret (some (.call "Some" [.variable "x"])))))
-    orderConstants [fn] = .error "compile-time dependency cycle at const function Some" := by rfl
+    orderConstants [fn] = .error "compile-time dependency cycle at const function Some" := by cbv
 
 /-- The schema controls arity; nested calls and variable operands remain intact. -/
 theorem tagged_dependencies_zeuge :
@@ -98,11 +101,11 @@ theorem tagged_dependencies_zeuge :
     valueReferences (.call "Data" []) (fun _ => false) owner = [.function "Data"] ∧
     valueReferences (.call "Empty" [.lit 1]) (fun _ => false) owner = [.function "Empty"] ∧
     valueReferences (.call "Data" [.lit 1]) (fun name => strEq name "Data") owner =
-      [.function "Data"] := ⟨rfl, rfl, rfl, rfl, rfl⟩
+      [.function "Data"] := by cbv
 
 theorem tagged_ambiguous_owner_zeuge :
     taggedConstructorOwner
       [⟨"First", [("Data", some (.atom "u8"))]⟩,
-       ⟨"Second", [("Data", some (.atom "u8"))]⟩] "Data" true = none := rfl
+       ⟨"Second", [("Data", some (.atom "u8"))]⟩] "Data" true = none := by cbv
 
 end Gabbro.Stage0.Frontend

@@ -1,0 +1,16 @@
+// After three passes the test is still true. getpid violates the zero-only answer;
+// exit 110 proves that the named handler ran, instead of silently returning 3.
+module ir_while_exhausted {
+assume tick "The probe deliberately falsifies the handler's zero-only answer." falsifier probe_tick;
+syscall overrun() -> u64 in 0 .. 0
+    abi linux arch x86_64 number 39
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut cursor : u64 in 0 .. 100 = 0;
+    while cursor < 7 bounded 3 ops on_exceeded overrun {
+        cursor = (cursor + 1) % 100;
+    }
+    return cursor;
+}
+}

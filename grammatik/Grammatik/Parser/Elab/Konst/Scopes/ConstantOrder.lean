@@ -95,11 +95,13 @@ theorem valueReferences_call (name : String) (args : List SExpr) (declared : Str
     valueReferences (.call name args) declared owner = dependencyCallReferences declared owner name args ++
       valueReferenceList args declared owner := rfl
 
+mutual
 /-- Bounds and counts use the same original operands as canonical type elaboration. Range
     bases contribute too: uTypIn resolves the base before admitting its numeric bounds. -/
 def typeReferences (source : STyp) (declared : String → Bool := fun _ => false)
     (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
+  | .tuple elements => typeReferenceList elements declared owner
   | .atom name => [.type name]
   | .range base lo hi _ => typeReferences base declared owner ++
       valueReferences lo declared owner ++ valueReferences hi declared owner
@@ -107,6 +109,22 @@ def typeReferences (source : STyp) (declared : String → Bool := fun _ => false
   | .wrap ty | .embed ty _ _ => typeReferences ty declared owner
   | .str count => valueReferences count declared owner
   | _ => []
+
+-- Traverse tuple components structurally so dependency discovery reduces in witnesses.
+def typeReferenceList (sources : List STyp) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
+  match sources with
+  | [] => []
+  | ty :: rest => typeReferences ty declared owner ++ typeReferenceList rest declared owner
+end
+
+/-- Structural tuple traversal retains the original dependency order and multiplicity. -/
+theorem typeReferenceList_eq_flatMap (sources : List STyp) (declared : String → Bool)
+    (owner : String → Bool → Option String) :
+    typeReferenceList sources declared owner = sources.flatMap (fun ty => typeReferences ty declared owner) := by
+  induction sources with
+  | nil => rfl
+  | cons ty rest ih => simp only [typeReferenceList, List.flatMap_cons, ih]
 
 mutual
 /-- Every row leaf remains in the graph, including unused constant arrays. -/
@@ -169,6 +187,7 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
       | .error _ => none
   let head := dependencyCallReferences declared owner
   let constructor := fun name => items.any fun
+    | .typeT [] declared [] [] (some (.tuple _)) => strEq declared name && declared.startsWith "#tuple:"
     | .typeT flags declared [] [] (some (.raw _)) => strEq declared name &&
         !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
     | _ => false
@@ -176,6 +195,8 @@ def dependencyDeclarations (items : List SItemTief) : List (DependencyName × Li
     | .function name => if constructor name then .type name else reference
     | _ => reference
   (items.filterMap fun
+    | .typeT [] name [] [] (some (.tuple elements)) =>
+      some (.type name, elements.flatMap (fun ty => typeReferences ty declared owner))
     | .typeT _ name [] _ (some ty@(.atom _))
     | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty declared owner)
     | .typeT flags name [] [] (some (.raw _)) =>

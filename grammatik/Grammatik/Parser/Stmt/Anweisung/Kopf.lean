@@ -47,6 +47,36 @@ public import Grammatik.Parser.Stmt.LibraryCall
 
 namespace Gabbro.Grammatik.Parser
 
+def tuplePatternParts : List Char → List Char → List String
+  | [], acc => [String.ofList acc.reverse]
+  | ',' :: rest, acc => String.ofList acc.reverse :: tuplePatternParts rest []
+  | char :: rest, acc => tuplePatternParts rest (char :: acc)
+
+/-- A reserved internal binder stores a flat source pattern until tuple expansion. -/
+def tuplePatternNames (name : String) : Option (List String) :=
+  match tuplePatternParts name.toList [] with
+  | "#tuple-pattern" :: names => some names
+  | _ => none
+
+/-- Ordinary binders introduce one name; tuple patterns introduce their non-wildcard names. -/
+def bindingNames (name : String) : List String :=
+  match tuplePatternNames name with
+  | some names => names.filter (fun name => !strEq name "_")
+  | none => [name]
+
+/-- Flat patterns only; nested patterns have an explicit refusal at the source boundary. -/
+def parseTuplePattern : List Token → Except String (List String × List Token)
+  | .zeichen "(" :: _ => .error "tuple pattern: nested patterns are unsupported"
+  | token :: rest => do
+    let some name := nameText token | throw "tuple pattern: name or wildcard expected"
+    match rest with
+    | .zeichen "," :: tail =>
+      let (names, rest) ← parseTuplePattern tail
+      pure (name :: names, rest)
+    | .zeichen ")" :: tail => pure ([name], tail)
+    | _ => throw "tuple pattern: comma or closing parenthesis expected"
+  | [] => .error "tuple pattern: closing parenthesis expected"
+
 set_option maxRecDepth 100000
 
 /- A surface tree: SYNTAX.md section 7 `stmt`, `block` and
@@ -157,6 +187,9 @@ inductive SAnw
   | retires : String → SAnw
   /-- Fallible statement call through a parenthesized function-pointer expression. -/
   | callIndElse : SExpr → List SExpr → String → SAnw → SAnw
+  /-- Bounded source sugar: the complete `while` or `for` header and its body.
+      The header reader rejects unknown clauses; export reuses `Stmt.retry`. -/
+  | boundedLoop : String → SAnw → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -207,6 +240,7 @@ def beqSAnw : SAnw → SAnw → Bool
     strEq b b2 && beqOptExpr o o2 && strEq k k2 && beqSExpr s s2 && strEq m m2 && strEq r r2 &&
       beqOptExpr i i2 && beqSAnw d d2
   | .retry h b, .retry i d => strEq h i && beqSAnw b d
+  | .boundedLoop h b, .boundedLoop i d => strEq h i && beqSAnw b d
   | .loop h b, .loop i d => strEq h i && beqSAnw b d
   | .waive inv b, .waive jnv d =>
     beqWorte inv jnv && beqSAnw b d

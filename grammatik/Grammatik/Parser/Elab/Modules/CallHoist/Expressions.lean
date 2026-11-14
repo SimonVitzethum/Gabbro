@@ -81,6 +81,7 @@ def ruhig (k : Kontext) : Nat → SExpr → Bool
   | n + 1, .bin _ a b => ruhig k n a && ruhig k n b
   | n + 1, .built _ args => args.all (ruhig k n)
   | _ + 1, _ => false
+termination_by structural fuel => fuel
 
 /-- The result of rewriting an expression: the bindings to put in front, the expression, the next
     fresh number, and whether everything evaluated so far reads no mutable state. -/

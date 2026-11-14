@@ -81,7 +81,7 @@ theorem bild_ruf_zeuge :
       RufLaufG t4P t4O 0 0 (RufStartG t4P t4Sp zeugeInit) M' ∧ WeltGleich σ1 σm1 ∧
       RandG 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) t4FRest M' σm1 Env.nil := by
   have hRuf : RufOkGleich t4P t4O 0 0 (fun _ => False) (rufAt t4P t4O 0 1) (Tief t4P (fun _ => False) 1) :=
-    rufOk_gleich_tief leseblind_t4O 0 (fun _ => False) 1
+    rufOk_gleich_tief (leseblind_t4O.toP _) 0 (fun _ => False) 1
   obtain ⟨σ1, v, hG⟩ := t4G_ruf_kehrt zeugeWeltL
   have hex : execStmt t4O 0 (rufAt t4P t4O 0 1) t4Ruf zeugeWeltL Env.nil = .ok σ1 Env.nil := by
     -- Keep the read world folded so the symbolic handler return matches.
@@ -101,7 +101,7 @@ theorem bild_ruf_zeuge :
   have hGL : RandGL 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) (.cons t4Ruf t4FRest)
       (RufStartG t4P t4Sp zeugeInit) zeugeWeltL Env.nil :=
     ⟨zeugeWelt, hw, hG⟩
-  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt leseblind_t4O hRuf hs hex hGL
+  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt leseblind_t4O.rs hRuf hs hex hGL
   exact ⟨leseblindOK_t4O, t4G_tief _, hRuf, σ1, σm1, M', hk, hl, hw1, hG'⟩
 
 #print axioms bild_ruf_zeuge

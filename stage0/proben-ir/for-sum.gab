@@ -1,0 +1,10 @@
+// Four passes sum 1 + 2 + 3 + 4; the exclusive endpoint needs no handler. Exit 10.
+module ir_for_sum {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut sum : u64 in 0 .. 100 = 0;
+    for i in 1 ..< 5 {
+        sum = (sum + i) % 100;
+    }
+    return sum;
+}
+}

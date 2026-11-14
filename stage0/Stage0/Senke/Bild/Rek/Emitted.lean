@@ -101,7 +101,7 @@ theorem Emitted.bild_ziel_rek [Kern] (output : Emitted src K options)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
     {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
-    [TorOK output.image.Y O] [SichtOK O] [LeseblindOK O] {m : Runner.Mem}
+    [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop} {j : Nat}
     (hj : output.image.depth - 1 = j + 1)
@@ -197,7 +197,7 @@ theorem Emitted.bild_ziel_rek [Kern] (output : Emitted src K options)
       (.cons (.call g xs hp hrg) rest) σe ρe :=
     zerlegung_rahmen hk
   have hRuf := rufOk_gleich_tief (P := output.compiled.program) (passes := output.image.passes)
-    (leseblind_von O) thr Agl (output.image.depth - 1)
+    (leseblindP_alle _ O) thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA
       (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start⟩
@@ -208,7 +208,7 @@ theorem Emitted.bild_ziel_rek [Kern] (output : Emitted src K options)
         BildLauf.bild_ziel_rek (fs := output.fsA) hcodes output.lsA hA0 hL hH hZ' hj
           (Nat.lt_of_le_of_lt (Nat.sub_le _ _) hdep) hOk hre hRe hex
           (rufOk_gleich_tief (P := output.compiled.program) (passes := output.image.passes)
-            (leseblind_von O) thr Agl j) hkC
+            (leseblindP_alle _ O) thr Agl j) hkC
       rcases hk2.weiche sI with hvor2 | ⟨k3, hnach2⟩
       · exact Or.inr (Or.inr (Or.inl ⟨pce, me, Me, hRe, hre, hze, ⟨k2, hk2⟩, pcI, fpc, mI, sI, hvor2⟩))
       · exact Or.inr (Or.inr (Or.inr ⟨fpc, rpc, Kc, Ksc, ensc, σm, hinner hnach2⟩))

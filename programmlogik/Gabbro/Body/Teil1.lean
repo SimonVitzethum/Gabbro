@@ -1,6 +1,7 @@
 module
 
 public import Lean
+public import Gabbro.Body.Teil9Rec
 
 @[expose] public section
 
@@ -10,26 +11,11 @@ namespace Gabbro.Body
 
 /-! ## 1. Values
 
-    Four forms, and the list is closed. `option index into T` is `absent`/`present` -- **not
+    Scalar, option, tagged and positional record values. `option index into T` is `absent`/`present` -- **not
     `Option Int`**, because a value has to be comparable with every other value, and a sum
     type over `Int` would be two levels.
 -/
 
-inductive Value where
-  | int (n : Int)
-  | bool (t : Bool)
-  | absent
-  | present (n : Int)
-  /-- **A `reason` -- the error value of the one error propagation** (2026-09-07). `let x =
-      f() else (e) { … }` binds `e` to it; a `match` over it picks the arm by the case's
-      name; `==` compares it. The name is the CASE (`Unbelegt`), not the declaration's,
-      because that is how a `match` arm spells it. -/
-  | reason (r : String)
-  /-- **A `tagged` value** (2026-09-07): the case's name and its payload, where the payload
-      is a NUMBER -- an index, an integer, or an opaque handle taken as its representation.
-      A `tagged` type whose payload is anything else has no value here. -/
-  | tagged (t : String) (payload : Option Int)
-  deriving DecidableEq, Repr
 
 /-! ## 2. Places
 
@@ -108,60 +94,6 @@ inductive BinOp where
   | and | or
   deriving DecidableEq, Repr
 
-/-- The shape of a value. **A sum carries its cases** -- the case's name and whether it
-    has a payload -- so that a `tagged` value of the shape is one of the declared cases WITH
-    the declared payload: a `match` over it then has an arm for every value the world can
-    hold, and none of the model's arms gets stuck on a case the type excludes. -/
-inductive Shape where
-  | int | bool | opt
-  /-- **A number in its declared range** (2026-09-08): a place of type `u8 in 0 .. 15`
-      holds a number the checker keeps in range (`M1`), and the well-typed world says so
-      -- a read from it comes with its bounds (`WF_intIn`), a store into it owes them. -/
-  | intIn (lo hi : Int)
-  /-- The cases of a `tagged` type, each with its payload: `none` -- no payload;
-      `some none` -- a number; `some (some (lo, hi))` -- a number in its declared range
-      (2026-09-08: the range is part of the type, and the checker keeps every payload in
-      it, so a `match` arm that reads the payload has the range it has). -/
-  | sum (cases : List (String × Option (Option (Int × Int))))
-  deriving DecidableEq, Repr
-
-/-- Whether a payload is what a case declares. -/
-def Shape.payloadOk : Option (Option (Int × Int)) → Option Int → Bool
-  | none, none => true
-  | some none, some _ => true
-  | some (some (lo, hi)), some n => decide (lo ≤ n ∧ n ≤ hi)
-  | _, _ => false
-
-/-- Whether a case with this name and payload is one of the declared cases. -/
-def Shape.caseOk (cases : List (String × Option (Option (Int × Int)))) (t : String) (p : Option Int) : Bool :=
-  cases.any (fun c => c.1 == t && Shape.payloadOk c.2 p)
-
-/-! **`payloadOk`, computed** -- on a literal case, `simp` turns it into what the payload
-    is: nothing, a number, or a number in its range. -/
-@[simp] theorem Shape.payloadOk_none_iff (p : Option Int) : Shape.payloadOk none p = true ↔ p = none := by
-  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq]
-@[simp] theorem Shape.payloadOk_some_none_iff (p : Option Int) :
-    Shape.payloadOk (some none) p = true ↔ ∃ n, p = some n := by
-  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq, exists_const, Option.some.injEq, exists_eq']
-@[simp] theorem Shape.payloadOk_range_iff (lo hi : Int) (p : Option Int) :
-    Shape.payloadOk (some (some (lo, hi))) p = true ↔ ∃ n, p = some n ∧ lo ≤ n ∧ n ≤ hi := by
-  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq, false_and, exists_const, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Option.some.injEq, exists_eq_left']
-@[simp] theorem Shape.payloadOk_none_none : Shape.payloadOk none none = true := by rfl
-@[simp] theorem Shape.payloadOk_none_some (n : Int) : Shape.payloadOk none (some n) = false := by rfl
-@[simp] theorem Shape.payloadOk_some_none_none : Shape.payloadOk (some none) none = false := by rfl
-@[simp] theorem Shape.payloadOk_some_none_some (n : Int) : Shape.payloadOk (some none) (some n) = true := by rfl
-@[simp] theorem Shape.payloadOk_range_none (lo hi : Int) : Shape.payloadOk (some (some (lo, hi))) none = false := by rfl
-@[simp] theorem Shape.payloadOk_range_some (lo hi n : Int) :
-    Shape.payloadOk (some (some (lo, hi))) (some n) = decide (lo ≤ n ∧ n ≤ hi) := by rfl
-
-def Value.hasShape : Value → Shape → Bool
-  | .int _, .int => true
-  | .int n, .intIn lo hi => decide (lo ≤ n ∧ n ≤ hi)
-  | .bool _, .bool => true
-  | .absent, .opt => true
-  | .present _, .opt => true
-  | .tagged t p, .sum cs => Shape.caseOk cs t p
-  | _, _ => false
 
 /-! **`hasShape` on a constructor computes, and stays folded on a variable** -- these are
     the equations the simp set uses instead of unfolding the definition, so that a
@@ -280,6 +212,15 @@ inductive Expr where
   /-- `Case(e)` / `Case` -- a `tagged` value; the payload, where there is one, must
       evaluate to a number. -/
   | tagOf (t : String) (payload : Option Expr)
+  /-- Construct fields in declaration order; nominal identity is checked and erased by
+      the bridge, never resolved from names during evaluation. -/
+  | recOf (args : List Expr)
+  /-- Read a positional field. The bridge must emit `idx < fields.length` from the
+      schema; a non-record base or an out-of-range index gets stuck. -/
+  | recGet (base : Expr) (idx : Nat)
+  /-- Replace a positional field. The bridge must emit `idx < fields.length` from the
+      schema; nominal identity is checked before erasure, and invalid access gets stuck. -/
+  | recSet (base : Expr) (idx : Nat) (val : Expr)
   deriving Repr
 
 /-- Two's complement reduction to `bits` -- `Int.emod`, so the unsigned form is never

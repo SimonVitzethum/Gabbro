@@ -51,5 +51,6 @@
 module
 public import Grammatik.Kern.Semantik.Semantik.T1
 public import Grammatik.Kern.Semantik.Semantik.T2
+public import Grammatik.Kern.Semantik.Semantik.BoundedWhile
 @[expose] public section
 

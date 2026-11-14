@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Konst.Ersetzung
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
+mutual
 /-- Simultaneous surface substitution; replacements are not substituted again. -/
 def expression (values : List (String × SExpr)) : SExpr → SExpr
   | .variable n => match values.find? (fun p => strEq p.1 n) with
@@ -14,13 +15,28 @@ def expression (values : List (String × SExpr)) : SExpr → SExpr
   | .arrow e n => .arrow (expression values e) n
   | .un op e => .un op (expression values e)
   | .bin op a b => .bin op (expression values a) (expression values b)
-  | .call n args => .call n (args.map (expression values))
-  | .built n args => .built n (args.map (expression values))
+  | .call n args => .call n (expressionList values args)
+  | .built n args => .built n (expressionList values args)
   | .old e => .old (expression values e)
-  | .ext k ns args => .ext k ns (args.map (expression values))
+  | .ext k ns args => .ext k ns (expressionList values args)
   | e => e
-termination_by e => sizeOf e
+termination_by structural e => e
 
+/-- Substitute list elements in their original order without nested recursion. -/
+def expressionList (values : List (String × SExpr)) : List SExpr → List SExpr
+  | [] => []
+  | e :: rest => expression values e :: expressionList values rest
+termination_by structural es => es
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem expressionList_eq_map (values : List (String × SExpr)) (es : List SExpr) :
+    expressionList values es = es.map (expression values) := by
+  induction es with
+  | nil => rfl
+  | cons head rest ih => simp only [expressionList, List.map_cons, ih]
+
+mutual
 /-- Substitute both kinds of parameters in structured surface types. -/
 def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)) :
     STyp → STyp
@@ -28,6 +44,7 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
     | some p => p.2
     | none => .atom n
   | .ptr s r t => .ptr s r (surfaceType types values t)
+  | .tuple ts => .tuple (surfaceTypes types values ts)
   | .range t lo hi ex => .range (surfaceType types values t)
       (expression values lo) (expression values hi) ex
   | .array t n => .array (surfaceType types values t) (expression values n)
@@ -38,6 +55,23 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
   | .entry args none => .entry args none
   | .entry args (some result) => .entry args (some (surfaceType types values result))
   | t => t
+termination_by structural ty => ty
+
+/-- Substitute tuple components without revisiting replacement types. -/
+def surfaceTypes (types : List (String × STyp)) (values : List (String × SExpr)) :
+    List STyp → List STyp
+  | [] => []
+  | ty :: rest => surfaceType types values ty :: surfaceTypes types values rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem surfaceTypes_eq_map (types : List (String × STyp)) (values : List (String × SExpr))
+    (ts : List STyp) :
+    surfaceTypes types values ts = ts.map (surfaceType types values) := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [surfaceTypes, List.map_cons, ih]
 
 /-- Generic arguments use the same certified call substitution as ordinary source
     values before bounded integer evaluation. Expansion cannot erase an unchecked call. -/

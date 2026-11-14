@@ -122,8 +122,12 @@ example : wahr? (eval (D := leer) (Γ := []) (Λ := []) leereWelt (.and .tru (.n
 
 def leerV : Vertrag leer := ⟨fun t => t.elim, fun g => g.elim, none, 0, [], [], none, {}⟩
 
-def leerO : Orakel leer :=
-  ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => Option.none⟩
+def leerO : Orakel leer where
+  wirktL := fun a => a.elim
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 def gleitProbe : Block leer leerV false [] [] [] :=
   .floatLit (3, 2) (0, 1) (10, 1) .nil

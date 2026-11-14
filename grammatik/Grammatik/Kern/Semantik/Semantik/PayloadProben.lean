@@ -32,8 +32,8 @@ def world : World D :=
   { slots := fun _ _ _ => false, globs := (fun g => nomatch g), spur := [] }
 
 def oracle : Orakel D :=
-  { wirkt := (fun a => nomatch a), regLies := (fun r => nomatch r),
-    regSchreib := (fun r => nomatch r), sichtbar := fun g => nomatch g }
+  { wirktL := (fun a => nomatch a), regLiesL := (fun r => nomatch r),
+    regSchreib := (fun r => nomatch r), sichtbarL := fun g => nomatch g }
 
 /-- An arm returns its complete payload under the same tag, including arrays,
     strings and the nested sum; no projection or default value is substituted. -/
@@ -97,6 +97,6 @@ theorem foreign_typed_payload_refused_zeuge :
 
 theorem nested_schema_equality_zeuge :
     decide (Ty.sum [some (.arr (.sum [some .bool]) 2)] =
-      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide +kernel
+      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide_cbv
 
 end Gabbro.Grammatik.TypedPayload

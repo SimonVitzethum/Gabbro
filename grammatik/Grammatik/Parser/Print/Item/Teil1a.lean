@@ -129,12 +129,7 @@ def druckFelder : List SFeld → List Token
   | f :: fs => druckFeld f ++ [.zeichen ","] ++ druckFelder fs
 
 def druckGruppenInv (i : SGruppenInv) : List Token :=
-  [.wort "invariant", nameTok i.name, .wort "cost", .ident "O", .zeichen "("] ++ druckToks i.kosten ++
-    [.zeichen ")", .wort "runs", .wort (if i.online then "online" else "offline")] ++
-    (match i.proof with
-      | some h => [.wort "by"] ++ rohToks h
-      | none => []) ++
-    [.zeichen ":"] ++ druckToks i.pred ++ [.zeichen ";"]
+  [.wort "invariant", nameTok i.name, .zeichen ":"] ++ druckToks i.pred ++ [.zeichen ";"]
 
 def druckKanten : List (String × String) → List Token
   | [] => []

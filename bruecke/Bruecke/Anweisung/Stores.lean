@@ -25,7 +25,7 @@ def lowAssignTab (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UId
 
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
-theorem assignDurchStmt_eq {space : Nat} {read : Bool} (Γ : Ctx) (Λ : List (Res (declOf u)))
+theorem assignDurchStmt_eq {loopMode : Bool} {space : Nat} {read : Bool} (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr ⟨space, ⟨read, true, none⟩, .table t.val⟩))
     (ht : (declOf u).capTab space t.val = some t)
@@ -34,11 +34,11 @@ theorem assignDurchStmt_eq {space : Nat} {read : Bool} (Γ : Ctx) (Λ : List (Re
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
-      assignDurchStmt (l := false) u Γ Λ V t fh p ht i e hw hL =
+      assignDurchStmt (l := loopMode) u Γ Λ V t fh p ht i e hw hL =
         Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
-theorem assignSlotStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
+theorem assignSlotStmt_eq {loopMode : Bool} (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (fh : FieldHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
@@ -46,11 +46,11 @@ theorem assignSlotStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
-      assignSlotStmt (l := false) u Γ Λ V t fh i e hw hL =
+      assignSlotStmt (l := loopMode) u Γ Λ V t fh i e hw hL =
         Stmt.assignSlot (D := declOf u) t fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
-theorem assignDurchOwnStmt_eq {space : Nat} {read : Bool}
+theorem assignDurchOwnStmt_eq {loopMode : Bool} {space : Nat} {read : Bool}
     (Γ : Ctx) (Λ : List (Res (declOf u))) (V : Vertrag (declOf u))
     (t : Fin u.tabs.length) (fh : FieldHit u t) (owner : Nat) (m : Fin u.marken.length)
     (p : Expr (declOf u) Γ Λ (.ptr ⟨space, ⟨read, true, some owner⟩, .table t.val⟩))
@@ -62,7 +62,7 @@ theorem assignDurchOwnStmt_eq {space : Nat} {read : Bool}
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     let guards := ownGuard_holds u Λ t owner m hm he hL
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
-      assignDurchOwnStmt (l := false) u Γ Λ V t fh owner m p hc i e hm he hw hL =
+      assignDurchOwnStmt (l := loopMode) u Γ Λ V t fh owner m p hc i e hm he hw hL =
         Stmt.assignThruOwn (D := declOf u) p t hc fh.idx i e2 m 0
           guards.1 guards.2.1 guards.2.2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
@@ -118,7 +118,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                     | ok cap =>
                       simp only [hcap, bind, Except.bind] at h
                       cases h
-                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (ctxOf u c) Λ (verOf u c)
+                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (loopMode := false) (ctxOf u c) Λ (verOf u c)
                         ⟨num, hlt⟩ fh (Expr.var pv) cap.down i e _ hG
                       rw [heq]
                       have hparam : ((fnAt u c).params[j]?).map (·.2) =
@@ -182,7 +182,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                         | ok cap =>
                           simp only [hcap, bind, Except.bind] at h
                           cases h
-                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq (ctxOf u c) Λ (verOf u c)
+                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq (loopMode := false) (ctxOf u c) Λ (verOf u c)
                             ⟨num, hlt⟩ fh owner m (Expr.var pv) cap.down i e hm heig _ hG
                           rw [heq]
                           have hparam : ((fnAt u c).params[j]?).map (·.2) =
@@ -251,7 +251,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
             split at h
             · rename_i hw
               cases h
-              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq (ctxOf u c) Λ (verOf u c)
+              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq (loopMode := false) (ctxOf u c) Λ (verOf u c)
                 t fh i e _ hG
               rw [heq]
               simp only [stmtBody] at hb

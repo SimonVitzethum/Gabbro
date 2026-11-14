@@ -163,10 +163,10 @@ def P1 : Programm D1 where
 
 /-- The oracle: no axioms, no registers, no globals. -/
 def O1 : Orakel D1 where
-  wirkt := fun a _ _ => nomatch a
-  regLies := fun r _ => nomatch r
+  wirktL := fun a _ _ => nomatch a
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- A world with the slot set to `b` and the trace `tr`. -/
 def weltB (b : Bool) (tr : List (Ereignis D1)) : World D1 :=

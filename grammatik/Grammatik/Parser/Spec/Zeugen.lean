@@ -33,6 +33,8 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser.Spec
 open Uebersetze
+-- Literal spelling comparisons use proof-producing evaluation, without decoding strings.
+attribute [local cbv_eval] strEq_apply_eq_decide
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
@@ -70,7 +72,7 @@ def circles : SItemTief := .tableT "Circles" none (some (.lit 4)) none none fals
 
 def shape : List SItemTief := [circles, shapeSpec, shapeImpl, .fnT caller (callerBody)]
 
-theorem shape_conformance_zeuge : conforms shape = true := by rfl
+theorem shape_conformance_zeuge : conforms shape = true := by cbv
 
 theorem shape_inferred_call_zeuge :
     resolveCall shape caller.params "Shape::area" none [.variable "c"] = .ok "$spec$0$area" := by rfl
@@ -267,21 +269,21 @@ theorem missing_function_zeuge :
 
 theorem stronger_requires_zeuge :
     check [shapeSpec, shapeImpl { areaImpl with klauseln := .needs (.bin ">=" radius (.lit 1)) :: areaImpl.klauseln }] =
-      .error "spec.requires" := by rfl
+      .error "spec.requires" := by cbv
 
 theorem weaker_ensures_zeuge :
     check [shapeSpec, shapeImpl { areaImpl with
-      klauseln := [.effs [.reads (.variable "Circles")], .cost (.lit 20)] }] = .error "spec.ensures" := by rfl
+      klauseln := [.effs [.reads (.variable "Circles")], .cost (.lit 20)] }] = .error "spec.ensures" := by cbv
 
 theorem larger_effects_zeuge :
     check [shapeSpec, shapeImpl { areaImpl with klauseln :=
       [.gives (.bin ">=" .res (.lit 1)), .effs [.writes (.variable "Circles")], .cost (.lit 20)] }] =
-      .error "spec.effects" := by rfl
+      .error "spec.effects" := by cbv
 
 theorem larger_cost_zeuge :
     check [shapeSpec, shapeImpl { areaImpl with klauseln :=
       [.gives (.bin ">=" .res (.lit 1)), .effs [.reads (.variable "Circles")], .cost (.lit 51)] }] =
-      .error "spec.cost" := by rfl
+      .error "spec.cost" := by cbv
 
 theorem held_in_spec_zeuge :
     check [.specGroupT "Shape" ["T"] ["E"]
@@ -291,13 +293,13 @@ theorem held_in_spec_zeuge :
 theorem extra_function_zeuge :
     check [shapeSpec, .implGroupT "Shape" [.index false "Circles"] [[.reads (.variable "Circles")]]
       [.fnT areaImpl areaBody, .fnT { areaImpl with name := "perimeter" } areaBody]] =
-      .error "spec.function.extra" := by rfl
+      .error "spec.function.extra" := by cbv
 
 theorem duplicate_impl_zeuge :
     check [shapeSpec, shapeImpl, shapeImpl] = .error "spec.implementation.duplicate" := by rfl
 
 theorem wrong_signature_zeuge :
-    check [shapeSpec, shapeImpl { areaImpl with res := some (.atom "bool") }] = .error "spec.signature" := by rfl
+    check [shapeSpec, shapeImpl { areaImpl with res := some (.atom "bool") }] = .error "spec.signature" := by cbv
 
 theorem missing_effect_argument_zeuge :
     check [shapeSpec, .implGroupT "Shape" [.index false "Circles"] [] [.fnT areaImpl areaBody]] =
@@ -339,7 +341,7 @@ theorem missing_cost_bound_zeuge :
 
 theorem instance_effects_zeuge :
     expandEffects shape (groups shape) (instances shape) [] [] 1000
-      [.instanceEffects "Shape" [.index false "Circles"]] = .ok [.reads (.variable "Circles")] := by rfl
+      [.instanceEffects "Shape" [.index false "Circles"]] = .ok [.reads (.variable "Circles")] := by cbv
 
 theorem bare_u32_normalization_zeuge :
     beqSTyp (canonicalType [] 128 (.range (.atom "u32") (.lit 0) (.lit 4294967295) false))

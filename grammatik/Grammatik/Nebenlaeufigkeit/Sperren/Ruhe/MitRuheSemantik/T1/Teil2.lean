@@ -11,9 +11,10 @@ variable {D : Deklaration}
 
 theorem wirkt_mitRuhe (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     O.mitRuhe.wirkt a (worldR σ) (envR ρ) = (worldR (O.wirkt a σ ρ).1, (O.wirkt a σ ρ).2) := by
-  show (worldR (O.wirkt a (worldZ (worldR σ)) (envZ (envR ρ))).1,
-    (O.wirkt a (worldZ (worldR σ)) (envZ (envR ρ))).2) = _
-  rw [worldZ_worldR, envZ_envR]
+  show ((worldR (O.wirktL a (worldZ (worldR σ).ohneLese) (envZ (envR ρ))).1).auf (worldR σ),
+    (O.wirktL a (worldZ (worldR σ).ohneLese) (envZ (envR ρ))).2) =
+    (worldR ((O.wirktL a σ.ohneLese ρ).1.auf σ), (O.wirktL a σ.ohneLese ρ).2)
+  rw [worldR_ohneLese, worldZ_worldR, envZ_envR, worldR_auf]
 
 /-- **An oracle of `D.mitRuhe` answering like `O`** on translated worlds and arguments. Until
     2026-09-15 the only such oracle the transfer used was `O.mitRuhe` itself, and every oracle
@@ -109,11 +110,11 @@ theorem zeiger_mitRuhe (O : Orakel D) (k : Int) : (O.mitRuhe.zeiger k).bind id =
 
 theorem orakelRu_mitRuhe (O : Orakel D) : OrakelRu O O.mitRuhe :=
   ⟨wirkt_mitRuhe O, fun r σ => by
-      show O.regLies r (worldZ (worldR σ)) = _
-      rw [worldZ_worldR],
+      show O.regLiesL r (worldZ (worldR σ).ohneLese) = O.regLiesL r σ.ohneLese
+      rw [worldR_ohneLese, worldZ_worldR],
     fun g σ => by
-      show O.sichtbar g (worldZ (worldR σ)) = _
-      rw [worldZ_worldR],
+      show O.sichtbarL g (worldZ (worldR σ).ohneLese) = O.sichtbarL g σ.ohneLese
+      rw [worldR_ohneLese, worldZ_worldR],
     zeiger_mitRuhe O⟩
 
 /-- A question to the outside translates as itself. -/

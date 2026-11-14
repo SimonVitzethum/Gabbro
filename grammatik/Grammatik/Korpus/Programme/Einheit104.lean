@@ -18,6 +18,7 @@ public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
@@ -66,11 +67,20 @@ open Gabbro.Grammatik Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.Uebe
 
 set_option maxRecDepth 100000
 
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
+
 /-! ## 1. Parse: the real source text, through the generic pipeline -/
 
 abbrev D4 : Deklaration := declOf uExp104
 
-theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by decide +kernel
+theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 2 := bound
+    rcases (by omega : index = 0 ∨ index = 1) with rfl | rfl
+    all_goals constructor <;> cbv
 
 /-- The generically lowered program of 104. -/
 def P4 : Programm D4 := ((lowerAllg uExp104).toOption.get low_some).1
@@ -244,6 +254,50 @@ theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
     rw [ptrPost4]
     exact hv
 
+/-- A finite view of the actual image, proved from its projections. Checker
+    computation over this view never replays the dependent whole-unit lowering. -/
+private theorem image4_eq : P4 = {
+    invariante := fun i => Fin.elim0 i
+    requires := fun _ => .tru
+    ensures := Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
+    rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
+    unterbricht := fun _ => false
+    ptrVertrag := ptrVertragOf uExp104
+    axVertrag := fun a => Fin.elim0 a } := by
+  have inv : P4.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
+  have req : P4.requires = fun _ => .tru := funext req4
+  have post : P4.ensures = Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
+    funext f
+    rcases fn_zwei f with rfl | rfl
+    · exact ens_ein4
+    · exact ens_lies4
+  have body : P4.rumpf = Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
+    funext f
+    rcases fn_zwei f with rfl | rfl
+    · exact rumpf_ein4
+    · exact rumpf_lies4
+  have dispatch : P4.unterbricht = fun _ => false := by
+    have assembled := low4
+    unfold lowerAllg at assembled
+    split at assembled
+    · cases assembled
+    · split at assembled
+      · cases assembled
+      · split at assembled
+        · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
+          rw [same]
+          rfl
+        · cases assembled
+  have ptr : P4.ptrVertrag = ptrVertragOf uExp104 := funext assembly4.2
+  have ax : P4.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
+  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
+  revert inv req post body dispatch ptr ax
+  generalize P4 = P
+  cases P
+  intro inv req post body dispatch ptr ax
+  subst inv req post body dispatch ptr ax
+  rfl
+
 /-! ## 3. The enumerations of the declaration's members -/
 
 def fsA : Aufzaehlung D4.Fn := ⟨[ein4, lies4], fun f => by
@@ -280,8 +334,12 @@ def E4 : Einheit D4 where
   starts := []
   sp0 := sp4
 
-/-- The checker accepts the unit, by computation. -/
-theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by decide +kernel
+/-- The checker accepts the unit, computing only over the certified finite image. -/
+theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by
+  rewrite [akzeptiert_pruefer_eq]
+  change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] [] = true
+  rewrite [image4_eq]
+  cbv
 
 /-! ## 5. The user's logic on the parsed program -/
 
@@ -366,9 +424,11 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
       · simp only [execEnd] at h2
         cases h2
 
-theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by decide +kernel
+theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by
+  simp only [programmLogikFrei, fsA, List.all_cons, List.all_nil, rumpf_ein4, rumpf_lies4] <;> cbv
 
-theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by decide +kernel
+theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by
+  simp only [ohneEwigB, fsA, List.all_cons, List.all_nil, rumpf_ein4, rumpf_lies4] <;> cbv
 
 theorem koerperS4 : ∀ f : D4.Fn, KoerperGutS P4 0 (axWahr D4) (SperrInv.leer D4) f := by
   intro f
@@ -395,10 +455,10 @@ theorem nutzer4 : NutzerPflicht E4 where
 
 /-- The oracle of `D4`: no axiom, register or global exists. -/
 def O4 : Orakel D4 where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,

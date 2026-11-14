@@ -42,7 +42,7 @@ open Zielsatz
     `GutO`, which speaks about the answer WORLD, is `axO`'s), with a raw
     answer of `99` -- outside `inc`'s declared result type `int 0 3`. -/
 def axOBoese : Orakel axD :=
-  { axO with wirkt := fun a σ ρ => ((axO.wirkt a σ ρ).1, 99) }
+  { axO with wirktL := fun a σ ρ => ((axO.wirktL a σ ρ).1, 99) }
 
 /-- The answer world is `axO`'s, so the frame and trace clauses are. -/
 theorem axOBoese_gut : GutO axOBoese := axO_gut

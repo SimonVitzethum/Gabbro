@@ -122,10 +122,10 @@ theorem ergValOf_nth {D : Deklaration} {Γ : Ctx} : ∀ (e : Option Ty) (v : Erg
 
 theorem nthVal_ergEnv {D : Deklaration} {Γ : Ctx} : ∀ (e : Option Ty) (v : ErgVal D e) (ρ : Env D Γ)
     (j : Nat), nthVal (ergEnv e v ρ) ((if e.isSome then 1 else 0) + j) = nthVal ρ j
-  | none, _, _, j => by simp only [Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]; rfl
+  | none, _, _, j => by simp only [Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Nat.zero_add] <;> rfl
   | some _, _, _, j => by
       simp only [Option.isSome_some, ↓reduceIte]
-      rw [Nat.add_comm]; rfl
+      rw [Nat.add_comm] <;> rfl
 
 theorem nthVal_heq {D : Deklaration} {Γ₁ Γ₂ : Ctx} (h : Γ₁ = Γ₂) (ρ₁ : Env D Γ₁) (ρ₂ : Env D Γ₂)
     (hρ : HEq ρ₁ ρ₂) (j : Nat) : nthVal ρ₁ j = nthVal ρ₂ j := by
@@ -137,16 +137,17 @@ theorem eval_heq2 {D : Deklaration} {Γ₁ Γ₂ : Ctx} {Λ₁ Λ₂ : List (Res
     eval σ₀ e₁ σ ρ₁ = eval σ₀ e₂ σ ρ₂ := by
   subst hΓ; subst hΛ; cases he; cases hρ; rfl
 
-/-- The results the bridge speaks about: none or a number (no `bool`, aggregate, option, tagged or
-    reason result). -/
+/-- The bridge represents void, scalars and records whose complete shape is representable. -/
 def ErgSchlicht (f : UFn) : Prop :=
-  f.resBool = false ∧ f.resTy = none ∧ f.resOpt = none ∧ f.resSum = none ∧ f.resWhy = none
+  resultTypeB f = true ∧ f.resOpt = none ∧ f.resSum = none ∧ f.resWhy = none
 
-/-- With a number result or none, the result type is the recorded range. -/
+/-- Aggregate results retain the canonical `resTy` precedence over scalar result flags. -/
 theorem ergTy_of {f : UFn} (h : ErgSchlicht f) :
-    f.ergTy = f.res.map fun r => Ty.int r.1 r.2 := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := h
-  simp [UFn.ergTy, h1, h2, h3, h4, h5]
+    f.ergTy = match f.resTy with
+      | some ty => some ty
+      | none => if f.resBool then some Ty.bool else f.res.map (fun r => Ty.int r.1 r.2) := by
+  obtain ⟨_, h2, h3, h4⟩ := h
+  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h2, h3, h4]
 
 theorem isSome_erg (f : Fin u.fns.length) :
     ((declOf u).erg f).isSome = (fnAt u f).ergTy.isSome := by
@@ -160,17 +161,57 @@ theorem resultClause_wahr (f : Fin u.fns.length) (hb : ErgSchlicht (fnAt u f)) :
   revert he
   generalize (declOf u).erg f = e
   intro he v q hq
-  subst he
-  cases hr : (fnAt u f).res with
-  | none => simp [resultClause, hr] at hq
-  | some lr =>
-    simp only [resultClause, hr, Option.map_some, Option.toList_some, List.mem_singleton] at hq
-    subst hq
-    obtain ⟨lo, hi⟩ := lr
-    revert v
-    rw [hr]
-    intro v
-    exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
+  cases hrt : (fnAt u f).resTy with
+  | some ty =>
+      simp only [hrt] at he
+      subst e
+      have hs : (shapeOfTy ty).isSome = true := by
+        simpa only [resultTypeB, hrt] using hb.1
+      cases hsh : shapeOfTy ty with
+      | none => rw [hsh] at hs; cases hs
+      | some sh =>
+          simp only [resultClause, hrt, hsh, Option.map_some, Option.toList_some,
+            List.mem_singleton] at hq
+          subst q
+          exact ⟨valOf ty v, rfl, valOf_shape ty v sh hsh⟩
+  | none =>
+      simp only [hrt] at he
+      cases hrb : (fnAt u f).resBool with
+      | true =>
+        simp only [hrb, ↓reduceIte] at he
+        subst he
+        simp only [resultClause, hrt, hrb, ↓reduceIte, Option.toList_some, List.mem_singleton] at hq
+        subst hq
+        exact ⟨v, rfl⟩
+      | false =>
+        simp only [hrb, Bool.false_eq_true, ↓reduceIte] at he
+        subst he
+        cases hr : (fnAt u f).res with
+        | none => simp only [resultClause, hrt, hrb, Bool.false_eq_true, ↓reduceIte, hr,
+            Option.map_none, Option.toList_none, List.not_mem_nil] at hq
+        | some lr =>
+          simp only [resultClause, hrt, hrb, Bool.false_eq_true, ↓reduceIte, hr,
+            Option.map_some, Option.toList_some, List.mem_singleton] at hq
+          subst hq
+          obtain ⟨lo, hi⟩ := lr
+          revert v
+          rw [hr]
+          intro v
+          exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
+
+/-- A record result clause retains every field, its arity and all declared field shapes. -/
+theorem resultClause_record_iff (f : UFn) (r : Option Gabbro.Body.Value) (id : Nat) (fs : List Ty)
+    (ss : List Gabbro.Body.Shape) (ht : f.resTy = some (.prod id fs))
+    (hs : shapesOfTys fs = some ss) :
+    (resultClause f r).getD False ↔ ∃ vs, r = some (.record vs) ∧
+      vs.length = ss.length ∧ Gabbro.Body.Value.fieldsHaveShape vs ss = true := by
+  simp only [resultClause, ht, shapeOfTy, hs, Option.map_some, Option.getD_some]
+  constructor
+  · rintro ⟨v, hr, hv⟩
+    obtain ⟨vs, rfl, hlen, hf⟩ := Gabbro.Body.Value.hasShape_rec_true v ss hv
+    exact ⟨vs, hr, hlen, hf⟩
+  · rintro ⟨vs, hr, hlen, hf⟩
+    exact ⟨.record vs, hr, by simp [hlen, hf]⟩
 
 /-- Every clause of the promise is in the fragment. Checked per unit. -/
 def PostDef (u : UProg) (fn : UFn) : Prop := ∀ e ∈ fn.gives, (ensExpr u fn {} e).isSome = true
@@ -185,7 +226,7 @@ theorem ensList_some (fn : UFn) (s s' : Gabbro.Body.State) (r : Option Gabbro.Bo
       cases hx : ensExpr u fn {} e with
       | none => rw [hx] at he; cases he
       | some xa =>
-        exact ⟨_, by simp only [ensList, ensClause, hx, hcs, Option.map_some]; rfl⟩
+        exact ⟨_, by simp only [ensList, ensClause, hx, hcs, Option.map_some] <;> rfl⟩
 
 /-- The unit's well-typed world, as the bridge states it (the duty files' `wellFormed`,
     `Instanz*.wf_eq`). -/
@@ -217,7 +258,7 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
     intro h
     rw [nthVal_heq (ensCtx_eq u f) E₀ E hE]
     exact ergValOf_nth _ v ρ (by rw [isSome_erg f]; exact h)
-  have hcl := ensList_iff hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).gives cs e0
+  have hcl := ensList_iff (er := (fnAt u f).ergTy) hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).gives cs e0
     hO hcs he0
   have hev : eval σ₀ (P.ensures f) σ' E = eval σ₀ e0 σ' E₀ :=
     eval_heq2 (ensCtx_eq u f).symm rfl _ _ hPe E E₀ hE.symm σ₀ σ'
@@ -252,7 +293,7 @@ theorem zuBody_eq (fn : UFn) : zuBody u fn =
   | none => rfl
   | some ss =>
     cases fn.ret
-    case val v => simp only [endBody, Option.map_map]; rfl
+    case val v => simp only [endBody, Option.map_map] <;> rfl
     all_goals simp [endBody]
 
 theorem ergValOf_heq {D : Deklaration} {e₁ e₂ : Option Ty} (h : e₁ = e₂) (x₁ : ErgVal D e₁)
@@ -302,8 +343,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
           have he : (verOf u c).erg = none := by
             show (vertragVon (declOf u) c).erg = none
             rw [vErg_eq u c, hErg]
-          rw [ergValOf_none _ he]
-          rfl
+          rw [ergValOf_none _ he] <;> rfl
         · cases hE
       · cases h
   case val sd =>
@@ -338,8 +378,7 @@ theorem lowEnd_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))} {r : URet
               rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
                 (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
               simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
-                Gabbro.Body.finalValue]
-              trivial
+                Gabbro.Body.finalValue] <;> trivial
           · cases hE
           · cases hE
         · cases h

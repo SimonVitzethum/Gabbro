@@ -203,7 +203,11 @@ theorem alleIndizes_bild {c c' : Int} (hc : c' = c) :
 theorem inv_antwort (hZ : E.Rueck) {pad : List (Ereignis D)} (hp : PadOk pad)
     {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ') (W : World D') :
     E.Inv hZ M (E.antwortWelt hZ pad σ W) W :=
-  h.wachs E (E.antwortWelt_laenge hZ hp σ W) (E.treu_antwortWelt hZ pad σ W)
+  h.wachs E (E.antwortWelt_laenge hZ hp σ W)
+    (by
+      show (spurOhneLese σ.spur).length ≤ (spurOhneLese (pad ++ σ.spur)).length
+      exact rang_append_le pad σ.spur)
+    (E.treu_antwortWelt hZ pad σ W)
 
 /-! ## Reads with an expression -/
 
@@ -222,6 +226,21 @@ theorem lese_eval (hZ : E.Rueck) {M : Keys D D'} {σ : World D} {σ' : World D'}
           (eval (leseA A' σ' Λ' (X.map E.ortE)) (exE E e) (leseA A' σ' Λ' (X.map E.ortE)) ρ') := by
   obtain ⟨M₁, σ₁, hs, hΦ, hI⟩ := E.lese_schritt h T hA' hT Λ Λ' X
   exact ⟨M₁, σ₁, hs, hΦ, hI, fun e ρ ρ' hρ => E.eval_exE hZ hI.treu hI.treu e ρ ρ' hρ⟩
+
+/-- `lese_eval`, with the oracle keys and the rank kept. -/
+theorem lese_evalO (hZ : E.Rueck) {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
+    {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
+    (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
+      (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
+      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) ∧ M₁.orakel = M.orakel ∧ σ₁.rang = σ.rang ∧
+      ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ)
+        (ρ' : Env D' (Γ.map E.tyE)), E.EnvR hZ ρ ρ' →
+        E.VRel hZ τ (eval σ₁ e σ₁ ρ)
+          (eval (leseA A' σ' Λ' (X.map E.ortE)) (exE E e) (leseA A' σ' Λ' (X.map E.ortE)) ρ') := by
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, ho, hr⟩ := E.lese_schrittO h T hA' hT Λ Λ' X
+  exact ⟨M₁, σ₁, hs, hΦ, hI, ho, hr, fun e ρ ρ' hρ => E.eval_exE hZ hI.treu hI.treu e ρ ρ' hρ⟩
 
 end Einbettung
 

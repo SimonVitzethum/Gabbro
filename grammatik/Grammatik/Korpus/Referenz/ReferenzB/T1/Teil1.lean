@@ -132,10 +132,10 @@ def refP : Programm refD where
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def refO : Orakel refD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The oracle is good: every conjunct closes on its empty domain. -/
 theorem refO_gut : GutO refO := by

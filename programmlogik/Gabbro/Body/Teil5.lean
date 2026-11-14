@@ -113,6 +113,7 @@ meta partial def GabbroMeta.openHyp (n : Name) (fuel : Nat) : TacticM Unit := do
       if sh.isConstOf ``Gabbro.Body.Shape.int then some ``Gabbro.Body.Value.hasShape_int_true
       else if sh.isConstOf ``Gabbro.Body.Shape.bool then some ``Gabbro.Body.Value.hasShape_bool_true
       else if sh.isAppOfArity ``Gabbro.Body.Shape.sum 1 then some ``Gabbro.Body.Value.hasShape_sum_true
+      else if sh.isAppOfArity ``Gabbro.Body.Shape.record 1 then some ``Gabbro.Body.Value.hasShape_rec_true
       else if sh.isConstOf ``Gabbro.Body.Shape.opt then some ``Gabbro.Body.Value.hasShape_opt_true
       else if sh.isAppOfArity ``Gabbro.Body.Shape.intIn 2 then some ``Gabbro.Body.Value.hasShape_intIn_true
       else none
@@ -120,7 +121,7 @@ meta partial def GabbroMeta.openHyp (n : Name) (fuel : Nat) : TacticM Unit := do
       let ls := mkIdent l
       if sh.isAppOfArity ``Gabbro.Body.Shape.intIn 2 then
         evalTactic (← `(tactic| have $w := $ls _ _ _ $h))
-      else if sh.isAppOfArity ``Gabbro.Body.Shape.sum 1 then
+      else if sh.isAppOfArity ``Gabbro.Body.Shape.sum 1 || sh.isAppOfArity ``Gabbro.Body.Shape.record 1 then
         evalTactic (← `(tactic| have $w := $ls _ _ $h))
       else
         evalTactic (← `(tactic| have $w := $ls _ $h))
@@ -356,7 +357,7 @@ macro_rules
                      -- and what none of these closes is left reduced, for the person
                      | simp [Gabbro.Body.Value.hasShape]))))
 
-/-- **`gabbro_shape Γ` closes `∃ n, σ p = .int n` (and the bool, sum and option forms)
+/-- **`gabbro_shape Γ` closes `∃ n, σ p = .int n` (and the bool, sum, option and record forms)
     from a well-typed world** -- what a routine's answer read from a place owes to the
     promise's shape clause. The place's shape is decided by `rfl` over the typing. -/
 syntax "gabbro_shape" ident : tactic
@@ -409,13 +410,13 @@ elab_rules : tactic
     for (σ, p) in reads do
       let σs ← (← getMainGoal).withContext do Term.exprToSyntax σ
       let ps ← (← getMainGoal).withContext do Term.exprToSyntax p
-      for l in [``Gabbro.Body.WF_int, ``Gabbro.Body.WF_intIn, ``Gabbro.Body.WF_bool, ``Gabbro.Body.WF_sum, ``Gabbro.Body.WF_opt] do
+      for l in [``Gabbro.Body.WF_int, ``Gabbro.Body.WF_intIn, ``Gabbro.Body.WF_bool, ``Gabbro.Body.WF_sum, ``Gabbro.Body.WF_opt, ``Gabbro.Body.WF_rec] do
         let saved ← saveState
         try
           let w := mkIdent (← mkFreshUserName `hw)
           let ls := mkIdent l
           -- `rfl` decides the shape: a wrong lemma fails to elaborate and is skipped
-          if l == ``Gabbro.Body.WF_sum then
+          if l == ``Gabbro.Body.WF_sum || l == ``Gabbro.Body.WF_rec then
             GabbroMeta.haveClosed (← `(tactic| have $w := $ls $Γ $σs $ps _ ?_ rfl))
               (← `(tactic| first | assumption | gabbro_assumption | gabbro_wf $Γ))
           else if l == ``Gabbro.Body.WF_intIn then

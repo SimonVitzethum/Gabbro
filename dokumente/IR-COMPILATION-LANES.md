@@ -1204,16 +1204,16 @@ noninteger result context consume this gate; alias resolution and expanded
 spec contracts cannot hide a guarded export. `Frontend/ExportCorrectness.lean`
 connects these facts to `irBild_correct`. Existing lowering branches retain
 their admission behavior. This is bounded case coverage, not closure of every
-variant in these four catalogue rows. Invariant and spec-macro metadata,
+variant in these four catalogue rows. Unsupported spec-macro metadata,
 declared costs, held-time promises and richer loop/header obligations remain
 explicit refusals for the new paths. Local type annotations and constant type
 wrappers are included in the original-source duty result.
 
-A01 remains **open**: every source invariant has mandatory `cost` and `runs`
-metadata and optional `by` provenance, while the current `UInv` stores only its
-name, carriers and predicate. A new `breaking` export must not inherit that loss.
-The source exporter continues to refuse `breaking`. No source invariant rule, checker meaning,
-`Kern/` definition or goal statement has been changed. A02/A03 still require one
+C05 (2026-11-13) removes independent invariant cost, execution-mode and proof
+clauses. A01 now transports `breaking` through the ordinary invariant reader;
+carrier, read and restoration duties remain. The writer's declared costs cover
+body and return predicates. Integration and corpus results remain the lead's
+measurement; no completion count follows from this source edit alone. A02/A03 still require one
 consistent resource-threading change across signatures, calls and every exit;
 the current `Empty` mark carrier and fixed-resource sequence interfaces cannot
 represent their flow.
@@ -1224,7 +1224,7 @@ proofs and the still missing export obligations, not a completed source theorem.
 
 | ID / source form | Exact refusal or absent export | Target canonical construction | Existing Stage0 proof; what export must preserve |
 |---|---|---|---|
-| A01 `breaking I { ... }` | `Uebersetze.lean:2538`, `stmt without G form: waive`, via `uAnwReihe` default | `Stmt.breaking` (S:610) | `lowS_ok` branch :146 recurses through `lowB_ok`. Resolve each invariant name (multiple names become nested scopes); retain body/exits and invariant restoration at return.  **Open after implementation audit:** mandatory invariant cost/runs/by duties have no source admission binding; the new-path metadata gate refuses `breaking`. No completion count. |
+| A01 `breaking I { ... }` | Named scopes export through `uBreaking`; unknown invariant names remain refused by the G reader. | `Stmt.breaking` (S:610) | `lowS_ok` branch :146 recurses through `lowB_ok`. Resolve each invariant name (multiple names become nested scopes); retain body/exits and invariant restoration at return. C05 removes the independent invariant clauses; the metadata gate now admits the retained predicate. Carrier resolution, declared reads and restoration remain checked. Integration and corpus measurements are pending. |
 | A02 linear/ghost mark order, `consumes`/`allocs`, advances clause/statement | `Uebersetze.lean:1925/1952/2538`: `effect without G form`, `clause without G form`, `... step`; `UebersetzeAllg.lean:231/232/382` fixes empty signatures/`Marke := Empty` | `D.Marke/stufen`, `Signatur.konsumiert/produziert`, `Res.marke`, `nachSig`, `Stmt.advances` (S:185/89/287/306/637) | `lowS_ok` :151 and generic call/bind/return branches. Export one consistent mark namespace, exact flow/conformance/return resources, possession and `a+1 < stufen`; never produce an owner mark. Complete owner minting is C09. |
 | A03 `retires m from s ...` | `Uebersetze.lean:1953`, `clause without G form`; raw `quits` tail has no body export | `Stmt.retires` (S:640), final resource list | `lowS_ok` :152. Resolve mark/stage/assumption, consume exactly that mark on the correct exits and retain assumption provenance. Runtime erasure is not erasure of the obligation. |
 | A04 `table ... owner m` guard metadata, given valid initial ownership | `Uebersetze.lean:1172`, `table without G form`; `UebersetzeAllg.lean:382/387` exports no owners | `D.eigner`, `D.braucht` with `.inr (m,s)`, `darf` (S:190/192/301) | Generic `lowE_ok`/`lowS_ok` slot/thru/store proofs. Export shared/owner guards, uniqueness and `eigner_nie_erzeugt`. The current `own`→writable Bool conversion is insufficient; minter/borrow-return semantics are C09. |

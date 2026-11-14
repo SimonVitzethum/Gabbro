@@ -168,8 +168,12 @@ theorem suff_rund : ∀ (n : Nat) (Rn : R n)
       have hF1 : 1 ≤ F := by omega
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append] at ⊢
-      simp only [parseSuffixe, nameText_nameTok] at ⊢
-      -- ⊢ : parseSuffixe F' (feld base f) (suffToks suff ++ rest) = ...
+      have hstep : parseSuffixe (F' + 1) base
+          (.zeichen "." :: nameTok f :: (suffToks suff ++ rest)) =
+            parseSuffixe F' (.field base f) (suffToks suff ++ rest) := by
+        unfold nameTok
+        split <;> simp only [parseSuffixe, nameText]
+      rw [hstep]
       simp only [applySuff] at ⊢
       have hs2 : suffGroesse suff + groesse (.field base f) ≤ n + 1 := by
         simp only [suffGroesse, groesse] at hs ⊢

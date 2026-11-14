@@ -1,7 +1,7 @@
 module
 public import Bruecke.Kette.Quelle
 public import Bruecke.Anweisung.Zweig.ZweigZeuge
-import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,6 +33,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 /-!
@@ -41,6 +44,7 @@ import all Init.Data.String.ToSlice
 A fresh `let` precedes the proved branching fixture (early return and slot writes). A second
 carried function calls it inside a branch, making closure nontrivial. A Boolean function is
 open and is a declared start. Pointer refinement and its G body duty remain explicit premises.
+Bool results now pass the unit gate; a separate bool-storage case witnesses its refusal.
 This witnesses a lowered unit, without claiming measured source-parser acceptance.
 -/
 
@@ -50,7 +54,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 100000
-set_option maxHeartbeats 2000000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 /-- The existing proved function with an unused fresh local binding. -/
 def routine : UFn :=
@@ -96,19 +102,19 @@ theorem carried_checks : ∀ c : Fin unit.fns.length, carried c →
     bindFrischB (fnAt unit c) = true := by
   intro c hc
   rcases carried_indices c hc with rfl | rfl
-  · exact (by decide +kernel : artB routine = true ∧ namenB routine = true ∧
+  · exact (by cbv : artB routine = true ∧ namenB routine = true ∧
       freiB routine = true ∧ oldsB unit routine = true ∧ postB unit routine = true ∧
       schreibtB unit routine = true ∧ bindFrischB routine = true)
-  · exact (by decide +kernel : artB caller = true ∧ namenB caller = true ∧
+  · exact (by cbv : artB caller = true ∧ namenB caller = true ∧
       freiB caller = true ∧ oldsB unit caller = true ∧ postB unit caller = true ∧
       schreibtB unit caller = true ∧ bindFrischB caller = true)
 
 theorem getragen_zeuge : GetragenG unit carried := by
   refine { toGetragen := {
     geschlossen := ?_
-    boolTab := (keinBoolB_ok (u := ZweigZeuge.unit) (by decide +kernel)).1
+    boolTab := (keinBoolB_ok (u := ZweigZeuge.unit) (by cbv)).1
     boolErg := ?_
-    tab := tabB_ok (by decide +kernel)
+    tab := tabB_ok (by cbv)
     art := fun c hc => artB_ok (carried_checks c hc).1
     namen := fun c hc => (of_decide_eq_true (carried_checks c hc).2.1 :
       ((fnAt unit c).params.map (·.1)).Nodup)
@@ -120,12 +126,12 @@ theorem getragen_zeuge : GetragenG unit carried := by
     ohneReq := ?_
     ohneGrund := ?_
     ohneInv := rfl
-    statics := staticsB_ok (by decide +kernel)
-    ohneTransition := fun c _ => ohneTransitionB_ok (by decide +kernel) c }
+    statics := staticsB_ok (by cbv)
+    ohneTransition := fun c _ => ohneTransitionB_ok (by cbv) c }
            frisch := fun c hc => bindFrischB_ok (carried_checks c hc).2.2.2.2.2.2 }
   · intro c hc n hn d hd
     rcases carried_indices c hc with rfl | rfl
-    · have empty : calleesOf routine = [] := by kernel_rfl
+    · have empty : calleesOf routine = [] := by cbv
       change n ∈ calleesOf routine at hn
       rw [empty] at hn
       cases hn
@@ -136,7 +142,7 @@ theorem getragen_zeuge : GetragenG unit carried := by
       | ⟨1, _⟩ => show (1 : Nat) < 2; omega
       | ⟨2, _⟩ =>
         have hd' : fnSuch unit "pick" = some openFn := hd
-        have hl : fnSuch unit "pick" = some routine := by kernel_rfl
+        have hl : fnSuch unit "pick" = some routine := by cbv
         rw [hl] at hd'
         have names := congrArg UFn.name (Option.some.inj hd')
         exact False.elim ((by decide : routine.name ≠ openFn.name) names)
@@ -145,16 +151,16 @@ theorem getragen_zeuge : GetragenG unit carried := by
         omega
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
-    · exact ⟨rfl, rfl, rfl, rfl, rfl⟩
-    · exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+    · exact ⟨rfl, rfl, rfl, rfl⟩
+    · exact ⟨rfl, rfl, rfl, rfl⟩
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
-    · kernel_rfl
-    · kernel_rfl
+    · cbv
+    · cbv
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
-    · kernel_rfl
-    · kernel_rfl
+    · cbv
+    · cbv
 
 /-- Reuse the closed branching duty after executing the additional fresh binding. -/
 theorem routine_meets : meetsU unit (wfU unit) routine koerper := by
@@ -179,12 +185,12 @@ theorem caller_meets : meetsU unit (wfU unit) caller callerBody := by
   intro ρ s hW _
   change Gabbro.Body.Contract ρ "pick" (preProp (wfU unit) routine)
       (fun s s' r => (postU unit (wfU unit) routine s s' r).getD False) →
-    Gabbro.Body.Frame ρ "pick" ["T"] → _
+    Gabbro.Body.Frame ρ "pick" ["T", callClock] → _
   intro hContract _
   let t : Gabbro.Body.State :=
     ⟨s.world, Gabbro.Body.bindAll ["k"] [.int 2] (fun _ => .absent)⟩
   have hp : Gabbro.Body.eval t (preExpr routine) = some (.bool true) := by
-    have pre : preExpr routine = .hasShape "k" (.intIn 0 9) := by kernel_rfl
+    have pre : preExpr routine = .hasShape "k" (.intIn 0 9) := by cbv
     rw [pre]
     simp [Gabbro.Body.eval, t, Gabbro.Body.bindAll, Gabbro.Body.bindLocal,
       Gabbro.Body.Value.hasShape_int_intIn]
@@ -201,7 +207,7 @@ theorem caller_meets : meetsU unit (wfU unit) caller callerBody := by
   have run : Gabbro.Body.exec ρ callerBody s = .running s' := by
     simp only [callerBody, Gabbro.Body.exec, step_ite_wahr ρ hc, hcall]
   refine ⟨s', ?_, ?_⟩
-  · rw [run]; rfl
+  · rw [run] <;> rfl
   · exact hw
 
 theorem body_duties_zeuge : ∀ c : Fin unit.fns.length, carried c →
@@ -209,16 +215,24 @@ theorem body_duties_zeuge : ∀ c : Fin unit.fns.length, carried c →
       meetsU unit (wfU unit) (fnAt unit c) body := by
   intro c hc
   rcases carried_indices c hc with rfl | rfl
-  · exact ⟨koerper, by kernel_rfl, routine_meets⟩
-  · exact ⟨callerBody, by kernel_rfl, caller_meets⟩
+  · exact ⟨koerper, by cbv, routine_meets⟩
+  · exact ⟨callerBody, by cbv, caller_meets⟩
 
 /-- The call nested between branch markers is present in closure's flat callee list. -/
 theorem branch_call_zeuge : calleesOf caller = ["pick"] ∧
     fnSuch unit "pick" = some (fnAt unit ⟨0, by decide⟩) ∧
     carried ⟨1, by decide⟩ ∧ carried ⟨0, by decide⟩ := by
-  exact ⟨by kernel_rfl, by kernel_rfl, by decide, by decide⟩
+  exact ⟨by cbv, by cbv, by decide, by decide⟩
 
-theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by decide +kernel
+theorem lowered_some : (lowerAllg unit).toOption.isSome = true := by
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 3 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+    rcases choices with rfl | rfl | rfl
+    all_goals constructor <;> cbv
 
 def program : Programm (declOf unit) := ((lowerAllg unit).toOption.get lowered_some).1
 
@@ -230,9 +244,9 @@ theorem all_requires : ∀ c, program.requires c = .tru := by
   have hn : ∀ c : Fin unit.fns.length, (fnAt unit c).needs = [] := by
     intro c
     match c with
-    | ⟨0, _⟩ => exact (by kernel_rfl : (fnAt unit ⟨0, by decide⟩).needs = [])
-    | ⟨1, _⟩ => exact (by kernel_rfl : (fnAt unit ⟨1, by decide⟩).needs = [])
-    | ⟨2, _⟩ => exact (by kernel_rfl : (fnAt unit ⟨2, by decide⟩).needs = [])
+    | ⟨0, _⟩ => exact (by cbv : (fnAt unit ⟨0, by decide⟩).needs = [])
+    | ⟨1, _⟩ => exact (by cbv : (fnAt unit ⟨1, by decide⟩).needs = [])
+    | ⟨2, _⟩ => exact (by cbv : (fnAt unit ⟨2, by decide⟩).needs = [])
     | ⟨n + 3, h⟩ =>
       have h' : n + 3 < 3 := h
       omega
@@ -263,13 +277,12 @@ theorem offenePflicht_zeuge (pointer_refinement : PtrVerfeinert program)
   exact ⟨hBody, pointer_refinement _⟩
 
 theorem starts_zeuge : startsAllg unit =
-    [⟨⟨1, by decide⟩, Env.nil⟩, ⟨⟨2, by decide⟩, Env.nil⟩] := by kernel_rfl
+    [⟨⟨1, by decide⟩, Env.nil⟩, ⟨⟨2, by decide⟩, Env.nil⟩] := by cbv
 
-theorem offeneStarts_zeuge : OffeneStartPflicht unit carried program (by decide +kernel) := by
+theorem offeneStarts_zeuge : OffeneStartPflicht unit carried program (by cbv) := by
   intro a _ _
   unfold ReqAmEintritt
-  rw [all_requires a.1]
-  rfl
+  rw [all_requires a.1] <;> rfl
 
 /-- All premises of the unit-level theorem coexist with bindings, branching, closure and an
     open start. The two remaining user obligations are stated, never manufactured. -/
@@ -281,18 +294,19 @@ theorem kettenpflichten_zeuge (pointer_refinement : PtrVerfeinert program)
     (∀ c : Fin unit.fns.length, carried c → ∃ body,
       zuBodyZ unit (fnAt unit c) = some body ∧ meetsU unit (wfU unit) (fnAt unit c) body) ∧
     OffenePflicht unit carried ∧
-    OffeneStartPflicht unit carried program (by decide +kernel) ∧
+    OffeneStartPflicht unit carried program (by cbv) ∧
     startsAllg unit = [⟨⟨1, by decide⟩, Env.nil⟩, ⟨⟨2, by decide⟩, Env.nil⟩] ∧
     carried ⟨0, by decide⟩ ∧ carried ⟨1, by decide⟩ ∧ ¬ carried ⟨2, by decide⟩ ∧
-    stimmigB unit = false ∧
-    Zielsatz.NutzerPflicht (einheitAllg unit program (by decide +kernel)) := by
+    stimmigB unit = true ∧
+    keinBoolB { unit with tabs := [{ name := "Flags", count := 1, cols := [], bools := ["ready"] }] } = false ∧
+    Zielsatz.NutzerPflicht (einheitAllg unit program (by cbv)) := by
   have hPtr : SchnittstellenPflichtTeil unit carried :=
     fun P fs hlow c _ => interfaces pointer_refinement P fs hlow c
   have hOpen := offenePflicht_zeuge pointer_refinement hBody
-  exact ⟨by decide +kernel, getragen_zeuge, by decide +kernel, hPtr, body_duties_zeuge,
+  exact ⟨by cbv, getragen_zeuge, by cbv, hPtr, body_duties_zeuge,
     hOpen, offeneStarts_zeuge, starts_zeuge, by decide, by decide, by decide,
-    by decide +kernel,
-    bruecke_nutzer_G lowered getragen_zeuge (rangAuto unit) (rang_of (by decide +kernel))
-      body_duties_zeuge hPtr hOpen (by decide +kernel) offeneStarts_zeuge⟩
+    by cbv, by cbv,
+    bruecke_nutzer_G lowered getragen_zeuge (rangAuto unit) (rang_of (by cbv))
+      body_duties_zeuge hPtr hOpen (by cbv) offeneStarts_zeuge⟩
 
 end Gabbro.Bruecke.KetteZeuge

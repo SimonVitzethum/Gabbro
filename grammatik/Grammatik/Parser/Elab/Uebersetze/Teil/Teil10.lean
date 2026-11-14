@@ -9,6 +9,7 @@ public import Grammatik.Parser.Elab.Uebersetze.CallElse
 public import Grammatik.Parser.Elab.Uebersetze.Branches
 public import Grammatik.Parser.Elab.Uebersetze.Breaking
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
+public import Grammatik.Parser.Elab.Uebersetze.Loops.Bounded
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 mutual
@@ -191,6 +192,8 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
     match ctx.tabs.find? (fun y => strEq y.name tn) with
     | .some { von := .some p, .. } => uAnwReihe tabs koepfe f ctx (.bind mu x t (.call p []) :: rest)
     | _ => .error ("alloc of a table without provider: " ++ tn)
+  | f + 1, ctx, .boundedLoop header body :: rest =>
+    uBoundedLoop tabs koepfe (uAnwReihe tabs koepfe f) ctx header body rest
   | f + 1, ctx, .retry h (.block ss e) :: rest =>
     match uRetryKopf ctx h with
     | .error err => .error err

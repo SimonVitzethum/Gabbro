@@ -1,5 +1,4 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit104
@@ -75,9 +74,52 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
 theorem wf_eq : wellFormed = fun s => WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
 
+/-- The bridge permits the private call clock to advance in a read-only callee. -/
+def einzahlen_meets_statement : Prop :=
+  ∀ (ρ : Env) (s : State) (hwf : wellFormed s)
+    (hpre : eval s einzahlen_pre = some (.bool true))
+    (c_lies : Contract ρ "lies" lies_requires lies_post)
+    (fr_lies : Frame ρ "lies" [callClock]),
+    ∃ s', finalState (exec ρ einzahlen_body s) = some s'
+        ∧ einzahlen_post s s' (finalValue (exec ρ einzahlen_body s))
 
-example : zuBody u ein = some einzahlen_body := rfl
-example : zuBody u lies = some lies_body := rfl
+theorem einzahlen_meets : einzahlen_meets_statement := by
+  intro ρ s hwf hpre c_lies fr_lies
+  obtain ⟨i, ei, ilo, ihi⟩ := shape_intIn s "i" _ _ (and_left _ _ _ hpre)
+  obtain ⟨n, en, _, nhi⟩ :=
+    WF_intIn shapeOf s.world (.slot "Konto" i "stand") 0 100 hwf rfl
+  let σ := store s.world (.slot "Konto" i "stand") (.int 100)
+  let t : State := ⟨σ, bindAll ["k", "i"] [s.local' "k", .int i] (fun _ => .absent)⟩
+  have hσ : WF shapeOf σ := by
+    apply WF_store _ _ _ _ hwf
+    intro sh hsh
+    have hs : some (.intIn 0 100) = some sh := hsh
+    cases hs
+    decide
+  have ht : lies_requires t := by
+    refine ⟨hσ, ?_⟩
+    simp [t, lies_pre, eval, bindAll, bindLocal, Value.hasShape, andBool, ilo, ihi]
+  have hc := c_lies t ht
+  let s' : State := { s with world := (ρ "lies" t).1.world }
+  have he : exec ρ einzahlen_body s = .running s' := by
+    simp [einzahlen_body, exec, step, eval, evalAll, ei, t, σ, s',
+      bindAll, bindLocal, Value.hasShape, andBool, ilo, ihi]
+  have hr : (ρ "lies" t).1.world (.slot "Konto" i "stand") = .int 100 := by
+    rw [Frame_read ρ "lies" [callClock] fr_lies t (.slot "Konto" i "stand")
+      (by simp [Place.carrier, callClock])]
+    exact store_here _ _ _
+  refine ⟨s', ?_, ?_⟩
+  · rw [he]
+    rfl
+  · change wellFormed s' ∧ _
+    refine ⟨hc.1, ?_⟩
+    intro ov hov
+    have ho : .int n = ov := Option.some.inj (by simpa [eval, ei, en] using hov)
+    subst ov
+    simp [eval, s', ei, bindLocal, hr, binop, nhi]
+
+theorem einzahlen_body_eq : zuBodyZ u ein = some einzahlen_body := by cbv
+theorem lies_body_eq : zuBodyZ u lies = some lies_body := by cbv
 example : preExpr ein = einzahlen_pre := rfl
 example : preExpr lies = lies_pre := rfl
 example : ein.puts = einzahlen_writes := rfl
@@ -88,8 +130,12 @@ example : (fun s s' r => (postU u wellFormed lies s s' r).getD False) = lies_pos
 example : preProp wellFormed ein = einzahlen_requires := rfl
 example : preProp wellFormed lies = lies_requires := rfl
 
-example : meetsU u wellFormed ein ((zuBody u ein).getD []) = einzahlen_meets_statement := rfl
-example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statement := rfl
+example : meetsU u wellFormed ein ((zuBodyZ u ein).getD []) = einzahlen_meets_statement := by
+  rw [einzahlen_body_eq]
+  rfl
+example : meetsU u wellFormed lies ((zuBodyZ u lies).getD []) = lies_meets_statement := by
+  rw [lies_body_eq]
+  rfl
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit104.E4 :=
@@ -99,12 +145,12 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
 
     S3 instance: the consolidated source theorem (`Kette/Quelle.lean`) applied to the
     parser's program of 104. Its premises, each checked here: the lowering (`Einheit104.low4`), the
-    name conditions and the rank of the call graph (decided), and the DUTIES -- GabbroV's own
-    proofs `einzahlen_meets` and `lies_meets` from `Duty0104Referenz.lean`, the statements the
-    per-unit `rfl` checks above tie to the Lean computation. The conclusion is premise (b) of the
+    name conditions and the rank of the call graph (decided), and the DUTIES -- the frame-aware
+    `einzahlen_meets` above and GabbroV's `lies_meets` from `Duty0104Referenz.lean`, tied to the
+    canonical reader by the body equalities above. The conclusion is premise (b) of the
     goal theorem for the chain's unit `E4`. -/
 
-theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq] <;> rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
 theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
@@ -112,8 +158,8 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨einzahlen_body, (by kernel_rfl), einzahlen_meets⟩
-  | ⟨1, _⟩ => exact ⟨lies_body, (by kernel_rfl), lies_meets⟩
+  | ⟨0, _⟩ => exact ⟨einzahlen_body, einzahlen_body_eq, einzahlen_meets⟩
+  | ⟨1, _⟩ => exact ⟨lies_body, lies_body_eq, lies_meets⟩
 
 /-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 

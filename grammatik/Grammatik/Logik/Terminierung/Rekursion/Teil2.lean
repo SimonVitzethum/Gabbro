@@ -66,7 +66,7 @@ theorem rekursion_endlich_aus (Q : AxEns D) (S : SperrInv D) (K : Faden → D.Fn
     (R : LaufGX P O pa Tg) (h0 : R.M 0 = RufStartG P sp init) (t : Faden) :
     ∃ N, ∀ j, N ≤ j → R.akt j ≠ some t :=
   rekursion_endlich m zyk rk fs Q S lok hvoll hTA hR hL sp init
-    (fun M hr => (zielInvSA_erreichbarGX P O pa Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
+    (fun M hr => (zielInvSA_erreichbarGX P O pa Q S K Tg lok sp init hO hRL (relyQ_of_O hQ) hlok hS hvoll hAbg hWurzel
       hTA hTV hTS hTO hFragS hFS hlokK hK hM hStart hsp hex M hr).1) R h0 t
 
 end Lauf

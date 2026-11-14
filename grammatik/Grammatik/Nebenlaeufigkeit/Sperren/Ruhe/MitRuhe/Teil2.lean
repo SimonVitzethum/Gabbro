@@ -444,12 +444,12 @@ def wsRuhe (ws : List D.Fn) : List D.mitRuhe.Fn := ws.map some
 /-- **The oracle of `D.mitRuhe`**: `O` on the translated-back world and
     arguments, its world translated forth. -/
 def Orakel.mitRuhe (O : Orakel D) : Orakel D.mitRuhe where
-  wirkt a σ ρ :=
-    (worldR (O.wirkt a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).1,
-      (O.wirkt a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).2)
-  regLies r σ := O.regLies r (worldZ σ)
+  wirktL a σ ρ :=
+    (worldR (O.wirktL a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).1,
+      (O.wirktL a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).2)
+  regLiesL r σ := O.regLiesL r (worldZ σ)
   regSchreib := O.regSchreib
-  sichtbar g σ := O.sichtbar g (worldZ σ)
+  sichtbarL g σ := O.sichtbarL g (worldZ σ)
   zeiger k := (O.zeiger k).map some
 
 /-- **The lock invariants of `D.mitRuhe`**: the same carriers, `S.inv` on the

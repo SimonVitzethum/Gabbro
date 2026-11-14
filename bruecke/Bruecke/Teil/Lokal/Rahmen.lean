@@ -18,11 +18,11 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 
 /-- A lowered body statement writes a carrier the function declares, or calls a function it
     finds by name whose declared writes are its own -- in every scope. -/
-theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) {Γ : Ctx} {fn : UFn}
+theorem stmt_statisch_teilB {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) {Γ : Ctx} {fn : UFn}
     (hΓ : Γ = fn.params.map (·.2)) (st : UStmt)
     (hmem : st ∈ (fnAt u c).body) {Λ Λ' : List (Res (declOf u))}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
-    (h : lowStmtL (l := false) u c Γ fn Λ st = .ok ⟨Λ', g⟩) {bst : Gabbro.Body.Stmt}
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowStmtL (l := loopMode) u c Γ fn Λ st = .ok ⟨Λ', g⟩) {bst : Gabbro.Body.Stmt}
     (hb : stmtBody u fn st = some bst) :
     (∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts) ∨
     (∃ n ve, bst = .assignGlobal n ve ∧ n ∈ (fnAt u c).gputs) ∨
@@ -48,7 +48,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         rw [hsv] at hb
         cases hb
         exact ⟨_, _, _, _, rfl, any_mem hw⟩
-    cases stored : lowAssignDurchL (l := false) u c Γ fn Λ b fname ix v with
+    cases stored : lowAssignDurchL (l := loopMode) u c Γ fn Λ b fname ix v with
     | error error => simp only [stored, Except.map] at h <;> cases h
     | ok statement =>
       simp only [stored, Except.map] at h
@@ -107,7 +107,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         · cases h
   case assignTab b fname ix v =>
     rw [lowStmtL_assignTab S.tab c Γ fn Λ b fname ix v] at h
-    cases stored : lowAssignTabL (l := false) u c Γ fn Λ b fname ix v with
+    cases stored : lowAssignTabL (l := loopMode) u c Γ fn Λ b fname ix v with
     | error error => simp only [stored, Except.map] at h <;> cases h
     | ok statement =>
       simp only [stored, Except.map] at h
@@ -134,7 +134,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
           exact ⟨_, _, _, _, rfl, any_mem hw'⟩
   case assignGlob n v =>
     simp only [lowStmtL] at h
-    cases hs : lowAssignGlobL (l := false) u c Γ fn Λ n v with
+    cases hs : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v with
     | error err => simp only [hs, Except.map] at h; cases h
     | ok st =>
       simp only [hs, Except.map] at h
@@ -148,7 +148,7 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
         cases hb
         exact .inr (.inl ⟨n, e, rfl, hw⟩)
   case call cname args =>
-    have h' : lowCallL (l := false) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩ := h
+    have h' : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩ := h
     unfold lowCallL at h'
     split at h'
     · cases h'
@@ -171,12 +171,14 @@ theorem stmt_statisch_teilB (S : Getragen u C) (c : Fin u.fns.length) (hc : C c)
             exact List.any_eq_true.mpr ⟨_, hw, beq_self_eq_true _⟩
           have h2 := hWr t h1
           exact List.mem_append_left _ (any_mem h2)
-        · obtain ⟨g, rfl⟩ := S.gschreibt k.callee (callee_getragen_teil S hc hmem hfs) w hw
-          have h1 : writesGAt u (fnAt u k.callee) g = true := by
-            unfold writesGAt
-            exact List.any_eq_true.mpr ⟨_, hw, beq_self_eq_true _⟩
-          have h2 := lowRufKopf_gwrites hk g h1
-          exact List.mem_append_right _ (any_mem h2)
+        · rcases List.mem_append.mp hw with hw | hw
+          · obtain ⟨g, rfl⟩ := S.gschreibt k.callee (callee_getragen_teil S hc hmem hfs) w hw
+            have h1 : writesGAt u (fnAt u k.callee) g = true := by
+              unfold writesGAt
+              exact List.any_eq_true.mpr ⟨_, hw, beq_self_eq_true _⟩
+            have h2 := lowRufKopf_gwrites hk g h1
+            exact writesU_global (any_mem h2)
+          · exact List.mem_append_right _ (List.mem_append_right _ hw)
   all_goals simp [stmtBody] at hb
 
 end Gabbro.Bruecke

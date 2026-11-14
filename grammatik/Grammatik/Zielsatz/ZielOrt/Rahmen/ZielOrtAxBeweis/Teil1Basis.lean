@@ -25,8 +25,8 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat) (Q : AxEns D)
     from `σ` predicts the body's result. -/
 def KopfA (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (σ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA σ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV σ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA σ.rang HA ∧
     GleichAuf (fussOrte P F.f) σ W ∧ F.rest.2.2.2.2.okV P (fussOrte P F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
       PasstV R H → PasstA O' HA → ZeigerGleich O O' →
@@ -41,8 +41,8 @@ def KopfA (F : RufRahmenG D) (W : World D) : Prop :=
     answer to the pending call predicts the body's result. -/
 def WarteA (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (κ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA κ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV κ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzA κ.rang HA ∧
     F.rest.2.2.2.2.okV P (fussOrte P F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧
@@ -88,7 +88,7 @@ theorem fadenA_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenA P O passes 
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrte P z.kopf.f) σ W →
       r.okV P (fussOrte P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrte P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrte P z.kopf.f) σ' W' ∧
         r'.okV P (fussOrte P z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
           (semV O' passes R r σ ρ).folgt (semV O' passes R r' σ' ρ')) :
@@ -129,7 +129,7 @@ theorem popA_ens (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, KoerperGutA P 
   simp only at h1
   have h2 := ZErg.folgt_zurueck (ZErg.folgt_trans h1 (ZErg.folgt_of_gleich (hsem _ _ σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h2
-  have hE := (hK G.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertrag hQ hqa) (rufAusV H)
+  have hE := (hK G.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
     (rufAusV_respektiert hv) (rufAusV_ohneVorbedingung hv) G.s0 G.rho hreq).1 σ'' _ hex
   have hgl : GleichAuf (fussOrte P G.f) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
     hg.lese Λ Λ e.orte e.orte
@@ -163,7 +163,7 @@ theorem pushA_req (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, KoerperGutA P
         (orakelAus_passt O hfa) rfl
       rw [hlogik _ _ _ htor] at h1
       have hex := zErg_gleich_logik (ZErg.folgt_logik h1)
-      exact (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertrag hQ hqa) (rufAusV H)
+      exact (hK F.f (orakelAus O HA) (orakelAus_rahmen hO hra) (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (rufAusV H)
         (rufAusV_respektiert hv) (rufAusV_ohneVorbedingung hv) F.s0 F.rho hreq).2 g hex
 
 

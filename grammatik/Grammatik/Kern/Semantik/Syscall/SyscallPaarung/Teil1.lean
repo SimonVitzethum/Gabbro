@@ -271,12 +271,12 @@ def swU : UserSyscall swD (swD.aparams ()) IoFehler where
     since `swD` guards nothing). Locks are untouched (a `zugriff` event
     leaves `offen` unchanged). -/
 def swO : Orakel swD where
-  wirkt := fun _ σ ρ =>
-    ((σ.storeSlot () (swFd ρ) () ⟨1, by decide, by decide⟩).merke
-      (axiomSpur [()] [] () [] σ.haelt), 0)
-  regLies := fun r _ => nomatch r
+  wirktL := fun _ σ ρ =>
+    ({ σ.storeSlot () (swFd ρ) () ⟨1, by decide, by decide⟩ with
+        spur := axiomSpur [()] [] () [] σ.haelt }, 0)
+  regLiesL := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g _ => nomatch g
+  sichtbarL := fun g _ => nomatch g
 
 /-- The kernel implementation relation: the proved frame and postcondition
     travel with every behaviour, indexed by dispatch identity, plus the
@@ -360,13 +360,13 @@ theorem swCon : ∀ σ ρ σ' roh, swKbeh swK.nummer swK.abi σ ρ σ' roh →
 theorem swO_trifft : ∀ σ ρ, ∃ σ' roh,
     swKbeh swU.nummer swU.abi σ ρ σ' roh ∧ swO.wirkt () σ ρ = (σ', roh) := by
   intro σ ρ
-  refine ⟨(σ.storeSlot () (swFd ρ) () ⟨1, by decide, by decide⟩).merke
-      (axiomSpur [()] [] () [] σ.haelt), 0,
-    ⟨rfl, rfl, ?_, ?_, rfl, rfl⟩, rfl⟩
+  refine ⟨(swO.wirkt () σ ρ).1, 0, ⟨rfl, rfl, ?_, ?_, rfl, ?_⟩, rfl⟩
   · exact .inl ⟨by omega, (swLen_bereich ρ).1, rfl⟩
   · exact (rahmen_storeSlot swK.Ek swK.EkG σ () (swFd ρ) ()
       (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192)) rfl).trans
       (rahmen_gleich rfl rfl)
+  · show axiomSpur [()] [] () [] σ.ohneLese.haelt ++ σ.spur = axiomSpur [()] [] () [] σ.haelt ++ σ.spur
+    rw [World.ohneLese_haelt]
 
 /-- `Qk -> Qu` after decoding: a count in range decodes to `ok` with
     payload `roh ≤ len`; EBADF decodes to its listed reason. -/

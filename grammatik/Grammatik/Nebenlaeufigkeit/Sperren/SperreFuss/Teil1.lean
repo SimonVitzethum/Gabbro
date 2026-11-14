@@ -359,7 +359,7 @@ theorem okS_start (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
     against handlers and oracles as before. -/
 def KoerperGutS (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (f : D.Fn) :
     Prop :=
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →
@@ -370,7 +370,7 @@ def KoerperGutS (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (
         (∀ g : D.Fn,
           execEndH (V := vertragVon D f) S O' U passes (torRuf P R) (P.rumpf f) σ ρ ≠
             EndAusgang.logik (Logik.vorbedingung g))) ∧
-  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  (∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneLogik R →
@@ -413,7 +413,7 @@ def FunkU (HU : List (UEintrag D)) : Prop :=
   ∀ (L : D.Lock) (σ : World D) (s s' : Speicher D), (L, σ, s) ∈ HU → (L, σ, s') ∈ HU → s = s'
 
 def KurzU (N : Nat) (HU : List (UEintrag D)) : Prop :=
-  ∀ e ∈ HU, e.2.1.spur.length < N
+  ∀ e ∈ HU, e.2.1.rang < N
 
 /-- Every recorded source memory meets the lock's invariant. -/
 def InvU (S : SperrInv D) (HU : List (UEintrag D)) : Prop :=

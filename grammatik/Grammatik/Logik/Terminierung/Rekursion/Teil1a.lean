@@ -41,7 +41,7 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
   have hfm : (mitSpeicher M σ).faeden t = M.faeden t := rfl
   have hlen : ∀ z : RufFadenG D, (RufFadenSchluesselG z).length = z.stapel.length + 1 := by
     intro z; simp only [RufFadenSchluesselG, List.map_cons, List.length_cons, List.length_map, Nat.add_left_cancel_iff]
-  rcases schrittArt hg hb (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) true with
+  rcases schrittArt hg hb 0 (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) true with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · -- the head steps: same stack, same key, lower potential
     rw [hfm, ← hfa'] at hst hpot
@@ -72,8 +72,8 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
       rcases hdir with ⟨hz, _⟩ | ⟨n, hn, hp, _⟩
       · exact hz
       · exact torS_tor zyk rk fs hvoll hn hp
-    have hlt : potRest (fun _ => 0) pa caller'.rest.2.2.2.2 + 1 ≤
-        potRest (fun _ => 0) pa (M.faeden t).kopf.rest.2.2.2.2 := by
+    have hlt : potRest 0 (fun _ => 0) pa caller'.rest.2.2.2.2 + 1 ≤
+        potRest 0 (fun _ => 0) pa (M.faeden t).kopf.rest.2.2.2.2 := by
       rcases hdir with ⟨_, h⟩ | ⟨_, _, _, h⟩
       · simp only [Nat.add_zero] at h; omega
       · exact h
@@ -106,7 +106,7 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
   · -- a return: the head goes, the caller stays at most where it was
     rw [hfm] at hst
     rw [← hfa'] at hst' hpop
-    obtain ⟨hgate, hle⟩ := hpop (fun _ => 0) (tor zyk rk caller.f) (torS zyk rk fs caller.f) true
+    obtain ⟨hgate, hle⟩ := hpop 0 (fun _ => 0) (tor zyk rk caller.f) (torS zyk rk fs caller.f) true
     have hkey : RufSchluesselG (M'.faeden t).kopf = RufSchluesselG caller := by
       rcases hk with he | ⟨_, he⟩ | ⟨_, _, _, _, _, he, _⟩ | ⟨_, _, _, _, _, he, _⟩
       · exfalso
@@ -129,8 +129,8 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
       rw [hst, hst']
       simp only [List.map_cons, List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
       apply slt_praefix
-      by_cases hp : potRest (fun _ => 0) pa (M'.faeden t).kopf.rest.2.2.2.2 <
-          potRest (fun _ => 0) pa caller.rest.2.2.2.2
+      by_cases hp : potRest 0 (fun _ => 0) pa (M'.faeden t).kopf.rest.2.2.2.2 <
+          potRest 0 (fun _ => 0) pa caller.rest.2.2.2.2
       · exact Or.inl (wlt_pot (gew_fst m rk hkey) hp)
       · refine Or.inr ⟨Prod.ext (gew_fst m rk hkey) (by dsimp only [gew]; omega), trivial⟩
     · rw [hst']

@@ -14,10 +14,10 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
 /-- A call in a binding scope uses shape duties only for its resolved target. -/
-theorem lowCall_sim_teilB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ Λ' : List (Res (declOf u))}
+theorem lowCall_sim_teilB {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ Λ' : List (Res (declOf u))}
     {cname : String} {args : List UArg}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ'} {bst : Gabbro.Body.Stmt}
-    (h : lowCallL (l := false) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩)
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ'} {bst : Gabbro.Body.Stmt}
+    (h : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', g⟩)
     (hb : namedStmt u fn ns (.call cname args) = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (hTarget : ∀ d, fnSuch u cname = some (fnAt u d) →

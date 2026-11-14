@@ -46,7 +46,7 @@ namespace Gabbro.Grammatik
 theorem igPschlecht_nicht_invGutGrund :
     ¬ Zielsatz.InvGutGrund igPschlecht 0 (axWahr igD) (SperrInv.leer igD) igSetze := by
   intro h
-  have h3 := h igO (gutO_rahmenO igO_gut) igO_lokal (axVertragO_wahr igO) (fun _ σ => σ) ig_havoc
+  have h3 := h igO (gutO_rahmenO igO_gut) igO_lokal (axVertragOP_of_O _ (axVertragO_wahr igO)) (fun _ σ => σ) ig_havoc
     (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil igPschlecht))
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil igPschlecht).1) (igSp.welt []) .nil rfl _ _ rfl ()
     (List.mem_singleton.mpr rfl) rfl

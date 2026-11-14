@@ -327,6 +327,10 @@ theorem uebernahmeE (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab �
   orte := fun _ => rfl
   inv := fun _ _ => rfl
   atom := hT
+  axPre := fun a _ σ' ρ _ _ => by
+    -- This extension retains its existing unresolved provenance for every foreign item.
+    -- Its oracle therefore owes unconditional summaries, irrespective of the source pre.
+    exact preQ_hw (programmE D g₀ P) (by intro h; cases h) σ' ((einE D g₀).aparamsUm a ρ)
   ax := fun a W' v => by
     show Q a _ _ = _
     erw [castV_rund]

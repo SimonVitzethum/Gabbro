@@ -89,12 +89,20 @@ def aP : Programm aD where
 def aS : Speicher aD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.elim⟩
 
 /-- A foreign body that writes nothing. -/
-def oG : Orakel aD := ⟨fun _ σ _ => (σ, 0), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+def oG : Orakel aD where
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 /-- A foreign body that writes `T[7]`, outside the declared extent `0 .. 1`. -/
-def oB : Orakel aD :=
-  ⟨fun _ σ _ => (σ.storeSlot () 7 () ⟨5, by decide, by decide⟩, 0), fun r => r.elim, fun r => r.elim,
-    fun g => g.elim, fun _ => none⟩
+def oB : Orakel aD where
+  wirktL := fun _ σ _ => ({ σ.storeSlot () 7 () ⟨5, by decide, by decide⟩ with spur := [] }, 0)
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 theorem oG_gut : ImBereichO oG := fun _ _ _ _ _ _ _ => rfl
 
@@ -102,7 +110,7 @@ theorem oB_nicht : ¬ ImBereichO oB := by
   intro h
   have := h () (aS.welt []) .nil () 7 () (by simp only [ImBereich, Int.zero_le_ofNat, Bool.false_eq_true, Int.reduceLT, or_self, and_false,
   not_false_eq_true])
-  simp only [oB, World.storeSlot, ↓reduceDIte, ↓reduceIte] at this
+  simp only [Orakel.wirkt, oB, World.auf, World.ohneLese, World.storeSlot, ↓reduceDIte, ↓reduceIte] at this
   have := congrArg Zahl.n this
   simp only [Speicher.welt, aS, Int.reduceEq] at this
 

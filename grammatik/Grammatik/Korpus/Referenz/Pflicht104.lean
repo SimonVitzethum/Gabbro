@@ -289,10 +289,10 @@ theorem oblig_nutzer_ist_stated : G104_referenz_oblig.nutzerPflicht := oblig_nut
 
 /-- The oracle of `gD`: no axiom, register or global exists. -/
 def oO : Orakel G104_referenz_oblig.gD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- The empty oracle meets the oracle clauses of the named hardware assumption;
     the native CPU contract is supplied explicitly. -/

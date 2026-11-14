@@ -1,5 +1,4 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Pflichten
 public import Bruecke.Pruefung
 public import Grammatik.Korpus.Programme.Einheit108
@@ -67,8 +66,8 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
 
-example : zuBody u ra = some read_a_body := rfl
-example : zuBody u rc = some read_c_body := rfl
+theorem read_a_body_eq : zuBodyZ u ra = some read_a_body := by cbv
+theorem read_c_body_eq : zuBodyZ u rc = some read_c_body := by cbv
 example : preExpr ra = read_a_pre := rfl
 example : preExpr rc = read_c_pre := rfl
 example : ra.puts = read_a_writes := rfl
@@ -77,8 +76,12 @@ example : (fun s s' r => (postU u wellFormed ra s s' r).getD False) = read_a_pos
 example : (fun s s' r => (postU u wellFormed rc s s' r).getD False) = read_c_post := rfl
 example : preProp wellFormed ra = read_a_requires := rfl
 example : preProp wellFormed rc = read_c_requires := rfl
-example : meetsU u wellFormed ra ((zuBody u ra).getD []) = read_a_meets_statement := rfl
-example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statement := rfl
+example : meetsU u wellFormed ra ((zuBodyZ u ra).getD []) = read_a_meets_statement := by
+  rw [read_a_body_eq]
+  rfl
+example : meetsU u wellFormed rc ((zuBodyZ u rc).getD []) = read_c_meets_statement := by
+  rw [read_c_body_eq]
+  rfl
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit108.E8 :=
@@ -92,7 +95,7 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
 theorem wf_eq : wellFormed = fun s => Gabbro.Body.WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
 
-theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq]; rfl
+theorem wfU_eq : wfU u = wellFormed := by rw [wf_eq] <;> rfl
 
 /-- Every duty of the unit, as the bridge states it: GabbroV's proofs. -/
 theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧
@@ -100,8 +103,8 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨read_a_body, (by kernel_rfl), read_a_meets⟩
-  | ⟨1, _⟩ => exact ⟨read_c_body, (by kernel_rfl), read_c_meets⟩
+  | ⟨0, _⟩ => exact ⟨read_a_body, read_a_body_eq, read_a_meets⟩
+  | ⟨1, _⟩ => exact ⟨read_c_body, read_c_body_eq, read_c_meets⟩
 
 /-! GENERIC-WITNESS beispiele/0108-disjoint-start-locks.gab pflichten_108
 

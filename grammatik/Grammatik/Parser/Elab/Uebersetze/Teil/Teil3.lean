@@ -57,6 +57,7 @@ def sTypText : STyp → String
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
   | .dyn n _ => "dyn " ++ n
+  | .tuple _ => "tuple"
 
 /-- Normalize the complete table access rights. Owner identities resolve
     against the unit's declared owner namespace; anything else (unknown
@@ -85,6 +86,26 @@ def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
   | some (_, index) => .ok index
   | none => .error ("unknown data space: " ++ name)
 
+/-- C13: the declared STORAGE width in bits of a type as written: a builtin unsigned word (with or without a range),
+    a `wrapping` field of one, or an alias of one (`uAliasBreiten`); `0` for everything else. It is the width the
+    declaration chose, never the width the range of the type happens to fit. -/
+def uSpeicherBreite (widths : List (String × (Int × Int))) : STyp → Nat
+  | .atom a =>
+    if 0 < uAtomBreite a then uAtomBreite a
+    else
+      match uSuch "type" widths (a ++ "#bits") with
+      | .ok (w, _) => w.toNat
+      | .error _ => 0
+  | .range t _ _ _ => uSpeicherBreite widths t
+  | .wrap t => uSpeicherBreite widths t
+  | _ => 0
+
+/-- The tuple namespace also retains integer storage widths: two equal ranges must not
+    accidentally change the width of a field intrinsic when their tuples are interned. -/
+def uTuplePrefix (alias : List (String × (Int × Int))) (elements : List STyp) : String :=
+  "#tuple:" ++ String.intercalate "," (elements.map (fun ty => toString (uSpeicherBreite alias ty))) ++ ":"
+
+mutual
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). `own@m` rights resolve against the unit's declared owner
@@ -135,11 +156,25 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
+  | .tuple elements => do
+    let types ← uTypInList alias tabs named spaces eigner elements
+    match named.find? (fun (name, ty) => name.startsWith (uTuplePrefix alias elements) &&
+        (match ty with | .prod _ fields => fields == types | _ => false)) with
+    | some (_, ty) => pure ty
+    | none => throw "source export: tuple type has no generated record schema"
   | .str n =>
     match uSchranke alias n with
     | some k => if 0 ≤ k then .ok (.str k.toNat) else .error "string of a negative maximum"
     | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
+
+-- Tuple components in order: `mapM` without nested recursion.
+def uTypInList (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty))
+    (spaces eigner : List String) : List STyp → Except String (List Ty)
+  | [] => pure []
+  | ty :: rest => do
+    pure ((← uTypIn alias tabs named spaces eigner ty) :: (← uTypInList alias tabs named spaces eigner rest))
+end
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
 def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) (eigner : List String := []) : STyp → Except String Ty :=
@@ -171,20 +206,6 @@ def uFeldTyp (alias : List (String × (Int × Int))) (ty : STyp) : Except String
   | .ok (.int lo hi) => .ok (lo, hi)
   | .ok _ => .error ("field type without G form: " ++ sTypText ty)
   | .error e => .error e
-
-/-- C13: the declared STORAGE width in bits of a type as written: a builtin unsigned word (with or without a range),
-    a `wrapping` field of one, or an alias of one (`uAliasBreiten`); `0` for everything else. It is the width the
-    declaration chose, never the width the range of the type happens to fit. -/
-def uSpeicherBreite (widths : List (String × (Int × Int))) : STyp → Nat
-  | .atom a =>
-    if 0 < uAtomBreite a then uAtomBreite a
-    else
-      match uSuch "type" widths (a ++ "#bits") with
-      | .ok (w, _) => w.toNat
-      | .error _ => 0
-  | .range t _ _ _ => uSpeicherBreite widths t
-  | .wrap t => uSpeicherBreite widths t
-  | _ => 0
 
 /-- C13: the widths of the fields of a table, for the fields of a bare unsigned word type. -/
 def uFeldBreiten (widths : List (String × (Int × Int))) (fds : List SFeld) : List (String × Nat) :=

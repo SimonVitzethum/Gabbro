@@ -302,10 +302,10 @@ def t4P : Programm t4D where
     | 3 => t4LRumpf
 
 def t4O : Orakel t4D where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 /-- Start memory: every slot reads `0`. -/
 def t4Sp : Speicher t4D :=

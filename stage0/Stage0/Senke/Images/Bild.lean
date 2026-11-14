@@ -37,6 +37,7 @@
   signature), so neither the spawns nor the call write a parameter word.
 -/
 module
+public import Stage0.Senke.Anweisung.Fast.Function
 public import Stage0.Senke.Rekursion
 public import Stage0.Senke.Anweisung.Refusal
 public import Stage0.Senke.Welt.AlignUp
@@ -156,6 +157,20 @@ def maxTop (cs : List (List II × Nat)) : Nat := cs.foldl (fun a c => max a c.2)
 
 def depthOf (K L : Nat) : Nat := (K - FB) / L - 1
 
+/-- Automatic images retain the established 4 MiB reserve when it suffices. -/
+def stackReserveFloor : Nat := 2 ^ 19
+
+/-- A width-independent minimum for automatic images, not a source recursion bound.
+    The emitted depth can be larger; the existing checked image extent remains the limit. -/
+def stackReserveDepth : Nat := 64
+
+/-- Zero requests automatic sizing from the first lowering pass. Positive capacities
+    keep their exact meaning. Startup scratch and the root's initial call both fit. -/
+def stackReserve (requested largest scratch : Nat) : Nat :=
+  if requested = 0 then
+    max stackReserveFloor (max (FB + (stackReserveDepth + 1) * largest) scratch)
+  else requested
+
 /-- What `bild` checks of the finished layout. -/
 def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
@@ -168,7 +183,7 @@ instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Decidable (BildGut D main roots lens cs fp0 Ks K Y code) := by
   unfold BildGut; infer_instance
 
-/-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first
+/-- The image of a program, or why not: `Ks` slots of stack (zero selects automatic sizing), the world laid out by `Y` from its first
     byte, `main` started with the environment `ρ` (its words in the first frame). The world base is the
     stack end aligned up to the required base alignment `req` (`alignUp`: `0` imposes no alignment);
     `K` covers the stacks, the alignment padding and the world. -/
@@ -178,6 +193,9 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
   match lowAll passes P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
+    let requested := Ks
+    let Ks := stackReserve requested (maxTop cs0)
+      ((main :: roots).foldl (fun top f => max top (startScratch f + 8)) 0)
     let lens := cs0.map (·.1.length)
     let k := roots.length
     -- An array, filled once: a read of the address list inside `A` walked it at every call site (n²).
@@ -194,7 +212,9 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       let n := depthOf Ks (maxTop cs)
       let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
-      if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
+      if BildGut D main roots lens cs fp0 Ks K Yb code ∧
+          fp0 = codeBase + 16 * (headLen k + body.length) ∧
+          (requested ≠ 0 ∨ stackReserveDepth ≤ n) then
         .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ,
           starts.map (fun start => encodeEnv Yb start.2), req⟩
       else if D.gruende main != 0 then .error "ir: main has an uncaught reason channel"
@@ -204,6 +224,8 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       else if Ks < FB + 2 * maxTop cs ∨ ((main :: roots).all fun f => decide (startScratch f + 8 ≤ Ks)) = false then
         .error "ir: the stack is too small for one call"
       else if (code.all fun i => decide (i.o < 256)) = false then .error "ir: an opcode above 255"
+      else if requested = 0 ∧ n < stackReserveDepth then
+        .error "ir: relocated frames exceed the automatic stack reserve"
       else .error "ir: the world does not lie above the stack"
 
 def encII (i : II) : List Runner.B := Runner.Prog.insB i.o i.a i.b i.c

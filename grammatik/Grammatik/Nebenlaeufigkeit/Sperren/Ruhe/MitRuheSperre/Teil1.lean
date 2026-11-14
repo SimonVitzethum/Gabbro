@@ -106,10 +106,10 @@ def rufZuD (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitR
 
 /-- **The oracle of `D` an oracle of `D.mitRuhe` answers with.** -/
 def Orakel.zurueck (O' : Orakel D.mitRuhe) : Orakel D where
-  wirkt a σ ρ := (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1, (O'.wirkt a (worldR σ) (envR ρ)).2)
-  regLies r σ := O'.regLies r (worldR σ)
+  wirktL a σ ρ := (worldZ (O'.wirktL a (worldR σ) (envR ρ)).1, (O'.wirktL a (worldR σ) (envR ρ)).2)
+  regLiesL r σ := O'.regLiesL r (worldR σ)
   regSchreib := O'.regSchreib
-  sichtbar g σ := O'.sichtbar g (worldR σ)
+  sichtbarL g σ := O'.sichtbarL g (worldR σ)
   zeiger k := (O'.zeiger k).bind id
 
 /-- **Every oracle of `D.mitRuhe` answers like one of `D`** (`OrakelRu`). Until 2026-09-15
@@ -119,10 +119,59 @@ def Orakel.zurueck (O' : Orakel D.mitRuhe) : Orakel D where
     the root, so every run agrees. -/
 theorem orakelRu_zurueck (O' : Orakel D.mitRuhe) : OrakelRu (Orakel.zurueck O') O' :=
   ⟨fun a σ ρ => by
-      show O'.wirkt a (worldR σ) (envR ρ) =
-        (worldR (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1), (O'.wirkt a (worldR σ) (envR ρ)).2)
-      rw [worldR_worldZ],
-    fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
+      show ((O'.wirktL a (worldR σ).ohneLese (envR ρ)).1.auf (worldR σ),
+          (O'.wirktL a (worldR σ).ohneLese (envR ρ)).2) =
+        (worldR ((worldZ (O'.wirktL a (worldR σ.ohneLese) (envR ρ)).1).auf σ),
+          (O'.wirktL a (worldR σ.ohneLese) (envR ρ)).2)
+      rw [worldR_ohneLese, ← worldR_auf, worldR_worldZ],
+    fun r σ => by
+      show O'.regLiesL r (worldR σ).ohneLese = O'.regLiesL r (worldR σ.ohneLese)
+      rw [worldR_ohneLese],
+    fun g σ => by
+      show O'.sichtbarL g (worldR σ).ohneLese = O'.sichtbarL g (worldR σ.ohneLese)
+      rw [worldR_ohneLese],
+    fun _ => rfl⟩
+
+/-- **The oracle of `D` an oracle of `D.mitRuhe` answers with, at any world**: `O'` at the translated world. -/
+theorem wirkt_zurueck_welt (O' : Orakel D.mitRuhe) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    (Orakel.zurueck O').wirkt a σ ρ =
+      (worldZ (O'.wirkt a (worldR σ) (envR ρ)).1, (O'.wirkt a (worldR σ) (envR ρ)).2) := by
+  show ((worldZ (O'.wirktL a (worldR σ.ohneLese) (envR ρ)).1).auf σ, (O'.wirktL a (worldR σ.ohneLese) (envR ρ)).2) =
+    (worldZ ((O'.wirktL a (worldR σ).ohneLese (envR ρ)).1.auf (worldR σ)),
+      (O'.wirktL a (worldR σ).ohneLese (envR ρ)).2)
+  rw [worldR_ohneLese, ← worldZ_auf, worldZ_worldR]
+
+theorem regLies_zurueck_welt (O' : Orakel D.mitRuhe) (r : D.Reg) (σ : World D) :
+    (Orakel.zurueck O').regLies r σ = O'.regLies r (worldR σ) := by
+  show O'.regLiesL r (worldR σ.ohneLese) = O'.regLiesL r (worldR σ).ohneLese
+  rw [worldR_ohneLese]
+
+theorem sichtbar_zurueck_welt (O' : Orakel D.mitRuhe) (g : D.Glob) (σ : World D) :
+    (Orakel.zurueck O').sichtbar g σ = O'.sichtbar g (worldR σ) := by
+  show O'.sichtbarL g (worldR σ.ohneLese) = O'.sichtbarL g (worldR σ).ohneLese
+  rw [worldR_ohneLese]
+
+/-- **The oracle of `D.mitRuhe` at any of its worlds**: `O` at the translated-back world (the erasure commutes with the
+    translation, `worldZ_ohneLese`). -/
+theorem wirkt_mitRuhe_welt (O : Orakel D) (a : D.mitRuhe.Ax) (σ : World D.mitRuhe)
+    (ρ : Env D.mitRuhe (D.mitRuhe.aparams a)) :
+    O.mitRuhe.wirkt a σ ρ =
+      (worldR (O.wirkt a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).1, (O.wirkt a (worldZ σ) (envZ (Γ := D.aparams a) ρ)).2) := by
+  show ((worldR (O.wirktL a (worldZ σ.ohneLese) (envZ (Γ := D.aparams a) ρ)).1).auf σ,
+      (O.wirktL a (worldZ σ.ohneLese) (envZ (Γ := D.aparams a) ρ)).2) =
+    (worldR ((O.wirktL a (worldZ σ).ohneLese (envZ (Γ := D.aparams a) ρ)).1.auf (worldZ σ)),
+      (O.wirktL a (worldZ σ).ohneLese (envZ (Γ := D.aparams a) ρ)).2)
+  rw [worldZ_ohneLese, ← worldR_auf, worldR_worldZ]
+
+theorem regLies_mitRuhe_welt (O : Orakel D) (r : D.Reg) (σ : World D.mitRuhe) :
+    O.mitRuhe.regLies r σ = O.regLies r (worldZ σ) := by
+  show O.regLiesL r (worldZ σ.ohneLese) = O.regLiesL r (worldZ σ).ohneLese
+  rw [worldZ_ohneLese]
+
+theorem sichtbar_mitRuhe_welt (O : Orakel D) (g : D.Glob) (σ : World D.mitRuhe) :
+    O.mitRuhe.sichtbar g σ = O.sichtbar g (worldZ σ) := by
+  show O.sichtbarL g (worldZ σ.ohneLese) = O.sichtbarL g (worldZ σ).ohneLese
+  rw [worldZ_ohneLese]
 
 /-- The move of `D` a move of `D.mitRuhe` makes. -/
 def umweltZ (U' : Umwelt D.mitRuhe) : Umwelt D := fun L σ => worldZ (U' L (worldR σ))

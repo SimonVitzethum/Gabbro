@@ -82,7 +82,9 @@ def checkLiteralQuantifier (globals locals : List String) (binder : String) :
     checkLiteralQuantifier globals locals binder rest
 end
 
+mutual
 def checkLiteralType (globals locals : List String) : STyp → Except String Unit
+  | .tuple types => checkLiteralTypes globals locals types
   | .atom name =>
     if istTypWort name || istZuckerBreite name || name == "f32" || name == "f64" then pure ()
     else checkLiteralName globals locals name
@@ -98,6 +100,14 @@ def checkLiteralType (globals locals : List String) : STyp → Except String Uni
   | .str n => checkLiteralExpression globals locals n
   | .raw raw => checkLiteralRaw globals locals raw
   | ty => checkLiteralNames globals locals (Oeffentlich.namenT ty)
+
+/-- The literal check over the components of a tuple, in order. -/
+def checkLiteralTypes (globals locals : List String) : List STyp → Except String Unit
+  | [] => pure ()
+  | ty :: rest => do
+    checkLiteralType globals locals ty
+    checkLiteralTypes globals locals rest
+end
 
 def checkLiteralClause (globals locals : List String) : SKlausel → Except String Unit
   | .needs e | .gives e | .cost e | .drops e => checkLiteralExpression globals locals e
@@ -149,6 +159,9 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
   | .elsif e body | .trim e _ body | .locks _ e body => do
     checkLiteralExpression globals locals e
     checkLiteralBody globals locals body
+  | .boundedLoop raw body => do
+    checkLiteralRaw globals ((boundedLoopLocals raw).map Prod.fst ++ locals) raw
+    checkLiteralBody globals ((boundedLoopLocals raw).map Prod.fst ++ locals) body
   | .retry _ body | .loop _ body | .waive _ body | .watch _ body | .child body =>
     checkLiteralBody globals locals body
   | .ret value => checkLiteralExpressions globals locals value.toList

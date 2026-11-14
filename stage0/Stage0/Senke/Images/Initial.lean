@@ -51,7 +51,9 @@ theorem initialLayout_bild {u : UProg} {P : Programm (declOf u)} {passes : Nat}
                 · cases emitted
                 · split at emitted
                   · cases emitted
-                  · cases emitted
+                  · split at emitted
+                    · cases emitted
+                    · cases emitted
 
 /-- Bounds are inherited from the actual image layout check; initialization changes
     neither image size nor its permitted address range. -/

@@ -33,7 +33,7 @@ table Ordner count N {
 
     occupied benutzt;
 
-    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+    invariant jeder_erreicht_die_wurzel :
         forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
 }
 

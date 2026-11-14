@@ -21,11 +21,11 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
-theorem lowStmtL_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+theorem lowStmtL_assign {loopMode : Bool} (hT : TabEindeutig u) (c : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (b f : String) (ix : UIdx) (v : USide) :
-    lowStmtL (l := false) u c Γ fn Λ (.assign b f ix v) =
-      (lowAssignDurchL (l := false) u c Γ fn Λ b f ix v).map (fun st => ⟨Λ, st⟩) := by
-  have hn : lowAssignDurchW (l := false) u c Γ fn Λ b f ix v = none := by
+    lowStmtL (l := loopMode) u c Γ fn Λ (.assign b f ix v) =
+      (lowAssignDurchL (l := loopMode) u c Γ fn Λ b f ix v).map (fun st => ⟨Λ, st⟩) := by
+  have hn : lowAssignDurchW (l := loopMode) u c Γ fn Λ b f ix v = none := by
     unfold lowAssignDurchW
     split
     · rfl
@@ -33,32 +33,30 @@ theorem lowStmtL_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (Γ : Ctx) 
       · rename_i num _
         split
         · rename_i hlt
-          rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)]
-          rfl
+          rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)] <;> rfl
         · rfl
       · rfl
   simp only [lowStmtL, hn, Option.getD_none]
   try rfl
 
-theorem lowStmtL_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+theorem lowStmtL_assignTab {loopMode : Bool} (hT : TabEindeutig u) (c : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (b f : String) (ix : UIdx) (v : USide) :
-    lowStmtL (l := false) u c Γ fn Λ (.assignTab b f ix v) =
-      (lowAssignTabL (l := false) u c Γ fn Λ b f ix v).map (fun st => ⟨Λ, st⟩) := by
-  have hn : lowAssignTabW (l := false) u c Γ fn Λ b f ix v = none := by
+    lowStmtL (l := loopMode) u c Γ fn Λ (.assignTab b f ix v) =
+      (lowAssignTabL (l := loopMode) u c Γ fn Λ b f ix v).map (fun st => ⟨Λ, st⟩) := by
+  have hn : lowAssignTabW (l := loopMode) u c Γ fn Λ b f ix v = none := by
     unfold lowAssignTabW
     split
     · rfl
     · rename_i t _
-      rw [fieldHitW_none (hT.2 t)]
-      rfl
+      rw [fieldHitW_none (hT.2 t)] <;> rfl
   simp only [lowStmtL, hn, Option.getD_none]
   try rfl
 
 /-- **A slot write through a pointer**, in every scope. -/
-theorem lowAssignDurch_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
+theorem lowAssignDurch_simB {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
     {Λ : List (Res (declOf u))} {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowAssignDurchL (l := false) u c Γ fn Λ b fname ix v = .ok g)
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowAssignDurchL (l := loopMode) u c Γ fn Λ b fname ix v = .ok g)
     (hb : stmtBody u fn (.assign b fname ix v) = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -99,12 +97,12 @@ theorem lowAssignDurch_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : B
                     | error error =>
                       simp only [hcap] at h
                       change (Except.error error : Except String
-                        (Stmt (declOf u) (verOf u c) false Γ Λ Λ)) = .ok g at h
+                        (Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ)) = .ok g at h
                       cases h
                     | ok cap =>
                       simp only [hcap, bind, Except.bind] at h
                       cases h
-                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq Γ Λ (verOf u c)
+                      obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (loopMode := loopMode) Γ Λ (verOf u c)
                         ⟨num, hlt⟩ fh (Expr.var pv) cap.down i e _ hG
                       rw [heq]
                       have hparam : (fn.params[j]?).map (·.2) =
@@ -162,12 +160,12 @@ theorem lowAssignDurch_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : B
                         | error error =>
                           simp only [hcap] at h
                           change (Except.error error : Except String
-                            (Stmt (declOf u) (verOf u c) false Γ Λ Λ)) = .ok g at h
+                            (Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ)) = .ok g at h
                           cases h
                         | ok cap =>
                           simp only [hcap, bind, Except.bind] at h
                           cases h
-                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq Γ Λ (verOf u c)
+                          obtain ⟨e2, he2, heq⟩ := assignDurchOwnStmt_eq (loopMode := loopMode) Γ Λ (verOf u c)
                             ⟨num, hlt⟩ fh owner m (Expr.var pv) cap.down i e hm heig _ hG
                           rw [heq]
                           have hparam : (fn.params[j]?).map (·.2) =
@@ -201,10 +199,10 @@ theorem lowAssignDurch_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : B
     · cases h
 
 /-- **A slot write at a table**, in every scope. -/
-theorem lowAssignTab_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
+theorem lowAssignTab_simB {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
     {Λ : List (Res (declOf u))} {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowAssignTabL (l := false) u c Γ fn Λ b fname ix v = .ok g)
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowAssignTabL (l := loopMode) u c Γ fn Λ b fname ix v = .ok g)
     (hb : stmtBody u fn (.assignTab b fname ix v) = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -235,7 +233,7 @@ theorem lowAssignTab_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : Bod
             split at h
             · rename_i hw
               cases h
-              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq Γ Λ (verOf u c)
+              obtain ⟨e2, he2, heq⟩ := assignSlotStmt_eq (loopMode := loopMode) Γ Λ (verOf u c)
                 t fh i e _ hG
               rw [heq]
               simp only [stmtBody] at hb

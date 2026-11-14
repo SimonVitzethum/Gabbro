@@ -92,13 +92,13 @@ def σF : World DF :=
 /-- The oracle: flips every slot to `true`, keeps globals and locks, and
     records the axiom's write event (as the recording `GutO` demands). -/
 def OF : Orakel DF :=
-  { wirkt := fun _ σ _ =>
+  { wirktL := fun _ σ _ =>
       ({ slots := fun _ _ _ => true
          globs := fun g => nomatch g
-         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
-    regLies := fun r _ => nomatch r
+         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt }, 0)
+    regLiesL := fun r _ => nomatch r
     regSchreib := fun r _ => nomatch r
-    sichtbar := fun g _ => nomatch g }
+    sichtbarL := fun g _ => nomatch g }
 
 /-- The axiom writes only the guarded table, whose guard is in hand. -/
 theorem hdF : ∀ t, DF.aschreibt () t = true → darf DF t ΛF := by
@@ -137,7 +137,7 @@ theorem hOF : GutO OF := by
       have hW : OF.wirkt () σ ρ =
           ({ slots := fun _ _ _ => true
              globs := fun g => nomatch g
-             spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0) := rfl
+             spur := axiomSpur [()] [] () [Res.held ()] σ.ohneLese.haelt ++ σ.spur }, 0) := rfl
       refine ⟨?_, by rw [hW]; rfl, ?_⟩
       · constructor
         · intro t ht
@@ -166,7 +166,7 @@ theorem hOF : GutO OF := by
             rfl
           rw [eL]
           exact hgt () rfl () (List.Mem.head _)
-        · rw [hW]
+        · rw [hW, World.ohneLese_haelt]
 
 /-- The static trace names exactly the held lock. -/
 theorem hhF : HeldGenau ΛF σF.haelt := by

@@ -17,7 +17,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : Sperr
 
 /-- **The head's prediction is never a `logik` outcome** (as `kopfS_keineLogik`), against the
     record handler, oracle, lock move and atomic environment. -/
-theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
     (hG : KopfSA P O passes Q S lok Tg m zyk F W) :
@@ -36,12 +36,12 @@ theorem kopfSA_keineLogik (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) hPX hHA (gleichRS_orakelAus O HA)
   rw [he] at h1
   exact (hK F.f).2 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) A hHA (rufAusL H)
+    (orakelAus_vertragOP hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) A hHA (rufAusL H)
     (rufAusL_rahmen hv) (rufAusL_ohneLogik hv.1) F.s0 F.rho hreq e
     (zErgG_gleich_logik (ZErgG.folgt_logik h1))
 
 /-- The same, for a residue named by its shape. -/
-theorem kopfSA_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem kopfSA_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
     (hG : KopfSA P O passes Q S lok Tg m zyk F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
@@ -57,7 +57,7 @@ theorem kopfSA_keineLogik' (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O
   exact ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩
 
 /-- **At a release the invariant holds in the machine** (as `kopfS_frei_inv`). -/
-theorem kopfSA_frei_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem kopfSA_frei_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {F : RufRahmenG D} {W : World D}
     (hG : KopfSA P O passes Q S lok Tg m zyk F W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -80,7 +80,7 @@ theorem kopfSA_frei_inv (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   | inr g => exact (hg.2 g hcs).symm
 
 /-- **The release after the body keeps the replay** (`freiGib`). -/
-theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {z : RufFadenG D} {W : World D}
     (hF : FadenSA P O passes Q S lok Tg m zyk z W) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock)
@@ -93,12 +93,12 @@ theorem fadenSA_frei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     (fun O' U A R σ h => semHA_frei_falsch S O' U A passes R L k σ ρ h)
   refine fadenSA_lokalQ hF hr ρ k spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS List.mem_cons_self hg).trans hW
-  exact ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  exact ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     gleichAuf_frei hg spur', hok,
     fun R O' U A _ _ _ => ZErgG.folgt_of_eq (semHA_frei S O' U A passes R L k σ ρ hiσ)⟩
 
 /-- **A `leave`/`next` out of a `locks` body keeps the replay**. -/
-theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) {z : RufFadenG D} {W : World D}
     (hF : FadenSA P O passes Q S lok Tg m zyk z W) {Γ : Ctx} {Λ Λ1 : List (Res D)} (L : D.Lock)
@@ -119,7 +119,7 @@ theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   refine fadenSA_lokalQ hF hr ρ _ spur' (fun σ HX hfx hkx hg hok => ?_)
   have hiσ : S.inv L σ.speicher = true := (inv_gleich hS hLΛ hg).trans hW
   obtain ⟨_, _, hk⟩ := hok
-  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
+  refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, World.rang_le_gibt σ L,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
     ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp only [blockOrteP, Bool.false_eq_true, ↓reduceIte, stmtOrteP, List.append_nil, List.not_mem_nil] at hc, hk⟩,
     fun R O' U A _ _ _ => ZErgG.folgt_of_eq (semHA_peelFrei S O' U A passes R L rest k σ ρ h x hiσ)⟩

@@ -13,23 +13,32 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
-/-- Only numeric entries of explicit integer kind may share a source spelling. Missing
-    kind entries are protected as well; numeric type alone does not admit shadowing. -/
+/-- Scalar integers, booleans and checked indices may share source names. Capability
+    entries stay protected; positional identifiers preserve shadowed scalar values. -/
 def protectedNames : List (String × Ty) → List UParamArt → List String
   | [], _ => []
   | (x, .int ..) :: ps, .int :: ks => protectedNames ps ks
+  | (x, .bool) :: ps, .bool :: ks => protectedNames ps ks
+  | (_, .int ..) :: ps, .index _ :: ks => protectedNames ps ks
+  | (_, .prod ..) :: ps, .wert :: ks => protectedNames ps ks
   | (x, _) :: ps, _ :: ks => x :: protectedNames ps ks
   | (x, _) :: ps, [] => x :: protectedNames ps []
 
 def binderOf : UStmt → Option String
   | .bind x _ _ => some x
   | .bindMut x _ _ _ => some x
+  | .bindB x _ => some x
+  | .bindCall x _ _ => some x
+  | .narrowBeg x _ _ => some x
+  | .loopBeg x _ _ => some x
+  | .bindW x _ _ => some x
+  | .matchBeg _ _ x => some x
   | _ => none
 
 def NameFrisch (ns : List String) (x : String) : Prop :=
   x ∉ ns ∧ x ≠ "result" ∧ x ≠ "#erg" ∧ ∀ i, x ≠ oldName i
 
-/-- All bridge binders have integer kind, so the protected names do not grow. -/
+/-- Scalar bridge binders do not grow the protected names. -/
 def BindFrischL : List String → List UStmt → Prop
   | _, [] => True
   | ns, s :: ss =>
@@ -45,6 +54,10 @@ theorem bindFrischL_bind {ns : List String} {x : String} {d : Option (Int × Int
 
 theorem bindFrischL_bindMut {ns : List String} {x : String} {lo hi : Int} {v : USide}
     {ss : List UStmt} (h : BindFrischL ns (.bindMut x lo hi v :: ss)) :
+    NameFrisch ns x ∧ BindFrischL ns ss := h
+
+theorem bindFrischL_bindB {ns : List String} {x : String} {v : UEns}
+    {ss : List UStmt} (h : BindFrischL ns (.bindB x v :: ss)) :
     NameFrisch ns x ∧ BindFrischL ns ss := h
 
 theorem bindFrischL_sonst {ns : List String} {s : UStmt} {ss : List UStmt}

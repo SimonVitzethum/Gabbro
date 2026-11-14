@@ -38,6 +38,7 @@ def parseFunctionArgument (fuel : Nat) (tokens : List Token) :
     | [.ende] => pure (.path path)
     | _ => throw "static function argument must be a path or function literal"
 
+mutual
 /-- Names bound anywhere inside a literal, used only to preserve their spelling during module
     qualification. The later free-name check follows lexical scopes rather than this overapproximation. -/
 def literalLocals : SAnw → List String
@@ -48,15 +49,29 @@ def literalLocals : SAnw → List String
   | .alloc _ n _ _ _ body => n :: (match body with
       | some body => literalLocals body
       | none => [])
-  | .cond _ yes branches no => literalLocals yes ++ branches.flatMap literalLocals ++
+  | .cond _ yes branches no => literalLocals yes ++ literalLocalsList branches ++
       (match no with | some body => literalLocals body | none => [])
-  | .cases _ arms => arms.flatMap literalLocals
+  | .cases _ arms => literalLocalsList arms
   | .arm _ binder body => binder.toList ++ literalLocals body
   | .each binder _ _ _ _ _ _ body => binder :: literalLocals body
-  | .elsif _ body | .retry _ body | .loop _ body | .waive _ body | .trim _ _ body |
+  | .elsif _ body | .boundedLoop _ body | .retry _ body | .loop _ body | .waive _ body | .trim _ _ body |
     .locks _ _ body | .watch _ body | .grow _ _ body | .child body => literalLocals body
-  | .block statements _ => statements.flatMap literalLocals
+  | .block statements _ => literalLocalsList statements
   | _ => []
-termination_by s => sizeOf s
+termination_by structural statement => statement
+
+/-- Collect branch and block binders without changing their order or multiplicity. -/
+def literalLocalsList : List SAnw → List String
+  | [] => []
+  | statement :: rest => literalLocals statement ++ literalLocalsList rest
+termination_by structural statements => statements
+end
+
+/-- The structural traversal agrees with the original flatMap traversal. -/
+theorem literalLocalsList_eq_flatMap (ss : List SAnw) :
+    literalLocalsList ss = ss.flatMap literalLocals := by
+  induction ss with
+  | nil => rfl
+  | cons head rest ih => simp only [literalLocalsList, List.flatMap_cons, ih]
 
 end Gabbro.Grammatik.Parser

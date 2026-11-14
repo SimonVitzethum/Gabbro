@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
 variable {Q : AxEns D} {S : SperrInv D}
 
-theorem akteurSA_g7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+theorem akteurSA_g7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hM : ∀ f, MassPflicht P passes Q S Tg m zyk f)
     (hTV : ∀ c, Tg c → VertragsFrei P c)

@@ -63,10 +63,10 @@ def program : Programm D where
     exact body
 
 def oracle : Orakel D where
-  wirkt a := Fin.elim0 a
-  regLies r := Fin.elim0 r
+  wirktL a := Fin.elim0 a
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def initial : World D where
   slots t k f := by
@@ -95,7 +95,7 @@ theorem increment_oldG_zeuge :
     image.isOk = true ∧ (functionFrame program function).snapshotWords = 5 ∧
     oldCells (program.ensures function) =
       [.glob global, .elem tab field 0, .elem tab field 1, .elem tab field 2, .elem tab field 3] := by
-  exact ⟨by decide +kernel, rfl, rfl⟩
+  exact ⟨by decide_cbv, rfl, rfl⟩
 
 /-- The canonical model returns 1 after both writes. The body changes index to 2,
     whose entry slot is 7; ensures must continue to use its original index 1. -/

@@ -83,7 +83,8 @@ def TypOptGut : Option STyp → Prop
   | some t => TypGut t
 
 /-- The head of `let`: `mut`, the name, the type, the `=`. -/
-theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp)
+theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut")
+    (ht : tuplePatternNames x = none) (ty : Option STyp)
     (nach : List Token) (hty : TypOptGut ty) (hf : ∀ t, ty = some t → fbT t ≤ f) :
     parseLet (f + 1) ((if m then [.wort "mut"] else []) ++ nameTok x ::
       (druckTypOpt ty ++ .zeichen "=" :: nach)) = parseLetNach f m x ty nach := by
@@ -92,13 +93,13 @@ theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut") (ty :
     intro R; simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact parseLet_nameTok x hx R f
   cases ty with
   | none =>
-    cases m <;> (try rw [hm]) <;> simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Bool.false_eq_true, List.cons_append, nameText_nameTok] <;> rfl
+    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; by_cases hk : istSchluessel x = true <;> simp only [hk, ↓reduceIte, Bool.false_eq_true])) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Bool.false_eq_true, List.cons_append, nameText_nameTok, ht, Option.isSome_none] <;> rfl
   | some t =>
     have hT : parseTyp f (druckTyp t ++ .zeichen "=" :: nach) = .ok (t, .zeichen "=" :: nach) :=
       parse_druckTyp t hty _ f
         ⟨(by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e),
           (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e), rfl, rfl, rfl⟩ (hf t rfl)
-    cases m <;> (try rw [hm]) <;> simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Token.zeichen.injEq, String.reduceEq, Bool.false_eq_true, nameText_nameTok] <;> rfl
+    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; by_cases hk : istSchluessel x = true <;> simp only [hk, ↓reduceIte, Bool.false_eq_true])) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Token.zeichen.injEq, String.reduceEq, Bool.false_eq_true, nameText_nameTok, ht, Option.isSome_none] <;> rfl
 
 /-- An expression right side: neither `@` nor `alloc t (` nor `alloc t ;`. -/
 theorem parseLetNach_expr (f : Nat) (m : Bool) (x : String) (ty : Option STyp) (e : SExpr)
@@ -133,8 +134,9 @@ theorem fbT_of (ty : Option STyp) (t : STyp) (h : ty = some t) :
     (druckTypOpt ty).length = (druckTyp t).length + 1 := by
   subst h; simp only [druckTypOpt, List.cons_append, List.nil_append, List.length_cons, Nat.add_left_cancel_iff]
 
-theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (e : SExpr) (hty : TypOptGut ty)
-    (hg : gut e = true) : AnwBein (.bind m x ty e) := by
+theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ht : tuplePatternNames x = none)
+    (ty : Option STyp) (e : SExpr) (hty : TypOptGut ty) (hg : gut e = true) :
+    AnwBein (.bind m x ty e) := by
   intro rest F _ hF
   simp only [fbA, druckAnw, List.length_cons, List.length_nil, List.length_append,
     List.length_singleton] at hF
@@ -144,7 +146,7 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (
     simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]
   rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
   rw [show F' + 1 + 1 = (F' + 1) + 1 from rfl]
-  rw [parseLet_kopf (F' + 1) m x hx ty _ hty (by
+  rw [parseLet_kopf (F' + 1) m x hx ht ty _ hty (by
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega),
     parseLetNach_expr _ _ _ _ e hg]
   have hO := ausdruck e hg (.zeichen ";" :: rest) F' rfl rfl rfl (by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)
@@ -158,7 +160,8 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (
     list's follow (`KE`). -/
 def anwWortTafel : List (List Char) :=
   ["else", "let", "if", "match", "traverse", "retry", "forever", "breaking", "narrow", "locks", "observes",
-   "leave", "next", "return", "reset", "grow", "free", "child", "transition", "advances", "retires"].map
+   "leave", "next", "return", "reset", "grow", "free", "child", "transition", "advances", "retires",
+   "while", "for"].map
     String.toList
 
 /-- A statement head word (see `anwWortTafel`). -/
@@ -201,6 +204,7 @@ theorem parseStmt_ident (f : Nat) (a : String) (r : List Token)
             e "locks" rfl, e "observes" rfl, e "leave" rfl, e "next" rfl,
             e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl,
             e "child" rfl, e "transition" rfl, e "advances" rfl, e "retires" rfl,
+            e "while" rfl, e "for" rfl,
             Bool.false_eq_true, ite_false] using placed
     · rename_i same
       cases same

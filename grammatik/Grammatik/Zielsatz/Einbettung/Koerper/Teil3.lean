@@ -104,7 +104,7 @@ theorem sim_block_bindAxiom {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (args.orte)
   have hev0 := E.frei_alle hZ (@hev) hρ
-  obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
+  obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
   have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
   have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
   have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
@@ -152,7 +152,7 @@ theorem sim_block_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
     (args.orte)
   have hev0 := E.frei_alle hZ (@hev) hρ
-  obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
+  obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
   have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
   have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
   have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
@@ -209,7 +209,7 @@ theorem sim_block_regRead {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
     : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.regRead r hk rest : Block D V l Γ Λ Λ')) (execBlockHA S' O' U' A' passes R' (exB hS (.regRead r hk rest : Block D V l Γ Λ Λ'))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluesselF hM (.inr (.inl r)) (.inr (.inl (E.reg r)))
   have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
   have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
     rw [List.map_cons, E.rtyp]
@@ -257,7 +257,7 @@ theorem sim_block_regReadElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
     : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.regReadElse r hk zusage sonst rest : Block D V l Γ Λ Λ')) (execBlockHA S' O' U' A' passes R' (exB hS (.regReadElse r hk zusage sonst rest : Block D V l Γ Λ Λ'))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+  obtain ⟨hk1, hs1, hΦ1⟩ := E.schluesselF hM (.inr (.inl r)) (.inr (.inl (E.reg r)))
   have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
   have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
     rw [List.map_cons, E.rtyp]
@@ -346,10 +346,14 @@ theorem sim_block_awaits {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
     : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.awaits g payload hp hL hat rest : Block D V l Γ Λ Λ')) (execBlockHA S' O' U' A' passes R' (exB hS (.awaits g payload hp hL hat rest : Block D V l Γ Λ Λ'))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hMo, hσr, hev⟩ := E.lese_eval'O hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
     [Sum.inr g] [Sum.inr (E.glob g)] rfl
   have hev0 := E.frei_alle hZ (@hev) hρ
-  obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
+  obtain ⟨hk2, hs2, hΦ2⟩ := E.schluesselO hI (fun p hp => by
+    rw [hMo] at hp
+    have h1 := hM.oKurz p hp
+    rw [hσr, World.rang_fragt]
+    omega)
   have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
     rw [List.map_cons, E.gtyp]
   have hzf := hZ.frei.atomFrei g hat

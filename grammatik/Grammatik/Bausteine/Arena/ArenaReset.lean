@@ -67,10 +67,10 @@ section Zeuge
 /-- The witness oracle over the four-slot fixture: no axioms, no registers;
     visibility answers `false`. -/
 def oz : Orakel ArenaZeuge.ZD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
+  wirktL := fun a => nomatch a
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun _ _ => false
+  sichtbarL := fun _ _ => false
 
 /-- The `else` continuation for the witness: return with nothing left to hold. -/
 def voll0 : Endblock ArenaZeuge.ZD ArenaZeuge.ZV false [] [] :=

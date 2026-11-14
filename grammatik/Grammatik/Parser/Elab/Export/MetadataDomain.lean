@@ -32,7 +32,9 @@ def consumingHeader (raw : String) : Except String (SExpr × String) := do
       match token with | .ende => none | _ => some (zeigeTok token)))
   | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
+mutual
 def typeMetadata : STyp → Bool
+  | .tuple elements => typeMetadataList elements
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
   | .ptr _ rights (.atom target) =>
       (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with
@@ -41,6 +43,12 @@ def typeMetadata : STyp → Bool
   | .ptr .. => true
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
+
+/-- Inspect tuple components in order, preserving the existential metadata check. -/
+def typeMetadataList : List STyp → Bool
+  | [] => false
+  | ty :: rest => typeMetadata ty || typeMetadataList rest
+end
 
 /-- The type of a table field: a wrapping integer is bound, the elaborator records its modulus
     (`UTab.wraps`) and every store reduces the value (`uWrap`). -/
@@ -57,7 +65,7 @@ def pointerOrMetadata : STyp → Bool
   | t => typeMetadata t
 
 /-- A conservative unit domain where no cost, scheduling, proof or reservation duty can disappear.
-    Invariants are refused (no cost/runs/by binding); local annotations and nested continuations are inspected. -/
+    Invariants use the canonical predicate reader; local annotations and nested continuations are inspected. -/
 def bodyMetadata : Nat → SAnw → Bool
   | 0, _ => true
   | n + 1, .block ss _ => ss.any (bodyMetadata n)
@@ -82,6 +90,8 @@ def bodyMetadata : Nat → SAnw → Bool
       and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
   | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
+  | n + 1, .boundedLoop header body =>
+    (readBoundedHeader header).toOption.isNone || bodyMetadata n body
   | n + 1, .retry header body => !retryHeaderBound header || bodyMetadata n body
   /- An atomic exchange and an atomic await are read completely by the elaborator: the static must be
       a declared atomic, the payload the declared one, the binder's written type the atomic's
@@ -99,6 +109,7 @@ def bodyMetadata : Nat → SAnw → Bool
     _ + 1, .ret .. | _ + 1, .start .. | _ + 1, .retires .. |
     _ + 1, .reset .. | _ + 1, .trimReq .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
+termination_by structural fuel => fuel
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
   | .effs effects => effects.any (fun | .mints _ => true | _ => false)
@@ -193,7 +204,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       parts.any fun
         | .tSlot fields => fields.any (fun field => fieldTypeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
-        | .tTree _ => false
+        | .tTree _ | .tInv _ => false
         | _ => true
   /- A literal hold bound is bound: the compiler checks K002 over every section of the lock
       (`HeldBinding.holds`). Reservation, mask and invariant stay refused. -/
@@ -205,7 +216,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       the static arena commits all its slots, so the required allocation's only
       duty is the counter bound under `KoerperGutS/SA`). -/
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
-  | .groupT .. => true
+  | .groupT .. => false
   /- Alignment is read and validated by the existing profile/uGlobs path. Names
       need its real constant environment; sections remain an unbound duty here. -/
   | .globT _ _ ty _ alignment sectionName _ => typeMetadata ty || alignment.any (fun e =>

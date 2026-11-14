@@ -95,8 +95,12 @@ theorem rumpf_ist_anbieterruf :
 theorem alloc_in_T : rD.tabNr 0 = some () ∧ rD.offen () = true := Block.alloc_tabelle (a := ()) rfl rfl
 
 /-- The provider answering cell `K` (the raw word `K`). -/
-def oK (K : Nat) : Orakel rD :=
-  ⟨fun _ σ _ => (σ, (K : Int)), fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+def oK (K : Nat) : Orakel rD where
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, (K : Int))
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 /-- A start world: every cell holds `0`. -/
 def w0 : World rD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => g.elim, []⟩
@@ -114,7 +118,8 @@ theorem zelle_geschrieben (K : Nat) (passes : Nat)
     ∃ σ', execEnd (oK K) passes R rumpf w0 .nil = .zurueck σ' () ∧ (σ'.slots () (K : Int) ()).n = 7 := by
   have h : execEnd (oK K) passes R rumpf w0 .nil =
       (execEnd (oK K) passes R weiter ((w0.lese [] []).fragt (.inl ())) (.cons (Val.vonZelle K) .nil)).schrumpf := by
-    simp only [rumpf_ist_anbieterruf, execEnd, axiomAntwort, oK, Args.orte, antwort_K]
+    simp only [rumpf_ist_anbieterruf, execEnd, axiomAntwort, Orakel.wirkt, oK, World.auf,
+      World.ohneLese, Args.orte, antwort_K]
     rfl
   rw [h]
   refine ⟨_, rfl, ?_⟩
@@ -142,6 +147,6 @@ def prog : Programm rD where
 
 /-- **The core checker accepts the program with the open region.** -/
 theorem prog_akzeptiert :
-    Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide +kernel
+    Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide_cbv
 
 end Gabbro.Grammatik.GRegion

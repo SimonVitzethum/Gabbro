@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Lokal.Bindung
+public import Bruecke.Anweisung.Lokal.RecordScope
 public import Bruecke.Lauf
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T3.Teil1
@@ -27,7 +28,7 @@ variable {u : UProg}
 
 /-- The statements the body reader passes one by one to `lowStmtL` and the bridge carries. -/
 def LeseEinzeln : UStmt → Prop
-  | .assign .. | .assignTab .. | .assignGlob .. | .call .. | .setVar .. => True
+  | .assign .. | .assignTab .. | .assignGlob .. | .call .. | .setVar .. | .setVarB .. => True
   | _ => False
 
 theorem lowBodyF_cons_ok (c : Fin u.fns.length) (r : URet) {Γ : Ctx} {fn : UFn} (s : UStmt)
@@ -46,7 +47,7 @@ theorem lowBodyF_cons_ok (c : Fin u.fns.length) (r : URet) {Γ : Ctx} {fn : UFn}
         | .error error => .error error
         | .ok ending => .ok (Endblock.cons st ending)) := by
     cases s
-    case assign | assignTab | assignGlob | call | setVar =>
+    case assign | assignTab | assignGlob | call | setVar | setVarB =>
       rw [lowBodyF] <;> try simp
       all_goals
         split <;> rename_i hread
@@ -91,6 +92,27 @@ theorem lowBodyF_bind_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
       cases h
       exact ⟨ls, e, hls, he, rfl⟩
 
+/-- Explicit aggregate annotations fix the type before the local scope is extended. -/
+theorem lowBodyF_bindRecord_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
+    {Λ : List (Res (declOf u))} {x : String} {id : Nat} {fs : List Ty} {v : USide}
+    {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
+    (h : lowBodyF u c Γ fn (n + 1) Λ (.bindW x (some (.prod id fs)) v :: ss) r = .ok b0) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.prod id fs))
+      (e : Endblock (declOf u) (verOf u c) false (.prod id fs :: Γ) Λ),
+      lowWertAtE u Γ Λ fn none (.prod id fs) v = .ok ev ∧
+      lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r = .ok e ∧
+      b0 = Endblock.bind ev e := by
+  simp only [lowBodyF, lowBindW] at h
+  cases hw : lowWertAtE u Γ Λ fn none (.prod id fs) v with
+  | error err => simp only [hw, reduceCtorEq] at h <;> cases h
+  | ok ev =>
+    simp only [hw] at h
+    split at h
+    · cases h
+    · rename_i e he
+      cases h
+      exact ⟨ev, e, rfl, he, rfl⟩
+
 theorem lowBodyF_bindMut_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x : String} {lo hi : Int} {v : USide}
     {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
@@ -99,6 +121,25 @@ theorem lowBodyF_bindMut_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Na
       (e : Endblock (declOf u) (verOf u c) false (.int lo hi :: Γ) Λ),
       lowWertAt u Γ Λ fn lo hi v = .ok ev ∧
       lowBodyF u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ ss r = .ok e ∧
+      b0 = Endblock.bind ev e := by
+  simp only [lowBodyF] at h
+  split at h
+  · cases h
+  · rename_i ev hev
+    split at h
+    · cases h
+    · rename_i e he
+      cases h
+      exact ⟨ev, e, hev, he, rfl⟩
+
+theorem lowBodyF_bindB_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
+    {Λ : List (Res (declOf u))} {x : String} {v : UEns}
+    {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
+    (h : lowBodyF u c Γ fn (n + 1) Λ (.bindB x v :: ss) r = .ok b0) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.bool))
+      (e : Endblock (declOf u) (verOf u c) false (.bool :: Γ) Λ),
+      lowEns u Γ Λ fn none v = .ok ev ∧
+      lowBodyF u c (.bool :: Γ) (fn.mitBindungB x) n Λ ss r = .ok e ∧
       b0 = Endblock.bind ev e := by
   simp only [lowBodyF] at h
   split at h

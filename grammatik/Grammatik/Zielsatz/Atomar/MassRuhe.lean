@@ -165,7 +165,7 @@ theorem massPflicht_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : ∀ w, AbgK P
     | none => rw [zykS_mitRuhe_zur_ruhe P] at hz; cases hz
     | some g =>
     have hzg : zykS P fs f g = true := by rwa [zykS_mitRuhe P hvoll hA] at hz
-    have hk := hM f (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl) (axVertrag_zurueck hq)
+    have hk := hM f (Orakel.zurueck O') (rahmenO_zurueck hr) (regLokal_zurueck hl) (axVertragOP_zurueck hq)
       (umweltZ U') (havocOk_umweltZ hU') (umweltZA A') (havocA_umweltZA hA') (rufZuD R')
       (respektiert_rufZuD hR) (ohneAbstieg_rufZuD hOA) (ohneVorbedingung_rufZuD R') σ0 ρ0 hreq0 g hzg
     have hrel := rumpfA_rel P S passes O' U' A' (massTor m (zykS P fs f) (m.wert f σ0 ρ0) (rufZuD R'))

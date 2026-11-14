@@ -1,7 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Benannt
 public import Bruecke.Anweisung.Lokal.Werte
-import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,6 +33,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 @[expose] public section
 
 /-!
@@ -49,6 +52,11 @@ open Gabbro.Grammatik
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def routine : UFn :=
   { name := "shadow", params := [], kinds := [], res := some (0, 1),
@@ -68,7 +76,7 @@ def body : List Gabbro.Body.Stmt :=
 theorem translation_zeuge :
     stmtsBodyZ unit (routine.body.length + 1) routine (BodyNames.start routine)
       routine.body routine.ret = some body := by
-  kernel_rfl
+  cbv
 
 def after (s : Gabbro.Body.State) : Gabbro.Body.State :=
   ⟨s.world, Gabbro.Body.bindLocal
@@ -82,7 +90,14 @@ theorem return_zeuge (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) :
     Gabbro.Body.bindLocal_elsewhere _ _ _ _ hne, Gabbro.Body.bindLocal_here, after]
 
 theorem lowered_some_zeuge : (lowerAllg unit).toOption.isSome = true := by
-  decide +kernel
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 1 := bound
+    have zero : index = 0 := by omega
+    subst index
+    all_goals constructor <;> cbv
 
 /-- The Body duty is proved for all initial states and all callee environments. -/
 theorem routine_meets_zeuge : meetsU unit (wfU unit) routine body := by

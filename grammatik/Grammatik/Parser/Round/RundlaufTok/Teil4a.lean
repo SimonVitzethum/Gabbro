@@ -79,12 +79,14 @@ theorem prim_emb1M (w : String) (a : String) (suff : List SuffFrag) (rest : List
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   have hO := ortM a suff ([.zeichen ")"] ++ rest) F'' hka hs (hrs_paren rest) (by omega)
   obtain rfl | rfl := hw
-  · simp only [druckToks, args_einzeln, List.cons_append, parsePrimary]
+  · simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary]
     simp only [parseEingebaut_ein]
     simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
     simp only [hO]
     exact eingebaut_ein_ok "sizeof" _ rest hp htw
-  · simp only [druckToks, args_einzeln, List.cons_append, parsePrimary]
+  · simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+      args_einzeln, List.cons_append, parsePrimary]
     simp only [parseEingebaut_ein]
     simp only [List.append_assoc, List.cons_append, List.nil_append] at ⊢ hO
     simp only [hO]
@@ -96,7 +98,8 @@ theorem prim_alignedM (m : Nat) (a b : SExpr) (rest : List Token) (F : Nat)
     parsePrimary F (druckToks (.built "aligned" [a, b]) ++ rest) =
       .ok (.built "aligned" [a, b], rest) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  simp only [druckToks, args_cons, args_einzeln, List.cons_append, parsePrimary]
+  simp only [druckToks, strEq_eq, String.reduceEq, ↓reduceIte,
+    args_cons, args_einzeln, List.cons_append, parsePrimary]
   obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
   simp only [parseEingebaut_zwei]
   have hkomma : ruhig ([.zeichen ","] ++ druckToks b ++ ([.zeichen ")"] ++ rest)) = true := rfl

@@ -169,7 +169,7 @@ theorem kurzVBA_mono {N N' : Nat} {H : List (EintragV D)}
 
 theorem funkV_appendBA {N : Nat} {H : List (EintragV D)} (hf : FunkV H)
     (hk : KurzVBA (P := P) (O := O) (passes := passes) (S := S) N H) (e : EintragV D)
-    (he : Nonempty (Ereignis D) → N ≤ e.2.1.spur.length)
+    (he : Nonempty (Ereignis D) → N ≤ e.2.1.rang)
     (hb : ¬ Nonempty (Ereignis D) → BegruendetA P O passes S e) : FunkV (H ++ [e]) := by
   by_cases hN : Nonempty (Ereignis D)
   · exact funkV_append hf (hk.1 hN) e (he hN)
@@ -250,9 +250,9 @@ def KopfSA (F : RufRahmenG D) (W : World D) : Prop :=
     (HX : List (XEintrag D)) (σ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
     MassOkV m (zyk F.f) (m.wert F.f F.s0 F.rho) H ∧
-    KurzVBA (P := P) (O := O) (passes := passes) (S := S) σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O σ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzUB σ.spur.length HU ∧
+    KurzVBA (P := P) (O := O) (passes := passes) (S := S) σ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O σ.rang HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB σ.rang HU ∧
     (FunkX HX ∧ KurzX σ.spur.length HX) ∧
     GleichAuf (stabilS P S lok F.f F.rest.2.2.1) σ W ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
@@ -268,9 +268,9 @@ def WarteSA (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) 
     (HX : List (XEintrag D)) (κ : World D),
     ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkR P H ∧
     MassOkV m (zyk F.f) (m.wert F.f F.s0 F.rho) H ∧
-    KurzVBA (P := P) (O := O) (passes := passes) (S := S) κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O κ.spur.length HA ∧
-    FunkU HU ∧ InvU S HU ∧ KurzUB κ.spur.length HU ∧
+    KurzVBA (P := P) (O := O) (passes := passes) (S := S) κ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ VertragA O.zeiger Q HA ∧ KurzAB O κ.rang HA ∧
+    FunkU HU ∧ InvU S HU ∧ KurzUB κ.rang HU ∧
     (FunkX HX ∧ KurzX κ.spur.length HX) ∧
     F.rest.2.2.2.2.okS P (fussOrteG P F.f) (sicher P lok F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧

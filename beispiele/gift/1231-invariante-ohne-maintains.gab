@@ -10,7 +10,7 @@ module gift::invariante_ohne_maintains {
 
 table W count 8 {
     slot { a : u32 in 0 .. 10, }
-    invariant klein cost O(n) runs offline :
+    invariant klein :
         forall s in slots of W : W.slots[s].a <= 5;
 }
 

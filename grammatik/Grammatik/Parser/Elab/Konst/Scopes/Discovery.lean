@@ -1,6 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scopes.Environments
-public import Grammatik.Parser.Elab.Konst.Scopes.AliasOrder
+public import Grammatik.Parser.Elab.Konst.Scopes.AliasOrderFast
 public import Grammatik.Parser.Elab.Konst.Scopes.AliasMeaning
 import all Init.Data.Repr
 import all Init.Data.String.Basic

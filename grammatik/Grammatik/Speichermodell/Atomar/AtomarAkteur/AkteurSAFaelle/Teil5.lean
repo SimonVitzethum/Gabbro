@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannPruefFalsch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)
@@ -107,7 +107,7 @@ theorem akteurSA_dannPruefFalsch {D : Deklaration} {P : Programm D} {O : Orakel 
   obtain ⟨_, hsS, _⟩ := teile2 hss
   have hw' : wahr? (eval σ c σ ρ) = false := by
     rw [eval_gleichAuf c (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
-  refine ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+  refine ⟨σ, ⟨Nat.le_refl _, Nat.le_refl _⟩, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     okS_alsBlock sonst k rest.held_iff hkS hsS hrk, fun R O' U A σ0 _ _ hσ0 => ?_⟩
   have h1 := semHA_pruefFalsch S O' U A passes R c sonst rest k σ0 ρ (by rw [hσ0]; exact hw')
   rw [hσ0] at h1
@@ -116,7 +116,7 @@ theorem akteurSA_dannPruefFalsch {D : Deklaration} {P : Programm D} {O : Orakel 
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_dannBreaking {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
-  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
+  {zyk : D.Fn → D.Fn → Bool} (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O) (hlok : AxEnsLokal Q)
   (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ (L : D.Lock), S.inv L sp = true)
   (hK : ∀ (f : D.Fn), KoerperGutSA P passes Q S Tg f) (hM : ∀ (f : D.Fn), MassPflicht P passes Q S Tg m zyk f)
   (hTV : ∀ (c : D.Tab ⊕ D.Glob), Tg c → VertragsFrei P c)

@@ -149,7 +149,7 @@ theorem ptrHolds_sound (h : ptrHolds T u = true) (j : Nat) (raw : String) (c : N
 
 /-- Whether one member's body fits under its declaration and calls only members. -/
 def fits (P : Programm (declOf u)) (passes : Nat) (g : Fin u.fns.length) : Bool :=
-  decide (kostenEnd (D := declOf u) (decl T u) passes (P.rumpf g) ≤ decl T u g) &&
+  decide (kostenEnd (D := declOf u) (kostenEpilog P g) (decl T u) passes (P.rumpf g) ≤ decl T u g) &&
     rufeE (D := declOf u) (fun h => (costOf T u h).isSome) (fun _ => false) true (P.rumpf g)
 
 /-- **The declared costs hold**: every source function with a declared cost is a function of the

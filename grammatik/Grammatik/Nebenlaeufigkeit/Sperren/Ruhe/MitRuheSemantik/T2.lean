@@ -38,13 +38,13 @@ theorem axiomAntwortSonst_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env 
 
 theorem regLies_mitRuhe (O : Orakel D) (r : D.Reg) (σ : World D) :
     O.mitRuhe.regLies r (worldR σ) = O.regLies r σ := by
-  show O.regLies r (worldZ (worldR σ)) = _
-  rw [worldZ_worldR]
+  show O.regLiesL r (worldZ (worldR σ).ohneLese) = O.regLiesL r σ.ohneLese
+  rw [worldR_ohneLese, worldZ_worldR]
 
 theorem sichtbar_mitRuhe (O : Orakel D) (g : D.Glob) (σ : World D) :
     O.mitRuhe.sichtbar g (worldR σ) = O.sichtbar g σ := by
-  show O.sichtbar g (worldZ (worldR σ)) = _
-  rw [worldZ_worldR]
+  show O.sichtbarL g (worldZ (worldR σ).ohneLese) = O.sichtbarL g σ.ohneLese
+  rw [worldR_ohneLese, worldZ_worldR]
 
 theorem rzusage_mitRuhe (r : D.Reg) (v : Wert D (D.rtyp r)) :
     (D.mitRuhe).rzusage r (valR (D.rtyp r) v) = D.rzusage r v := by

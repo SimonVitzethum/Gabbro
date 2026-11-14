@@ -69,7 +69,7 @@ theorem foreign_read {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
   obtain ⟨M₁, σ₁, hs, hread, hI, _⟩ := E.lese_eval hZ hM T hB.havocA hB.atom
     Λ (Λ.map E.resE) args.orte
   obtain ⟨M₂, hs2, hOracle, hI2⟩ := E.ax_schluessel hZ pad O'
-    (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
+    hI a (evalArgs σ₁ args σ₁ ρ)
   exact ⟨M₂, σ₁, teil_trans hs hs2, fun Φ hP => hread Φ (passt_teil hP hs2),
     hOracle, fun W => E.inv_antwort hZ hB.pad hI2 W,
     E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _

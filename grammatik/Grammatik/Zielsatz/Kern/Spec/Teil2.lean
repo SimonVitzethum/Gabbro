@@ -366,7 +366,7 @@ def SchwachX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Gl
     RufSchrittGX P O passes Tg M u W'.g ∧ ∀ c, ¬ Tg c → TraegerGleich σ M.speicher c
 
 /-- **Time over GX**: `ZeitAb` for every run of GX from `M` (the weak memory answering the
-    shared atomics). -/
+    shared atomics). Its cost account includes the value-return epilogue (C05). -/
 def ZeitAbX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ D.Glob → Prop)
     (M : RufMaschineG D) : Prop :=
   ∀ (f : Faden) (g : D.Fn) (n : Nat) (rho : Env D (D.params g)) (s0 : World D) (k : Nat),
@@ -442,7 +442,11 @@ structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   besitz : ∀ a ∈ B, ArenaOwnership.Machine.OwnInv a.A a.I K.m
 -- END atomic-rely definitions --
 
-/-- **GABBRO_ZIEL** (since Opus lane O25c, 2026-09-26: WITH THE ATOMIC RELY). Over the THREAD
+/-- **GABBRO_ZIEL_VOLL**: the goal under the FULL summary premise (c), every foreign answer meeting
+    its declared summary at every question (`HardwareAnnahmen`). Since C08 R3b (2026-11-13) the
+    headline `GabbroZiel` (`Spec/Fremd.lean`) replaces premise (c) for software items by the
+    call-site duties; this statement keeps the text of before. With the atomic rely (since Opus
+    lane O25c, 2026-09-26). Over the THREAD
     MACHINE OVER GX: every run from the runtime's start, with any set `lebt0` of initially live
     threads -- the others are slots that `start` or `child` spawn at run time -- in which every
     read of an ADMITTED SHARED ATOMIC of the unit (`GeteiltV E.P E.ws`: `atomic`, unguarded, not
@@ -457,7 +461,7 @@ structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     every unit without an arena it accepts (b) is (b) of before and no admitted shared atomic
     exists: the statement of before, `GabbroZielSC`, is a corollary there (`gabbro_ziel_sc_aus`,
     Zielsatz/BeweisAtomar.lean). -/
-def GabbroZiel : Prop :=
+def GabbroZielVoll : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E fs.1 ls.1 cs.1 = true →                     -- (a) the checker, on E

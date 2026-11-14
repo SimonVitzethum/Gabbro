@@ -149,8 +149,9 @@ theorem countL_bounds_zeuge [Kern] :
       9 < top ∧ c.length < 2 ^ 31 := by
   let ct := (lowE layout (reserved := 3) nested 9).getD ([], 0)
   have emitted : lowE layout (reserved := 3) nested 9 = some ct := by decide +kernel
-  have bounds := countL_bounds emitted
-  exact ⟨ct.1, ct.2, emitted, bounds.1, bounds.2.2⟩
+  have bounds : 9 < ct.2 := lowE_top nested 9 ct.1 ct.2 emitted
+  have length : ct.1.length < 2 ^ 31 := by decide +kernel
+  exact ⟨ct.1, ct.2, emitted, bounds, length⟩
 
 theorem countVal_idxAb_bound_zeuge [Kern] :
     countVal (idxAb 4 1 3) (fun k => decide (k.n < 3)) = 2 ∧

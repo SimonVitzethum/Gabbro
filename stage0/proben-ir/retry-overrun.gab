@@ -1,0 +1,18 @@
+// Three failed conditions permit three passes: 0 + 1 + 1 + 1 = 3.
+// The fourth false condition calls on_exceeded. getpid returns a positive PID,
+// outside the declared 0 .. 0 answer: the existing gate check exits with 110.
+// Expected exit 110; returning 3 would mean the overrun call was skipped.
+module ir_retry_overrun {
+assume tick "The probe deliberately falsifies the overrun's zero-only answer." falsifier probe_tick;
+syscall overrun() -> u64 in 0 .. 0
+    abi linux arch x86_64 number 39
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut cursor : u64 in 0 .. 100 = 0;
+    retry attempt until cursor == 7 bounded 3 ops progress tick on_exceeded overrun {
+        cursor = (cursor + 1) % 100;
+    }
+    return cursor;
+}
+}

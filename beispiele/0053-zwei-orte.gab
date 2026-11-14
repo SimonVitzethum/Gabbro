@@ -44,7 +44,7 @@ table Endpunkt count NKERNE {
 
     // **Die ganze Aussage der Stelle, in einer Zeile.** In Caprock steht sie als Kommentar
     // (*„stets gemeinsam gesetzt/geloescht"*); hier ist sie eine Ableitung.
-    invariant antwortpflicht_paarig cost O(1) runs online :
+    invariant antwortpflicht_paarig :
         forall e in slots of Self :
             (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
 }
@@ -59,7 +59,7 @@ impl fn treffen_oeffnen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt
               e.slots[kern].antwortende == Some(dient)
     maintains antwortpflicht_paarig
     effects   { writes e.slots, locks EPS }
-    costs     <= 8 ops
+    costs     <= 16 ops
 {
     breaking antwortpflicht_paarig {
         e.slots[kern].anrufer     = Some(ruft);
@@ -75,7 +75,7 @@ impl fn treffen_schliessen(e : ptr<normal, rw> Endpunkt, kern : index into Endpu
               e.slots[kern].antwortende == None
     maintains antwortpflicht_paarig
     effects   { writes e.slots, locks EPS }
-    costs     <= 8 ops
+    costs     <= 12 ops
 {
     breaking antwortpflicht_paarig {
         e.slots[kern].anrufer     = None;

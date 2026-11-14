@@ -93,43 +93,43 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .floatNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
 end
 /-- The §1 cost plus the declared foreign cost, per statement form. -/
-def kostenStmtF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+def kostenStmtF (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') : Nat :=
-  kostenStmt c pa s + fremdStmt fa pa s
+  kostenStmt ep c pa s + fremdStmt fa pa s
 
 /-- The §1 cost plus the declared foreign cost, per block. -/
-def kostenBlockF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+def kostenBlockF (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') : Nat :=
-  kostenBlock c pa b + fremdBlock fa pa b
+  kostenBlock ep c pa b + fremdBlock fa pa b
 
 /-- The §1 cost plus the declared foreign cost, per end block. -/
-def kostenEndF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+def kostenEndF (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) : Nat :=
-  kostenEnd c pa e + fremdEnd fa pa e
+  kostenEnd ep c pa e + fremdEnd fa pa e
 
 /-- The §1 cost plus the declared foreign cost, per `else` branch. -/
-def kostenSonstF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
+def kostenSonstF (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) : Nat :=
-  kostenSonst c pa e + fremdEnd fa pa e
+  kostenSonst ep c pa e + fremdEnd fa pa e
 
-theorem kostenStmtF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem kostenStmtF_ge (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
-    kostenStmt c pa s ≤ kostenStmtF fa c pa s := by
+    kostenStmt ep c pa s ≤ kostenStmtF ep fa c pa s := by
   simp only [kostenStmtF]; omega
 
-theorem kostenBlockF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem kostenBlockF_ge (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
-    kostenBlock c pa b ≤ kostenBlockF fa c pa b := by
+    kostenBlock ep c pa b ≤ kostenBlockF ep fa c pa b := by
   simp only [kostenBlockF]; omega
 
-theorem kostenEndF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem kostenEndF_ge (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenEnd c pa e ≤ kostenEndF fa c pa e := by
+    kostenEnd ep c pa e ≤ kostenEndF ep fa c pa e := by
   simp only [kostenEndF]; omega
 
-theorem kostenSonstF_ge (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
+theorem kostenSonstF_ge (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    kostenSonst c pa e ≤ kostenSonstF fa c pa e := by
+    kostenSonst ep c pa e ≤ kostenSonstF ep fa c pa e := by
   simp only [kostenSonstF]; omega
 
 /-- A foreign statement site counts exactly its declared cost. -/
@@ -156,12 +156,12 @@ theorem fremd_bindAxiom (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool
 
 /-- No zero slip, statement site: a foreign call costs at least one step even
     at declared `0` (the §1 dispatch step). -/
-theorem fremd_kein_null_stmt (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
+theorem fremd_kein_null_stmt (ep : Nat) (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat)
     (V : Vertrag D) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
     (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
-    1 ≤ kostenStmtF (V := V) fa c pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) := by
+    1 ≤ kostenStmtF ep (V := V) fa c pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) := by
   simp only [kostenStmtF, kostenStmt]; omega

@@ -24,7 +24,7 @@ namespace Gabbro.Grammatik
 
 /-- The canonical oracle of a closed const program: no axiom, register or
     shared global exists, so every answer channel is vacuous. -/
-@[expose] def constOrakel (c : ConstProgram) : Orakel c.D := { wirkt := fun a _ _ => ((c.noOracles a).elim, 0), regLies := fun r _ => (c.noRegisters r).elim, regSchreib := fun r _ => (c.noRegisters r).elim, sichtbar := fun g _ => (c.noGlobals g).elim }
+@[expose] def constOrakel (c : ConstProgram) : Orakel c.D := { wirktL := fun a _ _ => ((c.noOracles a).elim, 0), regLiesL := fun r _ => (c.noRegisters r).elim, regSchreib := fun r _ => (c.noRegisters r).elim, sichtbarL := fun g _ => (c.noGlobals g).elim }
 
 /-! ### Structural work bound.
 

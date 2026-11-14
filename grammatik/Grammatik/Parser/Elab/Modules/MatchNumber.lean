@@ -106,4 +106,18 @@ def erweitere (items : List SItemTief) : Except String (List SItemTief) := do
     pure (acc.1 ++ [r.1], r.2)) ([], 0)
   return r.1
 
+/-- Unit output is accumulated once, preserving item order and the first refusal. -/
+def erweitereFast (items : List SItemTief) : Except String (List SItemTief) := do
+  let k := kontext items
+  let r ← CallHoist.collectStepsM (ε := String) (σ := Nat) (α := SItemTief) (β := SItemTief)
+    (fun (nr : Nat) item => do
+    let r ← erweitereItem k nr item
+    pure ([r.1], r.2)) items 0
+  return r.1
+
+
+@[csimp] theorem erweitere_eq_fast : @erweitere = @erweitereFast := by
+  funext items
+  simp only [erweitereFast, erweitere, CallHoist.collectStepsM_singleton]
+
 end Gabbro.Grammatik.Parser.MatchNumber

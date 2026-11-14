@@ -1,0 +1,8 @@
+module ir_while_nonstatic {
+extern fn overrun() effects { pure } costs <= 1 ops;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let n : u64 in 0 .. 3 = 3;
+    while false bounded n ops on_exceeded overrun { }
+    return 0;
+}
+}

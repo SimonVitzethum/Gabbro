@@ -43,7 +43,7 @@ theorem paP_nicht_sperre (Q : AxEns zD) (S : SperrInv zD)
     (hs : ∀ L, S.inv L s = true) (f : zD.Fn) : ¬ KoerperGutS paP 0 Q S f := by
   intro h
   have hl : (paP.rumpf f).ohneLocks = true := by cases f <;> rfl
-  refine h.2 zO zO_rahmen zO_lokal (zO_vertrag Q) (fun L σ => mischU S L σ s)
+  refine h.2 zO zO_rahmen zO_lokal (axVertragOP_of_O _ (zO_vertrag Q)) (fun L σ => mischU S L σ s)
     (havocOk_misch_lokal hS (fun _ _ => s) (fun L _ => hs L)) hwRuf (hwRuf_rahmen paP) hwRuf_ohneLogik
     (zSp.welt []) (by cases f <;> exact .nil) rfl .schleife ?_
   rw [Endblock.execH_ohne S zO _ 0 hwRuf _ hl]

@@ -1,0 +1,4 @@
+module ir_breaking_metadata {
+table T count 1 { slot { value : u8, } invariant I : forall i in slots of T : T.slots[i].value == 0; }
+impl fn main() -> u8 effects { writes T.slots } { breaking I { T.slots[0].value = 0; } return 42; }
+}

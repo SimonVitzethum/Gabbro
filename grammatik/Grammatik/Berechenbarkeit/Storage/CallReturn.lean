@@ -83,8 +83,12 @@ def program : Programm declaration where
   rumpf := fun f => if f then returnedBody true else callerBody
 
 def memory : Speicher declaration := ⟨fun t => t.elim, fun g => g.elim⟩
-def oracle : Orakel declaration :=
-  ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => none⟩
+def oracle : Orakel declaration where
+  wirktL := fun a => a.elim
+  regLiesL := fun r => r.elim
+  regSchreib := fun r => r.elim
+  sichtbarL := fun g => g.elim
+  zeiger := fun _ => none
 
 def initial (b : Bool) : RufMaschineG declaration :=
   RufStartG program memory (fun _ => ⟨false, environment b⟩)

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Expr.Typ
 public import Grammatik.Parser.Stmt.Anweisung.IndirectElse
+public import Grammatik.Parser.Stmt.Anweisung.BoundedHeaders
 
 @[expose] public section
 
@@ -127,6 +128,8 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "transition" then parseUebergang f rest
       else if strEq w "advances" then parseSchreitet f rest
       else if strEq w "retires" then parseRetires rest
+      else if strEq w "while" then parseSchleife f rest 3
+      else if strEq w "for" then parseSchleife f rest 4
       else parsePlatzStmt f toks
     | .ident "start" :: .zeichen "{" :: rest => parseStart f rest
     | .zeichen "@" :: _ => parseLibStmt f toks
@@ -142,7 +145,15 @@ def parseLet (f : Nat) (toks : List Token) :
     let (m, t1) : Bool × List Token := match toks with
       | .wort "mut" :: rest => (true, rest)
       | _ => (false, toks)
-    let (name, r1) ← nimmName t1
+    let (name, r1) ← match t1 with
+      | .zeichen "(" :: rest => do
+        if m then throw "tuple pattern: mutable destructuring is unsupported"
+        let (names, rest) ← parseTuplePattern rest
+        if names.length < 2 then throw "tuple pattern: at least two elements required"
+        let bound := names.filter (fun name => !strEq name "_")
+        if bound.eraseDups.length != bound.length then throw "tuple pattern: duplicate binding"
+        pure (String.intercalate "," ("#tuple-pattern" :: names), rest)
+      | _ => nimmName t1
     let (optional, r1) := nimmFrage r1
     let (ty, r2) ← (match r1 with
       | .zeichen ":" :: r => do
@@ -150,7 +161,13 @@ def parseLet (f : Nat) (toks : List Token) :
         pure (some t, r')
       | _ => pure (none, r1))
     let nach ← fordereZeichen "=" r2
-    if optional then do
+    if (tuplePatternNames name).isSome then do
+      if optional then throw "tuple pattern: optional binding is unsupported"
+      let (statement, rest) ← parseLetExpr f m name ty nach
+      match statement with
+      | .bind .. => pure (statement, rest)
+      | _ => throw "tuple pattern: plain let binding required"
+    else if optional then do
       let (a, rest) ← parseLetExpr f m name ty nach
       match a with
       | .bind _ x t e => pure (.bindAxiomOpt x t e, rest)
@@ -370,7 +387,11 @@ def parseSchleife (f : Nat) (toks : List Token) (art : Nat) :
       | .error e => .error e
       | .ok (b, rest') =>
         if art == 1 then .ok (.retry h b, rest')
-        else .ok (.loop h b, rest')
+        else if art == 2 then .ok (.loop h b, rest')
+        else do
+          let raw := (if art == 3 then "while " else "for ") ++ h
+          let _ ← readBoundedHeader raw
+          .ok (.boundedLoop raw b, rest')
 
 def parseBricht (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=

@@ -46,8 +46,7 @@ theorem gateT_zeuge :
       [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
     check (Auswahl.waehleL .pruefbau
       [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
-    check (Auswahl.waehleL .pruefbau [.gateT (.groupT "G" [] [])]) =
-      .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
+    check (Auswahl.waehleL .pruefbau [.gateT (.groupT "G" [] [])]) = .ok () := by
   exact ⟨rfl, rfl, rfl, rfl⟩
 /-- The table owner field adds no unbound placement duty; providers and backing remain gated. -/
 theorem tableSpace_bound (name owner : String) (count : Option SExpr) (shared : Bool) :

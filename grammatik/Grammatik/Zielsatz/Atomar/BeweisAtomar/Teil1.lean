@@ -217,12 +217,13 @@ variable [DecidableEq D.Fn]
 
 /-- **Every leg of `ZielX` at every machine GX reaches**, from (a) `AkzeptiertSpecX`, (b) the
     user's logic with the rely, (c) the hardware assumptions and an admissible start. -/
-theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
+theorem zielX_rely (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
     {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
     (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
-    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
+    (O : Orakel D) (hO : GutO O) (hRL : RegLokal O) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hQ : RelyQ P O passes Q (GeteiltV P ws) (RufStartG P sp init)) (hZ : StartZulaessig P S fs ws sp init)
     (M : RufMaschineG D)
     (hX : RufErreichbarGX P O passes (GeteiltV P ws) (RufStartG P sp init) M) :
     ZielX P S O passes (GeteiltV P ws) (RufStartG P sp init) M := by
@@ -249,26 +250,26 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
   have hex := startExklusiv_ohne_haelt init hLeer
   have hGA := gx_ga_lauf hTA hX
   have hV := ziel_ort_atomar_voll P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hInv := invarianten_atomar P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hZI := zielInvSA_erreichbarGX P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hH.1 hH.2.1 hH.2.2.1 hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK (fun f => massPflicht_aus P passes Q S (GeteiltV P ws) Mass.leer f) hZ.req hZ.sperren hex M hX
   exact
-    { speicherSicher := gaInv_spur hH.1 sp init hGA
+    { speicherSicher := gaInv_spur hO sp init hGA
       rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt =>
-        rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _)
+        rennfreiGA hO hvoll sp init hex (kVon P fs init) (fun t => hA.abg _)
           (fun t => reachB_wurzel P fs _)
           (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt))
           ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt
       schwach := fun ord W W' u σ M'' wahl neu hr hWg h => by
-        have h' := schwach_ist_gX (S := S) hH.1 hvoll (fun t => hA.abg _)
+        have h' := schwach_ist_gX (S := S) hO hvoll (fun t => hA.abg _)
           (fun t => reachB_wurzel P fs _) hA.fuss hlokK hTA hex hr h
         rw [hWg] at h'
         exact h'
@@ -283,11 +284,11 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
       startEnde := hV.2.2.2.2.2.1
       keinStartGrund := hV.2.2.2.2.2.2
       keinLogikHalt := hV.2.2.1
-      keineVerklemmung := keine_verklemmungGA hH.1 hA.stufen sp init hLeer ls hls hGA
-      keinZyklus := kein_warteZyklusGA hH.1 hA.stufen sp init hLeer hGA
+      keineVerklemmung := keine_verklemmungGA hO hA.stufen sp init hLeer ls hls hGA
+      keinZyklus := kein_warteZyklusGA hO hA.stufen sp init hLeer hGA
       keinKernHalt := kernHaltEA_aus hvoll hA.abg hA.masken sp init M
-      fortschritt := fortschrittG_GA hH.1 hA.stufen sp init (startSpur_nodup_leer init hLeer) hGA
-        hV.2.2.1 (fun t => fadenSA_bereich hH.1 hH.2.1 hH.2.2.1 hS hZ.sperren hK hA.fuss t
+      fortschritt := fortschrittG_GA hO hA.stufen sp init (startSpur_nodup_leer init hLeer) hGA
+        hV.2.2.1 (fun t => fadenSA_bereich hO hRL hQ.1 hS hZ.sperren hK hA.fuss t
           (hZI.1.1 t)) hA.antworten
       zeit := fun f g n _ _ _ hadm hE _ run hA' =>
         frame_schritte_beschraenktX f g n hadm hE run hA'
@@ -295,6 +296,18 @@ theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.F
       speicherAdressen := fun hI lay hLay t k f hne =>
         geaendert_im_bereich (rufErreichbarGX_aussen
           (fun t ht => by obtain ⟨g, e, -⟩ := hTA _ ht; cases e) hI hX) hLay hne }
+
+/-- `zielX_rely` under the full summary premise (every answer meets `Q`). -/
+theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
+    (M : RufMaschineG D)
+    (hX : RufErreichbarGX P O passes (GeteiltV P ws) (RufStartG P sp init) M) :
+    ZielX P S O passes (GeteiltV P ws) (RufStartG P sp init) M :=
+  zielX_rely P S Q hvoll hls ws hA hN O hH.1 hH.2.1 passes sp init (relyQ_of_O hH.2.2.1) hZ M hX
 
 /-- A residue at a named stop is no `forever` loop with budget left. -/
 theorem restHalt_nicht_ewigPos {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -346,12 +359,14 @@ theorem budget_unecht {M : RufMaschineG D} {t : Faden} (hF : FortschrittG P O (p
   · exact hs
 
 /-- **Every leg of `ZielFX` on every thread machine over GX.** -/
-theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
+theorem zielFX_rely (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
     {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
     (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
-    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
+    (O : Orakel D) (hO : GutO O) (hRL : RegLokal O) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    (hQ : ∀ n, RelyQ P O n Q (GeteiltV P ws) (RufStartG P sp init))
+    (hZ : StartZulaessig P S fs ws sp init)
     (hS : ∀ a ∈ B, ArenaOwnership.Machine.StartOwn a.A a.I sp init)
     (lebt0 : Faden → Bool) (K : FadenMaschine D)
     (hK : FadenErreichbarX P O passes (GeteiltV P ws) (FadenStart P sp init lebt0) K) :
@@ -361,7 +376,7 @@ theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
     · exact (hA.wurzeln _ h).1
     · exact h.1
   have hI := fadenInvX_erreichbar hK
-  have hG := zielX_aus P S Q hvoll hls ws hA hN O hH passes sp init hZ K.m hI.lauf
+  have hG := zielX_rely P S Q hvoll hls ws hA hN O hO hRL passes sp init (hQ passes) hZ K.m hI.lauf
   exact {
     g := hG
     schlafendUnberuehrt := hI.schlaeft
@@ -371,7 +386,7 @@ theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
     joinFrei := fun t ht L hL => by
       rw [hI.joinFrei t ht] at hL
       exact List.not_mem_nil hL
-    keineVerklemmung := keine_verklemmungFX hH.1 hA.stufen (fun c h => h.1.1) sp init hLeer ls
+    keineVerklemmung := keine_verklemmungFX hO hA.stufen (fun c h => h.1.1) sp init hLeer ls
       hls hI
     keinZyklus := by
       have h := kein_warteZyklusF hI.ohneLauf hG.keinZyklus
@@ -384,13 +399,28 @@ theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
       exact List.not_mem_nil hL
     budgetUnecht := fun t hB => by
       have hK1 := fadenInvX_erreichbar (fadenErreichbarX_budget 1 hK)
-      exact budget_unecht (zielX_aus P S Q hvoll hls ws hA hN O hH (passes + 1) sp init hZ _
+      exact budget_unecht (zielX_rely P S Q hvoll hls ws hA hN O hO hRL (passes + 1) sp init
+        (hQ (passes + 1)) hZ _
         hK1.lauf).fortschritt hB
-    besitz := fun a ha => ArenaOwnership.Machine.ownInv_reachGX hH.1 (hA.besitz a ha) hvoll
+    besitz := fun a ha => ArenaOwnership.Machine.ownInv_reachGX hO (hA.besitz a ha) hvoll
       (ArenaOwnership.Ruhe.threadFacts_of (P := P) (S := S) (A := a.A)
         (fs := fs) (ws := ws) (B := B) (Ak := A) hA hZ (hA.worte a ha))
       (hS a ha) (hA.worte a ha)
       (fun c hc => hc.1.1) (fadenErreichbarX_GX hK) }
+
+/-- `zielFX_rely` under the full summary premise (every answer meets `Q`). -/
+theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
+    (hS : ∀ a ∈ B, ArenaOwnership.Machine.StartOwn a.A a.I sp init)
+    (lebt0 : Faden → Bool) (K : FadenMaschine D)
+    (hK : FadenErreichbarX P O passes (GeteiltV P ws) (FadenStart P sp init lebt0) K) :
+    ZielFX P S O passes (GeteiltV P ws) (RufStartG P sp init) B K :=
+  zielFX_rely P S Q hvoll hls ws hA hN O hH.1 hH.2.1 passes sp init
+    (fun _ => relyQ_of_O hH.2.2.1) hZ hS lebt0 K hK
 
 end Aus
 
@@ -428,57 +458,5 @@ theorem geteiltV_mitRuhe_eq (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK
       ((getrenntR_iff (fsRuhe_voll hvoll) (abg_mitRuhe P hvoll hAbg) c).mp hR'))
 
 end Ruhe
-
-/-! ## 4. The statement -/
-
-/-- **GABBRO_ZIEL WITH THE ATOMIC RELY, PROVED.** -/
-theorem gabbro_ziel : GabbroZiel := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
-  obtain ⟨hA0, hBS, _⟩ := C.korrekt E fs ls cs hH.2.2.2 hC
-  have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
-  have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hA0.abg
-  have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
-      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
-    have h := logikPflichtA_mitRuhe hN.logik
-    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
-        (h.1 passes f).1,
-      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
-      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
-      h.2⟩
-  have h := zielFX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
-    (wsRuhe E.ws) hA hN' O.mitRuhe (hardware_mitRuhe hH) passes sp init
-    (startZulaessig_aus E fs.1 hN.start hL) (ArenaOwnership.Ruhe.startOwn_arenen hL hBS) lebt0 K (heq ▸ hK)
-  exact heq ▸ h
-
-/-- **GABBRO_ZIEL_LEBEN, PROVED.** The reduction to `P.mitRuhe` as for `gabbro_ziel`; every machine of the run is
-    reached, so the goal theorem's facts hold at each of them (progress, lock exclusivity, the rank invariant), and
-    `hungerfrei` applies. -/
-theorem gabbro_ziel_leben : GabbroZielLeben := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL R hR0 hFair n t L hSp
-  have hA0 := (C.korrekt E fs ls cs hH.2.2.2 hC).1
-  have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
-  have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
-      (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
-    have h := logikPflichtA_mitRuhe hN.logik
-    exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
-        (h.1 passes f).1,
-      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
-      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
-      h.2⟩
-  have hH' := hardware_mitRuhe hH
-  have hZ := startZulaessig_aus E fs.1 hN.start hL
-  have hLeer : ∀ t, D.mitRuhe.haelt (init t).1 = [] := fun t => by
-    rcases hZ.wurzel t with h | h
-    · exact (hA.wurzeln _ h).1
-    · exact h.1
-  have hND := startSpur_nodup_leer init hLeer
-  have hr : ∀ n, RufErreichbarG E.P.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) (R.M n) :=
-    R.toPlanLauf.erreichbar (hR0 ▸ RufErreichbarG.start)
-  exact hungerfrei R hH'.1
-    (fun n t => ⟨_, rangInvG_erreichbar hH'.1 hA.stufen sp init hND (hr n) t⟩)
-    (fun n => exklusivG hH'.1 sp init (startExklusiv_ohne_haelt init hLeer) (hr n))
-    (fun n => (zielX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2 (wsRuhe E.ws) hA hN'
-      O.mitRuhe hH' passes sp init hZ (R.M n) (gx_aus_g_lauf (hr n))).fortschritt)
-    hFair hSp
 
 end Gabbro.Grammatik.Zielsatz

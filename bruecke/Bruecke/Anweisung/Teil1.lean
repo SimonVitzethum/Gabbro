@@ -108,13 +108,20 @@ theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} {eB : Gabbro.Body.Expr}
     (h : uIdxOfSide sd = .ok ix) (hb : sideExprG u fn sd = some eB) :
     eB = idxExpr ix := by
   cases sd with
-  | lit n => cases h; exact (Option.some.inj hb).symm
+  | lit n =>
+    cases h
+    simpa only [sideExprG, recordRead, numericSideExprG, Option.map_some, Option.some.injEq,
+      idxExpr] using hb.symm
   | param p =>
     cases h
-    simp only [sideExprG] at hb
-    split at hb
-    · exact (Option.some.inj hb).symm
-    · cases hb
+    cases hr : valueParamTy fn p with
+    | some ty =>
+      simpa only [sideExprG, recordRead, hr, Option.map_some, Option.some.injEq, idxExpr] using hb.symm
+    | none =>
+      simp only [sideExprG, recordRead, hr, numericSideExprG] at hb
+      split at hb
+      · simpa only [Option.map_some, Option.some.injEq, idxExpr] using hb.symm
+      · cases hb
   | _ => simp [uIdxOfSide] at h
 
 /-- **One call argument**: the Body argument term evaluates to the G argument value. -/
@@ -138,8 +145,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
       | (cases h
          simp only [Gabbro.Body.eval]
          rw [hL p _ ‹paramPos (fnAt u c).params p = .ok _›, Nat.zero_add,
-           nthVal_lowVar _ _ _ _ ρ (by assumption)]
-         rfl)
+           nthVal_lowVar _ _ _ _ ρ (by assumption)] <;> rfl)
   | freshPtr tname w2 =>
     simp only [argExpr] at hb
     cases hq : ptrParam u (fnAt u c) tname with
@@ -203,8 +209,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                   rw [uIdxOfSide_expr hix hb]
                   rw [lowIdx_sim hei σ₀ σ ρ s.world s.local' hL]
                   have hτ : Ty.int lo hi = Ty.index ((declOf u).count ⟨num, hlt⟩) := by rw [hLo, hHi]
-                  rw [valOf_eval_heq hτ _ ei ((mpr_heq _ _).trans (mpr_heq _ _)) σ₀ σ ρ]
-                  rfl
+                  rw [valOf_eval_heq hτ _ ei ((mpr_heq _ _).trans (mpr_heq _ _)) σ₀ σ ρ] <;> rfl
             · rw [dif_neg hHi] at h; cases h
           · rw [dif_neg hLo] at h; cases h
         · rw [dif_neg hlt] at h; cases h
@@ -220,8 +225,25 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
           cases h
           exact lowWertAt_sim he' hb hA hT σ₀ σ ρ s.world s.local' hW hL
       | _ => simp only [lowCallArgOne, lowCallArgOneL] at h; cases h
-    | _ => simp [ArtSchlicht] at hK
-  | bval _ | oval _ | gval _ | fnref _ => simp [argExpr] at hb
+    | bool => cases τ <;> simp only [lowCallArgOne, lowCallArgOneL] at h <;> cases h
+    | wert =>
+      cases τ <;> simp only [lowCallArgOne, lowCallArgOneL] at h
+      all_goals first
+        | exact lowWertAtE_rec_sim (er := none) h hb hA hT σ₀ σ ρ s.world s.local' hW hL
+        | cases h
+    | opt num | why num | sum num => cases τ <;> simp only [lowCallArgOne, lowCallArgOneL] at h <;> cases h
+    | _ => simp only [ArtSchlicht, Bool.false_eq_true] at hK
+  | bval b =>
+    simp only [argExpr] at hb
+    simp only [lowCallArgOne, lowCallArgOneL] at h
+    -- Reduce the dependent kind/type match before eliminating impossible successes.
+    split at h
+    all_goals first
+      | exact lowEns_raw_sim h hb hA hT σ₀ σ ρ s hW hL
+      | (repeat' split at h
+         all_goals cases h)
+  | oval _ | gval _ | fnref _ => simp only [argExpr, reduceCtorEq] at hb
+
 
 /-- **The argument list.** -/
 theorem lowCallArgsAux_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
@@ -261,8 +283,7 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
                 hA hT hN σ₀ σ ρ s hW hL
               have h2 := lowCallArgsAux_sim c hA hT hN σ₀ σ ρ s hW hL ks ts' as' rest esB
                 (fun k hk => hKs k (List.mem_cons_of_mem _ hk)) hrest hxs
-              simp only [Gabbro.Body.evalAll, h1, h2]
-              rfl
+              simp only [Gabbro.Body.evalAll, h1, h2] <;> rfl
             · cases hb
       · cases h
 

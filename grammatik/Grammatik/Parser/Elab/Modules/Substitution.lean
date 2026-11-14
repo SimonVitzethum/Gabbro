@@ -59,7 +59,6 @@ def field (env : Environment) (bindings : Bindings) (f : SFeld) : RewriteM SFeld
 
 def invariant (env : Environment) (bindings : Bindings) (iv : SGruppenInv) : RewriteM SGruppenInv := do
   pure { iv with
-    kosten := ← rewriteExpression env bindings iv.kosten
     pred := ← rewriteExpression env bindings iv.pred
   }
 

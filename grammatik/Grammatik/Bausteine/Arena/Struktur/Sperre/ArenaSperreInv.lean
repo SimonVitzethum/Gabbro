@@ -46,7 +46,7 @@ def InvAmRueckD2 (arena : ArenaTafel D) (P : Programm D) (f : D.Fn) (σ : World 
     `execEndH` satisfies `Mean i` for every invariant `f` owes. (`Mean := InvHaelt P` is `InvGutS`.) -/
 def InvGutSM (Mean : D.Inv → World D → Prop) (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D)
     (f : D.Fn) : Prop :=
-  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragO Q O' →
+  ∀ O' : Orakel D, RahmenO O' → RegLokal O' → AxVertragOP (PreQ P) Q O' →
     ∀ U : Umwelt D, HavocOk S U →
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f),
       RespektiertRahmen P R → OhneVorbedingung R →

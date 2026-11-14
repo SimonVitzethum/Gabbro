@@ -5,7 +5,7 @@ public import Grammatik.Speichermodell.Maschine.GXMaschine
 public import Grammatik.Zielsatz.Faeden.Verbund
 public import Grammatik.Logik.Fortschritt.Hungerfrei
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Start
-public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Teil1
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Voll
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -57,7 +57,7 @@ theorem gabbro_ziel_gx (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : 
       (RufStartG E.P.mitRuhe sp init) M) :
     ZielX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
       (RufStartG E.P.mitRuhe sp init) M :=
-  (gabbro_ziel C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
+  (gabbro_ziel_voll C D E fs ls cs hC hN O hH passes sp init hL (fun _ => true)
     (FadenMaschine.alleLebend M) (fadenErreichbarX_von_GX hr)).g
 
 /-- **On a declaration without an `atomic` global, (b) with the rely is (b)**: no read of a
@@ -159,7 +159,7 @@ end Einbettung
     Since 2026-11-02 (C15) for every unit without an accumulator (`hA`); `Pruefer.alsX` adds the
     accumulator admission and neutral initialization, which such a unit passes vacuously.
     On a unit WITH an arena the statement of before is `gabbro_ziel_sc` (proved directly). -/
-theorem gabbro_ziel_sc_aus (h : GabbroZiel) (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
+theorem gabbro_ziel_sc_aus (h : GabbroZielVoll) (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
     (E : Einheit D) (hB : E.arenen = []) (hA : E.akku = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
     (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
@@ -345,7 +345,7 @@ theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : De
 
 #print axioms Gabbro.Grammatik.Zielsatz.zielX_aus
 #print axioms Gabbro.Grammatik.Zielsatz.zielFX_aus
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_voll
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_sc_aus
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_gx
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_verbund

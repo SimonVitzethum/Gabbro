@@ -235,4 +235,27 @@ theorem ensList_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Opt
                 exact Iff.of_eq (Bool.and_eq_true _ _).symm
       · cases hb
 
+/-- A runtime bool expression has no entry snapshots or result binder. -/
+theorem lowEns_raw_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
+    {v : UEns} {ev : Expr (declOf u) Γ Λ .bool} {e : Gabbro.Body.Expr}
+    (h : lowEns u Γ Λ fn none v = .ok ev) (hb : rawCond u fn v = some e)
+    (hA : ArtStimmt fn) (hT : TabEindeutig u)
+    (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
+    (hW : WGRel u σ s.world) (hL : LRel fn 0 ρ s.local') :
+    Gabbro.Body.eval s e = some (valOf .bool (eval σ₀ ev σ ρ)) := by
+  unfold rawCond at hb
+  split at hb
+  · rename_i raw a hens
+    split at hb
+    · rename_i hc
+      cases hb
+      let s0 : Gabbro.Body.State := ⟨encG u σ₀ s.world, s.local'⟩
+      have hB : EnsBind fn none ρ s0 a s.local' :=
+        ⟨hL, fun hr => (by rw [hc.2] at hr; cases hr),
+          fun i hi => (by rw [hc.1] at hi; exact absurd hi (Nat.not_lt_zero _))⟩
+      exact lowEns_sim (er := none) hA hT σ₀ σ ρ s0 s.world s.local' a
+        (wgrel_enc u σ₀ s.world) hL hW hB v hens h (Vor.refl a)
+    · cases hb
+  · cases hb
+
 end Gabbro.Bruecke

@@ -30,7 +30,7 @@ theorem fadenS_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ) σ W →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D), GleichRS O O' →
@@ -57,7 +57,7 @@ theorem fadenS_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenS P O passes 
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ) σ W →
       r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
         r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
           (U : Umwelt D), (semH S O' U passes R r σ ρ).folgt (semH S O' U passes R r' σ' ρ')) :
@@ -100,7 +100,7 @@ theorem popS_ens (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : Sp
   have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich (hsem _ _ _ σ)))
   obtain ⟨σ'', hex, hsg⟩ := zErgG_gleich_zurueck h2
   have hE := ((hK G.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-    (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+    (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
     (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ'' _ hex
   have hgl : GleichAuf (stabilS P S lok G.f Λ) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
     hg.lese Λ Λ e.orte e.orte
@@ -137,7 +137,7 @@ theorem pushS_req (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : S
       rw [hlogik _ _ _ _ htor] at h1
       have hex := zErgG_gleich_logik (ZErgG.folgt_logik h1)
       exact ((hK F.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra) (regLokal_orakelAus hRL HA)
-        (orakelAus_vertrag hQ hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+        (orakelAus_vertragOP (axVertragOP_of_O _ hQ) hqa) (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
         (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) F.s0 F.rho hreq).2 g hex
 
 /-- **A returning head justifies its answer** (no event): the head's
@@ -206,7 +206,7 @@ theorem popS_kopf {F : RufRahmenG D}
   have hσa : GleichAuf (stabilS P S lok F.f F.rest.2.2.1) (rahmenWeltF G.1 κ s1) s1 :=
     rahmenWeltF_gleichAuf G.1 hfussκ hRah
   have hlen := rahmenWeltF_laenge G.1 κ s1
-  have hlt : Nonempty (Ereignis D) → κ.spur.length < (rahmenWeltF G.1 κ s1).spur.length :=
+  have hlt : Nonempty (Ereignis D) → κ.rang < (rahmenWeltF G.1 κ s1).rang :=
     fun hN => frischSpur_laenge hN κ.spur
   have hbe : ¬ Nonempty (Ereignis D) →
       Begruendet P O passes S ⟨G.1, κ, G.2.1, mk (rahmenWeltF G.1 κ s1)⟩ := by

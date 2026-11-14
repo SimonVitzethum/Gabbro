@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Strecke
+public import Bruecke.Anweisung.Lokal.BoolScope
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -14,10 +15,10 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 variable {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
   {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
 
-theorem blockZiel_nil_G {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (ids : List String) (σ : World (declOf u))
+theorem blockZiel_nil_G {loopMode : Bool} {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (ids : List String) (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (hW : WGRel u σ s.world)
     (hL : PositionalLRel fn ids 0 ρ s.local') :
-    BlockZiel_G u C c O passes R fn ids (Block.nil : Block (declOf u) (verOf u c) false Γ Λ Λ) σ ρ s [] := by
+    BlockZiel_G u C c O passes R fn ids (Block.nil : Block (declOf u) (verOf u c) loopMode Γ Λ Λ) σ ρ s [] := by
   refine ⟨fun e h => ?_, fun σ' v h => ?_, fun σ' ρ' h => ?_⟩
   · rw [execBlockZ_nil] at h; cases h
   · rw [execBlockZ_nil] at h; cases h
@@ -25,8 +26,8 @@ theorem blockZiel_nil_G {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (ids 
     cases h
     exact ⟨[], s, Strecke_G.leer s, hW, hL⟩
 
-theorem stmtZiel_of_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {ids : List String}
-    {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁} {blk : Block (declOf u) (verOf u c) false Γ Λ Λ₁}
+theorem stmtZiel_of_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {ids : List String}
+    {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁} {blk : Block (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
     {σ σl : World (declOf u)} {ρ : Env (declOf u) Γ} {s : Gabbro.Body.State}
     {x : Gabbro.Body.Stmt} {tB : List Gabbro.Body.Stmt}
     (hG : execStmt O passes R st σ ρ = execBlock O passes R blk σl ρ)
@@ -42,9 +43,9 @@ theorem stmtZiel_of_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {
     refine ⟨A, s', { hS with lauf := fun ρB hT hF => ?_ }, hW, hL⟩
     simp only [Gabbro.Body.exec, hB ρB, hS.lauf ρB hT hF]
 
-theorem blockZiel_cons_G {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
-    {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁}
-    {rest : Block (declOf u) (verOf u c) false Γ Λ₁ Λ'} {σ : World (declOf u)}
+theorem blockZiel_cons_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
+    {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
+    {rest : Block (declOf u) (verOf u c) loopMode Γ Λ₁ Λ'} {σ : World (declOf u)}
     {ρ : Env (declOf u) Γ} {s : Gabbro.Body.State} {x : Gabbro.Body.Stmt}
     {ys : List Gabbro.Body.Stmt} (hst : StmtZiel_G u C c O passes R fn ids st σ ρ s x)
     (hrest : ∀ σ₁ ρ₁ s₁, WGRel u σ₁ s₁.world → PositionalLRel fn ids 0 ρ₁ s₁.local' →
@@ -104,8 +105,8 @@ theorem blockZiel_cons_G {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn :
     exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
       fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
 
-theorem blockZiel_bind_G {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String} {τ : Ty}
-    {e : Expr (declOf u) Γ Λ τ} {rest : Block (declOf u) (verOf u c) false (τ :: Γ) Λ Λ'}
+theorem blockZiel_bind_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String} {τ : Ty}
+    {e : Expr (declOf u) Γ Λ τ} {rest : Block (declOf u) (verOf u c) loopMode (τ :: Γ) Λ Λ'}
     {σ : World (declOf u)} {ρ : Env (declOf u) Γ} {s s₁ : Gabbro.Body.State}
     {x : Gabbro.Body.Stmt} {ys : List Gabbro.Body.Stmt} {y id : String} {w : Int × Int}
     (hstep : ∀ ρB, RahmenAlleC u C ρB → Gabbro.Body.step ρB x s = .running s₁)
@@ -123,6 +124,20 @@ theorem blockZiel_bind_G {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} 
     obtain ⟨ρ'', hin, rfl⟩ := schrumpfZ_ok he
     obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ'' hin
     exact ⟨A, s', Strecke_G.vor hstep hgz hS, hW, hL.tail⟩
+
+theorem blockZiel_bindB_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
+    {e : Expr (declOf u) Γ Λ .bool} {rest : Block (declOf u) (verOf u c) loopMode (.bool :: Γ) Λ Λ'}
+    {σ : World (declOf u)} {ρ : Env (declOf u) Γ} {s s₁ : Gabbro.Body.State}
+    {x : Gabbro.Body.Stmt} {ys : List Gabbro.Body.Stmt} {y id : String}
+    (hstep : ∀ ρB, RahmenAlleC u C ρB → Gabbro.Body.step ρB x s = .running s₁)
+    (hgz : ∀ w', gz w' s.world ≤ gz w' s₁.world)
+    (h : BlockZiel_G u C c O passes R (fn.mitBindungB y) (id :: ids) rest (σ.lese Λ e.orte)
+      (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) s₁ ys) :
+    BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
+  apply blockZiel_bind_G (fn := fn) (y := y) (w := (0, 0)) hstep hgz
+  refine ⟨h.1, h.2.1, fun σ' ρ' he => ?_⟩
+  obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ' he
+  exact ⟨A, s', hS, hW, ⟨hL.length, hL.distinct, hL.values⟩⟩
 
 theorem laufZiel_strecke_G {Γ Γ₁ : Ctx} {Λ Λ₁ : List (Res (declOf u))}
     {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}

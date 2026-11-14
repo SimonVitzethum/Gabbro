@@ -43,12 +43,12 @@ theorem realisiert_G (S : Getragen u C)
         obtain ⟨b0, hb0⟩ := hlow c hc
         -- the callees: found, of smaller rank, so kept by `ρk`
         have hcallee : ∀ cn gf', fnSuch u cn = some gf' →
-            (∃ args, UStmt.call cn args ∈ (fnAt u c).body) →
+            (∃ args, CallsIn (fnAt u c).body cn args) →
             Gabbro.Body.Contract ρk cn (preProp (wfU u) gf') (postP u gf') ∧
             Gabbro.Body.Frame ρk cn (writesU gf') := by
           intro cn gf' hgf' ⟨args, hm⟩
           obtain ⟨d, rfl, _⟩ := fnSuch_mem hgf'
-          exact hk cn d (callee_getragen_teil S hc hm hgf') hgf'
+          exact hk cn d (callee_getragen_calls S hc hm hgf') hgf'
             (by have := hR c cn args hm; rw [hname] at this; omega)
         constructor
         · intro t hpre

@@ -1,0 +1,6 @@
+module ir_for_noninteger {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    for i in 0 ..< 1.5 { }
+    return 0;
+}
+}

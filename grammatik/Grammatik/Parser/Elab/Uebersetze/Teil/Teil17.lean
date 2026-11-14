@@ -167,6 +167,7 @@ def uAkkuInExpr : Nat → List String → SExpr → Bool
   | f + 1, ns, .old x => uAkkuInExpr f ns x
   | f + 1, ns, .ext _ _ xs => xs.any fun a => uAkkuInExpr f ns a
   | _, _, _ => false
+termination_by structural fuel => fuel
 
 /-- Whether an effect mentions an accumulator name. -/
 def uAkkuInEffekt : Nat → List String → SEffekt → Bool
@@ -231,6 +232,8 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .each _ s _ e _ _ _ b =>
     (match s with | none => false | some x => uAkkuInExpr f ns x) || uAkkuInExpr f ns e ||
     uAkkuInAnw f ns b
+  | f + 1, ns, .boundedLoop raw b =>
+    (boundedLoopExpressions raw).any (uAkkuInExpr f ns) || uAkkuInAnw f ns b
   | f + 1, ns, .retry _ b => uAkkuInAnw f ns b
   | f + 1, ns, .loop _ b => uAkkuInAnw f ns b
   | f + 1, ns, .trim e _ b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
@@ -245,6 +248,7 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .alloc _ x _ _ e _ =>
     (ns.any fun m => strEq m x) || uAkkuInExpr f ns e
   | _, _, _ => false
+termination_by structural fuel => fuel
 
 /-- Whether the signatures mention an accumulator name (for the expansion's
     narrow refusals: foreign signatures never go through the update or fold). -/

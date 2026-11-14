@@ -213,10 +213,10 @@ def axP : Programm axD := axPE axEnsInc
 /-- The oracle that writes `w` into the slot and answers `v` -- inside the
     frame of `inc` for every `v`, `w`. -/
 def axOrakel (v w : Wert axD (.int 0 3)) : Orakel axD where
-  wirkt := fun _ σ _ => (σ.storeSlot () 0 () w, v.n)
-  regLies := fun r => nomatch r
+  wirktL := fun _ σ _ => ({ σ.storeSlot () 0 () w with spur := [] }, v.n)
+  regLiesL := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  sichtbarL := fun g => nomatch g
 
 theorem axOrakel_rahmen (v w : Wert axD (.int 0 3)) : RahmenO (axOrakel v w) := by
   intro a σ ρ
@@ -325,7 +325,7 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
     | some u =>
         intro e
         cases e
-        exact hQ axInc _ .nil _ hw
+        exact hQ axInc _ .nil _ (preQ_hw axP (by decide) _ _) hw
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 (torRuf axP R) σ _ _ hax)
     revert e
     cases einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).2 with

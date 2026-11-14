@@ -4,39 +4,28 @@
            rounds, the lanes and agents that moved the statement, every superseded form) is in git:
            `git log -p -- grammatik/Grammatik/Zielsatz/Kern/Spec.lean`.
 
-  GOAL (Simon): a Gabbro user proves only their own logic plus named hardware assumptions; memory safety, race
-  freedom, contracts where claimed -- in concurrent runs too -- and time are carried by the language.
+  GOAL (Simon): a Gabbro user proves only their own logic plus named hardware assumptions; memory safety, race freedom, contracts where claimed -- in concurrent runs too -- and time are carried by the language.
 
-  NATIVE FLOAT HARDWARE BOUNDARY (owner, 2026-11-05). All floating operations,
-  comparisons, conversions, codecs and literal interpretation use opaque native
-  primitives. `RootNativeFloat.Hardware` is the named fourth component of (c),
-  including its finite/range, unsigned and saturating-conversion contracts.
-  Its seventh component additionally assumes nearest-even rounding for finite
-  binary32/binary64 addition, subtraction, multiplication and division, with
-  signed overflow and division-by-zero results. This strengthens the named
-  hardware premise; zero signs and NaN payloads remain unconstrained. The
+  NATIVE FLOAT HARDWARE BOUNDARY (owner, 2026-11-05). All floating operations, comparisons, conversions, codecs and literal interpretation use opaque native
+  primitives. `RootNativeFloat.Hardware` is the named fourth component of (c), including its finite/range, unsigned and saturating-conversion contracts.
+  Its seventh component additionally assumes nearest-even rounding for finite binary32/binary64 addition, subtraction, multiplication and division, with
+  signed overflow and division-by-zero results. This strengthens the named hardware premise; zero signs and NaN payloads remain unconstrained. The
   proof kernel does not execute an IEEE arithmetic, rounding or packing model.
-  There is no global instance discharging this hardware assumption. Memory,
-  ownership, concurrency, user contracts and cost conclusions remain unchanged.
-  The shared logical CPU operations and these proofs are ISA-independent. ARM,
-  x86, RISC-V and other targets supply their own checked instruction, register,
-  memory-order, ABI and encoding correspondences; x86 flags and SSE control do
-  not form part of the shared scalar contract.
+  There is no global instance discharging this hardware assumption. Memory, ownership, concurrency, user contracts and cost conclusions remain unchanged.
+  The shared logical CPU operations and these proofs are ISA-independent. ARM, x86, RISC-V and other targets supply their own checked instruction, register,
+  memory-order, ABI and encoding correspondences; x86 flags and SSE control do not form part of the shared scalar contract.
 
-  C03 DESCRIPTOR STAGE (2026-11-02). `ReasonSpec`/`ReasonVal` describe nominal u128 codes, including unknown
-  open codes, and source collection retains their identity, code order and closed flag. The current G/GX goals
-  still use finite-index reason channels and scalar raw answers: open transport and typed payloads are NOT
-  claimed by this preparatory stage. The authorized channel migration must extend `KopfHalt`, `InvAmGrundG`,
-  `InvGutGrund` and foreign-answer admission to every admitted open code and every checked structured field,
-  retaining the same named assumptions and user duties; it remains required before C03 is complete.
-  C03 TYPED SOURCE SCHEMAS. Tagged collection now retains complete parsed payload types and resolves every
-  present payload at an explicit kernel-admission gate. The kernel is still numeric-only at that gate;
+  C03 DESCRIPTOR STAGE (2026-11-02). `ReasonSpec`/`ReasonVal` describe nominal u128 codes, including unknown open codes, and source collection retains their identity, code order and closed flag. The current G/GX goals
+  still use finite-index reason channels and scalar raw answers: open transport and typed payloads are NOT claimed by this preparatory stage. The authorized channel migration must extend `KopfHalt`, `InvAmGrundG`,
+  `InvGutGrund` and foreign-answer admission to every admitted open code and every checked structured field, retaining the same named assumptions and user duties; it remains required before C03 is complete.
+  C03 TYPED SOURCE SCHEMAS. Tagged collection now retains complete parsed payload types and resolves every present payload at an explicit kernel-admission gate. The kernel is still numeric-only at that gate;
   reading a bool, record, array, string or reference schema does not enable its execution as a sum payload.
   This source-stage refactoring does not yet change the domain or meaning of the goal statements below.
 
-  THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
-  `Classical.choice`, `Quot.sound`):
-  * `GabbroZiel` -- safety, on every reached machine: the legs of `ZielFX` (below). Proof `gabbro_ziel`.
+  THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`, `Classical.choice`, `Quot.sound`):
+  * `GabbroZiel` (Spec/Fremd.lean) -- safety, on every reached machine: the legs of `ZielFX` (below), with the
+    call-site duties of software foreign items (C08 below). Proof `gabbro_ziel`. `GabbroZielVoll` -- the same
+    under the full summary premise (c) of before (`gabbro_ziel_voll`).
   * `GabbroZielSC` -- the same over machine G without the atomic rely and without the ownership leg; proved directly
     (`gabbro_ziel_sc`), and on every unit without an arena a corollary (`gabbro_ziel_sc_aus`), kept as a name
     because corpus theorems and embeddings are stated over it.
@@ -50,8 +39,8 @@
     in class `endet` never stands at a spent `forever` budget (`gabbro_ziel_terminierung`, proof in
     Zielsatz/Atomar/BeweisTerminierung.lean). See TERMINATION below.
   * `GabbroZielWarten` -- a waiting bound: on every run of the ticket lock a thread standing at `locks L` takes `L`
-    within `wartezeit` scheduler steps, under four named premises of the run (`gabbro_ziel_warten`, proof in
-    Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
+    within `wartezeit` scheduler steps, under three named premises of the run and the checker's hold bounds
+    (`gabbro_ziel_warten`, proof in Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
   * `GabbroZielProfil` (C14, 2026-11-02) -- the same conclusion over a SELECTED, profile-bound unit
     (`ProfilEinheit`: the unit with its build mode, the ORIGINAL parsed items and the image's section policy;
     Zielsatz/Projekte/Profil.lean). MEANING CHANGE, two points. (1) Assumption provenance: (c) is stated through
@@ -67,12 +56,10 @@
     static placement, an entry/service binding or a guest boundary (C08/C12 services, still refused).
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool `AkzeptiertX`, not a deployed
-  checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which
-  carries none of the concurrent legs of `ZielFX`.
+  checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which carries none of the concurrent legs of `ZielFX`.
 
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
-  lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time
-  roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
+  lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`; the atomic checker also requires static-array reset admission
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
       lock-free starts, pool safety, write separation, answer sites, masking discipline, the C02 library binding
@@ -80,8 +67,7 @@
       ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
       declared-check admission (`CheckAdmission`); arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
-      enumerations (finite declarations only).
-  (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
+      enumerations (finite declarations only). (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
       callee answer meeting the callee's contract and frame, every oracle answer of class (c), every lock move
       keeping the invariant (`HavocOk`), and every value a read of an admitted shared atomic may return (the rely):
       its `ensures` and owed invariants at value and reason exits, every callee's `requires`, no `logik` outcome
@@ -89,17 +75,14 @@
       contravariant requires, covariant normal ensures, part of (b), never discharged by structural acceptance);
       and the start (`StartPflicht`: the lock invariants at `E.sp0`, every root's `requires`
       there). For units the Lean parser elaborates, (b) is derived from GabbroV's duty files
-      (`bruecke_nutzer`, `bruecke_nutzerA`) under per-unit decided name and rank conditions.
-  (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code (THE ONE LIST, below).
+      (`bruecke_nutzer`, `bruecke_nutzerA`) under per-unit decided name and rank conditions. (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code (THE ONE LIST, below).
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (THE ONE LIST).
   CONCLUSION of `GabbroZiel`: for every budget `passes`, every set `lebt0` of initially live threads and every
   machine `K` of the THREAD machine over GX (FadenMaschine.lean, GXMaschine.lean: machine G, threads spawned at run
   time by `start`/`child`, and every read of an admitted shared atomic answered by the weak memory) reachable from
-  the runtime's start: `ZielFX` at `K`. The program run is `E.P.mitRuhe`, `E.P` plus the runtime's idle root
-  (MitRuhe.lean; every function behaves as in `E.P`, MitRuheSemantik.lean).
+  the runtime's start: `ZielFX` at `K`. The program run is `E.P.mitRuhe`, `E.P` plus the runtime's idle root (MitRuhe.lean; every function behaves as in `E.P`, MitRuheSemantik.lean).
 
-  THE LEGS. `ZielX` at the G state `K.m` (reached from `M0`), `ZielFX` on the thread machine. "From" names what
-  carries a leg besides machine G: (a) the checker, (b) the user, (c) the oracle class, "--" nothing.
+  THE LEGS. `ZielX` at the G state `K.m` (reached from `M0`), `ZielFX` on the thread machine. "From" names what carries a leg besides machine G: (a) the checker, (b) the user, (c) the oracle class, "--" nothing.
   * `speicherSicher` (`SpurInv`) -- every recorded access carries its carrier's guards, whose locks are held. (c).
   * `speicherAdressen` -- if foreign code writes inside the declared extents (`ImBereichO`, inside the leg), every
     cell the run changed lies in its extent and, under every correct byte layout (`AdressLayout`, `LayoutOk`), with
@@ -137,6 +120,13 @@
   * `fortschritt` -- every thread is finished, waits for a lock, stands at a NAMED stop, or can step (SAFETY: no
     unnamed stuck state). (a), (b), (c).
   * `zeit` -- a frame with a finite call tree takes at most `kostenTief` own steps while active. --.
+  C05 EPILOGUE COST (2026-11-13, strengthening of the `zeit` cost account). `kostenTief`, hence `ZeitAb`/`ZeitAbX`, includes the callee's `ensures` and
+  every owed invariant predicate at each value return, including scoped returns, via `kostenEpilog` in `kostenStmt`/`kostenEnd`/`kostenSonst`.
+  The `lese` bookkeeping and evaluation occur inside the G return step; predicate primitive costs include their loads. Reason exits (`retWhy`,
+  `retWhyScoped`, `leave`, `next`) evaluate no return predicate and add no epilogue price. The writer's declared `costs` must cover body plus epilogue.
+  Invariants have only the surface `invariant n : p;`: no independent cost, execution mode or proof tail. There is one cost figure, the writer's `costs`.
+  No new assumption, stop or weakened safety leg.
+
   * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
     (Folge.lean). --.
   * `pruefstand` (`CheckTreueG`, C16, 2026-11-02) -- check evidence and its consumption: every completed probe
@@ -155,8 +145,7 @@
     with every counter one higher: the budget stop is no stop of the program (BudgetMonoton.lean: every run at
     budget `p` is a run at every larger budget).
 
-  THE ONE ASSUMPTION LIST -- everything the statements assume that is neither the checker's Bool nor the user's
-  proof:
+  THE ONE ASSUMPTION LIST -- everything the statements assume that is neither the checker's Bool nor the user's proof:
   * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`) writes only its
     declared carriers, keeps the held locks and leaves its accesses in the trace. Nothing in the language can check
     foreign code. (Carriers, not indices: that it writes inside the declared extents is `ImBereichO`, below.)
@@ -193,8 +182,7 @@
     promise about the foreign code). Every other empty answer type is refused by the checker (`antworten`).
   * `flagge` -- an `awaits` whose flag is not visible: a WAIT (not yet published, not visible, or never published).
   * `budget` -- a spent `forever` budget: a model artefact, and not final (`budgetUnecht`).
-  A thread at any of these stops while holding a lock leaves every thread that needs it waiting for ever; that is
-  the second case of `GabbroZielLeben`.
+  A thread at any of these stops while holding a lock leaves every thread that needs it waiting for ever; that is the second case of `GabbroZielLeben`.
 
   THE READING -- not premises, assumptions of reading the statements as statements about the BINARY:
   * C02 translators use exact source-bound map correspondence, in addition to output typing
@@ -230,22 +218,55 @@
         (Code/Conc/Lock.lean: fetch-add on `next`, acquire spin on `now`, release advance); Stage 0 emits a ticket
         lock of the same discipline (stage0/Stage0/Senke/Sperre/Ticket: `cas` on `next`, waiting for `serving` by
         `futex_wait` instead of spinning, release by `cas` on `serving` and `futex_wake` of all waiters, with a
-        waiter count). Only its uncontended paths are proved (`locks_okT`); no theorem ties a futex-blocked thread
-        to the model's waiting, so `GabbroZielLeben` and `GabbroZielWarten`, stated over the model's spinning
-        lock, are still NOT statements about the emitted lock;
+        waiter count). Its uncontended paths are proved on the runner (`locks_okT`). Its contended behaviour is
+        proved over an access-level MODEL of the emitted code (stage0/Stage0/Senke/Sperre/Faeden, `Faeden.Schritt`:
+        ONE lock, a fixed set of `N ≤ 2147483647` threads, one step per shared-word access, a futex that blocks,
+        returns spuriously and wakes all waiters; the guarded body and the code outside are steps in place). The
+        bound is the emitted WAKE count and also makes the word compares exact (`serving` mod 2^64, its low 32 bits
+        in FUTEX_WAIT). Proved over that model: every run is a stuttering run of Faeden's own abstract ticket lock
+        `Abs` in which a futex-blocked thread is a waiting thread (`Lauf.abbild`, `Lauf.schlaeft_wartet`), with
+        mutual exclusion (`Lauf.ausschluss`) and the queue facts of `FifoLauf` ADAPTED to access granularity
+        (`Lauf.glied`, `Lauf.eindeutig`, `Lauf.kopf` -- only the entering step must be the head --, `Lauf.ordnung`);
+        `Abs` simulates the model's ghost `Tkt` (Code/Conc/LockRel.lean): each draw, enter, give is `Tkt.take`,
+        `Tkt.enter`, `Tkt.leave` of the same thread with the ghost preconditions of `take_step`, `spin_enter_step`,
+        `release_step`, `Tkt.Ok` kept (`passt_zieht`, `passt_tritt`, `passt_gibt`), so an emitted run read at G's
+        steps (`Fenster`) carries a `Tkt` ghost run (`Lauf.tkt`); and the emitted lock's own liveness in the shape of
+        `GabbroZielLeben`'s conclusion (`Lauf.leben`, `Lauf.leben_warte`) under weak fairness over the threads not
+        blocked in FUTEX_WAIT plus one named futex premise: FUTEX_WAIT returns spuriously only finitely often
+        (`Lauf.ScheinbarEndlich`). Carried to the model statement: a G run COUPLED with the emitted locks -- per
+        lock, the emitted run at G granularity (`AbsLauf`, proved from `Fenster`) and G's view of the lock equal to
+        it (`GSicht`) -- is a `FifoLauf` (`fifoAus`), and `gabbro_ziel_leben` read back through the coupling is
+        `gabbroZielLeben_emittiert` / `gabbroZielLeben_faeden`, an INSTANCE under G's fairness; only threads `< N`
+        use a coupled lock (`GSicht.unter`); nesting and waiting across locks are the coupled G run's. Still
+        assumed: that the access-level model is what the runner and the OS futex do (the runner's
+        `Runner.IR.FutexOK` classifies one thread's WAIT return only, without blocked threads or interleaving), and
+        the coupling (`Fenster`, `GSicht`: G simulates the emitted code at each lock, with disjoint lock words and
+        no other code touching them); neither is proved. Not claimed: that a thread before its draw draws (the draw
+        is a `cas` loop on `next`, lock-free but not wait-free, while the model's arrival at `locks L` is one G
+        step); a waiting bound -- `GabbroZielWarten` is still NOT a statement about the emitted lock (its `cas` loops
+        on `next` and on the waiter count have no retry bound); and neither statement is carried to the image, which
+        needs the missing simulation of the thread machine over GX (THE READING);
     (4) carriers are the locations (a table or an atomic array is one location of W);
     (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.
 
-  QUESTIONS TO THE OUTSIDE ARE TRACE EVENTS (2026-10-25, a change of meaning reviewed with the owner). Every
-  foreign call, register read and `awaits` visibility first records `Ereignis.fremd` in the thread's trace
+  QUESTIONS TO THE OUTSIDE ARE TRACE EVENTS (2026-10-25, a change of meaning reviewed with the owner). Every foreign call, register read and `awaits` visibility first records `Ereignis.fremd` in the thread's trace
   (`World.fragt`), and the oracle answers in that world. So two calls of the same foreign body in the same memory
   are two different questions, and an oracle may answer them differently, as a real system does (a `read` that
   returns the next bytes, a provider that hands out a fresh cell). Before, every oracle had to answer both alike,
   so the statement covered no run in which a repeated call answered differently. The event touches no cell and no
   lock. `RegLokal` (premise (c)) still lets a register or visibility answer depend on the device carriers only, not
-  on that history: lifting it needs the local replay of `ziel_ort_*` to record register answers as it records
-  foreign answers -- named, open.
+  on that history: lifting it needs the local replay of `ziel_ort_*` to record register answers as it records foreign answers -- named, open.
+
+  THE OUTSIDE IS BLIND TO READS (2026-11-13, a change of meaning of (c)). The oracle answers the world WITHOUT its read events (`World.ohneLese`: a table or global access with `schreibt = false` is erased; writes, lock
+  moves and the `fremd` questions stay): `Orakel` holds the raw answers `wirktL`, `regLiesL`, `sichtbarL`, and
+  G consults `Orakel.wirkt`/`regLies`/`sichtbar`, which hand them the erased world. A foreign body answers a memory and the events it adds; G puts them on top of the thread's whole trace (`World.auf`), so the reads
+  stay recorded and an answer never unwrites the thread's past. Hence the oracle class of (c) narrows by exactly two distinctions: an oracle that answers differently after ghost read events, and an oracle that
+  rewrites the thread's ghost trace below its own events. Both are functionally indistinguishable -- a read changes no cell, takes no lock and asks nothing outside, and the trace is the model's bookkeeping, not a
+  device -- so every foreign body, device and memory system that answers from memory contents, writes, lock moves and the questions asked is still an oracle of (c).
+  What a physical environment may observe of loads beyond their function -- timing, cache occupancy, performance counters, trace units, DMA or interconnect snooping of load traffic -- is a physical side
+  channel and out of scope of the model (`ZeitAb` counts steps of G, not time); an environment whose answers depend on the number or order of the thread's loads is not an oracle of (c). In exchange
+  read-blindness holds for EVERY oracle (`Orakel.wirkt_blind`, `regLies_blind`, `sichtbar_blind`) instead of being an assumption about it; the image theorems of stage 0 use it.
 
   WHAT A GREEN BUILD COVERS. The goal statements themselves, their witnesses, and the per-program instances checked
   in under Korpus/ (among them Korpus/Programme/GenOblig104.lean and GenOblig108.lean: the unit as a G term, the
@@ -254,59 +275,44 @@
   register of certified programs. A source text reaches the statements only through the Lean elaborator plus a
   Lean proof of the checker premise and of (b) for the unit it produces (for (b): GabbroV's duty files through
   `bruecke_nutzer`/`bruecke_nutzerA`). STILL TRUSTED: that the elaborator's unit is what the source text means
-  (the elaborator is the definition of that meaning; its export laws, `ExportPreservation`, cover single forms),
-  and THE READING above. A green build says NOTHING about a program for which no such instance is checked.
+  (the elaborator is the definition of that meaning; its export laws, `ExportPreservation`, cover single forms), and THE READING above. A green build says NOTHING about a program for which no such instance is checked.
 
   TERMINATION (2026-10-22, `GabbroZielTerminierung`). Two more premises beside (a)-(d), both user logic: a measure
-  `m` (per function a lexicographic tuple of natural-number expressions over its parameters, the `decreases`
-  clause) whose duty `MassPflicht` holds for every function -- every call back into the caller's cycle (`zykS`)
+  `m` (per function a lexicographic tuple of natural-number expressions over its parameters, the `decreases` clause) whose duty `MassPflicht` holds for every function -- every call back into the caller's cycle (`zykS`)
   has a smaller measure than the caller's entry -- and measures of one length along a cycle. A function on no cycle
-  owes nothing (`massPflicht_ohne_zyklus`). The measure, its duty and the class are stated on the user's program
-  `E.P`; the runs are those of the program with the idle root (`E.P.mitRuhe`), to which the duty transfers
-  (`massPflicht_mitRuhe`). Claimed: (1) on every infinite run of the thread machine over GX from the runtime's
-  start (any initially live threads; threads started, spawned and joined at run time) every thread takes only
+  owes nothing (`massPflicht_ohne_zyklus`). The measure, its duty and the class are stated on the user's program `E.P`; the runs are those of the program with the idle root (`E.P.mitRuhe`), to which the duty transfers
+  (`massPflicht_mitRuhe`). Claimed: (1) on every infinite run of the thread machine over GX from the runtime's start (any initially live threads; threads started, spawned and joined at run time) every thread takes only
   finitely many steps -- a `forever` is finite here because machine G grants `passes` passes from outside; (2) a thread whose start
-  function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`,
-  `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
+  function the decision algorithm `klasse` (Logik/Terminierung/Klasse.lean: `endet`, `umgebung`, `bedingt`, `abgelehnt`, computed from the syntax) puts in class `endet` never stands at a spent budget: its end does not
   lean on the passes. Classes `umgebung` and `bedingt` are finite per pass (`durchgang_schritte`); how their loops can
   end is fixed in the model, not here (Logik/Terminierung/Ausgang.lean): a `forever` loop completes only through a
   pass that leaves and returns only through one that returns (`forever_bedingt`), and a loop whose body holds no exit
-  -- the loops of class `umgebung` -- ends only at a logic or hardware stop, at its `progress` assumption when the
-  passes are spent (`forever_umgebung`).
+  -- the loops of class `umgebung` -- ends only at a logic or hardware stop, at its `progress` assumption when the passes are spent (`forever_umgebung`).
 
-  WAITING (2026-10-23, `GabbroZielWarten`). Over the runs of the ticket lock (`FifoLauf`) from the runtime's start,
-  four named premises of the run, none derived: the scheduler's fairness window `F` (`FairF`: a thread that can
-  step at each of `F` consecutive steps takes one); the hold time (`Haltezeit h k`: on every stretch on which a
-  thread holds `L` it takes at most `h L` own steps, `k L` of them at a nested `locks`); no named stop inside a
-  critical section (`HardwareImAbschnitt`); the contenders `Ts L` (`Anwaerter`). Claimed: a thread standing at
-  `locks L` takes `L` within `wartezeit ls Ts h k F L` scheduler steps (Logik/Fortschritt/Warten.lean: recursive over
-  the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
-  bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
+  WAITING (2026-10-23, `GabbroZielWarten`; hold time derived 2026-11-13). Over the runs of the ticket lock (`FifoLauf`) from the runtime's start, three named premises of the run, none derived: the scheduler's fairness
+  window `F` (`FairF`: a thread that can step at each of `F` consecutive steps takes one); no named stop inside a
+  critical section (`HardwareImAbschnitt`); the contenders `Ts L` (`Anwaerter`). Beside them a decidable check of the source program, `haltPasst E.P passes N decl fs ks` (Logik/Fortschritt/Halten/
+  Pruefung.lean): every `locks L` section of every function costs at most `N L` in `kostenBlock` -- the G-step cost of KostenG, the checker's `held <= N ops` (K002) -- and calls only functions of `ks`, each fitting its
+  declared cost `decl` (K001). Claimed: a thread standing at `locks L` takes `L` within `wartezeit ls Ts h h F L` scheduler steps with `h = haltSchranke ls N`, i.e. `h L = N L + 1 + ls.length`
+  (Logik/Fortschritt/Warten.lean: recursive over the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time `Haltezeit h h` was a premise on the run until 2026-11-13; it is now the theorem `haltezeit_aus`
+  (Halten/Haltezeit.lean): a section's own steps are at most its body's `kostenBlock`, one release, and the
+  releases of the frame's outer locks a scoped `return` performs before `L` (at most `ls.length`). The nested-lock steps are not counted apart (`k = h`): the single cost potential bounds all own steps; a tighter count
+  needs a separate acquisition potential through calls and loops. Every lock must carry a bound (`N` is total); a program with an unbounded lock does not meet the check. `HeldBinding.holds_haltPasst` derives
+  this check from the exporter's hold/cost acceptance and a bound for every lock; `haltPasst_mitRuhe` transfers it to the runtime program (the idle root adds no section and no call). Indirect calls inside
+  sections, and anywhere in cost-checked functions of `ks`, are refused; checked pointer-type costs do not yet enter this cost potential. Calls outside sections in functions outside `ks` are unaffected.
 
-  PER-CORE ACCUMULATORS (2026-11-02, C15 concurrency/link/export slice; a reviewed change
-  of meaning in the sense of §1, staged beside the goal). One `accumulates` declaration
-  becomes N private global cells with one exclusive lock each, a core-query binding and
-  generated update/reduction functions. The checker admits the descriptor, the neutral
-  initialization at the start memory and the storage/contract shape (`AccumulatorAdmission`
-  in (a) with the Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance,
-  the range facts and the quiescence condition are source-derived user duties in (b). The
-  operators, neutral elements and fold/permutation/RMW laws are proved on the typed encodings
-  (`Bausteine/Kernzelle`); the sampled fold equals the contribution fold under a proved
-  quiescent history (`ruhigFalte`). Since this slice: each cell is proved guarded by its
-  exclusive lock, so the ordinary race leg covers accumulator cells with no per-core
-  exemption (`SperrProtokoll.akkuRennfreiAbgedeckt`; group invariants and `KernHaltEA`
-  still apply); the quiescent collapse to the completed fold and the neutral-start RMW
-  chain are proved at the ghost level with the staged added conjunct `AkkuZielErweitert`
-  beside `ZielX`/`ZielFX`; the admission and neutral initialization cross separately
-  compiled units through the link check (`SchnittstelleSpec.akku`, `BindeSpec.akku` with
-  `akkuStart`, decided by the link Bools); the elaborator expands admitted declarations
-  (`max`/`min`/`add`/`or` over integer ranges with a positive constant `per cpu` count) to
-  guarded storage while updates, reads and the core query stay refused (they need the C08
-  core-query contract); a full-program admission is witnessed on a non-degenerate two-cell
+  PER-CORE ACCUMULATORS (2026-11-02, C15 concurrency/link/export slice; a reviewed change of meaning in the sense of §1, staged beside the goal). One `accumulates` declaration
+  becomes N private global cells with one exclusive lock each, a core-query binding and generated update/reduction functions. The checker admits the descriptor, the neutral
+  initialization at the start memory and the storage/contract shape (`AccumulatorAdmission` in (a) with the Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance,
+  the range facts and the quiescence condition are source-derived user duties in (b). The operators, neutral elements and fold/permutation/RMW laws are proved on the typed encodings
+  (`Bausteine/Kernzelle`); the sampled fold equals the contribution fold under a proved quiescent history (`ruhigFalte`). Since this slice: each cell is proved guarded by its
+  exclusive lock, so the ordinary race leg covers accumulator cells with no per-core exemption (`SperrProtokoll.akkuRennfreiAbgedeckt`; group invariants and `KernHaltEA`
+  still apply); the quiescent collapse to the completed fold and the neutral-start RMW chain are proved at the ghost level with the staged added conjunct `AkkuZielErweitert`
+  beside `ZielX`/`ZielFX`; the admission and neutral initialization cross separately compiled units through the link check (`SchnittstelleSpec.akku`, `BindeSpec.akku` with
+  `akkuStart`, decided by the link Bools); the elaborator expands admitted declarations (`max`/`min`/`add`/`or` over integer ranges with a positive constant `per cpu` count) to
+  guarded storage while updates, reads and the core query stay refused (they need the C08 core-query contract); a full-program admission is witnessed on a non-degenerate two-cell
   fixture (`akkuProgramm_zeuge`). What is NOT claimed yet: the run-level existence of such
-  a history for every reachable machine (needs the GX replay of the update stores), so the
-  goal has no accumulator leg yet; any race exemption or universal quiescence (existing
-  race/time qualifications are retained).
+  a history for every reachable machine (needs the GX replay of the update stores), so the goal has no accumulator leg yet; any race exemption or universal quiescence (existing race/time qualifications are retained).
 
   NOT CLAIMED:
   * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
@@ -382,35 +388,44 @@
   * every program the certificate register lists as UNCERTIFIED, by name.
 
   KNOWN DEBT. There is no definition-only layer: the goal predicates live in mixed files (ZielOrt, SperreFuss,
-  SperreMaschine, Verklemmung, RennfreiVoll, KostenG, …), and the import closure includes witness files. To do:
-  every definition this file reads out of its proof file.
+  SperreMaschine, Verklemmung, RennfreiVoll, KostenG, …), and the import closure includes witness files. To do: every definition this file reads out of its proof file.
 
-  C08 FOUNDATION (2026-11-02, no change of meaning). New definitions only: the canonical
-  foreign signature (`Deklaration.asignatur`), the provenance (`AxOrigin`, `axHerkunft`,
-  `axBeleg`; unresolved by default, never inferred), call contracts with boundary clauses
-  (`CallContract`, `BoundaryClause`, `Programm.axVertrag`), boundary records with the
-  live-grant inventory and provider judgment (`BoundaryRecord`, `GrantInventory`,
-  `ProviderOk`, `ProviderRealisiert`, `klauselGilt`), the generalized contract with replay
-  (`AxVor`, `AxNach`, `AxVertragONeu`, `VertragANeu`), the software obligations
-  (`ForeignPflicht` over the actual binding, `ProviderTreueG`, `GrantsStart` with
-  `Einheit.grants0`), the interface component (`schnittstellenB`, `SchnittstellenOk`,
-  folded into `Akzeptiert`/`AkzeptiertX` and `AkzeptiertSpec`/`AkzeptiertSpecX`), and the
-  `Logik.fremdAntwort` outcome for unexpected software answers. The statements above are
-  unchanged: wiring the software obligations into (b), narrowing the foreign part of (c)
+  C08 FOUNDATION (2026-11-02, no change of meaning). New definitions only: the canonical foreign signature (`Deklaration.asignatur`), the provenance (`AxOrigin`, `axHerkunft`,
+  `axBeleg`; unresolved by default, never inferred), call contracts with boundary clauses (`CallContract`, `BoundaryClause`, `Programm.axVertrag`), boundary records with the
+  live-grant inventory and provider judgment (`BoundaryRecord`, `GrantInventory`, `ProviderOk`, `ProviderRealisiert`, `klauselGilt`), the generalized contract with replay
+  (`AxVor`, `AxNach`, `AxVertragONeu`, `VertragANeu`), the software obligations (`ForeignPflicht` over the actual binding, `ProviderTreueG`, `GrantsStart` with
+  `Einheit.grants0`), the interface component (`schnittstellenB`, `SchnittstellenOk`, folded into `Akzeptiert`/`AkzeptiertX` and `AkzeptiertSpec`/`AkzeptiertSpecX`), and the
+  `Logik.fremdAntwort` outcome for unexpected software answers. The statements above are unchanged: wiring the software obligations into (b), narrowing the foreign part of (c)
   to named hardware, and the provider history in G are staged next.
 
-  C08 PREMISE SPLIT (2026-11-02, authorized change of what (c) means; `GabbroZiel` itself is
-  untouched and stays proved). `Zielsatz/Atomar/GabbroZielFremd.lean` states the same goal as
+  C08 PREMISE SPLIT (2026-11-02, authorized change of what (c) means; the statement of before is untouched and stays proved, now `GabbroZielVoll`). `Zielsatz/Atomar/GabbroZielFremd.lean` states it as
   `GabbroZielFremd` with the foreign premise split by provenance: (c) of the above reads
   "the hardware and foreign code", but a foreign item declared SOFTWARE (`axHerkunft`) is user
-  logic -- its implementation proves its declared ensures against the actual binding `O`
-  (`AxVertragOSw`, now part of (b)), and only the named hardware stays in (c')
-  (`HardwareAnnahmenHw`: frame, register locality, the ensures of every item NOT declared
-  software; unresolved provenance reads as hardware, the meaning of every unit before C08).
-  `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is
-  `gabbro_ziel` recombined): no guarantee is weakened and nothing is newly assumed. The
-  call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
+  logic -- its implementation proves its declared ensures against the actual binding `O` (`AxVertragOSw`, now part of (b)), and the remaining assumptions stay in (c')
+  (`HardwareAnnahmenHw`: frame, register locality, the ensures of every item NOT declared software; unresolved provenance reads as hardware, the meaning of every unit before C08).
+  `GutO` still covers software bindings as well: frame respect and preservation of held locks in
+  every world, and the prescribed trace suffix when the declared write guards are held, remain assumptions in (c'), not duties discharged by `AxVertragOSw`.
+  `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is `gabbro_ziel_voll`
+  recombined): no guarantee is weakened and nothing is newly assumed. The call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
   provider history in the machine replace the unconditional software premise in a later step.
+
+  C08 CALL-SITE GOAL (2026-11-13, change of meaning of `GabbroZiel` and of premise (b); decision C08, PLAN-COMPILER-READY §8.1). `GabbroZiel` (Spec/Fremd.lean) carries the
+  call-site duties in (b): the `requires` of a foreign item declared SOFTWARE is owed at every call a GX run reaches (`CallSitePflicht`); its `ensures` is relied on only where
+  that pre held -- by the actual binding's proof (`ForeignVertrag`: under the pre at the question world every answer meets the post; every answer decodes), with the post covering
+  the declared summary (`PostDeckt`), and by the body duties. Premise (c) (`HardwareAnnahmenHw`) retains `GutO` for ALL items, including software bindings: frame
+  respect and preservation of held locks in every world, and the prescribed trace suffix when the declared write guards are held, remain explicit assumptions, not duties discharged by
+  `ForeignVertrag` or `CallSitePflicht`. It also retains register locality, the summaries of every item NOT declared software and the native-float hardware. The unconditional software summary is
+  no premise of `GabbroZiel` any more; the statement under the full summary premise keeps its text as `GabbroZielVoll` (`gabbro_ziel_voll`), as do `GabbroZielSC`, `GabbroZielVerbund`,
+  `GabbroZielVerbundSC`, `GabbroZielVerbundN`, `GabbroZielLeben`, `GabbroZielWarten`, `GabbroZielTerminierung`, `GabbroZielProfil`, `GabbroZielProjekte` and `GabbroZielFremd`.
+  The body duties (KoerperGut/InvGut/PflichtWP/MassPflicht, SC and atomic) quantify over every
+  frame-respecting oracle of the class `AxVertragOP (PreQ P) Q`: a declared summary is required exactly at QUESTION worlds `σ0.fragt (.inl a)` -- the only worlds machine G asks
+  an oracle in -- and for a software item only where its interface pre holds there (hardware and unresolved items: at every question). This enlarges the quantified class
+  and strengthens (b), including the measure duty of `GabbroZielTerminierung`: an unsatisfiable software summary off-pre or at a never-asked world
+  no longer empties the body duties, and a body depending on an off-pre software answer is refused (`CallSiteConditionalBite`). The every-world class of the first repair
+  (`AxVertragOPAlle`) excluded the actual trace-faithful binding (`CallSiteQuestionBlocker.old_class_too_strong`); the actual binding inhabits the
+  question-world class (`axVertragOP_of_binding`), every question a run asks is answered within the summary under the call-site duty (`antwortQLauf_of_callSite`), and the replay
+  records exactly those answers (`orakelAus_vertragOP`, `zielFX_rely`). Embeddings ask the
+  image oracle at the image question world (`World.alsFrage`, `orakelΦ`) and carry a true source pre to the image call (`Uebernahme.axPre`). No run-time check, no change of machine G, no new stop kind.
 -/
 module
 

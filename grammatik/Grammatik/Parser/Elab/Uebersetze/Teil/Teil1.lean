@@ -163,7 +163,7 @@ inductive UStmt
   | callIndElseBeg : String → String → List UArg → String → UStmt
   /-- Explicit linear retirement in generated check consumers. No payload or runtime effect. -/
   | retireMark : String → UStmt
-  /-- One named invariant scope, closed by `blkEnd`. Source metadata duties stay gated. -/
+  /-- One named invariant scope, closed by `blkEnd`; its declaration resolves in G. -/
   | breakingBeg : String → UStmt
   /-- Current-state traversal: candidate, table, predecessor, member, edge, invariant,
       state-reading measure and the source mutation sub-contract. -/
@@ -343,7 +343,7 @@ structure USum (Payload : Type := Ty) where
   deriving DecidableEq, Repr
 /-- The complete ordered payload schema, independent of its resolution stage. -/
 def USum.spec {Payload : Type} (s : USum Payload) : List (Option Payload) := s.cases.map (·.2)
-/-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
+/-- One invariant (`table T { .. invariant I : p; }` or `group G over { T, U } { invariant I : p; }`,
     `D.Inv`): its name, its carriers -- tables and statics, by name (`D.traeger`) -- and its predicate over no parameter (`Programm.invariante`,
     read under the guards of its carriers, `invSicht`). -/
 structure UInv where

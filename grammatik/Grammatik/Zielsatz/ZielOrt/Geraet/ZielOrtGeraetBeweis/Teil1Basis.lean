@@ -22,8 +22,8 @@ variable (P : Programm D) (O : Orakel D) (passes : Nat)
     answers. -/
 def KopfG (F : RufRahmenG D) (W : World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (σ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV σ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ KurzA σ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV σ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ KurzA σ.rang HA ∧
     GleichAuf (fussOrteG P F.f) σ W ∧ F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
       PasstV R H → PasstA O' HA → GleichRS O O' →
@@ -34,8 +34,8 @@ def KopfG (F : RufRahmenG D) (W : World D) : Prop :=
     of sequential oracles. -/
 def WarteG (F : RufRahmenG D) (G : Σ f : D.Fn, Env D (D.params f) × World D) : Prop :=
   ∃ (H : List (EintragV D)) (HA : List (AxEintrag D)) (κ : World D),
-    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV κ.spur.length H ∧
-    FunkA HA ∧ RahmenA HA ∧ KurzA κ.spur.length HA ∧
+    ReqAmEintritt P F.f F.s0 F.rho ∧ FunkV H ∧ VertraegeOkV P H ∧ KurzV κ.rang H ∧
+    FunkA HA ∧ RahmenA HA ∧ KurzA κ.rang HA ∧
     F.rest.2.2.2.2.okG P (fussOrteG P F.f) ∧
     ReqAmEintritt P G.1 κ G.2.1 ∧
     GleichAuf ((P.requires G.1).orte ++ (P.ensures G.1).orte) κ G.2.2 ∧
@@ -81,7 +81,7 @@ theorem fadenG_lokalQ {z : RufFadenG D} {W W' : World D} (hF : FadenG P O passes
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrteG P z.kopf.f) σ W →
       r.okG P (fussOrteG P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
         r'.okG P (fussOrteG P z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
           GleichRS O O' → (semV O' passes R r σ ρ).folgt (semV O' passes R r' σ' ρ')) :
@@ -105,7 +105,7 @@ theorem fadenG_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenG P O passes 
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrteG P z.kopf.f) σ W →
       r.okG P (fussOrteG P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrteG P z.kopf.f) σ' W' ∧
         r'.okG P (fussOrteG P z.kopf.f) ∧
         ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D),
           (semV O' passes R r σ ρ).folgt (semV O' passes R r' σ' ρ')) :

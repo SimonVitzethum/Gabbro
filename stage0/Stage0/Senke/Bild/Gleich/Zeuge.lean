@@ -19,20 +19,18 @@ open Gabbro.Grammatik
 /-- An oracle that ignores the trace: a foreign call leaves the world and answers `0`, a register reads `0`, every
     publication is visible. -/
 def stillesOrakel (D : Deklaration) : Orakel D where
-  wirkt := fun _ σ _ => (σ, 0)
-  regLies := fun _ _ => 0
+  wirktL := fun _ σ _ => ({ σ with spur := [] }, 0)
+  regLiesL := fun _ _ => 0
   regSchreib := fun _ _ => ()
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
-/-- **The oracle premise is satisfiable for every declaration.** -/
+/-- **The oracle premise holds** (as for every oracle, `leseblind_alle`). -/
 theorem leseblind_still (D : Deklaration) : Leseblind (stillesOrakel D) :=
-  ⟨fun _ _ _ _ h => ⟨h, rfl⟩, fun _ _ _ _ => rfl, fun _ _ _ _ => rfl⟩
+  leseblind_alle _
 
 /-- The call fixture's oracle is read-blind (the fixture has no foreign body, register or global). -/
-theorem leseblind_t4O : Leseblind t4O where
-  wirkt a := nomatch a
-  regLies r := nomatch r
-  sichtbar g := nomatch g
+theorem leseblind_t4O : Leseblind t4O :=
+  leseblind_alle _
 
 /-- The fixture's start world: every slot `0`, empty trace. -/
 abbrev zeugeWelt : World t4D := t4Sp.welt []
@@ -56,7 +54,7 @@ theorem execEnd_lg_zeuge :
       (execEnd t4O 0 (fun g σ ρ => rufRumpf t4P t4O 0 1 g (σ.lese [] [.inl ()]) ρ) t4FRumpf
         (zeugeWelt.lese [] [.inl ()]) Env.nil) :=
   execEnd_lg (passes := 0)
-    (rufRumpf_lese_vorn (P := t4P) (passes := 0) (Er := fun _ => False) leseblind_t4O 1 [] [.inl ()])
-    leseblind_t4O t4FRumpf (weltGleich_lese _ _ _) Env.nil
+    (rufRumpf_lese_vorn (P := t4P) (passes := 0) (Er := fun _ => False) (leseblind_t4O.toP t4P) 1 [] [.inl ()])
+    leseblind_t4O.rs t4FRumpf (Or.inr leseblind_t4O.w) (weltGleich_lese _ _ _) Env.nil
 
 end Gabbro.Stage0.Senke.BildLauf

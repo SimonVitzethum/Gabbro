@@ -11,10 +11,10 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 /-- A pointer store reads caller expressions through the positional visible projection. -/
-theorem lowAssignDurch_named_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
+theorem lowAssignDurch_named_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
     {Λ : List (Res (declOf u))} {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowAssignDurchL (l := false) u c Γ fn Λ b fname ix v = .ok g)
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowAssignDurchL (l := loopMode) u c Γ fn Λ b fname ix v = .ok g)
     (hb : namedStmt u fn ns (.assign b fname ix v) = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
@@ -36,10 +36,10 @@ theorem lowAssignDurch_named_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n
   rw [hs']
 
 /-- A table store uses the same renaming and leaves every positional local unchanged. -/
-theorem lowAssignTab_named_sim (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
+theorem lowAssignTab_named_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames}
     {Λ : List (Res (declOf u))} {b fname : String} {ix : UIdx} {v : USide}
-    {g : Stmt (declOf u) (verOf u c) false Γ Λ Λ} {bst : Gabbro.Body.Stmt}
-    (h : lowAssignTabL (l := false) u c Γ fn Λ b fname ix v = .ok g)
+    {g : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
+    (h : lowAssignTabL (l := loopMode) u c Γ fn Λ b fname ix v = .ok g)
     (hb : namedStmt u fn ns (.assignTab b fname ix v) = some bst)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)

@@ -66,15 +66,14 @@ table Kappenraum count NSLOTS {
         vorheriges   : option index into Kappenraum,
     }
 
-    invariant wurzel_ohne_vorgaenger cost O(n) runs offline :
+    invariant wurzel_ohne_vorgaenger :
         forall s in slots of Self : Self.slots[s].elter == None
             => Self.slots[s].vorheriges == None;
 
     // Ohne `ops` ist diese Tabelle Zuschnitt (a): reine Beschreibung mit erzeugtem
     // Pruefer. Mit `ops insert, remove;` waere jede Handmutation unten ein Fehler --
     // der Unterschied ist eine Zeile und damit sichtbar gewaehlt.
-    invariant baum_bleibt_baum cost O(n) runs offline
-        by induction over descendants of Self :
+    invariant baum_bleibt_baum :
         forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
 }
 

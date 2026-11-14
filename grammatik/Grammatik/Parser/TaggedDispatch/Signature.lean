@@ -6,27 +6,52 @@ public import Grammatik.Parser.TaggedDispatch.Expansion
 @[expose] public section
 namespace Gabbro.Grammatik.Parser
 
+mutual
 /-- Substitute the spec receiver throughout a surface signature type. -/
 def taggedSubstituteType (parameter : String) (variant : STyp) : STyp → STyp
   | .atom name => if strEq name parameter then variant else .atom name
   | .ptr r w t => .ptr r w (taggedSubstituteType parameter variant t)
+  | .tuple types => .tuple (taggedSubstituteTypes parameter variant types)
   | .range t a b closed => .range (taggedSubstituteType parameter variant t) a b closed
   | .array t n => .array (taggedSubstituteType parameter variant t) n
   | .wrap t => .wrap (taggedSubstituteType parameter variant t)
   | .embed t n e => .embed (taggedSubstituteType parameter variant t) n e
   | .entry args (some result) => .entry args (some (taggedSubstituteType parameter variant result))
   | t => t
+termination_by structural ty => ty
+
+/-- Substitute the receiver in each tuple component, without substituting replacements again. -/
+def taggedSubstituteTypes (parameter : String) (variant : STyp) : List STyp → List STyp
+  | [] => []
+  | ty :: rest => taggedSubstituteType parameter variant ty :: taggedSubstituteTypes parameter variant rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem taggedSubstituteTypes_eq_map (parameter : String) (variant : STyp) (ts : List STyp) :
+    taggedSubstituteTypes parameter variant ts = ts.map (taggedSubstituteType parameter variant) := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [taggedSubstituteTypes, List.map_cons, ih]
 
 def taggedSubstituteSelf (variant : STyp) : STyp → STyp :=
   taggedSubstituteType "Self" variant
 
+mutual
 /-- Conservative occurrence check, including nested result types. -/
 def taggedContainsSelf : STyp → Bool
   | .atom "Self" => true
+  | .tuple types => taggedContainsSelfList types
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ =>
     taggedContainsSelf t
   | .entry _ (some result) => taggedContainsSelf result
   | _ => false
+
+/-- The occurrence check over the components of a tuple. -/
+def taggedContainsSelfList : List STyp → Bool
+  | [] => false
+  | t :: rest => taggedContainsSelf t || taggedContainsSelfList rest
+end
 
 /-- Result-producing static functions do not participate in closed dispatch. -/
 def taggedDispatchable (signature : FnSig) : Bool :=

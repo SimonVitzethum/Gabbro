@@ -69,7 +69,7 @@ table Kappraum count NKAPPEN {
     // **Der Satz aus `LANGUAGE.md`:383, zum ersten Mal geschrieben.** Zwei Ebenen
     // Schachtelung -- die aeussere zaehlt die Elter, die innere ihre direkten Kinder. Mehr
     // als zwei erlaubt die Sprache nicht, und mehr braucht der Satz auch nicht.
-    invariant kind_zeigt_zurueck cost O(n * kette) runs offline :
+    invariant kind_zeigt_zurueck :
         forall s in slots of Self :
             forall k in chain(erstes_kind, naechstes_geschwister) in Self.slots[s] :
                 Self.slots[k].elter == Some(s);

@@ -54,14 +54,16 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
   | _, _, .arrGet a _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
-    · exact lowE_top a d c top h
-    · simp only [arrGetL] at h
-      split at h
-      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, _, rfl⟩ := h
-        have := lowE_top a d ca ta ha
-        omega
-      · cases h
+    · exact arrReadL_top h
+    · split at h
+      · exact lowE_top a d c top h
+      · simp only [arrGetL] at h
+        split at h
+        · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, _, rfl⟩ := h
+          have := lowE_top a d ca ta ha
+          omega
+        · cases h
   | _, _, .arrSet a i v, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -209,7 +211,9 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
     · exact wideBinaryL_top h
-  | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => floatExprL_top h
+  | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    exact floatExprL_top h
   | _, _, .neg a, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

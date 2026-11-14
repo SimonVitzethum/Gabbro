@@ -126,7 +126,7 @@ def image (optional nested : Bool) : Except String (List Runner.B) := do
 theorem boolean_binder_images_zeuge :
     (image false false).isOk = true ∧ (image false true).isOk = true ∧
     (image true false).isOk = true ∧ (image true true).isOk = true := by
-  decide +kernel
+  decide_cbv
 
 /-- Error handling and both Boolean payloads retain canonical admission. -/
 theorem boolean_binder_admission_zeuge :
@@ -134,13 +134,13 @@ theorem boolean_binder_admission_zeuge :
       [entry] [] [] [entry] = true ∧
     Akzeptiert (program true true) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry] [] [] [entry] = true := by
-  decide +kernel
+  decide_cbv
 
 def oracle (raw : Runner.W) : Orakel D where
-  wirkt _ σ _ := (σ, rohW AxiomElseProbe.binding 1 raw)
-  regLies r := Fin.elim0 r
+  wirktL _ σ _ := ({ σ with spur := [] }, rohW AxiomElseProbe.binding 1 raw)
+  regLiesL r := Fin.elim0 r
   regSchreib r := Fin.elim0 r
-  sichtbar _ _ := true
+  sichtbarL _ _ := true
 
 def observed (optional nested : Bool) (raw : Runner.W) : Int :=
   match execEnd (oracle raw) 1 (AxiomElseProbe.calls result)
@@ -158,7 +158,7 @@ theorem boolean_binder_paths_zeuge :
     observed true false (BitVec.ofInt 64 (-9)) = 9 ∧
     observed true true 0 = 19 ∧ observed true true 7 = 17 ∧
     observed true true (BitVec.ofInt 64 (-9)) = 9 := by
-  decide +kernel
+  decide_cbv
 
 /-- The canonical accepted provider fixture now lowers as a whole function,
     including the write through its returned reference into a supplied region. -/
@@ -166,7 +166,7 @@ theorem reference_function_zeuge :
     Akzeptiert GRegion.prog ⟨fun l => l.elim, fun l => l.elim⟩ [()] [] [.inl ()] [()] = true ∧
     (lowFun 1 GRegion.prog (fun _ => 0) ReferenceProbe.layout ()).isSome = true ∧
     ReferenceProbe.layout.count () = 2 := by
-  exact ⟨GRegion.prog_akzeptiert, by decide +kernel, rfl⟩
+  exact ⟨GRegion.prog_akzeptiert, by decide_cbv, rfl⟩
 
 /-- The new provider premise is jointly satisfiable on a real represented
     region; it is not hidden in an impossible reference layout. -/
@@ -194,7 +194,7 @@ theorem capability_decoders_zeuge :
     (chkC (some (.ref 0)) 8).isSome = true ∧
     einpassenErg (D := GRegion.rD) (fun _ => none)
       (some (.ref 0)) (-1) = none := by
-  exact ⟨by decide +kernel, by decide +kernel, rfl⟩
+  exact ⟨by decide_cbv, by decide_cbv, rfl⟩
 
 namespace Region
 open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
@@ -231,7 +231,7 @@ def image : Except String (List Runner.B) := do
 
 /-- Region-capability results reach a complete image on a nonempty table layout. -/
 theorem region_image_zeuge : image.isOk = true ∧ unit.tabs.length = 1 := by
-  decide +kernel
+  decide_cbv
 
 end Region
 

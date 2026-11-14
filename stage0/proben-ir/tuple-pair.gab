@@ -1,0 +1,10 @@
+// Pair return and positional projection. Exit 25.
+module ir_tuple_pair {
+impl fn make() -> (u32 in 0 .. 255, u32 in 0 .. 255) effects { pure } {
+    return (17, 25);
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let pair = make();
+    return pair.1;
+}
+}

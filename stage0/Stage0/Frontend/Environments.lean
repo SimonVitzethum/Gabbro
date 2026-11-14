@@ -2,6 +2,7 @@ module
 public import Grammatik.Parser.Elab.Konst.Scopes.Environments
 public import Stage0.Frontend.EnvironmentsPart1
 public import Stage0.Frontend.Correctness
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -39,6 +40,8 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+attribute [local cbv_eval] strEq_apply_eq_decide
+
 /-- A dependent exclusive range is checked with the previous binding, without widening it. -/
 theorem typedItem_sound_zeuge :
     ∃ lo hi value,
@@ -49,7 +52,7 @@ theorem typedItem_sound_zeuge :
       [("LIMIT", 42), ("ANSWER", 42)] = [("LIMIT", 42)] ++ [("ANSWER", value)] :=
   typedItem_sound [] [] [("LIMIT", 42)] [("LIMIT", 42), ("ANSWER", 42)] "ANSWER"
     (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true)
-    (.variable "LIMIT") (by decide +kernel) (by decide +kernel)
+    (.variable "LIMIT") (by cbv) (by cbv)
 
 /-- Full ordered canonical environments must agree with the typed source declaration fold.
     Also require stability of alias ranges when newly folded constants become visible. -/
@@ -149,12 +152,12 @@ theorem Scopes.prefix_lookup_zeuge :
   let scope := evaluatedScopes
     [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1))),
      .constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
-    [("BASE", -1), ("ANSWER", 42)] (by decide +kernel)
+    [("BASE", -1), ("ANSWER", 42)] (by cbv)
   refine ⟨scope, Scopes.prefix_lookup scope
     [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
     [.constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
     [("BASE", -1)] "BASE" ("BASE", -1) rfl ?_ ?_⟩
-  · decide +kernel
-  · rfl
+  · cbv
+  · cbv
 
 end Gabbro.Stage0.Frontend

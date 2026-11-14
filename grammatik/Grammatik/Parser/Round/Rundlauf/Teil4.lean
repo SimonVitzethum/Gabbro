@@ -254,10 +254,14 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
             obtain hmL | hmR := hm
             · rw [List.mem_append] at hmL
               obtain hmL | hmR := hmL
-              · rw [List.mem_cons, List.mem_singleton] at hmL
-                obtain rfl | rfl := hmL
-                · intro h
-                  simp only [reduceCtorEq] at h
+              · rw [List.mem_append, List.mem_singleton] at hmL
+                obtain hmL | rfl := hmL
+                · split at hmL
+                  · simp only [List.not_mem_nil] at hmL
+                  · rw [List.mem_singleton] at hmL
+                    subst hmL
+                    intro h
+                    simp only [reduceCtorEq] at h
                 · intro h
                   simp only [Token.zeichen.injEq, String.reduceEq] at h
               · rw [args_einzeln] at hmR
@@ -290,10 +294,14 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
               obtain hmL | hmR := hm
               · rw [List.mem_append] at hmL
                 obtain hmL | hmR := hmL
-                · rw [List.mem_cons, List.mem_singleton] at hmL
-                  obtain rfl | rfl := hmL
-                  · intro h
-                    simp only [reduceCtorEq] at h
+                · rw [List.mem_append, List.mem_singleton] at hmL
+                  obtain hmL | rfl := hmL
+                  · split at hmL
+                    · simp only [List.not_mem_nil] at hmL
+                    · rw [List.mem_singleton] at hmL
+                      subst hmL
+                      intro h
+                      simp only [reduceCtorEq] at h
                   · intro h
                     simp only [Token.zeichen.injEq, String.reduceEq] at h
                 · rw [args_einzeln] at hmR
@@ -335,10 +343,14 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                   obtain hmL | hmR := hm
                   · rw [List.mem_append] at hmL
                     obtain hmL | hmR := hmL
-                    · rw [List.mem_cons, List.mem_singleton] at hmL
-                      obtain rfl | rfl := hmL
-                      · intro h
-                        simp only [reduceCtorEq] at h
+                    · rw [List.mem_append, List.mem_singleton] at hmL
+                      obtain hmL | rfl := hmL
+                      · split at hmL
+                        · simp only [List.not_mem_nil] at hmL
+                        · rw [List.mem_singleton] at hmL
+                          subst hmL
+                          intro h
+                          simp only [reduceCtorEq] at h
                       · intro h
                         simp only [Token.zeichen.injEq, String.reduceEq] at h
                     · rw [args_cons] at hmR

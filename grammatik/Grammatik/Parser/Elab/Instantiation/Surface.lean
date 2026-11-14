@@ -75,11 +75,13 @@ def quantified (scope : Scope) (binder : String) : List SExpr → SurfaceFacts
   | e :: rest => merge (expression scope e) (quantified scope binder rest)
 end
 
+mutual
 /-- Raw type/header strings are opaque fields of the existing surface AST, not new AST forms.
     Function literals are represented only inside explicit generic argument spellings; rejecting
     their enclosing application constructors removes them, including unused applications. -/
 def inspectType (scope : Scope) : STyp → SurfaceFacts
   | .atom _ | .path _ | .index _ _ | .raw _ => {}
+  | .tuple types => gather (inspectTypes scope types)
   | .ptr _ _ ty | .wrap ty => inspectType scope ty
   | .range ty lo hi _ => gather [inspectType scope ty, expression scope lo, expression scope hi]
   | .array ty n => merge (inspectType scope ty) (expression scope n)
@@ -88,6 +90,21 @@ def inspectType (scope : Scope) : STyp → SurfaceFacts
   | .entry _ none => {}
   | .entry _ (some result) => inspectType scope result
   | .dyn _ _ => ⟨false, []⟩
+termination_by structural ty => ty
+
+/-- Retain individual facts before the existing right fold combines them. -/
+def inspectTypes (scope : Scope) : List STyp → List SurfaceFacts
+  | [] => []
+  | ty :: rest => inspectType scope ty :: inspectTypes scope rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem inspectTypes_eq_map (scope : Scope) (ts : List STyp) :
+    inspectTypes scope ts = ts.map (inspectType scope) := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [inspectTypes, List.map_cons, ih]
 
 def effect (scope : Scope) : SEffekt → SurfaceFacts
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => expression scope e
@@ -119,7 +136,7 @@ def field (scope : Scope) (f : SFeld) : SurfaceFacts :=
   merge (inspectType scope f.ftyp) (optional (expression scope) f.wo)
 
 def invariant (scope : Scope) (i : SGruppenInv) : SurfaceFacts :=
-  merge (expression scope i.kosten) (expression scope i.pred)
+  expression scope i.pred
 
 def transition (scope : Scope) (t : STrans) : SurfaceFacts :=
   gather [gather (t.schritte.map fun (a, b, c) =>

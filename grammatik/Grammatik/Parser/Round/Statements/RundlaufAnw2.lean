@@ -79,6 +79,8 @@ private theorem word_dispatch (f : Nat) (word : String) (rest : List Token)
       else if strEq word "transition" then parseUebergang f rest
       else if strEq word "advances" then parseSchreitet f rest
       else if strEq word "retires" then parseRetires rest
+      else if strEq word "while" then parseSchleife f rest 3
+      else if strEq word "for" then parseSchleife f rest 4
       else parsePlatzStmt f (.wort word :: rest)) := by
   simp only [parseStmt]
   split
@@ -168,7 +170,8 @@ inductive Einfach : SAnw → Prop
   | ret (e : SExpr) : gutPrim e = true → Einfach (.ret (some e))
   | leave (l : String) : Einfach (.leave l)
   | next (l : String) : Einfach (.next l)
-  | bind (x : String) (e : SExpr) : x ≠ "mut" → gutPrim e = true → Einfach (.bind false x none e)
+  | bind (x : String) (e : SExpr) : x ≠ "mut" → tuplePatternNames x = none → gutPrim e = true →
+      Einfach (.bind false x none e)
 
 /-- The fuel one statement needs. -/
 def fuelAnw : SAnw → Nat
@@ -198,7 +201,8 @@ theorem parseLet_nameTok (x : String) (hx : x ≠ "mut") (R : List Token) (f : N
       rfl
   · rfl
 
-theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : Nat)
+theorem parseLet_nach (x : String) (hx : x ≠ "mut") (ht : tuplePatternNames x = none)
+    (nach : List Token) (f : Nat)
     (h1 : ∀ ts, nach ≠ .zeichen "@" :: ts)
     (h2 : ∀ s t ts, nach = .wort s :: t :: .zeichen "(" :: ts → strEq s "alloc" = false)
     (h3 : ∀ s t ts, nach = .wort s :: t :: .zeichen ";" :: ts → strEq s "alloc" = false) :
@@ -206,7 +210,7 @@ theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : N
   rw [parseLet_nameTok x hx]
   simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, List.cons.injEq, Token.zeichen.injEq,
   String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self,
-  Bool.false_eq_true, ↓reduceIte]
+  Bool.false_eq_true, ↓reduceIte, ht, Option.isSome_none]
   split
   · rename_i tl
     exact absurd rfl (h1 tl)
@@ -219,12 +223,12 @@ theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : N
   · rfl
 
 /-- `let x = e ;` reads as an expression `let`, whatever the head of `e` (`@` and `alloc` stay off it). -/
-theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (e : SExpr) (hg : gut e = true) (r : List Token)
+theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (ht : tuplePatternNames x = none) (e : SExpr) (hg : gut e = true) (r : List Token)
     (f : Nat) :
     parseLet (f + 1) (nameTok x :: .zeichen "=" :: (druckToks e ++ .zeichen ";" :: r)) =
       parseLetExpr f false x none (druckToks e ++ .zeichen ";" :: r) := by
   obtain ⟨t, ts, hk, hkg⟩ := druck_kopf e hg
-  apply parseLet_nach x hx
+  apply parseLet_nach x hx ht
   · rw [hk]
     intro us hc
     injection hc with ht _
@@ -285,12 +289,12 @@ theorem parseStmt_einfach (s : SAnw) (hs : Einfach s) (r : List Token) (F : Nat)
     rw [parseStmt_next_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true])]
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.reduceAdd, Nat.reduceLeDiff] at hF; omega⟩
     simp only [parseWeiter, nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte]
-  | bind x e hx hg =>
+  | bind x e hx ht hg =>
     simp only [druckAnw, druckTypOpt, Bool.false_eq_true, if_false, List.cons_append, List.nil_append,
       List.append_assoc, List.singleton_append]
     rw [parseStmt_let_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true])]
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.add_le_add_iff_right] at hF; omega⟩
-    rw [parseLet_ausdruck x hx e (gut_of_gutPrim e hg) r F'']
+    rw [parseLet_ausdruck x hx ht e (gut_of_gutPrim e hg) r F'']
     obtain ⟨F3, rfl⟩ : ∃ F3, F'' = F3 + 1 := ⟨F'' - 1, by simp only [fuelAnw, Nat.add_le_add_iff_right, Nat.reduceLeDiff] at hF; omega⟩
     exact parseLetExpr_aus x e hg r F3 (by simp only [fuelAnw, Nat.add_le_add_iff_right] at hF; omega)
 

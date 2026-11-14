@@ -34,7 +34,7 @@ table Topologie count NGERAETE {
     // Die Invariante, die die Wohlfundiertheit traegt -- ohne sie ist `ancestors of` eine
     // Kette ohne Ende. `table.induktion` sagt es seit dem 2026-08-16 ausdruecklich:
     // Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis.
-    invariant azyklisch cost O(n) runs offline :
+    invariant azyklisch :
         forall g in slots of Topologie : Topologie.slots[g].bereich <= 255;
 }
 

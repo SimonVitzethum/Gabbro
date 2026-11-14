@@ -128,6 +128,7 @@ def uRelErsetzeS (x y n : String) : Nat → SAnw → SAnw
     | .ret v => .ret (v.map (uRelErsetzeE x y n))
     | .block as en => .block (as.map (uRelErsetzeS x y n f)) (uRelErsetzeEnde x y n en)
     | s => s
+termination_by structural fuel => fuel
 
 /-- The names a statement may bind or change, nested blocks included: every binder, every name an assigned place
     mentions, and `"*"` (every name) for a raw statement, a form not listed here and a walk out of fuel. -/
@@ -146,6 +147,7 @@ def uBindetS : Nat → SAnw → List String
     | .step x y => [x, y]
     | .cond _ t ei els => uBindetS f t ++ ei.flatMap (uBindetS f) ++ (els.map (uBindetS f)).getD []
     | .elsif _ b | .waive _ b | .child b | .locks _ _ b => uBindetS f b
+    | .boundedLoop raw b => (boundedLoopLocals raw).map Prod.fst ++ uBindetS f b
     | .retry l b | .loop l b | .watch l b => l :: uBindetS f b
     | .cases _ as => as.flatMap (uBindetS f)
     | .arm _ k b => k.toList ++ uBindetS f b
@@ -157,6 +159,7 @@ def uBindetS : Nat → SAnw → List String
     | .callElse _ _ r b | .callIndElse _ _ r b => r :: uBindetS f b
     | .block as _ => as.flatMap (uBindetS f)
     | _ => ["*"]
+termination_by structural fuel => fuel
 
 /-- The statements of a run with every `x - y` read as `n`, up to the first statement that may bind `x`, `y` or
     `n` (that statement and the rest keep their text), and whether the whole run was rewritten. -/

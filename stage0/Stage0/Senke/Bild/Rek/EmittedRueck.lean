@@ -50,7 +50,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
     {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
-    [TorOK output.image.Y O] [SichtOK O] [LeseblindOK O] {m : Runner.Mem}
+    [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop} {j : Nat}
     (hj : output.image.depth - 1 = j + 1)
@@ -183,7 +183,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
       (TiefAlle output.compiled.program Agl (output.image.depth - 1)) rest σ1 ρ1 ebeR σeR ρeR :=
     zerlegung_rahmen hkR
   have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (passes := output.image.passes)
-    (leseblind_von O) thr Agl (output.image.depth - 1)
+    (leseblindP_alle _ O) thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA
       (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start⟩

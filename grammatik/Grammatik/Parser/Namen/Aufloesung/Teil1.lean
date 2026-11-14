@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Parser.Stmt.BoundedRewrite
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 public import Grammatik.Parser.Item.ElementTief.FunctionArguments
 public import Grammatik.Parser.Namen.References
@@ -232,10 +233,12 @@ def ausO (k : Kontext) : Option SExpr → Option SExpr
   | some e => some (aus k e)
   | none => none
 
+mutual
 /-- **A type, resolved.** -/
 def typ (k : Kontext) : STyp → STyp
   | .dyn n raw => .dyn (k.ref n) (raw.map (genericArgument k))
   | .atom s => .atom (k.ref s)
+  | .tuple types => .tuple (typList k types)
   | .path ps => if k.nenntItem ps then .atom (k.ref ("::".intercalate ps)) else .path ps
   | .ptr r w t => .ptr r w (typ k t)
   | .index o t => .index o (k.ref t)
@@ -246,6 +249,21 @@ def typ (k : Kontext) : STyp → STyp
   | .str e => .str (aus k e)
   | .entry s (some t) => .entry s (some (typ k t))
   | t => t
+termination_by structural ty => ty
+
+/-- Resolve tuple components in source order. -/
+def typList (k : Kontext) : List STyp → List STyp
+  | [] => []
+  | ty :: rest => typ k ty :: typList k rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem typList_eq_map (k : Kontext) (ts : List STyp) :
+    typList k ts = ts.map (typ k) := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [typList, List.map_cons, ih]
 
 /-- An optional type, resolved. -/
 def typO (k : Kontext) : Option STyp → Option STyp
@@ -313,6 +331,9 @@ def anw (k : Kontext) : SAnw → SAnw
   | .arm g b s => .arm g b (anw (k.mit b.toList) s)
   | .each b o d s m r i body =>
     .each b (ausO k o) d (aus k s) m r (ausO (k.mit [b]) i) (anw (k.mit [b]) body)
+  | .boundedLoop raw body =>
+    .boundedLoop (mapBoundedHeader (aus k) k.ruf raw)
+      (anw (k.mit ((boundedLoopLocals raw).map Prod.fst)) body)
   | .retry l s => .retry l (anw k s)
   | .loop l s => .loop l (anw k s)
   | .waive gs s => .waive gs (anw k s)
@@ -369,7 +390,7 @@ end
 
 /-- An invariant, resolved. -/
 def inv (k : Kontext) (i : SGruppenInv) : SGruppenInv :=
-  { i with kosten := aus k i.kosten, pred := aus k i.pred }
+  { i with pred := aus k i.pred }
 
 /-- A table member, resolved. -/
 def tabTeil (k : Kontext) : STabTeil → STabTeil

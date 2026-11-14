@@ -82,7 +82,7 @@ theorem fadenOk_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenOk P O passe
     (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
     (hstep : ∀ σ : World D, GleichAuf (fussOrte P z.kopf.f) σ W →
       r.okZ P (fussOrte P z.kopf.f) →
-      ∃ σ', σ.spur.length ≤ σ'.spur.length ∧ GleichAuf (fussOrte P z.kopf.f) σ' W' ∧
+      ∃ σ', σ.rang ≤ σ'.rang ∧ GleichAuf (fussOrte P z.kopf.f) σ' W' ∧
         r'.okZ P (fussOrte P z.kopf.f) ∧
         ∀ R, (semZ O passes R r' σ' ρ').gleich (semZ O passes R r σ ρ)) :
     FadenOk P O passes
@@ -111,7 +111,7 @@ theorem fadenOk_speicher {z : RufFadenG D} {W W' : World D} (hF : FadenOk P O pa
   · exact (hg.2 g hg').trans (hw (.inr g) hg').symm
 
 theorem lese_laenge (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
-    σ.spur.length ≤ (σ.lese Λ os).spur.length :=
+    σ.rang ≤ (σ.lese Λ os).rang :=
   spur_laenge_erw (Erw.lese σ Λ os)
 
 theorem fuss_rumpf (P : Programm D) (f : D.Fn) : endblockOrteP P (P.rumpf f) ⊆ fussOrte P f :=
@@ -133,9 +133,19 @@ end Hilfen
 /-! ## 4. Calls and returns of the replay -/
 
 /-- The answer world a return records: the machine's memory at the return,
-    one trace event past the call key (a fresh position: the record stays a
-    function of the key). -/
-def antwortWelt (e0 : Ereignis D) (s1 κ : World D) : World D := ⟨s1.slots, s1.globs, e0 :: κ.spur⟩
+    one trace event past the call key (a fresh position, not a read: the rank grows and the record
+    stays a function of the key). -/
+def antwortWelt (e0 : Ereignis D) (s1 κ : World D) : World D := ⟨s1.slots, s1.globs, nichtLese e0 :: κ.spur⟩
+
+theorem antwortWelt_rang (e0 : Ereignis D) (s1 κ : World D) : (antwortWelt e0 s1 κ).rang = κ.rang + 1 :=
+  rang_nichtLese_cons e0 κ.spur
+
+theorem antwortWelt_rang_lt (e0 : Ereignis D) (s1 κ : World D) : κ.rang < (antwortWelt e0 s1 κ).rang := by
+  rw [antwortWelt_rang]
+  exact Nat.lt_succ_self _
+
+theorem antwortWelt_rang_le (e0 : Ereignis D) (s1 κ : World D) : κ.rang ≤ (antwortWelt e0 s1 κ).rang :=
+  Nat.le_of_lt (antwortWelt_rang_lt e0 s1 κ)
 
 section Rufe
 
@@ -207,10 +217,10 @@ theorem pop_kopf (e0 : Ereignis D) {F : RufRahmenG D}
       · exact ⟨fun _ _ => rfl, fun _ _ => rfl⟩
   · intro e hm
     rcases List.mem_append.mp hm with hm | hm
-    · exact Nat.lt_succ_of_lt (hk e hm)
+    · exact Nat.lt_of_lt_of_le (hk e hm) (antwortWelt_rang_le _ _ _)
     · rw [List.mem_singleton] at hm
       subst hm
-      exact Nat.lt_succ_self _
+      exact antwortWelt_rang_lt _ _ _
   · exact ⟨fun t _ => congrFun hW'.1.symm t, fun g _ => congrFun hW'.2.symm g⟩
   · intro R hR
     have hans := hR _ _ _ _ _ hmem

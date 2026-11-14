@@ -39,8 +39,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
           have he : (verOf u c).erg = none := by
             show (vertragVon (declOf u) c).erg = none
             rw [vErg_eq u c, hErg]
-          rw [ergValOf_none _ he]
-          rfl
+          rw [ergValOf_none _ he] <;> rfl
         · cases hE
       · cases h
   case val sd =>
@@ -75,9 +74,83 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
               rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
                 (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
               simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
+                Gabbro.Body.finalValue] <;> trivial
+          · cases hE
+          · cases hE
+        · cases h
+  case bool bd =>
+    simp only [namedEnd] at hb
+    cases hs : condZ u fn ns bd with
+    | none => rw [hs] at hb; cases hb
+    | some e =>
+      rw [hs] at hb
+      simp only [Option.map_some, Option.some.injEq] at hb
+      subst hb
+      simp only [lowEnd] at h
+      cases hE : lowErg u c Γ Λ fn (.bool bd) with
+      | error err => simp only [hE, reduceCtorEq] at h
+      | ok E =>
+        simp only [hE] at h
+        split at h
+        · cases h
+          simp only [lowErg] at hE
+          split at hE
+          · rename_i hErg
+            split at hE
+            · cases hE
+            · rename_i ve hve
+              cases hE
+              refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
+              have herg : (verOf u c).erg = some .bool := by
+                show (vertragVon (declOf u) c).erg = _
+                rw [vErg_eq u c, hErg]
+              generalize hσl : σ.lese _ _ = σl
+              have hWl : WGRel u σl s.world := by
+                rw [← hσl]
+                exact wgrel_same u rfl rfl hW
+              have hv := lowEns_named_sim hve hs hA hT σl σl ρ s hWl hWl hL
+              rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
+                (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+              simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState, Gabbro.Body.finalValue] <;> trivial
+          · cases hE
+          · cases hE
+        · cases h
+  case wert sd =>
+    simp only [namedEnd] at hb
+    cases hs : namedSide u fn ns sd with
+    | none => rw [hs] at hb; cases hb
+    | some e =>
+      rw [hs] at hb
+      simp only [Option.map_some, Option.some.injEq] at hb
+      subst hb
+      simp only [lowEnd] at h
+      cases hE : lowErg u c Γ Λ fn (.wert sd) with
+      | error err => simp only [hE, reduceCtorEq] at h
+      | ok E =>
+        simp only [hE] at h
+        split at h
+        · cases h
+          simp only [lowErg] at hE
+          split at hE
+          · rename_i ty hErg
+            split at hE
+            · cases hE
+            · rename_i ve hve
+              cases hE
+              refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
+              have herg : (verOf u c).erg = some ty := by
+                show (vertragVon (declOf u) c).erg = _
+                rw [vErg_eq u c, hErg]
+              generalize hσl : σ.lese _ _ = σl
+              have hWl : WGRel u σl s.world := by
+                rw [← hσl]
+                exact wgrel_same u rfl rfl hW
+              have hv := lowWertAtE_named_sim hve hs hA hT σl σl ρ s hWl hL
+              rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
+                (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+              simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
                 Gabbro.Body.finalValue]
               trivial
-          · cases hE
           · cases hE
         · cases h
   all_goals simp only [namedEnd, reduceCtorEq] at hb

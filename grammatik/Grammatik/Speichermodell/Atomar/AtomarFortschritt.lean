@@ -119,7 +119,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {Q : AxEns D} {S : Sperr
 
 /-- **A replayed thread passes every float range check at its head, under the atomic rely**
     (the twin of `fadenS_bereich`). -/
-theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
+theorem fadenSA_bereich (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) Q O)
     (hS : SperrInvOk S) {sp : Speicher D} (hsp : ∀ L, S.inv L sp = true)
     (hK : ∀ f, KoerperGutSA P passes Q S Tg f) (hFS : ∀ f, FussSX P S lok Tg f)
     {M : RufMaschineG D} (t : Faden)
