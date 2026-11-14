@@ -155,4 +155,90 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
           exact (ready allowed safe).2 }
 
+/-- Exact traversal checking retains the model's annotation test at entry,
+    each pass and every leave. A false annotation cannot hide a logic stop. -/
+def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (table : D.Tab) (annotation : Expr D Γ Λ .bool)
+    (body : Block D V true (.index (D.count table) :: Γ) Λ Λ)
+    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition (S := S) policy body locals goals))
+    (indices : List (Wert D (.index (D.count table)))) (locals : Env D Γ) (goals : Goals D V Γ) :
+    Except Frag.Refusal (Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
+      ∀ allowed, HandlerSafe policy runtime allowed →
+        goals.holds (l := l) allowed (traverseLauf (V := V) (l := l)
+          (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
+          (fun world env => let read := world.lese Λ annotation.orte
+            (read, wahr? (eval read annotation read env))) indices world locals))) :=
+  let refused : Condition (fun (_ : Runtime program (fun _ => []) S) (_ : World D) => False) :=
+    { formula := .fls, sound := fun _ _ impossible => False.elim impossible }
+  match indices with
+  | [] => do
+      let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
+      let combined ← branchCondition annotation locals
+        (done.map (fun runtime _ ready (allowed : Logik D → Prop)
+          (_ : HandlerSafe policy runtime allowed) => ready)) refused
+      return combined.map (fun runtime world ready allowed safe => by
+        cases tested : eval (world.lese Λ annotation.orte) annotation (world.lese Λ annotation.orte) locals with
+        | false =>
+            simp only [wahr?, tested, Bool.false_eq_true, ↓reduceIte] at ready
+            exact ready.elim
+        | true =>
+            simp only [wahr?, tested, ↓reduceIte] at ready
+            simpa only [traverseLauf, wahr?, tested, ↓reduceIte, Goals.holds] using ready allowed safe)
+  | index :: indices => do
+      let resume := fun env => traverseCondition table annotation body compileBody indices env goals
+      let exit := fun env => traverseCondition table annotation body compileBody [] env goals
+      let passGoals : Goals D V (.index (D.count table) :: Γ) :=
+        { normal := fun env => generatedFormula (resume env.tail)
+          escape := fun env => generatedFormula (exit env.tail)
+          again := fun env => generatedFormula (resume env.tail)
+          returned := goals.returned
+          reason := goals.reason }
+      let step ← compileBody (.cons index locals) passGoals
+      let advanced := step.map (fun runtime world ready allowed safe =>
+        show goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
+          runtime.passes runtime.calls body world (.cons index locals) with
+          | .ok next env | .next _ next env => traverseLauf (V := V) (l := l)
+              (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
+              (fun world env => let read := world.lese Λ annotation.orte
+                (read, wahr? (eval read annotation read env))) indices next env.tail
+          | .leave _ next env => if wahr? (eval (next.lese Λ annotation.orte) annotation
+              (next.lese Λ annotation.orte) env.tail) = true
+              then .ok (next.lese Λ annotation.orte) env.tail else .logik .schleife
+          | .zurueck next value => .zurueck next value
+          | .why next reason => .why next reason
+          | .logik error => .logik error
+          | .hardware error => .hardware error) from by
+        have ready := ready allowed safe
+        unfold Runtime.wpB at ready
+        cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+            world (.cons index locals) with
+        | ok next env =>
+            rw [result] at ready
+            exact generated_sound (resume env.tail) runtime next ready allowed safe
+        | next h next env =>
+            rw [result] at ready
+            exact generated_sound (resume env.tail) runtime next ready allowed safe
+        | leave h next env =>
+            rw [result] at ready
+            exact generated_sound (exit env.tail) runtime next ready allowed safe
+        | zurueck next value => simpa only [result, Goals.holds, passGoals] using ready
+        | why next reason => simpa only [result, Goals.holds, passGoals] using ready
+        | logik error => simpa only [result, Goals.holds] using ready
+        | hardware error => trivial)
+      let combined ← branchCondition annotation locals advanced refused
+      return combined.map (fun runtime world ready allowed safe => by
+        cases tested : eval (world.lese Λ annotation.orte) annotation (world.lese Λ annotation.orte) locals with
+        | false =>
+            simp only [wahr?, tested, Bool.false_eq_true, ↓reduceIte] at ready
+            exact ready.elim
+        | true =>
+            simp only [wahr?, tested, ↓reduceIte] at ready
+            have ready := ready allowed safe
+            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+                (world.lese Λ annotation.orte) (.cons index locals) <;>
+              simpa only [traverseLauf, wahr?, tested, Bool.true_eq_false,
+                ↓reduceIte, Goals.holds, result] using ready)
+termination_by indices.length
+decreasing_by all_goals simp_wf <;> omega
+
 end Gabbro.Grammatik.Vertraege.Pruefer

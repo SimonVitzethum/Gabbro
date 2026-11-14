@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Invarianten.VC.Extended
 public import Grammatik.Logik.Invarianten.VC.Witness
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 
 @[expose] public section
 
@@ -169,5 +170,20 @@ theorem conditional_initializer_counterexample_zeuge :
     (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
       | _ => true) = false := by decide
+
+/-- The strict traversal rule must preserve the declared invariant and must
+    reject the model's annotation logic stop, even with an empty body. -/
+def traversalProgram (annotationHolds : Bool) : Programm declaration :=
+  { program with rumpf := fun _ =>
+      .cons (.traverse () (if annotationHolds then .tru else .fls) .nil)
+        (.ret .empty (List.Perm.refl _)) }
+
+theorem traversal_contract_accepted_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram true)
+      (SperrInv.leer declaration) [()] = true := by decide
+
+theorem traversal_contract_refused_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram false)
+      (SperrInv.leer declaration) [()] = false := by decide
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness

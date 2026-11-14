@@ -120,6 +120,12 @@ def extendedBlock (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     | .bindCall f args he hp hr rest =>
         boundCallCondition expansion f args he hp hr rest locals goals
           (fun env => extendedBlock fuel rest env (goals.shrink _))
+    | .regRead register readable .nil => do
+        let pre ← requireCondition (program := program) (checked := checked) (S := S) (goals.normal locals)
+        return pre.map (fun runtime world ready =>
+          registerReadEmpty_sound runtime register readable world locals goals.holds
+            (fun next same => (denotes_assignment _ world next same.symm).mp ready)
+            (fun _ => trivial))
     | _ => .error (.unsupported "writer block constructor is outside the checked control fragment")
 termination_by fuel
 
