@@ -190,7 +190,7 @@ theorem trace_operations_keep_slots (σ : World D) (es : List (Ereignis D)) (Λ 
 structure ViewScopedStep {P I : Type} (a : Authority D) (layout : AdressLayout D)
     (c : Context D P I) (M M' : RufMaschineG D) (u : Faden) : Prop where
   valid : c.Valid a
-  scoped : ∀ span ∈ a.spans, ∀ (t : D.Tab) (k : Int) (f : D.Feld t), span.table = t →
+  confined : ∀ span ∈ a.spans, ∀ (t : D.Tab) (k : Int) (f : D.Feld t), span.table = t →
     ImBereich D t k → M'.speicher.slots t k f ≠ M.speicher.slots t k f →
     span.Touches layout t k f →
     ∃ view ∈ c.views, c.frame = view.borrower ∧ view.rights.write = true ∧

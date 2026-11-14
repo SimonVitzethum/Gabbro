@@ -88,7 +88,7 @@ theorem written_records :
 theorem written_scope :
     ViewScopedStep authority layout writableResult.next inertMachine writtenMachine 0 :=
   { valid := ram_view_preserves initial_valid writableResult
-    scoped := by
+    confined := by
       intro span member t k f table extent changed touch
       cases t
       refine ⟨writableView, List.mem_cons_self .., rfl, rfl, rfl, ?_, written_records⟩
@@ -110,7 +110,7 @@ theorem written_scope :
 theorem outside_views_zeuge :
     ¬ ViewScopedStep authority layout initial inertMachine writtenMachine 0 := by
   intro scope
-  obtain ⟨view, live, _⟩ := scope.scoped ram (List.mem_cons_self ..) () 0 () rfl
+  obtain ⟨view, live, _⟩ := scope.confined ram (List.mem_cons_self ..) () 0 () rfl
     ⟨(by change (0 : Int) ≤ 0; omega), .inr (by change (0 : Int) < 1; omega)⟩
     written_change written_touches
   cases live

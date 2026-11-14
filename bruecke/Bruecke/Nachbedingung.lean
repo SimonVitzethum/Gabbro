@@ -147,7 +147,7 @@ theorem ergTy_of {f : UFn} (h : ErgSchlicht f) :
       | some ty => some ty
       | none => if f.resBool then some Ty.bool else f.res.map (fun r => Ty.int r.1 r.2) := by
   obtain ⟨_, h2, h3, h4⟩ := h
-  cases f.resTy <;> simp only [UFn.ergTy, h2, h3, h4]
+  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h2, h3, h4]
 
 theorem isSome_erg (f : Fin u.fns.length) :
     ((declOf u).erg f).isSome = (fnAt u f).ergTy.isSome := by

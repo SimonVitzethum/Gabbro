@@ -188,7 +188,7 @@ theorem layout_correct : LayoutOk layout :=
             | false => decide
             | true => exact False.elim (different rfl)
           · intro g; exact g.elim
-    feld := by intro t f; cases t <;> decide
+    feld := by intro t f; cases t <;> cases f <;> decide
     felder := by intro t f f' different; exact False.elim (different (Subsingleton.elim _ _))
     tabellen := by
       intro t t' byte different inside other

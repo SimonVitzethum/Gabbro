@@ -91,7 +91,7 @@ theorem storeSlot_only_via_view_core {P I : Type} {a : Authority D} {layout : Ad
   obtain ⟨changed, span, member, touch⟩ := change
   have table := touch_table correct (realizes span member) extent touch
   obtain ⟨view, live, active, writable, viewTable, bytes, recorded⟩ :=
-    scope.scoped span member t k f table extent changed touch
+    scope.confined span member t k f table extent changed touch
   refine ⟨view, live, scope.valid.2.2.2.1 view live, active, writable, viewTable, extent,
     ?_, Or.inl ⟨true, recorded⟩, Or.inl recorded,
     fun byte cell => ⟨bytes byte cell, region byte cell⟩⟩
