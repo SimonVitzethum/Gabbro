@@ -145,7 +145,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | A2 | lift `RegLokal`: record register answers in the local replay like foreign answers (63 of 70 readable example registers have no carriers, **measured**; refusing them is no option) | 3 000–8 000 / 2–4 / — |
 | A3 | float premise conditional (`GleitHw`) and satisfiable (`hardware_satisfiable`); Stage-0 `Runner.IR.Kern` without `extends Hardware` | 100–400 left / 1–2 / 1–3 |
 | A4 | `ImBereichO` and `KernPlan` into the named list (c) or derived from `GutO` | 300–1 500 / 1–2 / — |
-| A5 | (d) proved for Stage-0 images: start, clone, spawn success at the checked places (today `Senke.CloneOK` is a premise) | 1 500–4 000 / 0–1 / 10–20 |
+| A5 | (d) proved for Stage-0 images: start, clone, spawn success at the checked places (today `Senke.CloneAnswers` is a premise) | 1 500–4 000 / 0–1 / 10–20 |
 
 ### B — goal theorem: more conclusions
 
@@ -321,7 +321,7 @@ system-call implementations.
 | device contracts | the declared answers of each device register and port (after A2 they may depend on the history; today `RegLokal` and the hardware part of `AxVertragO`), and where a device writes memory (DMA): only into the carriers and extents its contract names (today `ImBereichO`, which then leaves the leg) | data sheets |
 | `FirmwareHandoff` | the state at entry, the truth of the memory map, and that the image and its initial memory are loaded as declared (for the kernel this replaces `Laufzeit.lader`) | firmware specification |
 | for a hosted program only: the contract of the operating system behind each system call, in the conditional form of A1 (assumed `pre → post`, the caller proves `pre`) | declared in the binding, visible per call | — |
-| for a hosted program only: the operating system's loader and thread creation (today `Laufzeit.lader`, `Senke.CloneOK`, the runner kernel class `Runner.IR.Kern`) and, where liveness or waiting bounds are claimed, its scheduler's fairness (today `Fair`, `FairF` of `GabbroZielLeben`/`GabbroZielWarten`) | declared in the profile | — |
+| for a hosted program only: the operating system's loader and thread creation (today `Laufzeit.lader`, `Senke.CloneAnswers`, the runner kernel class `Runner.IR.Kern`) and, where liveness or waiting bounds are claimed, its scheduler's fairness (today `Fair`, `FairF` of `GabbroZielLeben`/`GabbroZielWarten`) | declared in the profile | — |
 
 Nothing else may remain: no loader assumption beyond `FirmwareHandoff` (K1, L9), no runtime assumption (L9), no
 foreign-code assumption for software inside the image (A1), no unnamed stop (B6 piece vii, B9), no `ImBereichO` or
