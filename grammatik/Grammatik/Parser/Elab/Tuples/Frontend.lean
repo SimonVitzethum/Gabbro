@@ -104,8 +104,6 @@ def expandItem (k : Context) : Nat → SItemTief → ExpandM SItemTief
     | .gateT item => return .gateT (← expandItem k fuel item)
     | item => pure item
 
-/-- The tuple pass runs after static instantiation and before call lifting. It returns the actual
-    generated declarations for the shared name-hygiene gate. No kernel or IR rule is introduced. -/
 /-- The interning context of a unit: constants, aliases and the ordinary source types. -/
 def prepareContext (items : List SItemTief) : Context :=
   let constants := uConstsRech (uKonstFns items) items []
@@ -121,6 +119,8 @@ def prepareContext (items : List SItemTief) : Context :=
     aliases := aliases
     sourceTypes := sourceTypes }
 
+/-- The tuple pass runs after static instantiation and before call lifting. It returns the actual
+    generated declarations for the shared name-hygiene gate. No kernel or IR rule is introduced. -/
 def expand (items : List SItemTief) : Except String (List SItemTief × List String) := do
   let k := prepareContext items
   let (items, state) ← (items.mapM (expandItem k 100000)).run {}
