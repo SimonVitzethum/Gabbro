@@ -13,7 +13,7 @@ namespace Gabbro.Grammatik.Gen.Zeugen
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
 /-- M contains only fixtures with a full acceptance proof. -/
-def Mw : List Einsatz := [ScalarRead.e, Reset.Good.e]
+def Mw : List Einsatz := [ScalarRead.e, M16_13.e, Reset.Good.e]
 
 /-- N contains wrong programs refused by a structural model gate. -/
 def Nw : List Einsatz := structuralRefusals
@@ -21,8 +21,9 @@ def Nw : List Einsatz := structuralRefusals
 theorem checked_m : ∀ m ∈ Mw, m.gueltig = true := by
   intro m member
   simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl
+  rcases member with rfl | rfl | rfl
   · exact ScalarRead.e_gueltig
+  · exact M16_13.e_gueltig
   · exact Reset.Good.e_gueltig
 
 theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
@@ -57,14 +58,14 @@ theorem checked_read_zeuge : ScalarRead.e ∈ Mw ∧ ScalarRead.e.gueltig = true
 
 /-- A concrete remaining hole, not a claim that the cell is impossible for
     every accepted source program. W1/W2 still need coverage evidence. -/
-theorem checked_m_missing_lock_cell :
-    ∀ m ∈ Mw, ¬ m.Hat ⟨3, 0, true, [true, true]⟩ := by
+theorem checked_m_missing_indirect_cell :
+    ∀ m ∈ Mw, ¬ m.Hat ⟨0, 0, true, [true, true, false]⟩ := by
   intro m member
   simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl <;> decide
+  rcases member with rfl | rfl | rfl <;> decide
 
 #print axioms checked_m
 #print axioms checked_n
-#print axioms GateAudit.m16_gate_finding_zeuge
+#print axioms GateAudit.m16_source_accepted_zeuge
 
 end Gabbro.Grammatik.Gen.Zeugen

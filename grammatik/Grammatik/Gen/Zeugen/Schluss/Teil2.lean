@@ -5,7 +5,7 @@ public import Grammatik.Gen.Zeugen.Gap.M99_824
 public import Grammatik.Gen.Zeugen.Gap.M99_825
 public import Grammatik.Gen.Zeugen.Gap.M47_549
 public import Grammatik.Gen.Zeugen.Gap.M169_350
-public import Grammatik.Gen.Zeugen.Gap.M16_13
+public import Grammatik.Gen.Zeugen.M.M16_13
 public import Grammatik.Gen.Zeugen.Gap.M49_50
 public import Grammatik.Gen.Zeugen.Gap.M103_803
 public import Grammatik.Gen.Zeugen.Gap.M103_131
