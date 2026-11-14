@@ -211,6 +211,8 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Zeugen.Pipeline.ProductRecordWitness
 public import Stage0.Zeugen.Pipeline.NumberWildcardWitness
+public import Stage0.Zeugen.Pipeline.FieldNarrowingWitness
+public import Stage0.Zeugen.Pipeline.U64DifferenceWitness
 public import Stage0.Zeugen.Pipeline.ProductValueWitness
 public import Stage0.Frontend.CheckExport
 public import Stage0.Frontend.Witnesses.MeasureWitness

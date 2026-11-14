@@ -42,10 +42,10 @@ def replaceRun (place : SExpr) (owner name : String) : List SAnw → List SAnw �
       let (rest, whole) := replaceRun place owner name rest
       (uReadErsetzeS (replace place name) uLiestTiefe s :: rest, whole)
 
+mutual
 /-- Expand a field narrow into an ordinary immutable binding followed by the existing
     local narrow. The successful continuation reads that snapshot until its root changes.
     Failure arms keep the original record and its original range. No model rule is added. -/
-mutual
 def expand : Nat → List String → Nat → SAnw → SAnw × Nat
   | 0, _, nr, body => (body, nr)
   | fuel + 1, locals, nr, body =>
@@ -80,12 +80,28 @@ def expand : Nat → List String → Nat → SAnw → SAnw × Nat
       (.boundedLoop header b, nr)
     | .retry header b => let (b, nr) := nested [] nr b; (.retry header b, nr)
     | .loop header b => let (b, nr) := nested [] nr b; (.loop header b, nr)
+    | .watch header b => let (b, nr) := nested [] nr b; (.watch header b, nr)
     | .bindElse x ty value reason b =>
       let (b, nr) := nested [reason] nr b
       (.bindElse x ty value reason b, nr)
     | .callElse callee args reason b =>
       let (b, nr) := nested [reason] nr b
       (.callElse callee args reason b, nr)
+    | .callIndElse callee args reason b =>
+      let (b, nr) := nested [reason] nr b
+      (.callIndElse callee args reason b, nr)
+    | .bindAxiomOptElse x ty value reason b =>
+      let (b, nr) := nested [reason] nr b
+      (.bindAxiomOptElse x ty value reason b, nr)
+    | .alloc mu name ty arena count failure =>
+      match failure with
+      | none => (body, nr)
+      | some b =>
+        let (b, nr) := nested [] nr b
+        (.alloc mu name ty arena count (some b), nr)
+    | .grow arena count b =>
+      let (b, nr) := nested [] nr b
+      (.grow arena count b, nr)
     | body => (body, nr)
 termination_by structural fuel => fuel
 
