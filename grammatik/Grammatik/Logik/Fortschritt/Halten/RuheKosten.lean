@@ -154,12 +154,23 @@ theorem entfZ_ru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 section Costs
 variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
 
+/- Every case unfolds one constructor, transports the index casts, and rewrites the
+   translated subterms by the recursive cost laws (`erw`: the translated indices agree
+   only definitionally). -/
 mutual
 theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') :
     kostenStmt ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruS s) = kostenStmt ep c pa s := by
-  cases s <;> (try simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenSonst_umΛ, Option.elim_some, Option.elim_none]) <;>
-    (repeat
+  match s with
+  | .assignSlot .. | .assignThru .. | .assignGlob .. | .putBytes .. | .assignVar .. | .shift ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd .. | .locks ..
+  | .breaking .. | .traverse .. | .retry .. | .forever .. | .axiomCall .. | .regWrite ..
+  | .transition .. | .publish .. | .advances .. | .retires .. | .ret .. | .retWhy .. | .leave ..
+  | .next .. | .assignSlotRef .. | .consumeTraverse .. | .retScoped .. | .retWhyScoped ..
+  | .axiomCallElse .. | .callIndElse .. | .assignThruOwn .. =>
+    (try simp only [ruS, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
       (first
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
@@ -174,17 +185,23 @@ theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | erw [kostenGrundArms_ru]
         | erw [kostenEnd_ru]
         | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-termination_by sizeOf s
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
+termination_by structural s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') :
     kostenBlock ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruB b) = kostenBlock ep c pa b := by
-  cases b with
-  | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim_some, Option.elim_none]) <;>
-    (repeat
+  match b with
+  | .nil .. | .cons .. | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse ..
+  | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse .. | .awaits ..
+  | .exchange .. | .narrow .. | .check .. | .float .. | .floatLit .. | .floatOf ..
+  | .floatNarrow .. | .narrowRequired .. | .bindCallIndElse .. =>
+    (try simp only [ruB, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
       (first
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
@@ -199,47 +216,35 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | erw [kostenGrundArms_ru]
         | erw [kostenEnd_ru]
         | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | _ =>
-    (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-termination_by sizeOf b
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
+  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
+    cases e <;> (
+      (try simp only [ruB, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+      repeat
+        (first
+          | erw [kostenStmt_nachΛ]
+          | erw [kostenBlock_vorΛ]
+          | erw [kostenEnd_umΛ]
+          | erw [kostenSonst_umΛ]
+          | erw [kostenExpr_ru]
+          | erw [kostenArgs_ru]
+          | erw [kostenErg_ru]
+          | erw [kostenStmt_ru]
+          | erw [kostenBlock_ru]
+          | erw [kostenArms_ru]
+          | erw [kostenGrundArms_ru]
+          | erw [kostenEnd_ru]
+          | erw [kostenSonst_ru]
+          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+          )
+      try rfl
+      )
+termination_by structural b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
@@ -249,23 +254,29 @@ theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (
   | .cons (c := payload) b rest =>
     cases payload <;>
       exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
-termination_by sizeOf arms
+termination_by structural arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
-    kostenGrundArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms ep c pa arms := by
+    kostenGrundArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruGArms arms) =
+      kostenGrundArms ep c pa arms := by
   match arms with
   | .nil => rfl
   | .cons b rest =>
     exact cost_congr₂ max (kostenBlock_ru b) (kostenGrundArms_ru rest)
-termination_by sizeOf arms
+termination_by structural arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenEnd ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
-  cases e with
-  | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
+  match e with
+  | .ret .. | .retWhy .. | .leave .. | .next .. | .cons .. | .bind .. | .bindCall ..
+  | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse ..
+  | .awaits .. | .bindCallInd .. | .narrow .. | .exchange .. | .ite .. | .narrowRequired ..
+  | .retScoped .. | .retWhyScoped .. | .bindCallIndElse .. | .float .. | .floatLit ..
+  | .floatOf .. | .floatNarrow .. =>
+    (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
       (first
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
@@ -280,54 +291,47 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         | erw [kostenGrundArms_ru]
         | erw [kostenEnd_ru]
         | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | _ =>
-    (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-termination_by sizeOf e
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
+  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
+    cases e <;> (
+      (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+      repeat
+        (first
+          | erw [kostenStmt_nachΛ]
+          | erw [kostenBlock_vorΛ]
+          | erw [kostenEnd_umΛ]
+          | erw [kostenSonst_umΛ]
+          | erw [kostenExpr_ru]
+          | erw [kostenArgs_ru]
+          | erw [kostenErg_ru]
+          | erw [kostenStmt_ru]
+          | erw [kostenBlock_ru]
+          | erw [kostenArms_ru]
+          | erw [kostenGrundArms_ru]
+          | erw [kostenEnd_ru]
+          | erw [kostenSonst_ru]
+          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+          )
+      try rfl
+      )
+termination_by structural e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenSonst ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
-  cases e with
-  | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
+  match e with
+  | .ret .. | .retWhy .. | .leave .. | .next .. | .cons .. | .bind .. | .bindCall ..
+  | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse ..
+  | .awaits .. | .bindCallInd .. | .narrow .. | .exchange .. | .ite .. | .narrowRequired ..
+  | .retScoped .. | .retWhyScoped .. | .bindCallIndElse .. | .float .. | .floatLit ..
+  | .floatOf .. | .floatNarrow .. =>
+    (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+    repeat
       (first
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
@@ -342,47 +346,35 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         | erw [kostenGrundArms_ru]
         | erw [kostenEnd_ru]
         | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-  | _ =>
-    (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim_some, Option.elim_none]) <;>
-    (repeat
-      (first
-        | erw [kostenStmt_nachΛ]
-        | erw [kostenBlock_vorΛ]
-        | erw [kostenEnd_umΛ]
-        | erw [kostenSonst_umΛ]
-        | erw [kostenExpr_ru]
-        | erw [kostenArgs_ru]
-        | erw [kostenErg_ru]
-        | erw [kostenStmt_ru]
-        | erw [kostenBlock_ru]
-        | erw [kostenArms_ru]
-        | erw [kostenGrundArms_ru]
-        | erw [kostenEnd_ru]
-        | erw [kostenSonst_ru]
-        )) <;>
-    (try rfl)
-termination_by sizeOf e
+        | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+        )
+    try rfl
+  | .bindAxiomOpt (e := e) .. | .bindAxiomOptElse (e := e) .. =>
+    cases e <;> (
+      (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none])
+      repeat
+        (first
+          | erw [kostenStmt_nachΛ]
+          | erw [kostenBlock_vorΛ]
+          | erw [kostenEnd_umΛ]
+          | erw [kostenSonst_umΛ]
+          | erw [kostenExpr_ru]
+          | erw [kostenArgs_ru]
+          | erw [kostenErg_ru]
+          | erw [kostenStmt_ru]
+          | erw [kostenBlock_ru]
+          | erw [kostenArms_ru]
+          | erw [kostenGrundArms_ru]
+          | erw [kostenEnd_ru]
+          | erw [kostenSonst_ru]
+          | simp only [kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
+        entfZ_ru, Option.elim_some, Option.elim_none]
+          )
+      try rfl
+      )
+termination_by structural e
 end
 end Costs
 end HaltRuhe
