@@ -8,6 +8,8 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.TaggedDispatch.Frontend
