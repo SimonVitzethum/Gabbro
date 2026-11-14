@@ -56,7 +56,7 @@ theorem grund_sichtbar_zeuge :
     grundSichtbar [.modT "a" [.whyT "R" [] false],
       .modT "b" [leereFn (fnKopf "impl" "g" (.some "R"))]] =
       .error "private reason used outside its module: R" := by
-  exact ⟨rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl, by decide +kernel⟩
 
 /-- G003: an item named `TESTBUILD` is refused (reserved gate word). -/
 theorem reserviert_refused_zeuge :
