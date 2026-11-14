@@ -95,12 +95,13 @@ theorem valueReferences_call (name : String) (args : List SExpr) (declared : Str
     valueReferences (.call name args) declared owner = dependencyCallReferences declared owner name args ++
       valueReferenceList args declared owner := rfl
 
+mutual
 /-- Bounds and counts use the same original operands as canonical type elaboration. Range
     bases contribute too: uTypIn resolves the base before admitting its numeric bounds. -/
 def typeReferences (source : STyp) (declared : String → Bool := fun _ => false)
     (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
   match source with
-  | .tuple elements => elements.flatMap (fun ty => typeReferences ty declared owner)
+  | .tuple elements => typeReferenceList elements declared owner
   | .atom name => [.type name]
   | .range base lo hi _ => typeReferences base declared owner ++
       valueReferences lo declared owner ++ valueReferences hi declared owner
@@ -108,6 +109,22 @@ def typeReferences (source : STyp) (declared : String → Bool := fun _ => false
   | .wrap ty | .embed ty _ _ => typeReferences ty declared owner
   | .str count => valueReferences count declared owner
   | _ => []
+
+-- Traverse tuple components structurally so dependency discovery reduces in witnesses.
+def typeReferenceList (sources : List STyp) (declared : String → Bool := fun _ => false)
+    (owner : String → Bool → Option String := fun _ _ => none) : List DependencyName :=
+  match sources with
+  | [] => []
+  | ty :: rest => typeReferences ty declared owner ++ typeReferenceList rest declared owner
+end
+
+/-- Structural tuple traversal retains the original dependency order and multiplicity. -/
+theorem typeReferenceList_eq_flatMap (sources : List STyp) (declared : String → Bool)
+    (owner : String → Bool → Option String) :
+    typeReferenceList sources declared owner = sources.flatMap (fun ty => typeReferences ty declared owner) := by
+  induction sources with
+  | nil => rfl
+  | cons ty rest ih => simp only [typeReferenceList, List.flatMap_cons, ih]
 
 mutual
 /-- Every row leaf remains in the graph, including unused constant arrays. -/
