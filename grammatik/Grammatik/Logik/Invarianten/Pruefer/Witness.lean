@@ -141,4 +141,65 @@ def nonlinear : Programm declaration :=
 /-- Declaration admission is checked even with no enumerated writer. -/
 theorem outside_fragment_refused_zeuge : invariantVCB nonlinear unit.S [] = false := by decide +kernel
 
+namespace Reason
+
+/-- A callable body with a nonempty reason type, separate from the entry
+    fixture: the model correctly forbids reason-returning thread roots. -/
+def declaration : Deklaration :=
+  { Witness.declaration with
+    sigNr := fun _ => { Witness.declaration.sigNr 0 with gruende := 1 } }
+
+def access : gdarf declaration false [] := fun _ member => nomatch member
+
+def invariant : Expr declaration [] [] .bool := .eq (.glob false access) (.lit 0)
+
+def store (value : Nat) (bounded : value ≤ 10) :
+    Stmt declaration (vertragVon declaration ()) false [] [] [] :=
+  .assignGlob false (.widen (by omega) (by omega) (.lit (value : Int))) rfl access
+
+def program (restore : Bool) : Programm declaration where
+  invariante := fun _ => invariant
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ =>
+    .cons (store (if restore then 0 else 1) (by cases restore <;> decide))
+      (.retWhy ⟨0, by decide⟩ (List.Perm.refl _))
+
+theorem accepted_zeuge : invariantVCB (program true) (SperrInv.leer declaration) [()] = true := by
+  decide +kernel
+
+theorem refused_zeuge : invariantVCB (program false) (SperrInv.leer declaration) [()] = false := by
+  decide +kernel
+
+theorem duty_zeuge (passes : Nat) (Q : AxEns declaration) :
+    InvGutGrund (program true) passes Q (SperrInv.leer declaration) () :=
+  (invariantVCB_invGut (fun f => by cases f; exact List.mem_cons_self)
+    accepted_zeuge passes Q ()).2
+
+def world : World declaration where
+  slots := Witness.world.slots
+  globs := Witness.world.globs
+  spur := []
+
+def oracle : Orakel declaration where
+  wirkt := fun item => nomatch item
+  regLies := fun item => nomatch item
+  regSchreib := fun item => nomatch item
+  sichtbar := fun _ _ => true
+
+def calls (f : declaration.Fn) (entry : World declaration)
+    (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok entry ()
+
+theorem returns_reason_zeuge :
+    (match execEnd oracle 0 calls ((program true).rumpf ()) world .nil with
+      | .why next _ => eval next invariant next .nil
+      | _ => false) = true := by decide +kernel
+
+theorem breaks_at_reason_zeuge :
+    (match execEnd oracle 0 calls ((program false).rumpf ()) world .nil with
+      | .why next _ => eval next invariant next .nil
+      | _ => true) = false := by decide +kernel
+
+end Reason
+
 end Gabbro.Grammatik.Invarianten.Pruefer.Witness
