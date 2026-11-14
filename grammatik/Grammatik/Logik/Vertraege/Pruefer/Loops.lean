@@ -120,12 +120,12 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         have obligations := checks.sound runtime world parts.2
         let I : Nat → World D → Env D Γ → Prop :=
           fun _ next _ => invariant.denote (assignment next)
-        let doneTest := fun next env =>
+        let doneTest := fun (next : World D) (env : Env D Γ) =>
           let read := next.lese Λ test.orte
           (read, wahr? (eval read test read env))
         have stepRule : ∀ n next env, I (n + 1) next env →
             (doneTest next env).2 = false →
-            runtime.wpB body (WP.PassSchritt (goals.holds allowed) I n) (doneTest next env).1 env := by
+            runtime.wpB body (WP.PassSchritt (goals.holds (l := l) allowed) I n) (doneTest next env).1 env := by
           intro n next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
@@ -139,7 +139,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         apply WP.retry_regel
           (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
           doneTest (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls overflow)
-          (goals.holds allowed) I ?_ ?_ stepRule count world locals parts.1
+          (goals.holds (l := l) allowed) I ?_ ?_ stepRule count world locals parts.1
         · intro n next env holds finished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = true := finished
