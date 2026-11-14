@@ -208,7 +208,7 @@ theorem nested_return_sim_zeuge :
       (lrel_bindAll test ρ (by cbv) rfl)
     obtain ⟨σ', v, hex, hw, _⟩ := lowRet_sim ⟨0, by decide⟩ h
       (bst := .ret (some (.place "T" (.lit (.int 1)) "next")))
-      (by cbv) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL
+      (by cbv) (fun _ h => by cases h) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL
     exact ⟨g, σ', v, (by first | exact h | rfl | simp_all), hex, hw⟩
 end StoreSimulations
 
