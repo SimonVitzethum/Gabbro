@@ -87,7 +87,7 @@ theorem druckAnw_kopf (s : SAnw) (hs : Einfach s) :
   | ret e hg => exact ⟨"return", druckToks e ++ [.zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]⟩
   | leave l => exact ⟨"leave", [nameTok l, .zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append]⟩
   | next l => exact ⟨"next", [nameTok l, .zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append]⟩
-  | bind x e _ hg =>
+  | bind x e _ _ hg =>
     exact ⟨"let", [nameTok x, .zeichen "="] ++ druckToks e ++ [.zeichen ";"],
       fun r => by simp only [druckAnw, Bool.false_eq_true, ↓reduceIte, List.append_nil, List.cons_append, List.nil_append,
   druckTypOpt, List.append_assoc]⟩
@@ -178,7 +178,7 @@ theorem rundlauf_block_einfach_zeuge (r : List Token) :
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
       rcases hs with rfl | rfl
-      · exact Einfach.bind "x" (.lit 1) (by decide) (by decide)
+      · exact Einfach.bind "x" (.lit 1) (by decide) rfl (by decide)
       · exact Einfach.leave "i")
     (by simp only [EinfachEnde]; decide) (by intro h; simp only [reduceCtorEq] at h) r 200 (by decide)
 
