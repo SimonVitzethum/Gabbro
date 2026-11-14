@@ -140,6 +140,18 @@ theorem ContextEntry.close_shape {entry next : ContextEntry D} {key : ScopeKey}
       · cases closed
     · cases closed
 
+/-- Cleanup shortens the real lexical stack by exactly one. -/
+theorem ContextEntry.close_stack {entry next : ContextEntry D} {key : ScopeKey}
+    (closed : entry.close key = .ok next) : entry.scopes = key :: next.scopes := by
+  obtain ⟨tail, context, loans, stack, _, rfl⟩ := close_shape closed
+  exact stack
+
+/-- Releasing a scope restores access; it cannot change the authority origin. -/
+theorem ContextEntry.close_authority {entry next : ContextEntry D} {key : ScopeKey}
+    (closed : entry.close key = .ok next) : next.authority = entry.authority := by
+  obtain ⟨tail, context, loans, _, _, rfl⟩ := close_shape closed
+  rfl
+
 /-- No successful exit may silently leave the released generation live. -/
 theorem ContextEntry.close_stale {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) :
@@ -154,6 +166,22 @@ theorem ContextEntry.close_other {entry next : ContextEntry D} {key : ScopeKey}
     next.generations ancestor = entry.generations ancestor := by
   obtain ⟨tail, context, loans, _, _, rfl⟩ := close_shape closed
   exact SpanGenerations.bump_other entry.generations different
+
+/-- A successful shared close always used this id's actual stored context.
+    The statement extracts runtime data; no unrelated receipt is a premise. -/
+theorem ContextLedger.close_entry {ledger next : ContextLedger D} {id : Nat} {key : ScopeKey}
+    (closed : ledger.close id key = .ok next) :
+    ∃ entry updated, ledger id = some entry ∧ entry.close key = .ok updated ∧
+      next = ledger.set id updated := by
+  unfold close at closed
+  split at closed
+  · cases closed
+  · rename_i entry found
+    split at closed
+    · cases closed
+    · rename_i updated released
+      cases closed
+      exact ⟨entry, updated, found, released, rfl⟩
 
 /-- Resolving and closing one id cannot alter another context. -/
 theorem ContextLedger.close_other {ledger next : ContextLedger D} {id : Nat} {key : ScopeKey}
