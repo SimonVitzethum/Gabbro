@@ -221,7 +221,8 @@ theorem booleanMemory_reified_zeuge :
 
 theorem booleanMemory_sound_zeuge (world : World booleanDeclaration) :
     eval world booleanMemory world .nil = true ↔ assignment world (.glob false) = 1 :=
-  uebersetzeB_sound [.inr false] booleanMemory _ booleanMemory_reified_zeuge world
+  uebersetzeB_sound [.inr false] booleanMemory (.eq (.var (.glob false)) (.konst 1))
+    booleanMemory_reified_zeuge world
 
 theorem constant_sound_zeuge (values : Assignment Nat) :
     (LTerm.add (.scale (-3) (.konst 2)) (.konst 5)).denote values = -1 :=
