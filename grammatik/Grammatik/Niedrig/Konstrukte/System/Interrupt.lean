@@ -60,8 +60,9 @@ def irqFrameAt (frame : Eingang.EntryFrame) (incoming : Arch.Priv) : Eingang.Ent
 theorem frameOf_replaceVector (source : Parser.SEingang) (old new : Parser.SExpr)
     (present : source.vektor = some old) :
     Eingang.frameOf { source with vektor := some new } = Eingang.frameOf source := by
-  simp only [Eingang.frameOf, Eingang.alleOk, Eingang.hatBeide, Eingang.artAus,
-    Eingang.rahmenAus, present]
+  cases via : source.via <;>
+    simp only [Eingang.frameOf, Eingang.alleOk, Eingang.hatBeide, Eingang.artAus,
+      Eingang.rahmenAus, Eingang.ersteFehler, present, via]
 
 /-- Save both mask/depth and priority. PrioStep's intermediate mask update is
     combined with MaskStep's saved-bit stack; neither state replaces the other. -/

@@ -9,8 +9,8 @@ namespace Gabbro.Grammatik.LowLevel.Construct.Witness
 
 /-- Literal, signed offset and narrowing all go through the new step functions. -/
 theorem address_offset_zeuge :
-    (addrOffStep start 3 (by decide) before).value.value.n = 103 ∧
-    (addrOffStep start 3 (by decide) before).world = before ∧
+    (addrOffStep start 3 (by unfold AddrOffOk; decide) before).value.value.n = 103 ∧
+    (addrOffStep start 3 (by unfold AddrOffOk; decide) before).world = before ∧
     (narrowAddrStep start 7 (by decide) before).value.value.n = 100 ∧
     addrOffB start 200 = false := ⟨rfl, rfl, rfl, rfl⟩
 
@@ -53,7 +53,7 @@ theorem roundtrip_sim_zeuge :
     (written.slots false 0 ()).n = 42 :=
   ⟨(viewGetStep_sim view layout () rfl 0 1 resources getChecked written written_sim_zeuge
       (List.mem_cons_self ..) rfl).1,
-    returnViewStep_sim written_sim_zeuge rfl, rfl⟩
+    returnViewStep_sim written_sim_zeuge (ram_view_return initial_valid receipt), rfl⟩
 
 theorem scope_both_exits_zeuge :
     closeViewExitStep (.ok 42 : Except Nat Nat) authority receipt.next written =
@@ -83,9 +83,11 @@ theorem scope_run_sim_zeuge : SimRel authority initial written := by
 theorem getBytes_correspondence_zeuge :
     (viewGetStep view layout () rfl 0 1 resources getChecked written).value =
       eval written (.getBytes false () rfl 1
-        (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide) (by decide)) written .nil :=
+        (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide)
+        getChecked.2.1.2.2.1) written .nil :=
   viewGetStep_eval_getBytes view layout () rfl 1
-    (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide) (by decide) written .nil getChecked
+    (.lit 0 : Expr D [] resources (.int 0 0)) (by decide) (by decide)
+    getChecked.2.1.2.2.1 written .nil getChecked
 
 /-- A four-byte source sliced at [1,3) has exactly the two middle bytes. -/
 def text : Wert D (.str 4) :=
@@ -108,8 +110,8 @@ theorem array_slice_zeuge :
     (arrSliceStep array 1 3 (by decide) before).world = before := ⟨rfl, rfl, rfl⟩
 
 theorem context_typing_zeuge :
-    bindCtxB 0 true 0 ghost renamedGhost 10 11 = true ∧
-    ctxMoveB true 0 renamedGhost ghost 10 11 = false := ⟨by decide, by decide⟩
+    bindCtxB (D := D) 0 true 0 ghost renamedGhost 10 11 = true ∧
+    ctxMoveB (D := D) true 0 renamedGhost ghost 10 11 = false := ⟨by decide, by decide⟩
 
 theorem context_step_zeuge :
     bindCtxStep (resources := []) oracle 0 true 0 .nil .nil ghost renamedGhost 10 11

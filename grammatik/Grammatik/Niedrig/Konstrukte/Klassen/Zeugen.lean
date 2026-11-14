@@ -29,7 +29,7 @@ theorem deviceAuthority_valid : deviceAuthority.Valid := by
 
 theorem deviceInitial_valid : initial.Valid deviceAuthority :=
   ⟨deviceAuthority_valid, owners_valid, initial_valid.2.2.1,
-    by intro v member; cases member, by intro v member; cases member⟩
+    (by intro v member; cases member), (by intro v member; cases member)⟩
 
 noncomputable def deviceView : View D := { view with span := deviceSpan }
 
