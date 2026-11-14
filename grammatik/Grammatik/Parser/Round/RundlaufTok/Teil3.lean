@@ -188,7 +188,12 @@ theorem suffWeiterM : ∀ (suff : List SuffFrag) (base : SExpr) (R : List Token)
     cases frag with
     | dot f =>
       simp only [suffToks, List.cons_append]
-      simp only [parseSuffixe, nameText_nameTok]
+      have hstep : parseSuffixe (F' + 1) base
+          (.zeichen "." :: nameTok f :: (suffToks suff ++ R)) =
+            parseSuffixe F' (.field base f) (suffToks suff ++ R) := by
+        unfold nameTok
+        split <;> simp only [parseSuffixe, nameText]
+      rw [hstep]
       simp only [applySuff]
       simp only [suffToks, List.length_cons] at hF
       exact ih _ R F' hs' (by omega)

@@ -17,7 +17,7 @@ theorem stackReserve_unchanged (largest scratch : Nat)
     (frames : FB + (stackReserveDepth + 1) * largest ≤ stackReserveFloor)
     (startup : scratch ≤ stackReserveFloor) :
     stackReserve 0 largest scratch = stackReserveFloor := by
-  simp only [stackReserve, if_pos rfl]
+  simp only [stackReserve, ↓reduceIte, ite_true]
   omega
 
 /-- The reservation covers the floor, all requested frame levels and startup scratch. -/
@@ -25,7 +25,7 @@ theorem stackReserve_bounds (largest scratch : Nat) :
     stackReserveFloor ≤ stackReserve 0 largest scratch ∧
     FB + (stackReserveDepth + 1) * largest ≤ stackReserve 0 largest scratch ∧
     scratch ≤ stackReserve 0 largest scratch := by
-  simp only [stackReserve, if_pos rfl]
+  simp only [stackReserve, ↓reduceIte, ite_true]
   omega
 
 /-- Frame width cannot reduce the depth selected from that same high-water mark. -/
