@@ -46,14 +46,12 @@ theorem waitModel_zeuge :
 
 /-- The generic ghost theorem has jointly satisfiable premises with a waiting
     thread, a distinct holder and actual spin retry steps. -/
-theorem WaitRun_tkt_zeuge [Conf] (width : 4 < 2 ^ Conf.wbits) :
+theorem WaitRun_tkt_zeuge [Conf] :
     ∃ gh : Nat → Tkt, (∀ n, Passt (gh n) ((bild (spin.z n)).karte Fin.val)) ∧
       (∀ n, Nach ((spin.akt n).map Fin.val) (gh n) (gh (n + 1))) ∧
       tHalter (gh 0) = some 0 ∧ 1 ∈ tWarte (gh 0) := by
   have invariant : Inv 2 (spin.z 0) := waitModel_zeuge.2.1
-  obtain ⟨gh, matches, steps⟩ := spin.tkt (by decide) invariant (fun n => by
-    change 1 + 2 < 2 ^ Conf.wbits
-    omega)
+  obtain ⟨gh, matches, steps⟩ := spin.tkt (by decide) invariant
   refine ⟨gh, matches, steps, ?_, ?_⟩
   · exact (matches 0).halter.symm
   · rw [← (matches 0).warte]

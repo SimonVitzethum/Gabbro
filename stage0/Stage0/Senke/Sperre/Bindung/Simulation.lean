@@ -103,13 +103,17 @@ def WaitRun.abstract (R : WaitRun M) (hN : N ≤ 2147483647) (h0 : Inv N (R.z 0)
 
 /-- Every binding carries the model's same ticket ghost, with exactly the
     existing word-width bound. No per-program translation validation is used. -/
-theorem WaitRun.tkt [Conf] (R : WaitRun M) (hN : N ≤ 2147483647) (h0 : Inv N (R.z 0))
-    (bound : ∀ n, (bild (R.z n)).queue.length + 2 < 2 ^ Conf.wbits) :
+theorem WaitRun.tkt [Conf] (R : WaitRun M) (hN : N ≤ 2147483647) (h0 : Inv N (R.z 0)) :
     ∃ gh : Nat → Tkt, (∀ n, Passt (gh n) ((bild (R.z n)).karte Fin.val)) ∧
       ∀ n, Nach ((R.akt n).map Fin.val) (gh n) (gh (n + 1)) := by
   apply (R.abstract hN h0).tkt
   intro n
-  simpa only [Abs.karte, List.length_map] using bound n
+  have length : (bild (R.z n)).queue.length ≤ N :=
+    Nat.le_trans (bild_laenge _) (R.inv hN h0 n).laenge
+  have width : 2147483649 < 2 ^ Conf.wbits := by
+    rcases Conf.wide with h | h <;> rw [h] <;> decide
+  simp only [Abs.karte, List.length_map]
+  omega
 
 /-- Mutual exclusion has the identical invariant and bound for both bindings. -/
 theorem WaitRun.ausschluss (R : WaitRun M) (hN : N ≤ 2147483647) (h0 : Inv N (R.z 0))
