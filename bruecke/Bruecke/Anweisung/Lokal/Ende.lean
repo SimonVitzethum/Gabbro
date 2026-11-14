@@ -193,7 +193,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
                       exact wgrel_same u rfl rfl hW
                     have hv := lowOption_named_sim hev hs hT σl σl ρ s hWl hL
                     have hval := valOf_eval_heq (congrArg Ty.opt same)
-                      ev _ (mpr_heq _ _).symm σl σl ρ
+                      ev _ (mpr_heq (congrArg (Expr (declOf u) Γ Λ) (congrArg Ty.opt same).symm) ev).symm σl σl ρ
                     rw [ergValOf_heq herg _
                       (evalErg σl (ErgExpr.val (D := declOf u) _) σl ρ)
                       (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]

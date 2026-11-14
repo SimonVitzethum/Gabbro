@@ -106,16 +106,16 @@ theorem lowBodyF_bindRecord_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn}
       b0 = .bind ev rest := by
   simp only [lowBodyF] at h
   cases hw : lowBindW u Γ Λ fn d v with
-  | error err => simp only [hw, Except.bind, reduceCtorEq] at h; cases h
+  | error err => simp only [hw, Except.bind, reduceCtorEq] at h
   | ok w =>
     obtain ⟨ev, hev, rfl⟩ := lowBindW_record ht hw
     simp only [hw, Except.bind] at h
     cases hr : lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r with
-    | error err => simp only [hr, reduceCtorEq] at h; cases h
+    | error err => simp only [hr, reduceCtorEq] at h
     | ok rest =>
       simp only [hr] at h
       cases h
-      exact ⟨ev, rest, hev, hr, rfl⟩
+      exact ⟨ev, rest, hev, rfl, rfl⟩
 
 theorem lowBodyF_bindMut_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x : String} {lo hi : Int} {v : USide}
