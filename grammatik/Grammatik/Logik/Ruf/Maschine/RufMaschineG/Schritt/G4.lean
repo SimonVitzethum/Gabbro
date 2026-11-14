@@ -232,7 +232,8 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (neu : List (Ereignis D))
       (hneu : s1.spur = neu ++ (M.faeden f).spur)
-      (hnw : caller.wartend = false) :
+      (hnw : caller.wartend = false)
+      (hniedrig : k.keinNiedrig) :
       RufSchrittG4 P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
@@ -297,7 +298,8 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (he : D.erg g = some τ)
       (neu : List (Ereignis D))
-      (hneu : s1.spur = neu ++ (M.faeden f).spur) :
+      (hneu : s1.spur = neu ++ (M.faeden f).spur)
+      (hniedrig : kk.keinNiedrig) :
       RufSchrittG4 P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f

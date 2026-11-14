@@ -255,7 +255,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
-      (hnonempty : R.scopes ≠ []) :
+      (hnonempty : R.scopes ≠ [])
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
@@ -274,7 +275,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
-      (hnonempty : R.scopes ≠ []) :
+      (hnonempty : R.scopes ≠ [])
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
@@ -323,7 +325,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hempty : R.scopes = []) (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₁ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
+      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₁ (.inl (evalErg σ₁ e σ₁ ρ)) = some z)
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
   /-- Direct reason return, with no cleanup residue. -/
@@ -338,7 +341,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (hempty : R.scopes = []) (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) (M.weltVon f) (.inr grund) = some z) :
+      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) (M.weltVon f) (.inr grund) = some z)
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf, M.start⟩
 

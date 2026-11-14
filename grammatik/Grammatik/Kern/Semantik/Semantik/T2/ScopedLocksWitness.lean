@@ -140,7 +140,7 @@ theorem execStmt_locks_g7_zeuge (passes : Nat) :
         intro L member
         change L ∈ [inner, outer, inherited]
         simpa only [List.mem_cons, List.not_mem_nil, or_false, Res.held.injEq] using member)
-      acquired rfl [] rfl (by decide)
+      acquired rfl [] rfl (by decide) (GRest.keinNiedrig_alt _)
   have first : RufSchrittG7 program oracle passes cleanupMachine 0 lastMachine :=
     .rueckFreigabe cleanupMachine 0 Env.nil saved inner [outer] rfl (by decide)
   have last : RufSchrittG7 program oracle passes lastMachine 0 finishedMachine :=

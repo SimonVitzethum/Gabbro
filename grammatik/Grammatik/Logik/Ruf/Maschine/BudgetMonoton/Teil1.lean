@@ -226,13 +226,13 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.peelAbbruchNext (passes := p + j) (M.plus j) f Γ Λ Λ1 Λk rest (k.plus j) ρ hnext (RufRahmenG.plus_rest (j := j) hhead)
     | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu hnw =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannRet (passes := p + j) (M.plus j) f l Γ Λ Λ'' e hperm rest (k.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu (by rw [RufRahmenG.plus_wartend]; exact hnw)
+        exact RufSchrittG.dannRet (passes := p + j) (M.plus j) f l Γ Λ Λ'' e hperm rest (k.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu (by rw [RufRahmenG.plus_wartend]; exact hnw) (GRest.keinNiedrig_alt _)
     | rueckCons caller rst hpop Γ Λ e hperm rest ρ hAnon9 g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckCons (passes := p + j) (M.plus j) f (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) Γ Λ e hperm rest ρ (RufRahmenG.plus_rest (j := j) hAnon9) g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu (by rw [RufRahmenG.plus_wartend]; exact hnw)
     | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannRetBind (passes := p + j) (M.plus j) f lk Γk Λk Λk'' e hperm restk (kk.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ restb (k.plus j) ρc (hcaller.imp (fun h => RufRahmenG.plus_rest (j := j) h) (fun ⟨n, err, h⟩ => ⟨n, err, RufRahmenG.plus_rest (j := j) h⟩)) hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu
+        exact RufSchrittG.dannRetBind (passes := p + j) (M.plus j) f lk Γk Λk Λk'' e hperm restk (kk.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ restb (k.plus j) ρc (hcaller.imp (fun h => RufRahmenG.plus_rest (j := j) h) (fun ⟨n, err, h⟩ => ⟨n, err, RufRahmenG.plus_rest (j := j) h⟩)) hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu (GRest.keinNiedrig_alt _)
     | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckConsBind (passes := p + j) (M.plus j) f lk Γk Λk e hperm restk ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ restb (k.plus j) ρc (hcaller.imp (fun h => RufRahmenG.plus_rest (j := j) h) (fun ⟨n, err, h⟩ => ⟨n, err, RufRahmenG.plus_rest (j := j) h⟩)) hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu
@@ -246,7 +246,7 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.rueckConsGrund (passes := p + j) (M.plus j) f r hperm restk ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest (j := j) hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn
     | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannRetGrund (passes := p + j) (M.plus j) f r hperm restk (kk.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest (j := j) hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn
+        exact RufSchrittG.dannRetGrund (passes := p + j) (M.plus j) f r hperm restk (kk.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest (j := j) hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn (GRest.keinNiedrig_alt _)
     | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannRegLies (passes := p + j) (M.plus j) f l Γ Λ Λ' r hk rest (k.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) v hv hz hΛ
@@ -371,11 +371,11 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedWert (passes := p + j) (M.plus j) f ρ (r.plus j) e R
           (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedWert j r |>.trans hret)
-          hscope hΛ σ₁ hs₁ neu hneu hnonempty
+          hscope hΛ σ₁ hs₁ neu hneu hnonempty (GRest.keinNiedrig_alt _)
     | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedGrund (passes := p + j) (M.plus j) f ρ (r.plus j) grund R
-          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedGrund j r |>.trans hret) hscope hΛ hnonempty
+          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedGrund j r |>.trans hret) hscope hΛ hnonempty (GRest.keinNiedrig_alt _)
     | rueckFreigabe ρ a L remaining hhead hnonempty =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckFreigabe (passes := p + j) (M.plus j) f ρ a L remaining
@@ -389,12 +389,12 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedWertDirekt (passes := p + j) (M.plus j) f ρ (r.plus j) e R
           (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedWert j r |>.trans hret)
-          hscope hΛ σ₁ hs₁ neu hneu hempty (z.plus j) (rufAntwortG_plus j ha)
+          hscope hΛ σ₁ hs₁ neu hneu hempty (z.plus j) (rufAntwortG_plus j ha) (GRest.keinNiedrig_alt _)
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedGrundDirekt (passes := p + j) (M.plus j) f ρ (r.plus j) grund R
           (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedGrund j r |>.trans hret)
-          hscope hΛ hempty (z.plus j) (rufAntwortG_plus j ha)
+          hscope hΛ hempty (z.plus j) (rufAntwortG_plus j ha) (GRest.keinNiedrig_alt _)
 
 theorem rufErreichbarG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M0 M : RufMaschineG D}
     (h : RufErreichbarG P O p M0 M) : RufErreichbarG P O (p + j) (M0.plus j) (M.plus j) := by

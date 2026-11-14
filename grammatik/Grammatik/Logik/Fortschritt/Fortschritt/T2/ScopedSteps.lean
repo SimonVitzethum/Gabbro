@@ -71,9 +71,9 @@ theorem w_scopedWert {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
       ((M.weltVon t).lese Λ e.orte) ((M.weltVon t).lese Λ e.orte)
       (.inl (evalErg ((M.weltVon t).lese Λ e.orte) e ((M.weltVon t).lese Λ e.orte) ρ)) hkt
     exact ⟨_, RufSchrittG.rueckScopedWertDirekt M t ρ r e R hx hret hscope hΛ
-      _ rfl neu hneu hsc z hz⟩
+      _ rfl neu hneu hsc z hz (GRest.keinNiedrig_alt _)⟩
   · exact ⟨_, RufSchrittG.rueckScopedWert M t ρ r e R hx hret hscope hΛ
-      _ rfl neu hneu hsc⟩
+      _ rfl neu hneu hsc (GRest.keinNiedrig_alt _)⟩
 
 /-- The reason channel has the same cleanup step, without reading a value. -/
 theorem w_scopedGrund {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
@@ -91,8 +91,8 @@ theorem w_scopedGrund {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
   by_cases hsc : R.scopes = []
   · obtain ⟨z, hz⟩ := rufAntwortG_moeglich (M.faeden t)
       (M.weltVon t) (M.weltVon t) (.inr grund) hkt
-    exact ⟨_, RufSchrittG.rueckScopedGrundDirekt M t ρ r grund R hx hret hscope hΛ hsc z hz⟩
-  · exact ⟨_, RufSchrittG.rueckScopedGrund M t ρ r grund R hx hret hscope hΛ hsc⟩
+    exact ⟨_, RufSchrittG.rueckScopedGrundDirekt M t ρ r grund R hx hret hscope hΛ hsc z hz (GRest.keinNiedrig_alt _)⟩
+  · exact ⟨_, RufSchrittG.rueckScopedGrund M t ρ r grund R hx hret hscope hΛ hsc (GRest.keinNiedrig_alt _)⟩
 
 /-- Every cleanup head can step. Releases need no external answer; after
     the final release the existing stack invariant supplies answer delivery. -/

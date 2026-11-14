@@ -348,7 +348,7 @@ theorem w_dannRet {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannRet M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ
-    _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw, gepopptG_neu rfl rfl⟩
+    _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw (GRest.keinNiedrig_alt _), gepopptG_neu rfl rfl⟩
 
 end Schritte
 

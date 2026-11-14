@@ -67,7 +67,7 @@ theorem w_dannRetGrundP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   cases hart with
   | sonst err restb k' ρc hc =>
     exact ⟨_, RufSchrittG.dannRetGrund M f r hperm rest k ρ hhead caller rst hpop _ _ _ _ _ _
-      err restb k' ρc hc hΛ _ rfl (M.faeden f).kopf.rho rfl _ rfl r rfl rfl,
+      err restb k' ρc hc hΛ _ rfl (M.faeden f).kopf.rho rfl _ rfl r rfl rfl (GRest.keinNiedrig_alt _),
       gepopptGrundG_neu rfl rfl⟩
 
 end SchritteGrund

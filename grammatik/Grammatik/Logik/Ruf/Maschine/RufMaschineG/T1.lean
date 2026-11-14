@@ -22,7 +22,7 @@
 -/
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
-public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1Basis
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.KeinNiedrig
 import all Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1Basis
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Logik.Vertraege.Locations.VertragOrtB

@@ -66,7 +66,8 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (rho : Env D (D.params g)) (hrho : (M.faeden f).kopf.rho = hfg ▸ rho)
       (s0 : World D) (hs0 : (M.faeden f).kopf.s0 = s0)
       (rg : Fin (D.gruende g)) (hrg : rg = hfg ▸ r)
-      (hn : D.gruende g = n) :
+      (hn : D.gruende g = n)
+      (hniedrig : kk.keinNiedrig) :
       RufSchrittG5 P O passes M f
         ⟨M.speicher,
          rufUpdateG M.faeden f
