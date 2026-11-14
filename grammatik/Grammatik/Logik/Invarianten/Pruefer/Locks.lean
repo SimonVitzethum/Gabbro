@@ -25,10 +25,12 @@ def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
   let some source := sources lock
     | .error (.unsupported "semantic lock invariant has no reified source formula; user duty")
   let encoded ← translateInvariant (S.orte lock) source.expression
+  let formula : LProp (Observation D) := encoded.payload
   return {
-      formula := lower encoded.payload
+      formula := lower formula
       correct := fun world => by
-        rw [lower_denote, ← encoded.bool_iff world, source.correct world] }
+        exact (lower_denote formula (assignment world)).trans
+          ((encoded.bool_iff world).symm.trans (by rw [source.correct world]; rfl)) }
 
 /-- Enumerate parameter values, with a proof of completeness. No arbitrary
     sample or supplied proof of a function contract participates in checking. -/
