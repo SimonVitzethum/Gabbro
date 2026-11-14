@@ -44,11 +44,9 @@ set_option maxHeartbeats 2000000
 
 /-- Distinct numeric arms and the final wildcard use the existing conditional path. -/
 def text : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let result = choose(2); return result; } }"
+  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
 
 def candidate : Except String (Emitted text 256) := emit text 256
-
-#eval candidate.map (fun _ => ())
 
 theorem candidate_present : candidate.toOption.isSome = true := by
   kernel_rfl
@@ -65,7 +63,7 @@ theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := outpu
 
 /-- The poison differs only by the missing exhaustive fallback. -/
 def missingFallback : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } } } impl fn main() -> u8 { let result = choose(2); return result; } }"
+  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
 
 theorem missing_fallback_refused_zeuge :
     (emit missingFallback 256).toOption.isSome = false := by
@@ -73,7 +71,7 @@ theorem missing_fallback_refused_zeuge :
 
 /-- Duplicate numeric patterns cannot silently select the first arm. -/
 def duplicatePattern : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 0 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let result = choose(2); return result; } }"
+  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 0 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
 
 theorem duplicate_pattern_refused_zeuge :
     (emit duplicatePattern 256).toOption.isSome = false := by

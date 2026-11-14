@@ -74,14 +74,14 @@ theorem total_eng_zeuge :
 
 /-- The reversed difference is not justified by the guard. -/
 def reversed : String :=
-  "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { if a >= b { return b - a; } return 0; } impl fn main() -> u64 { let result = difference(7, 3); return result; } }"
+  "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { if a >= b { return b - a; } return 0; } impl fn main() -> u64 { let answer = difference(7, 3); return answer; } }"
 
 theorem reversed_difference_refused_zeuge : (emit reversed 256).toOption.isSome = false := by
   kernel_rfl
 
 /-- Without a guard, u64 subtraction keeps its potentially negative range. -/
 def unguarded : String :=
-  "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { return a - b; } impl fn main() -> u64 { let result = difference(3, 7); return result; } }"
+  "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { return a - b; } impl fn main() -> u64 { let answer = difference(3, 7); return answer; } }"
 
 theorem unguarded_difference_refused_zeuge : (emit unguarded 256).toOption.isSome = false := by
   kernel_rfl
