@@ -30,10 +30,10 @@ structure CheckedUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List
 def checkUnitLock (E : Einheit D) (lock : D.Lock) :
     Except Invarianten.Frag.Refusal (PLift ((∀ s s', (∀ c ∈ E.S.orte lock, TraegerGleich s s' c) →
       E.S.inv lock s = E.S.inv lock s') ∧ E.S.inv lock E.sp0 = true)) := do
-  let local ← checkLockLocal E.S E.lockFormulas lock
+  let oracleLocal ← checkLockLocal E.S E.lockFormulas lock
   let formula ← lockFormula E.S E.lockFormulas lock
   if initial : formula.formula.eval (assignment (E.sp0.welt [])) = true then
-    return ⟨local.down, (formula.correct _).mp ((qf_eval _ _).mp initial)⟩
+    return ⟨oracleLocal.down, (formula.correct _).mp ((qf_eval _ _).mp initial)⟩
   else .error (.unsupported "lock invariant is false in the initial memory")
 
 def checkStartRequires (E : Einheit D) (start : Σ f : D.Fn, Env D (D.params f)) :

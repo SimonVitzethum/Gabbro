@@ -86,17 +86,17 @@ theorem contractDuties_congr {left right : Programm D} {S S' : SperrInv D} (f : 
     ReqAmEintritt EnsAmRueck InvAmRueck InvHaelt torRuf at facts ⊢
   rw [← invariants, ← requires, ← ensures, ← body]
   refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
-  · intro O frame local contract U havoc A atomic R respects noPre
-    exact facts.1.1 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+    exact facts.1.1 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noPre
-  · intro O frame local contract U havoc A atomic R respects noLogic
-    exact facts.1.2 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  · intro O frame oracleLocal contract U havoc A atomic R respects noLogic
+    exact facts.1.2 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noLogic
-  · intro O frame local contract U havoc A atomic R respects noPre
-    exact facts.2.1 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+    exact facts.2.1 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noPre
-  · intro O frame local contract U havoc A atomic R respects noPre
-    exact facts.2.2 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+    exact facts.2.2 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noPre
 
 end Gabbro.Grammatik.Vertraege.Pruefer

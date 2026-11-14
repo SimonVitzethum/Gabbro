@@ -72,7 +72,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
   if empty : (D.invs.filter (fun item => schuldet f item)).isEmpty = true ∧ checkLocks = false then
     return ⟨fun _ _ _ _ => by
       constructor <;>
-        intro O frame local contract U havoc A atomic R respects noPre world locals requires next value returned <;>
+        intro O frame oracleLocal contract U havoc A atomic R respects noPre world locals requires next value returned <;>
         intro item member owed
       all_goals
         have inside := List.mem_filter.mpr ⟨member, owed⟩
@@ -89,7 +89,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
         (checkEnvironment program S sources budget f post)
       return ⟨fun passes Q shared subset => by
         constructor <;>
-          intro O frame local contract U havoc A atomic R respects noPre world locals requires next value returned
+          intro O frame oracleLocal contract U havoc A atomic R respects noPre world locals requires next value returned
         all_goals
           let runtime : Runtime program (fun _ => []) S :=
             { oracle := O, passes := passes, calls := R
@@ -98,7 +98,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
           have valid := checked.down locals (domain.complete locals) runtime world requires
           have noShared : ∀ carrier ∈ endblockOrteP program (program.rumpf f), ¬ shared carrier :=
             fun carrier member present => atomicFreeB_sound program f free carrier member (subset carrier present)
-          rw [Endblock.execHA_frei program S O U A passes R atomic local.2 _ noShared] at returned
+          rw [Endblock.execHA_frei program S O U A passes R atomic oracleLocal.2 _ noShared] at returned
           change EndFlow post.formula (execEndH S O U passes R (program.rumpf f) world locals) at valid
           rw [returned] at valid
           intro item member owed

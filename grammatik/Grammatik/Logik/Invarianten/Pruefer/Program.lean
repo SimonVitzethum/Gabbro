@@ -76,10 +76,10 @@ theorem invariantDuties_congr {left right : Programm D} {S S' : SperrInv D} (f :
   unfold InvGutSA InvGutGrundA RespektiertRahmen RespektiertVertraege
     ReqAmEintritt EnsAmRueck InvAmRueck InvHaelt at facts ⊢
   rw [← invariants, ← requires, ← ensures, ← body]
-  constructor <;> intro O frame local contract U havoc A atomic R respects noPre
-  · exact facts.1 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  constructor <;> intro O frame oracleLocal contract U havoc A atomic R respects noPre
+  · exact facts.1 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noPre
-  · exact facts.2 O frame local (axVertragOP_of_O _ (axVertragO_wahr O))
+  · exact facts.2 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O))
       U havoc A atomic R respects noPre
 
 end Gabbro.Grammatik.Invarianten.Pruefer

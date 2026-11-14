@@ -21,13 +21,13 @@ theorem contractDuties_mitRuhe (checked : ∀ f, ContractDuties P S f) :
       have normal := invGutSA_mitRuhe facts.2.1
       have reason := invGutGrundA_mitRuhe facts.2.2
       refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
-      · intro O frame local contract U havoc A atomic R respects noPre
-        exact body.1 O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
-      · intro O frame local contract U havoc A atomic R respects noLogic
-        exact body.2 O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noLogic
-      · intro O frame local contract U havoc A atomic R respects noPre
-        exact normal O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
-      · intro O frame local contract U havoc A atomic R respects noPre
-        exact reason O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
+      · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+        exact body.1 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
+      · intro O frame oracleLocal contract U havoc A atomic R respects noLogic
+        exact body.2 O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noLogic
+      · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+        exact normal O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
+      · intro O frame oracleLocal contract U havoc A atomic R respects noPre
+        exact reason O frame oracleLocal (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
 
 end Gabbro.Grammatik.Vertraege.Pruefer
