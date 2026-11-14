@@ -15,6 +15,9 @@ theorem lowWertE_recordRead_type {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : U
   have untagged {oe : Option Gabbro.Body.Expr}
       (hh : oe.map (fun e => ((none : Option Ty), e)) = some (some ty, e)) : False := by
     cases oe <;> simp at hh
+  have ih : ∀ x : USide, sizeOf x < sizeOf sd → ∀ {wv' : LowWert u Γ Λ} {ty' : Ty} {e' : Gabbro.Body.Expr},
+      lowWertE u Γ Λ fn er x = .ok wv' → recordRead u fn x = some (some ty', e') → wv'.ty = ty' :=
+    fun x _ _ _ _ hx hbx => lowWertE_recordRead_type hx hbx
   cases sd
   case param p =>
     cases ht : valueParamTy fn p with
@@ -88,7 +91,7 @@ theorem lowWertE_recordRead_type {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : U
             cases hw : lowWertE u Γ Λ fn er base with
             | error err => simp [lowWertE, hg, hw, bind, Except.bind] at h
             | ok baseW =>
-              have same := lowWertE_recordRead_type hw hr
+              have same := ih base (by simp <;> omega) hw hr
               rcases baseW with ⟨actual, term⟩
               dsimp only at same
               subst actual
@@ -126,6 +129,42 @@ theorem lowWertE_recordRead_type {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : U
                            pure, Except.pure, Except.ok.injEq] at h
                          cases h
                          rfl)
+  case absent n =>
+    simp only [recordRead, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    simp only [lowWertE, Except.ok.injEq] at h
+    cases h
+    rfl
+  case present n value =>
+    cases hr : recordRead u fn value with
+    | none => simp [recordRead, hr] at hb
+    | some out =>
+      obtain ⟨tag, be⟩ := out
+      simp only [recordRead, hr, bind, Option.bind_some, pure,
+        Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      cases hv : lowWertAtE u Γ Λ fn er (Ty.index n) value with
+      | error err => simp [lowWertE, hv, Except.map] at h
+      | ok ve =>
+        simp only [lowWertE, hv, Except.map, Except.ok.injEq] at h
+        cases h
+        rfl
+  case option num value =>
+    by_cases hn : num < u.tabs.length
+    · have ht : u.tabs[num]? = some (tabAt u ⟨num, hn⟩) := List.getElem?_eq_getElem hn
+      cases hr : optionExpr u fn value with
+      | none => simp [recordRead, ht, hr] at hb
+      | some be =>
+        simp only [recordRead, ht, hr, bind, Option.bind_some, pure,
+          Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        cases hv : lowOpt u Γ Λ fn (if er.isSome then 1 else 0) num hn value with
+        | error err => simp [lowWertE, hn, hv, Except.map] at h
+        | ok ve =>
+          simp only [lowWertE, hn, ↓reduceDIte, hv, Except.map, Except.ok.injEq] at h
+          cases h
+          rfl
+    · simp [lowWertE, hn] at h
   all_goals
     simp only [recordRead] at hb
     exact (untagged hb).elim

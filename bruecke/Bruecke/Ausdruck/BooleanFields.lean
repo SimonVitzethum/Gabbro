@@ -28,14 +28,10 @@ theorem boolCmpExpr_some {fn : UFn} {op : String} {l r : USide} {e : Gabbro.Body
 theorem recordRead_bool_ohneCount {fn : UFn} {sd : USide} {e : Gabbro.Body.Expr}
     (h : recordRead u fn sd = some (some .bool, e)) : usideHatZaehle sd = false := by
   cases sd
-  case zaehle | zaehleBaum | zaehleFeld => cases h
-  case add a b | sub a b | mul a b =>
-    simp only [recordRead] at h
-    cases hs : numericSideExprG u fn _ with
-    | none => simp only [hs, Option.map_none, reduceCtorEq] at h
-    | some e => simp only [hs, Option.map_some, Option.some.injEq, Prod.mk.injEq,
-        reduceCtorEq, false_and] at h
-  all_goals rfl
+  all_goals first
+    | rfl
+    | (exfalso; simp [recordRead, numericSideExprG, binE] at h)
+    | (exfalso; simp [recordRead, numericSideExprG] at h)
 
 /-- Typed Boolean comparisons, including record projections, agree with the actual G
     equality lowering. No numeric encoding of truth values is introduced. -/
@@ -60,7 +56,9 @@ theorem lowEns_boolCmp_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     dsimp only at sameL
     subst tyL
     cases hright : lowWertE u Γ Λ fn er r with
-    | error err => simp [hleft, hright, lowVglWert, zahlVon] at h
+    | error err =>
+      (simp [hleft, hright, lowVglWert, zahlVon, LowWert.zahl] at h) <;>
+        first | (split at h <;> cases h) | cases h | simp at h
     | ok right =>
       obtain ⟨hvR, htR⟩ := lowWertE_recordRead_sim hright hr hA hT σ₀ σ ρ w β hW hL
       have sameR := htR .bool rfl
