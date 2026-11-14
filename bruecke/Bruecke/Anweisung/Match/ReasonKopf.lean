@@ -18,31 +18,40 @@ theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (decl
          lowGArmsL u c Γ fn fuel Λ [] n rest = .ok (restArms, tail)) ∧
       arms = .cons body restArms := by
   change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (n + 1) ss = .ok (arms, tail) at h
-  simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms, bind, Except.bind] at h
-  split at h
-  · cases h
-  · rename_i out body remaining hb
+  simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms] at h
+  cases hb : lowSeqL u c Γ fn fuel Λ [] ss with
+  | error err => simp only [hb, bind, Except.bind] at h <;> cases h
+  | ok result =>
+    obtain ⟨⟨out, body⟩, remaining⟩ := result
+    simp only [hb, bind, Except.bind] at h
     cases n with
     | zero =>
-      split at h
-      · rename_i same
+      by_cases same : out = Λ
+      · simp only [same, ↓reduceDIte] at h
         subst out
         cases h
-        exact ⟨body, .nil, remaining, hb, .inl ⟨rfl, rfl⟩, rfl⟩
-      · cases h
+        exact ⟨body, .nil, remaining, (by first | exact hb | rfl | simp_all),
+          .inl ⟨rfl, rfl⟩, rfl⟩
+      · simp only [same, ↓reduceDIte] at h <;> cases h
     | succ m =>
-      split at h
-      · rename_i rest hr
-        split at h
-        · cases h
-        · rename_i restArms remaining' hrest
-          split at h
-          · rename_i same
-            subst out
-            cases h
-            exact ⟨body, restArms, remaining, hb, .inr ⟨m, rest, rfl, hr, hrest⟩, rfl⟩
-          · cases h
-      · cases h
+      cases remaining with
+      | nil => cases h
+      | cons marker rest =>
+        cases marker <;> try { cases h }
+        case ifElse =>
+          cases hrest : lowGArmsL u c Γ fn fuel Λ [] (m + 1) rest with
+          | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
+          | ok result =>
+            obtain ⟨restArms, remaining'⟩ := result
+            simp only [hrest, bind, Except.bind] at h
+            by_cases same : out = Λ
+            · simp only [same, ↓reduceDIte] at h
+              subst out
+              cases h
+              exact ⟨body, restArms, .ifElse :: rest,
+                (by first | exact hb | rfl | simp_all),
+                .inr ⟨m, rest, rfl, rfl, (by first | exact hrest | rfl | simp_all)⟩, rfl⟩
+            · simp only [same, ↓reduceDIte] at h <;> cases h
 
 theorem lowBodyF_reason_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
@@ -72,27 +81,41 @@ theorem lowStruct_reason_ok {fuel count : Nat} {Γ : Ctx} {fn : UFn}
       lowGArmsL u c Γ fn fuel Λ [] count ss = .ok (arms, .blkEnd :: tail) ∧
       Λ' = Λ ∧ HEq st (Stmt.onWhy (Expr.var v) arms) := by
   rw [lowStructL_succ] at h
-  simp only [lowStructStep] at h
+  simp only [lowStructStep, lowStufe_garms] at h
   cases hj : paramPos fn.params x with
   | error err => rw [hj] at h; cases h
   | ok j =>
     rw [hj] at h
     unfold valueParamTy at ht
     rw [paramPos_find _ _ _ hj] at ht
-    split at h
-    · rename_i name cnt hq
-      simp only [hq, Option.some.injEq, Ty.why.injEq] at ht
-      subst cnt
-      split at h
-      · cases h
-      · rename_i v hv
-        simp only [lowStufe_garms] at h
-        split at h
-        · cases h
-        · rename_i arms remaining ha
-          cases h
-          exact ⟨j, v, arms, hj, hv, ha, rfl, HEq.rfl⟩
-      · cases h
-    · cases h
+    cases hp : fn.params[j]? with
+    | none => rw [hp] at h <;> cases h
+    | some entry =>
+      obtain ⟨name, ty⟩ := entry
+      rw [hp] at ht
+      cases ty
+      case why cnt =>
+        simp only [Option.some.injEq, Ty.why.injEq] at ht
+        subst cnt
+        simp only [hp] at h
+        cases hv : lowVar Γ j (.why count) with
+        | error err => simp only [hv] at h <;> cases h
+        | ok v =>
+          simp only [hv] at h
+          cases ha : lowGArmsL u c Γ fn fuel Λ [] count ss with
+          | error err => simp only [ha] at h <;> cases h
+          | ok result =>
+            obtain ⟨arms, remaining⟩ := result
+            simp only [ha] at h
+            cases remaining with
+            | nil => cases h
+            | cons marker rest =>
+              cases marker <;> try { cases h }
+              case blkEnd =>
+                cases h
+                exact ⟨j, v, arms, (by first | exact hj | rfl),
+                  (by first | exact hv | rfl), (by first | exact ha | rfl | simp_all),
+                  rfl, HEq.rfl⟩
+      all_goals cases ht
 
 end Gabbro.Bruecke
