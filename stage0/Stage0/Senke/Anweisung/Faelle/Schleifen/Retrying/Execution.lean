@@ -70,7 +70,7 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
       simp only [List.mem_cons]; exact Or.inr (Or.inr hj))⟩
   · intro m σ ρ entry falseCond
     obtain ⟨m1, run, frame, kept, ready⟩ := x.test_run lowered top entry.1
-    simp only [show wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false from falseCond, Bool.false_eq_true, ↓reduceIte] at run
+    simp only [show ¬ wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = true from falseCond, ↓reduceIte] at run
     have zero : x.read m1 x.counter 0 := by
       exact (kept x.counter List.mem_cons_self).trans entry.2.1
     have atOverflow : x.addr x.controlIndex +
@@ -87,7 +87,7 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
       (overflowRun m1 _ ρ ready)
   · intro n m σ ρ entry falseCond
     obtain ⟨m1, testRun, testFrame, testKept, ready1⟩ := x.test_run lowered top entry.1
-    simp only [show wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false from falseCond, Bool.false_eq_true, ↓reduceIte] at testRun
+    simp only [show ¬ wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = true from falseCond, ↓reduceIte] at testRun
     have start : x.Entry (n + 1) m1 (σ.lese Λ bis.orte) ρ := by
       refine ⟨ready1, ?_, ?_, entry.2.2.2⟩
       · exact (testKept x.counter List.mem_cons_self).trans entry.2.1
