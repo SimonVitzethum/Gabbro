@@ -75,10 +75,10 @@ def memory : Mem where
 /-- Joint witness of all machine-state premises of the two-instruction retry.
     This uses the runner's ordinary IR semantics and no futex response. -/
 theorem nimmT_spin_retry_zeuge [Kern] :
-    ∃ m f, LS memory m 4096 4 8192 f 1 0 0 ∧ f 2 = 1 ∧ f 5 = 0 ∧
+    ∃ m f, LS memory m 4096 4 8192 f 2 0 0 ∧ f 2 = 1 ∧ f 5 = 0 ∧
       Star ⟨160, 4096⟩ m ⟨112, 4096⟩ m ∧ m.rd64 (slot 4096 3) = some 77 ∧
       ∃ m' f', Star ⟨112, 4096⟩ m ⟨112, 4096⟩ m' ∧
-        LS memory m' 4096 4 8192 f' 1 0 0 ∧ f' 2 = 1 := by
+        LS memory m' 4096 4 8192 f' 2 0 0 ∧ f' 2 = 1 := by
   have E : LE memory 0 4096 4 8192 (nimmT (layout "freestanding") 8192 4) := by
     refine ⟨⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
       by decide, by decide, by decide, rfl, rfl, rfl, ?_, ?_⟩
