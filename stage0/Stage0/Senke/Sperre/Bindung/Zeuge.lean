@@ -21,6 +21,18 @@ def binding (environment : String) : ProfilBindung.ProfileBinding :=
 def layout (environment : String) : Lay WartenProbe.D :=
   { WartenProbe.layout with lockWait := (Profil.imageEnvironment {} (binding environment)).lockWait }
 
+/-- A real admitted source profile jointly witnesses the strengthened source
+    provenance certificate and freestanding image-environment selection. -/
+theorem Prepared_imageEnvironment_eq_zeuge :
+    ∃ result : Profil.Prepared {} (profile "freestanding"),
+      Profil.prepareItems {} (profile "freestanding") = .ok result ∧
+      Profil.imageEnvironment {} result.bindung = .freestanding ∧
+      result.bindung = ProfilBindung.ProfileBinding.aus result.selected := by
+  let result : Profil.Prepared {} (profile "freestanding") :=
+    ⟨profile "freestanding", rfl, by decide, rfl, binding "freestanding", rfl,
+      by decide, rfl, rfl⟩
+  exact ⟨result, rfl, rfl, rfl⟩
+
 /-- The two admitted source profiles select different implementations around
     the same nonempty body and the same lock address, with identical code size. -/
 theorem profile_lock_zeuge :
