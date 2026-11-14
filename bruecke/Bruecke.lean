@@ -46,6 +46,7 @@ public import Bruecke.Kette.Formen.SchleifeZeuge
 public import Bruecke.Kette.Formen.SchleifeLokalZeuge
 public import Bruecke.Anweisung.Schleife.FiniteZeuge
 public import Bruecke.Kette.RecordZeuge
+public import Bruecke.Anweisung.Bereich.RecordZeuge
 public import Bruecke.Kette.Formen.OptionZeuge
 public import Bruecke.Kette.Formen.ReasonZeuge
 public import Bruecke.Kette.Formen.TagZeuge

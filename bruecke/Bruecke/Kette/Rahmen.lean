@@ -52,8 +52,8 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           (by rw [mitBindung_ctx]; exact congrArg (List.cons _) hΓ)
           (hS.bind x (0, 0) ls.range) hmemss hrest hbs' hFss)
       case bindW x d v =>
-        obtain ⟨id, fields, eT, bs', rfl, heT, hbs', rfl⟩ := stmtsBodyZ_bindRecord_some hbs
-        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindRecord_ok c hlow
+        obtain ⟨id, fields, eT, bs', htT, heT, hbs', rfl⟩ := stmtsBodyZ_bindRecord_some hbs
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindRecord_ok c ((recordBinderType_sicht hS d v).symm.trans htT) hlow
         exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss (fn.mitWert x (.prod id fields))
           (fT.mitWert x (.prod id fields)) (ns.push x) rest bs'
           (congrArg (List.cons _) hΓ) (hS.bindRecord x id fields) hmemss hrest hbs' hFss)

@@ -66,10 +66,10 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         exact laufZiel_schritt_teilB (bind_lauf O passes R ls.term rest σ ρ) (fun ρB _ => hstep ρB)
           (fun w => Int.le_refl _) IH
       case bindW x d v =>
-        obtain ⟨id, fields, eT, bs', rfl, heT, hbs', rfl⟩ := stmtsBodyZ_bindRecord_some hbs
+        obtain ⟨id, fields, eT, bs', htT, heT, hbs', rfl⟩ := stmtsBodyZ_bindRecord_some hbs
         have hx : NameFrisch (protectedNames fn.params fn.kinds) x := hF.1
         have hF' : BindFrischL (protectedNames fn.params fn.kinds) ss := hF.2
-        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindRecord_ok c hlow
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindRecord_ok c ((recordBinderType_sicht hS d v).symm.trans htT) hlow
         have heB : namedSide u fn ns v = some eT := (namedSide_sicht hS ns v).symm.trans heT
         obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindRecord_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
         have IH := lauf_G G S c hc O passes R hRR r n k ss (fn.mitWert x (.prod id fields))
@@ -240,7 +240,7 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans (endBodyZ_suffix k fT ns ss errorBody _ hEZ)
         have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
         have hErr := endBodyZ_sim G S c hc O passes R hRR blockFuel k ss fn fT ns err
-          (.blkEnd :: tail) errorBody hU hS hmemss hEG hEZ
+          (.blkEnd :: tail) errorBody hU hS hmemss hF.2 hEG hEZ
         have IH := lauf_G G S c hc O passes R hRR r n k tail (fn.mitBindung x (lo, hi))
           (fT.mitBindung x (lo, hi)) (ns.push x) q ys (hU.bind hF.1 (lo, hi))
           (hS.bind x (lo, hi) (lo, hi)) hmemTail (bindFrischL_suffix hF.2 hsuf) hQG hYZ

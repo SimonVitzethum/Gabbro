@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Bereich.Ansicht
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -65,69 +66,5 @@ theorem stmtsBodyZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String
           | some ys =>
             simp only [hq, bind, Option.bind_some, pure, Option.some.injEq] at h
             exact ⟨e, err, tail, ys, (by first | exact he | rfl | simp_all), (by first | exact herr | rfl | simp_all), hq, h.symm⟩
-
-/-- A successful ending reader either returns now or consumes one supported leaf. -/
-theorem endBodyZ_cases {k : Nat} {fn : UFn} {ns : BodyNames} {st : UStmt}
-    {ss tail : List UStmt} {bs : List Gabbro.Body.Stmt}
-    (h : endBodyZ u (k + 1) fn ns (st :: ss) = some (bs, tail)) :
-    (∃ r b, st = .ret r ∧ retZ u fn ns r = some b ∧ bs = [b] ∧ tail = ss) ∨
-    (∃ leave x, st = controlU leave x ∧ bs = [controlStmtB leave] ∧ tail = ss) ∨
-    (∃ b ys, endLeafB st = true ∧ schrittB u fn ns st = some (b, fn, ns) ∧
-      endBodyZ u k fn ns ss = some (ys, tail) ∧ bs = b :: ys) := by
-  have leaf (st : UStmt) (hleaf : endLeafB st = true)
-      (h : (do
-        let (b, _, _) ← schrittB u fn ns st
-        let (ys, tail') ← endBodyZ u k fn ns ss
-        pure (b :: ys, tail')) = some (bs, tail)) :
-      ∃ b ys, endLeafB st = true ∧ schrittB u fn ns st = some (b, fn, ns) ∧
-        endBodyZ u k fn ns ss = some (ys, tail) ∧ bs = b :: ys := by
-    cases hstep : schrittB u fn ns st with
-    | none => simp only [hstep, bind, Option.bind_none] at h; cases h
-    | some p =>
-      obtain ⟨b, fn', ns'⟩ := p
-      simp only [hstep, bind, Option.bind_some] at h
-      have hsame := schrittB_einzeln_sicht (Sicht.refl fn) hstep (endLeafB_ok hleaf)
-      cases hr : endBodyZ u k fn ns ss with
-      | none => simp only [hr, bind, Option.bind_none] at h; cases h
-      | some p =>
-        obtain ⟨ys, tail'⟩ := p
-        simp only [hr, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact ⟨b, ys, hleaf, (by first | exact hsame.1 | rfl | simp_all), (by first | exact hr | rfl | simp_all), rfl⟩
-  cases st
-  case ret r =>
-    simp only [endBodyZ] at h
-    cases hb : retZ u fn ns r with
-    | none => rw [hb] at h; cases h
-    | some b =>
-      rw [hb] at h
-      cases h
-      exact .inl ⟨r, b, rfl, hb, rfl, rfl⟩
-  case leave x =>
-    simp only [endBodyZ, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact .inr (.inl ⟨true, x, rfl, rfl, rfl⟩)
-  case next x =>
-    simp only [endBodyZ, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact .inr (.inl ⟨false, x, rfl, rfl, rfl⟩)
-  all_goals
-    simp only [endBodyZ] at h
-    split at h
-    · rename_i hleaf
-      exact .inr (.inr (leaf _ hleaf h))
-    · cases h
-
-/-- The unread tail is a suffix, including the marker after a mandatory return. -/
-theorem endBodyZ_suffix : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
-    (bs : List Gabbro.Body.Stmt) (tail : List UStmt),
-    endBodyZ u k fn ns ss = some (bs, tail) → tail <:+ ss
-  | 0, _, _, _, _, _, h => by cases h
-  | _ + 1, _, _, [], _, _, h => by cases h
-  | k + 1, fn, ns, st :: ss, bs, tail, h => by
-    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨leave, x, rfl, _, rfl⟩ | ⟨b, ys, _, _, hr, _⟩
-    · exact List.suffix_cons _ _
-    · exact List.suffix_cons _ _
-    · exact (endBodyZ_suffix k fn ns ss ys tail hr).trans (List.suffix_cons _ _)
 
 end Gabbro.Bruecke

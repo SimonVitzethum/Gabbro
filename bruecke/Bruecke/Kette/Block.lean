@@ -72,10 +72,10 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       exact blockZiel_bind_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case bindW x d v =>
-      obtain ⟨id, fields, eT, ys, rfl, heT, hys, rfl⟩ := seqZ_bindRecord_some hbs
+      obtain ⟨id, fields, eT, ys, htT, heT, hys, rfl⟩ := seqZ_bindRecord_some hbs
       have hx : NameFrisch (protectedNames fn.params fn.kinds) x := hF.1
       have hF' : BindFrischL (protectedNames fn.params fn.kinds) ss := hF.2
-      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindRecord_ok hlow
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindRecord_ok ((recordBinderType_sicht hS d v).symm.trans htT) hlow
       have heB : namedSide u fn ns v = some eT := (namedSide_sicht hS ns v).symm.trans heT
       have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitWert x (.prod id fields))
         (fT.mitWert x (.prod id fields)) (ns.push x) q rest ys restZ used
@@ -167,7 +167,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans (endBodyZ_suffix k fT ns ss errorBody _ hEZ)
       have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
       have hErr := endBodyZ_sim G S c hc O passes R hRR n k ss fn fT ns err
-        (.blkEnd :: tail) errorBody hU hS hmemss hEG hEZ
+        (.blkEnd :: tail) errorBody hU hS hmemss hF.2 hEG hEZ
       have IH := ih n (Nat.lt_succ_self n) k tail (fn.mitBindung x (lo, hi))
         (fT.mitBindung x (lo, hi)) (ns.push x) q rest ys restZ used (hU.bind hF.1 (lo, hi))
         (hS.bind x (lo, hi) (lo, hi)) hmemTail (bindFrischL_suffix hF.2 hsuf) hQG hYZ

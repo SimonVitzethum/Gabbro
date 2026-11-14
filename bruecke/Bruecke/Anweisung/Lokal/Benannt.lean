@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Lokal.Uebersetzung
+public import Bruecke.Ausdruck.RecordType
 public import Bruecke.Anweisung.Lokal.Umbenennung
 @[expose] public section
 
@@ -289,5 +290,9 @@ theorem namedEnd_sicht {u : UProg} {fT fn : UFn} (h : Sicht u fT fn)
 theorem retZ_sicht {u : UProg} {fT fn : UFn} (h : Sicht u fT fn)
     (ns : BodyNames) (r : URet) : retZ u fT ns r = retZ u fn ns r := by
   cases r <;> simp only [retZ, namedSide_sicht h, condZ_sicht h, namedOption_sicht h]
+
+theorem recordBinderType_sicht {ft fn : UFn} (h : Sicht u ft fn)
+    (d : Option Ty) (v : USide) : recordBinderType u ft d v = recordBinderType u fn d v := by
+  cases d <;> simp only [recordBinderType, recordRead_sicht h]
 
 end Gabbro.Bruecke

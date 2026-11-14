@@ -92,26 +92,30 @@ theorem lowBodyF_bind_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
       cases h
       exact ⟨ls, e, hls, he, rfl⟩
 
-/-- Explicit aggregate annotations fix the type before the local scope is extended. -/
-theorem lowBodyF_bindRecord_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
-    {Λ : List (Res (declOf u))} {x : String} {id : Nat} {fs : List Ty} {v : USide}
-    {ss : List UStmt} {r : URet} {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
-    (h : lowBodyF u c Γ fn (n + 1) Λ (.bindW x (some (.prod id fs)) v :: ss) r = .ok b0) :
+/-- Annotated and inferred aggregates agree on the exact type before extending the scope. -/
+theorem lowBodyF_bindRecord_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn}
+    {n : Nat} {Λ : List (Res (declOf u))} {x : String} {id : Nat} {fs : List Ty}
+    {d : Option Ty} {v : USide} {ss : List UStmt} {r : URet}
+    {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
+    (ht : recordBinderType u fn d v = some (.prod id fs))
+    (h : lowBodyF u c Γ fn (n + 1) Λ (.bindW x d v :: ss) r = .ok b0) :
     ∃ (ev : Expr (declOf u) Γ Λ (.prod id fs))
-      (e : Endblock (declOf u) (verOf u c) false (.prod id fs :: Γ) Λ),
+      (rest : Endblock (declOf u) (verOf u c) false (.prod id fs :: Γ) Λ),
       lowWertAtE u Γ Λ fn none (.prod id fs) v = .ok ev ∧
-      lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r = .ok e ∧
-      b0 = Endblock.bind ev e := by
-  simp only [lowBodyF, lowBindW] at h
-  cases hw : lowWertAtE u Γ Λ fn none (.prod id fs) v with
-  | error err => simp only [hw, reduceCtorEq] at h <;> cases h
-  | ok ev =>
-    simp only [hw] at h
-    split at h
-    · cases h
-    · rename_i e he
+      lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r = .ok rest ∧
+      b0 = .bind ev rest := by
+  simp only [lowBodyF] at h
+  cases hw : lowBindW u Γ Λ fn d v with
+  | error err => simp only [hw, Except.bind, reduceCtorEq] at h; cases h
+  | ok w =>
+    obtain ⟨ev, hev, rfl⟩ := lowBindW_record ht hw
+    simp only [hw, Except.bind] at h
+    cases hr : lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r with
+    | error err => simp only [hr, reduceCtorEq] at h; cases h
+    | ok rest =>
+      simp only [hr] at h
       cases h
-      exact ⟨ev, e, rfl, he, rfl⟩
+      exact ⟨ev, rest, hev, hr, rfl⟩
 
 theorem lowBodyF_bindMut_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x : String} {lo hi : Int} {v : USide}

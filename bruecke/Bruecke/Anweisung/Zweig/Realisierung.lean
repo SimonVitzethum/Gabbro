@@ -60,10 +60,11 @@ theorem endBodyZ_callee : ∀ k fn ns ss bs tail,
   | 0, _, _, _, _, _, h, _, _, _ => by cases h
   | _ + 1, _, _, [], _, _, h, _, _, _ => by cases h
   | k + 1, fn, ns, st :: ss, bs, tail, h, g, args, hm => by
-    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨leave, x, rfl, _, rfl⟩ | ⟨b, ys, hl, hs, hy, _⟩
-    · exact .inr (CallsIn.tail (by rfl) hm)
-    · exact .inr (CallsIn.tail (by cases leave <;> rfl) hm)
-    · rcases CallsIn.head_or_tail hm with hc | hc
+    cases endBodyZ_view h with
+    | ret hr => exact .inr (CallsIn.tail (by rfl) hm)
+    | control leave x ss => exact .inr (CallsIn.tail (by cases leave <;> rfl) hm)
+    | leaf hl hs hy =>
+      rcases CallsIn.head_or_tail hm with hc | hc
       · cases st
         case call cn as =>
           cases hc
@@ -72,7 +73,14 @@ theorem endBodyZ_callee : ∀ k fn ns ss bs tail,
           cases hc
           exact .inl (callee_of_bindCall hs)
         all_goals first | cases hc | cases hl
-      · exact endBodyZ_callee k fn ns ss ys tail hy g args hc
+      · exact endBodyZ_callee k fn ns ss _ tail hy g args hc
+    | @binding st ss b fn' ns' ys tail hl hs hy =>
+      have ht : CallsIn ss g args := by
+        cases st <;> first | exact CallsIn.tail (by rfl) hm | cases hl
+      exact endBodyZ_callee k fn' ns' ss ys tail hy g args ht
+    | @record x d v ss id fs e ys tail ht he hy =>
+      exact endBodyZ_callee k (fn.mitWert x (.prod id fs)) (ns.push x) ss ys tail hy g args
+        (CallsIn.tail (by rfl) hm)
 
 /-- A call the block reader reads finds its callee, or it lies in what is left. -/
 theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt) (t : List Gabbro.Body.Stmt)
@@ -116,7 +124,7 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hY g args
             (CallsIn.tail (by rfl) ht)
       case bindW x d v =>
-        obtain ⟨id, fields, e, ys, rfl, _, hY, _⟩ := seqZ_bindRecord_some h
+        obtain ⟨id, fields, e, ys, _, _, hY, _⟩ := seqZ_bindRecord_some h
         exact seqZ_callee k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys rest used hY g args
           (CallsIn.tail (by rfl) hm)
       case call g' args' | bindCall x g' args' =>
@@ -214,7 +222,7 @@ theorem stmtsBodyZ_callee (r : URet) : ∀ (k : Nat) (fn : UFn) (ns : BodyNames)
         · exact stmtsBodyZ_callee r k fn (ns.resume allocated) tail ys hY g args
             (CallsIn.tail (by rfl) ht)
       case bindW x d v =>
-        obtain ⟨id, fields, e, ys, rfl, he, hys, _⟩ := stmtsBodyZ_bindRecord_some h
+        obtain ⟨id, fields, e, ys, _, he, hys, _⟩ := stmtsBodyZ_bindRecord_some h
         exact stmtsBodyZ_callee r k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys hys g args
           (CallsIn.tail (by rfl) hm)
       case bind | bindMut | bindB | bindOpt | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB =>

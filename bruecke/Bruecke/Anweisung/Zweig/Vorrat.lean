@@ -71,7 +71,7 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         obtain ⟨ys, hY, _⟩ := (by first | exact seqZ_control_some (leave := true) h | exact seqZ_control_some (leave := false) h)
         exact seqZ_used k fn ns ss ys rest used hY
       case bindW x d v =>
-        obtain ⟨id, fields, e, ys, rfl, _, hY, _⟩ := seqZ_bindRecord_some h
+        obtain ⟨id, fields, e, ys, htT, _, hY, _⟩ := seqZ_bindRecord_some h
         have hy := seqZ_used k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys rest used hY
         exact fun y hm => hy y (BodyNames.used_push ns x y hm)
       case ret r =>

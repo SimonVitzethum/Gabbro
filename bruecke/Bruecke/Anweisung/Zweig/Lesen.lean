@@ -69,57 +69,57 @@ theorem stmtsBodyZ_schritt_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt
       exact ⟨b, fn', ns', bs', hsb, hq, h.symm⟩
   · cases h
 
-/-- Nested record binders allocate and retain the same nominal scope as function binders. -/
+/-- Both annotated and inferred nominal binders retain their exact type in nested scopes. -/
 theorem seqZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
     {d : Option Ty} {v : USide} {rest tail : List UStmt}
     {bs : List Gabbro.Body.Stmt} {used : List String}
     (h : seqZ u (k + 1) fn ns (.bindW x d v :: rest) = some (bs, tail, used)) :
     ∃ (id : Nat) (fs : List Ty) (e : Gabbro.Body.Expr) (ys : List Gabbro.Body.Stmt),
-      d = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
+      recordBinderType u fn d v = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
       seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest = some (ys, tail, used) ∧
       bs = .bindName (ns.fresh x) e :: ys := by
-  cases d with
-  | none => cases h
+  simp only [seqZ] at h
+  cases ht : recordBinderType u fn d v with
+  | none => rw [ht] at h; cases h
   | some ty =>
-      cases ty <;> try { simp only [seqZ, reduceCtorEq] at h }
-      case prod id fs =>
-        simp only [seqZ] at h
-        cases he : namedSide u fn ns v with
-        | none => rw [he] at h; cases h
-        | some e =>
-          rw [he] at h
-          cases hy : seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest with
-          | none => rw [hy] at h; cases h
-          | some result =>
-            obtain ⟨ys, tail', used'⟩ := result
-            rw [hy] at h
-            cases h
-            exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
+    obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
+    rw [ht] at h
+    cases he : namedSide u fn ns v with
+    | none => rw [he] at h; cases h
+    | some e =>
+      rw [he] at h
+      cases hy : seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest with
+      | none => rw [hy] at h; cases h
+      | some result =>
+        obtain ⟨ys, tail', used'⟩ := result
+        rw [hy] at h
+        cases h
+        exact ⟨id, fs, e, ys, ht, he, hy, rfl⟩
 
-/-- The whole-function record binder has an explicit nominal type. -/
+/-- Whole-function record inference uses the same reader as nested record inference. -/
 theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
     {d : Option Ty} {v : USide} {rest : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}
     (h : stmtsBodyZ u (k + 1) fn ns (.bindW x d v :: rest) r = some bs) :
     ∃ (id : Nat) (fs : List Ty) (e : Gabbro.Body.Expr) (ys : List Gabbro.Body.Stmt),
-      d = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
+      recordBinderType u fn d v = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
       stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r = some ys ∧
       bs = .bindName (ns.fresh x) e :: ys := by
-  cases d with
-  | none => cases h
+  simp only [stmtsBodyZ] at h
+  cases ht : recordBinderType u fn d v with
+  | none => rw [ht] at h; cases h
   | some ty =>
-      cases ty <;> try { simp only [stmtsBodyZ, reduceCtorEq] at h }
-      case prod id fs =>
-        simp only [stmtsBodyZ] at h
-        cases he : namedSide u fn ns v with
-        | none => rw [he] at h; cases h
-        | some e =>
-            rw [he] at h
-            cases hy : stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r with
-            | none => rw [hy] at h; cases h
-            | some ys =>
-                rw [hy] at h
-                cases h
-                exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
+    obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
+    rw [ht] at h
+    cases he : namedSide u fn ns v with
+    | none => rw [he] at h; cases h
+    | some e =>
+      rw [he] at h
+      cases hy : stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r with
+      | none => rw [hy] at h; cases h
+      | some ys =>
+        rw [hy] at h
+        cases h
+        exact ⟨id, fs, e, ys, ht, he, hy, rfl⟩
 
 theorem seqZ_wenn_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {cnd : UEns}
     {rest r : List UStmt} {xs : List Gabbro.Body.Stmt} {used : List String}

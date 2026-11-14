@@ -8,8 +8,7 @@ namespace Gabbro.Bruecke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 
-/-- Ending branches currently carry ordinary leaf statements and an explicit return.
-    Bindings and structured control remain refused here by constructor. -/
+/-- Ordinary ending statements preserve their scope. -/
 def endLeafB : UStmt → Bool
   | .assign .. | .assignTab .. | .assignOpt .. | .assignTabOpt .. | .assignGlob .. | .assignGlobB .. | .call .. | .setVar .. | .setVarB .. => true
   | _ => false
@@ -17,7 +16,13 @@ def endLeafB : UStmt → Bool
 theorem endLeafB_ok {st : UStmt} (h : endLeafB st = true) : LeseEinzeln st := by
   cases st <;> first | exact True.intro | cases h
 
-/-- Read the mandatory ending of a narrow failure branch, leaving its closing marker. -/
+/-- Scalar locals use the shared positional statement reader. -/
+def endLocalB : UStmt → Bool
+  | .bind .. | .bindMut .. | .bindB .. => true
+  | _ => false
+
+/-- Read a mandatory ending, including numeric, Boolean and record locals.
+    An ending arm has no joining continuation, so its local identifiers cannot escape. -/
 def endBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
     Option (List Gabbro.Body.Stmt × List UStmt)
   | 0, _, _, _ => none
@@ -25,8 +30,17 @@ def endBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
   | _ + 1, fn, ns, .ret r :: rest => (retZ u fn ns r).map (fun b => ([b], rest))
   | _ + 1, _, _, .leave _ :: rest => some ([.leave], rest)
   | _ + 1, _, _, .next _ :: rest => some ([.exit], rest)
+  | k + 1, fn, ns, .bindW x d v :: rest => do
+      let ty ← recordBinderType u fn d v
+      let e ← namedSide u fn ns v
+      let (bs, tail) ← endBodyZ u k (fn.mitWert x ty) (ns.push x) rest
+      pure (.bindName (ns.fresh x) e :: bs, tail)
   | k + 1, fn, ns, st :: rest =>
-      if endLeafB st then do
+      if endLocalB st then do
+        let (b, fn', ns') ← schrittB u fn ns st
+        let (bs, tail) ← endBodyZ u k fn' ns' rest
+        pure (b :: bs, tail)
+      else if endLeafB st then do
         let (b, _, _) ← schrittB u fn ns st
         let (bs, tail) ← endBodyZ u k fn ns rest
         pure (b :: bs, tail)
