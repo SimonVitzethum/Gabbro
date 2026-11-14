@@ -15,8 +15,6 @@ def futexC (a op : Nat) (v q : Nat) (vConst : Option Int) : List II :=
     ci 1 ((q + 4 : Nat) : Int) 0 0, ci 1 ((q + 5 : Nat) : Int) 0 0, ci 1 ((q + 6 : Nat) : Int) 0 0,
     ci 23 ((q + 7 : Nat) : Int) q 0]
 
-end Gabbro.Stage0.Senke
-
 /-- Equal-width binding cells keep all ticket-code offsets independent of the
     environment. Freestanding padding is a one-instruction forward jump. -/
 def bindingCell (strategy : LockWait) (hosted : II) : II :=

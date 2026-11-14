@@ -8,6 +8,7 @@ public import Stage0.Senke.Sperre.Warten.Fixture
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WaitBindingWitness
+set_option maxRecDepth 100000
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Runner Runner.IR Runner.Mem
 
 /-- Both selected source profiles pass the canonical admission gate. -/
