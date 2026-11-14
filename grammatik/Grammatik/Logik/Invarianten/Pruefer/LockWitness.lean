@@ -134,8 +134,8 @@ theorem checker_accepted_zeuge :
     rw [program_accepted_zeuge, contracts_accepted_zeuge]
     simp only [Bool.and_true]
     decide
-  exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
-    ⟨Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr ⟨core, besitzB_leer rfl⟩,
+  exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+    ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨core, besitzB_leer rfl⟩,
       Kernzelle.akkuStartB_leer (unit true)⟩, invariants_accepted_zeuge⟩, logic_accepted_zeuge⟩
 
 theorem program_refused_zeuge :
