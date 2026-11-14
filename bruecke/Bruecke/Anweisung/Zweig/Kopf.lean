@@ -97,18 +97,18 @@ theorem lowSeq_bindRecord_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
   rw [lowSeqL_succ] at h
   simp only [lowSeqStep, lowStufe_seq] at h
   cases hw : lowBindW u Γ Λ fn d v with
-  | error err => simp only [hw, Except.bind, reduceCtorEq] at h; cases h
+  | error err => simp only [hw, Except.bind, reduceCtorEq] at h
   | ok w =>
     obtain ⟨ev, hev, rfl⟩ := lowBindW_record ht hw
     simp only [hw, Except.bind] at h
     cases hq : lowSeqL (l := loopMode) u c (.prod id fs :: Γ)
         (fn.mitWert x (.prod id fs)) n Λ pe ss with
-    | error err => simp only [hq, Except.bind, reduceCtorEq] at h; cases h
+    | error err => simp only [hq, Except.bind, reduceCtorEq] at h
     | ok out =>
       obtain ⟨⟨Λ', b⟩, tail⟩ := out
       simp only [hq, Except.bind] at h
       cases h
-      exact ⟨ev, ⟨Λ', b⟩, hev, hq, rfl⟩
+      exact ⟨ev, ⟨Λ', b⟩, hev, rfl, rfl⟩
 
 theorem lowSeq_bindMut_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {x : String} {lo hi : Int} {v : USide} {ss rest : List UStmt}
