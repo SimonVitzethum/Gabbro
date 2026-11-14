@@ -186,4 +186,9 @@ theorem traversal_contract_refused_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram false)
       (SperrInv.leer declaration) [()] = false := by decide
 
+theorem traversal_logic_stop_zeuge :
+    (match execEnd oracle 0 calls ((traversalProgram false).rumpf ()) counterexampleWorld .nil with
+      | .logik .schleife => true
+      | _ => false) = true := by decide
+
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
