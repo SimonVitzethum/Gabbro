@@ -9,7 +9,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 
 /-- A literal condition has no name lookup or captured context to evaluate. -/
 theorem condZ_true (u : UProg) (fn : UFn) (ns : BodyNames) :
-    condZ u fn ns .tru = some (.lit (.bool true)) := rfl
+    condZ u fn ns .tru = some (.lit (.bool true)) := by
+  simp [condZ, rawCond, ensExpr, renameScalar]
 
 /-- Small source-reader witness for an actual scalar update in a traversal. Table and
     positional lookup are explicit small premises; the proof evaluates no whole unit. -/
@@ -23,7 +24,7 @@ theorem loop_local_reader_zeuge (u : UProg) (fn : UFn) (ns : BodyNames)
         some [.forEach (ns.fresh binder) (loopIndices u t)
           [.bindName id (.lit (.bool true))]] := by
   simp only [stmtsBodyZ, loopWritesB, Bool.not_true, Bool.false_eq_true, ↓reduceIte, ht, Except.toOption,
-    seqZ, schrittB, hx, condZ_true, namedEnd, Option.bind, Option.map]
+    seqZ, schrittB, hx, condZ_true, namedEnd, bind, pure, Option.bind, Option.map]
 
 /-- The updated local is the output of the pass, rather than the old entry environment. -/
 theorem forEach_local_true (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State)

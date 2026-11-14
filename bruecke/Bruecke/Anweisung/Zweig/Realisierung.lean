@@ -66,6 +66,9 @@ theorem endBodyZ_callee : ∀ k fn ns ss bs tail,
         case call cn as =>
           cases hc
           exact .inl (callee_of_schrittB hs)
+        case bindCall x cn as =>
+          cases hc
+          exact .inl (callee_of_bindCall hs)
         all_goals first | cases hc | cases hl
       · exact endBodyZ_callee k fn ns ss ys tail hy g args hc
 
