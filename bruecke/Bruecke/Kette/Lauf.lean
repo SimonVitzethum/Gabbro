@@ -5,7 +5,7 @@ public import Bruecke.Kette.Block
 public import Bruecke.Kette.Ende.Simulation
 public import Bruecke.Anweisung.Match.Kopf
 public import Bruecke.Anweisung.Match.Simulation
-public import Bruecke.Kette.Formen.ReasonSchritt
+public import Bruecke.Kette.Formen.Reason
 public import Bruecke.Kette.Formen.Tag
 @[expose] public section
 

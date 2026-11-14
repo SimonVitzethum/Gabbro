@@ -9,6 +9,7 @@ public import Bruecke.Kette.Formen.Bereich
 public import Bruecke.Anweisung.Schleife.Simulation
 public import Bruecke.Anweisung.Match.NestedKopf
 public import Bruecke.Anweisung.Match.Simulation
+public import Bruecke.Kette.Formen.Dispatch
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -129,6 +130,59 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindOpt_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
       exact blockZiel_bindOpt_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
+    case matchWhyBeg x =>
+      obtain ⟨count, e, arms, tailZ, allocated, ys, he, hAZ, hYZ, rfl⟩ := seqZ_reason_some hbs
+      obtain ⟨id, ht, hid, rfl⟩ := reasonSubject_some he
+      have ht' : valueParamTy fn x = some (.why count) := (hS.2.2.2.2 x).symm.trans ht
+      have hid' := (BodyNames.lookup_sicht hS ns x).symm.trans hid
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_reason_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨j, v, ga, hj, hv, hAG, hΛ, hst⟩ := lowStruct_reason_ok ht' hStruct
+      subst Λ₁
+      cases hst
+      have hF0 := bindFrischL_sonst (by rfl) hF
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m
+        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB =>
+          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
+        m (Nat.le_refl m) count k 0 ss fn fT ns Λ ga
+        (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hU hS hmemss hF0 hAG hAZ
+      have ht : tailZ = tail := (List.cons.inj hr).2
+      subst tailZ
+      have hsuf' : tail <:+ ss := (List.suffix_cons _ _).trans hsuf
+      have hU' := hU.resume (reasonArmsZ_used k fT count 0 ns ss arms (.blkEnd :: tail) allocated hAZ)
+      have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used
+        hU' hS (fun st hm => hmemss st (mem_of_suffix hsuf' hm))
+        (bindFrischL_suffix hF0 hsuf') hQ hYZ
+      exact ⟨IH.1, (IH.2.1.trans hsuf').trans (List.suffix_cons _ _), fun σ ρ s hW hL =>
+        blockZiel_cons_G (stmtZiel_reason_G hj hv hid' hArms σ ρ s hW hL) IH.2.2⟩
+    case matchTagBeg sidx x binders =>
+      obtain ⟨cs, e, arms, tailZ, allocated, ys, hn, he, hAZ, hYZ, rfl⟩ := seqZ_tag_some hbs
+      obtain ⟨id, ht, hBare, hid, rfl⟩ := tagSubject_some he
+      have ht' : valueParamTy fn x = some (.sum cs) := (hS.2.2.2.2 x).symm.trans ht
+      have hid' := (BodyNames.lookup_sicht hS ns x).symm.trans hid
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_tag_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨j, v, tagG, hj, hv, hTagG, hΛ, hst⟩ := lowStruct_tag_ok hn ht' hStruct
+      subst Λ₁
+      cases hst
+      obtain ⟨ga, hAG, hBareRel⟩ := lowArms_bare m fn Λ cs binders ss tagG (.blkEnd :: tail) hBare hTagG
+      have hF0 := bindFrischL_sonst (by rfl) hF
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m
+        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB =>
+          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
+        m (Nat.le_refl m) cs.length k 0 ss fn fT ns Λ ga
+        (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hU hS hmemss hF0 hAG hAZ
+      have ht : tailZ = tail := (List.cons.inj hr).2
+      subst tailZ
+      have hsuf' : tail <:+ ss := (List.suffix_cons _ _).trans hsuf
+      have hU' := hU.resume (reasonArmsZ_used k fT cs.length 0 ns ss arms (.blkEnd :: tail) allocated hAZ)
+      have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used
+        hU' hS (fun st hm => hmemss st (mem_of_suffix hsuf' hm))
+        (bindFrischL_suffix hF0 hsuf') hQ hYZ
+      exact ⟨IH.1, (IH.2.1.trans hsuf').trans (List.suffix_cons _ _), fun σ ρ s hW hL =>
+        blockZiel_cons_G (stmtZiel_tag_G hj hv hid' hBareRel hArms σ ρ s hW hL) IH.2.2⟩
     case matchBeg num v x =>
       obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, he, hPZ, hAZ, hYZ, rfl⟩ := seqZ_option_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_option_ok hlow

@@ -9,6 +9,7 @@ public import Bruecke.Anweisung.Schleife.Kopf
 public import Bruecke.Anweisung.Schleife.Kontrolle
 public import Bruecke.Anweisung.Match.NestedKopf
 public import Bruecke.Anweisung.Match.Rahmen
+public import Bruecke.Kette.Formen.DispatchStatisch
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -110,6 +111,53 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         (by rw [mitOpt_ctx]; exact congrArg (List.cons _) hΓ)
         (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case matchWhyBeg x =>
+      obtain ⟨count, e, arms, tailZ, allocated, ys, he, hAZ, hYZ, rfl⟩ := seqZ_reason_some hbs
+      obtain ⟨id, ht, hid, rfl⟩ := reasonSubject_some he
+      have ht' : valueParamTy fn x = some (.why count) := (hS.2.2.2.2 x).symm.trans ht
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_reason_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨j, v, ga, hj, hv, hAG, hΛ, hst⟩ := lowStruct_reason_ok ht' hStruct
+      subst Λ₁
+      cases hst
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m
+        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF =>
+          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
+        m (Nat.le_refl m) count k 0 ss fn fT ns Λ ga
+        (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
+      have ht : tailZ = tail := (List.cons.inj hr).2
+      subst tailZ
+      have hsuf' : tail <:+ ss := (List.suffix_cons _ _).trans hsuf
+      obtain ⟨hr, hsufTail, hRest⟩ := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated)
+        q rest ys restZ used hΓ hS (fun st hm => hmemss st (mem_of_suffix hsuf' hm)) hQ hYZ
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf' h)⟩)
+      exact ⟨hr, (hsufTail.trans hsuf').trans (List.suffix_cons _ _),
+        .selected _ _ (reason_frame hArms) hRest⟩
+    case matchTagBeg sidx x binders =>
+      obtain ⟨cs, e, arms, tailZ, allocated, ys, hn, he, hAZ, hYZ, rfl⟩ := seqZ_tag_some hbs
+      obtain ⟨id, ht, hBare, hid, rfl⟩ := tagSubject_some he
+      have ht' : valueParamTy fn x = some (.sum cs) := (hS.2.2.2.2 x).symm.trans ht
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_tag_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨j, v, tagG, hj, hv, hTagG, hΛ, hst⟩ := lowStruct_tag_ok hn ht' hStruct
+      subst Λ₁
+      cases hst
+      obtain ⟨ga, hAG, hBareRel⟩ := lowArms_bare m fn Λ cs binders ss tagG (.blkEnd :: tail) hBare hTagG
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m
+        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF =>
+          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
+        m (Nat.le_refl m) cs.length k 0 ss fn fT ns Λ ga
+        (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
+      have ht : tailZ = tail := (List.cons.inj hr).2
+      subst tailZ
+      have hsuf' : tail <:+ ss := (List.suffix_cons _ _).trans hsuf
+      obtain ⟨hr, hsufTail, hRest⟩ := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated)
+        q rest ys restZ used hΓ hS (fun st hm => hmemss st (mem_of_suffix hsuf' hm)) hQ hYZ
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf' h)⟩)
+      exact ⟨hr, (hsufTail.trans hsuf').trans (List.suffix_cons _ _),
+        .selected _ _ (tag_frame hArms) hRest⟩
     case matchBeg num v x =>
       obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, he, hPZ, hAZ, hYZ, rfl⟩ := seqZ_option_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_option_ok hlow

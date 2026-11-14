@@ -18,6 +18,20 @@ namespace Gabbro.Bruecke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
+/-- Finite reason arms reuse the ordinary scoped block reader and its allocation history. -/
+def readReasonArms (read : BodyNames → List UStmt →
+    Option (List Gabbro.Body.Stmt × List UStmt × List String)) : Nat → Nat → BodyNames → List UStmt →
+    Option (List (String × List Gabbro.Body.Stmt) × List UStmt × List String)
+  | 0, _, ns, ss => some ([], ss, ns.used)
+  | n + 1, offset, ns, ss => do
+      let (body, remaining, allocated) ← read ns ss
+      match n with
+      | 0 => pure ([(caseLabel offset, body)], remaining, allocated)
+      | m + 1 =>
+        let .ifElse :: tail := remaining | none
+        let (arms, rest, used) ← readReasonArms read (m + 1) (offset + 1) (ns.resume allocated) tail
+        pure ((caseLabel offset, body) :: arms, rest, used)
+
 /-- The active list is scoped; the returned allocation history is function-wide. -/
 def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
     Option (List Gabbro.Body.Stmt × List UStmt × List String)
@@ -38,6 +52,18 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
               (fun p => (.ite ce tb eb :: p.1, p.2.1, p.2.2))
           | _ => none
         | _ => none
+  | k + 1, fn, ns, .matchTagBeg sidx x _ :: rest =>
+      if sidx < u.sums.length then do
+        let (cs, e) ← tagSubject fn ns x
+        let (arms, .blkEnd :: tail, allocated) ← readReasonArms (seqZ u k fn) cs.length 0 ns rest | none
+        let p ← seqZ u k fn (ns.resume allocated) tail
+        pure (.onTag e (tagArms arms) :: p.1, p.2.1, p.2.2)
+      else none
+  | k + 1, fn, ns, .matchWhyBeg x :: rest => do
+      let (count, e) ← reasonSubject fn ns x
+      let (arms, .blkEnd :: tail, allocated) ← readReasonArms (seqZ u k fn) count 0 ns rest | none
+      let p ← seqZ u k fn (ns.resume allocated) tail
+      pure (.onReason e arms :: p.1, p.2.1, p.2.2)
   | k + 1, fn, ns, .matchBeg num v x :: rest =>
       if hn : num < u.tabs.length then do
         let e ← optionZ fn ns v
@@ -79,18 +105,8 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
         (seqZ u k fn' ns' rest).map (fun p => (b :: p.1, p.2.1, p.2.2))
       | none => none
 
-/-- Finite reason arms reuse the ordinary scoped block reader and its allocation history. -/
-def reasonArmsZ (u : UProg) (k : Nat) (fn : UFn) : Nat → Nat → BodyNames → List UStmt →
-    Option (List (String × List Gabbro.Body.Stmt) × List UStmt × List String)
-  | 0, _, ns, ss => some ([], ss, ns.used)
-  | n + 1, offset, ns, ss => do
-      let (body, remaining, allocated) ← seqZ u k fn ns ss
-      match n with
-      | 0 => pure ([(caseLabel offset, body)], remaining, allocated)
-      | m + 1 =>
-        let .ifElse :: tail := remaining | none
-        let (arms, rest, used) ← reasonArmsZ u k fn (m + 1) (offset + 1) (ns.resume allocated) tail
-        pure ((caseLabel offset, body) :: arms, rest, used)
+/-- Finite reason arms specialize the shared scoped arm reader. -/
+def reasonArmsZ (u : UProg) (k : Nat) (fn : UFn) := readReasonArms (seqZ u k fn)
 
 /-- Read a whole function, retaining allocation history across both arms and the continuation. -/
 def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet →

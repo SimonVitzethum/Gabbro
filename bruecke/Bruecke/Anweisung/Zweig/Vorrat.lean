@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Lesen
 public import Bruecke.Anweisung.Match.NestedLesen
+public import Bruecke.Anweisung.Match.DispatchLesen
 public import Bruecke.Anweisung.Bereich.Lesen
 public import Bruecke.Anweisung.Schleife.Lesen
 @[expose] public section
@@ -68,6 +69,20 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have he := seqZ_used k fn (ns.resume used1) r1 eb _ used2 hE
         have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
         exact fun x hx => hy x (he x (ht x hx))
+      case matchWhyBeg x =>
+        obtain ⟨count, e, arms, tail, allocated, ys, _, hA, hY, _⟩ := seqZ_reason_some h
+        have hUsed := readReasonArms_used (read := seqZ u k fn)
+          (fun ns ss bs tail used hr => seqZ_used k fn ns ss bs tail used hr)
+          count 0 ns ss arms (.blkEnd :: tail) allocated hA
+        have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY
+        exact fun x hx => hTail x (hUsed x hx)
+      case matchTagBeg sidx x binders =>
+        obtain ⟨cs, e, arms, tail, allocated, ys, _, _, hA, hY, _⟩ := seqZ_tag_some h
+        have hUsed := readReasonArms_used (read := seqZ u k fn)
+          (fun ns ss bs tail used hr => seqZ_used k fn ns ss bs tail used hr)
+          cs.length 0 ns ss arms (.blkEnd :: tail) allocated hA
+        have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY
+        exact fun x hx => hTail x (hUsed x hx)
       case matchBeg num v x =>
         obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, _, hP, hA, hY, _⟩ := seqZ_option_some h
         have hp := seqZ_used k (fn.mitIndex x num ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count ⟨num, hn⟩))
