@@ -16,7 +16,9 @@ structure Results (D : Deklaration) (result : Option Ty) where
   complete : ∀ value, value ∈ values
 
 def results (budget : Nat) : (result : Option Ty) → Except Invarianten.Frag.Refusal (Results D result)
-  | none => .ok { values := [()], complete := fun value => by cases value; simp }
+  | none => .ok
+      { values := [show ErgVal D none from ()]
+        complete := fun value => by cases value; exact List.mem_cons_self }
   | some τ => do
       let domain ← localDomain (D := D) budget τ
       return {
@@ -29,9 +31,9 @@ def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
     (compile : ∀ actual, Except Invarianten.Frag.Refusal (Condition (target actual))) :
     Except Invarianten.Frag.Refusal (Condition (fun runtime world =>
       target (evalArgs world args world locals) runtime world)) :=
-  match args with
-  | .nil => compile .nil
-  | .cons head tail => do
+  match params, args, target, compile with
+  | [], .nil, _, compile => compile .nil
+  | _ :: _, .cons head tail, target, compile => do
       let selected ← localSelect budget head locals
         (fun value runtime world => target (.cons value (evalArgs world tail world locals)) runtime world)
         (fun value => arguments budget tail locals
@@ -73,8 +75,9 @@ def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
         have parts := (conj_denote _ _ _).mp valid
         have entry := (pre.property world).mp parts.1
         cases reply : runtime.calls f world actual with
-        | ok next value => exact branches.sound runtime world parts.2 value (domain.complete value)
-            (policy.requires f world actual entry) safe.1 next reply
+        | ok next value =>
+            exact branches.sound runtime world parts.2 value (domain.complete value)
+              (policy.requires f world actual entry) safe.1 next reply
         | why next reason => exact (Fin.cast noReasons reason).elim0
         | logik error => exact safe.2 f world actual entry error reply
         | hardware _ => trivial }
