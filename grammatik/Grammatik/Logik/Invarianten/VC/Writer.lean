@@ -144,7 +144,7 @@ def writerCounterexample {program : Programm D} {checked : D.Fn → List D.Inv}
     (compiled : EndVC program checked code locals terminal)
     (entry path : LProp (Observation D)) : Option (Assignment (Observation D)) :=
   let matrix := writerMatrix entry path compiled.formula
-  counterexample (qfKeys matrix) (quoteQF matrix)
+  counterexample (qfKeys matrix).eraseDups (quoteQF matrix)
 
 theorem writerCounterexample_complete {program : Programm D} {checked : D.Fn → List D.Inv}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

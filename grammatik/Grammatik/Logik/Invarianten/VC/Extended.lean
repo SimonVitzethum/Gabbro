@@ -41,7 +41,7 @@ def writerCounterexample {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (compiled : EndCondition program checked S code locals terminal)
     (entry path : LProp (Observation D)) : Option (Assignment (Observation D)) :=
   let matrix := writerMatrix entry path compiled.formula
-  counterexample (qfKeys matrix) (quoteQF matrix)
+  counterexample (qfKeys matrix).eraseDups (quoteQF matrix)
 
 theorem writerCounterexample_complete {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {code : Endblock D V l Γ Λ} {locals : Env D Γ} {terminal : QF (Observation D)}
