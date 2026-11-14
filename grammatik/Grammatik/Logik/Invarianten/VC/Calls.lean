@@ -103,13 +103,35 @@ theorem typeFact_sound (key : Observation D) (world : World D) :
       exact typeFact_of_value world _ (D.typ table field) (world.slots table index field) rfl rfl
 
 def typeFacts (keys : List (Observation D)) : LProp (Observation D) :=
-  keys.foldr (fun key rest => .and (typeFact key) rest) .tru
+  keys.eraseDups.foldr (fun key rest => .and (typeFact key) rest) .tru
+
+private theorem foldedTypeFacts_denote (keys : List (Observation D))
+    (values : Assignment (Observation D)) :
+    (keys.foldr (fun key rest => .and (typeFact key) rest) .tru).denote values ↔
+      ∀ key ∈ keys, (typeFact key).denote values := by
+  induction keys with
+  | nil => exact ⟨fun _ _ member => False.elim (List.not_mem_nil member), fun _ => trivial⟩
+  | cons key keys ih =>
+      change ((typeFact key).denote values ∧ _) ↔ _
+      rw [ih]
+      constructor
+      · intro valid current member
+        rcases List.mem_cons.mp member with same | member
+        · subst current; exact valid.1
+        · exact valid.2 current member
+      · intro valid
+        exact ⟨valid key List.mem_cons_self,
+          fun current member => valid current (List.mem_cons_of_mem key member)⟩
+
+/-- Every original observation keeps its decoded range constraint. Repeating
+    the same constraint has no effect on any arithmetic assignment. -/
+theorem typeFacts_denote (keys : List (Observation D)) (values : Assignment (Observation D)) :
+    (typeFacts keys).denote values ↔ ∀ key ∈ keys, (typeFact key).denote values := by
+  simp only [typeFacts, foldedTypeFacts_denote, List.mem_eraseDups]
 
 theorem typeFacts_sound (keys : List (Observation D)) (world : World D) :
-    (typeFacts keys).denote (assignment world) := by
-  induction keys with
-  | nil => trivial
-  | cons key keys ih => exact ⟨typeFact_sound key world, ih⟩
+    (typeFacts keys).denote (assignment world) :=
+  (typeFacts_denote keys _).mpr (fun key _ => typeFact_sound key world)
 
 /-- Written carriers are universally havoced. Only decode ranges, the frame,
     and checked invariant formulas constrain their result. -/
