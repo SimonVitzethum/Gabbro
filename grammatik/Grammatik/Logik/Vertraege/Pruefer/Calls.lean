@@ -60,14 +60,12 @@ def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
     (fun value => do
       let post ← postFormula program f actual value
       let tail ← compile value
-      return
-        { formula := callWP f post.val tail.formula
+      return { formula := callWP f post.val tail.formula
           sound := fun runtime world valid requires respects next returned =>
             tail.sound runtime next (callWP_sound f post.val tail.formula world next valid
               (runtime.evidence.frame f world actual next value returned)
               ((post.property world next).mpr (respects.1 f world actual requires next value returned))) })
-  return
-    { formula := conj pre.val branches.formula
+  return { formula := conj pre.val branches.formula
       sound := fun runtime world valid allowed safe => by
         have parts := (conj_denote _ _ _).mp valid
         have entry := (pre.property world).mp parts.1

@@ -206,8 +206,7 @@ def extendedEnd (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
             let pre ← extendedEnd fuel rest (.cons value locals) terminal
             return pre.freshResult _ value)
         let known ← invariantFormula program (checked f)
-        return
-          { formula := callWP f known.formula tails.formula
+        return { formula := callWP f known.formula tails.formula
             sound := fun runtime world valid => by
               let read := world.lese Λ args.orte
               let actual := evalArgs read args read locals

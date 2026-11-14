@@ -28,8 +28,7 @@ def invariantFormula (program : Programm D) :
       | .error cause => .error cause
       | .ok head => do
           let tail ← invariantFormula program rest
-          return
-            { formula := conj (lower head) tail.formula
+          return { formula := conj (lower head) tail.formula
               correct := fun world => by
                 rw [conj_denote, lower_denote, tail.correct world]
                 have evaluated := translateDeclared_sound program item head translated world

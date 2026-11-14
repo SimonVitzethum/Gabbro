@@ -70,8 +70,7 @@ def scopedReturnCondition (budget : Nat)
     Except Refusal (StatementCondition (S := S) policy (.retScoped expression cleanup) locals goals) := do
   let releases ← cleanupFormula facts cleanup.scopes
   let returned ← returnCondition (S := S) budget expression locals goals
-  return
-    { formula := conj releases.formula returned.formula
+  return { formula := conj releases.formula returned.formula
       sound := fun runtime world valid allowed safe => by
         have parts := (conj_denote _ _ _).mp valid
         let read := world.lese Λ expression.orte

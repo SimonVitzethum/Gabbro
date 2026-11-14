@@ -36,8 +36,7 @@ def checkInvariants (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock
     let locks ← collect locks
       (fun lock => (E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)
       (checkLockInitial E)
-    return
-      { program := program
+    return { program := program
         initial := (program.invariants.correct _).mp ((qf_eval _ _).mp valid)
         lockInitial := locks.down }
   else .error (.unsupported "declared invariant is false in the declared initial memory")
