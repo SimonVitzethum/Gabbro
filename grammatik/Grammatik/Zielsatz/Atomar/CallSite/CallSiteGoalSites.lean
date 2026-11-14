@@ -54,8 +54,7 @@ theorem koepfe_start (sp : Speicher wD.mitRuhe)
     | some f =>
       cases f
       simp only [hi]
-      refine Or.inr ⟨false, [], [], ρ, .int 0 1, ruA args,
-        _, _, _, _, _, _, _, ?_, rfl⟩
+      refine Or.inr ⟨false, _, _, ρ, _, _, _, _, _, _, _, _, _, ?_, rfl⟩
       intro _ _ _
       rfl
 

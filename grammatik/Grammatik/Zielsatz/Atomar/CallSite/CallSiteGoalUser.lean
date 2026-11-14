@@ -122,6 +122,6 @@ theorem summary_used (T : wD.Tab ⊕ wD.Glob → Prop) :
     (fun _ _ _ _ _ _ => rfl) (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
     (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil wP))
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil wP).1) world .nil rfl
-  exact absurd (hk.1 _ _ rfl) (by decide)
+  exact absurd (hk.1 _ _ rfl) (by unfold EnsAmRueck; decide)
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal
