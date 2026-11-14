@@ -1,0 +1,16 @@
+// Exit 43: exact high-bit subtraction and a low-limb borrow, then a false guard.
+module guard_relation_u64 {
+    impl fn difference(a : u64, b : u64) -> u64 {
+        if a >= b { return a - b; }
+        return 0;
+    }
+    impl fn main() -> u8 {
+        let low = difference(18446744073709551615, 9223372036854775808);
+        let high = difference(18446744073709551615, 1);
+        let below = difference(1, 18446744073709551615);
+        if low == 9223372036854775807 && high == 18446744073709551614 && below == 0 {
+            return 43;
+        }
+        return 0;
+    }
+}

@@ -1,0 +1,13 @@
+// Exit 30: the checked field succeeds with 23 and the failure arm keeps the sibling value 7.
+module narrow_record_field {
+    type Entry = { pos : u64, other : u8, };
+    impl fn checked(entry : Entry) -> u8 {
+        narrow entry.pos to 0 .. 63 else { return entry.other; }
+        return entry.pos;
+    }
+    impl fn main() -> u16 {
+        let a = checked(Entry(pos: 23, other: 7));
+        let b = checked(Entry(pos: 1000, other: 7));
+        return a + b;
+    }
+}
