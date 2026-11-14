@@ -4,7 +4,7 @@ public import Bruecke.Kodierung
 public import Bruecke.Pflichten
 public import Bruecke.Ausdruck.Teil1
 public import Bruecke.Ausdruck.Glob
-public import Bruecke.Ausdruck.ScalarBinary
+public import Bruecke.Ausdruck.RecordField
 
 @[expose] public section
 
@@ -19,19 +19,24 @@ variable {u : UProg}
 
 /-- **A side with a Body form lowers to a number** (`lowWertE` answers `ls.wert`), and the Body
     term evaluates to the number the G term does. -/
-theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
+theorem lowWertE_scalar_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
     {sd : USide} {wv : LowWert u Γ Λ} {eB : Gabbro.Body.Expr}
     (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : numericSideExprG u fn sd = some eB)
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
-    (β : Gabbro.Body.Binding) (hW : WGRel u σ w) (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
+    (β : Gabbro.Body.Binding) (hW : WGRel u σ w) (hL : LRel fn (if er.isSome then 1 else 0) ρ β)
+    (recurse : ∀ (sd' : USide), sizeOf sd' < sizeOf sd →
+      ∀ {wv' : LowWert u Γ Λ} {eB' : Gabbro.Body.Expr},
+      lowWertE u Γ Λ fn er sd' = .ok wv' → numericSideExprG u fn sd' = some eB' →
+      ∃ ls : LowSide u Γ Λ, wv' = ls.wert ∧
+        Gabbro.Body.eval ⟨w, β⟩ eB' = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)))
+    (records : ∀ (sd' : USide), sizeOf sd' < sizeOf sd →
+      ∀ {wv' : LowWert u Γ Λ} {tag : Option Ty} {e : Gabbro.Body.Expr},
+      lowWertE u Γ Λ fn er sd' = .ok wv' → recordRead u fn sd' = some (tag, e) →
+      Gabbro.Body.eval ⟨w, β⟩ e = some (valOf wv'.ty (eval σ₀ wv'.term σ ρ)) ∧
+        (∀ ty, tag = some ty → wv'.ty = ty)) :
     ∃ ls : LowSide u Γ Λ, wv = ls.wert ∧
       Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
-  have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd)
-      {wv' : LowWert u Γ Λ} {eB' : Gabbro.Body.Expr}
-      (h' : lowWertE u Γ Λ fn er sd' = .ok wv')
-      (hb' : numericSideExprG u fn sd' = some eB') :=
-    lowWertE_sim h' hb' hA hT σ₀ σ ρ w β hW hL
   cases sd with
   | lit n =>
     simp only [lowWertE, Except.ok.injEq] at h
@@ -278,8 +283,25 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
           | none => none) = _
         rw [ha]
         rfl
+  | field base name =>
+    cases hr : recordProject u (recordRead u fn base) name with
+    | none => simp [numericSideExprG, hr] at hb
+    | some out =>
+      rcases out with ⟨tag, e⟩
+      cases tag with
+      | none => simp [numericSideExprG, hr] at hb
+      | some ty =>
+        cases ty <;> try { simp [numericSideExprG, hr] at hb }
+        case int lo hi =>
+          simp only [numericSideExprG, hr, bind, Option.bind, pure, Option.some.injEq] at hb
+          subst eB
+          obtain ⟨hv, ht⟩ := lowWertE_field_sim h hr
+            (fun hw hb => records base (by simp_wf; omega) hw hb)
+          have same := ht (.int lo hi) rfl
+          rcases wv with ⟨actual, term⟩
+          dsimp only at same
+          subst actual
+          exact ⟨⟨(lo, hi), term⟩, rfl, hv⟩
   | _ => simp [numericSideExprG] at hb
-termination_by sizeOf sd
-decreasing_by assumption
 
 end Gabbro.Bruecke

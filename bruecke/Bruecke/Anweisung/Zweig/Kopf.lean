@@ -81,6 +81,33 @@ theorem lowSeq_bind_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : L
       cases h
       exact ⟨ls, ⟨Λ', b⟩, rfl, hq, rfl⟩
 
+/-- The canonical block lowerer keeps an explicitly typed record local by value. -/
+theorem lowSeq_bindRecord_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
+    {Λ : List (Res (declOf u))} {pe : AtTop u c Λ} {x : String} {id : Nat} {fs : List Ty}
+    {v : USide} {ss rest : List UStmt}
+    {p : Σ Λ', Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe
+      (.bindW x (some (.prod id fs)) v :: ss) = .ok (p, rest)) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.prod id fs))
+      (q : Σ Λ', Block (declOf u) (verOf u c) loopMode (.prod id fs :: Γ) Λ Λ'),
+      lowWertAtE u Γ Λ fn none (.prod id fs) v = .ok ev ∧
+      lowSeqL (l := loopMode) u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ pe ss =
+        .ok (q, rest) ∧ p = ⟨q.1, Block.bind ev q.2⟩ := by
+  rw [lowSeqL_succ] at h
+  simp only [lowSeqStep, lowStufe_seq, lowBindW] at h
+  cases hv : lowWertAtE u Γ Λ fn none (.prod id fs) v with
+  | error err => simp only [hv, Except.bind, reduceCtorEq] at h; cases h
+  | ok ev =>
+    simp only [hv, Except.bind] at h
+    cases hq : lowSeqL (l := loopMode) u c (.prod id fs :: Γ)
+        (fn.mitWert x (.prod id fs)) n Λ pe ss with
+    | error err => simp only [hq, Except.bind, reduceCtorEq] at h; cases h
+    | ok out =>
+      obtain ⟨⟨Λ', b⟩, tail⟩ := out
+      simp only [hq, Except.bind] at h
+      cases h
+      exact ⟨ev, ⟨Λ', b⟩, (by first | exact hv | rfl), hq, rfl⟩
+
 theorem lowSeq_bindMut_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {x : String} {lo hi : Int} {v : USide} {ss rest : List UStmt}
     {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}

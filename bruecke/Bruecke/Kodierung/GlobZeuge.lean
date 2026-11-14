@@ -74,20 +74,18 @@ theorem shapeOfUG_zeuge :
   intro t
   exact Fin.elim0 t
 
-/-- A function datum is needed only for the old reader's numeric-parameter decision. -/
+/-- The expression reader uses the function datum for numeric parameter lookup. -/
 def routine : UFn :=
   { name := "read", params := [], kinds := [], res := none, held := [], puts := [],
     gives := [], body := [], ret := .empty }
 
-/-- Statics are read recursively inside arithmetic; old successful arithmetic is preserved. -/
+/-- Statics and literals are read recursively inside arithmetic. -/
 theorem sideExprG_zeuge :
     sideExprG unit routine (.add (.glob "counter") (.conv 0 10 (.lit 2))) =
       some (.bin .add (.global "counter") (.lit (.int 2))) ∧
-    sideExpr unit routine (.add (.lit 1) (.lit 2)) =
-      some (.bin .add (.lit (.int 1)) (.lit (.int 2))) ∧
     sideExprG unit routine (.add (.lit 1) (.lit 2)) =
       some (.bin .add (.lit (.int 1)) (.lit (.int 2))) :=
-  ⟨by kernel_rfl, by kernel_rfl, sideExprG_of_sideExpr unit routine _ _ (by kernel_rfl)⟩
+  ⟨by kernel_rfl, by kernel_rfl⟩
 
 /-- A `bool` declaration has the Body shape `bool`; an aggregate declaration acquires neither a
     bridge shape nor a value. -/

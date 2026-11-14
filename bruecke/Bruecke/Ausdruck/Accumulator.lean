@@ -119,16 +119,22 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, rfl⟩ := h; exact Vor.refl _
   | .cmp op l r, a, a', x, h => by
-      simp only [ensExpr] at h
-      split at h
-      · rename_i o le a1 _ hl
-        split at h
-        · rename_i re a2 hr
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨_, rfl⟩ := h
-          exact (ensSide_vor hl).trans (ensSide_vor hr)
-        · cases h
-      · cases h
+      cases hbool : boolCmpExpr u fn op l r with
+      | some be =>
+        simp only [ensExpr, hbool, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact Vor.refl _
+      | none =>
+          simp only [ensExpr, hbool] at h
+          split at h
+          · rename_i o le a1 _ hl
+            split at h
+            · rename_i re a2 hr
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨_, rfl⟩ := h
+              exact (ensSide_vor hl).trans (ensSide_vor hr)
+            · cases h
+          · cases h
   | .and x y, a, a', z, h => by
       simp only [ensExpr] at h
       split at h

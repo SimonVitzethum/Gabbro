@@ -3,6 +3,7 @@ module
 public import Bruecke.Kodierung
 public import Bruecke.Pflichten
 public import Bruecke.Ausdruck.Accumulator
+public import Bruecke.Ausdruck.BooleanFields
 
 @[expose] public section
 
@@ -154,45 +155,51 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, _⟩ := hb; rfl
   | .cmp op l r, a, a', x, g, hb, h, hpre => by
-      simp only [ensExpr] at hb
-      split at hb
-      · rename_i o le a1 hop hl
-        split at hb
-        · rename_i re a2 hr
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
-            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp, lowVglWert] at h
-          split at h
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · split at h
-            · cases h
-            · rename_i s1 hs1
+      cases hbool : boolCmpExpr u fn op l r with
+      | some be =>
+        simp only [ensExpr, hbool, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        exact lowEns_boolCmp_sim h hbool hA hT σ₀ σ ρ w β hW hB.par
+      | none =>
+          simp only [ensExpr, hbool] at hb
+          split at hb
+          · rename_i o le a1 hop hl
+            split at hb
+            · rename_i re a2 hr
+              simp only [Option.some.injEq, Prod.mk.injEq] at hb
+              obtain ⟨rfl, rfl⟩ := hb
+              simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+                Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp, lowVglWert] at h
               split at h
-              · cases h
-              · rename_i s2 hs2
-                have p1 := (ensSide_vor hr).trans hpre
-                have e1 := lowSideEns_sim hs1 hl p1 hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
-                have e2 := lowSideEns_sim hs2 hr hpre hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
-                rcases opOf_some hop with
-                  ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
-                all_goals
-                  cases h
-                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                  simp [Grammatik.eval, wahr?]
-        · cases hb
-      · cases hb
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · split at h
+                · cases h
+                · rename_i s1 hs1
+                  split at h
+                  · cases h
+                  · rename_i s2 hs2
+                    have p1 := (ensSide_vor hr).trans hpre
+                    have e1 := lowSideEns_sim hs1 hl p1 hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
+                    have e2 := lowSideEns_sim hs2 hr hpre hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
+                    rcases opOf_some hop with
+                      ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+                    all_goals
+                      cases h
+                      simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
+                      simp [Grammatik.eval, wahr?]
+            · cases hb
+          · cases hb
   | .and x y, a, a', z, g, hb, h, hpre => by
       simp only [ensExpr] at hb
       split at hb
@@ -351,39 +358,45 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
   | .cmp op l r, a, a', x, g, hb, h => by
-      simp only [ensExpr] at hb
-      split at hb
-      · rename_i o le a1 hop hl
-        split at hb
-        · rename_i re a2 hr
-          simp only [Option.some.injEq, Prod.mk.injEq] at hb
-          obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
-            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp, lowVglWert] at h
-          split at h
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · rename_i hx1 _
-            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
-            simp [LowSide.wert] at hls
-          · split at h
-            · cases h
-            · rename_i s1 hs1
+      cases hbool : boolCmpExpr u fn op l r with
+      | some be =>
+        simp only [ensExpr, hbool, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        exact Zuwachs.refl _ _ _
+      | none =>
+          simp only [ensExpr, hbool] at hb
+          split at hb
+          · rename_i o le a1 hop hl
+            split at hb
+            · rename_i re a2 hr
+              simp only [Option.some.injEq, Prod.mk.injEq] at hb
+              obtain ⟨rfl, rfl⟩ := hb
+              simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+                Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp, lowVglWert] at h
               split at h
-              · cases h
-              · rename_i s2 hs2
-                exact Zuwachs.trans (ensSide_vor hl)
-                  (ensSide_zuwachs hs1 hl hA hT σ₀ σ ρ s₀ hW₀ hL₀)
-                  (ensSide_zuwachs hs2 hr hA hT σ₀ σ ρ s₀ hW₀ hL₀)
-        · cases hb
-      · cases hb
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · rename_i hx1 _
+                obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+                simp [LowSide.wert] at hls
+              · split at h
+                · cases h
+                · rename_i s1 hs1
+                  split at h
+                  · cases h
+                  · rename_i s2 hs2
+                    exact Zuwachs.trans (ensSide_vor hl)
+                      (ensSide_zuwachs hs1 hl hA hT σ₀ σ ρ s₀ hW₀ hL₀)
+                      (ensSide_zuwachs hs2 hr hA hT σ₀ σ ρ s₀ hW₀ hL₀)
+            · cases hb
+          · cases hb
   | .and x y, a, a', z, g, hb, h => by
       simp only [ensExpr] at hb
       split at hb

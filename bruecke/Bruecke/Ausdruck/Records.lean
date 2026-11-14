@@ -1,5 +1,5 @@
 module
-public import Bruecke.Ausdruck.RecordFit
+public import Bruecke.Ausdruck.Scalar
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -8,28 +8,44 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 mutual
+/-- Numeric reading also carries fields nested arbitrarily in arithmetic. -/
+theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
+    {sd : USide} {wv : LowWert u Γ Λ} {eB : Gabbro.Body.Expr}
+    (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : numericSideExprG u fn sd = some eB)
+    (hA : ArtStimmt fn) (hT : TabEindeutig u)
+    (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
+    (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
+    (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
+    ∃ ls : LowSide u Γ Λ, wv = ls.wert ∧
+      Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
+  exact lowWertE_scalar_sim h hb hA hT σ₀ σ ρ w β hW hL
+    (fun sd' _ h' hb' => lowWertE_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
+    (fun sd' _ h' hb' => lowWertE_recordRead_sim h' hb' hA hT σ₀ σ ρ w β hW hL)
+termination_by 5 * sizeOf sd
+decreasing_by all_goals omega
+
 /-- The actual source value lowerer agrees with the record reader, including its exact
     nominal type information. The scalar fallback uses the existing scalar simulation. -/
 theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     {er : Option Ty} {sd : USide} {wv : LowWert u Γ Λ}
     {tag : Option Ty} {eB : Gabbro.Body.Expr}
     (h : lowWertE u Γ Λ fn er sd = .ok wv)
-    (hb : recordRead u fn (numericSideExprG u fn) sd = some (tag, eB))
+    (hb : recordRead u fn sd = some (tag, eB))
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
     (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
     (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf wv.ty (eval σ₀ wv.term σ ρ)) ∧
       (∀ ty, tag = some ty → wv.ty = ty) := by
-  have scalarCase {sd' : USide} {wv' : LowWert u Γ Λ} {tag' : Option Ty}
-      {e' : Gabbro.Body.Expr} (h' : lowWertE u Γ Λ fn er sd' = .ok wv')
-      (hb' : recordRead u fn (numericSideExprG u fn) sd' = some (tag', e'))
-      (read : recordRead u fn (numericSideExprG u fn) sd' =
-        (numericSideExprG u fn sd').map (none, ·)) :
+  have scalarCase {wv' : LowWert u Γ Λ} {tag' : Option Ty}
+      {e' : Gabbro.Body.Expr} (h' : lowWertE u Γ Λ fn er sd = .ok wv')
+      (hb' : recordRead u fn sd = some (tag', e'))
+      (read : recordRead u fn sd =
+        (numericSideExprG u fn sd).map (none, ·)) :
       Gabbro.Body.eval ⟨w, β⟩ e' = some (valOf wv'.ty (eval σ₀ wv'.term σ ρ)) ∧
         (∀ ty, tag' = some ty → wv'.ty = ty) := by
     rw [read] at hb'
-    cases hs : numericSideExprG u fn sd' with
+    cases hs : numericSideExprG u fn sd with
     | none => simp [hs] at hb'
     | some e =>
         simp only [hs, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb'
@@ -64,7 +80,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
       cases hs : uRecordOf u.records (.prod identity (fields.map (·.1))) with
       | error err => simp [recordRead, hs, Except.toOption, bind, Option.bind] at hb
       | ok schema =>
-          cases hr : recordReads u fn (numericSideExprG u fn) fields with
+          cases hr : recordReads u fn fields with
           | none => simp [recordRead, hs, hr, Except.toOption, bind, Option.bind] at hb
           | some es =>
               simp only [recordRead, hs, Except.toOption, hr, Option.unattach, Option.map_some,
@@ -84,48 +100,10 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                       rw [Gabbro.Body.eval_recOf, hv]
                       rfl
   | .field base name, h, hb =>
-      cases hr : recordRead u fn (numericSideExprG u fn) base with
-      | none => simp [recordRead, hr] at hb
-      | some out =>
-          rcases out with ⟨bt, be⟩
-          cases bt with
-          | none => simp [recordRead, hr] at hb
-          | some ty =>
-              cases hg : u.exportGate with
-              | error err => simp [lowWertE, hg, bind, Except.bind] at h
-              | ok gate =>
-                  cases hw : lowWertE u Γ Λ fn er base with
-                  | error err => simp [lowWertE, hg, hw, bind, Except.bind] at h
-                  | ok baseW =>
-                      obtain ⟨hv, hty⟩ := lowWertE_recordRead_sim hw hr hA hT σ₀ σ ρ w β hW hL
-                      have same := hty ty rfl
-                      rcases baseW with ⟨actual, term⟩
-                      dsimp only at same
-                      subst actual
-                      cases hs : uRecordOf u.records ty with
-                      | error err => simp [recordRead, hr, hs, Except.toOption, bind, Option.bind] at hb
-                      | ok schema =>
-                          cases hp : uRecordPosition schema.val.fields name with
-                          | error err => simp [recordRead, hr, hs, hp, Except.toOption, bind, Option.bind] at hb
-                          | ok pos =>
-                              rcases pos with ⟨fieldTy, pos⟩
-                              simp only [recordRead, hr, hs, hp, Except.toOption,
-                                Option.unattach, Option.map_some, bind, Option.bind, pure,
-                                Option.some.injEq, Prod.mk.injEq] at hb
-                              obtain ⟨rfl, rfl⟩ := hb
-                              simp only [lowWertE, hg, hw, hs, hp, bind, Except.bind,
-                                pure, Except.pure, Except.ok.injEq] at h
-                              cases h
-                              let baseE := cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) term
-                              have he : Gabbro.Body.eval ⟨w, β⟩ be =
-                                  some (.record (valOfProd _ (eval σ₀ baseE σ ρ))) := by
-                                rw [hv, ← valOf_cast_eval schema.property.symm term σ₀ σ ρ]
-                                rfl
-                              refine ⟨?_, fun _ heq => Option.some.inj heq⟩
-                              rw [Gabbro.Body.eval_recGet _ _ _ _ he]
-                              exact valOfProd_get (D := declOf u) pos (eval σ₀ baseE σ ρ)
+      exact lowWertE_field_sim h hb
+        (fun hw hr => lowWertE_recordRead_sim hw hr hA hT σ₀ σ ρ w β hW hL)
   | .replace base name value, h, hb =>
-      cases hr : recordRead u fn (numericSideExprG u fn) base with
+      cases hr : recordRead u fn base with
       | none => simp [recordRead, hr] at hb
       | some out =>
           rcases out with ⟨bt, be⟩
@@ -150,7 +128,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                           | error err => simp [recordRead, hr, hs, hp, Except.toOption, bind, Option.bind] at hb
                           | ok pos =>
                               rcases pos with ⟨fieldTy, pos⟩
-                              cases hrV : recordRead u fn (numericSideExprG u fn) value with
+                              cases hrV : recordRead u fn value with
                               | none => simp [recordRead, hr, hs, hp, hrV, Except.toOption, bind, Option.bind] at hb
                               | some outV =>
                                   rcases outV with ⟨vt, ve⟩
@@ -198,7 +176,7 @@ theorem lowWertAtE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
     {er : Option Ty} {ty : Ty} {sd : USide} {e : Expr (declOf u) Γ Λ ty}
     {tag : Option Ty} {eB : Gabbro.Body.Expr}
     (h : lowWertAtE u Γ Λ fn er ty sd = .ok e)
-    (hb : recordRead u fn (numericSideExprG u fn) sd = some (tag, eB))
+    (hb : recordRead u fn sd = some (tag, eB))
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
     (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
@@ -221,7 +199,7 @@ theorem lowProductArgs_record_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
     {er : Option Ty} {fields : List (Ty × USide)}
     {args : Args (declOf u) Γ Λ (fields.map (·.1))} {es : List Gabbro.Body.Expr}
     (h : lowProductArgs u Γ Λ fn er fields = .ok args)
-    (hb : recordReads u fn (numericSideExprG u fn) fields = some es)
+    (hb : recordReads u fn fields = some es)
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
     (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
@@ -235,11 +213,11 @@ theorem lowProductArgs_record_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
       cases hb
       rfl
   | (ty, sd) :: rest, args, h, hb =>
-      cases hr : recordRead u fn (numericSideExprG u fn) sd with
+      cases hr : recordRead u fn sd with
       | none => simp [recordReads, hr] at hb
       | some out =>
           rcases out with ⟨tag, be⟩
-          cases hrs : recordReads u fn (numericSideExprG u fn) rest with
+          cases hrs : recordReads u fn rest with
           | none => simp [recordReads, hr, hrs] at hb
           | some bes =>
               simp only [recordReads, hr, hrs, bind, Option.bind, pure, Option.some.injEq] at hb
@@ -271,7 +249,7 @@ theorem lowWertE_rec_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er 
     (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf wv.ty (eval σ₀ wv.term σ ρ)) := by
   unfold sideExprG at hb
-  cases hr : recordRead u fn (numericSideExprG u fn) sd with
+  cases hr : recordRead u fn sd with
   | none => simp [hr] at hb
   | some out =>
       rcases out with ⟨tag, e⟩
@@ -289,7 +267,7 @@ theorem lowWertAtE_rec_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {e
     (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf ty (eval σ₀ e σ ρ)) := by
   unfold sideExprG at hb
-  cases hr : recordRead u fn (numericSideExprG u fn) sd with
+  cases hr : recordRead u fn sd with
   | none => simp [hr] at hb
   | some out =>
       rcases out with ⟨tag, be⟩

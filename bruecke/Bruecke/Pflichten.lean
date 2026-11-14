@@ -1,222 +1,30 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze
 public import Gabbro.Body
-public import Bruecke.Ausdruck.RecordData
+public import Bruecke.Ausdruck.Readers
 public import Grammatik.Parser.Elab.Generic.SignatureData
 @[expose] public section
 
 
 /-!
-# S1 + S2: the duty statements and the body datum, COMPUTED IN LEAN from the parser's `UProg`
+# Duty statements and Body data computed from the parser's `UProg`
 
-`gabbro pflichten --lean` (`crates/gabbro-check/src/lean.rs`) PRINTS, per unit, a duty file: the
-body of every routine as a `Body.Stmt` datum, its precondition, its postcondition, its frame, the
-`meets` statement a person proves and the wiring. This file COMPUTES the same things from
-`UProg` -- the elaborated output of the Lean parser `uebersetzeAllg`, itself computed from the
-source text in Lean -- so a wrong Rust print is a failed per-unit check (`Instanz*.lean`), never
-a wrong theorem. The definitions here are the reference; the Rust printer is checked against them.
+The bridge computes routine bodies, preconditions, postconditions, frames and user duties
+from the same elaborated unit as the canonical lowerer. `Ausdruck/Readers` owns the shared
+expression readers, including nominal records, integer arithmetic and Boolean comparisons.
+The positional statement reader in `Anweisung/Lokal/Benannt` and the structured readers in
+`Anweisung/Zweig/Benannt` extend this datum with scoped locals and control flow.
 
-FRAGMENT: numeric module-static and slot writes through a pointer or at a table, direct calls with scalar or
-capability and bool arguments, numeric/bool local bindings and assignments, bool conditions,
-scalar, record or void returns, and numeric `ensures` comparisons and bool variables with boolean combinations. This is a subset of the Lean parser's output.
-indirect/fallible/foreign call binders, consuming traversals, scoped returns and required
-narrowing have no Body representation here: the readers' catch-all arms return `none`.
-The positional reader in `Anweisung/Lokal/Benannt` also carries scalar direct-result
-bindings. Its shared call discovery includes those calls in contracts, closure and rank checks.
+Unsupported forms return `none`; successfully read forms are connected to the generic
+simulation chain. Fixtures remain witnesses outside that trust path.
 -/
-
-open Gabbro.Grammatik.Parser.Uebersetze
-open Gabbro.Grammatik (Ty)
 
 namespace Gabbro.Bruecke
 
 open Gabbro.Body
+open Gabbro.Grammatik (Ty)
+open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
-
-/-! ## 0. Lookups -/
-
-def fnSuch (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name == n)
-
-/-- The name of the table a pointer parameter points at. -/
-def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
-  match f.params.find? (fun q => q.1 == p) with
-  | some (_, .ptr ⟨_, _, .table t⟩) => (u.tabs[t]?).map (·.name)
-  | _ => none
-
-/-- The pointer parameter of `f` that points at the table `tab` -- only when there is exactly one
-    (a call that passes "a pointer to `tab`" names no variable in `UArg.freshPtr`). -/
-def ptrParam (u : UProg) (f : UFn) (tab : String) : Option String :=
-  match f.params.filter (fun q => match q.2 with
-      | .ptr ⟨_, _, .table t⟩ => (u.tabs[t]?).map (·.name) == some tab
-      | _ => false) with
-  | [q] => some q.1
-  | _ => none
-
-/-! ## 1. Expressions -/
-
-def idxExpr : UIdx → Expr
-  | .lit n => .lit (.int n)
-  | .param p => .name p
-
-/-- One side of a comparison. `old` (the entry value) is handled by the caller (`altSides`), and
-    reads here as the `old#i` binder it is numbered to. -/
-def oldName : Nat → String
-  | 0 => "old#1" | 1 => "old#2" | 2 => "old#3" | 3 => "old#4" | 4 => "old#5" | 5 => "old#6"
-  | 6 => "old#7" | 7 => "old#8" | _ => "old#9"
-
-/-- The place a slot read names. -/
-def slotPlace (u : UProg) (f : UFn) : USide → Option Expr
-  | .slot p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
-  | .tab t fld i => some (.place t (idxExpr i) fld)
-  | .old p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
-  | _ => none
-
-/-- Two operands under one Body operator (both must have a Body form). -/
-def binE (op : BinOp) : Option Expr → Option Expr → Option Expr
-  | some x, some y => some (.bin op x y)
-  | _, _ => none
-
-/-- Scalar parameters are distinguished from the capability parameters of `argExpr`. -/
-def numericParam (f : UFn) (p : String) : Bool :=
-  match f.params.find? (fun q => q.1 == p) with
-  | some (_, .int ..) => true
-  | _ => false
-
-/-- Assignment supports value parameters; capability parameters remain protected. -/
-def assignableParam (f : UFn) (p : String) : Bool :=
-  numericParam f p || (valueParamTy f p).isSome
-
-/-- A scalar side outside an `ensures`: no `old` or `erg`. Integer arithmetic and bit
-    operations use Body's exact integer operators; a widening conversion retains its number.
-    G selects `div`/`sdiv` and `rem`/`srem` by range; both use Body's truncating operators.
-    The canonical lowering still checks zero denominators and shift widths.
-    Capability values are represented only by `argExpr`'s pointer-argument cases. -/
-def numericSideExpr (u : UProg) (f : UFn) : USide → Option Expr
-  | .lit n => some (.lit (.int n))
-  | .param p => if numericParam f p then some (.name p) else none
-  | .slot p fld i => slotPlace u f (.slot p fld i)
-  | .tab t fld i => slotPlace u f (.tab t fld i)
-  | .old .. => none
-  | .erg => none
-  | .add a b => binE .add (numericSideExpr u f a) (numericSideExpr u f b)
-  | .sub a b => binE .sub (numericSideExpr u f a) (numericSideExpr u f b)
-  | .mul a b => binE .mul (numericSideExpr u f a) (numericSideExpr u f b)
-  | .conv _ _ a => numericSideExpr u f a
-  | .band a b => binE .band (numericSideExpr u f a) (numericSideExpr u f b)
-  | .bor a b => binE .bor (numericSideExpr u f a) (numericSideExpr u f b)
-  | .bxor a b => binE .bxor (numericSideExpr u f a) (numericSideExpr u f b)
-  | .div a b => binE .div (numericSideExpr u f a) (numericSideExpr u f b)
-  | .rem a b => binE .rem (numericSideExpr u f a) (numericSideExpr u f b)
-  | .shl a b => binE .shl (numericSideExpr u f a) (numericSideExpr u f b)
-  | .shr a b => binE .shr (numericSideExpr u f a) (numericSideExpr u f b)
-  | .neg a => (numericSideExpr u f a).map (.un .neg ·)
-  | _ => none
-
-/-- Only integer and bool, non-atomic module statics belong to this bridge fragment. -/
-def ScalarStatics (u : UProg) : Prop :=
-  ∀ g : Fin u.globs.length,
-    ((∃ lo hi : Int, (globAt u g).ty = .int lo hi) ∨ (globAt u g).ty = .bool) ∧
-      (globAt u g).atomic = false
-
-/-- Numeric expressions including module statics; nonnumeric static access is refused by lowering. -/
-def numericSideExprG (u : UProg) (f : UFn) : USide → Option Expr
-  | .lit n => some (.lit (.int n))
-  | .param p => if numericParam f p then some (.name p) else none
-  | .slot p fld i => slotPlace u f (.slot p fld i)
-  | .tab t fld i => slotPlace u f (.tab t fld i)
-  | .glob g =>
-      match globIdx u.globs g with
-      | .error _ => none
-      | .ok i =>
-          match (globAt u i).ty with
-          | .int .. => some (.global g)
-          | .bool | .wert _ => none
-  | .old .. => none
-  | .erg => none
-  | .add a b => binE .add (numericSideExprG u f a) (numericSideExprG u f b)
-  | .sub a b => binE .sub (numericSideExprG u f a) (numericSideExprG u f b)
-  | .mul a b => binE .mul (numericSideExprG u f a) (numericSideExprG u f b)
-  | .conv _ _ a => numericSideExprG u f a
-  | .band a b => binE .band (numericSideExprG u f a) (numericSideExprG u f b)
-  | .bor a b => binE .bor (numericSideExprG u f a) (numericSideExprG u f b)
-  | .bxor a b => binE .bxor (numericSideExprG u f a) (numericSideExprG u f b)
-  | .div a b => binE .div (numericSideExprG u f a) (numericSideExprG u f b)
-  | .rem a b => binE .rem (numericSideExprG u f a) (numericSideExprG u f b)
-  | .shl a b => binE .shl (numericSideExprG u f a) (numericSideExprG u f b)
-  | .shr a b => binE .shr (numericSideExprG u f a) (numericSideExprG u f b)
-  | .neg a => (numericSideExprG u f a).map (.un .neg ·)
-  | _ => none
-
-/-- Source values, including positional nominal records; the scalar reader is shared. -/
-def sideExpr (u : UProg) (f : UFn) (sd : USide) : Option Expr :=
-  (recordRead u f (numericSideExpr u f) sd).map (·.2)
-
-def sideExprG (u : UProg) (f : UFn) (sd : USide) : Option Expr :=
-  (recordRead u f (numericSideExprG u f) sd).map (·.2)
-
-/-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
-    whether `result` occurs. -/
-structure Acc where
-  olds : List Expr := []
-  result : Bool := false
-
-def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
-  | .old p fld i =>
-      (slotPlace u f (.old p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
-  | .erg => some (.name "result", { a with result := true })
-  -- Pure arithmetic reuses the scalar reader without changing the accumulator. Nested
-  -- `old`/`result` still have no scalar form and are refused by `sideExprG`.
-  | s => (numericSideExprG u f s).map (fun e => (e, a))
-
-def opOf : String → Option BinOp
-  | "==" => some .eq | "<" => some .lt | "<=" => some .le
-  | ">" => some .gt | ">=" => some .ge | "!=" => some .ne | _ => none
-
-def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
-  | .tru => some (.lit (.bool true), a)
-  | .fls => some (.lit (.bool false), a)
-  | .var p => some (.name p, a)
-  | .cmp op l r =>
-      match opOf op, ensSide u f a l with
-      | some o, some (le, a1) =>
-          match ensSide u f a1 r with
-          | some (re, a2) => some (.bin o le re, a2)
-          | none => none
-      | _, _ => none
-  | .and x y =>
-      match ensExpr u f a x with
-      | some (xe, a1) =>
-          match ensExpr u f a1 y with
-          | some (ye, a2) => some (.bin .and xe ye, a2)
-          | none => none
-      | none => none
-  | .or x y =>
-      match ensExpr u f a x with
-      | some (xe, a1) =>
-          match ensExpr u f a1 y with
-          | some (ye, a2) => some (.bin .or xe ye, a2)
-          | none => none
-      | none => none
-  | .not x =>
-      match ensExpr u f a x with
-      | some (xe, a1) => some (.un .not xe, a1)
-      | none => none
-  -- A `bool` static reads its Body global; other statics are refused (as by `lowGlobBool`).
-  | .globB g =>
-      match globIdx u.globs g with
-      | .error _ => none
-      | .ok i =>
-          match (globAt u i).ty with
-          | .bool => some (.global g, a)
-          | .int .. | .wert _ => none
-  -- Bool fields have no slot encoding in this bridge and remain refused by name.
-  | .slotB .. | .tabB .. => none
-  | _ => none
-
-def rawCond (u : UProg) (fn : UFn) (c : UEns) : Option Gabbro.Body.Expr :=
-  match ensExpr u fn {} c with
-  | some (x, a) => if a.olds.length = 0 ∧ a.result = false then some x else none
-  | none => none
 
 /-! ## 2. Shapes, the precondition, the frame -/
 

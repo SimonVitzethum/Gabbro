@@ -115,6 +115,10 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         · exact .inl hf
         · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hY g args
             (CallsIn.tail (by rfl) ht)
+      case bindW x d v =>
+        obtain ⟨id, fields, e, ys, rfl, _, hY, _⟩ := seqZ_bindRecord_some h
+        exact seqZ_callee k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys rest used hY g args
+          (CallsIn.tail (by rfl) hm)
       case call g' args' | bindCall x g' args' =>
         obtain ⟨b, fn', ns', ys, hs, hY, _⟩ := seqZ_schritt_some h (by exact True.intro)
         rcases CallsIn.head_or_tail hm with h' | h'

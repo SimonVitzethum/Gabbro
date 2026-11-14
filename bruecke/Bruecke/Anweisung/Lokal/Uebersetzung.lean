@@ -76,6 +76,7 @@ theorem slotPlace_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : USide) :
     slotPlace u fT s = slotPlace u fn s := by
   cases s <;> simp [slotPlace, h.2.1]
 
+mutual
 theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
     numericSideExprG u fT sd = numericSideExprG u fn sd := by
   have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) :
@@ -95,13 +96,13 @@ theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
   | neg x =>
     have hx := recurse x (by simp_wf; omega)
     simp only [numericSideExprG, hx]
+  | field base name => simp only [numericSideExprG, recordRead_sicht h base]
   | _ => simp [numericSideExprG, slotPlace_sicht h]
-termination_by sizeOf sd
-decreasing_by assumption
+termination_by 3 * sizeOf sd
+decreasing_by all_goals (simp_wf <;> omega)
 
-mutual
 theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
-    recordRead u fT (numericSideExprG u fT) sd = recordRead u fn (numericSideExprG u fn) sd := by
+    recordRead u fT sd = recordRead u fn sd := by
   cases sd with
   | param p => simp only [recordRead, h.2.2.2.2 p, numericSideExprG_sicht h]
   | product id order fields => simp only [recordRead, recordReads_sicht h fields]
@@ -109,16 +110,16 @@ theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
   | replace base name value =>
       simp only [recordRead, recordRead_sicht h base, recordRead_sicht h value]
   | _ => simp only [recordRead, numericSideExprG_sicht h]
-termination_by 3 * sizeOf sd
+termination_by 3 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
 theorem recordReads_sicht {fT fn : UFn} (h : Sicht u fT fn) (fields : List (Ty × USide)) :
-    recordReads u fT (numericSideExprG u fT) fields =
-      recordReads u fn (numericSideExprG u fn) fields := by
+    recordReads u fT fields =
+      recordReads u fn fields := by
   match fields with
   | [] => simp only [recordReads]
   | (ty, sd) :: rest => simp only [recordReads, recordRead_sicht h sd, recordReads_sicht h rest]
-termination_by 3 * sizeOf fields + 1
+termination_by 3 * sizeOf fields + 2
 decreasing_by all_goals (simp_wf <;> omega)
 end
 
@@ -130,6 +131,10 @@ theorem ensSide_sicht {fT fn : UFn} (h : Sicht u fT fn) (a : Acc) (sd : USide) :
     ensSide u fT a sd = ensSide u fn a sd := by
   cases sd <;> simp [ensSide, slotPlace_sicht h, numericSideExprG_sicht h]
 
+theorem boolCmpExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (op : String) (l r : USide) :
+    boolCmpExpr u fT op l r = boolCmpExpr u fn op l r := by
+  simp only [boolCmpExpr, recordRead_sicht h]
+
 theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     ensExpr u fT a e = ensExpr u fn a e := by
   have recurse (e' : UEns) (hlt : sizeOf e' < sizeOf e) (a' : Acc) :
@@ -137,7 +142,7 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     ensExpr_sicht h e' a'
   cases e with
   | cmp op l r =>
-    simp only [ensExpr, ensSide_sicht h]
+    simp only [ensExpr, boolCmpExpr_sicht h, ensSide_sicht h]
   | and x y =>
     have hx := recurse x (by simp_wf <;> omega)
     have hy := recurse y (by simp_wf <;> omega)

@@ -1,5 +1,7 @@
 module
-public import Bruecke.Ausdruck.Scalar
+public import Bruecke.Ausdruck.ScalarBinary
+public import Bruecke.Ausdruck.Glob
+public import Bruecke.Ausdruck.Teil1
 @[expose] public section
 
 namespace Gabbro.Bruecke

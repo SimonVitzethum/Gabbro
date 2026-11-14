@@ -57,6 +57,12 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
       match retZ u fn ns r with
       | none => none
       | some b => (seqZ u k fn ns rest).map (fun p => (b :: p.1, p.2.1, p.2.2))
+  | k + 1, fn, ns, .bindW x (some ty@(.prod ..)) v :: rest =>
+      match namedSide u fn ns v with
+      | none => none
+      | some e => (seqZ u k (fn.mitWert x ty) (ns.push x) rest).map
+          (fun p => (.bindName (ns.fresh x) e :: p.1, p.2.1, p.2.2))
+  | _ + 1, _, _, .bindW .. :: _ => none
   | k + 1, fn, ns, st :: rest =>
       match schrittB u fn ns st with
       | some (b, fn', ns') =>
@@ -130,7 +136,7 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
       let bs ← stmtsBodyZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail r
       pure (narrowStep ns x lo hi e err :: bs)
   -- An explicitly typed record local shares the positional identifier mechanism.
-  -- Inferred aggregates and aggregate binders inside structured blocks remain refused.
+  -- Inferred aggregates remain refused; nested blocks use the same record scope.
   | k + 1, fn, ns, .bindW x (some ty@(.prod ..)) v :: rest, r =>
       match namedSide u fn ns v with
       | none => none

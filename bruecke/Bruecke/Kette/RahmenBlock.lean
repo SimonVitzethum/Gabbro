@@ -72,6 +72,13 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         (by rw [mitBindung_ctx]; exact congrArg (List.cons _) hΓ)
         (hS.bind x (0, 0) ls.range) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case bindW x d v =>
+      obtain ⟨id, fields, eT, ys, rfl, _, hys, rfl⟩ := seqZ_bindRecord_some hbs
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindRecord_ok hlow
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitWert x (.prod id fields))
+        (fT.mitWert x (.prod id fields)) (ns.push x) q rest ys restZ used
+        (congrArg (List.cons _) hΓ) (hS.bindRecord x id fields) hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
     case bindMut x lo hi v =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨eT, heT, rfl, rfl, rfl⟩ := schrittB_bindMut hstepT
