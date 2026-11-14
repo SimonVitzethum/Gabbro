@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.VC.Fresh
-public import Mathlib.Tactic.Omega
+public import Mathlib.Tactic
 
 @[expose] public section
 

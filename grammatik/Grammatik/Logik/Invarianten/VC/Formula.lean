@@ -119,7 +119,7 @@ theorem termKeys_closed [DecidableEq α] (term : LTerm α) (names : List α)
   | var name => simpa only [termClosedB, decide_eq_true_eq] using included name (by simp [termKeys])
   | konst _ => rfl
   | add left right ihLeft ihRight | sub left right ihLeft ihRight =>
-      exact Bool.and_eq_true.mpr
+      exact Bool.and_eq_true_iff.mpr
         ⟨ihLeft (fun name h => included name (List.mem_append_left _ h)),
          ihRight (fun name h => included name (List.mem_append_right _ h))⟩
   | scale _ term ih => exact ih included
@@ -134,7 +134,7 @@ theorem quoteQF_closed [DecidableEq α] (body : QF α) (names : List α)
       have ht := termKeys_closed term names included
       cases relation <;> simp only [quoteQF, closedUnderB, termClosedB, ht, Bool.and_self]
   | conj left right ihLeft ihRight | disj left right ihLeft ihRight =>
-      exact Bool.and_eq_true.mpr
+      exact Bool.and_eq_true_iff.mpr
         ⟨ihLeft (fun name h => included name (List.mem_append_left _ h)),
          ihRight (fun name h => included name (List.mem_append_right _ h))⟩
 
@@ -146,8 +146,8 @@ theorem termClosed_mono [DecidableEq α] (term : LTerm α) (names more : List α
       apply decide_eq_true (included name (of_decide_eq_true closed))
   | konst _ => rfl
   | add left right ihLeft ihRight | sub left right ihLeft ihRight =>
-      obtain ⟨hl, hr⟩ := Bool.and_eq_true.mp closed
-      exact Bool.and_eq_true.mpr ⟨ihLeft hl, ihRight hr⟩
+      obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp closed
+      exact Bool.and_eq_true_iff.mpr ⟨ihLeft hl, ihRight hr⟩
   | scale _ term ih => exact ih closed
 
 theorem formulaClosed_mono [DecidableEq α] (body : LProp α) (names more : List α)
@@ -157,15 +157,15 @@ theorem formulaClosed_mono [DecidableEq α] (body : LProp α) (names more : List
   | tru => rfl
   | fls => rfl
   | le left right | lt left right | eq left right =>
-      obtain ⟨hl, hr⟩ := Bool.and_eq_true.mp closed
-      exact Bool.and_eq_true.mpr
+      obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp closed
+      exact Bool.and_eq_true_iff.mpr
         ⟨termClosed_mono left names more included hl,
          termClosed_mono right names more included hr⟩
   | dvd _ term => exact termClosed_mono term names more included closed
   | not body ih => exact ih names more included closed
   | and left right ihLeft ihRight | or left right ihLeft ihRight | imp left right ihLeft ihRight =>
-      obtain ⟨hl, hr⟩ := Bool.and_eq_true.mp closed
-      exact Bool.and_eq_true.mpr ⟨ihLeft names more included hl, ihRight names more included hr⟩
+      obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp closed
+      exact Bool.and_eq_true_iff.mpr ⟨ihLeft names more included hl, ihRight names more included hr⟩
   | ex name body ih | all name body ih =>
       apply ih (name :: names) (name :: more) _ closed
       intro key member
