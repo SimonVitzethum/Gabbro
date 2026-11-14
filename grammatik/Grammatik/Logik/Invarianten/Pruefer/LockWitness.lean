@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.Pruefer.Locks
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
 public import Grammatik.Logik.Vertraege.Pruefer.Fixtures
+import Lean.Elab.Tactic.Cbv
 
 @[expose] public section
 
@@ -64,7 +65,7 @@ theorem lockFormula_sound_zeuge :
     ∃ fact : VC.LockFormula family (), lockFormula family cellSources () = .ok fact ∧
       ∀ world, fact.formula.denote (assignment world) ↔
         family.inv () world.speicher = true := by
-  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide
+  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide_cbv
   cases computed : lockFormula family cellSources () with
   | error cause => simp only [computed, Except.toOption, Option.isSome] at available; cases available
   | ok fact => exact ⟨fact, rfl, lockFormula_sound family cellSources () fact computed⟩
@@ -112,17 +113,17 @@ theorem invariant_nontrivial_zeuge :
   decide
 
 theorem lock_initial_checked_zeuge :
-    (checkUnitLock (unit true) ()).toOption.isSome = true := by decide
+    (checkUnitLock (unit true) ()).toOption.isSome = true := by decide_cbv
 
 theorem program_accepted_zeuge :
-    programInvariantsB (program true) family [()] cellSources {} [()] = true := by decide
+    programInvariantsB (program true) family [()] cellSources {} [()] = true := by decide_cbv
 
 theorem contracts_accepted_zeuge :
-    Vertraege.Pruefer.KontrakteGeprueftB (program true) family [()] cellSources = true := by decide
+    Vertraege.Pruefer.KontrakteGeprueftB (program true) family [()] cellSources = true := by decide_cbv
 
-theorem invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by decide
+theorem invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by decide_cbv
 
-theorem logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by decide
+theorem logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by decide_cbv
 
 /-- Acceptance through the complete concrete checker, including both new unit
     gates, the program invariant gate and the contract gate. -/
@@ -139,12 +140,12 @@ theorem checker_accepted_zeuge :
       Kernzelle.akkuStartB_leer (unit true)⟩, invariants_accepted_zeuge⟩, logic_accepted_zeuge⟩
 
 theorem program_refused_zeuge :
-    programInvariantsB (program false) family [()] cellSources {} [()] = false := by decide
+    programInvariantsB (program false) family [()] cellSources {} [()] = false := by decide_cbv
 
 theorem contracts_refused_zeuge :
-    Vertraege.Pruefer.KontrakteGeprueftB (program false) family [()] cellSources = false := by decide
+    Vertraege.Pruefer.KontrakteGeprueftB (program false) family [()] cellSources = false := by decide_cbv
 
-theorem logic_refused_zeuge : nutzerPflichtGeprueftB (unit false) [()] [()] = false := by decide
+theorem logic_refused_zeuge : nutzerPflichtGeprueftB (unit false) [()] [()] = false := by decide_cbv
 
 theorem checker_refused_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit false) [()] [()] [.inl (), .inr false, .inr true] = false := by
@@ -173,7 +174,7 @@ def invalidInitial : Einheit declaration :=
       ({ initial with globs := fun _ => ⟨1, by decide, by decide⟩ }).speicher }
 
 theorem false_initial_refused_zeuge :
-    (checkUnitLock invalidInitial ()).toOption.isSome = false := by decide
+    (checkUnitLock invalidInitial ()).toOption.isSome = false := by decide_cbv
 
 theorem opaque_unit_refused_zeuge :
     (checkUnitLock { unit true with lockFormulas := fun _ => none } ()).toOption.isSome = false := by

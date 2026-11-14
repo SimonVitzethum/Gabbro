@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.VC.Extended
 public import Grammatik.Logik.Invarianten.VC.Witness
 public import Grammatik.Logik.Vertraege.Pruefer.Program
+import Lean.Elab.Tactic.Cbv
 
 @[expose] public section
 
@@ -70,27 +71,27 @@ def traverseCompiled : EndCondition program noFacts (SperrInv.leer declaration) 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem bounded_decided_zeuge :
-    decideB (Extended.writerVC boundedCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC boundedCompiled entry .tru) = true := by decide_cbv
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem overflow_decided_zeuge :
-    decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by decide
+    decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by decide_cbv
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem temporary_decided_zeuge :
-    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide_cbv
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem mutable_decided_zeuge :
-    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide_cbv
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem traverse_decided_zeuge :
-    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide_cbv
 
 /-- With a checked same-fragment invariant, a bound beyond the unrolling
     allowance is handled inductively rather than expanded into one hundred passes. -/
@@ -104,7 +105,7 @@ def inductiveCompiled : EndCondition program noFacts (SperrInv.leer declaration)
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem inductive_decided_zeuge :
-    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide_cbv
 
 /-- The false decision has both an extracted arithmetic assignment and an
     actual typed G execution that destroys the invariant. -/
@@ -116,12 +117,12 @@ theorem overflow_assignment_zeuge :
 theorem overflow_execution_zeuge :
     (match execEnd oracle 0 calls overflowingWriter counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide
+      | _ => true) = false := by decide_cbv
 
 theorem temporary_execution_zeuge :
     (match execEnd oracle 0 calls temporaryWriter counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => false) = true := by decide
+      | _ => false) = true := by decide_cbv
 
 /-- An over-budget loop is a definite refusal, not an unchecked fallback. -/
 theorem over_budget_refused_zeuge :
@@ -157,19 +158,19 @@ def conditionalCompiled (preserves : Bool) : EndCondition program noFacts
   (compile (conditionalWriter preserves)).toOption.get (by cases preserves <;> decide)
 
 theorem boolean_initializer_decided_zeuge :
-    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide
+    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide_cbv
 
 theorem conditional_initializer_decided_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide
+    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide_cbv
 
 theorem conditional_initializer_refused_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide
+    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide_cbv
 
 theorem conditional_initializer_counterexample_zeuge :
     eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
     (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide
+      | _ => true) = false := by decide_cbv
 
 /-- The strict traversal rule must preserve the declared invariant and must
     reject the model's annotation logic stop, even with an empty body. -/
@@ -180,15 +181,15 @@ def traversalProgram (annotationHolds : Bool) : Programm declaration :=
 
 theorem traversal_contract_accepted_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram true)
-      (SperrInv.leer declaration) [()] = true := by decide
+      (SperrInv.leer declaration) [()] = true := by decide_cbv
 
 theorem traversal_contract_refused_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram false)
-      (SperrInv.leer declaration) [()] = false := by decide
+      (SperrInv.leer declaration) [()] = false := by decide_cbv
 
 theorem traversal_logic_stop_zeuge :
     (match execEnd oracle 0 calls ((traversalProgram false).rumpf ()) counterexampleWorld .nil with
       | .logik .schleife => true
-      | _ => false) = true := by decide
+      | _ => false) = true := by decide_cbv
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness

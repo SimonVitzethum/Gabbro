@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Goal
 public import Grammatik.Logik.Invarianten.VC.Witness
+import Lean.Elab.Tactic.Cbv
 
 @[expose] public section
 
@@ -35,7 +36,7 @@ def badUnit : Einheit declaration :=
 
 /-- Evaluation is isolated in this witness module. The lead measures it
     against the few-seconds proof limit; it is not a compiler-path proof. -/
-theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide
+theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide_cbv
 
 /-- The complete concrete checker accepts the fixture, not just an isolated
     VC emitter. Structural components are small independent decisions; the
@@ -43,8 +44,8 @@ theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide
 theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [.inl (), .inr false, .inr true] = true := by
   have programAccepted := invariantenGeprueftB_program accepted_zeuge
-  have contracts : Vertraege.Pruefer.KontrakteGeprueftB unit.P unit.S [()] = true := by decide
-  have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide
+  have contracts : Vertraege.Pruefer.KontrakteGeprueftB unit.P unit.S [()] = true := by decide_cbv
+  have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide_cbv
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws [] [] [] [] unit.lockFormulas = true := by
     unfold AkzeptiertX
@@ -68,7 +69,7 @@ theorem invariant_duties_zeuge (passes : Nat) :
 theorem initial_zeuge : ∀ item ∈ declaration.invs, InvHaelt unit.P item (unit.sp0.welt []) :=
   invariantenStart_of_geprueft ((invariantenGeprueftB_iff unit [()] [] {}).mp accepted_zeuge)
 
-theorem refused_zeuge : invariantenGeprueftB badUnit [()] [] = false := by decide
+theorem refused_zeuge : invariantenGeprueftB badUnit [()] [] = false := by decide_cbv
 
 /-- A concrete typed counterexample accompanies the refused unguarded writer:
     len = cap = 4 initially, then len = 5 and cap = 4 after the writer. -/
@@ -93,6 +94,6 @@ def nonlinearUnit : Einheit declaration :=
       .le (.mul lengthValue capacityValue) (.lit 10) } }
 
 theorem outside_fragment_refused_zeuge :
-    invariantenGeprueftB nonlinearUnit [] [] = false := by decide
+    invariantenGeprueftB nonlinearUnit [] [] = false := by decide_cbv
 
 end Gabbro.Grammatik.Invarianten.Pruefer.Witness
