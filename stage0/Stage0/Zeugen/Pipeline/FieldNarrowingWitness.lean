@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.ExportCorrectness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,7 +49,7 @@ def text : String :=
 def candidate : Except String (Emitted text 256) := emit text 256
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
@@ -67,28 +68,28 @@ theorem model_shape_zeuge :
       (fun | .bind "#fieldNarrow:0" _ (.field (.param "e") "pos") => true | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .narrowBeg "#fieldNarrow:0" 0 63 => true | _ => false) = 1 ∧
-    (fnAt output.compiled.unit output.compiled.main).ret = .val (.param "#fieldNarrow:0") := by
-  decide +kernel
+    (fnAt output.compiled.unit output.compiled.main).ret = .val (.param "#fieldNarrow:0") :=
+  ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
 
 /-- A later write invalidates the refined read, so the wide field cannot be returned as u8. -/
 def changedField : String :=
   "module field_narrow { type Entry = { pos : u64, other : u8, }; impl fn main() -> u8 { let mut e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return e.other; } e.pos = 100; return e.pos; } }"
 
 theorem changed_field_refused_zeuge : (emit changedField 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 /-- Shadowing introduces a different record, without inheriting the old field's range. -/
 def shadowedRecord : String :=
   "module field_narrow { type Entry = { pos : u64, other : u8, }; impl fn main() -> u8 { let e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return e.other; } let e : Entry = Entry(pos: 1000, other: 7); return e.pos; } }"
 
 theorem shadowed_record_refused_zeuge : (emit shadowedRecord 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 /-- A nonnumeric field cannot acquire an integer range through this sugar. -/
 def booleanField : String :=
   "module field_narrow { type Entry = { flag : bool, }; impl fn main() -> u8 { let e : Entry = Entry(flag: true); narrow e.flag to 0 .. 1 else { return 7; } return 0; } }"
 
 theorem boolean_field_refused_zeuge : (emit booleanField 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.FieldNarrowingWitness

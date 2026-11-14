@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.ExportCorrectness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,7 +48,7 @@ def text : String :=
 def candidate : Except String (Emitted text 256) := emit text 256
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
@@ -65,7 +66,7 @@ def missingFallback : String :=
 
 theorem missing_fallback_refused_zeuge :
     (emit missingFallback 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 /-- Duplicate numeric patterns cannot silently select the first arm. -/
 def duplicatePattern : String :=
@@ -73,6 +74,6 @@ def duplicatePattern : String :=
 
 theorem duplicate_pattern_refused_zeuge :
     (emit duplicatePattern 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.NumberWildcardWitness

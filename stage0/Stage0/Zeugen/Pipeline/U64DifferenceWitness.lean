@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.ExportCorrectness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -49,7 +50,7 @@ def text : String :=
 def candidate : Except String (Emitted text 256) := emit text 256
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
@@ -68,20 +69,20 @@ theorem total_eng_zeuge :
       | .bind "#rel:a:b" (some (0, 18446744073709551615))
           (.eng (.sub (.param "a") (.param "b")) 0 18446744073709551615) => true
       | _ => false)) = true := by
-  decide +kernel
+  kernel_rfl
 
 /-- The reversed difference is not justified by the guard. -/
 def reversed : String :=
   "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { if a >= b { return b - a; } return 0; } impl fn main() -> u64 { let result = difference(7, 3); return result; } }"
 
 theorem reversed_difference_refused_zeuge : (emit reversed 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 /-- Without a guard, u64 subtraction keeps its potentially negative range. -/
 def unguarded : String :=
   "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { return a - b; } impl fn main() -> u64 { let result = difference(3, 7); return result; } }"
 
 theorem unguarded_difference_refused_zeuge : (emit unguarded 256).toOption.isSome = false := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.U64DifferenceWitness
