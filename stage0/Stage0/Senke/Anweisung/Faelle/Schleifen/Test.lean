@@ -72,7 +72,7 @@ theorem test_run {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
     have v : w = 1 := by simpa only [hb, ↓reduceIte] using value
     have branch := brz_stay final.test scratch small read (by rw [v]; decide)
     rw [trueStart] at branch
-    have jump := jmp_go final.exitJump (retry_displacements _ _ _ x.sized).1
+    have jump := jmp_go (fp := x.fp) final.exitJump (retry_displacements _ _ _ x.sized).1
     rw [trueTarget] at jump
     exact ⟨m1, run.trans (branch.trans jump), changed, kept, final⟩
 
