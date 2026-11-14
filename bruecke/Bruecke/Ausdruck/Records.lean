@@ -36,8 +36,9 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
         obtain ⟨rfl, rfl⟩ := hb'
         obtain ⟨ls, rfl, hv⟩ := lowWertE_sim h' hs hA hT σ₀ σ ρ w β hW hL
         exact ⟨hv, fun _ he => by cases he⟩
-  cases sd with
-  | param p =>
+  -- Retain constructor size relationships across the mutual simulation proofs.
+  match sd, h, hb with
+  | .param p, h, hb =>
       cases ht : valueParamTy fn p with
       | none =>
           cases hs : numericSideExprG u fn (.param p) with
@@ -53,21 +54,21 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
           obtain ⟨rfl, rfl⟩ := hb
           obtain ⟨hv, hty⟩ := lowParam_record_sim ht h σ₀ σ ρ β hL
           exact ⟨congrArg some hv, fun t he => (Option.some.inj he) ▸ hty⟩
-  | truth b =>
+  | .truth b, h, hb =>
       simp only [recordRead, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       simp only [lowWertE, Except.ok.injEq] at h
       subst wv
       cases b <;> exact ⟨rfl, fun _ he => Option.some.inj he⟩
-  | product identity reordered fields =>
+  | .product identity reordered fields, h, hb =>
       cases hs : uRecordOf u.records (.prod identity (fields.map (·.1))) with
-      | error err => simp [recordRead, hs] at hb
+      | error err => simp [recordRead, hs, Except.toOption, bind, Option.bind] at hb
       | ok schema =>
           cases hr : recordReads u fn (numericSideExprG u fn) fields with
-          | none => simp [recordRead, hs, hr] at hb
+          | none => simp [recordRead, hs, hr, Except.toOption, bind, Option.bind] at hb
           | some es =>
-              simp only [recordRead, hs, Except.toOption, hr, Option.bind_some,
-                Option.some.injEq, Prod.mk.injEq] at hb
+              simp only [recordRead, hs, Except.toOption, hr, Option.unattach, Option.map_some,
+                bind, Option.bind, pure, Option.some.injEq, Prod.mk.injEq] at hb
               obtain ⟨rfl, rfl⟩ := hb
               cases hg : u.exportGate with
               | error err => simp [lowWertE, hg, bind, Except.bind] at h
@@ -82,7 +83,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                       refine ⟨?_, fun _ he => Option.some.inj he⟩
                       rw [Gabbro.Body.eval_recOf, hv]
                       rfl
-  | field base name =>
+  | .field base name, h, hb =>
       cases hr : recordRead u fn (numericSideExprG u fn) base with
       | none => simp [recordRead, hr] at hb
       | some out =>
@@ -102,14 +103,15 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                       dsimp only at same
                       subst actual
                       cases hs : uRecordOf u.records ty with
-                      | error err => simp [recordRead, hr, hs] at hb
+                      | error err => simp [recordRead, hr, hs, Except.toOption, bind, Option.bind] at hb
                       | ok schema =>
                           cases hp : uRecordPosition schema.val.fields name with
-                          | error err => simp [recordRead, hr, hs, hp] at hb
+                          | error err => simp [recordRead, hr, hs, hp, Except.toOption, bind, Option.bind] at hb
                           | ok pos =>
                               rcases pos with ⟨fieldTy, pos⟩
                               simp only [recordRead, hr, hs, hp, Except.toOption,
-                                Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hb
+                                Option.unattach, Option.map_some, bind, Option.bind, pure,
+                                Option.some.injEq, Prod.mk.injEq] at hb
                               obtain ⟨rfl, rfl⟩ := hb
                               simp only [lowWertE, hg, hw, hs, hp, bind, Except.bind,
                                 pure, Except.pure, Except.ok.injEq] at h
@@ -122,7 +124,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                               refine ⟨?_, fun _ heq => Option.some.inj heq⟩
                               rw [Gabbro.Body.eval_recGet _ _ _ _ he, valOfProd_get]
                               rfl
-  | replace base name value =>
+  | .replace base name value, h, hb =>
       cases hr : recordRead u fn (numericSideExprG u fn) base with
       | none => simp [recordRead, hr] at hb
       | some out =>
@@ -142,18 +144,19 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                       dsimp only at same
                       subst actual
                       cases hs : uRecordOf u.records ty with
-                      | error err => simp [recordRead, hr, hs] at hb
+                      | error err => simp [recordRead, hr, hs, Except.toOption, bind, Option.bind] at hb
                       | ok schema =>
                           cases hp : uRecordPosition schema.val.fields name with
-                          | error err => simp [recordRead, hr, hs, hp] at hb
+                          | error err => simp [recordRead, hr, hs, hp, Except.toOption, bind, Option.bind] at hb
                           | ok pos =>
                               rcases pos with ⟨fieldTy, pos⟩
                               cases hrV : recordRead u fn (numericSideExprG u fn) value with
-                              | none => simp [recordRead, hr, hs, hp, hrV] at hb
+                              | none => simp [recordRead, hr, hs, hp, hrV, Except.toOption, bind, Option.bind] at hb
                               | some outV =>
                                   rcases outV with ⟨vt, ve⟩
                                   simp only [recordRead, hr, hs, hp, hrV, Except.toOption,
-                                    Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hb
+                                    Option.unattach, Option.map_some, bind, Option.bind, pure,
+                                    Option.some.injEq, Prod.mk.injEq] at hb
                                   obtain ⟨rfl, rfl⟩ := hb
                                   cases hf : lowWertAtE u Γ Λ fn er fieldTy value with
                                   | error err => simp [lowWertE, hg, hw, hs, hp, hf,
@@ -174,7 +177,17 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                                         (by rw [valOfProd_length]; exact recordIndex_lt pos)]
                                       rw [← valOfProd_set]
                                       rfl
-  | _ => exact scalarCase h hb rfl
+  | .lit _, h, hb | .slot _ _ _, h, hb | .tab _ _ _, h, hb | .old _ _ _, h, hb
+  | .glob _, h, hb | .erg, h, hb | .add _ _, h, hb | .sub _ _, h, hb | .mul _ _, h, hb
+  | .conv _ _ _, h, hb | .band _ _, h, hb | .bor _ _, h, hb | .bxor _ _, h, hb
+  | .div _ _, h, hb | .rem _ _, h, hb | .shl _ _, h, hb | .shr _ _, h, hb
+  | .neg _, h, hb | .refSlot _ _, h, hb | .idx _ _, h, hb | .len _, h, hb
+  | .text _, h, hb | .arrNil, h, hb | .arrCons _ _, h, hb | .upd _ _ _, h, hb
+  | .typed _ _, h, hb | .eng _ _ _, h, hb | .ib1 _ _ _, h, hb | .ib2 _ _ _ _, h, hb
+  | .zaehle _ _ _, h, hb | .zaehleBaum _ _ _ _ _ _, h, hb | .zaehleFeld _ _ _, h, hb
+  | .taggedEmpty _ _, h, hb | .taggedValue _ _ _, h, hb | .predicate _, h, hb
+  | .option _ _, h, hb | .absent _, h, hb | .present _ _, h, hb | .reason _ _, h, hb
+  | .function _ _, h, hb => exact scalarCase h hb (by rw [recordRead])
 termination_by 5 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
@@ -211,15 +224,14 @@ theorem lowProductArgs_record_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
     (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
     (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     Gabbro.Body.evalAll ⟨w, β⟩ es = some (valOfProd _ (evalProd σ₀ args σ ρ)) := by
-  cases fields with
-  | nil =>
+  match fields, h, hb with
+  | [], h, hb =>
       simp only [lowProductArgs, Except.ok.injEq] at h
       cases h
       simp only [recordReads, Option.some.injEq] at hb
       cases hb
       rfl
-  | cons field rest =>
-      rcases field with ⟨ty, sd⟩
+  | (ty, sd) :: rest, h, hb =>
       cases hr : recordRead u fn (numericSideExprG u fn) sd with
       | none => simp [recordReads, hr] at hb
       | some out =>
@@ -227,7 +239,7 @@ theorem lowProductArgs_record_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
           cases hrs : recordReads u fn (numericSideExprG u fn) rest with
           | none => simp [recordReads, hr, hrs] at hb
           | some bes =>
-              simp only [recordReads, hr, hrs, Option.bind_some, Option.some.injEq] at hb
+              simp only [recordReads, hr, hrs, bind, Option.bind, pure, Option.some.injEq] at hb
               cases hb
               cases hh : lowWertAtE u Γ Λ fn er ty sd with
               | error err => simp [lowProductArgs, hh, bind, Except.bind] at h

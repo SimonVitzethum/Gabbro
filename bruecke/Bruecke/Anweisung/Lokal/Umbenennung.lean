@@ -133,13 +133,13 @@ theorem eval_renameScalar (name : String → Option String) (s : State) :
           cases hv : renameScalar name v with
           | none => simp [renameScalar, hr, hv] at h
           | some val =>
-              simp only [renameScalar, hr, hv, Option.bind_some, Option.some.injEq] at h
+              simp only [renameScalar, hr, hv, bind, Option.bind, pure, Option.some.injEq] at h
               subst e'
               simp only [eval, eval_renameScalar name s e base hr, eval_renameScalar name s v val hv]
   | .someOf _, _, h | .fieldOf _ _, _, h | .forallSlots _ _ _, _, h
   | .existsSlots _ _ _, _, h | .reaches _ _ _ _ _, _, h | .chainFrom _ _ _ _ _, _, h
-  | .wrapTo _ _ _, _, h | .tagOf _ _, _, h
-  | .recOf _, _, h | .recGet _ _, _, h | .recSet _ _ _, _, h => by
+  | .wrapTo _ _ _, _, h | .tagOf _ _, _, h => by
+      simp only [renameScalar] at h
       cases h
 
 termination_by e _ _ => 3 * sizeOf e
@@ -148,7 +148,10 @@ decreasing_by all_goals (simp_wf <;> omega)
 theorem eval_renameScalarFields (name : String → Option String) (s : State) :
     ∀ (es es' : List Expr), renameScalarFields name es = some es' →
       evalAll s es' = evalAll ⟨s.world, visibleBinding name s.local'⟩ es
-  | [], es', h => by cases h; rfl
+  | [], es', h => by
+      simp only [renameScalarFields, Option.some.injEq] at h
+      subst es'
+      rfl
   | e :: es, es', h => by
       cases hr : renameScalar name e with
       | none => simp [renameScalarFields, hr] at h
@@ -156,7 +159,7 @@ theorem eval_renameScalarFields (name : String → Option String) (s : State) :
           cases hrs : renameScalarFields name es with
           | none => simp [renameScalarFields, hr, hrs] at h
           | some tail =>
-              simp only [renameScalarFields, hr, hrs, Option.bind_some, Option.some.injEq] at h
+              simp only [renameScalarFields, hr, hrs, bind, Option.bind, pure, Option.some.injEq] at h
               subst es'
               simp only [evalAll, eval_renameScalar name s e e' hr,
                 eval_renameScalarFields name s es tail hrs]
