@@ -232,7 +232,7 @@ def E8 : Einheit D8 where
   sp0 := sp8
 
 /-- The checker accepts the unit WITH its two concurrent starts. -/
-theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by decide_cbv
+theorem akzeptiert8 : akzeptiert_pruefer.akzeptiert E8 fsA.1 lsA.1 csA.1 = true := by decide +kernel
 
 /-! ## 4. The user's logic -/
 
@@ -250,9 +250,9 @@ theorem koerperV8 (f : D8.Fn) : KoerperGutV P8 0 f := by
       simp only [bodyC8, execEnd] at hrun
       cases hrun
 
-theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by decide_cbv
+theorem logikFrei8 : programmLogikFrei P8 fsA.1 = true := by decide +kernel
 
-theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by decide_cbv
+theorem ohneEwig8 : ohneEwigB P8 fsA.1 = true := by decide +kernel
 
 theorem koerperS8 : ∀ f : D8.Fn, KoerperGutS P8 0 (axWahr D8) (SperrInv.leer D8) f := fun f =>
   koerperGutS_leer ⟨koerperGutRQ_of_R _ (koerperGutR_of_V (koerperV8 f)),

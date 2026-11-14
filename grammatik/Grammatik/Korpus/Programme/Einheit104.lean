@@ -70,7 +70,7 @@ set_option maxRecDepth 100000
 
 abbrev D4 : Deklaration := declOf uExp104
 
-theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by decide_cbv
+theorem low_some : (lowerAllg uExp104).toOption.isSome = true := by decide +kernel
 
 /-- The generically lowered program of 104. -/
 def P4 : Programm D4 := ((lowerAllg uExp104).toOption.get low_some).1
@@ -281,7 +281,7 @@ def E4 : Einheit D4 where
   sp0 := sp4
 
 /-- The checker accepts the unit, by computation. -/
-theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by decide_cbv
+theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by decide +kernel
 
 /-! ## 5. The user's logic on the parsed program -/
 
@@ -366,9 +366,9 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
       · simp only [execEnd] at h2
         cases h2
 
-theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by decide_cbv
+theorem logikFrei4 : programmLogikFrei P4 fsA.1 = true := by decide +kernel
 
-theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by decide_cbv
+theorem ohneEwig4 : ohneEwigB P4 fsA.1 = true := by decide +kernel
 
 theorem koerperS4 : ∀ f : D4.Fn, KoerperGutS P4 0 (axWahr D4) (SperrInv.leer D4) f := by
   intro f
