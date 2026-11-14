@@ -69,16 +69,16 @@ termination_by structural e
 
 theorem kostenNutz_ru {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (e : NutzlastExpr D Γ Λ c) : kostenNutz (ruN e) = kostenNutz e := by
-  cases e with
-  | empty => rfl
-  | val e => exact kostenExpr_ru e
+  match e with
+  | .empty => rfl
+  | .val e => exact kostenExpr_ru e
 termination_by structural e
 
 theorem kostenArgs_ru {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty} (args : Args D Γ Λ ts) :
     kostenArgs (ruA args) = kostenArgs args := by
-  cases args with
-  | nil => rfl
-  | cons e rest => exact cost_congr₂ (· + ·) (kostenExpr_ru e) (kostenArgs_ru rest)
+  match args with
+  | .nil => rfl
+  | .cons e rest => exact cost_congr₂ (· + ·) (kostenExpr_ru e) (kostenArgs_ru rest)
 termination_by structural args
 end
 
@@ -148,7 +148,8 @@ end Transport
 
 theorem entfZ_ru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') : entfZ (ruS s) = entfZ s := by
-  cases s <;> simp only [ruS, entfZ_nachΛ, entfZ, GEntfaltbar, ↓reduceIte] <;> rfl
+  cases s <;> simp only [ruS] <;> (try simp only [entfZ_nachΛ]) <;>
+    (try simp only [entfZ, GEntfaltbar, ↓reduceIte]) <;> rfl
 
 section Costs
 variable (ep : Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
@@ -169,7 +170,7 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
   | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
   | _ => skip
-  all_goals simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
+  all_goals first | rfl | simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
     kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]
 termination_by structural b
 
@@ -180,7 +181,7 @@ theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (
   | .nil => rfl
   | .cons (c := payload) b rest =>
     cases payload <;>
-      exact cost_congr₂ max (kostenBlock_ru ep c pa b) (kostenArms_ru ep c pa rest)
+      exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
 termination_by structural arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -189,7 +190,7 @@ theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Na
   cases arms with
   | nil => rfl
   | cons b rest =>
-    exact cost_congr₂ max (kostenBlock_ru ep c pa b) (kostenGrundArms_ru ep c pa rest)
+    exact cost_congr₂ max (kostenBlock_ru b) (kostenGrundArms_ru rest)
 termination_by structural arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
@@ -198,7 +199,7 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
   | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
   | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
   | _ => skip
-  all_goals simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
+  all_goals first | rfl | simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
     kostenEnd_ru, kostenSonst_ru, Option.elim]
 termination_by structural e
@@ -209,7 +210,7 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | bindAxiomOpt result _ _ _ _ _ _ _ => cases result
   | bindAxiomOptElse result _ _ _ _ _ _ _ _ _ => cases result
   | _ => skip
-  all_goals simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
+  all_goals first | rfl | simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
     kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]
 termination_by structural e
 end
