@@ -1,21 +1,17 @@
 /-
   File:      Grammatik/Parser/Cover/Differenz.lean
-  Subject:   Track P as a CHECKER: the Lean verdict on source text with no Rust exporter in the loop.
+  Subject:   Source verdicts from the canonical Lean checker.
 
-  `verdict` runs the whole Lean pipeline on a source text -- lex, parse in depth, elaborate (`elabU`),
-  lower every function to a G term (`lowerAllg`) -- and evaluates the Bool of the goal theorem's checker,
-  `AkzeptiertX`, on the lowered program with the lock family `SperrInv.leer`, the elaborated locks and
-  carriers, and the elaborated thread roots (`UProg.roots`). The answer is one of
+  `verdict` lexes, parses and elaborates source text, lowers every function to a G term (`lowerAllg`),
+  and runs `AkzeptiertX` with the elaborated lock family, retained lock expressions, complete carrier
+  lists and declared thread roots. Its invariant and contract VCs are part of the checker verdict.
+  The answer is one of
 
     `accept` / `reject`     -- the pipeline decided and `AkzeptiertX` is `true` / `false`;
     `lex-err`, `parse-err`, `elab-err`, `lower-err` + message
-                            -- the fragment of Track P does not cover the program (the first stage that
-                               refused, with its message): no verdict, never a guess.
+                            -- the first source-pipeline stage that refused, with its message.
 
-  `DifferenzLauf.lean` is the runner (`main`: every `*.gab` of a directory, `NAME<TAB>VERDICT`); the Rust
-  differential harness (`crates/gabbro-check/tests/differenzial`) runs it over the generated programs and
-  compares it with the Rust checker AND with the exporter route, so the pure-Lean path validates the
-  exporter and the checker from source, and the coverage of the generated space it decides is measured.
+  `DifferenzLauf.lean` runs every `*.gab` file in a directory and emits `NAME<TAB>VERDICT`.
 -/
 module
 public import Grammatik.GabbroV.GvZensus

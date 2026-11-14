@@ -46,9 +46,9 @@ inductive Refusal where
   | atomicCarrier
   | nonlinear
   | crossEntry
-  | invalid (detail : String)
   | unsupported (ctorName : String)
   | within (part : String) (cause : Refusal)
+  | invalid (detail : String)
   deriving DecidableEq, Repr
 
 def Refusal.message : Refusal → String
