@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/AxiomVertrag.lean
+  File:      Grammatik/Logik/Vertraege/Oracle/AxiomVertrag.lean
   Subject:   AXIOM-CALLING BODIES WITH A RESULT-DEPENDENT CONTRACT -- the
              finding about `KoerperGutV`, and the strengthening that closes
              it: per-axiom declared ensures.
@@ -31,7 +31,7 @@
   (`AxEnsLokal`), the class the replay can transfer.
 -/
 module
-public import Grammatik.Logik.Vertraege.AxiomVertraga
+public import Grammatik.Logik.Vertraege.Oracle.AxiomVertraga
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 @[expose] public section

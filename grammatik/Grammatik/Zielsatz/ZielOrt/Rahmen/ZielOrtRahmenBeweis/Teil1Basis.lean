@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
-public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
 
 @[expose] public section
 

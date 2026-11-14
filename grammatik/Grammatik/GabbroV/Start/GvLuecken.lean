@@ -14,7 +14,7 @@ public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis

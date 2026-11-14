@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/AxiomVertrag.lean
+  File:      Grammatik/Logik/Vertraege/Oracle/AxiomVertraga.lean
   Subject:   AXIOM-CALLING BODIES WITH A RESULT-DEPENDENT CONTRACT -- the
              finding about `KoerperGutV`, and the strengthening that closes
              it: per-axiom declared ensures.

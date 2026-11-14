@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis.Teil1
 
 @[expose] public section

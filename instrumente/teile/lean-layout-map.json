@@ -13,7 +13,7 @@
  "Grammatik.AuditFinal": "Grammatik.Proben.AuditFinal",
  "Grammatik.AuditW5": "Grammatik.Proben.AuditW5",
  "Grammatik.AuditZiel": "Grammatik.Proben.AuditZiel",
- "Grammatik.AxiomVertrag": "Grammatik.Logik.Vertraege.AxiomVertrag",
+ "Grammatik.AxiomVertrag": "Grammatik.Logik.Vertraege.Oracle.AxiomVertrag",
  "Grammatik.Bausteine.Arena.ArenaAllocForm": "Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm",
  "Grammatik.Bausteine.Arena.ArenaAuf": "Grammatik.Bausteine.Arena.Struktur.ArenaAuf",
  "Grammatik.Bausteine.Arena.ArenaBaum": "Grammatik.Bausteine.Arena.Struktur.ArenaBaum",

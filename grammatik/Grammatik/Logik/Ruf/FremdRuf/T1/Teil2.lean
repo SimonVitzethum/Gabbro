@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Satz
-public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Logik.Ruf.FremdRuf.T1.Teil1
