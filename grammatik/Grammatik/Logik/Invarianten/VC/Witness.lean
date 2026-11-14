@@ -32,17 +32,17 @@ abbrev contract : Vertrag declaration := vertragVon declaration ()
 
 def access (name : declaration.Glob) : gdarf declaration name [] := fun _ h => nomatch h
 
-def lengthValue : Expr declaration [] [] (.int 0 10) := .glob false (access false)
+def lengthValue {Γ : Ctx} : Expr declaration Γ [] (.int 0 10) := .glob false (access false)
 
-def capacityValue : Expr declaration [] [] (.int 0 10) := .glob true (access true)
+def capacityValue {Γ : Ctx} : Expr declaration Γ [] (.int 0 10) := .glob true (access true)
 
-def invariant : Expr declaration [] [] .bool := .le lengthValue capacityValue
+def invariant {Γ : Ctx} : Expr declaration Γ [] .bool := .le lengthValue capacityValue
 
-def guard : Expr declaration [] [] .bool := .lt lengthValue capacityValue
+def guard {Γ : Ctx} : Expr declaration Γ [] .bool := .lt lengthValue capacityValue
 
 /-- The canonical model requires interval narrowing on `len + 1`. Its fallback
     leaves len alone; at the guarded increment it is unreachable on typed states. -/
-def increment : Stmt declaration contract false [] [] [] :=
+def increment {Γ : Ctx} {l : Bool} : Stmt declaration contract l Γ [] [] :=
   .assignGlob false (.eng (.add lengthValue (.lit 1)) 0 10 lengthValue) rfl (access false)
 
 def guarded : Endblock declaration contract false [] [] :=
