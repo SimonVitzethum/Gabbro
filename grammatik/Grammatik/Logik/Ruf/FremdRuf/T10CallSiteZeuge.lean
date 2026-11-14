@@ -98,11 +98,13 @@ theorem traceHistory_sites : ∀ e ∈ traceHistory,
   intro e hm
   rcases List.mem_append.mp hm with hm | hm
   · have he : e = ⟨(), key1, rho true, (key1, 0)⟩ := by
-      simpa only [actualHistory, List.mem_singleton] using hm
+      simp only [actualHistory, List.mem_singleton] at hm
+      exact hm
     subst e
     exact ⟨start true, memory, 0, .start, fun c _ => traegerGleich_refl _ c, rfl⟩
   · have he : e = ⟨(), key2, rho true, (key2, 0)⟩ := by
-      simpa only [actualHistory, List.mem_singleton] using hm
+      simp only [actualHistory, List.mem_singleton] at hm
+      exact hm
     subst e
     refine ⟨afterFirst true, memory, 0,
       .schritt _ _ 0 .start (gx_aus_g trace_first_step),

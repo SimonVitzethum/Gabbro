@@ -161,7 +161,12 @@ theorem suffM : ∀ (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F
     | dot f =>
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.cons_append]
-      simp only [parseSuffixe, nameText_nameTok]
+      have hstep : parseSuffixe (F' + 1) base
+          (.zeichen "." :: nameTok f :: (suffToks suff ++ rest)) =
+            parseSuffixe F' (.field base f) (suffToks suff ++ rest) := by
+        unfold nameTok
+        split <;> simp only [parseSuffixe, nameText]
+      rw [hstep]
       simp only [applySuff]
       simp only [suffToks, List.length_cons] at hF
       exact ih _ rest F' hs' hr (by omega)
