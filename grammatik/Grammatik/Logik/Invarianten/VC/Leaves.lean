@@ -123,6 +123,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             let read := world.lese Λ expression.orte
             have same : assignment read = assignment world := assignment_lese _ _ _
             have releaseReady := (releases.correct read).mp (by rw [same]; exact parts.1)
+            change scopesInvH S cleanup.scopes (world.lese Λ expression.orte) = true at releaseReady
             unfold Runtime.wpS
             simp only [execStmtH, releaseReady, ↓reduceIte, Goals.holds]
             rw [assignment_cleanup, assignment_lese]
