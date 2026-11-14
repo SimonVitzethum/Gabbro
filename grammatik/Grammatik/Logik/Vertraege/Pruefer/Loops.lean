@@ -25,7 +25,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
       let exceeded ← compileOverflow locals goals
       let combined ← branchCondition test locals
-        (done.map (fun _ _ ready _ _ => ready)) exceeded
+        (withHandlers policy done) exceeded
       return combined.map (fun runtime world ready allowed safe => by
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
           simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
@@ -72,7 +72,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | logik error => simpa only [result, Goals.holds] using ready
         | hardware error => trivial)
       let combined ← branchCondition test locals
-        (done.map (fun _ _ ready _ _ => ready)) advanced
+        (withHandlers policy done) advanced
       return combined.map (fun runtime world ready allowed safe => by
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
           simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
@@ -110,7 +110,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         sound := fun runtime world valid allowed safe =>
           let parts := (conj_denote _ _ _).mp valid
           ⟨step.sound runtime world parts.1 allowed safe, exceeded.sound runtime world parts.2 allowed safe⟩ }
-    let branch ← branchCondition test env (done.map (fun _ _ ready _ _ => ready)) advance
+    let branch ← branchCondition test env (withHandlers policy done) advance
     return inductiveCondition invariant branch
   let checks ← allConditions domain.values _ compilePass
   return {

@@ -33,6 +33,16 @@ def HandlerSafe (policy : CallPolicy program)
   ∀ f world locals, policy.holds f world locals → ∀ error,
     runtime.calls f world locals = .logik error → allowed error
 
+/-- Lift a condition independent of inherited errors into the strict handler
+    interface. Its arithmetic formula is unchanged. -/
+def withHandlers (policy : CallPolicy program)
+    {target : Runtime program (fun _ => []) S → World D → Prop}
+    (pre : Condition target) :
+    Condition (fun runtime world => ∀ allowed,
+      HandlerSafe policy runtime allowed → target runtime world) where
+  formula := pre.formula
+  sound := fun runtime world valid _ _ => pre.sound runtime world valid
+
 /-- Return goals depend on the actual value. Local updates only affect the
     three ordinary continuations; the function's entry arguments stay fixed. -/
 structure Goals (D : Deklaration) (V : Vertrag D) (Γ : Ctx) where
