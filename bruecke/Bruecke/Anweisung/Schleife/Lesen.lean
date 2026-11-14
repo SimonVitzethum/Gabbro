@@ -80,7 +80,7 @@ theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : Stri
               | none => simp only [hy, bind, Option.bind_none] at h; cases h
               | some ys =>
                 simp only [hy, bind, Option.bind_some, pure, Option.some.injEq] at h
-                exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, h.symm⟩
+                exact ⟨rfl, (by first | exact hg | rfl | simp_all), t, body, tail, allocated, ys, (by first | exact ht | rfl | simp_all), hbody, hy, h.symm⟩
   all_goals simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody, bind, Option.bind_none, Option.map_none, reduceCtorEq] at h
 
 /-- The admitted loop body is a sequence of writes, so all calls lie after its marker. -/
