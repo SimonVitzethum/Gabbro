@@ -62,7 +62,8 @@ def bindingCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def mutableCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (budget : Nat) (name : Var Γ τ) (expression : Expr D Γ Λ τ)
     (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Frag.Refusal (StatementCondition program checked S (.assignVar name expression) locals goals) := do
+    Except Frag.Refusal (StatementCondition program checked S
+      (.assignVar (V := V) (l := l) name expression) locals goals) := do
   let selected ← localSelect budget expression locals
     (fun value _ world => denotes (goals.normal (locals.set name value)) world)
     (fun value => do

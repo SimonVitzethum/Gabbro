@@ -50,7 +50,7 @@ def invalidMessage (label : String) (formula : LProp (Observation D))
 def environmentValues : {context : Ctx} → Env D context → List Int
   | [], .nil => []
   | .int _ _ :: _, .cons value rest => value.n :: environmentValues rest
-  | .bool :: _, .cons value rest => (if value then 1 else 0) :: environmentValues rest
+  | .bool :: _, .cons value rest => (if wahr? value then 1 else 0) :: environmentValues rest
   | τ :: _, .cons value rest => scalarValue τ value :: environmentValues rest
 
 /-- The return formula conjoins checked ensures with all owed invariants. -/

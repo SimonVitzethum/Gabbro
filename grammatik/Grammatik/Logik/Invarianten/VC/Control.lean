@@ -99,7 +99,7 @@ def branchCondition {program : Programm D} {checked : D.Fn → List D.Inv}
     (positive : Condition yes) (negative : Condition no) :
     Except Frag.Refusal (Condition (fun runtime world =>
       let read := world.lese Λ test.orte
-      if wahr? (eval read test read locals) then yes runtime read else no runtime read)) := do
+      if wahr? (eval read test read locals) = true then yes runtime read else no runtime read)) := do
   let guard ← translate test locals
   return {
       formula := lower (.and (.imp guard.payload (quoteQF positive.formula))
@@ -108,21 +108,31 @@ def branchCondition {program : Programm D} {checked : D.Fn → List D.Inv}
         let read := world.lese Λ test.orte
         have branches := (lower_denote _ (assignment world)).mp valid
         have agree : assignment read = assignment world := assignment_lese _ _ _
-        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals with
+        cases tested : eval read test read locals with
         | true =>
             have present := (guard.correct read).mp tested
             rw [agree] at present
             have ready := (quoteQF_denote _ _).mp (branches.1 present)
             have result := positive.sound runtime read (by rw [agree]; exact ready)
-            simpa only [wahr?, tested, eq_self, Bool.false_eq_true, ↓reduceIte] using result
+            dsimp only
+            split
+            · exact result
+            · rename_i other
+              exact (other tested).elim
         | false =>
             have absent : ¬ guard.payload.denote (assignment world) := by
               intro present
               rw [← agree] at present
-              exact Bool.false_ne_true (tested.symm.trans ((guard.correct read).mpr present))
+              have impossible := (guard.correct read).mpr present
+              rw [tested] at impossible
+              exact Bool.noConfusion impossible
             have ready := (quoteQF_denote _ _).mp (branches.2 absent)
             have result := negative.sound runtime read (by rw [agree]; exact ready)
-            simpa only [wahr?, tested, eq_self, Bool.false_eq_true, ↓reduceIte] using result }
+            dsimp only
+            split
+            · rename_i taken
+              exact Bool.noConfusion (taken.symm.trans tested)
+            · exact result }
 
 abbrev StatementCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
