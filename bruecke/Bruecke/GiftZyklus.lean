@@ -41,7 +41,7 @@ import all Init.Data.String.ToSlice
 
 
 /-!
-# Finding F2, measured: without a rank of the call graph the bridge would be FALSE
+# Finding F2, measured: with full callee contracts on a cycle the bridge would be FALSE
 
 Three functions over one table `T` (two slots, field `v : 0 .. 10`), in the parser's fragment:
 
@@ -54,7 +54,10 @@ contracts for EVERY entry state (`Contract`), and no environment keeps `h`'s (`e
 `g`'s (a claim about a slot `g` does not write) -- so each duty is true by vacuity. Premise (b) of
 the goal theorem FAILS (`nicht_koerperGutR`): its handler class asks a callee's contract only
 where the call is made, and a handler may answer `g` normally where slot 0 happens to be 7 -- then
-`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself).
+`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself),
+and so do the measure duties of recursive units (`keine_massPflicht`): under every well-founded
+measure, `h` may assume its own contract only strictly below its entry, so its duty is no longer
+vacuous -- and the chain would otherwise prove the failing premise.
 -/
 
 namespace Gabbro.Bruecke.Zyklus
@@ -349,7 +352,13 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   · rw [hR] at hR'; cases hR'
   · rw [hR] at hR'; cases hR'
 
+/-- **The measure duties refuse the unit**: under no well-founded measure do all duties of `uZ`
+    hold, for they would carry premise (b) through `bruecke_koerperGutR_M`, and it fails. -/
+theorem keine_massPflicht : ∀ M : MassU, ¬ MassPflichtU uZ (fun _ => True) M := fun M hZ =>
+  nicht_koerperGutR (bruecke_koerperGutR_M lowZ getragenZ M hZ 0 fI True.intro)
+
 #print axioms alle_pflichten
 #print axioms nicht_koerperGutR
+#print axioms keine_massPflicht
 
 end Gabbro.Bruecke.Zyklus
