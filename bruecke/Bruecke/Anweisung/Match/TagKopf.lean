@@ -93,6 +93,7 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
                     obtain ⟨reasons, hReasons, hRel⟩ := ih fn Λ (head :: cs) (binders.drop 1)
                       rest restArms restTail hBare' (by first | exact hrest | rfl | simp_all)
                     refine ⟨.cons body reasons, ?_, .cons hRel⟩
+                    simp only [List.length_cons] at hReasons
                     unfold lowGArmsL lowStufe
                     simp only [List.length_cons, lowGArmsStep, lowStufe_seq,
                       lowStufe_garms, hb, bind, Except.bind, hReasons, ↓reduceDIte]
