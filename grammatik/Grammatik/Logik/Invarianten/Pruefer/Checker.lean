@@ -46,4 +46,8 @@ theorem logikPflichtA_of_akzeptiertX (complete : ∀ f, f ∈ functions)
   logikPflichtA_of_invariantVCB complete (invariantVCB_of_akzeptiertX accepted)
     Q shared subset bodies locality
 
+#print axioms invariantVCB_invGutA
+#print axioms invariantVCB_invGut
+#print axioms logikPflichtA_of_akzeptiertX
+
 end Gabbro.Grammatik.Invarianten.Pruefer

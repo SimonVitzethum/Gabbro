@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.Pruefer.Duties
+public import Grammatik.Logik.Invarianten.Pruefer.Checker
 public import Grammatik.Logik.Invarianten.Modell.Decision
 public import Grammatik.Zielsatz.Atomar.AkzeptiertSchnell
 public import Grammatik.Logik.Invarianten.Frag.Witness
@@ -85,6 +85,20 @@ theorem checker_refused_zeuge :
 theorem duties_zeuge (passes : Nat) (Q : AxEns declaration) :
     InvGutS unit.P passes Q unit.S () ∧ InvGutGrund unit.P passes Q unit.S () :=
   invariantVCB_invGut (fun f => by cases f; exact List.mem_cons_self) restoring_accepted_zeuge passes Q ()
+
+/-- The existing user-duty adapter is inhabited on the same accepted unit.
+    No invariant proof is passed in its user-logic arguments. -/
+theorem adapter_zeuge : LogikPflichtA unit.P unit.S unit.Q (GeteiltA unit.P unit.ws) := by
+  have complete : ∀ f : declaration.Fn, f ∈ [()] := by
+    intro f; cases f; exact List.mem_cons_self
+  have subset : ∀ carrier, GeteiltA unit.P unit.ws carrier → AtomarAusgenommen carrier :=
+    fun _ present => present.1
+  apply logikPflichtA_of_akzeptiertX complete checker_accepted_zeuge unit.Q
+    (GeteiltA unit.P unit.ws) subset
+  · exact fun passes f => (invariantVCB_sound complete restoring_accepted_zeuge f
+      passes unit.Q (GeteiltA unit.P unit.ws) subset).1
+  · exact ⟨fun lock => nomatch lock, fun item => nomatch item,
+      fun _ _ impossible => by cases impossible⟩
 
 def nonlinear : Programm declaration :=
   { program with invariante := fun _ =>
