@@ -7210,3 +7210,22 @@ cost-checked functions are refused, even with checked pointer-type cost declarat
 The template (`Vorlage.lean`) emits the measure forms for a unit with a call-graph cycle instead
 of a refusal. The measure is supplied by the person (e.g. the values of the `decreases`
 clauses); it is not yet computed from `UFn.decreases` or fed from the checker's `MassPflicht`.
+
+## 189. The bridge measure computed from the `decreases` clauses (2026-11-14)
+
+*Files: `bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
+
+| Theorem | File | Statement |
+|---|---|---|
+| `quellWert`, `massTupel` (definitions), `quellWert_of_source` | `Kette/Mass/Wert.lean` | A `decreases` clause read on a Body binding; on a binding that reads every parameter at its position (`LRel`), it has exactly the value `SourceValue` denotes. |
+| `massTupel_wert`, `massTupel_eintritt` | `Kette/Mass/Wert.lean` | Preservation: the Body tuple is the exported canonical `Mass.wert` (`Measures.Export`, the measure `lowerAllg` checks); at the bridge entry state with unique parameter names. |
+| `massTupel_faellt`, `unterQ_of_lexLt` | `Kette/Mass/{Wert,Abstieg}.lean` | Where the canonical gate `massTor` admits a call (`lexLt` of the exported values), the Body source value of the callee entry lies below the caller's, i.e. the source guard `unterQ` admits it at the bridge entry states. |
+| `ErreichtU`, `ZyklusU`, `rangU`; `rangU_kante_le`, `rangU_kante_lt` | `Kette/Mass/Rang.lean` | The computed call-graph rank never rises along a call and falls off a cycle. |
+| `massQuelle`, `meetsUQ`, `meetsUM_of_meetsUQ`, `massPflichtU_quelle`, `meetsUQ_of_meetsU` | `Kette/Mass/Abstieg.lean` | The unit's measure (rank, `decreases` value) under `lexLt`/`lexLt_wf 2`; the source duty assumes callees off the cycle fully and callees on it below the caller's `decreases` value, and is a `meetsUM` duty under `massQuelle`. |
+| `lowering_ok_mass` | `Kette/Mass/Senkung.lean` | The lowering of a unit all of whose functions declare a measure (witness support). |
+| `nutzer_quelle_zeuge`, `wert_zeuge`, `top_wert_steigt` | `Kette/Mass/QuelleZeuge.lean` | Self, mutual and acyclic calls under `decreases k`: duties from the computed measure, the acyclic edge admitted by the rank where the source value rises, the exported value equal to the Body value, and `NutzerPflicht`. |
+
+Open: the run-level transport of the checker's `MassPflicht` (G runs behind `massTor`) to the
+Body duty. `unterQ_of_lexLt` covers the gate's test at encoded entries; the Body realisation
+quantifies over all Body states and Body environments, so a reverse simulation (Body run of a
+carried body ↦ G run, call by call) is still required.

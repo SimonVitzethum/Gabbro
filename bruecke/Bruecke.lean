@@ -49,6 +49,7 @@ public import Bruecke.Kette.RecordZeuge
 public import Bruecke.Anweisung.Bereich.RecordZeuge
 public import Bruecke.Kette.Mass.Zeuge
 public import Bruecke.Kette.Mass.Abstieg
+public import Bruecke.Kette.Mass.QuelleZeuge
 public import Bruecke.Kette.Formen.OptionZeuge
 public import Bruecke.Kette.Formen.ReasonZeuge
 public import Bruecke.Kette.Formen.TagZeuge
