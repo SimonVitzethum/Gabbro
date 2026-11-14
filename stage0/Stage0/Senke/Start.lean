@@ -207,38 +207,92 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
 
 /-! ## `main` starts the roots -/
 
-/-- **The named assumption at `clone`**: the kernel answers the thread that asks for a new thread with the new
-    thread's id (not 0) and leaves the memory as it is. -/
-class CloneOK : Prop where
-  ans : ∀ m : Runner.Mem, ∃ r x : Runner.W, r ≠ 0 ∧ Kern.ans cloneReq m (some (r, x)) m
+/-- **The named environment assumption at `clone`** (it replaces `CloneOK`): the kernel answers the call that asks for
+    a new thread (`cloneReq`: the fixed thread flags, no tid pointers, no new stack, so the memory stays as it is)
+    with a word `r` that is not 0 and leaves the memory as it is. 0 is the answer of the new thread, which only the
+    machine gives (`Runner.Mach`); every other word reaches the asking thread. `r` is a thread id (the kernel created
+    the thread) or an error number (it refused): which of the two is NOT assumed. The emitted startup code checks the
+    answer and stops with `cloneCode` on a refusal (`spawn1_ok`), so a refused thread creation is a declared stop of
+    the image, never a silently missing thread. What remains assumed is only that the kernel relation answers this
+    one call at all, in the shape the machine interprets (`Runner.Mach.Tr.clone`, `.cloneNo`). -/
+class CloneAnswers : Prop where
+  ans : ∀ m : Runner.Mem, ∃ r x : Runner.W, r ≠ 0 ∧ Kern.ans Runner.cloneReq m (some (r, x)) m
 
-/-- One `spawn`: the start code's address and the frame's address into the scratch slots `s`, `s + 1`; the new
-    thread's id into `s + 2`; the asking thread goes on. Every slot below `s` is unchanged. -/
-theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
-    (hc : CodeAt m pc [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0,
-      ci 24 ((s + 2 : Nat) : Int) s 0]) (hF : FrameOK m fp K) (hK : s + 3 ≤ K)
-    (hK2 : K < 2 ^ 31) (ha : a < 2 ^ 31) (hf : f < 2 ^ 31) (hcf : CodeFar pc 3 fp K) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m' ∧ Agree fp s K m m' := by
+/-- One root's spawn site: both constants, the `spawn`, the check of the answer. -/
+def spawnOne (s a f : Nat) : List II :=
+  [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0, ci 24 ((s + 2 : Nat) : Int) s 0,
+    ci 1 ((s + 3 : Nat) : Int) 0 0, ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int)] ++
+    guardC (s + 4) cloneCode s
+
+theorem spawnOne_len (s a f : Nat) : (spawnOne s a f).length = 10 := by
+  simp only [spawnOne, guardC, stopC, sysC, List.length_append, List.length_cons, List.length_nil]
+
+theorem spawnC_cons (s a f : Nat) (r : List (Nat × Nat)) :
+    spawnC s ((a, f) :: r) = spawnOne s a f ++ spawnC s r := rfl
+
+/-- The word the check computes from the answer: `0 <s answer`, as 1 or 0. -/
+def spawnFlag (r : Runner.W) : Runner.W := bool ((BitVec.ofInt 64 (0 : Int)).slt r)
+
+theorem ofInt_zero_toInt : (BitVec.ofInt 64 (0 : Int)).toInt = 0 :=
+  BitVec.toInt_ofInt_eq_self (by decide) (by decide) (by decide)
+
+theorem spawnFlag_pos {r : Runner.W} (h : 0 < r.toInt) : spawnFlag r = 1 := by
+  have hs : (BitVec.ofInt 64 (0 : Int)).slt r = true := by
+    rw [BitVec.slt_eq_decide, ofInt_zero_toInt]; exact decide_eq_true h
+  unfold spawnFlag Runner.IR.bool
+  rw [hs]; rfl
+
+theorem spawnFlag_nonpos {r : Runner.W} (h : r.toInt ≤ 0) : spawnFlag r = 0 := by
+  have h' : ¬ (0 < r.toInt) := by omega
+  have hs : (BitVec.ofInt 64 (0 : Int)).slt r = false := by
+    rw [BitVec.slt_eq_decide, ofInt_zero_toInt]; exact decide_eq_false h'
+  unfold spawnFlag Runner.IR.bool
+  rw [hs]; rfl
+
+/-- A position `a` instructions behind `pc`, then `b` more. -/
+theorem pcN (pc : Runner.W) (a b c : Nat) (h : a + b = c) :
+    pc + BitVec.ofNat 64 (16 * a) + BitVec.ofNat 64 (16 * b) = pc + BitVec.ofNat 64 (16 * c) := by
+  subst h; exact pc_add pc a b
+
+theorem const_step16 {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
+    (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K) (hK : K < 2 ^ 31) (hk : lit32 k = true) :
+    Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩
+      (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) :=
+  star_cast (const_step hc hF hj hK hk) rfl rfl
+
+/-- The first three instructions of a spawn site: the start code's address and the frame's address into the scratch
+    slots `s`, `s + 1`, and the `spawn`. Whatever the kernel answers (a word that is not 0, memory untouched), the
+    asking thread goes on after the `spawn` with the answer in slot `s + 2`; every slot below `s` is unchanged. -/
+theorem spawn3_ok {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
+    (hc : CodeAt m pc [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0, ci 24 ((s + 2 : Nat) : Int) s 0])
+    (hF : FrameOK m fp K) (hK : s + 3 ≤ K) (hK2 : K < 2 ^ 31) (ha : a < 2 ^ 31) (hf : f < 2 ^ 31)
+    (hcf : CodeFar pc 3 fp K) :
+    ∃ m2, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ∧ Agree fp s K m m2 ∧
+      ∀ r x : Runner.W, r ≠ 0 → Kern.ans Runner.cloneReq m2 (some (r, x)) m2 →
+        Star ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩
+          (write m2 (slot fp (BitVec.ofNat 64 (s + 2))) 8 r.toNat) := by
   have hroom := hF.room
   have hc' : CodeAt m pc ([ci 1 s a 0] ++ ([ci 1 ((s + 1 : Nat) : Int) f 0] ++
       [ci 24 ((s + 2 : Nat) : Int) s 0])) := hc
-  have s1 := const_step (k := (a : Int)) (codeAt_left hc') hF (by omega) hK2
+  have s1 := const_step16 (k := (a : Int)) (codeAt_left hc') hF (by omega) hK2
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
   let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 (a : Int)).toNat
   have a1 : Agree fp s K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hF1 := hF.agree a1
-  have hc1 := (codeAt_right hc').agree a1 (codeFar_right (n := 1) (k := 2) hcf)
-  have s2 := const_step (j := s + 1) (k := (f : Int)) (codeAt_left hc1) hF1 (by omega) hK2
+  have hc1 : CodeAt m1 (pc + BitVec.ofNat 64 (16 * 1)) ([ci 1 ((s + 1 : Nat) : Int) f 0] ++
+      [ci 24 ((s + 2 : Nat) : Int) s 0]) :=
+    (codeAt_right (a := [ci 1 s a 0]) hc').agree a1 (codeFar_right (n := 1) (k := 2) hcf)
+  have s2 := const_step16 (j := s + 1) (k := (f : Int)) (codeAt_left hc1) hF1 (by omega) hK2
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
   let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 1))) 8 (BitVec.ofInt 64 (f : Int)).toNat
   have a2 : Agree fp s K m1 m2 := agree_write hroom (by omega) (by omega) _
   have hF2 := hF1.agree a2
-  have hc2 : CodeAt m2 (pc + 16 + 16) [ci 24 ((s + 2 : Nat) : Int) s 0] := by
-    have := (codeAt_right (a := [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0])
+  have hc2 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 2)) [ci 24 ((s + 2 : Nat) : Int) s 0] :=
+    (codeAt_right (a := [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0])
       (b := [ci 24 ((s + 2 : Nat) : Int) s 0]) hc).agree (a1.trans a2) (codeFar_right (n := 2) (k := 1) hcf)
-    rwa [show pc + BitVec.ofNat 64 (16 * [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0].length) =
-      pc + 16 + 16 by rw [BitVec.add_assoc]; rfl] at this
-  obtain ⟨r, x, hr0, hk⟩ := CloneOK.ans m2
+  refine ⟨m2, star_cast (s1.trans s2) rfl (by simp only [T.mk.injEq, and_true]; exact pcN pc 1 1 2 rfl),
+    a1.trans a2, ?_⟩
+  intro r x hr0 hk
   have hi := hc2 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have h0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (a : Int)) := by
@@ -248,7 +302,7 @@ theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
   have h1 : m2.rd64 (slot fp (BitVec.ofNat 64 s) + 8) = some (BitVec.ofInt 64 (f : Int)) := by
     rw [show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]
     exact rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))
-  have s3 : Star ⟨pc + 16 + 16, fp⟩ m2 ⟨pc + 16 + 16 + 16, fp⟩
+  have s3 : Star ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ⟨pc + BitVec.ofNat 64 (16 * 2) + 16, fp⟩
       (write m2 (slot fp (BitVec.ofNat 64 (s + 2))) 8 r.toNat) := by
     refine Star.one (run_step (t := ⟨_, fp⟩) hi (by decide) ?_)
     simp only [op]
@@ -261,32 +315,141 @@ theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
     refine f1_run (t := ⟨_, fp⟩) hi ?_
     rw [sx_nat (by omega)]
     exact run_wr64 (wr64_some (hF2.wr _ (by omega)))
-  refine ⟨_, s1.trans (s2.trans (star_cast s3 rfl ?_)), a1.trans (a2.trans (agree_write hroom (by omega)
-    (by omega) _))⟩
-  simp only [T.mk.injEq, and_true]
-  rw [show (16 : Runner.W) = BitVec.ofNat 64 16 from rfl, addr_norm, addr_norm]
+  exact star_cast s3 rfl (by simp only [T.mk.injEq, and_true]; exact pcN pc 2 1 3 rfl)
 
-/-- The spawns of all roots. -/
-theorem spawnC_ok [CloneOK] {fp : Runner.W} {K s : Nat} (hK : s + 3 ≤ K) (hK2 : K < 2 ^ 31) :
+/-- The check of a spawn's answer `r` (in slot `s + 2`): slot `s + 4` becomes `0 <s r`; the guard stops with
+    `cloneCode` when it is zero (a refusal: `r` is not positive) and goes on otherwise (`r` is a thread id). -/
+theorem spawnCheck_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {r : Runner.W}
+    (hc : CodeAt m pc ([ci 1 ((s + 3 : Nat) : Int) 0 0] ++ ([ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int)
+      ((s + 2 : Nat) : Int)] ++ guardC (s + 4) cloneCode s)))
+    (hF : FrameOK m fp K) (hK : s + 8 ≤ K) (hK2 : K < 2 ^ 31) (hcf : CodeFar pc 7 fp K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 (s + 2))) = some r) :
+    (0 < r.toInt → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩ m' ∧ Agree fp (s + 3) K m m') ∧
+    (r.toInt ≤ 0 → Stops ⟨pc, fp⟩ m cloneCode) := by
+  have hroom := hF.room
+  have s1 := const_step16 (j := s + 3) (k := (0 : Int)) (codeAt_left hc) hF (by omega) hK2
+    (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
+  let m1 := write m (slot fp (BitVec.ofNat 64 (s + 3))) 8 (BitVec.ofInt 64 (0 : Int)).toNat
+  have a1 : Agree fp (s + 3) K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
+  have hF1 := hF.agree a1
+  have hc1 : CodeAt m1 (pc + BitVec.ofNat 64 (16 * 1)) ([ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int)
+      ((s + 2 : Nat) : Int)] ++ guardC (s + 4) cloneCode s) :=
+    (codeAt_right (a := [ci 1 ((s + 3 : Nat) : Int) 0 0]) hc).agree a1 (codeFar_right (n := 1) (k := 6) hcf)
+  have hra : m1.rd64 (slot fp (BitVec.ofNat 64 (s + 3))) = some (BitVec.ofInt 64 (0 : Int)) :=
+    rd64_wr64 (wr64_some (hF.wr _ (by omega))) (hF.rd _ (by omega))
+  have hrb : m1.rd64 (slot fp (BitVec.ofNat 64 (s + 2))) = some r := by
+    simp only [m1]
+    rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
+    exact hr
+  have s2 := bin_star (o := 13) (d := s + 4) (a := s + 3) (b := s + 2)
+    (g := fun a b => some (bool (a.slt b))) (K := K) (va := BitVec.ofInt 64 (0 : Int)) (vb := r)
+    (r := spawnFlag r)
+    (codeAt_left (a := [ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int)]) hc1)
+    rfl (by decide) hF1 (by omega) (by omega) (by omega) hK2 hra hrb rfl
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 4))) 8 (spawnFlag r).toNat
+  have a2 : Agree fp (s + 3) K m1 m2 := agree_write hroom (by omega) (by omega) _
+  have hF2 := hF1.agree a2
+  have hglen : (guardC (s + 4) cloneCode s).length = 5 := by
+    simp only [guardC, stopC, sysC, List.length_append, List.length_cons, List.length_nil]
+  have hc2 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1)) (guardC (s + 4) cloneCode s) :=
+    (codeAt_right (a := [ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int)]) hc1).agree a2
+      (by
+        have := codeFar_right (n := 1) (k := 5) (codeFar_right (n := 1) (k := 6) hcf)
+        rwa [BitVec.add_assoc, ← BitVec.ofNat_add] at this ⊢)
+  have hs12 : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1), fp⟩ m2 :=
+    s1.trans s2
+  have hread : m2.rd64 (slot fp (BitVec.ofNat 64 (s + 4))) = some (spawnFlag r) :=
+    rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))
+  have hcf5 : CodeFar (pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1)) 5 fp K := by
+    have := codeFar_right (n := 1) (k := 5) (codeFar_right (n := 1) (k := 6) hcf)
+    exact this
+  refine ⟨fun hpos => ?_, fun hneg => ?_⟩
+  · have hne : spawnFlag r ≠ 0 := by rw [spawnFlag_pos hpos]; decide
+    have pass := guard_pass (fp := fp) hc2 (by omega) hread hne
+    refine ⟨m2, star_cast (hs12.trans pass) rfl ?_, a1.trans a2⟩
+    simp only [T.mk.injEq, and_true, hglen]
+    rw [pcN pc 1 1 2 rfl]
+    exact pcN pc 2 5 7 rfl
+  · have h0 : spawnFlag r = 0 := spawnFlag_nonpos hneg
+    rw [h0] at hread
+    exact Stops.prefix hs12 (guard_stop hc2 hcf5 hF2 (by omega) (by omega) hK2 (by decide) hread)
+
+/-- **One spawn site, for every answer the kernel may give** (a word that is not 0, memory untouched): a positive
+    answer (a thread id) lets the asking thread run through the site; a negative one (a refusal) stops the process
+    with `cloneCode`. The first component is the state before the kernel is asked. -/
+theorem spawn1_cases {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
+    (hc : CodeAt m pc (spawnOne s a f)) (hF : FrameOK m fp K) (hK : s + 8 ≤ K) (hK2 : K < 2 ^ 31)
+    (ha : a < 2 ^ 31) (hf : f < 2 ^ 31) (hcf : CodeFar pc 10 fp K) :
+    ∃ m2, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ∧ Agree fp s K m m2 ∧
+      ∀ r x : Runner.W, r ≠ 0 → Kern.ans Runner.cloneReq m2 (some (r, x)) m2 →
+        (0 < r.toInt → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩ m' ∧ Agree fp s K m m') ∧
+        (r.toInt ≤ 0 → Stops ⟨pc, fp⟩ m cloneCode) := by
+  have hroom := hF.room
+  have hc' : CodeAt m pc ([ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0, ci 24 ((s + 2 : Nat) : Int) s 0] ++
+      ([ci 1 ((s + 3 : Nat) : Int) 0 0] ++ ([ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int)
+        ((s + 2 : Nat) : Int)] ++ guardC (s + 4) cloneCode s))) := hc
+  obtain ⟨m2, s12, a12, hs3⟩ := spawn3_ok (codeAt_left hc') hF (by omega) hK2 ha hf
+    (codeFar_left (k := 7) hcf)
+  refine ⟨m2, s12, a12, fun r x hr0 hk => ?_⟩
+  have s3 := hs3 r x hr0 hk
+  let m3 := write m2 (slot fp (BitVec.ofNat 64 (s + 2))) 8 r.toNat
+  have a3 : Agree fp s K m2 m3 := agree_write hroom (by omega) (by omega) _
+  have hF2 := hF.agree a12
+  have hF3 := hF2.agree a3
+  have hc3 : CodeAt m3 (pc + BitVec.ofNat 64 (16 * 3)) ([ci 1 ((s + 3 : Nat) : Int) 0 0] ++
+      ([ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int)] ++ guardC (s + 4) cloneCode s)) :=
+    (codeAt_right (a := [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0, ci 24 ((s + 2 : Nat) : Int) s 0]) hc').agree
+      (a12.trans a3) (codeFar_right (n := 3) (k := 7) hcf)
+  have hr3 : m3.rd64 (slot fp (BitVec.ofNat 64 (s + 2))) = some r :=
+    rd64_wr64 (wr64_some (hF2.wr _ (by omega))) (hF2.rd _ (by omega))
+  obtain ⟨pos, neg⟩ := spawnCheck_ok (s := s) hc3 hF3 hK hK2 (codeFar_right (n := 3) (k := 7) hcf) hr3
+  have s123 : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m3 := s12.trans s3
+  refine ⟨fun hp => ?_, fun hn => ?_⟩
+  · obtain ⟨m', s4, a4⟩ := pos hp
+    exact ⟨m', star_cast (s123.trans s4) rfl (by simp only [T.mk.injEq, and_true]; exact pcN pc 3 7 10 rfl),
+      a12.trans (a3.trans (a4.mono (Nat.le_add_right s 3)))⟩
+  · exact Stops.prefix s123 (neg hn)
+
+/-- **One spawn site**: under the kernel's answer (`CloneAnswers`) the asking thread runs through the site, or the
+    process stops with the declared `cloneCode` -- a refused clone is never a silent absence of the thread. -/
+theorem spawn1_ok [CloneAnswers] {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
+    (hc : CodeAt m pc (spawnOne s a f)) (hF : FrameOK m fp K) (hK : s + 8 ≤ K) (hK2 : K < 2 ^ 31)
+    (ha : a < 2 ^ 31) (hf : f < 2 ^ 31) (hcf : CodeFar pc 10 fp K) :
+    (∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩ m' ∧ Agree fp s K m m') ∨
+      Stops ⟨pc, fp⟩ m cloneCode := by
+  obtain ⟨m2, _, _, hcases⟩ := spawn1_cases hc hF hK hK2 ha hf hcf
+  obtain ⟨r, x, hr0, hk⟩ := CloneAnswers.ans m2
+  obtain ⟨pos, neg⟩ := hcases r x hr0 hk
+  rcases Int.lt_or_le 0 r.toInt with h | h
+  · exact Or.inl (pos h)
+  · exact Or.inr (neg h)
+
+/-- The spawns of all roots: every site is run through, or the process stops with `cloneCode`. -/
+theorem spawnC_ok [CloneAnswers] {fp : Runner.W} {K s : Nat} (hK : s + 8 ≤ K) (hK2 : K < 2 ^ 31) :
     (l : List (Nat × Nat)) → (∀ x ∈ l, x.1 < 2 ^ 31 ∧ x.2 < 2 ^ 31) → (m : Runner.Mem) → (pc : Runner.W) →
     CodeAt m pc (spawnC s l) → FrameOK m fp K → CodeFar pc (spawnC s l).length fp K →
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (spawnC s l).length), fp⟩ m' ∧ Agree fp s K m m'
-  | [], _, m, pc, _, _, _ => ⟨m, by simpa [spawnC] using Star.refl _ m, Agree.refl _ _ _ _⟩
+    (∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (spawnC s l).length), fp⟩ m' ∧ Agree fp s K m m') ∨
+      Stops ⟨pc, fp⟩ m cloneCode
+  | [], _, m, pc, _, _, _ => Or.inl ⟨m, by simpa [spawnC] using Star.refl _ m, Agree.refl _ _ _ _⟩
   | (a, f) :: r, hl, m, pc, hc, hF, hcf => by
     have h0 := hl (a, f) (by simp)
-    have hc' : CodeAt m pc ([ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0,
-        ci 24 ((s + 2 : Nat) : Int) s 0] ++ spawnC s r) := hc
-    have hcf' : CodeFar pc (3 + (spawnC s r).length) fp K := by
+    have hc' : CodeAt m pc (spawnOne s a f ++ spawnC s r) := hc
+    have hcf' : CodeFar pc ((spawnOne s a f).length + (spawnC s r).length) fp K := by
       have h := hcf
-      simp only [spawnC, List.length_append, List.length_cons, List.length_nil] at h
-      rwa [show 0 + 1 + 1 + 1 + (spawnC s r).length = 3 + (spawnC s r).length by omega] at h
-    obtain ⟨m1, s1, a1⟩ := spawn1_ok (codeAt_left hc') hF hK hK2 h0.1 h0.2 (codeFar_left hcf')
-    have hc1 := (codeAt_right hc').agree a1 (codeFar_right hcf')
-    obtain ⟨m2, s2, a2⟩ := spawnC_ok hK hK2 r (fun x hx => hl x (by simp [hx])) m1 _ hc1 (hF.agree a1)
-      (codeFar_right hcf')
-    refine ⟨m2, s1.trans (star_cast s2 (by simp) ?_), a1.trans a2⟩
-    simp only [T.mk.injEq, and_true, spawnC, List.length_append, List.length_cons, List.length_nil, addr_norm]
-    congr 2
-    omega
+      rw [spawnC_cons, List.length_append] at h
+      exact h
+    rw [spawnOne_len] at hcf'
+    rcases spawn1_ok (codeAt_left hc') hF hK hK2 h0.1 h0.2 (codeFar_left hcf') with ⟨m1, s1, a1⟩ | hstop
+    · have hc1 : CodeAt m1 (pc + BitVec.ofNat 64 (16 * 10)) (spawnC s r) := by
+        have := (codeAt_right hc').agree a1 (codeFar_right (n := 10) (k := (spawnC s r).length) hcf')
+        rwa [spawnOne_len] at this
+      rcases spawnC_ok hK hK2 r (fun x hx => hl x (by simp [hx])) m1 _ hc1 (hF.agree a1)
+        (codeFar_right hcf') with ⟨m2, s2, a2⟩ | hstop
+      · refine Or.inl ⟨m2, s1.trans (star_cast s2 rfl ?_), a1.trans a2⟩
+        simp only [T.mk.injEq, and_true, spawnC_cons, List.length_append, spawnOne_len, addr_norm]
+        congr 2
+        omega
+      · exact Or.inr (Stops.prefix s1 hstop)
+    · exact Or.inr hstop
 
 end Gabbro.Stage0.Senke

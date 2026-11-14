@@ -99,7 +99,7 @@ theorem stage0_c16_sondenachweis : checkChecksSonde.all (fun d =>
 
 /-- Every emitted image -- including check-carrying units -- carries the
     inherited IR execution certificate for its exact source program. -/
-theorem emitted_check_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem emitted_check_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : output.Correct :=
   output.correct
@@ -107,7 +107,7 @@ theorem emitted_check_correct [Runner.IR.Kern] [Senke.CloneOK]
 /-- The exact emitted source program's ordinary IR simulation and its
     completed actual-sample history share one declaration and program. Ghost
     completion records retirement, not truth of the check's prose claim. -/
-theorem emitted_check_history_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem emitted_check_history_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options)
     (machine : RufMaschineG (declOf output.compiled.unit)) (thread : Faden)

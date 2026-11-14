@@ -75,7 +75,7 @@ theorem accepted_image : emit text 256 = .ok output :=
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- The stored gate certificate for this unit. -/
 theorem gate_checked := output.compiled.gateChecked

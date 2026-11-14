@@ -23,6 +23,7 @@ public import Stage0.Zeugen.Pruefung.GoalCheckerWitness
 public import Stage0.Zeugen.Pruefung.FrontendDefectsZeuge
 public import Stage0.Zeugen.Ablehnung.AccWitness
 public import Stage0.Zeugen.Annahme.AlignedStaticWitness
+public import Stage0.Zeugen.Pipeline.CloneStartupWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
 public import Stage0.Zeugen.Annahme.NamedSpaceWitness
 public import Stage0.Senke.Ausdruck
@@ -47,6 +48,7 @@ public import Stage0.Senke.Rekursion
 public import Stage0.Senke.Images.Bild
 public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Images.BildSatz
+public import Stage0.Senke.Images.SpawnImage
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Bild.Ziel
 public import Stage0.Senke.Bild.Emitted
