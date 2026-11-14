@@ -20,7 +20,7 @@ theorem BareArms.exec {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (R
     {reasons : GrundArms D V false Γ Λ Λ cs.length} (h : BareArms arms reasons)
     (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) :
     execArms O passes R arms v σ ρ = execGrund O passes R reasons v.1 σ ρ := by
-  induction h generalizing v with
+  induction h with
   | nil => exact (Nat.not_lt_zero _ v.1.isLt).elim
   | @cons cs b arms reasons h ih =>
     rcases v with ⟨⟨i, hi⟩, payload⟩
@@ -54,7 +54,7 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
         have hBare' : cs.all Option.isNone = true := by simpa only [List.all_cons, Option.isNone_none, Bool.true_and] using hBare
         change lowArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (none :: cs) binders ss = .ok (arms, tail) at h
         simp only [lowArmsStep, lowStufe_seq, lowStufe_arms] at h
-        cases hb : lowSeqL u c Γ fn fuel Λ [] ss with
+        cases hb : lowSeqL (l := false) u c Γ fn fuel Λ [] ss with
         | error err => simp only [hb, bind, Except.bind] at h <;> cases h
         | ok result =>
           obtain ⟨⟨out, body⟩, remaining⟩ := result
@@ -62,9 +62,12 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
           cases cs with
           | nil =>
             by_cases same : out = Λ
-            · simp only [same, ↓reduceDIte] at h
-              subst out
-              cases h
+            · subst out
+              simp only [↓reduceDIte] at h
+              change Except.ok (Arms.cons body .nil, remaining) = .ok (arms, tail) at h
+              obtain ⟨harms, htail⟩ := Prod.mk.inj (Except.ok.inj h)
+              subst arms
+              subst tail
               refine ⟨.cons body .nil, ?_, .cons .nil⟩
               change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] _ ss = _
               simp only [lowGArmsStep, lowStufe_seq, hb, bind, Except.bind, ↓reduceDIte]
@@ -75,22 +78,24 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
             | cons marker rest =>
               cases marker <;> try { cases h }
               case ifElse =>
-                cases hrest : lowArmsT u c Γ fn fuel Λ [] (head :: cs) (binders.drop 1) rest with
+                cases hrest : lowArmsT (l := false) u c Γ fn fuel Λ [] (head :: cs) (binders.drop 1) rest with
                 | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
                 | ok result =>
                   obtain ⟨restArms, restTail⟩ := result
-                  simp only [hrest, bind, Except.bind] at h
                   by_cases same : out = Λ
-                  · simp only [same, ↓reduceDIte] at h
-                    subst out
-                    cases h
+                  · subst out
+                    simp only [hrest, bind, Except.bind, ↓reduceDIte] at h
+                    change Except.ok (Arms.cons body restArms, restTail) = .ok (arms, tail) at h
+                    obtain ⟨harms, htail⟩ := Prod.mk.inj (Except.ok.inj h)
+                    subst arms
+                    subst tail
                     obtain ⟨reasons, hReasons, hRel⟩ := ih fn Λ (head :: cs) (binders.drop 1)
                       rest restArms restTail hBare' (by first | exact hrest | rfl | simp_all)
                     refine ⟨.cons body reasons, ?_, .cons hRel⟩
                     change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] _ ss = _
                     simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms, hb, bind, Except.bind,
                       hReasons, ↓reduceDIte]
-                  · simp only [same, ↓reduceDIte] at h <;> cases h
+                  · simp only [hrest, bind, Except.bind, same, ↓reduceDIte] at h <;> cases h
 
 /-- Only local, bare tag subjects enter this reader; statics and payload cases remain refused. -/
 theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
@@ -110,11 +115,11 @@ theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
     rw [paramPos_find_none _ _ _ hj] at ht
     cases ht
   | ok j =>
-    rw [hj] at h
+    simp only [hj] at h
     unfold valueParamTy at ht
     rw [paramPos_find _ _ _ hj] at ht
     cases hp : fn.params[j]? with
-    | none => rw [hp] at h <;> cases h
+    | none => simp only [hp] at ht; cases ht
     | some entry =>
       obtain ⟨name, ty⟩ := entry
       rw [hp] at ht
@@ -127,7 +132,7 @@ theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
         | error err => simp only [hv] at h <;> cases h
         | ok v =>
           simp only [hv] at h
-          cases ha : lowArmsT u c Γ fn fuel Λ [] cs binders ss with
+          cases ha : lowArmsT (l := false) u c Γ fn fuel Λ [] cs binders ss with
           | error err => simp only [ha] at h <;> cases h
           | ok result =>
             obtain ⟨arms, remaining⟩ := result
