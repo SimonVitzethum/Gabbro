@@ -173,8 +173,8 @@ def extendedEnd (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | ok next env =>
               rw [result] at ready
               exact generated_sound (tails env) runtime next ready
-          | zurueck next value => simpa only [result, Goals.holds, EndFlow] using ready
-          | why next reason => simpa only [result, Goals.holds, EndFlow] using ready
+          | zurueck next value => simpa only [result, Goals.holds, EndFlow, headGoals, finalGoals] using ready
+          | why next reason => simpa only [result, Goals.holds, EndFlow, headGoals, finalGoals] using ready
           | leave h next env => simpa only [result, Goals.holds, EndFlow, headGoals, finalGoals, denotes] using ready
           | next h next env => simpa only [result, Goals.holds, EndFlow, headGoals, finalGoals, denotes] using ready
           | logik error => trivial
