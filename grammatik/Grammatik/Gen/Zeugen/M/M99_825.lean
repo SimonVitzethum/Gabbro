@@ -70,16 +70,17 @@ def P : Programm z.deklaration := h0.programm
 /-- The test as a program of the source. -/
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)
 
-/-- This fixture passes the structural cells. Full acceptance additionally
-    requires the invariant and contract gates, which may refuse this body. -/
-theorem e_gueltig : e.gueltig = true ↔
+/-- Every structural cell is admitted; full checker acceptance is separate. -/
+theorem e_strukturell : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
+  change ∀ z ∈ e.zellen, gutTafel z = true
+  decide
+
+/-- Full acceptance additionally requires the invariant and contract gates. -/
+theorem e_gueltig_iff_gates : e.gueltig = true ↔
     @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs (fun _ => none) {} e.ls = true ∧
     @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs (fun _ => none) {} (fun _ => none) = true := by
   rw [einsatz_akzeptiert e]
-  have structural : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
-    change ∀ z ∈ e.zellen, gutTafel z = true
-    decide
-  simp only [structural, true_and]
+  simp only [e_strukturell, true_and]
 
 theorem e_hat : ∀ x ∈ ([⟨2, 0, true, [false, false, true, false]⟩, ⟨2, 2, false, [false, true, true]⟩, ⟨2, 3, false, [false, false, true]⟩] : List Zelle), e.Hat x := by decide
 
