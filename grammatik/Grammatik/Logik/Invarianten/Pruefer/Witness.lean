@@ -84,6 +84,11 @@ theorem breaking_execution_zeuge :
 
 theorem restoring_accepted_zeuge : invariantVCB unit.P unit.S [()] = true := by decide +kernel
 
+/-- The generated idle root also has a satisfiable VC gate. Its return owes
+    no writer invariant; the translated real writer still restores zero. -/
+theorem idle_accepted_zeuge :
+    invariantVCB unit.P.mitRuhe unit.S.mitRuhe (fsRuhe [()]) = true := by decide +kernel
+
 theorem breaking_refused_zeuge : invariantVCB badUnit.P badUnit.S [()] = false := by decide +kernel
 
 /-- A writer restoring zero is accepted even though zero is not universally
