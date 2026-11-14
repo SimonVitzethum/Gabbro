@@ -267,9 +267,9 @@ def alleZellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.L
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : List Zelle :=
   (List.finRange 11).flatMap (zellen P S fs ls cs ws)
 
-/-- **Step 1.** The Lean model's Bool accepts a program exactly when the program has no bad cell. This is what makes
-    the checker of the goal theorem a CONJUNCTIVE checker over the cells (the class of Theorems 4 and 5). The
-    accumulator admission (C15) has no cells in this coverage; it rides beside. -/
+/-- **Step 1.** The eleven covered structural components are the conjunction
+    over the cells. Accumulator admission (C15) and the invariant/contract gates have no cells
+    in this coverage; all three are retained beside the cell conjunction. -/
 theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
@@ -277,34 +277,36 @@ theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
     AkzeptiertX P S fs ls cs ws aks = true ↔
       (∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false) ∧
-        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true := by
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true ∧
+        Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true ∧
+        Vertraege.Pruefer.KontrakteGeprueftB P S fs = true := by
   rw [akzeptiertX_iff]
   constructor
-  · intro h
-    refine ⟨?_, h.2.1⟩
+  · rintro ⟨h, hAkku, hReset, hI, hK⟩
+    refine ⟨?_, hAkku, hI, hK⟩
     have verdict : ∀ c : Fin 11, urteilAusZellen P S fs ls cs ws c = true := by
       intro c
       by_cases hc : c.val < 10
       · let old : Fin 10 := ⟨c.val, hc⟩
         have same : old.castSucc = c := Fin.ext rfl
         rw [← same, urteil_komp P S fs ls cs ws hvoll hls hcs old]
-        exact h.1 old
+        exact h old
       · have upper := c.isLt
         have same : c = (10 : Fin 11) := Fin.ext (by omega)
         rw [same, urteil_10]
-        exact h.2.2
+        exact hReset
     intro z hz
     obtain ⟨c, _, hzc⟩ := List.mem_flatMap.1 hz
     have h2 := (List.all_eq_true.1 (verdict c)) z hzc
     simpa using h2
-  · intro h
+  · rintro ⟨h, hAkku, hI, hK⟩
     have verdict : ∀ c : Fin 11, urteilAusZellen P S fs ls cs ws c = true := by
       intro c
       apply List.all_eq_true.2
       intro z hz
-      have := h.1 z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
+      have := h z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
       simp only [this, Bool.not_false]
-    refine ⟨?_, h.2, ?_⟩
+    refine ⟨?_, hAkku, ?_, hI, hK⟩
     · intro c
       rw [← urteil_komp P S fs ls cs ws hvoll hls hcs c]
       exact verdict c.castSucc

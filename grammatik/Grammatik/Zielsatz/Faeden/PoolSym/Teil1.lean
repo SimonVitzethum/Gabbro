@@ -153,17 +153,18 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
   unfold getrenntW getrenntWVor
   simp only [hm, Bool.not_false, Bool.and_true]
 
-/-- **(a) OF THE REVIEWED DIFF: no old verdict moves.** On every start list the old
-    checker accepted (it demanded `ws.Nodup`) the new Bool IS the old Bool; and the old
-    Bool accepts only distinct starts. So every unit accepted before is accepted now, and
-    every unit refused before with distinct starts is refused now. Since Opus agent H
+/-- On distinct starts the pool extension preserves every old structural check.
+    The current Bool also requires the gates added after that extension. Since Opus agent H
     (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
     is `true` on every program with no handler (`maskenB_ohne`). Since C18 it also has the
-    reset component `resetB`; it is `true` on every program with no zero-less array static. -/
+    reset component `resetB`; it is `true` on every program with no zero-less array static.
+    The invariant gate is retained explicitly: the old structural checks do not imply it. -/
 theorem akzeptiert_nodup_gleich [DecidableEq D.Ax]
     {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
-    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs) := by
+    Akzeptiert P S fs ls cs ws =
+      (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs &&
+        Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls) := by
   have hSchnitt : schnittstellenB P fs = true := by
     refine List.all_eq_true.mpr fun f _ => List.all_eq_true.mpr fun x _ => ?_
     cases x with
