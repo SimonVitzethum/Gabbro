@@ -168,7 +168,7 @@ def encodeObservation (τ : Ty) (key : Observation D) (value : World D → Wert 
         correct := fun world => by
           change value world = true ↔ assignment world key = 1
           rw [same world]
-          cases actual : value world <;> simp [scalarValue, actual, wahr?]
+          cases actual : value world <;> simp [scalarValue, actual, wahr?] <;> rfl
         supported := by
           simp [PayloadSupported, payloadObservations, LProp.freeVariables,
             LTerm.variables, ScalarObservation, typed] }
