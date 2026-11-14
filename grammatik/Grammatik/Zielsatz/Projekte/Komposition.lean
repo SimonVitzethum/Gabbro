@@ -59,14 +59,30 @@ def komponiereP (B : Programm D) (ps : List (Projekt D)) : Programm D :=
 def qAlle (ps : List (Projekt D)) : AxEns D :=
   fun a σ v => ps.all (fun p => p.E.Q a σ v)
 
+/-- Retain the link declaration's source representation whenever it describes
+    the composed summary. Its dependent type prevents attaching a representation
+    of a different predicate. Linking is a semantic construction here: this
+    equality test is noncomputable, not an executable source/checker procedure.
+    A changed summary needs a new representation before the unit checker accepts. -/
+noncomputable def axiomSourcesVon (B : Einheit D) (ps : List (Projekt D)) :
+    Option (Vertraege.Pruefer.AxiomSources (qAlle ps)) := by
+  classical
+  exact if same : B.Q = qAlle ps then same ▸ B.axiomSources else none
+
 /-- **The composed unit.** Checks are lifted per project (each project's declared
     checks travel with it); their joint admission over the composed program is the
     link check's `pruef` field (`BindeSpec`): cross-unit gate consumption and name
-    separation, without which the link is refused. -/
-def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
+    separation, without which the link is refused. Checker metadata comes from
+    the link declaration and is checked against the composed bodies; oracle
+    source correspondence is retained exactly when the summary is unchanged. -/
+noncomputable def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   P := komponiereP B.P ps
   S := B.S
   lockFormulas := B.lockFormulas
+  loopHints := B.loopHints
+  measure := B.measure
+  axiomSources := axiomSourcesVon B ps
+  pointerSignatures := B.pointerSignatures
   Q := qAlle ps
   starts := ps.flatMap (·.E.starts)
   sp0 := B.sp0

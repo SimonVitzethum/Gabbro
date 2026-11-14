@@ -1,7 +1,8 @@
 /- C08 replay-blocker regression: the unused false software summary still
    makes the old global oracle class empty, but the conditional body class
-   is inhabited. The false body post is now refused by premise (b); a true
-   body post remains provable. No goal or machine semantics is changed. -/
+   is inhabited. The false body post fails premise (b) and the concrete
+   checker; a true body post is accepted with complete source metadata.
+   No goal or machine semantics is changed. -/
 module
 
 public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
@@ -89,7 +90,19 @@ def goodProgram : Programm decl :=
 
 def goodUnit : Einheit decl :=
   { unit with
-    P := goodProgram }
+    P := goodProgram
+    axiomSources := some
+      { items := [()]
+        complete := fun a => by cases a; exact List.mem_cons_self
+        resources := fun _ => []
+        expression := fun _ => .fls
+        correct := fun _ _ _ => rfl }
+    pointerSignatures := some
+      { count := 1
+        outside := fun _ n beyond => by
+          change decide (0 = n) = false
+          simp only [decide_eq_false_iff_not]
+          omega } }
 
 theorem good_user : NutzerPflichtA goodUnit where
   logik := by
@@ -113,8 +126,22 @@ theorem good_user : NutzerPflichtA goodUnit where
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }
 
-/-- Premise (a) does not check logical truth of a function's ensures. -/
-theorem checker : akzeptiertX_pruefer.akzeptiert unit [()] [] [] = true := by
+/-- The false post fails the contract gate before missing source metadata
+    could cause a refusal of its own. -/
+theorem contract_refused :
+    Vertraege.Pruefer.KontrakteGeprueftB program unit.S [()] = false := by
+  decide
+
+/-- A false body post is refused by the strengthened concrete checker. -/
+theorem checker : akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false := by
+  have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide
+  change (_ && nutzerPflichtGeprueftB unit [()] []) = false
+  rw [refused, Bool.and_false]
+
+/-- A declared software item does not prevent acceptance when its caller
+    immediately returns under a true function contract. Source metadata is
+    supplied explicitly, including the finite pointer-interface table. -/
+theorem good_checker : akzeptiertX_pruefer.akzeptiert goodUnit [()] [] [] = true := by
   have hvoll : ∀ f : decl.Fn, f ∈ [()] := fun f => by
     cases f
     exact List.mem_singleton_self _
@@ -179,17 +206,27 @@ private theorem returnedHeads_start (sp : Speicher decl.mitRuhe)
       simp only [RufStartG, hi]
       exact ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
 
-/-- No software call head is reachable, for any binding, budget or runtime. -/
-theorem call_sites : CallSitePflicht unit := by
+private theorem returnedHeads_call_sites (E : Einheit decl)
+    (starts_return : ∀ sp init, ReturnedHeads (RufStartG E.P.mitRuhe sp init)) :
+    CallSitePflicht E := by
   intro O H hh hf passes sp init hl a σ ρ hreach hsw
   obtain ⟨M, presented, t, hr, _, hk⟩ := hreach
   have hm : ReturnedHeads M := by
     induction hr with
-    | start => exact returnedHeads_start sp init
+    | start => exact starts_return sp init
     | schritt M M' u _ hs ih => exact returnedHeads_gx ih hs
   have hn := returnedHeads_no_call (M := mitSpeicher M presented) hm t
   rw [hn] at hk
   cases hk
+
+/-- No software call head is reachable, for any binding, budget or runtime. -/
+theorem call_sites : CallSitePflicht unit :=
+  returnedHeads_call_sites unit returnedHeads_start
+
+/-- The accepted fixture also has no reachable foreign-call head. Changing
+    its function post does not change its immediate-return start bodies. -/
+theorem good_call_sites : CallSitePflicht goodUnit :=
+  returnedHeads_call_sites goodUnit returnedHeads_start
 
 /-- The actual runtime runs the sole declared start once and idles elsewhere. -/
 def initial (t : Faden) :
@@ -222,7 +259,8 @@ theorem start_post_fails :
   exact Bool.false_ne_true hp
 
 /-- The original counterexample retains its independent call-site, binding
-    and cover duties; precisely the strengthened body duty now excludes it. -/
+    and cover duties; its strengthened body duty is false. The concrete
+    checker independently refuses it (`checker`). -/
 theorem counterexample_excluded :
     CallSitePflicht unit ∧ PostDeckt unit ∧ ForeignVertrag unit traceOracle ∧
       AxVertragOP (PreQ unit.P) unit.Q traceOracle ∧ ¬ NutzerPflichtA unit :=

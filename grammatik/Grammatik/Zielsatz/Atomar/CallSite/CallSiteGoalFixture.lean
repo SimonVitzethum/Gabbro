@@ -1,6 +1,6 @@
-/- C08 R3b: THE FIXTURE OF THE CALL-SITE GOAL WITNESS (`CallSiteGoalZeuge`).
+/- C08 R3b: REFUSED CALL-SITE REGRESSION FIXTURE (`CallSiteGoalZeuge`).
 
-   The smallest unit with a software foreign item that the checker accepts and the runtime
+   A refused regression unit with a software foreign item that the runtime
    starts: the one-function, memory-free declaration of `CallSiteZeuge`, now with a VALUE
    answer. The item `g(x : 0..1) -> 0..1` is declared software with the contract
    `requires x != 0`, `ensures result == 1`, and the declared summary `Q` "the answer is 1".
@@ -10,9 +10,11 @@
    holds, and breaks the summary at `x = 0`, so it is no oracle of the full premise of
    `GabbroZielVoll`.
 
-   Proved here: (a) the checker Bool, component by component (each kernel computation over the
-   one body); `PostDeckt`, `ForeignVertrag` for `echo`, `HardwareAnnahmenHw`; the pre is
-   satisfiable and falsifiable; `echo` breaks the full summary. -/
+   The concrete checker refuses its foreign-call body with
+   "contract end block is outside the checked control fragment". The semantic
+   `PostDeckt`, `ForeignVertrag` for `echo` and `HardwareAnnahmenHw` witnesses remain:
+   the pre is satisfiable and falsifiable, and `echo` breaks the full summary.
+   `CallSiteGoalZeuge` uses the separate accepted immediate-return fixture. -/
 module
 
 public import Grammatik.Zielsatz.Kern.Spec.Fremd
@@ -271,13 +273,17 @@ theorem fs_voll : ∀ g : wD.Fn, g ∈ [()] := fun g => by
   cases g
   exact List.mem_singleton_self _
 
-/-- **(a)**: `akzeptiertX_pruefer` accepts the unit. The Bool is split into its components,
-    each decided over the one body (no kernel computation over the whole unit at once). -/
-theorem checker : akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true := by
-  simp only [akzeptiertX_pruefer, AkzeptiertX, Bool.and_eq_true]
-  and_intros
-  all_goals first
-    | exact (schnittstellenB_iff fs_voll).mpr (schnittstellen_standard _ _)
-    | decide
+/-- Exact diagnostic: even this typed call with a proved software binding is
+    outside the current contract VC generator's fragment. -/
+theorem contract_refusal :
+    Vertraege.Pruefer.contractVerdict wP wE.S [()] wE.lockFormulas false =
+      .error "contract end block is outside the checked control fragment" := by
+  decide
+
+/-- The concrete checker refuses the foreign-call regression fixture. -/
+theorem checker : akzeptiertX_pruefer.akzeptiert wE [()] [] [] = false := by
+  have refused : nutzerPflichtGeprueftB wE [()] [] = false := by decide
+  change (_ && nutzerPflichtGeprueftB wE [()] []) = false
+  rw [refused, Bool.and_false]
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal
