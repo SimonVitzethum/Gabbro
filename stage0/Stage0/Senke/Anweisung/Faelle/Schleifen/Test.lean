@@ -74,7 +74,7 @@ theorem test_run {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
     rw [trueStart] at branch
     have jump := jmp_go (fp := x.fp) final.exitJump (retry_displacements _ _ _ x.sized).1
     rw [show (16 * ((x.body.length : Int) + x.overflow.length + 4)) =
-      ((16 * (x.body.length + x.overflow.length + 4) : Nat) : Int) by omega, trueTarget] at jump
+      16 * ((x.body.length + x.overflow.length + 4 : Nat) : Int) by omega, trueTarget] at jump
     exact ⟨m1, run.trans (branch.trans jump), changed, kept, final⟩
 
 end Gabbro.Stage0.Senke.Retrying.Image
