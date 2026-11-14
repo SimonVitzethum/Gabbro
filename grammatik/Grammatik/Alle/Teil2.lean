@@ -344,6 +344,7 @@ public import Grammatik.Logik.Invarianten.Frag.Witness
 public import Grammatik.Logik.Invarianten.Elim.Witness
 public import Grammatik.Logik.Invarianten.Korrekt.Witness
 public import Grammatik.Logik.Invarianten.Modell.DecisionWitness
+public import Grammatik.Logik.Invarianten.Modell.ExecutionWitness
 public import Grammatik.Logik.WP.BoundedWhile
 public import Grammatik.Logik.WP.BoundedWhileWitness
 public import Grammatik.Logik.WP.Zeuge
