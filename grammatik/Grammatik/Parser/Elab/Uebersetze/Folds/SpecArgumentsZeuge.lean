@@ -1,8 +1,8 @@
-/- Witnesses of the spec-argument check (`uSpecArgs`, `uSpecArgument`): each claim is decided by the kernel. -/
+/- Witnesses of the spec-argument check (`uSpecArgs`, `uSpecArgument`). -/
 module
 public import Grammatik.Parser.Elab.Uebersetze.Folds.SpecArguments
 public import Grammatik.Parser.Spec.Contract
-import Grammatik.Kern.Taktik.KernelRfl
+import Lean.Elab.Tactic.Cbv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,6 +38,8 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
+attribute [local cbv_eval] strEq_apply_eq_decide
+
 set_option maxRecDepth 100000
 
 def argumentContext : UCtx :=
@@ -55,7 +57,7 @@ theorem spec_argument_range_zeuge :
       .error "spec small: argument 1 does not fit its parameter type" ∧
     uSpecArgs 20 argumentContext (.call "outer" []) =
       .error "spec small: argument 1 does not fit its parameter type" := by
-  decide +kernel
+  cbv
 
 /-- Boolean arguments use the Boolean reader; aggregates and missing arguments refuse. -/
 theorem spec_argument_types_zeuge :
@@ -66,14 +68,14 @@ theorem spec_argument_types_zeuge :
       .error "spec array: argument 1 does not fit its parameter type" ∧
     uSpecArgs 20 argumentContext (.call "small" []) =
       .error "spec small: argument 1 does not fit its parameter type" := by
-  decide +kernel
+  cbv
 
 /-- A narrowing conversion cannot manufacture a parameter interval for an ignored argument. -/
 theorem spec_argument_conversion_zeuge :
     uSpecArgument argumentContext "small" 1 (.atom "u32") (.call "u8" [.lit 1000]) =
       .error "spec small: argument 1 does not fit its parameter type" ∧
     uSpecArgument argumentContext "small" 1 (.atom "u32") (.call "u8" [.lit 7]) = .ok () := by
-  decide +kernel
+  cbv
 
 /-- The count binder shadows the smaller outer `value`; all 102 indices must fit. -/
 theorem spec_count_argument_refused_zeuge :
@@ -82,7 +84,7 @@ theorem spec_count_argument_refused_zeuge :
       (.ext .count ["value", "slots"]
         [.variable "T", .call "small" [.variable "value"]]) =
       .error "spec small: argument 1 does not fit its parameter type" := by
-  kernel_rfl
+  cbv
 
 /-- The same count is accepted when its largest bound index is exactly 100. -/
 theorem spec_count_argument_accepted_zeuge :
@@ -90,7 +92,7 @@ theorem spec_count_argument_accepted_zeuge :
       tabs := [{ name := "T", count := 101, cols := [] }]}
       (.ext .count ["value", "slots"]
         [.variable "T", .call "small" [.variable "value"]]) = .ok () := by
-  kernel_rfl
+  cbv
 
 def samePredicate : SExpr :=
   .ext .all ["y", "slots"] [.variable "T", .bin "==" (.variable "x") (.variable "y")]
@@ -108,20 +110,20 @@ def captureContext : UCtx :=
 theorem spec_capture_uninlined_zeuge :
     uSpecEin captureContext.specs 20 (.call "same" [.variable "y"]) =
       .call "same" [.variable "y"] := by
-  kernel_rfl
+  cbv
 
 /-- The argument gate reports the precise capture error before substituting. -/
 theorem spec_capture_refused_zeuge :
     uSpecArgs 20 captureContext (.call "same" [.variable "y"]) =
       .error "spec same: argument 1 names a binder of the predicate" := by
-  kernel_rfl
+  cbv
 
 /-- A remaining spec call has no ordinary predicate G form, even with a declared spec. -/
 theorem spec_capture_downstream_refused_zeuge :
     uSichert captureContext
       (uSpecEin captureContext.specs 20 (.call "same" [.variable "y"])) =
       .error "ensures clause without G form" := by
-  kernel_rfl
+  cbv
 
 /-- A non-clashing use still passes the type gate and inlines to the original quantifier. -/
 theorem spec_noncapturing_inline_zeuge :
@@ -129,7 +131,7 @@ theorem spec_noncapturing_inline_zeuge :
     uSpecEin captureContext.specs 20 (.call "same" [.variable "z"]) =
       .ext .all ["y", "slots"]
         [.variable "T", .bin "==" (.variable "z") (.variable "y")] := by
-  exact ⟨by kernel_rfl, by kernel_rfl⟩
+  constructor <;> cbv
 
 /-- The shared inliner preserves the capturing call in generic-spec contract predicates too. -/
 theorem spec_contract_capture_zeuge :
@@ -137,7 +139,7 @@ theorem spec_contract_capture_zeuge :
       { art := "spec", name := "contract", params := [], res := some (.atom "bool"),
         fehler := none, klauseln := [.gives (.call "same" [.variable "y"])] } =
       [.call "same" [.variable "y"]] := by
-  kernel_rfl
+  cbv
 
 /-- All quantifiers and every fold kind participate, including binders below an operand. -/
 theorem spec_capture_binder_kinds_zeuge :
@@ -145,13 +147,13 @@ theorem spec_capture_binder_kinds_zeuge :
       let body := SExpr.built "wrapper" [.ext kind ["y", "slots"] [.variable "T", .tru]]
       beqSExpr (uSpecEin [("g", ["x"], body)] 20 (.call "g" [.variable "y"]))
         (.call "g" [.variable "y"])) = true := by
-  kernel_rfl
+  cbv
 
 /-- Reusing name collection must not hide the argument's outer-scope domain name. -/
 theorem spec_capture_argument_domain_zeuge :
     specArgumentCaptures samePredicate
       (.ext .count ["y", "elems"] [.variable "y", .tru]) = true := by
-  kernel_rfl
+  cbv
 
 def deferredIndexContext : UCtx :=
   { argumentContext with
@@ -168,14 +170,14 @@ theorem fold_deferred_table_index_zeuge :
     uSpecArgument deferredIndexContext "small" 1 (.atom "u8")
       (.field (.index (.field (.variable "T") "slots") (.variable "i")) "v") =
       .error "spec small: argument 1 does not fit its parameter type" := by
-  exact ⟨by kernel_rfl, by kernel_rfl, by kernel_rfl⟩
+  refine ⟨?_, ?_, ?_⟩ <;> cbv
 
 /-- Supplying real in-bounds index evidence keeps the spec argument accepted. -/
 theorem fold_resolved_table_index_zeuge :
     uSpecArgument {deferredIndexContext with types := [.int 0 9], unknownRanges := []}
       "small" 1 (.atom "u8")
       (.field (.index (.field (.variable "T") "slots") (.variable "i")) "v") = .ok () := by
-  kernel_rfl
+  cbv
 
 /-- Array element ranges have the same split; the strict check also survives arithmetic nesting. -/
 theorem fold_deferred_array_index_zeuge :
@@ -184,6 +186,6 @@ theorem fold_deferred_array_index_zeuge :
     foldRange ctx (.add (.idx (.param "a") (.param "i")) (.lit 1)) = some (3, 8) ∧
     foldRangeWithIndexCheck ctx true
       (.add (.idx (.param "a") (.param "i")) (.lit 1)) = none := by
-  exact ⟨by kernel_rfl, by kernel_rfl⟩
+  constructor <;> cbv
 
 end Gabbro.Grammatik.Parser.Uebersetze
