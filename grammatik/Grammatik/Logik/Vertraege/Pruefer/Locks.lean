@@ -67,7 +67,8 @@ def scopedReturnCondition (budget : Nat)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (expression : ErgExpr D Γ Λ V.erg) (cleanup : RueckRessourcen D V Λ)
     (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retScoped expression cleanup) locals goals) := do
+    Except Invarianten.Frag.Refusal
+      (StatementCondition (S := S) policy (.retScoped (l := l) expression cleanup) locals goals) := do
   let releases ← cleanupFormula facts cleanup.scopes
   let returned ← returnCondition (S := S) budget expression locals goals.returned
   return {
