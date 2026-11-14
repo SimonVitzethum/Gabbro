@@ -82,9 +82,9 @@ def typeFact (key : Observation D) : LProp (Observation D) :=
 
 private theorem scalar_typeFact (τ : Ty) (value : Wert D τ) :
     (match τ with
-      | .int lo hi => lo ≤ scalarValue τ value ∧ scalarValue τ value ≤ hi
-      | .str capacity => 0 ≤ scalarValue τ value ∧ scalarValue τ value ≤ (capacity : Int)
-      | _ => True) := by
+      | .int lo hi => fun number : Int => lo ≤ number ∧ number ≤ hi
+      | .str capacity => fun number : Int => 0 ≤ number ∧ number ≤ (capacity : Int)
+      | _ => fun _ : Int => True) (scalarValue τ value) := by
   cases τ with
   | int lo hi => exact ⟨value.lo_le, value.le_hi⟩
   | str capacity =>
