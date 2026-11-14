@@ -329,9 +329,10 @@ not a deployed checker, and no bridge to any binary is built. The
 - **Commits** are plain `git commit` with a Conventional Commits subject (`type(scope): summary`, types `feat`,
   `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`); no helper script, no extra trailers beyond
   the model's `Co-Authored-By`. Write the message to a file outside the tree and commit with `git commit -F <file>`.
-- **Squash before pushing**: work that belongs together (e.g. a feature and its follow-up fix) becomes ONE commit
-  before it is pushed (`git reset --soft <base>` and recommit, or `git commit --fixup` + autosquash). Pushed
-  history is never rewritten (no force-push), so squash only what is not yet pushed.
+- **Agent commits are merged and pushed as they are (owner, 2026-11-14; before: squash before pushing).** No
+  group commit over a whole wave: each agent's commits and the lead's repairs keep their own messages. Only a
+  fix-up of a not yet pushed commit is folded into it (`git commit --fixup` + autosquash). Pushed history is
+  never rewritten (no force-push).
 - **Commit every building step.** Work that builds is committed at once.
 - **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`: never commit into it.
 - **Tag milestones** at the push that reaches them.
