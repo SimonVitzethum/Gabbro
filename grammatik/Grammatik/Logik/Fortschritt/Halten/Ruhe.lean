@@ -14,7 +14,8 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
     (N : D.Lock → Nat) (decl : D.Fn → Nat) (fs ks : List D.Fn)
     (h : haltPasst P passes N decl fs ks = true) :
     haltPasst P.mitRuhe passes N (fun g => g.elim 0 decl) (fsRuhe fs) (ks.map some) = true := by
-  have members : (fun g => (ks.map some).contains g) = (fun g => g.elim false (ks.contains ·)) := by
+  have members : (fun g : Option D.Fn => @List.contains _ instBEqOfDecidableEq (ks.map some) g) =
+      (fun g => g.elim false (ks.contains ·)) := by
     funext g
     rw [Bool.eq_iff_iff]
     cases g <;> simp [Option.elim, List.contains_iff_mem]
