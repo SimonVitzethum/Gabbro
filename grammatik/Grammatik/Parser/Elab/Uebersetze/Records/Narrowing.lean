@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardRelation
 public import Grammatik.Parser.Elab.Export.ExportMetadata
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil7
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze.FieldNarrowing
@@ -32,12 +33,22 @@ def replaceList (place : SExpr) (name : String) : List SExpr → List SExpr
   | value :: rest => replace place name value :: replaceList place name rest
 end
 
-/-- A write or rebinding of the containing record invalidates the snapshot. Unknown
-    statements are barriers too. No assignment target can become a snapshot local. -/
+/-- A write or rebinding of the containing record invalidates the snapshot. Its first
+    assignment still evaluates the value before writing; compound assignments reuse the
+    ordinary operator expansion. Targets are preserved, and later reads remain unchanged. -/
 def replaceRun (place : SExpr) (owner name : String) : List SAnw → List SAnw × Bool
   | [] => ([], true)
   | s :: rest =>
-    if (uBindetS uLiestTiefe s).any (fun bound =>
+    let writing : Option SAnw := match s with
+      | .set target op value => do
+        let targetOwner ← root target
+        if !strEq targetOwner owner then none else do
+          let value ← if strEq op "=" then some value
+            else (uOpBasis op).map (fun op => SExpr.bin op target value)
+          some (.set target "=" (replace place name value))
+      | _ => none
+    if writing.isSome then (writing.getD s :: rest, false)
+    else if (uBindetS uLiestTiefe s).any (fun bound =>
         strEq bound owner || strEq bound name || strEq bound "*") then (s :: rest, false)
     else
       let (rest, whole) := replaceRun place owner name rest

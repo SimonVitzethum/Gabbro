@@ -65,6 +65,12 @@ theorem mutation_barrier_zeuge :
       ([.set selected "=" (.lit 100), .ret (some selected)], false) := by
   kernel_rfl
 
+/-- A compound field write uses the checked old value, keeps its target, and ends the fact. -/
+theorem first_write_value_zeuge :
+    replaceRun selected "entry" snapshot [.set selected "+=" (.lit 1), .ret (some selected)] =
+      ([.set selected "=" (.bin "+" (.variable snapshot) (.lit 1)), .ret (some selected)], false) := by
+  kernel_rfl
+
 /-- A different lexical record with the same source name cannot inherit a refinement. -/
 theorem shadow_barrier_zeuge :
     replaceRun selected "entry" snapshot

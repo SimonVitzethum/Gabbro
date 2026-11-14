@@ -79,6 +79,14 @@ def changedField : String :=
 theorem changed_field_refused_zeuge : (emit changedField 256).toOption.isSome = false := by
   kernel_rfl
 
+/-- Validation also permits incrementing the field itself without an overflowing u64 range.
+    The subsequent return uses the record at its declared type, after the fact was invalidated. -/
+def firstWrite : String :=
+  "module field_write { type Entry = { pos : u64, other : u8, }; impl fn main() -> u64 { let mut e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return 7; } e.pos += 1; return e.pos; } }"
+
+theorem first_write_emitted_zeuge : (emit firstWrite 256).toOption.isSome = true := by
+  kernel_rfl
+
 /-- Shadowing introduces a different record, without inheriting the old field's range. -/
 def shadowedRecord : String :=
   "module field_narrow { type Entry = { pos : u64, other : u8, }; impl fn main() -> u8 { let e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return e.other; } let e : Entry = Entry(pos: 1000, other: 7); return e.pos; } }"
