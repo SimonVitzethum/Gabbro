@@ -21,11 +21,13 @@ theorem nimmT_spin_retry {L : Lay D} {m0 m : Mem} {pc fp : W}
     rfl rfl (by omega) (by omega)
     (by rw [compared]; exact bool_ne (Ne.symm waiting))
   have entry : code[p + 12]? = some (ci 18 (-80) 0 0) := by
-    have cell := hc.get (j := 12) (by simp [nimmT, binding, waitEntry])
-    exact cell
-  have retry := ls_jmp_back E h.ag (i := p + 7) (k := 5)
-    (by simpa only [Nat.add_assoc] using entry) rfl (by decide)
-  exact branch.trans retry
+    exact hc.get (j := 12) (x := ci 18 (-80) 0 0) (by simp [nimmT, binding, waitEntry])
+  have retry := ls_jmp_back E h.ag (i := p + 7) (k := 5) (Lb := -80)
+    (by simpa only [show p + 7 + 5 = p + 12 by omega] using entry) (by decide) (by decide)
+  have branch' := branch
+  simp only [show p + 10 + 2 = p + 12 by omega] at branch'
+  simp only [show p + 7 + 5 = p + 12 by omega] at retry
+  exact branch'.trans retry
 
 /-- One complete failed spin attempt: the serving read, comparison and retry.
     The ticket and all three shared words survive; only scratch slots change.

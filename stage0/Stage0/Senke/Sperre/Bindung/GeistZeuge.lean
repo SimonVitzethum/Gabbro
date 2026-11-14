@@ -56,7 +56,7 @@ theorem WaitRun_tkt_zeuge [Conf] (width : 4 < 2 ^ Conf.wbits) :
     omega)
   refine ⟨gh, matches, steps, ?_, ?_⟩
   · exact (matches 0).halter.symm
-  · rw [(matches 0).warte]
+  · rw [← (matches 0).warte]
     exact List.mem_singleton_self 1
 
 end Gabbro.Stage0.Senke.Faeden.WaitWitness
