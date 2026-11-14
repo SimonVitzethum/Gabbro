@@ -105,8 +105,7 @@ theorem retry_case {O : Orakel D} {passes : Nat}
       have h := adr_eq (pc := x.pc) (x := x.backIndex) (y := 0)
         (J := (retryTargets cc.1.length cb.length cu.1.length).2)
         (by dsimp only [retryTargets, Retrying.Image.backIndex, x]; omega)
-      change _ = x.pc + (0 : W) at h
-      simpa only [Retrying.Image.addr, BitVec.add_zero] using h
+      exact h.trans (BitVec.add_zero x.pc)
     have overflowEnd : x.addr x.overflowIndex + BitVec.ofNat 64 (16 * cu.1.length) = x.addr x.exitIndex :=
       step_eq x.pc (by dsimp only [Retrying.Image.overflowIndex, Retrying.Image.exitIndex, x]; omega)
     have simulation := x.correct (bis := bis) (tc := cc.2) (sc := sc) hcc
