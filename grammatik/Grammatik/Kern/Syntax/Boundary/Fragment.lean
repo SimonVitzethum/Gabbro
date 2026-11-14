@@ -17,7 +17,7 @@ inductive Refusal where
   | prose
   deriving DecidableEq, Repr
 
-/-- The executable entry fragment. Quantification ranges over a declared finite
+/- The executable entry fragment. Quantification ranges over a declared finite
     table or a literal count; an open table never supplies a quantifier bound.
     No callback, claim string or unobservable device predicate is an expression.
     Native floating comparisons use the existing finite/range value model. -/
