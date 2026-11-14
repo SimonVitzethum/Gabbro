@@ -1331,6 +1331,11 @@ race freedom, invariants, contracts: the guarantees then hold only as far as tha
 environment assumption holds. The contract of the foreign function must therefore name, beside
 `requires`/`ensures`, its frame (only its declared `effects`), its extents, that it keeps no
 Gabbro pointer beyond the call and starts no thread that touches Gabbro memory.
+**Bounds at every C call (owner, 2026-11-14):** every buffer handed to C is proved inside its
+region before the call; every length, index, count or region C hands back (result, out-parameter,
+or argument of an `entry` call from C) is checked once at run time against the handed-over
+capacity before Gabbro uses it; a failed check is a named stop or the declared `or` reason. The
+compiler emits these checks; the user writes none.
 
 **The generator also emits the ANNOTATIONS** — contracts the downstream prover reads. A
 generator that accidentally emits *weakened* contracts delivers a green proof over a weaker
