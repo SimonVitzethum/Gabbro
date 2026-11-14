@@ -31,14 +31,14 @@ def finalGoals {Γ : Ctx} (terminal : QF (Observation D)) : Goals D Γ where
 section Compiler
 
 variable (program : Programm D) (checked : D.Fn → List D.Inv)
-    (facts : ∀ lock, Except Refusal (LockFormula S lock)) (expansion : Nat)
+    (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock)) (expansion : Nat)
     (loopInvariant : Option (QF (Observation D)))
 
 mutual
 
 def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (StatementCondition program checked S code locals goals) :=
+    Except Frag.Refusal (StatementCondition program checked S code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "writer VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -56,7 +56,7 @@ def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         return pre.map (fun _ _ ready => ready)
     | .retry count test body overflow =>
         if count ≤ expansion then do
-          let pre ← retryCondition test body overflow
+          let pre ← retryCondition (V := V) (l := l) test body overflow
             (fun env target => extendedBlock fuel body env target)
             (fun env target => extendedBlock fuel overflow env target) count locals goals
           return pre.map (fun _ _ ready => ready)
@@ -68,7 +68,7 @@ def extendedStatement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (fun env target => extendedBlock fuel overflow env target) locals goals
     | .traverse table annotation body =>
         if (D.count table).toNat ≤ expansion then do
-          let pre ← traverseCondition table annotation body
+          let pre ← traverseCondition (V := V) (l := l) table annotation body
             (fun env target => extendedBlock fuel body env target)
             (alleIndizes (D.count table)) locals goals
           return pre.map (fun _ _ ready => ready)
@@ -87,7 +87,7 @@ termination_by fuel
 
 def extendedBlock (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Block D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (BlockCondition program checked S code locals goals) :=
+    Except Frag.Refusal (BlockCondition program checked S code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "writer VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -130,7 +130,7 @@ end
     particular program supplied by the caller. -/
 def extendedEnd (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (code : Endblock D V l Γ Λ) (locals : Env D Γ) (terminal : QF (Observation D)) :
-    Except Refusal (EndCondition program checked S code locals terminal) :=
+    Except Frag.Refusal (EndCondition program checked S code locals terminal) :=
   match fuel with
   | 0 => .error (.unsupported "writer VC syntax-depth budget exceeded")
   | fuel + 1 =>

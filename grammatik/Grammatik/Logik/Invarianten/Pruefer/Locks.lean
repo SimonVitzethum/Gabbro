@@ -21,7 +21,7 @@ structure ReifiedLock (S : SperrInv D) (lock : D.Lock) where
 abbrev LockSources (S : SperrInv D) := ∀ lock, Option (ReifiedLock S lock)
 
 def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
-    Except Refusal (LockFormula S lock) := do
+    Except Frag.Refusal (LockFormula S lock) := do
   let some source := sources lock
     | .error (.unsupported "semantic lock invariant has no reified source formula; user duty")
   let encoded ← translateInvariant (S.orte lock) source.expression
@@ -36,7 +36,7 @@ structure Environments (D : Deklaration) (context : Ctx) where
   values : List (Env D context)
   complete : ∀ locals, locals ∈ values
 
-def environments (budget : Nat) : (context : Ctx) → Except Refusal (Environments D context)
+def environments (budget : Nat) : (context : Ctx) → Except Frag.Refusal (Environments D context)
   | [] => .ok { values := [.nil], complete := fun locals => by cases locals; simp }
   | kind :: context => do
       let head ← localDomain (D := D) budget kind
@@ -54,8 +54,8 @@ def environments (budget : Nat) : (context : Ctx) → Except Refusal (Environmen
 /-- Conjoin certificates for a finite complete domain without evaluating proof
     fields. This is shared by parameter and function enumeration. -/
 def collect (items : List α) (property : α → Prop)
-    (check : ∀ item, Except Refusal (PLift (property item))) :
-    Except Refusal (PLift (∀ item ∈ items, property item)) :=
+    (check : ∀ item, Except Frag.Refusal (PLift (property item))) :
+    Except Frag.Refusal (PLift (∀ item ∈ items, property item)) :=
   match items with
   | [] => .ok ⟨fun _ member => False.elim (List.not_mem_nil member)⟩
   | item :: rest => do

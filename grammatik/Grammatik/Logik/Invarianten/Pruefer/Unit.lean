@@ -20,7 +20,7 @@ structure CheckedInvariants (E : Einheit D) (functions : List D.Fn) (locks : Lis
   lockInitial : ∀ lock ∈ locks, (E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true
 
 def checkLockInitial (E : Einheit D) (lock : D.Lock) :
-    Except Refusal (PLift ((E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)) := do
+    Except Frag.Refusal (PLift ((E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)) := do
   match source : E.lockFormulas lock with
   | none => return ⟨fun impossible => by simp [source] at impossible⟩
   | some _ =>
@@ -30,7 +30,7 @@ def checkLockInitial (E : Einheit D) (lock : D.Lock) :
       else .error (.unsupported "lock invariant is false in the declared initial memory")
 
 def checkInvariants (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
-    (budget : VCBudget := {}) : Except Refusal (CheckedInvariants E functions locks) := do
+    (budget : VCBudget := {}) : Except Frag.Refusal (CheckedInvariants E functions locks) := do
   let program ← checkProgram E.P E.S functions E.lockFormulas budget locks
   if valid : program.invariants.formula.eval (assignment (E.sp0.welt [])) = true then
     let locks ← collect locks

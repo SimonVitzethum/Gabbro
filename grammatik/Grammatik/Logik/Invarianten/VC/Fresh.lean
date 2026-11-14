@@ -45,8 +45,13 @@ theorem liftLocalTerm_denote (term : LTerm α) (values : Assignment (Option α))
     (liftLocalTerm term).denote values = term.denote (fun key => values (some key)) := by
   induction term <;> simp_all [liftLocalTerm, LTerm.denote]
 
+/-- The assignment of the lifted variables: the fresh local reads 0, the rest reads `values`. -/
+def dropBase (values : Assignment α) : Assignment (Option α)
+  | none => 0
+  | some name => values name
+
 theorem dropLocalTerm_denote (term : LTerm (Option α)) (values : Assignment α) :
-    (dropLocalTerm term).denote values = term.denote (fun key => (match key with | none => 0 | some name => values name)) := by
+    (dropLocalTerm term).denote values = term.denote (dropBase values) := by
   induction term with
   | var key => cases key <;> rfl
   | konst _ => rfl
@@ -58,12 +63,12 @@ theorem liftLocalQF_denote (body : QF α) (values : Assignment (Option α)) :
   induction body <;> simp_all [liftLocalQF, QF.denote, liftLocalTerm_denote]
 
 theorem dropLocalQF_denote (body : QF (Option α)) (values : Assignment α) :
-    (dropLocalQF body).denote values ↔ body.denote (fun key => (match key with | none => 0 | some name => values name)) := by
+    (dropLocalQF body).denote values ↔ body.denote (dropBase values) := by
   induction body <;> simp_all [dropLocalQF, QF.denote, dropLocalTerm_denote]
 
 def localCode : (τ : Ty) → Wert D τ → Int
   | .int _ _, value => value.n
-  | .bool, value => if value then 1 else 0
+  | .bool, value => if wahr? value = true then 1 else 0
   | _, _ => 0
 
 def localRange (τ : Ty) : LProp (Option (Observation D)) :=
@@ -73,11 +78,14 @@ def localRange (τ : Ty) : LProp (Option (Observation D)) :=
   | _ => .tru
 
 theorem localRange_sound (τ : Ty) (value : Wert D τ) (values : Assignment (Observation D)) :
-    (localRange τ).denote ((fun key => (match key with | none => 0 | some name => values name)).bind none (localCode τ value)) := by
+    (localRange τ).denote (Assignment.bind (dropBase values) none (localCode τ value)) := by
   cases τ with
-  | int lo hi => simpa [localRange, LProp.denote, LTerm.denote, Assignment.bind, localCode] using
-      And.intro value.lo_le value.le_hi
-  | bool => cases value <;> simp [localRange, LProp.denote, LTerm.denote, Assignment.bind, localCode]
+  | int lo hi =>
+      simpa [localRange, LProp.denote, LTerm.denote, Assignment.bind, localCode] using
+        (⟨value.lo_le, value.le_hi⟩ : lo ≤ value.n ∧ value.n ≤ hi)
+  | bool =>
+      by_cases h : wahr? value = true <;>
+        simp [localRange, LProp.denote, LTerm.denote, Assignment.bind, localCode, h]
   | _ => trivial
 
 /-- A decoded local is universally quantified with its type range and snapshot
@@ -96,10 +104,11 @@ theorem freshImplication_sound (τ : Ty) (value : Wert D τ)
     (selected : guard.denote values) : post.denote values := by
   have universal := (lower_denote _ _).mp ((dropLocalQF_denote _ values).mp valid)
   let extended : Assignment (Option (Observation D)) :=
-    (fun key => (match key with | none => 0 | some name => values name)).bind none (localCode τ value)
+    Assignment.bind (dropBase values) none (localCode τ value)
   have projection : (fun key => extended (some key)) = values := by
     funext key
     simp [extended, Assignment.bind]
+    rfl
   have ready := universal (localCode τ value)
     ⟨localRange_sound τ value values, by simp [LProp.denote, LTerm.denote, Assignment.bind]⟩
   have present : (quoteQF (liftLocalQF (lower guard))).denote extended := by

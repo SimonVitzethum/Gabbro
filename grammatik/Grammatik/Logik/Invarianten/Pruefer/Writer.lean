@@ -51,7 +51,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (sources : LockSour
     (budget : VCBudget) (f : D.Fn)
     (post : InvariantFormula program (D.invs.filter (fun item => schuldet f item)))
     (locals : Env D (D.params f)) :
-    Except Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world,
+    Except Frag.Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world,
       ReqAmEintritt program f world locals →
       runtime.wpE (program.rumpf f) (EndFlow post.formula) world locals)) := do
   let entry := writerEntry program f locals
@@ -68,7 +68,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (sources : LockSour
     this conservative restriction does not weaken the atomic rely. -/
 def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (f : D.Fn) (checkLocks : Bool := false) :
-    Except Refusal (PLift (InvariantDuties program S f)) := do
+    Except Frag.Refusal (PLift (InvariantDuties program S f)) := do
   if empty : (D.invs.filter (fun item => schuldet f item)).isEmpty = true ∧ checkLocks = false then
     return ⟨fun _ _ _ _ => by
       constructor <;>

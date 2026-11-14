@@ -12,8 +12,8 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D}
 variable {program : Programm D} {checked : D.Fn → List D.Inv}
 
 /-- A refused continuation is false, never an unchecked default. -/
-def requireCondition (result : Except Refusal (QF (Observation D))) :
-    Except Refusal (Condition (fun (_ : Runtime program checked S) world => denotes result world)) :=
+def requireCondition (result : Except Frag.Refusal (QF (Observation D))) :
+    Except Frag.Refusal (Condition (fun (_ : Runtime program checked S) world => denotes result world)) :=
   match result with
   | .error cause => .error cause
   | .ok formula => .ok
@@ -21,11 +21,11 @@ def requireCondition (result : Except Refusal (QF (Observation D))) :
         sound := fun _ _ valid => valid }
 
 def generatedFormula {target : Runtime program checked S → World D → Prop}
-    (result : Except Refusal (Condition target)) : Except Refusal (QF (Observation D)) :=
+    (result : Except Frag.Refusal (Condition target)) : Except Frag.Refusal (QF (Observation D)) :=
   result.map (fun pre => pre.formula)
 
 theorem generated_sound {target : Runtime program checked S → World D → Prop}
-    (result : Except Refusal (Condition target)) (runtime : Runtime program checked S)
+    (result : Except Frag.Refusal (Condition target)) (runtime : Runtime program checked S)
     (world : World D) (valid : denotes (generatedFormula result) world) : target runtime world := by
   cases h : result with
   | error cause => simp only [generatedFormula, h, Except.map, denotes] at valid
@@ -46,8 +46,8 @@ def Condition.freshResult {target : Runtime program checked S → World D → Pr
 def bindingCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (budget : Nat) (expression : Expr D Γ Λ τ)
     (rest : Block D V l (τ :: Γ) Λ Λ') (locals : Env D Γ) (goals : Goals D Γ)
-    (compile : ∀ next, Except Refusal (BlockCondition program checked S rest next (goals.shrink τ))) :
-    Except Refusal (BlockCondition program checked S (.bind expression rest) locals goals) := do
+    (compile : ∀ next, Except Frag.Refusal (BlockCondition program checked S rest next (goals.shrink τ))) :
+    Except Frag.Refusal (BlockCondition program checked S (.bind expression rest) locals goals) := do
   let selected ← localSelect budget expression locals
     (fun value runtime world => runtime.wpB rest
       (goals.shrink τ).holds world (.cons value locals))
@@ -62,7 +62,8 @@ def bindingCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 def mutableCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (budget : Nat) (name : Var Γ τ) (expression : Expr D Γ Λ τ)
     (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (StatementCondition program checked S (.assignVar name expression) locals goals) := do
+    Except Frag.Refusal (StatementCondition program checked S
+      (.assignVar (V := V) (l := l) name expression) locals goals) := do
   let selected ← localSelect budget expression locals
     (fun value _ world => denotes (goals.normal (locals.set name value)) world)
     (fun value => do
@@ -77,8 +78,8 @@ def boundCallCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (budget : Nat) (f : D.Fn) (args : Args D Γ Λ (D.params f))
     (he : D.erg f = some τ) (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
     (rest : Block D V l (τ :: Γ) (nach D f Λ) Λ') (locals : Env D Γ) (goals : Goals D Γ)
-    (compile : ∀ next, Except Refusal (BlockCondition program checked S rest next (goals.shrink τ))) :
-    Except Refusal (BlockCondition program checked S (.bindCall f args he hp hr rest) locals goals) := do
+    (compile : ∀ next, Except Frag.Refusal (BlockCondition program checked S rest next (goals.shrink τ))) :
+    Except Frag.Refusal (BlockCondition program checked S (.bindCall f args he hp hr rest) locals goals) := do
   let domain ← localDomain (D := D) budget τ
   let tails ← allConditions domain.values
     (fun value runtime world => runtime.wpB rest
