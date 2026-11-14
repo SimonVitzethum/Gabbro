@@ -51,10 +51,10 @@ theorem gibT_waiters_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next
       FutexArgs fw (BitVec.ofNat 64 (a + 8)) 129 2147483647 ∧
       StopAt ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ mw
         (futexReq (BitVec.ofNat 64 (a + 8)) 129 2147483647) := by
-  have prefix := gibT_waiters_read E h hc
+  have sharedRead := gibT_waiters_read E h hc
   simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
     futexC, List.map_cons, List.map_nil] at hc
-  obtain ⟨m1, f1, steps1, state1, test⟩ := prefix
+  obtain ⟨m1, f1, steps1, state1, test⟩ := sharedRead
   have branch := ls_brz_ne E state1 (hc.get (j := 7) rfl) (e := 2) rfl (by omega)
     (by rw [test]; exact waiters)
   have prep : At code (p + 8) (futexC (a + 8) 129 (s + 5) (s + 10) (some 2147483647)) := by
