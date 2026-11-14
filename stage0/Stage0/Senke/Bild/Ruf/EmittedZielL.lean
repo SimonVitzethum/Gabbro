@@ -4,8 +4,8 @@
              theorem, part 4: the (ii) of `EmittedZiel`). `Emitted.bild_ziel` (`Bild/EmittedZiel.lean`) admits calls
              only under the call obligation `RufOk` for the image's handler `rufAt`, which holds only for the empty
              callee set: `rufAt` reads the contracts into the trace and machine G does not (`befund_vertrag`).
-             `Emitted.bild_ziel_ruf` takes the obligation up to read events (`RufOkGleich`); the named oracle
-             property (`LeseblindOK`) comes from the hardware assumptions (`leseblindOK_hardware`); it concludes with
+             `Emitted.bild_ziel_ruf` takes the obligation up to read events (`RufOkGleich`); it needs no oracle
+             property beyond (c) -- read-blindness holds for every oracle (`leseblindP_alle`); it concludes with
              the correspondence up to read events (`KorrespondenzL`, `RandL`). `Emitted.bild_ziel_tief` discharges the
              obligation: every callee admitted at the image's call depth (`Tief P Agl (depth - 1)`: its body
              is in the call fragment with callees admitted one level down) may be called in the decomposed prefix,
@@ -29,8 +29,8 @@ set_option linter.unusedSectionVars false
 variable {src : String} {K : Nat} {options : Profil.Options}
 
 /-- **The goal legs on what the emitted image runs through, with calls (one thread).** `Emitted.bild_ziel` with the
-    call obligation up to read events (`hRuf : RufOkGleich …` for the image's handler `rufAt (depth - 1)`); the
-    named oracle property comes from the hardware assumptions (`leseblindOK_hardware`). Every memory-only prefix of the
+    call obligation up to read events (`hRuf : RufOkGleich …` for the image's handler `rufAt (depth - 1)`); read-blindness
+    of the oracle is a theorem (`leseblindP_alle`), not a premise. Every memory-only prefix of the
     image's run from the loader's first instruction is in front of `main`'s first body boundary (the start machine
     satisfies every leg of `Ziel`), or inside a decomposed step -- a statement, a `let` binding, or a call of an
     admitted callee -- corresponding (machine G up to read events) to a machine `thr` reaches at which every leg of
@@ -116,7 +116,7 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
 /-- **THE IMAGE THEOREM WITH CALLS, NO CALL PREMISE.** `Emitted.bild_ziel_ruf` for the callees admitted at the
     image's call depth (`Tief P Agl (depth - 1)`), whose call obligation up to read events is proved
     (`rufOk_gleich_tief`): the decomposed prefix of `main`'s body may call every such callee. The handler relation
-    for ALL callees needs read-blindness of the oracle, which every oracle has (`leseblindP_alle`): the theorem
+    for ALL callees uses read-blindness of the oracle, which every oracle has (`leseblindP_alle`, a theorem): the theorem
     covers programs WITH foreign calls (raw syscalls), with no premise on the oracle beyond (c). -/
 theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
     (hZ : OldSource.zertifizierbar output.compiled.unit = true) (hr : output.compiled.unit.roots = [])
@@ -161,7 +161,7 @@ theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') :=
   output.bild_ziel_ruf hZ hr hg hAt hRuhig hreqr hN hH loaded
-    (rufOk_gleich_tief (P := output.compiled.program) (leseblindP_alle _ O) thr Agl
+    (rufOk_gleich_tief (P := output.compiled.program) thr Agl
       (output.image.depth - 1)) hk
 
 #print axioms Emitted.bild_ziel_ruf
