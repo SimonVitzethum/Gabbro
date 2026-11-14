@@ -147,7 +147,8 @@ namespace Reason
     fixture: the model correctly forbids reason-returning thread roots. -/
 def declaration : Deklaration :=
   { Witness.declaration with
-    sigNr := fun _ => { Witness.declaration.sigNr 0 with gruende := 1 } }
+    sigNr := fun _ => { Witness.declaration.sigNr 0 with gruende := 1 }
+    passt_ok := fun _ _ impossible => by cases impossible }
 
 def access : gdarf declaration false [] := fun _ member => nomatch member
 
