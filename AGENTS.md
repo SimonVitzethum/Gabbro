@@ -35,8 +35,13 @@ The Lean module-system migration and the split of every Lean file below 500 line
   (`stage0/`, the runner, probes) are part of it.
 - **The owner is asked only about important things**: a change of the goal statement's meaning, a rule of the
   language, a decision the plan lists as open. Everything else the lead decides.
-- **Only the lead builds.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
-  `.lake` (no Mathlib, no build cache). A lead checks its sub-agents' work in its own tree.
+- **Agents check their own modules on a build-server slot (owner, 2026-11-14; before: only the lead built).**
+  Whenever a slot is free, an implementing agent checks the modules it changed before it reports:
+  `git push -f buildserver HEAD:refs/heads/agent/<branch>`, then
+  `ssh simonvitzethum@10.200.200.100 '~/agent-check.sh <branch> <package> <Module>...'` (three slots, 8 GB and
+  2 threads each, the script waits for a free slot and while the lead runs a full build). Agents build single
+  modules only, never a whole package and never the heavy probe modules (`*Proben*`, `*Probes*`); their local
+  worktrees still carry no `.lake`. The lead's integration build of the merged wave stays the acceptance.
 - **One integration branch.** The lead merges the branches of all its agents and its own work
   into ONE integration branch and builds/checks that branch only; never one build per agent.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
@@ -376,7 +381,7 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
   this checkout; its tree is on `master` before it starts. Two runs in one tree measure a mixture.
 - A lead tree gets its warm caches (`grammatik/.lake`, `programmlogik/.lake`) as in "One Mathlib for all trees":
   Mathlib hard-linked, never copied; with no cache `lake` goes off to clone Mathlib and hangs, and a stale
-  `.lake` is worse than none. Sub-agent trees carry no `.lake`.
+  `.lake` is worse than none. Sub-agent trees carry no `.lake`; agents check on the build-server slots (Team).
 - Before starting work in an area, check whether another session already works there (worktrees, recent file
   times) and do not duplicate it.
 - Reviews of theorem statements are delegated like other tasks (see "Team"); the lead checks every finding before
