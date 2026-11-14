@@ -2,7 +2,7 @@
 module c05_readonly {
 table T count 2 { slot { v : u8, } invariant small : forall i in slots of T : T.slots[i].v == T.slots[i].v; }
 lock L protects { T } rank 0;
-impl fn main() -> u32 in 0 .. 255 effects { reads T.slots, locks L } {
+impl fn main() -> u32 in 0 .. 510 effects { reads T.slots, locks L } {
     locks L {
         return T.slots[0].v + T.slots[1].v;
     }
