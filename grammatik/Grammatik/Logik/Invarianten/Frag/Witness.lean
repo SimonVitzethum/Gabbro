@@ -6,7 +6,7 @@ public import Grammatik.Logik.Invarianten.Frag.Translation
 
 namespace Gabbro.Grammatik.Invarianten.Frag.Witness
 
-def declaration : Deklaration where
+abbrev declaration : Deklaration where
   Tab := Unit
   decTab := inferInstance
   count := fun _ => 3

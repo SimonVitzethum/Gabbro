@@ -14,7 +14,7 @@ namespace Gabbro.Grammatik.Invarianten.VC.Witness
 open Frag Elim Elim.Korrekt Modell
 
 /-- Two bounded globals, one real writer, and a nonempty owed invariant. -/
-def declaration : Deklaration :=
+abbrev declaration : Deklaration :=
   { Frag.Witness.declaration with
     Fn := Unit
     sig := fun _ => 0
@@ -119,7 +119,9 @@ def calls (f : declaration.Fn) (world : World declaration)
     (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok world ()
 
 theorem counterexample_entry_zeuge :
-    eval counterexampleWorld invariant counterexampleWorld .nil = true := by decide
+    eval counterexampleWorld invariant counterexampleWorld .nil = true := by
+  change decide ((4 : Int) ≤ 4) = true
+  decide
 
 theorem counterexample_step_zeuge :
     (match execEnd oracle 0 calls unguarded counterexampleWorld .nil with
@@ -134,12 +136,13 @@ theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru
   have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
   rw [lower_denote] at step
   have initial : entry.denote (assignment counterexampleWorld) ∧ True := by
-    exact ⟨by decide, trivial⟩
+    exact ⟨by change (4 : Int) ≤ 4; decide, trivial⟩
   have result := (quoteQF_denote _ _).mp (step initial)
   rw [unguarded_formula] at result
   norm_num [incrementFormula, lower_denote, quoteQF_denote, subst_denote,
     incrementRange, incrementTerm, post, entry, LProp.denote, LTerm.denote,
-    Assignment.bind, assignment, counterexampleWorld, scalarValue] at result
+    Assignment.bind, assignment, counterexampleWorld, scalarValue,
+    declaration, Frag.Witness.declaration] at result
 
 /-- P17 also extracts a model for the FALSE generated closed VC. The concrete
     failing G step above separately rules out a merely arithmetic witness. -/
@@ -161,7 +164,7 @@ theorem unchecked_call_havoc_zeuge :
     decideB (close (callWP (D := declaration) () .tru post)) = false := by
   apply (close_decide_false_iff _).mpr
   let next : World declaration :=
-    { counterexampleWorld with globs := fun name => if name then ⟨4, by decide, by decide⟩
+    { counterexampleWorld with globs := fun name => if (show Bool from name) = true then ⟨4, by decide, by decide⟩
       else ⟨5, by decide, by decide⟩ }
   refine ⟨assignment counterexampleWorld, ?_⟩
   intro valid
@@ -175,7 +178,7 @@ theorem unchecked_call_havoc_zeuge :
       · rfl
   have result := callWP_sound () .tru post counterexampleWorld next valid frame trivial
   norm_num [post, lower_denote, entry, LProp.denote, LTerm.denote, assignment,
-    next, scalarValue] at result
+    next, scalarValue, declaration, Frag.Witness.declaration] at result
 
 /-- The invariant is actually owed by the witness's function. -/
 theorem owed_zeuge : schuldet (D := declaration) () () = true := by decide
@@ -194,7 +197,7 @@ def owedPost : InvariantFormula program
     (declaration.invs.filter (fun item => schuldet (D := declaration) () item)) where
   formula := post
   correct := fun world => by
-    rw [lower_denote]
+    rw [post, lower_denote]
     have translated := translateDeclared_sound program () entry rfl world
     constructor
     · intro h item _
