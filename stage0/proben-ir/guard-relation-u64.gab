@@ -1,4 +1,4 @@
-// Exit 43: exact high-bit subtraction and a low-limb borrow, then a false guard.
+// Exit 43: exact high-bit subtraction near the unsigned limit, then a false guard.
 module guard_relation_u64 {
     impl fn difference(a : u64, b : u64) -> u64 {
         if a >= b { return a - b; }

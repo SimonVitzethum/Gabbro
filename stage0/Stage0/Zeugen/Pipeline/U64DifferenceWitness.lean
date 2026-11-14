@@ -43,7 +43,7 @@ set_option maxHeartbeats 2000000
 
 
 /-- Full-width inputs require an exact 65-bit signed intermediate before total `eng`.
-    The entry calls exercise both sides of bit 63 and a borrow from the low limb. -/
+    The entry calls exercise both sides of bit 63 and subtraction near the unsigned limit. -/
 def text : String :=
   "module u64_difference { impl fn difference(a : u64, b : u64) -> u64 { if a >= b { return a - b; } return 0; } impl fn main() -> u64 { let low = difference(18446744073709551615, 9223372036854775808); let high = difference(18446744073709551615, 1); if low == 9223372036854775807 { return high; } return 0; } }"
 

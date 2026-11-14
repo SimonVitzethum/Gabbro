@@ -7221,5 +7221,5 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 | `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, mutation and lexical barriers, unchanged historical reads and nonlocal refusal. |
 
 The integration guardian also includes `narrow-record-field.gab` (both success and failure
-paths) and `guard-relation-u64.gab` (high bits, low-limb borrow and a false guard). Emission
+paths) and `guard-relation-u64.gab` (high bits, the unsigned limit and a false guard). Emission
 certificates and actual runner execution are separate measurements.
