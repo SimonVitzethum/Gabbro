@@ -90,6 +90,18 @@ theorem breaking_refused_zeuge : invariantVCB badUnit.P badUnit.S [()] = false :
 theorem invariant_not_valid_zeuge :
     Modell.decideInvariant (declaration.traeger ()) invariant = .ok false := by decide +kernel
 
+def preserving : Programm declaration :=
+  { program with requires := fun _ => invariant
+    rumpf := fun _ => .ret .empty (List.Perm.refl _) }
+
+/-- Ordinary preservation uses the entry invariant when requires states it. -/
+theorem preservation_accepted_zeuge : invariantVCB preserving unit.S [()] = true := by decide +kernel
+
+/-- Existing InvGut duties do not grant an unstated entry invariant. This
+    boundary must remain visible until the owner changes that semantic duty. -/
+theorem unstated_entry_refused_zeuge :
+    invariantVCB { preserving with requires := fun _ => .tru } unit.S [()] = false := by decide +kernel
+
 theorem checker_accepted_zeuge :
     AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true] unit.ws = true := by
   unfold AkzeptiertX
