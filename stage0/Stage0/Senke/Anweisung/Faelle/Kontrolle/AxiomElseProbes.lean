@@ -126,7 +126,7 @@ theorem stmtAxiomElse_case_zeuge :
     (image (some (.int 0 10)) true).isOk = true ∧
     (image none false).isOk = true ∧ (image none true).isOk = true ∧
     (image (some .bool) false).isOk = true ∧ (image (some .bool) true).isOk = true := by
-  decide_cbv
+  decide +kernel
 
 /-- Each compiled fixture has both live outcomes: success keeps local 23, and the
     bound reason reaches return 9 instead of the success or handler fallthrough. -/
@@ -139,7 +139,7 @@ theorem stmtAxiomElse_paths_zeuge :
     observed none true false = 23 ∧ observed none true true = 9 ∧
     observed (some .bool) false false = 23 ∧ observed (some .bool) false true = 9 ∧
     observed (some .bool) true false = 23 ∧ observed (some .bool) true true = 9 := by
-  decide_cbv
+  decide +kernel
 
 /-- Refusals describe unsupported profiles, rather than refusing the entire
     statement constructor now that integer and VOID profiles are connected. -/
@@ -157,6 +157,6 @@ theorem stmtAxiomElse_refused_zeuge :
     lowered none (some { binding with fehler := [(-9, 1)] }) = none ∧
     lowered (some (.int (-10) 10)) (some binding) = none ∧
     (lowered (some .bool) (some binding)).isSome = true := by
-  decide_cbv
+  decide +kernel
 
 end Gabbro.Stage0.Senke.AxiomElseProbe
