@@ -158,9 +158,7 @@ mutual
 theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') :
     kostenStmt ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruS s) = kostenStmt ep c pa s := by
-  cases s <;> (try simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru,
-    kostenErg_ru, kostenBlock_ru, kostenArms_ru, kostenGrundArms_ru, kostenSonst_umΛ,
-    kostenSonst_ru, Option.elim]) <;>
+  cases s <;> (try simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenSonst_umΛ, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -174,15 +172,14 @@ theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | erw [kostenSonst_ru]
         )) <;>
     (try rfl)
-termination_by structural s
+termination_by s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') :
     kostenBlock ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruB b) = kostenBlock ep c pa b := by
   cases b with
   | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
-      kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -197,8 +194,7 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         )) <;>
     (try rfl)
   | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
-      kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -213,8 +209,7 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         )) <;>
     (try rfl)
   | _ =>
-    (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
-      kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
+    (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenExpr_ru, kostenArgs_ru, kostenSonst_umΛ, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -228,7 +223,7 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | erw [kostenSonst_ru]
         )) <;>
     (try rfl)
-termination_by structural b
+termination_by b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
@@ -238,7 +233,7 @@ theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (
   | .cons (c := payload) b rest =>
     cases payload <;>
       exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
-termination_by structural arms
+termination_by arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
@@ -247,15 +242,13 @@ theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Na
   | .nil => rfl
   | .cons b rest =>
     exact cost_congr₂ max (kostenBlock_ru b) (kostenGrundArms_ru rest)
-termination_by structural arms
+termination_by arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenEnd ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
   cases e with
   | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
-      kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -270,9 +263,7 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         )) <;>
     (try rfl)
   | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
-      kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -287,9 +278,7 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         )) <;>
     (try rfl)
   | _ =>
-    (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
-      kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
+    (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -303,14 +292,13 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         | erw [kostenSonst_ru]
         )) <;>
     (try rfl)
-termination_by structural e
+termination_by e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenSonst ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
   cases e with
   | bindAxiomOpt result =>
-    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -325,8 +313,7 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         )) <;>
     (try rfl)
   | bindAxiomOptElse result =>
-    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
+    cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -341,8 +328,7 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         )) <;>
     (try rfl)
   | _ =>
-    (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
-      kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
+    (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ, kostenExpr_ru, kostenArgs_ru, kostenErg_ru, Option.elim]) <;>
     (repeat
       (first
         | erw [kostenExpr_ru]
@@ -356,7 +342,7 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         | erw [kostenSonst_ru]
         )) <;>
     (try rfl)
-termination_by structural e
+termination_by e
 end
 end Costs
 end HaltRuhe
