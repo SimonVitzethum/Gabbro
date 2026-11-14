@@ -199,7 +199,7 @@ theorem kein_umweg {P I : Type} {a : Authority D} {layout : AdressLayout D}
     (run : ∀ i, i < n → RufSchrittG program oracle passes (machines i) (threads i)
       (machines (i + 1)))
     (contexts : Nat → Context D P I)
-    (scoped : ∀ i, i < n → ViewScopedStep a layout (contexts i) (machines i) (machines (i + 1))
+    (confinedSteps : ∀ i, i < n → ViewScopedStep a layout (contexts i) (machines i) (machines (i + 1))
       (threads i))
     {t : D.Tab} {k : Int} {f : D.Feld t}
     (change : AuthorityChange a layout (machines 0).speicher (machines n).speicher t k f) :
@@ -217,7 +217,7 @@ theorem kein_umweg {P I : Type} {a : Authority D} {layout : AdressLayout D}
       AuthorityChange a layout (machines i).speicher (machines (i + 1)).speicher t k f :=
     ⟨moved, span, member, touch⟩
   obtain ⟨view, live, valid, active, writable, table, extent, event, _, _, bytes⟩ :=
-    storeSlot_only_via_view (run i below) foreign correct realizes (scoped i below) stepChange
+    storeSlot_only_via_view (run i below) foreign correct realizes (confinedSteps i below) stepChange
   exact ⟨extent, i, below, stepChange, view, live, valid, active, writable, table, event, bytes⟩
 
 /-! ## Declared writers -/

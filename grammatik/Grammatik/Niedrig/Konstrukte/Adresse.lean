@@ -78,6 +78,7 @@ theorem addrLitStep_checked (space : Space D) (value : Int)
     address space value = .ok (addrLitStep space value fits world).value := by
   unfold address
   rw [dif_pos (show 0 ≤ value ∧ value ≤ 2 ^ space.width - 1 from fits)]
+  rfl
 
 theorem addrOffStep_value {space : Space D} (base : Address space) (delta : Int)
     (fits : AddrOffOk base delta) (world : World D) :
