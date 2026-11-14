@@ -120,6 +120,8 @@ theorem adapter_zeuge : LogikPflichtA unit.P unit.S unit.Q (GeteiltA unit.P unit
   · exact ⟨fun lock => nomatch lock, fun item => nomatch item,
       fun _ _ impossible => by cases impossible⟩
 
+theorem user_duty_zeuge : NutzerPflichtA unit := ⟨adapter_zeuge, start_zeuge⟩
+
 def nonlinear : Programm declaration :=
   { program with invariante := fun _ =>
       .le (.mul (.glob false (access false)) (.glob false (access false))) (.lit 10) }
