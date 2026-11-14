@@ -108,14 +108,17 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
                 (eval world value world locals).n ≤ hi
             · have selected := yes.sound world
                 ((quoteQF_denote _ _).mp (branches.1 (guardCorrect.mpr fits)))
-              dsimp only [eval]
-              with_unfolding_all rw [dif_pos fits]
-              exact selected
+              have evaluated : eval world (.eng value lo hi fallback) world locals =
+                  (⟨(eval world value world locals).n, fits.1, fits.2⟩ : Zahl lo hi) :=
+                dif_pos fits
+              exact Eq.mpr (congrArg (fun v : Wert D (.int lo hi) =>
+                post.denote ((assignment world).bind key (scalarValue (.int lo hi) v))) evaluated) selected
             · have selected := no.sound world
                 ((quoteQF_denote _ _).mp (branches.2 (fun h => fits (guardCorrect.mp h))))
-              dsimp only [eval]
-              with_unfolding_all rw [dif_neg fits]
-              exact selected }
+              have evaluated : eval world (.eng value lo hi fallback) world locals =
+                  eval world fallback world locals := dif_neg fits
+              exact Eq.mpr (congrArg (fun v : Wert D (.int lo hi) =>
+                post.denote ((assignment world).bind key (scalarValue (.int lo hi) v))) evaluated) selected }
   | .wenn condition yes no => do
       let guard ← translate condition locals
       let yesVC ← scalarWP yes locals key post
