@@ -69,6 +69,12 @@ def unit (restore : Bool) : Einheit declaration where
   starts := [⟨(), .nil⟩]
   sp0 := world.speicher
 
+theorem start_zeuge : StartPflicht (unit true) := by
+  refine ⟨?_, fun _ _ => rfl⟩
+  intro lock
+  cases lock
+  decide +kernel
+
 theorem lock_accepted_zeuge : invariantVCB (program true) family [()] sources = true := by decide +kernel
 
 theorem lock_refused_zeuge : invariantVCB (program false) family [()] sources = false := by decide +kernel

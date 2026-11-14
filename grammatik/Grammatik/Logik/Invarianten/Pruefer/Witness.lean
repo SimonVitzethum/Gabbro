@@ -61,6 +61,26 @@ def unit : Einheit declaration where
 
 def badUnit : Einheit declaration := { unit with P := { program with rumpf := fun _ => breaking } }
 
+theorem start_zeuge : StartPflicht unit :=
+  ⟨fun lock => nomatch lock, fun _ _ => rfl⟩
+
+theorem initial_zeuge : InvHaelt unit.P () (unit.sp0.welt []) := by decide +kernel
+
+def oracle : Orakel declaration where
+  wirkt := fun item => nomatch item
+  regLies := fun item => nomatch item
+  regSchreib := fun item => nomatch item
+  sichtbar := fun _ _ => true
+
+def calls (f : declaration.Fn) (entry : World declaration)
+    (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok entry ()
+
+/-- The refused writer actually destroys an initially true invariant. -/
+theorem breaking_execution_zeuge :
+    (match execEnd oracle 0 calls breaking world .nil with
+      | .zurueck next _ => eval next invariant next .nil
+      | _ => true) = false := by decide +kernel
+
 theorem restoring_accepted_zeuge : invariantVCB unit.P unit.S [()] = true := by decide +kernel
 
 theorem breaking_refused_zeuge : invariantVCB badUnit.P badUnit.S [()] = false := by decide +kernel
