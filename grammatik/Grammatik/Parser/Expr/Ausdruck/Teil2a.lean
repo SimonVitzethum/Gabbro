@@ -495,5 +495,4 @@ def parsePredAtom (f : Nat) (toks : List Token) :
         | _ => .error er
 end
 
-
 end Gabbro.Grammatik.Parser
