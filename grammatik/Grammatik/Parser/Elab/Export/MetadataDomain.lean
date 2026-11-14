@@ -109,6 +109,7 @@ def bodyMetadata : Nat → SAnw → Bool
     _ + 1, .ret .. | _ + 1, .start .. | _ + 1, .retires .. |
     _ + 1, .reset .. | _ + 1, .trimReq .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
+termination_by structural fuel => fuel
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
   | .effs effects => effects.any (fun | .mints _ => true | _ => false)

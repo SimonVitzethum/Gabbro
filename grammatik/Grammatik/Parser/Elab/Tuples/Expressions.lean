@@ -63,5 +63,6 @@ def expandExpr (k : Context) (locals : Spec.Locals) (expected : Option STyp) :
       return .ext .array names (← args.mapM (expandExpr k locals element fuel))
     | .ext kind names args => return .ext kind names (← args.mapM recur)
     | expr => pure expr
+termination_by structural fuel => fuel
 
 end Gabbro.Grammatik.Parser.Tuples

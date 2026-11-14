@@ -80,6 +80,7 @@ def uArrayExpr : Nat → SExpr → Bool
     | .un _ a | .field a _ | .arrow a _ | .old a => uArrayExpr fuel a
     | .call _ values | .built _ values => values.any (uArrayExpr fuel)
     | _ => false
+termination_by structural fuel => fuel
 
 /-- Inspect the same nested statements covered by the original-source metadata gate. -/
 def uArrayBody : Nat → SAnw → Bool
@@ -103,6 +104,7 @@ def uArrayBody : Nat → SAnw → Bool
     | .callElse _ arguments _ body => arguments.any (uArrayExpr fuel) || uArrayBody fuel body
     | .call _ arguments => arguments.any (uArrayExpr fuel)
     | _ => false
+termination_by structural fuel => fuel
 
 /-- Exact declared lengths, evaluated in the already certified alias/constant scope. -/
 def uArrayTypeCounts (types : List (String × (Int × Int))) : STyp → List Nat
@@ -126,6 +128,7 @@ def uArrayBodyTypes : Nat → SAnw → List STyp
     | .callIndElse _ _ _ body | .callElse _ _ _ body | .each _ _ _ _ _ _ _ body => uArrayBodyTypes fuel body
     | .block statements _ => statements.flatMap (uArrayBodyTypes fuel)
     | _ => []
+termination_by structural fuel => fuel
 
 def uArraySignatureTypes (signature : FnSig) : List STyp := signature.params.map (·.2) ++ signature.res.toList
 

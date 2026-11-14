@@ -116,6 +116,7 @@ def uStartNamen : Nat → SAnw → List String
   | f + 1, .cases _ arms => arms.flatMap (uStartNamen f)
   | f + 1, .arm _ _ b => uStartNamen f b
   | _, _ => []
+termination_by structural fuel => fuel
 
 /-- Each root once, in order. -/
 def uOhneDoppelte (xs : List String) : List String :=

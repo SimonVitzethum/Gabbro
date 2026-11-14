@@ -61,6 +61,7 @@ def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
         .ext k ns ((xs.dropLast.map (sErsetze σ n)) ++ (xs.getLast?.map (sErsetze σ' n)).toList)
       else .ext k ns (xs.map (sErsetze σ n))
     | e => e
+termination_by structural fuel => fuel
 
 /-- Inline a `spec fn` only when substitution cannot capture argument names.
     A clashing call remains for the ordinary predicate reader to refuse.
@@ -86,6 +87,6 @@ def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr →
     | .old a => .old (uSpecEin specs n a)
     | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
     | e => e
-
+termination_by structural fuel => fuel
 
 end Gabbro.Grammatik.Parser.Uebersetze

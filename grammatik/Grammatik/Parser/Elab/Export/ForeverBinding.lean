@@ -143,6 +143,7 @@ def loopHeaders : Nat → SAnw → List String
   | n + 1, .loop header b => header :: loopHeaders n b
   | n + 1, .alloc _ _ _ _ _ (some b) => loopHeaders n b
   | _ + 1, _ => []
+termination_by structural fuel => fuel
 
 /-- The declared pass bounds of the source loops: the `progress` assumption and the bound. -/
 def declared (items : List SItemTief) : List (String × Nat) :=

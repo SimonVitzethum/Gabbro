@@ -61,6 +61,7 @@ def uForIndexEffects : Nat → String → SAnw → Bool × Bool
     let nested := (libraryChildren statement).map (uForIndexEffects fuel binder)
     (((Aufloesung.gebunden statement) ++ extra).any (strEq · binder) || nested.any (·.1),
       writes || nested.any (·.2))
+termination_by structural fuel => fuel
 
 /-- Export the complete source header to the existing retry path. The constant-true branch
     delimits the range index's lexical lifetime, including shadowing of an outer local.

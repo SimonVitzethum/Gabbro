@@ -58,6 +58,7 @@ def canonical (k : Context) : Nat → STyp → STyp
   | fuel + 1, .array ty count => .array (canonical k fuel ty) count
   | fuel + 1, .ptr space rights ty => .ptr space rights (canonical k fuel ty)
   | _, ty => ty
+termination_by structural fuel => fuel
 
 /-- Resolved G types identify equal intervals and aliases. The fallback retains nominal names;
     actual schema collection below also interns by resolved element types. -/
@@ -99,6 +100,7 @@ def expandType (k : Context) : Nat → STyp → ExpandM STyp
   | fuel + 1, .embed ty bits scale => return .embed (← expandType k fuel ty) bits scale
   | fuel + 1, .entry params result => return .entry params (← result.mapM (expandType k fuel))
   | _, ty => pure ty
+termination_by structural fuel => fuel
 
 /-- Tuple field order is the generated record's declaration order. -/
 def tupleElements (k : Context) (state : State) (ty : STyp) : Option (List STyp) :=
@@ -170,5 +172,6 @@ def infer (k : Context) (state : State) (locals : Spec.Locals) : Nat → SExpr �
     else Spec.inferTypeMit k.environment locals 128 (.bin op a b)
   | _, .res => (locals.find? (fun entry => strEq entry.1 "#tuple-result")).map (·.2)
   | _, value => Spec.inferTypeMit k.environment locals 128 value
+termination_by structural fuel => fuel
 
 end Gabbro.Grammatik.Parser.Tuples

@@ -156,6 +156,7 @@ def uLiestE : Nat → SExpr → List String
     | .why g _ => [g]
     | .ext _ ws xs => ws ++ xs.flatMap (uLiestE f)
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names a type mentions in its bounds (a bound is a constant expression; a raw or linked type
     mentions none the branch could read). -/
@@ -169,6 +170,7 @@ def uLiestT : Nat → STyp → List String
     | .embed b _ x => uLiestT f b ++ (x.map (uLiestE f)).getD []
     | .str n => uLiestE f n
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names an optional type mentions. -/
 def uLiestTO (f : Nat) (ty : Option STyp) : List String := (ty.map (uLiestT f)).getD []
@@ -207,6 +209,7 @@ def uLiestS : Nat → SAnw → List String
       as.flatMap (uLiestS f) ++ (match en with | some (.ret (some v)) => uLiestE f v | _ => [])
     | .other _ => ["*"]
     | _ => []
+termination_by structural fuel => fuel
 
 /-- The names a run of statements mentions. -/
 def uLiestL (ss : List SAnw) : List String := ss.flatMap (uLiestS uLiestTiefe)

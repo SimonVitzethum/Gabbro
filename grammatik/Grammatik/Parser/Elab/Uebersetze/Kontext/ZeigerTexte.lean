@@ -40,5 +40,6 @@ def uZeigerAnw : Nat → SAnw → List String
     | .child b => uZeigerAnw f b
     | .block as _ => as.flatMap (uZeigerAnw f)
     | _ => []
+termination_by structural fuel => fuel
 
 end Gabbro.Grammatik.Parser.Uebersetze

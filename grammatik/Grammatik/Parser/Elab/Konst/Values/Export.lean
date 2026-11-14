@@ -156,14 +156,29 @@ def elaborate (k : UKonstFn) : Except String (SourceFunction k) :=
         | .ok post => return ⟨source, hb, ⟨pre, body, post⟩, he, hp, hq⟩
   | _ => .error ("const body without a certified value G derivation at `" ++ k.name ++ "`")
 
+mutual
 /-- Preserve the original spellings available for exact short-string quotation. -/
 def textLiterals : SExpr → List String
   | .ext .text [text] [] => [text]
   | .field value _ | .index value _ | .arrow value _ | .un _ value | .old value => textLiterals value
   | .bin _ a b => textLiterals a ++ textLiterals b
-  | .call _ args | .built _ args | .ext _ _ args => args.flatMap textLiterals
+  | .call _ args | .built _ args | .ext _ _ args => textLiteralList args
   | _ => []
-termination_by e => sizeOf e
+termination_by structural e => e
+
+/-- Collect nested spellings in their original left-to-right order. -/
+def textLiteralList : List SExpr → List String
+  | [] => []
+  | e :: rest => textLiterals e ++ textLiteralList rest
+termination_by structural es => es
+end
+
+/-- The structural traversal agrees with the original flatMap traversal. -/
+theorem textLiteralList_eq_flatMap (es : List SExpr) :
+    textLiteralList es = es.flatMap textLiterals := by
+  induction es with
+  | nil => rfl
+  | cons head rest ih => simp only [textLiteralList, List.flatMap_cons, ih]
 
 /-- The candidate is canonical G evaluation. Its literal is certified separately,
     retaining the complete value and its exact source constructor. -/

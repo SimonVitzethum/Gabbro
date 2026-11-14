@@ -77,6 +77,7 @@ def checkSampleSubstitute (bindings : List (SExpr × SExpr)) : Nat → SExpr →
             (args.getLast?.map (checkSampleSubstitute inner fuel)).toList)
         else .ext kind names (args.map recur)
       | other => other
+termination_by structural fuel => fuel
 
 /-- A source-indexed private call that captures actual arguments. Floors are
     separate Bool arguments, evaluated even for a false written verdict; the

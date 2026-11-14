@@ -42,6 +42,7 @@ def containsDynamic (items : List SItemTief) (closed : List Closed) : Nat → ST
       | some (.typeT _ _ _ _ (some body)) => containsDynamic items closed f body
       | _ => false
     | _ => false
+termination_by structural fuel => fuel
 
 def checkCall (items : List SItemTief) (closed : List Closed) (locals : Locals)
     (name : String) (args : List SExpr) : Except String Unit := do

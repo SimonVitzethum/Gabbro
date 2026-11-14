@@ -109,6 +109,7 @@ def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
       | .entry ps r => do return .entry ps (← r.mapM (w.type locals f))
       | t => do return t)
     w.typeRewrite t
+termination_by structural fuel => fuel
 
 /-- Even a named type reaches the configured type rewrite or refusal. -/
 theorem Walk.type_atom (w : Walk) (locals : Locals) (fuel : Nat) (name : String) :

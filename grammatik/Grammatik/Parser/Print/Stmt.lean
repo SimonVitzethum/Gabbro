@@ -35,6 +35,7 @@ def rohToks (s : String) : List Token :=
   | .ok ts => ts.filter (fun t => match t with | .ende => false | _ => true)
   | .error _ => []
 
+mutual
 /-- A surface type as tokens (the inverse of `parseTyp`). -/
 def druckTyp : STyp → List Token
   | .dyn n bound => [.wort "dyn"] ++ rohToks n ++
@@ -43,7 +44,7 @@ def druckTyp : STyp → List Token
       | some raw => [.wort "effects", .zeichen "{"] ++ rohToks raw)
   | .atom a => [nameTok a]
   | .tuple types => [.zeichen "("] ++
-      ((types.map druckTyp).intersperse [.zeichen ","]).flatten ++ [.zeichen ")"]
+      ((druckTypList types).intersperse [.zeichen ","]).flatten ++ [.zeichen ")"]
   | .path segs => pfadToks segs
   | .ptr r w t =>
     [.wort "ptr", .zeichen "<", nameTok r, .zeichen ","] ++ rohToks w ++ [.zeichen ">"] ++ druckTyp t
@@ -64,6 +65,21 @@ def druckTyp : STyp → List Token
       (match o with
         | some t => [.zeichen "->"] ++ druckTyp t
         | none => [])
+termination_by structural ty => ty
+
+/-- Print tuple components before inserting their separators. -/
+def druckTypList : List STyp → List (List Token)
+  | [] => []
+  | ty :: rest => druckTyp ty :: druckTypList rest
+termination_by structural ts => ts
+end
+
+/-- The structural traversal agrees with the original map traversal. -/
+theorem druckTypList_eq_map (ts : List STyp) :
+    druckTypList ts = ts.map druckTyp := by
+  induction ts with
+  | nil => rfl
+  | cons head rest ih => simp only [druckTypList, List.map_cons, ih]
 
 /-- `: T` of a `let`, when there is one. -/
 def druckTypOpt : Option STyp → List Token

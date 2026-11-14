@@ -38,6 +38,7 @@ def expandConstant (k : Context) (expected : Option STyp) : Nat → SKonstWert �
       | .array ty _ => some ty
       | _ => none
     return .rows (← rows.mapM (expandConstant k element fuel))
+termination_by structural fuel => fuel
 
 /-- Field text stays intact, including all metadata. Only tuple schema discovery is performed
     here; the ordinary record collector later reads the original fields and checks every duty. -/
@@ -103,6 +104,7 @@ def expandItem (k : Context) : Nat → SItemTief → ExpandM SItemTief
     | .pubT item => return .pubT (← expandItem k fuel item)
     | .gateT item => return .gateT (← expandItem k fuel item)
     | item => pure item
+termination_by structural fuel => fuel
 
 /-- The interning context of a unit: constants, aliases and the ordinary source types. -/
 def prepareContext (items : List SItemTief) : Context :=

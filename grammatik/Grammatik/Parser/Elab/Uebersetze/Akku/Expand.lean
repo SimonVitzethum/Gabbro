@@ -49,6 +49,7 @@ def uAkkuBinder : Nat → SAnw → List String
   | f + 1, .child b => uAkkuBinder f b
   | f + 1, .block ss _ => ss.flatMap (uAkkuBinder f)
   | _, _ => []
+termination_by structural fuel => fuel
 
 /-- No plan name is bound as a local in the unit's bodies or parameters:
     otherwise the rewrite below could misread a shadowed name. -/

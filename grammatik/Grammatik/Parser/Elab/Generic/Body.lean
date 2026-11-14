@@ -57,16 +57,16 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .lcall call => return .lcall { call with args := ← call.args.mapM (rewriteExpression env bindings) }
   | .cond c yes branches none => do
     return .cond (← rewriteExpression env bindings c)
-      (← rewriteBody env bindings yes) (← branches.mapM (rewriteBody env bindings))
+      (← rewriteBody env bindings yes) (← rewriteBodies env bindings branches)
       none
   | .cond c yes branches (some no) => do
     return .cond (← rewriteExpression env bindings c)
-      (← rewriteBody env bindings yes) (← branches.mapM (rewriteBody env bindings))
+      (← rewriteBody env bindings yes) (← rewriteBodies env bindings branches)
       (some (← rewriteBody env bindings no))
   | .elsif c body => return .elsif (← rewriteExpression env bindings c) (← rewriteBody env bindings body)
   | .cases value arms => do
     return .cases (← rewriteExpression env bindings value)
-      (← arms.mapM (rewriteBody env bindings))
+      (← rewriteBodies env bindings arms)
   | .arm tag binder body => do
     return .arm tag binder
       (← rewriteBody env (bindings.without binder.toList) body)
@@ -125,6 +125,13 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
     pure (.block statements ending)
   | .allocVon mu n ty arena => return .allocVon mu n (← ty.mapM (rewriteType env bindings)) arena
   | statement => pure statement
+termination_by structural statement => statement
+
+/-- Sibling branches share the outer bindings; block sequences use rewriteStatements below. -/
+def rewriteBodies (env : Environment) (bindings : Bindings) : List SAnw → RewriteM (List SAnw)
+  | [] => pure []
+  | statement :: rest => return (← rewriteBody env bindings statement) :: (← rewriteBodies env bindings rest)
+termination_by structural statements => statements
 
 def rewriteStatements (env : Environment) (bindings : Bindings) :
     List SAnw → RewriteM (List SAnw × Bindings)
@@ -138,7 +145,15 @@ def rewriteStatements (env : Environment) (bindings : Bindings) :
       | _ => []
     let (tail, final) ← rewriteStatements env (bindings.without names) rest
     pure (rewritten :: tail, final)
+termination_by structural statements => statements
 end
+
+/-- The structural traversal agrees with the original mapM traversal. -/
+theorem rewriteBodies_eq_mapM (env : Environment) (bindings : Bindings) (ss : List SAnw) :
+    rewriteBodies env bindings ss = ss.mapM (rewriteBody env bindings) := by
+  induction ss with
+  | nil => rfl
+  | cons head rest ih => simp only [rewriteBodies, List.mapM_cons, ih]
 
 /-- Instantiate the complete declaration and collect its rewritten dependencies in the same pass. -/
 def instantiate (env : Environment) (key : Instance) :

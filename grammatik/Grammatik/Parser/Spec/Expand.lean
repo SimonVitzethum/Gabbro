@@ -25,16 +25,31 @@ def knownWalk (source : List SItemTief) : Walk :=
         | .error _ => pure e
       | _ => pure e }
 
+mutual
 /-- One item under a visitor built once. -/
 def resolveKnownWith (rewrite : Walk) : SItemTief → Except String SItemTief
   | .fnT sig body => do
     return .fnT sig (← { rewrite with result := sig.res }.statement sig.params 100000 body)
-  | .implGroupT n ts es fs => do return .implGroupT n ts es (← fs.mapM (resolveKnownWith rewrite))
-  | .modT n fs => do return .modT n (← fs.mapM (resolveKnownWith rewrite))
+  | .implGroupT n ts es fs => do return .implGroupT n ts es (← resolveKnownList rewrite fs)
+  | .modT n fs => do return .modT n (← resolveKnownList rewrite fs)
   | .pubT it => do return .pubT (← resolveKnownWith rewrite it)
   | .gateT it => do return .gateT (← resolveKnownWith rewrite it)
   | it => pure it
-termination_by item => sizeOf item
+termination_by structural item => item
+
+/-- Resolve nested declarations in the same order, stopping at the same first error. -/
+def resolveKnownList (rewrite : Walk) : List SItemTief → Except String (List SItemTief)
+  | [] => pure []
+  | item :: rest => return (← resolveKnownWith rewrite item) :: (← resolveKnownList rewrite rest)
+termination_by structural items => items
+end
+
+/-- The structural traversal agrees with the original mapM traversal. -/
+theorem resolveKnownList_eq_mapM (rewrite : Walk) (items : List SItemTief) :
+    resolveKnownList rewrite items = items.mapM (resolveKnownWith rewrite) := by
+  induction items with
+  | nil => rfl
+  | cons head rest ih => simp only [resolveKnownList, List.mapM_cons, ih]
 
 /-- Resolve statically known spec calls before dyn closure. Calls whose receiver is
     dynamic (or whose type depends on a later binding) stay for the mandatory final

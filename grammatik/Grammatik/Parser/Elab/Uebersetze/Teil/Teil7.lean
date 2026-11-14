@@ -324,6 +324,7 @@ def uAltErsetze (a : String) : Nat → SExpr → SExpr
   | f + 1, .bin o x y => .bin o (uAltErsetze a f x) (uAltErsetze a f y)
   | f + 1, .call n args => .call n (args.map (uAltErsetze a f))
   | _ + 1, e => e
+termination_by structural fuel => fuel
 
 /-- An exchange as read from its tail: the update binder, the guarded values, the last value, the payload, the
     `awaits` names, and whether it is the compare form (whose binder is the success, a truth value). -/

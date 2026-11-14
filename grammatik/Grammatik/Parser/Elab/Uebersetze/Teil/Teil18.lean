@@ -397,14 +397,29 @@ def entfalteAdapterItem (sigs : List FnSig) : SItemTief → Except String SItemT
   | .gateT item => (entfalteAdapterItem sigs item).map SItemTief.gateT
   | item => pure item
 
+mutual
 /-- Expand reason propagation in ordinary and newly generated adapter functions. -/
 def entfalteItem (ks : FrageKontext) : SItemTief → Except String SItemTief
   | .fnT s b => (entfalteFrage { ks with eigen := s.fehler } b).map (.fnT s)
   | .gateT item => (entfalteItem ks item).map SItemTief.gateT
   | .implGroupT name types effects bodies => do
-    pure (.implGroupT name types effects (← bodies.mapM (entfalteItem ks)))
+    pure (.implGroupT name types effects (← entfalteItems ks bodies))
   | item => pure item
-termination_by item => sizeOf item
+termination_by structural item => item
+
+/-- Expand nested implementation bodies from left to right. -/
+def entfalteItems (ks : FrageKontext) : List SItemTief → Except String (List SItemTief)
+  | [] => pure []
+  | item :: rest => return (← entfalteItem ks item) :: (← entfalteItems ks rest)
+termination_by structural items => items
+end
+
+/-- The structural traversal agrees with the original mapM traversal. -/
+theorem entfalteItems_eq_mapM (ks : FrageKontext) (items : List SItemTief) :
+    entfalteItems ks items = items.mapM (entfalteItem ks) := by
+  induction items with
+  | nil => rfl
+  | cons head rest ih => simp only [entfalteItems, List.mapM_cons, ih]
 
 /-- The single Phase-1 expansion: adapters first, then `?` with their complete signatures.
     Adapter targets keep the existing ordinary-function admission rule. -/

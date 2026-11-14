@@ -54,6 +54,7 @@ def safeConstantName (items : List SItemTief) : Nat → List String → String �
           (calls body).all (safeConstantName items fuel (name :: visited))
       | some _ => false
       | none => true
+termination_by structural fuel => fuel
 
 /-- A syntactic call-hull derivation. Every fresh function body has proved-safe clauses;
     revisiting a name closes a graph cycle rather than executing source code. -/

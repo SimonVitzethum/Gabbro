@@ -180,6 +180,7 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | _ + 1, false, .ret none => true
   | _ + 1, false, .ret (some e) => gut e
   | _ + 1, false, _ => false
+termination_by structural fuel => fuel
 
 theorem rohTrav_leer : RohTrav "" := ⟨[], rfl, by simp only [List.not_mem_nil, ne_eq, IsEmpty.forall_iff, implies_true]⟩
 
@@ -358,6 +359,7 @@ def itemGutB : Nat → SItemTief → Bool
   | _ + 1, .entryT e => e.vektor.all gut && e.ist.all gut &&
       (e.nest.isNone || e.nest == some "never" || e.nest == some "masked") && !e.dispatch.isEmpty
   | _ + 1, _ => false
+termination_by structural fuel => fuel
 
 theorem itemGutB_sound : ∀ (n : Nat) (it : SItemTief), itemGutB n it = true → ItemGut it := by
   intro n
