@@ -12,7 +12,7 @@ variable {D : Deklaration}
 
 /-- Optional source evidence for a semantic lock predicate. This is part of
     the model value, not a proof submitted to or checked by the compiler.
-    Without reification the lock predicate remains user duty (b). -/
+    The concrete invariant checker refuses a used lock without reification. -/
 structure ReifiedLock (S : SperrInv D) (lock : D.Lock) where
   resources : List (Res D)
   expression : Expr D [] resources .bool
@@ -30,17 +30,22 @@ def ReifiedLock.ofExpression (resources : List (Res D))
   expression := expression
   correct world := by
     rw [meaning]
-    exact eval_spurfrei expression _ _ _ _ rfl rfl rfl rfl .nil
+    exact Extraktion.eval_liest_nur_orte expression expression.orte (fun _ member => member)
+      world (world.speicher.welt []) world (world.speicher.welt []) .nil
+      (fun _ _ _ _ => rfl) (fun _ _ => rfl)
+      (fun _ _ _ _ => rfl) (fun _ _ => rfl)
 
 def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
     Except Frag.Refusal (LockFormula S lock) := do
   let some source := sources lock
-    | .error (.unsupported "semantic lock invariant has no reified source formula; user duty")
+    | .error (.unsupported "semantic lock invariant has no reified source formula")
   let encoded ← translateInvariant (S.orte lock) source.expression
+  let formula : LProp (Observation D) := encoded.payload
   return {
-      formula := lower encoded.payload
+      formula := lower formula
       correct := fun world => by
-        rw [lower_denote, ← encoded.bool_iff world, source.correct world] }
+        exact (lower_denote formula (assignment world)).trans
+          ((encoded.bool_iff world).symm.trans (by rw [source.correct world]; rfl)) }
 
 /-- Every produced formula denotes exactly the canonical model obligation,
     in every world, independently of the program being checked. -/

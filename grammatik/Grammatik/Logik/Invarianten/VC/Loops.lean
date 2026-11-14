@@ -44,8 +44,8 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           terminal := goals.terminal }
       let step ← compileBody locals passGoals
       let done ← requireCondition (program := program) (checked := checked) (S := S) (goals.normal locals)
-      let advanced := step.map (fun runtime world ready =>
-        show goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program checked S => fun world =>
+        goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
           | .ok next env | .next _ next env => retryLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -57,7 +57,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error) from by
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready => by
         unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world locals with
         | ok next env =>
@@ -73,13 +73,11 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | hardware error => trivial)
       let combined ← branchCondition test locals done advanced
       return combined.map (fun runtime world ready => by
-        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals with
-        | true => simpa only [retryLauf, wahr?, tested, eq_self, ↓reduceIte, Goals.holds] using ready
-        | false =>
-            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
-                (world.lese Λ test.orte) locals <;>
-              simpa only [retryLauf, wahr?, tested, eq_self, Bool.false_eq_true,
-                ↓reduceIte, Goals.holds, result] using ready)
+        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
+          cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls
+            body (world.lese Λ test.orte) locals <;>
+          simpa only [retryLauf, wahr?, tested, result, eq_self,
+            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
 
 /-- A traversal's checked annotation is tested at every boundary, including
     `leave`. Unrolling has a static count; no runtime or alternate interpreter
@@ -114,8 +112,8 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           again := fun env => generatedFormula (resume env.tail)
           terminal := goals.terminal }
       let step ← compileBody (.cons index locals) passGoals
-      let advanced := step.map (fun runtime world ready =>
-        show goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program checked S => fun world =>
+        goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world (.cons index locals) with
           | .ok next env | .next _ next env => traverseLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -127,7 +125,7 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error) from by
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready => by
         unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world (.cons index locals) with
         | ok next env =>
@@ -149,13 +147,11 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let combined ← branchCondition annotation locals advanced stopped
       return combined.map (fun runtime world ready => by
         cases tested : eval (world.lese Λ annotation.orte) annotation
-            (world.lese Λ annotation.orte) locals with
-        | false => simpa only [traverseLauf, wahr?, tested, Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready
-        | true =>
-            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
-                (world.lese Λ annotation.orte) (.cons index locals) <;>
-              simpa only [traverseLauf, wahr?, tested, Bool.true_eq_false,
-                Bool.false_eq_true, ↓reduceIte, Goals.holds, result] using ready)
+          (world.lese Λ annotation.orte) locals <;>
+          cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls
+            body (world.lese Λ annotation.orte) (.cons index locals) <;>
+          simpa only [traverseLauf, wahr?, tested, result, Bool.true_eq_false,
+            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
 termination_by indices.length
 decreasing_by all_goals simp_wf <;> omega
 

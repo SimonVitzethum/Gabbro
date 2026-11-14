@@ -6,7 +6,7 @@ public import Grammatik.Logik.Vertraege.Pruefer.Leaves
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
-open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 
 variable {D : Deklaration} {S : SperrInv D} {program : Programm D}
 

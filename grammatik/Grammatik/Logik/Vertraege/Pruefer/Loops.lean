@@ -6,7 +6,7 @@ public import Grammatik.Logik.Vertraege.Pruefer.Calls
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
-open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 
 variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm D}
 variable (policy : CallPolicy program)
@@ -16,19 +16,19 @@ variable (policy : CallPolicy program)
 def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition (S := S) policy body locals goals))
-    (compileOverflow : ∀ locals goals, Except Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
+    (compileBody : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy body locals goals))
+    (compileOverflow : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
     (count : Nat) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) :=
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) :=
   match count with
   | 0 => do
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
       let exceeded ← compileOverflow locals goals
       let combined ← branchCondition test locals
-        (done.map (fun _ _ ready _ _ => ready)) exceeded
+        (withHandlers policy done) exceeded
       return combined.map (fun runtime world ready allowed safe => by
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
+          simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
           have ready := ready allowed safe <;>
           simpa only [Runtime.wpS, Runtime.wpB, execStmtH, retryLauf, wahr?, tested,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
@@ -42,10 +42,11 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           reason := goals.reason }
       let step ← compileBody locals passGoals
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
-      let advanced := step.map (fun runtime world ready allowed safe =>
-        show goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
+        ∀ allowed, HandlerSafe policy runtime allowed →
+        goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
-          | .ok next env | .next _ next env => retryLauf
+          | .ok next env | .next _ next env => retryLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
               (fun world env => let read := world.lese Λ test.orte
                 (read, wahr? (eval read test read env)))
@@ -55,7 +56,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error) from by
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready allowed safe => by
         have ready := ready allowed safe
         unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world locals with
@@ -71,30 +72,25 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | logik error => simpa only [result, Goals.holds] using ready
         | hardware error => trivial)
       let combined ← branchCondition test locals
-        (done.map (fun _ _ ready _ _ => ready)) advanced
+        (withHandlers policy done) advanced
       return combined.map (fun runtime world ready allowed safe => by
-        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals with
-        | true =>
-            simp only [tested, ↓reduceIte] at ready
-            simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
-              ↓reduceIte, Goals.holds] using ready allowed safe
-        | false =>
-            simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
-            have ready := ready allowed safe
-            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
-                (world.lese Λ test.orte) locals <;>
-              simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
-                Bool.false_eq_true, ↓reduceIte, Goals.holds, result] using ready)
+        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
+          simp only [tested, wahr?, eq_self, Bool.false_eq_true, ↓reduceIte] at ready <;>
+          have ready := ready allowed safe <;>
+          cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls
+            body (world.lese Λ test.orte) locals <;>
+          simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested, result,
+            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
 
 /-- An inductive hint is checked at entry, at every ordinary/continue
     successor, at successful exit, and before overflow. No hint is trusted. -/
 def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (budget count : Nat) (invariant : QF (Observation D))
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition (S := S) policy body locals goals))
-    (compileOverflow : ∀ locals goals, Except Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
+    (compileBody : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy body locals goals))
+    (compileOverflow : ∀ locals goals, Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy overflow locals goals))
     (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) := do
+    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy (.retry count test body overflow) locals goals) := do
   let domain ← environmentDomain (D := D) budget Γ
   let passGoals : Goals D V Γ :=
     { normal := fun _ => .ok invariant
@@ -114,7 +110,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         sound := fun runtime world valid allowed safe =>
           let parts := (conj_denote _ _ _).mp valid
           ⟨step.sound runtime world parts.1 allowed safe, exceeded.sound runtime world parts.2 allowed safe⟩ }
-    let branch ← branchCondition test env (done.map (fun _ _ ready _ _ => ready)) advance
+    let branch ← branchCondition test env (withHandlers policy done) advance
     return inductiveCondition invariant branch
   let checks ← allConditions domain.values _ compilePass
   return {
@@ -124,16 +120,16 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         have obligations := checks.sound runtime world parts.2
         let I : Nat → World D → Env D Γ → Prop :=
           fun _ next _ => invariant.denote (assignment next)
-        let doneTest := fun next env =>
+        let doneTest := fun (next : World D) (env : Env D Γ) =>
           let read := next.lese Λ test.orte
           (read, wahr? (eval read test read env))
         have stepRule : ∀ n next env, I (n + 1) next env →
             (doneTest next env).2 = false →
-            runtime.wpB body (WP.PassSchritt (goals.holds allowed) I n) (doneTest next env).1 env := by
+            runtime.wpB body (WP.PassSchritt (goals.holds (l := l) allowed) I n) (doneTest next env).1 env := by
           intro n next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           have ready := ready allowed safe
           have run := ready.1
           unfold Runtime.wpB at run ⊢
@@ -143,16 +139,16 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         apply WP.retry_regel
           (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
           doneTest (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls overflow)
-          (goals.holds allowed) I ?_ ?_ stepRule count world locals parts.1
+          (goals.holds (l := l) allowed) I ?_ ?_ stepRule count world locals parts.1
         · intro n next env holds finished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = true := finished
-          simp only [tested, ↓reduceIte] at ready
+          simp only [tested, wahr?, eq_self, ↓reduceIte] at ready
           simpa only [Goals.holds] using ready allowed safe
         · intro next env holds unfinished
           have ready := obligations env (domain.complete env) next holds
           have tested : eval (next.lese Λ test.orte) test (next.lese Λ test.orte) env = false := unfinished
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+          simp only [tested, wahr?, Bool.false_eq_true, ↓reduceIte] at ready
           exact (ready allowed safe).2 }
 
 /-- Exact traversal checking retains the model's annotation test at entry,
