@@ -10,7 +10,7 @@ namespace Gabbro.Grammatik.Gen.Zeugen.ScalarRead
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
-abbrev z : Spez := ({ globs := [{ typ := .bool }] } : Spez).einzeln
+abbrev z : Spez := ({ globs := [{ typ := .int 0 1 }] } : Spez).einzeln
 
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
   .bind (.glob ⟨0, by decide⟩ (by decide)) (.ret .empty (List.Perm.refl _))
