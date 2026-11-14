@@ -9,17 +9,20 @@ namespace Gabbro.Grammatik.Boundary
 variable {D : Deklaration}
 
 /-- Omitting syntactically trivial checks preserves their truth. -/
-theorem requiredB_sound (question answer : World D) (ρ : Env D Γ) :
-    (e : Expr D Γ Λ .bool) → requiredB e = false → wahr? (eval question e answer ρ) = true
-  | .tru, _ => rfl
-  | .and left right, h => by
-      simp only [requiredB, Bool.or_eq_false_iff] at h
-      change (wahr? (eval question left answer ρ) &&
-        wahr? (eval question right answer ρ)) = true
-      rw [requiredB_sound question answer ρ left h.1,
-        requiredB_sound question answer ρ right h.2]
-      rfl
-  | e, h => by cases e <;> simp_all [requiredB]
+theorem requiredB_sound (question answer : World D) (ρ : Env D Γ)
+    (e : Expr D Γ Λ .bool) (h : requiredB e = false) :
+    wahr? (eval question e answer ρ) = true := by
+  unfold requiredB at h
+  split at h
+  · rfl
+  · rename_i left right
+    simp only [Bool.or_eq_false_iff] at h
+    change (wahr? (eval question left answer ρ) &&
+      wahr? (eval question right answer ρ)) = true
+    rw [requiredB_sound question answer ρ left h.1,
+      requiredB_sound question answer ρ right h.2]
+    rfl
+  · cases h
 
 /-- The shared value-or-reason gate. Only a decoded normal answer evaluates the
     predicate. An environment reason is forwarded unchanged; an invalid type or
