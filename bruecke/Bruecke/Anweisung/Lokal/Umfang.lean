@@ -13,11 +13,13 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
-/-- Explicit integer and bool scalars may share source names; capabilities stay protected. -/
+/-- Scalar integers, booleans and checked indices may share source names. Capability
+    entries stay protected; positional identifiers preserve shadowed scalar values. -/
 def protectedNames : List (String × Ty) → List UParamArt → List String
   | [], _ => []
   | (x, .int ..) :: ps, .int :: ks => protectedNames ps ks
   | (x, .bool) :: ps, .bool :: ks => protectedNames ps ks
+  | (_, .int ..) :: ps, .index _ :: ks => protectedNames ps ks
   | (_, .prod ..) :: ps, .wert :: ks => protectedNames ps ks
   | (x, _) :: ps, _ :: ks => x :: protectedNames ps ks
   | (x, _) :: ps, [] => x :: protectedNames ps []
