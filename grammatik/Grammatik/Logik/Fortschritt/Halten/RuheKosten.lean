@@ -252,9 +252,8 @@ theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (
     kostenArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruArms arms) = kostenArms ep c pa arms := by
   match arms with
   | .nil => rfl
-  | .cons (c := payload) b rest =>
-    cases payload <;>
-      exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
+  | .cons (c := none) b rest | .cons (c := some _) b rest =>
+    exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
 termination_by sizeOf arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
