@@ -96,7 +96,7 @@ theorem typeFact_of_value (world : World D) (key : Observation D) (τ : Ty) (val
       exact ⟨Int.natCast_nonneg _, by exact_mod_cast value.property⟩
   | bool =>
       simp only [LProp.denote, LTerm.denote, reads, scalarValue]
-      cases value <;> decide
+      cases value <;> simp [wahr?]
   | _ => trivial
 
 theorem typeFact_sound (key : Observation D) (world : World D) :

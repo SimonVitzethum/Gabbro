@@ -87,7 +87,7 @@ theorem decodeScalar_complete (τ : Ty) (value : Int)
       by_cases zero : value = 0
       · exact ⟨false, by simp only [decodeScalar, zero, ↓reduceIte]⟩
       · have one : value = 1 := by omega
-        exact ⟨true, by simp only [decodeScalar, zero, one, ↓reduceIte]⟩
+        exact ⟨true, by simp [decodeScalar, one]⟩
   | _ => exact False.elim valid
 
 def observationBounds (keys : List (Observation D)) : LProp (Observation D) :=
@@ -137,7 +137,7 @@ theorem scalarBounds_value (τ : Ty)
   | bool =>
       change 0 ≤ term.denote values ∧ term.denote values ≤ 1
       rw [same]
-      cases value <;> decide
+      cases value <;> simp [scalarValue, wahr?]
   | _ => exact False.elim supported
 
 theorem observationBounds_assignment (keys : List (Observation D)) (world : World D)
