@@ -290,9 +290,10 @@ theorem parseTyp_ident (F : Nat) (a : String) (rest : List Token)
     · exact absurd heq.1 h
     · exact absurd heq.2 (h _)
   next _ _ _ _ heq => simp only [List.cons.injEq, Token.ident.injEq] at heq; obtain ⟨rfl, rfl⟩ := heq; rfl
-  next _ _ heq => simp only [List.cons.injEq, reduceCtorEq, false_and] at heq
-  next _ _ heq => simp only [List.cons.injEq, reduceCtorEq, false_and] at heq
-  next _ _ heq => simp only [List.cons.injEq, reduceCtorEq, false_and] at heq
-  next _ _ _ x _ _ _ _ => exact absurd rfl (x a rest)
+  all_goals first
+    | (rename_i heq; simp only [List.cons.injEq, reduceCtorEq, false_and] at heq)
+    | exact absurd rfl
+        (‹∀ (a_1 : String) (tail : List Token), Token.ident a :: rest = Token.ident a_1 :: tail → False›
+          a rest)
 
 end Gabbro.Grammatik.Parser
