@@ -20,7 +20,7 @@ theorem reasonCheck_eval (β : Gabbro.Body.Binding) (w : Gabbro.Body.World) (x :
   | [] => rfl
   | tag :: labels => by
     simp only [reasonCheck, Gabbro.Body.eval, reasonCheck_eval β w x labels,
-      Gabbro.Body.binop, List.any_cons]
+      Gabbro.Body.binop, List.any_cons, Gabbro.Body.orBool_some]
 
 theorem entryCheck_wahr {D : Deklaration} (x : String) (ty : Ty) (v : Wert D ty)
     (β : Gabbro.Body.Binding) (w : Gabbro.Body.World) {e : Gabbro.Body.Expr}
@@ -35,7 +35,7 @@ theorem entryCheck_wahr {D : Deklaration} (x : String) (ty : Ty) (v : Wert D ty)
       List.mem_map.mpr ⟨v.val, List.mem_range.mpr v.isLt, rfl⟩
     have hh : ((List.range n).map caseLabel).any (fun tag => decide (β x = .reason tag)) = true := by
       apply List.any_eq_true.mpr
-      exact ⟨caseLabel v.val, hm, by simpa only [decide_eq_true_eq] using hv⟩
+      exact ⟨caseLabel v.val, hm, by rw [decide_eq_true_eq, hv]; rfl⟩
     rw [hh]
   | _ =>
     simp only [entryCheck] at he
