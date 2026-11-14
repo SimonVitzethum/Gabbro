@@ -5,6 +5,7 @@
 module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Atomar.ConcreteGoalZeuge
 @[expose] public section
 
 

@@ -39,8 +39,8 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 /-! Profile selection and placement witnesses in both build modes.
-The flag's concrete checker refuses atomic reads, so no accepted-unit
-application of the profile goal theorem is asserted here. -/
+The refused atomic flag retains its structural selection witnesses.
+The bounded increment supplies the concrete-checker profile goal witness. -/
 
 namespace Gabbro.Grammatik.AtomarXZeuge
 
@@ -88,3 +88,47 @@ theorem pe_profil_modell (m : Parser.Auswahl.BauModus) :
   exact ⟨mb, _, by rw [hp]; exact List.mem_singleton_self _, hmb⟩
 
 end Gabbro.Grammatik.AtomarXZeuge
+
+namespace Gabbro.Grammatik.ConcreteGoalZeuge
+
+open Gabbro.Grammatik Speichermodell Zielsatz
+open Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
+  nutzerPflicht_of_akzeptiert_zeuge)
+
+/-- The accepted increment with the same nonempty profile and placement
+    certificate used above, in each of the two build modes. -/
+def profileUnit (mode : Parser.Auswahl.BauModus) : ProfilEinheit declaration :=
+  ⟨unit, mode, AtomarXZeuge.peItems, Parser.ProfilBindung.pzPol⟩
+
+theorem profile_admitted_zeuge (mode : Parser.Auswahl.BauModus) :
+    (profileUnit mode).zulaessig = true :=
+  AtomarXZeuge.pe_zulaessig mode
+
+/-- Joint accepted profile, user, hardware and runtime premises, followed
+    by the profile goal on every reachable machine. The entry is inhabited
+    by concrete_premises_zeuge and has a nontrivial increment contract. -/
+theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
+    (mode : Parser.Auswahl.BauModus) :
+    profilAkzeptiert akzeptiertX_pruefer (profileUnit mode) fs.1 ls.1 cs.1 = true ∧
+    NutzerPflichtA unit ∧ ProfilAnnahmen (profileUnit mode) oracle ∧
+    Laufzeit unit sp init ∧
+    ∀ passes K,
+      FadenErreichbarX unit.P.mitRuhe oracle.mitRuhe passes
+        (GeteiltV (D := declaration) unit.P unit.ws) initial K →
+      ZielFX unit.P.mitRuhe unit.S.mitRuhe oracle.mitRuhe passes
+        (GeteiltV (D := declaration) unit.P unit.ws)
+        (RufStartG unit.P.mitRuhe sp init) [] K := by
+  have accepted : profilAkzeptiert akzeptiertX_pruefer (profileUnit mode)
+      fs.1 ls.1 cs.1 = true :=
+    Bool.and_eq_true.mpr ⟨checker_accepted_zeuge, profile_admitted_zeuge mode⟩
+  have hardware : ProfilAnnahmen (profileUnit mode) oracle :=
+    (profilAnnahmen_iff (profileUnit mode) oracle).mpr hardware_zeuge
+  refine ⟨accepted, nutzerPflicht_of_akzeptiert_zeuge, hardware, laufzeit_voll unit, ?_⟩
+  intro passes K reached
+  exact gabbro_ziel_profil akzeptiertX_pruefer declaration (profileUnit mode) fs ls cs
+    accepted nutzerPflicht_of_akzeptiert_zeuge oracle hardware
+    passes sp init (laufzeit_voll unit) (fun _ => true) K reached
+
+#print axioms gabbro_ziel_profil_zeuge
+
+end Gabbro.Grammatik.ConcreteGoalZeuge
