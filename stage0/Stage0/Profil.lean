@@ -147,6 +147,7 @@ structure Prepared (options : Options) (items : List SItemTief) where
   admitted : Auswahl.reserviertL items = false
   compatible : runnerCompatible options
   bindung : ProfilBindung.ProfileBinding
+  bindingSource : bindung = ProfilBindung.ProfileBinding.aus selected
   bindungOk : ProfilBindung.bindungB bindung = true
   environmentChecked : environmentOk options bindung = true
   abschnittFrei : abschnittFehler selected = none
@@ -165,6 +166,14 @@ theorem Prepared.elaborierbar_eq {options : Options} {items : List SItemTief}
   unfold Prepared.elaborierbar
   rw [result.selection]
 
+/-- The execution environment is read from the exact canonically selected
+    source profile, rather than from independent admitted metadata. -/
+theorem Prepared.imageEnvironment_eq {options : Options} {items : List SItemTief}
+    (result : Prepared options items) :
+    imageEnvironment options result.bindung =
+      imageEnvironment options (ProfilBindung.ProfileBinding.aus (Auswahl.waehleL options.mode items)) := by
+  rw [result.bindingSource, result.selection]
+
 def prepareItems (options : Options) (items : List SItemTief) :
     Except String (Prepared options items) := do
   if h : runnerCompatible options then
@@ -176,7 +185,7 @@ def prepareItems (options : Options) (items : List SItemTief) :
           | some e => throw e
           | none =>
             checkItems 100000 (ProfilBindung.ohneProfilL selected)
-            pure ⟨selected, rfl, reserved, h, ProfilBindung.ProfileBinding.aus selected, hb, hen, he⟩
+            pure ⟨selected, rfl, reserved, h, ProfilBindung.ProfileBinding.aus selected, rfl, hb, hen, he⟩
         else throw "ir: execution environment conflicts with the source profile"
       else throw "ir: profile binding refused: modes, assumptions or library requirements are not consistent"
     else throw "build selection: TESTBUILD is reserved (G003)"
@@ -199,7 +208,7 @@ theorem prepareItems_preserves_zeuge :
       prepareItems {} [.goalT "userspace" none] = .ok result ∧
       result.selected = [.goalT "userspace" none] ∧ runnerCompatible ({} : Options) :=
   ⟨⟨[.goalT "userspace" none], rfl, rfl, rfl,
-    ProfilBindung.ProfileBinding.aus [.goalT "userspace" none], by decide, by decide, by decide⟩,
+    ProfilBindung.ProfileBinding.aus [.goalT "userspace" none], rfl, by decide, by decide, by decide⟩,
     rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Profil
