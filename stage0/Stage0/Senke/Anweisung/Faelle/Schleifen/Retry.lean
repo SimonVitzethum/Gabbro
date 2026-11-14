@@ -35,14 +35,26 @@ theorem retry_case {O : Orakel D} {passes : Nat}
       dsimp only [counter, one]
       exact ⟨by rw [hlo0]; exact allowed.1, by omega, allowed.2.1⟩
     have room : frei Γ reserved ≤ K := by have := hW.ks; omega
+    have protectedSlots : ∀ j ∈ pr, j < frei Γ reserved ∧ j ≠ counter ∧ j ≠ one := by
+      intro j hj
+      refine ⟨hpr j hj, ?_, ?_⟩
+      · intro eq
+        apply allowed.2.2.1
+        change counter ∈ pr
+        rw [← eq]
+        exact hj
+      · intro eq
+        apply allowed.2.2.2
+        change one ∈ pr
+        rw [← eq]
+        exact hj
     obtain ⟨m1, initRun, initFrame, entry, surrounds, snapshot, world, keeps, count, unit⟩ :=
       forever_initialize_entry (lo := lo) (pr := pr) hW hp hu hk hw
         (by rw [hlo0]) controlBounds.1 (by omega) (by omega) controlBounds.2.2
         (by omega) room fuel (by
           intro j hj
-          have member := hpr j hj
-          exact ⟨by omega, fun eq => allowed.2.2.1 (eq ▸ hj),
-            fun eq => allowed.2.2.2 (eq ▸ hj)⟩)
+          have member := protectedSlots j hj
+          exact ⟨by omega, member.2⟩)
     let x : Retrying.Image L P f Γ reserved :=
       { A := A
         C := C
@@ -68,10 +80,7 @@ theorem retry_case {O : Orakel D} {passes : Nat}
         low := hlo
         controls := controlBounds
         room := (by omega)
-        kept := (by
-          intro j hj
-          exact ⟨hpr j hj, fun eq => allowed.2.2.1 (eq ▸ hj),
-            fun eq => allowed.2.2.2 (eq ▸ hj)⟩)
+        kept := protectedSlots
         sized := imageSize }
     have ready : x.Ready m1 σ ρ :=
       { pre := entry
@@ -97,10 +106,11 @@ theorem retry_case {O : Orakel D} {passes : Nat}
         (J := (retryTargets cc.1.length cb.length cu.1.length).2)
         (by dsimp only [retryTargets, Retrying.Image.backIndex, x]; omega)
       change _ = x.pc + (0 : W) at h
-      simpa only [BitVec.add_zero] using h
+      simpa only [Retrying.Image.addr, BitVec.add_zero] using h
     have overflowEnd : x.addr x.overflowIndex + BitVec.ofNat 64 (16 * cu.1.length) = x.addr x.exitIndex :=
       step_eq x.pc (by dsimp only [Retrying.Image.overflowIndex, Retrying.Image.exitIndex, x]; omega)
-    have simulation := x.correct (bis := bis) (tc := cc.2) (sc := sc) hcc (by omega) (execBlock O passes R body)
+    have simulation := x.correct (bis := bis) (tc := cc.2) (sc := sc) hcc
+      (by change cc.2 ≤ Ks; omega) (execBlock O passes R body)
       (execBlock O passes R overflow)
       (outerLeave := x.addr x.exitIndex + BitVec.ofInt 64 ex.1)
       (outerNext := x.addr x.exitIndex + BitVec.ofInt 64 ex.2)
