@@ -63,13 +63,14 @@ def lockCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Lexical cleanup checks every owed lock before returning the actual value. -/
 def scopedReturnCondition (budget : Nat)
-    (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock))
+    (facts : ∀ lock, Except Invarianten.Frag.Refusal (LockFormula S lock))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (expression : ErgExpr D Γ Λ V.erg) (cleanup : RueckRessourcen D V Λ)
     (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Frag.Refusal (StatementCondition (S := S) policy (.retScoped expression cleanup) locals goals) := do
+    Except Invarianten.Frag.Refusal
+      (StatementCondition (S := S) policy (.retScoped (l := l) expression cleanup) locals goals) := do
   let releases ← cleanupFormula facts cleanup.scopes
-  let returned ← returnCondition (S := S) budget expression locals goals
+  let returned ← returnCondition (S := S) budget expression locals goals.returned
   return {
       formula := conj releases.formula returned.formula
       sound := fun runtime world valid allowed safe => by
@@ -77,6 +78,7 @@ def scopedReturnCondition (budget : Nat)
         let read := world.lese Λ expression.orte
         have same : assignment read = assignment world := assignment_lese _ _ _
         have cleanupReady := (releases.correct read).mp (by rw [same]; exact parts.1)
+        change scopesInvH S cleanup.scopes (world.lese Λ expression.orte) = true at cleanupReady
         have ready := returned.sound runtime read (by rw [same]; exact parts.2)
         unfold Runtime.wpS
         simp only [execStmtH, cleanupReady, ↓reduceIte, Goals.holds]
