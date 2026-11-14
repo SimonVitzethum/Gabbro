@@ -210,6 +210,19 @@ def atomicBound : Expr atomicDeclaration [] [] .bool :=
 theorem atomicBound_refused_zeuge :
     uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by rfl
 
+/-- Boolean memory keeps its value rather than becoming a constant predicate. -/
+def booleanDeclaration : Deklaration := { declaration with gtyp := fun _ => .bool }
+
+def booleanMemory : Expr booleanDeclaration [] [] .bool :=
+  .glob false (fun _ member => nomatch member)
+
+theorem booleanMemory_reified_zeuge :
+    uebersetzeB [.inr false] booleanMemory = .ok (.eq (.var (.glob false)) (.konst 1)) := rfl
+
+theorem booleanMemory_sound_zeuge (world : World booleanDeclaration) :
+    eval world booleanMemory world .nil = true ↔ assignment world (.glob false) = 1 :=
+  uebersetzeB_sound [.inr false] booleanMemory _ booleanMemory_reified_zeuge world
+
 theorem constant_sound_zeuge (values : Assignment Nat) :
     (LTerm.add (.scale (-3) (.konst 2)) (.konst 5)).denote values = -1 :=
   LTerm.constant?_sound rfl values
