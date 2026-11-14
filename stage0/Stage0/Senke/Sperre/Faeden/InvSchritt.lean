@@ -52,15 +52,14 @@ theorem Inv.zieht {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {l : Nat} (h : σ
     omega
   · show (σ.q ++ [t]).head? = some u
     by_cases hut : u = t
-    · rw [hut, upd_self] at hu
-      simp [Ort.haelt] at hu
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp [hut, upd_self, Ort.haelt] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       obtain ⟨r, hr⟩ := List.head?_eq_some_iff.1 (hI.haelt u hu)
       simp [hr]
   · show σ.w.wait = (σ.q ++ [t]).countP (fun u => (upd σ.pc t (.ladeS σ.w.next) u).gezaehlt)
     have h1 : σ.q.countP (fun u => (upd σ.pc t (.ladeS σ.w.next) u).gezaehlt) =
         σ.q.countP (fun u => (σ.pc u).gezaehlt) :=
-      List.countP_congr (fun x hx => by rw [upd_ne σ.pc _ (fun e => htq (e ▸ hx))])
+      List.countP_congr (fun x hx => by rw [upd_ne σ.pc _ (fun e : x = t => htq (e ▸ hx))])
     have h2 : [t].countP (fun u => (upd σ.pc t (.ladeS σ.w.next) u).gezaehlt) = 0 := by
       simp [List.countP_cons, upd_self, Ort.gezaehlt]
     rw [List.countP_append, h1, h2]

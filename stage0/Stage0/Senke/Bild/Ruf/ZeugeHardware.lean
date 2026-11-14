@@ -53,8 +53,13 @@ theorem t4P_fremdFrei : FremdFrei t4P :=
 def zaehlQ : AxEns t4D := fun a => nomatch a
 
 /-- **The counting oracle meets the goal theorem's hardware assumptions** on the fixture's declaration. -/
-theorem zaehl_hardware [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen (zaehlOrakel t4D) zaehlQ :=
-  ⟨fun a => nomatch a, zaehlOrakel_regLokal t4D, fun a => nomatch a, inferInstance⟩
+theorem zaehl_hardware [hw : RootNativeFloat.Hardware] :
+    Zielsatz.HardwareAnnahmen (zaehlOrakel t4D) zaehlQ := by
+  refine And.intro ?_ (And.intro (zaehlOrakel_regLokal t4D) (And.intro ?_ hw))
+  · intro a
+    exact nomatch a
+  · intro a
+    exact nomatch a
 
 /-- The leaf callee returns under the counting oracle, with a symbolic start world (no kernel run). -/
 theorem t4G_ruf_kehrt_zaehl (σ : World t4D) : ∃ (σ' : World t4D) (v : ErgVal t4D (t4D.erg t4G)),
