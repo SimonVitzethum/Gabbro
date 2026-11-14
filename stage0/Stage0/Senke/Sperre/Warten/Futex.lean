@@ -2,6 +2,7 @@
    Memory interference is an explicit client premise, never supplied by FutexOK. -/
 module
 public import Stage0.Senke.Sperre.Warten.Waiter
+public import Stage0.Senke.Sperre.Bindung.Code
 public import Runner.IR.Futex
 @[expose] public section
 

@@ -1,7 +1,7 @@
 /-
   File:      stage0/Stage0/Senke/Sperre/Code.lean
   Subject:   Building blocks of the lock code (`Ticket/Code.lean`): `addC` adds to a word by `cas`, again until it
-             holds; `futexC` builds the request block of a `futex` call and makes it.
+             holds. Environment-specific code lives in `Bindung/Code.lean`.
 -/
 module
 public import Stage0.Senke.Ausdruck

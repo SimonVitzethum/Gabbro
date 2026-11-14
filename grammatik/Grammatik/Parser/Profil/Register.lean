@@ -35,7 +35,7 @@ open Gabbro.Grammatik
 
 /-! ## The closed decoder of the keyed modes -/
 
-/-- The five keys of a keyed mode entry, by their source spelling. Any other word is no key. -/
+/-- The keys of a keyed mode entry, by their source spelling. Any other word is no key. -/
 def schluesselVon (s : String) : Option ProfilSchluessel :=
   if strEq s "arch" then some .arch
   else if strEq s "rounding" then some .fpRundung
@@ -48,7 +48,7 @@ def schluesselVon (s : String) : Option ProfilSchluessel :=
 /-- The value of a key by its source spelling. Only the modes the model and the emitted image have a
     meaning for are supported, each a positive code: `arch` x86_64 (1) / aarch64 (2), `rounding` nearest,
     `fp_contract` off (the float prelude binds `-ffp-contract=off`, `N218`), `memory_model` c11,
-    `interrupt_routing` fest. Anything else is refused. -/
+    `interrupt_routing` fest, and `environment` linux / freestanding. Anything else is refused. -/
 def wertVon (k : ProfilSchluessel) (v : String) : Option Nat :=
   match k with
   | .arch => if strEq v "x86_64" then some 1 else if strEq v "aarch64" then some 2 else none

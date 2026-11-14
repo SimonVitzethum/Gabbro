@@ -2,8 +2,8 @@
   File:      stage0/Stage0/Senke/Sperre/Ticket/Code.lean
   Subject:   The ticket-lock code (lock stage 2a): the three words of a lock at `a` are the next ticket, the ticket
              now served and the waiter count. `nimmT`: take a ticket by `cas` on the next word, again until it holds;
-             when the serving word holds my ticket, done, else waiters + 1, `futex_wait` on the serving word,
-             waiters - 1, again. `gibT`: serving + 1 by `cas` (a LOCKED store: a plain store followed by the load of
+             when the serving word holds my ticket, done; otherwise the profile binding retries or parks,
+             preserving the same ticket. `gibT`: serving + 1 by `cas` (a LOCKED store: a plain store followed by the load of
              the waiters could lose a wake-up); `futex_wake` when there are waiters. `gibTs`: the release chain of a
              scoped return (lock stage 3), and the two scoped return codes built on it (`retScopedC`,
              `retWhyScopedC`).
@@ -33,7 +33,7 @@ def nimmT (L : Lay D) (a s : Nat) : List II :=
     ci 14 ((s + 6 : Nat) : Int) ((s + 5 : Nat) : Int) ((s + 2 : Nat) : Int),
     ci 19 ((s + 6 : Nat) : Int) (16 * 2) 0, -- to WAIT (index 12)
     ci 18 (16 * 24) 0 0] ++ -- to END (index 35)
-  -- WAIT: waiters + 1, futex_wait on the serving word, waiters - 1, again
+  -- WAIT: spin retries at index 7; Linux registers, waits, unregisters and retries.
   [waitEntry L.lockWait a s] ++ (addC (a + 16) (s + 7) 1).drop 1 ++\n  waitBindingC L.lockWait (a + 8) 128 (s + 5) (s + 10) none ++ addC (a + 16) (s + 7) (-1) ++
   [ci 18 (-(16 * 27)) 0 0] -- back to L1 (index 7)
 

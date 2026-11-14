@@ -7191,3 +7191,30 @@ existing exported section fixture's premise from acceptance and applies the gene
 and hold-time theorem. Nested acquisitions retain the conservative bound `k = h`; a separate
 acquisition potential through calls/loops is not proved. Indirect calls in sections or in
 cost-checked functions are refused, even with checked pointer-type cost declarations.
+
+## 188. Profile-bound ticket waiting (S7)
+
+The admitted `environment linux` / `environment freestanding` profile entry selects the execution-image binding;
+`--environment` must agree with an entry declared in source. The default remains the Linux runner image.
+`Emitted.lockWait` proves that the selected binding survives the actual image constructor and relocation.
+`ticket_spin_no_syscall`, `locksCodeT_spin_no_syscall` and `Emitted.lock_spin_no_syscall` concern lock code only;
+the runner startup and declared gates have separate bindings. Linux retains private WAIT and WAKE-all
+(`ticket_futex_syscalls`). Both bindings keep every instruction offset and the existing uncontended simulation
+statements. The spin contention edge takes two instructions back to the serving read, preserving the complete
+memory (`nimmT_spin_retry`); its padded wait/wake blocks contain no syscall.
+
+`Sperre/Bindung/Simulation.lean` states the small safety interface `WaitModel`: a scheduled step stutters or is an
+existing ticket-machine step. `waitModel` proves both instances. For every such model, `WaitRun.inv`,
+`WaitRun.abbild`, `WaitRun.abstract`, `WaitRun.tkt` and `WaitRun.ausschluss` carry the same invariant, abstract
+FIFO order, ticket ghost and mutual exclusion. The existing machine-G coupling obligation is unchanged.
+Joint witnesses are `profile_lock_zeuge`, `nimmT_spin_retry_zeuge`, `waitModel_zeuge`, `WaitRun_tkt_zeuge` and
+`image_binding_zeuge` under `Sperre/Bindung/`.
+
+**Liveness finding (no weakened theorem):** the existing `Faeden.Lauf` models Linux waiter registration,
+FUTEX_WAIT blocking and WAKE-all. Its `Lauf.ScheinbarEndlich` bounds spontaneous returns from a blocked place;
+it is not a progress contract for active spin retries. A spin retry at `ladeS` is a stutter, not a `Schritt`
+of that Linux machine. Consequently `Lauf.waechst`, `Lauf.leben`, `Lauf.leben_warte` and their
+`Stau`/`Potential` proof chain do not transfer through the safety-only `WaitModel` interface. A generic liveness
+proof additionally needs progress at the strategy's retry place under scheduler fairness. Those Linux
+statements and their assumptions remain intact; no spin liveness theorem is claimed here. FIFO and ghost
+refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-one remains unsupported.

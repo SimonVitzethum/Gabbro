@@ -2700,7 +2700,7 @@ against one set, decidable and cheap.
 profiledecl     = "profile" "{" { profileentry } "}" ";" ;
 requiresprofile = "requires" "profile" "{" { profileentry } "}" ";" ;
 profileentry    = ( "arch" | "rounding" | "fp_contract" | "memory_model"
-                  | "interrupt_routing" ) ident ";"
+                  | "interrupt_routing" | "environment" ) ident ";"
                 | "assume" ident ";" ;
 ```
 
@@ -2751,6 +2751,14 @@ things only a profile can fail:
   (`LANGUAGE.md` §3.4); an `arch` the unit never declares contradicts the
   declared machines (`N218`). Without declared machines nothing is
   refused — a unit with no machine named constrains no machine.
+
+`environment linux;` selects the Stage-0 ticket lock's private futex WAIT and WAKE-all binding;
+`environment freestanding;` selects a syscall-free spin retry on the serving ticket. `environment`
+is contextual inside a profile, not a reserved identifier elsewhere. Both bindings retain the same
+FIFO ticket order and lock safety theorems. `--environment linux|freestanding`, when supplied,
+must agree with the source profile; without either declaration the existing Linux runner image
+is selected. This binds lock waiting only; other image facilities retain their own checked bindings.
+The existing Linux futex liveness theorem is not a spin-progress theorem (S7 finding in the theorem map).
 
 **The manifest** lists every keyed profile entry (with the
 `-ffp-contract=off` flag where the profile says `fp_contract off`) and

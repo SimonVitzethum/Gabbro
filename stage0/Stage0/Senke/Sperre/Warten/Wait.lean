@@ -33,7 +33,7 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
     (by rw [compared, ticket]; exact bool_ne (Ne.symm waiting))
   have inc : At code (p + 12) (addC (a + 16) (s + 7) 1) := by
     intro j hj
-    have := hc (12 + j) (by change j < 7 at hj; rw [nimmT_len]; omega)
+    have := hc (12 + j) (by change j < 7 at hj; change 12 + j < 35; omega)
     rw [show p + 12 + j = p + (12 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl
@@ -41,7 +41,7 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
   obtain ⟨m1, f1, steps1, state1, keep1⟩ := add_waiters E h inc (by decide) (by decide)
   have prep : At code (p + 19) (futexC (a + 8) 128 (s + 5) (s + 10) none) := by
     intro j hj
-    have := hc (19 + j) (by change j < 8 at hj; rw [nimmT_len]; omega)
+    have := hc (19 + j) (by change j < 8 at hj; change 19 + j < 35; omega)
     rw [show p + 19 + j = p + (19 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl
@@ -78,7 +78,7 @@ theorem nimmT_wait_retry {spurious : W → W → Mem → Mem → Prop} [FutexOK 
   obtain ⟨m1, steps1, state1⟩ := futex_return E h (hc.get (j := 26) rfl) args answer resume
   have dec : At code (p + 27) (addC (a + 16) (s + 7) (-1)) := by
     intro j hj
-    have := hc (27 + j) (by change j < 7 at hj; rw [nimmT_len]; omega)
+    have := hc (27 + j) (by change j < 7 at hj; change 27 + j < 35; omega)
     rw [show p + 27 + j = p + (27 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl
