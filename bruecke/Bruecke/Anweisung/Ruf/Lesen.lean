@@ -54,7 +54,7 @@ theorem namedResult_some {fn : UFn} {ns : BodyNames} {x g : String}
           | some renamed =>
             simp only [hn, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
-            exact ⟨gf, es, renamed, sh, hgf, ht, hsh, hes, hn, rfl⟩
+            exact ⟨gf, es, renamed, sh, rfl, ht, hsh, rfl, hn, rfl⟩
 
 theorem namedResult_sicht {fn ft : UFn} (h : Sicht u ft fn) (ns : BodyNames)
     (x g : String) (args : List UArg) :
