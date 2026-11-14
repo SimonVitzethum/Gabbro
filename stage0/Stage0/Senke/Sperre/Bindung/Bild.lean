@@ -35,7 +35,7 @@ theorem bild_lockWait {D : Deklaration} {P : Programm D} {passes : Nat}
 theorem ticket_spin_no_syscall {D : Deklaration} (L : Lay D) (a s : Nat)
     (binding : L.lockWait = .spin) :
     ((nimmT L a s ++ gibT L a s).all fun i => i.o != 23) = true := by
-  simp [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC, ci]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci]
 
 /-- The scoped lock and all three release paths add no syscall to a
     syscall-free body in a freestanding image. -/
@@ -43,7 +43,7 @@ theorem locksCodeT_spin_no_syscall {D : Deklaration} (L : Lay D) (a s : Nat)
     (cb : List II) (x y : Int) (binding : L.lockWait = .spin)
     (body : (cb.all fun i => i.o != 23) = true) :
     ((locksCodeT L a s cb x y).all fun i => i.o != 23) = true := by
-  simp [locksCodeT, nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC, ci, body]
+  simp [locksCodeT, nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci, body]
 
 /-- Linux retains WAIT on contention and WAKE-all on release, at the same
     offsets as the existing sequential and cross-thread theorems. -/
@@ -52,7 +52,7 @@ theorem ticket_futex_syscalls {D : Deklaration} (L : Lay D) (a s : Nat)
     (nimmT L a s)[26]? = some (ci 23 ((s + 17 : Nat) : Int) ((s + 10 : Nat) : Int) 0) ∧
     (gibT L a s)[15]? = some (ci 23 ((s + 17 : Nat) : Int) ((s + 10 : Nat) : Int) 0) ∧
     (gibT L a s)[11]? = some (ci 1 ((s + 13 : Nat) : Int) 2147483647 0) := by
-  simp [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 end Gabbro.Stage0.Senke
 

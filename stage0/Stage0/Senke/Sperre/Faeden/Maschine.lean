@@ -309,13 +309,13 @@ theorem nimmT_inc (binding : L.lockWait = .futex) : (nimmT L a s)[12]? = some (c
     (nimmT L a s)[13]? = some (ci 15 ((s + 7 + 1 : Nat) : Int) ((s + 7 : Nat) : Int) 0) ∧
     (nimmT L a s)[16]? =
       some (ci 22 ((s + 7 + 4 : Nat) : Int) ((s + 7 : Nat) : Int) ((s + 7 + 1 : Nat) : Int)) := by
-  simp [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 theorem nimmT_futexW (binding : L.lockWait = .futex) : (nimmT L a s)[20]? = some (ci 1 ((s + 10 + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0) ∧
     (nimmT L a s)[21]? = some (ci 1 ((s + 10 + 2 : Nat) : Int) ((128 : Nat) : Int) 0) ∧
     (nimmT L a s)[22]? = some (ci 2 ((s + 10 + 3 : Nat) : Int) ((s + 5 : Nat) : Int) 0) ∧
     (nimmT L a s)[26]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) := by
-  simp [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 theorem nimmT_dec : (nimmT L a s)[28]? = some (ci 15 ((s + 7 + 1 : Nat) : Int) ((s + 7 : Nat) : Int) 0) ∧
     (nimmT L a s)[31]? =
@@ -331,7 +331,7 @@ theorem gibT_schritte (binding : L.lockWait = .futex) : (gibT L a s)[0]? = some 
     (gibT L a s)[7]? = some (ci 19 ((s + 2 : Nat) : Int) (16 * 9) 0) ∧
     (gibT L a s)[11]? = some (ci 1 ((s + 10 + 3 : Nat) : Int) 2147483647 0) ∧
     (gibT L a s)[15]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) := by
-  simp [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell, futexC, addC]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 end Code
 

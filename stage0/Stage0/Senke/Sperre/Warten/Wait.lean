@@ -26,7 +26,7 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
       FutexArgs fw (BitVec.ofNat 64 (a + 8)) 128 (f 5) ∧ fw 2 = t ∧ fw 5 = f 5 ∧
       StopAt ⟨pc + BitVec.ofNat 64 (16 * (p + 26)), fp⟩ mw
         (futexReq (BitVec.ofNat 64 (a + 8)) 128 (f 5)) := by
-  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
     futexC, List.map_cons, List.map_nil] at hc
   have branch := ls_brz_zero E h (hc.get (j := 10) rfl) (e := 6) (k := 2)
     rfl rfl (by omega) (by omega)
@@ -72,7 +72,7 @@ theorem nimmT_wait_retry {spurious : W → W → Mem → Mem → Prop} [FutexOK 
         ⟨pc + BitVec.ofNat 64 (16 * (p + 7)), fp⟩ m' ∧
       LS m0 m' fp s a f' n' u' (w' - 1) ∧ TicketInvW T n' u' (w' - 1) ∧
       f' 2 = f 2 ∧ f' 5 = f 5 := by
-  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
     futexC, List.map_cons, List.map_nil] at hc
   refine ⟨FutexOK.wait_return _ _ _ _ _ _ answer, ?_⟩
   obtain ⟨m1, steps1, state1⟩ := futex_return E h (hc.get (j := 26) rfl) args answer resume

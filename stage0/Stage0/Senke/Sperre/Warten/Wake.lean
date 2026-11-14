@@ -52,7 +52,7 @@ theorem gibT_waiters_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next
       StopAt ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ mw
         (futexReq (BitVec.ofNat 64 (a + 8)) 129 2147483647) := by
   have prefix := gibT_waiters_read E h hc
-  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
     futexC, List.map_cons, List.map_nil] at hc
   obtain ⟨m1, f1, steps1, state1, test⟩ := prefix
   have branch := ls_brz_ne E state1 (hc.get (j := 7) rfl) (e := 2) rfl (by omega)
@@ -83,7 +83,7 @@ theorem gibT_waiters_return {spurious : W → W → Mem → Mem → Prop} [Futex
     ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (p + 16)), fp⟩ m' ∧
       LS m0 m' fp s a (upd f 17 r) next' n' w' := by
-  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
     futexC, List.map_cons, List.map_nil] at hc
   obtain ⟨m', steps, state⟩ := futex_return E h (hc.get (j := 15) rfl) args answer resume
   have result : r.toInt < 0 ∨ r.toNat ≤ 2147483647 := by

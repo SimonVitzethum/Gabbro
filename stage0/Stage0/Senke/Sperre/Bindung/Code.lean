@@ -24,8 +24,13 @@ def bindingCell (strategy : LockWait) (hosted : II) : II :=
 
 /-- The syscall block has a fixed width in both images. In a freestanding image
     every cell is a forward jump; no syscall or request number is present. -/
-def waitBindingC (strategy : LockWait) (a op v q : Nat) (value : Option Int) : List II :=
-  (futexC a op v q value).map (bindingCell strategy)
+def ticketWaitC (strategy : LockWait) (a s : Nat) : List II :=
+  (futexC (a + 8) 128 (s + 5) (s + 10) none).map (bindingCell strategy)
+
+/-- Linux wakes every waiter; freestanding release needs no environment call.
+    The operation number and wake-all policy belong only to this binding. -/
+def ticketWakeC (strategy : LockWait) (a s : Nat) : List II :=
+  (futexC (a + 8) 129 0 (s + 10) (some 2147483647)).map (bindingCell strategy)
 
 /-- On contention the freestanding binding returns directly to the serving read
     (index 12 to 7). A retry has a fixed instruction bound; it never registers a

@@ -34,7 +34,8 @@ def nimmT (L : Lay D) (a s : Nat) : List II :=
     ci 19 ((s + 6 : Nat) : Int) (16 * 2) 0, -- to WAIT (index 12)
     ci 18 (16 * 24) 0 0] ++ -- to END (index 35)
   -- WAIT: spin retries at index 7; Linux registers, waits, unregisters and retries.
-  [waitEntry L.lockWait a s] ++ (addC (a + 16) (s + 7) 1).drop 1 ++\n  waitBindingC L.lockWait (a + 8) 128 (s + 5) (s + 10) none ++ addC (a + 16) (s + 7) (-1) ++
+  [waitEntry L.lockWait a s] ++ (addC (a + 16) (s + 7) 1).drop 1 ++
+  ticketWaitC L.lockWait a s ++ addC (a + 16) (s + 7) (-1) ++
   [ci 18 (-(16 * 27)) 0 0] -- back to L1 (index 7)
 
 /-- **Give the ticket lock** with words at `a`, scratch from slot `s` (to `s + 17`). -/
@@ -45,7 +46,7 @@ def gibT (L : Lay D) (a s : Nat) : List II :=
     ci 22 ((s + 5 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
     ci 1 ((s + 1 : Nat) : Int) ((a + 16 : Nat) : Int) 0, ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0,
     ci 19 ((s + 2 : Nat) : Int) (16 * 9) 0] ++ -- to END (index 16)
-  waitBindingC L.lockWait (a + 8) 129 0 (s + 10) (some 2147483647)
+  ticketWakeC L.lockWait a s
 
 theorem nimmT_len (L : Lay D) (a s : Nat) : (nimmT L a s).length = 7 + 5 + 7 + 8 + 7 + 1 := by rfl
 theorem gibT_len (L : Lay D) (a s : Nat) : (gibT L a s).length = 8 + 8 := by rfl
