@@ -57,7 +57,8 @@ theorem reasonArms_statisch_with {loopMode : Bool} (ρB : Gabbro.Body.Env) (boun
         · cases hn
           rw [hrG] at hrB
           cases hrB
-          have hsuf' : rest <:+ ss := (List.suffix_cons _ _).trans hsuf
+          have hsuf' : rest <:+ ss :=
+            (List.suffix_cons UStmt.ifElse rest).trans (by simpa only [hrG] using hsuf)
           obtain ⟨htail, hsufTail, hFrames⟩ := ih (by omega) (m + 1) k (offset + 1) rest fn ft
             (ns.resume allocated) Λ grest tail bs' tailZ used hΓ hV
             (fun st h => hm st (mem_of_suffix hsuf' h)) hgrest hbrest

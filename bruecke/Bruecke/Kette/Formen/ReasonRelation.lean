@@ -35,7 +35,7 @@ theorem ReasonRelated.select {loopMode : Bool} {Γ : Ctx} {fn : UFn} {ids : List
       (∀ ρB s, Gabbro.Body.pickArm ρB bs (caseLabel (offset + i.val)) s = Gabbro.Body.exec ρB bb s) ∧
       (∀ σ ρ s, WGRel u σ s.world → PositionalLRel fn ids 0 ρ s.local' →
         BlockZiel_G u C c O passes R fn ids b σ ρ s bb) := by
-  induction h generalizing i with
+  induction h with
   | nil => exact (Nat.not_lt_zero _ i.isLt).elim
   | @cons n offset b rest bb bs hBody hRest ih =>
     rcases i with ⟨i, hi⟩

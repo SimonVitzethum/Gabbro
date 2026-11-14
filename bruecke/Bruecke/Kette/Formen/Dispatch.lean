@@ -56,7 +56,7 @@ theorem reasonArms_G_with {loopMode : Bool} (bound : Nat)
       · rcases hcB with ⟨hn, _⟩ | ⟨m', restZ, bs', hn, hrB, hbrest, rfl⟩
         · cases hn
         · cases hn
-          rw [hrG] at hrB
+          subst hrG
           cases hrB
           have hsuf' : rest <:+ ss := (List.suffix_cons _ _).trans hsuf
           obtain ⟨htail, hsufTail, hRelated⟩ := ih (by omega) (m + 1) k
