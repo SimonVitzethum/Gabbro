@@ -1,10 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/ZellenSchluss.lean
-  Subject:   The TEXT of the closing file `Gen/Zeugen/Schluss.lean`, written by `gen-zellen-sammeln`: for every cell of
-             the universe its reason -- a witness theorem of `Gen/Zeugen/M` or `N`, or a theorem of
-             `Satz/Unmoeglich.lean` -- and from them the cell table and the checker and compiler theorems with no
-             assumption left. A cell without a reason is returned as OPEN, and then no closing file is written. The
-             text is untrusted: the kernel checks the file.
+  Emit an explicit witness table and its accepted-program compiler theorem. Semantic gate refusals are not characterized by structural cells.
 -/
 module
 public import Grammatik.Gen.Druck.LeanZeuge
@@ -44,8 +39,6 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Gen
 
-/-- The atoms of a cell as `a b c` Lean booleans. -/
-private def bs (x : Zelle) : List String := x.atome.map toString
 
 /-- The reason a GOOD cell needs no valid test, if a theorem gives one. -/
 def unmoeglichGut (x : Zelle) : Option String :=
@@ -83,24 +76,6 @@ def NGrund.partner (x : Zelle) (m : Bool) : Option Zelle :=
   | 6, 0, [true, h, g] => if h || g then some ⟨5, 0, true, [h, g]⟩ else none
   | _, _, _ => none
 
-/-- A test `st` covers `x` when its needed cells are `x` (and `p` if given). -/
-def deckt (st : String) (x : Zelle) (p : Option Zelle) : String :=
-  match p with
-  | none => s!"⟨{st}.bnoetig, fun w hw => by\n        obtain rfl := (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean}) w hw\n        exact h, {st}.zellen⟩"
-  | some q => s!"⟨{st}.bnoetig, fun w hw => by\n        rcases (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean} ∨ w = {q.lean}) w hw with rfl | rfl <;> assumption,\n        {st}.zellen⟩"
-
-/-- The proof term for a bad cell. -/
-def schlechtBeweis (x : Zelle) : NGrund → String
-  | .einfach st => s!"fun e h => {deckt st x none}"
-  | .wurzel st0 st1 =>
-    match x.atome with
-    | [h, g] => s!"fun e h => by\n      obtain ⟨m, hm⟩ := m_5_0 {h} {g} e h\n      cases m\n      · exact {deckt st0 x (NGrund.partner x false)}\n      · exact {deckt st1 x (NGrund.partner x true)}"
-    | _ => "?"
-  | .pool st =>
-    match x.atome with
-    | [_, h, g] => s!"fun e h => by\n      have hm := (m_6_0 true {h} {g} rfl e h).1\n      exact {deckt st x (NGrund.partner x true)}"
-    | _ => "?"
-
 /-- How the explicit list `Nw` covers a test `st` whose needed cells are `x` (and `p` if given), for the table of the
     witness lists. -/
 def decktT (st : String) (x : Zelle) (p : Option Zelle) : String :=
@@ -125,34 +100,21 @@ def schlechtBeweisT (x : Zelle) : NGrund → String
     cell; `mods` are the witness modules. -/
 def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund) (mods : List String) :
     Except (List Zelle) String :=
-  let fall := fun (x : Zelle) =>
-    if x.schlecht then
-      match unmoeglichSchlecht x with
-      | some u => some s!"fun e h => absurd h ({u})"
-      | none => (schl x).map (schlechtBeweis x)
-    else
-      match gut x with
-      | some st => some s!"Or.inl ({st}.zellen _ (by decide))"
-      | none => unmoeglichGut x
-  let offen := zellAlle.filter fun x => (fall x).isNone
-  if !offen.isEmpty then .error offen else
-  let liste := String.intercalate ",\n    " (zellAlle.map Zelle.lean)
-  let pat := String.intercalate " | " (zellAlle.map fun _ => "rfl")
-  let gutF := String.join (zellAlle.map fun x =>
-    if x.schlecht then "  · exact absurd hs (by decide)\n" else s!"  · exact {(fall x).getD "?"}\n")
-  let schlF := String.join (zellAlle.map fun x =>
-    if x.schlecht then s!"  · exact {(fall x).getD "?"}\n" else "  · exact absurd hs (by decide)\n")
-  let erreicht := zellAlle.filter fun x => !x.schlecht && (gut x).isSome
-  let erreichtF := String.join (erreicht.map fun x => s!"  · exact {(gut x).getD "?"}.zellen _ (by decide)\n")
-  let erreichtPat := String.intercalate " | " (erreicht.map fun _ => "rfl")
-  let mSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.M.")).map (·.drop "Grammatik.Gen.Zeugen.M.".length |>.toString)
-  let nSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.N.")).map (·.drop "Grammatik.Gen.Zeugen.N.".length |>.toString)
   let gutT := fun (x : Zelle) => match gut x with
     | some st => some s!"Or.inl ⟨{st}.e, by simp [Mw], {st}.e_hat _ (by decide)⟩"
     | none => unmoeglichGut x
   let schlT := fun (x : Zelle) => match unmoeglichSchlecht x with
     | some u => some s!"fun e h => absurd h ({u})"
     | none => (schl x).map (schlechtBeweisT x)
+  let offen := zellAlle.filter fun x =>
+    if x.schlecht then (schlT x).isNone else (gutT x).isNone
+  if !offen.isEmpty then .error offen else
+  let liste := String.intercalate ",\n    " (zellAlle.map Zelle.lean)
+  let pat := String.intercalate " | " (zellAlle.map fun _ => "rfl")
+  let erreicht := zellAlle.filter fun x => !x.schlecht && (gut x).isSome
+  let erreichtPat := String.intercalate " | " (erreicht.map fun _ => "rfl")
+  let mSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.M.")).map (·.drop "Grammatik.Gen.Zeugen.M.".length |>.toString)
+  let nSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.N.")).map (·.drop "Grammatik.Gen.Zeugen.N.".length |>.toString)
   let gutTF := String.join (zellAlle.map fun x =>
     if x.schlecht then "    · exact absurd hs (by decide)\n" else s!"    · exact {(gutT x).getD "?"}\n")
   let schlTF := String.join (zellAlle.map fun x =>
@@ -166,22 +128,15 @@ def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
   let zeugenText :=
     s!"/-! ## The witnesses alone: M and N as explicit lists of programs of the source -/\n\n/-- **M**: the valid witnesses. -/\ndef Mw : List Einsatz := [{mList}]\n\n/-- **N**: the refused tests. -/\ndef Nw : List Einsatz := [{nList}]\n\n" ++
     s!"theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by\n  intro w hw\n  simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw\n  rcases hw with {erreichtPat}\n{erreichtMF}\n" ++
-    s!"/-- **The table of the witness lists**: M and N are complete. -/\ntheorem zeugen_tafel : Tafel Mw Nw where\n  gut_m m hm := by\n    simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm\n    rcases hm with {mPat}\n" ++ String.join (mSt.map fun st => s!"    · exact {st}.e_gueltig\n") ++
+    s!"/-- **The table of the witness lists**, including accepted-program cell coverage. -/\ntheorem zeugen_tafel : Tafel Mw Nw where\n  gut_m m hm := by\n    simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm\n    rcases hm with {mPat}\n" ++ String.join (mSt.map fun st => s!"    · exact {st}.e_gueltig\n") ++
     s!"  gut x hx hs := by\n    rw [zellAlle_liste] at hx\n    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n    rcases hx with {pat}\n{gutTF}" ++
     s!"  n_schlecht n hn := by\n    simp only [Nw, List.mem_cons, List.not_mem_nil, or_false] at hn\n    rcases hn with {nPat}\n" ++ String.join (nSt.map fun st => s!"    · exact {st}.e_gueltig\n") ++
     s!"  schlecht x hx hs := by\n    rw [zellAlle_liste] at hx\n    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n    rcases hx with {pat}\n{schlTF}\n" ++
-    "/-- **A neutral checker that answers like the model on the witness lists M and N answers like the model on every\n    program of the source.** -/\ntheorem pruefer_zeugen_korrekt (C : Einsatz → Bool) (hC : Neutral C) (hM : ∀ m ∈ Mw, C m = m.gueltig)\n    (hN : ∀ n ∈ Nw, C n = n.gueltig) (e : Einsatz) : C e = e.gueltig := by\n  obtain ⟨φ, hφ⟩ := hC\n  have h := einsatz_hinreichend zeugen_tafel φ (fun m hm => by rw [← hφ m, hM m hm]) (fun n hn => by rw [← hφ n, hN n hn]) e\n  rw [Bool.eq_iff_iff, hφ e]\n  exact h\n\n" ++
-    "/-- **A neutral compiler correct on the witness list M is correct on every valid program of the source.** -/\ntheorem compiler_zeugen_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ Mw, K m) (e : Einsatz)\n    (hv : e.gueltig = true) : K e := by\n  obtain ⟨ψ, hψ⟩ := hK\n  refine (hψ e).2 fun z hz => ?_\n  obtain ⟨m, hm, hmz⟩ := (vollstaendig_aus_tafel zeugen_tafel).gut e z hz ((einsatz_akzeptiert e).2 hv)\n  exact (hψ m).1 (hM m hm) z hmz\n\n"
-  .ok (s!"/-\n  File:      Grammatik/Gen/Zeugen/Schluss.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`, `ZellenSchluss.lean`): every cell of the universe has its reason, so\n             M and N are complete and a neutral checker or compiler that treats them right treats every program of\n             the source right. Do not edit.\n-/\n" ++
-    String.join (mods.map fun m => s!"import {m}\n") ++
-    "import Grammatik.Gen.Abdeckung.Satz.Neutral\nimport Grammatik.Gen.Abdeckung.Satz.Unmoeglich\n\nset_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz\n\n" ++
-    s!"theorem zellAlle_liste : zellAlle = [\n    {liste}] := by decide\n\n" ++
-    s!"theorem erreicht_raum : ∀ w ∈ erreicht, RaumGut ncZiel w := by\n  intro w hw\n  simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw\n  rcases hw with {erreichtPat}\n{erreichtF}\n" ++
-    s!"theorem schluss_gut : GutGedeckt ncZiel := by\n  intro x hx hs\n  rw [zellAlle_liste] at hx\n  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n  rcases hx with {pat}\n{gutF}\n" ++
-    s!"theorem schluss_schlecht : SchlechtGedeckt ncZiel erreicht := by\n  intro x hx hs\n  rw [zellAlle_liste] at hx\n  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx\n  rcases hx with {pat}\n{schlF}\n" ++
-    "/-- **M and N are complete.** -/\ntheorem mn_vollstaendig : Tafel (mGen ncZiel) (nGen ncZiel) :=\n  tafel_erzeugt ncZiel erreicht schluss_gut schluss_schlecht erreicht_raum\n\n" ++
-    "/-- **A neutral checker (a function: terminating, deterministic) that answers like the model on M and N answers like\n    the model on every program of the source.** -/\ntheorem pruefer_korrekt (C : Einsatz → Bool) (hC : Neutral C) (hM : ∀ m ∈ mGen ncZiel, C m = m.gueltig)\n    (hN : ∀ n ∈ nGen ncZiel, C n = n.gueltig) (e : Einsatz) : C e = e.gueltig :=\n  pruefer_hinreichend ncZiel erreicht schluss_gut schluss_schlecht erreicht_raum C hC hM hN e\n\n" ++
-    "/-- **A neutral compiler correct on M is correct on every valid program of the source.** -/\ntheorem compiler_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ mGen ncZiel, K m) (e : Einsatz)\n    (hv : e.gueltig = true) : K e :=\n  compiler_hinreichend ncZiel erreicht schluss_gut schluss_schlecht erreicht_raum K hK hM e hv\n\n" ++ zeugenText ++
+    "/-- **A neutral compiler correct on the witness list M is correct on every valid program of the source.** -/\ntheorem compiler_zeugen_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ Mw, K m) (e : Einsatz)\n    (hv : e.gueltig = true) : K e := by\n  obtain ⟨ψ, hψ⟩ := hK\n  refine (hψ e).2 fun z hz => ?_\n  obtain ⟨m, hm, hmz⟩ := zellen_deckt zeugen_tafel.gut e hv z hz\n  exact (hψ m).1 (hM m hm) z hmz\n\n"
+  .ok (s!"/-\n  File:      Grammatik/Gen/Zeugen/Schluss.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`, `ZellenSchluss.lean`): every cell of the universe has its reason, so\n             the accepted-program cell coverage yields the neutral compiler theorem. Do not edit.\n-/\n" ++
+    "module\n" ++ String.join (mods.map fun m => s!"public import {m}\n") ++
+    "public import Grammatik.Gen.Abdeckung.Satz.Neutral\npublic import Grammatik.Gen.Abdeckung.Satz.Unmoeglich\n\n@[expose] public section\n\nset_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz\n\n" ++
+    s!"theorem zellAlle_liste : zellAlle = [\n    {liste}] := by decide\n\n" ++ zeugenText ++
     "end Gabbro.Grammatik.Gen.Zeugen\n")
 
 end Gabbro.Grammatik.Gen

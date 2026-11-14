@@ -1,7 +1,6 @@
 /-
-  File:      Grammatik/Gen/Zeugen/N23_4.lean
-  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member 23, the cells below lie in the generator's
-             space. Checked by the kernel; do not edit.
+  Structural cell fixture with its current checker characterization and
+  concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.Raum
@@ -68,10 +67,6 @@ def alle : List Zelle := [⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true,
 
 def bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w
 
-theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=
-  ⟨23, by rw [mitglieder_laenge]; decide, raumSchlechtIn_aus z (grenzenVon 23).1 (grenzenVon 23).2 ncZiel h0
-    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 23).1) f) (by decide)
-    (by decide +kernel) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- The test as a program of the source. -/
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)

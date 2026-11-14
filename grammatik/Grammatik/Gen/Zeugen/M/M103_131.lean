@@ -1,7 +1,6 @@
 /-
-  File:      Grammatik/Gen/Zeugen/M103_131.lean
-  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member 103, the cells below lie in the generator's
-             space. Checked by the kernel; do not edit.
+  Structural cell fixture with its current checker characterization and
+  concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.Raum
@@ -67,17 +66,20 @@ def ws : List z.deklaration.Fn := [(⟨0, by decide⟩ : Fin z.fns.length)]
 
 def P : Programm z.deklaration := h0.programm
 
-theorem zellen : ∀ x ∈ ([⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨1, 0, true, [false, false, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨2, 1, true, [true, true]⟩, ⟨2, 2, false, [true, false, true]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [false, false, false]⟩, ⟨6, 1, true, [false, true, false, false]⟩, ⟨6, 1, true, [false, true, true, true]⟩, ⟨6, 1, true, [false, true, false, true]⟩, ⟨6, 1, true, [false, false, false, false]⟩, ⟨6, 1, true, [false, false, true, true]⟩, ⟨6, 1, true, [false, false, false, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨8, 0, true, [true, false, true]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, false, false, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, true, false, false]⟩] : List Zelle), RaumGut ncZiel x := by
-  intro x hx
-  refine ⟨103, by rw [mitglieder_laenge]; decide, raumGutIn_aus z (grenzenVon 103).1 (grenzenVon 103).2 ncZiel h0
-    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 103).1) f) (by decide)
-    (by decide +kernel) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) ?_⟩
-  revert x; decide
 
 /-- The test as a program of the source. -/
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)
 
-theorem e_gueltig : e.gueltig = true := by decide
+/-- This fixture passes the structural cells. Full acceptance additionally
+    requires the invariant and contract gates, which may refuse this body. -/
+theorem e_gueltig : e.gueltig = true ↔
+    @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs (fun _ => none) {} e.ls = true ∧
+    @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs (fun _ => none) {} (fun _ => none) = true := by
+  rw [einsatz_akzeptiert e]
+  have structural : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
+    change ∀ z ∈ e.zellen, gutTafel z = true
+    decide
+  simp only [structural, true_and]
 
 theorem e_hat : ∀ x ∈ ([⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨1, 0, true, [false, false, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨2, 1, true, [true, true]⟩, ⟨2, 2, false, [true, false, true]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [false, false, false]⟩, ⟨6, 1, true, [false, true, false, false]⟩, ⟨6, 1, true, [false, true, true, true]⟩, ⟨6, 1, true, [false, true, false, true]⟩, ⟨6, 1, true, [false, false, false, false]⟩, ⟨6, 1, true, [false, false, true, true]⟩, ⟨6, 1, true, [false, false, false, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨8, 0, true, [true, false, true]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, false, false, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, true, false, false]⟩] : List Zelle), e.Hat x := by decide
 

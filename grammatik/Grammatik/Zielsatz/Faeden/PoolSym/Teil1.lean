@@ -40,7 +40,6 @@ public import Grammatik.Korpus.Referenz.ReferenzB
 @[expose] public section
 
 
-
 namespace Gabbro.Grammatik
 
 open Zielsatz
@@ -195,17 +194,16 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   simp only [Bool.and_eq_true] at h
   exact of_decide_eq_true h.1.1.2
 
-/-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
-    discipline, in particular of every program with no handler (`maskenB_ohne`), and whose
-    static arrays admit zero (`resetB`). The library
-    component holds on every program (`libraryB_immer`). -/
+/-- Old structural acceptance extends to the current checker when the handler,
+    reset and invariant gates also accept. -/
 theorem akzeptiert_vor_neu [DecidableEq D.Ax]
     {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true)
-    (hR : resetB cs = true) :
+    (hR : resetB cs = true)
+    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true) :
     Akzeptiert P S fs ls cs ws = true := by
-  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR, libraryB_immer _ _]
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR, libraryB_immer _ _, hI]
   rfl
 
 /-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/

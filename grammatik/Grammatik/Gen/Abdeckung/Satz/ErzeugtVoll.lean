@@ -1,9 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/Satz/ErzeugtVoll.lean
-  Subject:   M AND N ARE COMPLETE, a theorem and not a test: the space of the generator (`RaumGut`, `RaumSchlecht`),
-             every valid program of the space is in M (`raumGut_mGen`), every isolated single-fault program in N
-             (`raumSchlecht_nGen`), and the cell table `Tafel` with Theorem 5 over every program of the source
-             (`tafel_erzeugt`, `erzeugt_hinreichend`) from one fact per cell.
+  Generated-space membership and the cell table for generated M and N. Coverage of all source programs requires separate evidence.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
@@ -99,12 +95,5 @@ theorem tafel_erzeugt (nc : Nat) (er : List Zelle) (hG : GutGedeckt nc) (hB : Sc
     · exact Or.inl (hBe w h)
     · exact Or.inr (raumGut_mGen (hE w h))
 
-/-- **Theorem 5 for the generated test sets, over every program of the model.** -/
-theorem erzeugt_hinreichend (nc : Nat) (er : List Zelle) (hG : GutGedeckt nc) (hB : SchlechtGedeckt nc er)
-    (hE : ∀ w ∈ er, RaumGut nc w)
-    (φ : Zelle → Bool) (hM : ∀ m ∈ mGen nc, akzeptiert Einsatz.Hat φ m ↔ m.gueltig = true)
-    (hN : ∀ n ∈ nGen nc, akzeptiert Einsatz.Hat φ n ↔ n.gueltig = true) (e : Einsatz) :
-    akzeptiert Einsatz.Hat φ e ↔ e.gueltig = true :=
-  einsatz_hinreichend (tafel_erzeugt nc er hG hB hE) φ hM hN e
 
 end Gabbro.Grammatik.Gen

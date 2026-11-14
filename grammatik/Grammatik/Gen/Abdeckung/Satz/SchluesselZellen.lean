@@ -1,9 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/Satz/SchluesselZellen.lean
-  Subject:   T1: BODIES OF THE SAME SUMMARY GIVE THE SAME CELLS. Replacing every body of a program by one with the same
-             `Rumpf.schluessel` leaves the cells (`gs_alleZellen`), every component of `AkzeptiertX` (`gs_komp`) and so
-             the model's Bool (`gs_akzeptiertX`) unchanged. This is what lets the generator keep one body per summary
-             (`Spez.tabellenD`) without losing a cell.
+  Equal body summaries preserve structural cells and components. Full checker equality additionally requires preservation of both verification gates.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.Schluessel
@@ -136,23 +132,20 @@ theorem gs_komp (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls
   rw [← urteil_komp (P.mitRumpf r) S fs ls cs ws hvoll hls hcs c, ← urteil_komp P S fs ls cs ws hvoll hls hcs c]
   exact all_mem_gleich _ (gs_zellen P r h S fs ls cs ws c.castSucc)
 
-/-- **The same verdict** of the model's Bool. -/
-theorem gs_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
+/-- Equal structural summaries preserve the full verdict only when both
+    verification gates are preserved as well. -/
+theorem gs_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (hI : Invarianten.Pruefer.programInvariantsB (P.mitRumpf r) S fs (fun _ => none) {} ls =
+      Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls)
+    (hK : Vertraege.Pruefer.KontrakteGeprueftB (P.mitRumpf r) S fs =
+      Vertraege.Pruefer.KontrakteGeprueftB P S fs) :
     AkzeptiertX (P.mitRumpf r) S fs ls cs ws = AkzeptiertX P S fs ls cs ws := by
-  cases h1 : AkzeptiertX P S fs ls cs ws
-  · cases h2 : AkzeptiertX (P.mitRumpf r) S fs ls cs ws
-    · rfl
-    · rw [akzeptiertX_iff _ _ _ _ _ _ []] at h2
-      obtain ⟨h2k, _, hr⟩ := h2
-      have : AkzeptiertX P S fs ls cs ws = true :=
-        (akzeptiertX_iff _ _ _ _ _ _ []).2 ⟨fun c => by
-          rw [← gs_komp P r h S fs ls cs ws hvoll hls hcs c]; exact h2k c,
-        Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr⟩
-      rw [this] at h1; cases h1
-  · have h1' := (akzeptiertX_iff _ _ _ _ _ _ []).1 h1
-    exact (akzeptiertX_iff _ _ _ _ _ _ []).2 ⟨fun c => by
-      rw [gs_komp P r h S fs ls cs ws hvoll hls hcs c]; exact h1'.1 c,
-      h1'.2⟩
+  apply Bool.eq_iff_iff.mpr
+  rw [akzeptiertX_iff _ _ _ _ _ _ [], akzeptiertX_iff _ _ _ _ _ _ []]
+  simp only [Gabbro.Grammatik.Kernzelle.accumulatorB_leer, true_and, hI, hK,
+    gs_komp P r h S fs ls cs ws hvoll hls hcs]
+
 
 end
 

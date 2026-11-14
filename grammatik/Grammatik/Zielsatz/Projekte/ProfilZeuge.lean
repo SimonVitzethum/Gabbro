@@ -38,15 +38,9 @@ import all Init.Data.String.ToSlice
 
 @[expose] public section
 
-/-!
-  File:      Grammatik/Zielsatz/Projekte/ProfilZeuge.lean
-  Subject:   WITNESS of `gabbro_ziel_profil` (C14): the flag program of `AtomarGoalZeuge` as a selected unit
-             whose original items carry a profile with an `assume` and a library requirement, two aligned
-             statics in two region labels and a test-build gate; every premise of the statement holds
-             jointly (the checker and the structural admission, the user's logic with the rely, the
-             profile-selected hardware components, the runtime's full start), and the conclusion `ZielFX`
-             follows on every reachable thread machine. Both build modes are separate instances.
--/
+/-! Profile selection and placement witnesses in both build modes.
+The flag's concrete checker refuses atomic reads, so no accepted-unit
+application of the profile goal theorem is asserted here. -/
 
 namespace Gabbro.Grammatik.AtomarXZeuge
 
@@ -74,26 +68,6 @@ theorem pe_bedarfe_nicht_leer (m : Parser.Auswahl.BauModus) :
     (peE m).zert.bindung.bedarfe ≠ [] := by
   cases m <;> decide
 
-/-- **`gabbro_ziel_profil` on the flag program**, in either build mode: `ZielFX` on every reachable thread
-    machine over GX of the runtime's full start, every budget, every set of initially live threads. -/
-theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
-    (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
-    (K : FadenMaschine nD.mitRuhe)
-    (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
-      (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
-    ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
-      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
-  gabbro_ziel_profil akzeptiertX_pruefer nD (peE m) ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
-    ⟨nCs, nCs_voll⟩
-    (by
-      have h1 : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = true := by
-        show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
-        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩
-      simp only [profilAkzeptiert, Bool.and_eq_true]
-      exact ⟨h1, pe_zulaessig m⟩)
-    n1E_nutzerPflichtA nO ((profilAnnahmen_iff (peE m) nO).mpr
-      ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
-    passes _ _ (laufzeit_voll n1E) lebt0 K hK
 
 /-- The selection of the fixture differs by mode: the test build keeps the gated constant, the shipping
     build drops it (so a proof in one mode says nothing about the other). -/
@@ -112,7 +86,5 @@ theorem pe_profil_modell (m : Parser.Auswahl.BauModus) :
     cases m <;> rfl
   obtain ⟨mb, hmb⟩ := profil_modell_einheit (peE m) (pe_zulaessig m) hp
   exact ⟨mb, _, by rw [hp]; exact List.mem_singleton_self _, hmb⟩
-
-#print axioms gabbro_ziel_profil_zeuge
 
 end Gabbro.Grammatik.AtomarXZeuge

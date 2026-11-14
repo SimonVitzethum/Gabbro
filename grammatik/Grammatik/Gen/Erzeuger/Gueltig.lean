@@ -267,14 +267,18 @@ theorem bad_alle (hvoll : ∀ g : D.Fn, g ∈ fs) {c : Fin 10} (h : Haut D) (hv 
     unfold groesseHaut
     exact le_summe (fun f => groesseEnd (h.rumpf f)) (Aufz.fn_mem f)) hu⟩
 
-/-- A program is valid iff no component refuses it; refused by at least one iff `¬ valid`. -/
+/-- Once the reset and verification gates pass, acceptance is decided by the
+    ten structural components. -/
 theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hr : resetB cs = true) :
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hr : resetB cs = true)
+    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true)
+    (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
     AkzeptiertX P S fs ls cs ws = true ∨ ∃ c, komp P S fs ls cs ws c = false := by
   by_cases h : AkzeptiertX P S fs ls cs ws = true
   · exact Or.inl h
   · right
-    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2 ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr⟩)
+    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2
+      ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr, hI, hK⟩)
     cases hc : komp P S fs ls cs ws c
     · exact absurd ⟨c, hc⟩ hn
     · rfl
