@@ -8,6 +8,9 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Index `k` lies in the declared extent of table `t`: below its count, or anywhere above `0` in an open region. -/
+def ImBereich (D : Deklaration) (t : D.Tab) (k : Int) : Prop := 0 ≤ k ∧ (D.offen t = true ∨ k < D.count t)
+
 /-- An address: a backing-region identity and a byte in it. -/
 abbrev Adresse : Type := Nat × Nat
 
