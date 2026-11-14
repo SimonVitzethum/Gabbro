@@ -270,7 +270,9 @@ def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop →
                    Frame ρ g (writesU gf) → hyps u wf ρ gs c
       | none => False
 
-/-- **`meets`** -- what a person proves about `f` (`_meets_statement`). -/
+/-- **`meets`** -- what a person proves about `f` (`_meets_statement`). Non-vacuous only
+    together with `zuBodyZ u f = some body`: `meetsU` alone over the body the reader returns
+    proves nothing unless that body is the one the bridge connects to `f`. -/
 def meetsU (u : UProg) (wf : State → Prop) (f : UFn) (body : List Stmt) : Prop :=
   ∀ (ρ : Env) (s : State), wf s → eval s (preExpr f) = some (.bool true) →
     hyps u wf ρ (calleesOf f)
