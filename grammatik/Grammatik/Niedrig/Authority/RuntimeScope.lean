@@ -98,14 +98,14 @@ theorem ContextEntry.openView_close {space : Space D} {entry next : ContextEntry
     (valid : entry.context.Valid entry.authority)
     (opened : entry.openView node start length rights borrower = .ok (next, key)) :
     next.close key = .ok { entry with generations := entry.generations.bump node } := by
-  unfold openView at opened
+  unfold ContextEntry.openView at opened
   split at opened
   · cases opened
   · split at opened
     · cases opened
     · rename_i receipt produced
       cases opened
-      simp only [close, ↓reduceIte, ram_view_return valid receipt]
+      simp only [ContextEntry.close, ↓reduceIte, ram_view_return valid receipt]
       rfl
 
 /-- Every successful close removes precisely the top ledger marker and
@@ -115,7 +115,7 @@ theorem ContextEntry.close_shape {entry next : ContextEntry D} {key : ScopeKey}
     ∃ tail context loans, entry.scopes = key :: tail ∧
       key.generation = entry.generations key.node ∧
       next = entry.finish key tail context loans := by
-  unfold close at closed
+  unfold ContextEntry.close at closed
   split at closed
   · cases closed
   · rename_i top tail hstack
@@ -143,28 +143,28 @@ theorem ContextEntry.close_shape {entry next : ContextEntry D} {key : ScopeKey}
 /-- Cleanup shortens the real lexical stack by exactly one. -/
 theorem ContextEntry.close_stack {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) : entry.scopes = key :: next.scopes := by
-  obtain ⟨tail, context, loans, stack, _, rfl⟩ := close_shape closed
+  obtain ⟨tail, context, loans, stack, _, rfl⟩ := ContextEntry.close_shape closed
   exact stack
 
 /-- Releasing a scope restores access; it cannot change the authority origin. -/
 theorem ContextEntry.close_authority {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) : next.authority = entry.authority := by
-  obtain ⟨tail, context, loans, _, _, rfl⟩ := close_shape closed
+  obtain ⟨tail, context, loans, _, _, rfl⟩ := ContextEntry.close_shape closed
   rfl
 
 /-- No successful exit may silently leave the released generation live. -/
 theorem ContextEntry.close_stale {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) :
     key.generation < next.generations key.node := by
-  obtain ⟨tail, context, loans, _, live, rfl⟩ := close_shape closed
-  rw [finish, SpanGenerations.bump_self, live]
+  obtain ⟨tail, context, loans, _, live, rfl⟩ := ContextEntry.close_shape closed
+  rw [ContextEntry.finish, SpanGenerations.bump_self, live]
   exact Nat.lt_succ_self _
 
 /-- A child release cannot invalidate the generation of a distinct ancestor. -/
 theorem ContextEntry.close_other {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) {ancestor : Nat} (different : ancestor ≠ key.node) :
     next.generations ancestor = entry.generations ancestor := by
-  obtain ⟨tail, context, loans, _, _, rfl⟩ := close_shape closed
+  obtain ⟨tail, context, loans, _, _, rfl⟩ := ContextEntry.close_shape closed
   exact SpanGenerations.bump_other entry.generations different
 
 /-- A successful shared close always used this id's actual stored context.
@@ -173,7 +173,7 @@ theorem ContextLedger.close_entry {ledger next : ContextLedger D} {id : Nat} {ke
     (closed : ledger.close id key = .ok next) :
     ∃ entry updated, ledger id = some entry ∧ entry.close key = .ok updated ∧
       next = ledger.set id updated := by
-  unfold close at closed
+  unfold ContextLedger.close at closed
   split at closed
   · cases closed
   · rename_i entry found
@@ -187,12 +187,12 @@ theorem ContextLedger.close_entry {ledger next : ContextLedger D} {id : Nat} {ke
 theorem ContextLedger.close_other {ledger next : ContextLedger D} {id : Nat} {key : ScopeKey}
     (closed : ledger.close id key = .ok next) {other : Nat} (different : other ≠ id) :
     next other = ledger other := by
-  unfold close at closed
+  unfold ContextLedger.close at closed
   split at closed
   · cases closed
   · split at closed
     · cases closed
     · cases closed
-      exact set_other _ _ _ different
+      exact ContextLedger.set_other _ _ _ different
 
 end Gabbro.Grammatik.LowLevel
