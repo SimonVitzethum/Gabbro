@@ -47,6 +47,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
+#eval candidate.map (fun _ => ())
+
 theorem candidate_present : candidate.toOption.isSome = true := by
   kernel_rfl
 
