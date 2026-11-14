@@ -98,7 +98,7 @@ theorem m103_131_refused : M103_131.e.gueltig = false :=
   refused_of_cause _ _ m103_131_cause
 
 /-- A source formula for the actual maximal lock family's true predicate.
-    This changes checker input only in the following diagnostic witness. -/
+    Default-none refuses even trivially-true locks. This reifies their\n    definitionally true predicates for the contract-gate diagnostic only. -/
 def trueLockSources (z : Spez) : Invarianten.Pruefer.LockSources z.sperreMax :=
   fun _ => some
     { resources := []

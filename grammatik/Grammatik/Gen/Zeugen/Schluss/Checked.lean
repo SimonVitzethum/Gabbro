@@ -2,7 +2,7 @@
    of the former candidate list does not establish coverage of these lists. -/
 module
 
-public import Grammatik.Gen.Zeugen.Schluss.GateAudit
+public import Grammatik.Gen.Zeugen.Gap
 public import Grammatik.Gen.Zeugen.M.ScalarRead
 
 @[expose] public section
@@ -14,12 +14,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 /-- M contains only fixtures with a full acceptance proof. -/
 def Mw : List Einsatz := [ScalarRead.e, Reset.Good.e]
 
-/-- N includes fragment refusals as well as structural refusals. GateAudit
-    records why the former candidates are refused; it does not call their
-    contracts false. -/
-def Nw : List Einsatz := structuralRefusals ++
-  [M99_824.e, M47_549.e, M169_350.e, M16_13.e, M49_50.e,
-    M103_803.e, M103_131.e, M99_825.e]
+/-- N contains wrong programs refused by a structural model gate. -/
+def Nw : List Einsatz := structuralRefusals
 
 theorem checked_m : ∀ m ∈ Mw, m.gueltig = true := by
   intro m member
@@ -30,11 +26,10 @@ theorem checked_m : ∀ m ∈ Mw, m.gueltig = true := by
 
 theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   intro n member
-  simp only [Nw, structuralRefusals, List.mem_append, List.mem_cons,
+  simp only [Nw, structuralRefusals, List.mem_cons,
     List.not_mem_nil, or_false] at member
   rcases member with
-    (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) |
-    (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl)
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact N16_5.e_gueltig
   · exact N18_0.e_gueltig
   · exact N18_4.e_gueltig
@@ -49,14 +44,6 @@ theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   · exact N47_P.e_gueltig
   · exact N47_45.e_gueltig
   · exact Reset.Bad.e_gueltig
-  · exact GateAudit.m99_824_refused
-  · exact GateAudit.m47_549_refused
-  · exact GateAudit.m169_350_refused
-  · exact GateAudit.m16_13_refused
-  · exact GateAudit.m49_50_refused
-  · exact GateAudit.m103_803_refused
-  · exact GateAudit.m103_131_refused
-  · exact GateAudit.m99_825_refused
 
 /-- The scalar-read fine cell survives with full checker acceptance. -/
 theorem checked_read_zeuge : ScalarRead.e ∈ Mw ∧ ScalarRead.e.gueltig = true ∧
