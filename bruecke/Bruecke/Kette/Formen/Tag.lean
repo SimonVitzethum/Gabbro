@@ -8,12 +8,12 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
-theorem stmtZiel_tag_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
+theorem stmtZiel_tag_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {cs : List (Option Ty)} {j : Nat} {x id : String} {v : Var Γ (.sum cs)}
-    {arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs}
-    {ga : GrundArms (declOf u) (verOf u c) false Γ Λ Λ cs.length}
+    {arms : Arms (declOf u) (verOf u c) loopMode Γ Λ Λ cs}
+    {ga : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ cs.length}
     {bs : List (String × List Gabbro.Body.Stmt)}
     (hj : paramPos fn.params x = .ok j) (hv : lowVar Γ j (.sum cs) = .ok v)
     (hid : ns.lookup fn x = some id) (hBare : BareArms arms ga)

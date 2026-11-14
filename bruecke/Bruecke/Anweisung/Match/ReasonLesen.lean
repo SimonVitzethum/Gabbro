@@ -1,5 +1,5 @@
 module
-public import Bruecke.Anweisung.Match.Lesen
+public import Bruecke.Anweisung.Match.DispatchLesen
 public import Bruecke.Anweisung.Zweig.Vorrat
 @[expose] public section
 
@@ -7,39 +7,6 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
-
-theorem reasonArmsZ_succ {k n offset : Nat} {fn : UFn} {ns : BodyNames}
-    {ss tail : List UStmt} {arms : List (String × List Gabbro.Body.Stmt)} {used : List String}
-    (h : reasonArmsZ u k fn (n + 1) offset ns ss = some (arms, tail, used)) :
-    ∃ body remaining allocated, seqZ u k fn ns ss = some (body, remaining, allocated) ∧
-      ((n = 0 ∧ arms = [(caseLabel offset, body)] ∧ remaining = tail ∧ allocated = used) ∨
-       ∃ m rest restArms, n = m + 1 ∧ remaining = .ifElse :: rest ∧
-         reasonArmsZ u k fn (m + 1) (offset + 1) (ns.resume allocated) rest =
-           some (restArms, tail, used) ∧ arms = (caseLabel offset, body) :: restArms) := by
-  rw [reasonArmsZ] at h
-  cases hb : seqZ u k fn ns ss with
-  | none => simp only [hb, bind, Option.bind_none] at h <;> cases h
-  | some out =>
-    obtain ⟨body, remaining, allocated⟩ := out
-    simp only [hb, bind, Option.bind_some] at h
-    refine ⟨body, remaining, allocated, (by first | exact hb | rfl), ?_⟩
-    cases n with
-    | zero =>
-      simp only [pure, Option.some.injEq, Prod.mk.injEq] at h
-      exact .inl ⟨rfl, h.1.symm, h.2.1, h.2.2⟩
-    | succ m =>
-      cases remaining with
-      | nil => cases h
-      | cons marker rest =>
-        cases marker <;> try { cases h }
-        case ifElse =>
-          cases ha : reasonArmsZ u k fn (m + 1) (offset + 1) (ns.resume allocated) rest with
-          | none => simp only [ha, bind, Option.bind_none] at h <;> cases h
-          | some out =>
-            obtain ⟨restArms, tail', used'⟩ := out
-            simp only [ha, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl, rfl⟩ := h
-            exact .inr ⟨m, rest, restArms, rfl, rfl, ha, rfl⟩
 
 theorem stmtsBodyZ_reason_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
     {ss : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}

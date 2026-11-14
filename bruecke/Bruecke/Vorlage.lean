@@ -49,7 +49,8 @@ The source is pinned as `.toList` pieces (`zeilen`) and not as one literal: the 
 `uebersetzeAllg_von_zeichen` lets the chain files avoid the decoder altogether. The output then
 states -- with the computed functions `PflichtenAlle`, `meetsU`, `zuBodyZ`, never a printed statement --
 one duty per function that a person proves, and closes with the generic theorem
-`nutzer_aus_quelleG_alle`. A construct outside the fragment shows up as a NAMED refusal (the front end
+`nutzer_aus_quelleG_alle`. A unit with a call-graph cycle gets the measure forms instead
+(`PflichtenAlleM`, `meetsUM` under one well-founded `mass`, `nutzer_aus_quelleM_alle`). A construct outside the fragment shows up as a NAMED refusal (the front end
 says why, or `zuBodyZ` is `none`, or a Bool check is false): the duty is then unprovable on
 purpose, never weaker.
 -/
@@ -136,8 +137,10 @@ def vorlage (name src : String) : String :=
        else "-- REFUSED: a local binder is not fresh (`bindFrischAllB u = false`).\n" ++
             "theorem frisch : bindFrischAllB u = true := by exact?\n") ++
       (if rangB u (rangAuto u) then "theorem rang : rangB u (rangAuto u) = true := by decide\n"
-       else "-- REFUSED: the call graph has a cycle or no rank (`rangB u (rangAuto u) = false`).\n" ++
-            "theorem rang : rangB u (rangAuto u) = true := by exact?\n") ++
+       else "-- RECURSIVE: the call graph has a cycle (`rangB u (rangAuto u) = false`). The duties below\n" ++
+            "-- are measure duties (`meetsUM`): a callee's contract holds only below the caller's entry\n" ++
+            "-- value of `mass`, one well-founded measure for the whole unit (e.g. the `decreases` values).\n" ++
+            "noncomputable def mass : MassU := by exact?\n") ++
       (if ohneTransitionB u then "theorem ordinary : ohneTransitionB u = true := by decide\n"
        else "-- REFUSED: generated transition bodies have no Body simulation.\n" ++
             "theorem ordinary : ohneTransitionB u = true := by exact?\n") ++ "\n"
@@ -151,13 +154,18 @@ def vorlage (name src : String) : String :=
         | none => ""
       acc ++ "/-- The duty of `" ++ name_i ++ "`: the computed statement. -/\n" ++ hinweis ++
         "theorem pflicht_" ++ toString i ++ " : ∃ body, zuBodyZ u (fnAt u ⟨" ++ toString i ++ ", by decide⟩) = some body ∧\n" ++
-        "    meetsU u (wfU u) (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  exact?\n\n") ""
+        "    " ++ (if rangB u (rangAuto u) then "meetsU u (wfU u)" else "meetsUM u (wfU u) mass") ++
+        " (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  exact?\n\n") ""
     let fall := (List.range n).foldl (fun acc i =>
       acc ++ "  | ⟨" ++ toString i ++ ", _⟩ => pflicht_" ++ toString i ++ "\n") ""
     let schluss :=
       "/-- O43: supply refinement of the actual lowered pointer contracts separately. -/\n" ++
-      "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlle quelle :=\n" ++
-      "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, schnittstellen, fun c => match c with\n" ++ fall ++
+      (if rangB u (rangAuto u) then
+        "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlle quelle :=\n" ++
+        "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, schnittstellen, fun c => match c with\n"
+       else
+        "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlleM quelle :=\n" ++
+        "  ⟨u, verankert, null, stimmig, frisch, ordinary, schnittstellen, mass, fun c _ => match c with\n") ++ fall ++
       "  | ⟨_ + " ++ toString n ++ ", h⟩ => absurd h\n" ++
       "      (by have hl : u.fns.length = " ++ toString n ++ " := by decide\n          omega)⟩\n\n" ++
       "/-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/\n" ++
@@ -165,7 +173,8 @@ def vorlage (name src : String) : String :=
       "    {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
       "    {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :\n" ++
       "    ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=\n" ++
-      "  nutzer_aus_quelleG_alle (pflichten schnittstellen) h\n\n" ++
+      "  " ++ (if rangB u (rangAuto u) then "nutzer_aus_quelleG_alle" else "nutzer_aus_quelleM_alle") ++
+      " (pflichten schnittstellen) h\n\n" ++
       "end Gabbro.Bruecke.Vorlage." ++ name ++ "\n"
     kopf ++ bools ++ pflicht ++ schluss
 

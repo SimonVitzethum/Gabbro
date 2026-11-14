@@ -233,7 +233,7 @@ theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List
         | .error error => .error error
         | .ok ending => .ok (Endblock.cons st ending)) := by
     cases s
-    case assign | assignTab | assignGlob | call =>
+    case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
       unfold lowStmt
       rw [lowBodyF] <;> try simp
       all_goals

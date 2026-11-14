@@ -105,6 +105,57 @@ theorem stmt_statisch_teilB {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.
                       · cases h
           · cases h
         · cases h
+  case assignOpt b fname ix v =>
+    simp only [lowStmtL] at h
+    have pointerWrite {space num j : Nat} {read : Bool} {owner : Option Nat}
+        (pv : Var Γ (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩))
+        (hj : paramPos fn.params b = .ok j)
+        (hpv : lowVar Γ j (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) = .ok pv)
+        (hlt : num < u.tabs.length) (hw : writesAt u (fnAt u c) ⟨num, hlt⟩ = true) :
+        ∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts := by
+      have hparam : (fn.params[j]?).map (·.2) =
+          some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
+        simpa only [hΓ, List.getElem?_map] using (lowVar_typ Γ j _ pv hpv)
+      have hpt := ptrTab_of_type fn b j num read true hj hparam hlt
+      simp only [stmtBody, hpt] at hb
+      cases hsv : optionExpr u fn v with
+      | none => rw [hsv] at hb; cases hb
+      | some ve =>
+        rw [hsv] at hb
+        cases hb
+        exact ⟨_, _, _, _, rfl, any_mem hw⟩
+    cases stored : lowAssignDurchOL (l := loopMode) u c Γ fn Λ b fname ix v with
+    | error error => simp only [stored, Except.map] at h <;> cases h
+    | ok statement =>
+      simp only [stored, Except.map] at h
+      cases h
+      have h := stored
+      unfold lowAssignDurchOL at h
+      split at h
+      · cases h
+      · rename_i j hj
+        split at h
+        · rename_i space read num _
+          split at h
+          · rename_i hlt
+            split at h
+            · cases h
+            · rename_i fh _
+              split at h
+              · cases h
+              · rename_i pv hpv
+                split at h
+                · cases h
+                · split at h
+                  · cases h
+                  · split at h
+                    · split at h
+                      · rename_i hw
+                        exact .inl (pointerWrite pv hj hpv hlt hw)
+                      · cases h
+                    · cases h
+          · cases h
+        · cases h
   case assignTab b fname ix v =>
     rw [lowStmtL_assignTab S.tab c Γ fn Λ b fname ix v] at h
     cases stored : lowAssignTabL (l := loopMode) u c Γ fn Λ b fname ix v with
@@ -132,6 +183,33 @@ theorem stmt_statisch_teilB {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.
           unfold writesAt at hw'
           rw [show (tabAt u t).name = b from hn] at hw'
           exact ⟨_, _, _, _, rfl, any_mem hw'⟩
+  case assignTabOpt b fname ix v =>
+    simp only [lowStmtL] at h
+    cases stored : lowAssignTabOL (l := loopMode) u c Γ fn Λ b fname ix v with
+    | error error => simp only [stored, Except.map] at h <;> cases h
+    | ok statement =>
+      simp only [stored, Except.map] at h
+      cases h
+      have h := stored
+      simp only [lowAssignTabOL] at h
+      split at h
+      · cases h
+      · rename_i t ht
+        repeat' split at h
+        all_goals try cases h
+        rename_i hw
+        left
+        simp only [stmtBody] at hb
+        cases hsv : optionExpr u fn v with
+        | none => rw [hsv] at hb; cases hb
+        | some ve =>
+          rw [hsv] at hb
+          cases hb
+          have hn := tabIdx_name _ _ _ ht
+          have hw' : writesAt u (fnAt u c) t = true := hw
+          unfold writesAt at hw'
+          rw [show (tabAt u t).name = b from hn] at hw'
+          exact ⟨_, _, _, _, rfl, any_mem hw'⟩
   case assignGlob n v =>
     simp only [lowStmtL] at h
     cases hs : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v with
@@ -142,6 +220,21 @@ theorem stmt_statisch_teilB {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.
       have hw := lowAssignGlob_writes c hs S.statics
       simp only [stmtBody] at hb
       cases he : sideExprG u fn v with
+      | none => rw [he] at hb; cases hb
+      | some e =>
+        rw [he] at hb
+        cases hb
+        exact .inr (.inl ⟨n, e, rfl, hw⟩)
+  case assignGlobB n v =>
+    simp only [lowStmtL] at h
+    cases hs : lowAssignGlobBL (l := loopMode) u c Γ fn Λ n v with
+    | error err => simp only [hs, Except.map] at h; cases h
+    | ok st =>
+      simp only [hs, Except.map] at h
+      cases h
+      have hw := lowAssignGlobB_writes c hs
+      simp only [stmtBody] at hb
+      cases he : rawCond u fn v with
       | none => rw [he] at hb; cases hb
       | some e =>
         rw [he] at hb

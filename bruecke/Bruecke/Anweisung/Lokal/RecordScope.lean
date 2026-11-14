@@ -80,4 +80,14 @@ theorem PositionalLRel.pushRecord {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids :
   have hp := h.push x name (0, 0) hi v
   exact ⟨hp.length, hp.distinct, hp.values⟩
 
+/-- Leaving a record-local scope removes exactly its first positional entry. -/
+theorem PositionalLRel.tailRecord {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : List String}
+    {name x : String} {id : Nat} {fs : List Ty} {ρ : Env D (.prod id fs :: Γ)}
+    {β : Gabbro.Body.Binding}
+    (h : PositionalLRel (fn.mitWert x (.prod id fs)) (name :: ids) 0 ρ β) :
+    PositionalLRel fn ids 0 ρ.tail β := by
+  have hn : PositionalLRel (fn.mitBindung x (0, 0)) (name :: ids) 0 ρ β :=
+    ⟨h.length, h.distinct, h.values⟩
+  exact hn.tail
+
 end Gabbro.Bruecke

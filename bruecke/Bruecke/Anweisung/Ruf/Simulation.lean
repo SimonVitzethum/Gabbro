@@ -1,4 +1,5 @@
 module
+public import Bruecke.Anweisung.Ruf.Scope
 public import Bruecke.Anweisung.Ruf.Kopf
 public import Bruecke.Teil.Lokal.Ruf
 @[expose] public section

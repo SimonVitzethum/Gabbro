@@ -58,30 +58,32 @@ def schreibtB (u : UProg) (fn : UFn) : Bool :=
   (fn.puts.all fun w => u.tabs.any (·.name == w)) &&
     fn.gputs.all fun w => u.globs.any (·.name == w)
 
-/-- Bool table fields, options and record-typed table slots are refused by name. Record results
+/-- Bool and record-typed table slots are refused by name. Option and record results
     are represented by Body values and the return simulation. -/
 def keinBoolB (u : UProg) : Bool :=
-  u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
-    u.fns.all (fun f => resultTypeB f && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
+  u.tabs.all (fun t => t.bools.isEmpty && t.werte.isEmpty) &&
+    u.fns.all (fun f => resultTypeB f && f.resSum.isNone && f.resWhy.isNone)
 
-/-- Boolean, aggregate and atomic statics are refused by the unit gate. -/
+/-- Aggregate and atomic statics are refused by the unit gate; integer and bool statics pass. -/
 def staticsB (u : UProg) : Bool := u.globs.all fun g =>
   match g.ty with
-  | .int .. => !g.atomic
-  | .bool | .wert _ => false
+  | .int .. | .bool => !g.atomic
+  | .wert _ => false
 
-theorem staticsB_ok {u : UProg} (h : staticsB u = true) : NumericStatics u := by
+theorem staticsB_ok {u : UProg} (h : staticsB u = true) : ScalarStatics u := by
   intro g
   have hg := List.all_eq_true.mp h (globAt u g) (List.get_mem _ _)
   cases ht : (globAt u g).ty with
   | int lo hi =>
     simp only [ht, Bool.not_eq_eq_eq_not, Bool.not_true] at hg
-    exact ⟨lo, hi, rfl, hg⟩
-  | bool => simp only [ht, Bool.false_eq_true] at hg
+    exact ⟨.inl ⟨lo, hi, rfl⟩, hg⟩
+  | bool =>
+    simp only [ht, Bool.not_eq_eq_eq_not, Bool.not_true] at hg
+    exact ⟨.inr rfl, hg⟩
   | wert ty => simp only [ht, Bool.false_eq_true] at hg
 
 def stimmigB (u : UProg) : Bool :=
-  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty && fn.gruende == 0) && u.invs.isEmpty && staticsB u &&
+  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty) && u.invs.isEmpty && staticsB u &&
     u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 
@@ -178,17 +180,17 @@ theorem gschreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
 
 /-- **The name conditions, decided.** -/
 theorem keinBoolB_ok (h : keinBoolB u = true) :
-    (∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []) ∧
+    (∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).werte = []) ∧
       (∀ c : Fin u.fns.length, ErgSchlicht (fnAt u c)) := by
   simp only [keinBoolB, Bool.and_eq_true] at h
   obtain ⟨h1, h2⟩ := h
   refine ⟨fun t => ?_, fun c => ?_⟩
   · have := List.all_eq_true.mp h1 (tabAt u t) (List.get_mem _ _)
     simp only [Bool.and_eq_true, List.isEmpty_iff] at this
-    exact ⟨this.1.1, this.1.2, this.2⟩
+    exact this
   · have := List.all_eq_true.mp h2 (fnAt u c) (List.get_mem _ _)
     simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, Option.isNone_iff_eq_none] at this
-    exact ⟨this.1.1.1, this.1.1.2, this.1.2, this.2⟩
+    exact ⟨this.1.1, this.1.2, this.2⟩
 
 /-! ## The rank -/
 

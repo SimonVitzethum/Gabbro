@@ -81,6 +81,35 @@ theorem lowSeq_bind_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : L
       cases h
       exact ⟨ls, ⟨Λ', b⟩, rfl, hq, rfl⟩
 
+/-- The canonical block lowerer keeps an annotated or inferred record local by value. -/
+theorem lowSeq_bindRecord_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
+    {Λ : List (Res (declOf u))} {pe : AtTop u c Λ} {x : String} {id : Nat} {fs : List Ty}
+    {d : Option Ty} {v : USide} {ss rest : List UStmt}
+    {p : Σ Λ', Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
+    (ht : recordBinderType u fn d v = some (.prod id fs))
+    (h : lowSeqL (l := loopMode) u c Γ fn (n + 1) Λ pe
+      (.bindW x d v :: ss) = .ok (p, rest)) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.prod id fs))
+      (q : Σ Λ', Block (declOf u) (verOf u c) loopMode (.prod id fs :: Γ) Λ Λ'),
+      lowWertAtE u Γ Λ fn none (.prod id fs) v = .ok ev ∧
+      lowSeqL (l := loopMode) u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ pe ss =
+        .ok (q, rest) ∧ p = ⟨q.1, Block.bind ev q.2⟩ := by
+  rw [lowSeqL_succ] at h
+  simp only [lowSeqStep, lowStufe_seq] at h
+  cases hw : lowBindW u Γ Λ fn d v with
+  | error err => simp only [hw, Except.bind, reduceCtorEq] at h; cases h
+  | ok w =>
+    obtain ⟨ev, hev, rfl⟩ := lowBindW_record ht hw
+    simp only [hw, Except.bind] at h
+    cases hq : lowSeqL (l := loopMode) u c (.prod id fs :: Γ)
+        (fn.mitWert x (.prod id fs)) n Λ pe ss with
+    | error err => simp only [hq, Except.bind, reduceCtorEq] at h; cases h
+    | ok out =>
+      obtain ⟨⟨Λ', b⟩, tail⟩ := out
+      simp only [hq, Except.bind] at h
+      cases h
+      exact ⟨ev, ⟨Λ', b⟩, hev, hq, rfl⟩
+
 theorem lowSeq_bindMut_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
     {pe : AtTop u c Λ} {x : String} {lo hi : Int} {v : USide} {ss rest : List UStmt}
     {p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
@@ -137,7 +166,7 @@ theorem lowSeqStep_einzeln {l : Bool} (R : LowStufe u c) (Γ : Ctx) (fn : UFn)
       (lowStmtL (l := l) u c Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
         (R.seq (l := l) Γ fn Λ₁ pe ss).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r) := by
   cases s
-  case assign | assignTab | assignGlob | call | setVar | setVarB => rfl
+  case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call | setVar | setVarB | setVarOpt => rfl
   all_goals simp [LeseEinzeln] at hs
 
 theorem lowSeq_einzeln_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}

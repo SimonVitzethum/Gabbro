@@ -25,7 +25,7 @@ structure Getragen (u : UProg) (C : Fin u.fns.length → Prop) : Prop where
   geschlossen : ∀ c, C c → ∀ n ∈ calleesOf (fnAt u c), ∀ d,
     fnSuch u n = some (fnAt u d) → C d
   boolTab : ∀ t : Fin u.tabs.length,
-    (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []
+    (tabAt u t).bools = [] ∧ (tabAt u t).werte = []
   boolErg : ∀ c, C c → ErgSchlicht (fnAt u c)
   tab : TabEindeutig u
   art : ∀ c, C c → ArtStimmt (fnAt u c)
@@ -36,9 +36,8 @@ structure Getragen (u : UProg) (C : Fin u.fns.length → Prop) : Prop where
   schreibt : ∀ c, C c → ∀ w ∈ (fnAt u c).puts, ∃ t, (tabAt u t).name = w
   gschreibt : ∀ c, C c → ∀ w ∈ (fnAt u c).gputs, ∃ g, (globAt u g).name = w
   ohneReq : ∀ c, C c → (fnAt u c).needs = []
-  ohneGrund : ∀ c, C c → (fnAt u c).gruende = 0
   ohneInv : u.invs = []
-  statics : NumericStatics u
+  statics : ScalarStatics u
   ohneTransition : ∀ c, C c → transitionOfFn u c = none
 
 /-- O43 for carried targets. The complementary targets owe the very same canonical

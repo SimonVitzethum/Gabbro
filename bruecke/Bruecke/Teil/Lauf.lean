@@ -50,10 +50,13 @@ theorem eintrag_gut_teil {P : Programm (declOf u)} (G : GesenktC u C P) (S : Get
         unfold slotWert at hsw
         split at hsw
         · rename_i t' ht'
-          split at hsw
-          · rename_i fh' hf'
-            cases hsw
-            rw [wrel_lies_k u hWt.1 c t' ht' fld fh' hf' k]
+          cases hf' : fieldIndex u t' fld with
+          | none => rw [hf'] at hsw; cases hsw
+          | some f =>
+            rw [hf'] at hsw
+            have hval := Option.some.inj hsw
+            subst hval
+            rw [wrel_lies_index u hWt.1 c t' ht' fld f hf' k]
             congr 1
             have hfr := (hRR.2 callee σr envA σ' v hR).1.1 t'
             have hwf : (declOf u).schreibt callee t' = false := by
@@ -66,8 +69,7 @@ theorem eintrag_gut_teil {P : Programm (declOf u)} (G : GesenktC u C P) (S : Get
               intro x hx e
               subst e
               exact hp (List.mem_append_left _ hx)
-            exact hfr hwf k fh'.idx
-          · cases hsw
+            exact hfr hwf k f
         · cases hsw
     | field c n => rfl
     | global n =>
