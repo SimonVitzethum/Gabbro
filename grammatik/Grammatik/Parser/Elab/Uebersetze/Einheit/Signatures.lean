@@ -99,8 +99,8 @@ def uArenaSchranken (consts : List (String × Int)) : List SItemTief → Except 
     match uAnzahl consts lo, uAnzahl consts hi with
     | .error _, _ | _, .error _ => .error ("arena bounds without compile-time constants: " ++ n)
     | .ok l, .ok h =>
-      if !(0 ≤ l ∧ l ≤ h) then .error ("arena bounds without 0 <= lo <= hi: " ++ n)
-      else uArenaSchranken consts rest
+      if 0 ≤ l ∧ l ≤ h then uArenaSchranken consts rest
+      else .error ("arena bounds without 0 <= lo <= hi: " ++ n)
   | _ :: rest => uArenaSchranken consts rest
 
 /-- Two bodied functions never share a name in one unit (`N042`): after resolution every item carries
