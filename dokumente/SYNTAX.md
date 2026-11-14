@@ -233,7 +233,7 @@ the vocabulary — identifiers in a fixed position, counted and named by the gua
 words of the vocabulary AND terminals the lexer knows («SS-1», `lex_keywords` in
 `Parser/Lex/Lexer/Teil2a.lean`); the EBNF
 side carries them through `syscalldecl`, and a `syscall` item has been checked
-since lane S5 (Lean home: `N063` in `grammatik/Grammatik/Hardware/Tor/Abi.lean`; `N064`-`N068`,
+since lane S5 (Lean home: `N063`/`N065`/`N066` in `grammatik/Grammatik/Hardware/Tor/Abi.lean`; `N064`/`N067`/`N068`,
 `A005`/`A006` are not yet Lean judgments) and lowered by Stage 0 (`stage0/Stage0/Bindung.lean`
 binds direct gates inline; measured on `beispiele/74`). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
@@ -413,7 +413,7 @@ path above is the whole migration; no second frontend remains. Parser, stack, di
 | `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one, each element lies in the element type (`K191`/`K194` are not yet Lean judgments) | no constructor — not yet decided by the Lean checker; the model certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (Lean: `N446`-`N452` in `Bausteine/Schablonen/SchablonenFaden.lean`, `N456`/`N457` in `Nebenlaeufigkeit/Allgemein/Threads/FadenMaschine.lean`; emitter `C185` is not yet a Lean judgment) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (Lean: `N446`/`N448`/`N449`/`N451`/`N452` in `Bausteine/Schablonen/SchablonenFaden.lean`, `N456`/`N457` in `Nebenlaeufigkeit/Allgemein/Threads/FadenMaschine.lean`; `N447`/`N450` and emitter `C185` are not yet Lean judgments) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
 | `targetdecl`, `syscall V;`, `via V` (§12.3, Opus agent L) | **a gate's kernel is a binding, not its text**: the parser fills every `via` gate from the active target's binding before any pass runs, and the checker holds every binding (`N562`-`N567` are not yet Lean judgments, inactive targets included) | none of its own — the filled gate is the `syscalldecl` row above; the target's named assumption is the gate's `D.Ax` assumption |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
@@ -1408,9 +1408,9 @@ freestmt   = "free" place ";" ;                            (* TODO §1-B, §9.1 
    readable and writable, or the `else` runs (OOM below the ceiling). The `else` always
    stands -- the grammar has no branchless form, so a missing `else` is `P001` at the
    reader, not a checker question. The amount is any expression at the reader and must
-    be a translation-time constant at the checker (`N426` in
-    `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses the uncountable shape
-    and the request reaching past the ceiling, branch or no branch). `grow = 1;` stays
+    be a translation-time constant at the checker (Lean model of `N426` in
+    `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal is not yet a Lean
+    judgment). `grow = 1;` stays
    an assignment -- the head word decides, like at `reset` above. *)
 childstmt  = "child" block ;                                    (* lane O-1, §12.1 *)
 startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §11; `ident` spelled `start`, read by text, not a vocabulary word *)
@@ -2062,7 +2062,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210` is not yet a Lean judgment) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
 | `arena A capacity lo .. hi of T pb P blw B` | the UNBOUNDED form: no `max`, the ceiling is the counter room (`u32::MAX`); the generator reserves address space once (`mmap(PROT_NONE)`, no RAM) and commits per 1 MiB on demand (`mprotect`); before each commit it asks `P` for free bytes, below `B` the `else` runs (OOM path) — one probe per MiB, zero on the fast path; freestanding `P` measures itself | `ArenaDyn.lean`: ceiling `M`, committed prefix `c`, past-ceiling refusal, real OOM below `M` (the `else` is the program's); the 1 MiB steps overshoot the need invisibly (no introspection), hence refinement-true |
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` is not yet a Lean judgment; the END of the range is held against the length (`M103` in `SchablonenT5SemBasis.lean`); it is a store (`writes X`) | none: the Lean exporter refuses the statement by name (`LG005` in `Bausteine/Arena/ArenaDyn/Teil2.lean`) — the exporter has no model of a released page |
-| `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` in `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` is not yet a Lean judgment) | no constructor yet: the committed prefix is checker flow, and the lowering refuses the statement by name until the dynamic arm lands |
+| `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (Lean model of `N426` in `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal and `N213` are not yet Lean judgments) | no constructor yet: the committed prefix is checker flow, and the lowering refuses the statement by name until the dynamic arm lands |
 | `free A[i];` | give exactly one slot back: the name dies statically (`N586` in `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the Lean exporter refuses by name (`LG005`) until the Block form lands |
 | `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
@@ -2174,14 +2174,13 @@ impl fn nutzen() -> u32 effects { writes Log } costs <= 32 ops {
 * `grow A by n else { … };` (lane 257) commits `n` further slots below the
   ceiling, or runs the `else` (OOM below the ceiling). The `else` always
   stands -- boolean discipline: both outcomes of the commit decision are
-  written down. The amount is a translation-time constant; `N426` refuses
-  the uncountable amount and every request whose upper bound may reach past
-  the ceiling, branch or no branch. The bound is whole-run (`reset` gives no
+  written down. The amount is a translation-time constant (Lean model of `N426` in
+  `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal is not yet a Lean judgment). The bound is whole-run (`reset` gives no
   commit back): every path, every loop pass (a loop without a constant pass
   bound makes it unbounded), every call, and every root of the call graph
   entered once per load (an `entry` dispatch target without bound; fix lane
   F2). Until the dynamic arm lands, the
-  emitter and the G exporter refuse the statement by name.
+  lowering refuses the statement by name.
 
 *Lean:* the generation is a type index (`Arena k g`, `ArenaIdx g n`, `Marke g`
 with a private constructor), so a stale index does not typecheck; `alloc`
