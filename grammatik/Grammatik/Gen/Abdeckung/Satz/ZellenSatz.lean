@@ -274,13 +274,14 @@ theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
-    AkzeptiertX P S fs ls cs ws aks = true ↔
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (sources : Invarianten.Pruefer.LockSources S := fun _ => none) :
+    AkzeptiertX P S fs ls cs ws aks [] [] [] sources = true ↔
       (∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false) ∧
         Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true ∧
-        Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true ∧
-        Vertraege.Pruefer.KontrakteGeprueftB P S fs = true := by
-  rw [akzeptiertX_iff]
+        Invarianten.Pruefer.programInvariantsB P S fs sources {} ls = true ∧
+        Vertraege.Pruefer.KontrakteGeprueftB P S fs sources = true := by
+  rw [akzeptiertX_iff (sources := sources)]
   constructor
   · rintro ⟨h, hAkku, hReset, hI, hK⟩
     refine ⟨?_, hAkku, hI, hK⟩
