@@ -93,13 +93,13 @@ theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut")
     intro R; simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact parseLet_nameTok x hx R f
   cases ty with
   | none =>
-    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; split)) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Bool.false_eq_true, List.cons_append, nameText_nameTok, ht, Option.isSome_none] <;> rfl
+    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; by_cases hk : istSchluessel x = true <;> simp only [hk, ↓reduceIte, Bool.false_eq_true])) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Bool.false_eq_true, List.cons_append, nameText_nameTok, ht, Option.isSome_none] <;> rfl
   | some t =>
     have hT : parseTyp f (druckTyp t ++ .zeichen "=" :: nach) = .ok (t, .zeichen "=" :: nach) :=
       parse_druckTyp t hty _ f
         ⟨(by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e),
           (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e), rfl, rfl, rfl⟩ (hf t rfl)
-    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; split)) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Token.zeichen.injEq, String.reduceEq, Bool.false_eq_true, nameText_nameTok, ht, Option.isSome_none] <;> rfl
+    cases m <;> (try rw [hm]) <;> (try (unfold nameTok; by_cases hk : istSchluessel x = true <;> simp only [hk, ↓reduceIte, Bool.false_eq_true])) <;> simp only [parseLet, nameText, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Token.zeichen.injEq, String.reduceEq, Bool.false_eq_true, nameText_nameTok, ht, Option.isSome_none] <;> rfl
 
 /-- An expression right side: neither `@` nor `alloc t (` nor `alloc t ;`. -/
 theorem parseLetNach_expr (f : Nat) (m : Bool) (x : String) (ty : Option STyp) (e : SExpr)
