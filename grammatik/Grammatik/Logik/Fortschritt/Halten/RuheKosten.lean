@@ -294,12 +294,15 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
-  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+  | .bindAxiomOpt (e := none) (rest := rest) .. | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
     (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
       entfZ_ru, Option.elim_some, Option.elim_none])
     repeat
       (first
+        | erw [kostenEnd_ru rest]
+        | erw [kostenSonst_ru rest]
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
         | erw [kostenEnd_umΛ]
@@ -348,12 +351,15 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
-  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+  | .bindAxiomOpt (e := none) (rest := rest) .. | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
     (try simp only [ruEnd, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
       entfZ_ru, Option.elim_some, Option.elim_none])
     repeat
       (first
+        | erw [kostenEnd_ru rest]
+        | erw [kostenSonst_ru rest]
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
         | erw [kostenEnd_umΛ]
