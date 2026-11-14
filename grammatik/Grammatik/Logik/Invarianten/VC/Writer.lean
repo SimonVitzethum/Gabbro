@@ -50,7 +50,8 @@ def endBlock (program : Programm D) (checked : D.Fn → List D.Inv)
   | .cons first rest => do
       let tail ← endBlock program checked rest locals terminal
       let head ← statement program checked first locals tail.formula terminal
-      return { formula := head.formula
+      return {
+          formula := head.formula
           sound := fun O passes calls evidence world valid => by
             have step := head.sound O passes calls evidence world valid
             unfold WP.wpS at step
@@ -72,7 +73,8 @@ def endBlock (program : Programm D) (checked : D.Fn → List D.Inv)
       let guard ← translate condition locals
       let yesVC ← endBlock program checked yes locals terminal
       let noVC ← endBlock program checked no locals terminal
-      return { formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
+      return {
+          formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
             (.imp (.not guard.payload) (quoteQF noVC.formula)))
           sound := fun O passes calls evidence world valid => by
             let read := world.lese Λ condition.orte

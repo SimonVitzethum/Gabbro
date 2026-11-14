@@ -57,7 +57,8 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   match code with
   | .assignGlob name expression _ _ => do
       let pre ← scalarWP expression locals (.glob name) normal
-      return { formula := pre.formula
+      return {
+          formula := pre.formula
           sound := fun O passes calls evidence world valid => by
             refine ⟨rfl, ?_⟩
             rw [assignment_schreibGlob]
@@ -68,7 +69,8 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       let encodedIndex ← translate index locals
       let offset ← encodedIndex.constantIndex
       let pre ← scalarWP expression locals (.slot table field offset.val) normal
-      return { formula := pre.formula
+      return {
+          formula := pre.formula
           sound := fun O passes calls evidence world valid => by
             refine ⟨rfl, ?_⟩
             rw [assignment_schreibSlot, offset.property]
@@ -79,7 +81,8 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       let guard ← translate condition locals
       let yesVC ← block yes locals normal terminal
       let noVC ← block no locals normal terminal
-      return { formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
+      return {
+          formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
             (.imp (.not guard.payload) (quoteQF noVC.formula)))
           sound := fun O passes calls evidence world valid => by
             let read := world.lese Λ condition.orte
@@ -105,7 +108,8 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 simpa only [WP.wpS, WP.wpB, execStmt, tested, wahr?, ↓reduceIte] using result }
   | .call f args _ noReasons => do
       let facts ← invariantFormula program (checked f)
-      return { formula := callWP f facts.formula normal
+      return {
+          formula := callWP f facts.formula normal
           sound := fun O passes calls evidence world valid => by
             let read := world.lese Λ args.orte
             let actual := evalArgs read args read locals
@@ -126,7 +130,8 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             | hardware error => trivial }
   | .breaking _ body => do
       let pre ← block body locals normal terminal
-      return { formula := pre.formula
+      return {
+          formula := pre.formula
           sound := fun O passes calls evidence world valid =>
             pre.sound O passes calls evidence world valid }
   | .ret expression _ => .ok
@@ -164,7 +169,8 @@ def block {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .cons first rest => do
       let tail ← block rest locals normal terminal
       let head ← statement first locals tail.formula terminal
-      return { formula := head.formula
+      return {
+          formula := head.formula
           sound := fun O passes calls evidence world valid => by
             have step := head.sound O passes calls evidence world valid
             unfold WP.wpS at step

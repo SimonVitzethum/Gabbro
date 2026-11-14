@@ -29,7 +29,8 @@ def checkProgram (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
   let invariants ← invariantFormula program D.invs
   let writers ← collect functions (InvariantDuties program S)
     (fun f => checkWriter program S sources budget f (locks.any fun lock => (sources lock).isSome))
-  return { invariants := invariants, writers := writers.down }
+  return {
+      invariants := invariants, writers := writers.down }
 
 /-- A program is admitted only after translation and every writer decision
     succeed. Outside-fragment invariants are refused, never user logic and

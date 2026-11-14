@@ -19,7 +19,7 @@ theorem requiredB_sound (question answer : World D) (ρ : Env D Γ) :
       rw [requiredB_sound question answer ρ left h.1,
         requiredB_sound question answer ρ right h.2]
       rfl
-  | _, h => by cases h
+  | e, h => by cases e <;> simp_all [requiredB]
 
 /-- The shared value-or-reason gate. Only a decoded normal answer evaluates the
     predicate. An environment reason is forwarded unchanged; an invalid type or

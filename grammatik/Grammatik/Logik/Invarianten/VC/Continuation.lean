@@ -87,7 +87,8 @@ def boundCallCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       let pre ← compile (.cons value locals)
       return pre.freshResult τ value)
   let facts ← invariantFormula program (checked f)
-  return { formula := callWP f facts.formula tails.formula
+  return {
+      formula := callWP f facts.formula tails.formula
       sound := fun runtime world valid => by
         let read := world.lese Λ args.orte
         let actual := evalArgs read args read locals
