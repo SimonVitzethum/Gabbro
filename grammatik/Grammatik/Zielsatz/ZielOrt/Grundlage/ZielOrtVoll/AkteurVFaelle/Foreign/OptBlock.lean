@@ -42,11 +42,11 @@ theorem akteurV_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -60,7 +60,7 @@ theorem akteurV_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOpt none a args he hp hd hgd rest) σ ρ) = _
-    simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
+    simp only [execBlock, axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
     refine ⟨fadenV_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
@@ -70,7 +70,7 @@ theorem akteurV_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOpt (some τ) a args he hp hd hgd rest) σ ρ) = _
-    simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
+    simp only [execBlock, axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
 
 set_option maxHeartbeats 4000000 in
