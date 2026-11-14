@@ -77,7 +77,7 @@ def intern (k : Context) (elements : List STyp) : ExpandM STyp := do
   | some record => pure (.atom record.name)
   | none =>
     let name := uTuplePrefix k.aliases elements ++ toString state.records.length
-    set { state with records := state.records ++ [⟨name, elements, key⟩] }
+    set { state with records := state.records ++ [({ name := name, elements := elements, key := key } : Record)] }
     pure (.atom name)
 
 /-- Generated records are represented structurally in the frontend, avoiding a round trip

@@ -73,6 +73,7 @@ theorem axVertragOP_mitRuhe {P : Programm D} {Q : AxEns D} {O : Orakel D}
     rw [← preQ_mitRuhe P a ((worldZ σ).fragt (.inl a)) (envZ ρ), ← worldZ_fragt, worldR_worldZ,
       envR_envZ]
     exact hp
+  rw [wirkt_mitRuhe_welt] at hv
   change einpassenErg (D := D.mitRuhe) O.mitRuhe.zeiger ((D.aerg a).map tyR)
     (O.wirkt a ((worldZ σ).fragt (.inl a)) (envZ ρ)).2 = some v at hv
   rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)] at hv
