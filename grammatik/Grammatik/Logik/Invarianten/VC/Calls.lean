@@ -78,6 +78,7 @@ def typeFact (key : Observation D) : LProp (Observation D) :=
   match observationType key with
   | .int lo hi => .and (.le (.konst lo) (.var key)) (.le (.var key) (.konst hi))
   | .str capacity => .and (.le (.konst 0) (.var key)) (.le (.var key) (.konst capacity))
+  | .bool => .and (.le (.konst 0) (.var key)) (.le (.var key) (.konst 1))
   | _ => .tru
 
 /-- The range fact of one observation, from the typed value it reads. -/
@@ -93,6 +94,9 @@ theorem typeFact_of_value (world : World D) (key : Observation D) (τ : Ty) (val
   | str capacity =>
       simp only [LProp.denote, LTerm.denote, reads, scalarValue]
       exact ⟨Int.natCast_nonneg _, by exact_mod_cast value.property⟩
+  | bool =>
+      simp only [LProp.denote, LTerm.denote, reads, scalarValue]
+      cases value <;> decide
   | _ => trivial
 
 theorem typeFact_sound (key : Observation D) (world : World D) :

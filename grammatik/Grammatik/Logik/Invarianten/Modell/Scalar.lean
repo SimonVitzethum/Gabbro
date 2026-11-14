@@ -29,6 +29,7 @@ def decodeScalar (τ : Ty) (value : Int) : Option (Wert D τ) :=
           simp only [List.length_replicate]
           omega⟩
       else none
+  | .bool => if value = 0 then some false else if value = 1 then some true else none
   | _ => none
 
 theorem decodeScalar_sound (τ : Ty) (value : Int) (decoded : Wert D τ)
@@ -49,6 +50,17 @@ theorem decodeScalar_sound (τ : Ty) (value : Int) (decoded : Wert D τ)
         simp only [scalarValue, List.length_replicate]
         exact Int.toNat_of_nonneg valid.1
       · contradiction
+  | bool =>
+      simp only [decodeScalar] at success
+      split at success
+      · rename_i zero
+        cases success
+        exact zero.symm
+      · split at success
+        · rename_i one
+          cases success
+          exact one.symm
+        · contradiction
   | _ => simp [decodeScalar] at success
 
 /-- The type bounds are ordinary Presburger formulas, inserted BEFORE deciding
@@ -57,6 +69,7 @@ def scalarBounds (τ : Ty) (term : LTerm α) : LProp α :=
   match τ with
   | .int lo hi => .and (.le (.konst lo) term) (.le term (.konst hi))
   | .str capacity => .and (.le (.konst 0) term) (.le term (.konst capacity))
+  | .bool => .and (.le (.konst 0) term) (.le term (.konst 1))
   | _ => .fls
 
 theorem decodeScalar_complete (τ : Ty) (value : Int)
@@ -69,6 +82,12 @@ theorem decodeScalar_complete (τ : Ty) (value : Int)
   | str capacity =>
       change 0 ≤ value ∧ value ≤ (capacity : Int) at valid
       exact ⟨_, dif_pos valid⟩
+  | bool =>
+      change 0 ≤ value ∧ value ≤ 1 at valid
+      by_cases zero : value = 0
+      · exact ⟨false, by simp only [decodeScalar, zero, ↓reduceIte]⟩
+      · have one : value = 1 := by omega
+        exact ⟨true, by simp only [decodeScalar, zero, one, ↓reduceIte]⟩
   | _ => exact False.elim valid
 
 def observationBounds (keys : List (Observation D)) : LProp (Observation D) :=
@@ -99,7 +118,7 @@ theorem observationBounds_sound (keys : List (Observation D))
     is added to the invariant soundness theorem. Support precedes the dependent
     value so its type test does not generalize that value or the equality proof. -/
 theorem scalarBounds_value (τ : Ty)
-    (supported : match τ with | .int _ _ | .str _ => True | _ => False)
+    (supported : match τ with | .int _ _ | .bool | .str _ => True | _ => False)
     (value : Wert D τ) (term : LTerm α) [DecidableEq α] (values : Assignment α)
     (same : term.denote values = scalarValue τ value) :
     (scalarBounds τ term).denote values := by
@@ -115,6 +134,10 @@ theorem scalarBounds_value (τ : Ty)
       constructor
       · omega
       · exact_mod_cast value.property
+  | bool =>
+      change 0 ≤ term.denote values ∧ term.denote values ≤ 1
+      rw [same]
+      cases value <;> decide
   | _ => exact False.elim supported
 
 theorem observationBounds_assignment (keys : List (Observation D)) (world : World D)
