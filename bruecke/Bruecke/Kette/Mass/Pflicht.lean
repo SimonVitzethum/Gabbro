@@ -1,5 +1,6 @@
 module
 public import Bruecke.Realisierung
+public import Bruecke.Anweisung.Zweig.Benannt
 @[expose] public section
 
 /-!

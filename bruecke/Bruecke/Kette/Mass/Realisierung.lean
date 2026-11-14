@@ -66,7 +66,7 @@ theorem massEnv_rahmen (n : String) (gf : UFn) (hgf : fnSuch u n = some gf) :
   intro t p hp
   by_cases hex : ∃ out, AntwortGut u n t out
   · exact (massEnv_gut hex).1 gf hgf p hp
-  · rw [massEnv_sonst hex]
+  · simp only [massEnv_sonst hex]
 
 theorem massEnv_vertrag {n : String} {t : Gabbro.Body.State} {gf : UFn}
     (hgf : fnSuch u n = some gf) (hex : ∃ out, AntwortGut u n t out)
