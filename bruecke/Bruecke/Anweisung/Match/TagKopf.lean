@@ -94,7 +94,7 @@ theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
     {ss tail : List UStmt} {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
     (hn : sidx < u.sums.length) (ht : valueParamTy fn x = some (.sum cs))
     (h : lowStructL u c Γ fn (fuel + 1) Λ [] (.matchTagBeg sidx x binders) ss = .ok (⟨Λ', st⟩, tail)) :
-    ∃ j (v : Var Γ (.sum cs)) (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs),
+    ∃ j, ∃ (v : Var Γ (.sum cs)) (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs),
       paramPos fn.params x = .ok j ∧ lowVar Γ j (.sum cs) = .ok v ∧
       lowArmsT u c Γ fn fuel Λ [] cs binders ss = .ok (arms, .blkEnd :: tail) ∧
       Λ' = Λ ∧ HEq st (Stmt.onTag (Expr.var v) arms) := by

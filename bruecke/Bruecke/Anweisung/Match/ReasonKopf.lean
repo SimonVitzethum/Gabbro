@@ -66,7 +66,7 @@ theorem lowStruct_reason_ok {fuel count : Nat} {Γ : Ctx} {fn : UFn}
     {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
     (ht : valueParamTy fn x = some (.why count))
     (h : lowStructL u c Γ fn (fuel + 1) Λ [] (.matchWhyBeg x) ss = .ok (⟨Λ', st⟩, tail)) :
-    ∃ j (v : Var Γ (.why count))
+    ∃ j, ∃ (v : Var Γ (.why count))
       (arms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ count),
       paramPos fn.params x = .ok j ∧ lowVar Γ j (.why count) = .ok v ∧
       lowGArmsL u c Γ fn fuel Λ [] count ss = .ok (arms, .blkEnd :: tail) ∧
