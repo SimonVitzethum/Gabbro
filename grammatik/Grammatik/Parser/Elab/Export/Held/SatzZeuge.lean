@@ -89,6 +89,7 @@ theorem holds_haltPasst_zeuge {r : Programm (declOf sectionUnit) × List (declOf
     intro L
     have index : L = ⟨0, by decide⟩ := by
       apply Fin.ext
+      change L.val = 0
       have bound := L.isLt
       change L.val < 1 at bound
       omega
@@ -125,7 +126,7 @@ theorem accepted_hold_fixture :
     rw [lowered] at hh
     cases hh
   | some r =>
-    exact ⟨r, lowered, holds_haltPasst_zeuge lowered, holds_haltPasst_mitRuhe_zeuge lowered⟩
+    exact ⟨r, rfl, holds_haltPasst_zeuge lowered, holds_haltPasst_mitRuhe_zeuge lowered⟩
 
 /-- On the existing exported section fixture, hold time follows with the syntactic premise
     discharged solely by acceptance. The remaining premises are precisely the run-side
