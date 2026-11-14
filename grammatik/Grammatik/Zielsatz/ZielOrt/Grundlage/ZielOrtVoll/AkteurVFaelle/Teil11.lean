@@ -212,11 +212,11 @@ theorem akteurV_dannBindAxiomElseOk {D : Deklaration} {P : Programm D} {O : Orak
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -229,7 +229,7 @@ theorem akteurV_dannBindAxiomElseOk {D : Deklaration} {P : Programm D} {O : Orak
     hfr (fun O' R σ hz hwk => ?_), hL⟩
   apply ZErg.folgt_of_eq
   show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomElse a args he hr hw hg hd hgd err rest) σ ρ) = _
-  simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv]
+  simp only [execBlock, axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv]
   rfl
 
 end Gabbro.Grammatik

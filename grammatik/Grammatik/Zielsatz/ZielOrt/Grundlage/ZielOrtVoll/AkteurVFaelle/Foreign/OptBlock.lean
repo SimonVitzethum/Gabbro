@@ -111,11 +111,11 @@ theorem akteurV_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -130,7 +130,7 @@ theorem akteurV_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOptElse none a args he hp hd hgd hr err rest) σ ρ) = _
-    simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
+    simp only [execBlock, axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
     refine ⟨fadenV_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
@@ -141,7 +141,7 @@ theorem akteurV_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOptElse (some τ) a args he hp hd hgd hr err rest) σ ρ) = _
-    simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
+    simp only [execBlock, axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
 
 set_option maxHeartbeats 4000000 in
@@ -183,11 +183,11 @@ theorem akteurV_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -201,7 +201,7 @@ theorem akteurV_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
     hfr (fun O' R σ hz hwk => ?_), hL⟩
   apply ZErg.folgt_of_eq
   show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ ρ) = _
-  simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv]
+  simp only [execBlock, axiomAntwortSonst, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Option.isSome_none, Bool.or_false, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv]
   exact (semV_alsBlock_schrumpf O' passes R err k _ _).symm
 
 end Gabbro.Grammatik
