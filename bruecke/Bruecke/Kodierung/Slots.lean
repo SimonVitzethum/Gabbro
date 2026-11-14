@@ -17,6 +17,17 @@ theorem fieldIndex_name {u : UProg} {t : Fin u.tabs.length} {fld : String}
     cases h
     exact fieldAtPos_name _ _ _ hw
 
+/-- A found field name has its declared position. -/
+theorem fieldIndex_of {u : UProg} {t : Fin u.tabs.length} {fld : String} {w : Int × Int}
+    (hw : fieldAtPos (tabAt u t).cols fld = some w) :
+    fieldIndex u t fld = some ⟨fieldPos (tabAt u t).cols fld, fieldPos_lt _ _ _ hw⟩ := by
+  unfold fieldIndex
+  split
+  · rename_i h
+    rw [hw] at h
+    cases h
+  · rfl
+
 /-- Integer field lookup and the general slot lookup select the same position. -/
 theorem fieldIndex_int {u : UProg} {t : Fin u.tabs.length} {fld : String}
     {fh : FieldHit u t} (h : fieldHit u t fld = .ok fh) :
@@ -25,8 +36,15 @@ theorem fieldIndex_int {u : UProg} {t : Fin u.tabs.length} {fld : String}
   split at h
   · cases h
   · rename_i w hw
-    repeat' split at h
-    all_goals first | (cases h; simp only [fieldIndex, hw]) | (cases h; done)
+    dsimp only at h
+    split at h
+    · split at h
+      · split at h
+        · cases h
+          exact fieldIndex_of hw
+        · cases h
+      · cases h
+    · cases h
 
 /-- Option field lookup uses that same position, without erasing its target table. -/
 theorem fieldIndex_opt {u : UProg} {t : Fin u.tabs.length} {fld : String}
@@ -36,8 +54,9 @@ theorem fieldIndex_opt {u : UProg} {t : Fin u.tabs.length} {fld : String}
   split at h
   · cases h
   · rename_i w hw
+    dsimp only at h
     repeat' split at h
-    all_goals first | (cases h; simp only [fieldIndex, hw]) | (cases h; done)
+    all_goals first | (cases h; exact fieldIndex_of hw) | (cases h; done) | cases h
 
 /-! ## 4. Worlds, through the declaration's names -/
 
@@ -100,7 +119,7 @@ theorem wrel_lies_index {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WR
     (fld : String) (f : Fin (fieldCount u t)) (hf : fieldIndex u t fld = some f) (k : Int) :
     w (.slot c k fld) = valOf ((declOf u).typ t f) (σ.slots t k f) := by
   apply hW
-  simp only [slotWert, ht, hf, Option.map_some]
+  (simp only [slotWert, ht, hf]) <;> rfl
 
 /-- A slot store preserves every other declared place, for every represented type. -/
 theorem wrel_store_index {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u σ w)
@@ -114,9 +133,13 @@ theorem wrel_store_index {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : W
   split at hv
   · rename_i t' ht'
     cases hf' : fieldIndex u t' fld' with
-    | none => simp only [hf', Option.map_none, reduceCtorEq] at hv
+    | none =>
+      rw [hf'] at hv
+      cases hv
     | some f' =>
-      simp only [hf', Option.map_some, Option.some.injEq] at hv
+      rw [hf'] at hv
+      have hv' : valOf ((declOf u).typ t' f') ((σ.storeSlot t k f x).slots t' k' f') = v :=
+        Option.some.inj hv
       subst v
       by_cases hp : (Gabbro.Body.Place.slot c' k' fld') = .slot c k fld
       · simp only [Gabbro.Body.Place.slot.injEq] at hp
