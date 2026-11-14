@@ -90,7 +90,8 @@ private theorem scalar_typeFact (τ : Ty) (value : Wert D τ) :
   | str capacity =>
       constructor
       · exact Int.natCast_nonneg _
-      · exact_mod_cast value.property
+      · change (value.val.length : Int) ≤ (capacity : Int)
+        exact_mod_cast value.property
   | _ => trivial
 
 theorem typeFact_sound (key : Observation D) (world : World D) :
