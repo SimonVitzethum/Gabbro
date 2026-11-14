@@ -73,15 +73,34 @@ def unguardedCompiled : EndVC program noFacts unguarded .nil post :=
 
 /- This decision is on the VC generated from the typed G writer, rather than
    on a manually supplied preservation formula. -/
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
-theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = true := by
-  decide
+private def incrementTerm : LTerm (Observation declaration) :=
+  .add (.var (.glob false)) (.konst 1)
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
-theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) = false := by
-  decide
+private def incrementRange : LProp (Observation declaration) :=
+  .and (.le (.konst 0) incrementTerm) (.le incrementTerm (.konst 10))
+
+private def incrementFormula : QF (Observation declaration) :=
+  lower (.and (.imp incrementRange (quoteQF (post.subst (.glob false) incrementTerm)))
+    (.imp (.not incrementRange) (quoteQF (post.subst (.glob false) (.var (.glob false))))))
+
+private theorem guarded_formula : guardedCompiled.formula =
+    lower (.and (.imp (.lt (.var (.glob false)) (.var (.glob true))) (quoteQF incrementFormula))
+      (.imp (.not (.lt (.var (.glob false)) (.var (.glob true)))) (quoteQF post))) := rfl
+
+private theorem unguarded_formula : unguardedCompiled.formula = incrementFormula := rfl
+
+theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, guarded_formula]
+  simp only [lower_denote, LProp.denote, quoteQF_denote, incrementFormula,
+    incrementRange, subst_denote, post, entry, incrementTerm, LTerm.denote] at *
+  simp only [Assignment.bind, ↓reduceIte] at *
+  omega
 
 /-- A concrete typed pre-state realizes the failed unguarded increment. -/
 def counterexampleWorld : World declaration where
@@ -106,6 +125,21 @@ theorem counterexample_step_zeuge :
       | .zurueck next _ => eval next invariant next .nil
       | _ => true) = false := by decide
 
+theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) = false := by
+  apply (close_decide_false_iff _).mpr
+  refine ⟨assignment counterexampleWorld, ?_⟩
+  rw [writerMatrix, lower_denote]
+  intro valid
+  have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
+  rw [lower_denote] at step
+  have initial : entry.denote (assignment counterexampleWorld) ∧ LProp.denote _ .tru := by
+    exact ⟨by decide, trivial⟩
+  have result := (quoteQF_denote _ _).mp (step initial)
+  rw [unguarded_formula] at result
+  norm_num [incrementFormula, lower_denote, quoteQF_denote, subst_denote,
+    incrementRange, incrementTerm, post, entry, LProp.denote, LTerm.denote,
+    Assignment.bind, assignment, counterexampleWorld, scalarValue] at result
+
 /-- P17 also extracts a model for the FALSE generated closed VC. The concrete
     failing G step above separately rules out a merely arithmetic witness. -/
 theorem counterexample_extracted_zeuge :
@@ -113,15 +147,32 @@ theorem counterexample_extracted_zeuge :
       writerCounterexample unguardedCompiled entry .tru = some values :=
   writerCounterexample_complete unguardedCompiled entry .tru unguarded_decided_zeuge
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
 theorem checked_call_zeuge :
-    decideB (close (callWP (D := declaration) () post post)) = true := by decide
+    decideB (close (callWP (D := declaration) () post post)) = true := by
+  apply (close_decide_true_iff _).mpr
+  apply havoc_of_valid
+  intro values
+  apply (lower_denote _ _).mpr
+  exact fun initial => initial.2
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
 theorem unchecked_call_havoc_zeuge :
-    decideB (close (callWP (D := declaration) () .tru post)) = false := by decide
+    decideB (close (callWP (D := declaration) () .tru post)) = false := by
+  apply (close_decide_false_iff _).mpr
+  let next : World declaration :=
+    { counterexampleWorld with globs := fun name => if name then ⟨4, by decide, by decide⟩
+      else ⟨5, by decide, by decide⟩ }
+  refine ⟨assignment counterexampleWorld, ?_⟩
+  intro valid
+  have result := callWP_sound () .tru post counterexampleWorld next valid ?_ trivial
+  · norm_num [post, lower_denote, entry, LProp.denote, LTerm.denote, assignment,
+      next, scalarValue] at result
+  · constructor
+    · intro table _ index field
+      rfl
+    · intro name unchanged
+      cases name
+      · cases unchanged
+      · rfl
 
 /-- The invariant is actually owed by the witness's function. -/
 theorem owed_zeuge : schuldet (D := declaration) () () = true := by decide

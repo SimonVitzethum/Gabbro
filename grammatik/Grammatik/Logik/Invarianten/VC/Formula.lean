@@ -142,6 +142,13 @@ theorem havoc_sound [DecidableEq α] (written : α → Bool) (body : QF α)
   | false => rfl
   | true => exact False.elim (absent (List.mem_eraseDups.mpr (List.mem_filter.mpr ⟨member, h⟩)))
 
+theorem havoc_of_valid [DecidableEq α] (written : α → Bool) (body : QF α)
+    (valid : ∀ values, body.denote values) (values : Assignment α) :
+    (havoc written body).denote values := by
+  apply (lower_denote _ _).mpr
+  apply (closure_characterization _ _ _).mpr
+  exact fun other _ => valid other
+
 /-- The list is the complete free support, with no external enumeration duty. -/
 theorem termKeys_closed [DecidableEq α] (term : LTerm α) (names : List α)
     (included : ∀ name ∈ termKeys term, name ∈ names) : termClosedB names term = true := by
@@ -228,5 +235,21 @@ theorem close_sound [DecidableEq α] (body : QF α) (accepted : decideB (close b
   apply closure_transfer (qfKeys body).eraseDups body values values
     (decideB_sound (close body) (close_closed body) accepted values)
   exact fun _ _ _ => rfl
+
+/-- Decision completeness lets witnesses prove validity symbolically without
+    reducing Cooper elimination again inside the kernel. -/
+theorem close_decide_true_iff [DecidableEq α] (body : QF α) :
+    decideB (close body) = true ↔ ∀ values, body.denote values := by
+  constructor
+  · exact close_sound body
+  · intro valid
+    apply decideB_of_valid (close body) (close_closed body) (fun _ => 0)
+    apply (closure_characterization _ _ _).mpr
+    exact fun values _ => valid values
+
+theorem close_decide_false_iff [DecidableEq α] (body : QF α) :
+    decideB (close body) = false ↔ ∃ values, ¬ body.denote values := by
+  classical
+  rw [Bool.eq_false_iff, close_decide_true_iff, not_forall]
 
 end Gabbro.Grammatik.Invarianten.VC
