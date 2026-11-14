@@ -123,7 +123,8 @@ theorem bindClassViewStep_success {P I : Type} {a : Authority D} {layout : Adres
     bindClassViewStep a layout c memoryClass r.view world = (.ok r, world) := by
   cases r with
   | mk view checked owners borrowed =>
-    simp only [bindClassViewStep, dif_pos checked, borrowed]
+    rw [bindClassViewStep, dif_pos checked]
+    split <;> simp_all
 
 theorem bindClassViewStep_refused {P I : Type} (a : Authority D) (layout : AdressLayout D)
     (c : Context D P I) (memoryClass : MemoryClass) (v : View D) (world : World D)

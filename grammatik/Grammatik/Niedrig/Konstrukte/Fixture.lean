@@ -40,9 +40,14 @@ namespace Gabbro.Grammatik.LowLevel.Construct.Witness
     Fn := Fin 3
     sig := fun _ => 0
     sigNr := fun _ =>
-      { params := [], erg := none, gruende := 0, haelt := [],
-        schreibt := fun _ => true, gschreibt := fun e => nomatch e,
-        konsumiert := [], produziert := [] }
+      { params := []
+        erg := none
+        gruende := 0
+        haelt := []
+        schreibt := fun _ => true
+        gschreibt := fun e => nomatch e
+        konsumiert := []
+        produziert := [] }
     eigner_nie_erzeugt := by intros; simp
     Inv := Empty
     traeger := fun e => nomatch e
@@ -83,7 +88,7 @@ def space : Space D :=
     declared := by decide
     positiveWidth := by decide }
 
-def span : Span D :=
+noncomputable def span : Span D :=
   { space := space
     base := 100
     length := 8
@@ -101,10 +106,10 @@ def span : Span D :=
 def secondSpace : Space D :=
   { space with nominal := 1, backing := 9, declared := by decide }
 
-def secondSpan : Span D :=
+noncomputable def secondSpan : Span D :=
   { span with space := secondSpace, table := true, number := 1 }
 
-def authority : Authority D :=
+noncomputable def authority : Authority D :=
   { names := names
     token := token
     spans := [span, secondSpan]
@@ -196,7 +201,7 @@ def before : World D :=
 
 def start : Address space := (addrLitStep space 100 (by decide) before).value
 
-def view : View D :=
+noncomputable def view : View D :=
   { span := span
     base := 100
     length := 4
@@ -205,7 +210,7 @@ def view : View D :=
     borrower := OwnerWitness.child
     epoch := 2 }
 
-def receipt : ViewResult authority initial :=
+noncomputable def receipt : ViewResult authority initial :=
   { view := view
     admission :=
       { span := List.mem_cons_self ..
@@ -229,7 +234,7 @@ def putChecked : ViewPutOk view layout () 0 resources (fun _ => true) := by deci
 
 def getChecked : ViewGetOk view layout () 0 1 resources := by decide
 
-def written : World D := viewPutStep view layout () 0 ⟨42, by decide, by decide⟩
+noncomputable def written : World D := viewPutStep view layout () 0 ⟨42, by decide, by decide⟩
   resources (fun _ => true) putChecked before
 
 def ghost : OwnerBindings D.Marke := [⟨10, true, 0⟩]

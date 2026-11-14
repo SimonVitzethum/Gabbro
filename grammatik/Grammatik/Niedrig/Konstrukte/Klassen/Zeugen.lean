@@ -10,9 +10,9 @@ namespace Gabbro.Grammatik.LowLevel.Construct.Witness
 
 /-- Device and RAM occupy different backings even though their numeric byte
     ranges coincide. This exercises physical, rather than nominal, separation. -/
-def deviceSpan : Span D := { secondSpan with memoryClass := .device }
+noncomputable def deviceSpan : Span D := { secondSpan with memoryClass := .device }
 
-def deviceAuthority : Authority D := { authority with spans := [span, deviceSpan] }
+noncomputable def deviceAuthority : Authority D := { authority with spans := [span, deviceSpan] }
 
 theorem deviceAuthority_valid : deviceAuthority.Valid := by
   refine ⟨⟨false, by decide⟩, by decide, ?_, ?_⟩
@@ -31,9 +31,9 @@ theorem deviceInitial_valid : initial.Valid deviceAuthority :=
   ⟨deviceAuthority_valid, owners_valid, initial_valid.2.2.1,
     by intro v member; cases member, by intro v member; cases member⟩
 
-def deviceView : View D := { view with span := deviceSpan }
+noncomputable def deviceView : View D := { view with span := deviceSpan }
 
-def deviceReceipt : ClassViewResult deviceAuthority layout initial .device :=
+noncomputable def deviceReceipt : ClassViewResult deviceAuthority layout initial .device :=
   { view := deviceView
     checked := by decide
     owners := receipt.owners
@@ -109,10 +109,10 @@ theorem class_failure_order_zeuge :
 
 /-- A second live, writable view is allowed only because it is in the other
     backing. Its lender is suspended; both returns restore real escrow. -/
-def nestedView : View D :=
+noncomputable def nestedView : View D :=
   { view with lender := OwnerWitness.child, borrower := OwnerWitness.grandchild }
 
-def nestedReceipt : ClassViewResult deviceAuthority layout deviceReceipt.next .ordinaryRam :=
+noncomputable def nestedReceipt : ClassViewResult deviceAuthority layout deviceReceipt.next .ordinaryRam :=
   { view := nestedView
     checked := by decide
     owners := deviceReceipt.next.owners.withLedger (deviceReceipt.next.owners.ledger.put 0
