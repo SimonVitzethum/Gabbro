@@ -125,13 +125,12 @@ theorem akzeptiertA_of_akzeptiert {axEq : DecidableEq D.Ax}
     (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
   unfold AkzeptiertA
-  simp only [Bool.and_eq_true] at h ⊢
+  simp only [Bool.and_eq_true, and_assoc]
   -- Project the shared components from the complete canonical checker.
-  have hcore := h.1.1.1.1.1.1.1
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ := hcore
-  exact ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWAB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, _⟩ := h
+  exact ⟨h1, h2, fussWAB_of_fussWB h3, h4, h5, h6, h7, h8, h9⟩
 
 omit [DecidableEq D.Fn] in
 /-- `FussSA` is monotone in the local carriers. -/

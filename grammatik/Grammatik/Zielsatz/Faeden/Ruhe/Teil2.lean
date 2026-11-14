@@ -24,10 +24,10 @@ theorem akzeptiert_mitRuhe [RootNativeFloat.Hardware] {ls : List D.Lock} {cs : L
     Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) [] (checks.map CheckDecl.mitRuhe) = true := by
   have hA := akzeptiertSpec_of hvoll hls hcs [] h
   have hChecks : CheckAdmission P fs checks := by
-    have h := (Bool.and_eq_true.mp h).1
     dsimp only [Akzeptiert] at h
-    simp only [Bool.and_eq_true] at h
-    exact (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h.1.1.2
+    simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, hChecks, _, _⟩ := h
+    exact (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp hChecks
   exact spec_akzeptiert (fsRuhe_voll hvoll) hls hcs []
     (fun a ha => absurd ha List.not_mem_nil)
     (CheckAdmission.mitRuhe P hvoll hA.abg hChecks) hI

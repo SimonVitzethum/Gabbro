@@ -204,4 +204,15 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
       exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
         ⟨Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
 
+/-- A minimal certifiable unit: one parameterless function declared as the
+    only root. This witnesses certifiability independently of compilation. -/
+def zeugenFn : UFn :=
+  { name := "main", params := [], kinds := [], res := none, held := [], puts := [],
+    gives := [], body := [], ret := .empty }
+
+def zeugenEinheit : UProg :=
+  { tabs := [], locks := [], fns := [zeugenFn], roots := ["main"] }
+
+theorem zertifizierbar_zeuge : zertifizierbar zeugenEinheit = true := by decide
+
 end Gabbro.Stage0.OldSource

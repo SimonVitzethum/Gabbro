@@ -66,7 +66,7 @@ def x104Sp : Speicher x104D :=
 /-- **The checker's Bool holds on the export with the runtime's root.** -/
 theorem gP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
     Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = true :=
-  akzeptiert_mitRuhe x104P x104Fs_voll x104Ls_voll x104Cs_voll gP_akzeptiert
+  akzeptiert_mitRuhe x104P x104Fs_voll x104Ls_voll x104Cs_voll gP_akzeptiert (by decide)
 
 /-- **An admissible start of `gP.mitRuhe`** -- the export itself has none
     (`gP_start_leer`). -/
@@ -96,7 +96,7 @@ theorem probeC_start :
 
 theorem mP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
     Akzeptiert mP.mitRuhe mSI.mitRuhe (fsRuhe mFs) [()] mCs (wsRuhe [mHauptA, mHauptB]) = true :=
-  akzeptiert_mitRuhe mP mFs_voll mLocks_voll mCs_voll mP_akzeptiert
+  akzeptiert_mitRuhe mP mFs_voll mLocks_voll mCs_voll mP_akzeptiert (by decide)
 
 /-- **`hauptA` on thread 0, `hauptB` on thread 1, the root everywhere
     else, is admissible on `mP.mitRuhe`.** -/

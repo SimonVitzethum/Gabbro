@@ -114,9 +114,7 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
     schnittstelleB fs cs e E₁ E₂ qs = true ↔
       (SchnittstelleSpec fs e E₁ E₂ ∧
         ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
-          Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q)
-    (hI : Invarianten.Pruefer.programInvariantsB (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S
-      fs (fun _ => none) {} ls = true) := by
+          Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) := by
   unfold schnittstelleB
   simp only [Bool.and_eq_true]
   constructor
@@ -206,7 +204,9 @@ theorem verbinde_akzeptiert [RootNativeFloat.Hardware] {E₁ E₂ : Einheit D} {
     (qs : List D.Ax)
     (hS : schnittstelleB fs cs e E₁ E₂ qs = true)
     (hq : ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
-      Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) :
+      Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q)
+    (hI : Invarianten.Pruefer.programInvariantsB (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S
+      fs (fun _ => none) {} ls = true) :
     Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs = true :=
   spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef) hI
     (h := akzeptiertSpec_verbinde hvoll
