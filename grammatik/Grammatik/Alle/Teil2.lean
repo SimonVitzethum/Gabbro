@@ -431,3 +431,8 @@ public import Grammatik.Niedrig.Bytes.Grants
 public import Grammatik.Niedrig.Bytes.GrantsSaetze
 public import Grammatik.Niedrig.Bytes.Erreichbar
 public import Grammatik.Niedrig.Bytes.GrantsZeuge
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Binding
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Waiting
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Witnesses
