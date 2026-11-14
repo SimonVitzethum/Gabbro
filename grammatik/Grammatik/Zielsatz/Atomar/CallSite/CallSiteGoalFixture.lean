@@ -250,8 +250,13 @@ theorem echo_gut : GutO echo := by
     exact nomatch L
 
 /-- (c): the frame and register locality of `echo`; `g` is software, so no summary is assumed. -/
-theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw echo wE.Q :=
-  ⟨echo_gut, ⟨fun r => nomatch r, fun g => nomatch g⟩, fun _ hsw => absurd rfl hsw, inferInstance⟩
+theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw echo wE.Q := by
+  refine ⟨echo_gut, ?_, fun _ hsw => absurd rfl hsw, inferInstance⟩
+  constructor
+  · intro r
+    exact nomatch r
+  · intro g
+    exact nomatch g
 
 /-- **NON-DEGENERATE**: `echo` breaks the summary at the argument `0`; it is no oracle of the
     full summary premise (c) of `GabbroZielVoll`. -/
