@@ -154,16 +154,16 @@ theorem counterexample_sound [DecidableEq α] (names : List α) (formula : LProp
   (elimination_denote (.not formula) values).mp
     (reconstruct_sound _ _ _ values success)
 
-/-- A false universal decision always returns an assignment. Closedness is not
-    needed here: both decision and reconstruction use zero for unlisted names. -/
+/-- Raw elimination at zero suffices for replay, including open matrices.
+    This is not an invariant-validity decision: unlisted names remain zero.
+    Public `decideB` instead requires a closedness proof. -/
 theorem counterexample_complete [DecidableEq α] (names : List α) (formula : LProp α)
-    (rejected : decideB (universalClosure names formula) = false) :
+    (rejected : (elimination (universalClosure names formula)).1.eval (fun _ => 0) = false) :
     ∃ values : Assignment α, counterexample names formula = some values := by
   have invalid : ¬ (universalClosure names formula).denote (fun _ => 0) := by
     intro valid
     have evaluated := (qf_eval (elimination (universalClosure names formula)).1
       (fun _ => 0)).mpr ((elimination_denote _ _).mpr valid)
-    change decideB (universalClosure names formula) = true at evaluated
     rw [rejected] at evaluated
     contradiction
   apply reconstruct_complete names (elimination (.not formula)).1 (fun _ => 0)
@@ -172,7 +172,8 @@ theorem counterexample_complete [DecidableEq α] (names : List α) (formula : LP
   exact (closure_negation names formula (fun _ => 0)).mpr invalid
 
 theorem counterexample_of_exists [DecidableEq α] (names : List α) (formula : LProp α)
-    (accepted : decideB (existentialClosure names (.not formula)) = true) :
+    (accepted : (elimination (existentialClosure names (.not formula))).1.eval
+      (fun _ => 0) = true) :
     ∃ values : Assignment α, counterexample names formula = some values := by
   have valid := (elimination_denote (existentialClosure names (.not formula)) (fun _ => 0)).mp
     ((qf_eval _ _).mp accepted)

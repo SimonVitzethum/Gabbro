@@ -104,7 +104,7 @@ theorem compile_success [DecidableEq α] (formula : LProp α) :
     The closedness premise is required by the declaration-time entry point. -/
 theorem budget_sufficient [DecidableEq α] (formula : LProp α) (fuel : Nat)
     (closed : closedUnderB [] formula = true) (enough : Budget formula ≤ fuel) :
-    decideWithBudget formula fuel = .ok (decideB formula) := by
+    decideWithBudget formula fuel = .ok (decideB formula closed) := by
   obtain ⟨result, spent, _, unbounded, bounded⟩ := covers_compile formula 0
   have computed : elimination formula = (result, spent) := by
     simp [elimination, unbounded]

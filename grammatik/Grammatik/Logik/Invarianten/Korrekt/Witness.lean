@@ -15,7 +15,7 @@ def evenAbove : LProp Nat :=
 /-- Normalization's extra image constraint rules out this rational solution. -/
 def oddEquation : LProp Nat := .ex 0 (.eq (.scale 2 (.var 0)) (.konst 3))
 
-theorem evenAbove_computed_zeuge : decideB evenAbove = true := by
+theorem evenAbove_computed_zeuge : decideB evenAbove (by decide) = true := by
   apply (decideB_true_iff evenAbove (by rfl) (fun _ => 0)).mpr
   refine ⟨4, ?_, ?_⟩
   · change (3 : Int) < 4
@@ -23,7 +23,7 @@ theorem evenAbove_computed_zeuge : decideB evenAbove = true := by
   · change (2 : Int) ∣ 4
     exact ⟨2, rfl⟩
 
-theorem oddEquation_computed_zeuge : decideB oddEquation = false := by
+theorem oddEquation_computed_zeuge : decideB oddEquation (by decide) = false := by
   apply (decideB_false_iff oddEquation (by rfl) (fun _ => 0)).mpr
   rintro ⟨value, equation⟩
   change 2 * value = 3 at equation
@@ -35,11 +35,11 @@ theorem decideB_sound_zeuge (values : Assignment Nat) : evenAbove.denote values 
 theorem decideB_complete_zeuge (values : Assignment Nat) : ¬ oddEquation.denote values :=
   decideB_complete oddEquation (by decide) oddEquation_computed_zeuge values
 
-theorem decideB_of_valid_zeuge (values : Assignment Nat) : decideB evenAbove = true :=
+theorem decideB_of_valid_zeuge (values : Assignment Nat) : decideB evenAbove (by decide) = true :=
   decideB_of_valid evenAbove (by decide) values (decideB_sound_zeuge values)
 
 theorem decideB_false_iff_zeuge (values : Assignment Nat) :
-    decideB oddEquation = false ↔ ¬ oddEquation.denote values :=
+    decideB oddEquation (by decide) = false ↔ ¬ oddEquation.denote values :=
   decideB_false_iff oddEquation (by decide) values
 
 theorem decideWithBudget_at_Budget_zeuge (values : Assignment Nat) :

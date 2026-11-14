@@ -114,7 +114,8 @@ def stateCounterexample (base : World D) (keys : List (Observation D))
 
 theorem stateCounterexample_complete (base : World D) (keys : List (Observation D))
     (formula : LProp (Observation D))
-    (rejected : decideB (universalClosure keys (stateValidity keys formula)) = false) :
+    (rejected : (elimination (universalClosure keys (stateValidity keys formula))).1.eval
+      (fun _ => 0) = false) :
     ∃ world : World D, stateCounterexample base keys formula = some world := by
   classical
   obtain ⟨values, selected⟩ := counterexample_complete keys (stateValidity keys formula) rejected

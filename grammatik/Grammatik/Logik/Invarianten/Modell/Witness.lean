@@ -82,7 +82,7 @@ def dependentVariables : LProp Nat :=
 theorem backwards_trace_computed_zeuge :
     (counterexample [0, 1] dependentVariables).map (fun values => (values 0, values 1)) =
       some (4, 5) := by
-  have rejected : decideB (universalClosure [0, 1] dependentVariables) = false := by
+  have rejected : decideB (universalClosure [0, 1] dependentVariables) (by decide) = false := by
     apply (decideB_false_iff (universalClosure [0, 1] dependentVariables) (by decide)
       (fun _ => 0)).mpr
     intro valid

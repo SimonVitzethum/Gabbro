@@ -132,7 +132,7 @@ theorem generated_ranges_hold_zeuge (world : World Frag.Witness.declaration) :
 
 theorem default_budget_total_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant =
-      .ok (decideB (closedInvariant rangeFormula)) :=
+      .ok (decideB (closedInvariant rangeFormula) (closedInvariant_closed rangeFormula)) :=
   decideInvariant_total (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
     range_translated_zeuge
 
@@ -151,7 +151,7 @@ theorem model_counterexample_iff_zeuge :
 theorem sufficient_explicit_budget_zeuge (fuel : Nat)
     (enough : Budget (closedInvariant rangeFormula) ≤ fuel) :
     decideInvariant (Frag.Witness.declaration.traeger ()) rangeInvariant (some fuel) =
-      .ok (decideB (closedInvariant rangeFormula)) :=
+      .ok (decideB (closedInvariant rangeFormula) (closedInvariant_closed rangeFormula)) :=
   decideInvariant_at_budget (Frag.Witness.declaration.traeger ()) rangeInvariant rangeFormula
     range_translated_zeuge (some fuel) enough
 
