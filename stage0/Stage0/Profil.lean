@@ -1,6 +1,7 @@
 /- Explicit configuration for the existing Stage0 runner image. This is a checked adapter,
    not semantics for boot, entrust or hardware profiles. -/
 module
+public import Stage0.LockWait
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Pipeline
 public import Grammatik.Parser.Profil.Register
@@ -15,6 +16,7 @@ open Gabbro.Grammatik.Parser
 /-- These values select bindings for the execution image, independently of the compiler host. -/
 structure Options where
   arch : String := "x86_64"
+  environment : Option ImageEnvironment := none
   target : Option String := none
   mode : Auswahl.BauModus := .auslieferung
   checkConsumer : Option Uebersetze.CheckConsumerSelection := none
@@ -24,6 +26,11 @@ structure Options where
     have the usual last-value-wins meaning. Unknown flags fail instead of being ignored. -/
 def parseOptions : List String → Options → Except String Options
   | [], options => .ok options
+  | "--environment" :: "linux" :: rest, options =>
+    parseOptions rest { options with environment := some .linux }
+  | "--environment" :: "freestanding" :: rest, options =>
+    parseOptions rest { options with environment := some .freestanding }
+  | "--environment" :: _, _ => .error "--environment requires linux or freestanding"
   | "--testbuild" :: rest, options => parseOptions rest { options with mode := .pruefbau }
   | "--check" :: check :: gate :: rest, options =>
     parseOptions rest { options with checkConsumer := some ⟨check, gate⟩ }
@@ -112,6 +119,24 @@ end
 /-- The first named section of the tree, if any. -/
 def abschnittFehler : List SItemTief → Option String := abschnittFehlerL []
 
+/-- The admitted source profile's execution environment, if declared. The closed
+    profile decoder has already refused unknown values and conflicting entries. -/
+def sourceEnvironment (binding : ProfilBindung.ProfileBinding) : Option ImageEnvironment :=
+  ((binding.profile.head?).bind fun p =>
+    (ProfilBindung.modi p.eintraege).find? (fun kv => kv.1 == .imageEnvironment)).map
+      (fun kv => if kv.2 = 2 then .freestanding else .linux)
+
+/-- An explicit image option must agree with the admitted source profile. -/
+def environmentOk (options : Options) (binding : ProfilBindung.ProfileBinding) : Bool :=
+  match options.environment, sourceEnvironment binding with
+  | some a, some b => a == b
+  | _, _ => true
+
+/-- Source profile first, otherwise the explicit image option, otherwise the
+    existing Linux runner image. There is no independent lock-strategy flag. -/
+def imageEnvironment (options : Options) (binding : ProfilBindung.ProfileBinding) : ImageEnvironment :=
+  (sourceEnvironment binding).getD (options.environment.getD .linux)
+
 /-- An accepted input carries exact canonical build selection, the checked profile
     binding of the selected tree (`ProfileBinding`, admitted by `bindungB`) with no
     named sections, and the runner ABI check. The elaborator sees `elaborierbar`:
@@ -123,6 +148,7 @@ structure Prepared (options : Options) (items : List SItemTief) where
   compatible : runnerCompatible options
   bindung : ProfilBindung.ProfileBinding
   bindungOk : ProfilBindung.bindungB bindung = true
+  environmentChecked : environmentOk options bindung = true
   abschnittFrei : abschnittFehler selected = none
 
 /-- The tree the elaborator sees: the selected tree without its admitted profile blocks.
@@ -145,11 +171,13 @@ def prepareItems (options : Options) (items : List SItemTief) :
     if reserved : Auswahl.reserviertL items = false then
       let selected := Auswahl.waehleL options.mode items
       if hb : ProfilBindung.bindungB (ProfilBindung.ProfileBinding.aus selected) then
-        match he : abschnittFehler selected with
-        | some e => throw e
-        | none =>
-          checkItems 100000 (ProfilBindung.ohneProfilL selected)
-          pure ⟨selected, rfl, reserved, h, ProfilBindung.ProfileBinding.aus selected, hb, he⟩
+        if hen : environmentOk options (ProfilBindung.ProfileBinding.aus selected) then
+          match he : abschnittFehler selected with
+          | some e => throw e
+          | none =>
+            checkItems 100000 (ProfilBindung.ohneProfilL selected)
+            pure ⟨selected, rfl, reserved, h, ProfilBindung.ProfileBinding.aus selected, hb, hen, he⟩
+        else throw "ir: execution environment conflicts with the source profile"
       else throw "ir: profile binding refused: modes, assumptions or library requirements are not consistent"
     else throw "build selection: TESTBUILD is reserved (G003)"
   else throw s!"ir: architecture {options.arch}: no compatible Stage0 runner image ABI"
@@ -171,7 +199,7 @@ theorem prepareItems_preserves_zeuge :
       prepareItems {} [.goalT "userspace" none] = .ok result ∧
       result.selected = [.goalT "userspace" none] ∧ runnerCompatible ({} : Options) :=
   ⟨⟨[.goalT "userspace" none], rfl, rfl, rfl,
-    ProfilBindung.ProfileBinding.aus [.goalT "userspace" none], by decide, by decide⟩,
+    ProfilBindung.ProfileBinding.aus [.goalT "userspace" none], by decide, by decide, by decide⟩,
     rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Profil

@@ -41,6 +41,8 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Stage0.Senke
 
+variable {lockWait : LockWait}
+
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
 
 set_option linter.unusedSectionVars false
@@ -92,27 +94,27 @@ theorem in_tab (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) (k
 
 /-- Different canonical cells occupy disjoint complete byte spans. -/
 theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
-    (c c' : Zelle (declOf u)) (hc : c.da (layU u tor b)) (hc' : c'.da (layU u tor b))
-    (hne : c ≠ c') : c.adr (layU u tor b) + c.bytes ≤ c'.adr (layU u tor b) ∨
-      c'.adr (layU u tor b) + c'.bytes ≤ c.adr (layU u tor b) := by
-  by_cases left : c.adr (layU u tor b) + c.bytes ≤ c'.adr (layU u tor b)
+    (c c' : Zelle (declOf u)) (hc : c.da (layU (lockWait := lockWait) u tor b)) (hc' : c'.da (layU (lockWait := lockWait) u tor b))
+    (hne : c ≠ c') : c.adr (layU (lockWait := lockWait) u tor b) + c.bytes ≤ c'.adr (layU (lockWait := lockWait) u tor b) ∨
+      c'.adr (layU (lockWait := lockWait) u tor b) + c'.bytes ≤ c.adr (layU (lockWait := lockWait) u tor b) := by
+  by_cases left : c.adr (layU (lockWait := lockWait) u tor b) + c.bytes ≤ c'.adr (layU (lockWait := lockWait) u tor b)
   · exact Or.inl left
   apply Or.inr
-  by_cases right : c'.adr (layU u tor b) + c'.bytes ≤ c.adr (layU u tor b)
+  by_cases right : c'.adr (layU (lockWait := lockWait) u tor b) + c'.bytes ≤ c.adr (layU (lockWait := lockWait) u tor b)
   · exact right
   exfalso
-  have overlap1 : c'.adr (layU u tor b) < c.adr (layU u tor b) + c.bytes := by omega
-  have overlap2 : c.adr (layU u tor b) < c'.adr (layU u tor b) + c'.bytes := by omega
+  have overlap1 : c'.adr (layU (lockWait := lockWait) u tor b) < c.adr (layU (lockWait := lockWait) u tor b) + c.bytes := by omega
+  have overlap2 : c.adr (layU (lockWait := lockWait) u tor b) < c'.adr (layU (lockWait := lockWait) u tor b) + c'.bytes := by omega
   have positive : ∀ cell : Zelle (declOf u), 0 < cell.bytes := by
     intro cell; cases cell with
     | glob g => exact Nat.mul_pos (by decide) (valueWords_pos _)
     | elem t f k => exact Nat.mul_pos (by decide) (valueWords_pos _)
   have pos1 := positive c
   have pos2 := positive c'
-  let x := max (c.adr (layU u tor b)) (c'.adr (layU u tor b))
-  have x1 : c.adr (layU u tor b) ≤ x ∧ x < c.adr (layU u tor b) + c.bytes := by
+  let x := max (c.adr (layU (lockWait := lockWait) u tor b)) (c'.adr (layU (lockWait := lockWait) u tor b))
+  have x1 : c.adr (layU (lockWait := lockWait) u tor b) ≤ x ∧ x < c.adr (layU (lockWait := lockWait) u tor b) + c.bytes := by
     dsimp [x]; omega
-  have x2 : c'.adr (layU u tor b) ≤ x ∧ x < c'.adr (layU u tor b) + c'.bytes := by
+  have x2 : c'.adr (layU (lockWait := lockWait) u tor b) ≤ x ∧ x < c'.adr (layU (lockWait := lockWait) u tor b) + c'.bytes := by
     dsimp [x]; omega
   apply hne
   cases c with
@@ -188,7 +190,7 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
 
 /-- Full-span separation plus the common eight-byte storage grid. -/
 theorem layU_dis (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) :
-    LayDis (layU u tor b) := by
+    LayDis (layU (lockWait := lockWait) u tor b) := by
   refine ⟨layU_spans u tor b, ?_, ?_⟩
   · intro c c' hc hc' eq
     by_cases same : c = c'

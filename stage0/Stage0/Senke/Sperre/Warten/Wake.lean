@@ -44,13 +44,15 @@ theorem gibT_waiters_read (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next 
 /-- Nonzero waiters fall through to a private futex WAKE-all, with the signed
     32-bit maximum as the wake count. No waiter is removed by the syscall. -/
 theorem gibT_waiters_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next n w)
-    (hc : At code p (gibT L a s)) (waiters : w ≠ 0) :
+    (hc : At code p (gibT L a s)) (binding : L.lockWait = .futex) (waiters : w ≠ 0) :
     ∃ mw fw, Star ⟨pc + BitVec.ofNat 64 (16 * p), fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ mw ∧
       LS m0 mw fp s a fw next (n + 1) w ∧
       FutexArgs fw (BitVec.ofNat 64 (a + 8)) 129 2147483647 ∧
       StopAt ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ mw
         (futexReq (BitVec.ofNat 64 (a + 8)) 129 2147483647) := by
+  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+    futexC, List.map_cons, List.map_nil] at hc
   obtain ⟨m1, f1, steps1, state1, test⟩ := gibT_waiters_read E h hc
   have branch := ls_brz_ne E state1 (hc.get (j := 7) rfl) (e := 2) rfl (by omega)
     (by rw [test]; exact waiters)
@@ -71,7 +73,7 @@ theorem gibT_waiters_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next
     threads. Other threads' effects are exactly the supplied resumed `LS`. -/
 theorem gibT_waiters_return {spurious : W → W → Mem → Mem → Prop} [FutexOK spurious]
     (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f next n w)
-    (hc : At code p (gibT L a s))
+    (hc : At code p (gibT L a s)) (binding : L.lockWait = .futex)
     (args : FutexArgs f (BitVec.ofNat 64 (a + 8)) 129 2147483647)
     {r x next' n' w' : W} {mr : Mem}
     (answer : Kern.ans (futexReq (BitVec.ofNat 64 (a + 8)) 129 2147483647) m (some (r, x)) mr)
@@ -80,6 +82,8 @@ theorem gibT_waiters_return {spurious : W → W → Mem → Mem → Prop} [Futex
     ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * (p + 15)), fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (p + 16)), fp⟩ m' ∧
       LS m0 m' fp s a (upd f 17 r) next' n' w' := by
+  simp only [nimmT, gibT, binding, waitEntry, waitBindingC, bindingCell,
+    futexC, List.map_cons, List.map_nil] at hc
   obtain ⟨m', steps, state⟩ := futex_return E h (hc.get (j := 15) rfl) args answer resume
   have result : r.toInt < 0 ∨ r.toNat ≤ 2147483647 := by
     by_cases error : r.toInt < 0

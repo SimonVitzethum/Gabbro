@@ -6,6 +6,8 @@ public import Stage0.Senke.Welt.Initial.Readback
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
+
+variable {lockWait : LockWait}
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg
 
@@ -25,7 +27,7 @@ theorem initialLayout_bild {u : UProg} {P : Programm (declOf u)} {passes : Nat}
     {args : Env (declOf u) ((declOf u).params main)}
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {slots req : Nat} {b : Bild (declOf u)}
-    (emitted : bild passes P (layU u tor) fs pos name main args starts slots req = .ok b) :
+    (emitted : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main args starts slots req = .ok b) :
     InitialLayout u b.Y := by
   simp only [bild] at emitted
   split at emitted

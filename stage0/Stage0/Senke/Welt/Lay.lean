@@ -1,6 +1,7 @@
 /- Typed world storage: each cell occupies its complete canonical value span.
    Logical pointer values remain distinct from checked physical layout addresses. -/
 module
+public import Stage0.LockWait
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
 @[expose] public section
 
@@ -39,6 +40,8 @@ structure Lay (D : Deklaration) where
   /-- The three words of a lock (owner, count, waiters) from this address, above the world, below `sye`. -/
   lk : D.Lock → Nat := fun _ => 0
   sye : Nat := 0
+  /-- Checked execution-image binding, independent of storage geometry. -/
+  lockWait : LockWait := .futex
 
 /-- The words of every lock lie between the world's end and `sye`, three words each, apart from each other. -/
 def LaySync {D : Deklaration} (L : Lay D) : Prop :=

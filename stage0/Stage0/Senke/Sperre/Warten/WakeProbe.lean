@@ -26,10 +26,10 @@ theorem gibT_waiters_zeuge :
   obtain ⟨f0, initial⟩ := ls_init E (o := 2) (c := 0) (w := 1)
     (by decide +kernel) (by decide +kernel) (by decide +kernel)
   obtain ⟨mw, fw, stepsw, statew, args, entry⟩ :=
-    gibT_waiters_entry E initial (At.whole wakeCode) (by decide)
+    gibT_waiters_entry (binding := rfl) E initial (At.whole wakeCode) (by decide)
   have answer : Kern.ans (futexReq 8200 129 2147483647) mw (some (0, 0)) mw :=
     ⟨rfl, 8200, 2147483647, Or.inr rfl, rfl⟩
-  obtain ⟨_, m', stepsr, stater⟩ := gibT_waiters_return (spurious := fun _ _ _ _ => True)
+  obtain ⟨_, m', stepsr, stater⟩ := gibT_waiters_return (binding := rfl) (spurious := fun _ _ _ _ => True)
     E statew (At.whole wakeCode) args answer statew
   refine ⟨by unfold TicketInvW; decide +kernel, by unfold TicketInvW; decide +kernel,
     mw, fw, m', stepsw, entry, stepsr, stater, args, ?_⟩

@@ -23,13 +23,3 @@ def addC (a u : Nat) (d : Int) : List II :=
     ci 14 ((u + 4 : Nat) : Int) ((u + 4 : Nat) : Int) ((u + 1 : Nat) : Int),
     ci 19 ((u + 4 : Nat) : Int) (-96) 0]
 
-/-- `futex (a, op, v)` with `v` from slot `v`, the request block from `q`: 8 instructions. -/
-def futexC (a op : Nat) (v q : Nat) (vConst : Option Int) : List II :=
-  [ci 1 q 202 0, ci 1 ((q + 1 : Nat) : Int) a 0, ci 1 ((q + 2 : Nat) : Int) op 0,
-    (match vConst with
-     | some k => ci 1 ((q + 3 : Nat) : Int) k 0
-     | none => ci 2 ((q + 3 : Nat) : Int) v 0),
-    ci 1 ((q + 4 : Nat) : Int) 0 0, ci 1 ((q + 5 : Nat) : Int) 0 0, ci 1 ((q + 6 : Nat) : Int) 0 0,
-    ci 23 ((q + 7 : Nat) : Int) q 0]
-
-end Gabbro.Stage0.Senke
