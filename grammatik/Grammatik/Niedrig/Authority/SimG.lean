@@ -107,7 +107,7 @@ theorem returnView_ledger (returned : returnView a c = .ok c') :
       | some owners =>
         simp only [hr] at returned
         cases returned
-        exact ⟨view, rest, hv, frame, hr, rfl, rfl, rfl, rfl⟩
+        exact ⟨view, rest, rfl, frame, hr, rfl, rfl, rfl, rfl⟩
     · cases returned
 
 theorem returnView_views_subset (returned : returnView a c = .ok c') :

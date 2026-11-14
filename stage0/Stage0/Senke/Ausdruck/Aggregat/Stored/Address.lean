@@ -59,7 +59,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
     StoredOk (L := L) m pc fp K d c ρ W reserved τ (eval σ₀ e σ ρ) := by
   cases e <;> try (simp only [lowStorage, lowStorageWith] at made; contradiction)
   case var x =>
-    simp only [lowStorage, lowStorageWith, Option.some.injEq, Prod.mk.injEq] at made
+    simp only [lowStorage, lowStorageWith, specLookup, Option.some.injEq, Prod.mk.injEq] at made
     obtain ⟨rfl, rfl⟩ := made
     refine ⟨_, frameAddress_ok pre (by have := vslot_lt (reserved := reserved) x; have := pre.ctx; omega)
       (by omega), ?_⟩
@@ -74,7 +74,8 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
       exact (const_ok pre (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
         (by omega)).mono fun w hw => by simpa only [BitVec.ofInt_natCast] using hw
     · cases made
-  case slot t f i access | thru a t ht f i access | thruOwn a t ht f i p q r s u v =>
+  case slot t f access i | thru t ht f access a i |
+      thruOwn t ht f ownerMark ownerStage ownerNamed ownerHeld ownerGuard access a i =>
     simp only [lowStorage, lowStorageWith, bind, Option.bind_eq_some_iff] at made
     obtain ⟨⟨ci', ti⟩, hi, made⟩ := made
     have tops := cellAddressC_top made
@@ -87,7 +88,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
         change w = BitVec.ofInt 64 index.n at hw
         rw [hw, ← BitVec.ofInt_natCast, Int.toNat_of_nonneg nonnegative]) pre
     simpa only [eval, Int.toNat_of_nonneg nonnegative] using result
-  case slotRef r t ht ho f access =>
+  case slotRef t ht ho f access r =>
     simp only [lowStorage, lowStorageWith, bind, Option.bind_eq_some_iff] at made
     obtain ⟨⟨ci', ti⟩, hi, made⟩ := made
     have tops := cellAddressC_top made

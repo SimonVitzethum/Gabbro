@@ -49,13 +49,13 @@ inductive OwnerMintChain (names : OwnerNamespace D)
   | initial : OwnerMintChain names initial root grant initial root grant
   | mint {before after : OwnerState D} {frame : ArenaOwnership.Frame}
       {old token : OwnerToken D}
-      (prefix : OwnerMintChain names initial root grant before frame old)
+      (previous : OwnerMintChain names initial root grant before frame old)
       (declaration : OwnerMintDecl D)
       (minted : OwnerState.recordMint names declaration before frame = some (after, token)) :
       OwnerMintChain names initial root grant after frame token
   | handoff {before after : OwnerState D} {source into : ArenaOwnership.Frame}
       {old token : OwnerToken D}
-      (prefix : OwnerMintChain names initial root grant before source old)
+      (previous : OwnerMintChain names initial root grant before source old)
       (moved : OwnerState.transfer names before source into old = some (after, token)) :
       OwnerMintChain names initial root grant after into token
 
