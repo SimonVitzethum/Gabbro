@@ -133,7 +133,7 @@ theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru
   intro valid
   have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
   rw [lower_denote] at step
-  have initial : entry.denote (assignment counterexampleWorld) ∧ LProp.denote _ .tru := by
+  have initial : entry.denote (assignment counterexampleWorld) ∧ True := by
     exact ⟨by decide, trivial⟩
   have result := (quoteQF_denote _ _).mp (step initial)
   rw [unguarded_formula] at result
