@@ -7191,3 +7191,35 @@ existing exported section fixture's premise from acceptance and applies the gene
 and hold-time theorem. Nested acquisitions retain the conservative bound `k = h`; a separate
 acquisition potential through calls/loops is not proved. Indirect calls in sections or in
 cost-checked functions are refused, even with checked pointer-type cost declarations.
+
+## 188. Stage-0 numeric wildcards, record-field narrowing and u64 differences (2026-11-14)
+
+The existing numeric-match expansion (`Modules/MatchNumber.lean`) feeds the ordinary
+conditional lowering. With the compiler's `UCtx.narrow` switch, `Records/Narrowing.lean`
+expands a local record-field narrow into a snapshot binding and the existing checked
+local narrow. Successful reads stop using that snapshot before mutation, shadowing or
+an unknown statement. `GuardRelation.lean` shares its runtime read traversal with this
+rewrite. The canonical exporter keeps the switch off. Full-range u64 differences use
+the existing relational `USide.eng` and verified wide-integer lowering; no G rule,
+acceptance rule, goal statement or named assumption changes.
+
+All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the last row.
+
+| Statement | File | Meaning |
+|---|---|---|
+| `NumberWildcardWitness.candidate_present`, `accepted_image` | `NumberWildcardWitness.lean` | Numeric arms `0`, `1` and `_` produce an actual `Emitted` image through `emit`. |
+| `NumberWildcardWitness.canonical_source`, `image_correct` | same | The same compiled source is canonical and instantiates the generic image correctness theorem, with its existing hardware/runtime premises. |
+| `NumberWildcardWitness.missing_fallback_refused_zeuge`, `duplicate_pattern_refused_zeuge` | same | Whole-source emission refuses a missing fallback and duplicate numeric patterns. |
+| `FieldNarrowingWitness.candidate_present`, `accepted_image` | `FieldNarrowingWitness.lean` | A u64 record field narrowed to `0 .. 63`, with a sibling-field failure return, reaches an actual image. |
+| `FieldNarrowingWitness.canonical_source`, `image_correct` | same | The field source uses the canonical program and inherited generic image correctness. |
+| `FieldNarrowingWitness.model_shape_zeuge` | same | Exactly one field snapshot and one existing local narrow occur; the final return reads that checked snapshot. |
+| `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
+| `U64DifferenceWitness.candidate_present`, `accepted_image` | `U64DifferenceWitness.lean` | Full-width unsigned operands, including values above bit 63, compile through `emit`. |
+| `U64DifferenceWitness.canonical_source`, `image_correct` | same | The same source instantiates the canonical-program and generic image theorems. |
+| `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
+| `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
+| `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, mutation and lexical barriers, unchanged historical reads and nonlocal refusal. |
+
+The integration guardian also includes `narrow-record-field.gab` (both success and failure
+paths) and `guard-relation-u64.gab` (high bits, low-limb borrow and a false guard). Emission
+certificates and actual runner execution are separate measurements.
