@@ -87,6 +87,20 @@ def firstWrite : String :=
 theorem first_write_emitted_zeuge : (emit firstWrite 256).toOption.isSome = true := by
   kernel_rfl
 
+/-- The checked field can index an actual table write without being treated as a target. -/
+def indexedStore : String :=
+  "module field_store { table T count 2 { slot { value : u8, } } type Entry = { pos : u64, }; impl fn main() -> u8 effects { writes T.slots } { let e : Entry = Entry(pos: 1); narrow e.pos to 0 .. 1 else { return 7; } T.slots[e.pos].value = 23; return 23; } }"
+
+theorem indexed_store_emitted_zeuge : (emit indexedStore 256).toOption.isSome = true := by
+  kernel_rfl
+
+def staleStore : String :=
+  "module field_store { table T count 2 { slot { value : u8, } } type Entry = { pos : u64, }; impl fn main() -> u8 effects { writes T.slots } { let mut e : Entry = Entry(pos: 1); narrow e.pos to 0 .. 1 else { return 7; } e.pos = 100; T.slots[e.pos].value = 23; return 23; } }"
+
+/-- A real record mutation still invalidates the index proof before the later store. -/
+theorem stale_store_refused_zeuge : (emit staleStore 256).toOption.isSome = false := by
+  kernel_rfl
+
 /-- Shadowing introduces a different record, without inheriting the old field's range. -/
 def shadowedRecord : String :=
   "module field_narrow { type Entry = { pos : u64, other : u8, }; impl fn main() -> u8 { let e : Entry = Entry(pos: 23, other: 7); narrow e.pos to 0 .. 63 else { return e.other; } let e : Entry = Entry(pos: 1000, other: 7); return e.pos; } }"

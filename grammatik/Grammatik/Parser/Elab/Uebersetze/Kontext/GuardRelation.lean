@@ -135,8 +135,15 @@ def uRelErsetzeS (x y n : String) := uRewriteRuntimeReads (uRelErsetzeE x y n)
 
 def uRelErsetzeEnde (x y n : String) := uRewriteRuntimeReturn (uRelErsetzeE x y n)
 
-/-- The names a statement may bind or change, nested blocks included: every binder, every name an assigned place
-    mentions, and `"*"` (every name) for a raw statement, a form not listed here and a walk out of fuel. -/
+/-- The root changed by an assignment. Indices are reads, rather than additional targets.
+    Unknown place forms conservatively stand for every local. -/
+def uAssignmentRoots : SExpr → List String
+  | .variable name => [name]
+  | .field base _ | .index base _ | .arrow base _ => uAssignmentRoots base
+  | _ => ["*"]
+
+/-- The names a statement may bind or change, nested blocks included: every binder,
+    the root of each assigned place, and `"*"` for an unknown form or exhausted fuel. -/
 def uBindetS : Nat → SAnw → List String
   | 0, _ => ["*"]
   | f + 1, a => match a with
@@ -144,7 +151,7 @@ def uBindetS : Nat → SAnw → List String
     | .reset x _ | .retires x => [x]
     | .await x _ _ w | .swap x _ _ w => [x, w]
     | .bindElse x _ _ r b | .bindAxiomOptElse x _ _ r b => x :: r :: uBindetS f b
-    | .set p _ _ => uLiestE f p
+    | .set p _ _ => uAssignmentRoots p
     | .shift p o w => uLiestE f p ++ [o, w]
     | .call .. | .lcall .. | .callQ .. | .genericCall .. | .leave .. | .next .. | .ret .. | .free ..
     | .start .. => []

@@ -71,6 +71,18 @@ theorem first_write_value_zeuge :
       ([.set selected "=" (.bin "+" (.variable snapshot) (.lit 1)), .ret (some selected)], false) := by
   kernel_rfl
 
+/-- Reading the narrowed field as a store index does not change its containing record. -/
+theorem indexed_store_snapshot_zeuge :
+    replaceRun selected "entry" snapshot
+      [.set (.field (.index (.field (.variable "T") "slots") selected) "value") "=" (.lit 23)] =
+      ([.set (.field (.index (.field (.variable "T") "slots") (.variable snapshot)) "value") "=" (.lit 23)],
+        true) := by
+  kernel_rfl
+
+theorem assignment_root_zeuge :
+    uAssignmentRoots (.field (.index (.field (.variable "T") "slots") selected) "value") = ["T"] := by
+  kernel_rfl
+
 /-- A different lexical record with the same source name cannot inherit a refinement. -/
 theorem shadow_barrier_zeuge :
     replaceRun selected "entry" snapshot
