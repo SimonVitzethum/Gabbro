@@ -7214,12 +7214,13 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 | `FieldNarrowingWitness.canonical_source`, `image_correct` | same | The field source uses the canonical program and inherited generic image correctness. |
 | `FieldNarrowingWitness.model_shape_zeuge` | same | Exactly one field snapshot and one existing local narrow occur; the final return reads that checked snapshot. |
 | `FieldNarrowingWitness.first_write_emitted_zeuge` | same | Narrowing a u64 field permits its first compound increment, with later reads at the record's declared type. |
+| `FieldNarrowingWitness.indexed_store_emitted_zeuge`, `stale_store_refused_zeuge` | same | A narrowed field indexes an actual table write; mutation of the record before that write invalidates the index fact and is refused. |
 | `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
 | `U64DifferenceWitness.candidate_present`, `accepted_image` | `U64DifferenceWitness.lean` | Full-width unsigned operands, including values above bit 63, compile through `emit`. |
 | `U64DifferenceWitness.canonical_source`, `image_correct` | same | The same source instantiates the canonical-program and generic image theorems. |
 | `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
 | `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
-| `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `first_write_value_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, the first write value, mutation and lexical barriers, unchanged historical reads and nonlocal refusal. |
+| `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `first_write_value_zeuge`, `indexed_store_snapshot_zeuge`, `assignment_root_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, the first write value, store-index reads versus mutation roots, lexical barriers, unchanged historical reads and nonlocal refusal. |
 
 The integration guardian also includes `narrow-record-field.gab` (both success and failure
 paths) and `guard-relation-u64.gab` (high bits, the unsigned limit and a false guard). Emission

@@ -230,6 +230,8 @@ including the enclosing block's final return, use the checked snapshot until a s
 may mutate or rebind the containing record. Unknown statements are conservative barriers.
 The value of the first assignment can still use the snapshot before the write; its target
 and every later read use the original record. Compound assignments share the ordinary expansion.
+A field used only as the index of a store remains a read: writing `T.slots[entry.pos]`
+does not invalidate a refinement of the separate local record `entry`.
 The failure branch keeps the original record and range; the record's declared type and other
 fields remain intact. Globals, slots and indirect places do not acquire this local refinement.
 
