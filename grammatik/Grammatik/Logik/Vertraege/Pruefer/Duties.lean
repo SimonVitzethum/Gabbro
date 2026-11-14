@@ -34,7 +34,7 @@ theorem respectsGate
 theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
     (locals : Env D (D.params f)) (checked : CheckedEnvironment (S := S) policy f locals) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
-    (O : Orakel D) (local : RegLokal O) (passes : Nat)
+    (O : Orakel D) (locality : RegLokal O) (passes : Nat)
     (U : Umwelt D) (havoc : HavocOk S U) (A : AUmwelt D) (atomic : HavocA shared A)
     (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (respects : RespektiertRahmen program calls) (allowed : Logik D → Prop)
@@ -48,13 +48,13 @@ theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
       evidence := frameOnlyEvidence program calls respects
       environment := U, havoc := havoc }
   have valid := checked runtime world allowed ⟨respects, errors⟩ requires
-  rw [replay S O local U A passes calls shared atomic subset]
+  rw [replay S O locality U A passes calls shared atomic subset]
   exact valid
 
 theorem checkedExecution_atomic (policy : CallPolicy program) (f : D.Fn)
     (checked : CheckedExecution (S := S) policy f) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
-    (O : Orakel D) (local : RegLokal O) (passes : Nat)
+    (O : Orakel D) (locality : RegLokal O) (passes : Nat)
     (U : Umwelt D) (havoc : HavocOk S U) (A : AUmwelt D) (atomic : HavocA shared A)
     (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (respects : RespektiertRahmen program calls) (allowed : Logik D → Prop)
@@ -64,7 +64,7 @@ theorem checkedExecution_atomic (policy : CallPolicy program) (f : D.Fn)
     EndPost program f world locals allowed
       (execEndHA S O U A passes calls (program.rumpf f) world locals) := by
   exact checkedEnvironment_atomic policy f locals (checked locals) replay shared subset
-    O local passes U havoc A atomic calls respects allowed errors world requires
+    O locality passes U havoc A atomic calls respects allowed errors world requires
 
 /-- The contract part of (b), including call-site requires, value returns,
     owed invariant returns and absence of local logic stops, for every rely. -/
@@ -80,10 +80,10 @@ theorem contractDuties_of_execution (f : D.Fn)
   intro passes Q shared subset
   have run := checkedExecution_atomic (requiresPolicy program) f checked replay shared subset
   refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
-  · intro O frame local hardware U havoc A atomic R respects noPre world locals requires
+  · intro O frame locality hardware U havoc A atomic R respects noPre world locals requires
     constructor
     · intro next value returned
-      have valid := run O local passes U havoc A atomic R respects (fun _ => True)
+      have valid := run O locality passes U havoc A atomic R respects (fun _ => True)
         (fun _ _ _ _ _ _ => trivial) world locals requires
       rw [returned] at valid
       exact valid.1
@@ -91,7 +91,7 @@ theorem contractDuties_of_execution (f : D.Fn)
       have gated : RespektiertRahmen program (torRuf program R) :=
         respectsGate R respects (fun g world locals => wahr? (eval world (program.requires g) world locals))
           Logik.vorbedingung
-      have valid := run O local passes U havoc A atomic (torRuf program R) gated
+      have valid := run O locality passes U havoc A atomic (torRuf program R) gated
         (fun error => ∀ g, error ≠ Logik.vorbedingung g)
         (fun f world locals entry error reply => by
           have same : torRuf program R f world locals = R f world locals := if_pos entry
@@ -100,18 +100,18 @@ theorem contractDuties_of_execution (f : D.Fn)
         world locals requires
       rw [returned] at valid
       exact valid g rfl
-  · intro O frame local hardware U havoc A atomic R respects noLogic world locals requires error returned
-    have valid := run O local passes U havoc A atomic R respects (fun _ => False)
+  · intro O frame locality hardware U havoc A atomic R respects noLogic world locals requires error returned
+    have valid := run O locality passes U havoc A atomic R respects (fun _ => False)
       (fun f world locals _ error reply => noLogic f world locals error reply) world locals requires
     rw [returned] at valid
     exact valid
-  · intro O frame local hardware U havoc A atomic R respects noPre world locals requires next value returned
-    have valid := run O local passes U havoc A atomic R respects (fun _ => True)
+  · intro O frame locality hardware U havoc A atomic R respects noPre world locals requires next value returned
+    have valid := run O locality passes U havoc A atomic R respects (fun _ => True)
       (fun _ _ _ _ _ _ => trivial) world locals requires
     rw [returned] at valid
     exact valid.2
-  · intro O frame local hardware U havoc A atomic R respects noPre world locals requires next reason returned
-    have valid := run O local passes U havoc A atomic R respects (fun _ => True)
+  · intro O frame locality hardware U havoc A atomic R respects noPre world locals requires next reason returned
+    have valid := run O locality passes U havoc A atomic R respects (fun _ => True)
       (fun _ _ _ _ _ _ => trivial) world locals requires
     rw [returned] at valid
     exact valid

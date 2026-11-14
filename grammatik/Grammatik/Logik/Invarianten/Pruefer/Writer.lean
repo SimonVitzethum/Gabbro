@@ -50,14 +50,16 @@ def AtomicReplay (program : Programm D) (f : D.Fn) : Prop :=
     empty metadata solely to compute executable reads; all contract checking
     and every runtime handler retain the original program. -/
 private def executionFootprintProgram (program : Programm D) : Programm D :=
-  { program with requires := fun _ => .tru, ensures := fun _ => .tru
+  { program with
+    requires := fun _ => .tru
+    ensures := fun _ => .tru
     ptrVertrag := fun _ => { pre := .tru, post := .tru } }
 
 private theorem atomicReplay_of_footprint (program footprint : Programm D) (f : D.Fn)
     (free : ∀ carrier ∈ endblockOrteP footprint (program.rumpf f),
       ¬ AtomarAusgenommen carrier) : AtomicReplay program f := by
-  intro S O local U A passes R shared atomic subset world locals
-  exact Endblock.execHA_frei footprint S O U A passes R atomic local.2 _
+  intro S O locality U A passes R shared atomic subset world locals
+  exact Endblock.execHA_frei footprint S O U A passes R atomic locality.2 _
     (fun carrier member present => free carrier member (subset carrier present)) world locals
 
 /-- Keep the existing conservative gate, then admit the additional fragment
@@ -118,7 +120,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
   if empty : (D.invs.filter (fun item => schuldet f item)).isEmpty = true ∧ checkLocks = false then
     return ⟨fun _ _ _ _ => by
       constructor <;>
-        intro O frame local contract U havoc A atomic R respects noPre world locals requires next value returned <;>
+        intro O frame locality contract U havoc A atomic R respects noPre world locals requires next value returned <;>
         intro item member owed
       all_goals
         have inside := List.mem_filter.mpr ⟨member, owed⟩
@@ -135,14 +137,14 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
         (checkEnvironment program S sources budget f post)
       return ⟨fun passes Q shared subset => by
         constructor <;>
-          intro O frame local contract U havoc A atomic R respects noPre world locals requires next value returned
+          intro O frame locality contract U havoc A atomic R respects noPre world locals requires next value returned
         all_goals
           let runtime : Runtime program (fun _ => []) S :=
             { oracle := O, passes := passes, calls := R
               evidence := frameOnlyEvidence program R respects
               environment := U, havoc := havoc }
           have valid := checked.down locals (domain.complete locals) runtime world requires
-          rw [replay.down S O local U A passes R shared atomic subset] at returned
+          rw [replay.down S O locality U A passes R shared atomic subset] at returned
           change EndFlow post.formula (execEndH S O U passes R (program.rumpf f) world locals) at valid
           rw [returned] at valid
           intro item member owed

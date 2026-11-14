@@ -41,7 +41,7 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
     (passes : Nat) (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop)
     (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier) :
     MassPflicht program passes Q S shared measure cycle f := by
-  intro O frame local hardware U havoc A atomic R respects noDecrease noPre world locals requires g inCycle returned
+  intro O frame locality hardware U havoc A atomic R respects noDecrease noPre world locals requires g inCycle returned
   let entry := measure.wert f anchor locals
   let policy := measurePolicy program measure (cycle f) anchor entry
   have gated : RespektiertRahmen program (massTor measure (cycle f) entry R) := by
@@ -64,7 +64,7 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
     simp only [massTor, disabled, Bool.false_eq_true, ↓reduceIte] at reply
     exact fun g => noDecrease h next args g reply
   have valid := checkedEnvironment_atomic policy f locals (checked locals) replay shared subset
-    O local passes U havoc A atomic (massTor measure (cycle f) entry R) gated
+    O locality passes U havoc A atomic (massTor measure (cycle f) entry R) gated
     (fun error => ∀ g, error ≠ Logik.abstieg g) errors world requires
   have same := measure.wert_welt f anchor world locals
   dsimp only [entry] at valid

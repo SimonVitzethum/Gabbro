@@ -21,9 +21,9 @@ theorem invariantDuties_mitRuhe (checked : ∀ f, InvariantDuties P S f) :
       have normal := invGutSA_mitRuhe facts.1
       have reason := invGutGrundA_mitRuhe facts.2
       constructor
-      · intro O frame local contract U havoc A atomic R respects noPre
-        exact normal O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
-      · intro O frame local contract U havoc A atomic R respects noPre
-        exact reason O frame local (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
+      · intro O frame locality contract U havoc A atomic R respects noPre
+        exact normal O frame locality (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
+      · intro O frame locality contract U havoc A atomic R respects noPre
+        exact reason O frame locality (axVertragOP_of_O _ (axVertragO_wahr O)) U havoc A atomic R respects noPre
 
 end Gabbro.Grammatik.Invarianten.Pruefer
