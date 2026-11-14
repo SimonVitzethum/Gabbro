@@ -38,6 +38,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.SpecArguments
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 public import Grammatik.Parser.Elab.Uebersetze.Einheit.ReturnCalls
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Initializers
+public import Grammatik.Parser.Elab.Uebersetze.Records.Narrowing
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
@@ -94,7 +95,7 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
   match elabKlauseln ctx klauseln0 with
   | .error e => .error e
   | .ok (gives, needs) =>
-    match koerper with
+    match (if ctx.narrow then (FieldNarrowing.expand 1000 ctx.names 0 koerper).1 else koerper) with
     | .block ss ende =>
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
       | .error e => .error e
