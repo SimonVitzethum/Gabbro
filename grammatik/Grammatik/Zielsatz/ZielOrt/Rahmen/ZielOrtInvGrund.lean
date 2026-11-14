@@ -233,7 +233,7 @@ theorem invGrundLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
       simp only [rufUpdateG_self]
       exact antwort_invGrundLogS ha (fun _ h => by cases h)
-    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha _hniedrig =>
       rename_i l Γ Λ
       simp only [rufUpdateG_self]
       apply antwort_invGrundLogS ha

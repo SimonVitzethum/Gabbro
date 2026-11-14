@@ -38,6 +38,14 @@ def GRest.plus (j : Nat) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : L
   | _, _, _, .aufraeumen a remaining => .aufraeumen a remaining
   | _, _, _, .leer => .leer
 
+/-- Shifting loop budgets preserves the continuation-discard guard. Return
+    transport must use the original guard, rather than assume every residue
+    is free of low-level scopes. -/
+theorem GRest.plus_keinNiedrig (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (k : GRest D V l Γ Λ) :
+    (k.plus j).keinNiedrig ↔ k.keinNiedrig := by
+  induction k <;> simp only [GRest.plus, GRest.keinNiedrig, *]
+
 /-- A frame with its residue shifted. -/
 def RufRahmenG.plus (j : Nat) (r : RufRahmenG D) : RufRahmenG D :=
   ⟨r.f, r.rho, r.s0, ⟨r.rest.1, r.rest.2.1, r.rest.2.2.1, r.rest.2.2.2.1, r.rest.2.2.2.2.plus j⟩⟩
