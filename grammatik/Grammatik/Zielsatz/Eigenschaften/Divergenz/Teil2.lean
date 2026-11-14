@@ -186,7 +186,7 @@ def divS1 : RufMaschineG divD :=
       ⟨false, divD.params divSchreib, Signatur.anfang divD (divD.signatur divSchreib), divRho7,
        .dann (.cons (.forever () .tru .nil) .nil) (.ende divSpinRet)⟩⟩,
      (divS0.faeden 0).spur, (divS0.faeden 0).log⟩,
-   divS0.lauf, divS0.start⟩
+   divS0.lauf, divS0.start, divS0.kontexte⟩
 
 /-- The first G step: `endeEntf` unfolds the `forever` statement. -/
 theorem divS01 : RufSchrittG divPS divO 1 divS0 0 divS1 :=

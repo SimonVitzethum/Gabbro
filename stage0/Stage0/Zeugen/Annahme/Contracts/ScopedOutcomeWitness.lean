@@ -159,7 +159,7 @@ private theorem source_held_zeuge (why : Bool) :
 
 /-- Expected successor records use the same update operation as the G rules. -/
 def successor (M : RufMaschineG D) (z : RufFadenG D) (events : Lauf D) : RufMaschineG D :=
-  ⟨M.speicher, rufUpdateG M.faeden 0 z, M.lauf ++ events, M.start⟩
+  ⟨M.speicher, rufUpdateG M.faeden 0 z, M.lauf ++ events, M.start, M.kontexte⟩
 
 def captured (why : Bool) : RufMaschineG D :=
   successor (source why)

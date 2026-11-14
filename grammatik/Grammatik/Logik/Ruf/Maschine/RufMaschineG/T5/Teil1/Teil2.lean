@@ -54,7 +54,7 @@ def M4G : RufMaschineG rufDF :=
         .dann .nil (.dann .nil (.ende restF))⟩⟩,
       outWF.spur, (M3G.faeden 0).log⟩,
    M3G.lauf ++ rufEigenG 0 outWF.spur,
-   M3G.start⟩
+   M3G.start, M3G.kontexte⟩
 
 /-- Step 4 fires `dannBlatt` on the writing leaf -- the memory move. -/
 theorem schritt4G : RufSchrittG gP rufOF 0 M3G 0 M4G := by
@@ -107,6 +107,6 @@ def M5G : RufMaschineG rufDF :=
         Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
         .dann .nil (.ende restF)⟩⟩,
       (M4G.faeden 0).spur, (M4G.faeden 0).log⟩,
-   M4G.lauf, M4G.start⟩
+   M4G.lauf, M4G.start, M4G.kontexte⟩
 
 end Gabbro.Grammatik

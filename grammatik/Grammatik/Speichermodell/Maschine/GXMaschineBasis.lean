@@ -50,7 +50,7 @@ theorem gxSchritt_fremd {M M' : RufMaschineG D} {u : Faden}
     successor is the inner step's machine. -/
 theorem gx_leer_g (hT : ∀ c, ¬ Tg c) {M M' : RufMaschineG D} {u : Faden}
     (h : RufSchrittGX P O passes Tg M u M') : RufSchrittG P O passes M u M' := by
-  obtain ⟨σ, M'', hs, hσ, h1, h2, hfa, hla, hst⟩ := h
+  obtain ⟨σ, M'', hs, hσ, h1, h2, hfa, hla, hst, hctx⟩ := h
   have eσ : σ = M.speicher := speicher_ext fun c => hσ c (hT c)
   subst eσ
   rw [mitSpeicher_selbst] at hs h1 h2
@@ -61,11 +61,11 @@ theorem gx_leer_g (hT : ∀ c, ¬ Tg c) {M M' : RufMaschineG D} {u : Faden}
         (traegerGleich_symm (traegerGleich_of_nicht_schreib (M := M) (M' := M'') hw))
   have e : M' = M'' := by
     cases M' with
-    | mk sp fa la st =>
+    | mk sp fa la st ctx =>
       cases M'' with
-      | mk sp' fa' la' st' =>
-        simp only at esp hfa hla hst
-        subst esp hfa hla hst
+      | mk sp' fa' la' st' ctx' =>
+        simp only at esp hfa hla hst hctx
+        subst esp hfa hla hst hctx
         rfl
   rw [e]
   exact hs

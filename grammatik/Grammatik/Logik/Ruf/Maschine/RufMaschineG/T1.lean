@@ -22,6 +22,7 @@
 -/
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
+public import Grammatik.Niedrig.Authority.Runtime
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.KeinNiedrig
 import all Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1Basis
 public import Grammatik.Kern.Semantik.Maschine
@@ -65,6 +66,7 @@ structure RufMaschineG (D : Deklaration) where
   faeden : Faden → RufFadenG D
   lauf : Lauf D
   start : World D
+  kontexte : LowLevel.ContextLedger D := LowLevel.ContextLedger.empty
 
 /-- Resume a caller with an already evaluated answer. Both the G and K
     machines use this operation, including the signature equality checks. -/

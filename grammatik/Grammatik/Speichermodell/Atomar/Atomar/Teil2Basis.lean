@@ -27,7 +27,7 @@ theorem schritt_sichtInvA (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
   have hs := h.schritt
   have hr := hI.erreicht
   have hGA : RufSchrittGA P O passes W.g u W'.g :=
-    ⟨σ, M'', hs, hσ, h.speicherS, h.speicherU, h.faeden, h.lauf, h.start⟩
+    ⟨σ, M'', hs, hσ, h.speicherS, h.speicherU, h.faeden, h.lauf, h.start, h.kontexte⟩
   have hr' : RufErreichbarGA P O passes (RufStartG P sp init) W'.g := .schritt _ _ _ hr hGA
   -- the thread-local invariants, before (on the presented machine) and after the step
   have hSp' : SpurInv M'' := by

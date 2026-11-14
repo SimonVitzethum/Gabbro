@@ -67,7 +67,7 @@ def RufSchrittGA (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschine
     (∀ c, ¬ AtomarAusgenommen c → TraegerGleich σ M.speicher c) ∧
     (∀ c, SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M''.speicher c) ∧
     (∀ c, ¬ SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M.speicher c) ∧
-    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start
+    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start ∧ M'.kontexte = M''.kontexte
 
 /-- **The machines GA reaches** from `M0`. -/
 inductive RufErreichbarGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 : RufMaschineG D) :

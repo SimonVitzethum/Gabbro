@@ -56,7 +56,7 @@ def RufFadenG.plus (j : Nat) (z : RufFadenG D) : RufFadenG D :=
 
 /-- A machine with every thread shifted. -/
 def RufMaschineG.plus (j : Nat) (M : RufMaschineG D) : RufMaschineG D :=
-  ⟨M.speicher, fun t => (M.faeden t).plus j, M.lauf, M.start⟩
+  ⟨M.speicher, fun t => (M.faeden t).plus j, M.lauf, M.start, M.kontexte⟩
 
 /-- A thread machine with its machine-G state shifted. -/
 def FadenMaschine.plus (j : Nat) (K : FadenMaschine D) : FadenMaschine D :=

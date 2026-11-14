@@ -67,7 +67,7 @@ def push (M : RufMaschineG bD) : RufMaschineG bD :=
        ⟨false, [], [], .nil, .ende rEnd⟩⟩ :: (M.faeden 0).stapel,
      ⟨(), .nil, σ, ⟨false, [], [], .nil, .ende rZwei⟩⟩,
      (M.faeden 0).spur, .eintritt () .nil σ :: (M.faeden 0).log⟩,
-   M.lauf, M.start⟩
+   M.lauf, M.start, M.kontexte⟩
 
 /-- Every push is an actual G call; it consumes no `forever` budget. -/
 theorem push_step (p : Nat) (M : RufMaschineG bD)

@@ -72,6 +72,7 @@ theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : Ru
       faeden := rfl
       lauf := rfl
       start := rfl
+      kontexte := rfl
       histS := fun c hw => by
         show (if schreibt c then _ else _) = _
         rw [if_pos hw]
@@ -240,6 +241,7 @@ theorem schrittW_bau {W : RufMaschineW D} {σ : Speicher D} {u : Faden} {M'' : R
     faeden := rfl
     lauf := rfl
     start := rfl
+    kontexte := rfl
     histS := fun c hw => by
       show (if schreibt c then _ else _) = _
       rw [if_pos hw]

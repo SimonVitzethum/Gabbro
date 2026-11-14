@@ -67,7 +67,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
               ⟨rest, caller, s1.spur,
                (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨rest, caller, s1.spur,
              (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
               RufFadenG D) := by
@@ -113,7 +113,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩ :: (M.faeden f).stapel,
              ⟨g, rho, s0,
@@ -148,7 +148,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩ ::
                 (M.faeden f).stapel,
@@ -190,7 +190,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩ ::
                 (M.faeden f).stapel,
@@ -221,7 +221,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩ ::
                 (M.faeden f).stapel,
@@ -252,7 +252,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩ ::
                 (M.faeden f).stapel,
@@ -283,7 +283,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                  rho, .ende (P.rumpf g)⟩⟩,
                s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err rest k⟩⟩ ::
                 (M.faeden f).stapel,
@@ -332,7 +332,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
                s1.spur,
                (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨rest,
              ⟨caller.f, caller.rho, caller.s0,
               ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc,
@@ -361,7 +361,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
               ⟨rst, caller, s1.spur,
                (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨rst, caller, s1.spur,
              (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
               RufFadenG D) := by
@@ -381,7 +381,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
               ⟨rst, caller, s1.spur,
                (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
             M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
+            M.start, M.kontexte⟩ : RufMaschineG D).faeden f =
             (⟨rst, caller, s1.spur,
              (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
               RufFadenG D) := by

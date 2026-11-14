@@ -121,24 +121,24 @@ theorem ZustandG.spur {M : RufMaschineG D} {f : Faden} {stapel : List (RufRahmen
 
 /-- Building the state after a step: the updated thread is the target shape. -/
 theorem zustandG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
-    {z : RufFadenG D} {lauf : Lauf D} {st : World D}
+    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {ctx : LowLevel.ContextLedger D}
     {stapel : List (RufRahmenG D)} {fn : D.Fn} {rho : Env D (D.params fn)}
     {s0 : World D} {log : List (RufEreignisF D)} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D fn) l Γ Λ}
     {σ : World D}
     (hz : z = ⟨stapel, ⟨fn, rho, s0, ⟨l, Γ, Λ, ρ, r⟩⟩, σ.spur, log⟩)
     (hsp : sp = σ.speicher) :
-    ZustandG ⟨sp, rufUpdateG M.faeden f z, lauf, st⟩ f stapel fn rho s0 log ρ r σ :=
+    ZustandG ⟨sp, rufUpdateG M.faeden f z, lauf, st, ctx⟩ f stapel fn rho s0 log ρ r σ :=
   ⟨by rw [← hz]; exact rufUpdateG_self M.faeden f z, hsp⟩
 
 theorem gepopptG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
-    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {caller : RufRahmenG D}
+    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {ctx : LowLevel.ContextLedger D} {caller : RufRahmenG D}
     {rst : List (RufRahmenG D)} {fn : D.Fn} {rho : Env D (D.params fn)}
     {s0 : World D} {log : List (RufEreignisF D)} {v : ErgVal D (D.erg fn)}
     {σ' : World D}
     (hz : z = ⟨rst, caller, σ'.spur, RufEreignisF.rueck fn rho v s0 σ' :: log⟩)
     (hsp : sp = σ'.speicher) :
-    GepopptG ⟨sp, rufUpdateG M.faeden f z, lauf, st⟩ f caller rst fn rho s0 log v σ' :=
+    GepopptG ⟨sp, rufUpdateG M.faeden f z, lauf, st, ctx⟩ f caller rst fn rho s0 log v σ' :=
   ⟨by rw [← hz]; exact rufUpdateG_self M.faeden f z, hsp⟩
 
 /-! ## 3. Leaves extend the trace by access events only -/

@@ -131,7 +131,7 @@ def blattM (M : RufMaschineG nD) (f : Faden)
       ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
        ⟨false, [], [], .nil, .ende rest⟩⟩,
       σ'.spur, (M.faeden f).log⟩,
-   M.lauf ++ rufEigenG f σ'.spur, M.start⟩
+   M.lauf ++ rufEigenG f σ'.spur, M.start, M.kontexte⟩
 
 theorem blattM_schritt (M : RufMaschineG nD) (f : Faden)
     (s : Stmt nD (vertragVon nD (M.faeden f).kopf.f) false [] [] [])

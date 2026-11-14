@@ -200,7 +200,7 @@ theorem Emitted.bild_ziel_rek [Kern] (output : Emitted src K options)
     (leseblindP_alle _ O) thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA
-      (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start⟩
+      (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start, RufErreichbarG.kontexte⟩
   · rcases bild_ziel_startL (fs := output.fsA) (ls := output.lsA) hOk hA0 hL hH hZ'
         hRuf hk' hSt hnach with h1 | ⟨pce, me, Me, hRe, hre, hze, k2, hk2⟩
     · exact Or.inr (Or.inl h1)

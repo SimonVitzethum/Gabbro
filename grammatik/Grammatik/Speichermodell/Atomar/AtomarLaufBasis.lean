@@ -40,7 +40,7 @@ def RufSchrittGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ 
     (∀ c, ¬ Tg c → TraegerGleich σ M.speicher c) ∧
     (∀ c, SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M''.speicher c) ∧
     (∀ c, ¬ SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M.speicher c) ∧
-    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start
+    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start ∧ M'.kontexte = M''.kontexte
 
 /-- The machines GX reaches from `M0`. -/
 inductive RufErreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat)

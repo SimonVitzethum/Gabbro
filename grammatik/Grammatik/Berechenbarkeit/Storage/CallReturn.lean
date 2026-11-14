@@ -103,14 +103,14 @@ def called (b : Bool) : RufMaschineG declaration :=
      ⟨true, environment (!b), memory.welt [],
        ⟨false, [.bool], [], environment (!b), .ende (returnedBody true)⟩⟩,
      [], .eintritt true (environment (!b)) (memory.welt []) :: (M.faeden 0).log⟩,
-   [], M.start⟩
+   [], M.start, M.kontexte⟩
 
 def resumed (b : Bool) : RufMaschineG declaration :=
   let M := called b
   ⟨memory, rufUpdateG M.faeden 0
     ⟨[], saved b, [],
      .rueck true (environment (!b)) () (memory.welt []) (memory.welt []) :: (M.faeden 0).log⟩,
-   [], M.start⟩
+   [], M.start, M.kontexte⟩
 
 /-- Genuine call from the standard empty-stack entry, at every loop budget. -/
 theorem call_step (budget : Nat) (b : Bool) :

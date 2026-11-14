@@ -33,7 +33,7 @@ variable {D : Deklaration}
           ⟨l, ArmCtx Γ selected.1, Λ, armEnv selected.2.2 environment,
             .dann selected.2.1 (armContinuation rest tail selected.1)⟩⟩,
         world.spur, (M.faeden thread).log⟩,
-    M.lauf ++ rufEigenG thread events, M.start⟩
+    M.lauf ++ rufEigenG thread events, M.start, M.kontexte⟩
 
 /-- Every generated dispatch is a step of the UNCHANGED machine G. This
     proves the control part of reification, not the implementations of the

@@ -71,6 +71,22 @@ inductive RufErreichbarG (P : Programm D) (O : Orakel D) (passes : Nat)
       (h : RufErreichbarG P O passes M0 M) (hs : RufSchrittG P O passes M f M') :
       RufErreichbarG P O passes M0 M'
 
+/-- Ordinary language steps cannot create or replace authority. In particular
+    a foreign World answer cannot alter the separate shared context ledger. -/
+theorem rufSchrittG_kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  (rcases step with h | h | h | h | h | h | h <;> cases h) <;> rfl
+
+/-- Every ordinary run retains the actual entry ledger, including its span
+    generations. View/loan entry and exit rules will name their updates. -/
+theorem rufErreichbarG_kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M0 M : RufMaschineG D} (run : RufErreichbarG P O passes M0 M) :
+    M.kontexte = M0.kontexte := by
+  induction run with
+  | start => rfl
+  | schritt _ _ _ _ hs ih => exact (rufSchrittG_kontexte hs).trans ih
+
 /-! ## 5. Matching entries and returns: the call-log invariant -/
 
 /-- The key of a frame: function, actual parameters, entry world.
