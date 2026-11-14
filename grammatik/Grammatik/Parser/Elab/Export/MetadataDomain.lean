@@ -32,8 +32,9 @@ def consumingHeader (raw : String) : Except String (SExpr × String) := do
       match token with | .ende => none | _ => some (zeigeTok token)))
   | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
+mutual
 def typeMetadata : STyp → Bool
-  | .tuple elements => elements.any typeMetadata
+  | .tuple elements => typeMetadataList elements
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
   | .ptr _ rights (.atom target) =>
       (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with
@@ -42,6 +43,12 @@ def typeMetadata : STyp → Bool
   | .ptr .. => true
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
+
+/-- Inspect tuple components in order, preserving the existential metadata check. -/
+def typeMetadataList : List STyp → Bool
+  | [] => false
+  | ty :: rest => typeMetadata ty || typeMetadataList rest
+end
 
 /-- The type of a table field: a wrapping integer is bound, the elaborator records its modulus
     (`UTab.wraps`) and every store reduces the value (`uWrap`). -/
