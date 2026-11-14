@@ -7,6 +7,8 @@ public import Bruecke.Anweisung.Zweig.Lesen
 public import Bruecke.Anweisung.Bereich.Rahmen
 public import Bruecke.Anweisung.Schleife.Kopf
 public import Bruecke.Anweisung.Schleife.Kontrolle
+public import Bruecke.Anweisung.Match.NestedKopf
+public import Bruecke.Anweisung.Match.Rahmen
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -108,6 +110,33 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         (by rw [mitOpt_ctx]; exact congrArg (List.cons _) hΓ)
         (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case matchBeg num v x =>
+      obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, he, hPZ, hAZ, hYZ, rfl⟩ := seqZ_option_some hbs
+      obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_option_ok hlow
+      obtain _ | m := n
+      · rw [lowStructL_zero] at hStruct; cases hStruct
+      obtain ⟨ev, pG, aG, rest1, hv, hPG, hAG, rfl⟩ := lowStruct_option_ok hn hStruct
+      obtain ⟨hr1, hsuf1, hP⟩ := ih m (by omega) k ss
+        (fn.mitIndex x num ((declOf u).count ⟨num, hn⟩))
+        (fT.mitIndex x num ((declOf u).count ⟨num, hn⟩)) (ns.push x)
+        ⟨Λ₁, pG⟩ (.ifElse :: rest1) pb (.ifElse :: r1) used1
+        (congrArg (List.cons _) hΓ) (hS.index x num ((declOf u).count ⟨num, hn⟩)) hmemss hPG hPZ hFss
+      have h1 : r1 = rest1 := (List.cons.inj hr1).2
+      subst r1
+      have hsuf1' : rest1 <:+ ss := (List.suffix_cons _ _).trans hsuf1
+      obtain ⟨hr2, hsuf2, hA⟩ := ih m (by omega) k rest1 fn fT (ns.resume used1)
+        ⟨Λ₁, aG⟩ (.blkEnd :: tail) ab (.blkEnd :: r2) used2 hΓ hS
+        (fun st hm => hmemss st (mem_of_suffix hsuf1' hm)) hAG hAZ
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf1' h)⟩)
+      have h2 : r2 = tail := (List.cons.inj hr2).2
+      subst r2
+      have hsuf2' : tail <:+ ss := ((List.suffix_cons _ _).trans hsuf2).trans hsuf1'
+      obtain ⟨hr3, hsuf3, hRest⟩ := ih (m + 1) (by omega) k tail fn fT
+        (ns.resume used2) q rest ys restZ used hΓ hS
+        (fun st hm => hmemss st (mem_of_suffix hsuf2' hm)) hQ hYZ
+        (fun cn gf hgf ⟨args, hm⟩ => hFss cn gf hgf ⟨args, hm.mono (fun _ h => mem_of_suffix hsuf2' h)⟩)
+      exact ⟨hr3, (hsuf3.trans hsuf2').trans (List.suffix_cons _ _),
+        .selected _ _ (option_frame hP hA) hRest⟩
     case loopBeg x tab inv =>
       obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow

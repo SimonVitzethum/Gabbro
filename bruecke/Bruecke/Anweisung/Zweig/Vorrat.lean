@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Match.NestedLesen
 public import Bruecke.Anweisung.Bereich.Lesen
 public import Bruecke.Anweisung.Schleife.Lesen
 @[expose] public section
@@ -67,6 +68,13 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have he := seqZ_used k fn (ns.resume used1) r1 eb _ used2 hE
         have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
         exact fun x hx => hy x (he x (ht x hx))
+      case matchBeg num v x =>
+        obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, _, hP, hA, hY, _⟩ := seqZ_option_some h
+        have hp := seqZ_used k (fn.mitIndex x num ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count ⟨num, hn⟩))
+          (ns.push x) ss pb _ used1 hP
+        have ha := seqZ_used k fn (ns.resume used1) r1 ab _ used2 hA
+        have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
+        exact fun z hz => hy z (ha z (hp z (BodyNames.used_push ns x z hz)))
       case leave x | next x =>
         obtain ⟨ys, hY, _⟩ := (by first | exact seqZ_control_some (leave := true) h | exact seqZ_control_some (leave := false) h)
         exact seqZ_used k fn ns ss ys rest used hY

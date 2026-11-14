@@ -29,6 +29,32 @@ theorem ausgangZiel_map
     obtain ⟨A, hg, ho, hk, hr⟩ := h.2.2.2.2 σ r hv
     exact ⟨A, hg, ho, hk, fun ρB hT hF => by rw [he]; exact hr ρB hT hF⟩
 
+/-- A selected arm starts with fresh locals but the same world. Re-present its execution
+    as the enclosing selection while retaining every result and control channel. -/
+theorem ausgangZiel_map_state {t : Gabbro.Body.State}
+    (h : AusgangZiel_G u C c R fn ids out t xs) (hw : t.world = s.world)
+    (he : ∀ ρB, Gabbro.Body.exec ρB ys s = Gabbro.Body.exec ρB xs t) :
+    AusgangZiel_G u C c R fn ids out s ys := by
+  refine ⟨h.1, ?_, ?_, ?_, ?_⟩
+  · intro σ v hv
+    obtain ⟨A, hg, ho, hk, hr⟩ := h.2.1 σ v hv
+    exact ⟨A, hg, hw ▸ ho, hk, fun ρB hT hF => by rw [he]; exact hr ρB hT hF⟩
+  · intro σ ρ hv
+    obtain ⟨A, t', ht, hW, hL⟩ := h.2.2.1 σ ρ hv
+    exact ⟨A, t', { ht with
+      oben := hw ▸ ht.oben
+      mono := fun w => hw ▸ ht.mono w
+      lauf := fun ρB hT hF => by rw [he]; exact ht.lauf ρB hT hF }, hW, hL⟩
+  · intro leave hl σ ρ hv
+    obtain ⟨A, t', ht, hW, hL⟩ := h.2.2.2.1 leave hl σ ρ hv
+    exact ⟨A, t', { ht with
+      oben := hw ▸ ht.oben
+      mono := fun w => hw ▸ ht.mono w
+      lauf := fun ρB hT hF => by rw [he]; exact ht.lauf ρB hT hF }, hW, hL⟩
+  · intro σ r hv
+    obtain ⟨A, hg, ho, hk, hr⟩ := h.2.2.2.2 σ r hv
+    exact ⟨A, hg, hw ▸ ho, hk, fun ρB hT hF => by rw [he]; exact hr ρB hT hF⟩
+
 /-- A running prefix composes with normal completion, returns and either loop exit. -/
 theorem ausgangZiel_nach {A : List Eintrag}
     (hp : Strecke_G u C A s s₁ xs) (h : AusgangZiel_G u C c R fn ids out s₁ ys) :

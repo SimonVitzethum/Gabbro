@@ -38,6 +38,15 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
               (fun p => (.ite ce tb eb :: p.1, p.2.1, p.2.2))
           | _ => none
         | _ => none
+  | k + 1, fn, ns, .matchBeg num v x :: rest =>
+      if hn : num < u.tabs.length then do
+        let e ← optionZ fn ns v
+        let (pb, .ifElse :: r1, used1) ← seqZ u k
+          (fn.mitIndex x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest | none
+        let (ab, .blkEnd :: r2, used2) ← seqZ u k fn (ns.resume used1) r1 | none
+        let p ← seqZ u k fn (ns.resume used2) r2
+        pure (.onOption e (ns.fresh x) pb ab :: p.1, p.2.1, p.2.2)
+      else none
   | k + 1, fn, ns, .loopBeg x tab .tru :: rest => do
       let t ← (tabIdx u.tabs tab).toOption
       let (body, .blkEnd :: tail, used) ← seqZ u k
