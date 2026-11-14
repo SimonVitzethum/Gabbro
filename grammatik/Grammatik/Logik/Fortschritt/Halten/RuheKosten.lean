@@ -189,7 +189,7 @@ theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-termination_by structural s
+termination_by sizeOf s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') :
@@ -244,7 +244,7 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           )
       try rfl
       )
-termination_by structural b
+termination_by sizeOf b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
@@ -254,7 +254,7 @@ theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (
   | .cons (c := payload) b rest =>
     cases payload <;>
       exact cost_congr₂ max (kostenBlock_ru b) (kostenArms_ru rest)
-termination_by structural arms
+termination_by sizeOf arms
 
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
@@ -264,7 +264,7 @@ theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Na
   | .nil => rfl
   | .cons b rest =>
     exact cost_congr₂ max (kostenBlock_ru b) (kostenGrundArms_ru rest)
-termination_by structural arms
+termination_by sizeOf arms
 
 theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenEnd ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenEnd ep c pa e := by
@@ -319,7 +319,7 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
           )
       try rfl
       )
-termination_by structural e
+termination_by sizeOf e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
     kostenSonst ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruEnd e) = kostenSonst ep c pa e := by
@@ -374,7 +374,7 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
           )
       try rfl
       )
-termination_by structural e
+termination_by sizeOf e
 end
 end Costs
 end HaltRuhe
