@@ -189,6 +189,7 @@ theorem link (b : Bool) : PasstA oracle (history b) := by
     have hσ := congrArg (fun e : AxEintrag decl => e.2.1) h
     have hx := congrArg (fun e : AxEintrag decl => e.2.2.2) h
     change (σ, 0) = x
+    dsimp only [record] at hσ hx
     rw [hσ]
     exact hx.symm
 
@@ -242,9 +243,10 @@ theorem first_step (b : Bool) :
 theorem second_step (b : Bool) :
     ∃ M : RufMaschineG decl, RufSchrittG (program b) oracle 0 (afterFirst b) 0 M := by
   refine ⟨_, RufSchrittG.blatt (afterFirst b) 0 false [] [] [] (call b)
-    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl rfl ?_⟩
+    (.ret .empty (by rfl)) .nil rfl rfl ?_ key2 .nil [.fremd (.inl ())] rfl ?_ ?_⟩
   · intro L
     exact nomatch L
+  · cases b <;> rfl
   · intro L
     exact nomatch L
 

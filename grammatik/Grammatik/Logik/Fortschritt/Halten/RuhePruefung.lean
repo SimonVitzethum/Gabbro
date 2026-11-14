@@ -28,40 +28,138 @@ variable (Z : D.Fn → Bool) {V : Vertrag D}
   subst h
   rfl
 
+/- Match the constructors directly so the recursive calls retain their size relation.
+   The translated indices agree definitionally; rewrite those laws with `erw`. -/
 mutual
 theorem rufeS_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
-    rufeS (fun g => g.elim false Z) (fun _ => false) true (ruS s) =
+    rufeS (D := D.mitRuhe) (fun (g : Option D.Fn) => g.elim false Z) (fun _ => false) true (ruS s) =
       rufeS Z (fun _ => false) true s := by
-  cases s <;> simp only [ruS, rufeS_nachΛ, rufeS, rufeB_ru, rufeArms_ru, rufeGArms_ru,
-    rufeE_umΛ, rufeE_ru, Option.elim]
-termination_by structural s
+  match s with
+  | .assignSlot .. | .assignThru .. | .assignGlob .. | .putBytes .. | .assignVar .. | .shift ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd .. | .locks ..
+  | .breaking .. | .traverse .. | .retry .. | .forever .. | .axiomCall .. | .regWrite ..
+  | .transition .. | .publish .. | .advances .. | .retires .. | .ret .. | .retWhy .. | .leave ..
+  | .next .. | .assignSlotRef .. | .consumeTraverse .. | .retScoped .. | .retWhyScoped ..
+  | .axiomCallElse .. | .callIndElse .. | .assignThruOwn .. =>
+    simp only [ruS, rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [rufeS_nachΛ]
+        | erw [rufeB_vorΛ]
+        | erw [rufeE_umΛ]
+        | erw [rufeS_ru]
+        | erw [rufeB_ru]
+        | erw [rufeArms_ru]
+        | erw [rufeGArms_ru]
+        | erw [rufeE_ru]
+        | simp only [rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf s
 
 theorem rufeB_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
-    rufeB (fun g => g.elim false Z) (fun _ => false) true (ruB b) =
+    rufeB (D := D.mitRuhe) (fun (g : Option D.Fn) => g.elim false Z) (fun _ => false) true (ruB b) =
       rufeB Z (fun _ => false) true b := by
-  cases b <;> simp only [ruB, rufeB, rufeB_vorΛ, rufeS_ru, rufeB_ru, rufeE_umΛ,
-    rufeE_ru, Option.elim]
-termination_by structural b
+  match b with
+  | .nil .. | .cons .. | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse ..
+  | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse .. | .awaits ..
+  | .exchange .. | .narrow .. | .check .. | .float .. | .floatLit .. | .floatOf ..
+  | .floatNarrow .. | .narrowRequired .. | .bindCallIndElse .. =>
+    simp only [ruB, rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [rufeS_nachΛ]
+        | erw [rufeB_vorΛ]
+        | erw [rufeE_umΛ]
+        | erw [rufeS_ru]
+        | erw [rufeB_ru]
+        | erw [rufeArms_ru]
+        | erw [rufeGArms_ru]
+        | erw [rufeE_ru]
+        | simp only [rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none])
+    try rfl
+  | .bindAxiomOpt (e := none) (rest := rest) ..
+  | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
+    simp only [ruB, rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [rufeB_ru rest]
+        | erw [rufeS_nachΛ]
+        | erw [rufeB_vorΛ]
+        | erw [rufeE_umΛ]
+        | erw [rufeS_ru]
+        | erw [rufeB_ru]
+        | erw [rufeArms_ru]
+        | erw [rufeGArms_ru]
+        | erw [rufeE_ru]
+        | simp only [rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf b
 
 theorem rufeArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
-    rufeArms (fun g => g.elim false Z) (fun _ => false) true (ruArms arms) =
+    rufeArms (D := D.mitRuhe) (fun (g : Option D.Fn) => g.elim false Z) (fun _ => false) true (ruArms arms) =
       rufeArms Z (fun _ => false) true arms := by
-  cases arms <;> simp only [ruArms, rufeArms, rufeB_ru, rufeArms_ru]
-termination_by structural arms
+  match arms with
+  | .nil => rfl
+  | .cons (c := none) b rest | .cons (c := some _) b rest =>
+    simp only [ruArms, rufeArms]
+    erw [rufeB_ru b, rufeArms_ru rest]
+termination_by sizeOf arms
 
 theorem rufeGArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
-    rufeGArms (fun g => g.elim false Z) (fun _ => false) true (ruGArms arms) =
+    rufeGArms (D := D.mitRuhe) (fun (g : Option D.Fn) => g.elim false Z) (fun _ => false) true (ruGArms arms) =
       rufeGArms Z (fun _ => false) true arms := by
-  cases arms <;> simp only [ruGArms, rufeGArms, rufeB_ru, rufeGArms_ru]
-termination_by structural arms
+  match arms with
+  | .nil => rfl
+  | .cons b rest =>
+    simp only [ruGArms, rufeGArms]
+    erw [rufeB_ru b, rufeGArms_ru rest]
+termination_by sizeOf arms
 
 theorem rufeE_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    rufeE (fun g => g.elim false Z) (fun _ => false) true (ruEnd e) =
+    rufeE (D := D.mitRuhe) (fun (g : Option D.Fn) => g.elim false Z) (fun _ => false) true (ruEnd e) =
       rufeE Z (fun _ => false) true e := by
-  cases e <;> simp only [ruEnd, rufeE, rufeE_umΛ, rufeS_ru, rufeE_ru, Option.elim]
-termination_by structural e
+  match e with
+  | .ret .. | .retWhy .. | .leave .. | .next .. | .cons .. | .bind .. | .bindCall ..
+  | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse ..
+  | .awaits .. | .bindCallInd .. | .narrow .. | .exchange .. | .ite .. | .narrowRequired ..
+  | .retScoped .. | .retWhyScoped .. | .bindCallIndElse .. | .float .. | .floatLit ..
+  | .floatOf .. | .floatNarrow .. =>
+    simp only [ruEnd, rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [rufeS_nachΛ]
+        | erw [rufeB_vorΛ]
+        | erw [rufeE_umΛ]
+        | erw [rufeS_ru]
+        | erw [rufeB_ru]
+        | erw [rufeArms_ru]
+        | erw [rufeGArms_ru]
+        | erw [rufeE_ru]
+        | simp only [rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none])
+    try rfl
+  | .bindAxiomOpt (e := none) (rest := rest) ..
+  | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
+    simp only [ruEnd, rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [rufeE_ru rest]
+        | erw [rufeS_nachΛ]
+        | erw [rufeB_vorΛ]
+        | erw [rufeE_umΛ]
+        | erw [rufeS_ru]
+        | erw [rufeB_ru]
+        | erw [rufeArms_ru]
+        | erw [rufeGArms_ru]
+        | erw [rufeE_ru]
+        | simp only [rufeS, rufeB, rufeE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf e
 end
 end Calls
 
@@ -86,34 +184,144 @@ variable (h : D.Lock → Option Nat) (ep : Nat) (c : D.Fn → Nat) (Z : D.Fn →
 
 mutual
 theorem haltS_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
-    haltS h ep (fun g => g.elim 0 c) (fun g => g.elim false Z) pa (ruS s) = haltS h ep c Z pa s := by
-  cases s <;> simp only [ruS, haltS_nachΛ, haltS, haltB_ru, haltArms_ru, haltGArms_ru,
-    haltE_umΛ, haltE_ru, kostenBlock_ru, rufeB_ru]
-termination_by structural s
+    haltS (D := D.mitRuhe) h ep (fun (g : Option D.Fn) => g.elim 0 c) (fun (g : Option D.Fn) => g.elim false Z) pa (ruS s) =
+      haltS h ep c Z pa s := by
+  match s with
+  | .assignSlot .. | .assignThru .. | .assignGlob .. | .putBytes .. | .assignVar .. | .shift ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd .. | .locks ..
+  | .breaking .. | .traverse .. | .retry .. | .forever .. | .axiomCall .. | .regWrite ..
+  | .transition .. | .publish .. | .advances .. | .retires .. | .ret .. | .retWhy .. | .leave ..
+  | .next .. | .assignSlotRef .. | .consumeTraverse .. | .retScoped .. | .retWhyScoped ..
+  | .axiomCallElse .. | .callIndElse .. | .assignThruOwn .. =>
+    simp only [ruS, haltS, haltB, haltE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [haltS_nachΛ]
+        | erw [haltB_vorΛ]
+        | erw [haltE_umΛ]
+        | erw [kostenBlock_ru]
+        | erw [rufeB_ru]
+        | erw [haltS_ru]
+        | erw [haltB_ru]
+        | erw [haltArms_ru]
+        | erw [haltGArms_ru]
+        | erw [haltE_ru]
+        | simp only [haltS, haltB, haltE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf s
 
 theorem haltB_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
-    haltB h ep (fun g => g.elim 0 c) (fun g => g.elim false Z) pa (ruB b) = haltB h ep c Z pa b := by
-  cases b <;> simp only [ruB, haltB, haltB_vorΛ, haltS_ru, haltB_ru, haltE_umΛ, haltE_ru]
-termination_by structural b
+    haltB (D := D.mitRuhe) h ep (fun (g : Option D.Fn) => g.elim 0 c) (fun (g : Option D.Fn) => g.elim false Z) pa (ruB b) =
+      haltB h ep c Z pa b := by
+  match b with
+  | .nil .. | .cons .. | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse ..
+  | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse .. | .awaits ..
+  | .exchange .. | .narrow .. | .check .. | .float .. | .floatLit .. | .floatOf ..
+  | .floatNarrow .. | .narrowRequired .. | .bindCallIndElse .. =>
+    simp only [ruB, haltS, haltB, haltE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [haltS_nachΛ]
+        | erw [haltB_vorΛ]
+        | erw [haltE_umΛ]
+        | erw [kostenBlock_ru]
+        | erw [rufeB_ru]
+        | erw [haltS_ru]
+        | erw [haltB_ru]
+        | erw [haltArms_ru]
+        | erw [haltGArms_ru]
+        | erw [haltE_ru]
+        | simp only [haltS, haltB, haltE, Option.elim_some, Option.elim_none])
+    try rfl
+  | .bindAxiomOpt (e := none) (rest := rest) ..
+  | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
+    simp only [ruB, haltS, haltB, haltE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [haltB_ru rest]
+        | erw [haltS_nachΛ]
+        | erw [haltB_vorΛ]
+        | erw [haltE_umΛ]
+        | erw [kostenBlock_ru]
+        | erw [rufeB_ru]
+        | erw [haltS_ru]
+        | erw [haltB_ru]
+        | erw [haltArms_ru]
+        | erw [haltGArms_ru]
+        | erw [haltE_ru]
+        | simp only [haltS, haltB, haltE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf b
 
 theorem haltArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) :
-    haltArms h ep (fun g => g.elim 0 c) (fun g => g.elim false Z) pa (ruArms arms) =
+    haltArms (D := D.mitRuhe) h ep (fun (g : Option D.Fn) => g.elim 0 c) (fun (g : Option D.Fn) => g.elim false Z) pa (ruArms arms) =
       haltArms h ep c Z pa arms := by
-  cases arms <;> simp only [ruArms, haltArms, haltB_ru, haltArms_ru]
-termination_by structural arms
+  match arms with
+  | .nil => rfl
+  | .cons (c := none) b rest | .cons (c := some _) b rest =>
+    simp only [ruArms, haltArms]
+    erw [haltB_ru b, haltArms_ru rest]
+termination_by sizeOf arms
 
 theorem haltGArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
-    haltGArms h ep (fun g => g.elim 0 c) (fun g => g.elim false Z) pa (ruGArms arms) =
+    haltGArms (D := D.mitRuhe) h ep (fun (g : Option D.Fn) => g.elim 0 c) (fun (g : Option D.Fn) => g.elim false Z) pa (ruGArms arms) =
       haltGArms h ep c Z pa arms := by
-  cases arms <;> simp only [ruGArms, haltGArms, haltB_ru, haltGArms_ru]
-termination_by structural arms
+  match arms with
+  | .nil => rfl
+  | .cons b rest =>
+    simp only [ruGArms, haltGArms]
+    erw [haltB_ru b, haltGArms_ru rest]
+termination_by sizeOf arms
 
 theorem haltE_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
-    haltE h ep (fun g => g.elim 0 c) (fun g => g.elim false Z) pa (ruEnd e) = haltE h ep c Z pa e := by
-  cases e <;> simp only [ruEnd, haltE, haltE_umΛ, haltS_ru, haltE_ru]
-termination_by structural e
+    haltE (D := D.mitRuhe) h ep (fun (g : Option D.Fn) => g.elim 0 c) (fun (g : Option D.Fn) => g.elim false Z) pa (ruEnd e) =
+      haltE h ep c Z pa e := by
+  match e with
+  | .ret .. | .retWhy .. | .leave .. | .next .. | .cons .. | .bind .. | .bindCall ..
+  | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse .. | .regRead .. | .regReadElse ..
+  | .awaits .. | .bindCallInd .. | .narrow .. | .exchange .. | .ite .. | .narrowRequired ..
+  | .retScoped .. | .retWhyScoped .. | .bindCallIndElse .. | .float .. | .floatLit ..
+  | .floatOf .. | .floatNarrow .. =>
+    simp only [ruEnd, haltS, haltB, haltE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [haltS_nachΛ]
+        | erw [haltB_vorΛ]
+        | erw [haltE_umΛ]
+        | erw [kostenBlock_ru]
+        | erw [rufeB_ru]
+        | erw [haltS_ru]
+        | erw [haltB_ru]
+        | erw [haltArms_ru]
+        | erw [haltGArms_ru]
+        | erw [haltE_ru]
+        | simp only [haltS, haltB, haltE, Option.elim_some, Option.elim_none])
+    try rfl
+  | .bindAxiomOpt (e := none) (rest := rest) ..
+  | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
+    simp only [ruEnd, haltS, haltB, haltE, Option.elim_some, Option.elim_none]
+    repeat
+      (first
+        | erw [haltE_ru rest]
+        | erw [haltS_nachΛ]
+        | erw [haltB_vorΛ]
+        | erw [haltE_umΛ]
+        | erw [kostenBlock_ru]
+        | erw [rufeB_ru]
+        | erw [haltS_ru]
+        | erw [haltB_ru]
+        | erw [haltArms_ru]
+        | erw [haltGArms_ru]
+        | erw [haltE_ru]
+        | simp only [haltS, haltB, haltE, Option.elim_some, Option.elim_none])
+    try rfl
+termination_by sizeOf e
 end
 end Sections
 end Gabbro.Grammatik.HaltRuhe
