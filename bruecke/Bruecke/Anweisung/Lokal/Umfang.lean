@@ -22,6 +22,8 @@ def protectedNames : List (String × Ty) → List UParamArt → List String
   | (_, .int ..) :: ps, .index _ :: ks => protectedNames ps ks
   | (_, .index _) :: ps, .index _ :: ks => protectedNames ps ks
   | (_, .prod ..) :: ps, .wert :: ks => protectedNames ps ks
+  | (_, .opt _) :: ps, .opt _ :: ks => protectedNames ps ks
+  | (_, .opt _) :: ps, .int :: ks => protectedNames ps ks
   | (x, _) :: ps, _ :: ks => x :: protectedNames ps ks
   | (x, _) :: ps, [] => x :: protectedNames ps []
 
@@ -29,6 +31,7 @@ def binderOf : UStmt → Option String
   | .bind x _ _ => some x
   | .bindMut x _ _ _ => some x
   | .bindB x _ => some x
+  | .bindOpt x _ _ => some x
   | .bindCall x _ _ => some x
   | .narrowBeg x _ _ => some x
   | .loopBeg x _ _ => some x
@@ -59,6 +62,10 @@ theorem bindFrischL_bindMut {ns : List String} {x : String} {lo hi : Int} {v : U
 
 theorem bindFrischL_bindB {ns : List String} {x : String} {v : UEns}
     {ss : List UStmt} (h : BindFrischL ns (.bindB x v :: ss)) :
+    NameFrisch ns x ∧ BindFrischL ns ss := h
+
+theorem bindFrischL_bindOpt {ns : List String} {x : String} {num : Nat} {v : UOpt}
+    {ss : List UStmt} (h : BindFrischL ns (.bindOpt x num v :: ss)) :
     NameFrisch ns x ∧ BindFrischL ns ss := h
 
 theorem bindFrischL_sonst {ns : List String} {s : UStmt} {ss : List UStmt}

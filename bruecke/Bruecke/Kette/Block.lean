@@ -1,4 +1,6 @@
 module
+public import Bruecke.Anweisung.Option.Kopf
+public import Bruecke.Anweisung.Option.Werte
 public import Bruecke.Kette.Schritt
 public import Bruecke.Anweisung.Zweig.Schritt
 public import Bruecke.Anweisung.Zweig.Vorrat
@@ -111,6 +113,20 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindB_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
       exact blockZiel_bindB_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
+    case bindOpt x num v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨hn, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindOpt hstepT
+      obtain ⟨hx, hF'⟩ := bindFrischL_bindOpt hF
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindOpt_ok (hn := hn) hlow
+      have heB : namedOption u fn ns v = some eT := (namedOption_sicht hS ns v).symm.trans heT
+      have hU' : UmfangB (.opt ((declOf u).count ⟨num, hn⟩) :: Γ) (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) := hU.bindOpt num ((declOf u).count ⟨num, hn⟩) hx
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩))
+        (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) q rest ys restZ used hU' (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩))
+        hmemss hF' hq hys
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindOpt_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
+      exact blockZiel_bindOpt_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
+        (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case loopBeg x tab inv =>
       obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow
@@ -165,13 +181,16 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       subst bt
       have hb : namedResult u fn ns x g args = some (bB, ty) :=
         (namedResult_sicht hS ns x g args).symm.trans hbT
-      rw [mitRuf_scalar fn x head.callee hsh] at hq
-      have hU' := hU.bindTy hF.1 hsh
-      have hF' : BindFrischL (protectedNames (fn.mitTy x ty).params (fn.mitTy x ty).kinds) ss := by
-        rw [protectedNames_mitTy fn x hsh]
+      obtain ⟨hidx, _, _⟩ := lowRufKopf_ok hk
+      have hcallee : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hidx
+      have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hcallee
+      have hType := (S.boolErg head.callee hd).1
+      have hU' := hU.bindRuf hF.1 head.callee hsh hType he
+      have hF' : BindFrischL (protectedNames (mitRuf u fn x head.callee ty).params (mitRuf u fn x head.callee ty).kinds) ss := by
+        rw [protectedNames_mitRuf fn x head.callee hsh]
         exact hF.2
-      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitTy x ty)
-        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hU' (hS.bindTy x hsh) hmemss hF' hq hys
+      have IH := ih n (Nat.lt_succ_self n) k ss (mitRuf u fn x head.callee ty)
+        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hU' (hS.bindRuf x head.callee hsh hType he) hmemss hF' hq hys
       refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
       cases hR : R head.callee (σ.lese Λ head.args.orte)
           (evalArgs (σ.lese Λ head.args.orte) head.args (σ.lese Λ head.args.orte) ρ) with
@@ -198,7 +217,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_, fun leave hl σ' ρ' hh => (by
           cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh)⟩
         all_goals simp only [execBlock, hR] at hh; cases hh
-    case setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call =>
+    case setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       have hF' := bindFrischL_sonst (by rfl) hF

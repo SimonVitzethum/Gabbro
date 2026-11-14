@@ -20,12 +20,6 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 def fnSuch (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name == n)
 
-/-- The name of the table a pointer parameter points at. -/
-def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
-  match f.params.find? (fun q => q.1 == p) with
-  | some (_, .ptr ⟨_, _, .table t⟩) => (u.tabs[t]?).map (·.name)
-  | _ => none
-
 /-- The pointer parameter of `f` that points at the table `tab` -- only when there is exactly one
     (a call that passes "a pointer to `tab`" names no variable in `UArg.freshPtr`). -/
 def ptrParam (u : UProg) (f : UFn) (tab : String) : Option String :=
@@ -36,10 +30,6 @@ def ptrParam (u : UProg) (f : UFn) (tab : String) : Option String :=
   | _ => none
 
 /-! ## 1. Expressions -/
-
-def idxExpr : UIdx → Expr
-  | .lit n => .lit (.int n)
-  | .param p => .name p
 
 /-- One side of a comparison. `old` (the entry value) is handled by the caller (`altSides`), and
     reads here as the `old#i` binder it is numbered to. -/
@@ -120,6 +110,14 @@ def recordRead (u : UProg) (f : UFn) :
       match valueParamTy f p with
       | some ty => some (some ty, .name p)
       | none => (numericSideExprG u f (.param p)).map (none, ·)
+  | .option num v => do
+      let t ← u.tabs[num]?
+      let e ← optionExpr u f v
+      pure (some (.opt t.count), e)
+  | .present n value => do
+      let (_, e) ← recordRead u f value
+      pure (some (.opt n), .someOf e)
+  | .absent n => some (some (.opt n), .lit .absent)
   | .truth b => some (some .bool, .lit (.bool b))
   | .product identity _ fields => do
       let _ ← (uRecordOf u.records (.prod identity (fields.map (·.1)))).toOption
@@ -210,6 +208,7 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
+  | .istSome v _ => (optionExpr u f v).map (fun e => (.bin .ne e (.lit .absent), a))
   -- A `bool` static reads its Body global; other statics are refused (as by `lowGlobBool`).
   | .globB g =>
       match globIdx u.globs g with

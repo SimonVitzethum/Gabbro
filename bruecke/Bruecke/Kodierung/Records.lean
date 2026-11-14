@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kodierung.Teil2
+public import Bruecke.Kodierung.Teil1
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -58,7 +58,11 @@ theorem valOf_shape {D : Deklaration} (ty : Ty) (v : Wert D ty) (sh : Gabbro.Bod
           subst sh
           obtain ⟨hlen, hf⟩ := valOfProd_shape fs v ss hs
           simp [valOf_prod, Gabbro.Body.Value.hasShape_record_record, hlen, hf]
-  | .opt _, _, h | .sum _, _, h | .why _, _, h | .never, _, h | .fl _ _, _, h
+  | .opt n, v, h =>
+      simp only [shapeOfTy, Option.some.injEq] at h
+      subst sh
+      cases v <;> rfl
+  | .sum _, _, h | .why _, _, h | .never, _, h | .fl _ _, _, h
   | .fnptr _, _, h | .ptr _, _, h | .ref _, _, h | .arr _ _, _, h | .str _, _, h =>
       simp [shapeOfTy] at h
 termination_by sizeOf ty

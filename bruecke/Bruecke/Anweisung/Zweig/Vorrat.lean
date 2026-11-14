@@ -27,6 +27,12 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   case bindB x v =>
     obtain ⟨e, _, _, _, rfl⟩ := schrittB_bindB h
     exact BodyNames.used_push ns x
+  case bindOpt x num v =>
+    obtain ⟨hn, e, _, _, _, rfl⟩ := schrittB_bindOpt h
+    exact BodyNames.used_push ns x
+  case setVarOpt x num v =>
+    obtain ⟨id, e, _, _, _, _, rfl⟩ := schrittB_setVarOpt h
+    exact fun _ hx => hx
   case bindCall x g args =>
     obtain ⟨ty, _, _, rfl⟩ := schrittB_bindCall h
     exact BodyNames.used_push ns x
@@ -36,7 +42,7 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   all_goals
     obtain ⟨_, _, rfl⟩ := schrittB_stmt h (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     exact fun _ hx => hx
 
 /-- Returned histories include allocations from both arms and the continuation. -/

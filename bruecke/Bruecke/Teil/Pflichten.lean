@@ -25,7 +25,7 @@ structure Getragen (u : UProg) (C : Fin u.fns.length → Prop) : Prop where
   geschlossen : ∀ c, C c → ∀ n ∈ calleesOf (fnAt u c), ∀ d,
     fnSuch u n = some (fnAt u d) → C d
   boolTab : ∀ t : Fin u.tabs.length,
-    (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []
+    (tabAt u t).bools = [] ∧ (tabAt u t).werte = []
   boolErg : ∀ c, C c → ErgSchlicht (fnAt u c)
   tab : TabEindeutig u
   art : ∀ c, C c → ArtStimmt (fnAt u c)

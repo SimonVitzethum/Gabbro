@@ -29,6 +29,11 @@ theorem retZ_form {fn : UFn} {ns : BodyNames} {r : URet} {b : Gabbro.Body.Stmt}
     cases he : namedSide u fn ns sd with
     | none => rw [he] at h; cases h
     | some e => rw [he] at h; cases h; exact ⟨some e, rfl⟩
+  case opt v =>
+    simp only [retZ] at h
+    cases he : namedOption u fn ns v with
+    | none => rw [he] at h; cases h
+    | some e => rw [he] at h; cases h; exact ⟨some e, rfl⟩
   all_goals cases h
 
 theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB : Gabbro.Body.Env) :
@@ -66,7 +71,7 @@ theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB :
       all_goals
         obtain ⟨hb, _, _⟩ := schrittB_stmt hsN (fun _ _ _ h => by cases h)
           (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-          (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+          (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
         exact statisch_schritt_G S c hc ρB hΓ _ ss (hm _ (List.mem_cons_self ..)) hgs hb hF ih
 
 end Gabbro.Bruecke

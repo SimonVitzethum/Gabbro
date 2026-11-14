@@ -164,7 +164,7 @@ theorem lowSeqStep_einzeln {l : Bool} (R : LowStufe u c) (Γ : Ctx) (fn : UFn)
       (lowStmtL (l := l) u c Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>
         (R.seq (l := l) Γ fn Λ₁ pe ss).bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r) := by
   cases s
-  case assign | assignTab | assignGlob | assignGlobB | call | setVar | setVarB => rfl
+  case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call | setVar | setVarB | setVarOpt => rfl
   all_goals simp [LeseEinzeln] at hs
 
 theorem lowSeq_einzeln_ok {loopMode : Bool} {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}

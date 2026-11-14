@@ -142,7 +142,7 @@ theorem wfG_of_grel {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u
 /-- Combine the existing slot typing theorem with the independent global relation. -/
 theorem wf_of_wrel_grel {σ : World (declOf u)} {w : Gabbro.Body.World}
     (hB : ∀ t : Fin u.tabs.length,
-      (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+      (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (hW : WRel u σ w) (hG : GRel u σ w) : Gabbro.Body.WF (shapeOfUG u) w := by
   intro p sh hp
   cases p with
@@ -165,20 +165,28 @@ theorem wgrel_lese {σ : World (declOf u)} {w : Gabbro.Body.World}
     (h : WGRel u σ w) (Λ) (orte) : WGRel u (σ.lese Λ orte) w :=
   wgrel_same u rfl rfl h
 
+theorem wgrel_store_index {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WGRel u σ w)
+    (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
+    (fld : String) (f : Fin (fieldCount u t)) (hf : fieldIndex u t fld = some f) (k : Int)
+    (x : Wert (declOf u) ((declOf u).typ t f)) :
+    WGRel u (σ.storeSlot t k f x)
+      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t f) x)) := by
+  refine ⟨wrel_store_index u h.1 c t ht fld f hf k x, ?_⟩
+  intro g v hv
+  have hg := grel_globs u (σ' := σ.storeSlot t k f x) rfl h.2 g v hv
+  exact (Gabbro.Body.store_elsewhere _ _ _ _ (by intro e; cases e)).trans hg
+
 theorem wgrel_store {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WGRel u σ w)
     (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
     (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int)
     (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
     WGRel u (σ.storeSlot t k fh.idx x)
-      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t fh.idx) x)) := by
-  refine ⟨wrel_store u h.1 c t ht fld fh hf k x, ?_⟩
-  intro g v hv
-  have hg := grel_globs u (σ' := σ.storeSlot t k fh.idx x) rfl h.2 g v hv
-  exact (Gabbro.Body.store_elsewhere _ _ _ _ (by intro e; cases e)).trans hg
+      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t fh.idx) x)) :=
+  wgrel_store_index u h c t ht fld fh.idx (fieldIndex_int hf) k x
 
 theorem wf_of_wgrel {σ : World (declOf u)} {w : Gabbro.Body.World}
     (hB : ∀ t : Fin u.tabs.length,
-      (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+      (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (h : WGRel u σ w) : Gabbro.Body.WF (shapeOfUG u) w :=
   wf_of_wrel_grel u hB h.1 h.2
 

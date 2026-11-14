@@ -74,20 +74,12 @@ theorem lowSeq_bindCall_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat}
           exact ⟨k, ty, he, hr, ⟨Λ', b⟩, (by first | exact hk | rfl), hq, rfl⟩
         · cases h
 
-/-- For admitted scalar result types, the canonical call scope is exactly the reader scope. -/
-theorem mitRuf_scalar (fn : UFn) (x : String) (d : Fin u.fns.length)
-    {ty : Ty} {sh : Gabbro.Body.Shape} (ht : shapeOfTy ty = some sh) :
-    mitRuf u fn x d ty = fn.mitTy x ty := by
-  cases ty
-  case int | bool | prod => rfl
-  all_goals cases ht
-
 theorem protectedNames_mitTy (fn : UFn) (x : String) {ty : Ty} {sh : Gabbro.Body.Shape}
     (ht : shapeOfTy ty = some sh) :
     protectedNames (fn.mitTy x ty).params (fn.mitTy x ty).kinds =
       protectedNames fn.params fn.kinds := by
   cases ty
-  case int | bool | prod => rfl
+  case int | bool | prod | opt => rfl
   all_goals cases ht
 
 end Gabbro.Bruecke

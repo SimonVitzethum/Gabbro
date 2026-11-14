@@ -77,7 +77,7 @@ def initialStaticsB (u : UProg) : Bool := u.globs.all fun g =>
 
 /-- Zero-initialized numeric table fields and valid, non-atomic scalar static initializers. -/
 def nullB (u : UProg) : Bool :=
-  (staticsB u && initialStaticsB u) && u.tabs.all fun t => t.opts.isEmpty && t.werte.isEmpty &&
+  (staticsB u && initialStaticsB u) && u.tabs.all fun t => t.werte.isEmpty &&
     t.cols.all fun f => decide (f.2.1 ≤ 0) && decide (0 ≤ f.2.2)
 
 theorem nullB_statics {u : UProg} (h : nullB u = true) : ScalarStatics u :=
@@ -98,10 +98,10 @@ theorem declOf_scalar_kein_atomar (u : UProg) (h : ScalarStatics u) :
   exact (h g).2
 
 theorem nullB_tab {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length) :
-    (tabAt u t).opts = [] ∧ (tabAt u t).werte = [] := by
+    (tabAt u t).werte = [] := by
   simp only [nullB, Bool.and_eq_true, List.all_eq_true] at h
   have := (h.2 _ (List.get_mem _ _ : tabAt u t ∈ u.tabs)).1
-  exact ⟨List.isEmpty_iff.mp this.1, List.isEmpty_iff.mp this.2⟩
+  exact List.isEmpty_iff.mp this
 
 theorem null_bereich {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) (w : Int × Int) (hw : fieldRangeO u t f = some w) :
@@ -129,16 +129,19 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
       exact (false : Bool)
     · rw [if_neg hbf]
       have hp := nullB_tab h t
-      have ho : optFeldAt u t f = none := by
-        unfold optFeldAt optNumAt; rw [hp.1]; split <;> rfl
-      have hw' : wertFeldAt u t f = none := by
-        unfold wertFeldAt; rw [hp.2]; split <;> rfl
-      rw [ho, hw']
-      cases hw : fieldRangeO u t f with
-      | none => exact (⟨0, Int.le_refl _, Int.le_refl _⟩ : Zahl 0 0)
-      | some w =>
-        have := null_bereich h t f w hw
-        exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
+      cases ho : optFeldAt u t f with
+      | some n => exact (none : Option (Zahl 0 (n - 1)))
+      | none =>
+        have hw' : wertFeldAt u t f = none := by
+          unfold wertFeldAt
+          rw [hp]
+          split <;> rfl
+        rw [hw']
+        cases hw : fieldRangeO u t f with
+        | none => exact (⟨0, Int.le_refl _, Int.le_refl _⟩ : Zahl 0 0)
+        | some w =>
+          have := null_bereich h t f w hw
+          exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
   globs := fun g => by
     change Wert (declOf u) (globAt u g).ty.toTy
     cases ht : (globAt u g).ty with

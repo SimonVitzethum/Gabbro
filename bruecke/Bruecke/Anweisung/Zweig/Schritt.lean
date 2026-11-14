@@ -2,6 +2,7 @@ module
 public import Bruecke.Anweisung.Zweig.Strecke
 public import Bruecke.Anweisung.Zweig.Lesen
 public import Bruecke.Anweisung.Lokal.Werte
+public import Bruecke.Anweisung.Option.Werte
 @[expose] public section
 
 /-!
@@ -172,6 +173,56 @@ theorem lowRet_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn
               all_goals first
                 | rfl
                 | trivial
+          · cases hE
+        · cases h
+  case opt v =>
+    simp only [retZ] at hb
+    cases hs : namedOption u fn ns v with
+    | none => rw [hs] at hb; cases hb
+    | some e =>
+      rw [hs] at hb
+      simp only [Option.map_some, Option.some.injEq] at hb
+      subst hb
+      simp only [lowRetStmt] at h
+      cases hE : lowErg u c Γ Λ fn (.opt v) with
+      | error err => simp only [hE, Except.bind] at h; cases h
+      | ok E =>
+        simp only [hE, Except.bind] at h
+        split at h
+        · cases h
+          simp only [lowErg] at hE
+          split at hE
+          · rename_i n hErg
+            split at hE
+            · rename_i num count hOpt
+              split at hE
+              · rename_i hn
+                split at hE
+                · rename_i same
+                  split at hE
+                  · cases hE
+                  · rename_i ev hev
+                    cases hE
+                    refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
+                    have herg : (verOf u c).erg = some (.opt n) := by
+                      show (vertragVon (declOf u) c).erg = _
+                      rw [vErg_eq u c, hErg]
+                    generalize hσl : σ.lese _ _ = σl
+                    have hWl : WGRel u σl s.world := by
+                      rw [← hσl]
+                      exact wgrel_same u rfl rfl hW
+                    have hv := lowOption_named_sim hev hs hT σl σl ρ s hWl hL
+                    have hval := valOf_eval_heq (congrArg Ty.opt same)
+                      ev _ (mpr_heq _ _).symm σl σl ρ
+                    rw [ergValOf_heq herg _
+                      (evalErg σl (ErgExpr.val (D := declOf u) _) σl ρ)
+                      (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+                    simp only [Gabbro.Body.step, hv]
+                    rw [hval]
+                · cases hE
+              · cases hE
+            · cases hE
+          · cases hE
           · cases hE
         · cases h
   all_goals simp [retZ] at hb

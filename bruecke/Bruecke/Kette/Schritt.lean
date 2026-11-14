@@ -1,4 +1,5 @@
 module
+public import Bruecke.Anweisung.Option.Speichern
 public import Bruecke.Kette.Verknuepfung
 public import Bruecke.Anweisung.Zweig.Schritt
 public import Bruecke.Teil.Lokal.Ruf
@@ -65,10 +66,22 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowSetVarB_named_sim c hsv hid heT hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
         hsl hL'
+  case setVarOpt x num v =>
+    obtain ⟨id, eT, hid, heT, rfl, -, -⟩ := schrittB_setVarOpt hb
+    simp only [lowStmtL] at hgst
+    cases hsv : lowSetVarOptL (l := loopMode) u c Γ fn Λ x num v with
+    | error err => simp only [hsv, Except.map] at hgst; cases hgst
+    | ok st1 =>
+      simp only [hsv, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, ρ₁, bv, hex, hsl, hstep, hL'⟩ :=
+        lowSetVarOpt_named_sim c hsv hid heT S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
+        hsl hL'
   case assign b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assign S.tab c Γ fn Λ b' f i v] at hgst
     cases stored : lowAssignDurchL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
@@ -82,7 +95,7 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
   case assignTab b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assignTab S.tab c Γ fn Λ b' f i v] at hgst
     cases stored : lowAssignTabL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
@@ -93,10 +106,38 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowAssignTab_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
         (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
+  case assignOpt b' f i v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignDurchOL (l := loopMode) u c Γ fn Λ b' f i v with
+    | error err => simp only [stored, Except.map] at hgst <;> cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, cn, k, fld, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignDurchO_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
+  case assignTabOpt b' f i v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignTabOL (l := loopMode) u c Γ fn Λ b' f i v with
+    | error err => simp only [stored, Except.map] at hgst <;> cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, cn, k, fld, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignTabO_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
   case assignGlob n v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     simp only [lowStmtL] at hgst
     cases stored : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v with
     | error err => simp only [stored, Except.map] at hgst; cases hgst
@@ -110,7 +151,7 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
   case assignGlobB n v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     simp only [lowStmtL] at hgst
     cases stored : lowAssignGlobBL (l := loopMode) u c Γ fn Λ n v with
     | error err => simp only [stored, Except.map] at hgst; cases hgst
@@ -125,7 +166,7 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
 
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     have hgst' : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', gst⟩ := hgst
     obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
       lowCall_sim_teilB c hgst' hx hU S.tab (fun d hd =>

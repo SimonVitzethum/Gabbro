@@ -1,4 +1,6 @@
 module
+public import Bruecke.Anweisung.Option.Kopf
+public import Bruecke.Anweisung.Option.Werte
 public import Bruecke.Kette.Block
 public import Bruecke.Kette.Ende.Simulation
 public import Bruecke.Anweisung.Match.Kopf
@@ -103,6 +105,21 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         have hU' : UmfangB (.bool :: Γ) (fn.mitBindungB x) (ns.push x) := hU.bindB hx
         have IH := lauf_G G S c hc O passes R hRR r n k ss (fn.mitBindungB x)
           (fT.mitBindungB x) (ns.push x) rest bs' hU' (hS.bindB x)
+          hmemss hF' hrest hbs' _ _
+          ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+        exact laufZiel_schritt_teilB (bind_lauf O passes R ev rest σ ρ) (fun ρB _ => hstep ρB)
+          (fun w => Int.le_refl _) IH
+      case bindOpt x num v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨hn, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindOpt hstep0
+        obtain ⟨hx, hF'⟩ := bindFrischL_bindOpt hF
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindOpt_ok c (hn := hn) hlow
+        have heB : namedOption u fn ns v = some eT := (namedOption_sicht hS ns v).symm.trans heT
+        obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindOpt_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
+        have hU' : UmfangB (.opt ((declOf u).count ⟨num, hn⟩) :: Γ) (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) := hU.bindOpt num ((declOf u).count ⟨num, hn⟩) hx
+        have IH := lauf_G G S c hc O passes R hRR r n k ss (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩))
+          (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest bs' hU' (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩))
           hmemss hF' hrest hbs' _ _
           ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
         exact laufZiel_schritt_teilB (bind_lauf O passes R ev rest σ ρ) (fun ρB _ => hstep ρB)
@@ -236,13 +253,16 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         subst bt
         have hb : namedResult u fn ns x g args = some (bB, ty) :=
           (namedResult_sicht hS ns x g args).symm.trans hbT
-        rw [mitRuf_scalar fn x head.callee hsh] at hq
-        have hU' := hU.bindTy hF.1 hsh
-        have hF' : BindFrischL (protectedNames (fn.mitTy x ty).params (fn.mitTy x ty).kinds) ss := by
-          rw [protectedNames_mitTy fn x hsh]
+        obtain ⟨hidx, _, _⟩ := lowRufKopf_ok hk
+        have hcallee : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hidx
+        have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hcallee
+        have hType := (S.boolErg head.callee hd).1
+        have hU' := hU.bindRuf hF.1 head.callee hsh hType he
+        have hF' : BindFrischL (protectedNames (mitRuf u fn x head.callee ty).params (mitRuf u fn x head.callee ty).kinds) ss := by
+          rw [protectedNames_mitRuf fn x head.callee hsh]
           exact hF.2
-        have IH := lauf_G G S c hc O passes R hRR r n k ss (fn.mitTy x ty)
-          (fT.mitTy x ty) (ns.push x) q ys hU' (hS.bindTy x hsh) hmemss hF' hq hys
+        have IH := lauf_G G S c hc O passes R hRR r n k ss (mitRuf u fn x head.callee ty)
+          (fT.mitTy x ty) (ns.push x) q ys hU' (hS.bindRuf x head.callee hsh hType he) hmemss hF' hq hys
         cases hR : R head.callee (σ.lese Λ head.args.orte)
             (evalArgs (σ.lese Λ head.args.orte) head.args (σ.lese Λ head.args.orte) ρ) with
         | ok σ₁ v =>
@@ -278,7 +298,7 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         | hardware err =>
           refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ ⟩
           all_goals simp only [execEnd, hR] at hh; cases hh
-      case setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call =>
+      case setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
         obtain ⟨bT, fT', ns', bs', hstepT, hbs', rfl⟩ :=
           stmtsBodyZ_schritt_some hbs (by exact True.intro)
         obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)

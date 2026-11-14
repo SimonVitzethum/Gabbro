@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 /-- Ending branches currently carry ordinary leaf statements and an explicit return.
     Bindings and structured control remain refused here by constructor. -/
 def endLeafB : UStmt → Bool
-  | .assign .. | .assignTab .. | .assignGlob .. | .assignGlobB .. | .call .. | .setVar .. | .setVarB .. => true
+  | .assign .. | .assignTab .. | .assignOpt .. | .assignTabOpt .. | .assignGlob .. | .assignGlobB .. | .call .. | .setVar .. | .setVarB .. => true
   | _ => false
 
 theorem endLeafB_ok {st : UStmt} (h : endLeafB st = true) : LeseEinzeln st := by

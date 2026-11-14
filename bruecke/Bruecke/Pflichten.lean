@@ -15,6 +15,13 @@ expression readers, including nominal records, integer arithmetic and Boolean co
 The positional statement reader in `Anweisung/Lokal/Benannt` and the structured readers in
 `Anweisung/Zweig/Benannt` extend this datum with scoped locals and control flow.
 
+Body's `.opt` shape checks the absence/presence constructor only; it erases the table
+extent and accepts any integer payload in `.present`. Consequently `shapeOfTy`, entry
+checks, world typing and `resultClause` do not recover an option's numeric bound. The
+G-to-Body encoding still preserves every checked G index exactly; user duties quantify
+over all well-formed Body states, including those without a bounded G counterpart.
+`resultTypeB_option` checks agreement of the result metadata extents, not payload bounds.
+
 Unsupported forms return `none`; successfully read forms are connected to the generic
 simulation chain. Fixtures remain witnesses outside that trust path.
 -/
@@ -42,17 +49,19 @@ def shapeConjuncts (f : UFn) : List Expr :=
 def preExpr (f : UFn) : Expr :=
   conjE (shapeConjuncts f ++ f.held.map (fun _ => Expr.lit (.bool true)))
 
-/-- The typing of the world: every declared slot field has its range. -/
-def slotShape (ts : List UTab) (c : String) (fld : String) : Option Shape :=
-  match ts with
-  | [] => none
-  | t :: rest =>
-      if c = t.name then (t.cols.find? (fun q => q.1 == fld)).map (fun q => .intIn q.2.1 q.2.2)
-      else slotShape rest c fld
+/-- The first declared field position, independent of its value type. -/
+def fieldIndex (u : UProg) (t : Fin u.tabs.length) (fld : String) :
+    Option (Fin (fieldCount u t)) :=
+  match h : fieldAtPos (tabAt u t).cols fld with
+  | none => none
+  | some w => some ⟨fieldPos (tabAt u t).cols fld, fieldPos_lt _ _ _ h⟩
 
 def shapeOfU (u : UProg) : Typing := fun p =>
   match p with
-  | .slot c _ fld => slotShape u.tabs c fld
+  | .slot c _ fld => do
+      let t ← (tabIdx u.tabs c).toOption
+      let f ← fieldIndex u t fld
+      shapeOfTy (typAt u t f)
   | _ => none
 
 /-! ## 3. The body -/
@@ -62,6 +71,7 @@ def argExpr (u : UProg) (f : UFn) : UArg → Option Expr
   | .freshPtr tab _ => (ptrParam u f tab).map (fun p => .name p)
   | .val s => sideExprG u f s
   | .bval b => rawCond u f b
+  | .oval v => optionExpr u f v
   | _ => none
 
 def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
@@ -77,6 +87,11 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
   | .assignTab t fld i v => (sideExprG u f v).map (fun ve => .assign t (idxExpr i) fld ve)
+  | .assignOpt p fld i v =>
+      match ptrTab u f p, optionExpr u f v with
+      | some t, some ve => some (.assign t (idxExpr i) fld ve)
+      | _, _ => none
+  | .assignTabOpt t fld i v => (optionExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
   | .assignGlob g v => (sideExprG u f v).map (fun ve => .assignGlobal g ve)
   | .assignGlobB g v => (rawCond u f v).map (fun ve => .assignGlobal g ve)
   | .call g as =>
@@ -125,16 +140,28 @@ def ensClause (u : UProg) (f : UFn) (e : UEns) (s s' : State) (r : Option Value)
 
 /-- Whether an aggregate result has a complete representable shape. -/
 def resultTypeB (f : UFn) : Bool :=
-  match f.resTy with
+  (match f.resTy with
   | none => true
-  | some ty => (shapeOfTy ty).isSome
+  | some ty => (shapeOfTy ty).isSome) &&
+    (match f.ergTy, f.resOpt with
+    | some (.opt n), some (_, cnt) => n == cnt
+    | _, _ => true)
+
+/-- Option result metadata must retain the exact extent used by the result type. -/
+theorem resultTypeB_option {f : UFn} (h : resultTypeB f = true)
+    {n cnt : Int} {num : Nat} (he : f.ergTy = some (.opt n))
+    (ho : f.resOpt = some (num, cnt)) : n = cnt := by
+  have hc := (Bool.and_eq_true_iff.mp h).2
+  simpa only [he, ho, beq_iff_eq] using hc
 
 /-- The declared result shape, including all fields of a record result. -/
 def resultClause (f : UFn) (r : Option Value) : Option Prop :=
   match f.resTy with
   | some ty => (shapeOfTy ty).map (fun sh => ∃ v, r = some v ∧ v.hasShape sh = true)
   | none => if f.resBool then some (∃ b, r = some (.bool b))
-    else f.res.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
+    else match f.resOpt with
+      | some (_, n) => some (∃ v, r = some v ∧ v.hasShape .opt = true)
+      | none => f.res.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
 
 /-- All clauses of the promise beyond well-formedness, in the printer's order. `False`-free:
     a clause outside the fragment makes `ensList` answer `none`. -/

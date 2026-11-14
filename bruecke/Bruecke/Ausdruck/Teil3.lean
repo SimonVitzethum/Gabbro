@@ -1,4 +1,5 @@
 module
+public import Bruecke.Ausdruck.Option
 
 public import Bruecke.Kodierung
 public import Bruecke.Pflichten
@@ -279,10 +280,26 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       obtain ⟨_, _, _, rfl, rfl⟩ := ensExpr_globB hb
       simp only [lowEns] at h
       exact lowGlobBool_sim h σ₀ σ ρ w β hW.2
+  | .istSome v num, a, a', x, g, hb, h, _ => by
+      simp only [ensExpr] at hb
+      cases hr : optionExpr u fn v with
+      | none => simp [hr] at hb
+      | some e =>
+        simp only [hr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        simp only [lowEns] at h
+        split at h
+        · rename_i hn
+          split at h
+          · cases h
+          · rename_i ev hv
+            cases h
+            exact eval_option_test _ _ _ (lowOpt_sim hv hr hT σ₀ σ ρ ⟨w, β⟩ hW.1 hB.par)
+        · cases h
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _, _ | .tabB .., _, _, _, _, hb, _, _
   | .alle .., _, _, _, _, hb, _, _ | .einige .., _, _, _, _, hb, _, _
-  | .ergB, _, _, _, _, hb, _, _ | .istSome .., _, _, _, _, hb, _, _
+  | .ergB, _, _, _, _, hb, _, _
   | .held .., _, _, _, _, hb, _, _ | .imp .., _, _, _, _, hb, _, _
   | .reach .., _, _, _, _, hb, _, _ | .member .., _, _, _, _, hb, _, _
   | .filtered .., _, _, _, _, hb, _, _ | .arrayElements .., _, _, _, _, hb, _, _ => by cases hb
@@ -456,10 +473,18 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
   | .globB p, a, a', x, g, hb, h => by
       obtain ⟨_, _, _, _, rfl⟩ := ensExpr_globB hb
       exact Zuwachs.refl _ _ _
+  | .istSome v num, a, a', x, g, hb, h => by
+      simp only [ensExpr] at hb
+      cases hr : optionExpr u fn v with
+      | none => simp [hr] at hb
+      | some e =>
+        simp only [hr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨_, rfl⟩ := hb
+        exact Zuwachs.refl _ _ _
   -- Unrepresented predicates contradict the existing `ensExpr` premise.
   | .slotB .., _, _, _, _, hb, _ | .tabB .., _, _, _, _, hb, _
   | .alle .., _, _, _, _, hb, _ | .einige .., _, _, _, _, hb, _
-  | .ergB, _, _, _, _, hb, _ | .istSome .., _, _, _, _, hb, _
+  | .ergB, _, _, _, _, hb, _
   | .held .., _, _, _, _, hb, _ | .imp .., _, _, _, _, hb, _
   | .reach .., _, _, _, _, hb, _ | .member .., _, _, _, _, hb, _
   | .filtered .., _, _, _, _, hb, _ | .arrayElements .., _, _, _, _, hb, _ => by cases hb

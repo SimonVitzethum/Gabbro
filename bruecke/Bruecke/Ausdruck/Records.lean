@@ -1,5 +1,6 @@
 module
 public import Bruecke.Ausdruck.Scalar
+public import Bruecke.Ausdruck.Option
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -70,6 +71,44 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
           obtain ⟨rfl, rfl⟩ := hb
           obtain ⟨hv, hty⟩ := lowParam_record_sim ht h σ₀ σ ρ β hL
           exact ⟨congrArg some hv, fun t he => (Option.some.inj he) ▸ hty⟩
+  | .absent n, h, hb =>
+      cases h
+      simp only [recordRead, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      exact ⟨rfl, fun _ he => Option.some.inj he⟩
+  | .present n value, h, hb =>
+      cases hr : recordRead u fn value with
+      | none => simp [recordRead, hr] at hb
+      | some out =>
+        obtain ⟨tag, be⟩ := out
+        simp only [recordRead, hr, bind, Option.bind_some, pure,
+          Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        cases hv : lowWertAtE u Γ Λ fn er (Ty.index n) value with
+        | error err => simp [lowWertE, hv, Except.map] at h
+        | ok ve =>
+          simp only [lowWertE, hv, Except.map, Except.ok.injEq] at h
+          cases h
+          have he := lowWertAtE_recordRead_sim hv hr hA hT σ₀ σ ρ w β hW hL
+          refine ⟨?_, fun _ heq => Option.some.inj heq⟩
+          simp only [Gabbro.Body.eval, he, valOf, eval]
+  | .option num value, h, hb =>
+      by_cases hn : num < u.tabs.length
+      · have ht : u.tabs[num]? = some (tabAt u ⟨num, hn⟩) := List.getElem?_eq_getElem hn
+        cases hr : optionExpr u fn value with
+        | none => simp [recordRead, ht, hr] at hb
+        | some be =>
+          simp only [recordRead, ht, hr, bind, Option.bind_some, pure,
+            Option.some.injEq, Prod.mk.injEq] at hb
+          obtain ⟨rfl, rfl⟩ := hb
+          cases hv : lowOpt u Γ Λ fn (if er.isSome then 1 else 0) num hn value with
+          | error err => simp [lowWertE, hn, hv, Except.map] at h
+          | ok ve =>
+            simp only [lowWertE, hn, ↓reduceDIte, hv, Except.map, Except.ok.injEq] at h
+            cases h
+            exact ⟨lowOpt_sim hv hr hT σ₀ σ ρ ⟨w, β⟩ hW.1 hL,
+              fun _ heq => Option.some.inj heq⟩
+      · simp [lowWertE, hn] at h
   | .truth b, h, hb =>
       simp only [recordRead, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
@@ -167,7 +206,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
   | .typed _ _, h, hb | .eng _ _ _, h, hb | .ib1 _ _ _, h, hb | .ib2 _ _ _ _, h, hb
   | .zaehle _ _ _, h, hb | .zaehleBaum _ _ _ _ _ _, h, hb | .zaehleFeld _ _ _, h, hb
   | .taggedEmpty _ _, h, hb | .taggedValue _ _ _, h, hb | .predicate _, h, hb
-  | .option _ _, h, hb | .absent _, h, hb | .present _ _, h, hb | .reason _ _, h, hb
+  | .reason _ _, h, hb
   | .function _ _, h, hb => exact scalarCase h hb (by rw [recordRead] <;> simp)
 termination_by 5 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)

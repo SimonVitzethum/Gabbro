@@ -1,4 +1,6 @@
 module
+public import Bruecke.Anweisung.Option.Kopf
+public import Bruecke.Anweisung.Option.Werte
 public import Bruecke.Kette.Formen.StatischSchritt
 public import Bruecke.Anweisung.Zweig.Rahmen
 public import Bruecke.Anweisung.Zweig.Lesen
@@ -97,6 +99,15 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         (by rw [mitBindungB_ctx]; exact congrArg (List.cons _) hΓ)
         (hS.bindB x) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case bindOpt x num v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨hn, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindOpt hstepT
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowSeq_bindOpt_ok (hn := hn) hlow
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩))
+        (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) q rest ys restZ used
+        (by rw [mitOpt_ctx]; exact congrArg (List.cons _) hΓ)
+        (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
     case loopBeg x tab inv =>
       obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow
@@ -149,20 +160,22 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       obtain ⟨head, ty, he, hr, q, hk, hq, rfl⟩ := lowSeq_bindCall_ok hlow
       obtain ⟨ht, sh, hsh⟩ := resultCall_type hk he hb
       subst bt
-      rw [mitRuf_scalar fn x head.callee hsh] at hq
       obtain ⟨gf, raw, es, _, hgf, _, _, _, _, rfl⟩ := namedResult_some hb
       obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
       have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
       rw [hf] at hgf
       cases hgf
-      have hctx : ty :: Γ = (fn.mitTy x ty).params.map (·.2) := by
-        cases ty
-        case int | bool | prod => exact congrArg (List.cons _) hΓ
-        all_goals cases hsh
+      obtain ⟨hidx, _, _⟩ := lowRufKopf_ok hk
+      have hcallee : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hidx
+      have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hcallee
+      have hType := (S.boolErg head.callee hd).1
+      have hctx : ty :: Γ = (mitRuf u fn x head.callee ty).params.map (·.2) := by
+        rw [mitRuf_params fn x head.callee hType he, mitTy_params]
+        exact congrArg (List.cons _) hΓ
       have hsub := lowRufKopf_writes S hc hk (CallsIn.bind hhead)
       have hframe := hF g (fnAt u head.callee) hf ⟨args, CallsIn.bind (List.mem_cons_self ..)⟩
-      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitTy x ty)
-        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hctx (hS.bindTy x hsh) hmemss hq hys hFss
+      have IH := ih n (Nat.lt_succ_self n) k ss (mitRuf u fn x head.callee ty)
+        (fT.mitTy x ty) (ns.push x) q rest ys restZ used hctx (hS.bindRuf x head.callee hsh hType he) hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _),
         .bindCall _ _ _ _ _ _ (fun t p hp => hframe t p (fun hm => hp (hsub _ hm))) IH.2.2⟩
     case setVar x v =>
@@ -177,12 +190,18 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
-    case assign | assignTab | assignGlob | assignGlobB | call =>
+    case setVarOpt x num v =>
+      obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨id, eT, -, -, rfl, rfl, rfl⟩ := schrittB_setVarOpt hstepT
+      obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
+      have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
+      exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), .bindName _ _ _ IH.2.2⟩
+    case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
       obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstepT (by exact True.intro)
       obtain ⟨hx, -, -⟩ := schrittB_stmt hstepN (fun _ _ _ h => by cases h)
         (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-        (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+        (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowSeq_einzeln_ok hlow (by exact True.intro)
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hq hys hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _),
@@ -227,6 +246,14 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         case wert sd =>
           simp only [retZ] at hbT
           cases hse : namedSide u fT ns sd with
+          | none => rw [hse] at hbT; cases hbT
+          | some e =>
+            rw [hse] at hbT
+            simp only [Option.map_some, Option.some.injEq] at hbT
+            exact ⟨_, hbT.symm⟩
+        case opt v =>
+          simp only [retZ] at hbT
+          cases hse : namedOption u fT ns v with
           | none => rw [hse] at hbT; cases hbT
           | some e =>
             rw [hse] at hbT

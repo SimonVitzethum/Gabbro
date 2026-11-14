@@ -17,9 +17,30 @@ def valueParamTy (f : UFn) (name : String) : Option Ty :=
   match f.params.find? (fun q => q.1 == name) with
   | some (_, ty@(.prod ..)) => some ty
   | some (_, .bool) => some .bool
+  | some (_, ty@(.opt _)) => some ty
   | some (_, ty@(.why _)) => some ty
   | some (_, ty@(.sum _)) => some ty
   | _ => none
+
+/-- The name of the table a pointer parameter points at. -/
+def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
+  match f.params.find? (fun q => q.1 == p) with
+  | some (_, .ptr ⟨_, _, .table t⟩) => (u.tabs[t]?).map (·.name)
+  | _ => none
+
+def idxExpr : UIdx → Expr
+  | .lit n => .lit (.int n)
+  | .param p => .name p
+
+/-- Read optional table indices with the same places as ordinary slot reads. The
+    canonical lowerer checks the table identity and index bounds. -/
+def optionExpr (u : UProg) (f : UFn) : UOpt → Option Expr
+  | .nichts => some (.lit .absent)
+  | .etwas ix => some (.someOf (idxExpr ix))
+  | .var x => some (.name x)
+  | .slot p fld ix => (ptrTab u f p).map (fun t => .place t (idxExpr ix) fld)
+  | .tab t fld ix => some (.place t (idxExpr ix) fld)
+  | .glob _ => none
 
 /-- Project a named field using the canonical nominal schema and typed position. -/
 def recordProject (u : UProg) (base : Option (Option Ty × Expr)) (name : String) :
@@ -35,6 +56,7 @@ mutual
 def shapeOfTy : Ty → Option Shape
   | .int lo hi => some (.intIn lo hi)
   | .bool => some .bool
+  | .opt _ => some .opt
   | .prod _ fs => (shapesOfTys fs).map Shape.record
   | _ => none
 termination_by structural ty => ty

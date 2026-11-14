@@ -118,7 +118,16 @@ open GabbroDuty.Duty0130DerivedContractPure
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
-  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;> simp [shapeOf, shapeOfUG, shapeOfU, globShape, globIdx, slotShape, u]
+  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;> simp [shapeOf, shapeOfUG, shapeOfU, globShape, globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.boolFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.optFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u]
 
 theorem wfU_eq : wfU u = wellFormed := by
   funext s; unfold wfU wellFormed; rw [shape_eq]

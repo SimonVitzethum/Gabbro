@@ -120,29 +120,19 @@ theorem wf_t0 : wfU uZ t0 := by
   intro p sh hp
   cases p with
   | slot c k fld =>
-    obtain ⟨t, _, hf⟩ := slotShape_tabIdx _ c fld sh hp
-    have ht : t = ⟨0, by decide⟩ := Fin.ext (by
-      have := t.isLt
-      simp [uZ] at this
-      show t.val = 0
-      omega)
-    subst ht
-    by_cases hv : fld = "v"
-    · subst hv
-      have e : sh = .intIn 0 10 := by
-        have h2 : ((uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == "v")).map
-            (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some (.intIn 0 10) := rfl
-        rw [h2] at hf
-        exact (Option.some.inj hf).symm
-      subst e
-      rfl
-    · have h2 : (uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == fld) = none := by
-        show [("v", ((0 : Int), (10 : Int)))].find? (fun q => q.1 == fld) = none
-        simp only [List.find?]
-        have : ("v" == fld) = false := by simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hv e.symm
-        rw [this]
-      rw [h2] at hf
-      cases hf
+    by_cases hc : c = "T"
+    · subst c
+      by_cases hf : fld = "v"
+      · subst fld
+        have hs : sh = .intIn 0 10 := by
+          simpa [wfU, shapeOfUG, shapeOfU, fieldIndex, shapeOfTy,
+            tabIdx, fieldAtPos, fieldPos, typAt, boolFeldAt, optFeldAt,
+            optNumAt, wertFeldAt, fieldRangeO, tabAt, fieldCount, uZ] using hp.symm
+        subst sh
+        rfl
+      · simp [shapeOfUG, shapeOfU, fieldIndex, tabIdx, fieldAtPos, tabAt, uZ,
+          hf, Ne.symm hf] at hp
+    · simp [shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
   | field c n => simp [shapeOfUG, shapeOfU] at hp
   | global n => simp [shapeOfUG, globShape, globIdx, uZ] at hp
 

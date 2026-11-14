@@ -59,6 +59,16 @@ theorem namedEnd_rets {fn : UFn} {ns : BodyNames} {r : URet} {eB : List Gabbro.B
       subst h
       simp at hx
       exact ⟨e, hx⟩
+  case opt v =>
+    simp only [namedEnd] at h
+    cases hs : namedOption u fn ns v with
+    | none => rw [hs] at h; cases h
+    | some e =>
+      rw [hs] at h
+      simp only [Option.map_some, Option.some.injEq] at h
+      subst h
+      simp at hx
+      exact ⟨e, hx⟩
   all_goals simp only [namedEnd, reduceCtorEq] at h
 
 end Gabbro.Bruecke

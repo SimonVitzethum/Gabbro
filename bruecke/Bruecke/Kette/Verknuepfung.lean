@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Schleife.Verknuepfung
 public import Bruecke.Anweisung.Lokal.BoolScope
+public import Bruecke.Anweisung.Option.Scope
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -79,6 +80,19 @@ theorem blockZiel_bindB_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (decl
     BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
   simpa only [BlockZiel_G, execBlockZ_bind, List.singleton_append] using
     ausgangZiel_schrumpf (Strecke_G.schritt hstep hgz) (fun _ _ hl => hl.tailB) h
+
+theorem blockZiel_bindOpt_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
+    {num : Nat} {cnt : Int}
+    {e : Expr (declOf u) Γ Λ (.opt cnt)} {rest : Block (declOf u) (verOf u c) loopMode ((.opt cnt) :: Γ) Λ Λ'}
+    {σ : World (declOf u)} {ρ : Env (declOf u) Γ} {s s₁ : Gabbro.Body.State}
+    {x : Gabbro.Body.Stmt} {ys : List Gabbro.Body.Stmt} {y id : String}
+    (hstep : ∀ ρB, RahmenAlleC u C ρB → Gabbro.Body.step ρB x s = .running s₁)
+    (hgz : ∀ w', gz w' s.world ≤ gz w' s₁.world)
+    (h : BlockZiel_G u C c O passes R (fn.mitOpt y num cnt) (id :: ids) rest (σ.lese Λ e.orte)
+      (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) s₁ ys) :
+    BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
+  simpa only [BlockZiel_G, execBlockZ_bind, List.singleton_append] using
+    ausgangZiel_schrumpf (Strecke_G.schritt hstep hgz) (fun _ _ hl => hl.tailOpt) h
 
 theorem laufZiel_strecke_G {Γ Γ₁ : Ctx} {Λ Λ₁ : List (Res (declOf u))}
     {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}

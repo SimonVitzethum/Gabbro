@@ -1,4 +1,6 @@
 module
+public import Bruecke.Anweisung.Option.Kopf
+public import Bruecke.Anweisung.Option.Werte
 public import Bruecke.Kette.RahmenBlock
 public import Bruecke.Kette.Ende.Rahmen
 public import Bruecke.Anweisung.Match.Kopf
@@ -73,6 +75,15 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           (fT.mitBindungB x) (ns.push x) rest bs'
           (by rw [mitBindungB_ctx]; exact congrArg (List.cons _) hΓ)
           (hS.bindB x) hmemss hrest hbs' hFss)
+      case bindOpt x num v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨hn, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindOpt hstep0
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindOpt_ok c (hn := hn) hlow
+        exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩))
+          (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest bs'
+          (by rw [mitOpt_ctx]; exact congrArg (List.cons _) hΓ)
+          (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hrest hbs' hFss)
       case loopBeg x tab inv =>
         obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow
@@ -189,20 +200,22 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
         obtain ⟨head, ty, he, hr, q, hk, hq, rfl⟩ := lowBodyF_bindCall_ok hlow
         obtain ⟨ht, sh, hsh⟩ := resultCall_type hk he hb
         subst bt
-        rw [mitRuf_scalar fn x head.callee hsh] at hq
         obtain ⟨gf, raw, es, _, hgf, _, _, _, _, rfl⟩ := namedResult_some hb
         obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
         have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
         rw [hf] at hgf
         cases hgf
-        have hctx : ty :: Γ = (fn.mitTy x ty).params.map (·.2) := by
-          cases ty
-          case int | bool | prod => exact congrArg (List.cons _) hΓ
-          all_goals cases hsh
+        obtain ⟨hidx, _, _⟩ := lowRufKopf_ok hk
+        have hcallee : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hidx
+        have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hcallee
+        have hType := (S.boolErg head.callee hd).1
+        have hctx : ty :: Γ = (mitRuf u fn x head.callee ty).params.map (·.2) := by
+          rw [mitRuf_params fn x head.callee hType he, mitTy_params]
+          exact congrArg (List.cons _) hΓ
         have hsub := lowRufKopf_writes S hc hk (CallsIn.bind hhead)
         have hframe := hF g (fnAt u head.callee) hf ⟨args, CallsIn.bind (List.mem_cons_self ..)⟩
-        have IH := statisch_G S c hc ρB r n k ss (fn.mitTy x ty)
-          (fT.mitTy x ty) (ns.push x) q ys hctx (hS.bindTy x hsh) hmemss hq hys hFss
+        have IH := statisch_G S c hc ρB r n k ss (mitRuf u fn x head.callee ty)
+          (fT.mitTy x ty) (ns.push x) q ys hctx (hS.bindRuf x head.callee hsh hType he) hmemss hq hys hFss
         exact .bindCall _ _ _ _ _ _ (fun t p hp => hframe t p (fun hm => hp (hsub _ hm))) IH
       case setVar x v =>
         obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
@@ -218,13 +231,20 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
         obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ :=
           lowBodyF_cons_ok c r (.setVarB x v) ss trivial hlow
         exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss fn _ _ rest bs' hΓ hS hmemss hrest hbs' hFss)
-      case assign | assignTab | assignGlob | assignGlobB | call =>
+      case setVarOpt x num v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨id, eT, -, -, rfl, rfl, rfl⟩ := schrittB_setVarOpt hstep0
+        obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ :=
+          lowBodyF_cons_ok c r (.setVarOpt x num v) ss trivial hlow
+        exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss fn _ _ rest bs' hΓ hS hmemss hrest hbs' hFss)
+      case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
         obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
           stmtsBodyZ_schritt_some hbs (by exact True.intro)
         obtain ⟨hstepN, rfl, rfl⟩ := schrittB_einzeln_sicht hS hstep0 (by exact True.intro)
         obtain ⟨hx, -, -⟩ := schrittB_stmt hstepN (fun _ _ _ h => by cases h)
           (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-          (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+          (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
         obtain ⟨Λ', gst, rest, hgst, hrest, rfl⟩ :=
           lowBodyF_cons_ok c r _ ss (by exact True.intro) hlow
         exact statisch_schritt_G S c hc ρB hΓ _ ss hhead hgst hx hF

@@ -76,6 +76,10 @@ theorem slotPlace_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : USide) :
     slotPlace u fT s = slotPlace u fn s := by
   cases s <;> simp [slotPlace, h.2.1]
 
+theorem optionExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (v : UOpt) :
+    optionExpr u fT v = optionExpr u fn v := by
+  cases v <;> simp only [optionExpr, h.2.1]
+
 mutual
 theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
     numericSideExprG u fT sd = numericSideExprG u fn sd := by
@@ -106,10 +110,11 @@ theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
   cases sd with
   | param p => simp only [recordRead, h.2.2.2.2 p, numericSideExprG_sicht h]
   | product id order fields => simp only [recordRead, recordReads_sicht h fields]
+  | present n value => simp only [recordRead, recordRead_sicht h value]
   | field base name => simp only [recordRead, recordRead_sicht h base]
   | replace base name value =>
       simp only [recordRead, recordRead_sicht h base, recordRead_sicht h value]
-  | _ => simp only [recordRead, numericSideExprG_sicht h]
+  | _ => simp only [recordRead, numericSideExprG_sicht h, optionExpr_sicht h]
 termination_by 3 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
@@ -169,6 +174,7 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     have hx := recurse x (by simp_wf <;> omega)
     simp only [ensExpr]
     rw [hx a]
+  | istSome v num => simp only [ensExpr, optionExpr_sicht h]
   | _ => rfl
 termination_by sizeOf e
 decreasing_by assumption
@@ -180,7 +186,7 @@ theorem rawCond_sicht {fT fn : UFn} (h : Sicht u fT fn) (c : UEns) :
 
 theorem argExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (a : UArg) :
     argExpr u fT a = argExpr u fn a := by
-  cases a <;> simp only [argExpr, rawCond, ensExpr_sicht h, h.2.2.1, sideExprG_sicht h]
+  cases a <;> simp only [argExpr, rawCond, ensExpr_sicht h, h.2.2.1, sideExprG_sicht h, optionExpr_sicht h]
 
 theorem argsExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) :
     ∀ as : List UArg, argsExpr u fT as = argsExpr u fn as
@@ -189,7 +195,7 @@ theorem argsExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) :
 
 theorem stmtBody_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : UStmt) :
     stmtBody u fT s = stmtBody u fn s := by
-  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h, rawCond_sicht h]
+  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h, rawCond_sicht h, optionExpr_sicht h]
 
 
 end Gabbro.Bruecke

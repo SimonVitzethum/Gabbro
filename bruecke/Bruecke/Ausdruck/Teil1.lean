@@ -155,8 +155,7 @@ theorem wrel_lies {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u �
     (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
     (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int) :
     w (.slot c k fld) = valOf ((declOf u).typ t fh.idx) (σ.slots t k fh.idx) := by
-  apply hW
-  simp only [slotWert, ht, hf]
+  exact wrel_lies_k u hW c t ht fld fh hf k
 
 /-- The pointer parameter the lowering resolves names, in `Pflichten.ptrTab`, its table. -/
 theorem ptrTab_of (fn : UFn) (hA : ArtStimmt fn) (b : String) (j num : Nat) (w : Bool)

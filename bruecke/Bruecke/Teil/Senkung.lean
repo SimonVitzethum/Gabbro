@@ -50,7 +50,7 @@ theorem gesenkt_of_teil {P : Programm (declOf u)} {fs : List (declOf u).Fn}
 theorem post_iff_teil {P : Programm (declOf u)} (G : GesenktC u C P) (f : Fin u.fns.length) (hf : C f)
     (hA : ArtStimmt (fnAt u f)) (hT : TabEindeutig u) (hN : NamenFrei (fnAt u f))
     (hO : OldsKurz u (fnAt u f)) (hD : PostDef u (fnAt u f))
-    (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+    (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
     (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WGRel u σ' s'.world) :

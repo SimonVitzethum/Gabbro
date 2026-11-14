@@ -172,10 +172,18 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
   | .globB g, a, a', x, h => by
       obtain ⟨_, _, _, _, rfl⟩ := ensExpr_globB h
       exact Vor.refl _
+  | .istSome v num, a, a', x, h => by
+      simp only [ensExpr] at h
+      cases hr : optionExpr u fn v with
+      | none => simp [hr] at h
+      | some e =>
+        simp only [hr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨_, rfl⟩ := h
+        exact Vor.refl _
   -- All other predicates are outside the Body fragment (`ensExpr` returns `none`).
   | .slotB .., _, _, _, h | .tabB .., _, _, _, h
   | .alle .., _, _, _, h | .einige .., _, _, _, h
-  | .ergB, _, _, _, h | .istSome .., _, _, _, h
+  | .ergB, _, _, _, h
   | .held .., _, _, _, h | .imp .., _, _, _, h
   | .reach .., _, _, _, h | .member .., _, _, _, h
   | .filtered .., _, _, _, h | .arrayElements .., _, _, _, h => by cases h
