@@ -33,6 +33,28 @@ theorem RufLaufG.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Fad
     RufLaufG P O passes f M M' :=
   RufLaufG.schritt h (RufLaufG.refl M')
 
+/-- A nonempty run exposes its first step for progress, while return
+    simulation can include any number of mandatory scope exits. -/
+def RufLaufG.Pos (P : Programm D) (O : Orakel D) (passes : Nat) (f : Faden)
+    (M M' : RufMaschineG D) : Prop :=
+  ∃ M1, RufSchrittG P O passes M f M1 ∧ RufLaufG P O passes f M1 M'
+
+theorem RufLaufG.Pos.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') :
+    RufLaufG.Pos P O passes f M M' := ⟨M', h, .refl M'⟩
+
+theorem RufLaufG.Pos.lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufLaufG.Pos P O passes f M M') :
+    RufLaufG P O passes f M M' := by
+  obtain ⟨M1, hs, hl⟩ := h
+  exact .schritt hs hl
+
+theorem RufLaufG.Pos.erster {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufLaufG.Pos P O passes f M M') :
+    ∃ M1, RufSchrittG P O passes M f M1 := by
+  obtain ⟨M1, hs, _⟩ := h
+  exact ⟨M1, hs⟩
+
 /-- A step of thread `f` leaves every other thread untouched. -/
 theorem rufSchrittG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
     {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') (g : Faden) (hg : g ≠ f) :

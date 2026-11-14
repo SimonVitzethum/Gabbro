@@ -124,7 +124,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
     rw [hZ7.spur, geOffen_fragt, h60]; exact hoff5
   -- return `x == y`, which is `true`
   obtain ⟨M8, s8, hG8⟩ := w_dannRetP (P := geP) (O := geO) (passes := 0) e7 _ _ rfl
-    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (geHgLg (geHoff_e e7 hoff7)).heldIn
+    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (geHgLg (geHoff_e e7 hoff7)).heldIn (by trivial)
   have hr8 : RufErreichbarG geP geO 0 (RufStartG geP geSp geInit) M8 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _
       (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3) s4) s5) s6) s7) s8

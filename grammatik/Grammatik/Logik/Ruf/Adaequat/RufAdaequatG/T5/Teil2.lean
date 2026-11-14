@@ -154,10 +154,10 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have hW := hZ.welt
       simp only [execStmt, Ausgang.zurueck.injEq] at hex
       obtain ⟨rfl, rfl⟩ := hex
-      obtain ⟨M1, hs1, hG⟩ := w_dannRet (P := P) (O := O) (passes := passes) hZ.1
+      obtain ⟨M1, hs1, hG⟩ := lauf_dannRet (P := P) (O := O) (passes := passes) hZ.1
         caller rst rfl e hperm rest k ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
-      exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
+      exact ⟨M1, hs1.lauf, hG⟩
   | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -440,10 +440,10 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have hW := hZ.welt
       simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.zurueck.injEq] at hex
       obtain ⟨rfl, rfl⟩ := hex
-      obtain ⟨M1, hs1, hG⟩ := w_dannRet (P := P) (O := O) (passes := passes) hZ.1
+      obtain ⟨M1, hs1, hG⟩ := lauf_dannRet (P := P) (O := O) (passes := passes) hZ.1
         caller rst rfl e hperm .nil k ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
-      exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
+      exact ⟨M1, hs1.lauf, hG⟩
   | _, _, _, .retWhy .., he => by cases he
   | _, _, _, .retScoped .., he => by cases he
   | _, _, _, .retWhyScoped .., he => by cases he

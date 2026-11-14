@@ -319,13 +319,13 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
             | cons caller rst =>
                 obtain ⟨ziel, hart⟩ := popArt_von hst hkt
-                exact fort_schritt (w_dannRetP rfl caller rst hst hart e hp rest k ρ hx hΛ)
+                exact fort_lauf (lauf_dannRetP rfl caller rst hst hart e hp rest k ρ hx hΛ)
         | retWhy r hp =>
             cases hst : (M.faeden t).stapel with
             | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
             | cons caller rst =>
                 obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
-                exact fort_schritt (w_dannRetGrundP rfl caller rst hst hart r hp rest k ρ hx hΛ)
+                exact fort_lauf (lauf_dannRetGrundP rfl caller rst hst hart r hp rest k ρ hx hΛ)
         | retScoped e R =>
             simp only [Block.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
             exact fort_schritt' (w_scopedWert ρ _ e R hx rfl hScope.1 hΛ hkt)

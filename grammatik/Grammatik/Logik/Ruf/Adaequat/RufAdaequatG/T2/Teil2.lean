@@ -341,14 +341,33 @@ theorem w_dannRet {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ret e hperm) rest) k⟩)
-    (hΛ : HeldIn Λ (offen z.spur)) (hnw : caller.wartend = false) :
+    (hΛ : HeldIn Λ (offen z.spur)) (hnw : caller.wartend = false) (hniedrig : k.keinNiedrig) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       GepopptG M' f caller rst z.kopf.f z.kopf.rho z.kopf.s0 z.log
         (evalErg ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ)
         ((M.weltVon f).lese Λ e.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannRet M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ
-    _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw (GRest.keinNiedrig_alt _), gepopptG_neu rfl rfl⟩
+    _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw hniedrig, gepopptG_neu rfl rfl⟩
+
+/-- Return simulation follows a nonempty run, including the scope exits
+    that precede delivery. The one-step helper requires its explicit guard. -/
+theorem lauf_dannRet {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+    (hpop : z.stapel = caller :: rst) {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (e : ErgExpr D Γ Λ (vertragVon D z.kopf.f).erg)
+    (hperm : Λ.Perm (vertragVon D z.kopf.f).ende)
+    (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ret e hperm) rest) k⟩)
+    (hΛ : HeldIn Λ (offen z.spur)) (hnw : caller.wartend = false) :
+    ∃ M', RufLaufG.Pos P O passes f M M' ∧
+      GepopptG M' f caller rst z.kopf.f z.kopf.rho z.kopf.s0 z.log
+        (evalErg ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ)
+        ((M.weltVon f).lese Λ e.orte) := by
+  obtain ⟨M', hs, hg⟩ := w_dannRet (P := P) (O := O) (passes := passes) hz
+    caller rst hpop e hperm rest k ρ hhead hΛ hnw (GRest.keinNiedrig_alt _)
+  exact ⟨M', RufLaufG.Pos.einzeln hs, hg⟩
 
 end Schritte
 

@@ -40,6 +40,13 @@ theorem fort_schritt {M : RufMaschineG D} {t : Faden} {X : RufMaschineG D → Pr
   obtain ⟨M', hs, _⟩ := h
   exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨M', hs⟩)))))
 
+/-- A nonempty simulation run supplies an actual next step for progress. -/
+theorem fort_lauf {M : RufMaschineG D} {t : Faden} {X : RufMaschineG D → Prop}
+    (h : ∃ M', RufLaufG.Pos P O passes t M M' ∧ X M') : FortFaden P O passes M t := by
+  obtain ⟨M', hl, _⟩ := h
+  obtain ⟨M1, hs⟩ := hl.erster
+  exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨M1, hs⟩)))))
+
 theorem fort_schritt' {M : RufMaschineG D} {t : Faden}
     (h : ∃ M', RufSchrittG P O passes M t M') : FortFaden P O passes M t :=
   Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr h)))))
