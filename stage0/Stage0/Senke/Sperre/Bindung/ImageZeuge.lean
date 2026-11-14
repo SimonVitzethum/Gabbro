@@ -31,8 +31,9 @@ def image (environment : String) : Except String (Bild WartenProbe.D) :=
 
 set_option maxRecDepth 100000 in
 /-- Both actual images build, contain the nonempty scoped-lock function, and
-    retain the selected binding after relocation. Startup syscalls are outside
-    this statement about their lock code. -/
+    retain the selected binding after relocation. The complete Linux image has
+    exactly four more syscall instructions: one wait and three scoped release
+    paths. Startup syscalls occur equally in both images. -/
 theorem image_binding_zeuge :
     (image "freestanding").isOk = true ∧ (image "linux").isOk = true ∧
     ((image "freestanding").toOption.map fun b =>
@@ -41,7 +42,9 @@ theorem image_binding_zeuge :
     ((image "linux").toOption.map fun b =>
       b.Y.lockWait == .futex && decide (86 < b.code.length) &&
       decide ((nimmT b.Y (b.Y.lk lock) 4)[26]?.map (·.o) = some 23) &&
-      decide ((gibT b.Y (b.Y.lk lock) 4)[15]?.map (·.o) = some 23)) = some true := by
+      decide ((gibT b.Y (b.Y.lk lock) 4)[15]?.map (·.o) = some 23)) = some true ∧
+    ((image "linux").toOption.map fun b => (b.code.filter fun i => i.o == 23).length) =
+      ((image "freestanding").toOption.map fun b => (b.code.filter fun i => i.o == 23).length + 4) := by
   decide
 
 end Gabbro.Stage0.Senke.WaitBindingWitness
