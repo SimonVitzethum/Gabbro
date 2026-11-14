@@ -187,9 +187,9 @@ termination_by structural arms
 theorem kostenGrundArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) :
     kostenGrundArms ep (fun (g : Option D.Fn) => g.elim 0 c) pa (ruGArms arms) = kostenGrundArms ep c pa arms := by
-  cases arms with
-  | nil => rfl
-  | cons b rest =>
+  match arms with
+  | .nil => rfl
+  | .cons b rest =>
     exact cost_congr₂ max (kostenBlock_ru b) (kostenGrundArms_ru rest)
 termination_by structural arms
 
