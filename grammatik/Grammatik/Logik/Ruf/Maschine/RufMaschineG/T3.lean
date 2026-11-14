@@ -71,21 +71,43 @@ inductive RufErreichbarG (P : Programm D) (O : Orakel D) (passes : Nat)
       (h : RufErreichbarG P O passes M0 M) (hs : RufSchrittG P O passes M f M') :
       RufErreichbarG P O passes M0 M'
 
-/-- Ordinary language steps cannot create or replace authority. In particular
-    a foreign World answer cannot alter the separate shared context ledger. -/
-theorem rufSchrittG_kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
-    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG P O passes M f M') :
+/-- These groups contain ordinary language transitions. Authority entry and
+    exit belong to their own group; the existing groups cannot mint, replace
+    or revoke authority through a foreign World answer. -/
+theorem RufSchrittG1.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG1 P O passes M f M') :
     M'.kontexte = M.kontexte := by
-  (rcases step with h | h | h | h | h | h | h <;> cases h) <;> rfl
+  cases step <;> rfl
 
-/-- Every ordinary run retains the actual entry ledger, including its span
-    generations. View/loan entry and exit rules will name their updates. -/
-theorem rufErreichbarG_kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
-    {M0 M : RufMaschineG D} (run : RufErreichbarG P O passes M0 M) :
-    M.kontexte = M0.kontexte := by
-  induction run with
-  | start => rfl
-  | schritt _ _ _ _ hs ih => exact (rufSchrittG_kontexte hs).trans ih
+theorem RufSchrittG2.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG2 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
+
+theorem RufSchrittG3.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG3 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
+
+theorem RufSchrittG4.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG4 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
+
+theorem RufSchrittG5.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG5 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
+
+theorem RufSchrittG6.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG6 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
+
+theorem RufSchrittG7.kontexte {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M M' : RufMaschineG D} {f : Faden} (step : RufSchrittG7 P O passes M f M') :
+    M'.kontexte = M.kontexte := by
+  cases step <;> rfl
 
 /-! ## 5. Matching entries and returns: the call-log invariant -/
 
