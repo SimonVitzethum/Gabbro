@@ -18,6 +18,8 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
     funext g
     rw [Bool.eq_iff_iff]
     cases g <;> simp [Option.elim, List.contains_iff_mem]
+  have members' : ∀ g, (ks.map some).contains g = g.elim false (ks.contains ·) :=
+    fun g => congrFun members g
   unfold haltPasst at h ⊢
   obtain ⟨costs, sections⟩ := Bool.and_eq_true_iff.mp h
   apply Bool.and_eq_true_iff.mpr
@@ -27,7 +29,8 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
     intro g hg
     obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hg
     have row := List.all_eq_true.mp costs f hf
-    erw [members, HaltRuhe.kostenEpilog_mitRuhe]
+    simp only [members']
+    erw [HaltRuhe.kostenEpilog_mitRuhe]
     dsimp only [Programm.mitRuhe]
     erw [HaltRuhe.kostenEnd_umΛ, HaltRuhe.kostenEnd_ru,
       HaltRuhe.rufeE_umΛ, HaltRuhe.rufeE_ru]
@@ -39,7 +42,8 @@ theorem haltPasst_mitRuhe [DecidableEq D.Fn] (P : Programm D) (passes : Nat)
       rfl
     · obtain ⟨f, hf, rfl⟩ := List.mem_map.mp user
       have row := List.all_eq_true.mp sections f hf
-      erw [members, HaltRuhe.kostenEpilog_mitRuhe]
+      simp only [members']
+    erw [HaltRuhe.kostenEpilog_mitRuhe]
       dsimp only [Programm.mitRuhe]
       erw [HaltRuhe.haltE_umΛ, HaltRuhe.haltE_ru]
       exact row
