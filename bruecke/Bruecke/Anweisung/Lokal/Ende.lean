@@ -199,7 +199,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
                       (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
                     simp only [Gabbro.Body.exec, Gabbro.Body.step, hv,
                       Gabbro.Body.finalState, Gabbro.Body.finalValue]
-                    exact ⟨rfl, congrArg some hval⟩
+                    exact ⟨trivial, congrArg some hval⟩
                 · cases hE
               · cases hE
             · cases hE
