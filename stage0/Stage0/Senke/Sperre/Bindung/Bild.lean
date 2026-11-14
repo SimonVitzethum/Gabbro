@@ -52,7 +52,8 @@ theorem ticket_futex_syscalls {D : Deklaration} (L : Lay D) (a s : Nat)
     (nimmT L a s)[26]? = some (ci 23 ((s + 17 : Nat) : Int) ((s + 10 : Nat) : Int) 0) ∧
     (gibT L a s)[15]? = some (ci 23 ((s + 17 : Nat) : Int) ((s + 10 : Nat) : Int) 0) ∧
     (gibT L a s)[11]? = some (ci 1 ((s + 13 : Nat) : Int) 2147483647 0) := by
-  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC,
+    Int.add_assoc]
 
 end Gabbro.Stage0.Senke
 
