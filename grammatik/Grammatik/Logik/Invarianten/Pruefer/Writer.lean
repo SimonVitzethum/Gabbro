@@ -34,6 +34,52 @@ theorem atomicFreeB_sound (program : Programm D) (f : D.Fn)
   have fact := List.all_eq_true.mp accepted (.inr name) member
   simp only [atom, Bool.not_true, Bool.false_eq_true] at fact
 
+/-- Exact replay of the actual body, uniformly in handlers and atomic rely.
+    This certificate says nothing about truth of requires or ensures. -/
+def AtomicReplay (program : Programm D) (f : D.Fn) : Prop :=
+  ∀ (S : SperrInv D) (O : Orakel D), RegLokal O → ∀ (U : Umwelt D)
+    (A : AUmwelt D) (passes : Nat)
+    (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
+    (shared : D.Tab ⊕ D.Glob → Prop), HavocA shared A →
+    (∀ carrier, shared carrier → AtomarAusgenommen carrier) → ∀ world locals,
+    execEndHA S O U A passes R (program.rumpf f) world locals =
+      execEndH S O U passes R (program.rumpf f) world locals
+
+/-- `endblockOrteP` includes callee contract metadata. The replay theorem is
+    generic in that metadata: execution itself reads only call arguments. Use
+    empty metadata solely to compute executable reads; all contract checking
+    and every runtime handler retain the original program. -/
+private def executionFootprintProgram (program : Programm D) : Programm D :=
+  { program with requires := fun _ => .tru, ensures := fun _ => .tru
+    ptrVertrag := fun _ => { pre := .tru, post := .tru } }
+
+private theorem atomicReplay_of_footprint (program footprint : Programm D) (f : D.Fn)
+    (free : ∀ carrier ∈ endblockOrteP footprint (program.rumpf f),
+      ¬ AtomarAusgenommen carrier) : AtomicReplay program f := by
+  intro S O local U A passes R shared atomic subset world locals
+  exact Endblock.execHA_frei footprint S O U A passes R atomic local.2 _
+    (fun carrier member present => free carrier member (subset carrier present)) world locals
+
+/-- Keep the existing conservative gate, then admit the additional fragment
+    only with the same exact model replay theorem. Direct atomic reads remain
+    refused; a callee's logical contract is still checked independently. -/
+def atomicReplay? (program : Programm D) (f : D.Fn) : Option (PLift (AtomicReplay program f)) :=
+  if free : atomicFreeB program f = true then
+    some ⟨atomicReplay_of_footprint program program f (atomicFreeB_sound program f free)⟩
+  else
+    let footprint := executionFootprintProgram program
+    if free : (endblockOrteP footprint (program.rumpf f)).all
+        (fun carrier => match carrier with
+          | .inl _ => true
+          | .inr name => !D.atomar name) = true then
+      some ⟨atomicReplay_of_footprint program footprint f (by
+        intro carrier member atomic
+        obtain ⟨name, same, atom⟩ := atomic
+        subst carrier
+        have fact := List.all_eq_true.mp free (.inr name) member
+        simp only [atom, Bool.not_true, Bool.false_eq_true] at fact)⟩
+    else none
+
 /-- If requires cannot be translated here, check the invariant writer under
     true. The separate contract gate still refuses unsupported requires;
     forgetting its information never assumes an unproved fact. -/
@@ -79,7 +125,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
         rw [List.isEmpty_iff.mp empty.1] at inside
         exact False.elim (List.not_mem_nil inside)⟩
   else
-    if free : atomicFreeB program f = true then
+    if let some replay := atomicReplay? program f then
       let post ← invariantFormula program (D.invs.filter (fun item => schuldet f item))
       let domain ← environments (D := D) budget.expansion (D.params f)
       let checked ← collect domain.values
@@ -96,9 +142,7 @@ def checkWriter (program : Programm D) (S : SperrInv D) (sources : LockSources S
               evidence := frameOnlyEvidence program R respects
               environment := U, havoc := havoc }
           have valid := checked.down locals (domain.complete locals) runtime world requires
-          have noShared : ∀ carrier ∈ endblockOrteP program (program.rumpf f), ¬ shared carrier :=
-            fun carrier member present => atomicFreeB_sound program f free carrier member (subset carrier present)
-          rw [Endblock.execHA_frei program S O U A passes R atomic local.2 _ noShared] at returned
+          rw [replay.down S O local U A passes R shared atomic subset] at returned
           change EndFlow post.formula (execEndH S O U passes R (program.rumpf f) world locals) at valid
           rw [returned] at valid
           intro item member owed

@@ -37,7 +37,7 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
     (anchor : World D) (f : D.Fn)
     (checked : ∀ locals, CheckedEnvironment (S := S)
       (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) f locals)
-    (free : atomicFreeB program f = true)
+    (replay : AtomicReplay program f)
     (passes : Nat) (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop)
     (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier) :
     MassPflicht program passes Q S shared measure cycle f := by
@@ -63,7 +63,7 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
       | true => simp only [tested, obligation.2 tested, Bool.not_true, Bool.and_false]
     simp only [massTor, disabled, Bool.false_eq_true, ↓reduceIte] at reply
     exact fun g => noDecrease h next args g reply
-  have valid := checkedEnvironment_atomic policy f locals (checked locals) free shared subset
+  have valid := checkedEnvironment_atomic policy f locals (checked locals) replay shared subset
     O local passes U havoc A atomic (massTor measure (cycle f) entry R) gated
     (fun error => ∀ g, error ≠ Logik.abstieg g) errors world requires
   have same := measure.wert_welt f anchor world locals
@@ -78,7 +78,7 @@ def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources 
     Except Frag.Refusal (PLift (∀ passes Q shared,
       (∀ carrier, shared carrier → AtomarAusgenommen carrier) →
       MassPflicht program passes Q S shared measure cycle f)) := do
-  if free : atomicFreeB program f = true then
+  if let some replay := atomicReplay? program f then
     let domain ← environments (D := D) budget.expansion (D.params f)
     let invariants ← invariantFormula program (D.invs.filter (schuldet f))
     let executions ← collect domain.values
@@ -87,7 +87,7 @@ def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources 
       (fun locals => checkEnvironment program S
         (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) sources budget hint f invariants locals)
     return ⟨massPflicht_of_execution measure cycle anchor f
-      (fun locals => executions.down locals (domain.complete locals)) free⟩
+      (fun locals => executions.down locals (domain.complete locals)) replay.down⟩
   else .error (.unsupported "decreases body reads atomic memory outside the checked VC fragment")
 
 /-- Public Bool for the source decreases obligation of one function. -/

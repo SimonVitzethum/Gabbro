@@ -32,7 +32,7 @@ theorem respectsGate
 /-- P20's atomic-freedom gate transports the stronger WP to the rely
     semantics. No atomic read is silently treated as a sequential read. -/
 theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
-    (locals : Env D (D.params f)) (checked : CheckedEnvironment (S := S) policy f locals) (free : atomicFreeB program f = true)
+    (locals : Env D (D.params f)) (checked : CheckedEnvironment (S := S) policy f locals) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
     (O : Orakel D) (local : RegLokal O) (passes : Nat)
     (U : Umwelt D) (havoc : HavocOk S U) (A : AUmwelt D) (atomic : HavocA shared A)
@@ -48,13 +48,11 @@ theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
       evidence := frameOnlyEvidence program calls respects
       environment := U, havoc := havoc }
   have valid := checked runtime world allowed ⟨respects, errors⟩ requires
-  have noShared : ∀ carrier ∈ endblockOrteP program (program.rumpf f), ¬ shared carrier :=
-    fun carrier member present => atomicFreeB_sound program f free carrier member (subset carrier present)
-  rw [Endblock.execHA_frei program S O U A passes calls atomic local.2 _ noShared]
+  rw [replay S O local U A passes calls shared atomic subset]
   exact valid
 
 theorem checkedExecution_atomic (policy : CallPolicy program) (f : D.Fn)
-    (checked : CheckedExecution (S := S) policy f) (free : atomicFreeB program f = true)
+    (checked : CheckedExecution (S := S) policy f) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
     (O : Orakel D) (local : RegLokal O) (passes : Nat)
     (U : Umwelt D) (havoc : HavocOk S U) (A : AUmwelt D) (atomic : HavocA shared A)
@@ -65,7 +63,7 @@ theorem checkedExecution_atomic (policy : CallPolicy program) (f : D.Fn)
     (world : World D) (locals : Env D (D.params f)) (requires : ReqAmEintritt program f world locals) :
     EndPost program f world locals allowed
       (execEndHA S O U A passes calls (program.rumpf f) world locals) := by
-  exact checkedEnvironment_atomic policy f locals (checked locals) free shared subset
+  exact checkedEnvironment_atomic policy f locals (checked locals) replay shared subset
     O local passes U havoc A atomic calls respects allowed errors world requires
 
 /-- The contract part of (b), including call-site requires, value returns,
@@ -78,9 +76,9 @@ def ContractDuties (program : Programm D) (S : SperrInv D) (f : D.Fn) : Prop :=
 
 theorem contractDuties_of_execution (f : D.Fn)
     (checked : CheckedExecution (S := S) (requiresPolicy program) f)
-    (free : atomicFreeB program f = true) : ContractDuties program S f := by
+    (replay : AtomicReplay program f) : ContractDuties program S f := by
   intro passes Q shared subset
-  have run := checkedExecution_atomic (requiresPolicy program) f checked free shared subset
+  have run := checkedExecution_atomic (requiresPolicy program) f checked replay shared subset
   refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
   · intro O frame local hardware U havoc A atomic R respects noPre world locals requires
     constructor
@@ -122,9 +120,9 @@ theorem contractDuties_of_execution (f : D.Fn)
 def checkFunction (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
     Except Frag.Refusal (PLift (ContractDuties program S f)) := do
-  if free : atomicFreeB program f = true then
+  if let some replay := atomicReplay? program f then
     let execution ← checkExecution program S (requiresPolicy program) sources budget hint f
-    return ⟨contractDuties_of_execution f execution.down free⟩
+    return ⟨contractDuties_of_execution f execution.down replay.down⟩
   else .error (.unsupported "contract body reads atomic memory outside the checked VC fragment")
 
 end Gabbro.Grammatik.Vertraege.Pruefer
