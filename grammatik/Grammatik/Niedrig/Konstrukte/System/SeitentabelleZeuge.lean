@@ -21,7 +21,7 @@ theorem written_other_index (index : Nat) (different : index ≠ 0) :
   have nonzero : (index : Int) ≠ 0 := by omega
   change (if (index : Int) = 0 then (⟨42, by decide, by decide⟩ : Zahl 0 255)
     else before.slots false (index : Int) ()) = before.slots false (index : Int) ()
-  rw [if_neg nonzero]
+  exact if_neg nonzero
 
 theorem page_table_encoding_zeuge :
     PageTableEncodingDuty projectedTables before written 0 0 (.leaf 42 pagePermissions) := by
