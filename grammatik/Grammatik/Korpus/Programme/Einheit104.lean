@@ -260,7 +260,7 @@ private theorem image4_eq : P4 = {
     invariante := fun i => Fin.elim0 i
     requires := fun _ => .tru
     ensures := Fin.cases ensEin4 (Fin.cases ensLies4 Fin.elim0)
-    rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 Fin.elim0)
+    rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
     unterbricht := fun _ => false
     ptrVertrag := ptrVertragOf uExp104
     axVertrag := fun a => Fin.elim0 a } := by
@@ -271,7 +271,7 @@ private theorem image4_eq : P4 = {
     rcases fn_zwei f with rfl | rfl
     · exact ens_ein4
     · exact ens_lies4
-  have body : P4.rumpf = Fin.cases bodyEin4 (Fin.cases bodyLies4 Fin.elim0) := by
+  have body : P4.rumpf = Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
     funext f
     rcases fn_zwei f with rfl | rfl
     · exact rumpf_ein4

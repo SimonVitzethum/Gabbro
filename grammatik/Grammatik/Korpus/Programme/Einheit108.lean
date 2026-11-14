@@ -211,14 +211,14 @@ private theorem image8_eq : P8 = {
     invariante := fun i => Fin.elim0 i
     requires := fun _ => .tru
     ensures := fun _ => .tru
-    rumpf := Fin.cases bodyA8 (Fin.cases bodyC8 Fin.elim0)
+    rumpf := Fin.cases bodyA8 (Fin.cases bodyC8 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
     unterbricht := fun _ => false
     ptrVertrag := ptrVertragOf uExp108
     axVertrag := fun a => Fin.elim0 a } := by
   have inv : P8.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
   have req : P8.requires = fun _ => .tru := funext req8
   have post : P8.ensures = fun _ => .tru := funext ens8
-  have body : P8.rumpf = Fin.cases bodyA8 (Fin.cases bodyC8 Fin.elim0) := by
+  have body : P8.rumpf = Fin.cases bodyA8 (Fin.cases bodyC8 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
     funext f
     rcases fn_zwei f with rfl | rfl
     · exact rumpf_a8
