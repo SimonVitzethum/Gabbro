@@ -13,6 +13,10 @@ require runner from "../runner"
 @[default_target]
 lean_lib Stage0
 
+/-- Explicit review modules for bounded importer checks. -/
+lean_lib Stage0Review where
+  roots := #[`Nachpruefung.Teil1, `Nachpruefung.Teil2]
+
 @[default_target]
 lean_exe stage0 where
   root := `Stage0.Haupt
