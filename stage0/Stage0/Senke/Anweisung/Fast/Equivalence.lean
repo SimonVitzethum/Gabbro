@@ -29,7 +29,7 @@ theorem lowSFast_eq (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : Fram
     unfold lowSFast lowS
     simp only [lowEFast_eq, FrameCache.free_eq, FrameCache.slot_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .ite c t e => by
     have ht := fun ex => lowBFast_eq passes A L layout ens pr ex t reserved sc frame
     have he := lowBFast_eq passes A L layout ens pr ex e reserved sc frame
@@ -43,12 +43,12 @@ theorem lowSFast_eq (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : Fram
     unfold lowSFast lowS
     simp only [FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .ret .. => by
     unfold lowSFast lowS
     simp only [lowErgFast_eq, FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .breaking i body => by exact lowBFast_eq passes A L layout ens pr ex body reserved sc frame
   | .locks lk hr body => by
     have ih := lowBFast_eq passes A L layout ens pr (16 * 17, 16 * 34)
@@ -56,7 +56,7 @@ theorem lowSFast_eq (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : Fram
     unfold lowSFast lowS
     simp only [ih, FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .assignSlot .. => by rfl
   | .assignThru .. => by rfl
   | .assignGlob .. => by rfl
@@ -163,22 +163,22 @@ theorem lowEndFast_eq (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : Fr
     unfold lowEndFast lowEnd
     simp only [FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .next .. => by
     unfold lowEndFast lowEnd
     simp only [FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .retWhy .. => by
     unfold lowEndFast lowEnd
     simp only [FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .ret .. => by
     unfold lowEndFast lowEnd
     simp only [lowErgFast_eq, FrameCache.free_eq]
     split <;> rename_i guard <;>
-      simp only [guard, ↓reduceIte] <;> normalize_cached_code
+      (try simp only [guard, ↓reduceIte]) <;> normalize_cached_code
   | .cons s rest => by
     have hs := fun ex => lowSFast_eq passes A L layout ens pr ex s reserved sc frame
     have hr := lowEndFast_eq passes A L layout ens pr ex rest reserved sc frame
