@@ -5,6 +5,8 @@ public import Grammatik.Logik.Invarianten.Frag.Witness
 
 @[expose] public section
 
+set_option profiler true
+
 namespace Gabbro.Grammatik.Invarianten.VC.Witness
 
 open Frag Elim Elim.Korrekt Modell
