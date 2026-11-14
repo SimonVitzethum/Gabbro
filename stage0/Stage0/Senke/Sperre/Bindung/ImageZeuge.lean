@@ -2,6 +2,38 @@
    these complete programs belongs to this witness module, off the compiler path. -/
 module
 public import Stage0.Senke.Sperre.Bindung.Zeuge
+import all Init.Data.Int.Repr
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WaitBindingWitness
@@ -21,7 +53,7 @@ def image (environment : String) : Except String (Emitted (sourceText environmen
 theorem image_binding_present_zeuge :
     (image "freestanding").toOption.isSome = true ∧
     (image "linux").toOption.isSome = true := by
-  decide
+  decide +kernel
 
 def freestandingImage : Emitted (sourceText "freestanding") 1024 :=
   (image "freestanding").toOption.get image_binding_present_zeuge.1
@@ -40,7 +72,7 @@ theorem image_binding_zeuge :
     freestandingImage.image.code.length = linuxImage.image.code.length ∧
     (linuxImage.image.code.filter fun i => i.o == 23).length =
       (freestandingImage.image.code.filter fun i => i.o == 23).length + 4 := by
-  decide
+  decide +kernel
 
 /-- The generic production-image binding theorem has jointly satisfiable
     premises for both environments and an actual scoped-lock source program. -/
