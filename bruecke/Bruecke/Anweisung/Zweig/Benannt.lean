@@ -39,17 +39,20 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
           | _ => none
         | _ => none
   | k + 1, fn, ns, .loopBeg x tab .tru :: rest => do
-      if !loopWritesB rest then none else do
-        let t ← (tabIdx u.tabs tab).toOption
-        let (body, .blkEnd :: tail, used) ← seqZ u k
-          (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
-        let p ← seqZ u k fn (ns.resume used) tail
-        pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
+      let t ← (tabIdx u.tabs tab).toOption
+      let (body, .blkEnd :: tail, used) ← seqZ u k
+        (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
+      let p ← seqZ u k fn (ns.resume used) tail
+      pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
       let p ← seqZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail
       pure (narrowStep ns x lo hi e err :: p.1, p.2.1, p.2.2)
+  | k + 1, fn, ns, .leave _ :: rest =>
+      (seqZ u k fn ns rest).map (fun p => (.leave :: p.1, p.2.1, p.2.2))
+  | k + 1, fn, ns, .next _ :: rest =>
+      (seqZ u k fn ns rest).map (fun p => (.exit :: p.1, p.2.1, p.2.2))
   | k + 1, fn, ns, .ret r :: rest =>
       match retZ u fn ns r with
       | none => none
@@ -111,12 +114,11 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
         pure (.onOption e (ns.fresh x) pb ab :: ys)
       else none
   | k + 1, fn, ns, .loopBeg x tab .tru :: rest, r => do
-      if !loopWritesB rest then none else do
-        let t ← (tabIdx u.tabs tab).toOption
-        let (body, .blkEnd :: tail, used) ← seqZ u k
-          (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
-        let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
-        pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
+      let t ← (tabIdx u.tabs tab).toOption
+      let (body, .blkEnd :: tail, used) ← seqZ u k
+        (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
+      let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
+      pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest, r => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none

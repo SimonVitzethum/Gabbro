@@ -16,13 +16,13 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 /-! Answer-table stretches and returns whose environments owe frames only for carried functions. -/
 
 structure Strecke_G (u : UProg) (C : Fin u.fns.length → Prop) (A : List Eintrag) (s s' : Gabbro.Body.State)
-    (bs : List Gabbro.Body.Stmt) : Prop where
+    (bs : List Gabbro.Body.Stmt) (finish : Gabbro.Body.State → Gabbro.Body.Outcome := .running) : Prop where
   gut : ∀ e ∈ A, EintragGut u e
   oben : Oben u A s.world
   unten : Unten u A s'.world
   schluessel : Schluessel A
   mono : ∀ w, gz w s.world ≤ gz w s'.world
-  lauf : ∀ ρB, Treu A ρB → RahmenAlleC u C ρB → Gabbro.Body.exec ρB bs s = .running s'
+  lauf : ∀ ρB, Treu A ρB → RahmenAlleC u C ρB → Gabbro.Body.exec ρB bs s = finish s'
 
 abbrev RueckZ_G (u : UProg) (C : Fin u.fns.length → Prop) (A : List Eintrag) (s : Gabbro.Body.State) (bs : List Gabbro.Body.Stmt)
     (σ' : World (declOf u)) (v : Option Gabbro.Body.Value) : Prop :=
@@ -49,8 +49,9 @@ theorem Strecke_G.schritt {s s₁ : Gabbro.Body.State} {x : Gabbro.Body.Stmt}
     lauf := fun ρB _ hF => by simp only [Gabbro.Body.exec, hstep ρB hF] }
 
 theorem Strecke_G.append {A₁ A₂ : List Eintrag} {s s₁ s₂ : Gabbro.Body.State}
-    {xs ys : List Gabbro.Body.Stmt} (h₁ : Strecke_G u C A₁ s s₁ xs) (h₂ : Strecke_G u C A₂ s₁ s₂ ys) :
-    Strecke_G u C (A₁ ++ A₂) s s₂ (xs ++ ys) :=
+    {xs ys : List Gabbro.Body.Stmt} {finish : Gabbro.Body.State → Gabbro.Body.Outcome}
+    (h₁ : Strecke_G u C A₁ s s₁ xs) (h₂ : Strecke_G u C A₂ s₁ s₂ ys finish) :
+    Strecke_G u C (A₁ ++ A₂) s s₂ (xs ++ ys) finish :=
   { gut := fun e he => (List.mem_append.mp he).elim (h₁.gut e) (h₂.gut e)
     oben := fun e he => (List.mem_append.mp he).elim (h₁.oben e)
       (fun h => oben_mono h₁.mono h₂.oben e h)
@@ -117,30 +118,46 @@ theorem RueckZ_G.vor {A : List Eintrag} {s s₁ : Gabbro.Body.State} {x : Gabbro
   obtain ⟨s', e1, e2⟩ := hb ρB hT hF
   exact ⟨s', by rw [exec_cons_running ρB x ys s s₁ (hstep ρB hF)]; exact e1, e2⟩
 
+/-- Both loop-control channels retain the world, outer locals and sampled-call history. -/
+def controlG {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (leave : Bool) (hl : l = true) (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ :=
+  if leave then .leave hl σ ρ else .next hl σ ρ
+
+def controlB (leave : Bool) (s : Gabbro.Body.State) : Gabbro.Body.Outcome :=
+  if leave then .left s else .exited s
+
+/-- The pass relation includes every successful channel relevant to finite traversal.
+    Logic failures retain their originating carried call; hardware and reason failures
+    cannot be mistaken for normal completion. -/
+abbrev AusgangZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop)
+    (c : Fin u.fns.length)
+    (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
+    {Γ : Ctx} (fn : UFn) (ids : List String)
+    (out : Ausgang (verOf u c) loopMode Γ) (s : Gabbro.Body.State)
+    (bs : List Gabbro.Body.Stmt) : Prop :=
+  (∀ e, out = .logik e →
+    ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
+      C g ∧ R g σr envA = .logik e) ∧
+  (∀ σ' v, out = .zurueck σ' v →
+    ∃ A, RueckZ_G u C A s bs σ' (ergValOf (verOf u c).erg v)) ∧
+  (∀ σ' ρ', out = .ok σ' ρ' →
+    ∃ A s', Strecke_G u C A s s' bs ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local') ∧
+  (∀ leave hl σ' ρ', out = controlG leave hl σ' ρ' →
+    ∃ A s', Strecke_G u C A s s' bs (controlB leave) ∧
+      WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
+
 abbrev StmtZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} (fn : UFn) (ids : List String)
     (st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁) (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (x : Gabbro.Body.Stmt) : Prop :=
-  (∀ e, execStmt O passes R st σ ρ = .logik e →
-    ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
-      C g ∧ R g σr envA = .logik e) ∧
-  (∀ σ' v, execStmt O passes R st σ ρ = .zurueck σ' v →
-    ∃ A, RueckZ_G u C A s [x] σ' (ergValOf (verOf u c).erg v)) ∧
-  (∀ σ' ρ', execStmt O passes R st σ ρ = .ok σ' ρ' →
-    ∃ A s', Strecke_G u C A s s' [x] ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
+  AusgangZiel_G u C c R fn ids (execStmt O passes R st σ ρ) s [x]
 
 abbrev BlockZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} (fn : UFn) (ids : List String)
     (b : Block (declOf u) (verOf u c) loopMode Γ Λ Λ') (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (t : List Gabbro.Body.Stmt) : Prop :=
-  (∀ e, execBlock O passes R b σ ρ = .logik e →
-    ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
-      C g ∧ R g σr envA = .logik e) ∧
-  (∀ σ' v, execBlock O passes R b σ ρ = .zurueck σ' v →
-    ∃ A, RueckZ_G u C A s t σ' (ergValOf (verOf u c).erg v)) ∧
-  (∀ σ' ρ', execBlock O passes R b σ ρ = .ok σ' ρ' →
-    ∃ A s', Strecke_G u C A s s' t ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
+  AusgangZiel_G u C c R fn ids (execBlock O passes R b σ ρ) s t
 
 end Gabbro.Bruecke

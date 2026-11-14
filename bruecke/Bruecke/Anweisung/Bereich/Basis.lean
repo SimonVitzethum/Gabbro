@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Lokal.Benannt
 public import Bruecke.Anweisung.Lokal.Kopf
+public import Bruecke.Anweisung.Schleife.Basis
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -8,7 +9,7 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 
 /-- Ending branches currently carry ordinary leaf statements and an explicit return.
-    Bindings, structured control and nonlocal exits remain refused here by constructor. -/
+    Bindings and structured control remain refused here by constructor. -/
 def endLeafB : UStmt → Bool
   | .assign .. | .assignTab .. | .assignGlob .. | .assignGlobB .. | .call .. | .setVar .. | .setVarB .. => true
   | _ => false
@@ -22,6 +23,8 @@ def endBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
   | 0, _, _, _ => none
   | _ + 1, _, _, [] => none
   | _ + 1, fn, ns, .ret r :: rest => (retZ u fn ns r).map (fun b => ([b], rest))
+  | _ + 1, _, _, .leave _ :: rest => some ([.leave], rest)
+  | _ + 1, _, _, .next _ :: rest => some ([.exit], rest)
   | k + 1, fn, ns, st :: rest =>
       if endLeafB st then do
         let (b, _, _) ← schrittB u fn ns st

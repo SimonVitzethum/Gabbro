@@ -71,6 +71,7 @@ theorem endBodyZ_cases {k : Nat} {fn : UFn} {ns : BodyNames} {st : UStmt}
     {ss tail : List UStmt} {bs : List Gabbro.Body.Stmt}
     (h : endBodyZ u (k + 1) fn ns (st :: ss) = some (bs, tail)) :
     (∃ r b, st = .ret r ∧ retZ u fn ns r = some b ∧ bs = [b] ∧ tail = ss) ∨
+    (∃ leave x, st = controlU leave x ∧ bs = [controlStmtB leave] ∧ tail = ss) ∨
     (∃ b ys, endLeafB st = true ∧ schrittB u fn ns st = some (b, fn, ns) ∧
       endBodyZ u k fn ns ss = some (ys, tail) ∧ bs = b :: ys) := by
   have leaf (st : UStmt) (hleaf : endLeafB st = true)
@@ -102,11 +103,19 @@ theorem endBodyZ_cases {k : Nat} {fn : UFn} {ns : BodyNames} {st : UStmt}
       rw [hb] at h
       cases h
       exact .inl ⟨r, b, rfl, hb, rfl, rfl⟩
+  case leave x =>
+    simp only [endBodyZ, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact .inr (.inl ⟨true, x, rfl, rfl, rfl⟩)
+  case next x =>
+    simp only [endBodyZ, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact .inr (.inl ⟨false, x, rfl, rfl, rfl⟩)
   all_goals
     simp only [endBodyZ] at h
     split at h
     · rename_i hleaf
-      exact .inr (leaf _ hleaf h)
+      exact .inr (.inr (leaf _ hleaf h))
     · cases h
 
 /-- The unread tail is a suffix, including the marker after a mandatory return. -/
@@ -116,7 +125,8 @@ theorem endBodyZ_suffix : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List U
   | 0, _, _, _, _, _, h => by cases h
   | _ + 1, _, _, [], _, _, h => by cases h
   | k + 1, fn, ns, st :: ss, bs, tail, h => by
-    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨b, ys, _, _, hr, _⟩
+    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨leave, x, rfl, _, rfl⟩ | ⟨b, ys, _, _, hr, _⟩
+    · exact List.suffix_cons _ _
     · exact List.suffix_cons _ _
     · exact (endBodyZ_suffix k fn ns ss ys tail hr).trans (List.suffix_cons _ _)
 

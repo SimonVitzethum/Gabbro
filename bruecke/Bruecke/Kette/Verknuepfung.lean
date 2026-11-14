@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Strecke
+public import Bruecke.Anweisung.Schleife.Verknuepfung
 public import Bruecke.Anweisung.Lokal.BoolScope
 @[expose] public section
 
@@ -19,12 +19,14 @@ theorem blockZiel_nil_G {loopMode : Bool} {Γ : Ctx} {Λ : List (Res (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (hW : WGRel u σ s.world)
     (hL : PositionalLRel fn ids 0 ρ s.local') :
     BlockZiel_G u C c O passes R fn ids (Block.nil : Block (declOf u) (verOf u c) loopMode Γ Λ Λ) σ ρ s [] := by
-  refine ⟨fun e h => ?_, fun σ' v h => ?_, fun σ' ρ' h => ?_⟩
+  refine ⟨fun e h => ?_, fun σ' v h => ?_, fun σ' ρ' h => ?_, ?_⟩
   · rw [execBlockZ_nil] at h; cases h
   · rw [execBlockZ_nil] at h; cases h
   · rw [execBlockZ_nil] at h
     cases h
     exact ⟨[], s, Strecke_G.leer s, hW, hL⟩
+  · intro leave hl σ' ρ' h
+    cases leave <;> simp only [execBlock, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h
 
 theorem stmtZiel_of_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁} {blk : Block (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
@@ -33,15 +35,9 @@ theorem stmtZiel_of_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ : List (Res (declOf
     (hG : execStmt O passes R st σ ρ = execBlock O passes R blk σl ρ)
     (hB : ∀ ρB, Gabbro.Body.step ρB x s = Gabbro.Body.exec ρB tB s)
     (h : BlockZiel_G u C c O passes R fn ids blk σl ρ s tB) : StmtZiel_G u C c O passes R fn ids st σ ρ s x := by
-  refine ⟨fun e he => h.1 e (hG.symm.trans he), fun σ' v he => ?_, fun σ' ρ' he => ?_⟩
-  · obtain ⟨A, hg, ho, hk, hb⟩ := h.2.1 σ' v (hG.symm.trans he)
-    refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
-    obtain ⟨s', e1, e2⟩ := hb ρB hT hF
-    refine ⟨s', ?_, e2⟩
-    simp only [Gabbro.Body.exec, hB ρB, e1]
-  · obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ' (hG.symm.trans he)
-    refine ⟨A, s', { hS with lauf := fun ρB hT hF => ?_ }, hW, hL⟩
-    simp only [Gabbro.Body.exec, hB ρB, hS.lauf ρB hT hF]
+  unfold StmtZiel_G
+  rw [hG]
+  exact ausgangZiel_map h (fun ρB => by rw [Gabbro.Body.exec_singleton, hB])
 
 theorem blockZiel_cons_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ₁}
@@ -53,57 +49,12 @@ theorem blockZiel_cons_G {loopMode : Bool} {Γ : Ctx} {Λ Λ₁ Λ' : List (Res 
     BlockZiel_G u C c O passes R fn ids (Block.cons st rest) σ ρ s (x :: ys) := by
   cases hx : execStmt O passes R st σ ρ with
   | ok σ₁ ρ₁ =>
-    obtain ⟨A₁, s₁, hS, hW, hL⟩ := hst.2.2 σ₁ ρ₁ hx
-    have hw := execBlockZ_cons_ok O passes R st rest hx
-    have hr := hrest σ₁ ρ₁ s₁ hW hL
-    refine ⟨fun e h => hr.1 e (hw.symm.trans h), fun σ' v h => ?_, fun σ' ρ' h => ?_⟩
-    · obtain ⟨A₂, hR⟩ := hr.2.1 σ' v (hw.symm.trans h)
-      refine ⟨A₁ ++ A₂, ?_⟩
-      rw [← List.singleton_append]
-      exact RueckZ_G.nach hS hR
-    · obtain ⟨A₂, s₂, hS₂, hW₂, hL₂⟩ := hr.2.2 σ' ρ' (hw.symm.trans h)
-      exact ⟨A₁ ++ A₂, s₂, Strecke_G.cons hS hS₂, hW₂, hL₂⟩
-  | zurueck σ' v =>
-    have hw := execBlockZ_cons_zurueck O passes R st rest (ρ := ρ) hx
-    refine ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => ?_, fun σ'' ρ'' h => (by
-      rw [hw] at h; cases h)⟩
-    rw [hw] at h
-    cases h
-    obtain ⟨A, hR⟩ := hst.2.1 σ' v hx
-    refine ⟨A, ?_⟩
-    rw [← List.singleton_append]
-    exact RueckZ_G.append hR ys
-  | logik e =>
-    have hw := execBlockZ_cons_logik O passes R st rest (ρ := ρ) hx
-    refine ⟨fun e' h => ?_, fun σ'' v' h => (by rw [hw] at h; cases h), fun σ'' ρ'' h => (by
-      rw [hw] at h; cases h)⟩
-    rw [hw] at h
-    cases h
-    exact hst.1 e hx
-  | why σ' r =>
-    have hw := execBlockZ_cons_still O passes R st rest (σ := σ) (ρ := ρ)
-      (fun _ _ h => by rw [hx] at h; cases h)
-    rw [hx] at hw
-    exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
-      fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
-  | leave hl σ' ρ' =>
-    have hw := execBlockZ_cons_still O passes R st rest (σ := σ) (ρ := ρ)
-      (fun _ _ h => by rw [hx] at h; cases h)
-    rw [hx] at hw
-    exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
-      fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
-  | next hl σ' ρ' =>
-    have hw := execBlockZ_cons_still O passes R st rest (σ := σ) (ρ := ρ)
-      (fun _ _ h => by rw [hx] at h; cases h)
-    rw [hx] at hw
-    exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
-      fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
-  | hardware e =>
-    have hw := execBlockZ_cons_still O passes R st rest (σ := σ) (ρ := ρ)
-      (fun _ _ h => by rw [hx] at h; cases h)
-    rw [hx] at hw
-    exact ⟨fun e h => (by rw [hw] at h; cases h), fun σ'' v' h => (by rw [hw] at h; cases h),
-      fun σ'' ρ'' h => (by rw [hw] at h; cases h)⟩
+    obtain ⟨A, s₁, hS, hW, hL⟩ := hst.2.2.1 σ₁ ρ₁ hx
+    have hh := ausgangZiel_nach hS (hrest σ₁ ρ₁ s₁ hW hL)
+    simpa only [BlockZiel_G, execBlock, hx, List.singleton_append] using hh
+  | _ =>
+    have hh := ausgangZiel_suffix hst (fun _ _ he => by rw [hx] at he; cases he) ys
+    simpa only [BlockZiel_G, execBlock, hx, List.singleton_append] using hh
 
 theorem blockZiel_bind_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String} {τ : Ty}
     {e : Expr (declOf u) Γ Λ τ} {rest : Block (declOf u) (verOf u c) loopMode (τ :: Γ) Λ Λ'}
@@ -114,16 +65,8 @@ theorem blockZiel_bind_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declO
     (h : BlockZiel_G u C c O passes R (fn.mitBindung y w) (id :: ids) rest (σ.lese Λ e.orte)
       (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) s₁ ys) :
     BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
-  refine ⟨fun err he => ?_, fun σ' v he => ?_, fun σ' ρ' he => ?_⟩
-  · rw [execBlockZ_bind] at he
-    exact h.1 err (schrumpfZ_logik he)
-  · rw [execBlockZ_bind] at he
-    obtain ⟨A, hR⟩ := h.2.1 σ' v (schrumpfZ_zurueck he)
-    exact ⟨A, RueckZ_G.vor hstep hgz hR⟩
-  · rw [execBlockZ_bind] at he
-    obtain ⟨ρ'', hin, rfl⟩ := schrumpfZ_ok he
-    obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ'' hin
-    exact ⟨A, s', Strecke_G.vor hstep hgz hS, hW, hL.tail⟩
+  simpa only [BlockZiel_G, execBlockZ_bind, List.singleton_append] using
+    ausgangZiel_schrumpf (Strecke_G.schritt hstep hgz) (fun _ _ hl => hl.tail) h
 
 theorem blockZiel_bindB_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf u))} {fn : UFn} {ids : List String}
     {e : Expr (declOf u) Γ Λ .bool} {rest : Block (declOf u) (verOf u c) loopMode (.bool :: Γ) Λ Λ'}
@@ -134,10 +77,8 @@ theorem blockZiel_bindB_G {loopMode : Bool} {Γ : Ctx} {Λ Λ' : List (Res (decl
     (h : BlockZiel_G u C c O passes R (fn.mitBindungB y) (id :: ids) rest (σ.lese Λ e.orte)
       (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) s₁ ys) :
     BlockZiel_G u C c O passes R fn ids (Block.bind e rest) σ ρ s (x :: ys) := by
-  apply blockZiel_bind_G (fn := fn) (y := y) (w := (0, 0)) hstep hgz
-  refine ⟨h.1, h.2.1, fun σ' ρ' he => ?_⟩
-  obtain ⟨A, s', hS, hW, hL⟩ := h.2.2 σ' ρ' he
-  exact ⟨A, s', hS, hW, ⟨hL.length, hL.distinct, hL.values⟩⟩
+  simpa only [BlockZiel_G, execBlockZ_bind, List.singleton_append] using
+    ausgangZiel_schrumpf (Strecke_G.schritt hstep hgz) (fun _ _ hl => hl.tailB) h
 
 theorem laufZiel_strecke_G {Γ Γ₁ : Ctx} {Λ Λ₁ : List (Res (declOf u))}
     {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
@@ -194,7 +135,7 @@ theorem laufZiel_cons_G {Γ : Ctx} {Λ Λ₁ : List (Res (declOf u))} {fn : UFn}
     LaufZielTeilB u C c O passes R (Endblock.cons st rest) σ ρ s (x :: bs) := by
   cases hx : execStmt O passes R st σ ρ with
   | ok σ₁ ρ₁ =>
-    obtain ⟨A, s₁, hS, hW, hL⟩ := hst.2.2 σ₁ ρ₁ hx
+    obtain ⟨A, s₁, hS, hW, hL⟩ := hst.2.2.1 σ₁ ρ₁ hx
     have := laufZiel_strecke_G (cons_lauf O passes R st rest σ σ₁ ρ ρ₁ hx) hS (hrest σ₁ ρ₁ s₁ hW hL)
     rw [List.singleton_append] at this
     exact this

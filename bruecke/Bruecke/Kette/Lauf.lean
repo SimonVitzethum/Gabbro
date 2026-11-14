@@ -107,7 +107,7 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
         exact laufZiel_schritt_teilB (bind_lauf O passes R ev rest σ ρ) (fun ρB _ => hstep ρB)
           (fun w => Int.le_refl _) IH
       case loopBeg x tab inv =>
-        obtain ⟨rfl, hg, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
+        obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow
         obtain ⟨m, hm⟩ : ∃ m, blockFuel = m + 1 := ⟨99999, rfl⟩
         rw [hm] at hStruct
@@ -118,17 +118,21 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
           rw [ht] at htZ
           exact (Except.ok.inj htZ).symm
         subst tZ
-        obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
+        obtain ⟨hrBody, hsufBody, hBody⟩ := laufSeq_G G S c hc O passes R hRR m k ss
           (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
-          (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
+          (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
+          (hU.index hF.1 t.val ((declOf u).count t)) (hS.index x t.val ((declOf u).count t))
+          hmemss hF.2 hBodyG hBodyZ
+        have htail : tailZ = tail := (List.cons.inj hrBody).2
         subst tailZ
+        have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
         have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
         have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
           (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
         have hUrest := hU.resume (fun z hz => hUsed z (BodyNames.used_push ns x z hz))
         have IH := lauf_G G S c hc O passes R hRR r n k tail fn fT (ns.resume allocated) q ys hUrest hS hmemTail
           (bindFrischL_suffix hF.2 hsuf) hQ hTailZ
-        exact laufZiel_cons_G (stmtZiel_loop_G G S c hc O passes R hRR hU hS hF.1 hmemss hg hBodyG hBodyZ σ ρ s hW hL)
+        exact laufZiel_cons_G (stmtZiel_loop_G hU hBody σ ρ s hW hL)
           (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH σ₁ ρ₁ s₁ hW₁ hL₁)
       case matchTagBeg sidx x binders =>
         obtain ⟨cs, e, arms, tailZ, allocated, ys, hn, he, hAZ, hYZ, rfl⟩ := stmtsBodyZ_tag_some hbs

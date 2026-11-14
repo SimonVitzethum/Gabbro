@@ -73,7 +73,7 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           (by rw [mitBindungB_ctx]; exact congrArg (List.cons _) hΓ)
           (hS.bindB x) hmemss hrest hbs' hFss)
       case loopBeg x tab inv =>
-        obtain ⟨rfl, hg, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
+        obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow
         obtain ⟨m, hm⟩ : ∃ m, blockFuel = m + 1 := ⟨99999, rfl⟩
         rw [hm] at hStruct
@@ -84,19 +84,17 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           rw [ht] at htZ
           exact (Except.ok.inj htZ).symm
         subst tZ
-        obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
-          (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
-          (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
-        subst tailZ
-        have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
-        have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
-          (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
         have hΓi : .index ((declOf u).count t) :: Γ =
             (fn.mitIndex x t.val ((declOf u).count t)).params.map (·.2) := congrArg (List.cons _) hΓ
-        obtain ⟨_, _, hFrameBody⟩ := statischSeq_G S c hc ρB m k ss
+        obtain ⟨hrBody, hsufBody, hFrameBody⟩ := statischSeq_G S c hc ρB m k ss
           (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
-          (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tail) allocated
+          (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
           hΓi (hS.index x t.val ((declOf u).count t)) hmemss hBodyG hBodyZ hFss
+        have htail : tailZ = tail := (List.cons.inj hrBody).2
+        subst tailZ
+        have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
+        have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
+
         have IH := statisch_G S c hc ρB r n k tail fn fT (ns.resume allocated) q ys hΓ hS hmemTail hQ hTailZ
           (fun g gf hgf ⟨args, hc⟩ => hFss g gf hgf ⟨args, hc.mono (fun _ hm => mem_of_suffix hsuf hm)⟩)
         exact .forEach _ _ _ _ hFrameBody IH

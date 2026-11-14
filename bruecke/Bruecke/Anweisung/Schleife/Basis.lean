@@ -8,13 +8,12 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-/-- Operational straight-line traversal: numeric world writes, scalar static writes and
-    scalar local updates. Calls, branches, local bindings, nested loops and exits are refused. -/
-def loopWritesB : List UStmt → Bool
-  | .blkEnd :: _ => true
-  | .assign .. :: ss | .assignTab .. :: ss | .assignGlob .. :: ss | .assignGlobB .. :: ss
-  | .setVar .. :: ss | .setVarB .. :: ss => loopWritesB ss
-  | _ => false
+/-- Control is interpreted by the innermost canonical loop. -/
+def controlU (leave : Bool) (x : String) : UStmt :=
+  if leave then .leave x else .next x
+
+def controlStmtB (leave : Bool) : Gabbro.Body.Stmt :=
+  if leave then .leave else .exit
 
 def loopIndices (u : UProg) (t : Fin u.tabs.length) : List Int :=
   (alleIndizes ((declOf u).count t)).map (·.n)

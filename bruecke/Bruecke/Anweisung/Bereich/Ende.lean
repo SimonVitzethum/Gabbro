@@ -53,17 +53,14 @@ theorem lowRetEnd_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : 
       rfl
     · cases h
 
-/-- Explicit endings cannot fall through; successful G returns are matched by Body returns. -/
+/-- Explicit endings share the full pass relation, including both loop controls. -/
 abbrev EndZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
-    {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {Γ : Ctx} {Λ : List (Res (declOf u))} (fn : UFn) (ids : List String)
     (ending : Endblock (declOf u) (verOf u c) loopMode Γ Λ) (σ : World (declOf u))
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (bs : List Gabbro.Body.Stmt) : Prop :=
-  (∀ e, execEnd O passes R ending σ ρ = .logik e →
-    ∃ g σr envA, C g ∧ R g σr envA = .logik e) ∧
-  (∀ σ' v, execEnd O passes R ending σ ρ = .zurueck σ' v →
-    ∃ A, RueckZ_G u C A s bs σ' (ergValOf (verOf u c).erg v))
+  AusgangZiel_G u C c R fn ids (execEnd O passes R ending σ ρ).zuAusgang s bs
 
 theorem endZiel_cons_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
@@ -74,35 +71,16 @@ theorem endZiel_cons_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
     {b : Gabbro.Body.Stmt} {bs : List Gabbro.Body.Stmt}
     (hs : StmtZiel_G u C c O passes R fn ids st σ ρ s b)
     (ih : ∀ σ₁ ρ₁ s₁, WGRel u σ₁ s₁.world → PositionalLRel fn ids 0 ρ₁ s₁.local' →
-      EndZiel_G u C c O passes R rest σ₁ ρ₁ s₁ bs) :
-    EndZiel_G u C c O passes R (.cons st rest) σ ρ s (b :: bs) := by
+      EndZiel_G u C c O passes R fn ids rest σ₁ ρ₁ s₁ bs) :
+    EndZiel_G u C c O passes R fn ids (.cons st rest) σ ρ s (b :: bs) := by
   cases he : execStmt O passes R st σ ρ with
   | ok σ₁ ρ₁ =>
-    obtain ⟨A₁, s₁, hS, hW, hL⟩ := hs.2.2 σ₁ ρ₁ he
-    have hh := ih σ₁ ρ₁ s₁ hW hL
-    refine ⟨fun e h => hh.1 e (by simpa only [execEnd, he] using h), fun σ' v h => ?_⟩
-    obtain ⟨A₂, hr⟩ := hh.2 σ' v (by simpa only [execEnd, he] using h)
-    refine ⟨A₁ ++ A₂, ?_⟩
-    rw [← List.singleton_append]
-    exact RueckZ_G.nach hS hr
-  | zurueck σ' v =>
-    refine ⟨fun e h => ?_, fun σ'' v' h => ?_⟩
-    · simp only [execEnd, he] at h; cases h
-    · simp only [execEnd, he] at h
-      cases h
-      obtain ⟨A, hr⟩ := hs.2.1 σ' v he
-      refine ⟨A, ?_⟩
-      rw [← List.singleton_append]
-      exact RueckZ_G.append hr bs
-  | logik e =>
-    refine ⟨fun e' h => ?_, fun σ' v h => ?_⟩
-    · simp only [execEnd, he] at h
-      cases h
-      exact hs.1 e he
-    · simp only [execEnd, he] at h; cases h
-  | why σ' r | leave hl σ' ρ' | next hl σ' ρ' | hardware e =>
-    exact ⟨fun e h => (by simp only [execEnd, he] at h; cases h),
-      fun σ'' v' h => (by simp only [execEnd, he] at h; cases h)⟩
+    obtain ⟨A, s₁, hS, hW, hL⟩ := hs.2.2.1 σ₁ ρ₁ he
+    have hh := ausgangZiel_nach hS (ih σ₁ ρ₁ s₁ hW hL)
+    simpa only [EndZiel_G, execEnd, he, List.singleton_append] using hh
+  | _ =>
+    have hh := ausgangZiel_suffix hs (fun _ _ hh => by rw [he] at hh; cases hh) bs
+    simpa only [EndZiel_G, execEnd, he, EndAusgang.zuAusgang, List.singleton_append] using hh
 
 theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
     (c : Fin u.fns.length) (hc : C c) (O : Orakel (declOf u)) (passes : Nat)
@@ -114,12 +92,12 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
       lowEndL (l := loopMode) u c Γ fn n Λ [] ss = .ok (ending, rest) →
       endBodyZ u k ft ns ss = some (bs, rest) →
       ∀ σ ρ s, WGRel u σ s.world → PositionalLRel fn ns.active 0 ρ s.local' →
-        EndZiel_G u C c O passes R ending σ ρ s bs
+        EndZiel_G u C c O passes R fn ns.active ending σ ρ s bs
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h, _ => by cases h
   | _ + 1, 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by cases h
   | _ + 1, _ + 1, [], _, _, _, _, _, _, _, _, _, _, _, _, h => by cases h
   | n + 1, k + 1, st :: ss, Γ, fn, ft, ns, Λ, ending, rest, bs, hU, hV, hm, hG, hB => by
-    rcases endBodyZ_cases hB with ⟨r, b, rfl, hr, rfl, rfl⟩ | ⟨b, ys, hleaf, hs, hys, rfl⟩
+    rcases endBodyZ_cases hB with ⟨r, b, rfl, hr, rfl, rfl⟩ | ⟨leave, x, rfl, rfl, rfl⟩ | ⟨b, ys, hleaf, hs, hys, rfl⟩
     · rw [lowEndL_succ] at hG
       simp only [lowEndStep] at hG
       cases hg : lowRetEnd (l := loopMode) u c Γ fn Λ [] r with
@@ -130,11 +108,20 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
         have hr' := (retZ_sicht hV ns r).symm.trans hr
         intro σ ρ s hW hL
         obtain ⟨σ', v, hex, hw, hstep⟩ := lowRetEnd_sim c hg hr' hU S.tab O passes R σ ρ s hW hL
-        refine ⟨fun err h => (by rw [hex] at h; cases h), fun σ'' v' h => ?_⟩
-        rw [hex] at h
+        refine ⟨fun err h => (by simp only [hex, EndAusgang.zuAusgang] at h; cases h), fun σ'' v' h => ?_,
+          fun σ'' ρ'' h => (by simp only [hex, EndAusgang.zuAusgang] at h; cases h),
+          fun leave hl σ'' ρ'' h => (by cases leave <;>
+            simp only [hex, EndAusgang.zuAusgang, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h)⟩
+        simp only [hex, EndAusgang.zuAusgang] at h
         cases h
         refine ⟨[], (by simp), (by simp [Oben]), List.Pairwise.nil, fun ρB _ _ => ⟨s, ?_, hw⟩⟩
         simp only [Gabbro.Body.exec, hstep ρB]
+    · obtain ⟨hl, rfl, rfl⟩ := lowEnd_control_ok hG
+      intro σ ρ s hW hL
+      have hh := stmtZiel_control_G (c := c) (C := C) (O := O) (passes := passes)
+        (R := R) (Λ := Λ) leave hl σ ρ s hW hL
+      cases leave <;> simpa only [EndZiel_G, controlEnd, controlStmt, controlStmtB, execEnd,
+        EndAusgang.zuAusgang, StmtZiel_G, execStmt] using hh
     · obtain ⟨hsN, _, _⟩ := schrittB_einzeln_sicht hV hs (endLeafB_ok hleaf)
       obtain ⟨Λ', gs, nextB, hgs, hnext, rfl⟩ := lowEndL_leaf_ok (endLeafB_ok hleaf) hG
       intro σ ρ s hW hL

@@ -71,13 +71,20 @@ theorem traverse_leave_sim_zeuge (u : UProg) (V : Vertrag (declOf u))
     exact hs
   · exact wgrel_enc u σ w
 
-/-- Semantic lifting is not source admission. The unfinished forms remain refused by
+/-- The unrelated retry and nested reason-match forms remain refused by
     the actual reader; a caller cannot obtain a carried duty through a fallback. -/
 theorem finite_reader_refusals (u : UProg) (fn : UFn) (ns : BodyNames) (x : String) (n : Nat) :
     seqZ u 3 fn ns [.retryBeg n .tru, .ifElse, .blkEnd] = none ∧
-    seqZ u 3 fn ns [.leave x, .blkEnd] = none ∧
-    seqZ u 3 fn ns [.next x, .blkEnd] = none ∧
     seqZ u 3 fn ns [.matchWhyBeg x, .blkEnd] = none := by
-  exact ⟨rfl, rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl⟩
+
+/-- Both leaves are now read through the ordinary sequence and ending readers.
+    Canonical lowering still rejects them outside a loop. -/
+theorem finite_control_readers (u : UProg) (fn : UFn) (ns : BodyNames) (x : String) :
+    seqZ u 3 fn ns [.leave x, .blkEnd] = some ([.leave], [.blkEnd], ns.used) ∧
+    seqZ u 3 fn ns [.next x, .blkEnd] = some ([.exit], [.blkEnd], ns.used) ∧
+    endBodyZ u 3 fn ns [.leave x, .blkEnd] = some ([.leave], [.blkEnd]) ∧
+    endBodyZ u 3 fn ns [.next x, .blkEnd] = some ([.exit], [.blkEnd]) :=
+  ⟨rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Bruecke

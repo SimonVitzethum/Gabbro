@@ -98,7 +98,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       exact blockZiel_bindB_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case loopBeg x tab inv =>
-      obtain ⟨rfl, hg, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
+      obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := seqZ_loop_some hbs
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowSeq_loop_ok hlow
       obtain _ | m := n
       · rw [lowStructL_zero] at hStruct; cases hStruct
@@ -109,10 +109,14 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         rw [ht] at htZ
         exact (Except.ok.inj htZ).symm
       subst tZ
-      obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
+      obtain ⟨hrBody, hsufBody, hBody⟩ := ih m (by omega) k ss
         (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
-        (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
+        (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
+        (hU.index hF.1 t.val ((declOf u).count t)) (hS.index x t.val ((declOf u).count t))
+        hmemss hF.2 hBodyG hBodyZ
+      have htail : tailZ = tail := (List.cons.inj hrBody).2
       subst tailZ
+      have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
       have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
       have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
         (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
@@ -120,7 +124,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hUrest hS hmemTail
         (bindFrischL_suffix hF.2 hsuf) hQ hTailZ
       exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), fun σ ρ s hW hL =>
-        blockZiel_cons_G (stmtZiel_loop_G G S c hc O passes R hRR hU hS hF.1 hmemss hg hBodyG hBodyZ σ ρ s hW hL) (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)⟩
+        blockZiel_cons_G (stmtZiel_loop_G hU hBody σ ρ s hW hL) (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)⟩
     case narrowBeg x lo hi =>
       obtain ⟨e, errorBody, tailZ, ys, hname, hEZ, hYZ, rfl⟩ := seqZ_narrow_some hbs
       obtain ⟨hn, id, hid, rfl⟩ := narrowName_some hname
@@ -167,7 +171,8 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
         have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
         have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hf
-        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_⟩
+        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_, fun leave hl σ' ρ' hh => (by
+          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh)⟩
         · simp only [execBlock, hR] at hh
           cases hh
           exact ⟨head.callee, _, _, hd, hR⟩
@@ -176,7 +181,8 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         · simp only [execBlock, hR] at hh
           cases hh
       | hardware err =>
-        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_⟩
+        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_, fun leave hl σ' ρ' hh => (by
+          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh)⟩
         all_goals simp only [execBlock, hR] at hh; cases hh
     case setVar | setVarB | assign | assignTab | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
@@ -188,6 +194,21 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       exact blockZiel_cons_G
         (stmtZiel_einzeln_G G S c hc O passes R hRR hhead (by exact True.intro) hst hstepN hU σ ρ s hW hL)
         (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)
+    case leave x | next x =>
+      obtain ⟨ys, hys, rfl⟩ := (by first
+        | exact seqZ_control_some (leave := true) hbs
+        | exact seqZ_control_some (leave := false) hbs)
+      obtain ⟨hl, q, hq, rfl⟩ := (by first
+        | exact lowSeq_control_ok (leave := true) hlow
+        | exact lowSeq_control_ok (leave := false) hlow)
+      have IH := ih n (Nat.lt_succ_self n) k ss fn fT ns q rest ys restZ used
+        hU hS hmemss (bindFrischL_sonst (by rfl) hF) hq hys
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      first
+        | exact blockZiel_cons_G (stmtZiel_control_G true hl σ ρ s hW hL)
+            (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)
+        | exact blockZiel_cons_G (stmtZiel_control_G false hl σ ρ s hW hL)
+            (fun σ₁ ρ₁ s₁ hW₁ hL₁ => IH.2.2 σ₁ ρ₁ s₁ hW₁ hL₁)
     case ret r0 =>
       obtain ⟨bst, ys, hbT, hys, rfl⟩ := seqZ_ret_some hbs
       have hbN : retZ u fn ns r0 = some bst := (retZ_sicht hS ns r0).symm.trans hbT

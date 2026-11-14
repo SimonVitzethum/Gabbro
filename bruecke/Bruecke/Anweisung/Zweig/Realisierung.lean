@@ -59,8 +59,9 @@ theorem endBodyZ_callee : ∀ k fn ns ss bs tail,
   | 0, _, _, _, _, _, h, _, _, _ => by cases h
   | _ + 1, _, _, [], _, _, h, _, _, _ => by cases h
   | k + 1, fn, ns, st :: ss, bs, tail, h, g, args, hm => by
-    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨b, ys, hl, hs, hy, _⟩
+    rcases endBodyZ_cases h with ⟨r, b, rfl, _, _, rfl⟩ | ⟨leave, x, rfl, _, rfl⟩ | ⟨b, ys, hl, hs, hy, _⟩
     · exact .inr (CallsIn.tail (by rfl) hm)
+    · exact .inr (CallsIn.tail (by cases leave <;> rfl) hm)
     · rcases CallsIn.head_or_tail hm with hc | hc
       · cases st
         case call cn as =>
@@ -94,6 +95,9 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
             with hf | hm2
           · exact .inl hf
           · exact seqZ_callee k fn (ns.resume used2) r2 ys rest used hY g args (CallsIn.tail (by rfl) hm2)
+      case leave x | next x =>
+        obtain ⟨ys, hY, _⟩ := (by first | exact seqZ_control_some (leave := true) h | exact seqZ_control_some (leave := false) h)
+        exact seqZ_callee k fn ns ss ys rest used hY g args (CallsIn.tail (by rfl) hm)
       case ret r0 =>
         obtain ⟨b, ys, _, hY, _⟩ := seqZ_ret_some h
         exact seqZ_callee k fn ns ss ys rest used hY g args (CallsIn.tail (by rfl) hm)
@@ -104,9 +108,12 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         · exact seqZ_callee k (fn.mitBindung x (lo, hi)) (ns.push x) tail ys rest used hY g args
             (CallsIn.tail (by rfl) hc)
       case loopBeg x tab inv =>
-        obtain ⟨rfl, hg, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
-        have ht := loopWrites_calls k _ _ ss body tail allocated hg hB g args (CallsIn.tail (by rfl) hm)
-        exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hY g args ht
+        obtain ⟨rfl, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
+        rcases seqZ_callee k _ (ns.push x) ss body (.blkEnd :: tail) allocated hB
+            g args (CallsIn.tail (by rfl) hm) with hf | ht
+        · exact .inl hf
+        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hY g args
+            (CallsIn.tail (by rfl) ht)
       case call g' args' | bindCall x g' args' =>
         obtain ⟨b, fn', ns', ys, hs, hY, _⟩ := seqZ_schritt_some h (by exact True.intro)
         rcases CallsIn.head_or_tail hm with h' | h'
@@ -186,9 +193,12 @@ theorem stmtsBodyZ_callee (r : URet) : ∀ (k : Nat) (fn : UFn) (ns : BodyNames)
         · exact stmtsBodyZ_callee r k (fn.mitBindung x (lo, hi)) (ns.push x) tail ys hY g args
             (CallsIn.tail (by rfl) hc)
       case loopBeg x tab inv =>
-        obtain ⟨rfl, hg, t, body, tail, allocated, ys, _, hB, hY, _⟩ := stmtsBodyZ_loop_some h
-        have ht := loopWrites_calls k _ _ ss body tail allocated hg hB g args (CallsIn.tail (by rfl) hm)
-        exact stmtsBodyZ_callee r k fn (ns.resume allocated) tail ys hY g args ht
+        obtain ⟨rfl, t, body, tail, allocated, ys, _, hB, hY, _⟩ := stmtsBodyZ_loop_some h
+        rcases seqZ_callee k _ (ns.push x) ss body (.blkEnd :: tail) allocated hB
+            g args (CallsIn.tail (by rfl) hm) with hf | ht
+        · exact hf
+        · exact stmtsBodyZ_callee r k fn (ns.resume allocated) tail ys hY g args
+            (CallsIn.tail (by rfl) ht)
       case bindW x d v =>
         obtain ⟨id, fields, e, ys, rfl, he, hys, _⟩ := stmtsBodyZ_bindRecord_some h
         exact stmtsBodyZ_callee r k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys hys g args

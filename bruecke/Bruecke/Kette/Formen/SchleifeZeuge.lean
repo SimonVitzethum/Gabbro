@@ -236,11 +236,16 @@ theorem nutzer_aus_quelleG_schleife_zeuge :
       OffeneStartPflicht unit (fun _ => True) program hn := fun _ _ _ hc => (hc True.intro).elim
   exact ⟨carried_duties, translated, nutzer_aus_quelleG carried_duties hStart translated⟩
 
-/-- A nontrivial invariant or a call in the body remains explicitly outside this first fragment. -/
+/-- A nontrivial invariant remains explicitly outside the carried traversal fragment. -/
 theorem traversal_refusals :
-    zuBodyZ unit { fill with body := [.loopBeg "i" "T" .fls, .blkEnd] } = none ∧
-      zuBodyZ unit { fill with body := [.loopBeg "i" "T" .tru, .call "fill" [], .blkEnd] } = none := by
-  constructor <;> cbv
+    zuBodyZ unit { fill with body := [.loopBeg "i" "T" .fls, .blkEnd] } = none := by
+  cbv
+
+/-- Complete traverse bodies are read: a call inside the body is no longer refused. -/
+theorem traversal_call_read :
+    (zuBodyZ unit { fill with body := [.loopBeg "i" "T" .tru, .call "fill" [], .blkEnd] }).isSome =
+      true := by
+  cbv
 
 #print axioms nutzer_aus_quelleG_schleife_zeuge
 

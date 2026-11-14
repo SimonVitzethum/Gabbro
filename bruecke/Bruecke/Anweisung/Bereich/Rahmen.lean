@@ -43,9 +43,13 @@ theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB :
   | _ + 1, 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h, _ => by cases h
   | _ + 1, _ + 1, [], _, _, _, _, _, _, _, _, _, _, _, _, h, _ => by cases h
   | n + 1, k + 1, st :: ss, Γ, fn, ft, ns, Λ, ending, rest, bs, hΓ, hV, hm, hG, hB, hF => by
-    rcases endBodyZ_cases hB with ⟨r, b, rfl, hr, rfl, _⟩ | ⟨b, ys, hleaf, hs, hys, rfl⟩
+    rcases endBodyZ_cases hB with ⟨r, b, rfl, hr, rfl, _⟩ | ⟨leave, x, rfl, rfl, _⟩ | ⟨b, ys, hleaf, hs, hys, rfl⟩
     · obtain ⟨e, rfl⟩ := retZ_form hr
       exact .ret _ _ .nil
+    · apply Statisch.selected _ _ ?_ .nil
+      intro t s' he p hp
+      cases leave <;> simp only [controlStmtB, Gabbro.Body.step, Gabbro.Body.finalState,
+        Option.some.injEq] at he <;> cases he <;> rfl
     · obtain ⟨hsN, _, _⟩ := schrittB_einzeln_sicht hV hs (endLeafB_ok hleaf)
       obtain ⟨Λ', gs, nextB, hgs, hnext, rfl⟩ := lowEndL_leaf_ok (endLeafB_ok hleaf) hG
       have ih := endBodyZ_statisch S hc ρB n k ss fn ft ns nextB rest ys hΓ hV

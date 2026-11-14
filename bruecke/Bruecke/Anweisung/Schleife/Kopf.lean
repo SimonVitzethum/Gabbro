@@ -78,33 +78,4 @@ theorem lowBodyF_loop_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
       cases h
       exact ⟨Λ₁, st, tail, rest, hs, hr, rfl⟩
 
-/-- The finite write fragment consumes exactly its first closing marker. -/
-theorem loopWrites_rest {loopMode : Bool} : ∀ n k ss {Γ : Ctx} (fn ft : UFn) (ns : BodyNames)
-    {Λ Λ' : List (Res (declOf u))} (block : Block (declOf u) (verOf u c) loopMode Γ Λ Λ')
-    (tail tailZ : List UStmt) (bs : List Gabbro.Body.Stmt) (used : List String),
-    loopWritesB ss = true →
-    lowSeqL (l := loopMode) u c Γ fn n Λ [] ss = .ok (⟨Λ', block⟩, .blkEnd :: tail) →
-    seqZ u k ft ns ss = some (bs, .blkEnd :: tailZ, used) → tail = tailZ ∧ tail <:+ ss
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h, _ => by cases h
-  | _ + 1, 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by cases h
-  | _ + 1, _ + 1, [], _, _, _, _, _, _, _, _, _, _, _, hg, _, _ => by cases hg
-  | n + 1, k + 1, st :: ss, Γ, fn, ft, ns, Λ, Λ', block, tail, tailZ, bs, used, hg, hG, hB => by
-    cases st
-    case blkEnd =>
-      rw [lowSeq_blkEnd] at hG
-      cases hG
-      simp only [seqZ, Option.some.injEq, Prod.mk.injEq] at hB
-      obtain ⟨_, heq, _⟩ := hB
-      cases heq
-      exact ⟨rfl, List.suffix_cons _ _⟩
-    case assign | assignTab | assignGlob | assignGlobB | setVar | setVarB =>
-      obtain ⟨b, ft', ns', ys, hb, hy, _⟩ := seqZ_schritt_some hB (by exact True.intro)
-      obtain ⟨_, hft, hns⟩ := schrittB_einzeln_sicht (Sicht.refl ft) hb (by exact True.intro)
-      subst ft'
-      subst ns'
-      obtain ⟨Λ₁, gs, q, _, hq, _⟩ := lowSeq_einzeln_ok hG (by exact True.intro)
-      have ih := loopWrites_rest n k ss fn ft ns q.2 tail tailZ ys used hg hq hy
-      exact ⟨ih.1, ih.2.trans (List.suffix_cons _ _)⟩
-    all_goals cases hg
-
 end Gabbro.Bruecke

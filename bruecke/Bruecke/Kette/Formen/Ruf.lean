@@ -99,17 +99,7 @@ theorem blockZiel_bindCall_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Or
       (Env.cons (ergWert he v) ρ) s₁ ys) :
     BlockZiel_G u C c O passes R fn ns.active
       (.bindCall head.callee head.args he head.hp hr rest) σ ρ s (b :: ys) := by
-  refine ⟨fun err h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
-  · simp only [execBlock, hR] at h
-    exact ih.1 err (schrumpfZ_logik h)
-  · simp only [execBlock, hR] at h
-    obtain ⟨A₂, hret⟩ := ih.2.1 σ' v' (schrumpfZ_zurueck h)
-    refine ⟨A ++ A₂, ?_⟩
-    rw [← List.singleton_append]
-    exact RueckZ_G.nach hS hret
-  · simp only [execBlock, hR] at h
-    obtain ⟨ρ'', hin, rfl⟩ := schrumpfZ_ok h
-    obtain ⟨A₂, s₂, hS₂, hW₂, hL₂⟩ := ih.2.2 σ' ρ'' hin
-    exact ⟨A ++ A₂, s₂, Strecke_G.cons hS hS₂, hW₂, hL₂.tailTy ht⟩
+  simpa only [BlockZiel_G, execBlock, hR, List.singleton_append] using
+    ausgangZiel_schrumpf hS (fun _ _ hl => hl.tailTy ht) ih
 
 end Gabbro.Bruecke

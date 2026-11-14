@@ -61,6 +61,9 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have he := seqZ_used k fn (ns.resume used1) r1 eb _ used2 hE
         have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
         exact fun x hx => hy x (he x (ht x hx))
+      case leave x | next x =>
+        obtain ⟨ys, hY, _⟩ := (by first | exact seqZ_control_some (leave := true) h | exact seqZ_control_some (leave := false) h)
+        exact seqZ_used k fn ns ss ys rest used hY
       case ret r =>
         obtain ⟨b, ys, _, hY, _⟩ := seqZ_ret_some h
         exact seqZ_used k fn ns ss ys rest used hY
@@ -69,7 +72,7 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have hy := seqZ_used k (fn.mitBindung x (lo, hi)) (ns.push x) tail ys rest used hY
         exact fun y hm => hy y (BodyNames.used_push ns x y hm)
       case loopBeg x tab inv =>
-        obtain ⟨rfl, _, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
+        obtain ⟨rfl, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
         have hBody := seqZ_used k (fn.mitIndex x t.val ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count t))
           (ns.push x) ss body _ allocated hB
         have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY

@@ -20,6 +20,7 @@ def protectedNames : List (String × Ty) → List UParamArt → List String
   | (x, .int ..) :: ps, .int :: ks => protectedNames ps ks
   | (x, .bool) :: ps, .bool :: ks => protectedNames ps ks
   | (_, .int ..) :: ps, .index _ :: ks => protectedNames ps ks
+  | (_, .index _) :: ps, .index _ :: ks => protectedNames ps ks
   | (_, .prod ..) :: ps, .wert :: ks => protectedNames ps ks
   | (x, _) :: ps, _ :: ks => x :: protectedNames ps ks
   | (x, _) :: ps, [] => x :: protectedNames ps []
