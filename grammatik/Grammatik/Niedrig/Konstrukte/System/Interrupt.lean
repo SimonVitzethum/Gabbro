@@ -62,7 +62,8 @@ theorem frameOf_replaceVector (source : Parser.SEingang) (old new : Parser.SExpr
     Eingang.frameOf { source with vektor := some new } = Eingang.frameOf source := by
   cases via : source.via <;>
     simp only [Eingang.frameOf, Eingang.alleOk, Eingang.hatBeide, Eingang.artAus,
-      Eingang.rahmenAus, Eingang.ersteFehler, present, via]
+      Eingang.rahmenAus, Eingang.ersteFehler, present, via, Bool.true_eq_false, false_and,
+      ↓reduceIte, Option.isSome_some]
 
 /-- Save both mask/depth and priority. PrioStep's intermediate mask update is
     combined with MaskStep's saved-bit stack; neither state replaces the other. -/
