@@ -101,8 +101,7 @@ def branchCondition {program : Programm D} {checked : D.Fn → List D.Inv}
       let read := world.lese Λ test.orte
       if eval read test read locals then yes runtime read else no runtime read)) := do
   let guard ← translate test locals
-  return
-    { formula := lower (.and (.imp guard.payload (quoteQF positive.formula))
+  return { formula := lower (.and (.imp guard.payload (quoteQF positive.formula))
         (.imp (.not guard.payload) (quoteQF negative.formula)))
       sound := fun runtime world valid => by
         let read := world.lese Λ test.orte

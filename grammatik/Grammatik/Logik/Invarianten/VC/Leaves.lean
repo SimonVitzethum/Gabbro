@@ -23,8 +23,7 @@ def cleanupFormula (facts : ∀ lock, Except Refusal (LockFormula S lock)) :
   | lock :: locks => do
       let head ← facts lock
       let tail ← cleanupFormula facts locks
-      return
-        { formula := conj head.formula tail.formula
+      return { formula := conj head.formula tail.formula
           correct := fun world => by
             rw [conj_denote, head.correct world, tail.correct world]
             simp only [scopesInvH, List.all_cons, Bool.and_eq_true] }
@@ -48,8 +47,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       | .error cause => .error cause
       | .ok normal => do
           let pre ← scalarWP expression locals (.glob name) normal
-          return
-            { formula := pre.formula
+          return { formula := pre.formula
               sound := fun runtime world valid => by
                 unfold Runtime.wpS
                 simp only [execStmtH, Goals.holds, h, denotes]
@@ -64,8 +62,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           let encodedIndex ← translate index locals
           let offset ← encodedIndex.constantIndex
           let pre ← scalarWP expression locals (.slot table field offset.val) normal
-          return
-            { formula := pre.formula
+          return { formula := pre.formula
               sound := fun runtime world valid => by
                 unfold Runtime.wpS
                 simp only [execStmtH, Goals.holds, h, denotes]
@@ -79,8 +76,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       | .error cause => .error cause
       | .ok normal => do
           let known ← invariantFormula program (checked f)
-          return
-            { formula := callWP f known.formula normal
+          return { formula := callWP f known.formula normal
               sound := fun runtime world valid => by
                 let read := world.lese Λ args.orte
                 let actual := evalArgs read args read locals
@@ -116,8 +112,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       return pre.map (fun _ _ valid => valid)
   | .retScoped expression cleanup => do
       let releases ← cleanupFormula facts cleanup.scopes
-      return
-        { formula := conj releases.formula goals.terminal
+      return { formula := conj releases.formula goals.terminal
           sound := fun runtime world valid => by
             have parts := (conj_denote _ _ _).mp valid
             let read := world.lese Λ expression.orte
@@ -129,8 +124,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             exact parts.2 }
   | .retWhyScoped reason cleanup => do
       let releases ← cleanupFormula facts cleanup.scopes
-      return
-        { formula := conj releases.formula goals.terminal
+      return { formula := conj releases.formula goals.terminal
           sound := fun runtime world valid => by
             have parts := (conj_denote _ _ _).mp valid
             have releaseReady := (releases.correct world).mp parts.1

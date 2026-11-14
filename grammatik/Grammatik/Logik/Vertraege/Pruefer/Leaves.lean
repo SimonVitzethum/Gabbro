@@ -35,8 +35,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       | .error cause => .error cause
       | .ok normal => do
           let pre ← scalarWP expression locals (.glob name) normal
-          return
-            { formula := pre.formula
+          return { formula := pre.formula
               sound := fun runtime world valid allowed safe => by
                 unfold Runtime.wpS
                 simp only [execStmtH, Goals.holds, h, denotes]
@@ -51,8 +50,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           let encodedIndex ← translate index locals
           let offset ← encodedIndex.constantIndex
           let pre ← scalarWP expression locals (.slot table field offset.val) normal
-          return
-            { formula := pre.formula
+          return { formula := pre.formula
               sound := fun runtime world valid allowed safe => by
                 unfold Runtime.wpS
                 simp only [execStmtH, Goals.holds, h, denotes]

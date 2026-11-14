@@ -23,8 +23,7 @@ def environmentDomain (budget : Nat) : (Γ : Ctx) → Except Refusal (Environmen
       let head ← localDomain (D := D) budget τ
       let tail ← environmentDomain budget Γ
       if head.values.length * tail.values.length ≤ budget then
-        return
-          { values := head.values.flatMap (fun value => tail.values.map (.cons value))
+        return { values := head.values.flatMap (fun value => tail.values.map (.cons value))
             complete := fun locals => by
               cases locals with
               | cons value rest =>
@@ -77,8 +76,7 @@ def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     let branch ← branchCondition test env done advance
     return inductiveCondition invariant branch
   let checks ← allConditions domain.values _ compilePass
-  return
-    { formula := conj invariant checks.formula
+  return { formula := conj invariant checks.formula
       sound := fun runtime world valid => by
         have parts := (conj_denote _ _ _).mp valid
         have obligations := checks.sound runtime world parts.2

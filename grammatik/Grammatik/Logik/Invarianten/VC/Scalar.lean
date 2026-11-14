@@ -69,13 +69,11 @@ def translateScalar (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   match τ with
   | .int _ _ => do
       let encoded ← translate expression locals
-      return
-        { term := encoded.payload
+      return { term := encoded.payload
           correct := encoded.correct }
   | .str _ => do
       let encoded ← translate expression locals
-      return
-        { term := encoded.payload
+      return { term := encoded.payload
           correct := encoded.correct }
   | _ => .error (.unsupported "writer stores a non-scalar value")
 
@@ -93,8 +91,7 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
       let no ← scalarWP fallback locals key post
       let guard : LProp (Observation D) :=
         .and (.le (.konst lo) encoded.term) (.le encoded.term (.konst hi))
-      return
-        { formula := lower (.and (.imp guard (quoteQF yes.formula))
+      return { formula := lower (.and (.imp guard (quoteQF yes.formula))
             (.imp (.not guard) (quoteQF no.formula)))
           sound := fun world valid => by
             have branches := (lower_denote _ (assignment world)).mp valid
@@ -116,8 +113,7 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
       let guard ← translate condition locals
       let yesVC ← scalarWP yes locals key post
       let noVC ← scalarWP no locals key post
-      return
-        { formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
+      return { formula := lower (.and (.imp guard.payload (quoteQF yesVC.formula))
             (.imp (.not guard.payload) (quoteQF noVC.formula)))
           sound := fun world valid => by
             have branches := (lower_denote _ (assignment world)).mp valid
@@ -136,8 +132,7 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
                 simpa only [eval, tested, wahr?, ↓reduceIte] using selected }
   | expression => do
       let encoded ← translateScalar expression locals
-      return
-        { formula := post.subst key encoded.term
+      return { formula := post.subst key encoded.term
           sound := fun world valid => by
             have selected := (subst_denote key encoded.term post (assignment world)).mp valid
             rw [encoded.correct world] at selected

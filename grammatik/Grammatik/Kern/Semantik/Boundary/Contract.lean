@@ -53,7 +53,7 @@ theorem Contract.split_correct (c : Contract D Γ Λ) (p : Parts D Γ Λ)
   | deviceInternal name =>
       cases h
       simp only [Contract.denote, Parts.Q_check, Parts.Q_rest, Check.trivial,
-        eval, List.all_cons, List.all_nil, Bool.and_true, Bool.true_and]
+        eval, wahr?, List.all_cons, List.all_nil, Bool.and_true, Bool.true_and]
   | conjunction left right ihLeft ihRight =>
       cases hl : left.split with
       | error reason => simp [Contract.split, hl] at h

@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.VC.Fresh
-public import Mathlib.Tactic
+public import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -128,8 +128,7 @@ def localBranches {program : Programm D} {checked : D.Fn → List D.Inv}
       let relation ← localEquality expression locals value
       let head ← compile value
       let tail ← localBranches values expression locals target compile
-      return
-        { formula := conj (freshImplication τ value relation.val head.formula) tail.formula
+      return { formula := conj (freshImplication τ value relation.val head.formula) tail.formula
           sound := fun runtime world valid current member equals => by
             have parts := (conj_denote _ _ _).mp valid
             rcases List.mem_cons.mp member with same | member
@@ -162,8 +161,7 @@ def allConditions {program : Programm D} {checked : D.Fn → List D.Inv}
   | value :: values => do
       let head ← compile value
       let tail ← allConditions values target compile
-      return
-        { formula := conj head.formula tail.formula
+      return { formula := conj head.formula tail.formula
           sound := fun runtime world valid current member => by
             have parts := (conj_denote _ _ _).mp valid
             rcases List.mem_cons.mp member with same | member

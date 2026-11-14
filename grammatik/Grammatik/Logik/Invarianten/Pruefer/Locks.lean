@@ -37,8 +37,7 @@ def lockFormula (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
   let some source := sources lock
     | .error (.unsupported "semantic lock invariant has no reified source formula; user duty")
   let encoded ← translateInvariant (S.orte lock) source.expression
-  return
-    { formula := lower encoded.payload
+  return { formula := lower encoded.payload
       correct := fun world => by
         rw [lower_denote, ← encoded.bool_iff world, source.correct world] }
 
@@ -62,8 +61,7 @@ def environments (budget : Nat) : (context : Ctx) → Except Refusal (Environmen
       let head ← localDomain (D := D) budget kind
       let tail ← environments budget context
       if head.values.length * tail.values.length ≤ budget then
-        return
-          { values := head.values.flatMap fun value => tail.values.map (Env.cons value)
+        return { values := head.values.flatMap fun value => tail.values.map (Env.cons value)
             complete := fun locals => by
               cases locals with
               | cons value locals =>
