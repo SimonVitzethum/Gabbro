@@ -18,9 +18,9 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Opti
     (returned : ErgVal D result → Except Invarianten.Frag.Refusal (QF (Observation D))) :
     Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
       denotes (returned (evalErg world expression world locals)) world)) :=
-  match expression with
-  | .empty => requireCondition (returned ())
-  | .val expression =>
+  match result, expression, returned with
+  | none, .empty, returned => requireCondition (returned ())
+  | some _, .val expression, returned =>
       localSelect budget expression locals
         (fun value _ world => denotes (returned value) world)
         (fun value => requireCondition (returned value))
