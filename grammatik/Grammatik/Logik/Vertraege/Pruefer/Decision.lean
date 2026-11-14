@@ -41,7 +41,7 @@ def invalidMessage (label : String) (formula : LProp (Observation D))
     (pre : QF (Observation D)) : String :=
   let matrix := writerMatrix formula .tru pre
   let names := (qfKeys matrix).eraseDups
-  match counterexample names (quoteQF matrix) with
+  match Modell.counterexample names (quoteQF matrix) with
   | none => label ++ ": false VC (no counterexample extracted)"
   | some values => label ++ ": false VC; counterexample in observation order = " ++
       reprStr (names.map values)
@@ -99,9 +99,9 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
   let domain ← results (D := D) budget.expansion (D.erg f)
   let _ ← collect domain.values
     (fun value => ∃ post, postFormula program f locals value = .ok post)
-    (fun value => match computed : postFormula program f locals value with
+    (fun value => match postFormula program f locals value with
       | .error cause => .error cause
-      | .ok post => .ok ⟨⟨post, computed⟩⟩)
+      | .ok post => .ok ⟨⟨post, rfl⟩⟩)
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) locals (contractGoals program f locals invariants)
   if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) = true then

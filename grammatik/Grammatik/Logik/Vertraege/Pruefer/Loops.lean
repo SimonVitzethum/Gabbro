@@ -190,8 +190,9 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           returned := goals.returned
           reason := goals.reason }
       let step ← compileBody (.cons index locals) passGoals
-      let advanced := step.map (fun runtime world ready allowed safe =>
-        show goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
+        ∀ allowed, HandlerSafe policy runtime allowed →
+        goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world (.cons index locals) with
           | .ok next env | .next _ next env => traverseLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -203,7 +204,7 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error) from by
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready allowed safe => by
         have ready := ready allowed safe
         unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
