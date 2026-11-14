@@ -46,6 +46,8 @@ theorem lowOpt_named_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
       | error err => rw [hj] at h; cases h
       | ok j =>
         rw [hj] at h
+        dsimp only at h
+        try simp only [Nat.zero_add] at h
         cases hk : fn.kinds[j]? with
         | none => rw [hk] at h; cases h
         | some kind =>
