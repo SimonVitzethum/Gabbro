@@ -81,6 +81,7 @@ theorem registerReadEmpty_sound {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       (runtime.oracle.regLies register (world.fragt (.inr (.inl register)))) with
   | none => exact stopped _
   | some value =>
+      dsimp only
       split
       · apply normal
         funext key
