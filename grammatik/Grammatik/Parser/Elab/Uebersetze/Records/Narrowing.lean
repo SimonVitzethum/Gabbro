@@ -52,7 +52,7 @@ def expand : Nat → List String → Nat → SAnw → SAnw × Nat
   | fuel + 1, locals, nr, body =>
     let visit := expand fuel
     let nested := fun extra nr body => visit (extra ++ locals) nr body
-    let many := fun nr bodies => bodies.foldl (fun (acc : List SAnw × Nat) body =>
+    let many := fun (nr : Nat) (bodies : List SAnw) => bodies.foldl (fun (acc : List SAnw × Nat) body =>
       let (body, nr) := nested [] acc.2 body
       (acc.1 ++ [body], nr)) ([], nr)
     match body with
