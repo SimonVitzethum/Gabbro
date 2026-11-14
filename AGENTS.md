@@ -249,7 +249,8 @@ not a deployed checker, and no bridge to any binary is built. The
   waiting bounds, stack depth, the hardware, weak memory beyond DRF-SC, unguarded publish/await payloads, floats
   beyond the named native hardware assumption, starvation freedom, invariants inside a running writer or a held
   section, a start declared once running on several threads. Linking of separately compiled units is a second statement,
-  `GabbroZielVerbund`. Probabilistic statements are out of scope. Every extension of the goal is a diff of
+  `GabbroZielVerbund`. Probabilistic statements are on the plan as a separate statement `GabbroZielProb` (item B11, owner
+  2026-11-14); until it exists they stay on the NOT CLAIMED list. Every extension of the goal is a diff of
   `Spec.lean` (or of the definitions it uses) and is described as such.
 
 ## 3. Standing rules
@@ -311,7 +312,8 @@ not a deployed checker, and no bridge to any binary is built. The
   the program's provider. **OOM is user logic**: an allocation needs no source OOM path; that the provider has
   memory to give is the program's own obligation. An arena's `else` at its declared ceiling is a capacity bound,
   not OOM.
-- **Floats are in scope** (IEEE kernel model). Probabilistic statements are out of scope.
+- **Floats are in scope** (IEEE kernel model). Probabilistic statements are in scope as plan item B11 (owner,
+  2026-11-14): quantitative bounds over a Markov-decision-process lift of G/GX, safety unchanged for every outcome.
 
 **Lean layout**
 - **Every Lean file has fewer than 500 lines** (owner, 2026-11-01): also every OLD file — the 235 files above

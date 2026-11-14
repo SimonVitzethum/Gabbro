@@ -156,6 +156,7 @@ Grouped by stream. IDs are used in §5–§7. Estimates: LOC / full grammatik bu
 | B8 | time without exceptions: declared costs and hold bounds in `Einheit` and (a) (K001/K002 into the model), hold-time theorem from `held`, per-pass bound for `forever` (`ForeverBinding` soundness), recursion by the measure | 4 000–10 000 / 2–4 / 5–15 |
 | B9 | stack depth: S5, plus a NAMED stop instead of the logic code `abstieg` for recursion beyond the bound (Spec change, owner) | 1 000–3 000 / 2–3 / 3–6 |
 | B10 | missing legs: accumulator fold (C15, run-level history), owner marks (C09, needs A1), arenas across the link, `Q` equal only on shared axioms in `GabbroZielVerbund` | 10 000–25 000 / 4–8 / — |
+| B11 | **probabilistic statements (owner, 2026-11-14: on the plan; before: out of scope).** Safety already holds for every random outcome (a random number is one more oracle answer, and the goal quantifies over all answers); B11 adds QUANTITATIVE statements as a separate statement `GabbroZielProb` beside `GabbroZielVerbund`, reusing every safety leg. (a) Semantics: machine G/GX lifted to a Markov decision process — random answers drawn from declared distributions, the scheduler and every other oracle answer stay adversarial (statements hold for every scheduler and every non-random answer); measure theory from Mathlib. (b) A named hardware assumption for the random source (`ZufallHw`: declared distribution, independence of draws) in (c), never a proof obligation. (c) Statement forms: probability bounds on events of runs (`Pr[ereignis] ≥ p`), expected cost (`E[kosten] ≤ b`, building on `ZeitAb`), almost-sure termination and progress of randomized loops (randomized backoff, lock-free retry), and the computational-security form needed by cryptography (a bound on any adversary's success probability). (d) The checker side: which source forms draw randomness (`random` binding call with a declared distribution) and which bounds the checker decides or refuses. (e) The image theorem and the compiler preserve distributions, not only sets of runs (an obligation on R3/C9). Order: after B6 and B8; a design before the first line | 30 000–80 000 / 2–4 / — (uncalibrated) |
 
 ### C11 — non-emptiness in the statement
 
@@ -402,7 +403,7 @@ That is **about 23 full grammatik builds** for the goal theorem and the low-leve
 | S Stage 0 complete | 8 400–23 800 | — |
 | V GabbroV to R2 | 12 400–40 900 | — |
 | A fewer assumptions | 7 400–19 900 | — |
-| B more conclusions (B6 alone 30 000–80 000) | 48 000–126 000 | — |
+| B more conclusions (B6 alone 30 000–80 000; B11 probabilistic 30 000–80 000) | 78 000–206 000 | — |
 | C11 non-emptiness | 200–800 | — |
 | L low-level model (L1–L11) | 58 500–146 000 | — |
 | C compiler on GIR, Lean side (C1–C5, C9) | 84 000–210 000 | — |
