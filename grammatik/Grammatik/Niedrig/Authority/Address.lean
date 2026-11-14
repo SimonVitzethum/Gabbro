@@ -1,28 +1,12 @@
 module
 
-public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Typen.Sicht
 public import Grammatik.Speichermodell.Adressen.Layout
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.LowLevel
-
-/-- A declared nominal space and a canonical backing identity. Translation of
-    virtual aliases is L6; distinct nominal names never establish separation. -/
-inductive AddressKind where
-  | physical
-  | virtual
-  deriving DecidableEq, Repr
-
-structure Space (D : Deklaration) where
-  nominal : Nat
-  backing : Nat
-  width : Nat
-  kind : AddressKind
-  declared : nominal < D.dataSpaces.length
-  positiveWidth : 0 < width
-  deriving DecidableEq, Repr
 
 /-- Inert, width-bounded data. The existing number type carries the range duty.
     There is deliberately no coercion to a capability, region or reference. -/
