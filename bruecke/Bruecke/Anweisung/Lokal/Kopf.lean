@@ -103,14 +103,15 @@ theorem lowBodyF_bindRecord_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n :
       lowBodyF u c (.prod id fs :: Γ) (fn.mitWert x (.prod id fs)) n Λ ss r = .ok e ∧
       b0 = Endblock.bind ev e := by
   simp only [lowBodyF, lowBindW] at h
-  split at h
-  · cases h
-  · rename_i ev hev
+  cases hw : lowWertAtE u Γ Λ fn none (.prod id fs) v with
+  | error err => simp only [hw, reduceCtorEq] at h <;> cases h
+  | ok ev =>
+    simp only [hw] at h
     split at h
     · cases h
     · rename_i e he
       cases h
-      exact ⟨ev, e, hev, he, rfl⟩
+      exact ⟨ev, e, rfl, he, rfl⟩
 
 theorem lowBodyF_bindMut_ok (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x : String} {lo hi : Int} {v : USide}

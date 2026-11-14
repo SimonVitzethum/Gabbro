@@ -88,7 +88,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
       subst hb
       simp only [lowEnd] at h
       cases hE : lowErg u c Γ Λ fn (.bool bd) with
-      | error err => simp only [hE, reduceCtorEq] at h; cases h
+      | error err => simp only [hE, reduceCtorEq] at h
       | ok E =>
         simp only [hE] at h
         split at h
@@ -125,7 +125,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
       subst hb
       simp only [lowEnd] at h
       cases hE : lowErg u c Γ Λ fn (.wert sd) with
-      | error err => simp only [hE, reduceCtorEq] at h; cases h
+      | error err => simp only [hE, reduceCtorEq] at h
       | ok E =>
         simp only [hE] at h
         split at h

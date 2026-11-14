@@ -34,25 +34,25 @@ theorem namedResult_some {fn : UFn} {ns : BodyNames} {x g : String}
       b = .bindCall (ns.fresh x) g (gf.params.map (·.1)) renamed (preExpr gf) := by
   unfold namedResult at h
   cases hgf : fnSuch u g with
-  | none => simp only [hgf, Option.bind_none] at h; cases h
+  | none => simp only [hgf, bind, Option.bind_none] at h; cases h
   | some gf =>
-    simp only [hgf, Option.bind_some] at h
+    simp only [hgf, bind, Option.bind_some] at h
     cases ht : gf.ergTy with
-    | none => simp only [ht, Option.bind_none] at h; cases h
+    | none => simp only [ht, bind, Option.bind_none] at h; cases h
     | some t =>
-      simp only [ht, Option.bind_some] at h
+      simp only [ht, bind, Option.bind_some] at h
       cases hsh : shapeOfTy t with
-      | none => simp only [hsh, Option.bind_none] at h; cases h
+      | none => simp only [hsh, bind, Option.bind_none] at h; cases h
       | some sh =>
-        simp only [hsh, Option.bind_some] at h
+        simp only [hsh, bind, Option.bind_some] at h
         cases hes : argsExpr u fn args with
-        | none => simp only [hes, Option.bind_none] at h; cases h
+        | none => simp only [hes, bind, Option.bind_none] at h; cases h
         | some es =>
-          simp only [hes, Option.bind_some] at h
+          simp only [hes, bind, Option.bind_some] at h
           cases hn : renameStep.renameScalars (ns.lookup fn) es with
-          | none => simp only [hn, Option.bind_none] at h; cases h
+          | none => simp only [hn, bind, Option.bind_none] at h; cases h
           | some renamed =>
-            simp only [hn, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
+            simp only [hn, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
             exact ⟨gf, es, renamed, sh, hgf, ht, hsh, hes, hn, rfl⟩
 
