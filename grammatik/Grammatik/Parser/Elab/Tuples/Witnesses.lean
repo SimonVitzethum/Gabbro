@@ -141,7 +141,7 @@ private theorem caller_run :
 /-- Small AST evaluation, without lexing a large source or building an entire program witness. -/
 theorem tuple_export_zeuge : expand fixture = .ok (expandedFixture, [generated]) := by
   unfold expand
-  rewrite [prepared_context]
+  erw [prepared_context]
   have hrun := run_two (f := expandItem context 100000) producer_run caller_run
   change (fixture.mapM (expandItem context 100000)).run {} = _ at hrun
   rewrite [hrun]
