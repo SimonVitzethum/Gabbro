@@ -199,7 +199,7 @@ theorem schrittB_setVarB {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
 theorem schrittB_bindOpt {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
     {x : String} {num : Nat} {v : UOpt} {b : Gabbro.Body.Stmt}
     (h : schrittB u fn ns (.bindOpt x num v) = some (b, fn', ns')) :
-    ∃ (hn : num < u.tabs.length) e, namedOption u fn ns v = some e ∧
+    ∃ (hn : num < u.tabs.length), ∃ e, namedOption u fn ns v = some e ∧
       b = .bindName (ns.fresh x) e ∧
       fn' = fn.mitOpt x num ((declOf u).count ⟨num, hn⟩) ∧ ns' = ns.push x := by
   simp only [schrittB] at h

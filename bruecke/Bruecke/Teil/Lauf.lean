@@ -69,7 +69,7 @@ theorem eintrag_gut_teil {P : Programm (declOf u)} (G : GesenktC u C P) (S : Get
               intro x hx e
               subst e
               exact hp (List.mem_append_left _ hx)
-            exact hfr hwf k f
+            exact congrArg (valOf _) (hfr hwf k f)
         · cases hsw
     | field c n => rfl
     | global n =>
