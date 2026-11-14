@@ -152,8 +152,9 @@ theorem counterexample_extracted_zeuge :
 theorem checked_call_zeuge :
     decideB (close (callWP (D := declaration) () post post)) = true := by
   apply (close_decide_true_iff _).mpr
-  apply havoc_of_valid
   intro values
+  apply havoc_of_valid
+  intro other
   apply (lower_denote _ _).mpr
   exact fun initial => initial.2
 
@@ -165,16 +166,17 @@ theorem unchecked_call_havoc_zeuge :
       else ⟨5, by decide, by decide⟩ }
   refine ⟨assignment counterexampleWorld, ?_⟩
   intro valid
-  have result := callWP_sound () .tru post counterexampleWorld next valid ?_ trivial
-  · norm_num [post, lower_denote, entry, LProp.denote, LTerm.denote, assignment,
-      next, scalarValue] at result
-  · constructor
+  have frame : Rahmen (declaration.schreibt ()) (declaration.gschreibt ()) counterexampleWorld next := by
+    constructor
     · intro table _ index field
       rfl
     · intro name unchanged
       cases name
       · cases unchanged
       · rfl
+  have result := callWP_sound () .tru post counterexampleWorld next valid frame trivial
+  norm_num [post, lower_denote, entry, LProp.denote, LTerm.denote, assignment,
+    next, scalarValue] at result
 
 /-- The invariant is actually owed by the witness's function. -/
 theorem owed_zeuge : schuldet (D := declaration) () () = true := by decide
