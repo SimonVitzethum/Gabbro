@@ -138,8 +138,8 @@ private theorem tuple_empty_gate_check (art name : String) (error : Option Strin
   intro k
   have gate := Tuples.expandItem_empty_function k
     { art, name, params := [], res := none, fehler := error, klauseln := [], generics }
-    100000 rfl rfl rfl
-  have checked := Tuples.expandItem_check k check 100000
+    rfl rfl rfl
+  have checked := Tuples.expandItem_check k check
   simp only [List.mapM_cons, List.mapM_nil, gate, checked, pure_bind]
 
 attribute [local cbv_opaque] Tuples.expand Tuples.prepareContext
