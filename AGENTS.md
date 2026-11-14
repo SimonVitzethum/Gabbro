@@ -21,7 +21,7 @@ The Lean module-system migration and the split of every Lean file below 500 line
   started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
   - agents of the Claude family (owner, 2026-11-13, latest): EITHER one Opus 5.5 (`claude-opus-5-5`) OR two
     Sonnet 5.5 (`claude-sonnet-5-5`) at the same time, never mixed; Fable 5.2 only as the lead session;
-  - **three** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`);
+  - **five** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`; owner, 2026-11-14);
   - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
     `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
   Which model gets which kind of task follows [MODEL-EVALUATION.md](dokumente/MODEL-EVALUATION.md), not a fixed
