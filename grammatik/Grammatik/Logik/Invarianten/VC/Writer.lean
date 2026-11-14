@@ -80,24 +80,26 @@ def endBlock (program : Programm D) (checked : D.Fn → List D.Inv)
             let read := world.lese Λ condition.orte
             have branches := (lower_denote _ (assignment world)).mp valid
             have agree : assignment read = assignment world := assignment_lese _ _ _
-            cases tested : eval read condition read locals with
+            cases tested : eval (world.lese Λ condition.orte) condition
+                (world.lese Λ condition.orte) locals with
             | true =>
                 have present := (guard.correct read).mp tested
                 rw [agree] at present
                 have result := yesVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.1 present))
-                simpa only [WP.wpE, execEnd, tested, wahr?, ↓reduceIte] using result
+                simpa only [WP.wpE, execEnd, tested, wahr?, eq_self,
+                  Bool.false_eq_true, ↓reduceIte] using result
             | false =>
                 have absent : ¬ guard.payload.denote (assignment world) := by
                   intro h
                   rw [← agree] at h
-                  have := (guard.correct read).mpr h
-                  simp only [tested, Bool.false_eq_true] at this
+                  exact Bool.false_ne_true (tested.symm.trans ((guard.correct read).mpr h))
                 have result := noVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.2 absent))
-                simpa only [WP.wpE, execEnd, tested, wahr?, ↓reduceIte] using result }
+                simpa only [WP.wpE, execEnd, tested, wahr?, eq_self,
+                  Bool.false_eq_true, ↓reduceIte] using result }
   | .bind .. => .error (.unsupported "local bindings need a symbolic local environment")
   | .bindCall .. => .error (.unsupported "bound call results need a symbolic local environment")
   | _ => .error (.unsupported "writer end block: binding, loop, or scoped operation")
