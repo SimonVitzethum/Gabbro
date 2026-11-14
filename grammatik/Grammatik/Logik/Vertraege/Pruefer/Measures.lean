@@ -7,7 +7,7 @@ public import Grammatik.Logik.Terminierung.Mass
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
-open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC Invarianten.Pruefer
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC Invarianten.Pruefer
 
 variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 
