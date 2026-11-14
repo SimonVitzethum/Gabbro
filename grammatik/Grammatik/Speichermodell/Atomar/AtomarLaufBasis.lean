@@ -70,7 +70,7 @@ theorem gx_ga_lauf (hTA : ∀ c, Tg c → AtomarAusgenommen c) {M0 M : RufMaschi
 theorem gx_aus_g {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittG P O passes M u M') :
     RufSchrittGX P O passes Tg M u M' := by
   refine ⟨M.speicher, M', by rw [mitSpeicher_selbst]; exact hs, fun c _ => traegerGleich_refl _ c,
-    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl⟩
+    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl, rfl⟩
   have h := traegerGleich_of_nicht_schreib hw
   rw [mitSpeicher_selbst] at h
   exact h
