@@ -20,7 +20,7 @@ structure CheckedInvariants (E : Einheit D) (functions : List D.Fn) (locks : Lis
   lockInitial : ∀ lock ∈ locks, (E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true
 
 def checkLockInitial (E : Einheit D) (lock : D.Lock) :
-    Except Refusal (PLift ((E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)) := do
+    Except Frag.Refusal (PLift ((E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)) := do
   match source : E.lockFormulas lock with
   | none => return ⟨fun impossible => by simp [source] at impossible⟩
   | some _ =>
@@ -30,7 +30,7 @@ def checkLockInitial (E : Einheit D) (lock : D.Lock) :
       else .error (.unsupported "lock invariant is false in the declared initial memory")
 
 def checkInvariants (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
-    (budget : VCBudget := {}) : Except Refusal (CheckedInvariants E functions locks) := do
+    (budget : VCBudget := {}) : Except Frag.Refusal (CheckedInvariants E functions locks) := do
   let program ← checkProgram E.P E.S functions E.lockFormulas budget locks
   if valid : program.invariants.formula.eval (assignment (E.sp0.welt [])) = true then
     let locks ← collect locks
@@ -43,7 +43,7 @@ def checkInvariants (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock
   else .error (.unsupported "declared invariant is false in the declared initial memory")
 
 /-- Every invariant declaration is translated and every writer VC is decided
-    by Extended.compileWriter and the verified arithmetic decider. Refusal
+    by Extended.compileWriter and the verified arithmetic decider. Frag.Refusal
     outside the fragment is intentional: invariants never route to user logic.
     Opaque semantic lock predicates are the explicit exception: absent optional
     reification, their existing user duties are retained. No user proof of invariant truth or

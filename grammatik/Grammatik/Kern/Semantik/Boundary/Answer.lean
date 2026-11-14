@@ -15,13 +15,28 @@ theorem requiredB_sound (question answer : World D) (ρ : Env D Γ)
   unfold requiredB at h
   split at h
   · rfl
-  · rename_i left right
-    simp only [Bool.or_eq_false_iff] at h
-    change (wahr? (eval question left answer ρ) &&
-      wahr? (eval question right answer ρ)) = true
-    rw [requiredB_sound question answer ρ left h.1,
-      requiredB_sound question answer ρ right h.2]
-    rfl
+  · first
+    | (rename_i left right _
+       simp only [Bool.or_eq_false_iff] at h
+       change (wahr? (eval question left answer ρ) &&
+         wahr? (eval question right answer ρ)) = true
+       rw [requiredB_sound question answer ρ left h.1,
+         requiredB_sound question answer ρ right h.2]
+       rfl)
+    | (rename_i _ left right
+       simp only [Bool.or_eq_false_iff] at h
+       change (wahr? (eval question left answer ρ) &&
+         wahr? (eval question right answer ρ)) = true
+       rw [requiredB_sound question answer ρ left h.1,
+         requiredB_sound question answer ρ right h.2]
+       rfl)
+    | (rename_i left right
+       simp only [Bool.or_eq_false_iff] at h
+       change (wahr? (eval question left answer ρ) &&
+         wahr? (eval question right answer ρ)) = true
+       rw [requiredB_sound question answer ρ left h.1,
+         requiredB_sound question answer ρ right h.2]
+       rfl)
   · cases h
 
 /-- The shared value-or-reason gate. Only a decoded normal answer evaluates the

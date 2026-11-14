@@ -13,12 +13,12 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D}
 /-- Separate continuations are essential for mutable locals and loop control.
     A return owes the final invariant; `next` owes the next pass, not the exit. -/
 structure Goals (D : Deklaration) (Γ : Ctx) where
-  normal : Env D Γ → Except Refusal (QF (Observation D))
-  escape : Env D Γ → Except Refusal (QF (Observation D))
-  again : Env D Γ → Except Refusal (QF (Observation D))
+  normal : Env D Γ → Except Frag.Refusal (QF (Observation D))
+  escape : Env D Γ → Except Frag.Refusal (QF (Observation D))
+  again : Env D Γ → Except Frag.Refusal (QF (Observation D))
   terminal : QF (Observation D)
 
-def denotes (formula : Except Refusal (QF (Observation D))) (world : World D) : Prop :=
+def denotes (formula : Except Frag.Refusal (QF (Observation D))) (world : World D) : Prop :=
   match formula with
   | .ok body => body.denote (assignment world)
   | .error _ => False
@@ -97,9 +97,9 @@ def branchCondition {program : Programm D} {checked : D.Fn → List D.Inv}
     {Γ : Ctx} {Λ : List (Res D)} (test : Expr D Γ Λ .bool) (locals : Env D Γ)
     {yes no : Runtime program checked S → World D → Prop}
     (positive : Condition yes) (negative : Condition no) :
-    Except Refusal (Condition (fun runtime world =>
+    Except Frag.Refusal (Condition (fun runtime world =>
       let read := world.lese Λ test.orte
-      if eval read test read locals then yes runtime read else no runtime read)) := do
+      if wahr? (eval read test read locals) = true then yes runtime read else no runtime read)) := do
   let guard ← translate test locals
   return {
       formula := lower (.and (.imp guard.payload (quoteQF positive.formula))
@@ -114,16 +114,25 @@ def branchCondition {program : Programm D} {checked : D.Fn → List D.Inv}
             rw [agree] at present
             have ready := (quoteQF_denote _ _).mp (branches.1 present)
             have result := positive.sound runtime read (by rw [agree]; exact ready)
-            simpa only [tested, ↓reduceIte] using result
+            dsimp only
+            split
+            · exact result
+            · rename_i other
+              exact (other tested).elim
         | false =>
             have absent : ¬ guard.payload.denote (assignment world) := by
               intro present
               rw [← agree] at present
               have impossible := (guard.correct read).mpr present
-              simp only [tested, Bool.false_eq_true] at impossible
+              rw [tested] at impossible
+              exact Bool.noConfusion impossible
             have ready := (quoteQF_denote _ _).mp (branches.2 absent)
             have result := negative.sound runtime read (by rw [agree]; exact ready)
-            simpa only [tested, Bool.false_eq_true, ↓reduceIte] using result }
+            dsimp only
+            split
+            · rename_i taken
+              exact Bool.noConfusion (taken.symm.trans tested)
+            · exact result }
 
 abbrev StatementCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

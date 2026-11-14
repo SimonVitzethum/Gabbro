@@ -87,17 +87,26 @@ def endBlock (program : Programm D) (checked : D.Fn → List D.Inv)
                 have result := yesVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.1 present))
-                simpa only [WP.wpE, execEnd, tested, wahr?, ↓reduceIte] using result
+                simp only [WP.wpE, execEnd]
+                split
+                · exact result
+                · rename_i other
+                  exact (other tested).elim
             | false =>
                 have absent : ¬ guard.payload.denote (assignment world) := by
                   intro h
                   rw [← agree] at h
                   have := (guard.correct read).mpr h
-                  simp only [tested, Bool.false_eq_true] at this
+                  rw [tested] at this
+                  exact Bool.noConfusion this
                 have result := noVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.2 absent))
-                simpa only [WP.wpE, execEnd, tested, wahr?, ↓reduceIte] using result }
+                simp only [WP.wpE, execEnd]
+                split
+                · rename_i taken
+                  exact Bool.noConfusion (taken.symm.trans tested)
+                · exact result }
   | .bind .. => .error (.unsupported "local bindings need a symbolic local environment")
   | .bindCall .. => .error (.unsupported "bound call results need a symbolic local environment")
   | _ => .error (.unsupported "writer end block: binding, loop, or scoped operation")

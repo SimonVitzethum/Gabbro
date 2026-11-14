@@ -18,7 +18,7 @@ structure CheckedProgram (program : Programm D) (S : SperrInv D) (functions : Li
 
 def checkProgram (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S) (budget : VCBudget := {}) (locks : List D.Lock := []) :
-    Except Refusal (CheckedProgram program S functions) := do
+    Except Frag.Refusal (CheckedProgram program S functions) := do
   let _ ← collect locks
     (fun lock => (sources lock).isSome = true → Nonempty (LockFormula S lock))
     (fun lock => match source : sources lock with

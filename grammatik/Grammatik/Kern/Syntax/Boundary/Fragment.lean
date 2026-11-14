@@ -78,14 +78,17 @@ def Check.trivial : Check D Γ Λ where
   expression := .tru
   admitted := rfl
 
+
 /-- Conjunctions of true clauses contain no runtime check. This recognizes only
     syntax, without trying to decide general semantic tautologies. -/
-def requiredB : Expr D Γ Λ .bool → Bool
-  | .tru => false
-  | .and left right => requiredB left || requiredB right
-  | _ => true
+def requiredB : {τ : Ty} → Expr D Γ Λ τ → Bool
+  | _, .tru => false
+  | _, .and left right => requiredB left || requiredB right
+  | _, _ => true
 
 def Check.requiredB (c : Check D Γ Λ) : Bool := Boundary.requiredB c.expression
+
+theorem Check.trivial_requiredB : (Check.trivial : Check D Γ Λ).requiredB = false := rfl
 
 /-- Admission of a call site: executable checks require its declared error arm.
     The error code itself is supplied by that declaration, never invented here. -/

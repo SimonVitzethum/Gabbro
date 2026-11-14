@@ -45,10 +45,10 @@ def traverseWriter : Endblock declaration contract false [] [] :=
     (.ret .empty (List.Perm.refl _))
 
 def noLockFacts (lock : declaration.Lock) :
-    Except Refusal (LockFormula (SperrInv.leer declaration) lock) := nomatch lock
+    Except Frag.Refusal (LockFormula (SperrInv.leer declaration) lock) := nomatch lock
 
 def compile (code : Endblock declaration contract false [] []) :
-    Except Refusal (EndCondition program noFacts (SperrInv.leer declaration) code .nil post) :=
+    Except Frag.Refusal (EndCondition program noFacts (SperrInv.leer declaration) code .nil post) :=
   extendedEnd program noFacts noLockFacts 16 none 64 code .nil post
 
 def boundedCompiled : EndCondition program noFacts (SperrInv.leer declaration) boundedWriter .nil post :=

@@ -16,11 +16,11 @@ variable {program : Programm D} {checked : D.Fn → List D.Inv}
 def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Refusal (BlockCondition program checked S body locals goals))
-    (compileOverflow : ∀ locals goals, Except Refusal (BlockCondition program checked S overflow locals goals))
+    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition program checked S body locals goals))
+    (compileOverflow : ∀ locals goals, Except Frag.Refusal (BlockCondition program checked S overflow locals goals))
     (count : Nat) (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (Condition (fun runtime : Runtime program checked S => fun world =>
-      goals.holds (retryLauf
+    Except Frag.Refusal (Condition (fun runtime : Runtime program checked S => fun world =>
+      goals.holds (V := V) (l := l) (retryLauf (V := V) (l := l)
         (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
         (fun world env => let read := world.lese Λ test.orte
           (read, wahr? (eval read test read env)))
@@ -46,9 +46,9 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let done ← requireCondition (program := program) (checked := checked) (S := S) (goals.normal locals)
       let advanced := step.map (fun runtime world ready => by
         unfold Runtime.wpB at ready
-        change goals.holds (match execBlockH S runtime.oracle runtime.environment
+        change goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
-          | .ok next env | .next _ next env => retryLauf
+          | .ok next env | .next _ next env => retryLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
               (fun world env => let read := world.lese Λ test.orte
                 (read, wahr? (eval read test read env)))
@@ -83,10 +83,10 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (table : D.Tab) (annotation : Expr D Γ Λ .bool)
     (body : Block D V true (.index (D.count table) :: Γ) Λ Λ)
-    (compileBody : ∀ locals goals, Except Refusal (BlockCondition program checked S body locals goals))
+    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition program checked S body locals goals))
     (indices : List (Wert D (.index (D.count table)))) (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (Condition (fun runtime : Runtime program checked S => fun world =>
-      goals.holds (traverseLauf
+    Except Frag.Refusal (Condition (fun runtime : Runtime program checked S => fun world =>
+      goals.holds (V := V) (l := l) (traverseLauf (V := V) (l := l)
         (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
         (fun world env => let read := world.lese Λ annotation.orte
           (read, wahr? (eval read annotation read env))) indices world locals))) :=
@@ -112,9 +112,9 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let step ← compileBody (.cons index locals) passGoals
       let advanced := step.map (fun runtime world ready => by
         unfold Runtime.wpB at ready
-        change goals.holds (match execBlockH S runtime.oracle runtime.environment
+        change goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world (.cons index locals) with
-          | .ok next env | .next _ next env => traverseLauf
+          | .ok next env | .next _ next env => traverseLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
               (fun world env => let read := world.lese Λ annotation.orte
                 (read, wahr? (eval read annotation read env))) indices next env.tail

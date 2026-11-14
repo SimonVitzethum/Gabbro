@@ -15,11 +15,11 @@ variable {program : Programm D} {checked : D.Fn → List D.Inv}
     to `writerVC`; refusals keep their offending source-form diagnostic.
     A supplied loop invariant is itself checked, never assumed. -/
 def compileWriter (program : Programm D) (checked : D.Fn → List D.Inv)
-    (facts : ∀ lock, Except Refusal (LockFormula S lock)) (budget : VCBudget)
+    (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock)) (budget : VCBudget)
     (loopInvariant : Option (QF (Observation D)))
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (code : Endblock D V l Γ Λ) (locals : Env D Γ) (terminal : QF (Observation D)) :
-    Except Refusal (EndCondition program checked S code locals terminal) :=
+    Except Frag.Refusal (EndCondition program checked S code locals terminal) :=
   extendedEnd program checked facts budget.expansion loopInvariant budget.depth code locals terminal
 
 /-- The existing writer matrix is independent of how its sufficient WP was

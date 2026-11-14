@@ -15,7 +15,7 @@ structure EnvironmentDomain (D : Deklaration) (Γ : Ctx) where
   values : List (Env D Γ)
   complete : ∀ locals : Env D Γ, locals ∈ values
 
-def environmentDomain (budget : Nat) : (Γ : Ctx) → Except Refusal (EnvironmentDomain D Γ)
+def environmentDomain (budget : Nat) : (Γ : Ctx) → Except Frag.Refusal (EnvironmentDomain D Γ)
   | [] => .ok
       { values := [.nil]
         complete := fun locals => by cases locals; simp }
@@ -54,10 +54,10 @@ def inductiveCondition (invariant : QF (Observation D))
 def retryInvariantCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (budget count : Nat) (invariant : QF (Observation D))
     (test : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) (overflow : Block D V l Γ Λ Λ)
-    (compileBody : ∀ locals goals, Except Refusal (BlockCondition program checked S body locals goals))
-    (compileOverflow : ∀ locals goals, Except Refusal (BlockCondition program checked S overflow locals goals))
+    (compileBody : ∀ locals goals, Except Frag.Refusal (BlockCondition program checked S body locals goals))
+    (compileOverflow : ∀ locals goals, Except Frag.Refusal (BlockCondition program checked S overflow locals goals))
     (locals : Env D Γ) (goals : Goals D Γ) :
-    Except Refusal (StatementCondition program checked S (.retry count test body overflow) locals goals) := do
+    Except Frag.Refusal (StatementCondition program checked S (.retry count test body overflow) locals goals) := do
   let domain ← environmentDomain (D := D) budget Γ
   let passGoals : Goals D Γ :=
     { normal := fun _ => .ok invariant

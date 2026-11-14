@@ -18,7 +18,7 @@ structure LocalDomain (D : Deklaration) (τ : Ty) where
   complete : ∀ value : Wert D τ, value ∈ values
 
 def integerValues (lo hi : Int) (remaining : Nat) : List (Zahl lo hi) :=
-  (List.range remaining).filterMap fun offset =>
+  (List.range remaining).filterMap fun (offset : Nat) =>
     if h : lo ≤ lo + (offset : Int) ∧ lo + (offset : Int) ≤ hi then
       some ⟨lo + (offset : Int), h.1, h.2⟩
     else none
@@ -35,7 +35,7 @@ theorem integerValues_complete (lo hi : Int) (value : Zahl lo hi) :
   have same : lo + ((value.n - lo).toNat : Int) = value.n := by omega
   simpa only [same, lower, upper, and_self, ↓reduceDIte]
 
-def localDomain (budget : Nat) (τ : Ty) : Except Refusal (LocalDomain D τ) :=
+def localDomain (budget : Nat) (τ : Ty) : Except Frag.Refusal (LocalDomain D τ) :=
   match τ with
   | .int lo hi =>
       if (hi - lo + 1).toNat ≤ budget then
@@ -46,15 +46,17 @@ def localDomain (budget : Nat) (τ : Ty) : Except Refusal (LocalDomain D τ) :=
   | .bool =>
       if 2 ≤ budget then
         .ok
-          { values := [false, true]
-            complete := fun value => by cases value <;> simp }
+          { values := (([false, true] : List Bool) : List (Wert D .bool))
+            complete := by
+              show ∀ value : Bool, value ∈ ([false, true] : List Bool)
+              decide }
       else .error (.unsupported "Boolean local observation exceeds the VC budget")
   | _ => .error (.unsupported "local observation needs a bounded integer or Boolean type")
 
 /-- Piecewise scalar initialization, including the model's narrowing fallback.
     The equality is exact in both arms, so local snapshots retain correlations. -/
 def integerEquality (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ) (number : Int) :
-    Except Refusal { formula : LProp (Observation D) // ∀ world,
+    Except Frag.Refusal { formula : LProp (Observation D) // ∀ world,
       formula.denote (assignment world) ↔ (eval world expression world locals).n = number } :=
   match expression with
   | .eng value low high fallback => do
@@ -91,18 +93,34 @@ def integerEquality (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ)
       return ⟨.and (.imp guard.payload yes.val) (.imp (.not guard.payload) no.val), fun world => by
         change (guard.payload.denote _ → yes.val.denote _) ∧
           (¬ guard.payload.denote _ → no.val.denote _) ↔ _
-        rw [← guard.correct world, yes.property world, no.property world]
-        cases tested : eval world test world locals <;> simp [eval, tested, wahr?]⟩
+        rw [← guard.bool_iff world, yes.property world, no.property world]
+        cases tested : wahr? (eval world test world locals) with
+        | true =>
+            have evaluated : eval world (.wenn test positive negative) world locals =
+                eval world positive world locals := if_pos tested
+            have equivalent := congrArg (fun v : Wert D (.int lo hi) => v.n = number) evaluated
+            simp only [tested, true_implies, not_true_eq_false, false_implies, and_true]
+            exact ⟨Eq.mpr equivalent, Eq.mp equivalent⟩
+        | false =>
+            have declined : ¬ wahr? (eval world test world locals) = true :=
+              fun taken => Bool.noConfusion (tested.symm.trans taken)
+            have evaluated : eval world (.wenn test positive negative) world locals =
+                eval world negative world locals := if_neg declined
+            have equivalent := congrArg (fun v : Wert D (.int lo hi) => v.n = number) evaluated
+            simp only [tested, Bool.false_eq_true, false_implies, not_false_eq_true,
+              true_implies, true_and]
+            exact ⟨Eq.mpr equivalent, Eq.mp equivalent⟩⟩
   | expression => do
       let encoded ← translate expression locals
       return ⟨.eq encoded.payload (.konst number), fun world => by
         change encoded.payload.denote _ = number ↔ _
         rw [encoded.correct world]⟩
+termination_by sizeOf expression
 
 /-- The equality relating a fresh local observation to its initializer. This
     preserves correlation with memory even if that memory is overwritten later. -/
 def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : Wert D τ) :
-    Except Refusal { formula : LProp (Observation D) // ∀ world,
+    Except Frag.Refusal { formula : LProp (Observation D) // ∀ world,
       formula.denote (assignment world) ↔ eval world expression world locals = value } :=
   match τ with
   | .int lo hi => do
@@ -112,13 +130,23 @@ def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : We
         exact ⟨fun h => zahl_ext h, fun h => congrArg Zahl.n h⟩⟩
   | .bool => do
       let encoded ← translate expression locals
-      return ⟨if value then encoded.payload else .not encoded.payload, fun world => by
-        cases value with
-        | true => exact (encoded.correct world).symm
+      return ⟨if wahr? value then encoded.payload else .not encoded.payload, fun world => by
+        change (if wahr? value then encoded.payload else .not encoded.payload).denote _ ↔
+          wahr? (eval world expression world locals) = wahr? value
+        cases expected : wahr? value with
+        | true =>
+            simp only [expected, ↓reduceIte]
+            exact (encoded.bool_iff world).symm
         | false =>
-            change ¬ encoded.payload.denote (assignment world) ↔ _ = false
-            rw [← encoded.correct world]
-            cases eval world expression world locals <;> simp⟩
+            simp only [expected, Bool.false_eq_true, ↓reduceIte, LProp.denote]
+            constructor
+            · intro absent
+              cases actual : wahr? (eval world expression world locals) with
+              | false => rfl
+              | true => exact (absent ((encoded.bool_iff world).mp actual)).elim
+            · intro absent present
+              have actual := (encoded.bool_iff world).mpr present
+              exact Bool.noConfusion (absent.symm.trans actual)⟩
   | _ => .error (.unsupported "local initializer is outside the scalar fragment")
 
 /-- Conjoin certified branches. The chosen domain is complete; empty types are
@@ -126,8 +154,8 @@ def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : We
 def localBranches {program : Programm D} {checked : D.Fn → List D.Inv}
     (values : List (Wert D τ)) (expression : Expr D Γ Λ τ) (locals : Env D Γ)
     (target : Wert D τ → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world => ∀ value ∈ values,
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world => ∀ value ∈ values,
       eval world expression world locals = value → target value runtime world)) :=
   match values with
   | [] => .ok
@@ -142,16 +170,17 @@ def localBranches {program : Programm D} {checked : D.Fn → List D.Inv}
           sound := fun runtime world valid current member equals => by
             have parts := (conj_denote _ _ _).mp valid
             rcases List.mem_cons.mp member with same | member
-            · subst current
-              exact head.sound runtime world (freshImplication_sound τ value relation.val head.formula
-                (assignment world) parts.1 ((relation.property world).mpr equals))
+            · have reached : eval world expression world locals = value := same ▸ equals
+              have result := head.sound runtime world (freshImplication_sound τ value relation.val
+                head.formula (assignment world) parts.1 ((relation.property world).mpr reached))
+              exact same ▸ result
             · exact tail.sound runtime world parts.2 current member equals }
 
 def localSelect {program : Programm D} {checked : D.Fn → List D.Inv}
     (budget : Nat) (expression : Expr D Γ Λ τ) (locals : Env D Γ)
     (target : Wert D τ → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world =>
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world =>
       target (eval world expression world locals) runtime world)) := do
   let domain ← localDomain (D := D) budget τ
   let branches ← localBranches domain.values expression locals target compile
@@ -162,8 +191,8 @@ def localSelect {program : Programm D} {checked : D.Fn → List D.Inv}
     from the callee contract is smuggled into this conjunction. -/
 def allConditions {program : Programm D} {checked : D.Fn → List D.Inv}
     (values : List α) (target : α → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value))) :
-    Except Refusal (Condition (fun runtime world => ∀ value ∈ values, target value runtime world)) :=
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
+    Except Frag.Refusal (Condition (fun runtime world => ∀ value ∈ values, target value runtime world)) :=
   match values with
   | [] => .ok
       { formula := .tru
