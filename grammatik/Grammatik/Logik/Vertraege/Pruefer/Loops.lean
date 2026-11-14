@@ -42,12 +42,11 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           reason := goals.reason }
       let step ← compileBody locals passGoals
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
-      let advanced := step.map (fun runtime world ready allowed safe => by
-        have ready := ready allowed safe
-        unfold Runtime.wpB at ready
-        change goals.holds allowed (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
+        ∀ allowed, HandlerSafe policy runtime allowed →
+        goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
-          | .ok next env | .next _ next env => retryLauf
+          | .ok next env | .next _ next env => retryLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
               (fun world env => let read := world.lese Λ test.orte
                 (read, wahr? (eval read test read env)))
@@ -57,7 +56,9 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error)
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready allowed safe => by
+        have ready := ready allowed safe
+        unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world locals with
         | ok next env =>
             rw [result] at ready
@@ -76,7 +77,9 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
           simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
           have ready := ready allowed safe <;>
-          simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
+          cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls
+            body (world.lese Λ test.orte) locals <;>
+          simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested, result,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
 
 /-- An inductive hint is checked at entry, at every ordinary/continue
