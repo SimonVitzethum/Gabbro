@@ -346,6 +346,14 @@ public import Grammatik.Logik.Invarianten.Korrekt.Witness
 public import Grammatik.Logik.Invarianten.Modell.DecisionWitness
 public import Grammatik.Logik.WP.BoundedWhile
 public import Grammatik.Logik.WP.BoundedWhileWitness
+public import Grammatik.Logik.Invarianten.Modell.Witness
+public import Grammatik.Logik.Invarianten.VC.Witness
+public import Grammatik.Logik.Invarianten.VC.ExtendedWitness
+public import Grammatik.Logik.Invarianten.Pruefer.Witness
+public import Grammatik.Logik.Invarianten.Pruefer.LockWitness
+public import Grammatik.Logik.Vertraege.Pruefer.Witness
+public import Grammatik.Logik.Vertraege.Pruefer.LoopWitness
+public import Grammatik.Logik.Vertraege.Pruefer.RecursionWitness
 public import Grammatik.Logik.WP.Zeuge
 public import Grammatik.Logik.WP.ZeugeRuf
 public import Grammatik.Logik.WP.ZeugeRel

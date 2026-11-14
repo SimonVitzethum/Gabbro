@@ -93,7 +93,9 @@ def einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
     Einheit (declOf u) :=
   { P := P, S := sperrFamilie u, Q := Q, starts := starts, sp0 := sp,
-    gestartet := gestartet, arenen := [], akku := [], pruefungen := [] }
+    gestartet := gestartet, arenen := [], akku := [], pruefungen := [],
+    lockFormulas := sperrQuellen u, axiomSources := leereAxQuellen u Q,
+    pointerSignatures := some (zeigerSignaturen u), measure := massVon u }
 
 /-- The `Einheit` carries the restored program. -/
 theorem einheitVon_P (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
@@ -138,15 +140,17 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
     (axEq₁ axEq₂ : DecidableEq D.Ax) (P : Programm D) (S : SperrInv D)
     (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (aks : List (Kernzelle.AccumulatorDecl D))
-    (checks : List (CheckDecl D)) (aqs : List D.Ax) (guests : List (GuestBoundary D)) :
-    @AkzeptiertX D fnEq₁ axEq₁ P S fs ls cs ws aks checks aqs guests =
-      @AkzeptiertX D fnEq₂ axEq₂ P S fs ls cs ws aks checks aqs guests := by
+    (checks : List (CheckDecl D)) (aqs : List D.Ax) (guests : List (GuestBoundary D))
+    (sources : Invarianten.Pruefer.LockSources S := fun _ => none)
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) :
+    @AkzeptiertX D fnEq₁ axEq₁ P S fs ls cs ws aks checks aqs guests sources hints =
+      @AkzeptiertX D fnEq₂ axEq₂ P S fs ls cs ws aks checks aqs guests sources hints := by
   cases Subsingleton.elim fnEq₁ fnEq₂
   cases Subsingleton.elim axEq₁ axEq₂
   rfl
 
 /-- **The step behind the bridge**: a successful `accepts` gives the goal checker's `true` on
-    `einheitVon`, whose arenas, accumulators and checks are empty, for EVERY unit. It says nothing
+    `einheitVon`, whose arenas, accumulators and checks are empty, after the actual start gate succeeds. It says nothing
     about a unit's own arenas, accumulators or checks: the bridge on the unit's judged `Einheit`
     is `accepts_gibt_pruefer` (JudgedUnit.lean), which uses `zertifizierbar`. The guest
     descriptors `accepts` certifies ride along unchanged (`akzeptiertX_guest_eq`); the ownership
@@ -159,7 +163,9 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
     (hFn : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length)))
     (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
-    (h : accepts u P main = .ok true) :
+    (h : accepts u P main = .ok true)
+    (hStart : unitStartGeprueftB (einheitVon u P Q sp starts gestartet)
+      (List.finRange u.fns.length) (List.finRange u.locks.length) = true) :
     akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
@@ -171,53 +177,31 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
     | ok guests =>
       simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure,
         Except.ok.injEq] at h
+      have h := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp h
       -- `h` carries the equality procedures `accepts` fixes with `letI`; the guest
       -- split is instantiated with exactly these, all other arguments come from `h`.
       have hsplit := (@akzeptiertX_guest_eq (declOf u)
         (inferInstanceAs (DecidableEq (Fin u.fns.length)))
         (inferInstanceAs (DecidableEq (Fin u.axs.length)))
-        P (sperrFamilie u) _ _ _ _ _ _ _ _).symm.trans h
+        P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)).symm.trans h
       have hpre := ((Bool.and_eq_true _ _).mp hsplit).1
       -- The goal checker decides with the caller's `hFn` and a classical procedure
       -- for `Ax` (`akzeptiertX_pruefer`); `akzeptiertX_inst` changes both.
       have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
           (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
           ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] = true := by
+          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) = true := by
         rw [einheitVon_ws, hws]
         exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
-          P (sperrFamilie u) _ _ _ _ _ _ _ _).symm.trans hpre
+          P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)).symm.trans hpre
       have hB : besitzB (einheitVon u P Q sp starts gestartet)
           (List.finRange u.fns.length) = true :=
         besitzB_leer (einheitVon_arenen u P Q sp starts gestartet)
       have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
           (einheitVon u P Q sp starts gestartet).akku = true :=
         Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet)
-      show (@AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y))
-          (einheitVon u P Q sp starts gestartet).P
-          (einheitVon u P Q sp starts gestartet).S (List.finRange u.fns.length)
-          (List.finRange u.locks.length)
-          ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-          (einheitVon u P Q sp starts gestartet).ws
-          (einheitVon u P Q sp starts gestartet).akku
-          (einheitVon u P Q sp starts gestartet).pruefungen [] [] &&
-          besitzB (einheitVon u P Q sp starts gestartet) (List.finRange u.fns.length) &&
-          Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
-            (einheitVon u P Q sp starts gestartet).akku) = true
-      exact (Bool.and_eq_true _ _).mpr ⟨(Bool.and_eq_true _ _).mpr ⟨hX, hB⟩, hA⟩
-
-/-- A minimal certifiable unit: one parameterless function declared as the
-    only root. Hand-built; it covers `zertifizierbar` alone. The joint witness
-    of the bridge on a compiled unit is `GoalCheckerWitness.bridge_zeuge`
-    (Zeugen/Pruefung/GoalCheckerWitness.lean). -/
-def zeugenFn : UFn :=
-  { name := "main", params := [], kinds := [], res := none, held := [], puts := [],
-    gives := [], body := [], ret := .empty }
-
-def zeugenEinheit : UProg :=
-  { tabs := [], locks := [], fns := [zeugenFn], roots := ["main"] }
-
-/-- The minimal unit is certifiable. -/
-theorem zertifizierbar_zeuge : zertifizierbar zeugenEinheit = true := by decide
+      have starts := Bool.and_eq_true.mp hStart
+      exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
+        ⟨Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
 
 end Gabbro.Stage0.OldSource

@@ -156,7 +156,8 @@ theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) :
     AkzeptiertSpec P S fs ws aks := by
-  unfold Akzeptiert at h
+  have h := (Bool.and_eq_true.mp h).1
+  dsimp only [Akzeptiert] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, _h16⟩ := h
   exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
@@ -171,7 +172,8 @@ theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
 theorem scopesOkProg_of_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
-  unfold Akzeptiert at h
+  have h := (Bool.and_eq_true.mp h).1
+  dsimp only [Akzeptiert] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
@@ -196,9 +198,12 @@ theorem spec_akzeptiert [RootNativeFloat.Hardware]
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
-    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks) :
+    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks)
+    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true) :
     Akzeptiert P S fs ls cs ws aks checks qs = true := by
   unfold Akzeptiert
+  apply Bool.and_eq_true.mpr
+  refine ⟨?_, hI⟩
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
     (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,

@@ -86,18 +86,24 @@ def args : Env (declOf result.unit) ((declOf result.unit).params result.main) :=
 
 /-- **The joint witness of the bridge**: all premises of `Compiled.goal_checker_main` hold
     together on the compiled unit, with the start environment the image uses, and the goal
-    checker answers `true` on the judged `Einheit`, for every foreign answer family and start
-    memory. -/
-theorem bridge_zeuge (Q : AxEns (declOf result.unit)) (sp : Speicher (declOf result.unit)) :
+    checker answers `true` on the judged `Einheit` when the actual start-data gate succeeds.
+    The unconditional new checker witness is Vertraege.Pruefer.Witness.checker_accepted_zeuge. -/
+theorem bridge_zeuge (Q : AxEns (declOf result.unit)) (sp : Speicher (declOf result.unit))
+    (checked : Zielsatz.unitStartGeprueftB
+      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
+      (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
       ((List.finRange result.unit.tabs.length).map Sum.inl ++
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
-  result.goal_checker_main Q sp args certifiable no_roots no_started
+  result.goal_checker_main Q sp args certifiable no_roots no_started checked
 
 /-- The general bridge on the same unit, with the derived (empty) check list. -/
-theorem bridge_checks_zeuge (Q : AxEns (declOf result.unit)) (sp : Speicher (declOf result.unit)) :
+theorem bridge_checks_zeuge (Q : AxEns (declOf result.unit)) (sp : Speicher (declOf result.unit))
+    (checked : Zielsatz.unitStartGeprueftB
+      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
+      (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
@@ -105,6 +111,6 @@ theorem bridge_checks_zeuge (Q : AxEns (declOf result.unit)) (sp : Speicher (dec
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
   result.goal_checker Q sp args [] [] [] certifiable
     (OldSource.uCheckDecls_zertifizierbar result.unit certifiable)
-    (OldSource.roots_leer result.unit no_roots) (OldSource.gestartet_leer result.unit no_started)
+    (OldSource.roots_leer result.unit no_roots) (OldSource.gestartet_leer result.unit no_started) checked
 
 end Gabbro.Stage0.GoalCheckerWitness

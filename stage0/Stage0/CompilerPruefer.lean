@@ -32,14 +32,17 @@ theorem Compiled.goal_checker {text : String} {options : Profil.Options}
     (hZ : OldSource.zertifizierbar result.unit = true)
     (hC : uCheckDecls result.unit = .ok checks)
     (hr : roots.map (·.1) = result.unit.roots.filterMap fun n => wurzelIdx result.unit n)
-    (hg : gestartet.map (·.1) = result.unit.gestartet.filterMap fun n => wurzelIdx result.unit n) :
+    (hg : gestartet.map (·.1) = result.unit.gestartet.filterMap fun n => wurzelIdx result.unit n)
+    (hStart : unitStartGeprueftB
+      (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet checks)
+      (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet checks)
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
       ((List.finRange result.unit.tabs.length).map Sum.inl ++
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
   OldSource.accepts_gibt_pruefer result.unit result.program Q sp result.main args roots gestartet
-    checks (hFn := inferInstance) (hZ := hZ) (hC := hC) (hr := hr) (hg := hg) (h := result.accepted)
+    checks (hFn := inferInstance) (hZ := hZ) (hC := hC) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
 
 /-- Premise (a) for a compiled unit whose only start is its entry (no declared roots, no
     run-time roots): the judged `Einheit` starts `result.main` alone and carries no check. -/
@@ -48,14 +51,17 @@ theorem Compiled.goal_checker_main {text : String} {options : Profil.Options}
     (sp : Speicher (declOf result.unit))
     (args : Env (declOf result.unit) ((declOf result.unit).params result.main))
     (hZ : OldSource.zertifizierbar result.unit = true)
-    (hr : result.unit.roots = []) (hg : result.unit.gestartet = []) :
+    (hr : result.unit.roots = []) (hg : result.unit.gestartet = [])
+    (hStart : unitStartGeprueftB
+      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
+      (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
       ((List.finRange result.unit.tabs.length).map Sum.inl ++
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
   OldSource.accepts_gibt_pruefer_main result.unit result.program Q sp result.main args
-    (hFn := inferInstance) (hZ := hZ) (hr := hr) (hg := hg) (h := result.accepted)
+    (hFn := inferInstance) (hZ := hZ) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
 
 /-- **The image of a unit without declared and run-time roots starts no thread besides `main`**:
     its canonical start plan has no `concurrent` occurrence and no named root. -/
@@ -82,7 +88,10 @@ theorem Emitted.goal_checker_main {src : String} {K : Nat} {options : Profil.Opt
     (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
     (sp : Speicher (declOf output.compiled.unit))
     (hZ : OldSource.zertifizierbar output.compiled.unit = true)
-    (hr : output.compiled.unit.roots = []) (hg : output.compiled.unit.gestartet = []) :
+    (hr : output.compiled.unit.roots = []) (hg : output.compiled.unit.gestartet = [])
+    (hStart : unitStartGeprueftB
+      (OldSource.einheitDer output.compiled.unit output.compiled.program Q sp output.compiled.main output.args [] [] [])
+      (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q sp output.compiled.main
         output.args [] [] [])
@@ -90,6 +99,6 @@ theorem Emitted.goal_checker_main {src : String} {K : Nat} {options : Profil.Opt
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
         (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true ∧
       output.starts = [] :=
-  ⟨output.compiled.goal_checker_main Q sp output.args hZ hr hg, output.starts_leer hr hg⟩
+  ⟨output.compiled.goal_checker_main Q sp output.args hZ hr hg hStart, output.starts_leer hr hg⟩
 
 end Gabbro.Stage0

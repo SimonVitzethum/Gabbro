@@ -66,6 +66,7 @@ def qAlle (ps : List (Projekt D)) : AxEns D :=
 def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   P := komponiereP B.P ps
   S := B.S
+  lockFormulas := B.lockFormulas
   Q := qAlle ps
   starts := ps.flatMap (·.E.starts)
   sp0 := B.sp0

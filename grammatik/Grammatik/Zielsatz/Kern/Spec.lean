@@ -58,6 +58,38 @@
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool `AkzeptiertX`, not a deployed
   checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which carries none of the concurrent legs of `ZielFX`.
 
+  CHECKER-DECIDED LOGIC (owner 2026-11-13). Premise (a) is strengthened:
+  AkzeptiertSpecX.invarianten and .kontrakte carry the semantic consequences
+  of verified arithmetic VC decisions. AkzeptiertX/AkzeptiertXVoll check every
+  function's requires at calls, ensures at actual value returns and owed
+  invariants at value/reason returns. Callee ensures are used only inside the
+  existing contract-respecting handler class; the whole function family is
+  checked together. Failed or unsupported obligations refuse acceptance.
+  Bounded retry loops unroll exactly within the expansion budget. Larger
+  bounds require a reified hint, checked at entry, preservation, exit and
+  overflow. Einheit carries these hint expressions; their source parser/exporter
+  connection remains open. The canonical decreases tuples add a strict-decrease condition
+  to every call back into the caller's cycle, discharged by the same decider.
+  False arithmetic decisions report counterexample values in observation order.
+
+  The concrete akzeptiertX_pruefer additionally runs nutzerPflichtGeprueftB:
+  lock formulas must be reified, local and initially true; lexical releases
+  are checked; every declared start meets requires; reified oracle predicates
+  are local to their declared answer footprint; every function-pointer target
+  refines its finite source interface table. Einheit's source correspondence
+  fields contain no proof of assertion truth, preservation or refinement.
+  They are elaborator output. Missing correspondence is a refusal, never a
+  user-logic escape hatch. Oracle truth remains a named assumption in (c).
+
+  nutzerPflicht_of_akzeptiert derives the existing NutzerPflichtA E from the
+  concrete checker; gabbro_ziel_ohne_nutzerpflicht is a GabbroZielVoll corollary.
+  The C08 headline keeps its software call-site and binding obligations.
+  This strengthens acceptance and does not weaken any guarantee or add a
+  runtime contract check. The current checked fragment refuses old-memory
+  contracts, oversized local domains, atomic-reading bodies and unsupported
+  control/foreign-call forms. In particular this package does not discharge
+  C08's software foreign-call-site duty for an in-image binding.
+
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`; the atomic checker also requires static-array reset admission
