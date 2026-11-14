@@ -89,6 +89,25 @@ def ContextLedger.openView {space : Space D} (ledger : ContextLedger D) (id node
       | .error reason => .error reason
       | .ok (next, key) => .ok (ledger.set id next, key)
 
+/-- A successful admission has an executable matching exit for every valid
+    input context. The restored entry retains the incremented node generation;
+    it is intentionally not the original entry with its old stamp. -/
+theorem ContextEntry.openView_close {space : Space D} {entry next : ContextEntry D}
+    {node : Nat} {start : Address space} {length : Nat} {rights : DataRights}
+    {borrower : ArenaOwnership.Frame} {key : ScopeKey}
+    (valid : entry.context.Valid entry.authority)
+    (opened : entry.openView node start length rights borrower = .ok (next, key)) :
+    next.close key = .ok { entry with generations := entry.generations.bump node } := by
+  unfold openView at opened
+  split at opened
+  · cases opened
+  · split at opened
+    · cases opened
+    · rename_i receipt produced
+      cases opened
+      simp only [close, ↓reduceIte, ram_view_return valid receipt]
+      rfl
+
 /-- Every successful close removes precisely the top ledger marker and
     increments its node. This is not yet a reachability theorem for G. -/
 theorem ContextEntry.close_shape {entry next : ContextEntry D} {key : ScopeKey}
