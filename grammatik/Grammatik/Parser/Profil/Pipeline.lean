@@ -3,7 +3,6 @@ module
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Register
-public import Grammatik.Parser.Namen.Oeffentlich
 
 @[expose] public section
 
@@ -102,10 +101,7 @@ def uebersetzeWahlItems (m : BauModus) (items : List SItemTief) :
     Except String (Σ u : UProg, Programm (declOf u) × List (declOf u).Fn) :=
   if (ProfilZert.von m items).auswahl.zulaessig = false then
     .error "build selection: `TESTBUILD` is reserved and cannot be declared as a name (G003)"
-  else match Oeffentlich.grundSichtbar (ProfilZert.von m items).auswahl.ausgewaehlt with
-  | .error e => .error e
-  | .ok _ =>
-  if bindungB (ProfilZert.von m items).bindung = false then
+  else if bindungB (ProfilZert.von m items).bindung = false then
     .error "profile binding refused: modes, assumptions or library requirements are not consistent"
   else
     match elabU (pre108 (ohneProfilL (ProfilZert.von m items).auswahl.ausgewaehlt)) with
@@ -129,8 +125,7 @@ def uebersetzeWahl (m : BauModus) (s : String) :
     admitted (empty) binding, goes through the stages of `uebersetzeAllg` unchanged, in either mode. -/
 theorem uebersetzeWahlItems_unveraendert (m : BauModus) {items : List SItemTief}
     (hg : gatefreiL items = true) (hp : profilfreiL items = true) (hr : reserviertL items = false)
-    (hb : bindungB (ProfileBinding.aus items) = true)
-    (hgrund : Oeffentlich.grundSichtbar items = .ok ()) :
+    (hb : bindungB (ProfileBinding.aus items) = true) :
     uebersetzeWahlItems m items =
       (match elabU (pre108 items) with
        | .error e => .error e
@@ -145,20 +140,17 @@ theorem uebersetzeWahlItems_unveraendert (m : BauModus) {items : List SItemTief}
     simp only [ProfilZert.von, hs]
     exact hb
   have hsel : (ProfilZert.von m items).auswahl.ausgewaehlt = items := hs
-  have hgrundz : Oeffentlich.grundSichtbar (ProfilZert.von m items).auswahl.ausgewaehlt = .ok () := by
-    rw [hsel]; exact hgrund
   unfold uebersetzeWahlItems
-  simp only [hz, hgrundz, hbz, hsel, ohneProfilL_id items hp, Bool.true_eq_false, ↓reduceIte]
+  simp only [hz, hbz, hsel, ohneProfilL_id items hp, Bool.true_eq_false, ↓reduceIte]
 
 /-- **`uebersetzeWahl` on such a source is `uebersetzeAllg`.** -/
 theorem uebersetzeWahl_eq_allg (m : BauModus) (s : String) {toks : List Token}
     {items : List SItemTief} (hl : lex s = .ok toks) (hpar : parseTopTief toks = .ok items)
     (hg : gatefreiL items = true) (hp : profilfreiL items = true) (hr : reserviertL items = false)
-    (hb : bindungB (ProfileBinding.aus items) = true)
-    (hgrund : Oeffentlich.grundSichtbar items = .ok ()) :
+    (hb : bindungB (ProfileBinding.aus items) = true) :
     uebersetzeWahl m s = uebersetzeAllg s := by
   unfold uebersetzeWahl uebersetzeAllg
   simp only [hl, hpar]
-  exact uebersetzeWahlItems_unveraendert m hg hp hr hb hgrund
+  exact uebersetzeWahlItems_unveraendert m hg hp hr hb
 
 end Gabbro.Grammatik
