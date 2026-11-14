@@ -1498,7 +1498,9 @@ With that compiler switch, `Records/Narrowing.lean` expands an explicit narrow o
 local record field chain into a field snapshot and the existing local `narrow`.
 Successful reads, including the block's ending, use the snapshot until a possible
 mutation or rebinding of the root; unknown statements are barriers. Failure arms keep
-the original record. This adds no G constructor or acceptance rule
+the original record. The first write's value can still use the snapshot, including through
+ordinary compound-assignment expansion; its target and later reads retain the original record.
+This adds no G constructor or acceptance rule
 (`narrow-record-field.gab`, `Records/NarrowingWitness.lean`).
 
 `return f(args);` inside a branch or match arm is lifted to a binding and a return of its result;
