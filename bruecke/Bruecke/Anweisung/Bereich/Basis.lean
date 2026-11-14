@@ -51,7 +51,7 @@ theorem narrowName_some {fn : UFn} {ns : BodyNames} {x : String} {e : Gabbro.Bod
     | some id =>
       rw [hid] at h
       cases h
-      exact ⟨hn, id, hid, rfl⟩
+      exact ⟨hn, id, rfl, rfl⟩
   · cases h
 
 theorem narrowName_sicht {u : UProg} {ft fn : UFn} (h : Sicht u ft fn)

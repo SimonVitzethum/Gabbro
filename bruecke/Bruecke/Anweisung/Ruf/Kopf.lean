@@ -30,13 +30,14 @@ theorem lowBodyF_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     · cases h
     · rename_i ty he
       split at h
-      · cases h
-      · rename_i rest hrest
+      · rename_i hr
         split at h
-        · rename_i hr
-          cases h
-          exact ⟨k, ty, he, hr, rest, hk, hrest, rfl⟩
         · cases h
+        · rename_i rest hrest
+          cases h
+          exact ⟨k, ty, he, hr, rest, (by first | exact hk | rfl), hrest, rfl⟩
+      · beta_reduce at h
+        split at h <;> cases h
 
 theorem lowSeq_bindCall_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {pe : AtTop u c Λ} {x g : String} {args : List UArg}
@@ -69,7 +70,7 @@ theorem lowSeq_bindCall_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat}
         split at h
         · rename_i hr
           cases h
-          exact ⟨k, ty, he, hr, ⟨Λ', b⟩, hk, hq, rfl⟩
+          exact ⟨k, ty, he, hr, ⟨Λ', b⟩, (by first | exact hk | rfl), hq, rfl⟩
         · cases h
 
 /-- For admitted scalar result types, the canonical call scope is exactly the reader scope. -/
