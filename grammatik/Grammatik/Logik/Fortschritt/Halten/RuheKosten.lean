@@ -220,12 +220,14 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         entfZ_ru, Option.elim_some, Option.elim_none]
         )
     try rfl
-  | .bindAxiomOpt (e := none) .. | .bindAxiomOptElse (e := none) ..
-  | .bindAxiomOpt (e := some _) .. | .bindAxiomOptElse (e := some _) .. =>
+  | .bindAxiomOpt (e := none) (rest := rest) .. | .bindAxiomOptElse (e := none) (rest := rest) ..
+  | .bindAxiomOpt (e := some _) (rest := rest) ..
+  | .bindAxiomOptElse (e := some _) (rest := rest) .. =>
     (try simp only [ruB, kostenStmt, kostenBlock, kostenEnd, kostenSonst, kostenExpr_ru, kostenArgs_ru, kostenErg_ru,
       entfZ_ru, Option.elim_some, Option.elim_none])
     repeat
       (first
+        | erw [kostenBlock_ru rest]
         | erw [kostenStmt_nachΛ]
         | erw [kostenBlock_vorΛ]
         | erw [kostenEnd_umΛ]
