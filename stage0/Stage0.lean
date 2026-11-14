@@ -114,6 +114,8 @@ public import Stage0.Senke.Bild.Mehr.Ort.Rahmen
 public import Stage0.Senke.Bild.Mehr.Ort.Commit
 public import Stage0.Senke.Bild.Mehr.Ort.Segment
 public import Stage0.Senke.Bild.Mehr.Ort.Zeuge
+public import Stage0.Senke.Bild.Block.Emitted
+public import Stage0.Senke.Bild.Block.Zeuge
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
