@@ -191,11 +191,11 @@ theorem akteurV_dannBindAxiom {D : Deklaration} {P : Programm D} {O : Orakel D} 
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwort] at this
+    simp only [axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -207,7 +207,7 @@ theorem akteurV_dannBindAxiom {D : Deklaration} {P : Programm D} {O : Orakel D} 
     hfr (fun O' R σ hz hwk => ?_), hL⟩
   apply ZErg.folgt_of_eq
   show weiterZ O' passes R k (execBlock O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
-  simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
+  simp only [execBlock, axiomAntwort, Boundary.Check.requiredB, Boundary.Check.trivial, Boundary.requiredB, Bool.false_eq_true, ↓reduceIte, hwk, (show O'.zeiger = O.zeiger from hz), hv]
   rfl
 
 end Gabbro.Grammatik
