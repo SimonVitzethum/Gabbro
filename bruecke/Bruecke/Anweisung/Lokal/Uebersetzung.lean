@@ -98,7 +98,7 @@ theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
     have hx := recurse x (by simp_wf; omega)
     simp only [numericSideExprG, hx]
   | neg x =>
-    have hx := recurse x (by simp_wf; omega)
+    have hx := recurse x (by simp_wf <;> omega)
     simp only [numericSideExprG, hx]
   | field base name => simp only [numericSideExprG, recordRead_sicht h base]
   | _ => simp [numericSideExprG, slotPlace_sicht h]
@@ -107,14 +107,24 @@ decreasing_by all_goals (simp_wf <;> omega)
 
 theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
     recordRead u fT sd = recordRead u fn sd := by
+  have recN (sd' : USide) (hle : sizeOf sd' ≤ sizeOf sd) :
+      numericSideExprG u fT sd' = numericSideExprG u fn sd' :=
+    numericSideExprG_sicht h sd'
+  have recR (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) :
+      recordRead u fT sd' = recordRead u fn sd' :=
+    recordRead_sicht h sd'
+  have recRs (fs : List (Ty × USide)) (hlt : sizeOf fs < sizeOf sd) :
+      recordReads u fT fs = recordReads u fn fs :=
+    recordReads_sicht h fs
   cases sd with
-  | param p => simp only [recordRead, h.2.2.2.2 p, numericSideExprG_sicht h]
-  | product id order fields => simp only [recordRead, recordReads_sicht h fields]
-  | present n value => simp only [recordRead, recordRead_sicht h value]
-  | field base name => simp only [recordRead, recordRead_sicht h base]
+  | param p => simp only [recordRead, h.2.2.2.2 p, recN _ (Nat.le_refl _)]
+  | product id order fields =>
+      simp only [recordRead, recRs fields (by simp <;> omega)]
+  | present n value => simp only [recordRead, recR value (by simp <;> omega)]
+  | field base name => simp only [recordRead, recR base (by simp <;> omega)]
   | replace base name value =>
-      simp only [recordRead, recordRead_sicht h base, recordRead_sicht h value]
-  | _ => simp only [recordRead, numericSideExprG_sicht h, optionExpr_sicht h]
+      simp only [recordRead, recR base (by simp <;> omega), recR value (by simp <;> omega)]
+  | _ => simp only [recordRead, recN _ (Nat.le_refl _), optionExpr_sicht h]
 termination_by 3 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
