@@ -127,4 +127,47 @@ theorem over_budget_refused_zeuge :
     (extendedEnd program noFacts noLockFacts 0 none 64 boundedWriter .nil post).toOption.isNone = true := by
   decide
 
+/-- The Boolean snapshot must retain its relation to the guard: choosing an
+    unrelated true flag at len = cap would make the increment fail the post. -/
+def booleanWriter : Endblock declaration contract false [] [] :=
+  .bind guard
+    (.cons (.ite (.var .here)
+      (.cons (.assignGlob false
+        (.eng (.add (.glob false (access false)) (.lit 1)) 0 10
+          (.glob false (access false))) rfl (access false)) .nil) .nil)
+      (.ret .empty (List.Perm.refl _)))
+
+def bumpedLength : Expr declaration [] [] (.int 0 10) :=
+  .eng (.add lengthValue (.lit 1)) 0 10 lengthValue
+
+/-- Both arms are present in the source. Reversing the guard makes the writer
+    increment at len = cap, where the declared invariant is false afterwards. -/
+def conditionalWriter (preserves : Bool) : Endblock declaration contract false [] [] :=
+  .bind (.wenn guard (if preserves then bumpedLength else lengthValue)
+      (if preserves then lengthValue else bumpedLength))
+    (.cons (.assignGlob false (.var .here) rfl (access false))
+      (.ret .empty (List.Perm.refl _)))
+
+def booleanCompiled : EndCondition program noFacts (SperrInv.leer declaration)
+    booleanWriter .nil post := (compile booleanWriter).toOption.get (by decide)
+
+def conditionalCompiled (preserves : Bool) : EndCondition program noFacts
+    (SperrInv.leer declaration) (conditionalWriter preserves) .nil post :=
+  (compile (conditionalWriter preserves)).toOption.get (by cases preserves <;> decide)
+
+theorem boolean_initializer_decided_zeuge :
+    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide
+
+theorem conditional_initializer_decided_zeuge :
+    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide
+
+theorem conditional_initializer_refused_zeuge :
+    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide
+
+theorem conditional_initializer_counterexample_zeuge :
+    eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
+    (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
+      | .zurueck next _ => eval next invariant next .nil
+      | _ => true) = false := by decide
+
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
