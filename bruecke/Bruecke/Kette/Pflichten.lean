@@ -3,6 +3,7 @@ public import Bruecke.Teil.Pflichten
 public import Bruecke.Anweisung.Lokal.Kopf
 public import Bruecke.Anweisung.Zweig.Benannt
 public import Bruecke.Anweisung.Lokal.SimulationB
+public import Bruecke.Kette.Mass.Pflicht
 @[expose] public section
 
 /-!
@@ -76,6 +77,45 @@ theorem pflichtenTeilG_of_alle {src : String} (hp : PflichtenAlle src) :
   obtain ⟨u, hu, hn, hs, hf, hr, hPlain, hPtr, hZ⟩ := hp
   refine ⟨u, hu, hn, getragenG_of_bools hs hPlain hf, hr,
     fun P fs hlow c _ => hPtr P fs hlow c, fun c _ => hZ c, ?_⟩
+  intro c hc
+  exact (hc True.intro).elim
+
+/-! ## Recursive units: the measure duties
+
+The rank conjunct `rangB u (rangAuto u) = true` of `PflichtenTeilG`/`PflichtenAlle` is the one
+unit gate that refuses every recursive unit. The measure forms below drop it: each carried
+function owes `meetsUM` under one well-founded measure of the person's choice, which admits
+recursion and mutual recursion. The rank forms are instances (`pflichtenTeilM_of_G`,
+`pflichtenAlleM_of_alle`), so every existing acyclic duty proof carries over unchanged. -/
+
+/-- Source duties for the carried functions under a measure; no call-graph rank. -/
+def PflichtenTeilM (src : String) {u : UProg} (C : Fin u.fns.length → Prop) : Prop :=
+  uOf src = some u ∧ nullB u = true ∧ GetragenG u C ∧ SchnittstellenPflichtTeil u C ∧
+    (∃ M : MassU, MassPflichtU u C M) ∧ OffenePflicht u C
+
+/-- Per-unit duties under a measure, every function carried; no call-graph rank. -/
+def PflichtenAlleM (src : String) : Prop :=
+  ∃ u : UProg, uOf src = some u ∧ nullB u = true ∧ stimmigB u = true ∧
+    bindFrischAllB u = true ∧ ohneTransitionB u = true ∧ SchnittstellenPflicht u ∧
+    ∃ M : MassU, MassPflichtU u (fun _ => True) M
+
+/-- The rank duties are measure duties under the rank. -/
+theorem pflichtenTeilM_of_G {src : String} {u : UProg} {C : Fin u.fns.length → Prop}
+    (hp : PflichtenTeilG src C) : PflichtenTeilM src C := by
+  obtain ⟨hu, hn, S, hr, hPtr, hZ, hOpen⟩ := hp
+  exact ⟨hu, hn, S, hPtr, ⟨_, massPflichtU_of_rang (rang_of hr) hZ⟩, hOpen⟩
+
+theorem pflichtenAlleM_of_alle {src : String} (hp : PflichtenAlle src) : PflichtenAlleM src := by
+  obtain ⟨u, hu, hn, hs, hf, hr, hPlain, hPtr, hZ⟩ := hp
+  exact ⟨u, hu, hn, hs, hf, hPlain, hPtr, _,
+    massPflichtU_of_rang (C := fun _ => True) (rang_of hr) (fun c _ => hZ c)⟩
+
+/-- Per-unit measure duties are the all-carried instance of the measure duties. -/
+theorem pflichtenTeilM_of_alleM {src : String} (hp : PflichtenAlleM src) :
+    ∃ u : UProg, PflichtenTeilM src (u := u) (fun _ => True) := by
+  obtain ⟨u, hu, hn, hs, hf, hPlain, hPtr, M, hZ⟩ := hp
+  refine ⟨u, hu, hn, getragenG_of_bools hs hPlain hf,
+    fun P fs hlow c _ => hPtr P fs hlow c, ⟨M, hZ⟩, ?_⟩
   intro c hc
   exact (hc True.intro).elim
 
