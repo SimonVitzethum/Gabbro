@@ -18,7 +18,7 @@ theorem ausgangZiel_nach_lauf {c : Fin u.fns.length} {l : Bool} {Γ : Ctx}
     (he : ∀ ρB, Treu A ρB → RahmenAlleC u C ρB →
       Gabbro.Body.exec ρB zs s = Gabbro.Body.exec ρB ys s₁) :
     AusgangZiel_G u C c R fn ids out s zs := by
-  refine ⟨h.1, ?_, ?_, ?_⟩
+  refine ⟨h.1, ?_, ?_, ?_, ?_⟩
   · intro σ v hv
     obtain ⟨B, hr⟩ := h.2.1 σ v hv
     obtain ⟨hg, ho, hk, _⟩ := RueckZ_G.nach hp hr
@@ -32,11 +32,17 @@ theorem ausgangZiel_nach_lauf {c : Fin u.fns.length} {l : Bool} {Γ : Ctx}
     rw [he ρB (fun e hm => hT e (List.mem_append_left _ hm)) hF]
     exact ht.lauf ρB (fun e hm => hT e (List.mem_append_right _ hm)) hF
   · intro leave hloop σ ρ hv
-    obtain ⟨B, t, ht, hw, hl⟩ := h.2.2.2 leave hloop σ ρ hv
+    obtain ⟨B, t, ht, hw, hl⟩ := h.2.2.2.1 leave hloop σ ρ hv
     have hh := hp.append ht
     refine ⟨A ++ B, t, { hh with lauf := fun ρB hT hF => ?_ }, hw, hl⟩
     rw [he ρB (fun e hm => hT e (List.mem_append_left _ hm)) hF]
     exact ht.lauf ρB (fun e hm => hT e (List.mem_append_right _ hm)) hF
+  · intro σ r hv
+    obtain ⟨B, hr⟩ := h.2.2.2.2 σ r hv
+    obtain ⟨hg, ho, hk, _⟩ := RueckZ_G.nach hp hr
+    refine ⟨A ++ B, hg, ho, hk, fun ρB hT hF => ?_⟩
+    rw [he ρB (fun e hm => hT e (List.mem_append_left _ hm)) hF]
+    exact hr.2.2.2 ρB (fun e hm => hT e (List.mem_append_right _ hm)) hF
 
 /-- The generic finite pass simulation consumes exactly the canonical `leave`/`next`
     outcomes. It also preserves sampled calls and early returns from arbitrary bodies. -/
@@ -57,7 +63,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
           (fun σ _ => (σ, true)) indices σ ρ) s
         [.forEach (ns.fresh x) (indices.map (·.n)) bs]
   | [], σ, ρ, s, hW, hL => by
-    refine ⟨fun e he => ?_, fun σ' v he => ?_, fun σ' ρ' he => ?_, ?_⟩
+    refine ⟨fun e he => ?_, fun σ' v he => ?_, fun σ' ρ' he => ?_, ?_, fun σ' r he => (by simp only [traverseLauf, ↓reduceIte] at he; cases he)⟩
     · simp only [traverseLauf, ↓reduceIte] at he; cases he
     · simp only [traverseLauf, ↓reduceIte] at he; cases he
     · simp only [traverseLauf, ↓reduceIte] at he
@@ -86,7 +92,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
             Gabbro.Body.forEach_cons_running ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s₁ (hp.lauf ρB hT hF)])
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | next hloop σ₁ ρ₁ =>
-      obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2 false hloop σ₁ ρ₁ hex
+      obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 false hloop σ₁ ρ₁ hex
       have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] :=
         { hp with lauf := fun ρB hT hF => by
             rw [Gabbro.Body.exec_singleton,
@@ -100,12 +106,12 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
             Gabbro.Body.forEach_cons_next ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s₁ (hp.lauf ρB hT hF)])
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | leave hloop σ₁ ρ₁ =>
-      obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2 true hloop σ₁ ρ₁ hex
+      obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 true hloop σ₁ ρ₁ hex
       have trace : Strecke_G u C A s s₁ [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs] :=
         { hp with lauf := fun ρB hT hF => by
             rw [Gabbro.Body.exec_singleton, List.map_cons,
               Gabbro.Body.forEach_cons_leave ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s₁ (hp.lauf ρB hT hF)] }
-      refine ⟨?_, ?_, ?_, ?_⟩
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro e he
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro σ' v he
@@ -116,8 +122,10 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
         exact ⟨A, s₁, trace, hw, hl.tailIndex⟩
       · intro leave hloop σ' ρ' he
         cases leave <;> simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex, controlG] at he <;> cases he
+      · intro σ' r' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
     | zurueck σ₁ v =>
-      refine ⟨?_, ?_, ?_, ?_⟩
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro e he
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro σ' v' he
@@ -133,8 +141,10 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro leave hloop σ' ρ' he
         cases leave <;> simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex, controlG] at he <;> cases he
+      · intro σ' r' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
     | logik err =>
-      refine ⟨?_, ?_, ?_, ?_⟩
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro e he
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he
         cases he
@@ -145,8 +155,10 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro leave hloop σ' ρ' he
         cases leave <;> simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex, controlG] at he <;> cases he
-    | why σ₁ r | hardware err =>
-      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro σ' r' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
+    | why σ₁ r =>
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro e he
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro σ' v he
@@ -155,6 +167,27 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
       · intro leave hloop σ' ρ' he
         cases leave <;> simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex, controlG] at he <;> cases he
+      · intro σ' r' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he
+        cases he
+        obtain ⟨A, hg, ho, hk, hr⟩ := hPass.2.2.2.2 σ₁ r hex
+        refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
+        obtain ⟨s', hb, hw⟩ := hr ρB hT hF
+        refine ⟨s', ?_, hw⟩
+        rw [Gabbro.Body.exec_singleton, List.map_cons,
+          Gabbro.Body.forEach_cons_returned ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s' _ hb]
+    | hardware err =>
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · intro e he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
+      · intro σ' v he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
+      · intro σ' ρ' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
+      · intro leave hloop σ' ρ' he
+        cases leave <;> simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex, controlG] at he <;> cases he
+      · intro σ' r' he
+        simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
 
 /-- The source traversal reuses the full recursive block claim for each actual index. -/
 theorem stmtZiel_loop_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}

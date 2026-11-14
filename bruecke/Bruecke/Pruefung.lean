@@ -83,7 +83,7 @@ theorem staticsB_ok {u : UProg} (h : staticsB u = true) : ScalarStatics u := by
   | wert ty => simp only [ht, Bool.false_eq_true] at hg
 
 def stimmigB (u : UProg) : Bool :=
-  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty && fn.gruende == 0) && u.invs.isEmpty && staticsB u &&
+  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty) && u.invs.isEmpty && staticsB u &&
     u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 

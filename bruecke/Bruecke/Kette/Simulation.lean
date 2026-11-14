@@ -50,7 +50,7 @@ theorem lauf_P_G {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   refine ⟨fun e h => hlauf.1 e ((logik_heq (ctxParams_eq u c).symm _ _ hX _).mp h),
     fun σ' v h => ?_⟩
   have h0 := (zurueck_heq (ctxParams_eq u c).symm _ _ hX σ' v).mp h
-  obtain ⟨A, hg, _, hk, hrun⟩ := hlauf.2 σ' v h0
+  obtain ⟨A, hg, _, hk, hrun⟩ := hlauf.2.1 σ' v h0
   have hB := tabEnv_gut_teil hg ρP hP
   obtain ⟨s'', h1, h2, h3⟩ := hrun (tabEnv A ρP) (tabEnv_treu hk ρP)
     (fun n d hd hgf => (hB n d hd hgf).2)

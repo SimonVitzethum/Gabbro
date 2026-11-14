@@ -144,7 +144,9 @@ abbrev AusgangZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Pro
     ∃ A s', Strecke_G u C A s s' bs ∧ WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local') ∧
   (∀ leave hl σ' ρ', out = controlG leave hl σ' ρ' →
     ∃ A s', Strecke_G u C A s s' bs (controlB leave) ∧
-      WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local')
+      WGRel u σ' s'.world ∧ PositionalLRel fn ids 0 ρ' s'.local') ∧
+  (∀ σ' r, out = .why σ' r →
+    ∃ A, RueckZ_G u C A s bs σ' (some (.reason (caseLabel r.val))))
 
 abbrev StmtZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop) (c : Fin u.fns.length) (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)

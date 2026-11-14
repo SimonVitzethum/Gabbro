@@ -31,6 +31,14 @@ theorem schrumpfZ_control {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx
       Ausgang.leave.injEq, Ausgang.next.injEq, reduceCtorEq] at h
   all_goals obtain ⟨rfl, rfl⟩ := h; exact ⟨_, rfl, rfl⟩
 
+/-- Shrinking a lexical context preserves a reason return and its exact case. -/
+theorem schrumpfZ_why {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
+    {a : Ausgang V l (τ :: Γ)} {σ : World D} {r : Fin V.gruende}
+    (h : a.schrumpf = .why σ r) : a = .why σ r := by
+  cases a <;> simp only [Ausgang.schrumpf, Ausgang.why.injEq, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rfl
+
 theorem lowSeq_control_ok {c : Fin u.fns.length} {l : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
     {Λ : List (Res (declOf u))} {ss rest : List UStmt} {leave : Bool} {x : String}
     {p : Σ Λ', Block (declOf u) (verOf u c) l Γ Λ Λ'}

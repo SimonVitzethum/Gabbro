@@ -205,7 +205,8 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
         have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hf
         refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_, fun leave hl σ' ρ' hh => (by
-          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh)⟩
+          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh),
+          fun σ' r hh => (by simp only [execBlock, hR] at hh; cases hh)⟩
         · simp only [execBlock, hR] at hh
           cases hh
           exact ⟨head.callee, _, _, hd, hR⟩
@@ -215,7 +216,8 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
           cases hh
       | hardware err =>
         refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ , fun σ' ρ' hh => ?_, fun leave hl σ' ρ' hh => (by
-          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh)⟩
+          cases leave <;> simp only [execBlock, hR, controlG, Bool.false_eq_true, ↓reduceIte] at hh <;> cases hh),
+          fun σ' r hh => (by simp only [execBlock, hR] at hh; cases hh)⟩
         all_goals simp only [execBlock, hR] at hh; cases hh
     case setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)

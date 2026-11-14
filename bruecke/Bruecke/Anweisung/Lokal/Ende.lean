@@ -14,6 +14,7 @@ variable {u : UProg}
 theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {r : URet} {eb : Endblock (declOf u) (verOf u c) false Γ Λ} {eB : List Gabbro.Body.Stmt}
     (h : lowEnd u c Γ Λ fn r = .ok eb) (hb : namedEnd u fn ns r = some eB)
+    (hn : ∀ n, r ≠ .why n)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -205,6 +206,7 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
           · cases hE
           · cases hE
         · cases h
+  case why n => exact (hn n rfl).elim
   all_goals simp only [namedEnd, reduceCtorEq] at hb
 
 end Gabbro.Bruecke

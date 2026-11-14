@@ -2,6 +2,7 @@ module
 public import Bruecke.Anweisung.Option.Speichern
 public import Bruecke.Kette.Verknuepfung
 public import Bruecke.Anweisung.Zweig.Schritt
+public import Bruecke.Anweisung.Zweig.ReasonReturn
 public import Bruecke.Teil.Lokal.Ruf
 public import Bruecke.Anweisung.Lokal.Glob
 public import Bruecke.Anweisung.Lokal.Ende
@@ -29,7 +30,8 @@ theorem stmtZiel_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (decl
       rw [hex] at h
       cases h
       exact ⟨A, s₁, hS, hW₁, hL₁⟩),
-    fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h)⟩
+    fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
 
 theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
     (c : Fin u.fns.length) (hc : C c) (O : Orakel (declOf u)) (passes : Nat)
@@ -226,10 +228,12 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         exact stmtZiel_ok_G hex hS hW₁ hL
     · exact ⟨fun e' h => (by rw [hex] at h; cases h; exact ⟨callee, σr, envA, hcc, hR⟩),
         fun σ' v h => (by rw [hex] at h; cases h), fun σ' ρ' h => (by rw [hex] at h; cases h),
-        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h)⟩
+        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
     · exact ⟨fun e' h => (by rw [hex] at h; cases h), fun σ' v h => (by rw [hex] at h; cases h),
         fun σ' ρ' h => (by rw [hex] at h; cases h),
-        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h)⟩
+        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
   all_goals simp [LeseEinzeln] at hs
 
 theorem stmtZiel_ret_G {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
@@ -241,10 +245,19 @@ theorem stmtZiel_ret_G {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn :
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active st σ ρ s bst := by
-  obtain ⟨σ', v, hex, hsl, hstep⟩ := lowRet_sim c h hb hU hT O passes R σ ρ s hW hL
+  by_cases hn : ∃ n, r = .why n
+  · obtain ⟨n, rfl⟩ := hn
+    obtain ⟨hlt, hp, rfl⟩ := lowRetWhyStmt_ok h
+    simp only [retZ, Option.some.injEq] at hb
+    subst bst
+    exact ausgangZiel_why ⟨n, hlt⟩ hW
+  have hn' : ∀ n, r ≠ .why n := fun n he => hn ⟨n, he⟩
+  obtain ⟨σ', v, hex, hsl, hstep⟩ := lowRet_sim c h hb hn' hU hT O passes R σ ρ s hW hL
+
   refine ⟨fun e h' => (by rw [hex] at h'; cases h'), fun σ'' v' h' => ?_,
     fun σ'' ρ'' h' => (by rw [hex] at h'; cases h'),
-    fun leave hl σ'' ρ'' h' => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h' <;> cases h')⟩
+    fun leave hl σ'' ρ'' h' => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h' <;> cases h'),
+    fun σ'' r h' => (by rw [hex] at h'; cases h')⟩
   rw [hex] at h'
   cases h'
   refine ⟨[], fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
@@ -260,7 +273,7 @@ theorem stmtZiel_control_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ids 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ids (controlStmt (Λ := Λ) leave hl) σ ρ s (controlStmtB leave) := by
   cases leave <;> refine ⟨(fun e he => by cases he), (fun σ' v he => by cases he),
-    (fun σ' ρ' he => by cases he), ?_⟩
+    (fun σ' ρ' he => by cases he), ?_, (fun σ' r he => by cases he)⟩
   all_goals
     intro leave' hl' σ' ρ' he
     cases leave' <;> simp only [controlStmt, controlG, Bool.false_eq_true, ↓reduceIte, execStmt] at he

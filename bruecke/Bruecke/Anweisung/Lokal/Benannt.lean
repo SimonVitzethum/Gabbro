@@ -86,9 +86,14 @@ def schrittB (u : UProg) (fn : UFn) (ns : BodyNames) :
       else none
   | s => (namedStmt u fn ns s).map (fun b => (b, fn, ns))
 
+/-- A reason uses the same ordinal case labels as reason matching. -/
+def reasonReturn (n : Nat) : Gabbro.Body.Stmt :=
+  .ret (some (.lit (.reason (caseLabel n))))
+
 /-- The trailing empty return stays empty, as in the source bridge. -/
 def namedEnd (u : UProg) (fn : UFn) (ns : BodyNames) : URet → Option (List Gabbro.Body.Stmt)
   | .empty => some []
+  | .why n => some [reasonReturn n]
   | .val v | .wert v => (namedSide u fn ns v).map (fun e => [.ret (some e)])
   | .bool v => (condZ u fn ns v).map (fun e => [.ret (some e)])
   | .opt v => (namedOption u fn ns v).map (fun e => [.ret (some e)])
@@ -98,6 +103,7 @@ def namedEnd (u : UProg) (fn : UFn) (ns : BodyNames) : URet → Option (List Gab
     return is read like the trailing one (`namedEnd`). -/
 def retZ (u : UProg) (fn : UFn) (ns : BodyNames) : URet → Option Gabbro.Body.Stmt
   | .empty => some (.ret none)
+  | .why n => some (reasonReturn n)
   | .val v | .wert v => (namedSide u fn ns v).map (fun e => .ret (some e))
   | .bool v => (condZ u fn ns v).map (fun e => .ret (some e))
   | .opt v => (namedOption u fn ns v).map (fun e => .ret (some e))

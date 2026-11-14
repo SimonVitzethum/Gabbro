@@ -15,17 +15,13 @@ theorem lowRetEnd_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : 
     {Λ : List (Res (declOf u))} {r : URet}
     {ending : Endblock (declOf u) (verOf u c) loopMode Γ Λ} {b : Gabbro.Body.Stmt}
     (h : lowRetEnd (l := loopMode) u c Γ fn Λ [] r = .ok ending)
-    (hb : retZ u fn ns r = some b) (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
+    (hb : retZ u fn ns r = some b) (hn : ∀ n, r ≠ .why n) (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     ∃ σ' v, execEnd O passes R ending σ ρ = .zurueck σ' v ∧ WGRel u σ' s.world ∧
       ∀ ρB, Gabbro.Body.step ρB b s = .returned s (ergValOf (verOf u c).erg v) := by
-  have hn : ∀ i, r ≠ .why i := by
-    intro i hr
-    subst r
-    cases hb
   have hEnd : lowRetEnd (l := loopMode) u c Γ fn Λ [] r =
       (lowErg u c Γ Λ fn r).bind (fun erg =>
         if hp : decide (Λ.Perm (verOf u c).ende) = true then
@@ -46,7 +42,7 @@ theorem lowRetEnd_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : 
         cases r
         case why i => exact (hn i rfl).elim
         all_goals simp only [lowRetStmt, he, Except.bind, hp, ↓reduceDIte]
-      obtain ⟨σ', v, hex, hw, hs⟩ := lowRet_sim c hStmt hb hU hT O passes R σ ρ s hW hL
+      obtain ⟨σ', v, hex, hw, hs⟩ := lowRet_sim c hStmt hb hn hU hT O passes R σ ρ s hW hL
       refine ⟨σ', v, ?_, hw, hs⟩
       simp only [execStmt] at hex
       cases hex
@@ -135,11 +131,20 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
         cases hG
         have hr' := (retZ_sicht hV ns r).symm.trans hr
         intro σ ρ s hW hL
-        obtain ⟨σ', v, hex, hw, hstep⟩ := lowRetEnd_sim c hg hr' hU S.tab O passes R σ ρ s hW hL
+        by_cases hn : ∃ i, r = .why i
+        · obtain ⟨i, rfl⟩ := hn
+          obtain ⟨hlt, hp, rfl⟩ := lowRetWhyEnd_ok hg
+          simp only [retZ, Option.some.injEq] at hr'
+          subst b
+          exact ausgangZiel_why ⟨i, hlt⟩ hW
+        have hn' : ∀ i, r ≠ .why i := fun i he => hn ⟨i, he⟩
+        obtain ⟨σ', v, hex, hw, hstep⟩ := lowRetEnd_sim c hg hr' hn' hU S.tab O passes R σ ρ s hW hL
+
         refine ⟨fun err h => (by simp only [hex, EndAusgang.zuAusgang] at h; cases h), fun σ'' v' h => ?_,
           fun σ'' ρ'' h => (by simp only [hex, EndAusgang.zuAusgang] at h; cases h),
           fun leave hl σ'' ρ'' h => (by cases leave <;>
-            simp only [hex, EndAusgang.zuAusgang, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h)⟩
+            simp only [hex, EndAusgang.zuAusgang, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+          fun σ' r h => (by simp only [hex, EndAusgang.zuAusgang] at h; cases h)⟩
         simp only [hex, EndAusgang.zuAusgang] at h
         cases h
         refine ⟨[], (by simp), (by simp [Oben]), List.Pairwise.nil, fun ρB _ _ => ⟨s, ?_, hw⟩⟩

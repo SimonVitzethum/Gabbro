@@ -63,7 +63,7 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     apply laufZiel_schritt_teilB (b1 := rest) (σ₁ := σl) (ρ₁ := .cons value ρ)
       (s₁ := s₁) (x := narrowStep ns x lo hi (.name id) errorBody)
-    · constructor
+    · refine ⟨?_, ?_, ?_⟩
       · intro e h
         simp only [execEnd, eval] at h
         first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
@@ -72,6 +72,9 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
         simp only [execEnd, eval] at h
         first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact endSchrumpf_zurueck h
+      · intro σ' r' h
+        simp only [execEnd, eval, hb, ↓reduceDIte] at h
+        exact endSchrumpf_why h
     · exact hs
     · exact fun w => Int.le_refl _
     · exact hRest σl (.cons value ρ) s₁ hWl hL₁
@@ -81,11 +84,19 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
       unfold narrowStep
       rw [Gabbro.Body.step, ht, decide_eq_false hb]
     have herr := hErr σl ρ s hWl hL
-    refine ⟨fun e h => herr.1 e ?_, fun σ' v' h => ?_⟩
+    refine ⟨fun e h => herr.1 e ?_, fun σ' v' h => ?_, fun σ' r' h => ?_⟩
     · simpa only [execEnd, eval, hb, ↓reduceDIte, EndAusgang.zuAusgang] using congrArg EndAusgang.zuAusgang h
     · have he : (execEnd O passes R err σl ρ).zuAusgang = .zurueck σ' v' := by
         simpa only [execEnd, eval, hb, ↓reduceDIte, EndAusgang.zuAusgang] using congrArg EndAusgang.zuAusgang h
       obtain ⟨A, hg, ho, hk, hr⟩ := herr.2.1 σ' v' he
+      refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
+      obtain ⟨s', hrun, hw⟩ := hr ρB hT hF
+      refine ⟨s', ?_, ?_, hw⟩
+      · simp only [Gabbro.Body.exec, hstep ρB, hrun, Gabbro.Body.finalState]
+      · simp only [Gabbro.Body.exec, hstep ρB, hrun, finalValue_returned]
+    · have he : (execEnd O passes R err σl ρ).zuAusgang = .why σ' r' := by
+        simpa only [execEnd, eval, hb, ↓reduceDIte, EndAusgang.zuAusgang] using congrArg EndAusgang.zuAusgang h
+      obtain ⟨A, hg, ho, hk, hr⟩ := herr.2.2.2.2 σ' r' he
       refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
       obtain ⟨s', hrun, hw⟩ := hr ρB hT hF
       refine ⟨s', ?_, ?_, hw⟩

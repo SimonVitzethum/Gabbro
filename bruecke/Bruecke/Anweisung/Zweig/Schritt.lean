@@ -26,6 +26,7 @@ variable {u : UProg}
 theorem lowRet_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {r : URet} {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ} {bst : Gabbro.Body.Stmt}
     (h : lowRetStmt (l := loopMode) u c Γ fn Λ [] r = .ok st) (hb : retZ u fn ns r = some bst)
+    (hn : ∀ n, r ≠ .why n)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -225,6 +226,7 @@ theorem lowRet_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn
           · cases hE
           · cases hE
         · cases h
+  case why n => exact (hn n rfl).elim
   all_goals simp [retZ] at hb
 
 end Gabbro.Bruecke

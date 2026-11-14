@@ -39,6 +39,11 @@ theorem namedEnd_rets {fn : UFn} {ns : BodyNames} {r : URet} {eB : List Gabbro.B
     simp only [namedEnd, Option.some.injEq] at h
     subst h
     cases hx
+  case why n =>
+    simp only [namedEnd, Option.some.injEq] at h
+    subst eB
+    have hx' : x = reasonReturn n := List.mem_singleton.mp hx
+    exact ⟨.lit (.reason (caseLabel n)), hx'⟩
   case val v | wert v =>
     simp only [namedEnd] at h
     cases hs : namedSide u fn ns v with

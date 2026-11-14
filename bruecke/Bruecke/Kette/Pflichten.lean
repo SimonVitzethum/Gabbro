@@ -63,17 +63,12 @@ theorem getragenG_of_bools {u : UProg} (hs : stimmigB u = true)
     schreibt := fun c _ => schreibtB_ok (hc c).2
     gschreibt := fun c _ => gschreibtB_ok (hc c).2
     ohneReq := fun c _ => ?_
-    ohneGrund := fun c _ => ?_
     ohneInv := List.isEmpty_iff.mp hi
     statics := staticsB_ok hg
     ohneTransition := fun c _ => ohneTransitionB_ok hPlain c }
            frisch := fun c _ => bindFrischAllB_ok hf c }
   · have h := List.all_eq_true.mp hq (fnAt u c) (List.get_mem _ _)
-    simp only [Bool.and_eq_true, List.isEmpty_iff] at h
-    exact h.1
-  · have h := List.all_eq_true.mp hq (fnAt u c) (List.get_mem _ _)
-    simp only [Bool.and_eq_true, beq_iff_eq] at h
-    exact h.2
+    exact List.isEmpty_iff.mp h
 
 /-- Per-unit duties are the all-carried instance of the consolidated duties. -/
 theorem pflichtenTeilG_of_alle {src : String} (hp : PflichtenAlle src) :

@@ -64,7 +64,8 @@ theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
       simp only [hh, valOf] at hval
       simp only [Gabbro.Body.step, hval]; rfl
     refine ⟨fun err h => hArm.1 err (schrumpfZ_logik (hG.symm.trans h)),
-      fun σ' result h => ?_, fun σ' env h => ?_, fun _ hl => Bool.noConfusion hl⟩
+      fun σ' result h => ?_, fun σ' env h => ?_, fun _ hl => Bool.noConfusion hl,
+      fun σ' reason h => ?_⟩
     · obtain ⟨A, hg, ho, hk, hr⟩ := hArm.2.1 σ' result (schrumpfZ_zurueck (hG.symm.trans h))
       refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
       obtain ⟨s', hs, hw⟩ := hr ρB hT hF
@@ -73,5 +74,9 @@ theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
       obtain ⟨A, s', hStretch, hw, hl⟩ := hArm.2.2.1 σ' env' hex
       refine ⟨A, s', { hStretch with lauf := fun ρB hT hF => ?_ }, hw, hl.tailIndex⟩
       simp only [Gabbro.Body.exec, hB ρB, hStretch.lauf ρB hT hF]
+    · obtain ⟨A, hg, ho, hk, hr⟩ := hArm.2.2.2.2 σ' reason (schrumpfZ_why (hG.symm.trans h))
+      refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
+      obtain ⟨s', hs, hw⟩ := hr ρB hT hF
+      exact ⟨s', by simp only [Gabbro.Body.exec, hB ρB, hs], hw⟩
 
 end Gabbro.Bruecke

@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
 /-- Outside a loop, an explicit ending cannot run on or take either control exit.
-    This equivalence retains all four channels of the shared outcome relation. -/
+    This equivalence retains all five channels of the shared outcome relation. -/
 theorem endZiel_false_iff {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {ids : List String}
@@ -22,13 +22,16 @@ theorem endZiel_false_iff {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
         ∃ (g : (declOf u).Fn) (σr : World (declOf u)) (envA : Env (declOf u) ((declOf u).params g)),
           C g ∧ R g σr envA = .logik e) ∧
       (∀ σ' v, execEnd O passes R b σ ρ = .zurueck σ' v →
-        ∃ A, RueckZ_G u C A s bs σ' (ergValOf (verOf u c).erg v)) := by
+        ∃ A, RueckZ_G u C A s bs σ' (ergValOf (verOf u c).erg v)) ∧
+      (∀ σ' r, execEnd O passes R b σ ρ = .why σ' r →
+        ∃ A, RueckZ_G u C A s bs σ' (some (.reason (caseLabel r.val)))) := by
   constructor
   · intro h
     exact ⟨fun e he => h.1 e (congrArg EndAusgang.zuAusgang he),
-      fun σ' v he => h.2.1 σ' v (congrArg EndAusgang.zuAusgang he)⟩
-  · rintro ⟨hlog, hret⟩
-    refine ⟨?_, ?_, ?_, fun leave hl => by cases hl⟩
+      fun σ' v he => h.2.1 σ' v (congrArg EndAusgang.zuAusgang he),
+      fun σ' r he => h.2.2.2.2 σ' r (congrArg EndAusgang.zuAusgang he)⟩
+  · rintro ⟨hlog, hret, hwhy⟩
+    refine ⟨?_, ?_, ?_, fun leave hl => by cases hl, ?_⟩
     · intro e he
       apply hlog e
       cases hx : execEnd O passes R b σ ρ <;>
@@ -40,6 +43,10 @@ theorem endZiel_false_iff {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     · intro σ' ρ' he
       cases hx : execEnd O passes R b σ ρ <;>
         simp only [hx, EndAusgang.zuAusgang, reduceCtorEq] at he <;> cases he
+    · intro σ' r he
+      apply hwhy σ' r
+      cases hx : execEnd O passes R b σ ρ <;>
+        simp only [hx, EndAusgang.zuAusgang, reduceCtorEq] at he <;> cases he <;> rfl
 
 theorem endZiel_to_lauf {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
@@ -49,11 +56,12 @@ theorem endZiel_to_lauf {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes :
     (h : EndZiel_G u C c O passes R fn ids b σ ρ s bs) :
     LaufZielTeilB u C c O passes R b σ ρ s bs := by
   rw [endZiel_false_iff] at h
-  refine ⟨h.1, fun σ' v hv => ?_⟩
-  obtain ⟨A, hg, ho, hk, hr⟩ := h.2 σ' v hv
-  refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
-  obtain ⟨s', hs, hw⟩ := hr ρB hT hF
-  exact ⟨s', by rw [hs]; rfl, by rw [hs, finalValue_returned], hw⟩
+  refine ⟨h.1, fun σ' v hv => ?_, fun σ' r hv => ?_⟩
+  all_goals
+    obtain ⟨A, hg, ho, hk, hr⟩ := (by first | exact h.2.1 σ' v hv | exact h.2.2 σ' r hv)
+    refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
+    obtain ⟨s', hs, hw⟩ := hr ρB hT hF
+    exact ⟨s', by rw [hs]; rfl, by rw [hs, finalValue_returned], hw⟩
 
 theorem endZiel_bind_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
@@ -68,11 +76,14 @@ theorem endZiel_bind_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : 
       (.cons (eval (σ.lese Λ ev.orte) ev (σ.lese Λ ev.orte) ρ) ρ) s₁ bs) :
     EndZiel_G u C c O passes R fn ids (.bind ev q) σ ρ s (b :: bs) := by
   rw [endZiel_false_iff] at h ⊢
-  refine ⟨fun e he => h.1 e ?_, fun σ' v he => ?_⟩
+  refine ⟨fun e he => h.1 e ?_, fun σ' v he => ?_, fun σ' r he => ?_⟩
   · simp only [execEnd] at he
     exact EndAusgang.schrumpf_logik he
   · simp only [execEnd] at he
-    obtain ⟨A, hr⟩ := h.2 σ' v (endSchrumpf_zurueck he)
+    obtain ⟨A, hr⟩ := h.2.1 σ' v (endSchrumpf_zurueck he)
+    exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) hgz hr⟩
+  · simp only [execEnd] at he
+    obtain ⟨A, hr⟩ := h.2.2 σ' r (endSchrumpf_why he)
     exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) hgz hr⟩
 
 theorem endZiel_strecke_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
@@ -85,13 +96,17 @@ theorem endZiel_strecke_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     {s s₁ : Gabbro.Body.State} {A : List Eintrag} {xs bs : List Gabbro.Body.Stmt}
     (hG : (∀ e, execEnd O passes R b σ ρ = .logik e → execEnd O passes R q σ₁ ρ₁ = .logik e) ∧
       (∀ σ' v, execEnd O passes R b σ ρ = .zurueck σ' v →
-        execEnd O passes R q σ₁ ρ₁ = .zurueck σ' v))
+        execEnd O passes R q σ₁ ρ₁ = .zurueck σ' v) ∧
+      (∀ σ' r, execEnd O passes R b σ ρ = .why σ' r →
+        execEnd O passes R q σ₁ ρ₁ = .why σ' r))
     (hs : Strecke_G u C A s s₁ xs) (h : EndZiel_G u C c O passes R fn' ids' q σ₁ ρ₁ s₁ bs) :
     EndZiel_G u C c O passes R fn ids b σ ρ s (xs ++ bs) := by
   rw [endZiel_false_iff] at h ⊢
-  refine ⟨fun e he => h.1 e (hG.1 e he), fun σ' v he => ?_⟩
-  obtain ⟨A₂, hr⟩ := h.2 σ' v (hG.2 σ' v he)
-  exact ⟨A ++ A₂, RueckZ_G.nach hs hr⟩
+  refine ⟨fun e he => h.1 e (hG.1 e he), fun σ' v he => ?_, fun σ' r he => ?_⟩
+  · obtain ⟨A₂, hr⟩ := h.2.1 σ' v (hG.2.1 σ' v he)
+    exact ⟨A ++ A₂, RueckZ_G.nach hs hr⟩
+  · obtain ⟨A₂, hr⟩ := h.2.2 σ' r (hG.2.2 σ' r he)
+    exact ⟨A ++ A₂, RueckZ_G.nach hs hr⟩
 
 theorem endZiel_of_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
@@ -104,11 +119,14 @@ theorem endZiel_of_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Na
     (h : EndZiel_G u C c O passes R fn ids q σl ρ s bs) :
     EndZiel_G u C c O passes R fn ids b σ ρ s (x :: xs) := by
   rw [endZiel_false_iff] at h ⊢
-  refine ⟨fun e he => h.1 e (hG.symm.trans he), fun σ' v he => ?_⟩
-  obtain ⟨A, hg, ho, hk, hr⟩ := h.2 σ' v (hG.symm.trans he)
-  refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
-  obtain ⟨s', hs, hw⟩ := hr ρB hT hF
-  exact ⟨s', by simp only [Gabbro.Body.exec, hB ρB, hs], hw⟩
+  refine ⟨fun e he => h.1 e (hG.symm.trans he), fun σ' v he => ?_, fun σ' r he => ?_⟩
+  all_goals
+    obtain ⟨A, hg, ho, hk, hr⟩ := (by first
+      | exact h.2.1 σ' v (hG.symm.trans he)
+      | exact h.2.2 σ' r (hG.symm.trans he))
+    refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
+    obtain ⟨s', hs, hw⟩ := hr ρB hT hF
+    exact ⟨s', by simp only [Gabbro.Body.exec, hB ρB, hs], hw⟩
 
 /-- An ending conditional preserves both branches' return values and ordered call tables. -/
 theorem endZiel_ite_G (hT : TabEindeutig u) {c : Fin u.fns.length} {O : Orakel (declOf u)}

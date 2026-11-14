@@ -180,6 +180,13 @@ theorem exec_cons_running (ρB : Gabbro.Body.Env) (x : Gabbro.Body.Stmt)
     Gabbro.Body.exec ρB (x :: xs) s = Gabbro.Body.exec ρB xs s₁ := by
   simp only [Gabbro.Body.exec, h]
 
+theorem endSchrumpf_why {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
+    {a : EndAusgang V l (τ :: Γ)} {σ : World D} {r : Fin V.gruende}
+    (h : a.schrumpf = .why σ r) : a = .why σ r := by
+  cases a <;> simp only [EndAusgang.schrumpf, EndAusgang.why.injEq, reduceCtorEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rfl
+
 /-- The run's outcomes of a binder are the rest's. -/
 theorem bind_lauf {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -189,12 +196,17 @@ theorem bind_lauf {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D
         (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) = .logik err) ∧
     (∀ σ' v, execEnd O passes R (Endblock.bind e rest) σ ρ = .zurueck σ' v →
       execEnd O passes R rest (σ.lese Λ e.orte)
-        (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) = .zurueck σ' v) := by
-  refine ⟨fun err h => ?_, fun σ' v h => ?_⟩
+        (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) = .zurueck σ' v) ∧
+    (∀ σ' r, execEnd O passes R (Endblock.bind e rest) σ ρ = .why σ' r →
+      execEnd O passes R rest (σ.lese Λ e.orte)
+        (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) = .why σ' r) := by
+  refine ⟨fun err h => ?_, fun σ' v h => ?_, fun σ' r h => ?_⟩
   · rw [execEnd_bind] at h
     exact EndAusgang.schrumpf_logik h
   · rw [execEnd_bind] at h
     exact endSchrumpf_zurueck h
+  · rw [execEnd_bind] at h
+    exact endSchrumpf_why h
 
 /-- The run's outcomes of a statement that continues are the rest's. -/
 theorem cons_lauf {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -204,8 +216,11 @@ theorem cons_lauf {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ Λ' : List (R
     (∀ err, execEnd O passes R (Endblock.cons st rest) σ ρ = .logik err →
       execEnd O passes R rest σ₁ ρ₁ = .logik err) ∧
     (∀ σ' v, execEnd O passes R (Endblock.cons st rest) σ ρ = .zurueck σ' v →
-      execEnd O passes R rest σ₁ ρ₁ = .zurueck σ' v) := by
+      execEnd O passes R rest σ₁ ρ₁ = .zurueck σ' v) ∧
+    (∀ σ' r, execEnd O passes R (Endblock.cons st rest) σ ρ = .why σ' r →
+      execEnd O passes R rest σ₁ ρ₁ = .why σ' r) := by
   have hrun := execEnd_cons_ok O passes R st rest σ σ₁ ρ ρ₁ h
-  exact ⟨fun err he => by rw [← hrun]; exact he, fun σ' v he => by rw [← hrun]; exact he⟩
+  exact ⟨fun err he => by rw [← hrun]; exact he, fun σ' v he => by rw [← hrun]; exact he,
+    fun σ' r he => by rw [← hrun]; exact he⟩
 
 end Gabbro.Bruecke

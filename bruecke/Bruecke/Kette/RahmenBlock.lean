@@ -227,6 +227,9 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
         case empty =>
           simp only [retZ, Option.some.injEq] at hbT
           exact ⟨_, hbT.symm⟩
+        case why n =>
+          simp only [retZ, Option.some.injEq] at hbT
+          exact ⟨_, hbT.symm⟩
         case val sd =>
           simp only [retZ] at hbT
           cases hse : namedSide u fT ns sd with

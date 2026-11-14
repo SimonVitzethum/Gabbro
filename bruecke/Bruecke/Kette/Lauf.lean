@@ -40,8 +40,19 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
       have heB : namedEnd u fn ns r = some bs := by
         rw [← namedEnd_sicht hS ns r]
         exact hbs
-      obtain ⟨σ', v, hex, hsl, hB⟩ := lowEnd_simB c hlow heB hU S.tab O passes R σ ρ s hW hL
-      refine ⟨fun e h => (by rw [hex] at h; cases h), fun σ'' v' h => ?_⟩
+      by_cases hn : ∃ i, r = .why i
+      · obtain ⟨i, rfl⟩ := hn
+        obtain ⟨hlt, hp, rfl⟩ := lowEndWhy_ok hlow
+        simp only [namedEnd, Option.some.injEq] at heB
+        subst bs
+        obtain ⟨A, hr⟩ := (ausgangZiel_why (l := false) (C := C) (R := R)
+          (fn := fn) (ids := ns.active) (Γ := Γ) ⟨i, hlt⟩ hW).2.2.2.2 σ ⟨i, hlt⟩ rfl
+        exact laufZiel_why_G (by rfl) hr
+      have hn' : ∀ i, r ≠ .why i := fun i he => hn ⟨i, he⟩
+      obtain ⟨σ', v, hex, hsl, hB⟩ := lowEnd_simB c hlow heB hn' hU S.tab O passes R σ ρ s hW hL
+
+      refine ⟨fun e h => (by rw [hex] at h; cases h), fun σ'' v' h => ?_,
+        fun σ'' r' h => (by rw [hex] at h; cases h)⟩
       rw [hex] at h
       cases h
       exact ⟨[], by simp, by simp [Oben], List.Pairwise.nil, fun ρB _ _ =>
@@ -271,14 +282,19 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
           have hrun : (∀ err, execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .logik err →
               execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .logik err) ∧
               (∀ σ' v', execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .zurueck σ' v' →
-                execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .zurueck σ' v') := by
-            constructor
+                execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .zurueck σ' v') ∧
+              (∀ σ' r', execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .why σ' r' →
+                execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .why σ' r') := by
+            refine ⟨?_, ?_, ?_⟩
             · intro err hh
               simp only [execEnd, hR] at hh
               exact EndAusgang.schrumpf_logik hh
             · intro σ' v' hh
               simp only [execEnd, hR] at hh
               exact endSchrumpf_zurueck hh
+            · intro σ' r' hh
+              simp only [execEnd, hR] at hh
+              exact endSchrumpf_why hh
           have hh := laufZiel_strecke_G hrun hStretch (IH σ₁ _ s₁ hW₁ hL₁)
           rw [List.singleton_append] at hh
           exact hh
@@ -288,7 +304,8 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
           obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
           have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
           have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hf
-          refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ ⟩
+          refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_,
+            fun σ' r' hh => (by simp only [execEnd, hR] at hh; cases hh)⟩
           · simp only [execEnd, hR] at hh
             cases hh
             exact ⟨head.callee, _, _, hd, hR⟩
@@ -296,7 +313,8 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
             cases hh
 
         | hardware err =>
-          refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_ ⟩
+          refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_,
+            fun σ' r' hh => (by simp only [execEnd, hR] at hh; cases hh)⟩
           all_goals simp only [execEnd, hR] at hh; cases hh
       case setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
         obtain ⟨bT, fT', ns', bs', hstepT, hbs', rfl⟩ :=

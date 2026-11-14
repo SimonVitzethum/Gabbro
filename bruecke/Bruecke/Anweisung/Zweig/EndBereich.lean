@@ -42,11 +42,14 @@ theorem endZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes 
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     have hr := hRest σl (.cons value ρ) s₁ hWl hL₁
     rw [endZiel_false_iff] at hr ⊢
-    refine ⟨fun e he => hr.1 e ?_, fun σ' v' he => ?_⟩
+    refine ⟨fun e he => hr.1 e ?_, fun σ' v' he => ?_, fun σ' r' he => ?_⟩
     · simp only [execEnd, eval, hb, ↓reduceDIte] at he
       exact EndAusgang.schrumpf_logik he
     · simp only [execEnd, eval, hb, ↓reduceDIte] at he
-      obtain ⟨A, hr⟩ := hr.2 σ' v' (endSchrumpf_zurueck he)
+      obtain ⟨A, hr⟩ := hr.2.1 σ' v' (endSchrumpf_zurueck he)
+      exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) (fun w => Int.le_refl _) hr⟩
+    · simp only [execEnd, eval, hb, ↓reduceDIte] at he
+      obtain ⟨A, hr⟩ := hr.2.2 σ' r' (endSchrumpf_why he)
       exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) (fun w => Int.le_refl _) hr⟩
   · apply endZiel_of_G (q := err) (σl := σl) ys
       (by simp only [execEnd, eval, hb, ↓reduceDIte])

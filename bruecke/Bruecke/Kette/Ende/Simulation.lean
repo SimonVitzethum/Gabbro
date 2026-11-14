@@ -57,10 +57,19 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
         cases hlow
         obtain ⟨rfl, rfl, _⟩ := seqZ_marker_some hm hy
         refine ⟨rfl, List.suffix_cons _ _, fun σ ρ s hW hL => ?_⟩
-        obtain ⟨σ', v, he, hw, hs⟩ := lowRetEnd_sim c hg
-          ((retZ_sicht hS ns r).symm.trans hr) hU S.tab O passes R σ ρ s hW hL
+        have hr' := (retZ_sicht hS ns r).symm.trans hr
+        by_cases hn : ∃ i, r = .why i
+        · obtain ⟨i, rfl⟩ := hn
+          obtain ⟨hlt, hp, rfl⟩ := lowRetWhyEnd_ok hg
+          simp only [retZ, Option.some.injEq] at hr'
+          subst bst
+          exact ausgangZiel_why ⟨i, hlt⟩ hW
+        have hn' : ∀ i, r ≠ .why i := fun i he => hn ⟨i, he⟩
+        obtain ⟨σ', v, he, hw, hs⟩ := lowRetEnd_sim c hg hr' hn' hU S.tab O passes R σ ρ s hW hL
+
         rw [endZiel_false_iff]
-        refine ⟨fun err hh => (by rw [he] at hh; cases hh), fun σ'' v' hh => ?_⟩
+        refine ⟨fun err hh => (by rw [he] at hh; cases hh), fun σ'' v' hh => ?_,
+          fun σ' r' hh => (by rw [he] at hh; cases hh)⟩
         rw [he] at hh
         cases hh
         exact ⟨[], (by simp), (by simp [Oben]), List.Pairwise.nil,
@@ -130,10 +139,13 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
         have hrun : (∀ err, execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .logik err →
             execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .logik err) ∧
             (∀ σ' v', execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .zurueck σ' v' →
-              execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .zurueck σ' v') := by
-          constructor
+              execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .zurueck σ' v') ∧
+            (∀ σ' r', execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .why σ' r' →
+              execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .why σ' r') := by
+          refine ⟨?_, ?_, ?_⟩
           · intro err hh; simp only [execEnd, hR] at hh; exact EndAusgang.schrumpf_logik hh
           · intro σ' v' hh; simp only [execEnd, hR] at hh; exact endSchrumpf_zurueck hh
+          · intro σ' r' hh; simp only [execEnd, hR] at hh; exact endSchrumpf_why hh
         simpa only [List.singleton_append] using endZiel_strecke_G hrun hs (IH.2.2 _ _ _ hw hl)
       | why σ₁ why => exact (Nat.not_lt_zero why.val (Nat.lt_of_lt_of_eq why.isLt hr)).elim
       | logik err =>
@@ -141,13 +153,15 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
         have hf := fnIdx_find _ _ _ hi
         have hd := callee_getragen_calls S hc (CallsIn.bind hhead) hf
         rw [endZiel_false_iff]
-        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_⟩
+        refine ⟨fun err' hh => ?_, fun σ' v' hh => ?_,
+          fun σ' r' hh => (by simp only [execEnd, hR] at hh; cases hh)⟩
         · simp only [execEnd, hR] at hh; cases hh
           exact ⟨head.callee, _, _, hd, hR⟩
         · simp only [execEnd, hR] at hh; cases hh
       | hardware err =>
         rw [endZiel_false_iff]
         exact ⟨fun _ hh => (by simp only [execEnd, hR] at hh; cases hh),
+          fun _ _ hh => (by simp only [execEnd, hR] at hh; cases hh),
           fun _ _ hh => (by simp only [execEnd, hR] at hh; cases hh)⟩
     case narrowBeg x lo hi =>
       obtain ⟨e, errorBody, tailZ, ys, hname, hEZ, hYZ, rfl⟩ := seqZ_narrow_some hbs
