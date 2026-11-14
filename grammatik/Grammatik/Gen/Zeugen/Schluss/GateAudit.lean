@@ -85,6 +85,12 @@ theorem m16_source_checked_zeuge : M16_13.e.gueltig = true ∧
   ⟨M16_13.e_gueltig, Vertraege.Pruefer.KontrakteGeprueftB_sound
     M16_13.e.hvoll (((einsatz_akzeptiert _).mp M16_13.e_gueltig).2.2)⟩
 
+/-- A callee's logical requires is not an executed atomic read. The exact
+    replay certificate adds this case while retaining the conservative gate. -/
+theorem m169_atomic_replay_zeuge :
+    Invarianten.Pruefer.atomicFreeB M169_350.e.P M169_350.fv = false ∧
+    (Invarianten.Pruefer.atomicReplay? M169_350.e.P M169_350.fv).isSome = true := by decide
+
 /-- The four former fragment refusals are accepted by the complete checker. -/
 theorem lock_fixtures_checked_zeuge :
     M16_13.e.gueltig = true ∧ M169_350.e.gueltig = true ∧
