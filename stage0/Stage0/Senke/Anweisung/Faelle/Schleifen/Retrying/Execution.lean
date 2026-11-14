@@ -65,16 +65,16 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
     (σ, wahr? (eval σ bis σ ρ))) overflow x.Entry x.low ?_ ?_ ?_
   · intro n m σ ρ entry done
     obtain ⟨m1, run, frame, kept, ready⟩ := x.test_run lowered top entry.1
-    try simp only [done, ↓reduceIte] at run
+    simp only [show wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = true from done, ↓reduceIte] at run
     exact ⟨m1, run, frame, ready.pre.env, ready.world, fun j hj => kept j (by
       simp only [List.mem_cons]; exact Or.inr (Or.inr hj))⟩
   · intro m σ ρ entry falseCond
     obtain ⟨m1, run, frame, kept, ready⟩ := x.test_run lowered top entry.1
-    try simp only [falseCond, ↓reduceIte] at run
+    simp only [show wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false from falseCond, Bool.false_eq_true, ↓reduceIte] at run
     have zero : x.read m1 x.counter 0 := by
       exact (kept x.counter List.mem_cons_self).trans entry.2.1
     have atOverflow : x.addr x.controlIndex +
-        BitVec.ofInt 64 (16 * (x.body.length + 3 : Nat)) = x.addr x.overflowIndex :=
+        BitVec.ofInt 64 (16 * ((x.body.length : Int) + 3)) = x.addr x.overflowIndex :=
       adr_eq x.pc (x := x.controlIndex) (y := x.overflowIndex) (by
         dsimp only [controlIndex, overflowIndex]; omega)
     have counterInside : x.counter < x.K := by
@@ -87,7 +87,7 @@ theorem correct {Λ : List (Res D)} {bis : Expr D Γ Λ .bool} {tc : Nat}
       (overflowRun m1 _ ρ ready)
   · intro n m σ ρ entry falseCond
     obtain ⟨m1, testRun, testFrame, testKept, ready1⟩ := x.test_run lowered top entry.1
-    try simp only [falseCond, ↓reduceIte] at testRun
+    simp only [show wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false from falseCond, Bool.false_eq_true, ↓reduceIte] at testRun
     have start : x.Entry (n + 1) m1 (σ.lese Λ bis.orte) ρ := by
       refine ⟨ready1, ?_, ?_, entry.2.2.2⟩
       · exact (testKept x.counter List.mem_cons_self).trans entry.2.1
