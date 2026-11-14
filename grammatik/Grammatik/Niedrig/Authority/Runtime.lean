@@ -21,6 +21,21 @@ theorem SpanGenerations.bump_other (generations : SpanGenerations) {node other :
     (different : other ≠ node) : generations.bump node other = generations other :=
   if_neg different
 
+/-- The kind of the innermost lexical exit. A loan remembers its exact
+    runtime identity; neither kind contains an authority receipt. -/
+inductive ScopeKind where
+  | view
+  | loan (id : Nat)
+  deriving DecidableEq
+
+/-- A persistent node stamp, shared by the ledger's stack and the machine
+    continuation marker. The generation is read from the entry on admission. -/
+structure ScopeKey where
+  kind : ScopeKind
+  node : Nat
+  generation : Nat
+  deriving DecidableEq
+
 /-- The machine stores the authority alongside the canonical context, so an
     operation resolves an id to actual data rather than to a ghost receipt.
     Byte-loan tables are separated by span node; their carrier-local counters
@@ -30,6 +45,7 @@ structure ContextEntry (D : Deklaration) where
   context : Construct.SystemContext D
   generations : SpanGenerations
   byteLoans : Nat → Niedrig.Bytes.GrantTable
+  scopes : List ScopeKey := []
 
 /-- Shared call-machine state, deliberately outside World and Speicher: an
     oracle may change neither authority nor generations by returning a World.
