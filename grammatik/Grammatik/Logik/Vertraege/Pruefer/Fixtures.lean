@@ -21,6 +21,7 @@ def declaration : Deklaration :=
         konsumiert := [], produziert := [] }
     passt := fun _ _ => false
     passt_ok := fun _ _ impossible => by cases impossible
+    rzusage := fun item => nomatch item
     Inv := Empty
     traeger := fun item => nomatch item
     invs := []

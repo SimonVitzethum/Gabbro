@@ -73,9 +73,13 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | hardware error => trivial)
       let combined ← branchCondition test locals done advanced
       return combined.map (fun runtime world ready => by
-        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-          simpa only [retryLauf, wahr?, tested, eq_self,
-            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
+        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals with
+        | true => simpa only [retryLauf, wahr?, tested, eq_self, ↓reduceIte, Goals.holds] using ready
+        | false =>
+            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+                (world.lese Λ test.orte) locals <;>
+              simpa only [retryLauf, wahr?, tested, eq_self, Bool.false_eq_true,
+                ↓reduceIte, Goals.holds, result] using ready)
 
 /-- A traversal's checked annotation is tested at every boundary, including
     `leave`. Unrolling has a static count; no runtime or alternate interpreter
@@ -145,9 +149,13 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let combined ← branchCondition annotation locals advanced stopped
       return combined.map (fun runtime world ready => by
         cases tested : eval (world.lese Λ annotation.orte) annotation
-          (world.lese Λ annotation.orte) locals <;>
-          simpa only [traverseLauf, wahr?, tested, Bool.true_eq_false,
-            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
+            (world.lese Λ annotation.orte) locals with
+        | false => simpa only [traverseLauf, wahr?, tested, Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready
+        | true =>
+            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+                (world.lese Λ annotation.orte) (.cons index locals) <;>
+              simpa only [traverseLauf, wahr?, tested, Bool.true_eq_false,
+                Bool.false_eq_true, ↓reduceIte, Goals.holds, result] using ready)
 termination_by indices.length
 decreasing_by all_goals simp_wf <;> omega
 

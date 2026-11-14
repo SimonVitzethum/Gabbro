@@ -25,6 +25,7 @@ def declaration : Deklaration :=
         produziert := [] }
     passt := fun _ n => decide (0 = n)
     passt_ok := fun _ _ _ => SigPasst.refl _ _
+    rzusage := fun item => nomatch item
     invarianten_gehalten := fun _ _ _ _ _ lock => nomatch lock }
 
 abbrev contract : Vertrag declaration := vertragVon declaration ()
@@ -68,8 +69,8 @@ def guardedCompiled : EndVC program noFacts guarded .nil post :=
 def unguardedCompiled : EndVC program noFacts unguarded .nil post :=
   ((endBlock program noFacts unguarded .nil post).toOption).get (by decide)
 
-/-- This decision is on the VC generated from the typed G writer, rather than
-    on a manually supplied preservation formula. -/
+/- This decision is on the VC generated from the typed G writer, rather than
+   on a manually supplied preservation formula. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = true := by
@@ -87,10 +88,10 @@ def counterexampleWorld : World declaration where
   spur := []
 
 def oracle : Orakel declaration where
-  wirkt := fun item => nomatch item
-  regLies := fun item => nomatch item
+  wirktL := fun item => nomatch item
+  regLiesL := fun item => nomatch item
   regSchreib := fun item => nomatch item
-  sichtbar := fun _ _ => true
+  sichtbarL := fun _ _ => true
 
 def calls (f : declaration.Fn) (world : World declaration)
     (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok world ()
