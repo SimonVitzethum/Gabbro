@@ -160,8 +160,7 @@ theorem localBound_translated_zeuge :
     uebersetzeB (declaration.traeger ()) localBound = .ok localFormula := by rfl
 
 theorem localBound_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) localBound = true := by
-  simp only [imFragmentB, localBound_translated_zeuge]
+    imFragmentB (declaration.traeger ()) localBound = true := rfl
 
 /-- String contents never enter the arithmetic problem; their length does. -/
 def stringDeclaration : Deklaration :=
