@@ -46,7 +46,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 | vocabulary words | 221 | **246 table words + 4 Sonderformen** measured (by the retired `pruefe-wortschatz`, historical: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23») |, `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3), `borrows` (C12 call-scoped owner loan, §6) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
 | formalised in Lean | — | **the whole surface**: `Syntax.lean` 4 mutual families, `Semantik.lean` total with a trace, `Satz.lean` frame + trace in one induction, `Wettlauf.lean` race freedom over interleavings, `Zucker.lean` every sugar as a definition, `Ziel.lean` the goal as theorems over the grammar alone — 0 `sorry`, axioms `propext`/`Classical.choice`/`Quot.sound` only |
-| **Guardian** | the grammar and reserved-word table tests of `cargo test` (run by `instrumente/pruefe-pruefer.py`); the retired `pruefe-syntax` (2026-10-17, see git history) also held closure of the rules, reachability from `program` and terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it read the same grammar |
+| **Guardian** | the grammar and reserved-word table checks of `instrumente/pruefe-lean.py` (the `lex_keywords` whole-table theorem in `Parser/Lex/Lexer/Teil2a.lean`); the retired `pruefe-syntax` (2026-10-17, see git history) also held closure of the rules, reachability from `program` and terminals covered by the vocabulary | unchanged; the attribute comments are EBNF comments, so it read the same grammar |
 
 > **Partly run on 2026-09-09.** The EBNF-closure branch of retired `pruefe-syntax`
 > (161 rules, 0 open) and retired `pruefe-wortschatz` (221/221 both readings, speech
@@ -136,7 +136,7 @@ one names below the position that forces it -- a use-site occurrence always pars
 the keyword form, so a variable of that name could be bound and never read back:
 
 ```
-  word       forcing position (keyword arm above the name path, parse.rs)
+  word       forcing position (keyword arm above the name path, in the Lean parser)
   sizeof     primary `sizeof(place)`                                          :2087
   lenof      primary `lenof(place)`                                           :2087
   aligned    primary `aligned(place, n)`                                      :2103
@@ -167,8 +167,8 @@ Every word that arrived after 2026-09-05 arrived contextual -- `syscall` `abi` `
 `errors` `kernel`, `target` (Opus agent L, §12.3), `arena` `capacity` `alloc` `reset`, `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap with sampling, §9.1), `free` (slot release, TODO §1-B, §9.1),
 `profile` `rounding` `fp_contract`
 `memory_model` `interrupt_routing`, `translator` `for`, `payload`, `depends` -- and
-`crates/gabbro-syntax/tests/wortschatz.rs` binds every one of the 248 as a parameter
-and as a local, requiring clean exactly for the 231. No word freed since stands
+the Lean theorem `lex_keywords` (`grammatik/Grammatik/Parser/Lex/Lexer/Teil2a.lean`) checks
+every word of the `wortschatz` table lexes as its keyword token. No word freed since stands
 unread: freeing one of the seventeen buys zero foreign sites and breaks either a read
 or the C, so the residue is irreducible by measurement, not by taste.
 
@@ -230,10 +230,12 @@ optional. **The `Sonderform` line (G6):** `O` (in `costexpr`), `@version` (in `f
 the vocabulary — identifiers in a fixed position, counted and named by the guardian.
 
 **The `Fremdkoerper` row (G6b):** `syscall`, `abi`, `number`, `errors`, `kernel` and `target` are
-words of the vocabulary AND terminals the lexer knows (`kw.rs`, «SS-1»); the EBNF
+words of the vocabulary AND terminals the lexer knows («SS-1», `lex_keywords` in
+`Parser/Lex/Lexer/Teil2a.lean`); the EBNF
 side carries them through `syscalldecl`, and a `syscall` item has been checked
-since lane S5 (`N063`-`N068`, `A005`/`A006`) and lowered by both backends (the C11 emitter and
-`gabbro llvm`, which lowers direct gates inline; measured on `beispiele/74`). `entry syscall …` keeps parsing: the
+since lane S5 (Lean home: `N063`/`N065`/`N066` in `grammatik/Grammatik/Hardware/Tor/Abi.lean`; `N064`/`N067`/`N068`,
+`A005`/`A006` are not yet Lean judgments) and lowered by Stage 0 (`stage0/Stage0/Bindung.lean`
+binds direct gates inline; measured on `beispiele/74`). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
@@ -400,19 +402,19 @@ Recursive module application is refused as `parametric-module-recursion`, even w
 arguments. Expansion-budget exhaustion is `parametric-module-limit`; duplicate aliases and generated
 name collisions are `parametric-module-alias-collision` and `parametric-module-name-collision`.
 An item without a module substitution rule is refused as `parametric-module-item` (raw assembly has
-the separate `parametric-module-assembly` refusal). The Rust frontend still requires the corresponding
-migration. Parser, stack, disjoint-storage and actual-exporter witnesses live in
+the separate `parametric-module-assembly` refusal). The Lean source/export/lowering
+path above is the whole migration; no second frontend remains. Parser, stack, disjoint-storage and actual-exporter witnesses live in
 `Parser/Elab/Modules/Witness.lean` and `PipelineWitness.lean`; they require Lean checking.
 
 | production | reading | Lean |
 |---|---|---|
 | `program`, `moduledecl`, `usedecl` | names are static; a module is a namespace, not a construct | `Deklaration` — one per translation unit |
 | `constdecl` | a `const` is a **literal** at every use | `Expr.lit n : Expr Γ Λ (.int n n)` |
-| `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one (`K191`), each element lies in the element type (`K194`) | no constructor — checker-evaluated (`konstanten.rs`); the certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
+| `constdecl` of array type (`arraylit`, lane 111) | a const table is its **folded elements** at every use; the count is the declared one, each element lies in the element type (`K191`/`K194` are not yet Lean judgments) | no constructor — not yet decided by the Lean checker; the model certificate is the `List.all` predicate `konstZert` (`Konstanten.lean`) |
 | `staticdecl` | a `static` is a **global carrier** with its guards (§11) | `D.Glob`, `D.gtyp`, `D.gbraucht` |
 | `bootdecl`, `entrydecl`, `entrustdecl` | a foreign body with a contract: what enters, what leaves, what it clobbers | `D.Ax` — an axiom with `aparams`, `aerg`, `aschreibt` («SG-18») |
-| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (`N446`-`N452`, `N456`/`N457`, emitter `C185`) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
-| `targetdecl`, `syscall V;`, `via V` (§12.3, Opus agent L) | **a gate's kernel is a binding, not its text**: the parser fills every `via` gate from the active target's binding before any pass runs, and the checker holds every binding (`N562`-`N567`, inactive targets included) | none of its own — the filled gate is the `syscalldecl` row above; the target's named assumption is the gate's `D.Ax` assumption |
+| `syscalldecl` (§12.1) | **checked since lane S5** — the user side of a system call: ABI binding, generated errno decoding, ghost OS state, assumption or kernel pairing; **`stack` + `child` since lane O-1** — the checked clone handoff (Lean: `N446`/`N448`/`N449`/`N451`/`N452` in `Bausteine/Schablonen/SchablonenFaden.lean`, `N456`/`N457` in `Nebenlaeufigkeit/Allgemein/Threads/FadenMaschine.lean`; `N447`/`N450` and emitter `C185` are not yet Lean judgments) | `D.Ax` with `sysabi` — number, register map, clobbers consumed by the emitter; the answer type is the `ok value | reason r` sum, `einpassen` holds the raw answer against it; the child as a spawned thread of machine G in `CloneHandoff.lean` (fix lane F9: standalone, NOT in `GabbroZiel`; the goal reaches a child through `klon_ziel` when the child entry is a declared start of an accepted unit; the exporter refuses `stack` gates `LG001` and `child` `LG004`) |
+| `targetdecl`, `syscall V;`, `via V` (§12.3, Opus agent L) | **a gate's kernel is a binding, not its text**: the parser fills every `via` gate from the active target's binding before any pass runs, and the checker holds every binding (`N562`-`N567` are not yet Lean judgments, inactive targets included) | none of its own — the filled gate is the `syscalldecl` row above; the target's named assumption is the gate's `D.Ax` assumption |
 | `accdecl` | a global plus a **generated** assignment `A = merge(A, v)` | `D.Glob` + `Stmt.assignGlob` (SUGAR) |
 | `buildgate` | a filter on the item list; the theorem is about the items that are there | none |
 
@@ -439,12 +441,12 @@ typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | struc
 tupletype  = "(" typeexpr "," typeexpr { "," typeexpr } ")" ;
 stringty   = stringkopf "max" int ;
 stringkopf = ident ;
-(* The word `string` -- contextual, NOT reserved (`parse.rs`): only `string`
+(* The word `string` -- contextual, NOT reserved (Lean parser): only `string`
    directly followed by `max` takes this arm; anything else -- including a user
    type named `string` -- falls through to the name arm. Lane 261: a bounded
-   string with declared maximum `max`. The length discipline holds maxes
-   against slots (`N453`-`N455` over parameters, results and `let`s, `N465`
-   everywhere else, `N486` for the bound `1 ..= 65535`); the emitter writes
+   string with declared maximum `max`. The length discipline is modelled in
+   `Bausteine/Zeichenfolge/ZeichenfolgeGebunden.lean` (`N453`, `N455`, `N465`, `N486`
+   name the checker rules, not yet Lean judgments); the deleted emitter wrote
    `gabbro_string_N` -- one length word plus N bytes, no NUL terminator. *)
 (* NO general `option T` («SG-26», §18): over `index into T` it is the
    carrier's index option («SG-4»); over any other `T` the writer spells the
@@ -509,16 +511,18 @@ fncontract = [ "requires" predlist ] [ "ensures" predlist ]
 entryfn    = "entry" "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] ;
 (* NEW C-free lane, C2 slice 3 (2026-10-01; OFFEN O39): CODE handed in by generated C. No new
    word -- `entry` heads an item at item level, and a type only before `fn`. The value is the
-   designator of a function a GENERATED driver wrote (in a kernel module, the wrapper around a
-   declared root, template `faden.modul`), and the type is the one shape in which code reaches
-   a foreign body (`N574` refuses every `fn(…)` there). It carries a C signature and NO
-   contract: no Gabbro code calls through it. Held by `eintrittscode.rs`: it stands only as the
-   own type of a parameter of an `extern fn` or a Gabbro function, with plain integers, `bool`
-   and `ptr<normal, …>` at plain integers, not behind `...` (`N575`); a Gabbro function that
-   takes one is called, taken or dispatched to by no Gabbro source (`N576`); inside it the
-   parameter is named once, as the whole argument of an `extern fn`'s `entry fn` parameter of
-   the same signature, outside every loop (`N577`). The exporter refuses such a function by
-   name (`LG001`): G has no code values, and nothing in Gabbro calls it. *)
+    designator of a function a GENERATED driver wrote (in a kernel module, the wrapper around a
+    declared root, template `faden.modul`), and the type is the one shape in which code reaches
+    a foreign body (`N574` is not yet a Lean judgment). It carries a C signature and NO
+    contract: no Gabbro code calls through it. The Lean checker holds it: it stands only as the
+    own type of a parameter of an `extern fn` or a Gabbro function, with plain integers, `bool`
+    and `ptr<normal, …>` at plain integers, not behind `...` (`N575` in
+    `Bausteine/Schablonen/SchablonenModul/Teil1.lean`); a Gabbro function that
+    takes one is called, taken or dispatched to by no Gabbro source (`N576` is not yet a
+    Lean judgment); inside it the
+    parameter is named once, as the whole argument of an `extern fn`'s `entry fn` parameter of
+    the same signature, outside every loop (`N577` in the same module). The exporter refuses such a function by
+    name (`LG001`): G has no code values, and nothing in Gabbro calls it. *)
 typelist   = typeexpr { "," typeexpr } ;
 params     = ident ":" typeexpr { "," ( ident ":" typeexpr | "..." ) } ;
 (* CHANGED C-free lane, C2 (2026-09-30): `...` once, behind at least one parameter, in the
@@ -648,8 +652,8 @@ checks the ordinary output forms, then expands libraries. `Dyn.checkedOutput_ord
 is the generic output-form gate; `Dyn/Witnesses.lean` and `Dyn/SourceWitnesses.lean`
 cover Scene/Shape, the exact two-case dispatch, effect filtering, costs and refusals.
 This is a front-end expansion into existing sums and matches: no `Ty.dyn`, machine G
-change, address table or allocation is introduced. Rust mirroring and executable
-source-to-IR coverage remain separate integration work.
+change, address table or allocation is introduced. Executable
+source-to-IR coverage remains separate integration work.
 
 **Attributes and Lean.**
 
@@ -861,14 +865,14 @@ placelist  = place { "," place } ;
 | `x.is_some()` / match on `option` | `x` an `option index into T` at a place (`N593` otherwise): a call through a place whose last suffix is `.is_some`, with no argument, IS the test | `bool` | `Expr.istSome` |
 | `Variant(e)` (a `tagged` case) | the payload has the case's type; the case index is in range by shape | the sum type | `Expr.case cs i nutz` |
 | `Variant()` / bare `Variant` (a nullary `tagged` case, lane 167) | nothing to carry — the case index alone says which case it is | the sum type | `Expr.case cs i` with the empty payload |
-| `Variant(e)` refused (lane 167) | an unknown or ambiguous case (`N280`); a missing payload (`N281`); a payload on a nullary case (`N282`); a bare name over a payload case (`N283`); labels at a case (`N284`) — the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
+| `Variant(e)` refused (lane 167) | an unknown or ambiguous case, a missing payload, a payload on a nullary case, a bare name over a payload case, labels at a case (`N280`-`N284` are not yet Lean judgments); the payload RANGE stays `M101`'s, its SHAPE `M140`'s | — | — |
 | `R::F` | | `reason R` | `Expr.why n r` |
 | `&f` | `f` conforms to the `fnptr` at the place (a `let p : fn(…) = &f;`, an argument for a parameter of that type; without a written type, `f`'s own signature) | `fn(…)` | `Expr.fnref f n (h : D.passt f n = true)` |
 | `&T` | `T` is the declared carrier number `n` | `ptr<…> T` | `Expr.ptrOf` |
 | `old(place)` | only in `ensures`: the value at entry — **under the guards of the place**, like the place | the place's type | `Expr.oldG hL`, `Expr.oldS hL` |
 | `result` | only in `ensures`: the answer (a number in a comparison, a truth value as a predicate) | the return type | the head variable of the `ensures` context (`ErgCtx`) |
 | `sizeof`, `lenof`, `aligned` | translation-time numbers | `n .. n` | `Expr.lit` (SUGAR) |
-| `[e₀, …]` as const initializer (lane 111) | each element folds (`K190` otherwise); the count is the declared one (`K191`); each element lies in the element type (`K194`) | the element type, per element | no constructor — checker-evaluated (`konstanten.rs`); the certificate is `konstZert` (`Konstanten.lean`) |
+| `[e₀, …]` as const initializer (lane 111) | each element folds; the count is the declared one; each element lies in the element type (`K190`/`K191`/`K194` are not yet Lean judgments) | the element type, per element | no constructor — not yet decided by the Lean checker; the model certificate is `konstZert` (`Konstanten.lean`) |
 | a call in expression position | SUGAR for `let t = call; … t …` (§7) | | `Block.bindCall` |
 | `x += e` etc. (§7) | SUGAR for `x = x + e` under the rules above | | `Expr.add` |
 
@@ -1087,7 +1091,7 @@ includes the actual function's precondition, and the actual postcondition includ
 postcondition. A failed inclusion uses the same mismatch refusal; specialization cannot bypass it.
 
 Generic prototypes, generic predicate/assembly bodies and generic translators are still
-refused. The Rust frontend has not yet been migrated to these forms. The Lean source/export/lowering
+refused. The Lean source/export/lowering
 witnesses are in `Parser/Elab/Generic/PipelineWitness.lean` and `FunctionWitness.lean`. Successful
 expansion still requires the ordinary export and lowering checks; witnesses require Lean checking.
 
@@ -1302,7 +1306,7 @@ literals (§5.4 of `ABSTRACTION-SYNTAX-PLAN.md`).
 
 The Lean implementation is `Parser/Spec/`, wired into `elabU`; its output-form theorem is
 `Spec.expand_ordinary`, and `Spec/Zeugen.lean` contains acceptance, resolution and refusal
-witnesses. This entry describes the Lean front-end rule; Rust mirroring and the lead's
+witnesses. This entry describes the Lean front-end rule; the lead's
 integration checks are separate acceptance work. Calls hidden in uninterpreted loop headers
 are refused as `spec.call.raw.header` until their ordinary header elaborator supports expansion.
 
@@ -1404,16 +1408,16 @@ freestmt   = "free" place ";" ;                            (* TODO §1-B, §9.1 
    readable and writable, or the `else` runs (OOM below the ceiling). The `else` always
    stands -- the grammar has no branchless form, so a missing `else` is `P001` at the
    reader, not a checker question. The amount is any expression at the reader and must
-   be a translation-time constant at the checker (`N426` refuses the uncountable shape
-   and the request reaching past the ceiling, branch or no branch). `grow = 1;` stays
+    be a translation-time constant at the checker (Lean model of `N426` in
+    `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal is not yet a Lean
+    judgment). `grow = 1;` stays
    an assignment -- the head word decides, like at `reset` above. *)
 childstmt  = "child" block ;                                    (* lane O-1, §12.1 *)
 startstmt  = ident "{" path { "," path } [ "," ] "}" ";" ;      (* lane 253, §11; `ident` spelled `start`, read by text, not a vocabulary word *)
 (* The hosted thread start: the listed roots are the declared-concurrent bodies the program starts
-   (`concurrentdecl`, §11). `start` is no keyword (`kw.rs` has no such word): only the identifier
+   (`concurrentdecl`, §11). `start` is no keyword (no such word in the `wortschatz` table): only the identifier
    `start` directly followed by `{` is this statement, so `start = 1;`, `start(x);` and `start f;`
-   keep their ordinary readings and refusals. Written down 2026-10-17 from `parse.rs` `startform`;
-   the Lean reader is `SAnw.start`. *)
+   keep their ordinary readings and refusals. The Lean reader is `SAnw.start`. *)
 (* The clone-child path (K-1): the block that runs on the handed stack of a `syscall`
    gate with a `stack` clause. It never returns into the caller's frame -- no `return`
    inside (`N448`), no `leave`/`next` past the region, and no fall-through past the
@@ -2054,13 +2058,13 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | declaration | reading | Lean |
 |---|---|---|
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
-| `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the emitter writes |
-| `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210`) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
+| `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210` is not yet a Lean judgment); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the lowering writes |
+| `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210` is not yet a Lean judgment) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
 | `arena A capacity lo .. hi of T pb P blw B` | the UNBOUNDED form: no `max`, the ceiling is the counter room (`u32::MAX`); the generator reserves address space once (`mmap(PROT_NONE)`, no RAM) and commits per 1 MiB on demand (`mprotect`); before each commit it asks `P` for free bytes, below `B` the `else` runs (OOM path) — one probe per MiB, zero on the fast path; freestanding `P` measures itself | `ArenaDyn.lean`: ceiling `M`, committed prefix `c`, past-ceiling refusal, real OOM below `M` (the `else` is the program's); the 1 MiB steps overshoot the need invisibly (no introspection), hence refinement-true |
-| `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` refuses any other carrier; the END of the range is held against the length (`M103`); it is a store (`writes X`) | none: `lean-g` refuses the statement by name (`LG005`) — the exporter has no model of a released page |
-| `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` the undeclared arena) | no constructor yet: the committed prefix is checker flow, and the emitter and the G exporter refuse the statement by name until the dynamic arm lands |
-| `free A[i];` | give exactly one slot back: the name dies statically (`N586` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the G exporter refuses by name (`LG005`) until the Block form lands |
-| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` until the producer stands**: a declared `linear` mark (`D265`), exactly one foreign minter executed once (`D266`/`D268`), every access holding it (`D267`); the first mark is minted once and travels by handoff (`kbedingung.rs::eigner`, poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
+| `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` is not yet a Lean judgment; the END of the range is held against the length (`M103` in `SchablonenT5SemBasis.lean`); it is a store (`writes X`) | none: the Lean exporter refuses the statement by name (`LG005` in `Bausteine/Arena/ArenaDyn/Teil2.lean`) — the exporter has no model of a released page |
+| `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (Lean model of `N426` in `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal and `N213` are not yet Lean judgments) | no constructor yet: the committed prefix is checker flow, and the lowering refuses the statement by name until the dynamic arm lands |
+| `free A[i];` | give exactly one slot back: the name dies statically (`N586` in `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the Lean exporter refuses by name (`LG005`) until the Block form lands |
+| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I : p;` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every value return, within the writer's declared `costs`. **Such a function holds the locks of every carrier of `I`** (`U003`: `invarianten_gehalten`), because it reads them all at return. Reason exits retain the invariant proof obligation. | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
@@ -2170,14 +2174,13 @@ impl fn nutzen() -> u32 effects { writes Log } costs <= 32 ops {
 * `grow A by n else { … };` (lane 257) commits `n` further slots below the
   ceiling, or runs the `else` (OOM below the ceiling). The `else` always
   stands -- boolean discipline: both outcomes of the commit decision are
-  written down. The amount is a translation-time constant; `N426` refuses
-  the uncountable amount and every request whose upper bound may reach past
-  the ceiling, branch or no branch. The bound is whole-run (`reset` gives no
+  written down. The amount is a translation-time constant (Lean model of `N426` in
+  `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal is not yet a Lean judgment). The bound is whole-run (`reset` gives no
   commit back): every path, every loop pass (a loop without a constant pass
   bound makes it unbounded), every call, and every root of the call graph
   entered once per load (an `entry` dispatch target without bound; fix lane
   F2). Until the dynamic arm lands, the
-  emitter and the G exporter refuse the statement by name.
+  lowering refuses the statement by name.
 
 *Lean:* the generation is a type index (`Arena k g`, `ArenaIdx g n`, `Marke g`
 with a private constructor), so a stale index does not typecheck; `alloc`
@@ -2820,12 +2823,12 @@ gate keeps** — its parameters, answer, `or R` channel, `requires`/`ensures`, `
 Stage0 accepts `--testbuild` alongside `--arch` and `--target`; it selects `when TESTBUILD` items before name resolution (shipping selection is the default).
 
 **The active target** is `--target T` (or `GABBRO_TARGET=T`) when given, else the one
-`target T;` selection, else the one block name. The parser fills every `via` gate from
-the active binding (`crates/gabbro-syntax/src/ziel.rs`) before any pass runs, so every
-pass, the emitter and the exporter read an ordinary gate. `progress V` over a variable
+`target T;` selection, else the one block name. The Lean parser fills every `via` gate from
+the active binding before any pass runs, so every
+pass and the exporter read an ordinary gate. `progress V` over a variable
 names the assumption the active target binds for it.
 
-**The checks** (`crates/gabbro-check/src/zielbindung.rs`):
+**The checks** (`N562`-`N567` are not yet Lean judgments):
 
 * `N562` — `via V` names a declared `syscall V;`, and no second gate uses `V`;
 * `N563` — EVERY target binds every variable a gate uses (switching never meets an
@@ -3156,9 +3159,9 @@ names its «SG-n», its Lean carrier, and what the writer still owes by hand.
 verifies a Gabbro program proves **only** their own logic (`requires`,
 `ensures`, `invariant`, `decreases`, a `state` pre-state) and their hardware
 measures (`assume`/`axiom` with `falsifier`, `progress`, a register promise, the
-memory model A10) — **and nothing else**. Everything else is carried by Gabbro
-and CompCert, assuming Gabbro is formally verified. The Lean body that states
-this independently of the current `.rs` code is
+memory model A10) — **and nothing else**. Everything else is carried by Gabbro,
+assuming Gabbro is formally verified. The Lean body that states
+this is
 `grammatik/Grammatik/Kern/Syntax/Ziel.lean`: it imports only the grammar, defines the
 lowering contract to a closed C subset explicitly, and its `#print axioms`
 shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
@@ -3166,7 +3169,7 @@ shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
 | | production | writer still proves by hand | carried by | Lean |
 |---|---|---|---|---|
 | **«SG-22» time split** | `deadline <= n ops arch X falsifier p` at `fn` (NEW, §6) | the `ops` number, honestly and tightly, like `costs`; the falsifier probe for the cycles on `X` | the budget (`costs`, `held <=`, `bounded`, `per_pass … ops`) is logic checked against the declaration; a missed deadline is **`hardware (fortschritt a)`** — the named environment assumption, not a silent reinterpretation of `ops`. Structural checks: the number reads (`K011`), the machine is declared (`K012`, R16); the probe's shape, when it resolves in-unit, is held by `N056` (same tail as `retires`), an unresolved probe is a program next to the tree; `unfalsifiable` stays legal and marked, and the manifest carries `frist_<fn>_eingehalten` with the class; measured by `instrumente/sonden/sonde_tick.c` (sample, R15/W10 — the Lean side names the mapping `fristAlsAnnahme` and proves nothing about time; `Fristlauf.lean` `fristlauf_erschöpfend` mirrors that mapping by shape and proves exhaustiveness — every run is `ok` or expiry) | `Hardware.fortschritt`; `Ziel.lean` `fristAlsAnnahme`; `Fristlauf.lean` `fristlauf_erschöpfend` |
-| **«SG-23» payload order** | DOCUMENTED (already enforced): `A = e publishes {p,q};` after the writes of `{p,q}`, `let x = A awaits {p,q};` before their reads (same sets as «SG-13») | the logic of what is published | the **order** — enforced since 2026-08-19 by `V006`/`V007` in `paarung.rs` (write-after-publish, read-before-await, `if`-evasion closed 2026-08-20); this version names the rule in the grammar instead of leaving it checker-only | `Stmt.publish`, `Block.awaits` |
+| **«SG-23» payload order** | DOCUMENTED (order named, refusal still to be modelled): `A = e publishes {p,q};` after the writes of `{p,q}`, `let x = A awaits {p,q};` before their reads (same sets as «SG-13») | the logic of what is published | the **order** — this version names the rule in the grammar (`Stmt.publish`, `Block.awaits`) instead of leaving it checker-only; the `V006`/`V007` order refusals of the deleted Rust checker are not yet Lean judgments | `Stmt.publish`, `Block.awaits` |
 | **«SG-24» counting** | `count k in slots of T : p` as an expression (NEW, §4) | the predicate `p` | the traversal that counts it — SUGAR for a call to the table's **generated** count function, like `ops insert/remove` (§9): `Block.bindCall` with its `requires`; over **one** table only, a cross-table count is a `group` invariant, never a hand-maintained counter | `Block.bindCall` |
 | **«SG-25» first match** | NO new syntax: bind the result into a variable before the loop, `leave` out, read it after | which match is first (the logic) | termination and the bound — still from the domain; `assignVar` plus `leave`, never a hand-threaded cursor or bitmap | `Stmt.assignVar`, `Stmt.leave` |
 | **«SG-26» general option** | NO new syntax: over non-index `T` spell the two-case `tagged` sum; `match` over it is exhaustive by shape | the case split | the shape — over `index into T` it stays the carrier's index option (`Expr.some`/`none`); nothing is lost and no constructor is added for what a declaration already says | `Ty.sum`, `Arms` |
@@ -3221,7 +3224,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
       pre-existing environment limit, not a finding about the grammar.
 - [ ] **The parser from this grammar into `Syntax.lean`** — open as translation validation
       T3 (`dokumente/PLAN-TRANSLATION-VALIDATION.md`): the token-to-tree map with a
-      certificate, so Rust leaves the trusted base. Production-to-constructor table
+      certificate, so the handwritten parser leaves the trusted base. Production-to-constructor table
       161 mapped-or-named in the retired `messung/SYNTAX-PARSER-ENTWURF.md` (in the history). This is what turns 16.4
       (8) into a corpus measurement.
 - [x] **A concurrent semantics** — `Wettlauf.lean`, evening of 2026-09-09; race freedom now
@@ -3231,8 +3234,9 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
   (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
   (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
-  counter lowering in `emit.rs` — all green, `beispiele/71` lowers and `cc`
-  accepts at `-O0`/`-O2`. `owner` parses and is refused as `D026`
+  counter lowering in the deleted emitter — all green on 2026-09-13, `beispiele/71` lowers and `cc`
+  accepts at `-O0`/`-O2` (historical measurement over the tools deleted 2026-11-10;
+  `V006`/`V007`, `K011`/`K012`, `N056`, `D025` are not yet Lean judgments). `owner` parses and is refused as `D026`
   (poison `gift/694`); the producer story stands since lane 151 (`D265`-`D268`,
   producers `beispiele/114`/`115`, poisons `gift/932`-`935`), named at the
   clause and in §9.
@@ -3484,9 +3488,9 @@ interference check it would otherwise owe per run: frame-locality is not
 preservation, so only the invariant itself survives every foreign step by
 construction (Lean: `InvariantForm` with `interferenceFree_of_invariantForm`
 in `InterferenzAllgemein.lean` §20, bound at Ziel level by
-`ziel_seqLogic_aus_spec_invariantForm`). Checker side the form check is
-`D027` in `domaene.rs::aus_pred`, decided against the declared table
-invariants and the declared `spec fn` names: a `requires`/`ensures` clause
+`ziel_seqLogic_aus_spec_invariantForm`). Checker side the form check `D027` is
+not yet a Lean judgment (the deleted Rust checker decided it against the declared table
+invariants and the declared `spec fn` names): a `requires`/`ensures` clause
 of a shared-side function (a `locks shared` effect or a `Held(L, shared)`
 witness in its contract) that reads a table carrier must call a declared
 invariant -- or a `spec fn` stating one -- by name, and a restated predicate
