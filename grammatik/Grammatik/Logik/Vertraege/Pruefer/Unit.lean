@@ -80,7 +80,7 @@ theorem nutzerPflichtGeprueftB_iff (E : Einheit D) (functions : List D.Fn) (lock
     (budget : VCBudget) : nutzerPflichtGeprueftB E functions locks budget = true ↔
       NutzerPflichtGeprueft E functions locks budget := by
   unfold nutzerPflichtGeprueftB NutzerPflichtGeprueft
-  cases checkUnitLogic E functions locks budget <;> simp
+  cases checkUnitLogic E functions locks budget <;> simp [Except.toOption]
 
 /-- All of premise (b) follows from a true checker result. No user logic
     premise and no proof of a source assertion is an argument. -/
