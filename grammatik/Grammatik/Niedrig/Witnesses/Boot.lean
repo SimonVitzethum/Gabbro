@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Witnesses.Layout
+public import Grammatik.Niedrig.Boot.Preservation
 public import Grammatik.Niedrig.Witnesses.Shared
 
 @[expose] public section

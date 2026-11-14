@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Witnesses.Fixture
+public import Grammatik.Niedrig.Authority.Layout
 
 @[expose] public section
 
