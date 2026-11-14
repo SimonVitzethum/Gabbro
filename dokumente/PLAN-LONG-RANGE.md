@@ -24,8 +24,8 @@ low RAM, reused until the next language change.
   regeneration adds another 30 GiB to history.
 - The manifest carries the hash of the Lean model (`Kern/Syntax` and `Akzeptiert`): a changed language makes the guardian report the
   corpus stale.
-- Stored are G terms, not source text, until the G-to-source printer exists (the Rust checker and compiler need source text: still
-  the blocker for measuring them).
+- Stored are G terms, not source text, until the G-to-source printer exists (measuring them needs source text, not G terms: still
+  the blocker).
 - This leaves Simon's older rule "no regenerable generated files in the repo" on purpose, because generating is expensive; the
   submodule lives outside the main repo.
 

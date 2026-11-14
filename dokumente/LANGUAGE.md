@@ -13,10 +13,12 @@ kernels, drivers and ordinary programs.
 | code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md) (the C backend, removed 2026-10-17) |
 | floats, heap, hardware | [`FLOATING-POINT.md`](FLOATING-POINT.md), [`PLAN-DYNAMIC.md`](PLAN-DYNAMIC.md), [`PLAN-HARDWARE.md`](PLAN-HARDWARE.md) |
 
-**Standing words.** *Checked* means a pass of the Rust checker refuses the opposite, by a
+**Standing words.** *Checked* means a pass of the Lean checker (`Akzeptiert`,
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert.lean`) refuses the opposite, by a
 diagnostic code. *Modelled* means the construct has semantics in the Lean model. *Not built* is
-said where a construct is only decided. Where a code is cited it exists in `crates/`; a claim
-beyond that is marked. The checker is unverified; what is proved, over which statement, is
+said where a construct is only decided. A code cited without qualification names a Lean checker
+rule; codes of the deleted Rust checker (removed 2026-11-10, in git history only) are marked
+historical. What is proved, over which statement, is
 [`PROOF.md`](PROOF.md)'s subject.
 
 ---
@@ -38,7 +40,7 @@ does and does not carry.
 
 **What may be said:** the goal theorem is proved over the Lean model, with a witness. **What may
 not:** "Gabbro is verified" — the checker inside the statement is the Lean checker, and the
-bridge to the Rust checker and the emitted binary is open ([`PROOF.md`](PROOF.md)).
+bridge to the deployed checker and the emitted binary is open ([`PROOF.md`](PROOF.md)).
 
 ---
 
@@ -120,9 +122,11 @@ and raw newlines are refused. Bounds count decoded UTF-8 bytes, including zero b
 rules of `Parser/Lex/Lexer/Text.lean` and the character scanner in `Lexer/Teil1.lean`;
 `stage0/proben-ir/char-literal.gab` and `string-escape.gab` exercise their value uses.
 
-**The vocabulary is a closed table** (`SYNTAX.md`, the terminal and reserved-word tables are held by `cargo test`, run by `instrumente/pruefe-pruefer.py`; the retired `pruefe-wortschatz` also compared EBNF
+**The vocabulary is a closed table** (`SYNTAX.md`; the word list `wortschatz` with the
+whole-table theorem `lex_keywords` in `grammatik/Grammatik/Parser/Lex/Lexer/Teil2a.lean`, checked by
+`instrumente/pruefe-lean.py`; the retired `pruefe-wortschatz` also compared EBNF
 terminals against table words, both readings). *A new word is a language change*: it needs an
-entry in the table, in `kw.rs`, and in the terminal count. Everything else is an identifier, and
+entry in the table and in the terminal count. Everything else is an identifier, and
 a word of the table is a keyword **only where the grammar expects one** — contextual words
 (`tree`, `parent`, `child`, `sibling`, `string`) stay identifiers elsewhere. A second word for an
 existing notion costs more than a second site for an existing word.
@@ -379,7 +383,7 @@ stages; `advances a -> b` goes forward only, and the mark stands at its source s
 
 | class | falls out of |
 |---|---|
-| data race | M2 + M3 (Rust does it too) |
+| data race | M2 + M3 |
 | *visibility before completion* (a thread runnable before it has authority) | M2: the phase is a linear value (`Parked` → `admit`) |
 | *lost wakeup* (one bit for four reasons) | M2: the waker consumes exactly its reason |
 | *publication without payload* | M2: `release` hands a ghost token over, `acquire` takes it |
@@ -458,9 +462,10 @@ carrier with generated `ops` is not placed in `dma` (`R001`).
   not derivable (`R004`); one place at two writable parameters falls at `R007`.
 * **`noalias`.** A writable pointer parameter of an *internal* function the checker holds the
   whole call of (not `pub`, called from a body of the unit, address never taken, effects naming
-  nothing but its own pointer parameters) is emitted `noalias` — resting on `R014` and the
-  named `R015` assumption. The model side is `Logik/Vertraege/Objekt*.lean`; the rule itself is
-  a Rust checker rule, not yet a Lean judgment.
+  nothing but its own pointer parameters) is emitted `noalias` — resting on `R014` (proved as
+  `r014_ruf_rahmen` in `grammatik/Grammatik/Logik/Vertraege/Objekt/ObjektWurzel.lean`) and the
+  named `R015` hypothesis there. The model side is `Logik/Vertraege/Objekt*.lean`; the decidable
+  emission rule itself is not yet a Lean judgment.
 
 Lifetimes and a general borrow checker are not built on purpose; a fragment that needs one is
 booked as a fifth-mechanism finding rather than smuggled in. Design record:
@@ -1319,6 +1324,18 @@ against the CAS version. Output is deterministic: same source, same bytes.
 **`extern fn` is the edge.** A foreign body whose contract is an `assume` per declaration,
 counted into the axiom layer — the edge is visible and ratchetable instead of silent. It takes
 no function pointer (`N574`) and a buffer parameter needs its length clause (`N506`).
+**Warning (owner, 2026-11-14):** C code in the same address space is neither checked nor
+restricted by anything in the language. Using even ONE `extern fn` (or letting C call an `entry`
+function, plan item A6) can in theory destroy EVERY guarantee of the goal theorem — memory safety,
+race freedom, invariants, contracts: the guarantees then hold only as far as that one named
+environment assumption holds. The contract of the foreign function must therefore name, beside
+`requires`/`ensures`, its frame (only its declared `effects`), its extents, that it keeps no
+Gabbro pointer beyond the call and starts no thread that touches Gabbro memory.
+**Bounds at every C call (owner, 2026-11-14):** every buffer handed to C is proved inside its
+region before the call; every length, index, count or region C hands back (result, out-parameter,
+or argument of an `entry` call from C) is checked once at run time against the handed-over
+capacity before Gabbro uses it; a failed check is a named stop or the declared `or` reason. The
+compiler emits these checks; the user writes none.
 
 **The generator also emits the ANNOTATIONS** — contracts the downstream prover reads. A
 generator that accidentally emits *weakened* contracts delivers a green proof over a weaker
@@ -1498,7 +1515,7 @@ outside the tracked discipline, the full export. See [`PLAN-DYNAMIC.md`](PLAN-DY
 
 Unbounded `while` or `for`, `goto`, `switch`, preprocessor, implicit conversion, `void*`,
 non-exhaustive matching, exceptions, inheritance, reflection, GC, assignment as an expression, forward
-declaration, self-hosting (the checker stays Rust: a project that rebuilds its checker has
+declaration, self-hosting (no self-hosted checker: a project that rebuilds its checker has
 none), user-defined quantifier domains, recursion in `spec fn`, handwritten lemmas, unnamed
 `break`/`continue`, lock hold time unnamed in service loops, unbounded CAS loops as a lowering
 detail, migration in format versions, cycles as a time unit, `option T` over arbitrary `T`, a
@@ -1508,10 +1525,11 @@ variable-length array tail, `libm`, a hidden OS.
 
 ## 19. The checker — pass order
 
-The checker is Rust with `forbid(unsafe_code)` and **no proof-tool dependency**; it reads the
-unified grammar (handwritten parser, no generator) and runs a **fixed pass order**. *The
+The checker is the Lean judgment `Akzeptiert` (`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert.lean`),
+decided with **no proof-tool dependency**; it reads the
+canonical grammar (handwritten Lean parser, no generator) and runs a **fixed pass order**. *The
 specification is the pass list*: a new pass is a change to this document, booked at this line or
-not at all. `gabbro paesse` prints each pass with the sentence it owes.
+not at all. The pass table names each pass with the sentence it owes.
 
 | # | pass | content | § |
 |---|---|---|---|
@@ -1524,8 +1542,8 @@ not at all. `gabbro paesse` prints each pass with the sentence it owes.
 | 7 | Paarung | `publishes`/`awaits`/`exchange` over the united set | 11.5 |
 | 8 | effects | writes, `locks`, reads held against the written list | 7 |
 | 9 | costs | bodies, `locks` against `held`, calls over declared costs | 7, 9.3 |
-| 10 | Gruppe | lock footprint, move, connecting statement (`U001`–`U007`) | 11 |
-| 11 | Phasen | stages of a mark, branches (`O001`–`O007`) | 4 |
+| 10 | Gruppe | lock footprint, move, connecting statement (`U001`–`U007`, not yet Lean judgments) | 11 |
+| 11 | Phasen | stages of a mark, branches (`O001`–`O007`, not yet Lean judgments) | 4 |
 | 12 | Sperren | rank order, shared/exclusive, contexts, RCU | 11.2 |
 
 Every pass has a speech test in both directions (poison falls, clean passes) **plus a mutation
