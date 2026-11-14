@@ -105,8 +105,8 @@ theorem nimmT_spin_retry_zeuge [Kern] :
   · exact nimmT_spin_retry E state (At.whole _) rfl compared (by rw [ticket, seen]; decide)
   · rw [state.ag.rd_low (by decide) (by decide) (by decide)]
     decide
-  · obtain ⟨m', f', steps, state', keep, _⟩ :=
+  · obtain ⟨m', f', read, retry, state', keep, _⟩ :=
       nimmT_spin_round E state (At.whole _) rfl (by rw [ticket]; decide)
-    exact ⟨m', f', steps, state', keep.trans ticket⟩
+    exact ⟨m', f', read.trans retry, state', keep.trans ticket⟩
 
 end Gabbro.Stage0.Senke.WaitBindingWitness

@@ -38,6 +38,8 @@ theorem nimmT_spin_round {L : Lay D} {m0 m : Mem} {pc fp : W}
     (hc : At code p (nimmT L a s)) (binding : L.lockWait = .spin)
     (waiting : f 2 ≠ u) :
     ∃ m' f', Star ⟨pc + BitVec.ofNat 64 (16 * (p + 7)), fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (p + 10)), fp⟩ m' ∧
+      Star ⟨pc + BitVec.ofNat 64 (16 * (p + 10)), fp⟩ m'
         ⟨pc + BitVec.ofNat 64 (16 * (p + 7)), fp⟩ m' ∧
       LS m0 m' fp s a f' n u w ∧ f' 2 = f 2 ∧ f' 5 = u := by
   have top := E.top
@@ -52,7 +54,7 @@ theorem nimmT_spin_round {L : Lay D} {m0 m : Mem} {pc fp : W}
     (d := 6) (e := 5) (g' := 2) rfl (by decide) rfl rfl rfl
     (by omega) (by omega) (by omega) (r := bool (u == f 2)) (by simp [upd])
   have retry := nimmT_spin_retry E state3 hc binding (by simp [upd]) (by simpa [upd] using waiting)
-  refine ⟨m3, _, step1.trans (step2.trans (step3.trans retry)), state3, ?_, ?_⟩
+  refine ⟨m3, _, step1.trans (step2.trans step3), retry, state3, ?_, ?_⟩
   · simp [upd]
   · simp [upd]
 
