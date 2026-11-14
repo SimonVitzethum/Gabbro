@@ -100,40 +100,40 @@ def uRelErsetzeEL (x y n : String) : List SExpr → List SExpr
 end
 
 /-- Rewrite the value of a return, preserving all other endings. -/
-def uReadErsetzeEnde (rewrite : SExpr → SExpr) : Option SEnde → Option SEnde
+def uRewriteRuntimeReturn (rewrite : SExpr → SExpr) : Option SEnde → Option SEnde
   | some (.ret (some v)) => some (.ret (some (rewrite v)))
   | en => en
 
 /-- Shared traversal of runtime reads for snapshot substitutions. The caller must first
     exclude every statement that can change or hide the substituted place (`uBindetS`). -/
-def uReadErsetzeS (rewrite : SExpr → SExpr) : Nat → SAnw → SAnw
+def uRewriteRuntimeReads (rewrite : SExpr → SExpr) : Nat → SAnw → SAnw
   | 0, s => s
   | f + 1, s =>
     match s with
     | .bind m v t a => .bind m v t (rewrite a)
     | .bindQ m v t a => .bindQ m v t (rewrite a)
-    | .bindElse v t a r b => .bindElse v t (rewrite a) r (uReadErsetzeS rewrite f b)
+    | .bindElse v t a r b => .bindElse v t (rewrite a) r (uRewriteRuntimeReads rewrite f b)
     | .set p o a => .set (rewrite p) o (rewrite a)
     | .call g xs => .call g (xs.map rewrite)
     | .callQ g xs => .callQ g (xs.map rewrite)
-    | .callElse g xs r b => .callElse g (xs.map rewrite) r (uReadErsetzeS rewrite f b)
+    | .callElse g xs r b => .callElse g (xs.map rewrite) r (uRewriteRuntimeReads rewrite f b)
     | .cond c t ei els =>
-      .cond (rewrite c) (uReadErsetzeS rewrite f t) (ei.map (uReadErsetzeS rewrite f))
-        (els.map (uReadErsetzeS rewrite f))
-    | .elsif c b => .elsif (rewrite c) (uReadErsetzeS rewrite f b)
-    | .cases c as => .cases (rewrite c) (as.map (uReadErsetzeS rewrite f))
-    | .arm c k b => .arm c k (uReadErsetzeS rewrite f b)
-    | .locks sh l b => .locks sh l (uReadErsetzeS rewrite f b)
-    | .child b => .child (uReadErsetzeS rewrite f b)
+      .cond (rewrite c) (uRewriteRuntimeReads rewrite f t) (ei.map (uRewriteRuntimeReads rewrite f))
+        (els.map (uRewriteRuntimeReads rewrite f))
+    | .elsif c b => .elsif (rewrite c) (uRewriteRuntimeReads rewrite f b)
+    | .cases c as => .cases (rewrite c) (as.map (uRewriteRuntimeReads rewrite f))
+    | .arm c k b => .arm c k (uRewriteRuntimeReads rewrite f b)
+    | .locks sh l b => .locks sh l (uRewriteRuntimeReads rewrite f b)
+    | .child b => .child (uRewriteRuntimeReads rewrite f b)
     | .ret v => .ret (v.map rewrite)
-    | .block as en => .block (as.map (uReadErsetzeS rewrite f)) (uReadErsetzeEnde rewrite en)
+    | .block as en => .block (as.map (uRewriteRuntimeReads rewrite f)) (uRewriteRuntimeReturn rewrite en)
     | s => s
 termination_by structural fuel => fuel
 
 /-- Relational narrowing uses the common read traversal after its binder barrier check. -/
-def uRelErsetzeS (x y n : String) := uReadErsetzeS (uRelErsetzeE x y n)
+def uRelErsetzeS (x y n : String) := uRewriteRuntimeReads (uRelErsetzeE x y n)
 
-def uRelErsetzeEnde (x y n : String) := uReadErsetzeEnde (uRelErsetzeE x y n)
+def uRelErsetzeEnde (x y n : String) := uRewriteRuntimeReturn (uRelErsetzeE x y n)
 
 /-- The names a statement may bind or change, nested blocks included: every binder, every name an assigned place
     mentions, and `"*"` (every name) for a raw statement, a form not listed here and a walk out of fuel. -/

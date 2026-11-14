@@ -41,7 +41,7 @@ def replaceRun (place : SExpr) (owner name : String) : List SAnw → List SAnw �
         strEq bound owner || strEq bound name || strEq bound "*") then (s :: rest, false)
     else
       let (rest, whole) := replaceRun place owner name rest
-      (uReadErsetzeS (replace place name) uLiestTiefe s :: rest, whole)
+      (uRewriteRuntimeReads (replace place name) uLiestTiefe s :: rest, whole)
 
 mutual
 /-- Expand a field narrow into an ordinary immutable binding followed by the existing
@@ -134,7 +134,7 @@ def expandRun : Nat → List String → Nat → List SAnw → Option SEnde →
             | some failure => SAnw.trim (.variable name) range failure
             | none => SAnw.trimReq (.variable name) range
           let (rest, whole) := replaceRun place owner name rest
-          let ending := if whole then uReadErsetzeEnde (replace place name) ending else ending
+          let ending := if whole then uRewriteRuntimeReturn (replace place name) ending else ending
           let (tail, ending, nr) := expandRun fuel (name :: locals) nextNr rest ending
           (.bind false name none place :: next :: tail, ending, nr)
         else ordinary ()
