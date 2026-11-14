@@ -73,11 +73,18 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       let combined ← branchCondition test locals
         (done.map (fun _ _ ready _ _ => ready)) advanced
       return combined.map (fun runtime world ready allowed safe => by
-        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-          simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
-          have ready := ready allowed safe <;>
-          simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
-            Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
+        cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals with
+        | true =>
+            simp only [tested, ↓reduceIte] at ready
+            simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
+              ↓reduceIte, Goals.holds] using ready allowed safe
+        | false =>
+            simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready
+            have ready := ready allowed safe
+            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+                (world.lese Λ test.orte) locals <;>
+              simpa only [Runtime.wpS, execStmtH, retryLauf, wahr?, tested,
+                Bool.false_eq_true, ↓reduceIte, Goals.holds, result] using ready)
 
 /-- An inductive hint is checked at entry, at every ordinary/continue
     successor, at successful exit, and before overflow. No hint is trusted. -/
