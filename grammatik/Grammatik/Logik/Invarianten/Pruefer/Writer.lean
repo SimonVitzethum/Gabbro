@@ -45,36 +45,32 @@ def AtomicReplay (program : Programm D) (f : D.Fn) : Prop :=
     execEndHA S O U A passes R (program.rumpf f) world locals =
       execEndH S O U passes R (program.rumpf f) world locals
 
-/-- `endblockOrteP` includes callee contract metadata. The replay theorem is
-    generic in that metadata: execution itself reads only call arguments. Use
-    empty metadata solely to compute executable reads; all contract checking
-    and every runtime handler retain the original program. -/
-private def executionFootprintProgram (program : Programm D) : Programm D :=
-  { program with
-    requires := fun _ => .tru
-    ensures := fun _ => .tru
-    ptrVertrag := fun _ => { pre := .tru, post := .tru } }
-
-private theorem atomicReplay_of_footprint (program footprint : Programm D) (f : D.Fn)
-    (free : ∀ carrier ∈ endblockOrteP footprint (program.rumpf f),
-      ¬ AtomarAusgenommen carrier) : AtomicReplay program f := by
-  intro S O locality U A passes R shared atomic subset world locals
-  exact Endblock.execHA_frei footprint S O U A passes R atomic locality.2 _
-    (fun carrier member present => free carrier member (subset carrier present)) world locals
-
 /-- Keep the existing conservative gate, then admit the additional fragment
     only with the same exact model replay theorem. Direct atomic reads remain
-    refused; a callee's logical contract is still checked independently. -/
+    refused; a callee's logical contract is still checked independently.
+    `endblockOrteP` includes callee metadata, while execution reads only call
+    arguments. Empty metadata computes executable reads solely for the generic
+    replay theorem; all checking and handlers retain the original program. -/
 def atomicReplay? (program : Programm D) (f : D.Fn) : Option (PLift (AtomicReplay program f)) :=
+  let replay (footprint : Programm D)
+      (free : ∀ carrier ∈ endblockOrteP footprint (program.rumpf f),
+        ¬ AtomarAusgenommen carrier) : AtomicReplay program f := by
+    intro S O locality U A passes R shared atomic subset world locals
+    exact Endblock.execHA_frei footprint S O U A passes R atomic locality.2 _
+      (fun carrier member present => free carrier member (subset carrier present)) world locals
   if free : atomicFreeB program f = true then
-    some ⟨atomicReplay_of_footprint program program f (atomicFreeB_sound program f free)⟩
+    some ⟨replay program (atomicFreeB_sound program f free)⟩
   else
-    let footprint := executionFootprintProgram program
+    let footprint : Programm D :=
+      { program with
+        requires := fun _ => .tru
+        ensures := fun _ => .tru
+        ptrVertrag := fun _ => { pre := .tru, post := .tru } }
     if free : (endblockOrteP footprint (program.rumpf f)).all
         (fun carrier => match carrier with
           | .inl _ => true
           | .inr name => !D.atomar name) = true then
-      some ⟨atomicReplay_of_footprint program footprint f (by
+      some ⟨replay footprint (by
         intro carrier member atomic
         obtain ⟨name, same, atom⟩ := atomic
         subst carrier
