@@ -56,7 +56,18 @@ def family : SperrInv declaration where
   inv := fun _ memory => decide ((memory.globs false).n = 0)
 
 def cellSources : LockSources family := fun _ => some
-  { resources := held, expression := invariant, correct := fun _ => rfl }
+  (ReifiedLock.ofExpression held invariant family () (fun _ => rfl))
+
+/-- The generic source correspondence and formula soundness apply jointly
+    to a predicate that distinguishes zero from one in a real guarded cell. -/
+theorem lockFormula_sound_zeuge :
+    ∃ fact : VC.LockFormula family (), lockFormula family cellSources () = .ok fact ∧
+      ∀ world, fact.formula.denote (assignment world) ↔
+        family.inv () world.speicher = true := by
+  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide
+  cases computed : lockFormula family cellSources () with
+  | error cause => simp only [computed, Except.toOption, Option.isSome] at available; cases available
+  | ok fact => exact ⟨fact, rfl, lockFormula_sound family cellSources () fact computed⟩
 
 /-- The same section either restores zero or violates the release condition.
     The bad body remains well typed; only the checked invariant distinguishes it. -/
@@ -167,5 +178,9 @@ theorem false_initial_refused_zeuge :
 theorem opaque_unit_refused_zeuge :
     (checkUnitLock { unit true with lockFormulas := fun _ => none } ()).toOption.isSome = false := by
   decide
+
+#print axioms lockFormula_sound_zeuge
+#print axioms contracts_accepted_zeuge
+#print axioms contracts_refused_zeuge
 
 end Gabbro.Grammatik.Invarianten.Pruefer.LockWitness
