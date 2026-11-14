@@ -16,11 +16,13 @@ Akzeptiert, or any definition used by the goal statement.
 
 Required later connections:
 * G syntax/evaluation: address expressions need a new inert value case;
-  context names remain existing linear ghost owner bindings. A bounded-view
-  scope must retain its extent and the actual owner escrow on both exits.
-* G/GX: relate AuthorityStep to actual call/scope transitions and record every
-  ordinary access in the existing trace. The present ViewWrite is an extent
-  receipt over the existing store, not an admitted source memory operation.
+  context values must identify records in G's shared context ledger. Existing
+  ghost owner bindings alone are not runtime contexts. A bounded-view scope
+  must retain its extent and the actual owner escrow on every exit.
+* G/GX: the shared ledger stores authority and canonical context records,
+  outside World. Connect checked ledger entry/release to actual source scope
+  transitions and record every ordinary access in the existing trace. The
+  present ViewWrite is an extent receipt, not an admitted source operation.
 * AkzeptiertSpec(X)/Akzeptiert: check declared spaces, profile/authority origin,
   exact LinearContextStep evidence, view lifetimes and permissions. Source
   forms stay refused until these checks and their simulation are connected.
