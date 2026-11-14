@@ -42,10 +42,8 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           reason := goals.reason }
       let step ← compileBody locals passGoals
       let done ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
-      let advanced := step.map (fun runtime world ready allowed safe => by
-        have ready := ready allowed safe
-        unfold Runtime.wpB at ready
-        change goals.holds allowed (match execBlockH S runtime.oracle runtime.environment
+      let advanced := step.map (fun runtime world ready allowed safe =>
+        show goals.holds (l := l) allowed (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
           | .ok next env | .next _ next env => retryLauf
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -57,7 +55,9 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error)
+          | .hardware error => .hardware error) from by
+        have ready := ready allowed safe
+        unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world locals with
         | ok next env =>
             rw [result] at ready
