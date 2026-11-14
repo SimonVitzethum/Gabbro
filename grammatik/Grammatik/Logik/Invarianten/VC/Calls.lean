@@ -80,30 +80,25 @@ def typeFact (key : Observation D) : LProp (Observation D) :=
   | .str capacity => .and (.le (.konst 0) (.var key)) (.le (.var key) (.konst capacity))
   | _ => .tru
 
-private theorem scalar_typeFact (τ : Ty) (value : Wert D τ) :
-    (match τ with
-      | .int lo hi => lo ≤ scalarValue τ value ∧ scalarValue τ value ≤ hi
-      | .str capacity => 0 ≤ scalarValue τ value ∧ scalarValue τ value ≤ (capacity : Int)
-      | _ => True) := by
-  cases τ with
-  | int lo hi => exact ⟨value.lo_le, value.le_hi⟩
-  | str capacity =>
-      constructor
-      · exact Int.natCast_nonneg _
-      · exact_mod_cast value.property
-  | _ => trivial
-
 theorem typeFact_sound (key : Observation D) (world : World D) :
     (typeFact key).denote (assignment world) := by
+  have ofValue (key : Observation D) (τ : Ty) (value : Wert D τ)
+      (kind : observationType key = τ) (reads : assignment world key = scalarValue τ value) :
+      (typeFact key).denote (assignment world) := by
+    unfold typeFact
+    rw [kind]
+    cases τ with
+    | int lo hi =>
+        simp only [LProp.denote, LTerm.denote, reads, scalarValue]
+        exact ⟨value.lo_le, value.le_hi⟩
+    | str capacity =>
+        simp only [LProp.denote, LTerm.denote, reads, scalarValue]
+        exact ⟨Int.natCast_nonneg _, by exact_mod_cast value.property⟩
+    | _ => trivial
   cases key with
-  | glob name =>
-      have h := scalar_typeFact (D.gtyp name) (world.globs name)
-      cases kind : D.gtyp name <;>
-        simpa only [typeFact, observationType, kind, LProp.denote, LTerm.denote, assignment] using h
+  | glob name => exact ofValue _ (D.gtyp name) (world.globs name) rfl rfl
   | slot table field index =>
-      have h := scalar_typeFact (D.typ table field) (world.slots table index field)
-      cases kind : D.typ table field <;>
-        simpa only [typeFact, observationType, kind, LProp.denote, LTerm.denote, assignment] using h
+      exact ofValue _ (D.typ table field) (world.slots table index field) rfl rfl
 
 def typeFacts (keys : List (Observation D)) : LProp (Observation D) :=
   keys.foldr (fun key rest => .and (typeFact key) rest) .tru
