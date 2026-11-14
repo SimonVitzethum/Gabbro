@@ -161,7 +161,7 @@ theorem Emitted.bild_ziel_tief [Kern] (output : Emitted src K options)
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') :=
   output.bild_ziel_ruf hZ hr hg hAt hRuhig hreqr hN hH loaded
-    (rufOk_gleich_tief (P := output.compiled.program) thr Agl
+    (rufOk_gleich_tief (P := output.compiled.program) (O := O) thr Agl
       (output.image.depth - 1)) hk
 
 #print axioms Emitted.bild_ziel_ruf

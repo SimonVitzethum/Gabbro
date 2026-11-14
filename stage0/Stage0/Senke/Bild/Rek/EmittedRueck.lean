@@ -182,7 +182,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
   have hkR' : Zerlegung (output.rahmen O C Lm rp ens) Agl
       (TiefAlle output.compiled.program Agl (output.image.depth - 1)) rest σ1 ρ1 ebeR σeR ρeR :=
     zerlegung_rahmen hkR
-  have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (passes := output.image.passes)
+  have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (O := O) (passes := output.image.passes)
     thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA

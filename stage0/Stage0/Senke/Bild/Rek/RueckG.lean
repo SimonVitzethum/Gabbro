@@ -124,7 +124,7 @@ theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden
   have hEC : EndR Agl (TiefAlle P Agl j) ebeC :=
     hkC.endR (show EndR Agl (TiefAlle P Agl j) (P.rumpf g) from hg)
   -- the caller's step over the call: its holdings behind the call
-  have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) thr Agl (j + 1)
+  have hRuf := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false
       (.call g args hp hr : Stmt D (vertragVon D f) l Γ Λ (nach D g Λ)) :=
     StmtR.call _ g rfl hg

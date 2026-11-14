@@ -106,7 +106,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
             Ziel P S O passes (RufStartG P sp init) M') t m' := by
   subst hkj
   -- the whole call as one step of the caller
-  have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) thr Agl (j + 1)
+  have hRuf := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false
       (.call g args hp hr : Stmt D (vertragVon D f) l Γ Λ (nach D g Λ)) :=
     StmtR.call _ g rfl hg
@@ -116,7 +116,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
   obtain ⟨fpc, rpc, Kc, Ksc, ensc, pcI, mI, M1, σm, sI, hl1, _, hOkC, hRI⟩ :=
     randL_ruf_eintritt (thr := thr) (stapel := stapel) (Agl := Agl) hc rfl hk64 hB h hex
   have hM1 := rufErreichbar_lauf hl1 hM
-  have hRufC := rufOk_gleich_tiefAlle (P := P) (passes := passes) thr Agl j
+  have hRufC := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl j
   have hkC' : Zerlegung (rumpfRahmen Y O passes P A C Lm j g fpc Kc Ksc rpc fp (rufWelt P g σ Λ args)
       (rufEnv g σ Λ args ρ) H ensc) Agl (TiefAlle P Agl j) (P.rumpf g) (rufWelt P g σ Λ args)
       (rufEnv g σ Λ args ρ) ebeC σeC ρeC :=
