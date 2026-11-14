@@ -161,9 +161,19 @@ theorem kostenStmt_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   cases s <;> (try simp only [ruS, kostenStmt_nachΛ, kostenStmt, kostenExpr_ru, kostenArgs_ru,
     kostenErg_ru, kostenBlock_ru, kostenArms_ru, kostenGrundArms_ru, kostenSonst_umΛ,
     kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
 termination_by structural s
 
 theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -173,21 +183,51 @@ theorem kostenBlock_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | bindAxiomOpt result =>
     cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
       kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | bindAxiomOptElse result =>
     cases result <;> (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
       kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | _ =>
     (try simp only [ruB, kostenBlock, kostenBlock_vorΛ, kostenStmt_ru,
       kostenExpr_ru, kostenArgs_ru, kostenBlock_ru, kostenSonst_umΛ, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
 termination_by structural b
 
 theorem kostenArms_ru {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
@@ -216,23 +256,53 @@ theorem kostenEnd_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V
     cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
       kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | bindAxiomOptElse result =>
     cases result <;> (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
       kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | _ =>
     (try simp only [ruEnd, kostenEnd, kostenEnd_umΛ, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, entfZ_ru, kostenStmt_ru,
       kostenEnd_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
 termination_by structural e
 
 theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
@@ -241,21 +311,51 @@ theorem kostenSonst_ru {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | bindAxiomOpt result =>
     cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | bindAxiomOptElse result =>
     cases result <;> (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
   | _ =>
     (try simp only [ruEnd, kostenSonst, kostenSonst_umΛ,
       kostenExpr_ru, kostenArgs_ru, kostenErg_ru, kostenStmt_ru, kostenSonst_ru, Option.elim]) <;>
-    (repeat (first | erw [kostenExpr_ru] | erw [kostenArgs_ru] | erw [kostenErg_ru]
-      | erw [kostenStmt_ru] | erw [kostenBlock_ru] | erw [kostenArms_ru]
-      | erw [kostenGrundArms_ru] | erw [kostenEnd_ru] | erw [kostenSonst_ru])) <;> (try rfl)
+    (repeat
+      (first
+        | erw [kostenExpr_ru]
+        | erw [kostenArgs_ru]
+        | erw [kostenErg_ru]
+        | erw [kostenStmt_ru]
+        | erw [kostenBlock_ru]
+        | erw [kostenArms_ru]
+        | erw [kostenGrundArms_ru]
+        | erw [kostenEnd_ru]
+        | erw [kostenSonst_ru]
+        )) <;>
+    (try rfl)
 termination_by structural e
 end
 end Costs
