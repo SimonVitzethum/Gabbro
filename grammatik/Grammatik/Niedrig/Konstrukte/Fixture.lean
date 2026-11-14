@@ -175,7 +175,7 @@ theorem layout_correct : LayoutOk layout :=
       | false => cases opened
       | true =>
         exact ⟨by intro other different; cases other <;> simp_all [layout], fun global => global.elim⟩
-    feld := by intro table field; decide
+    feld := by intro table field; cases table <;> cases field <;> decide
     felder := by intro table first second different; exact False.elim (different (Subsingleton.elim _ _))
     tabellen := by
       intro first second byte different inside other

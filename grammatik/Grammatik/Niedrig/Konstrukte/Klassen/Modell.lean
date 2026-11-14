@@ -124,7 +124,14 @@ theorem bindClassViewStep_success {P I : Type} {a : Authority D} {layout : Adres
   cases r with
   | mk view checked owners borrowed =>
     rw [bindClassViewStep, dif_pos checked]
-    split <;> simp_all
+    split
+    · rename_i heq
+      rw [borrowed] at heq
+      cases heq
+    · rename_i owners' heq
+      have e : owners' = owners := Option.some.inj (heq.symm.trans borrowed)
+      subst e
+      rfl
 
 theorem bindClassViewStep_refused {P I : Type} (a : Authority D) (layout : AdressLayout D)
     (c : Context D P I) (memoryClass : MemoryClass) (v : View D) (world : World D)
