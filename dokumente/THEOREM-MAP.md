@@ -7191,3 +7191,44 @@ existing exported section fixture's premise from acceptance and applies the gene
 and hold-time theorem. Nested acquisitions retain the conservative bound `k = h`; a separate
 acquisition potential through calls/loops is not proved. Indirect calls in sections or in
 cost-checked functions are refused, even with checked pointer-type cost declarations.
+
+## 188. Stage-0 ticket lock under contention and the image theorem with calls: statement review and what is NOT claimed (2026-11-14)
+
+Review W93 (two statement reviews of `stage0/Stage0/Senke/Sperre/Faeden/**` and
+`stage0/Stage0/Senke/Bild/{Rek,Gleich,Ruf}/**`, `Bild/EmittedZiel.lean`). This section records no
+new build or axiom audit of the whole package; the changes it names were checked module by module.
+The Stage-0 theorems below are not `gabbro_ziel`: the header of `Spec.lean` is unchanged, the lists
+here are the "what is NOT claimed" of these Stage-0 statements.
+
+| Name | File | Statement and boundary |
+|---|---|---|
+| `Lauf.leben` | `Sperre/Faeden/Leben.lean` | Liveness of the emitted ticket lock on a weakly fair run with finitely many spurious FUTEX_WAIT returns: a thread waiting with ticket `k` enters, or some thread holds from some step on for ever. `Lauf.ScheinbarEndlich` is a premise that carries part of the liveness; it is an assumption about the futex environment, not derived. NOT claimed: that a thread before its draw ever draws (the draw is a lock-free, not wait-free `cas` loop). The machine (`Faeden/Maschine.lean`) is a model of the code at the granularity of its shared-word accesses; the table at its end pins accesses to instruction indices of `nimmT`/`gibT` only. NOT proved: that the runner executing the emitted code behaves like this machine (atomicity, interleaving, the futex calls). |
+| `Fenster`, `Einmal`, `Lauf.fenster_fall`, `Lauf.absLauf`, `Fenster.id` | `Sperre/Faeden/Fenster.lean` | One G step of a thread does at most a give, a draw and an enter to one lock (`Weg`). The window condition cuts the emitted window of a G step into a give, a draw and an enter segment, each with at most one change of the abstract lock by the scheduled thread. Needed because G's `freiGib` step can release `L` and expose the next `locks L` as the head (the draw) in ONE step; the earlier "at most one change per window" condition was unsatisfiable for such programs. `Fenster.id` now takes `N ≤ 2147483647` and the start invariant. |
+| `gabbroZielLeben_emittiert`, `gabbroZielLeben_faeden` | `Sperre/Faeden/Transfer.lean` | `gabbro_ziel_leben` applied to the `FifoLauf` `fifoAus R a`, read back through the coupling premise `GSicht` (what G sees of `L` is the emitted lock). NOT claimed: that the emitted lock's own liveness (`Lauf.leben`, its futex premise) is used -- `gabbroZielLeben_emittiert` does not use it, the emitted lock enters only through `GSicht` and `AbsLauf`; progress is machine G's (`Fair`). `GSicht` is a premise: the runner and the GX thread machine are not connected. NO joint witness yet of `Fenster` (new form) together with `GSicht` and the other premises: `GeistZeuge.lean` witnesses only the `AbsLauf` half. |
+| `Emitted.bild_ziel`, `_ruf`, `_tief` | `Bild/EmittedZiel.lean`, `Bild/Ruf/EmittedZielL.lean` | The image theorem on the emitted image for one thread: every memory-only prefix of the image run corresponds to a machine G reaches at which every leg of `Ziel` holds; calls of admitted callees are ONE decomposed step. `bild_ziel` takes the exact call obligation `RufOk` (holds only for the empty callee set), `_ruf` the obligation up to read events, `_tief` discharges it for the callees admitted at the image's depth. |
+| `Emitted.bild_ziel_rek`, `Emitted.bild_ziel_aufruf` | `Bild/Rek/Emitted.lean`, `Bild/Rek/EmittedRueck.lean` | One call refined: boundaries inside the callee, and in `_aufruf` the return window and the continuation behind the call. `_aufruf` does not replace the earlier four: it needs a plain call at the end of `main`'s decomposed prefix, says nothing for a body without one, is fixed to the callee set `TiefAlle`, and splits the states behind the callee's prefix at `main`'s boundary instead of relating them all to the callee's boundary as `bild_ziel_rek` does. |
+
+NOT claimed by the image theorems of this section:
+
+1. **Iterated descent.** One application refines ONE call window: the callee's frame at depth `j`, its decomposed prefix,
+   `main`'s frame below. That the descent "applies again" at a callee boundary in front of a further call is prose, there is no
+   statement that iterates it to every depth the image has.
+2. **`Ziel` on `P`, not on the runtime's program.** Machine G runs `P` (from `bildInit`), not `P.mitRuhe`, and the legs are
+   `Ziel`, not `ZielX`. Every other thread starts an idle function `r`: the premises `Ruhig` and `ReqAmEintritt` for `r` are
+   premises, not derived. The lift to the machine of `P.mitRuhe`, the one `gabbro_ziel` speaks about, is not built.
+3. **Normal-end calls only.** A call is admitted only if it ends normally under the image's handler (`hex : … = .ok …`) and
+   its callee lies in the call fragment (`EndR`, decided by `endRB`: its header in `Bild/Rek/EndRB.lean` lists what the check
+   admits and what it refuses: indirect calls, foreign (axiom) calls, the scoped returns and the other forms named there are
+   outside the fragment). A call that ends in a reason or in a logic stop is not covered.
+4. **Conditional on `zertifizierbar`.** The checker acceptance (a') is derived from the compiler's acceptance only for a
+   certifiable unit (`OldSource.zertifizierbar`) without declared or run-time roots, without started threads
+   (`gestartet = []`) and without `atomic` globals; for every other unit nothing is said.
+5. **Read-blindness is a theorem, not a premise** (`leseblindRS_alle`, `leseblindP_alle`, `Bild/Gleich/Ausgang.lean`): machine G
+   hands the oracle the world without its read events, so no image theorem takes a read-blindness class or premise (changed in
+   this review; the class `LeseblindOK` and every `hO : LeseblindP P O` are gone). The image's run is related to machine G
+   only UP TO read events (`≈`): `rufAt` reads the places of the contracts into the sequential world's trace and the emitted
+   image does not.
+
+Witnesses still missing for the statements above (open, assigned separately): a joint witness of `gabbroZielLeben_faeden` with
+`GSicht` and the new `Fenster` (review IDs A1/F3); a joint witness of any `Emitted.bild_ziel*` on an `Emitted` value with a
+non-empty decomposed prefix and a non-trivial callee prefix (B1/F5); a recursive-callee fixture that runs the call (B2).
