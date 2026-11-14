@@ -94,7 +94,7 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP 
       dsimp only at hr hhead
       cases hr
       exact popSA_last_grund hO hRL hQ hS hsp hK hIG hFS hTV hF ρ r vor L hhead
-    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha _hniedrig =>
       simp only [rufUpdateG_self]
       exact antwort_invGrundLogA ha (fun _ h => by cases h)
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha _hniedrig =>

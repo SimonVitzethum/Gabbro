@@ -179,9 +179,9 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
           exact fort_schritt (w_rueckGrundP rfl caller rst hst hart r hp ρ hx hΛ)
   | retScoped e R =>
-      exact fort_schritt' (w_scopedWert ρ _ e R hx rfl hScope hΛ hkt)
+      exact fort_schritt' (w_scopedWert ρ _ e R hx rfl hScope hΛ hkt (by trivial))
   | retWhyScoped grund R =>
-      exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl hScope hΛ hkt)
+      exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl hScope hΛ hkt (by trivial))
   | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | bind e rest => exact fort_schritt (w_endeBind rfl e rest ρ hx hΛ)
@@ -352,11 +352,11 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
         | retScoped e R =>
             simp only [Endblock.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
             exact fort_schritt' (w_scopedWert ρ _ e R hx rfl
-              hScope.1 hΛ hkt)
+              hScope.1 hΛ hkt (by trivial))
         | retWhyScoped grund R =>
             simp only [Endblock.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
             exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl
-              hScope.1 hΛ hkt)
+              hScope.1 hΛ hkt (by trivial))
         | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | _ =>

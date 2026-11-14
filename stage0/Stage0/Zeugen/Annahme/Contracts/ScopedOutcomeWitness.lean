@@ -201,11 +201,11 @@ theorem capture_zeuge (why : Bool) :
   | false =>
     exact .rueckScopedWert (source false) 0 arguments (sourceRest false) resultExpr cleanup
       rfl rfl (by decide) (source_held_zeuge false)
-      beforeReturn rfl [] rfl (by decide) (GRest.keinNiedrig_alt _)
+      beforeReturn rfl [] rfl (by decide) (by trivial)
   | true =>
     exact .rueckScopedGrund (source true) 0 arguments (sourceRest true) reason cleanup
       rfl rfl (by decide) (source_held_zeuge true)
-      (by decide) (GRest.keinNiedrig_alt _)
+      (by decide) (by trivial)
 
 /-- The two real G7 releases have the required chronological order. -/
 theorem release_zeuge (why : Bool) :
@@ -288,7 +288,7 @@ theorem single_reason_zeuge :
         cases L with
         | false => exact _root_.List.mem_cons_self ..
         | true => cases _root_.List.mem_singleton.mp member)
-      (by decide) (GRest.keinNiedrig_alt _)
+      (by decide) (by trivial)
   · exact .rueckFreigabeLetzte singleCaptured 0 arguments
       ⟨.inr reason, singleWorld⟩ false rfl singleFinishedThread rfl
 
@@ -314,11 +314,11 @@ theorem empty_delivery_zeuge (why : Bool) :
   | false =>
     exact .rueckScopedWertDirekt (directSource false) 0 arguments (directRest false)
       (.val (.var .here)) emptyCleanup rfl rfl (by decide) (by intro L h; cases h)
-      entry rfl [] rfl rfl (directFinishedThread false) rfl (GRest.keinNiedrig_alt _)
+      entry rfl [] rfl rfl (directFinishedThread false) rfl (by trivial)
   | true =>
     exact .rueckScopedGrundDirekt (directSource true) 0 arguments (directRest true)
       reason emptyCleanup rfl rfl (by decide) (by intro L h; cases h)
-      rfl (directFinishedThread true) rfl (GRest.keinNiedrig_alt _)
+      rfl (directFinishedThread true) rfl (by trivial)
 
 def handler : Endblock D V false (.why 2 :: Params) [] :=
   .ret (.val (.widen (by decide) (by decide) (.lit 0))) (.refl [])

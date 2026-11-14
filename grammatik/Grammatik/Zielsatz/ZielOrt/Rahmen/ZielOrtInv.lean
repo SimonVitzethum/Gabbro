@@ -334,7 +334,7 @@ theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (h
       intro O' calls U σ
       exact semH_scopedWert S O' U passes calls r e R hret σ ρ
         (by simp only [hempty, scopesInvH, List.all_nil])
-    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha _hniedrig =>
       simp only [rufUpdateG_self]
       exact antwort_invLogS ha (fun _ h => by cases h)
     | _ => ohneRueck
