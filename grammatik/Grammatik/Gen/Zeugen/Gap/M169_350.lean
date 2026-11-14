@@ -43,7 +43,7 @@ import all Init.Data.String.ToSlice
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false
 
-namespace Gabbro.Grammatik.Gen.Zeugen.M169_350
+namespace Gabbro.Grammatik.Gen.Zeugen.Gap.M169_350
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
@@ -95,4 +95,4 @@ theorem e_gueltig_iff_gates : e.gueltig = true ↔
 
 theorem e_hat : ∀ x ∈ ([⟨0, 0, true, [true, false, false]⟩, ⟨0, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨1, 0, true, [false, false, true]⟩, ⟨1, 0, true, [false, true, false]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨1, 0, true, [true, true, true]⟩, ⟨2, 0, true, [true, true, true, false]⟩, ⟨2, 2, false, [true, false, false]⟩, ⟨2, 3, false, [false, false, false]⟩, ⟨2, 2, false, [true, false, true]⟩, ⟨2, 3, false, [true, false, false]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [false, false, false]⟩, ⟨6, 1, true, [false, true, false, false]⟩, ⟨6, 1, true, [false, true, false, true]⟩, ⟨6, 1, true, [false, true, true, true]⟩, ⟨6, 1, true, [false, false, false, false]⟩, ⟨6, 1, true, [false, false, false, true]⟩, ⟨6, 1, true, [false, false, true, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, false, false, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, true, false, false]⟩] : List Zelle), e.Hat x := by decide
 
-end Gabbro.Grammatik.Gen.Zeugen.M169_350
+end Gabbro.Grammatik.Gen.Zeugen.Gap.M169_350

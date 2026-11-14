@@ -5,7 +5,7 @@
 -/
 module
 public import Grammatik.Gen.Text.Pruefung
-public import Grammatik.Gen.Zeugen.M.M169_350
+public import Grammatik.Gen.Zeugen.Gap.M169_350
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -42,7 +42,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M169_350
 
-open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.M169_350
+open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.Gap.M169_350
 
 theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
 

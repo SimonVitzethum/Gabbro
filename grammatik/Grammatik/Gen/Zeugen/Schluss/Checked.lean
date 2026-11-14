@@ -2,6 +2,7 @@
    of the former candidate list does not establish coverage of these lists. -/
 module
 
+public import Grammatik.Gen.Zeugen.Schluss.GateAudit
 public import Grammatik.Gen.Zeugen.Gap
 public import Grammatik.Gen.Zeugen.M.ScalarRead
 
@@ -44,6 +45,10 @@ theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   · exact N47_P.e_gueltig
   · exact N47_45.e_gueltig
   · exact Reset.Bad.e_gueltig
+
+/-- A wrong reset program jointly witnesses N membership and refusal. -/
+theorem checked_n_zeuge : Reset.Bad.e ∈ Nw ∧ Reset.Bad.e.gueltig = false :=
+  ⟨by simp [Nw, structuralRefusals], Reset.Bad.e_gueltig⟩
 
 /-- The scalar-read fine cell survives with full checker acceptance. -/
 theorem checked_read_zeuge : ScalarRead.e ∈ Mw ∧ ScalarRead.e.gueltig = true ∧

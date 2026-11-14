@@ -1,7 +1,7 @@
 /- Fragment-gap refusals are not counterexamples and never belong to N. -/
 module
 
-public import Grammatik.Gen.Zeugen.Schluss.GateAudit
+public import Grammatik.Gen.Zeugen.Gap.Audit
 
 @[expose] public section
 
@@ -161,6 +161,9 @@ theorem gap_grund : ∀ g ∈ fragmentGaps, ∃ grund : GapGrund, GapBelegt g gr
 theorem gap_grund_zeuge : M99_824.e ∈ fragmentGaps ∧
     GapBelegt M99_824.e (.atomar 0) ∧ M99_824.e.gueltig = false :=
   ⟨List.mem_cons_self, m99_824_input, GateAudit.m99_824_refused⟩
+
+/-- The refusal annex is separate from the unchanged witness table. -/
+theorem gap_annex : GapAnnex fragmentGaps := ⟨checked_gap⟩
 
 #print axioms checked_gap
 #print axioms gap_grund

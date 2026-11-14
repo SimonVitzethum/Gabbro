@@ -9,6 +9,8 @@ public import Grammatik.Gen.Zeugen.Schluss.Checked
 
 namespace Gabbro.Grammatik.Gen.Zeugen
 
+open Gabbro.Grammatik.Gen.Zeugen.Gap
+
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz
 
 /-- A cell-sensitive correctness predicate: every structural cell is good.
