@@ -7,7 +7,7 @@
     the same field for `P.mitRuhe` (functions `fsRuhe fs`, starts
     `wsRuhe ws`, lock invariants `S.mitRuhe`).
   * `akzeptiert_mitRuhe`: the checker's Bool on `P.mitRuhe` follows from the
-    Bool on `P`.
+    Bool on `P`, with a checked VC conjunct for the generated program.
   * `ruhig_mitRuhe`: the root `none` is an idle start of `P.mitRuhe`.
   * `startZulaessig_mitRuhe`: "declared starts on their threads, the idle
     root on every other thread" is an admissible start of `P.mitRuhe`, given

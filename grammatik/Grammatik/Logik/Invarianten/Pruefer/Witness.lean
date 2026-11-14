@@ -1,0 +1,96 @@
+module
+
+public import Grammatik.Logik.Invarianten.Pruefer.Duties
+public import Grammatik.Logik.Invarianten.Modell.Decision
+public import Grammatik.Zielsatz.Atomar.AkzeptiertSchnell
+public import Grammatik.Logik.Invarianten.Frag.Witness
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Invarianten.Pruefer.Witness
+
+open Frag Zielsatz
+
+/-- A real writer with an invariant that is false in some typed worlds. -/
+def declaration : Deklaration :=
+  { Frag.Witness.declaration with
+    Fn := Unit
+    sig := fun _ => 0
+    sigNr := fun _ =>
+      { params := [], erg := none, gruende := 0, haelt := []
+        schreibt := fun _ => false, gschreibt := fun name => !name
+        konsumiert := [], produziert := [] }
+    passt := fun _ _ => false
+    passt_ok := fun _ _ impossible => by cases impossible
+    traeger := fun _ => [.inr false]
+    invarianten_gehalten := fun _ _ _ _ _ lock => nomatch lock }
+
+abbrev contract := vertragVon declaration ()
+
+def access (name : declaration.Glob) : gdarf declaration name [] := fun _ member => nomatch member
+
+def invariant : Expr declaration [] [] .bool := .eq (.glob false (access false)) (.lit 0)
+
+def store (value : Nat) (bounded : value ≤ 10) : Stmt declaration contract false [] [] [] :=
+  .assignGlob false (.widen (by omega) (by omega) (.lit (value : Int))) rfl (access false)
+
+def restoring : Endblock declaration contract false [] [] :=
+  .cons (store 1 (by decide))
+    (.cons (store 0 (by decide)) (.ret .empty (List.Perm.refl _)))
+
+def breaking : Endblock declaration contract false [] [] :=
+  .cons (store 1 (by decide)) (.ret .empty (List.Perm.refl _))
+
+def program : Programm declaration where
+  invariante := fun _ => invariant
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => restoring
+
+def world : World declaration where
+  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
+  globs := fun _ => ⟨0, by decide, by decide⟩
+  spur := []
+
+def unit : Einheit declaration where
+  P := program
+  S := SperrInv.leer declaration
+  Q := fun item => nomatch item
+  starts := [⟨(), .nil⟩]
+  sp0 := world.speicher
+
+def badUnit : Einheit declaration := { unit with P := { program with rumpf := fun _ => breaking } }
+
+theorem restoring_accepted_zeuge : invariantVCB unit.P unit.S [()] = true := by decide +kernel
+
+theorem breaking_refused_zeuge : invariantVCB badUnit.P badUnit.S [()] = false := by decide +kernel
+
+/-- A writer restoring zero is accepted even though zero is not universally
+    true. This rules out replacing preservation by declaration validity. -/
+theorem invariant_not_valid_zeuge :
+    Modell.decideInvariant (declaration.traeger ()) invariant = .ok false := by decide +kernel
+
+theorem checker_accepted_zeuge :
+    AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true] unit.ws = true := by
+  unfold AkzeptiertX
+  rw [restoring_accepted_zeuge]
+  simp only [Bool.and_true, Bool.and_eq_true]
+  decide +kernel
+
+theorem checker_refused_zeuge :
+    AkzeptiertX badUnit.P badUnit.S [()] [] [.inl (), .inr false, .inr true] badUnit.ws = false := by
+  unfold AkzeptiertX
+  rw [breaking_refused_zeuge, Bool.and_false]
+
+theorem duties_zeuge (passes : Nat) (Q : AxEns declaration) :
+    InvGutS unit.P passes Q unit.S () ∧ InvGutGrund unit.P passes Q unit.S () :=
+  invariantVCB_invGut (fun f => by cases f; exact List.mem_cons_self) restoring_accepted_zeuge passes Q ()
+
+def nonlinear : Programm declaration :=
+  { program with invariante := fun _ =>
+      .le (.mul (.glob false (access false)) (.glob false (access false))) (.lit 10) }
+
+/-- Declaration admission is checked even with no enumerated writer. -/
+theorem outside_fragment_refused_zeuge : invariantVCB nonlinear unit.S [] = false := by decide +kernel
+
+end Gabbro.Grammatik.Invarianten.Pruefer.Witness

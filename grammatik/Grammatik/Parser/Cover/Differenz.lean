@@ -102,6 +102,20 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
       | some e => wahr? (eval (s.welt []) e (s.welt []) Env.nil)
       | none => (lockAt u L).inv.isNone }
 
+/-- Retain the elaborated lock predicate for verification-condition generation.
+    The correspondence is computed from the same source as the semantic family. -/
+def sperrQuellen (u : UProg) : Invarianten.Pruefer.LockSources (sperrFamilie u) := fun lock =>
+  match source : sperrInvTerm u lock with
+  | some expression => some
+      (Invarianten.Pruefer.ReifiedLock.ofExpression (alleGehalten u) expression
+        (sperrFamilie u) lock (fun _ => by simp only [sperrFamilie, source]; rfl))
+  | none => some
+      { resources := []
+        expression := if (lockAt u lock).inv.isNone then .tru else .fls
+        correct := fun world => by
+          simp only [sperrFamilie, source]
+          cases (lockAt u lock).inv.isNone <;> rfl }
+
 /-- **The checker of the goal theorem on an elaborated unit**: the lowered program, the lock family
     `sperrFamilie`, every lock and every carrier (tables then statics) enumerated, the thread roots of the
     unit as the starts. -/
@@ -118,11 +132,12 @@ def akzeptiertU (u : UProg) : Except String Bool :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
     match sourceGuests u with
     | .error error => .error error
-    | .ok guests => .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests)
+    | .ok guests => .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u))
 
 /-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
     in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,
-    einzelnPool, renn, antworten, masken, bibliothek. For finding which component refuses a program. -/
+    einzelnPool, renn, antworten, masken, bibliothek, invariant VCs.
+    For finding which component refuses a program. -/
 def komponenten (u : UProg) : Except String String :=
   match lowerAllg u with
   | .error e => .error e
@@ -136,7 +151,8 @@ def komponenten (u : UProg) : Except String String :=
     let z (b : Bool) : String := if b then "1" else "0"
     .ok (String.join [z (programmImFragmentG P fs), z (abgAlleB P fs), z (fussWXB P S fs ws),
       z (stufenB P fs), z (sperrOrteB S ls), z (wurzelnB ws), z (einzelnPoolB P fs cs ws),
-      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs), z (libraryB P fs)])
+      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs), z (libraryB P fs),
+      z (Invarianten.Pruefer.invariantVCB P S fs (sperrQuellen u))])
 
 /-- The verdict on a source text (see the header). -/
 def verdict (src : String) : String :=

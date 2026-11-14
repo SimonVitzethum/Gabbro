@@ -25,7 +25,7 @@ theorem akzeptiert_guest_eq (P : Programm D) (S : SperrInv D)
     (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D)) :
     Akzeptiert P S fs ls cs ws aks checks qs guests =
       (Akzeptiert P S fs ls cs ws aks checks qs && GuestBoundary.admissionB guests) := by
-  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true]
+  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
 
 theorem akzeptiert_guest_sound {P : Programm D} {S : SperrInv D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
@@ -45,7 +45,7 @@ theorem akzeptiertX_guest_eq (P : Programm D) (S : SperrInv D)
     (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D)) :
     AkzeptiertX P S fs ls cs ws aks checks qs guests =
       (AkzeptiertX P S fs ls cs ws aks checks qs && GuestBoundary.admissionB guests) := by
-  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true]
+  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
 
 end Bool
 

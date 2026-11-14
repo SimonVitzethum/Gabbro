@@ -15,19 +15,22 @@ variable [DecidableEq D.Fn] [DecidableEq D.Ax] (P : Programm D) {S : SperrInv D}
 
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
     (the member lists of locks and carriers are the same; the checks ride
-    along under `some`, transported with the value). -/
+    along under `some`, transported with the value). The generated program's
+    VC conjunct is checked separately; the structural Spec is unchanged. -/
 theorem akzeptiert_mitRuhe [RootNativeFloat.Hardware] {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
-    (h : Akzeptiert P S fs ls cs ws [] checks = true) :
+    (h : Akzeptiert P S fs ls cs ws [] checks = true)
+    (hI : Invarianten.Pruefer.invariantVCB P.mitRuhe S.mitRuhe (fsRuhe fs) = true) :
     Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) [] (checks.map CheckDecl.mitRuhe) = true := by
   have hA := akzeptiertSpec_of hvoll hls hcs [] h
   have hChecks : CheckAdmission P fs checks := by
     simp only [Akzeptiert, Bool.and_eq_true] at h
+    have h := h.1
     exact (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h.1.1.2
   exact spec_akzeptiert (fsRuhe_voll hvoll) hls hcs []
     (fun a ha => absurd ha List.not_mem_nil)
-    (CheckAdmission.mitRuhe P hvoll hA.abg hChecks)
+    (CheckAdmission.mitRuhe P hvoll hA.abg hChecks) hI
     (h := akzeptiertSpec_mitRuhe P hvoll hA)
 
 omit [DecidableEq D.Ax] in
