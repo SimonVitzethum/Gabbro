@@ -36,7 +36,7 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simpa only [retryLauf, Runtime.wpB, wahr?, tested, eq_self,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
   | count + 1 => do
-      let resume := fun env => retryCondition (V := V) (l := l) test body overflow compileBody compileOverflow count env goals
+      let resume := fun env => retryCondition test body overflow compileBody compileOverflow count env goals
       let passGoals : Goals D Γ :=
         { normal := fun env => generatedFormula (resume env)
           escape := goals.normal
@@ -44,9 +44,8 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           terminal := goals.terminal }
       let step ← compileBody locals passGoals
       let done ← requireCondition (program := program) (checked := checked) (S := S) (goals.normal locals)
-      let advanced := step.map (fun runtime world ready => by
-        unfold Runtime.wpB at ready
-        change goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program checked S => fun world =>
+        goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world locals with
           | .ok next env | .next _ next env => retryLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -58,7 +57,8 @@ def retryCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error)
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready => by
+        unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world locals with
         | ok next env =>
             rw [result] at ready
@@ -102,17 +102,16 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simpa only [traverseLauf, wahr?, tested, eq_self,
             Bool.false_eq_true, ↓reduceIte, Goals.holds] using ready)
   | index :: indices => do
-      let resume := fun env => traverseCondition (V := V) (l := l) table annotation body compileBody indices env goals
-      let exit := fun env => traverseCondition (V := V) (l := l) table annotation body compileBody [] env goals
+      let resume := fun env => traverseCondition table annotation body compileBody indices env goals
+      let exit := fun env => traverseCondition table annotation body compileBody [] env goals
       let passGoals : Goals D (.index (D.count table) :: Γ) :=
         { normal := fun env => generatedFormula (resume env.tail)
           escape := fun env => generatedFormula (exit env.tail)
           again := fun env => generatedFormula (resume env.tail)
           terminal := goals.terminal }
       let step ← compileBody (.cons index locals) passGoals
-      let advanced := step.map (fun runtime world ready => by
-        unfold Runtime.wpB at ready
-        change goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
+      let advanced : Condition (fun runtime : Runtime program checked S => fun world =>
+        goals.holds (V := V) (l := l) (match execBlockH S runtime.oracle runtime.environment
           runtime.passes runtime.calls body world (.cons index locals) with
           | .ok next env | .next _ next env => traverseLauf (V := V) (l := l)
               (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
@@ -124,7 +123,8 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | .zurueck next value => .zurueck next value
           | .why next reason => .why next reason
           | .logik error => .logik error
-          | .hardware error => .hardware error)
+          | .hardware error => .hardware error)) := step.map (fun runtime world ready => by
+        unfold Runtime.wpB at ready
         cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body world (.cons index locals) with
         | ok next env =>
             rw [result] at ready
