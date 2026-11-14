@@ -7213,7 +7213,10 @@ existing ticket-machine step. `waitModel` proves both instances. For every such 
 FIFO order, ticket ghost and mutual exclusion. The existing machine-G coupling obligation is unchanged.
 Joint witnesses are `Prepared_imageEnvironment_eq_zeuge`, `profile_lock_zeuge`, `source_environment_zeuge`,
 `nimmT_spin_retry_zeuge`, `waitModel_zeuge`, `WaitRun_tkt_zeuge` and
-`image_binding_zeuge` under `Sperre/Bindung/`.
+`image_binding_present_zeuge`, `image_binding_zeuge`, `Emitted_lockWait_zeuge` and
+`Emitted_lock_spin_no_syscall_zeuge` under `Sperre/Bindung/`. The image witnesses run the complete
+production `emit` pipeline on a nonempty scoped-lock source program with each admitted source profile;
+the complete Linux image has exactly four additional syscall instructions (wait and three release paths).
 
 **Liveness finding (no weakened theorem):** the existing `Faeden.Lauf` models Linux waiter registration,
 FUTEX_WAIT blocking and WAKE-all. Its `Lauf.ScheinbarEndlich` bounds spontaneous returns from a blocked place;
