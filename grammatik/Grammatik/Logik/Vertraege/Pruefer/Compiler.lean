@@ -134,7 +134,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | fuel + 1 =>
     match code with
     | .ret expression _ => do
-        let pre ← returnCondition (S := S) budget.expansion expression locals goals
+        let pre ← returnCondition (S := S) budget.expansion expression locals goals.returned
         return (pre.read Λ expression.orte).map (fun _ _ ready _ _ => ready)
     | .retWhy _ _ => .ok
         { formula := goals.reason
