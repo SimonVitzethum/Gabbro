@@ -60,9 +60,9 @@ and is **not guarded today**.
 | Fragments clean / lowering / pierced | retired `zaehle-fragmente` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTS.md` §3) (historical) |
 | Mutation anchors that bite | retired `mutiere-pruefer` | **388 of 422** (2026-10-17: 34 anchors measure nothing because the checker moved under them; the full run of 2026-09-03 caught 388 of 388 valid mutations, 375 of 376 under `cargo test` alone) (historical) |
 | Mutation run over the whole checker | retired `mutiere-pruefer` | 13 min 20 s measured on 377 mutations (historical; not re-measured for the later catalogue) |
-| Checking passes, pass sentences | `gabbro paesse` | 12 passes; **216 sentences: 208 measured, 2 argued, 6 conjectured, 0 proved** (2026-10-17) |
-| Codes with / without a sentence | `gabbro paesse` (the retired `pruefe-saetze` ratchet is not guarded today) | 198 sentences over 419 codes, 55 codes still without — 2026-08-31 (historical) |
-| Template register | `gabbro schablonen` | **41 templates, 11 unproved, 30 machine-checked; 3 carried-unproved; 6 premises without a pass** (2026-10-17) |
+| Checking passes, pass sentences | retired `gabbro paesse` (CLI deleted 2026-11-10) | 12 passes; **216 sentences: 208 measured, 2 argued, 6 conjectured, 0 proved** (2026-10-17, historical) |
+| Codes with / without a sentence | retired `gabbro paesse` (the retired `pruefe-saetze` ratchet is not guarded today) | 198 sentences over 419 codes, 55 codes still without — 2026-08-31 (historical) |
+| Template register | retired `gabbro schablonen` (CLI deleted 2026-11-10) | **41 templates, 11 unproved, 30 machine-checked; 3 carried-unproved; 6 premises without a pass** (2026-10-17, historical) |
 | Isabelle theories / Lean transfer | `ls grammatik/Beweise/*.thy \| wc -l`; `ls grammatik/Grammatik/Isabelle/ \| wc -l` | 15 theories, 15 Lean files (2026-10-17); 3 512 lines, 101 sentences, 31 frozen proof searches (booked 2026-09-27 by the retired `zaehle-theorien`) |
 | Instruments | `ls instrumente/` | four guardians plus `abnahme.py` and `instrumente/teile/` (2026-10-17); before: 54 `pruefe-*`, 22 `zaehle-*` |
 | Number guardian | retired `pruefe-zahlen` | 80 figures with a command, 153 bold table figures without one (booked 2026-10-05; historical) |

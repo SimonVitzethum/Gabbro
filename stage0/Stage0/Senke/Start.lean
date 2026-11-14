@@ -207,7 +207,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
 
 /-! ## `main` starts the roots -/
 
-/-- **The named environment assumption at `clone`** (it replaces `CloneOK`): the kernel answers the call that asks for
+/-- **The named environment assumption at `clone`**: the kernel answers the call that asks for
     a new thread (`cloneReq`: the fixed thread flags, no tid pointers, no new stack, so the memory stays as it is)
     with a word `r` that is not 0 and leaves the memory as it is. 0 is the answer of the new thread, which only the
     machine gives (`Runner.Mach`); every other word reaches the asking thread. `r` is a thread id (the kernel created
