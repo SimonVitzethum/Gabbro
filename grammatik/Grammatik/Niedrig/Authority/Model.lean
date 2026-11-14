@@ -1,9 +1,9 @@
 module
 
-public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Kern.Syntax.Marken.Owner.Conservation
 public import Grammatik.Kern.Syntax.Marken.Owner.Source
-public import Grammatik.Niedrig.Authority.Address
+public import Grammatik.Niedrig.Authority.AddressData
+public import Grammatik.Niedrig.Authority.Metadata
 public import Grammatik.Hardware.Anbieter.Region
 
 @[expose] public section
@@ -44,14 +44,6 @@ def Span.range {D : Deklaration} (span : Span D) : Anbieter.Strecke :=
 def Span.Separated {D : Deklaration} (a b : Span D) : Prop :=
   a.space.backing ≠ b.space.backing ∨ a.range.getrennt b.range
 
-/-- An authority declaration is satisfied at the chosen boot boundary. Its
-    token is the existing nominal owner grant, never a copyable Ty value. -/
-structure Authority (D : Deklaration) where
-  names : OwnerNamespace D
-  token : OwnerToken D
-  spans : List (Span D)
-  epoch : Nat
-
 def Authority.Valid {D : Deklaration} (a : Authority D) : Prop :=
   (∃ t, a.token.mark ∈ D.eigner t) ∧ a.token.stage < D.stufen a.token.mark ∧
   (∀ span ∈ a.spans, span.Valid ∧ span.owner = a.token.mark ∧ span.epoch ≤ a.epoch) ∧
@@ -69,15 +61,6 @@ def View.Valid {D : Deklaration} (a : Authority D) (v : View D) : Prop :=
   v.rights.owner = v.span.rights.owner ∧
   0 < v.span.alignment ∧ v.base % v.span.alignment = 0 ∧ v.length % v.span.alignment = 0 ∧
   v.span.mapped = true ∧ v.span.initialized = true
-
-/-- Architectural state is abstract. No target or instruction is encoded here.
-    One context grant is suspended/restored by the existing owner loan stack. -/
-structure Context (D : Deklaration) (Privilege Interrupt : Type) where
-  owners : OwnerState D
-  frame : ArenaOwnership.Frame
-  views : List (View D)
-  privilege : Privilege
-  interrupt : Interrupt
 
 /-- Runtime metadata plus static authority conditions. AuthorityStep supplies
     actual borrow/return provenance; arbitrary record literals are not origins. -/

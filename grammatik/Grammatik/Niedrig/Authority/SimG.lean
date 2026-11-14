@@ -1,5 +1,7 @@
 module
 
+public import Grammatik.Niedrig.Authority.Address
+
 public import Grammatik.Niedrig.Authority.Layout
 public import Grammatik.Niedrig.Authority.Protocol
 public import Grammatik.Kern.Syntax.Satz.T1Frame
