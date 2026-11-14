@@ -56,7 +56,7 @@ def family : SperrInv declaration where
   inv := fun _ memory => decide ((memory.globs false).n = 0)
 
 def cellSources : LockSources family := fun _ => some
-  { resources := held, expression := invariant, correct := fun _ => rfl }
+  (ReifiedLock.ofExpression held invariant family () (fun _ => rfl))
 
 /-- The same section either restores zero or violates the release condition.
     The bad body remains well typed; only the checked invariant distinguishes it. -/

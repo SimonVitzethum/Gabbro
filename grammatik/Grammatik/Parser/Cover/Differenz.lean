@@ -107,13 +107,8 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
 def sperrQuellen (u : UProg) : Invarianten.Pruefer.LockSources (sperrFamilie u) := fun lock =>
   match source : sperrInvTerm u lock with
   | some expression => some
-      { resources := alleGehalten u
-        expression := expression
-        correct := fun world => by
-          simp only [sperrFamilie, source]
-          change eval world expression world .nil =
-            eval (world.speicher.welt []) expression (world.speicher.welt []) .nil
-          exact eval_spurfrei expression _ _ _ _ rfl rfl rfl rfl .nil }
+      (Invarianten.Pruefer.ReifiedLock.ofExpression (alleGehalten u) expression
+        (sperrFamilie u) lock (fun _ => by simp only [sperrFamilie, source]; rfl))
   | none => some
       { resources := []
         expression := if (lockAt u lock).inv.isNone then .tru else .fls

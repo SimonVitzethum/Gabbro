@@ -82,6 +82,10 @@ theorem e_gueltig_iff_gates : e.gueltig = true ↔
   rw [einsatz_akzeptiert e]
   simp only [e_strukturell, true_and]
 
+/-- Both gates compute their certificates from the preserved source formulas. -/
+theorem e_gueltig : e.gueltig = true :=
+  e_gueltig_iff_gates.mpr (by decide)
+
 theorem e_hat : ∀ x ∈ ([⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, true, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨1, 0, true, [false, true, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨2, 0, true, [true, false, true, false]⟩, ⟨2, 2, false, [false, true, true]⟩, ⟨2, 3, false, [false, false, true]⟩, ⟨2, 1, true, [true, false]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [true, false, false]⟩, ⟨6, 1, true, [true, true, false, false]⟩, ⟨6, 1, true, [true, true, true, true]⟩, ⟨6, 1, true, [true, true, false, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨8, 0, true, [true, false, true]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, true, false, false]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩] : List Zelle), e.Hat x := by decide
 
 end Gabbro.Grammatik.Gen.Zeugen.M103_803
