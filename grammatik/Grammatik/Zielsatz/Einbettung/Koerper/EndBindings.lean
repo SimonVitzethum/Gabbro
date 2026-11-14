@@ -110,10 +110,10 @@ theorem sim_end_bindAxiom {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
   | none =>
       refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-      · simp only [execEndHA, axiomAntwort, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
+      · simp only [execEndHA, axiomAntwort, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
         rw [hx]
       · simp only [exEnd, execEndHA, axiomAntwort, Expr.orte_umTy, Args.orte_umτs, Einbettung.orte_exA,
-          evalArgs_umτs, hargs, aparamsUm_falt, hw']
+          evalArgs_umτs, hargs, aparamsUm_falt, hw', Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
         rw [hx]
         trivial
   | some v =>
@@ -122,11 +122,11 @@ theorem sim_end_bindAxiom {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
         (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons hZ hρ _ _ rfl (E.ergWert_ergE hZ (E.aerg a) he he' v))
       refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
       · simp only [execEndHA, axiomAntwort, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)),
-          hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger]
+          hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
         rw [hx]
         exact congrArg EndAusgang.schrumpf (hΦ3 Φ hP)
       · simp only [exEnd, execEndHA, axiomAntwort, Expr.orte_umTy, Args.orte_umτs, Einbettung.orte_exA,
-          evalArgs_umτs, hargs, aparamsUm_falt, hw']
+          evalArgs_umτs, hargs, aparamsUm_falt, hw', Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
         rw [hx]
         exact E.endRel_schrumpf hR3
 
@@ -157,10 +157,10 @@ theorem sim_end_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
   have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
   rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
   · refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-    · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
+    · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
     · simp only [exEnd, execEndHA, axiomAntwortSonst, Expr.orte_umTy, Args.orte_umτs, Einbettung.orte_exA,
-        evalArgs_umτs, hargs, aparamsUm_falt, hw']
+        evalArgs_umτs, hargs, aparamsUm_falt, hw', Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
       trivial
   · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih_sim_end_rest M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
@@ -168,11 +168,11 @@ theorem sim_end_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
       (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons hZ hρ _ _ rfl (E.ergWert_ergE hZ (E.aerg a) he he' v))
     refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)),
-        hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger]
+        hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
       exact congrArg EndAusgang.schrumpf (hΦ3 Φ hP)
     · simp only [exEnd, execEndHA, axiomAntwortSonst, Expr.orte_umTy, Args.orte_umτs, Einbettung.orte_exA,
-        evalArgs_umτs, hargs, aparamsUm_falt, hw']
+        evalArgs_umτs, hargs, aparamsUm_falt, hw', Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
       exact E.endRel_schrumpf hR3
   · have hc : (Ty.why (D.agruende a) :: Γ).map E.tyE = Ty.why (D'.agruende (E.ax a)) :: Γ.map E.tyE := by
@@ -190,11 +190,11 @@ theorem sim_end_bindAxiomElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
           exact congrArg Fin.val (castW_why (D' := D') reasonTy (Fin.cast (E.agruende a).symm r)))))
     refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
     · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)),
-        hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger]
+        hOΦ Φ (passt_teil hP hs3), orakelΦ_zeiger, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
       exact congrArg EndAusgang.schrumpf (hΦ3 Φ hP)
     · simp only [exEnd, execEndHA, axiomAntwortSonst, Expr.orte_umTy, Args.orte_umτs, Einbettung.orte_exA,
-        evalArgs_umτs, hargs, aparamsUm_falt, hw']
+        evalArgs_umτs, hargs, aparamsUm_falt, hw', Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
       rw [hx]
       simp only [execEnd_umΓ]
       exact E.endRel_schrumpf ((E.endRel_um hc o _).mpr hR3)
