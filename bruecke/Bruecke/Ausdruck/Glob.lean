@@ -31,28 +31,21 @@ theorem binE_preserves_some (op : Gabbro.Body.BinOp)
 private theorem numericSideExprG_of_numericSideExpr (u : UProg) (fn : UFn) (s : USide) (e : Gabbro.Body.Expr)
     (h : numericSideExpr u fn s = some e) : numericSideExprG u fn s = some e := by
   match s, h with
-  | .add a b, h =>
-    exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
-      (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
-  | .sub a b, h =>
-    exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
-      (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
-  | .mul a b, h =>
-    exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
-      (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
-  | .band a b, h =>
-    exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
-      (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
-  | .bor a b, h =>
-    exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
-      (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
-  | .bxor a b, h =>
+  | .add a b, h | .sub a b, h | .mul a b, h
+  | .band a b, h | .bor a b, h | .bxor a b, h
+  | .div a b, h | .rem a b, h | .shl a b, h | .shr a b, h =>
     exact binE_preserves_some _ _ _ _ _ (fun x hx => numericSideExprG_of_numericSideExpr u fn a x hx)
       (fun y hy => numericSideExprG_of_numericSideExpr u fn b y hy) e h
   | .conv _ _ a, h => exact numericSideExprG_of_numericSideExpr u fn a e h
+  | .neg a, h =>
+    cases ha : numericSideExpr u fn a with
+    | none => simp [numericSideExpr, ha] at h
+    | some x =>
+      have ha' := numericSideExprG_of_numericSideExpr u fn a x ha
+      simpa only [numericSideExpr, numericSideExprG, ha, ha'] using h
   | .glob _, h => cases h
   | .lit _, h | .param _, h | .slot _ _ _, h | .tab _ _ _, h | .old _ _ _, h | .erg, h
-  | .div _ _, h | .rem _ _, h | .shl _ _, h | .shr _ _, h | .neg _, h | .refSlot _ _, h
+  | .refSlot _ _, h
   | .idx _ _, h | .len _, h | .text _, h | .arrNil, h | .arrCons _ _, h | .upd _ _ _, h
   | .typed _ _, h | .eng _ _ _, h | .ib1 _ _ _, h | .ib2 _ _ _ _, h | .zaehle _ _ _, h
   | .zaehleBaum _ _ _ _ _ _, h | .zaehleFeld _ _ _, h | .product _ _ _, h | .field _ _, h

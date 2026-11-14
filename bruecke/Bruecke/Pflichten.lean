@@ -88,6 +88,8 @@ def assignableParam (f : UFn) (p : String) : Bool :=
 
 /-- A scalar side outside an `ensures`: no `old` or `erg`. Integer arithmetic and bit
     operations use Body's exact integer operators; a widening conversion retains its number.
+    G selects `div`/`sdiv` and `rem`/`srem` by range; both use Body's truncating operators.
+    The canonical lowering still checks zero denominators and shift widths.
     Capability values are represented only by `argExpr`'s pointer-argument cases. -/
 def numericSideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
@@ -103,6 +105,11 @@ def numericSideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .band a b => binE .band (numericSideExpr u f a) (numericSideExpr u f b)
   | .bor a b => binE .bor (numericSideExpr u f a) (numericSideExpr u f b)
   | .bxor a b => binE .bxor (numericSideExpr u f a) (numericSideExpr u f b)
+  | .div a b => binE .div (numericSideExpr u f a) (numericSideExpr u f b)
+  | .rem a b => binE .rem (numericSideExpr u f a) (numericSideExpr u f b)
+  | .shl a b => binE .shl (numericSideExpr u f a) (numericSideExpr u f b)
+  | .shr a b => binE .shr (numericSideExpr u f a) (numericSideExpr u f b)
+  | .neg a => (numericSideExpr u f a).map (.un .neg ·)
   | _ => none
 
 /-- Only integer and bool, non-atomic module statics belong to this bridge fragment. -/
@@ -133,6 +140,11 @@ def numericSideExprG (u : UProg) (f : UFn) : USide → Option Expr
   | .band a b => binE .band (numericSideExprG u f a) (numericSideExprG u f b)
   | .bor a b => binE .bor (numericSideExprG u f a) (numericSideExprG u f b)
   | .bxor a b => binE .bxor (numericSideExprG u f a) (numericSideExprG u f b)
+  | .div a b => binE .div (numericSideExprG u f a) (numericSideExprG u f b)
+  | .rem a b => binE .rem (numericSideExprG u f a) (numericSideExprG u f b)
+  | .shl a b => binE .shl (numericSideExprG u f a) (numericSideExprG u f b)
+  | .shr a b => binE .shr (numericSideExprG u f a) (numericSideExprG u f b)
+  | .neg a => (numericSideExprG u f a).map (.un .neg ·)
   | _ => none
 
 /-- Source values, including positional nominal records; the scalar reader is shared. -/

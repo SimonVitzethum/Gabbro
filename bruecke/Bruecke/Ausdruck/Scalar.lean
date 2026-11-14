@@ -4,6 +4,7 @@ public import Bruecke.Kodierung
 public import Bruecke.Pflichten
 public import Bruecke.Ausdruck.Teil1
 public import Bruecke.Ausdruck.Glob
+public import Bruecke.Ausdruck.ScalarBinary
 
 @[expose] public section
 
@@ -239,143 +240,44 @@ theorem lowWertE_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Op
         · simp [Except.map] at h
       · simp [Except.map] at h
   | band x y =>
-    cases hsx : numericSideExprG u fn x with
-    | none => simp [numericSideExprG, hsx, binE] at hb
-    | some ex =>
-      cases hsy : numericSideExprG u fn y with
-      | none => simp [numericSideExprG, hsx, hsy, binE] at hb
-      | some ey =>
-        simp only [numericSideExprG, hsx, hsy, binE, Option.some.injEq] at hb
-        subst hb
-        cases hx : lowWertE u Γ Λ fn er x with
-        | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
-        | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
-          simp only [LowSide.wert] at hx
-          cases hy : lowWertE u Γ Λ fn er y with
-          | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
-          | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
-            simp only [LowSide.wert] at hy
-            simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
-            unfold LowSide.and at h
-            split at h
-            · rename_i h0
-              split at h
-              · rename_i h0'
-                simp only [Except.map, Except.ok.injEq] at h
-                subst h
-                refine ⟨_, rfl, ?_⟩
-                have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).n :=
-                  Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).lo_le
-                have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).n :=
-                  Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).lo_le
-                show Gabbro.Body.eval ⟨w, β⟩ (.bin .band ex ey) = _
-                rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .band ex ey) =
-                  (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
-                    | some x, some y => Gabbro.Body.binop .band x y
-                    | _, _ => none) from rfl]
-                rw [h1, h2]
-                simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
-                rfl
-              · simp [Except.map] at h
-            · simp [Except.map] at h
+    exact lowZwei_sim LowSide.and .band σ₀ σ ρ w β (lowAnd_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
   | bor x y =>
-    cases hsx : numericSideExprG u fn x with
-    | none => simp [numericSideExprG, hsx, binE] at hb
-    | some ex =>
-      cases hsy : numericSideExprG u fn y with
-      | none => simp [numericSideExprG, hsx, hsy, binE] at hb
-      | some ey =>
-        simp only [numericSideExprG, hsx, hsy, binE, Option.some.injEq] at hb
-        subst hb
-        cases hx : lowWertE u Γ Λ fn er x with
-        | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
-        | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
-          simp only [LowSide.wert] at hx
-          cases hy : lowWertE u Γ Λ fn er y with
-          | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
-          | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
-            simp only [LowSide.wert] at hy
-            simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
-            unfold LowSide.or at h
-            split at h
-            · rename_i h0
-              split at h
-              · rename_i h0'
-                split at h
-                · rename_i hw1
-                  split at h
-                  · rename_i hw2
-                    simp only [Except.map, Except.ok.injEq] at h
-                    subst h
-                    refine ⟨_, rfl, ?_⟩
-                    have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).n :=
-                      Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).lo_le
-                    have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).n :=
-                      Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).lo_le
-                    show Gabbro.Body.eval ⟨w, β⟩ (.bin .bor ex ey) = _
-                    rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .bor ex ey) =
-                      (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
-                        | some x, some y => Gabbro.Body.binop .bor x y
-                        | _, _ => none) from rfl]
-                    rw [h1, h2]
-                    simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
-                    rfl
-                  · simp [Except.map] at h
-                · simp [Except.map] at h
-              · simp [Except.map] at h
-            · simp [Except.map] at h
+    exact lowZwei_sim LowSide.or .bor σ₀ σ ρ w β (lowOr_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
   | bxor x y =>
+    exact lowZwei_sim LowSide.xoder .bxor σ₀ σ ρ w β (lowXor_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+  | div x y =>
+    exact lowZwei_sim LowSide.durch .div σ₀ σ ρ w β (lowDurch_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+  | rem x y =>
+    exact lowZwei_sim LowSide.rest .rem σ₀ σ ρ w β (lowRest_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+  | shl x y =>
+    exact lowZwei_sim LowSide.links .shl σ₀ σ ρ w β (lowLinks_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+  | shr x y =>
+    exact lowZwei_sim LowSide.rechts .shr σ₀ σ ρ w β (lowRechts_binop σ₀ σ ρ)
+      (recurse x (by simp_wf; omega)) (recurse y (by simp_wf; omega)) h hb
+  | neg x =>
     cases hsx : numericSideExprG u fn x with
-    | none => simp [numericSideExprG, hsx, binE] at hb
+    | none => simp [numericSideExprG, hsx] at hb
     | some ex =>
-      cases hsy : numericSideExprG u fn y with
-      | none => simp [numericSideExprG, hsx, hsy, binE] at hb
-      | some ey =>
-        simp only [numericSideExprG, hsx, hsy, binE, Option.some.injEq] at hb
-        subst hb
-        cases hx : lowWertE u Γ Λ fn er x with
-        | error e => simp [lowWertE, zahlVon, lowZwei, hx, Except.map] at h
-        | ok wa =>
-          obtain ⟨lx, rfl, h1⟩ := recurse x (by simp_wf; omega) hx hsx
-          simp only [LowSide.wert] at hx
-          cases hy : lowWertE u Γ Λ fn er y with
-          | error e => simp [lowWertE, zahlVon, lowZwei, LowWert.zahl, hx, hy, Except.map] at h
-          | ok wb =>
-            obtain ⟨ly, rfl, h2⟩ := recurse y (by simp_wf; omega) hy hsy
-            simp only [LowSide.wert] at hy
-            simp only [lowWertE, zahlVon, lowZwei, hx, hy, LowWert.zahl] at h
-            unfold LowSide.xoder at h
-            split at h
-            · rename_i h0
-              split at h
-              · rename_i h0'
-                split at h
-                · rename_i hw1
-                  split at h
-                  · rename_i hw2
-                    simp only [Except.map, Except.ok.injEq] at h
-                    subst h
-                    refine ⟨_, rfl, ?_⟩
-                    have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).n :=
-                      Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.range.1 lx.range.2).lo_le
-                    have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).n :=
-                      Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.range.1 ly.range.2).lo_le
-                    show Gabbro.Body.eval ⟨w, β⟩ (.bin .bxor ex ey) = _
-                    rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .bxor ex ey) =
-                      (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
-                        | some x, some y => Gabbro.Body.binop .bxor x y
-                        | _, _ => none) from rfl]
-                    rw [h1, h2]
-                    simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
-                    rfl
-                  · simp [Except.map] at h
-                · simp [Except.map] at h
-              · simp [Except.map] at h
-            · simp [Except.map] at h
+      simp only [numericSideExprG, hsx, Option.map_some, Option.some.injEq] at hb
+      subst eB
+      cases hx : lowWertE u Γ Λ fn er x with
+      | error err => simp [lowWertE, zahlVon, hx] at h
+      | ok vx =>
+        obtain ⟨a, rfl, ha⟩ := recurse x (by simp_wf; omega) hx hsx
+        simp only [lowWertE, hx, zahlVon, LowSide.wert, LowWert.zahl, Except.ok.injEq] at h
+        subst wv
+        refine ⟨LowSide.minusEins a, rfl, ?_⟩
+        change (match Gabbro.Body.eval ⟨w, β⟩ ex with
+          | some v => Gabbro.Body.unop .neg v
+          | none => none) = _
+        rw [ha]
+        rfl
   | _ => simp [numericSideExprG] at hb
 termination_by sizeOf sd
 decreasing_by assumption

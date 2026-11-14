@@ -84,33 +84,17 @@ theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
   cases sd with
   | param p => simp only [numericSideExprG, h.1 p]
   | slot p fld i => simp only [numericSideExprG, slotPlace_sicht h]
-  | add x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | sub x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | mul x y =>
+  | add x y | sub x y | mul x y | band x y | bor x y | bxor x y
+  | div x y | rem x y | shl x y | shr x y =>
     have hx := recurse x (by simp_wf; omega)
     have hy := recurse y (by simp_wf; omega)
     simp only [numericSideExprG, hx, hy]
   | conv lo hi x =>
     have hx := recurse x (by simp_wf; omega)
     simp only [numericSideExprG, hx]
-  | band x y =>
+  | neg x =>
     have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | bor x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | bxor x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
+    simp only [numericSideExprG, hx]
   | _ => simp [numericSideExprG, slotPlace_sicht h]
 termination_by sizeOf sd
 decreasing_by assumption
