@@ -79,15 +79,16 @@ private theorem recordRead_preserves_some (u : UProg) (fn : UFn)
     (sd : USide) (out : Option Ty × Gabbro.Body.Expr)
     (h : recordRead u fn scalar sd = some out) :
     recordRead u fn scalar' sd = some out := by
-  cases sd with
-  | param p =>
+  -- Keep the source constructor visible to the mutual termination checker.
+  match sd, h with
+  | .param p, h =>
       cases ht : valueParamTy fn p with
       | none =>
           simp only [recordRead, ht] at h ⊢
           exact map_preserves_some (none, ·) _ _ (hs _) out h
       | some ty => simpa only [recordRead, ht] using h
-  | truth b => exact h
-  | product identity reordered fields =>
+  | .truth _, h => simpa only [recordRead] using h
+  | .product identity _ fields, h =>
       cases ht : (uRecordOf u.records (.prod identity (fields.map (·.1)))).toOption with
       | none => simp [recordRead, ht, bind, Option.bind] at h
       | some schema =>
@@ -96,13 +97,13 @@ private theorem recordRead_preserves_some (u : UProg) (fn : UFn)
           | some es =>
               have hr' := recordReads_preserves_some u fn scalar scalar' hs fields es hr
               simpa only [recordRead, ht, hr, hr', bind, Option.bind] using h
-  | field base name =>
+  | .field base name, h =>
       cases hr : recordRead u fn scalar base with
       | none => simp [recordRead, hr, bind, Option.bind] at h
       | some result =>
           have hr' := recordRead_preserves_some u fn scalar scalar' hs base result hr
           simpa only [recordRead, hr, hr', bind, Option.bind] using h
-  | replace base name value =>
+  | .replace base name value, h =>
       cases hr : recordRead u fn scalar base with
       | none => simp [recordRead, hr, bind, Option.bind] at h
       | some result =>
@@ -122,7 +123,17 @@ private theorem recordRead_preserves_some (u : UProg) (fn : UFn)
                       | some val =>
                           have hv' := recordRead_preserves_some u fn scalar scalar' hs value val hv
                           simpa only [recordRead, hr, hr', ht, hp, hv, hv', bind, Option.bind] using h
-  | _ => exact map_preserves_some (none, ·) _ _ (hs _) out h
+  | .lit _, h | .slot _ _ _, h | .tab _ _ _, h | .old _ _ _, h | .glob _, h | .erg, h
+  | .add _ _, h | .sub _ _, h | .mul _ _, h | .conv _ _ _, h
+  | .band _ _, h | .bor _ _, h | .bxor _ _, h | .div _ _, h | .rem _ _, h
+  | .shl _ _, h | .shr _ _, h | .neg _, h | .refSlot _ _, h | .idx _ _, h | .len _, h
+  | .text _, h | .arrNil, h | .arrCons _ _, h | .upd _ _ _, h | .typed _ _, h
+  | .eng _ _ _, h | .ib1 _ _ _, h | .ib2 _ _ _ _, h | .zaehle _ _ _, h
+  | .zaehleBaum _ _ _ _ _ _, h | .zaehleFeld _ _ _, h | .taggedEmpty _ _, h
+  | .taggedValue _ _ _, h | .predicate _, h | .option _ _, h | .absent _, h
+  | .present _ _, h | .reason _ _, h | .function _ _, h =>
+      simp only [recordRead] at h ⊢
+      exact map_preserves_some (none, ·) _ _ (hs _) out h
 termination_by 3 * sizeOf sd
 decreasing_by all_goals (simp_wf <;> omega)
 
@@ -132,13 +143,14 @@ private theorem recordReads_preserves_some (u : UProg) (fn : UFn)
     (fields : List (Ty × USide)) (es : List Gabbro.Body.Expr)
     (h : recordReads u fn scalar fields = some es) :
     recordReads u fn scalar' fields = some es := by
-  cases fields with
-  | nil => exact h
-  | cons field rest =>
-      cases hr : recordRead u fn scalar field.2 with
+  match fields, h with
+  | [], h => simpa only [recordReads] using h
+  | (_, sd) :: rest, h =>
+      cases hr : recordRead u fn scalar sd with
       | none => simp [recordReads, hr, bind, Option.bind] at h
       | some result =>
-          have hr' := recordRead_preserves_some u fn scalar scalar' hs field.2 result hr
+          rcases result with ⟨tag, e⟩
+          have hr' := recordRead_preserves_some u fn scalar scalar' hs sd (tag, e) hr
           cases ht : recordReads u fn scalar rest with
           | none => simp [recordReads, hr, ht, bind, Option.bind] at h
           | some tail =>
@@ -151,6 +163,8 @@ end
 /-- Every expression already read by the slot-only bridge keeps exactly its Body form. -/
 theorem sideExprG_of_sideExpr (u : UProg) (fn : UFn) (s : USide) (e : Gabbro.Body.Expr)
     (h : sideExpr u fn s = some e) : sideExprG u fn s = some e := by
+  unfold sideExpr at h
+  unfold sideExprG
   exact map_preserves_some (·.2) _ _
     (recordRead_preserves_some u fn _ _ (numericSideExprG_of_numericSideExpr u fn) s) e h
 

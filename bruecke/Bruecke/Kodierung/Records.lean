@@ -41,16 +41,16 @@ mutual
 /-- Every representable typed value has its computed Body shape. -/
 theorem valOf_shape {D : Deklaration} (ty : Ty) (v : Wert D ty) (sh : Gabbro.Body.Shape)
     (h : shapeOfTy ty = some sh) : (valOf ty v).hasShape sh = true := by
-  cases ty with
-  | int lo hi =>
+  match ty, v, h with
+  | .int lo hi, v, h =>
       simp only [shapeOfTy, Option.some.injEq] at h
       subst sh
       simp [valOf_int, Gabbro.Body.Value.hasShape, v.lo_le, v.le_hi]
-  | bool =>
+  | .bool, v, h =>
       simp only [shapeOfTy, Option.some.injEq] at h
       subst sh
       rfl
-  | prod id fs =>
+  | .prod id fs, v, h =>
       cases hs : shapesOfTys fs with
       | none => simp [shapeOfTy, hs] at h
       | some ss =>
@@ -58,20 +58,22 @@ theorem valOf_shape {D : Deklaration} (ty : Ty) (v : Wert D ty) (sh : Gabbro.Bod
           subst sh
           obtain ⟨hlen, hf⟩ := valOfProd_shape fs v ss hs
           simp [valOf_prod, Gabbro.Body.Value.hasShape_record_record, hlen, hf]
-  | _ => simp [shapeOfTy] at h
-termination_by ty => sizeOf ty
+  | .opt _, _, h | .sum _, _, h | .why _, _, h | .never, _, h | .fl _ _, _, h
+  | .fnptr _, _, h | .ptr _, _, h | .ref _, _, h | .arr _ _, _, h | .str _, _, h =>
+      simp [shapeOfTy] at h
+termination_by sizeOf ty
 decreasing_by all_goals (simp_wf <;> omega)
 
 theorem valOfProd_shape {D : Deklaration} (fs : List Ty) (v : ProdVal D.Fn D.passt fs)
     (ss : List Gabbro.Body.Shape) (h : shapesOfTys fs = some ss) :
     (valOfProd fs v).length = ss.length ∧
       Gabbro.Body.Value.fieldsHaveShape (valOfProd fs v) ss = true := by
-  cases fs with
-  | nil =>
+  match fs, v, h with
+  | [], _, h =>
       simp only [shapesOfTys, Option.some.injEq] at h
       subst ss
       exact ⟨rfl, rfl⟩
-  | cons ty fs =>
+  | ty :: fs, v, h =>
       cases ht : shapeOfTy ty with
       | none => simp [shapesOfTys, ht] at h
       | some sh =>
@@ -85,7 +87,7 @@ theorem valOfProd_shape {D : Deklaration} (fs : List Ty) (v : ProdVal D.Fn D.pas
               · simpa only [valOfProd, List.length_cons] using congrArg Nat.succ hlen
               · simp only [valOfProd, Gabbro.Body.Value.fieldsHaveShape_cons_cons,
                   valOf_shape ty (ProdVal.hd v) sh ht, hf, Bool.true_and]
-termination_by fs => sizeOf fs
+termination_by sizeOf fs
 decreasing_by all_goals (simp_wf <;> omega)
 end
 
