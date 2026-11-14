@@ -104,7 +104,7 @@ private theorem run_two {α β : Type} {f : α → ExpandM β} {a b : α} {a' b'
     Except.bind ((f b).run s) (fun (y, s) => .ok ([x, y], s))) = _
   simp only [ha, hb, Except.bind]
 
-private theorem prepared_context :
+private theorem prepared_context_raw :
     (let constants := Uebersetze.uConstsRech (Uebersetze.uKonstFns fixture) fixture []
      let aliases := Uebersetze.uAliase constants fixture ++ Uebersetze.uAliasBreiten fixture ++
        constants.map (fun entry => (entry.1, (entry.2, entry.2)))
@@ -139,9 +139,12 @@ private theorem caller_run :
   cbv
 
 /-- Small AST evaluation, without lexing a large source or building an entire program witness. -/
+private theorem prepared_context : prepareContext fixture = context :=
+  prepared_context_raw
+
 theorem tuple_export_zeuge : expand fixture = .ok (expandedFixture, [generated]) := by
   unfold expand
-  erw [prepared_context]
+  rewrite [prepared_context]
   have hrun := run_two (f := expandItem context 100000) producer_run caller_run
   change (fixture.mapM (expandItem context 100000)).run {} = _ at hrun
   rewrite [hrun]
