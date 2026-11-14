@@ -122,8 +122,8 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                                 rw [hv, ← valOf_cast_eval schema.property.symm term σ₀ σ ρ]
                                 rfl
                               refine ⟨?_, fun _ heq => Option.some.inj heq⟩
-                              rw [Gabbro.Body.eval_recGet _ _ _ _ he, valOfProd_get]
-                              rfl
+                              rw [Gabbro.Body.eval_recGet _ _ _ _ he]
+                              exact valOfProd_get (D := declOf u) pos (eval σ₀ baseE σ ρ)
   | .replace base name value, h, hb =>
       cases hr : recordRead u fn (numericSideExprG u fn) base with
       | none => simp [recordRead, hr] at hb
@@ -174,8 +174,12 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                                         rfl
                                       refine ⟨?_, fun _ heq => Option.some.inj heq⟩
                                       rw [Gabbro.Body.eval_recSet _ _ _ _ _ _ he hev
-                                        (by rw [valOfProd_length]; exact recordIndex_lt pos)]
-                                      rw [← valOfProd_set]
+                                        (by
+                                          rw [valOfProd_length (D := declOf u)
+                                            (schema.val.fields.map (·.2)) (eval σ₀ baseE σ ρ)]
+                                          exact recordIndex_lt pos)]
+                                      rw [← valOfProd_set (D := declOf u) pos
+                                        (eval σ₀ baseE σ ρ) (eval σ₀ val σ ρ)]
                                       rfl
   | .lit _, h, hb | .slot _ _ _, h, hb | .tab _ _ _, h, hb | .old _ _ _, h, hb
   | .glob _, h, hb | .erg, h, hb | .add _ _, h, hb | .sub _ _, h, hb | .mul _ _, h, hb
@@ -187,7 +191,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
   | .zaehle _ _ _, h, hb | .zaehleBaum _ _ _ _ _ _, h, hb | .zaehleFeld _ _ _, h, hb
   | .taggedEmpty _ _, h, hb | .taggedValue _ _ _, h, hb | .predicate _, h, hb
   | .option _ _, h, hb | .absent _, h, hb | .present _ _, h, hb | .reason _ _, h, hb
-  | .function _ _, h, hb => exact scalarCase h hb (by rw [recordRead])
+  | .function _ _, h, hb => exact scalarCase h hb (by rw [recordRead] <;> simp)
 termination_by 5 * sizeOf sd + 1
 decreasing_by all_goals (simp_wf <;> omega)
 
@@ -224,14 +228,14 @@ theorem lowProductArgs_record_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : 
     (β : Gabbro.Body.Binding) (hW : WGRel u σ w)
     (hL : LRel fn (if er.isSome then 1 else 0) ρ β) :
     Gabbro.Body.evalAll ⟨w, β⟩ es = some (valOfProd _ (evalProd σ₀ args σ ρ)) := by
-  match fields, h, hb with
-  | [], h, hb =>
+  match fields, args, h, hb with
+  | [], args, h, hb =>
       simp only [lowProductArgs, Except.ok.injEq] at h
       cases h
       simp only [recordReads, Option.some.injEq] at hb
       cases hb
       rfl
-  | (ty, sd) :: rest, h, hb =>
+  | (ty, sd) :: rest, args, h, hb =>
       cases hr : recordRead u fn (numericSideExprG u fn) sd with
       | none => simp [recordReads, hr] at hb
       | some out =>
