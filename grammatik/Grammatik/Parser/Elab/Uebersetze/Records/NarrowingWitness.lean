@@ -2,6 +2,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Records.Narrowing
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
+import all Init.Data.ToString.Basic
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
