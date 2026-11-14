@@ -31,12 +31,13 @@ theorem lowBodyF_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     · rename_i ty he
       split at h
       · rename_i hr
+        simp only at h
         split at h
         · cases h
         · rename_i rest hrest
           cases h
           exact ⟨k, ty, he, hr, rest, (by first | exact hk | rfl), hrest, rfl⟩
-      · beta_reduce at h
+      · simp only at h
         split at h <;> cases h
 
 theorem lowSeq_bindCall_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat}
