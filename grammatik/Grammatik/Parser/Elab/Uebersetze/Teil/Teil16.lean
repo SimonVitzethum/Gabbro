@@ -225,6 +225,9 @@ def beqElabU : Except String UProg → Except String UProg → Bool
   | .error e1, .error e2 => e1 == e2
   | _, _ => false
 
+-- Keep the closed 104 checks within the bounded build slot's memory budget.
+set_option Elab.async false
+
 theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
   cbv
 
