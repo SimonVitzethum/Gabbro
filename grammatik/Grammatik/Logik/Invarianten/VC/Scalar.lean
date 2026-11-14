@@ -108,10 +108,14 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
                 (eval world value world locals).n ≤ hi
             · have selected := yes.sound world
                 ((quoteQF_denote _ _).mp (branches.1 (guardCorrect.mpr fits)))
-              simpa only [eval, dif_pos fits, scalarValue] using selected
+              dsimp only [eval]
+              rw [dif_pos fits]
+              exact selected
             · have selected := no.sound world
                 ((quoteQF_denote _ _).mp (branches.2 (fun h => fits (guardCorrect.mp h))))
-              simpa only [eval, dif_neg fits] using selected }
+              dsimp only [eval]
+              rw [dif_neg fits]
+              exact selected }
   | .wenn condition yes no => do
       let guard ← translate condition locals
       let yesVC ← scalarWP yes locals key post
@@ -130,10 +134,11 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
                 have absent : ¬ guard.payload.denote (assignment world) := by
                   intro h
                   have := (guard.correct world).mpr h
-                  simp only [tested, Bool.false_eq_true] at this
+                  rw [tested] at this
+                  exact Bool.noConfusion this
                 have selected := noVC.sound world
                   ((quoteQF_denote _ _).mp (branches.2 absent))
-                simpa only [eval, tested, wahr?, ↓reduceIte] using selected }
+                simpa only [eval, tested, wahr?, Bool.false_eq_true, ↓reduceIte] using selected }
   | expression => do
       let encoded ← translateScalar expression locals
       return {
