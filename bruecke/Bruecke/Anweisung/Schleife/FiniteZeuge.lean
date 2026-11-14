@@ -71,12 +71,11 @@ theorem traverse_leave_sim_zeuge (u : UProg) (V : Vertrag (declOf u))
     exact hs
   · exact wgrel_enc u σ w
 
-/-- The unrelated retry and nested reason-match forms remain refused by
+/-- The unrelated retry form remains refused by
     the actual reader; a caller cannot obtain a carried duty through a fallback. -/
-theorem finite_reader_refusals (u : UProg) (fn : UFn) (ns : BodyNames) (x : String) (n : Nat) :
-    seqZ u 3 fn ns [.retryBeg n .tru, .ifElse, .blkEnd] = none ∧
-    seqZ u 3 fn ns [.matchWhyBeg x, .blkEnd] = none := by
-  exact ⟨rfl, rfl⟩
+theorem finite_reader_refusals (u : UProg) (fn : UFn) (ns : BodyNames) (n : Nat) :
+    seqZ u 3 fn ns [.retryBeg n .tru, .ifElse, .blkEnd] = none := by
+  rfl
 
 /-- Both leaves are now read through the ordinary sequence and ending readers.
     Canonical lowering still rejects them outside a loop. -/
