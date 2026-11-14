@@ -98,7 +98,10 @@ def firmwareMemory : FirmwareMemory authority :=
           ((backing = 7 ∧ 66 ≤ byte ∧ byte < 76) ∨
            (backing = 9 ∧ 164 ≤ byte ∧ byte < 184))
         wert := fun _ _ => 42 }
-    byteValues := by intro _ _; decide
+    byteValues := by
+      intro backing byte
+      change 42 < 256
+      decide
     supplied := by
       intro s member initialized byte inside
       change s ∈ [span false, span true] at member
@@ -124,7 +127,7 @@ def firmwareMemory : FirmwareMemory authority :=
           opened.1.symm, rfl, opened.2⟩ }
 
 /-- The final token is a real fresh-grant handoff, not the firmware handle. -/
-def record : BootProviderRecord contract handoff.authority layout :=
+noncomputable def record : BootProviderRecord contract handoff.authority layout :=
   { granule := 8
     positiveGranule := by decide
     providerTrace := providerTrace
@@ -134,9 +137,14 @@ def record : BootProviderRecord contract handoff.authority layout :=
       intro s member
       change s ∈ [span false, span true] at member
       simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl
-      · exact coverage false
-      · exact coverage true
+      exact if closed : s = span false then
+        closed.symm ▸ coverage false
+      else by
+        have opened : s = span true := by
+          rcases member with equal | equal
+          · exact False.elim (closed equal)
+          · exact equal
+        exact opened.symm ▸ coverage true
     firmwareAuthority := authority
     firmwareContext := initial
     boot := firmware_entry
@@ -168,7 +176,23 @@ theorem provider_nondegenerate_zeuge :
     (placement true).first = 2 ∧ (placement true).elements = 4 ∧
     firmwareMemory.bytes.init 9 164 = true ∧ firmwareMemory.bytes.wert 9 164 = 42 ∧
     handoff.authority.token.handle ≠ authority.token.handle := by
-  decide
+  have initialized : firmwareMemory.bytes.init 9 164 = true :=
+    firmwareMemory.supplied (span true)
+      (List.mem_cons_of_mem _ (List.mem_cons_self ..)) rfl 164
+      (by change 164 ≤ 164 ∧ 164 < 184; exact ⟨by decide, by decide⟩)
+  refine ⟨?_, ?_, rfl, rfl, ?_, ?_, rfl, rfl, initialized, rfl, ?_⟩
+  · change (7 : Nat) ≠ 9
+    decide
+  · change (0 : Nat) ≠ 1
+    decide
+  · change 0 < 10
+    decide
+  · change 0 < 20
+    decide
+  · intro equal
+    have grants := congrArg ArenaOwnership.Handle.grant equal
+    change (1 : Nat) = 0 at grants
+    cases grants
 
 theorem provider_commit_zeuge :
     ∃ lo hi, Anbieter.Ereig.fuell lo hi ∈ providerTrace ∧ lo ≤ 164 ∧ 164 < hi :=
