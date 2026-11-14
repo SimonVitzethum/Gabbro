@@ -6,7 +6,7 @@ public import Grammatik.Logik.Vertraege.Pruefer.Loops
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
-open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 
 variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm D}
 variable {policy : CallPolicy program}
