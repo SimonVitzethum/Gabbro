@@ -150,7 +150,7 @@ theorem ergTy_of {f : UFn} (h : ErgSchlicht f) :
           | some (_, n) => some (.opt n)
           | none => f.res.map (fun r => Ty.int r.1 r.2) := by
   obtain ⟨_, h3, h4⟩ := h
-  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h3, h4]
+  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h3, h4] <;> rfl
 
 theorem isSome_erg (f : Fin u.fns.length) :
     ((declOf u).erg f).isSome = (fnAt u f).ergTy.isSome := by
