@@ -11,10 +11,22 @@
              contract's floor `bodenOk`). Soundness (`endR_von_fragB`) is here; completeness and `endRB_iff` are in
              `EndRBVoll.lean`.
 
-             What the fragment does NOT contain (and the check refuses): top-level `ite`, tail `let`-calls
-             (`bindCall`, `bindCallElse`) and every other binder form at terminal-block level, register reads,
-             `awaits`, `exchange`, `narrow`/`check`, `leave`/`next`, the scoped returns, foreign calls and indirect
-             calls. Recursion is admitted; these control and binding forms are not (yet).
+             What the fragment ADMITS (read off the arms of the `fragB` functions): at statement level every
+             leaf (`assignSlot`/`assignThru`/`assignThruOwn`/`assignSlotRef`/`assignGlob`/`putBytes`/`assignVar`/
+             `shift`/`regWrite`/`transition`/`publish`/`advances`/`retires`, via `Stmt.blattArt`), `ite`, `onOption`,
+             `onTag`, `onWhy`, `breaking`, `locks`, `traverse`, `retry`, `forever`, `call`, `leave`, `next`, `ret`,
+             `retWhy`; at block level `nil`, `cons`, `bind`, `bindCall`, `regRead`, `regReadElse`, `awaits`,
+             `exchange`, `narrow`, `check`, `float`, `floatLit`, `floatOf`, `floatNarrow`, `bindCallElse`; at
+             terminal-block level only `ret`, `retWhy`, `cons`, `bind` and the four float binders.
+
+             What the fragment REFUSES (the `_ => false` arms and the leaf fallback): at statement level
+             `callInd`, `axiomCall`, `axiomCallElse`, `callIndElse`, `retScoped`, `retWhyScoped`,
+             `consumeTraverse`; at block level `bindCallInd`, `bindAxiom`, `bindAxiomElse`, `bindAxiomOpt`,
+             `bindAxiomOptElse`, `bindCallIndElse`, `narrowRequired`; at terminal-block level every form but
+             those listed above, in particular `leave`, `next`, `ite`, tail `bindCall`/`bindCallElse`,
+             `regRead`, `awaits`, `exchange`, `narrow` and `narrowRequired`. So: indirect calls, foreign
+             (axiom) calls and the scoped returns are outside the fragment everywhere, and the terminal block
+             of a body is much narrower than its inner blocks. Recursion is admitted.
 -/
 module
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T1

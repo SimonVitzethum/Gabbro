@@ -15,8 +15,7 @@
                (`vertragsfrei_nurAbstieg`), closed in `rufAt_rufRumpf_pflicht`;
              * everywhere and at every depth for contracts that are valid formulas (`VertragGueltig`), where the
                short-direction induction runs with the empty error set (`rufAt_rufRumpf_gueltig`).
-             All of it carries the program premise `LeseblindP P O` (`Gleich/Ausgang.lean`): read-blind register and
-             visibility answers, and read-blind foreign answers or a program without foreign calls.
+             None of it needs an oracle premise: every oracle is read-blind (`leseblindP_alle`, `Gleich/Ausgang.lean`).
 -/
 module
 public import Stage0.Senke.Bild.Gleich.RufAt
@@ -40,10 +39,10 @@ def Vertragsfrei (P : Programm D) (O : Orakel D) (passes n : Nat) (g : D.Fn) (σ
 
 /-- **The exact relation**: where `rufAt` fails no contract check, `rufAt` and `rufRumpf` give the same outcome up to
     `≈`, with no early failure on either side. -/
-theorem rufAt_rufRumpf_genau (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' : World D}
+theorem rufAt_rufRumpf_genau {n : Nat} {g : D.Fn} {σ σ' : World D}
     {ρ : Env D (D.params g)} (hV : Vertragsfrei P O passes n g σ ρ) (hσ : WeltGleich σ σ') :
     RufLG (fun _ => False) (rufAt P O passes n g σ ρ) (rufRumpf P O passes n g σ' ρ) := by
-  have h := rufAt_rufRumpf_lg (P := P) (O := O) (passes := passes) hO n g σ σ' ρ hσ
+  have h := rufAt_rufRumpf_lg (P := P) (O := O) (passes := passes) n g σ σ' ρ hσ
   unfold Vertragsfrei at hV
   generalize rufAt P O passes n g σ ρ = a₁ at h hV ⊢
   generalize rufRumpf P O passes n g σ' ρ = a₂ at h ⊢
@@ -57,11 +56,11 @@ theorem rufAt_rufRumpf_genau (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' 
 
 /-- **An `ok` of the body run is an `ok` of `rufAt`** with the same value and a `≈` world, where `rufAt` fails no
     contract check. -/
-theorem rufRumpf_ok_rufAt (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
+theorem rufRumpf_ok_rufAt {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
     {ρ : Env D (D.params g)} {v : ErgVal D (D.erg g)} (hV : Vertragsfrei P O passes n g σ ρ)
     (hσ : WeltGleich σ σ') (h : rufRumpf P O passes n g σ' ρ = .ok σ₂ v) :
     ∃ σ₁, rufAt P O passes n g σ ρ = .ok σ₁ v ∧ WeltGleich σ₁ σ₂ := by
-  have hg := rufAt_rufRumpf_genau hO hV hσ
+  have hg := rufAt_rufRumpf_genau hV hσ
   rw [h] at hg
   generalize rufAt P O passes n g σ ρ = a at hg ⊢
   cases hg with
@@ -71,11 +70,11 @@ theorem rufRumpf_ok_rufAt (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ�
 
 /-- **A reason of the body run is the same reason of `rufAt`**, with a `≈` world, where `rufAt` fails no contract
     check. -/
-theorem rufRumpf_why_rufAt (hO : LeseblindP P O) {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
+theorem rufRumpf_why_rufAt {n : Nat} {g : D.Fn} {σ σ' σ₂ : World D}
     {ρ : Env D (D.params g)} {r : Fin (D.gruende g)} (hV : Vertragsfrei P O passes n g σ ρ)
     (hσ : WeltGleich σ σ') (h : rufRumpf P O passes n g σ' ρ = .why σ₂ r) :
     ∃ σ₁, rufAt P O passes n g σ ρ = .why σ₁ r ∧ WeltGleich σ₁ σ₂ := by
-  have hg := rufAt_rufRumpf_genau hO hV hσ
+  have hg := rufAt_rufRumpf_genau hV hσ
   rw [h] at hg
   generalize rufAt P O passes n g σ ρ = a at hg ⊢
   cases hg with
@@ -117,19 +116,19 @@ theorem vertragsfrei_nurAbstieg {n : Nat} (hN : NurAbstieg P O passes n) {g : D.
   exact nicht_vertragMarke_abstieg k hm
 
 /-- **(i) OF `EmittedZiel`: `rufAt ≈ rufRumpf` UNDER THE USER DUTY.** Under the user's own obligation
-    (`KoerperGutS`, `InvGutS`), an oracle in the named class that is read-blind, and bodies without `locks`: at a
+    (`KoerperGutS`, `InvGutS`), an oracle meeting `TreuO` and `RegLokal` (read-blindness needs no premise), and bodies without `locks`: at a
     disciplined entry meeting the callee's `requires`, from `≈` worlds, `rufAt` and the body run of machine G give the
     same outcome up to `≈` -- in both directions, with no early failure on either side. -/
 theorem rufAt_rufRumpf_pflicht {Q : AxEns D} {S : SperrInv D} {U : Umwelt D}
     (hTO : TreuO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hU : HavocOk S U)
     (hlocks : ∀ f : D.Fn, (P.rumpf f).ohneLocks = true)
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hI : ∀ f : D.Fn, InvGutS P passes Q S f)
-    (hS : ScopesOkProg P) (hO : LeseblindP P O) (n : Nat) {g : D.Fn} {σ σ' : World D}
+    (hS : ScopesOkProg P) (n : Nat) {g : D.Fn} {σ σ' : World D}
     {ρ : Env D (D.params g)}
     (hh : HeldB (D.signatur g).boden (Signatur.anfang D (D.signatur g)) σ.haelt)
     (hq : ReqAmEintritt P g σ ρ) (hσ : WeltGleich σ σ') :
     RufLG (fun _ => False) (rufAt P O passes n g σ ρ) (rufRumpf P O passes n g σ' ρ) :=
-  rufAt_rufRumpf_genau hO
+  rufAt_rufRumpf_genau
     (vertragsfrei_nurAbstieg
       (rufAt_nurAbstieg (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (U := U)
         hTO hRL hQ hU hlocks hK hI hS n) hh hq) hσ
@@ -145,9 +144,9 @@ structure VertragGueltig (P : Programm D) : Prop where
 
 /-- **Under valid contracts `rufAt ≈ rufRumpf` exactly**, at every depth and in every world: the short-direction
     induction with the empty error set. -/
-theorem rufAt_rufRumpf_gueltig (hP : VertragGueltig P) (hO : LeseblindP P O) (n : Nat) :
+theorem rufAt_rufRumpf_gueltig (hP : VertragGueltig P) (n : Nat) :
     HandlerLG (fun _ => False) (rufAt P O passes n) (rufRumpf P O passes n) :=
-  rufAt_rufRumpf_unter (fun _ => False) hO
+  rufAt_rufRumpf_unter (fun _ => False)
     (fun g σ ρ hq => absurd ((hP.requires g σ ρ).symm.trans hq) (by decide))
     (fun g σ₀ σ ρ v hq => absurd ((hP.ensures g σ₀ σ ρ v).symm.trans hq) (by decide))
     (fun i σ hq => absurd ((hP.invariante i σ).symm.trans hq) (by decide)) n
