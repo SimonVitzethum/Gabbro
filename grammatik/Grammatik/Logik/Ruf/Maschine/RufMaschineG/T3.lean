@@ -56,7 +56,7 @@ def RufStartG (P : Programm D) (sp : Speicher D)
       ⟨false, D.params g, Signatur.anfang D (D.signatur g),
        rho, .ende (P.rumpf g)⟩⟩,
      startSpur g, [RufEreignisF.eintritt g rho (sp.welt [])]⟩,
-   [], sp.welt []⟩
+   [], sp.welt [], LowLevel.ContextLedger.empty⟩
 
 /-- **The start fact about `init`**: no two threads start in functions
     holding a common lock by signature. -/

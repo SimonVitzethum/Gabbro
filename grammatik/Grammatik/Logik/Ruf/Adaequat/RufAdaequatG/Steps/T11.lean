@@ -170,7 +170,7 @@ def adTravFaden : RufFadenG adD :=
   ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adTravRumpf⟩⟩,
     [], []⟩
 
-def adTravM : RufMaschineG adD := ⟨adSp0, fun _ => adTravFaden, [], adSp0.welt []⟩
+def adTravM : RufMaschineG adD := ⟨adSp0, fun _ => adTravFaden, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 /-- The three frames the witness thread can be in: at the body, after the
     unfold of the `traverse` statement, at the loop. -/

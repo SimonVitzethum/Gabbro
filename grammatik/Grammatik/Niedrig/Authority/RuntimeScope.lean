@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Authority.Runtime
-public import Grammatik.Niedrig.Authority.View
+public import Grammatik.Niedrig.Authority.Preservation
 
 @[expose] public section
 
@@ -157,7 +157,8 @@ theorem ContextEntry.close_stale {entry next : ContextEntry D} {key : ScopeKey}
     (closed : entry.close key = .ok next) :
     key.generation < next.generations key.node := by
   obtain ⟨tail, context, loans, _, live, rfl⟩ := ContextEntry.close_shape closed
-  rw [ContextEntry.finish, SpanGenerations.bump_self, live]
+  change key.generation < (entry.generations.bump key.node) key.node
+  rw [SpanGenerations.bump_self, live]
   exact Nat.lt_succ_self _
 
 /-- A child release cannot invalidate the generation of a distinct ancestor. -/

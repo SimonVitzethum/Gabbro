@@ -296,7 +296,7 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
                 ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
                   .dann rest ((GRest.weiterOpt (Λ := Λ') e k).plus j)⟩⟩,
               σ₂.spur, ((M.plus j).faeden f).log⟩,
-            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start⟩
+            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start, (M.plus j).kontexte⟩
         rw [plus_weiterOpt]
         exact @RufSchrittG.dannBindAxiomOpt D P O (p + j) Λ' (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd
           rest (k.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
@@ -310,7 +310,7 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
                 ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
                   .dann rest ((GRest.weiterOpt (Λ := Λ') e k).plus j)⟩⟩,
               σ₂.spur, ((M.plus j).faeden f).log⟩,
-            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start⟩
+            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start, (M.plus j).kontexte⟩
         rw [plus_weiterOpt]
         exact @RufSchrittG.dannBindAxiomOptElseOk D P O (p + j) Λ' (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd
           err rest (k.plus j) ρ (RufRahmenG.plus_rest (j := j) hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ

@@ -140,13 +140,13 @@ theorem sem_dannRet {Λ Λ'' : List (Res D)} (e : ErgExpr D Γ Λ V.erg)
 
 end SemSchritt
 theorem faeden_upd (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
-    (z : RufFadenG D) (la : Lauf D) (st : World D) :
-    (⟨sp, rufUpdateG m f z, la, st⟩ : RufMaschineG D).faeden f = z :=
+    (z : RufFadenG D) (la : Lauf D) (st : World D) (ctx : LowLevel.ContextLedger D) :
+    (⟨sp, rufUpdateG m f z, la, st, ctx⟩ : RufMaschineG D).faeden f = z :=
   rufUpdateG_self m f z
 
 theorem weltVon_upd (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
-    (z : RufFadenG D) (la : Lauf D) (st : World D) :
-    (⟨sp, rufUpdateG m f z, la, st⟩ : RufMaschineG D).weltVon f = sp.welt z.spur := by
+    (z : RufFadenG D) (la : Lauf D) (st : World D) (ctx : LowLevel.ContextLedger D) :
+    (⟨sp, rufUpdateG m f z, la, st, ctx⟩ : RufMaschineG D).weltVon f = sp.welt z.spur := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
 
 /-- What one step of thread `f` does to a covered frame: either the frame

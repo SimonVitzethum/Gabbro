@@ -249,9 +249,9 @@ theorem fertigG_plus (j : Nat) (M : RufMaschineG D) (t : Faden) : FertigG (M.plu
 
 /-- The successor machine of every step, shifted: the update of the acting thread, shifted. -/
 theorem RufMaschineG.plus_update (j : Nat) (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
-    (z : RufFadenG D) (la : Lauf D) (st : World D) :
-    RufMaschineG.plus j ⟨sp, rufUpdateG m f z, la, st⟩ =
-      ⟨sp, rufUpdateG (fun t => (m t).plus j) f (z.plus j), la, st⟩ := by
+    (z : RufFadenG D) (la : Lauf D) (st : World D) (ctx : LowLevel.ContextLedger D) :
+    RufMaschineG.plus j ⟨sp, rufUpdateG m f z, la, st, ctx⟩ =
+      ⟨sp, rufUpdateG (fun t => (m t).plus j) f (z.plus j), la, st, ctx⟩ := by
   simp only [RufMaschineG.plus, rufUpdateG_plus]
 
 /- **A step at budget `p` is a step at budget `p + j`** of the shifted machines. -/

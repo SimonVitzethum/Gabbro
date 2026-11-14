@@ -260,7 +260,7 @@ def lkM1 (sp : Speicher nD) : RufMaschineG nD :=
       ⟨((lkM0 sp).faeden 0).kopf.f, ((lkM0 sp).faeden 0).kopf.rho, ((lkM0 sp).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann (.cons lkS .nil) (.ende lkRet)⟩⟩,
       ((lkM0 sp).faeden 0).spur, ((lkM0 sp).faeden 0).log⟩,
-   (lkM0 sp).lauf, (lkM0 sp).start⟩
+   (lkM0 sp).lauf, (lkM0 sp).start, (lkM0 sp).kontexte⟩
 
 end NIZeuge
 end Gabbro.Grammatik

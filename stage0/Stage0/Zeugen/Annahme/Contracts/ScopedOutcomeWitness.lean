@@ -147,7 +147,7 @@ def thread {Λ : List (Res D)} (r : GRest D V false Params Λ) (σ : World D)
   ⟨stack, ⟨(), arguments, entry, ⟨false, Params, Λ, arguments, r⟩⟩, σ.spur, []⟩
 
 def source (why : Bool) : RufMaschineG D :=
-  ⟨beforeReturn.speicher, fun _ => thread (sourceRest why) beforeReturn, [], entry⟩
+  ⟨beforeReturn.speicher, fun _ => thread (sourceRest why) beforeReturn, [], entry, LowLevel.ContextLedger.empty⟩
 
 private theorem source_held_zeuge (why : Bool) :
     HeldIn holdings (offen ((source why).faeden 0).spur) := by
@@ -266,7 +266,7 @@ theorem canonical_reason_bypass_zeuge :
 def singleCleanup : RueckRessourcen D V [.held false] := ⟨[false], .refl _⟩
 def singleWorld : World D := entry.nimmt false
 def singleSource : RufMaschineG D :=
-  ⟨initial, fun _ => thread (.ende (.retWhyScoped reason singleCleanup)) singleWorld, [], entry⟩
+  ⟨initial, fun _ => thread (.ende (.retWhyScoped reason singleCleanup)) singleWorld, [], entry, LowLevel.ContextLedger.empty⟩
 def singleCaptured : RufMaschineG D :=
   successor singleSource (thread (.aufraeumen ⟨.inr reason, singleWorld⟩ [false]) singleWorld) []
 def singleFinishedThread : RufFadenG D :=
@@ -297,7 +297,7 @@ def directRest (why : Bool) : GRest D V false Params [] :=
   .ende (if why then .retWhyScoped reason emptyCleanup
     else .retScoped (.val (.var .here)) emptyCleanup)
 def directSource (why : Bool) : RufMaschineG D :=
-  ⟨initial, fun _ => thread (directRest why) entry, [], entry⟩
+  ⟨initial, fun _ => thread (directRest why) entry, [], entry, LowLevel.ContextLedger.empty⟩
 def directFinishedThread (why : Bool) : RufFadenG D :=
   thread (.zurueckgekehrt ⟨answer why, entry⟩) entry
 def directFinished (why : Bool) : RufMaschineG D :=

@@ -64,7 +64,7 @@ theorem child_and_parent : closed.generations 7 = 4 ∧ closed.generations 2 = 1
 /-- The ledger operation executes the release of its actual stored entry. -/
 theorem ledger_release :
     (ContextLedger.empty.set 4 opened).close 4 key =
-      .ok (ContextLedger.empty.set 4 opened |>.set 4 closed) := by
+      .ok ((ContextLedger.empty.set 4 opened).set 4 closed) := by
   simp only [ContextLedger.close, ContextLedger.set_self, released]
 
 /-- An invalid stamp cannot use a successful escrow close to bypass the
