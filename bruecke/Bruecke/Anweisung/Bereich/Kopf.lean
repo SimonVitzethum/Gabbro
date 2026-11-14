@@ -23,31 +23,44 @@ theorem lowBodyF_narrow_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
       lowBodyF u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ tail r = .ok rest ∧
       b0 = .narrow (.var v) lo hi err rest := by
   simp only [lowBodyF] at h
-  split at h
-  · cases h
-  · rename_i j hj
+  cases hj : paramPos fn.params x with
+  | error e => simp only [hj] at h <;> cases h
+  | ok j =>
+    simp only [hj] at h
     have hnum := hn
     unfold numericParam at hnum
     rw [paramPos_find _ _ _ hj] at hnum
     cases hp : fn.params[j]? with
-    | none => rw [hp] at h; cases h
+    | none => rw [hp] at h <;> cases h
     | some p =>
       obtain ⟨nm, ty⟩ := p
-      rw [hp] at h hnum
+      rw [hp] at hnum
       cases ty
       case int a b =>
-        split at h
-        · cases h
-        · rename_i v hv
-          split at h
-          · cases h
-          · rename_i err tail herr
-            split at h
-            · cases h
-            · rename_i rest hrest
-              cases h
-              exact ⟨j, a, b, v, err, tail, rest, hj, hv, herr, hrest, rfl⟩
-          · cases h
+        simp only [hp] at h
+        cases hv : lowVar Γ j (.int a b) with
+        | error e => simp only [hv] at h <;> cases h
+        | ok v =>
+          simp only [hv] at h
+          cases herr : lowEndL (l := false) u c Γ fn blockFuel Λ [] ss with
+          | error e => simp only [herr] at h <;> cases h
+          | ok pair =>
+            obtain ⟨err, ending⟩ := pair
+            simp only [herr] at h
+            cases ending with
+            | nil => cases h
+            | cons marker tail =>
+              cases marker <;> try { cases h }
+              case blkEnd =>
+                cases hrest : lowBodyF u c (.int lo hi :: Γ)
+                    (fn.mitBindung x (lo, hi)) n Λ tail r with
+                | error e => simp only [hrest] at h <;> cases h
+                | ok rest =>
+                  simp only [hrest] at h
+                  cases h
+                  exact ⟨j, a, b, v, err, tail, rest,
+                    (by first | exact hj | rfl), (by first | exact hv | rfl),
+                    herr, hrest, rfl⟩
       all_goals cases hnum
 
 theorem lowSeq_narrow_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
@@ -65,35 +78,43 @@ theorem lowSeq_narrow_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ :
   rw [lowSeqL_succ] at h
   simp only [lowSeqStep, lowStufe_seq, lowStufe_ende] at h
   cases hj : paramPos fn.params x with
-  | error e => simp only [hj, Except.bind] at h; cases h
+  | error e => simp only [hj, Except.bind] at h <;> cases h
   | ok j =>
     simp only [hj, Except.bind] at h
     have hnum := hn
     unfold numericParam at hnum
     rw [paramPos_find _ _ _ hj] at hnum
     cases hp : fn.params[j]? with
-    | none => rw [hp] at h; cases h
+    | none => rw [hp] at h <;> cases h
     | some entry =>
       obtain ⟨nm, ty⟩ := entry
-      rw [hp] at h hnum
+      rw [hp] at hnum
       cases ty
       case int a b =>
+        simp only [hp] at h
         cases hv : lowVar Γ j (.int a b) with
-        | error e => simp only [hv, Except.bind] at h; cases h
+        | error e => simp only [hv, Except.bind] at h <;> cases h
         | ok v =>
           simp only [hv, Except.bind] at h
-          split at h
-          · cases h
-          · rename_i err remaining herr
-            cases hq : lowSeqL (l := loopMode) u c (.int lo hi :: Γ)
-                (fn.mitBindung x (lo, hi)) n Λ [] remaining with
-            | error e => simp only [hq, Except.bind] at h; cases h
-            | ok pair =>
-              obtain ⟨⟨Λ', rest⟩, tail'⟩ := pair
-              simp only [hq, Except.bind] at h
-              cases h
-              exact ⟨j, a, b, v, err, remaining, ⟨Λ', rest⟩, hj, hv, herr, hq, rfl⟩
-          · cases h
+          cases herr : lowEndL (l := loopMode) u c Γ fn n Λ [] ss with
+          | error e => simp only [herr] at h <;> cases h
+          | ok pair =>
+            obtain ⟨err, ending⟩ := pair
+            simp only [herr] at h
+            cases ending with
+            | nil => cases h
+            | cons marker remaining =>
+              cases marker <;> try { cases h }
+              case blkEnd =>
+                cases hq : lowSeqL (l := loopMode) u c (.int lo hi :: Γ)
+                    (fn.mitBindung x (lo, hi)) n Λ [] remaining with
+                | error e => simp only [hq, Except.bind] at h <;> cases h
+                | ok pair =>
+                  obtain ⟨⟨Λ', rest⟩, tail'⟩ := pair
+                  simp only [hq, Except.bind] at h
+                  cases h
+                  exact ⟨j, a, b, v, err, remaining, ⟨Λ', rest⟩,
+                    (by first | exact hj | rfl), (by first | exact hv | rfl), herr, hq, rfl⟩
       all_goals cases hnum
 
 /-- Leaf statements in an explicit ending use the same canonical single-statement reader. -/
@@ -101,7 +122,7 @@ theorem lowEndL_leaf_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : 
     {st : UStmt} {ss tail : List UStmt} {endB : Endblock (declOf u) (verOf u c) loopMode Γ Λ}
     (hs : LeseEinzeln st)
     (h : lowEndL (l := loopMode) u c Γ fn (n + 1) Λ [] (st :: ss) = .ok (endB, tail)) :
-    ∃ Λ' (gs : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ')
+    ∃ Λ', ∃ (gs : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ')
       (rest : Endblock (declOf u) (verOf u c) loopMode Γ Λ'),
       lowStmtL (l := loopMode) u c Γ fn Λ st = .ok ⟨Λ', gs⟩ ∧
       lowEndL (l := loopMode) u c Γ fn n Λ' [] ss = .ok (rest, tail) ∧ endB = .cons gs rest := by
@@ -114,17 +135,17 @@ theorem lowEndL_leaf_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : 
     all_goals cases hs
   rw [hd] at h
   cases hg : lowStmtL (l := loopMode) u c Γ fn Λ st with
-  | error e => simp only [hg, Except.bind] at h; cases h
+  | error e => simp only [hg, Except.bind] at h <;> cases h
   | ok pair =>
     obtain ⟨Λ', gs⟩ := pair
     simp only [hg, Except.bind] at h
     cases he : lowEndL (l := loopMode) u c Γ fn n Λ' [] ss with
-    | error e => simp only [he, Except.bind] at h; cases h
+    | error e => simp only [he, Except.bind] at h <;> cases h
     | ok pair =>
       obtain ⟨rest, tail'⟩ := pair
       simp only [he, Except.bind] at h
       cases h
-      exact ⟨Λ', gs, rest, hg, he, rfl⟩
+      exact ⟨Λ', gs, rest, (by first | exact hg | rfl), he, rfl⟩
 
 theorem endBodyZ_rest {loopMode : Bool} : ∀ n k ss {Γ : Ctx} (fn ft : UFn) (ns : BodyNames)
     {Λ : List (Res (declOf u))} (ending : Endblock (declOf u) (verOf u c) loopMode Γ Λ)

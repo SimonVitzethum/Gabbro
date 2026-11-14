@@ -25,9 +25,12 @@ def systemInitial : SystemContext D :=
     privilege := ⟨.kern, 0, false, 3, 0⟩
     interrupt := systemInterrupt }
 
-theorem systemInitial_valid : systemInitial.Valid authority :=
-  ⟨authority_valid, owners_valid, initial_valid.2.2.1,
-    by intro v member; cases member, by intro v member; cases member⟩
+theorem systemInitial_valid : systemInitial.Valid authority := by
+  refine ⟨authority_valid, owners_valid, initial_valid.2.2.1, ?_, ?_⟩
+  · intro v member
+    cases member
+  · intro v member
+    cases member
 
 theorem systemInitial_sim : ClassSimRel authority layout systemInitial before := by
   apply classSimRel_of_simRel (simRel_initial systemInitial_valid rfl before)
