@@ -48,7 +48,7 @@ theorem stmtsBodyZ_option_some {k : Nat} {fn : UFn} {ns : BodyNames} {num : Nat}
                   | none => simp only [hy, bind, Option.bind_none] at h; cases h
                   | some ys =>
                     simp only [hy, bind, Option.bind_some, pure, Option.some.injEq] at h
-                    exact ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, he, hp, ha, hy, h.symm⟩
+                    exact ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, (by first | exact he | rfl | simp_all), hp, ha, hy, h.symm⟩
   · simp only [hn, ↓reduceDIte] at h; cases h
 
 end Gabbro.Bruecke

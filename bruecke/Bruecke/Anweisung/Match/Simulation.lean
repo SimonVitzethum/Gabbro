@@ -38,10 +38,10 @@ theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
   cases hh : eval σl ev σl ρ with
   | none =>
     have hG : execStmt O passes R (.onOption ev pb ab) σ ρ = execBlock O passes R ab σl ρ := by
-      change (match eval σl ev σl ρ with
-        | some value => (execBlock O passes R pb σl (.cons value ρ)).schrumpf
-        | none => execBlock O passes R ab σl ρ) = _
-      simp only [hh]
+      first
+        | (simp only [execStmt, σl, hh]; done)
+        | (simp only [execStmt, σl] at *; simp only [hh])
+        | simp [execStmt, σl, hh]
     have hB : ∀ ρB, Gabbro.Body.step ρB (.onOption e (ns.fresh x) ps as) s =
         Gabbro.Body.exec ρB as s := by
       intro ρB
@@ -54,10 +54,10 @@ theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
     have hArm := hp σl (.cons value ρ) t hWl ht
     have hG : execStmt O passes R (.onOption ev pb ab) σ ρ =
         (execBlock O passes R pb σl (.cons value ρ)).schrumpf := by
-      change (match eval σl ev σl ρ with
-        | some value => (execBlock O passes R pb σl (.cons value ρ)).schrumpf
-        | none => execBlock O passes R ab σl ρ) = _
-      simp only [hh]
+      first
+        | (simp only [execStmt, σl, hh]; done)
+        | (simp only [execStmt, σl] at *; simp only [hh])
+        | simp [execStmt, σl, hh]
     have hB : ∀ ρB, Gabbro.Body.step ρB (.onOption e (ns.fresh x) ps as) s =
         Gabbro.Body.exec ρB ps t := by
       intro ρB

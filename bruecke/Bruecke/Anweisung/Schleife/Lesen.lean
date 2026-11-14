@@ -44,7 +44,7 @@ theorem seqZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {i
                 obtain ⟨ys, tail', used'⟩ := p
                 simp only [hy, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
                 obtain ⟨rfl, rfl, rfl⟩ := h
-                exact ⟨rfl, hg, t, body, tail, allocated, ys, ht, hbody, hy, rfl⟩
+                exact ⟨rfl, (by first | exact hg | rfl | simp_all), t, body, tail, allocated, ys, (by first | exact ht | rfl | simp_all), hbody, hy, rfl⟩
   all_goals simp only [seqZ, schrittB, namedStmt, stmtBody, bind, Option.bind_none, Option.map_none, reduceCtorEq] at h
 
 theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {inv : UEns}

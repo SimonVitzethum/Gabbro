@@ -35,6 +35,9 @@ theorem systemBindingStep_sim {Γ : Ctx} {resources : List (Res D)}
       checked.2.2.1 checked.2.2.2 answer invoked writes globals effect⟩
   constructor
   · simp only [systemBindingStep, invoked, bind, Option.bind_some, pure]
+    cases answer with
+    | none => rfl
+    | some r => cases r <;> rfl
   · cases answer with
     | none => exact called
     | some result =>

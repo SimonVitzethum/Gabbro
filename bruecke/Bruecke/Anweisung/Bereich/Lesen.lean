@@ -36,7 +36,7 @@ theorem seqZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String} {lo 
             obtain ⟨ys, r, us⟩ := p
             simp only [hq, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl, rfl⟩ := h
-            exact ⟨e, err, tail, ys, he, herr, hq, rfl⟩
+            exact ⟨e, err, tail, ys, (by first | exact he | rfl | simp_all), (by first | exact herr | rfl | simp_all), hq, rfl⟩
 
 theorem stmtsBodyZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String} {lo hi : Int}
     {ss : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}
@@ -64,7 +64,7 @@ theorem stmtsBodyZ_narrow_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String
           | none => simp only [hq, bind, Option.bind_none] at h; cases h
           | some ys =>
             simp only [hq, bind, Option.bind_some, pure, Option.some.injEq] at h
-            exact ⟨e, err, tail, ys, he, herr, hq, h.symm⟩
+            exact ⟨e, err, tail, ys, (by first | exact he | rfl | simp_all), (by first | exact herr | rfl | simp_all), hq, h.symm⟩
 
 /-- A successful ending reader either returns now or consumes one supported leaf. -/
 theorem endBodyZ_cases {k : Nat} {fn : UFn} {ns : BodyNames} {st : UStmt}
@@ -92,7 +92,7 @@ theorem endBodyZ_cases {k : Nat} {fn : UFn} {ns : BodyNames} {st : UStmt}
         obtain ⟨ys, tail'⟩ := p
         simp only [hr, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨b, ys, hleaf, hsame.1, hr, rfl⟩
+        exact ⟨b, ys, hleaf, (by first | exact hsame.1 | rfl | simp_all), (by first | exact hr | rfl | simp_all), rfl⟩
   cases st
   case ret r =>
     simp only [endBodyZ] at h
