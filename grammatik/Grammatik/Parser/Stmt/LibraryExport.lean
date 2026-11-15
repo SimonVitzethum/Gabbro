@@ -176,6 +176,9 @@ local macro "export_functions" : tactic => `(tactic| (
 
 -- Each complete value below is inferred exclusively from a canonical success
 -- equation, before any dependent function or declaration projection is used.
+set_option diagnostics true in
+set_option profiler true in
+set_option maxHeartbeats 300000 in
 private theorem full_phases :
     ∃ items, parseTopTief fullTokens = .ok items ∧
       (∃ expanded, exportLibraryUnit (uMembers (pre108 items)) = .ok expanded ∧
