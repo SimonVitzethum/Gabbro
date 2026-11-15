@@ -64,6 +64,10 @@ set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "init"
+
 -- The shared phase theorem leaves concrete pass proofs to this consumer.
 -- Activate the same local canonical operation equations here.
 -- Keep partial large-fuel callbacks as functions. Only the canonical unfolding
@@ -91,6 +95,10 @@ attribute [local cbv_eval]
 attribute [local cbv_eval] Spec.Walk.expr_literal Spec.Walk.type_atom
 
 -- Source fixtures have their own namespace, distinct from the AST witnesses.
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "data"
+
 namespace SourceWitnessData
 
 def source : String :=
@@ -124,7 +132,9 @@ open SourceWitnessData
 
 open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
 
-#eval IO.eprintln "dyn-source-phase: chunks"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "chunks"
 
 private def characters0 : List Char :=
   ['t', 'a', 'b', 'l', 'e', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', ' ', '{', ' ',
@@ -327,7 +337,9 @@ private def chunks : List Chunk :=
 
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
-#eval IO.eprintln "dyn-source-phase: text"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "text"
 
 private theorem source_text : source = String.ofList (characters chunks) := by cbv
 
@@ -337,7 +349,9 @@ private theorem lex_from_characters (text : String) (cs : List Char) (ts : List 
   rw [textEq, lex_ofList]
   exact scanned
 
-#eval IO.eprintln "dyn-source-phase: lexer"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "lexer"
 
 private theorem source_lexed : lex source = .ok (tokens chunks) :=
   lex_from_characters source (characters chunks) (tokens chunks) source_text
@@ -352,7 +366,9 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
 
 -- Retain kernel-checked normalized data from every real phase, including the parsed input.
 -- No later value contains a get that re-runs its producer chain.
-#eval IO.eprintln "dyn-source-phase: parse"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "parse"
 
 private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -364,7 +380,9 @@ private theorem source_items_success :
 private theorem source_items_read : parsed = .ok source_items :=
   parsed_from_phases source_lexed source_items_success
 
-#eval IO.eprintln "dyn-source-phase: fold"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "fold"
 
 private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -373,7 +391,9 @@ private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
     SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
 
-#eval IO.eprintln "dyn-source-phase: close"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "close"
 
 private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -382,7 +402,9 @@ private def source_close_value : List Closed × List SItemTief := source_close_r
 private theorem source_close_success :
     prepare source_fold_value = .ok source_close_value := source_close_result.property
 
-#eval IO.eprintln "dyn-source-phase: tagged"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "tagged"
 
 private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -391,7 +413,9 @@ private def source_tagged_value : List SItemTief × List String := source_tagged
 private theorem source_tagged_success :
     exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
 
-#eval IO.eprintln "dyn-source-phase: spec"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "spec"
 
 private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -400,7 +424,9 @@ private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
     Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
-#eval IO.eprintln "dyn-source-phase: checked"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "checked"
 
 private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -409,7 +435,9 @@ private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
     checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
 
-#eval IO.eprintln "dyn-source-phase: library"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "library"
 
 private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -426,7 +454,9 @@ private theorem source_exported : exportDeclarationUnit source_items = .ok sourc
     source_fold_success source_close_success source_tagged_success
     source_spec_success source_checked_success source_library_success
 
-#eval IO.eprintln "dyn-source-phase: summary"
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "summary"
 
 private theorem source_phases : ∃ items output,
     parsed = .ok items ∧ exportDeclarationUnit items = .ok output ∧
