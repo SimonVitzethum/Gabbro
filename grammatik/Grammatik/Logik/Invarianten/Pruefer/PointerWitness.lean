@@ -14,6 +14,7 @@ abbrev capability : Ty := .ptr (.table 0 (true, true))
 def declaration : Deklaration :=
   { Witness.declaration with
     tabNr := fun n => if n = 0 then some () else none
+    anbieter_passt := fun _ item => nomatch item
     sigNr := fun _ =>
       { params := [capability], erg := none, gruende := 0, haelt := []
         schreibt := fun _ => true, gschreibt := fun _ => false
