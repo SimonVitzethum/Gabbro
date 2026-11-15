@@ -151,7 +151,16 @@ def checkedCandidate : { value : Except String (Emitted text 256) // emit text 2
   refine ⟨?value, ?certificate⟩
   case certificate =>
     unfold emit compile Frontend.source
-    simp only [source_lex_zeuge]
+    split
+    next error rejected =>
+      have impossible := source_lex_zeuge.symm.trans rejected
+      cases impossible
+    next tokens origin =>
+      have same : tokens = textTokens := Except.ok.inj (origin.symm.trans source_lex_zeuge)
+      subst tokens
+      have origin_eq : origin = source_lex_zeuge := Subsingleton.elim _ _
+      subst origin
+      rfl
 
 def candidate : Except String (Emitted text 256) := checkedCandidate.val
 
@@ -249,7 +258,16 @@ def checkedEndCandidate :
   refine ⟨?value, ?certificate⟩
   case certificate =>
     unfold emit compile Frontend.source
-    simp only [end_lex_zeuge]
+    split
+    next error rejected =>
+      have impossible := end_lex_zeuge.symm.trans rejected
+      cases impossible
+    next tokens origin =>
+      have same : tokens = endTokens := Except.ok.inj (origin.symm.trans end_lex_zeuge)
+      subst tokens
+      have origin_eq : origin = end_lex_zeuge := Subsingleton.elim _ _
+      subst origin
+      rfl
 
 def endCandidate : Except String (Emitted endText 256) := checkedEndCandidate.val
 
