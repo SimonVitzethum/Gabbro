@@ -1,36 +1,12 @@
 /-
-  File:    Grammatik/Zielsatz/NeverAsm.lean -- `-> never` with an `asm` body that has `out`.
-
-  THE DEFECT (emitter side, Rust only, not touched here). A function declared `-> never`
-  whose body is `asm { … out { result } }` is contradictory: `-> never` lowers to
-  `_Noreturn` (`prototyp_kern`, emit.rs), an `out { result }` operand lowers to
-  `return result;` (the `asm` branch, emit.rs). Together that is not C. The checker
-  accepts it: `S009` (`nie_rueckkehr`, schleifen.rs) returns early on every non-`Block`
-  body (`let FnRumpf::Block(b) = &f.rumpf else { return };`), so an `asm` body is never
-  held against its `-> never` declaration -- phase 2 reports 0 errors.
-
-  THE MODEL SIDE (this file, Lean only). A foreign body is `a : D.Ax` (Syntax.lean); its
-  declared result is `D.aerg a`, and an `out` that delivers a value is an oracle answer
-  that FITS (`einpassenErg`, Semantik.lean). For `D.aerg a = some .never` no raw word
-  fits, for any image (`antwortLeer_never`, EinpassenVoll.lean):
-  * (a) `AxNeverGut` -- the goodness condition: a `never` axiom delivers no out value;
-    proved for every declaration (`axNeverGut_gilt`), and at the oracle
-    (`axiomAntwort_never_keine`);
-  * (b) the call never continues: `execBlock` of such a `bindAxiom` ends in
-    `hardware (annahme a)` (`execBlock_bindAxiom_never`) -- the model error -- never in
-    a `logik` outcome (`bindAxiom_never_kein_logik`, consistent with `KeinLogikHaltG`);
-    progress names the head `nieZurueck` (`kopf_nieZurueck_never`), never `hardware`
-    (`kein_hardware_an_never`, consistent with `FortschrittG`/`fort_dann`).
-  The acceptance side keeps admitting the PURE `-> never` axiom (`stelleOk_never_ax`,
-  the contrast `w1v_bool` in ProbenW1.lean): forbidding the contradictory `out` is the
-  checker's job (proposed sentence below, not implemented here).
-
-  PROPOSED CHECKER SENTENCE (not implemented): a `-> never` function with an `asm` body
-  that names `out { result }` is refused -- `_Noreturn` together with `return result` is
-  not C; whoever reads the assembler's result declares a result type, whoever never
-  returns writes no `out`.
+  A foreign result declared `never` has no fitting oracle answer. Its call
+  cannot continue, and progress classifies its head as the named stop
+  `nieZurueck`. The answer-site rule admits this result type. These semantic
+  statements and their standalone witness are independent of whole-program
+  contract acceptance in the separate G1/W1 probes.
 -/
 module
+
 public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 @[expose] public section
@@ -109,8 +85,7 @@ theorem bindAxiom_never_kein_logik (O : Orakel D) (passes : Nat)
 
 /-! ## 3. Progress names it `nieZurueck`, never `hardware` -/
 
-/-- The acceptance side keeps admitting the PURE `-> never` axiom: it is `StelleOk` by
-    its declaration (the contrast `w1v_bool`, ProbenW1.lean). -/
+/-- The answer-site rule admits a declared `never` result. -/
 theorem stelleOk_never_ax (a : D.Ax) (h : D.aerg a = some .never) :
     StelleOk D (.inl a) :=
   Or.inl h
