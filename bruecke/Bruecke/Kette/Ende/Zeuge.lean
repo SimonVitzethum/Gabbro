@@ -253,10 +253,8 @@ theorem option_unit_zeuge : GetragenG optionUnit (fun _ => True) ∧
 /-- Joint nondegenerate premises for the option-end inversion and simulations:
     two table slots, actual call results, writable storage and an explicit closer. -/
 theorem lowEndL_bindOpt_ok_zeuge :
-    (match lowEndL (l := false) optionUnit ⟨1, by decide⟩ (optionEnd.params.map (·.2))
-        optionEnd 12 [] [] optionStatements with
-      | .error _ => False
-      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
+    (lowEndL (l := false) optionUnit ⟨1, by decide⟩ (optionEnd.params.map (·.2))
+        optionEnd 12 [] [] optionStatements).toOption.map Prod.snd = some [UStmt.blkEnd] ∧
     (seqZ optionUnit 12 optionEnd (BodyNames.start optionEnd) optionStatements).map (·.1) =
       some optionBody := by
   constructor <;> cbv
@@ -264,21 +262,15 @@ theorem lowEndL_bindOpt_ok_zeuge :
 /-- The three dispatch forms are ordinary structured prefixes before an explicit
     terminal return. Their existing two-arm fixtures keep every arm nonempty. -/
 theorem lowEndL_struct_ok_zeuge :
-    (match lowEndL (l := false) OptionZeuge.unit ⟨0, by decide⟩ (OptionZeuge.test.params.map (·.2))
+    (lowEndL (l := false) OptionZeuge.unit ⟨0, by decide⟩ (OptionZeuge.test.params.map (·.2))
         OptionZeuge.test 12 [] []
-        (OptionZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
-      | .error _ => False
-      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
-    (match lowEndL (l := false) ReasonZeuge.unit ⟨0, by decide⟩ (ReasonZeuge.test.params.map (·.2))
+        (OptionZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd])).toOption.map Prod.snd = some [UStmt.blkEnd] ∧
+    (lowEndL (l := false) ReasonZeuge.unit ⟨0, by decide⟩ (ReasonZeuge.test.params.map (·.2))
         ReasonZeuge.test 12 [] []
-        (ReasonZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
-      | .error _ => False
-      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
-    (match lowEndL (l := false) TagZeuge.unit ⟨0, by decide⟩ (TagZeuge.test.params.map (·.2))
+        (ReasonZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd])).toOption.map Prod.snd = some [UStmt.blkEnd] ∧
+    (lowEndL (l := false) TagZeuge.unit ⟨0, by decide⟩ (TagZeuge.test.params.map (·.2))
         TagZeuge.test 12 [] []
-        (TagZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
-      | .error _ => False
-      | .ok (_, tail) => tail = [UStmt.blkEnd]) := by
+        (TagZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd])).toOption.map Prod.snd = some [UStmt.blkEnd] := by
   refine ⟨?_, ?_, ?_⟩ <;> cbv
 
 end Gabbro.Bruecke.EndeZeuge
