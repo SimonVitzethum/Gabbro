@@ -7,7 +7,7 @@ module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Speichermodell.Atomar.AtomarZeuge
-public import Grammatik.Speichermodell.Maschine.Zeuge
+public import Grammatik.Speichermodell.Maschine.WeakWitness
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
 import all Batteries.Data.Except
 import all Init.Data.Repr
