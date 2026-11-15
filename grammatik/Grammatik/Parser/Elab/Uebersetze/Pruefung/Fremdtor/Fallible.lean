@@ -4,6 +4,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
 import all Init.Data.Repr
@@ -110,6 +111,12 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem contracts_checked :
     Vertraege.Pruefer.KontrakteGeprueftB checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible) (List.finRange uFremdFallible.fns.length) = true := by
-  decide +kernel
+apply Vertraege.Pruefer.SelectionWitness.contracts_success
+  rintro ⟨index, bound⟩
+  kernel_change index < 4 at bound
+  have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 := by omega
+  rcases choices with h | h | h | h
+  all_goals subst index
+  all_goals cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 end Gabbro.Grammatik.Parser.Uebersetze
