@@ -24,7 +24,7 @@ def boundIndexB : Expr D Γ Λ τ → Bool
   | _ => false
 
 def checkMemoryType : Ty → Except Refusal Unit
-  | .int _ _ | .str _ => .ok ()
+  | .int _ _ | .bool | .str _ => .ok ()
   | _ => .error (.unsupported "non-integer memory or string contents")
 
 /-- A scalar record (count one) is available outside a slot binder. Otherwise a

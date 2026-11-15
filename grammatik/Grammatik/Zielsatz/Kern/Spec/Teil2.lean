@@ -264,6 +264,12 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   -- C16: the admitted list is existential evidence, as in AkzeptiertSpec.
   pruef : ∃ checks : List (CheckDecl D), CheckAdmission P fs checks
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
+  /-- Strengthening of (a): VC-decided invariant return duties, independent of
+      user contracts and hardware ensures. Initial memory is checked on the unit. -/
+  invarianten : ∀ f, Invarianten.Pruefer.InvariantDuties P S f
+  /-- Checked requires at every call, ensures at every value return, and
+      absence of locally generated logic stops. No user contract proof. -/
+  kontrakte : ∀ f, Vertraege.Pruefer.ContractDuties P S f
 
 /-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start
     memory (nothing used, the free list full), and no declared start or run-time root is handed an

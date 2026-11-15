@@ -1,6 +1,6 @@
 module
 
-public import Mathlib.Data.Int.Basic
+import Mathlib.Data.Int.Basic
 
 @[expose] public section
 

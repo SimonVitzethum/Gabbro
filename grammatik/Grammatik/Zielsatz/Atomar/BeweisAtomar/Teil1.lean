@@ -245,8 +245,10 @@ theorem zielX_rely (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
       unfold lokW at hc
       exact @of_decide_eq_true _ (Classical.propDecidable _) hc)
   have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
-  have hI := fun f => invGutSA_mono hT ((hN.1 passes f).2.1)
-  have hIG := fun f => invGutGrundA_mono hT ((hN.1 passes f).2.2)
+  have hI := fun f => invGutSA_mono hT
+    ((hA.invarianten f passes Q (GeteiltA P ws) (fun _ h => h.1)).1)
+  have hIG := fun f => invGutGrundA_mono hT
+    ((hA.invarianten f passes Q (GeteiltA P ws) (fun _ h => h.1)).2)
   have hex := startExklusiv_ohne_haelt init hLeer
   have hGA := gx_ga_lauf hTA hX
   have hV := ziel_ort_atomar_voll P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)

@@ -30,7 +30,7 @@ def ws : List z.deklaration.Fn := [⟨0, by decide⟩]
 
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)
 
-theorem e_gueltig : e.gueltig = true := by decide
+theorem e_gueltig : e.gueltig = true := by decide +kernel
 
 theorem e_hat : e.Hat ⟨10, 0, true, [true]⟩ := by decide
 
@@ -62,7 +62,7 @@ def e : Einsatz := z.einsatz P ws (by decide) (by decide)
 
 def bnoetig : List Zelle := [⟨10, 0, true, [false]⟩]
 
-theorem e_gueltig : e.gueltig = false := by decide
+theorem e_gueltig : e.gueltig = false := by decide +kernel
 
 theorem e_hat : e.Hat ⟨10, 0, true, [false]⟩ := by decide
 
