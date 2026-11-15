@@ -90,4 +90,3 @@ theorem localSelect_valid (budget : Nat)
       exact hvalid
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
-
