@@ -41,10 +41,26 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 
 /-- A value-returning foreign call using the optional binding spelling. -/
-def text : String :=
-  "module optional_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return 23; } }"
+def characters : List Char :=
+  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'o', 'p', 't', 'i', 'o', 'n', 'a', 'l', '_',
+   'p', 'r', 'o', 'b', 'e', ' ', '{', ' ', 'a', 'x', 'i', 'o', 'm', ' ', 'a', 'x',
+   '(', ')', ' ', '-', '>', ' ', 'u', '8', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's',
+   ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', 'u', 'n', 'f', 'a', 'l', 's',
+   'i', 'f', 'i', 'a', 'b', 'l', 'e', ' ', '\"', 'p', 'r', 'o', 'b', 'e', '\"', ';',
+   ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ',
+   '-', '>', ' ', 'u', '8', ' ', '{', ' ', 'l', 'e', 't', ' ', 'r', '?', ' ', '=',
+   ' ', 'a', 'x', '(', ')', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '2', '3',
+   ';', ' ', '}', ' ', '}']
 
-def parsed := ((lexL text.toList).mapError reprStr).bind parseTopTief
+def text : String := String.ofList characters
+
+def parsed := ((lexL characters).mapError reprStr).bind parseTopTief
+
+/-- The staged lexer receives exactly the declared source characters. -/
+theorem parsed_from_text_zeuge :
+    parsed = ((lexL text.toList).mapError reprStr).bind parseTopTief := by
+  simp only [text, String.toList_ofList]
+  rfl
 
 theorem parsed_present : parsed.toOption.isSome = true := by kernel_rfl
 
