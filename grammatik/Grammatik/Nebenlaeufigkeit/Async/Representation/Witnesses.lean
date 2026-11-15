@@ -10,7 +10,7 @@ public theorem liveAt_waiting_zeuge :
 
 public theorem taskRep_partial_join_zeuge :
     TaskRep declaration types [2] future partialJoin taskValue :=
-  TaskRep.joinActive
+  TaskRep.joinActive (D := declaration) (types := types)
     (TaskRep.callReady [0, 2] "fast" [Parser.SExpr.variable "live"]
       (valueAt_typed declaration scalarType ten))
     (TaskRep.callActive [1, 2] "slow" [Parser.SExpr.variable "live"] (zero, twenty, ()))
