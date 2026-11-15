@@ -60,6 +60,7 @@ import all Init.Data.String.Termination
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Dyn
+set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
@@ -122,6 +123,8 @@ end SourceWitnessData
 open SourceWitnessData
 
 open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
+#eval IO.eprintln "dyn-source-phase: chunks"
 
 private def characters0 : List Char :=
   ['t', 'a', 'b', 'l', 'e', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', ' ', '{', ' ',
@@ -324,6 +327,8 @@ private def chunks : List Chunk :=
 
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
+#eval IO.eprintln "dyn-source-phase: text"
+
 private theorem source_text : source = String.ofList (characters chunks) := by cbv
 
 private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
@@ -331,6 +336,8 @@ private theorem lex_from_characters (text : String) (cs : List Char) (ts : List 
     lex text = .ok ts := by
   rw [textEq, lex_ofList]
   exact scanned
+
+#eval IO.eprintln "dyn-source-phase: lexer"
 
 private theorem source_lexed : lex source = .ok (tokens chunks) :=
   lex_from_characters source (characters chunks) (tokens chunks) source_text
@@ -345,6 +352,8 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
 
 -- Retain kernel-checked normalized data from every real phase, including the parsed input.
 -- No later value contains a get that re-runs its producer chain.
+#eval IO.eprintln "dyn-source-phase: parse"
+
 private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
   case origin => kernel_value
@@ -355,12 +364,16 @@ private theorem source_items_success :
 private theorem source_items_read : parsed = .ok source_items :=
   parsed_from_phases source_lexed source_items_success
 
+#eval IO.eprintln "dyn-source-phase: fold"
+
 private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
   refine ⟨?actual, ?origin⟩
   case origin => kernel_value
 private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
     SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
+
+#eval IO.eprintln "dyn-source-phase: close"
 
 private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -369,12 +382,16 @@ private def source_close_value : List Closed × List SItemTief := source_close_r
 private theorem source_close_success :
     prepare source_fold_value = .ok source_close_value := source_close_result.property
 
+#eval IO.eprintln "dyn-source-phase: tagged"
+
 private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
   refine ⟨?actual, ?origin⟩
   case origin => kernel_value
 private def source_tagged_value : List SItemTief × List String := source_tagged_result.val
 private theorem source_tagged_success :
     exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
+
+#eval IO.eprintln "dyn-source-phase: spec"
 
 private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -383,12 +400,16 @@ private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
     Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
+#eval IO.eprintln "dyn-source-phase: checked"
+
 private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
   case origin => kernel_value
 private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
     checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
+
+#eval IO.eprintln "dyn-source-phase: library"
 
 private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
@@ -404,6 +425,8 @@ private theorem source_exported : exportDeclarationUnit source_items = .ok sourc
     (ordinary := source_spec_value) (validated := source_checked_value) (output := source_library_value)
     source_fold_success source_close_success source_tagged_success
     source_spec_success source_checked_success source_library_success
+
+#eval IO.eprintln "dyn-source-phase: summary"
 
 private theorem source_phases : ∃ items output,
     parsed = .ok items ∧ exportDeclarationUnit items = .ok output ∧
