@@ -213,16 +213,16 @@ theorem requirement_result : translate (zPB.requires zLies) arguments = .ok requ
 
 theorem requirement_payload : requirement.payload = .tru := rfl
 
-/-- The strict arithmetic gate accepts the original body and its original post. -/
 set_option backward.isDefEq.respectTransparency false in
+/-- The strict arithmetic gate accepts the original body and its original post. -/
 theorem environment_checked (sources : LockSources zS) :
     (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
   obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
     (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
-      simp only [postCheck, post_result]
-      exact ⟨_, rfl⟩)
+      refine ⟨⟨⟨post value, post_result value⟩⟩, ?_⟩
+      simp only [postCheck, post_result])
   have decided : decideB (close (writerMatrix .tru .tru pre.formula))
       (close_closed (writerMatrix .tru .tru pre.formula)) = true := by
     apply (close_decide_true_iff _).mpr
