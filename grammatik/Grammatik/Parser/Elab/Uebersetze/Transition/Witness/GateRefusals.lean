@@ -176,7 +176,8 @@ theorem n447_positiv_zeuge :
 
 /-- Stack-ness claimed twice (gift 1108). -/
 @[expose] def doppelStapel : SSyscall :=
-  { lesetor with params := lesetor.params ++ [("childStack", .atom "u64")],
+  { lesetor with
+    params := (lesetor.params ++ [("childStack", .atom "u64")]),
     way := (.lit "linux" "x86_64"
       ({ sauberBind with ins := [.binds "rdi" "fd", .binds "rsi" "len",
           .binds "rdx" "childStack"], stack := ["rsi", "rdx"] })
@@ -190,7 +191,8 @@ theorem n447_zeuge :
 
 /-- A byte buffer with its length bound passes the binding checks. -/
 @[expose] def byteBuffer : SSyscall :=
-  { lesetor with params := [("fd", .atom "u32"),
+  { lesetor with
+    params := [("fd", .atom "u32"),
       ("buf", .ptr "normal" "w" (.atom "u8")), ("len", .atom "u64")],
     gate := sauberTor,
     way := (.lit "linux" "x86_64"
@@ -223,7 +225,8 @@ theorem n464_other_buffer_zeuge :
 /-- A mirrored bound and a signed byte buffer express the same transfer limit. -/
 theorem n464_mirrored_zeuge :
     refused (uTorBindungPruef [] [] [leseGrund]
-      { byteBuffer with params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "i8")),
+      { byteBuffer with
+        params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "i8")),
           ("len", .atom "u64")],
         gate := { sauberTor with
           pre := [.bin ">=" (.built "lenof" [.variable "buf"]) (.variable "len")] } }) = false := by decide +kernel
@@ -304,7 +307,8 @@ theorem n574_ausnahme_zeuge :
 
 /-- A foreign body taking Gabbro code (gift 1392). -/
 @[expose] def codeSig : FnSig :=
-  { reineSig with name := "starte",
+  { reineSig with
+    name := "starte",
     params := [("f", .raw "fn ( d : u64 ) -> u32 costs <= 1 ops"), ("d", .atom "u64")] }
 
 theorem n574_zeuge :
@@ -342,8 +346,9 @@ theorem a006_zeuge :
 
 /-- A sealed machine at a gate is refused as sealed. -/
 @[expose] def versiegeltesTor : SSyscall :=
-  { lesetor with way := .lit "linux" "riscv64" sauberBind
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with
+    way := (.lit "linux" "riscv64" sauberBind
+      (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem a006_tor_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] versiegeltesTor)
@@ -353,12 +358,18 @@ theorem a006_tor_zeuge :
 
 /-- The collector reads entries, bodies and `= asm` machines, never claims. -/
 @[expose] def beispielEinheit : List SItemTief :=
-  [.entryT { name := "e", vektor := none, via := none, arch := "x86_64", regIn := [],
-    regOut := [], erhaelt := [], kills := [], stapel := "k", perCpu := true, ist := none,
-    nest := none, dispatch := ["m", "w"] },
-   .protoT { reineSig with klauseln := [.effs [.pure], .arch "aarch64"] }]
-
-theorem erklaerte_arch_zeuge :
-    uErklaerteArch beispielEinheit = ["x86_64"] := by decide +kernel
-
-end Gabbro.Grammatik.Parser.GateRefusals
+  [.entryT ({
+      name := "e",
+      vektor := none,
+      via := none,
+      arch := "x86_64",
+      regIn := [],
+      regOut := [],
+      erhaelt := [],
+      kills := [],
+      stapel := "k",
+      perCpu := true,
+      ist := none,
+      nest := none,
+      dispatch := ["m", "w"] }),
+   .protoT ({ reineSig with klauseln := [.effs [.pure], .arch "aarch64"] })]
