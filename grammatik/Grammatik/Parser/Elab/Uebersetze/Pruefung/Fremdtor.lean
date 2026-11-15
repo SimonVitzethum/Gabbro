@@ -69,6 +69,14 @@ open Gabbro.Grammatik.Zielsatz
 -- otherwise retain several complete front-end reductions in the same process.
 set_option Elab.async false
 
+open Lean Elab Tactic in
+elab "foreign_gate_progress" : tactic => do
+  let target ← getMainTarget
+  let label := match target.eq? with
+    | some (_, lhs, _) => lhs.getAppFn.constName!.toString
+    | none => "non-equality"
+  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label)
+
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper
@@ -234,7 +242,9 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   and_intros
-  all_goals decide +kernel
+  all_goals
+    foreign_gate_progress
+    decide +kernel
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
 
@@ -245,7 +255,9 @@ theorem fremdFallible_akzeptiert :
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   and_intros
-  all_goals decide +kernel
+  all_goals
+    foreign_gate_progress
+    decide +kernel
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
 
