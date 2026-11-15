@@ -2871,9 +2871,11 @@ list makes the round-6 probe meet `AkzeptiertSpec`; `w1_abgelehnt`: `akzeptiert_
 refuses every program with its code; `w1_bool`/`w1_sonst_alles`: computed, the Bool is
 `false` and every other component is `true`, so the refusal is `antwortenB`'s alone. The same
 for an empty register range (`w1r_spec_nicht`, `w1r_bool`) and `.grund 0` (`w1g_bool`). The
-contrast: behind an axiom `-> never` the code is accepted (`w1v_bool`) and the head is
-`nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`). Every earlier probe that
-used `decide` on `Akzeptiert` (G1 float register included) still computes `true`.
+contrast: behind an axiom `-> never` the code with a literal-true function post is accepted
+(`w1v_bool`) and the head is `nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`).
+The original vacuous false post is refused outside the foreign-call WP fragment
+(`w1v_false_post_abgelehnt`). The current G1 probes are strict-checker refusals with the
+returning counterexamples described in §24.4.
 
 **Axioms.** `gabbro_ziel`, `schrittAnt`, `antInvG_erreichbar`, `antwortB_iff`,
 `w1_abgelehnt`: `propext`, `Classical.choice`, `Quot.sound`; `flt_trans_endlich`,
