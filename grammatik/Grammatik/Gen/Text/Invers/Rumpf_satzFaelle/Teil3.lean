@@ -176,7 +176,7 @@ theorem rumpf_satz_ende : ∀ {z : Spez} {V : Vertrag z.deklaration}
     obtain ⟨us2, r2⟩ := q
     simp only [hτ, hx, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hu
     obtain ⟨rfl, rfl⟩ := hu
-    simp only [Endblock.bindCall.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
+    simp only [Endblock.bindCall.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨k, hfk, hKP⟩ := hK fk
     obtain ⟨ty, hmeta, hb⟩ := bindWert_call H tabs fk k hfk hKP hp.hh hr τ he a hτ args as xs ha hx (nVar Γ.length)
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
@@ -226,7 +226,7 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     obtain ⟨us2, r2⟩ := q
     simp only [hτ, hx, hue, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq, Prod.mk.injEq] at hu
     obtain ⟨rfl, rfl⟩ := hu
-    simp only [Endblock.bindCallElse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
+    simp only [Endblock.bindCallElse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨k, hfk, hKP⟩ := hK fk
     have hR := ruf_ok H tabs fk k hfk hKP hp.hh args as xs ha hx
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ

@@ -404,7 +404,7 @@ theorem wirkungen_append (a b : List SKlausel) :
 
 theorem griffe_append (devs : List String) : ∀ (ps q : List (String × STyp)) (k : Nat),
     (∀ p ∈ ps, uGriffTyp devs p.2 = none) → uGriffe devs k (ps ++ q) = uGriffe devs (k + ps.length) q
-  | [], q, k, _ => by simp only [List.nil_append, List.length_nil, add_zero]
+  | [], q, k, _ => by simp only [List.nil_append, List.length_nil, Nat.add_zero]
   | p :: ps, q, k, h => by
     simp only [List.cons_append, uGriffe, h p List.mem_cons_self]
     rw [griffe_append devs ps q (k + 1) (fun p' hm => h p' (List.mem_cons_of_mem _ hm))]

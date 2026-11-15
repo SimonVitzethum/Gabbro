@@ -90,7 +90,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfS] at hu
-    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s u hd hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) s u hd hu
   | add a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with

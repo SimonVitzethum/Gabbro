@@ -153,7 +153,7 @@ theorem rumpf_satz_block : ∀ {z : Spez} {V : Vertrag z.deklaration}
     simp only [hτ, hx, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    simp only [Block.bindCall.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
+    simp only [Block.bindCall.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨k, hfk, hKP⟩ := hK fk
     obtain ⟨ty, hmeta, hb⟩ := bindWert_call H tabs fk k hfk hKP hp.hh hr τ he a hτ args as xs ha hx (nVar Γ.length)
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
@@ -199,7 +199,7 @@ Option.bind_none, reduceCtorEq] at hu
         subst hd
         obtain ⟨f', rfl⟩ : ∃ f', f = f' + 2 := ⟨f - 2, by simp at hf; omega⟩
         simp only [Block.bindCallInd.sizeOf_spec, sizeOf_nat, Bool.sizeOf_eq_one, Expr.fnref.sizeOf_spec,
-sizeOf_default, add_zero] at hn hf
+sizeOf_default, Nat.add_zero] at hn hf
         obtain ⟨k, hfk, hKP⟩ := hK fk
         obtain ⟨i, hi, hk⟩ := kinv_idx (gNr := gNr) hfk
         have hiE : i = z.deklaration.sig fk := by rw [hI fk] at hi; exact (Option.some.inj hi).symm
@@ -265,7 +265,7 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     simp only [hτ, hx, hue, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    simp only [Block.bindCallElse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
+    simp only [Block.bindCallElse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨k, hfk, hKP⟩ := hK fk
     have hR := ruf_ok H tabs fk k hfk hKP hp.hh args as xs ha hx
     have hN : nach z.deklaration fk Λ = Λ := nach_ohne_marken hM _ Λ
@@ -310,7 +310,7 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    simp only [Block.regRead.sizeOf_spec, Bool.sizeOf_eq_one, Nat.reduceAdd, sizeOf_default, add_zero] at hn hf
+    simp only [Block.regRead.sizeOf_spec, Bool.sizeOf_eq_one, Nat.reduceAdd, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨ty, hmeta, hb⟩ := bindWert_regRead H tabs koepfe r (nVar Γ.length) a hτ
     have H' := (H.push (z.deklaration.rtyp r) a ty 0 [] ctx.loops rfl hmeta).foldBinding
       (before := ctx) (.regRead (nVar Γ.length) "Dev" (nReg (rN z r))) (by intro _ _ h; cases h)
@@ -334,7 +334,7 @@ Option.bind_some, hur, Option.bind_none, reduceCtorEq] at hu
     simp only [hτ, hur, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
     obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by omega⟩
-    simp only [Block.awaits.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn hf
+    simp only [Block.awaits.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn hf
     obtain ⟨ty, hmeta, hstep⟩ := reihe_await H tabs koepfe f' g hat (nVar Γ.length) a hτ ss2
     have H' := H.push (z.deklaration.gtyp g) a ty 0 [] ctx.loops rfl hmeta
     obtain ⟨hΛ, cE, hrest⟩ := ihB rest _ _ f' ss2 us2 (by omega) (by omega) H' hr' hur

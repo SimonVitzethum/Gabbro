@@ -206,7 +206,7 @@ theorem kopfOk_delab {Γ : Ctx} {Λ : List (Res z.deklaration)} (art : Nat → U
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfS, uOfB] at hf
-    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s hd (Or.inl (by simpa using hf))
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) s hd (Or.inl (by simpa using hf))
   | add a b =>
     simp only [delabE] at hd
     cases ha : delabE z k a <;> cases hb : delabE z k b <;>
@@ -350,7 +350,7 @@ theorem scalar_type {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) index <;>
           simp only [hx, Option.map_none, Option.map_some, Option.some.injEq, reduceCtorEq] at hu
         subst hu; trivial
-    | widen _ _ value => exact ih value (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) u hu
+    | widen _ _ value => exact ih value (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) u hu
     | add a b | sub a b | mul a b =>
       simp only [uOfS] at hu
       cases ha : uOfS z art none a <;> cases hb : uOfS z art none b <;>
@@ -378,7 +378,7 @@ theorem printed_left_scalar {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaratio
     | widen _ _ value =>
       have accepted : (uOfS z art none value).isSome = true := by
         simpa only [uOfS, uOfB, Option.isSome_none, Bool.false_eq_true, or_false] using hf
-      exact ih value (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega)
+      exact ih value (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega)
         s hd (Or.inl accepted) op a b hbin u hu
     | add left right | sub left right | mul left right | lt left right | le left right | eq left right =>
       simp only [delabE] at hd
