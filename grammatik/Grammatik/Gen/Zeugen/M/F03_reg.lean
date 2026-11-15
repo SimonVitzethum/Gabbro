@@ -8,6 +8,8 @@ public meta import Grammatik.Gen.Druck.LeanZeuge
 import Grammatik.Gen.Druck.LeanZeuge
 
 public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
 public import Grammatik.Gen.Fein.Zellen
 public import Grammatik.Gen.Zeugen.Gap.F03_reg
 import all Init.Data.String.Basic

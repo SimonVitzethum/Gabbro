@@ -8,6 +8,8 @@ public meta import Grammatik.Gen.Druck.LeanZeuge
 import Grammatik.Gen.Druck.LeanZeuge
 
 public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
 
 @[expose] public section
 
