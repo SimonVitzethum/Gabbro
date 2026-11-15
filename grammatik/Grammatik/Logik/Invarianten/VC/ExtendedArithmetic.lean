@@ -143,8 +143,8 @@ theorem temporary_decided_zeuge :
   intro _
   rw [quoteQF_denote, lower_denote]
   intro initial
-  rw [quoteQF_denote, temporary_formula, temporaryFormula,
-    snapshots_denote (D := declaration) (kind := .int 0 10)]
+  rw [quoteQF_denote, temporary_formula, temporaryFormula]
+  apply (snapshots_denote (D := declaration) (kind := .int 0 10) _ _ _ values).mpr
   intro value _ selected
   simp only [LProp.denote, LTerm.denote] at selected
   simp only [post, lower_denote, entry, LProp.denote, LTerm.denote] at initial ⊢
