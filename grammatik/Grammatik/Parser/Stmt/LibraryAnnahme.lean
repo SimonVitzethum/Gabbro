@@ -6,6 +6,7 @@ public import Grammatik.Parser.Stmt.LibraryCertificates
 public import Grammatik.Parser.Stmt.LibraryExport
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import all Grammatik.Parser.Stmt.LibraryExport
 import all Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -95,6 +96,7 @@ private theorem ident_items : translationItems false =
     ident_tokens (translation_parsed false)
 
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
+  Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.checkFunction
 attribute [local cbv_eval] export_seq_succ lowStructL_succ lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
@@ -106,12 +108,36 @@ local macro "ident_functions" : tactic => `(tactic| (
   have choices : index = 0 ∨ index = 1 := by omega
   rcases choices with first | second
   · subst index
-    cbv <;> exact Eq.refl _
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
   · subst index
-    cbv <;> exact Eq.refl _))
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)))
 
--- Use LibraryExport's one generic assembler/checker certificate. The values
--- here are inferred from successful canonical producers, never reconstructed.
+private def identUnit : UProg where
+  tabs := [{ name := "sample::Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] }]
+  locks := []
+  fns :=
+    [{ name := "sample::consume",
+       params := [("p", .ptr { space := 0, rights := { read := true }, target := .table 0 })],
+       kinds := [.ptr { space := 0, rights := { read := true }, target := .table 0 }],
+       res := none, held := [], puts := [], gives := [], body := [], ret := .empty },
+     { name := "caller", params := [], kinds := [], res := none, held := [], puts := [], gives := [],
+       body := [.call "sample::consume" [.freshPtr "sample::Rows"
+         { space := 0, rights := { read := true }, target := .table 0 }]], ret := .empty }]
+
+private def identProduced0 : { value : EnsTy identUnit ⟨0, by decide⟩ ×
+    RumpTy identUnit ⟨0, by decide⟩ × ReqTy identUnit ⟨0, by decide⟩ //
+    lowerFnAt identUnit ⟨0, by decide⟩ = .ok value } := by
+  refine ⟨?value, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
+private def identProduced1 : { value : EnsTy identUnit ⟨1, by decide⟩ ×
+    RumpTy identUnit ⟨1, by decide⟩ × ReqTy identUnit ⟨1, by decide⟩ //
+    lowerFnAt identUnit ⟨1, by decide⟩ = .ok value } := by
+  refine ⟨?value, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
+-- Retain the canonical producer equations before assembling the actual image,
+-- as for the qualified source in LibraryExport.
 private theorem ident_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 (translationItems false))) = .ok expanded ∧
       alleOhneBibliothek expanded = true) ∧
@@ -121,8 +147,8 @@ private theorem ident_phases :
   · refine ⟨?expanded, ?produced, ?ordinary⟩
     case produced => cbv <;> exact Eq.refl _
     case ordinary => cbv
-  · refine ⟨?unit, ?made, ?facts⟩
-    case made => cbv <;> exact Eq.refl _
+  · refine ⟨identUnit, ?made, ?facts⟩
+    case made => cbv
     case facts =>
       refine {
         gate := by cbv
@@ -130,9 +156,26 @@ private theorem ident_phases :
         contracts := by cbv
         measures := by ident_functions
         functions := ?_ }
-      refine functions_of_success _ ?produced ?safe
-      case produced => ident_functions
-      case safe => intro invariants pointers foreigns; cbv
+      refine ⟨?pieces, ?equations, ?safe⟩
+      case pieces =>
+        change (f : Fin 2) → EnsTy identUnit f × RumpTy identUnit f × ReqTy identUnit f
+        exact Fin.cases identProduced0.val (Fin.cases identProduced1.val (fun f : Fin 0 => Fin.elim0 f))
+      case equations =>
+        rintro ⟨index, bound⟩
+        have small : index < 2 := bound
+        have choices : index = 0 ∨ index = 1 := by omega
+        rcases choices with h | h
+        · subst index; exact identProduced0.property
+        · subst index; exact identProduced1.property
+      case safe =>
+        intro invariants pointers foreigns
+        unfold checkedImage
+        cbv
+        simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+        constructor
+        · cbv
+        · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+          ident_functions
 
 /-- The identity caller unit through the export: the source text with an
     unqualified library call elaborates to an ordinary unit. -/
@@ -188,7 +231,7 @@ theorem export_ident_akzeptiert_zeuge :
       exportIdentGesenkert.2 (List.finRange exportIdentEinheit.locks.length)
       ((List.finRange exportIdentEinheit.tabs.length).map Sum.inl ++
         (List.finRange exportIdentEinheit.globs.length).map Sum.inr) [] = true := by
-  exact export_checked ident_export_facts ident_emitted
+  simpa only [checkedImage] using export_checked ident_export_facts ident_emitted
 
 /-- The end-to-end chain in one witness: source text to accepted unit. -/
 theorem export_ident_kette_zeuge :
