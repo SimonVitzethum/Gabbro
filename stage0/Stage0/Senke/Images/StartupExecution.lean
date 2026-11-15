@@ -12,18 +12,18 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : 
   {n fp0 : Nat} {sp : List (Nat × Nat)} {rootArgs : List (List Runner.W)} {tail : List Runner.B}
 
 /-- **`main`'s thread**: the spawns of the roots, then `main` as `rufAt n main`, then `exit_group`. -/
-theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : Nat} {ρ : Env D (D.params main)}
+theorem bild_kern [CloneAnswers] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : Nat} {ρ : Env D (D.params main)}
     (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) {m : Runner.Mem}
     (hm : BytesAt m codeBase ((spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       ((startStackBytes Ks (FB + FB) (encodeEnv Yb ρ :: rootArgs)).getD [] ++ tail)))
     (hval : ∀ τ (x : Var (D.params main) τ), ValueValid Yb τ (ρ.get x))
     (σ : World D) (hWa : WeltAt m Yb σ) (hy : TicketSync m Yb (BitVec.ofNat 64 fp0) Ks []) :
-    match rufAt P O passes n main σ ρ with
+    (match rufAt P O passes n main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = BitVec.ofNat 64 231 ∧ ExitErg Yb (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode e)
-    | _ => False := by
+    | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m cloneCode := by
   obtain ⟨c1, c2, c3, ⟨stackBytes, madeStacks, loadedStacks⟩, _⟩ := h.code hm
   obtain ⟨frame, made, hframe⟩ := startStackBytes_frame madeStacks fp0 loadedStacks 0 (by simp)
   simp only [List.getElem_cons_zero, Nat.mul_zero, Nat.add_zero] at made hframe
@@ -47,7 +47,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
   have hl := h.head
   -- the spawns
   have hcS : CodeAt m (BitVec.ofNat 64 codeBase) (spawnC (startScratch main) sp) := codeAt_left (codeAt_left c3)
-  have hsl : (spawnC (startScratch main) sp).length = 3 * roots.length := by rw [spawnC_len, h.hsp]; simp
+  have hsl : (spawnC (startScratch main) sp).length = 10 * roots.length := by rw [spawnC_len, h.hsp]; simp
   have hspb : ∀ x ∈ sp, x.1 < 2 ^ 31 ∧ x.2 < 2 ^ 31 := by
     intro x hx
     rw [h.hsp] at hx
@@ -57,11 +57,13 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     have := h.hyord
     simp only [startLen]
     constructor <;> omega
-  obtain ⟨m1, s1, a1⟩ := spawnC_ok (fp := BitVec.ofNat 64 fp0) (K := Ks) (s := startScratch main) (by omega) (by omega)
+  rcases spawnC_ok (fp := BitVec.ofNat 64 fp0) (K := Ks) (s := startScratch main) (by omega) (by omega)
     sp hspb m _ hcS hF0
-    (codeFar_nat' (by rw [hsl]; omega) (by omega))
+    (codeFar_nat' (by rw [hsl]; omega) (by omega)) with ⟨m1, s1, a1⟩ | hstop
+  swap
+  · exact Or.inr hstop
   -- `main`
-  have hcM : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length))) (startC A main n 231 true) := by
+  have hcM : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length))) (startC A main n 231 true) := by
     have := codeAt_right (codeAt_left (a := spawnC (startScratch main) sp ++ startC A main n 231 true) c3)
     rw [ofNat_add64, hsl] at this
     exact this
@@ -69,7 +71,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
   have hPC : PCode m1 A (fun g => ((cs[pos g]?).map (·.1)).getD []) (BitVec.ofNat 64 fp0) Ks := fun g =>
     ⟨(c2 g).1.agree a1 (codeFar_nat' (c2 g).2 (by omega)), codeFar_nat' (c2 g).2 (by omega)⟩
   have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := main) (e := 231) (keep := true)
-    (pc := codeBase + 16 * (3 * roots.length)) (fpI := fp0) (m := m1) h.hfa c1
+    (pc := codeBase + 16 * (10 * roots.length)) (fpI := fp0) (m := m1) h.hfa c1
     (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) h.hwhy hroom hex
     (maxTop_pos cs) h.hdepth (by decide) (by omega) hcM1 (by simp only [startLen]; omega)
     (hF0.agree a1) hPC hW0 σ ρ hval
@@ -78,14 +80,14 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     (hy.agree a1
       (by have := hW0.top; have := hW0.ord; omega))
   rw [show BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (spawnC (startScratch main) sp).length) =
-    BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length)) by rw [ofNat_add64, hsl]] at s1
+    BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length)) by rw [ofNat_add64, hsl]] at s1
   generalize rufAt P O passes n main σ ρ = o at hst ⊢
   cases o with
   | ok σ' v =>
     obtain ⟨t', m', q, sx, hq, hnr, he⟩ := hst
-    exact ⟨t', m', q, s1.trans sx, hq, hnr, he rfl⟩
-  | logik e => exact Stops.prefix s1 hst
-  | hardware e => exact Stops.prefix s1 hst
+    exact Or.inl ⟨t', m', q, s1.trans sx, hq, hnr, he rfl⟩
+  | logik e => exact Or.inl (Stops.prefix s1 hst)
+  | hardware e => exact Or.inl (Stops.prefix s1 hst)
   | why _ _ => exact hst.elim
 
 /-- **The thread of root `j`**, from its start code on its stack: the root as `rufAt n`, then `exit`. -/
@@ -99,11 +101,11 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
     (hWa : WeltAt m Yb σ)
     (hy : TicketSync m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks []) :
     match rufAt P O passes n (getElem roots j hj) σ ρ with
-    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 60
-    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m (logikCode e)
-    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
   obtain ⟨c1, c2, c3, ⟨stackBytes, madeStacks, loadedStacks⟩, _⟩ := h.code hm
@@ -127,14 +129,14 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
     startFrameBytes_frame made loadedFrame (by omega)
   have hρ : WordsAt m (slot (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) (BitVec.ofNat 64 FB))
       FB (encodeEnv Yb ρ) := startEnvBytes_words (reserved := 0) Yb ρ made loadedFrame
-  have hsl : (spawnC (startScratch main) sp).length = 3 * roots.length := by rw [spawnC_len, h.hsp]; simp
-  have hcR : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)))
+  have hsl : (spawnC (startScratch main) sp).length = 10 * roots.length := by rw [spawnC_len, h.hsp]; simp
+  have hcR : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (10 * roots.length + startLen + startLen * j)))
       (startC A roots[j] n 60 false) := by
     have h1 := codeAt_right (a := spawnC (startScratch main) sp ++ startC A main n 231 true) c3
     rw [ofNat_add64, List.length_append, hsl, startC_len] at h1
     have := rootsC_at A n roots _ j hj h1
-    rwa [show codeBase + 16 * (3 * roots.length + startLen) + 16 * (startLen * j) =
-      codeBase + 16 * (3 * roots.length + startLen + startLen * j) by omega] at this
+    rwa [show codeBase + 16 * (10 * roots.length + startLen) + 16 * (startLen * j) =
+      codeBase + 16 * (10 * roots.length + startLen + startLen * j) by omega] at this
   have hPC : PCode m A (fun g => ((cs[pos g]?).map (·.1)).getD []) (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks :=
     fun g => ⟨(c2 g).1, codeFar_nat' (by have := (c2 g).2; dsimp only at this ⊢; omega) (by omega)⟩
   have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := roots[j]) (e := 60) (keep := false)

@@ -60,7 +60,7 @@ theorem accepted_image : emit text 256 = .ok output :=
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- The existing G narrowing path receives the actual field snapshot, and the final
     return uses that checked local rather than rereading the original wide field. -/

@@ -140,7 +140,7 @@ theorem bild_initialized_length_u {u : UProg} {P : Programm (declOf u)} {passes 
 /-- Main execution from the initialized payload keeps the existing generic world
     relation: a caller may simulate any source world represented by those same bytes.
     Canonical source startup uses the world fact from bild_initialized_loaded_u. -/
-theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
+theorem bild_initialized_ok_u [CloneAnswers] {u : UProg} {P : Programm (declOf u)}
     {O : Orakel (declOf u)} {passes : Nat} {fs : List (declOf u).Fn}
     {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}
     {ρ : Env (declOf u) ((declOf u).params main)}
@@ -152,13 +152,13 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params main) τ), ValueValid b.Y τ (ρ.get x))
     (world : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match (rufAt (D := declOf u) P O b.passes b.depth main σ ρ :
+    (match (rufAt (D := declOf u) P O b.passes b.depth main σ ρ :
         RufAusgang (D := declOf u) main) with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧
         StopAt t' m' q ∧ q.nr = 231 ∧ ExitErg b.Y ((declOf u).erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode e)
-    | _ => False := by
+    | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m cloneCode := by
   obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
     (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
@@ -191,11 +191,11 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     match (rufAt (D := declOf u) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
         RufAusgang (D := declOf u) (starts[j]'hj).1) with
     | .ok _ _ => ∃ t' m' q,
-        Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        Star ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
-    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
-    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
   obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
@@ -214,11 +214,11 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     match (rufAt (D := declOf u) P O b.passes b.depth root.1 σ root.2 :
         RufAusgang (D := declOf u) root.1) with
     | .ok _ _ => ∃ t' m' q,
-        Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        Star ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
-    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
-    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False
   have completed : rootOutcome (starts[j]'hj) := by

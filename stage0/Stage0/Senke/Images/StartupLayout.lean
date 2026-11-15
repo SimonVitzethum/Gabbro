@@ -20,7 +20,7 @@ structure BildLage (passes : Nat) (P : Programm D) (fs : List D.Fn) (pos : D.Fn 
   hbody : body = cs.flatMap (·.1)
   hdepth : n = depthOf Ks (maxTop cs)
   hsp : sp = (List.range roots.length).map fun j =>
-    (codeBase + 16 * (3 * roots.length + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
+    (codeBase + 16 * (10 * roots.length + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
   hfp : fp0 = codeBase + 16 * (headLen roots.length + body.length)
   haddr : ∀ g, A g = (addrs (codeBase + 16 * headLen roots.length) (cs.map (·.1.length))).getD (pos g) 0
   hlen : cs.length = fs.length

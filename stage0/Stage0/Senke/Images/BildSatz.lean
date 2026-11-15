@@ -84,19 +84,19 @@ theorem bild_length {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name
 
 /-- **The program theorem**, `main`'s thread: from the loader's first instruction, the roots spawned, `main` as
     `rufAt b.depth main`, then `exit_group` of its result -- or the stop of G's outcome. -/
-theorem bild_ok [CloneOK] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
+theorem bild_ok [CloneAnswers] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {starts : List (Σ f : D.Fn, Env D (D.params f))} {Ks req : Nat} {Y : Nat → Lay D} {b : Bild D}
     {ρ : Env D (D.params main)} (hb : bild passes P Y fs pos name main ρ starts Ks req = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     (hYsync : ∀ x, LaySync (Y x)) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D)
     (hval : ∀ τ (x : Var (D.params main) τ), ValueValid b.Y τ (ρ.get x))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth main σ ρ with
+    (match rufAt P O b.passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ ExitErg b.Y (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
-    | _ => False := by
+    | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m cloneCode := by
   obtain ⟨cs, body, sp, hl, hc, hr, ha, hra⟩ := bild_lage hb hfs hYin hYdis hYord hYsync
   have hm2 := bild_bytes hm
   rw [hc, hr, ha, hra] at hm2
@@ -118,11 +118,11 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match (rufAt (D := D) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
         RufAusgang (D := D) (starts[j]'hj).1) with
-    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
-    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
-    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
   obtain ⟨cs, body, sp, hl, hc, hr, ha, hra⟩ := bild_lage hb hfs hYin hYdis hYord hYsync
@@ -140,13 +140,13 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
   let rootOutcome : (Σ f : D.Fn, Env D (D.params f)) → Prop := fun root =>
     match (rufAt (D := D) P O b.passes b.depth root.1 σ root.2 : RufAusgang (D := D) root.1) with
     | .ok _ _ => ∃ t' m' q, Star
-        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops
-        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
     | .hardware e => Stops
-        ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
+        ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * starts.length + startLen + startLen * j)),
           BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False
   have completed : rootOutcome (starts[j]'hj) := by
