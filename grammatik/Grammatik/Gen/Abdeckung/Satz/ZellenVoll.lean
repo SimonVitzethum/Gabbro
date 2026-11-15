@@ -147,7 +147,7 @@ instance (e : Einsatz) (z : Zelle) : Decidable (e.Hat z) := inferInstanceAs (Dec
 
 /-- The Lean model's Bool on a program. -/
 def Einsatz.gueltig (e : Einsatz) : Bool :=
-  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] [] e.lockSources
+  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] [] e.lockSources (fun _ => none)
 
 /-- The model's table: a cell is admitted when it is not bad. -/
 def gutTafel (z : Zelle) : Bool := !z.schlecht
