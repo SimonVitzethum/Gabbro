@@ -3,7 +3,6 @@ module
 public import Grammatik.Logik.Ruf.Guest.Boundary
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Guest
 public import Grammatik.Logik.Vertraege.Pruefer.Program
-meta import Grammatik.Logik.Vertraege.Pruefer.Program
 import all Batteries.Data.Except
 
 @[expose] public section
@@ -189,15 +188,47 @@ instance : DecidableEq D.Ax := inferInstanceAs (DecidableEq Bool)
 
 def locks : SperrInv D := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
 
-#eval Vertraege.Pruefer.KontrakteGeprueftB program locks [()]
-
 /-- The admission is actually conjoined with the existing whole-program
     checker. This is a model fixture, not a source-to-IR witness. -/
 theorem checked_guest :
     Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] [] [guest] = true := by
-  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
-    Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
   decide +kernel
+
+def falseProgram : Programm D := { program with ensures := fun _ => .fls }
+
+theorem same_body_zeuge : falseProgram.rumpf = program.rumpf := rfl
+
+theorem false_post_refused_zeuge :
+    Akzeptiert falseProgram locks [()] [] [.inl false, .inl true] [] [] [] [] [guest] = false := by
+  decide +kernel
+
+def world : World D where
+  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
+  globs := fun item => nomatch item
+  spur := []
+
+def oracle (raw : Int) : Orakel D where
+  wirktL := fun _ state _ => ({ state with spur := [] }, raw)
+  regLiesL := fun item => nomatch item
+  regSchreib := fun item => nomatch item
+  sichtbarL := fun item => nomatch item
+
+def calls (f : D.Fn) (_ : World D) (_ : Env D (D.params f)) : RufAusgang f := .logik .schleife
+
+/-- Both the void answer and the declared failure return normally, so the
+    false post is an actual counterexample rather than an unreachable claim. -/
+theorem false_post_counterexample_zeuge :
+    (match execEnd (oracle 0) 0 calls (falseProgram.rumpf ()) world .nil with
+      | .zurueck _ _ => true | _ => false) = true ∧
+    (match execEnd (oracle 1) 0 calls (falseProgram.rumpf ()) world .nil with
+      | .zurueck _ _ => true | _ => false) = true ∧
+    ReqAmEintritt falseProgram () world .nil ∧
+      (∀ next, ¬ EnsAmRueck falseProgram () world next .nil ()) := by
+  exact ⟨by decide +kernel, by decide +kernel, rfl, fun _ => Bool.false_ne_true⟩
+
+#print axioms checked_guest
+#print axioms false_post_refused_zeuge
+#print axioms false_post_counterexample_zeuge
 
 theorem checked_missing_service :
     Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] []

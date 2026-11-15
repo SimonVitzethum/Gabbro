@@ -27,6 +27,18 @@ theorem end_shrink {τ : Ty} (result : EndAusgang V l (τ :: Γ))
     (valid : EndResult result) : EndResult result.schrumpf := by
   cases result <;> exact valid
 
+theorem statement_optional (kind : Option Ty) (result : Ausgang V l (ErgCtx Γ kind))
+    (valid : StatementResult result) : StatementResult (Ausgang.weiterOpt kind result) := by
+  cases kind with
+  | none => exact valid
+  | some _ => exact statement_shrink result valid
+
+theorem end_optional (kind : Option Ty) (result : EndAusgang V l (ErgCtx Γ kind))
+    (valid : EndResult result) : EndResult (EndAusgang.weiterOpt kind result) := by
+  cases kind with
+  | none => exact valid
+  | some _ => exact end_shrink result valid
+
 theorem end_statement (result : EndAusgang V l Γ) (valid : EndResult result) :
     StatementResult result.zuAusgang := by
   cases result <;> exact valid
@@ -191,6 +203,19 @@ def block (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ �
                   cases value with
                   | inl value => exact statement_shrink _ (checked.down O U A passes R _ _)
                   | inr reason => exact end_statement _ (end_shrink _ (failed.down O U A passes R _ _))⟩
+    | .bindAxiomOptElse kind item arguments same _ _ _ _ failure tail => do
+        let failed ← ending S sources fuel failure
+        let checked ← block S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          cases answer : axiomAntwortSonst O item _ _ with
+          | mk next value =>
+              cases value with
+              | none => trivial
+              | some value =>
+                  cases value with
+                  | inl value => exact statement_optional kind _ (checked.down O U A passes R _ _)
+                  | inr reason => exact end_statement _ (end_shrink _ (failed.down O U A passes R _ _))⟩
     | .narrow expression low high fallback tail => do
         let failed ← ending S sources fuel fallback
         let checked ← block S sources fuel tail
@@ -250,6 +275,19 @@ def ending (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ 
               | some value =>
                   cases value with
                   | inl value => exact end_shrink _ (checked.down O U A passes R _ _)
+                  | inr reason => exact end_shrink _ (failed.down O U A passes R _ _)⟩
+    | .bindAxiomOptElse kind item arguments same _ _ _ _ failure tail => do
+        let failed ← ending S sources fuel failure
+        let checked ← ending S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execEndHA]
+          cases answer : axiomAntwortSonst O item _ _ with
+          | mk next value =>
+              cases value with
+              | none => trivial
+              | some value =>
+                  cases value with
+                  | inl value => exact end_optional kind _ (checked.down O U A passes R _ _)
                   | inr reason => exact end_shrink _ (failed.down O U A passes R _ _)⟩
     | .narrow expression low high fallback tail => do
         let failed ← ending S sources fuel fallback
