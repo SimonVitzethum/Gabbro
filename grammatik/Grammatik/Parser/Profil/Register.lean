@@ -35,19 +35,20 @@ open Gabbro.Grammatik
 
 /-! ## The closed decoder of the keyed modes -/
 
-/-- The five keys of a keyed mode entry, by their source spelling. Any other word is no key. -/
+/-- The keys of a keyed mode entry, by their source spelling. Any other word is no key. -/
 def schluesselVon (s : String) : Option ProfilSchluessel :=
   if strEq s "arch" then some .arch
   else if strEq s "rounding" then some .fpRundung
   else if strEq s "fp_contract" then some .fpKontraktion
   else if strEq s "memory_model" then some .speichermodell
   else if strEq s "interrupt_routing" then some .interruptRouting
+  else if strEq s "environment" then some .imageEnvironment
   else none
 
 /-- The value of a key by its source spelling. Only the modes the model and the emitted image have a
     meaning for are supported, each a positive code: `arch` x86_64 (1) / aarch64 (2), `rounding` nearest,
     `fp_contract` off (the float prelude binds `-ffp-contract=off`, `N218`), `memory_model` c11,
-    `interrupt_routing` fest. Anything else is refused. -/
+    `interrupt_routing` fest, and `environment` linux / freestanding. Anything else is refused. -/
 def wertVon (k : ProfilSchluessel) (v : String) : Option Nat :=
   match k with
   | .arch => if strEq v "x86_64" then some 1 else if strEq v "aarch64" then some 2 else none
@@ -55,6 +56,7 @@ def wertVon (k : ProfilSchluessel) (v : String) : Option Nat :=
   | .fpKontraktion => if strEq v "off" then some 1 else none
   | .speichermodell => if strEq v "c11" then some 1 else none
   | .interruptRouting => if strEq v "fest" then some 1 else none
+  | .imageEnvironment => if strEq v "linux" then some 1 else if strEq v "freestanding" then some 2 else none
 
 /-- The entry name a decoded key carries in the model profile. -/
 def schluesselName : ProfilSchluessel → String
@@ -63,6 +65,7 @@ def schluesselName : ProfilSchluessel → String
   | .fpKontraktion => "fp_contract"
   | .speichermodell => "memory_model"
   | .interruptRouting => "interrupt_routing"
+  | .imageEnvironment => "environment"
 
 /-- Distinct keys carry distinct entry names. -/
 theorem schluesselName_inj {k k' : ProfilSchluessel} (h : schluesselName k = schluesselName k') :

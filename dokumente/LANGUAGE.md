@@ -1211,7 +1211,11 @@ proved under:  vtd_te_wirkt (falsified)
 ```
 
 (`gabbro annahmen`.) A library requires entries of the program's single `profile { … }` by
-reference (`N215`–`N219`), so linking adds no premise.
+reference (`N215`–`N219`), so linking adds no premise. The execution-image entry
+`environment linux` selects futex waiting and WAKE-all for Stage-0 ticket locks;
+`environment freestanding` selects spin retry without lock syscalls. Ticket order and safety
+are the same. The image option `--environment` must agree with any source entry; the existing
+Linux runner image remains the default. This entry binds lock waiting, not unrelated image services.
 
 ### 12.2 Boot code with proof that it never runs again
 

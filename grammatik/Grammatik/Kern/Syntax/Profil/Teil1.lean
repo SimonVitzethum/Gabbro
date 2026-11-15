@@ -33,6 +33,8 @@ inductive ProfilSchluessel where
   | speichermodell
   | arch
   | interruptRouting
+  /-- Execution-image environment: Linux (1) or freestanding (2). -/
+  | imageEnvironment
   deriving DecidableEq, Repr
 
 /-- An assumption entry: a name, a class, and either a keyed mode assumption

@@ -5,6 +5,8 @@ public import Stage0.Senke.Images.BildSatz
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
+
+variable {lockWait : LockWait}
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
 
@@ -20,7 +22,7 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
     (valid : GabbroV.sp0OkB u = true)
-    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
     WeltAt m b.Y (initialWorld u valid) ∧
@@ -32,8 +34,8 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
       BytesAt m Runner.Prog.IMG (Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq) ∧
       BytesAt m codeBase (b.code.flatMap encII ++ stackPayload) ∧ BytesAt m b.fp0 stackPayload := by
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   obtain ⟨stackPayload, made, length⟩ := h.stacks
   have actualStacks : startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs) = some stackPayload := by
     simpa only [args, rootArgs] using made
@@ -64,7 +66,7 @@ theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes 
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
     (valid : GabbroV.sp0OkB u = true)
-    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
     ∀ j, j ≤ b.roots.length →
@@ -72,8 +74,8 @@ theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes 
   obtain ⟨_, _, _, stackPayload, made, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, _, roots, _, rootArgs⟩ := bild_lage hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   have rootCount : b.rootArgs.length = b.roots.length := by
     simp only [rootArgs, roots, List.length_map]
   have separate : b.fp0 + 8 * (b.Ks * (b.roots.length + 1)) ≤ b.Y.lo := by
@@ -111,15 +113,15 @@ theorem bild_initialized_length_u {u : UProg} {P : Programm (declOf u)} {passes 
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
     (valid : GabbroV.sp0OkB u = true)
-    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) :
     (b.initializedBytes u valid).length = 16 + 16 * b.code.length + 8 * b.K := by
   obtain ⟨cs, body, sp, h, code, _, _, _⟩ := bild_lage hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   have imageLength := bild_length hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   have codeLength : b.code.length = headLen (starts.map (·.1)).length + body.length := by
     rw [code, List.length_append, h.head]
   have codeEnd : b.fp0 = codeBase + 16 * b.code.length := by
@@ -145,7 +147,7 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
     (valid : GabbroV.sp0OkB u = true)
-    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params main) τ), ValueValid b.Y τ (ρ.get x))
@@ -159,8 +161,8 @@ theorem bild_initialized_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)}
     | _ => False := by
   obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   have startup' : BytesAt m codeBase (b.code.flatMap encII ++
       ((startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs)).getD [] ++ [])) := by
     simpa only [made, Option.getD_some, List.append_nil] using startup
@@ -180,7 +182,7 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
     {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
     (valid : GabbroV.sp0OkB u = true)
-    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) (j : Nat) (hj : j < starts.length)
     (σ : World (declOf u))
@@ -198,8 +200,8 @@ theorem bild_initialized_wurzel_ok_u {u : UProg} {P : Programm (declOf u)}
     | _ => False := by
   obtain ⟨_, _, sync, stackPayload, made, _, _, startup, _⟩ := bild_initialized_loaded_u valid hb hfs loaded
   obtain ⟨cs, body, sp, h, code, roots, args, rootArgs⟩ := bild_lage hb hfs
-    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
-    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+    (fun base bound => layU_in (lockWait := lockWait) u tor base bound) (fun base => layU_dis (lockWait := lockWait) u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync (lockWait := lockWait) u tor base)
   have startup' : BytesAt m codeBase (b.code.flatMap encII ++
       ((startStackBytes b.Ks (FB + FB) (b.args :: b.rootArgs)).getD [] ++ [])) := by
     simpa only [made, Option.getD_some, List.append_nil] using startup

@@ -4,6 +4,8 @@ public import Stage0.Senke.Welt.Initial.Validity
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
+
+variable {lockWait : LockWait}
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg
 
@@ -52,7 +54,7 @@ structure InitialLayout (u : UProg) (L : Lay (declOf u)) : Prop where
   count : ∀ t, L.count t = (declOf u).count t
 
 theorem initialLayout_layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (base : Nat) :
-    InitialLayout u (layU u tor base) := by
+    InitialLayout u (layU (lockWait := lockWait) u tor base) := by
   refine ⟨fun _ => rfl, fun _ _ => rfl, rfl, fun t => ?_⟩
   simp only [Lay.count, layU, ite_self, Int.natCast_zero, Int.add_zero]
 

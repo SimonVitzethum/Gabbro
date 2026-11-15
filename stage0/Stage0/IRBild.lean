@@ -41,7 +41,7 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   args : Env (declOf compiled.unit) ((declOf compiled.unit).params compiled.main)
   pointers : Senke.mainEnv ((declOf compiled.unit).params compiled.main) = some args
   image : Senke.Bild (declOf compiled.unit)
-  emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU compiled.unit tor)
+  emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
     (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args
     (startPlan.starts (Senke.initialWorld compiled.unit initialValid)) K
@@ -77,7 +77,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     match hp : Senke.mainEnv ((declOf u).params main) with
     | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
     | some args =>
-      match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
+      match he : Senke.bild irDurchlaeufe P (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) u tor) (List.finRange u.fns.length) Fin.val
           (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
           (startPlan.starts (Senke.initialWorld u initialValid)) K
           (Senke.bodenAusrichtung u) with

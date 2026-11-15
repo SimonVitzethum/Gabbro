@@ -310,17 +310,17 @@ theorem nimmT_ladeS : (nimmT L a s)[7]? = some (ci 1 ((s + 1 : Nat) : Int) ((a +
     (nimmT L a s)[8]? = some (ci 15 ((s + 5 : Nat) : Int) ((s + 1 : Nat) : Int) 0) :=
   ⟨rfl, rfl⟩
 
-theorem nimmT_inc : (nimmT L a s)[12]? = some (ci 1 ((s + 7 : Nat) : Int) ((a + 16 : Nat) : Int) 0) ∧
+theorem nimmT_inc (binding : L.lockWait = .futex) : (nimmT L a s)[12]? = some (ci 1 ((s + 7 : Nat) : Int) ((a + 16 : Nat) : Int) 0) ∧
     (nimmT L a s)[13]? = some (ci 15 ((s + 7 + 1 : Nat) : Int) ((s + 7 : Nat) : Int) 0) ∧
     (nimmT L a s)[16]? =
-      some (ci 22 ((s + 7 + 4 : Nat) : Int) ((s + 7 : Nat) : Int) ((s + 7 + 1 : Nat) : Int)) :=
-  ⟨rfl, rfl, rfl⟩
+      some (ci 22 ((s + 7 + 4 : Nat) : Int) ((s + 7 : Nat) : Int) ((s + 7 + 1 : Nat) : Int)) := by
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
-theorem nimmT_futexW : (nimmT L a s)[20]? = some (ci 1 ((s + 10 + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0) ∧
+theorem nimmT_futexW (binding : L.lockWait = .futex) : (nimmT L a s)[20]? = some (ci 1 ((s + 10 + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0) ∧
     (nimmT L a s)[21]? = some (ci 1 ((s + 10 + 2 : Nat) : Int) ((128 : Nat) : Int) 0) ∧
     (nimmT L a s)[22]? = some (ci 2 ((s + 10 + 3 : Nat) : Int) ((s + 5 : Nat) : Int) 0) ∧
-    (nimmT L a s)[26]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) :=
-  ⟨rfl, rfl, rfl, rfl⟩
+    (nimmT L a s)[26]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) := by
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 theorem nimmT_dec : (nimmT L a s)[28]? = some (ci 15 ((s + 7 + 1 : Nat) : Int) ((s + 7 : Nat) : Int) 0) ∧
     (nimmT L a s)[31]? =
@@ -328,15 +328,15 @@ theorem nimmT_dec : (nimmT L a s)[28]? = some (ci 15 ((s + 7 + 1 : Nat) : Int) (
     (nimmT L a s)[34]? = some (ci 18 (-(16 * 27)) 0 0) :=
   ⟨rfl, rfl, rfl⟩
 
-theorem gibT_schritte : (gibT L a s)[0]? = some (ci 1 ((s + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0) ∧
+theorem gibT_schritte (binding : L.lockWait = .futex) : (gibT L a s)[0]? = some (ci 1 ((s + 1 : Nat) : Int) ((a + 8 : Nat) : Int) 0) ∧
     (gibT L a s)[1]? = some (ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0) ∧
     (gibT L a s)[4]? = some (ci 22 ((s + 5 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int)) ∧
     (gibT L a s)[5]? = some (ci 1 ((s + 1 : Nat) : Int) ((a + 16 : Nat) : Int) 0) ∧
     (gibT L a s)[6]? = some (ci 15 ((s + 2 : Nat) : Int) ((s + 1 : Nat) : Int) 0) ∧
     (gibT L a s)[7]? = some (ci 19 ((s + 2 : Nat) : Int) (16 * 9) 0) ∧
     (gibT L a s)[11]? = some (ci 1 ((s + 10 + 3 : Nat) : Int) 2147483647 0) ∧
-    (gibT L a s)[15]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    (gibT L a s)[15]? = some (ci 23 ((s + 10 + 7 : Nat) : Int) ((s + 10 : Nat) : Int) 0) := by
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC]
 
 end Code
 

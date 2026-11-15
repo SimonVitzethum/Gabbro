@@ -94,9 +94,9 @@ theorem world_at : WeltAt memory layout world := by
   have : f = 0 := by change f < 1 at hf; omega
   subst f
   have : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by change (k : Int) < 4 at hk; omega
-  rcases this with rfl | rfl | rfl | rfl
-  all_goals
-    exact ValueAt.of_enc (by rfl) (w := 0) (by decide +kernel +revert) rfl
+  rcases this with rfl | rfl | rfl | rfl <;>
+    apply ValueAt.of_enc (by rfl) (w := 0)
+  all_goals first | decide +kernel +revert | rfl
 
 theorem environment_at : EnvAt layout memory 1024 environment := by
   intro τ x
