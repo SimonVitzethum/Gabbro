@@ -106,7 +106,8 @@ def traversal : UFn :=
       .assignGlobB "err" .tru, .leave "i", .blkEnd, .blkEnd], ret := .empty }
 
 def traversalUnit : UProg :=
-  { unit with tabs := [{ name := "T", count := 2, cols := [("v", (0, 9))] }],
+  { unit with
+    tabs := [{ name := "T", count := 2, cols := [("v", (0, 9))] }],
     fns := [traversal] }
 
 def traversalBody : List Gabbro.Body.Stmt :=
@@ -121,7 +122,8 @@ theorem traversal_bool_zeuge : staticsB traversalUnit = true ∧ nullB traversal
   exact ⟨by cbv, by cbv, by cbv⟩
 
 def terminalTraversal : UFn :=
-  { traversal with name := "terminalToggle", resBool := true, ret := .keins,
+  { traversal with
+    name := "terminalToggle", resBool := true, ret := .keins,
     body := [.ifEnde (.globB "err")] ++ traversal.body ++
       [.ret (.bool (.globB "err")), .ifElse, .assignGlobB "err" .tru,
         .ret (.bool .fls), .blkEnd] }
