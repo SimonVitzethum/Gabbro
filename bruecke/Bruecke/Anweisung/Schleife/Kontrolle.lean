@@ -17,12 +17,11 @@ theorem Strecke_G.control_append {A : List Eintrag} {s s' : Gabbro.Body.State}
     {xs : List Gabbro.Body.Stmt} {leave : Bool}
     (h : Strecke_G u C A s s' xs (controlB leave)) (ys : List Gabbro.Body.Stmt) :
     Strecke_G u C A s s' (xs ++ ys) (controlB leave) := by
-  have hlauf : ∀ ρB hT hF, Gabbro.Body.exec ρB (xs ++ ys) s = controlB leave s' := by
-    intro ρB hT hF
-    rw [exec_append, h.lauf ρB hT hF]
-    cases leave <;> rfl
-  exact { gut := h.gut, oben := h.oben, unten := h.unten,
-    schluessel := h.schluessel, mono := h.mono, lauf := hlauf }
+  refine { gut := h.gut, oben := h.oben, unten := h.unten,
+    schluessel := h.schluessel, mono := h.mono, lauf := ?_ }
+  intro ρB hT hF
+  rw [exec_append, h.lauf ρB hT hF]
+  cases leave <;> rfl
 
 theorem schrumpfZ_control {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
     {a : Ausgang V l (τ :: Γ)} {leave : Bool} {hl : l = true}
