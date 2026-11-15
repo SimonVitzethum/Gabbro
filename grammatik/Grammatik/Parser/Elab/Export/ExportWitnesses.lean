@@ -29,6 +29,11 @@ def implicationItems := (parseTopTief implicationTokens).toOption.get implicatio
 theorem implication_elaborated : (elabU (pre108 implicationItems)).toOption.isSome = true := by decide +kernel
 def implicationUnit := (elabU (pre108 implicationItems)).toOption.get implication_elaborated
 
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/w93-export-functions.txt"
+    (reprStr (lowerEach implicationUnit (List.finRange implicationUnit.fns.length)))
+
 theorem closed_lowering_zeuge : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by
   apply closed_lowering implicationUnit
   · kernel_rfl
