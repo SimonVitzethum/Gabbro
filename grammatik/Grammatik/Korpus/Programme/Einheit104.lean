@@ -62,7 +62,6 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-
 namespace Gabbro.Grammatik.Einheit104
 
 open Gabbro.Grammatik Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.UebersetzeAllg2 Zielsatz
@@ -345,25 +344,26 @@ def E4 : Einheit D4 where
 def rho7 : Env D4 (D4.params ein4) :=
   .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
 
-/-- Capability gap: outside the decidable fragment: old-memory postconditions.
-    Refusal is proved from the actual contract gate, without evaluating all
-    structural checks or replacing the parsed program's body or contract. -/
-theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
-  have basic : Vertraege.Pruefer.checkBasicFunction P4 (SperrInv.leer D4) sources4 {} ein4 = none := by
-    unfold Vertraege.Pruefer.checkBasicFunction
-    rw [req4, ens_ein4]
-    rfl
-  have rejected : (Vertraege.Pruefer.postFormula P4 ein4 rho7 ()).toOption.isSome = false := by
-    apply Vertraege.Pruefer.RefusalWitness.post_refused
+/-- Joint typed witness for the unchanged checker's refusal-composition rules. -/
+theorem contracts_refused4_zeuge : Vertraege.Pruefer.KontrakteGeprueftB P4
+    (SperrInv.leer D4) [ein4, lies4] sources4 = false := by
+  have current : (Vertraege.Pruefer.currentOnly (P4.ensures ein4)).toOption.isSome = false := by
     rw [ens_ein4]
     rfl
-  have refused := Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
+  have basic := Vertraege.Pruefer.RefusalWitness.basic_none_of_current_refused
+    P4 (SperrInv.leer D4) sources4 {} ein4 current
+  have rejected := Vertraege.Pruefer.RefusalWitness.post_refused P4 ein4 rho7 () current
+  exact Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
     sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic rho7 () rejected
+
+/-- Capability gap: outside the decidable fragment: old-memory postconditions.
+    The actual post refusal prevents acceptance; the parsed body and contract stay. -/
+theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
   rw [akzeptiert_pruefer_eq]
   change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] []
     (sources := sources4) = false
   exact Bool.and_eq_false_iff.mpr (Or.inr
-    (Bool.and_eq_false_iff.mpr (Or.inr refused)))
+    (Bool.and_eq_false_iff.mpr (Or.inr contracts_refused4_zeuge)))
 
 /-! ## 5. The user's logic on the parsed program -/
 
@@ -489,5 +489,4 @@ theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
     axVertragO_wahr O4, inferInstance⟩
 
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
-
 end Gabbro.Grammatik.Einheit104

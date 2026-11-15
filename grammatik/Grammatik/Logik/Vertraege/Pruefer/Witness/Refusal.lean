@@ -37,7 +37,20 @@ theorem collect_each {α : Type} (items : List α) (property : α → Prop)
 
 variable {D : Deklaration}
 
-/-- A failed current-state syntax check is an actual post-translation refusal. -/
+attribute [local implicit_reducible] Payload CheckedEnvironment CheckedExecution
+
+/-- A refused post cannot be the literal truth accepted by the basic path. -/
+theorem basic_none_of_current_refused (program : Programm D) (S : SperrInv D)
+    (sources : LockSources S) (budget : VCBudget) (f : D.Fn)
+    (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
+    checkBasicFunction program S sources budget f = none := by
+  unfold checkBasicFunction
+  split
+  · simp_all only [currentOnly, Except.toOption, Option.isSome_some, Bool.true_eq_false]
+  · rfl
+
+/-- A failed current-state syntax check
+ is an actual post-translation refusal. -/
 theorem post_refused (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
     (value : ErgVal D (D.erg f))
     (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
@@ -56,19 +69,17 @@ theorem environment_refused (program : Programm D) (S : SperrInv D) (policy : Ca
     (checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = false := by
   unfold checkEnvironment
   cases entry : translate (program.requires f) locals with
-  | error cause => rw [entry]; rfl
+  | error cause => rfl
   | ok encoded =>
-      rw [entry]
       dsimp only [bind, Except.bind]
       cases domainResult : results (D := D) budget.expansion (D.erg f) with
-      | error cause => rw [domainResult]; rfl
+      | error cause => rfl
       | ok domain =>
-          rw [domainResult]
           dsimp only [bind, Except.bind]
           cases posts : collect domain.values
               (fun result => ∃ formula, postFormula program f locals result = .ok formula)
               (checkPostFormula program f locals) with
-          | error cause => rw [posts]; rfl
+          | error cause => rfl
           | ok checked =>
               have accepted := collect_each domain.values
                 (fun result => ∃ formula, postFormula program f locals result = .ok formula)
@@ -89,22 +100,20 @@ theorem execution_refused (program : Programm D) (S : SperrInv D) (policy : Call
     (checkExecution program S policy sources budget hint f).toOption.isSome = false := by
   unfold checkExecution
   cases invariantResult : invariantFormula program (D.invs.filter (schuldet f)) with
-  | error cause => rw [invariantResult]; rfl
+  | error cause => rfl
   | ok invariants =>
-      rw [invariantResult]
       dsimp only [bind, Except.bind]
       cases domainResult : environments (D := D) budget.expansion (D.params f) with
       | error cause => rw [domainResult]; rfl
       | ok domain =>
-          rw [domainResult]
           dsimp only [bind, Except.bind]
           cases checked : collect domain.values
               (fun args => CheckedEnvironment (S := S) policy f args)
               (checkEnvironment program S policy sources budget hint f invariants) with
           | error cause =>
-              delta CheckedEnvironment at checked
-              rw [checked]
-              rfl
+              first
+              | rfl
+              | delta CheckedEnvironment at checked; rw [checked]; rfl
           | ok certificate =>
               have accepted := collect_each domain.values
                 (fun args => CheckedEnvironment (S := S) policy f args)
@@ -125,12 +134,11 @@ theorem function_refused (program : Programm D) (S : SperrInv D) (sources : Lock
   unfold checkFunction
   rw [basic]
   cases replay : Invarianten.Pruefer.atomicReplay? program f with
-  | none => rw [replay]; rfl
+  | none => rfl
   | some certificate =>
-      rw [replay]
       have refused := execution_refused program S (requiresPolicy program) sources budget hint f locals value rejected
       cases executed : checkExecution program S (requiresPolicy program) sources budget hint f with
-      | error cause => rw [executed]; rfl
+      | error cause => rfl
       | ok checked => rw [executed] at refused; cases refused
 
 /-- A named function's actual post refusal propagates through the unchanged
@@ -145,7 +153,7 @@ theorem contracts_refused (program : Programm D) (S : SperrInv D) (sources : Loc
     (fun g => checkFunction program S sources budget none g)).toOption.isSome = false
   cases collected : collect functions (ContractDuties program S)
       (fun g => checkFunction program S sources budget none g) with
-  | error cause => rw [collected]; rfl
+  | error cause => rfl
   | ok checked =>
       have accepted := collect_each functions (ContractDuties program S)
         (fun g => checkFunction program S sources budget none g) (by rw [collected]; rfl) f member
