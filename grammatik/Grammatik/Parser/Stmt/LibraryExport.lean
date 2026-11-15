@@ -104,6 +104,7 @@ private theorem export_seq_succ (u : UProg) (caller : Fin u.fns.length) (fuel : 
       lowSeqStep u caller (lowStufe u caller fuel) Γ fn Λ entry statements := rfl
 
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
+attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
 attribute [local cbv_eval] export_seq_succ lowStructL_succ lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
@@ -222,6 +223,7 @@ private theorem full_phases :
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
+        all_goals cbv
         all_goals rfl
 
 private theorem selected_phases :
