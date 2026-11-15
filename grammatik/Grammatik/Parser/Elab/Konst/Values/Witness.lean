@@ -1,5 +1,5 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Kern.Taktik.KernelValue
 public import Grammatik.Kern.Taktik.ExceptWitness
 import all Init.Data.ToString.Basic
 import all Init.Data.Repr
@@ -76,7 +76,7 @@ private theorem elaborate_refused {k : UKonstFn} {source : SExpr} {error : Strin
   cases body
   dsimp only at refused
   unfold Values.elaborate
-  dsimp only
+  try dsimp only
   split
   · rename_i actualError found
     have same : actualError = error := Except.error.inj (found.symm.trans refused)
@@ -195,7 +195,7 @@ theorem string_values_zeuge :
 /-- The production collector binds the Boolean fixture to its actual source signature. -/
 theorem bool_collected_zeuge :
     collectFunctions [.fnT positive.signature positive.rumpf] = .ok [positive] := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 /-- A zero-byte maximum is checked separately from an empty string under maximum one. -/
@@ -206,13 +206,13 @@ theorem zero_string_zeuge :
 /-- Ordinary reason-tag values keep both their owner and the exact selected case. -/
 theorem reason_value_zeuge :
     ersetzeSExpr [reasonTag] (.call "reasonTag" []) = .ok (.why "Reason" "Second") := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 theorem foreign_reason_refused_zeuge :
     ersetzeSExpr [{ reasonTag with rumpf := .block [] (some (.ret (some (.why "Foreign" "Second")))) }]
       (.call "reasonTag" []) = .error "const reason owner is unknown: Foreign" := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 /-- The witnesses instantiate the generic G/literal theorem jointly with a
@@ -228,7 +228,7 @@ theorem portable_call_sound_zeuge :
       Values.checkCall optional [optional] [] [.lit 3] = .ok call ∧
         call.value = some (⟨3, by decide, by decide⟩ : Zahl 0 3) := by
     refine ⟨?call, ?success, ?value⟩
-    case success => apply except_ok_get; kernel_rfl
+    case success => kernel_value
     case value => kernel_rfl
   obtain ⟨call, success, value⟩ := checked
   refine ⟨call, success, value, ?_⟩
@@ -246,7 +246,7 @@ theorem option_bound_refused_zeuge :
       params := []
       rumpf := .block [] (some (.ret (some (.call "Some" [.lit 4])))) }]
       (.call "optional" []) = .error "const value interval is outside its declared type" := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 theorem tag_payload_refused_zeuge :
@@ -267,7 +267,7 @@ theorem string_utf8_bound_refused_zeuge :
 theorem wide_string_refused_zeuge :
     ersetzeSExpr [shortText "A" 2] (.call "shortText" []) =
       .error "const result type without a certified replacement at `shortText`" := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 theorem portable_post_refused_zeuge :
@@ -302,7 +302,7 @@ theorem portable_statement_refused_zeuge :
       .fnT signature (.block [.call "positive" [.lit 3]] (some (.ret none)))]
     checkErsetzt items items =
       .error "const call without certified value: refusing runtime export" := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 /-- Original global names in both body and arguments reach their certificates.
@@ -310,7 +310,7 @@ theorem portable_statement_refused_zeuge :
 theorem qualified_normalization_zeuge :
     ersetzeSExpr [captured] (.call "captured" [.bin "+" (.variable "math::K") (.lit 1)]) =
       .ok (.lit 11) := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 theorem normalization_denotation_zeuge :
@@ -327,7 +327,7 @@ theorem normalization_denotation_zeuge :
       Scalar.checkCall captured [captured] captured.constants
         [.bin "+" (.variable "math::K") (.lit 1)] = .ok call ∧ call.value = 11 := by
     refine ⟨?call, ?success, ?value⟩
-    case success => apply except_ok_get; kernel_rfl
+    case success => kernel_value
     case value => kernel_rfl
   obtain ⟨call, success, value⟩ := checked
   exact ⟨call, success, value, call.normalized_denotation⟩
@@ -337,7 +337,7 @@ theorem original_parameter_refused_zeuge :
     ersetzeSAnwIn ["x"] [captured]
       (.ret (some (.call "captured" [.variable "x"]))) =
       .error "const open argument at `captured`: certified substitution needs closed arguments" := by
-  dsimp only
+  try dsimp only
   kernel_rfl
 
 /-- Quantifier variables, sequential locals and pattern payloads also remain open. -/
@@ -361,7 +361,7 @@ theorem source_meaning_normalized_zeuge :
       normalize [] [("module::K", 5)] source = .ok normalized ∧
       Scalar.expression [] (normalizeNames ([] : Locals []) [("module::K", 5)] source) =
         .ok normalized.code ∧ normalized.code.1 = .int 6 6 := by
-  dsimp only
+  try dsimp only
   let normalized := (normalize (D := declaration [] (.int 0 10)) (Γ := []) [] [("module::K", 5)]
     (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide +kernel)
   exact ⟨normalized, by rfl, normalized.meaning.normalized, by rfl⟩
@@ -390,7 +390,7 @@ theorem replacement_sound_zeuge :
       checkReplacement optional [optional] [] [.lit 3] = .ok replacement ∧
         replacement.syntax = .call "Some" [.lit 3] := by
     refine ⟨?replacement, ?success, ?literal⟩
-    case success => apply except_ok_get; kernel_rfl
+    case success => kernel_value
     case literal => kernel_rfl
   obtain ⟨replacement, success, literal⟩ := checked
   exact ⟨replacement, success, literal, replacement.sound⟩
@@ -409,7 +409,7 @@ theorem reify_denotes_zeuge :
     ∃ literal : Reified D [] [] .bool true,
       reify [] [] 64 .bool true = .ok literal ∧ literal.syntax = .tru ∧
       ∀ before after, eval before literal.expr after .nil = true := by
-  dsimp only
+  try dsimp only
   let literal := (reify (D := declaration [] .bool) (Γ := []) [] [] 64 .bool true).toOption.get (by decide +kernel)
   exact ⟨literal, by rfl, by rfl, fun before after => reify_denotes literal before after .nil⟩
 
@@ -422,7 +422,7 @@ theorem source_function_normalized_zeuge :
   have checked : ∃ fn : Scalar.SourceFunction captured 0 20,
       Scalar.elaborate captured = .ok ⟨0, 20, fn⟩ := by
     refine ⟨?fn, ?success⟩
-    case success => apply except_ok_get; kernel_rfl
+    case success => kernel_value
   obtain ⟨fn, success⟩ := checked
   exact ⟨fn, success, fn.normalized⟩
 
