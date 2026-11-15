@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Goal
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Contracts
 public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 
 @[expose] public section
@@ -99,6 +99,12 @@ theorem invariant_gate_checked_zeuge :
 theorem contractDuties_of_basic_zeuge : ContractDuties program family () :=
   contractDuties_of_basic () rfl (by decide) certificate.down
 
+theorem massPflicht_of_basic_zeuge (measure : Mass declaration)
+    (cycle : declaration.Fn → declaration.Fn → Bool) (passes : Nat)
+    (Q : AxEns declaration) (shared : declaration.Tab ⊕ declaration.Glob → Prop) :
+    MassPflicht program passes Q family shared measure cycle () :=
+  massPflicht_of_basic () certificate.down measure cycle passes Q shared
+
 /-- The same syntax under a false post remains on the strict path and refuses. -/
 theorem false_contract_refused_zeuge :
     KontrakteGeprueftB falseProgram family [()] sources = false := by decide +kernel
@@ -143,7 +149,40 @@ theorem false_contract_counterexample_zeuge :
       ¬ EnsAmRueck falseProgram () world world .nil () := by
   exact ⟨rfl, Bool.false_ne_true⟩
 
+/-- A real conforming target with nonempty argument and result ranges. -/
+def trivialPointerProgram : Programm Witness.pointerDeclaration :=
+  { Witness.pointerProgram with
+    requires := fun _ => .tru
+    ensures := fun _ => .tru
+    ptrVertrag := fun _ => { pre := .tru, post := .tru } }
+
+theorem trivial_pointer_checked_zeuge :
+    (checkPointerTarget trivialPointerProgram {} () 0).toOption.isSome = true := by
+  decide +kernel
+
+def pointerCertificate : PLift (∀ target : Witness.pointerDeclaration.passt () 0 = true,
+    PtrZielVerfeinert trivialPointerProgram () 0 target) :=
+  (checkPointerTarget trivialPointerProgram {} () 0).toOption.get (by decide +kernel)
+
+theorem trivial_pointer_refinement_zeuge :
+    PtrZielVerfeinert trivialPointerProgram () 0 (by decide) :=
+  pointerCertificate.down (by decide)
+
+def traversalProgram (holds : Bool) : Programm Witness.pointerDeclaration :=
+  { trivialPointerProgram with rumpf := fun f =>
+      .cons (.traverse () (if holds then .tru else .fls) .nil)
+        (Witness.pointerProgram.rumpf f) }
+
+theorem traverse_safe_zeuge :
+    KontrakteGeprueftB (traversalProgram true) (SperrInv.leer Witness.pointerDeclaration) [()] = true := by
+  decide +kernel
+
+theorem false_traversal_refused_zeuge :
+    KontrakteGeprueftB (traversalProgram false) (SperrInv.leer Witness.pointerDeclaration) [()] = false := by
+  decide +kernel
+
 #print axioms noLogic_zeuge
 #print axioms contractDuties_of_basic_zeuge
+#print axioms massPflicht_of_basic_zeuge
 
 end Gabbro.Grammatik.Vertraege.Pruefer.ForeignWitness
