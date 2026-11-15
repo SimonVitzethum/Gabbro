@@ -7,13 +7,9 @@ namespace Gabbro.Grammatik.Async.Segment
 variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
   {Λ : List (Res D)} {τ storage : Ty}
 
-private theorem presentIndex_bound (type : Ty) :
-    1 < ([none, some type] : List (Option Ty)).length :=
-  Nat.succ_lt_succ (Nat.zero_lt_succ 0)
-
 @[expose] public def presentIndex (type : Ty) :
     Fin ([none, some type] : List (Option Ty)).length :=
-  ⟨1, presentIndex_bound type⟩
+  ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ 0)⟩
 
 @[expose] public def presentValue (D : Deklaration) (type : Ty) (value : Wert D type) :
     Wert D (.sum [none, some type]) :=
@@ -23,18 +19,18 @@ private theorem presentIndex_bound (type : Ty) :
     its tag to Present; all other saved fields are retained by prodSet. -/
 @[expose] public def saveSlotExpr (types : TypeResolution) (f : AsyncFn)
     (frame : Expr D Γ Λ (frameType types f))
-    (slot : FieldAt ((f.params ++ f.fields).map fun field =>
-      .sum [none, some (types.ordinary field.2)]) (.sum [none, some τ]))
+    (slot : FieldAt (frameFields types f) (.sum [none, some τ]))
     (value : Expr D Γ Λ τ) : Expr D Γ Λ (frameType types f) :=
   Expr.prodSet frame slot (Expr.case [none, some τ] (presentIndex τ) (NutzlastExpr.val value))
 
 public theorem saveSlotExpr_eval (types : TypeResolution) (f : AsyncFn)
     (frame : Expr D Γ Λ (frameType types f))
-    (slot : FieldAt ((f.params ++ f.fields).map fun field =>
-      .sum [none, some (types.ordinary field.2)]) (.sum [none, some τ]))
+    (slot : FieldAt (frameFields types f) (.sum [none, some τ]))
     (value : Expr D Γ Λ τ) (entry world : World D) (environment : Env D Γ) :
     eval entry (saveSlotExpr types f frame slot value) world environment =
-      prodSetW (F := D.Fn) (passt := D.passt) slot (eval entry frame world environment)
+      prodSetW (F := D.Fn) (passt := D.passt)
+        (fs := frameFields types f)
+        slot (eval entry frame world environment)
         (presentValue D τ (eval entry value world environment)) := rfl
 
 /-- Bind the resolved source expression once, then construct the successor
