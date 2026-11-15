@@ -61,6 +61,10 @@ def freestandingImage : Emitted (sourceText "freestanding") 1024 :=
 def linuxImage : Emitted (sourceText "linux") 1024 :=
   (image "linux").toOption.get image_binding_present_zeuge.2
 
+-- Keep computed images symbolic during dependent type elaboration.
+-- Closed witness equalities are still reduced and checked by the kernel.
+attribute [local irreducible] freestandingImage linuxImage
+
 /-- Actual source-selected images contain a lock and have equal code size.
     Linux has four more syscall instructions: one wait and three scoped release
     paths. Startup syscalls occur equally in both images. -/
