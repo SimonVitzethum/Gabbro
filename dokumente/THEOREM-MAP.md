@@ -2746,7 +2746,7 @@ Both runs violate the declared false post independently of the checker refusal.
 * **The oracle can answer:** `g1_holen_antwortet` -- for a declared ensures holding at some
   answer, an oracle meets ALL of (c) (`GutO`, `RegLokal`, `AxVertragO`) and its answer to
   `holen` FITS (`summeRoh`); `g1_temp_antwortet` -- an oracle meets (c) for every declared
-  ensures, and `temp` answers `0.5` (`0x3FE0000000000000`, decoded by the kernel,
+  ensures, and `temp` answers `0.5` (`0x3FE0000000000000`, decoded with `G1FloatAnswers`,
   `g1_temp_wort`); `g1_nicht_leer`: neither type is empty.
 * **The program relying on a false `ensures` is refuted:** `g1PA_widerlegt` -- no program with
   the code `g1PA` meets (b), whenever the declared ensures of `holen` holds at SOME answer
@@ -2869,7 +2869,7 @@ well-formed one, `WertOk`)". NOT CLAIMED names linking of separately compiled un
 **Refuted (Zielsatz/Kern/ProbenW1.lean).** `w1_spec_nicht`: no lock family, function list or start
 list makes the round-6 probe meet `AkzeptiertSpec`; `w1_abgelehnt`: `akzeptiert_pruefer`
 refuses every program with its code; `w1_bool`/`w1_sonst_alles`: computed, the Bool is
-`false` and every other component is `true`, so the refusal is `antwortenB`'s alone. The same
+`false`, the listed structural components are `true`, and `antwortenB` independently refuses. The same
 for an empty register range (`w1r_spec_nicht`, `w1r_bool`) and `.grund 0` (`w1g_bool`). The
 contrast: behind an axiom `-> never` the code with a literal-true function post is accepted
 (`w1v_bool`) and the head is `nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`).
@@ -2879,7 +2879,8 @@ returning counterexamples described in §24.4.
 
 **Axioms.** `gabbro_ziel`, `schrittAnt`, `antInvG_erreichbar`, `antwortB_iff`,
 `w1_abgelehnt`: `propext`, `Classical.choice`, `Quot.sound`; `flt_trans_endlich`,
-`gleitBarB_iff`: `propext`, `Quot.sound`; `w1_bool`, `w1v_bool`: `propext`. No `sorry`, no new
+`gleitBarB_iff`: `propext`, `Quot.sound`; `w1_bool`: `propext`. The current `w1v_bool` and
+`w1v_false_post_abgelehnt` use `propext`, `Classical.choice`, `Quot.sound`. No `sorry`, no new
 `axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
 green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
 

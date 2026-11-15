@@ -15,8 +15,8 @@
     `AkzeptiertSpec`: its one answer site is an axiom at an empty type other than `never`;
   * `w1_abgelehnt` -- so the checker of `GabbroZiel` (`akzeptiert_pruefer`) refuses EVERY
     program with this code, whatever its lock family, axiom ensures, starts and memory;
-  * `w1_bool` / `w1_sonst_alles` -- computed: the Bool is `false`, and every OTHER component
-    is `true` -- the refusal is the new component `antwortenB`'s alone;
+  * `w1_bool` / `w1_sonst_alles` -- computed: the Bool is `false`, the listed structural
+    components are `true`, and `antwortenB` independently refuses the empty answer type;
   * the same for an empty register type (`w1r_spec_nicht`, `w1r_bool`: `u8 in 1 .. 0`) and an
     axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
   THE CONTRAST: the same code with a literal-true function post behind an axiom `-> never`
@@ -144,7 +144,7 @@ theorem w1_abgelehnt (E : Einheit w1D) (hP : E.P = w1P) (fs : Aufzaehlung w1D.Fn
 /-- Computed: the checker's Bool on the probe (with `haupt` declared) is `false`. -/
 theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide +kernel
 
-/-- Computed: every OTHER component accepts the probe -- the refusal is `antwortenB`'s. -/
+/-- The listed structural components accept; `antwortenB` independently refuses the probe. -/
 theorem w1_sonst_alles :
     (programmImFragmentG w1P [()] && abgAlleB w1P [()] && fussWB w1P w1S [()] [()] &&
       stufenB w1P [()] && sperrOrteB w1S [] && wurzelnB (D := w1D) [()] &&
