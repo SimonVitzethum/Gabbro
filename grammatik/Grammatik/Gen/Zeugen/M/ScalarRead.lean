@@ -13,7 +13,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 abbrev z : Spez := ({ globs := [{ typ := .bool }] } : Spez).einzeln
 
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.glob (D := z.deklaration) ⟨0, by decide⟩ (by decide))
+  .bind (.glob (D := z.deklaration) ⟨0, by decide⟩ (fun _ member => nomatch member))
     (.ret .empty (List.Perm.refl _))
 
 def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
