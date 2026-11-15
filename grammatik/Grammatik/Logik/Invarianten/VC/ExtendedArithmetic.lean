@@ -38,7 +38,7 @@ private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
 attribute [local irreducible] lower
-attribute [local semireducible] extendedEnd extendedStatement extendedBlock integerEquality
+attribute [local semireducible] extendedEnd extendedStatement extendedBlock integerEquality traverseCondition
 attribute [local irreducible] freshImplication conj havoc
 
 private theorem bounded_formula :
@@ -286,8 +286,8 @@ theorem mutable_decided_zeuge :
 
 private def booleanFormula : QF (Observation declaration) :=
   snapshots (kind := .bool) ([false, true] : List Bool)
-    (fun flag => if flag then guardFormula else .not guardFormula)
-    (fun flag => branchFormula (if flag then .tru else .fls) (stepFormula post) post)
+    (fun flag => if wahr? flag then guardFormula else .not guardFormula)
+    (fun flag => branchFormula (if wahr? flag then .tru else .fls) (stepFormula post) post)
 
 private theorem boolean_formula : booleanCompiled.formula = booleanFormula := rfl
 
