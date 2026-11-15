@@ -17,6 +17,16 @@ theorem fieldIndex_name {u : UProg} {t : Fin u.tabs.length} {fld : String}
     cases h
     exact fieldAtPos_name _ _ _ hw
 
+/-- A missing field name has no dependent field index. -/
+theorem fieldIndex_none {u : UProg} {t : Fin u.tabs.length} {fld : String}
+    (h : fieldAtPos (tabAt u t).cols fld = none) : fieldIndex u t fld = none := by
+  unfold fieldIndex
+  split
+  · rfl
+  · rename_i w hw
+    rw [h] at hw
+    cases hw
+
 /-- A found field name has its declared position. -/
 theorem fieldIndex_of {u : UProg} {t : Fin u.tabs.length} {fld : String} {w : Int × Int}
     (hw : fieldAtPos (tabAt u t).cols fld = some w) :

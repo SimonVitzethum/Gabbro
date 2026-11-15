@@ -68,17 +68,10 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         rfl
       · have hbeq : ("v" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
         have hfield : fieldIndex u ⟨0, by decide⟩ f = none := by
-          unfold fieldIndex
-          split
-          · rfl
-          · rename_i w hw
-            have hn : Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos
-                (Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt u ⟨0, by decide⟩).cols f = none := by
-              change (if ("v" == f) = true then some (0, 4294967295) else none) = none
-              rw [hbeq]
-              rfl
-            rw [hn] at hw
-            cases hw
+          apply fieldIndex_none
+          change (if ("v" == f) = true then some (0, 4294967295) else none) = none
+          rw [hbeq]
+          rfl
         have ht : Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx u.tabs "T" =
             .ok ⟨0, by decide⟩ := rfl
         simp only [shapeOf, shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some,

@@ -93,4 +93,8 @@ theorem low_some : (lowerAllg uZ).toOption.isSome = true := by
     rcases choices with rfl | rfl | rfl
     all_goals constructor <;> cbv
 
+/-- The shared absence inversion has a real table with two slots and one other field. -/
+theorem fieldIndex_none_zeuge : fieldIndex uZ ⟨0, by decide⟩ "absent" = none :=
+  fieldIndex_none (by rfl)
+
 end Gabbro.Bruecke.Zyklus
