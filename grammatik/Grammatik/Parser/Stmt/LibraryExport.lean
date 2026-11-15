@@ -178,15 +178,16 @@ private theorem full_phases :
       (∃ expanded, exportLibraryUnit (uMembers (pre108 items)) = .ok expanded ∧
         alleOhneBibliothek expanded = true) ∧
       ∃ unit, elabU (pre108 items) = .ok unit ∧ ExportFacts unit := by
-  refine ⟨?items, ?parsed, ?expanded, ?elaboration⟩
-  case parsed => cbv <;> exact Eq.refl _
+  let items : List SItemTief := ?items
+  have parsed : parseTopTief fullTokens = .ok items := by cbv <;> exact Eq.refl _
+  refine ⟨items, parsed, ?expanded, ?elaboration⟩
   case expanded =>
     refine ⟨?expandedItems, ?expansion, ?ordinary⟩
     case expansion => cbv <;> exact Eq.refl _
     case ordinary => cbv
   case elaboration =>
     let unit : UProg := ?unit
-    have made : elabU (pre108 ?items) = .ok unit := by cbv <;> exact Eq.refl _
+    have made : elabU (pre108 items) = .ok unit := by cbv <;> exact Eq.refl _
     refine ⟨unit, made, ?facts⟩
     case facts =>
       refine {
