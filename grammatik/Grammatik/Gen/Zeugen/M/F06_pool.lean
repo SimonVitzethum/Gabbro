@@ -1,6 +1,10 @@
 /- Checked coverage fixture; requested cells remain explicit even when absent. -/
 module
 
+public meta import Grammatik.Gen.Abdeckung.Satz.Raum
+public meta import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+public meta import Grammatik.Gen.Druck.LeanZeuge
+
 import Grammatik.Gen.Druck.LeanZeuge
 
 public import Grammatik.Gen.Abdeckung.Satz.Raum
@@ -11,7 +15,8 @@ namespace Gabbro.Grammatik.Gen.Zeugen.F06_pool
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
-abbrev z : Spez := ({ locks := [{ rang := 0 }],
+abbrev z : Spez := ({
+    locks := [{ rang := 0 }],
     globs := [{ typ := .int 0 1, sperre := some 0 }, { typ := .int 0 1 }],
     sigs := [{ gschreibt := [0, 1] }, { gschreibt := [0] }, {}], fns := [0, 1, 2] } : Spez).einzeln
 

@@ -4,6 +4,10 @@
 -/
 module
 
+public meta import Grammatik.Gen.Abdeckung.Satz.Raum
+public meta import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+public meta import Grammatik.Gen.Druck.LeanZeuge
+
 import Grammatik.Gen.Druck.LeanZeuge
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Erzeuger.Entscheidung

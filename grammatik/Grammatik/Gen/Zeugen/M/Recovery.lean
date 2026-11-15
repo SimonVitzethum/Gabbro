@@ -1,6 +1,25 @@
 /- Accepted recovery candidates; exact cell records follow the slot measurement. -/
 module
 
+public meta import Grammatik.Gen.Abdeckung.Satz.Raum
+public meta import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+public meta import Grammatik.Gen.Druck.LeanZeuge
+public meta import Grammatik.Gen.Zeugen.M.ScalarRead
+public meta import Grammatik.Gen.Zeugen.Reset
+public meta import Grammatik.Gen.Zeugen.M.F00_call
+public meta import Grammatik.Gen.Zeugen.M.F01_chain
+public meta import Grammatik.Gen.Zeugen.M.F02_foot
+public meta import Grammatik.Gen.Zeugen.M.F03_reg
+public meta import Grammatik.Gen.Zeugen.M.F04_nolock
+public meta import Grammatik.Gen.Zeugen.M.F06_pool
+public meta import Grammatik.Gen.Zeugen.M.F07_race
+public meta import Grammatik.Gen.Zeugen.M.F08_answer
+public meta import Grammatik.Gen.Zeugen.M.F09_mask
+public meta import Grammatik.Gen.Zeugen.M.M16_13
+public meta import Grammatik.Gen.Zeugen.M.M169_350
+public meta import Grammatik.Gen.Zeugen.M.M103_803
+public meta import Grammatik.Gen.Zeugen.M.M103_131
+
 import Grammatik.Gen.Druck.LeanZeuge
 
 public import Grammatik.Gen.Zeugen.M.ScalarRead
