@@ -82,6 +82,13 @@ theorem breaking_execution_zeuge :
       | .zurueck next _ => eval next invariant next .nil
       | _ => true) = false := by decide +kernel
 
+/-- The accepted writer also has an actual value return with the invariant
+    restored, after its intermediate write of one. -/
+theorem restoring_execution_zeuge :
+    (match execEnd oracle 0 calls restoring world .nil with
+      | .zurueck next _ => eval next invariant next .nil
+      | _ => false) = true := by decide +kernel
+
 theorem restoring_accepted_zeuge : invariantVCB unit.P unit.S [()] = true := by decide +kernel
 
 /-- The generated idle root also has a satisfiable VC gate. Its return owes
