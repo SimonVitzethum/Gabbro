@@ -335,26 +335,6 @@ private def chunk13 : Chunk where
 private def chunks : List Chunk :=
   [chunk0, chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7, chunk8, chunk9, chunk10, chunk11, chunk12, chunk13]
 
-#eval do
-  IO.FS.createDirAll ".scratch-agent"
-  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "bounds"
-
--- Close numeric certificates independently before composing their opaque proofs.
-private theorem bounded0 : decide (chunk0.steps ≤ chunk0.characters.length) = true := by kernel_rfl
-private theorem bounded1 : decide (chunk1.steps ≤ chunk1.characters.length) = true := by kernel_rfl
-private theorem bounded2 : decide (chunk2.steps ≤ chunk2.characters.length) = true := by kernel_rfl
-private theorem bounded3 : decide (chunk3.steps ≤ chunk3.characters.length) = true := by kernel_rfl
-private theorem bounded4 : decide (chunk4.steps ≤ chunk4.characters.length) = true := by kernel_rfl
-private theorem bounded5 : decide (chunk5.steps ≤ chunk5.characters.length) = true := by kernel_rfl
-private theorem bounded6 : decide (chunk6.steps ≤ chunk6.characters.length) = true := by kernel_rfl
-private theorem bounded7 : decide (chunk7.steps ≤ chunk7.characters.length) = true := by kernel_rfl
-private theorem bounded8 : decide (chunk8.steps ≤ chunk8.characters.length) = true := by kernel_rfl
-private theorem bounded9 : decide (chunk9.steps ≤ chunk9.characters.length) = true := by kernel_rfl
-private theorem bounded10 : decide (chunk10.steps ≤ chunk10.characters.length) = true := by kernel_rfl
-private theorem bounded11 : decide (chunk11.steps ≤ chunk11.characters.length) = true := by kernel_rfl
-private theorem bounded12 : decide (chunk12.steps ≤ chunk12.characters.length) = true := by kernel_rfl
-private theorem bounded13 : decide (chunk13.steps ≤ chunk13.characters.length) = true := by kernel_rfl
-
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
 #eval do
@@ -363,63 +343,33 @@ private theorem bounded13 : decide (chunk13.steps ≤ chunk13.characters.length)
 
 private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
 
-private theorem lex_from_chunks (text : String) (pieces : List Chunk)
-    (textEq : text = String.ofList (characters pieces))
-    (bounded : pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true) :
-    lex text = .ok (tokens pieces) := by
+private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
+    (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
+    lex text = .ok ts := by
   rw [textEq, lex_ofList]
-  exact lex_chunks pieces
-    (Nat.le_trans (steps_le_length pieces bounded) (Nat.le_succ _))
-
-#eval do
-  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "bounds-compose"
-
-private theorem all_bounds :
-    chunks.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true := by
-  unfold chunks
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded0, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded1, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded2, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded3, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded4, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded5, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded6, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded7, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded8, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded9, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded10, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded11, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded12, ?_⟩
-  rw [List.all_cons]
-  refine Bool.and_eq_true.mpr ⟨bounded13, ?_⟩
-  rfl
+  exact scanned
 
 #eval do
   IO.FS.createDirAll ".scratch-agent"
   IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "lexer"
 
-private theorem lex_from_chunks_zeuge : lex source = .ok (tokens chunks) :=
-  lex_from_chunks source chunks source_text all_bounds
+private theorem source_lexed : lex source = .ok (tokens chunks) :=
+  lex_from_characters source (characters chunks) (tokens chunks) source_text
+    (lex_chunks chunks
+      (Nat.le_trans (steps_le_length chunks (by kernel_rfl)) (Nat.le_succ _)))
+
+#eval do
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "parsed-bridge"
 
 private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
     (scanned : lex source = .ok ts) (read : parseTopTief ts = .ok items) :
     parsed = .ok items := by
-  unfold parsed
-  rw [scanned]
-  exact read
+  let consume : Except LexFehler (List Token) → Except String (List SItemTief) :=
+    fun answer => match answer with
+      | .error _ => .error "lex"
+      | .ok tokens => parseTopTief tokens
+  kernel_change consume (lex source) = .ok items
+  exact (congrArg consume scanned).trans read
 
 -- Retain kernel-checked normalized data from every real phase, including the parsed input.
 -- No later value contains a get that re-runs its producer chain.
@@ -435,7 +385,7 @@ private theorem source_items_success :
     parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
 
 private theorem source_items_read : parsed = .ok source_items :=
-  parsed_from_phases lex_from_chunks_zeuge source_items_success
+  parsed_from_phases source_lexed source_items_success
 
 #eval do
   IO.FS.createDirAll ".scratch-agent"
