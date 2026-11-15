@@ -109,7 +109,7 @@ theorem closure_negation [DecidableEq α] (names : List α) (formula : LProp α)
       change (∃ value : Int,
         (existentialClosure names (.not formula)).denote (values.bind name value)) ↔
           ¬ ∀ value : Int, (universalClosure names formula).denote (values.bind name value)
-      simp only [ih, not_forall]
+      simp only [ih, Classical.not_forall]
 
 /-- A total executable counterexample extractor. Internal quantifiers in the
     matrix are decided by P12–P16; the explicit outer variables are reconstructed
