@@ -7282,6 +7282,10 @@ compiler switch and a nonempty predicate context whose clause is actually elabor
 list and its exact shape. The tactic normalizes a candidate with Lean Meta, assigns
 the requested output and leaves equality to kernel conversion. Dynamic source
 phase witnesses retain normalized values and all original statements.
+Their scanner-result continuation is named once and shared with the parsed fixture;
+the phase bridge composes its actual lexer equation instead of unfolding the closed
+source run during elaboration. Short scanner equations and text equality stay in
+the isolated source witness, checked by kernel conversion.
 
 `Measures/ClosedLowering.lean` moves `Uebersetze.check_measure_gate` out of the
 private check-witness phases with its statement unchanged. `Uebersetze.closed_lowering`
