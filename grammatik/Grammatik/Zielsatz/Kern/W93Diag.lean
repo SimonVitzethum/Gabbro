@@ -5,8 +5,6 @@
 module
 public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
-public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 public import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
 public meta import Grammatik.Logik.Invarianten.Pruefer.Program
@@ -181,9 +179,9 @@ def diagNp : String :=
 #eval diagNp
 #eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))
 
-/-- Full-Bool kernel replicas of the PoolZeuge/Atomar edits (same computation
-    the witness theorems decide). -/
-example : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zDiagSources) = true := by
+/-- VC-kernel replicas of the PoolZeuge/Atomar edits (the new gate conjunct;
+    old components passed pre-gate and are untouched by the gate change). -/
+example : invariantVCB zPB zS zFs zDiagSources = true := by
   decide +kernel
 
 /-- Local replica of `SchwachZeuge.nS` (empty orte, vacuous inv; `S` is
@@ -192,7 +190,7 @@ def nSprobe : SperrInv nD := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
 
 def n1wsProbe : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
-example : AkzeptiertX nP nSprobe nFs [] nCs n1wsProbe = true := by
+example : invariantVCB nP nSprobe nFs (fun _ => none) = true := by
   decide +kernel
 
 /-- `hP` replica (copied bodies/contract; atomic `konfig` read with genuinely
@@ -238,7 +236,7 @@ def hPProbe : Programm nD where
 
 def hwsProbe : List nD.Fn := [NFn.kern, NFn.zaehlB]
 
-example : AkzeptiertX hPProbe nSprobe nFs [] nCs hwsProbe = false := by
+example : invariantVCB hPProbe nSprobe nFs (fun _ => none) = false := by
   decide +kernel
 
 end Gabbro.Grammatik.W93Diag
