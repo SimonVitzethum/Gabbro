@@ -112,7 +112,10 @@ theorem checker_refused_zeuge :
 theorem unit_checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit true) [()] [()]
       [.inl (), .inr false, .inr true] = true := by
-  rw [akzeptiertX_pruefer_eq, checker_accepted_zeuge]
+  rw [akzeptiertX_pruefer_eq]
+  change (AkzeptiertX (program true) family [()] [()]
+    [.inl (), .inr false, .inr true] (unit true).ws (sources := sources) && true && true) = true
+  rw [checker_accepted_zeuge]
   rfl
 
 end Gabbro.Grammatik.Invarianten.Pruefer.LockWitness
