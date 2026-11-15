@@ -65,7 +65,6 @@ open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
-set_option smartUnfolding false
 
 /-! ## Connected export witness: a qualified library call through the pipeline.
 
@@ -169,11 +168,11 @@ local macro "export_functions" : tactic => `(tactic| (
   have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
   rcases choices with first | second | third
   · subst index
-    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
   · subst index
-    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
   · subst index
-    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl))
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)))
 
 -- The unit is tied to the actual elaborator result below. Each function value
 -- is retained together with its canonical success equation before checking.
