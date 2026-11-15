@@ -28,7 +28,7 @@ def unit : Einheit declaration where
   pointerSignatures := some
     { count := 1
       outside := fun _ n beyond => by
-        change decide +kernel (0 = n) = false
+        change decide (0 = n) = false
         simp only [decide_eq_false_iff_not]
         omega }
 

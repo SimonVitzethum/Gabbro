@@ -54,7 +54,7 @@ def invariant : Expr declaration [] held .bool :=
 
 def family : SperrInv declaration where
   orte := fun _ => [.inr false]
-  inv := fun _ memory => decide +kernel ((memory.globs false).n = 0)
+  inv := fun _ memory => decide ((memory.globs false).n = 0)
 
 def cellSources : LockSources family := fun _ => some
   (ReifiedLock.ofExpression held invariant family () (fun _ => rfl))
