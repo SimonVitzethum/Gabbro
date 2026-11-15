@@ -98,14 +98,14 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 def fremdElaborated : { unit : UProg // elabText checkTextFremd = .ok unit } := by
   refine ⟨?unit, ?computed⟩
-  case computed => cbv <;> exact Eq.refl _
+  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 def fremdFallibleElaborated :
     { unit : UProg // elabText checkTextFremdFallible = .ok unit } := by
   refine ⟨?unit, ?computed⟩
-  case computed => cbv <;> exact Eq.refl _
+  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 /-- Both foreign-gated units elaborate. -/
 theorem checkTextFremd_ok : (elabText checkTextFremd).toOption.isSome = true := by
