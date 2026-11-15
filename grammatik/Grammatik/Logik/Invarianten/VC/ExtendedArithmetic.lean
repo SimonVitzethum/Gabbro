@@ -38,26 +38,13 @@ private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
 attribute [local irreducible] lower
+attribute [local reducible] extendedEnd extendedStatement extendedBlock scalarWP Frag.translate
 
 private theorem bounded_formula :
-    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
-  simp only [boundedCompiled, compile, boundedWriter, extendedEnd, extendedStatement,
-    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
-    leafCondition, branchCondition, scalarWP, translateScalar, Frag.translate,
-    increment, guard, lengthValue, capacityValue, Condition.map,
-    bind, Except.bind, Except.map, pure, Except.pure, Except.toOption,
-    show (2 : Nat) ≤ 16 by decide, ↓reduceIte]
-  rfl
+    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
 
 private theorem overflowing_formula :
-    overflowingCompiled.formula = retryFormula .fls 2 := by
-  simp only [overflowingCompiled, compile, overflowingWriter, extendedEnd, extendedStatement,
-    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
-    leafCondition, branchCondition, scalarWP, translateScalar, Frag.translate,
-    increment, guard, lengthValue, capacityValue, Condition.map,
-    bind, Except.bind, Except.map, pure, Except.pure, Except.toOption,
-    show (2 : Nat) ≤ 16 by decide, ↓reduceIte]
-  rfl
+    overflowingCompiled.formula = retryFormula .fls 2 := rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
