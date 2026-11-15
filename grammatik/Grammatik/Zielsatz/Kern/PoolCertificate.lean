@@ -8,7 +8,7 @@ public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 namespace Gabbro.Grammatik.Zielsatz.PoolCertificate
 
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
-open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness
+open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness Invarianten.Pruefer
 
 abbrev scalar := Ty.int 0 100
 
@@ -39,7 +39,8 @@ def slotRelation (value : Zahl 0 100) :
 theorem slotRelation_result (value : Zahl 0 100) :
     localEquality (τ := scalar) slotExpr .nil value = .ok (slotRelation value) := by
   simp only [localEquality, scalar]
-  simp only [slotExpr, integerEquality]
+  simp only [slotExpr]
+  unfold integerEquality
   rfl
 
 theorem slotRelation_meaning (value : Zahl 0 100) (values : Assignment (Observation zD)) :
@@ -111,12 +112,16 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Zah
     (fun values => values (.slot () () 0) = bound.n) each
   cases result : branch sources bound with
   | error cause =>
-      simp only [branch, ending, tail, returnCondition, hpre, bind, Except.bind, pure,
+      simp only [branch, tail] at result
+      rw [ending] at result
+      simp only [returnCondition, hpre, bind, Except.bind, pure,
         Except.pure, reduceCtorEq] at result
   | ok out =>
       refine ⟨out, rfl, ?_⟩
       have shape : out.formula = pre.formula := by
-        simp only [branch, ending, tail, returnCondition, hpre, bind, Except.bind, pure,
+        simp only [branch, tail] at result
+        rw [ending] at result
+        simp only [returnCondition, hpre, bind, Except.bind, pure,
           Except.pure] at result
         exact (congrArg Condition.formula (Except.ok.inj result)).symm
       rw [shape]
