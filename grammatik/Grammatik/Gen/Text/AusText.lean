@@ -13,6 +13,7 @@
   check of a printed program never runs the lexer.
 -/
 module
+public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Gen.Text.Delab
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
@@ -94,13 +95,22 @@ def traegerU (u : UProg) : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
 /-- The lock family of the source: lock `L` protects every carrier it guards. -/
 def sperreU (u : UProg) : SperrInv (declOf u) where
   orte := fun L => (traegerU u).filter fun c => decide (L ∈ waechterVon c)
-  inv := fun _ _ => true
+  inv := (Cover.Differenz.sperrFamilie u).inv
+
+/-- Retain the elaborator's source formula with exactly the same semantic
+    predicate. The alternate footprint enumeration carries no new assumption. -/
+def lockSourcesU (u : UProg) : Invarianten.Pruefer.LockSources (sperreU u) :=
+  fun lock => (Cover.Differenz.sperrQuellen u lock).map fun source =>
+    { resources := source.resources
+      expression := source.expression
+      correct := source.correct }
 
 /-- A fixed numeric scheme (the cells and the verdict do not read it). -/
 def zahlenFest : Zahlen := Spez.zahlen {}
 
 /-- **The program of the source** an elaborated and lowered unit is. -/
 def mkEinsatz (u : UProg) (P : Programm (declOf u)) : Except String Einsatz :=
+  if !Cover.Differenz.sperrInvsOk u then .error "lock invariant without G form" else
   if hb : (List.finRange u.fns.length).all
       (fun f => @Programm.bodenP (declOf u) (aufzU u) P f == ((declOf u).signatur f).boden) = true then
   if ha : u.axs.length = 0 then
@@ -109,6 +119,7 @@ def mkEinsatz (u : UProg) (P : Programm (declOf u)) : Except String Einsatz :=
           zahlen := zahlenFest
           P := P
           S := sperreU u
+          lockSources := lockSourcesU u
           fs := List.finRange u.fns.length
           ls := List.finRange u.locks.length
           cs := traegerU u

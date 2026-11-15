@@ -102,6 +102,52 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
       | some e => wahr? (eval (s.welt []) e (s.welt []) Env.nil)
       | none => (lockAt u L).inv.isNone }
 
+/-- Preserve the source predicate beside its semantic lock family. This
+    correspondence is computed by elaboration; users supply no Lean proof. -/
+def sperrQuellen (u : UProg) : Invarianten.Pruefer.LockSources (sperrFamilie u) := fun lock =>
+  match source : sperrInvTerm u lock with
+  | some expression => some
+      (Invarianten.Pruefer.ReifiedLock.ofExpression (alleGehalten u) expression
+        (sperrFamilie u) lock (fun _ => by simp only [sperrFamilie, source]; rfl))
+  | none => some
+      { resources := []
+        expression := if (lockAt u lock).inv.isNone then .tru else .fls
+        correct := fun world => by
+          simp only [sperrFamilie, source]
+          cases (lockAt u lock).inv.isNone <;> rfl }
+
+/-- The declaration's finite interface layout is elaborator data, independent
+    of contract truth. Every admitted target is covered, used or unused. -/
+def zeigerSignaturen (u : UProg) : Vertraege.Pruefer.PointerSignatures (declOf u) where
+  count := (sigFns u).length
+  outside := fun f n beyond => by
+    cases tested : (declOf u).passt f n with
+    | false => rfl
+    | true => exact False.elim ((Nat.not_lt_of_ge beyond) (passtAt_lt u f n tested))
+
+/-- With no oracle declarations the source/model correspondence is computed
+    for any (necessarily empty) oracle family. Other families need their
+    actual expression reification, never an assumed locality proof. -/
+def leereAxQuellen (u : UProg) (Q : AxEns (declOf u)) :
+    Option (Vertraege.Pruefer.AxiomSources Q) :=
+  if empty : u.axs.length = 0 then
+    let absent : (declOf u).Ax → False := fun a => by
+      have inside := a.isLt
+      exact Nat.not_lt_zero _ (Nat.lt_of_lt_of_le inside (Nat.le_of_eq empty))
+    some
+      { items := []
+        complete := fun a => False.elim (absent a)
+        resources := fun a => False.elim (absent a)
+        expression := fun a => False.elim (absent a)
+        correct := fun a => False.elim (absent a) }
+  else none
+
+/-- The source exporter supplies the unit's measure. Failed exports cannot
+    reach the image path: lowerAllg and checkImageStartData both refuse them.
+    The empty value keeps this total metadata projection inert on failures. -/
+def massVon (u : UProg) : Mass (declOf u) :=
+  ((Measures.lowerMeasures u).toOption.map (·.mass)).getD Mass.leer
+
 /-- **The checker of the goal theorem on an elaborated unit**: the lowered program, the lock family
     `sperrFamilie`, every lock and every carrier (tables then statics) enumerated, the thread roots of the
     unit as the starts. -/
@@ -118,7 +164,8 @@ def akzeptiertU (u : UProg) : Except String Bool :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
     match sourceGuests u with
     | .error error => .error error
-    | .ok guests => .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests)
+    | .ok guests => Vertraege.Pruefer.contractVerdict P (sperrFamilie u) fs (sperrQuellen u)
+        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u))
 
 /-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
     in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,

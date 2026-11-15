@@ -199,14 +199,19 @@ theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestarte
 theorem verbinde_akzeptiert [RootNativeFloat.Hardware] {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)
-    (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true) (hV : Verbindbar E₁ E₂)
+    {sources₁ : Invarianten.Pruefer.LockSources E₁.S}
+    {sources₂ : Invarianten.Pruefer.LockSources E₂.S}
+    {sources : Invarianten.Pruefer.LockSources (verbinde e E₁ E₂).S}
+    (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku (sources := sources₁) = true)
+    (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku (sources := sources₂) = true) (hV : Verbindbar E₁ E₂)
     (qs : List D.Ax)
     (hS : schnittstelleB fs cs e E₁ E₂ qs = true)
     (hq : ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
-      Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) :
-    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs = true :=
-  spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef)
+      Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q)
+    (hI : Invarianten.Pruefer.programInvariantsB (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs sources {} ls = true) :
+    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws
+      (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs (sources := sources) = true :=
+  spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef) hI
     (h := akzeptiertSpec_verbinde hvoll
       (akzeptiertSpec_of hvoll hls hcs E₁.akku h₁) (akzeptiertSpec_of hvoll hls hcs E₂.akku h₂) hV
       (((schnittstelleB_iff hvoll hcs qs).mp hS).1))

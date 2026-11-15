@@ -19,15 +19,21 @@ variable [DecidableEq D.Fn] [DecidableEq D.Ax] (P : Programm D) {S : SperrInv D}
 theorem akzeptiert_mitRuhe [RootNativeFloat.Hardware] {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
-    (h : Akzeptiert P S fs ls cs ws [] checks = true) :
-    Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) [] (checks.map CheckDecl.mitRuhe) = true := by
+    {sources : Invarianten.Pruefer.LockSources S}
+    {idleSources : Invarianten.Pruefer.LockSources S.mitRuhe}
+    (h : Akzeptiert P S fs ls cs ws [] checks (sources := sources) = true)
+    (hI : Invarianten.Pruefer.programInvariantsB P.mitRuhe S.mitRuhe (fsRuhe fs) idleSources {} ls = true) :
+    Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) []
+      (checks.map CheckDecl.mitRuhe) (sources := idleSources) = true := by
   have hA := akzeptiertSpec_of hvoll hls hcs [] h
   have hChecks : CheckAdmission P fs checks := by
-    simp only [Akzeptiert, Bool.and_eq_true] at h
-    exact (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h.1.1.2
+    dsimp only [Akzeptiert] at h
+    simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, hChecks, _, _⟩ := h
+    exact (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp hChecks
   exact spec_akzeptiert (fsRuhe_voll hvoll) hls hcs []
     (fun a ha => absurd ha List.not_mem_nil)
-    (CheckAdmission.mitRuhe P hvoll hA.abg hChecks)
+    (CheckAdmission.mitRuhe P hvoll hA.abg hChecks) hI
     (h := akzeptiertSpec_mitRuhe P hvoll hA)
 
 omit [DecidableEq D.Ax] in

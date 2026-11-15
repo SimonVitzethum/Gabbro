@@ -45,11 +45,12 @@ abbrev Emitted.csA (output : Emitted src K options) :
 theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
     (hZ : OldSource.zertifizierbar output.compiled.unit = true) (hr : output.compiled.unit.roots = [])
     (hg : output.compiled.unit.gestartet = []) (hAt : ∀ g, (declOf output.compiled.unit).atomar g = false)
-    (hw : RootNativeFloat.Hardware) :
+    (hw : RootNativeFloat.Hardware)
+    (hStart : unitStartGeprueftB (output.einheit Q) output.fsA.1 output.lsA.1 = true) :
     AkzeptiertSpec (output.einheit Q).P (output.einheit Q).S output.fsA.1 (output.einheit Q).ws
       (output.einheit Q).akku := by
   have hacc : akzeptiertX_pruefer.akzeptiert (output.einheit Q) output.fsA.1 output.lsA.1 output.csA.1 = true :=
-    (output.goal_checker_main Q output.sp0 hZ hr hg).1
+    (output.goal_checker_main Q output.sp0 hZ hr hg hStart).1
   exact akzeptiertSpec_of_X (akzeptiertX_pruefer.korrekt (output.einheit Q) output.fsA output.lsA output.csA
     hw hacc).1 (keinGeteiltV hAt)
 
@@ -97,7 +98,7 @@ theorem Emitted.bild_ziel [Kern] (output : Emitted src K options)
     {ρr : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params r)}
     (hRuhig : Ruhig output.compiled.program output.fsA.1 r)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
-    {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
+    {Q : AxEns (declOf output.compiled.unit)} (hStart : unitStartGeprueftB (output.einheit Q) output.fsA.1 output.lsA.1 = true)
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
     [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem} (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop}
@@ -134,8 +135,11 @@ theorem Emitted.bild_ziel [Kern] (output : Emitted src K options)
           Ziel output.compiled.program (output.einheit Q).S O output.image.passes
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') := by
+  have hN : NutzerPflichtA (output.einheit Q) :=
+    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true.mp hStart).2
+
   -- (a′): the compiler's acceptance, the checker's soundness, no shared atomic
-  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2
+  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2 hStart
   -- (b): the logic without the rely, and the start duty of `main`
   have hL : LogikPflicht output.compiled.program (output.einheit Q).S Q := logikPflicht_of_A hN.logik
   have hmain : output.compiled.main ∈ (output.einheit Q).ws := by

@@ -151,7 +151,7 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
         exact hR _ _ _ _ heq
       · cases he'
   | .axiomCall a args h' hw hg hd hgd, _, σ, ρ, e', he => by
-      simp only [execStmt, axiomAntwort] at he
+      simp only [execStmt, axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at he
       split at he <;> cases he
   | .shift .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
   | .traverse .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
@@ -250,7 +250,7 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       · cases he
   | .bindAxiom a args he' hw hg hd hgd rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei] at h
-      simp only [execBlock, axiomAntwort] at he
+      simp only [execBlock, axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at he
       split at he
       · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
       · cases he
@@ -383,7 +383,7 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       · cases he
   | .bindAxiom a args he' hw hg hd hgd rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei] at h
-      simp only [execEnd, axiomAntwort] at he
+      simp only [execEnd, axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at he
       split at he
       · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
       · cases he

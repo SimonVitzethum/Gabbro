@@ -1,12 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/Satz/Raum.lean
-  Subject:   ANY PROGRAM WITHIN THE BOUNDS HAS ITS CELLS IN THE SPACE. The generator walks de-duplicated body tables
-             (`Spez.tabellenD`), so a given program is usually not literally in its stream. But every body of size
-             `≤ nb` has a representative of the same summary at a size not larger (`tabellenD_vollst`, from
-             `entdoppelt_vollst`), and bodies of the same summary give the same cells and the same verdict (T1,
-             `SchluesselZellen.lean`). So a valid program of a member, with bodies `≤ nb`, skeleton size `≤ kmax` and a
-             contract variant of size `≤ nc`, puts each of its cells into `RaumGut` (`raumGut_aus`); a single-fault
-             program with one bad cell puts that cell into `RaumSchlecht` (`raumSchlecht_aus`). Nothing is evaluated.
+  Body-table representatives preserve structural summaries and cells. Their full verification verdict is not determined by that summary.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
@@ -151,52 +144,6 @@ theorem gs_bodenOk (z : Spez) (P : Programm z.deklaration) (r : ∀ f, Rumpf z.d
   letI : Zahlen := z.zahlen
   simp only [Spez.bodenOk, Programm.bodenP, gs_bodenRunden z P r h]
 
-/-- **A valid program within the bounds puts its cells into the space.** -/
-theorem raumGutIn_aus (z : Spez) (nb kmax nc : Nat) {x : Zelle} (h0 : Haut z.deklaration)
-    (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
-    (hnb : nb < unendlich)
-    (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
-    {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
-    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
-    (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = true)
-    (hx : (z.einsatz P ws hax hb).Hat x) : RaumGutIn z nb kmax nc x := by
-  letI : Zahlen := z.zahlen
-  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hnb
-  have hgP : ∀ f, GleicherSchluessel (r f) (P.rumpf f) := fun f => by rw [vertragsL_rumpf hP]; exact hg f
-  have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
-  have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
-  have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
-  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hax hb).hcs
-  refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', ?_, ?_⟩
-  · exact Nat.le_trans (summe_le hc) hk
-  · rw [← hv]
-    exact gs_akzeptiertX P r hgP _ _ _ _ _ hvoll hls hcs
-  · exact (gs_alleZellen P r hgP _ _ _ _ _ x).2 hx
-
-/-- **A refused program within the bounds puts itself into the space**: each of its cells in `B` or a good one of `er`. -/
-theorem raumSchlechtIn_aus (z : Spez) (nb kmax nc : Nat) (h0 : Haut z.deklaration)
-    (hn : ∀ f, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ nb)
-    (hnb : nb < unendlich)
-    (hk : @groesseHaut z.deklaration z.aufz z.zahlen h0 ≤ kmax)
-    {P : Programm z.deklaration} (hP : P ∈ z.vertragsL nc h0) {ws : List z.deklaration.Fn}
-    (hws : ws ∈ z.parameter) (hax : z.axs = []) (hb : z.bodenOk P = true)
-    (hv : z.gutB P z.sperreMax (z.wurzelnVon P ws) = false) {er B : List Zelle}
-    (hE : gedeckt er B (z.einsatz P ws hax hb).zellen = true) : RaumSchlechtIn z nb kmax nc er B := by
-  letI : Zahlen := z.zahlen
-  obtain ⟨c, r, hc, hr, hg⟩ := vertreter z nb h0 hn hnb
-  have hgP : ∀ f, GleicherSchluessel (r f) (P.rumpf f) := fun f => by rw [vertragsL_rumpf hP]; exact hg f
-  have hb' : z.bodenOk (P.mitRumpf r) = true := by rw [gs_bodenOk z P r hgP]; exact hb
-  have hvoll : ∀ g : z.deklaration.Fn, g ∈ z.fnListe := List.mem_finRange
-  have hls : ∀ L : z.deklaration.Lock, L ∈ z.lockListe := List.mem_finRange
-  have hcs : ∀ c : z.deklaration.Tab ⊕ z.deklaration.Glob, c ∈ z.traegerListe := (z.einsatz P ws hax hb).hcs
-  refine ⟨((Aufz.fn (D := z.deklaration)).map c).sum, ?_, ⟨r, h0.unterbricht⟩, hautT_mem _ ⟨r, h0.unterbricht⟩ c hr,
-    P.mitRumpf r, vertragsL_mitRumpf r hP, ws, hws, hax, hb', ?_, ?_⟩
-  · exact Nat.le_trans (summe_le hc) hk
-  · rw [← hv]
-    exact gs_akzeptiertX P r hgP _ _ _ _ _ hvoll hls hcs
-  · rw [← hE]
-    exact all_mem_gleich _ (gs_alleZellen P r hgP _ _ _ _ _)
 
 set_option maxRecDepth 200000 in
 /-- The number of members, once (the witness files read it instead of deciding it). -/

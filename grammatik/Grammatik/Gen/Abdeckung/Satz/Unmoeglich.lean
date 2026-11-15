@@ -76,7 +76,12 @@ theorem ug_6_0 (m hh gg : Bool) (hbad : (hh || gg) = true) (e : Einsatz) (hv : e
     ¬ e.Hat ⟨6, 0, true, [m, hh, gg]⟩ := by
   letI := e.aufz
   letI := e.zahlen
-  exact zelle_6_0_nicht_gueltig e.P e.S e.fs e.ls e.cs e.ws e.hvoll e.hls e.hcs hv m hh gg hbad
+  intro occurrence
+  obtain ⟨root, bad⟩ := zelle_6_0_braucht_5 e.P e.S e.fs e.ls e.cs e.ws m hh gg hbad occurrence
+  have accepted := ((einsatz_akzeptiert e).mp hv).1 ⟨5, 0, true, [hh, gg]⟩ root
+  change !(⟨5, 0, true, [hh, gg]⟩ : Zelle).schlecht = true at accepted
+  rw [bad] at accepted
+  cases accepted
 
 /-- `6.0 m h g` with `h || g` comes with the bad root cell `5.0 h g`. -/
 theorem m_6_0 (m hh gg : Bool) (hbad : (hh || gg) = true) (e : Einsatz) (h : e.Hat ⟨6, 0, true, [m, hh, gg]⟩) :

@@ -60,8 +60,9 @@ theorem schnitt_komponiere (E : Einheit D) (eigen : D.Fn → Bool) :
   have hQ : qAlle (schnitt E eigen) = E.Q := by
     funext a σ v
     simp only [qAlle, schnitt, List.all_cons, List.all_nil, Bool.and_true, Bool.and_self]
-  unfold komponiere komponiereP
+  unfold komponiere komponiereP axiomSourcesVon
   rw [hP, hQ]
+  simp only [dif_pos rfl]
   cases E
   simp only [mitRumpf, schnitt, List.flatMap_cons, List.flatMap_nil, List.append_nil]
 

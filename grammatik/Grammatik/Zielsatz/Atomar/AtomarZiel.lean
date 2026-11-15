@@ -22,6 +22,10 @@
 -/
 module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Logik.Invarianten.Pruefer.Unit
+public import Grammatik.Logik.Invarianten.Pruefer.Transport
+public import Grammatik.Logik.Vertraege.Pruefer.Transport
+public import Grammatik.Logik.Vertraege.Pruefer.Unit
 public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Faeden.Ruhe.Teil3
@@ -146,6 +150,8 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
     (hA : AkzeptiertSpecX P S fs ws B A) :
     AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (B.map (·.mitRuhe))
       (A.map Kernzelle.AccumulatorDecl.mitRuhe) where
+  invarianten := Invarianten.Pruefer.invariantDuties_mitRuhe hA.invarianten
+  kontrakte := Vertraege.Pruefer.contractDuties_mitRuhe hA.kontrakte
   frag := frag_mitRuhe P hA.frag
   abg := abg_mitRuhe P hvoll hA.abg
   fuss := fussSX_mitRuhe P hvoll hA.abg hA.fuss
@@ -219,7 +225,7 @@ theorem besitzB_sound {E : Einheit D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g 
       BesitzStart E := by
   have h' := List.all_eq_true.mp h
   refine ⟨fun a ha => ?_, fun a ha => ?_, ⟨fun a ha => ?_, fun a ha r hr => ?_⟩⟩ <;>
-    have h1 := h' a ha <;> simp only [Bool.and_eq_true, decide_eq_true_eq] at h1
+    have h1 := h' a ha <;> simp only [Bool.and_eq_true_iff, decide_eq_true_eq] at h1
   · exact Body.checkProgram_sound hvoll h1.1.1.1
   · exact h1.1.1.2
   · exact h1.1.2
@@ -235,33 +241,57 @@ end Besitz
 noncomputable def akzeptiertX_pruefer : PrueferX where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] && besitzB E fs &&
-      Kernzelle.akkuStartB E E.akku
+    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints && besitzB E fs &&
+      Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
+      nutzerPflichtGeprueftB E fs ls
   korrekt := fun {D} _ E fs ls cs hardware h => by
     letI : RootNativeFloat.Hardware := hardware
     letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    have h := (Bool.and_eq_true _ _).mp h
+    have h := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
+    have h := (Bool.and_eq_true_iff).mp h
     obtain ⟨hX, hStart⟩ := h
-    have hX' := (Bool.and_eq_true _ _).mp hX
+    have hX' := (Bool.and_eq_true_iff).mp hX
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hX'.2
     have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
       akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1
     exact ⟨hSpec.mitBesitz hb hw,
       hs, Kernzelle.akkuStartB_sound hStart⟩
 
+/-- The concrete unit checker retains its declared lock syntax; its choice
+    of an internal axiom-equality instance does not affect the verdict. -/
+theorem akzeptiertX_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq : DecidableEq D.Ax]
+    (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
+    akzeptiertX_pruefer.akzeptiert E fs ls cs =
+      (AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+        besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls && nutzerPflichtGeprueftB E fs ls) := by
+  exact congrArg (fun inst : DecidableEq D.Ax =>
+    @AkzeptiertX D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+      besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
+        nutzerPflichtGeprueftB E fs ls)
+    (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
+
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
     (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
     `C.korrekt` (the lifted checker judges the unit's declared checks). -/
 def Pruefer.alsX (C : Pruefer) : PrueferX where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs &&
-    Kernzelle.akkuStartB E E.akku
+    Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
+      Vertraege.Pruefer.KontrakteGeprueftB E.P E.S fs E.lockFormulas {} E.loopHints
   korrekt := fun E fs ls cs hardware h => by
-    have h := (Bool.and_eq_true _ _).mp h
+    have outer := Bool.and_eq_true_iff.mp h
+    have hK := Vertraege.Pruefer.KontrakteGeprueftB_sound fs.2 outer.2
+    have h := outer.1
+    have full := (Bool.and_eq_true_iff.mp h)
+    have checked := (invariantenGeprueftB_iff E fs.1 ls.1 {}).mp full.2
+    obtain ⟨certificate, result⟩ := checked
+    have hI := fun f => certificate.program.writers f (fs.2 f)
+    have h := full.1
+    have h := (Bool.and_eq_true_iff).mp h
     obtain ⟨hC, hStart⟩ := h
-    have hC' := (Bool.and_eq_true _ _).mp hC
+    have hC' := (Bool.and_eq_true_iff).mp hC
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hC'.2
     have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
-      akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hardware hC'.1)
+      akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hardware hC'.1) hI hK
     exact ⟨hSpec.mitBesitz hb hw, hs,
       Kernzelle.akkuStartB_sound hStart⟩
 
@@ -270,7 +300,13 @@ def Pruefer.alsX (C : Pruefer) : PrueferX where
 theorem Pruefer.alsX_akzeptiert (C : Pruefer) {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hB : E.arenen = [])
     (hA : E.akku = [])
-    (h : C.akzeptiert E fs ls cs = true) : C.alsX.akzeptiert E fs ls cs = true := by
+    (h : C.akzeptiert E fs ls cs = true) (hI : invariantenGeprueftB E fs ls = true)
+    (hK : Vertraege.Pruefer.KontrakteGeprueftB E.P E.S fs E.lockFormulas {} E.loopHints = true) :
+    C.alsX.akzeptiert E fs ls cs = true := by
+  apply Bool.and_eq_true_iff.mpr
+  refine ⟨?_, hK⟩
+  apply Bool.and_eq_true_iff.mpr
+  refine ⟨?_, hI⟩
   show (C.akzeptiert E fs ls cs && besitzB E fs && Kernzelle.akkuStartB E E.akku) = true
   rw [h, besitzB_leer hB, hA]
   exact Kernzelle.akkuStartB_leer E
@@ -292,8 +328,10 @@ private theorem ziel_atomar_aus_einheit (D : Deklaration) [DecidableEq D.Fn] (E 
     have h := logikPflichtA_mitRuhe hN.logik
     exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc)
         (h.1 passes f).1,
-      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.1,
-      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA.abg hc) (h.1 passes f).2.2⟩,
+      (Invarianten.Pruefer.invariantDuties_mitRuhe hA.invarianten f passes (axEnsRuhe E.Q)
+        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).1,
+      (Invarianten.Pruefer.invariantDuties_mitRuhe hA.invarianten f passes (axEnsRuhe E.Q)
+        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).2⟩,
       h.2⟩
   exact ziel_atomar_spec (B := E.arenen.map (·.mitRuhe))
     (A := E.akku.map Kernzelle.AccumulatorDecl.mitRuhe)
@@ -327,6 +365,8 @@ theorem gabbro_ziel_atomar (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (
 theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (hB : E.arenen = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
+    (hI : ∀ f, Invarianten.Pruefer.InvariantDuties E.P E.S f)
+    (hContracts : ∀ f, Vertraege.Pruefer.ContractDuties E.P E.S f)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat)
     (ord : D.mitRuhe.Glob → Ordnung) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
@@ -338,7 +378,7 @@ theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn
   have hA := C.korrekt E fs ls cs hH.2.2.2 hC
   have hAX : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku := by
     rw [hB]
-    exact akzeptiertSpecX_of_spec (A := E.akku) hA
+    exact akzeptiertSpecX_of_spec (A := E.akku) hA hI hContracts
   exact ziel_atomar_aus_einheit D E fs ls hAX
     (nutzerPflichtA_of_akzeptiert fs.2 hA hN) O hH passes ord sp init hL
 

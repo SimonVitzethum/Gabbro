@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Elim.Formula
-public import Mathlib.Data.Int.GCD
+import Mathlib.Data.Int.GCD
 
 @[expose] public section
 

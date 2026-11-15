@@ -125,7 +125,7 @@ theorem axiomAntwort_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : OrakelRu O
     (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwort O' a (worldR σ) (envR ρ) =
       (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) := by
-  unfold axiomAntwort
+  simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Bool.false_eq_true, ↓reduceIte]
   rw [worldR_fragt, hO.wirkt]
   exact congrArg _ (einpassenErg_ru O.zeiger O'.zeiger hO.zeiger (D.aerg a) _)
 
