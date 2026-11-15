@@ -2,6 +2,7 @@
    No source parser/kernel execution or compiler build is performed by this fixture. -/
 module
 public import Stage0.Senke.Images.InitialRead
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -100,7 +101,7 @@ private theorem loaded : BytesAt memory Runner.Prog.IMG bytes := by
     change i < bytes.length at hi
     simp only [Runner.Prog.IMG] at *
     omega
-  change (bytes[(BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG]?).getD 0 = bytes[i]
+  kernel_change (bytes[(BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG]?).getD 0 = bytes[i]'hi
   rw [address, List.getElem?_eq_getElem hi]
   rfl
 

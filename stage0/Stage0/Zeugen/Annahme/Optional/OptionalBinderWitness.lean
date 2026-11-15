@@ -13,7 +13,8 @@ set_option maxHeartbeats 2000000
 def result (valued : Bool) : Option Ty := if valued then some (.int 0 10) else none
 
 def u (valued fallible : Bool) : UProg := { ControlProbe.u with
-  axs := [{ name := "gate", params := [], kinds := [], res := result valued,
+  axs := [{
+    name := "gate", params := [], kinds := [], res := result valued,
     gruende := if fallible then 1 else 0 }] }
 abbrev D (valued fallible : Bool) := declOf (u valued fallible)
 abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, by decide⟩
@@ -75,14 +76,14 @@ def body (valued fallible nested : Bool) :
     Endblock (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
       false [] [] := by
   cases fallible with
-  | true => exact .bind (.widen (by decide) (by decide) (.lit 23))
+  | true => exact (.bind (.widen (by decide) (by decide) (.lit 23))
       (if nested then .cons (.ite .tru (fallibleBlock valued) .nil)
-        (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued)
+        (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued))
   | false =>
     cases valued with
-    | false => exact .bind (.widen (by decide) (by decide) (.lit 23))
+    | false => exact (.bind (.widen (by decide) (by decide) (.lit 23))
         (if nested then .cons (.ite .tru plainBlock .nil)
-          (retN false false 99 (by decide) (by decide)) else plainEnd)
+          (retN false false 99 (by decide) (by decide)) else plainEnd))
     | true => exact retN true false 99 (by decide) (by decide)
 
 def program (valued fallible nested : Bool) : Programm (D valued fallible) where
@@ -95,8 +96,10 @@ def program (valued fallible nested : Bool) : Programm (D valued fallible) where
     subst f
     exact body valued fallible nested
 
-def binding (fallible : Bool) : TorB :=
-  ⟨1, [none, none, none, none, none, none], if fallible then [(-9, 0)] else []⟩
+def binding (fallible : Bool) : TorB where
+  nr := 1
+  regs := [none, none, none, none, none, none]
+  fehler := if fallible then [(-9, 0)] else []
 
 def image (valued fallible nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program valued fallible nested)
