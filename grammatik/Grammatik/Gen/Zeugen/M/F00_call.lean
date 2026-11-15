@@ -9,6 +9,8 @@ public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
 
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 namespace Gabbro.Grammatik.Gen.Zeugen.F00_call
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
@@ -58,7 +60,7 @@ def zellen : List Zelle := [
   ⟨5, 0, true, [false, false]⟩,
   ⟨6, 0, true, [false, false, false]⟩]
 
-theorem zellen_exact : e.zellen.eraseDups = zellen := by cbv
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide +kernel
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member

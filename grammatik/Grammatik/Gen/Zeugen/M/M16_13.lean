@@ -41,6 +41,8 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false
@@ -138,7 +140,7 @@ def zellen : List Zelle := [
   ⟨9, 0, true, [true, true, true, true]⟩,
   ⟨10, 0, true, [true]⟩]
 
-theorem zellen_exact : e.zellen.eraseDups = zellen := by cbv
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide +kernel
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member

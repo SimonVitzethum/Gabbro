@@ -43,6 +43,8 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.N47_P
 

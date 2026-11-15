@@ -19,6 +19,8 @@ import all Init.Data.String.OrderInstances
 
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 namespace Gabbro.Grammatik.Gen.Zeugen.F03_reg
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
@@ -102,7 +104,7 @@ def zellen : List Zelle := [
   ⟨9, 0, true, [false, true, true, false]⟩,
   ⟨10, 0, true, [true]⟩]
 
-theorem zellen_exact : e.zellen.eraseDups = zellen := by cbv
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide +kernel
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member
