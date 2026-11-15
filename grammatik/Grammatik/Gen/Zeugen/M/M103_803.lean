@@ -3,6 +3,8 @@
   concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
+
+
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Erzeuger.Entscheidung
 public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
@@ -38,6 +40,8 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
+
+set_option maxRecDepth 4096
 
 
 set_option linter.unusedTactic false
@@ -86,6 +90,55 @@ theorem e_gueltig_iff_gates : e.gueltig = true ↔
 theorem e_gueltig : e.gueltig = true :=
   e_gueltig_iff_gates.mpr (by decide +kernel)
 
-theorem e_hat : ∀ x ∈ ([⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, true, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨1, 0, true, [false, true, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨2, 0, true, [true, false, true, false]⟩, ⟨2, 2, false, [false, true, true]⟩, ⟨2, 3, false, [false, false, true]⟩, ⟨2, 1, true, [true, false]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [true, false, false]⟩, ⟨6, 1, true, [true, true, false, false]⟩, ⟨6, 1, true, [true, true, true, true]⟩, ⟨6, 1, true, [true, true, false, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨8, 0, true, [true, false, true]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, true, false, false]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩] : List Zelle), e.Hat x := by decide
+def requested : List Zelle := [⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true, [true, false, true]⟩, ⟨1, 0, true, [true, true, true]⟩, ⟨1, 0, true, [false, false, false]⟩, ⟨1, 0, true, [false, true, true]⟩, ⟨1, 0, true, [true, false, false]⟩, ⟨2, 0, true, [true, false, true, false]⟩, ⟨2, 2, false, [false, true, true]⟩, ⟨2, 3, false, [false, false, true]⟩, ⟨2, 1, true, [true, false]⟩, ⟨3, 0, true, [true, true]⟩, ⟨3, 0, true, [false, true]⟩, ⟨3, 0, true, [false, false]⟩, ⟨4, 0, true, [false, false]⟩, ⟨4, 0, true, [true, true]⟩, ⟨5, 0, true, [false, false]⟩, ⟨6, 0, true, [true, false, false]⟩, ⟨6, 1, true, [true, true, false, false]⟩, ⟨6, 1, true, [true, true, true, true]⟩, ⟨6, 1, true, [true, true, false, true]⟩, ⟨7, 0, true, [false, true]⟩, ⟨7, 1, false, [true, false, false]⟩, ⟨7, 0, true, [true, true]⟩, ⟨7, 1, false, [true, true, true]⟩, ⟨8, 0, true, [false, false, true]⟩, ⟨8, 0, true, [false, false, false]⟩, ⟨8, 0, true, [true, false, true]⟩, ⟨9, 0, true, [false, true, true, false]⟩, ⟨9, 0, true, [false, true, false, true]⟩, ⟨9, 0, true, [false, true, false, false]⟩, ⟨9, 0, true, [false, false, true, false]⟩, ⟨9, 0, true, [false, false, false, true]⟩]
+
+/-- Exact cell set, including every companion cell of this fixture. -/
+def zellen : List Zelle := [
+  ⟨0, 0, true, [true, false, false]⟩,
+  ⟨1, 0, true, [true, false, true]⟩,
+  ⟨1, 0, true, [true, true, true]⟩,
+  ⟨1, 0, true, [false, false, false]⟩,
+  ⟨1, 0, true, [false, true, true]⟩,
+  ⟨1, 0, true, [true, false, false]⟩,
+  ⟨2, 0, true, [true, false, true, false]⟩,
+  ⟨2, 2, false, [false, true, true]⟩,
+  ⟨2, 3, false, [false, false, true]⟩,
+  ⟨2, 1, true, [true, false]⟩,
+  ⟨3, 0, true, [true, true]⟩,
+  ⟨3, 0, true, [false, true]⟩,
+  ⟨3, 0, true, [false, false]⟩,
+  ⟨4, 0, true, [false, false]⟩,
+  ⟨4, 0, true, [true, true]⟩,
+  ⟨5, 0, true, [false, false]⟩,
+  ⟨6, 0, true, [true, false, false]⟩,
+  ⟨6, 1, true, [true, true, false, false]⟩,
+  ⟨6, 1, true, [true, true, true, true]⟩,
+  ⟨6, 1, true, [true, true, false, true]⟩,
+  ⟨7, 0, true, [false, true]⟩,
+  ⟨7, 1, false, [true, false, false]⟩,
+  ⟨7, 0, true, [true, true]⟩,
+  ⟨7, 1, false, [true, true, true]⟩,
+  ⟨8, 0, true, [false, false, true]⟩,
+  ⟨8, 0, true, [false, false, false]⟩,
+  ⟨8, 0, true, [true, false, true]⟩,
+  ⟨9, 0, true, [false, true, true, false]⟩,
+  ⟨9, 0, true, [false, true, false, true]⟩,
+  ⟨9, 0, true, [false, true, false, false]⟩,
+  ⟨9, 0, true, [false, false, true, false]⟩,
+  ⟨9, 0, true, [false, false, false, true]⟩,
+  ⟨10, 0, true, [true]⟩]
+
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide +kernel
+
+theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
+  intro x member
+  rw [← zellen_exact] at member
+  exact List.mem_eraseDups.1 member
+
+theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
+  ⟨e_gueltig, e_hat _ (by decide)⟩
+
+/-- Missing requested cells are findings, never an altered checker verdict. -/
+def missing : List Zelle := requested.filter (fun x => !zellen.contains x)
 
 end Gabbro.Grammatik.Gen.Zeugen.M103_803

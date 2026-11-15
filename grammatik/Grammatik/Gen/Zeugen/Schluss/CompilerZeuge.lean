@@ -9,6 +9,8 @@ public import Grammatik.Gen.Zeugen.Schluss.Checked
 
 namespace Gabbro.Grammatik.Gen.Zeugen
 
+open Gabbro.Grammatik.Gen.Zeugen.Gap
+
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz
 
 /-- A cell-sensitive correctness predicate: every structural cell is good.
@@ -48,8 +50,7 @@ theorem compiler_zeugen_korrekt_zeuge :
     change false = true at bad
     exact Bool.false_ne_true bad
 
-/-- Atomic reads trigger the first refusal. The contract gate also requires
-    reified lock sources, unlike the invariant gate's opaque-lock rule. -/
+/-- Atomic reads trigger the first refusal in the current checked fragment. -/
 theorem m99_refused_zeuge : M99_824.e.gueltig = false := GateAudit.m99_824_refused
 
 /-- W2 cannot use these fixed M/N lists: the gut_m premise is contradictory.

@@ -122,7 +122,8 @@ def Spez.leanZeuge (z : Spez) (i _nc : Nat) (stamm : String) (P : Programm z.dek
   let flags := z.fnListe.map fun f => toString (P.unterbricht f)
   let wsT := String.intercalate ", " (ws.map fun w => s!"(⟨{fn w}, by decide⟩ : Fin z.fns.length)")
   let zs := String.intercalate ", " (zellen.map Zelle.lean)
-  let kopf := s!"/-\n  File:      Grammatik/Gen/Zeugen/{stamm}.lean\n  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member {i}, concrete checker verdict and cell occurrences. Do not edit.\n-/\nmodule\npublic import Grammatik.Gen.Abdeckung.Satz.Raum\npublic import Grammatik.Gen.Erzeuger.Entscheidung\npublic import Grammatik.Korpus.Zeugnis.Zeugnis.T1\n" ++ (if abgelehnt then "public import Grammatik.Gen.Zeugen.Erreicht\n" else "") ++ s!"\n@[expose] public section\n\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.{stamm}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := mitglieder.getD {i} " ++ "{}" ++ s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs
+  let namensraum := stamm.replace "/" "."
+  let kopf := s!"/-\n  File:      Grammatik/Gen/Zeugen/{stamm}.lean\n  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member {i}, concrete checker verdict and cell occurrences. Do not edit.\n-/\nmodule\npublic import Grammatik.Gen.Abdeckung.Satz.Raum\npublic import Grammatik.Gen.Erzeuger.Entscheidung\npublic import Grammatik.Korpus.Zeugnis.Zeugnis.T1\n" ++ (if abgelehnt then "public import Grammatik.Gen.Zeugen.Erreicht\n" else "") ++ s!"\n@[expose] public section\n\nset_option linter.unusedTactic false\nset_option linter.unreachableTactic false\n\nnamespace Gabbro.Grammatik.Gen.Zeugen.{namensraum}\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen\n\nabbrev z : Spez := mitglieder.getD {i} " ++ "{}" ++ s!"\n\n{r}\ndef h0 : Haut z.deklaration := ⟨r, fun f => [{String.intercalate ", " flags}].getD f.val false⟩\n\ndef ws : List z.deklaration.Fn := [{wsT}]\n\n" ++ vdefs
   let einsatz := "/-- The test as a program of the source. -/\ndef e : Einsatz := z.einsatz P ws (by decide) (by decide)\n\n" ++
     s!"theorem e_gueltig : e.gueltig = {!abgelehnt} := by decide\n\n"
   let satz := if !abgelehnt then
@@ -130,6 +131,6 @@ def Spez.leanZeuge (z : Spez) (i _nc : Nat) (stamm : String) (P : Programm z.dek
     else
       s!"def alle : List Zelle := [{zs}]\n\ndef bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w\n\n" ++
       einsatz ++ "theorem e_gedeckt : gedeckt erreicht bnoetig e.zellen = true := by decide\n"
-  pure (kopf ++ satz ++ s!"\nend Gabbro.Grammatik.Gen.Zeugen.{stamm}\n")
+  pure (kopf ++ satz ++ s!"\nend Gabbro.Grammatik.Gen.Zeugen.{namensraum}\n")
 
 end Gabbro.Grammatik.Gen

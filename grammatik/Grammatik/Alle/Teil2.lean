@@ -295,10 +295,10 @@ public import Grammatik.Gen.Zeugen.M.M103_131
 public import Grammatik.Gen.Zeugen.M.M103_803
 public import Grammatik.Gen.Zeugen.M.M169_350
 public import Grammatik.Gen.Zeugen.M.M16_13
-public import Grammatik.Gen.Zeugen.M.M47_549
+public import Grammatik.Gen.Zeugen.Gap.M47_549
 public import Grammatik.Gen.Zeugen.M.M49_50
-public import Grammatik.Gen.Zeugen.M.M99_824
-public import Grammatik.Gen.Zeugen.M.M99_825
+public import Grammatik.Gen.Zeugen.Gap.M99_824
+public import Grammatik.Gen.Zeugen.Gap.M99_825
 public import Grammatik.Gen.Zeugen.N.N16_5
 public import Grammatik.Gen.Zeugen.N.N18_0
 public import Grammatik.Gen.Zeugen.N.N18_4
@@ -449,3 +449,7 @@ public import Grammatik.Kern.Semantik.Boundary.TransferObstacle
 
 public import Grammatik.Logik.Invarianten.Pruefer.WriterWitness
 public import Grammatik.Logik.Invarianten.Pruefer.ReleaseWitness
+public import Grammatik.Gen.Zeugen.Gap
+public import Grammatik.Gen.Zeugen.Gap.SourceAudit
+public import Grammatik.Gen.Zeugen.Gap.GeneratorWitness
+public import Grammatik.Gen.Zeugen.M.Recovery
