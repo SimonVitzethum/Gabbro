@@ -15,6 +15,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
@@ -340,14 +341,24 @@ def E4 : Einheit D4 where
   starts := []
   sp0 := sp4
 
+/-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
+def rho7 : Env D4 (D4.params ein4) :=
+  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
+
 /-- Capability gap: outside the decidable fragment: old-memory postconditions.
     Refusal is proved from the actual contract gate, without evaluating all
     structural checks or replacing the parsed program's body or contract. -/
 theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB P4 (SperrInv.leer D4)
-      [ein4, lies4] sources4 = false := by
-    rw [image4_eq]
-    cbv
+  have basic : Vertraege.Pruefer.checkBasicFunction P4 (SperrInv.leer D4) sources4 {} ein4 = none := by
+    unfold Vertraege.Pruefer.checkBasicFunction
+    rw [req4, ens_ein4]
+    rfl
+  have rejected : (Vertraege.Pruefer.postFormula P4 ein4 rho7 ()).toOption.isSome = false := by
+    apply Vertraege.Pruefer.RefusalWitness.post_refused
+    rw [ens_ein4]
+    rfl
+  have refused := Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
+    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic rho7 () rejected
   rw [akzeptiert_pruefer_eq]
   change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] []
     (sources := sources4) = false
@@ -476,10 +487,6 @@ def O4 : Orakel D4 where
 theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
     axVertragO_wahr O4, inferInstance⟩
-
-/-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
-def rho7 : Env D4 (D4.params ein4) :=
-  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
 
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
 
