@@ -60,7 +60,6 @@ def Refusal.message : Refusal → String
   | .invalid detail => detail
   | .unsupported ctorName => "unsupported invariant constructor: " ++ ctorName
   | .within part cause => part ++ ": " ++ cause.message
-  | .invalid detail => detail
 
 /-- Encodings exist for integers, Boolean predicates, and string lengths only. -/
 def Payload (D : Deklaration) : Ty → Type

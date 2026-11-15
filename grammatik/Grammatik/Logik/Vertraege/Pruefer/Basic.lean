@@ -24,6 +24,32 @@ theorem end_shrink {τ : Ty} (result : EndAusgang V l (τ :: Γ))
     (valid : EndResult result) : EndResult result.schrumpf := by
   cases result <;> exact valid
 
+theorem end_statement (result : EndAusgang V l Γ) (valid : EndResult result) :
+    StatementResult result.zuAusgang := by
+  cases result <;> exact valid
+
+/-- A loop annotation must be true at every iteration. The body certificate
+    excludes logic stops in every state, independently of the iteration bound. -/
+theorem forever_safe (annotation : D.Annahme)
+    (step : World D → Env D Γ → Ausgang V true Γ)
+    (invariant : World D → Env D Γ → World D × Bool)
+    (safe : ∀ world locals, StatementResult (step world locals))
+    (truth : ∀ world locals, (invariant world locals).2 = true) :
+    ∀ passes world locals,
+      StatementResult (foreverLauf (l := l) annotation step invariant passes world locals) := by
+  intro passes
+  induction passes with
+  | zero => intro world locals; trivial
+  | succ passes ih =>
+      intro world locals
+      simp only [foreverLauf, truth, Bool.true_eq_false, ↓reduceIte]
+      have valid := safe (invariant world locals).1 locals
+      cases reply : step (invariant world locals).1 locals with
+      | ok next env => exact ih next env
+      | next _ next env => exact ih next env
+      | logik error => simpa only [reply, StatementResult] using valid
+      | _ => trivial
+
 abbrev StatementSafe {Λ Λ' : List (Res D)} (code : Stmt D V l Γ Λ Λ') :=
   ∀ S O U A passes R world locals,
     StatementResult (execStmtHA S O U A passes R code world locals)
@@ -61,6 +87,11 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           split
           · exact yesChecked.down S O U A passes R _ locals
           · exact noChecked.down S O U A passes R _ locals⟩
+    | .forever annotation .tru body => do
+        let checked ← block fuel body
+        return ⟨fun S O U A passes R world locals =>
+          forever_safe annotation _ _ (checked.down S O U A passes R)
+            (fun _ _ => rfl) passes world locals⟩
     | _ => none
 
 def block {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -91,9 +122,15 @@ def block {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
               cases value with
               | none => trivial
               | some value => exact statement_shrink _ (checked.down S O U A passes R _ _)⟩
+    | .narrow expression low high fallback tail => do
+        let failed ← ending fuel fallback
+        let checked ← block fuel tail
+        return ⟨fun S O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          split
+          · exact statement_shrink _ (checked.down S O U A passes R _ _)
+          · exact end_statement _ (failed.down S O U A passes R _ locals)⟩
     | _ => none
-
-end
 
 def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (fuel : Nat) → (code : Endblock D V l Γ Λ) → Option (PLift (EndSafe code))
@@ -124,6 +161,14 @@ def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
               cases value with
               | none => trivial
               | some value => exact end_shrink _ (checked.down S O U A passes R _ _)⟩
+    | .narrow expression low high fallback tail => do
+        let failed ← ending fuel fallback
+        let checked ← ending fuel tail
+        return ⟨fun S O U A passes R world locals => by
+          dsimp only [execEndHA]
+          split
+          · exact end_shrink _ (checked.down S O U A passes R _ _)
+          · exact failed.down S O U A passes R _ locals⟩
     | .ite condition yes no => do
         let yesChecked ← ending fuel yes
         let noChecked ← ending fuel no
@@ -133,6 +178,8 @@ def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           · exact yesChecked.down S O U A passes R _ locals
           · exact noChecked.down S O U A passes R _ locals⟩
     | _ => none
+
+end
 
 theorem noLogic {Λ : List (Res D)} {code : Endblock D V l Γ Λ}
     (checked : EndSafe code) (S : SperrInv D) (O : Orakel D) (U : Umwelt D)
