@@ -238,11 +238,11 @@ theorem environment_checked (sources : LockSources zS) :
   unfold Vertraege.Pruefer.checkEnvironment
   rw [requirement_result, resultDomain_result]
   dsimp only [bind, Except.bind]
-  dsimp only [postCheck] at hposts
+  delta postCheck at hposts
   rw [hposts]
   dsimp only [bind, Except.bind]
   rw [body_eq]
-  dsimp only [compiled, goals] at hpre
+  delta compiled goals at hpre
   rw [hpre]
   dsimp only [bind, Except.bind]
   rw [requirement_payload, decided]
