@@ -2,6 +2,8 @@
 module
 
 public import Grammatik.Gen.Abdeckung.ZellenSammeln
+import all Init.Core
+import all Init.Prelude
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

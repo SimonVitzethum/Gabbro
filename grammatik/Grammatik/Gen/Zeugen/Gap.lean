@@ -48,7 +48,7 @@ def GapBelegt (g : Einsatz) : GapGrund → Prop
 def fragmentGaps : List Einsatz :=
   [M99_824.e, M99_825.e, M49_50.e, M47_549.e, F03_reg.e]
 
-theorem m99_824_input : AtomicGapInput M99_824.e 0 := by decide
+theorem m99_824_input : AtomicGapInput M99_824.e 0 := by unfold AtomicGapInput; decide
 
 theorem m99_824_cause_link : AtomicGapInput M99_824.e 0 →
     GateAudit.contractCause M99_824.e = some (.unsupported
@@ -59,7 +59,7 @@ theorem m99_824_cause_link_zeuge : AtomicGapInput M99_824.e 0 ∧
       "contract body reads atomic memory outside the checked VC fragment") :=
   ⟨m99_824_input, m99_824_cause_link m99_824_input⟩
 
-theorem m99_825_input : AtomicGapInput M99_825.e 0 := by decide
+theorem m99_825_input : AtomicGapInput M99_825.e 0 := by unfold AtomicGapInput; decide
 
 theorem m99_825_cause_link : AtomicGapInput M99_825.e 0 →
     GateAudit.contractCause M99_825.e = some (.unsupported
@@ -70,7 +70,7 @@ theorem m99_825_cause_link_zeuge : AtomicGapInput M99_825.e 0 ∧
       "contract body reads atomic memory outside the checked VC fragment") :=
   ⟨m99_825_input, m99_825_cause_link m99_825_input⟩
 
-theorem m49_50_input : AtomicGapInput M49_50.e 0 := by decide
+theorem m49_50_input : AtomicGapInput M49_50.e 0 := by unfold AtomicGapInput; decide
 
 theorem m49_50_cause_link : AtomicGapInput M49_50.e 0 →
     GateAudit.contractCause M49_50.e = some (.unsupported
@@ -81,7 +81,7 @@ theorem m49_50_cause_link_zeuge : AtomicGapInput M49_50.e 0 ∧
       "contract body reads atomic memory outside the checked VC fragment") :=
   ⟨m49_50_input, m49_50_cause_link m49_50_input⟩
 
-theorem m47_549_input : CallIndGapInput M47_549.e := by decide
+theorem m47_549_input : CallIndGapInput M47_549.e := by unfold CallIndGapInput; decide
 
 theorem m47_549_cause_link : CallIndGapInput M47_549.e →
     GateAudit.contractCause M47_549.e = some (.unsupported
@@ -92,11 +92,13 @@ theorem m47_549_cause_link_zeuge : CallIndGapInput M47_549.e ∧
       "contract statement is outside the checked scalar/control fragment") :=
   ⟨m47_549_input, m47_549_cause_link m47_549_input⟩
 
-theorem f03_reg_input : RegisterGapInput F03_reg.e := by decide
+theorem f03_reg_input : RegisterGapInput F03_reg.e := by unfold RegisterGapInput; decide
 
 theorem f03_reg_cause_link : RegisterGapInput F03_reg.e →
     GateAudit.contractCause F03_reg.e = some (.unsupported
-      "contract end block is outside the checked control fragment") := fun _ => F03_reg.e_cause
+      "contract end block is outside the checked control fragment") := by
+  intro _
+  simpa only [GateAudit.contractCause, F03_reg.cause] using F03_reg.e_cause
 
 theorem f03_reg_cause_link_zeuge : RegisterGapInput F03_reg.e ∧
     GateAudit.contractCause F03_reg.e = some (.unsupported
