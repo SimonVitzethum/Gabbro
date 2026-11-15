@@ -83,6 +83,30 @@ theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨ev, q, (by first | exact hv | rfl | simp_all), (by first | exact hv | rfl | simp_all), rfl⟩
 
+theorem lowEndL_bindOpt_ok {n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+    {x : String} {num : Nat} {v : UOpt} {hn : num < u.tabs.length} {ss rest : List UStmt}
+    {b : Endblock (declOf u) (verOf u c) false Γ Λ}
+    (h : lowEndL (l := false) u c Γ fn (n + 1) Λ [] (.bindOpt x num v :: ss) = .ok (b, rest)) :
+    ∃ (ev : Expr (declOf u) Γ Λ (.opt ((declOf u).count ⟨num, hn⟩)))
+      (q : Endblock (declOf u) (verOf u c) false (.opt ((declOf u).count ⟨num, hn⟩) :: Γ) Λ),
+      lowOpt u Γ Λ fn 0 num hn v = .ok ev ∧
+      lowEndL (l := false) u c _ (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩)) n Λ [] ss =
+        .ok (q, rest) ∧ b = .bind ev q := by
+  rw [lowEndL_succ] at h
+  simp only [lowEndStep, lowStufe_ende, hn, ↓reduceDIte] at h
+  cases hev : lowOpt u Γ Λ fn 0 num hn v with
+  | error e => simp only [hev, Except.bind] at h; cases h
+  | ok ev =>
+    simp only [hev, Except.bind] at h
+    cases hq : lowEndL (l := false) u c (.opt ((declOf u).count ⟨num, hn⟩) :: Γ)
+        (fn.mitOpt x num ((declOf u).count ⟨num, hn⟩)) n Λ [] ss with
+    | error e => simp only [hq] at h; cases h
+    | ok res =>
+      obtain ⟨q, r⟩ := res
+      simp only [hq] at h
+      cases h
+      exact ⟨ev, q, rfl, rfl, rfl⟩
+
 theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x g : String} {args : List UArg} {ss tail : List UStmt}
     {b : Endblock (declOf u) (verOf u c) false Γ Λ}
@@ -142,7 +166,9 @@ theorem lowEndL_struct_result {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (d
 /-- Ordinary structured prefixes use the same block lowering as nested sequences. -/
 theorem lowEndL_struct_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {st : UStmt} {ss tail : List UStmt} {b : Endblock (declOf u) (verOf u c) false Γ Λ}
-    (hs : (∃ cnd, st = .ifBeg cnd) ∨ (∃ x tab, st = .loopBeg x tab .tru))
+    (hs : (∃ cnd, st = .ifBeg cnd) ∨ (∃ x tab, st = .loopBeg x tab .tru) ∨
+      (∃ num v x, st = .matchBeg num v x) ∨ (∃ sidx x bs, st = .matchTagBeg sidx x bs) ∨
+      (∃ x, st = .matchWhyBeg x))
     (h : lowEndL (l := false) u c Γ fn (n + 1) Λ [] (st :: ss) = .ok (b, tail)) :
     ∃ (Λ₁ : List (Res (declOf u))) (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
       (rest : List UStmt) (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
@@ -153,7 +179,7 @@ theorem lowEndL_struct_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declO
       (lowStructL (l := false) u c Γ fn n Λ [] st ss).bind (fun p =>
         (lowEndL (l := false) u c Γ fn n p.1.1 [] p.2).bind
           (fun q => .ok (.cons p.1.2 q.1, q.2))) := by
-    rcases hs with ⟨cnd, rfl⟩ | ⟨x, tab, rfl⟩ <;> rfl
+    rcases hs with ⟨cnd, rfl⟩ | ⟨x, tab, rfl⟩ | ⟨num, v, x, rfl⟩ | ⟨sidx, x, bs, rfl⟩ | ⟨x, rfl⟩ <;> rfl
   rw [hd] at h
   exact lowEndL_struct_result h
 
