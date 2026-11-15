@@ -7,8 +7,9 @@ import all Batteries.Data.Except
 
 @[expose] public section
 
+set_option profiler true
 set_option maxRecDepth 100000
-set_option maxHeartbeats 400000
+set_option maxHeartbeats 10000
 
 namespace Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
 
@@ -43,7 +44,7 @@ private theorem overflowing_formula :
     overflowingCompiled.formula = retryFormula .fls 2 := rfl
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 10000 in
 theorem bounded_decided_zeuge :
     decideB (Extended.writerVC boundedCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
@@ -59,7 +60,7 @@ theorem bounded_decided_zeuge :
   simp [Assignment.bind] at * <;> omega
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 10000 in
 theorem overflow_decided_zeuge :
     decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by
   apply (close_decide_false_iff _).mpr
