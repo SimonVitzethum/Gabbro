@@ -1,6 +1,6 @@
 /-
   File:    Grammatik/Zielsatz/ProbenW1.lean -- the round-6 probe (finding W1) REFUTED by the
-           checker, and the contrast `never` still admitted.
+           checker, and the answer-site contrast for `never`.
 
   THE FINDING (W1, URTEIL-OPUS-2026-09-15d.md §3, URTEIL-MUSE-2026-09-15d.md). Probe A's
   contract (`ensures false`) behind `let p = hol();`, where `hol() -> fn(sig 5)` and no
@@ -21,18 +21,11 @@
     axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
   THE CONTRAST: the answer-site component admits `-> never` (`w1v_antworten`), and the
   head is the named stop `nieZurueck` (`w1v_kopf`): the call does not return and its
-  continuation is unreachable. The strict VC checker separately refuses this false-post
-  foreign-binder shape (`w1v_bool`): an unsupported fragment, not a wrong-program witness.
+  continuation is unreachable. This does not assert full acceptance by the added strict
+  VC gates: nontrivial-post foreign binders have no contract-compiler case yet.
 -/
 module
 public import Grammatik.Zielsatz.Kern.ProbenG1
-import all Batteries.Data.Except
-import all Grammatik.Logik.Vertraege.Pruefer.Program
-import all Grammatik.Logik.Vertraege.Pruefer.Duties
-import all Grammatik.Logik.Vertraege.Pruefer.Decision
-import all Grammatik.Logik.Vertraege.Pruefer.Compiler
-import all Grammatik.Logik.Invarianten.Pruefer.Locks
-import all Grammatik.Logik.Invarianten.Pruefer.Writer
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -233,35 +226,6 @@ def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty)
 /-- The answer-site component admits the genuinely non-returning result. -/
 theorem w1v_antworten : antwortenB w1vP [()] = true := by decide +kernel
 
-/-- The nontrivial-post foreign binder is outside the strict VC fragment.
-    This does not refute its safe non-returning behavior below. -/
-theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
-  have invariants : w1vD.invs.filter (schuldet (D := w1vD) ()) = [] := rfl
-  have parameters : w1vD.params () = [] := rfl
-  have result : w1vD.erg () = none := rfl
-  have requires : w1vP.requires () = .tru := rfl
-  have ensures : w1vP.ensures () = .fls := rfl
-  have body : w1vP.rumpf () =
-      .cons (.ite .tru w1vKopf .nil) (.ret .empty List.Perm.nil) := rfl
-  have compiled (goals : Vertraege.Pruefer.Goals w1vD (vertragVon w1vD ()) []) :
-      Vertraege.Pruefer.ending (Vertraege.Pruefer.requiresPolicy w1vP)
-        (Invarianten.Pruefer.lockFormula w1vS (fun _ => none)) {} none 128
-        (w1vP.rumpf ()) .nil goals =
-        .error (.unsupported "contract block is outside the checked control fragment") := by
-    rfl
-  have execution : Vertraege.Pruefer.checkExecution w1vP w1vS
-      (Vertraege.Pruefer.requiresPolicy w1vP) (fun _ => none) {} none () =
-      .error (.unsupported "contract block is outside the checked control fragment") := by
-    rfl
-  have basic : Vertraege.Pruefer.checkBasicFunction w1vP w1vS (fun _ => none) {} () = none := rfl
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
-    unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
-    simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
-      Vertraege.Pruefer.checkFunction, basic, bind, Except.bind, pure, Except.pure]
-    cases replay : Invarianten.Pruefer.atomicReplay? w1vP () <;>
-      simp only [replay, execution, bind, Except.bind, Except.toOption, Option.isSome]
-  simp only [Akzeptiert, Invarianten.Pruefer.invariantVCB, refused, Bool.and_false]
-
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
     KopfHalt O passes σ (.nil : Env w1vD []) .nieZurueck w1vKopf := by rfl
@@ -282,7 +246,6 @@ theorem w1_kein_nie (O : Orakel w1D) (passes : Nat) (σ : World w1D) :
 #print axioms Gabbro.Grammatik.Zielsatz.w1r_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1g_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_antworten
-#print axioms Gabbro.Grammatik.Zielsatz.w1v_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_kopf
 #print axioms Gabbro.Grammatik.Zielsatz.w1_kein_nie
 
