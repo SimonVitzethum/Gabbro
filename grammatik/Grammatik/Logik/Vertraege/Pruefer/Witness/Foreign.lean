@@ -63,6 +63,22 @@ def fallibleEnd : Endblock declaration contract false [] [] :=
     (fun item => nomatch item) (fun item => nomatch item)
     returned returned
 
+def optionalBlock : Block declaration contract false [] [] [] :=
+  .bindAxiomOptElse (some .bool) () .nil rfl
+    (by decide) (fun item => nomatch item) (fun item => nomatch item) (by decide)
+    returned .nil
+
+def optionalEnd : Endblock declaration contract false [] [] :=
+  .bindAxiomOptElse (some .bool) () .nil rfl
+    (by decide) (fun item => nomatch item) (fun item => nomatch item) (by decide)
+    returned returned
+
+/-- Both option-indexed value binders have joint generic certificate premises. -/
+theorem optional_some_zeuge :
+    (Basic.block family sources 32 optionalBlock).isSome = true ∧
+    (Basic.ending family sources 32 optionalEnd).isSome = true := by
+  constructor <;> decide +kernel
+
 /-- Both binder forms and an actual acquire/release occur in the same body. -/
 def body : Endblock declaration contract false [] [] :=
   .cons (.locks () (fun _ impossible => by cases impossible) .nil)
@@ -136,6 +152,13 @@ def oracle (raw : Int) : Orakel declaration where
 
 def calls (f : declaration.Fn) (_ : World declaration)
     (_ : Env declaration (declaration.params f)) : RufAusgang f := .logik .schleife
+
+theorem optional_answers_return_zeuge :
+    (match execEndHA family (oracle 0) (fun _ state => state) idA 0 calls optionalEnd world .nil with
+      | .zurueck _ _ => true | _ => false) = true ∧
+    (match execEndHA family (oracle 1) (fun _ state => state) idA 0 calls optionalEnd world .nil with
+      | .zurueck _ _ => true | _ => false) = true := by
+  constructor <;> decide +kernel
 
 /-- Both actual answer classes return, rather than proving a false post vacuously. -/
 theorem both_answers_return_zeuge :

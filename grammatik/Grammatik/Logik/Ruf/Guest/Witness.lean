@@ -7,6 +7,9 @@ import all Batteries.Data.Except
 
 @[expose] public section
 
+set_option profiler true
+set_option profiler.threshold 0
+
 namespace Gabbro.Grammatik.GuestWitness
 
 def code : DataCapTy := .table 0 (true, false)
@@ -187,6 +190,10 @@ instance : DecidableEq D.Fn := inferInstanceAs (DecidableEq Unit)
 instance : DecidableEq D.Ax := inferInstanceAs (DecidableEq Bool)
 
 def locks : SperrInv D := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
+
+theorem optional_void_block_zeuge :
+    (Vertraege.Pruefer.Basic.block locks (fun item => nomatch item) 32 invocation.lower).isSome = true := by
+  decide +kernel
 
 /-- The admission is actually conjoined with the existing whole-program
     checker. This is a model fixture, not a source-to-IR witness. -/
