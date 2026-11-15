@@ -208,7 +208,7 @@ theorem verbinde_akzeptiert [RootNativeFloat.Hardware] {E₁ E₂ : Einheit D} {
     (hS : schnittstelleB fs cs e E₁ E₂ qs = true)
     (hq : ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
       Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q)
-    (hI : Invarianten.Pruefer.programInvariantsB (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs sources {} ls = true) :
+    (hI : Invarianten.Pruefer.invariantVCB (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs sources {} (fun _ => none) ls = true) :
     Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws
       (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs (sources := sources) = true :=
   spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef) hI

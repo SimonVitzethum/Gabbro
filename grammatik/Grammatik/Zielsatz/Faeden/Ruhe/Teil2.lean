@@ -22,7 +22,7 @@ theorem akzeptiert_mitRuhe [RootNativeFloat.Hardware] {ls : List D.Lock} {cs : L
     {sources : Invarianten.Pruefer.LockSources S}
     {idleSources : Invarianten.Pruefer.LockSources S.mitRuhe}
     (h : Akzeptiert P S fs ls cs ws [] checks (sources := sources) = true)
-    (hI : Invarianten.Pruefer.programInvariantsB P.mitRuhe S.mitRuhe (fsRuhe fs) idleSources {} ls = true) :
+    (hI : Invarianten.Pruefer.invariantVCB P.mitRuhe S.mitRuhe (fsRuhe fs) idleSources {} (fun _ => none) ls = true) :
     Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) []
       (checks.map CheckDecl.mitRuhe) (sources := idleSources) = true := by
   have hA := akzeptiertSpec_of hvoll hls hcs [] h
