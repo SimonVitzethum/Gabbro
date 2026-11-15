@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Ruf.Guest.Boundary
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Guest
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 import all Batteries.Data.Except
 
 @[expose] public section
