@@ -349,6 +349,7 @@ public import Grammatik.Logik.Invarianten.Pruefer.Checker
 public import Grammatik.Logik.Invarianten.Pruefer.LockWitness
 public import Grammatik.Logik.Invarianten.Pruefer.PointerWitness
 public import Grammatik.Logik.Invarianten.Pruefer.AtomicWitness
+public import Grammatik.Logik.Invarianten.Pruefer.KeywordWitness
 public import Grammatik.Logik.WP.BoundedWhile
 public import Grammatik.Logik.WP.BoundedWhileWitness
 public import Grammatik.Logik.WP.Zeuge
