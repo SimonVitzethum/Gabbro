@@ -7249,3 +7249,9 @@ exports when every source measure clause is absent; no check is bypassed. The
 nonempty implication source is its joint `ExportWitnesses.closed_lowering_zeuge`
 (formerly `implication_lowered`, with the same proposition). Existing exporter
 witnesses use that generic combination without reducing transported G bodies.
+
+`Uebersetze.lowerMeasures_without_clauses` derives an actual measure export from
+absent clauses with the existing dependent collector theorem. Its nonempty
+`ExportWitnesses.lowerMeasures_without_clauses_zeuge` also checks that every
+exported tuple is empty. `closed_lowering` derives this export itself; the
+concrete fixtures no longer normalize their source getters to produce it.

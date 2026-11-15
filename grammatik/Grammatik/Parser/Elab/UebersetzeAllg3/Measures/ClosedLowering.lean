@@ -39,15 +39,34 @@ theorem check_measure_gate (u : UProg) (exported : Measures.Export u)
   dsimp only
   exact if_pos cycles
 
+/-- Absent source clauses export an actual empty measure family without inspecting bodies. -/
+theorem lowerMeasures_without_clauses (u : UProg)
+    (absent : ∀ fn ∈ u.fns, fn.decreases = none) :
+    ∃ exported, Measures.lowerMeasures u = .ok exported := by
+  let entries : (f : Fin u.fns.length) → Measures.At u f := fun f =>
+    ⟨[], by simp only [Measures.SourceTuple, absent (fnAt u f) (List.get_mem u.fns f)]⟩
+  have each (f : Fin u.fns.length) : Measures.lowerAt u f = .ok (entries f) := by
+    unfold Measures.lowerAt
+    rw [absent (fnAt u f) (List.get_mem u.fns f)]
+    rfl
+  have collected :
+      Measures.collect u.fns.length (Measures.At u) (Measures.lowerAt u) = .ok entries := by
+    rw [Measures.collect_eq_sammle]
+    exact sammle_ok _ _ _ entries each
+  refine ⟨⟨fun f => (entries f).tuple, fun f => (entries f).source⟩, ?_⟩
+  unfold Measures.lowerMeasures
+  rw [collected]
+  rfl
+
 /-- Successful invariant, function and contract checks, together with an actual
     empty-clause measure export, close the unchanged canonical lowering endpoint. -/
-theorem closed_lowering (u : UProg) (exported : Measures.Export u)
-    (made : Measures.lowerMeasures u = .ok exported)
+theorem closed_lowering (u : UProg)
     (invariants : lowerInvs u (List.finRange u.invs.length) = .ok ())
     (functions : lowerEach u (List.finRange u.fns.length) = .ok ())
     (contracts : contractGate u = true)
     (absent : ∀ fn ∈ u.fns, fn.decreases = none) :
     (lowerAllg u).toOption.isSome = true := by
+  obtain ⟨exported, made⟩ := lowerMeasures_without_clauses u absent
   unfold lowerAllg
   split
   · rename_i error rejected

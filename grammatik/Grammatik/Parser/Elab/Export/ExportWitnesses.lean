@@ -1,5 +1,5 @@
 module
-import Grammatik.Kern.Taktik.KernelValue
+import Grammatik.Kern.Taktik.KernelRfl
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.ClosedLowering
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
@@ -30,10 +30,7 @@ theorem implication_elaborated : (elabU (pre108 implicationItems)).toOption.isSo
 def implicationUnit := (elabU (pre108 implicationItems)).toOption.get implication_elaborated
 
 theorem closed_lowering_zeuge : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export implicationUnit // Measures.lowerMeasures implicationUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering implicationUnit exported.val exported.property
+  apply closed_lowering implicationUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -41,6 +38,19 @@ theorem closed_lowering_zeuge : (UebersetzeAllg2.lowerAllg implicationUnit).toOp
       kernel_rfl
     intro fn member
     exact of_decide_eq_true (List.all_eq_true.mp all fn member)
+
+/-- The nonempty source exports a real measure family, empty at every declared function. -/
+theorem lowerMeasures_without_clauses_zeuge :
+    ∃ exported, Measures.lowerMeasures implicationUnit = .ok exported ∧
+      ∀ f, exported.mass f = [] := by
+  have all : implicationUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+    kernel_rfl
+  have absent (fn : UFn) (member : fn ∈ implicationUnit.fns) : fn.decreases = none :=
+    of_decide_eq_true (List.all_eq_true.mp all fn member)
+  obtain ⟨exported, made⟩ := lowerMeasures_without_clauses implicationUnit absent
+  refine ⟨exported, made, fun f => ?_⟩
+  exact Measures.lowerMeasures_absent implicationUnit exported f
+    (absent (fnAt implicationUnit f) (List.get_mem implicationUnit.fns f))
 
 theorem implication_source_zeuge :
     (uebersetzeAllg implicationText).toOption.isSome = true := by
@@ -72,10 +82,7 @@ theorem held_elaborated : (elabU (pre108 heldItems)).toOption.isSome = true := b
 def heldUnit := (elabU (pre108 heldItems)).toOption.get held_elaborated
 
 theorem held_lowered : (UebersetzeAllg2.lowerAllg heldUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export heldUnit // Measures.lowerMeasures heldUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering heldUnit exported.val exported.property
+  apply closed_lowering heldUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -115,10 +122,7 @@ theorem nestedElse_elaborated : (elabU (pre108 nestedElseItems)).toOption.isSome
 def nestedElseUnit := (elabU (pre108 nestedElseItems)).toOption.get nestedElse_elaborated
 
 theorem nestedElse_lowered : (UebersetzeAllg2.lowerAllg nestedElseUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export nestedElseUnit // Measures.lowerMeasures nestedElseUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering nestedElseUnit exported.val exported.property
+  apply closed_lowering nestedElseUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -159,10 +163,7 @@ theorem resultScope_elaborated : (elabU (pre108 resultScopeItems)).toOption.isSo
 def resultScopeUnit := (elabU (pre108 resultScopeItems)).toOption.get resultScope_elaborated
 
 theorem resultScope_lowered : (UebersetzeAllg2.lowerAllg resultScopeUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export resultScopeUnit // Measures.lowerMeasures resultScopeUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering resultScopeUnit exported.val exported.property
+  apply closed_lowering resultScopeUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl

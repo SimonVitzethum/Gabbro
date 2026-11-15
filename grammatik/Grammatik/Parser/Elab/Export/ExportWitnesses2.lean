@@ -1,5 +1,5 @@
 module
-import Grammatik.Kern.Taktik.KernelValue
+import Grammatik.Kern.Taktik.KernelRfl
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.ClosedLowering
 public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
 public import Grammatik.Parser.Elab.Export.ExportComparisons
@@ -41,10 +41,7 @@ theorem count_elaborated : (elabU (pre108 countItems)).toOption.isSome = true :=
 def countUnit := (elabU (pre108 countItems)).toOption.get count_elaborated
 
 theorem count_lowered : (UebersetzeAllg2.lowerAllg countUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export countUnit // Measures.lowerMeasures countUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering countUnit exported.val exported.property
+  apply closed_lowering countUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -98,10 +95,7 @@ theorem relations_elaborated : (elabU (pre108 relationsItems)).toOption.isSome =
 def relationsUnit := (elabU (pre108 relationsItems)).toOption.get relations_elaborated
 
 theorem relations_lowered : (UebersetzeAllg2.lowerAllg relationsUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export relationsUnit // Measures.lowerMeasures relationsUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering relationsUnit exported.val exported.property
+  apply closed_lowering relationsUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -155,10 +149,7 @@ theorem tree_elaborated : (elabU (pre108 treeItems)).toOption.isSome = true := b
 def treeUnit := (elabU (pre108 treeItems)).toOption.get tree_elaborated
 
 theorem tree_lowered : (UebersetzeAllg2.lowerAllg treeUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export treeUnit // Measures.lowerMeasures treeUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering treeUnit exported.val exported.property
+  apply closed_lowering treeUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -213,10 +204,7 @@ theorem strings_elaborated : (elabU (pre108 stringsItems)).toOption.isSome = tru
 def stringsUnit := (elabU (pre108 stringsItems)).toOption.get strings_elaborated
 
 theorem strings_lowered : (UebersetzeAllg2.lowerAllg stringsUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export stringsUnit // Measures.lowerMeasures stringsUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering stringsUnit exported.val exported.property
+  apply closed_lowering stringsUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -260,10 +248,7 @@ theorem arrays_elaborated : (elabU (pre108 arraysItems)).toOption.isSome = true 
 def arraysUnit := (elabU (pre108 arraysItems)).toOption.get arrays_elaborated
 
 theorem arrays_lowered : (UebersetzeAllg2.lowerAllg arraysUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export arraysUnit // Measures.lowerMeasures arraysUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering arraysUnit exported.val exported.property
+  apply closed_lowering arraysUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -322,10 +307,7 @@ theorem treeTraversal_elaborated : (elabU (pre108 treeTraversalItems)).toOption.
 def treeTraversalUnit := (elabU (pre108 treeTraversalItems)).toOption.get treeTraversal_elaborated
 
 theorem treeTraversal_lowered : (UebersetzeAllg2.lowerAllg treeTraversalUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export treeTraversalUnit // Measures.lowerMeasures treeTraversalUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering treeTraversalUnit exported.val exported.property
+  apply closed_lowering treeTraversalUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
@@ -370,10 +352,7 @@ theorem arrayTraversal_elaborated : (elabU (pre108 arrayTraversalItems)).toOptio
 def arrayTraversalUnit := (elabU (pre108 arrayTraversalItems)).toOption.get arrayTraversal_elaborated
 
 theorem arrayTraversal_lowered : (UebersetzeAllg2.lowerAllg arrayTraversalUnit).toOption.isSome = true := by
-  let exported : {value : Measures.Export arrayTraversalUnit // Measures.lowerMeasures arrayTraversalUnit = .ok value} := by
-    refine ⟨?value, ?made⟩
-    case made => kernel_value
-  apply closed_lowering arrayTraversalUnit exported.val exported.property
+  apply closed_lowering arrayTraversalUnit
   · kernel_rfl
   · kernel_rfl
   · kernel_rfl
