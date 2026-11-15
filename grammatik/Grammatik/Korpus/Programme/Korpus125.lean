@@ -74,6 +74,9 @@ instance : DecidableEq kD.Ax := inferInstanceAs (DecidableEq Empty)
 def kSI : SperrInv kD :=
   ⟨fun _ => [.inr QGlob.z], fun _ _ => true⟩
 
+def kSources : Invarianten.Pruefer.LockSources kSI := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 theorem kSI_ok : SperrInvOk kSI := by
   refine ⟨fun L c hc => ?_, fun L s s' h => rfl⟩
   · cases L
@@ -95,7 +98,8 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `lese_schreibe`, `setze_null` (the `concurrent` members). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] []
+    (sources := kSources) = true := by decide +kernel
 
 /-! ## 3. The blocking facts, proved -/
 
@@ -218,6 +222,7 @@ def kSp5 : Speicher kD :=
 def kE : Zielsatz.Einheit kD where
   P := kP
   S := kSI
+  lockFormulas := kSources
   Q := axWahr kD
   starts := [⟨kLese, .nil⟩, ⟨kSetzeNull, .nil⟩]
   sp0 := kSp
@@ -246,8 +251,9 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g σ σ' _
 theorem kO_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen kO kE.Q :=
   ⟨kO_gut, kO_lokal, axVertragO_wahr kO, inferInstance⟩
 
-theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true; exact kP_akzeptiert)
+theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true := by
+  rw [akzeptiert_pruefer_eq]
+  exact kP_akzeptiert
 
 /-- **The goal theorem on the 125 program** -- `gabbro_ziel` with
     the concrete checker. -/
