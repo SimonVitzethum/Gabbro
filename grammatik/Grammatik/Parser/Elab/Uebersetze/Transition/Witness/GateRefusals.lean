@@ -243,13 +243,13 @@ theorem n464_via_positiv_zeuge :
 theorem n464_conjunction_zeuge :
     refused (uTorBindungPruef [] [] [leseGrund]
       { byteBuffer with gate := { sauberTor with
-        pre := [.bin "&&" .tru sauberTor.pre.head!] } }) = false := by decide +kernel
+        pre := [.bin "&&" .tru (.bin "<=" (.variable "len") (.built "lenof" [.variable "buf"]))] } }) = false := by decide +kernel
 
 /-- A bound in just one alternative supplies no unconditional transfer bound. -/
 theorem n464_disjunction_zeuge :
     refusalIs (uTorBindungPruef [] [] [leseGrund]
       { byteBuffer with gate := { sauberTor with
-        pre := [.bin "||" sauberTor.pre.head! .tru] } })
+        pre := [.bin "||" (.bin "<=" (.variable "len") (.built "lenof" [.variable "buf"])) .tru] } })
       "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
 
 /-- Fixed-size transfers need a positive extent, as in the deleted checker's object case. -/
