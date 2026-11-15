@@ -237,9 +237,9 @@ theorem environment_checked (sources : LockSources zS) :
   dsimp only [bind, Except.bind]
   rw [hposts]
   dsimp only [bind, Except.bind]
-  rw [body_eq]
-  delta compiled goals at hpre
-  rw [hpre]
+  have actual : ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128
+      (zPB.rumpf zLies) arguments (contractGoals zPB zLies arguments invariants) = .ok pre := hpre
+  rw [actual]
   dsimp only [bind, Except.bind]
   rw [requirement_payload, decided]
   rfl
