@@ -92,6 +92,11 @@ def checkTextFremd : String :=
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
+/-- The generated report index uses the ordinary decimal zero. -/
+private theorem fremd_repr_zero : Nat.repr 0 = "0" := by kernel_rfl
+
+attribute [local cbv_eval] fremd_repr_zero
+
 -- Retain the actual front-end values once, together with their complete
 -- success equations. Dependent checker callbacks then read ordinary unit data.
 set_option maxRecDepth 100000 in
