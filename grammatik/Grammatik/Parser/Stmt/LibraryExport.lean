@@ -215,7 +215,7 @@ private theorem full_phases :
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
-        all_goals decide +kernel
+        all_goals cbv
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
