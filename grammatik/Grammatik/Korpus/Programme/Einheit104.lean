@@ -3,8 +3,9 @@
   Subject:   `beispiele/0104-referenz.gab` as the goal theorem's UNIT, through the generic
              Lean pipeline: the real source text (`src104real`, byte-identical to the
              file) is parsed, elaborated and lowered (`uebersetzeAllg`), the program is
-             an `Einheit`, the checker's Bool accepts it by `decide`, and the user's logic
-             `NutzerPflicht` is proved for the parsed bodies at every budget.
+             an `Einheit`, and the user's logic `NutzerPflicht` is proved for the parsed
+             bodies at every budget. The strict checker refuses its old-memory
+             postcondition as outside the decidable fragment.
 
   (Until 2026-10-18 this was `Kette104.lean` + `Kette104Satz.lean`, the 104 instance of the
   C correspondence chain; the chain -- emitter layout, correspondence certificate, closing
@@ -324,22 +325,34 @@ def sp4 : Speicher D4 where
     exact (⟨0, by decide, by decide⟩ : Zahl 0 100)
   globs := fun g => nomatch g
 
+/-- The declared lock invariant is literally true, with honest source metadata. -/
+def sources4 : Invarianten.Pruefer.LockSources (SperrInv.leer D4) := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 /-- **104 as the goal theorem's unit**: the parsed code; no lock invariant
     (`lock M` declares none: the empty family), no axiom (the trivial axiom
     ensures), no declared start (104 has no `concurrent`), the zero memory. -/
 def E4 : Einheit D4 where
   P := P4
   S := SperrInv.leer D4
+  lockFormulas := sources4
   Q := axWahr D4
   starts := []
   sp0 := sp4
 
-/-- The checker accepts the unit, computing only over the certified finite image. -/
-theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by
-  rewrite [akzeptiert_pruefer_eq]
-  change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] [] = true
-  rewrite [image4_eq]
-  cbv
+/-- Capability gap: outside the decidable fragment: old-memory postconditions.
+    Refusal is proved from the actual contract gate, without evaluating all
+    structural checks or replacing the parsed program's body or contract. -/
+theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
+  have refused : Vertraege.Pruefer.KontrakteGeprueftB P4 (SperrInv.leer D4)
+      [ein4, lies4] sources4 = false := by
+    rw [image4_eq]
+    cbv
+  rw [akzeptiert_pruefer_eq]
+  change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] []
+    (sources := sources4) = false
+  exact Bool.and_eq_false_iff.mpr (Or.inr
+    (Bool.and_eq_false_iff.mpr (Or.inr refused)))
 
 /-! ## 5. The user's logic on the parsed program -/
 
