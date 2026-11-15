@@ -18,16 +18,6 @@ set_option maxHeartbeats 400000 in
 theorem mutable_decided_zeuge :
     decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide +kernel
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
-theorem traverse_decided_zeuge :
-    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide +kernel
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
-theorem inductive_decided_zeuge :
-    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide +kernel
-
 /-- The false decision has both an extracted arithmetic assignment and an
     actual typed G execution that destroys the invariant. -/
 theorem overflow_assignment_zeuge :

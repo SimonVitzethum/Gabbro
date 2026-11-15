@@ -39,7 +39,7 @@ private def guardFormula : LProp (Observation declaration) :=
 
 attribute [local irreducible] lower
 attribute [local semireducible] extendedEnd extendedStatement extendedBlock integerEquality
-attribute [local irreducible] freshImplication conj
+attribute [local irreducible] freshImplication conj havoc
 
 private theorem bounded_formula :
     boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
@@ -150,5 +150,92 @@ theorem temporary_decided_zeuge :
   simp only [post, lower_denote, entry, LProp.denote, LTerm.denote] at initial ⊢
   rw [subst_denote]
   simpa [lower_denote, entry, LProp.denote, LTerm.denote, Assignment.bind, ← selected] using initial.1
+
+private theorem branchFormula_denote (test : LProp (Observation declaration))
+    (yes no : QF (Observation declaration)) (values : Assignment (Observation declaration)) :
+    (branchFormula test yes no).denote values ↔
+      (test.denote values → yes.denote values) ∧ (¬ test.denote values → no.denote values) := by
+  simp only [branchFormula, lower_denote, LProp.denote, quoteQF_denote]
+
+private theorem stepFormula_preserves (terminal : QF (Observation declaration))
+    (preserved : ∀ values, entry.denote values → terminal.denote values)
+    (values : Assignment (Observation declaration))
+    (initial : entry.denote values) (guarded : guardFormula.denote values) :
+    (stepFormula terminal).denote values := by
+  rw [stepFormula, lower_denote]
+  constructor
+  · intro _
+    rw [quoteQF_denote, subst_denote]
+    apply preserved
+    simp only [entry, guardFormula, LProp.denote, LTerm.denote] at initial guarded
+    simpa [entry, LProp.denote, LTerm.denote, Assignment.bind, stepTerm] using
+      (show values (.glob false) + 1 ≤ values (.glob true) by omega)
+  · intro _
+    rw [quoteQF_denote, subst_denote]
+    apply preserved
+    simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using initial
+
+private def traverseFormula : Nat → QF (Observation declaration)
+  | 0 => branchFormula .tru post .tru
+  | count + 1 => branchFormula .tru
+      (branchFormula guardFormula (stepFormula (traverseFormula count)) (traverseFormula count)) .tru
+
+private theorem traverse_formula : traverseCompiled.formula = traverseFormula 3 := rfl
+
+private theorem traverse_preserves (count : Nat) :
+    ∀ values, entry.denote values → (traverseFormula count).denote values := by
+  induction count with
+  | zero =>
+      intro values initial
+      simpa [traverseFormula, branchFormula_denote, LProp.denote, QF.denote, post, lower_denote] using initial
+  | succ count ih =>
+      intro values initial
+      rw [traverseFormula, branchFormula_denote]
+      refine ⟨fun _ => ?_, fun impossible => (impossible trivial).elim⟩
+      rw [branchFormula_denote]
+      exact ⟨stepFormula_preserves _ ih values initial, fun _ => ih values initial⟩
+
+theorem traverse_decided_zeuge :
+    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, traverse_formula]
+  exact traverse_preserves 3 values initial.1
+
+private def inductiveBranch : QF (Observation declaration) :=
+  branchFormula (.not guardFormula) post (conj (stepFormula post) post)
+
+private def inductiveCheck : QF (Observation declaration) :=
+  lower (.imp (.and (typeFacts (qfKeys post ++ qfKeys inductiveBranch)) (quoteQF post))
+    (quoteQF inductiveBranch))
+
+private theorem inductive_formula : inductiveCompiled.formula =
+    conj post (conj (havoc (fun _ => true) inductiveCheck) .tru) := rfl
+
+theorem inductive_decided_zeuge :
+    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, inductive_formula, conj_denote, conj_denote]
+  refine ⟨(lower_denote _ _).mpr initial.1, ?_, trivial⟩
+  apply havoc_of_valid
+  intro other
+  rw [inductiveCheck, lower_denote]
+  intro entry
+  have holds := (lower_denote _ _).mp ((quoteQF_denote _ _).mp entry.2)
+  rw [quoteQF_denote, inductiveBranch, branchFormula_denote]
+  refine ⟨fun _ => (lower_denote _ _).mpr holds, fun guarded => ?_⟩
+  rw [conj_denote]
+  refine ⟨stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid) other holds ?_,
+    (lower_denote _ _).mpr holds⟩
+  simpa only [LProp.denote, not_not] using guarded
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
