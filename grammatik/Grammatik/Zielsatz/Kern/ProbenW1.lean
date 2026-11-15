@@ -224,7 +224,10 @@ def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty)
 
 /-- **The contrast**: the same code behind an axiom `-> never` is accepted -- there the call
     really does not return (the prototype is `_Noreturn`). -/
-theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by decide +kernel
+theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
+    Vertraege.Pruefer.checkContracts
+  decide +kernel
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
