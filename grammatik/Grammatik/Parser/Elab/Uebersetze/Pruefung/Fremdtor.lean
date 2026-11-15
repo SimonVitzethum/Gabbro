@@ -77,6 +77,10 @@ elab "foreign_gate_progress" : tactic => do
     | none => "non-equality"
   liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label)
 
+open Lean Elab Tactic in
+elab "foreign_gate_stage " label:str : tactic =>
+  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label.getString)
+
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper
@@ -260,8 +264,10 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   have interfaces : schnittstellenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
+  foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
-    maskenB_ohne (lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+    maskenB_ohne (P := checkPFremd) (lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+  foreign_gate_stage "acceptance split"
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremd_checkB, Bool.and_true, Bool.and_eq_true]
@@ -280,8 +286,10 @@ theorem fremdFallible_akzeptiert :
   have interfaces : schnittstellenB checkPFremdFallible
       (List.finRange uFremdFallible.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
+  foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
-    maskenB_ohne (lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
+    maskenB_ohne (P := checkPFremdFallible) (lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
+  foreign_gate_stage "acceptance split"
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremdFallible_checkB, Bool.and_true, Bool.and_eq_true]
