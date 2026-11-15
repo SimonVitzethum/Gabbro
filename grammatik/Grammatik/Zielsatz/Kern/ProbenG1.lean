@@ -220,8 +220,8 @@ def g1HalbW (answers : G1FloatAnswers) : Gleit (0, 1) (1, 1) :=
   ⟨Float.hwOfBits (UInt64.ofNat g1Halb.toNat), answers.finite_reply,
     answers.lower_reply, answers.upper_reply⟩
 
-/-- Outside the decidable fragment: float-register WP. The refusal is independent of
-    native float replies; the fitting-answer run below refutes the false post. -/
+/-- The false post is refused independently of native float replies.
+    The fitting-answer run below supplies a concrete semantic counterexample. -/
 theorem g1PR_abgelehnt : Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = false := by
   have refused : Vertraege.Pruefer.KontrakteGeprueftB g1PR g1S [g1Haupt] = false := by
     decide +kernel
@@ -315,6 +315,16 @@ theorem g1PA_lauf0 (v : Wert g1D g1Erg) (σ : World g1D) :
     g1_holen_dekodiert, Ausgang.schrumpf, evalErg]
   exact ⟨_, rfl⟩
 
+/-- A concrete `err` answer reaches the false post; the fragment refusal does not
+    conceal a body that can only stop in hardware. -/
+theorem g1PA_counterexample (σ : World g1D) :
+    ∃ σ', execEnd (V := vertragVon g1D g1Haupt)
+        (g1O (summeRoh g1Fall (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg)) 0) 0 g1Ruf
+        (g1PA.rumpf g1Haupt) σ .nil = .zurueck σ' () ∧
+      ¬ EnsAmRueck g1PA g1Haupt σ σ' .nil () := by
+  obtain ⟨σ', returned⟩ := g1PA_lauf0 (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg) σ
+  exact ⟨σ', returned, Bool.false_ne_true⟩
+
 theorem g1PA_lauf (v : Wert g1D g1Erg) (S : SperrInv g1D) (σ : World g1D) :
     ∃ σ', execEndH (V := vertragVon g1D g1Haupt) S (g1O (summeRoh g1Fall v) 0) (fun L => nomatch L) 0
       g1Ruf (g1PA.rumpf g1Haupt) σ .nil = .zurueck σ' () := by
@@ -328,6 +338,15 @@ theorem g1PR_lauf0 (answers : G1FloatAnswers) (σ : World g1D) :
   simp only [g1PR, g1RegStmt, execEnd, execStmt, execBlock, eval, wahr?, if_true,
     g1_temp_dekodiert answers, Ausgang.schrumpf, evalErg]
   exact ⟨_, rfl⟩
+
+/-- The original raw half-word, with its named primitive range replies, reaches a
+    return that violates the post. No function contract is assumed. -/
+theorem g1PR_counterexample (answers : G1FloatAnswers) (σ : World g1D) :
+    ∃ σ', execEnd (V := vertragVon g1D g1Haupt) (g1O 3 g1Halb) 0 g1Ruf
+        (g1PR.rumpf g1Haupt) σ .nil = .zurueck σ' () ∧
+      ¬ EnsAmRueck g1PR g1Haupt σ σ' .nil () := by
+  obtain ⟨σ', returned⟩ := g1PR_lauf0 answers σ
+  exact ⟨σ', returned, Bool.false_ne_true⟩
 
 theorem g1PR_lauf (answers : G1FloatAnswers) (S : SperrInv g1D) (σ : World g1D) :
     ∃ σ', execEndH (V := vertragVon g1D g1Haupt) S (g1O 3 g1Halb) (fun L => nomatch L) 0
