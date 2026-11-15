@@ -292,10 +292,14 @@ private theorem invariantDuties_verbinde {D : Deklaration} [DecidableEq D.Fn]
   intro f
   cases selected : e f with
   | true =>
-      exact Invarianten.Pruefer.invariantDuties_congr f rfl rfl rfl
+      exact Invarianten.Pruefer.invariantDuties_congr
+        (left := E₁.P) (right := (verbinde e E₁ E₂).P)
+        (S := E₁.S) (S' := (verbinde e E₁ E₂).S) f rfl rfl rfl
         (by simp only [verbinde, verbindeP, mitRumpf, selected, ↓reduceIte]) rfl (left.invarianten f)
   | false =>
-      exact Invarianten.Pruefer.invariantDuties_congr f compatible.invariante.symm
+      exact Invarianten.Pruefer.invariantDuties_congr
+        (left := E₂.P) (right := (verbinde e E₁ E₂).P)
+        (S := E₂.S) (S' := (verbinde e E₁ E₂).S) f compatible.invariante.symm
         compatible.requires.symm compatible.ensures.symm
         (by simp only [verbinde, verbindeP, mitRumpf, selected, Bool.false_eq_true, ↓reduceIte])
         compatible.sperren.symm (right.invarianten f)
@@ -310,10 +314,14 @@ private theorem contractDuties_verbinde {D : Deklaration} [DecidableEq D.Fn]
   intro f
   cases selected : e f with
   | true =>
-      exact Vertraege.Pruefer.contractDuties_congr f rfl rfl rfl
+      exact Vertraege.Pruefer.contractDuties_congr
+        (left := E₁.P) (right := (verbinde e E₁ E₂).P)
+        (S := E₁.S) (S' := (verbinde e E₁ E₂).S) f rfl rfl rfl
         (by simp only [verbinde, verbindeP, mitRumpf, selected, ↓reduceIte]) rfl (left.kontrakte f)
   | false =>
-      exact Vertraege.Pruefer.contractDuties_congr f compatible.invariante.symm
+      exact Vertraege.Pruefer.contractDuties_congr
+        (left := E₂.P) (right := (verbinde e E₁ E₂).P)
+        (S := E₂.S) (S' := (verbinde e E₁ E₂).S) f compatible.invariante.symm
         compatible.requires.symm compatible.ensures.symm
         (by simp only [verbinde, verbindeP, mitRumpf, selected, Bool.false_eq_true, ↓reduceIte])
         compatible.sperren.symm (right.kontrakte f)
