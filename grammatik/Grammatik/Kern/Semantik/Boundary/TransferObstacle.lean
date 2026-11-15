@@ -24,8 +24,10 @@ theorem probe_at_bound_encoding (z : Int → Option probeD.Fn) (word : Int)
   split at h
   · rename_i htag
     change word % 2 = 0 at htag
-    dsimp only [probeAtBound] at h
-    cases hv : einpassenErg z (some (.int 0 65535)) (word / 2) with
+    change Option.map (Sum.inl (β := Fin 1))
+      (einpassen z (.int 0 65535) (word / 2)) =
+        some (.inl (⟨4096, by decide, by decide⟩ : Zahl 0 65535)) at h
+    cases hv : einpassen z (.int 0 65535) (word / 2) with
     | none =>
         rw [hv] at h
         cases h
@@ -33,7 +35,7 @@ theorem probe_at_bound_encoding (z : Int → Option probeD.Fn) (word : Int)
         rw [hv] at h
         have heq : value = probeAtBound := Sum.inl.inj (Option.some.inj h)
         have hword : word / 2 = value.n := by
-          simp only [einpassenErg, einpassen] at hv
+          simp only [einpassen] at hv
           split at hv
           · cases hv
             rfl
