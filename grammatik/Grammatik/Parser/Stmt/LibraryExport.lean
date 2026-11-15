@@ -144,6 +144,7 @@ private theorem functions_of_success (u : UProg)
   ⟨(fun f => (lowerFnAt u f).toOption.get (produced f)),
     (fun f => except_ok_get (produced f)), safe⟩
 
+-- Select complete phase values before unfolding the dependent checker goal.
 attribute [local irreducible] checkedImage
 
 private theorem export_lowered {u : UProg} (facts : ExportFacts u) :
@@ -215,7 +216,7 @@ private theorem full_phases :
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
-        all_goals decide
+        all_goals rfl
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
