@@ -122,7 +122,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       subst Λ₁
       cases hst
       obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m
-        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF =>
+        (fun fuel hlt k ss (fn ft : UFn) (ns : BodyNames) p tail bs tailZ used hΓ hV hm hG hB hF =>
           ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
         m (Nat.le_refl m) count k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
@@ -146,7 +146,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       cases hst
       obtain ⟨ga, hAG, hBareRel⟩ := lowArms_bare m fn Λ cs binders ss tagG (.blkEnd :: tail) hBare hTagG
       obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m
-        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF =>
+        (fun fuel hlt k ss (fn ft : UFn) (ns : BodyNames) p tail bs tailZ used hΓ hV hm hG hB hF =>
           ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
         m (Nat.le_refl m) cs.length k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
