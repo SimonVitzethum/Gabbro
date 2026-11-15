@@ -104,7 +104,7 @@ theorem Zerlegung.endR {B : BodyFrame D} {Agl : D.Lock → Prop} {Cg C' : D.Fn �
     machine `Me` stand at that boundary of the callee up to read events, the caller frame `rufRahmenNach … rest`
     waiting on the stack. Then thread `thr` alone runs from `Me` to a machine at the caller's boundary in front of
     `rest`, at a world `≈` to the sequential world behind the call. -/
-theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {g : D.Fn} {args : Args D Γ Λ (D.params g)}
     {hp : RufPasst D (vertragVon D f) (D.signatur g) Λ} {hr : D.gruende g = 0}
@@ -124,11 +124,11 @@ theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Lesebl
   have hEC : EndR Agl (TiefAlle P Agl j) ebeC :=
     hkC.endR (show EndR Agl (TiefAlle P Agl j) (P.rumpf g) from hg)
   -- the caller's step over the call: its holdings behind the call
-  have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) hO thr Agl (j + 1)
+  have hRuf := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false
       (.call g args hp hr : Stmt D (vertragVon D f) l Γ Λ (nach D g Λ)) :=
     StmtR.call _ g rfl hg
-  obtain ⟨M2, _, σm2, hw2, hG2⟩ := randGL_schritt hO.rs hRuf hs hex hG
+  obtain ⟨M2, _, σm2, hw2, hG2⟩ := randGL_schritt hRuf hs hex hG
   -- the sequential call: the callee's body returned, and so did its residue
   simp only [execStmt] at hex
   split at hex
@@ -139,7 +139,7 @@ theorem randGL_rueck {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Lesebl
     have hz : execEnd O passes (rufAt P O passes j) ebeC σeC ρeC = .zurueck σ' v := hkC.zurueck hbody
     -- machine G at the callee's boundary: the body-running handler returns from a `≈` world
     obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-    have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO j) hO.rs ebeC
+    have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
       (Or.inl (axFrei_endR hEC)) hwe ρeC
     rw [hz] at hl
     obtain ⟨σ'', hz'', hw''⟩ := hl.zurueck_inv

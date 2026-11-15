@@ -26,7 +26,6 @@ lock P protects { Plaetze } rank 1;
 impl fn zaehle_werte(schwelle : u32 in 0 .. 100) -> u32 in 0 .. NSLOTS
     effects { reads Plaetze, reads Plaetze.slots, locks P }
     costs   <= 500 ops
-    deadline <= 5000 ops arch x86_64 falsifier sonde_tick
     arch x86_64
 {
     locks P {

@@ -8,6 +8,8 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.TaggedDispatch.Frontend
@@ -88,5 +90,26 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
   | .axiomT n ps res .none effs _ =>
     some ({ art := "extern", name := n, params := ps, res, fehler := .none, klauseln := [.effs effs] }, false)
   | _ => none
+
+/-- Arena bounds are compile-time constants with `0 <= lo <= hi` (`N210`): both bounds read as counts
+    (a literal, a named constant, or a canonical constant bound), the lower bound is not dropped. -/
+def uArenaSchranken (consts : List (String × Int)) : List SItemTief → Except String Unit
+  | [] => .ok ()
+  | .arenaT n lo hi _ _ _ :: rest =>
+    match uAnzahl consts lo, uAnzahl consts hi with
+    | .error _, _ | _, .error _ => .error ("arena bounds without compile-time constants: " ++ n)
+    | .ok l, .ok h =>
+      if 0 ≤ l ∧ l ≤ h then uArenaSchranken consts rest
+      else .error ("arena bounds without 0 <= lo <= hi: " ++ n)
+  | _ :: rest => uArenaSchranken consts rest
+
+/-- Two bodied functions never share a name in one unit (`N042`): after resolution every item carries
+    its key, so one key twice is one path twice -- two modules spelling the same path, or one module
+    spelling it twice. Different paths keep different keys and stay two items (`Aufloesung`). -/
+def uFnNamenEindeutig : List (FnSig × SAnw) → Except String Unit
+  | fns =>
+    if (uEindeutig (fns.map (fun (s, _) => s.name))).length != fns.length then
+      .error "duplicate bodied function: two functions share one name"
+    else .ok ()
 
 end Gabbro.Grammatik.Parser.Uebersetze

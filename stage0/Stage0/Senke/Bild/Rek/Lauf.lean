@@ -88,7 +88,7 @@ theorem randL_ruf_eintritt {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] {p
     callee's body and corresponds to a machine `thr` reaches, or has passed the callee's decomposed prefix, whose end
     boundary corresponds to such a machine (`korrespondenzL_lauf` in the callee's frame at depth `j`, with the
     callee's own call obligation `hRufC` for `rufAt j`). -/
-theorem korrespondenz_rek {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] [LeseblindOK O] {passes : Nat}
+theorem korrespondenz_rek {Y : Lay D} {O : Orakel D} [TorOK Y O] [SichtOK O] {passes : Nat}
     {P : Programm D} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat} (hc : BildCodes Y P passes A C Lm)
     {k j : Nat} (hkj : k = j + 1) (hk64 : k < 2 ^ 64) {f : D.Fn} {fp : Runner.W} {K Ks : Nat}
     {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {H : List D.Lock} {ens : List II × Nat}

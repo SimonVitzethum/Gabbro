@@ -6,20 +6,20 @@
              in `Er` (the first side may fail early, as in `HandlerKongruenz`). `HandlerLG Er R₁ R₂` says that two
              handlers answer `≈`-related worlds with related outcomes.
 
-             **The oracle premises are theorems** (2026-11-13). Machine G hands every oracle the world WITHOUT its
-             read events (`Orakel.wirkt`, grammatik T1/Lese.lean), so every oracle is read-blind: `leseblindW_alle`,
-             `leseblindRS_alle`, `leseblind_alle`, `leseblindP_alle`. The split below is kept as the interface the
-             proofs of P1-P5 use; its two halves were once separate premises:
-             * register and visibility answers (`LeseblindRS`) -- these follow from the named hardware assumption
-               `RegLokal` (`Ruf/Hardware.lean`), which every oracle of the goal theorem meets: they depend on
-               memory only, and `≈` worlds have the same memory;
+             **Read-blindness is a theorem for every oracle** (2026-11-13). Machine G hands every oracle the world
+             WITHOUT its read events (`Orakel.wirkt`, grammatik T1/Lese.lean), so every oracle is read-blind:
+             `leseblindW_alle`, `leseblindRS_alle`, `leseblind_alle`, `leseblindP_alle`. No theorem of the image
+             stack takes a read-blindness premise or class; the case lemmas below (`Faelle*.lean`, `Ersetzung.lean`)
+             still carry the split as their internal interface and are handed `leseblindRS_alle`/`leseblindW_alle`:
+             * register and visibility answers (`LeseblindRS`): they depend on memory only, and `≈` worlds have the
+               same memory;
              * foreign answers (`LeseblindW`) -- needed only where a foreign call is run. A body without a
                foreign-call form (`axFrei`, `AxFrei.lean`) never asks for one, and the image fragment
                (`StmtR`/`BlockR`/`EndR`) has none (`AxFreiR.lean`).
-             `Leseblind` (all three at once) is the old single premise; `LeseblindP P O` is what the program-level
-             statements take: the register/visibility half, and the foreign half OR a program without foreign
-             calls. Without read-blindness the statements would be false (an oracle that counted reads would tell
-             `rufAt`'s run from machine G's); the oracle interface rules such an oracle out.
+             `Leseblind` is both at once; `LeseblindP P O` is the form the body-level case lemmas use (the
+             register/visibility half, and the foreign half OR a program without foreign calls). Without
+             read-blindness the statements would be false (an oracle that counted reads would tell `rufAt`'s run
+             from machine G's); the oracle interface rules such an oracle out.
 -/
 module
 public import Stage0.Senke.Bild.Gleich.Lesegleich
@@ -44,7 +44,7 @@ structure Leseblind (O : Orakel D) : Prop where
   regLies : ∀ (r : D.Reg) (σ σ' : World D), WeltGleich σ σ' → O.regLies r σ = O.regLies r σ'
   sichtbar : ∀ (g : D.Glob) (σ σ' : World D), WeltGleich σ σ' → O.sichtbar g σ = O.sichtbar g σ'
 
-/-- **Read-blind register and visibility answers** (the half `RegLokal` gives). -/
+/-- **Read-blind register and visibility answers.** -/
 structure LeseblindRS (O : Orakel D) : Prop where
   regLies : ∀ (r : D.Reg) (σ σ' : World D), WeltGleich σ σ' → O.regLies r σ = O.regLies r σ'
   sichtbar : ∀ (g : D.Glob) (σ σ' : World D), WeltGleich σ σ' → O.sichtbar g σ = O.sichtbar g σ'
@@ -54,7 +54,7 @@ def LeseblindW (O : Orakel D) : Prop :=
   ∀ (a : D.Ax) (σ σ' : World D) (ρ : Env D (D.aparams a)), WeltGleich σ σ' →
     WeltGleich (O.wirkt a σ ρ).1 (O.wirkt a σ' ρ).1 ∧ (O.wirkt a σ ρ).2 = (O.wirkt a σ' ρ).2
 
-/-- **The oracle premise of a program**: read-blind register and visibility answers, and read-blind foreign
+/-- **The oracle fact the body-level case lemmas use**: read-blind register and visibility answers, and read-blind foreign
     answers OR no foreign call in any body. -/
 structure LeseblindP (P : Programm D) (O : Orakel D) : Prop where
   rs : LeseblindRS O
@@ -69,11 +69,6 @@ theorem Leseblind.w {O : Orakel D} (h : Leseblind O) : LeseblindW O :=
 /-- A read-blind oracle meets the premise of every program. -/
 theorem Leseblind.toP {O : Orakel D} (h : Leseblind O) (P : Programm D) : LeseblindP P O :=
   ⟨h.rs, Or.inl h.w⟩
-
-/-- A program without foreign calls needs only the register/visibility half. -/
-theorem leseblindP_frei {P : Programm D} {O : Orakel D} (h : LeseblindRS O) (hP : FremdFrei P) :
-    LeseblindP P O :=
-  ⟨h, Or.inr hP⟩
 
 /-- The premise of one body: its own foreign-call check, or read-blind foreign answers. -/
 theorem LeseblindP.rumpf {P : Programm D} {O : Orakel D} (h : LeseblindP P O) (g : D.Fn) :

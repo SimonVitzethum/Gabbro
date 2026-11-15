@@ -7,8 +7,13 @@
              as a hardware assumption:
              * one step of a thread is ONE access of the emitted code (`nimmT`, `gibT` in Ticket/Code.lean) to one
                of the three lock words -- a load, a `cas` (one `lock cmpxchg`), the WAIT or the WAKE request --
-               together with the frame-local instructions around it (they touch no shared word; the table at the
-               end pins every step to its instruction index);
+               together with the frame-local instructions around it (they touch no shared word; a modelling
+               claim the table does not check). What is proved about the CODE is only the table at the end:
+               the instruction at each named index of `nimmT`/`gibT` is the shared-word access the step names.
+               NOT proved: that the runner executing `nimmT`/`gibT` behaves like this machine -- the
+               runner-level semantics of the accesses (their atomicity, the interleaving of threads, the futex
+               calls) is an assumption of this model, not a theorem; nothing connects `Runner` runs of the
+               emitted code to `Lauf`;
              * FUTEX_WAIT on the serving word with value `v` compares the low 32 bits of the word with `v`
                ATOMICALLY with going to sleep: unequal returns at once (`kehrtZurueck`), equal blocks
                (`schlaeft`); a blocked thread may return at any time (`scheinbar`: spurious wake-ups, signals);
