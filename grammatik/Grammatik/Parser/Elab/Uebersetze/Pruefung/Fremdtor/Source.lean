@@ -264,7 +264,7 @@ theorem fremd_akzeptiert :
     ForeignGateFunctions.infPieces_ok checkChecksFremd
     (except_ok_get uFremd_lowered)
   intro invariants foreignGate
-  decide +kernel
+  cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -277,6 +277,6 @@ theorem fremdFallible_akzeptiert :
     ForeignGateFunctions.fallPieces_ok checkChecksFremdFallible
     (except_ok_get uFremdFallible_lowered)
   intro invariants foreignGate
-  decide +kernel
+  cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 end Gabbro.Grammatik.Parser.Uebersetze
