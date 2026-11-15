@@ -53,7 +53,7 @@ theorem stmtZiel_option_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (
     have ht := hL.pushIndex x hU.valid num ((declOf u).count ⟨num, hn⟩) value
     have hArm := hp σl (.cons value ρ) t hWl ht
     have hG : execStmt O passes R (.onOption ev pb ab) σ ρ =
-        (execBlock O passes R pb σl (.cons value ρ)).schrumpf t ps := by
+        (execBlock O passes R pb σl (.cons value ρ)).schrumpf := by
       first
         | (simp only [execStmt, σl, hh]; done)
         | (simp only [execStmt, σl] at *; simp only [hh])
@@ -65,9 +65,11 @@ theorem stmtZiel_option_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (
       simp only [Gabbro.Body.step, hval]; rfl
     have shrunk := ausgangZiel_schrumpf (Strecke_G.leer t)
       (fun _ _ hl => hl.tailIndex) hArm
+    have h' : AusgangZiel_G u C c R fn ns.active _ t ps :=
+      by simpa only [List.nil_append] using shrunk
     unfold StmtZiel_G
     rw [hG]
-    exact ausgangZiel_map_state (by simpa only [List.nil_append] using shrunk) rfl
+    exact ausgangZiel_map_state h' rfl
       (fun ρB => by rw [Gabbro.Body.exec_singleton, hB])
 
 end Gabbro.Bruecke
