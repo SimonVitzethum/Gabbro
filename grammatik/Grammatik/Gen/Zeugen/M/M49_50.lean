@@ -123,7 +123,7 @@ def zellen : List Zelle := [
   ⟨9, 0, true, [false, false, false, false]⟩,
   ⟨9, 0, true, [false, false, false, true]⟩]
 
-#eval e.zellen.eraseDups
+#reduce e.zellen.eraseDups
 
 theorem zellen_exact : e.zellen.eraseDups = zellen := by decide
 
