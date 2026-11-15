@@ -94,7 +94,7 @@ theorem seqZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
         obtain ⟨ys, tail', used'⟩ := result
         simp only [hy, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
-        exact ⟨id, fs, e, ys, ht, he, hy, rfl⟩
+        exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
 
 /-- Whole-function record inference uses the same reader as nested record inference. -/
 theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
@@ -119,7 +119,7 @@ theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : St
       | some ys =>
         simp only [hy, Option.map_some, Option.some.injEq] at h
         subst h
-        exact ⟨id, fs, e, ys, ht, he, hy, rfl⟩
+        exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
 
 theorem seqZ_wenn_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {cnd : UEns}
     {rest r : List UStmt} {xs : List Gabbro.Body.Stmt} {used : List String}
