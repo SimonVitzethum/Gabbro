@@ -70,7 +70,7 @@ theorem start_zeuge : StartPflicht unit :=
   ⟨(fun lock => nomatch lock), fun _ _ => rfl⟩
 
 theorem initial_zeuge : InvHaelt unit.P () (unit.sp0.welt []) := by
-  change eval (unit.sp0.welt []) invariant (unit.sp0.welt []) .nil = true
+  change wahr? (eval (unit.sp0.welt []) invariant (unit.sp0.welt []) .nil) = true
   decide +kernel
 
 def oracle : Orakel declaration where
