@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
+public import Grammatik.Logik.Vertraege.Pruefer.Basic
 
 @[expose] public section
 
@@ -120,13 +121,51 @@ theorem contractDuties_of_execution (f : D.Fn)
     rw [returned] at valid
     exact valid
 
+theorem contractDuties_of_basic (f : D.Fn)
+    (post : program.ensures f = .tru)
+    (noOwed : D.invs.all (fun item => !schuldet f item) = true)
+    (checked : Basic.EndSafe (program.rumpf f)) : ContractDuties program S f := by
+  have invariants : ∀ world, InvAmRueck program f world := by
+    intro world item member owed
+    have absent := List.all_eq_true.mp noOwed item member
+    simp only [owed, Bool.not_true, Bool.false_eq_true] at absent
+  intro passes Q shared subset
+  refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+  · intro O frame oracleLocal hardware U havoc A atomic R respects noPre world locals requires
+    constructor
+    · intro next value returned
+      simp only [EnsAmRueck, post, eval, wahr?]
+    · exact fun g => Basic.noLogic checked S O U A passes (torRuf program R) world locals _
+  · intro O frame oracleLocal hardware U havoc A atomic R respects noLogic world locals requires
+    exact Basic.noLogic checked S O U A passes R world locals
+  · intro O frame oracleLocal hardware U havoc A atomic R respects noPre world locals requires next value returned
+    exact invariants next
+  · intro O frame oracleLocal hardware U havoc A atomic R respects noPre world locals requires next reason returned
+    exact invariants next
+
+/-- Literal true clauses and no owed invariant reduce the arithmetic VCs to
+    truth. The remaining execution obligations are certified against every
+    atomic read environment. Potential logic stops still refuse. -/
+def checkBasicFunction (program : Programm D) (S : SperrInv D)
+    (budget : VCBudget) (f : D.Fn) : Option (PLift (ContractDuties program S f)) :=
+  match program.requires f, post : program.ensures f with
+  | .tru, .tru => do
+      if noOwed : D.invs.all (fun item => !schuldet f item) = true then
+        let checked ← Basic.ending budget.depth (program.rumpf f)
+        return ⟨contractDuties_of_basic f post noOwed checked.down⟩
+      else none
+  | _, _ => none
+
 /-- The Bool-facing function check constructs every proof internally. -/
 def checkFunction (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
-    Except Invarianten.Frag.Refusal (PLift (ContractDuties program S f)) := do
-  if free : atomicFreeB program f = true then
-    let execution ← checkExecution program S (requiresPolicy program) sources budget hint f
-    return ⟨contractDuties_of_execution f execution.down free⟩
-  else .error (.unsupported "contract body reads atomic memory outside the checked VC fragment")
+    Except Invarianten.Frag.Refusal (PLift (ContractDuties program S f)) :=
+  match checkBasicFunction program S budget f with
+  | some checked => .ok checked
+  | none => do
+      if free : atomicFreeB program f = true then
+        let execution ← checkExecution program S (requiresPolicy program) sources budget hint f
+        return ⟨contractDuties_of_execution f execution.down free⟩
+      else .error (.unsupported "contract body reads atomic memory outside the checked VC fragment")
 
 end Gabbro.Grammatik.Vertraege.Pruefer
