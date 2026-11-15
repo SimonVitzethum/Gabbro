@@ -111,7 +111,7 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem contracts_checked :
     Vertraege.Pruefer.KontrakteGeprueftB checkPFremd (Cover.Differenz.sperrFamilie uFremd) (List.finRange uFremd.fns.length) = true := by
-apply Vertraege.Pruefer.SelectionWitness.contracts_success
+  apply Vertraege.Pruefer.SelectionWitness.contracts_success
   rintro ⟨index, bound⟩
   kernel_change index < 4 at bound
   have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 := by omega
