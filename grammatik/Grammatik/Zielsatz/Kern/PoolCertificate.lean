@@ -2,7 +2,8 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 public import Grammatik.Logik.Invarianten.Pruefer.Program
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1
 
 @[expose] public section
 
@@ -11,6 +12,10 @@ namespace Gabbro.Grammatik.Zielsatz
 /-- Shared source metadata for the probe, pool and linked library fixtures. -/
 def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
   { resources := [], expression := .tru, correct := fun _ => rfl }
+
+/-- The footprint witness keeps the guarded read/write and every body. Its
+    unrelated imported posts use truth rather than unsupported old-memory logic. -/
+def zPCFragment : Programm zD := { zPC with ensures := fun _ => .tru }
 
 namespace PoolCertificate
 
@@ -282,6 +287,19 @@ theorem vc_checked : Invarianten.Pruefer.invariantVCB zPB zS zFs zPoolSources {}
 
 #print axioms vc_checked
 
+/-- The guarded read/write fixture remains a non-degenerate positive witness. -/
+theorem c_contracts_checked : KontrakteGeprueftB zPCFragment zS zFs zPoolSources = true := by
+  decide +kernel
+
+theorem c_vc_checked : Invarianten.Pruefer.invariantVCB zPCFragment zS zFs zPoolSources {}
+    (fun _ => none) [()] = true := by
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, c_contracts_checked⟩
+
+theorem c_accepted : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
+    (sources := zPoolSources) = true := by
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, c_vc_checked⟩
+
 end PoolCertificate
+
 
 end Gabbro.Grammatik.Zielsatz
