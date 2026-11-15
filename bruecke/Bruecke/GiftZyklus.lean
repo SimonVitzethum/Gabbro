@@ -99,7 +99,7 @@ def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
 theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
 
 theorem getragenZ : GetragenG uZ (fun _ => True) :=
-  getragenG_of_bools (by decide) (by decide) (by decide)
+  getragenG_of_bools (by cbv) (by cbv) (by cbv)
 
 /-- The rank check refuses the unit: `h` calls itself. -/
 theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
@@ -128,14 +128,14 @@ theorem wf_t0 : wfU uZ t0 := by
       by_cases hf : fld = "v"
       · subst fld
         have hs : sh = .intIn 0 10 := by
-          simpa [wfU, shapeOfUG, shapeOfU, fieldIndex, shapeOfTy,
+          simpa [Except.toOption, wfU, shapeOfUG, shapeOfU, fieldIndex, shapeOfTy,
             tabIdx, fieldAtPos, fieldPos, typAt, boolFeldAt, optFeldAt,
             optNumAt, wertFeldAt, fieldRangeO, tabAt, fieldCount, uZ] using hp.symm
         subst sh
         rfl
-      · simp [shapeOfUG, shapeOfU, fieldIndex, tabIdx, fieldAtPos, tabAt, uZ,
+      · simp [Except.toOption, shapeOfUG, shapeOfU, fieldIndex, tabIdx, fieldAtPos, tabAt, uZ,
           hf, Ne.symm hf] at hp
-    · simp [shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
+    · simp [Except.toOption, shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
   | field c n => simp [shapeOfUG, shapeOfU] at hp
   | global n => simp [shapeOfUG, globShape, globIdx, uZ] at hp
 
@@ -154,7 +154,7 @@ theorem g_unhaltbar (ρ : Gabbro.Body.Env)
   have := hc t0 ⟨wf_t0, rfl⟩
   have hw : (ρ "g" t0).1.world (.slot "T" 0 "v") = .int 0 :=
     hf t0 _ (by simp [writesU, fnG, uZ, Gabbro.Body.Place.carrier, callClock])
-  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+  simp [postP, postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
     clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnG, uZ, Gabbro.Body.eval, hw, Gabbro.Body.binop] at this
 
 theorem suche_g : fnSuch uZ "g" = some fnG := rfl
@@ -276,7 +276,7 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     have hv := platz hW 0
     rw [h7] at hv
     have hwf := wf_of_wgrel uZ getragenZ.boolTab hW
-    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+    simp [postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
     exact ⟨hwf, hv⟩
@@ -344,7 +344,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
       simp only [Gabbro.Body.Value.int.injEq] at hp
       exact hp.symm
     rw [h0] at h1
-    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr,
+    simp [postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr,
       clauseProp, clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, fI, uZ, Gabbro.Body.eval,
       Gabbro.Body.binop, s1] at hpost h1
     rw [hpost.2] at h1
