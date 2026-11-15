@@ -43,8 +43,6 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
 
-set_option maxRecDepth 4096
-
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.N47_P
 
@@ -72,7 +70,7 @@ def text : String :=
   | .ok its => renderText (druckItems its)
   | .error _ => ""
 
-theorem gelesen : textGelesenB text e.zellen e.gueltig = true := by cbv
+theorem gelesen : textGelesenB text e.zellen e.gueltig = true := by decide +kernel
 
 /-- **The text of the witness reads back with its cells and its verdict.** -/
 theorem text_reads : ∃ e', ausText text = .ok e' ∧ e'.zellen = e.zellen ∧ e'.gueltig = e.gueltig :=
