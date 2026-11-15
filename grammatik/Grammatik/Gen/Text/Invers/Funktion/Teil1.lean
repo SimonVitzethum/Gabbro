@@ -444,12 +444,12 @@ theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List �
   | nil => cases bs <;> simp_all
   | cons a as ih =>
     cases bs with
-    | nil => simp only [List.length_cons, List.length_nil, Nat.add_eq_zero_iff, List.length_eq_zero_iff, one_ne_zero,
+    | nil => simp only [List.length_cons, List.length_nil, Nat.add_eq_zero_iff, List.length_eq_zero_iff, Nat.one_ne_zero,
   and_false] at h1
     | cons b bs =>
       cases cs with
       | nil => simp only [List.length_nil, List.length_cons, Nat.right_eq_add, Nat.add_eq_zero_iff, List.length_eq_zero_iff,
-  one_ne_zero, and_false] at h2
+  Nat.one_ne_zero, and_false] at h2
       | cons c cs =>
         simp only [List.length_cons, Nat.add_right_cancel_iff] at h1 h2
         obtain ⟨i1, i2, i3⟩ := ih bs cs h1 h2
