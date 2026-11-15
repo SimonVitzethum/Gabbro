@@ -43,7 +43,13 @@ set_option maxHeartbeats 4000000
 -- Reuse the proved on-demand evaluator rather than constructing every unused
 -- callback at all 100000 source-lowering fuel levels.
 attribute [local cbv_opaque] Gabbro.Grammatik.Parser.UebersetzeAllg2.lowStufe
-attribute [local cbv_eval] Gabbro.Grammatik.Parser.UebersetzeAllg2.lowStufe_eq_schnell
+open Gabbro.Grammatik.Parser.UebersetzeAllg2 in
+/-- Apply the existing evaluator equivalence at the fully applied CBV head. -/
+theorem demand_level (u : UProg) (caller : Fin u.fns.length) (n : Nat) :
+    lowStufe u caller n = lowStufeSchnell u caller n :=
+  congrFun (congrFun (congrFun lowStufe_eq_schnell u) caller) n
+
+attribute [local cbv_eval] demand_level
 
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
@@ -72,6 +78,13 @@ theorem image_shape :
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
     0 < output.image.code.length ∧ 16 < output.bytes.length := by decide_cbv
+
+open Gabbro.Grammatik.Parser.UebersetzeAllg2 in
+/-- The evaluator rule applies to the actual nonempty three-gate source image. -/
+theorem demand_level_zeuge :
+    lowStufe output.compiled.unit output.compiled.main 100000 =
+      lowStufeSchnell output.compiled.unit output.compiled.main 100000 :=
+  demand_level _ _ _
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :
