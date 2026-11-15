@@ -2,8 +2,7 @@
   File:      stage0/Stage0/Senke/Bild/Ruf/ZielL.lean
   Subject:   **The goal legs at the machines G the image corresponds to, with calls** (package P3 of the closed calls
              of the image theorem, part 3). `bild_ziel_seqL`/`bild_ziel_startL` are `bild_ziel_seq`/`bild_ziel_start`
-             (`Bild/Ziel.lean`) with the call obligation up to read events (`RufOkGleich`), the named oracle property
-             `LeseblindOK` (now a consequence of the hardware assumptions, `leseblindOK_hardware`), and the
+             (`Bild/Ziel.lean`) with the call obligation up to read events (`RufOkGleich`) and the
              correspondence with machine G up to read events (`KorrespondenzL`, `RandL`).
              `Ziel` is unchanged: it is a statement about the machines G reached by steps of the image's thread, not
              about any world, so the read events `rufAt` adds to the sequential world never reach it. The exact forms
@@ -27,7 +26,7 @@ variable [Kern]
 
 /-- **`Ziel` at the machines G the sequential image corresponds to, with calls (T1)**: `bild_ziel_seq` with the call
     obligation up to read events (`hRuf : RufOkGleich …`) and machine G up to read events. Under the checker's facts
-    (a′), the user's logic (b), the named hardware assumptions (c; they give the oracle property) and an
+    (a′), the user's logic (b), the named hardware assumptions (c) and an
     admissible start (d′),
     from a body boundary that corresponds to a reachable machine `M`, in front of a decomposed prefix whose calls go
     to the admitted callees `Cg`, every prefix of `n` memory-only image steps corresponds (inside a decomposed step,
@@ -52,7 +51,6 @@ theorem bild_ziel_seqL [DecidableEq D.Fn] {B : BodyFrame D} [TorOK B.L B.O] [Sic
         RandL B thr stapel rho s0 Agl ebe pce me Me σe ρe ∧
         RufErreichbarG B.P B.O B.passes (RufStartG B.P sp init) Me ∧
         Ziel B.P S B.O B.passes (RufStartG B.P sp init) Me ∧ ∃ k, StarM k ⟨pce, B.fp⟩ me t m') := by
-  haveI : LeseblindOK B.O := leseblindOK_hardware hH
   rcases korrespondenzL_lauf hB hRuf hk hR hrun with ⟨M', hl, hK⟩ | ⟨pce, me, Me, hRe, hl, k, hk'⟩
   · have hr := rufErreichbar_lauf hl hM
     exact Or.inl ⟨M', hK, hr, ziel_aus B.P S Q fs ls ws hA hN B.O hH B.passes sp init hZ M' hr⟩
