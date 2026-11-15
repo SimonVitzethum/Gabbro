@@ -126,8 +126,9 @@ theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := by rfl
 theorem zKind_akzeptiert :
     akzeptiert_pruefer.akzeptiert zKind zFs [()] [.inl ()] = true := by
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt] = true
-  decide
+  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt]
+    (sources := zPoolSources) = true
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
 theorem zKind_nutzerPflicht : NutzerPflicht zKind :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,

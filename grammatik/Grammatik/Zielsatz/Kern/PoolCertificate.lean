@@ -226,11 +226,29 @@ theorem requirement_result : translate (zPB.requires zLies) arguments = .ok requ
 
 theorem requirement_payload : requirement.payload = .tru := rfl
 
+/-- Only bodies vary; the reader's declaration and all contract metadata stay fixed. -/
+abbrev Bodies := (f : zD.Fn) → Endblock zD (vertragVon zD f) false
+  (zD.params f) (Signatur.anfang zD (zD.signatur f))
+
+def withBodies (bodies : Bodies) : Programm zD := { zPB with rumpf := bodies }
+
+def invariantsFor (bodies : Bodies) :
+    InvariantFormula (withBodies bodies) (zD.invs.filter (schuldet zLies)) :=
+  (invariantFormula (withBodies bodies) []).toOption.get (by rfl)
+
 set_option backward.isDefEq.respectTransparency false in
-/-- The strict arithmetic gate accepts the original body and its original post. -/
-theorem environment_checked (sources : LockSources zS) :
-    (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
-  obtain ⟨pre, hpre, valid⟩ := compiled_valid zPB sources
+/-- The strict reader VC is independent of unrelated function bodies. -/
+theorem environment_checked_for (bodies : Bodies) (same : bodies zLies = body)
+    (sources : LockSources zS) :
+    (Vertraege.Pruefer.checkEnvironment (withBodies bodies) zS (requiresPolicy (withBodies bodies))
+      sources {} none zLies (invariantsFor bodies) arguments).toOption.isSome = true := by
+  obtain ⟨pre, hpre, valid⟩ := compiled_valid (withBodies bodies) sources
+  have hbody : ending (S := zS) (requiresPolicy (withBodies bodies)) (lockFormula zS sources)
+      {} none 128 ((withBodies bodies).rumpf zLies) arguments
+      (contractGoals (withBodies bodies) zLies arguments (invariantsFor bodies)) = .ok pre := by
+    change ending _ _ _ _ _ (bodies zLies) _ goals = .ok pre
+    rw [same]
+    exact hpre
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
     (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
@@ -246,26 +264,40 @@ theorem environment_checked (sources : LockSources zS) :
     apply (lower_denote _ _).mpr
     intro _
     exact (quoteQF_denote _ _).mpr (valid values)
-  exact environment_success zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments
-    requirement requirement_result resultDomain resultDomain_result posts hposts pre hpre decided
+  exact environment_success (withBodies bodies) zS (requiresPolicy (withBodies bodies)) sources {}
+    none zLies (invariantsFor bodies) arguments requirement requirement_result resultDomain
+    resultDomain_result posts hposts pre hbody decided
+
+/-- The strict arithmetic gate accepts the original body and its original post. -/
+theorem environment_checked (sources : LockSources zS) :
+    (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none
+      zLies invariants arguments).toOption.isSome = true :=
+  environment_checked_for zPB.rumpf body_eq sources
 
 def inputDomain : Invarianten.Pruefer.Environments zD context :=
   (Invarianten.Pruefer.environments (D := zD) 128 context).toOption.get (by rfl)
 
 theorem inputDomain_result : Invarianten.Pruefer.environments (D := zD) 128 context = .ok inputDomain := rfl
 
+/-- The reader certificate composes with arbitrary other bodies and actual replay. -/
+theorem reader_checked_for (bodies : Bodies) (same : bodies zLies = body)
+    (sources : LockSources zS)
+    (replay : (Invarianten.Pruefer.atomicReplay? (withBodies bodies) zLies).isSome = true) :
+    (checkFunction (withBodies bodies) zS sources {} none zLies).toOption.isSome = true := by
+  apply function_success (withBodies bodies) zS sources {} none zLies
+  · rfl
+  · exact replay
+  · apply execution_success (withBodies bodies) zS (requiresPolicy (withBodies bodies)) sources {}
+      none zLies (invariantsFor bodies) (by rfl) inputDomain inputDomain_result
+    intro locals
+    have equal : locals = arguments := by cases locals; rfl
+    subst locals
+    exact environment_checked_for bodies same sources
+
 /-- The original reader function, including its 101-value binder, is accepted. -/
 theorem reader_checked (sources : LockSources zS) :
-    (checkFunction zPB zS sources {} none zLies).toOption.isSome = true := by
-  apply function_success zPB zS sources {} none zLies
-  · rfl
-  · decide +kernel
-  · apply execution_success zPB zS (requiresPolicy zPB) sources {} none zLies
-      invariants rfl inputDomain inputDomain_result
-    intro locals
-    have same : locals = arguments := by cases locals; rfl
-    subst locals
-    exact environment_checked sources
+    (checkFunction zPB zS sources {} none zLies).toOption.isSome = true :=
+  reader_checked_for zPB.rumpf body_eq sources (by decide +kernel)
 
 #print axioms reader_checked
 
@@ -301,7 +333,16 @@ theorem c_accepted : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
     (sources := zPoolSources) = true := by
   exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, c_vc_checked⟩
 
+/-- Joint non-degeneracy witness for symbolic branch composition and strict admission. -/
+theorem reader_pipeline_zeuge :
+    domain.values.length = 101 ∧ zPB.rumpf zLies = body ∧
+    (∃ result, compiled zPB zPoolSources = .ok result ∧
+      ∀ values, result.formula.denote values) ∧
+    (checkFunction zPB zS zPoolSources {} none zLies).toOption.isSome = true :=
+  ⟨by decide +kernel, body_eq, compiled_valid zPB zPoolSources, reader_checked zPoolSources⟩
+
 end PoolCertificate
+
 
 
 end Gabbro.Grammatik.Zielsatz

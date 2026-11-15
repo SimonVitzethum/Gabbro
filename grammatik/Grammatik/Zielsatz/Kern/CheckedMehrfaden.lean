@@ -36,6 +36,10 @@ def sources : Invarianten.Pruefer.LockSources family := fun _ => some
 
 def carriers : List (mD.Tab ⊕ mD.Glob) := [.inl MTab.konto, .inl MTab.privA, .inl MTab.privB]
 
+/-- Honest source metadata for the original, unsupported cross-slot lock relation. -/
+def originalSources : Invarianten.Pruefer.LockSources mSI := fun _ => some
+  { resources := mL, expression := mGleich, correct := fun _ => rfl }
+
 theorem accepted_zeuge :
     Akzeptiert program family mFs [()] carriers [mHauptA, mHauptB]
       (sources := sources) = true := by

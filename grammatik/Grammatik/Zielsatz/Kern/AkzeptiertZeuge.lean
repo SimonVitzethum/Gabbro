@@ -29,8 +29,6 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Korpus.Programme.Export104
 import all Batteries.Data.Except
 @[expose] public section
-
-
 namespace Gabbro.Grammatik
 
 open Zielsatz
@@ -118,7 +116,7 @@ theorem mCs_voll : ∀ c : mD.Tab ⊕ mD.Glob, c ∈ mCs := fun c => by
 
 /-- Capability gap: outside the decidable fragment: cross-slot invariant and
     lock relations. The original correct program remains a refusal witness. -/
-theorem mP_abgelehnt : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = false := by
+theorem mP_abgelehnt : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] (sources := CheckedMehrfaden.originalSources) = false := by
   decide +kernel
 
 abbrev mFragment := CheckedMehrfaden.program
@@ -192,6 +190,9 @@ abbrev x104Ls : List x104D.Lock := [G104_referenz.GLock.M]
 abbrev x104Cs : List (x104D.Tab ⊕ x104D.Glob) := [.inl G104_referenz.GTab.Konto]
 abbrev x104S : SperrInv x104D := SperrInv.leer x104D
 
+def x104Sources : Invarianten.Pruefer.LockSources x104S := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 theorem x104Ls_voll : ∀ L : x104D.Lock, L ∈ x104Ls := fun L => by
   cases L; exact List.mem_singleton_self _
 
@@ -206,7 +207,7 @@ theorem x104Fs_voll : ∀ g : x104D.Fn, g ∈ x104Fs := fun g => by
   · exact List.mem_cons_of_mem _ List.mem_cons_self
 
 /-- Capability gap: outside the decidable fragment: old-memory postconditions. -/
-theorem gP_abgelehnt : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] [] = false := by decide +kernel
+theorem gP_abgelehnt : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] [] (sources := x104Sources) = false := by decide +kernel
 
 /-- With its two functions as starts the export is refused by the start
     component (both hold `M` by signature); the other components hold. -/
@@ -494,5 +495,4 @@ theorem ak2_nicht_stufen : ¬ StufenM akP2 := fun h =>
 #print axioms Gabbro.Grammatik.ak2_nicht_stufen
 #print axioms Gabbro.Grammatik.ak3_zwei_schreiber_ohne_lesen
 #print axioms Gabbro.Grammatik.mFragment_rennfrei_aus_akzeptiert
-
 end Gabbro.Grammatik

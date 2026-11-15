@@ -231,6 +231,8 @@ def gSp0 : Speicher gD :=
 def gE : Zielsatz.Einheit gD where
   P := gP
   S := gS
+  lockFormulas := fun _ => some
+    { resources := [], expression := .tru, correct := fun _ => rfl }
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0

@@ -63,9 +63,13 @@ def x104Sp : Speicher x104D :=
   ⟨fun t _ f => match t, f with
     | .Konto, .stand => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
 
+def x104IdleSources : Invarianten.Pruefer.LockSources x104S.mitRuhe := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 /-- Capability gap: outside the decidable fragment: translated old-memory postconditions. -/
+
 theorem gP_mitRuhe_abgelehnt :
-    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = false := by decide +kernel
+    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) (sources := x104IdleSources) = false := by decide +kernel
 
 /-- **An admissible start of `gP.mitRuhe`** -- the export itself has none
     (`gP_start_leer`). -/

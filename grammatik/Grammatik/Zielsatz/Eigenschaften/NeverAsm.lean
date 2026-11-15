@@ -31,7 +31,7 @@
   returns writes no `out`.
 -/
 module
-public import Grammatik.Zielsatz.Kern.ProbenW1
+public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 @[expose] public section
 
@@ -142,35 +142,50 @@ theorem kein_hardware_an_never (O : Orakel D) (passes : Nat) (σ : World D) (ρ 
   intro hH
   exact hH.2 (axNeverGut_gilt a h)
 
-/-! ## 4. Witness: the `never` contrast of ProbenW1 -/
+/-! ## 4. A standalone never fixture, independent of unrelated probe contracts -/
 
-/-- The witness declaration `w1vD` (ProbenW1.lean: one axiom `-> never`) meets the
+/-- One inhabited foreign name whose result has no value. -/
+def nvD : Deklaration :=
+  { BudgetZeuge.bD with
+    Ax := Unit
+    aparams := fun _ => []
+    aerg := fun _ => some .never
+    aschreibt := fun _ item => nomatch item
+    agschreibt := fun _ item => nomatch item
+    anbieter := fun item => nomatch item
+    anbieter_passt := fun item => nomatch item }
+
+def nvKopf : Block nvD (vertragVon nvD ()) false [] [] [] :=
+  .bindAxiom (τ := .never) () .nil rfl (fun item => nomatch item) (fun item => nomatch item)
+    (fun item => nomatch item) (fun item => nomatch item) .nil
+
+
+/-- The standalone witness declaration (one axiom `-> never`) meets the
     goodness condition. -/
-theorem nv_zeuge_gut : AxNeverGut w1vD :=
+theorem nv_zeuge_gut : AxNeverGut nvD :=
   axNeverGut_gilt
 
 /-- At the witness axiom no oracle answer fits. -/
-theorem nv_zeuge_kein_out (O : Orakel w1vD) (σ : World w1vD)
-    (ρ : Env w1vD (w1vD.aparams ())) :
-    einpassenErg O.zeiger (w1vD.aerg ()) (O.wirkt () σ ρ).2 = none :=
+theorem nv_zeuge_kein_out (O : Orakel nvD) (σ : World nvD)
+    (ρ : Env nvD (nvD.aparams ())) :
+    einpassenErg O.zeiger (nvD.aerg ()) (O.wirkt () σ ρ).2 = none :=
   axiomAntwort_never_keine O () rfl σ ρ
 
 /-- Non-degeneracy: the witness HAS a `never` axiom, the site is admissible, and no
-    oracle answer to it fits. (That the same code is accepted is `w1v_bool`, and that
-    its head is the named stop `nieZurueck` is `w1v_kopf`, ProbenW1.lean.) -/
+    oracle answer to it fits; both head classifications are proved jointly below. -/
 theorem nv_zeuge_nicht_leer :
-    ∃ a : w1vD.Ax, w1vD.aerg a = some .never ∧ StelleOk w1vD (.inl a) ∧
-      ∀ (O : Orakel w1vD) (σ : World w1vD) (ρ : Env w1vD (w1vD.aparams a)),
-        einpassenErg O.zeiger (w1vD.aerg a) (O.wirkt a σ ρ).2 = none :=
+    ∃ a : nvD.Ax, nvD.aerg a = some .never ∧ StelleOk nvD (.inl a) ∧
+      ∀ (O : Orakel nvD) (σ : World nvD) (ρ : Env nvD (nvD.aparams a)),
+        einpassenErg O.zeiger (nvD.aerg a) (O.wirkt a σ ρ).2 = none :=
   ⟨(), rfl, Or.inl rfl, fun O σ ρ => axiomAntwort_never_keine O () rfl σ ρ⟩
 
 /-- At the witness head both classifications hold together: `nieZurueck` structurally,
     never `hardware`. -/
-theorem nv_zeuge_kopf_benannt (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
-    KopfHalt O passes σ (.nil : Env w1vD []) .nieZurueck w1vKopf ∧
-      ¬ KopfHalt O passes σ (.nil : Env w1vD []) .hardware w1vKopf :=
-  ⟨w1v_kopf O passes σ,
-    kein_hardware_an_never O passes σ (.nil : Env w1vD []) () .nil rfl
+theorem nv_zeuge_kopf_benannt (O : Orakel nvD) (passes : Nat) (σ : World nvD) :
+    KopfHalt O passes σ (.nil : Env nvD []) .nieZurueck nvKopf ∧
+      ¬ KopfHalt O passes σ (.nil : Env nvD []) .hardware nvKopf :=
+  ⟨by rfl,
+    kein_hardware_an_never O passes σ (.nil : Env nvD []) () .nil rfl
       (fun e => nomatch e) (fun e => nomatch e) (fun e => nomatch e) (fun e => nomatch e)
       .nil rfl⟩
 
