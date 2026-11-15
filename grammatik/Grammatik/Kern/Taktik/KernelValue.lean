@@ -1,0 +1,25 @@
+module
+
+public import Grammatik.Kern.Taktik.KernelRfl
+public meta import Lean.Meta.Reduce
+
+public section
+
+open Lean Elab Tactic Meta in
+/-- Normalize a candidate data value and retain kernel conversion as the equality check.
+    Output metavariables receive the normalized data, so later phases share that value. -/
+elab "kernel_value" : tactic => withMainContext do
+  let goal ← getMainGoal
+  let type ← instantiateMVars (← goal.getType)
+  let some (_, lhs, rhs) := type.eq? | throwError "kernel_value: the goal is not an equality"
+  let value ← withTransparency .all (reduce lhs)
+  unless ← withAssignableSyntheticOpaque (isDefEq rhs value) do
+    throwError "kernel_value: the computed candidate does not match the requested result"
+  evalTactic (← `(tactic| kernel_rfl))
+
+/-- The computed witness and its expected nonempty data agree. -/
+theorem kernel_value_zeuge :
+    ∃ actual : List Nat, (List.range 3).map (· + 1) = actual ∧ actual = [1, 2, 3] := by
+  refine ⟨?actual, ?computed, ?shape⟩
+  case computed => kernel_value
+  case shape => rfl

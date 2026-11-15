@@ -1,6 +1,5 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
-public import Grammatik.Kern.Taktik.ExceptWitness
+import Grammatik.Kern.Taktik.KernelValue
 import all Init.Data.ToString.Basic
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
@@ -325,7 +324,7 @@ private def chunks : List Chunk :=
 
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
-private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
+private theorem source_text : source = String.ofList (characters chunks) := by cbv
 
 private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
     (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
@@ -344,10 +343,11 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
   rw [scanned]
   exact read
 
--- Certify every actual phase with the general success/extraction lemma.
--- The kernel checks each closed success premise.
+-- Retain kernel-checked normalized data from every real phase, including the parsed input.
+-- No later value contains a get that re-runs its producer chain.
 private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
-  exact ⟨_, except_ok_get (x := parseTopTief (tokens chunks)) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_items : List SItemTief := source_items_result.val
 private theorem source_items_success :
     parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
@@ -356,37 +356,43 @@ private theorem source_items_read : parsed = .ok source_items :=
   parsed_from_phases source_lexed source_items_success
 
 private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
-  exact ⟨_, except_ok_get (x := SourceFolds.prepare source_items) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
     SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
 
 private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
-  exact ⟨_, except_ok_get (x := prepare source_fold_value) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_close_value : List Closed × List SItemTief := source_close_result.val
 private theorem source_close_success :
     prepare source_fold_value = .ok source_close_value := source_close_result.property
 
 private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
-  exact ⟨_, except_ok_get (x := exportTaggedUnitDetailed source_close_value.2) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_tagged_value : List SItemTief × List String := source_tagged_result.val
 private theorem source_tagged_success :
     exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
 
 private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
-  exact ⟨_, except_ok_get (x := Spec.prepare (finish source_close_value.1 source_tagged_value.1)) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
     Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
 private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
-  exact ⟨_, except_ok_get (x := checkedOutput source_tagged_value.1 source_spec_value) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
     checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
 
 private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
-  exact ⟨_, except_ok_get (x := exportLibraryUnit source_checked_value) (by kernel_rfl)⟩
+  refine ⟨?actual, ?origin⟩
+  case origin => kernel_value
 private def source_library_value : List SItemTief := source_library_result.val
 private theorem source_library_success :
     exportLibraryUnit source_checked_value = .ok source_library_value := source_library_result.property
@@ -406,7 +412,7 @@ private theorem source_phases : ∃ items output,
       | _ => none) =
       [("#dyn0", "{ GabbroDyn0Case0(index into Circles), GabbroDyn0Case1(index into Rects) }")] := by
   refine ⟨source_items, source_library_value, source_items_read, source_exported, ?sum⟩
-  case sum => kernel_rfl
+  case sum => cbv
 
 /-- Source text, lexer, parser and the actual front-end expansion agree on the closed cases. -/
 public theorem dyn_source_scene_zeuge :

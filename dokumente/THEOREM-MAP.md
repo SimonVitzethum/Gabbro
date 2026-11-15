@@ -7236,3 +7236,8 @@ The private `Parser.Spec.function_block` evaluation equation includes the compil
 field normalizer for every context, retaining all clause and refusal paths. Its joint
 `function_block_zeuge` fixture has a u64 record field, explicit narrow failure, the enabled
 compiler switch and a nonempty predicate context whose clause is actually elaborated.
+
+`kernel_value_zeuge` in `Kern/Taktik/KernelValue.lean` checks a nonempty computed
+list and its exact shape. The tactic normalizes a candidate with Lean Meta, assigns
+the requested output and leaves equality to kernel conversion. Dynamic source
+phase witnesses retain normalized values and all original statements.
