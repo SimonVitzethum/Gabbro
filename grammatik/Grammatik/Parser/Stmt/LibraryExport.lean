@@ -215,7 +215,7 @@ private theorem full_phases :
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
-        all_goals cbv
+        all_goals decide
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
@@ -277,6 +277,6 @@ theorem export_qual_akzeptiert_zeuge :
       exportQualGesenkert.2 (List.finRange exportQualEinheit.locks.length)
       ((List.finRange exportQualEinheit.tabs.length).map Sum.inl ++
         (List.finRange exportQualEinheit.globs.length).map Sum.inr) [] = true := by
-  exact export_checked export_facts export_emitted
+  simpa only [checkedImage] using export_checked export_facts export_emitted
 
 end Gabbro.Grammatik.Uebersetzung
