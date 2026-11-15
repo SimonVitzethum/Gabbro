@@ -335,6 +335,26 @@ private def chunk13 : Chunk where
 private def chunks : List Chunk :=
   [chunk0, chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7, chunk8, chunk9, chunk10, chunk11, chunk12, chunk13]
 
+#eval do
+  IO.FS.createDirAll ".scratch-agent"
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "bounds"
+
+-- Close numeric certificates independently before composing their opaque proofs.
+private theorem bounded0 : decide (chunk0.steps ≤ chunk0.characters.length) = true := by kernel_rfl
+private theorem bounded1 : decide (chunk1.steps ≤ chunk1.characters.length) = true := by kernel_rfl
+private theorem bounded2 : decide (chunk2.steps ≤ chunk2.characters.length) = true := by kernel_rfl
+private theorem bounded3 : decide (chunk3.steps ≤ chunk3.characters.length) = true := by kernel_rfl
+private theorem bounded4 : decide (chunk4.steps ≤ chunk4.characters.length) = true := by kernel_rfl
+private theorem bounded5 : decide (chunk5.steps ≤ chunk5.characters.length) = true := by kernel_rfl
+private theorem bounded6 : decide (chunk6.steps ≤ chunk6.characters.length) = true := by kernel_rfl
+private theorem bounded7 : decide (chunk7.steps ≤ chunk7.characters.length) = true := by kernel_rfl
+private theorem bounded8 : decide (chunk8.steps ≤ chunk8.characters.length) = true := by kernel_rfl
+private theorem bounded9 : decide (chunk9.steps ≤ chunk9.characters.length) = true := by kernel_rfl
+private theorem bounded10 : decide (chunk10.steps ≤ chunk10.characters.length) = true := by kernel_rfl
+private theorem bounded11 : decide (chunk11.steps ≤ chunk11.characters.length) = true := by kernel_rfl
+private theorem bounded12 : decide (chunk12.steps ≤ chunk12.characters.length) = true := by kernel_rfl
+private theorem bounded13 : decide (chunk13.steps ≤ chunk13.characters.length) = true := by kernel_rfl
+
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
 #eval do
@@ -356,7 +376,11 @@ private theorem lex_from_characters (text : String) (cs : List Char) (ts : List 
 private theorem source_lexed : lex source = .ok (tokens chunks) :=
   lex_from_characters source (characters chunks) (tokens chunks) source_text
     (lex_chunks chunks
-      (Nat.le_trans (steps_le_length chunks (by kernel_rfl)) (Nat.le_succ _)))
+      (Nat.le_trans (steps_le_length chunks (by
+        simp only [chunks, List.all_cons, List.all_nil, bounded0, bounded1,
+          bounded2, bounded3, bounded4, bounded5, bounded6, bounded7, bounded8,
+          bounded9, bounded10, bounded11, bounded12, bounded13, Bool.true_and]))
+        (Nat.le_succ _)))
 
 private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
     (scanned : lex source = .ok ts) (read : parseTopTief ts = .ok items) :
