@@ -115,7 +115,15 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       obtain ⟨head, ty, he, hr, q, hk, hq, rfl⟩ := lowEndL_bindCall_ok hlow
       obtain ⟨hty, sh, hsh⟩ := resultCall_type hk he hb
       subst bt
-      rw [mitRuf_scalar fn x head.callee hsh] at hq
+      cases ty with
+      | int lo hi => simp only [mitRuf_int] at hq
+      | bool => simp only [mitRuf_bool] at hq
+      | prod id fs => simp only [mitRuf] at hq
+      | opt n =>
+        cases ho : (fnAt u head.callee).resOpt with
+        | none => simp only [mitRuf, ho] at hq
+        | some entry => simp only [mitRuf, ho] at hq
+      | _ => cases hsh
       obtain ⟨gf, raw, es, _, hgf, _, _, _, _, rfl⟩ := namedResult_some hb
       obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
       have hf : fnSuch u g = some (fnAt u head.callee) := fnIdx_find _ _ _ hi
