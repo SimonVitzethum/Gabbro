@@ -254,6 +254,8 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
+attribute [local irreducible] checkPFremd checkPFremdFallible
+
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "infallible acceptance"
 
 set_option maxRecDepth 100000 in
@@ -266,7 +268,9 @@ theorem fremd_akzeptiert :
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
   foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
-    maskenB_ohne (P := checkPFremd) (lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+    maskenB_ohne (P := checkPFremd) (by
+      simpa only [checkPFremd] using
+        lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
   foreign_gate_stage "acceptance split"
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
@@ -288,7 +292,9 @@ theorem fremdFallible_akzeptiert :
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
   foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
-    maskenB_ohne (P := checkPFremdFallible) (lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
+    maskenB_ohne (P := checkPFremdFallible) (by
+      simpa only [checkPFremdFallible] using
+        lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
   foreign_gate_stage "acceptance split"
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
