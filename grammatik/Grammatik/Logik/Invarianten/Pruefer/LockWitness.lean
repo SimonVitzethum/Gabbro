@@ -3,7 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.Pruefer.Locks
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
 public import Grammatik.Logik.Vertraege.Pruefer.Fixtures
-import Lean.Elab.Tactic.Cbv
+import all Batteries.Data.Except
 
 @[expose] public section
 
@@ -54,7 +54,7 @@ def invariant : Expr declaration [] held .bool :=
 
 def family : SperrInv declaration where
   orte := fun _ => [.inr false]
-  inv := fun _ memory => decide ((memory.globs false).n = 0)
+  inv := fun _ memory => decide +kernel ((memory.globs false).n = 0)
 
 def cellSources : LockSources family := fun _ => some
   (ReifiedLock.ofExpression held invariant family () (fun _ => rfl))
@@ -65,7 +65,7 @@ theorem lockFormula_sound_zeuge :
     ∃ fact : VC.LockFormula family (), lockFormula family cellSources () = .ok fact ∧
       ∀ world, fact.formula.denote (assignment world) ↔
         family.inv () world.speicher = true := by
-  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide_cbv
+  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide +kernel
   cases computed : lockFormula family cellSources () with
   | error cause => simp only [computed, Except.toOption, Option.isSome] at available; cases available
   | ok fact => exact ⟨fact, rfl, lockFormula_sound family cellSources () fact computed⟩
@@ -74,8 +74,8 @@ theorem lockFormula_sound_zeuge :
     The bad body remains well typed; only the checked invariant distinguishes it. -/
 def writeCell (preserves : Bool) : Stmt declaration contract false [] held held :=
   .assignGlob false
-    (if preserves then .widen (by decide) (by decide) (.lit 0)
-      else .widen (by decide) (by decide) (.lit 1))
+    (if preserves then .widen (by decide +kernel) (by decide +kernel) (.lit 0)
+      else .widen (by decide +kernel) (by decide +kernel) (.lit 1))
     rfl cell_access
 
 def sectionBody (preserves : Bool) : Block declaration contract false [] held held :=
@@ -90,8 +90,8 @@ def program (preserves : Bool) : Programm declaration where
       (.ret .empty (List.Perm.refl _))
 
 def initial : World declaration where
-  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
-  globs := fun _ => ⟨0, by decide, by decide⟩
+  slots := fun _ _ _ => ⟨0, by decide +kernel, by decide +kernel⟩
+  globs := fun _ => ⟨0, by decide +kernel, by decide +kernel⟩
   spur := []
 
 def unit (preserves : Bool) : Einheit declaration where
@@ -111,21 +111,21 @@ def unit (preserves : Bool) : Einheit declaration where
 
 theorem invariant_nontrivial_zeuge :
     family.inv () initial.speicher = true ∧
-    family.inv () ({ initial with globs := fun _ => ⟨1, by decide, by decide⟩ }).speicher = false := by
-  decide
+    family.inv () ({ initial with globs := fun _ => ⟨1, by decide +kernel, by decide +kernel⟩ }).speicher = false := by
+  decide +kernel
 
 theorem lock_initial_checked_zeuge :
-    (checkUnitLock (unit true) ()).toOption.isSome = true := by decide_cbv
+    (checkUnitLock (unit true) ()).toOption.isSome = true := by decide +kernel
 
 theorem program_accepted_zeuge :
-    programInvariantsB (program true) family [()] cellSources {} [()] = true := by decide_cbv
+    programInvariantsB (program true) family [()] cellSources {} [()] = true := by decide +kernel
 
 theorem contracts_accepted_zeuge :
-    Vertraege.Pruefer.KontrakteGeprueftB (program true) family [()] cellSources = true := by decide_cbv
+    Vertraege.Pruefer.KontrakteGeprueftB (program true) family [()] cellSources = true := by decide +kernel
 
-theorem invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by decide_cbv
+theorem invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by decide +kernel
 
-theorem logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by decide_cbv
+theorem logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by decide +kernel
 
 /-- Acceptance through the complete concrete checker, including both new unit
     gates, the program invariant gate and the contract gate. -/
@@ -136,18 +136,18 @@ theorem checker_accepted_zeuge :
     unfold AkzeptiertX
     rw [program_accepted_zeuge, contracts_accepted_zeuge]
     simp only [Bool.and_true]
-    decide
+    decide +kernel
   exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
     ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨core, besitzB_leer rfl⟩,
       Kernzelle.akkuStartB_leer (unit true)⟩, invariants_accepted_zeuge⟩, logic_accepted_zeuge⟩
 
 theorem program_refused_zeuge :
-    programInvariantsB (program false) family [()] cellSources {} [()] = false := by decide_cbv
+    programInvariantsB (program false) family [()] cellSources {} [()] = false := by decide +kernel
 
 theorem contracts_refused_zeuge :
-    Vertraege.Pruefer.KontrakteGeprueftB (program false) family [()] cellSources = false := by decide_cbv
+    Vertraege.Pruefer.KontrakteGeprueftB (program false) family [()] cellSources = false := by decide +kernel
 
-theorem logic_refused_zeuge : nutzerPflichtGeprueftB (unit false) [()] [()] = false := by decide_cbv
+theorem logic_refused_zeuge : nutzerPflichtGeprueftB (unit false) [()] [()] = false := by decide +kernel
 
 theorem checker_refused_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit false) [()] [()] [.inl (), .inr false, .inr true] = false := by
@@ -166,22 +166,22 @@ def scopedProgram (preserves : Bool) : Programm declaration :=
 
 theorem scoped_return_accepted_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (scopedProgram true) family [()] cellSources = true := by
-  decide
+  decide +kernel
 
 theorem scoped_return_refused_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (scopedProgram false) family [()] cellSources = false := by
-  decide
+  decide +kernel
 
 def invalidInitial : Einheit declaration :=
   { unit true with sp0 :=
-      ({ initial with globs := fun _ => ⟨1, by decide, by decide⟩ }).speicher }
+      ({ initial with globs := fun _ => ⟨1, by decide +kernel, by decide +kernel⟩ }).speicher }
 
 theorem false_initial_refused_zeuge :
-    (checkUnitLock invalidInitial ()).toOption.isSome = false := by decide_cbv
+    (checkUnitLock invalidInitial ()).toOption.isSome = false := by decide +kernel
 
 theorem opaque_unit_refused_zeuge :
     (checkUnitLock { unit true with lockFormulas := fun _ => none } ()).toOption.isSome = false := by
-  decide
+  decide +kernel
 
 #print axioms lockFormula_sound_zeuge
 #print axioms contracts_accepted_zeuge

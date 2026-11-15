@@ -3,11 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.VC.Extended
 public import Grammatik.Logik.Invarianten.VC.Witness
 public import Grammatik.Logik.Vertraege.Pruefer.Program
-import all Grammatik.Logik.Invarianten.Elim.Decision
-import all Grammatik.Logik.Invarianten.Frag.Observation
-import all Grammatik.Logik.Invarianten.VC.Compiler
-import all Grammatik.Logik.Invarianten.VC.Witness
-import Lean.Elab.Tactic.Cbv
+import all Batteries.Data.Except
 
 @[expose] public section
 
@@ -58,44 +54,44 @@ def compile (code : Endblock declaration contract false [] []) :
   extendedEnd program noFacts noLockFacts 16 none 64 code .nil post
 
 def boundedCompiled : EndCondition program noFacts (SperrInv.leer declaration) boundedWriter .nil post :=
-  (compile boundedWriter).toOption.get (by decide)
+  (compile boundedWriter).toOption.get (by decide +kernel)
 
 def overflowingCompiled : EndCondition program noFacts (SperrInv.leer declaration) overflowingWriter .nil post :=
-  (compile overflowingWriter).toOption.get (by decide)
+  (compile overflowingWriter).toOption.get (by decide +kernel)
 
 def temporaryCompiled : EndCondition program noFacts (SperrInv.leer declaration) temporaryWriter .nil post :=
-  (compile temporaryWriter).toOption.get (by decide)
+  (compile temporaryWriter).toOption.get (by decide +kernel)
 
 def mutableCompiled : EndCondition program noFacts (SperrInv.leer declaration) mutableWriter .nil post :=
-  (compile mutableWriter).toOption.get (by decide)
+  (compile mutableWriter).toOption.get (by decide +kernel)
 
 def traverseCompiled : EndCondition program noFacts (SperrInv.leer declaration) traverseWriter .nil post :=
-  (compile traverseWriter).toOption.get (by decide)
+  (compile traverseWriter).toOption.get (by decide +kernel)
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem bounded_decided_zeuge :
-    decideB (Extended.writerVC boundedCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC boundedCompiled entry .tru) = true := by decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem overflow_decided_zeuge :
-    decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by decide_cbv
+    decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem temporary_decided_zeuge :
-    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem mutable_decided_zeuge :
-    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem traverse_decided_zeuge :
-    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by decide +kernel
 
 /-- With a checked same-fragment invariant, a bound beyond the unrolling
     allowance is handled inductively rather than expanded into one hundred passes. -/
@@ -104,12 +100,12 @@ def inductiveWriter : Endblock declaration contract false [] [] :=
     (.ret .empty (List.Perm.refl _))
 
 def inductiveCompiled : EndCondition program noFacts (SperrInv.leer declaration) inductiveWriter .nil post :=
-  (extendedEnd program noFacts noLockFacts 16 (some post) 64 inductiveWriter .nil post).toOption.get (by decide)
+  (extendedEnd program noFacts noLockFacts 16 (some post) 64 inductiveWriter .nil post).toOption.get (by decide +kernel)
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
 theorem inductive_decided_zeuge :
-    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by decide +kernel
 
 /-- The false decision has both an extracted arithmetic assignment and an
     actual typed G execution that destroys the invariant. -/
@@ -121,17 +117,17 @@ theorem overflow_assignment_zeuge :
 theorem overflow_execution_zeuge :
     (match execEnd oracle 0 calls overflowingWriter counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide_cbv
+      | _ => true) = false := by decide +kernel
 
 theorem temporary_execution_zeuge :
     (match execEnd oracle 0 calls temporaryWriter counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => false) = true := by decide_cbv
+      | _ => false) = true := by decide +kernel
 
 /-- An over-budget loop is a definite refusal, not an unchecked fallback. -/
 theorem over_budget_refused_zeuge :
     (extendedEnd program noFacts noLockFacts 0 none 64 boundedWriter .nil post).toOption.isNone = true := by
-  decide
+  decide +kernel
 
 /-- The Boolean snapshot must retain its relation to the guard: choosing an
     unrelated true flag at len = cap would make the increment fail the post. -/
@@ -155,26 +151,26 @@ def conditionalWriter (preserves : Bool) : Endblock declaration contract false [
       (.ret .empty (List.Perm.refl _)))
 
 def booleanCompiled : EndCondition program noFacts (SperrInv.leer declaration)
-    booleanWriter .nil post := (compile booleanWriter).toOption.get (by decide)
+    booleanWriter .nil post := (compile booleanWriter).toOption.get (by decide +kernel)
 
 def conditionalCompiled (preserves : Bool) : EndCondition program noFacts
     (SperrInv.leer declaration) (conditionalWriter preserves) .nil post :=
-  (compile (conditionalWriter preserves)).toOption.get (by cases preserves <;> decide)
+  (compile (conditionalWriter preserves)).toOption.get (by cases preserves <;> decide +kernel)
 
 theorem boolean_initializer_decided_zeuge :
-    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide +kernel
 
 theorem conditional_initializer_decided_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide_cbv
+    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide +kernel
 
 theorem conditional_initializer_refused_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide_cbv
+    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide +kernel
 
 theorem conditional_initializer_counterexample_zeuge :
     eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
     (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide_cbv
+      | _ => true) = false := by decide +kernel
 
 /-- The strict traversal rule must preserve the declared invariant and must
     reject the model's annotation logic stop, even with an empty body. -/
@@ -186,15 +182,15 @@ def traversalProgram (annotationHolds : Bool) : Programm declaration :=
 
 theorem traversal_contract_accepted_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram true)
-      (SperrInv.leer declaration) [()] = true := by decide_cbv
+      (SperrInv.leer declaration) [()] = true := by decide +kernel
 
 theorem traversal_contract_refused_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram false)
-      (SperrInv.leer declaration) [()] = false := by decide_cbv
+      (SperrInv.leer declaration) [()] = false := by decide +kernel
 
 theorem traversal_logic_stop_zeuge :
     (match execEnd oracle 0 calls ((traversalProgram false).rumpf ()) counterexampleWorld .nil with
       | .logik .schleife => true
-      | _ => false) = true := by decide_cbv
+      | _ => false) = true := by decide +kernel
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness

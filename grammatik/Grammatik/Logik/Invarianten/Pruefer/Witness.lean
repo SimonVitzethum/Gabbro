@@ -2,11 +2,7 @@ module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Goal
 public import Grammatik.Logik.Invarianten.VC.Witness
-import all Grammatik.Logik.Invarianten.Elim.Decision
-import all Grammatik.Logik.Invarianten.Frag.Observation
-import all Grammatik.Logik.Invarianten.VC.Compiler
-import all Grammatik.Logik.Invarianten.VC.Witness
-import Lean.Elab.Tactic.Cbv
+import all Batteries.Data.Except
 
 @[expose] public section
 
@@ -32,7 +28,7 @@ def unit : Einheit declaration where
   pointerSignatures := some
     { count := 1
       outside := fun _ n beyond => by
-        change decide (0 = n) = false
+        change decide +kernel (0 = n) = false
         simp only [decide_eq_false_iff_not]
         omega }
 
@@ -42,7 +38,7 @@ def badUnit : Einheit declaration :=
 
 /-- Evaluation is isolated in this witness module. The lead measures it
     against the few-seconds proof limit; it is not a compiler-path proof. -/
-theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide_cbv
+theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide +kernel
 
 /-- The complete concrete checker accepts the fixture, not just an isolated
     VC emitter. Structural components are small independent decisions; the
@@ -51,14 +47,14 @@ theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [.inl (), .inr false, .inr true] = true := by
   have programAccepted := invariantenGeprueftB_program accepted_zeuge
   have contracts : Vertraege.Pruefer.KontrakteGeprueftB unit.P unit.S [()] unit.lockFormulas = true := by
-    decide_cbv
-  have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide_cbv
+    decide +kernel
+  have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide +kernel
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws [] [] [] [] unit.lockFormulas = true := by
     unfold AkzeptiertX
     rw [programAccepted, contracts]
     simp only [Bool.and_true]
-    decide
+    decide +kernel
   apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, logic⟩
   apply Bool.and_eq_true_iff.mpr
@@ -76,7 +72,7 @@ theorem invariant_duties_zeuge (passes : Nat) :
 theorem initial_zeuge : ∀ item ∈ declaration.invs, InvHaelt unit.P item (unit.sp0.welt []) :=
   invariantenStart_of_geprueft ((invariantenGeprueftB_iff unit [()] [] {}).mp accepted_zeuge)
 
-theorem refused_zeuge : invariantenGeprueftB badUnit [()] [] = false := by decide_cbv
+theorem refused_zeuge : invariantenGeprueftB badUnit [()] [] = false := by decide +kernel
 
 /-- A false invariant decision gates the complete checker regardless of the
     other structural components. -/
@@ -102,6 +98,6 @@ def nonlinearUnit : Einheit declaration :=
       invariante := fun _ => .le (.mul lengthValue capacityValue) (.lit 10) } }
 
 theorem outside_fragment_refused_zeuge :
-    invariantenGeprueftB nonlinearUnit [] [] = false := by decide_cbv
+    invariantenGeprueftB nonlinearUnit [] [] = false := by decide +kernel
 
 end Gabbro.Grammatik.Invarianten.Pruefer.Witness
