@@ -235,12 +235,24 @@ theorem w1v_antworten : antwortenB w1vP [()] = true := by decide +kernel
 /-- The nontrivial-post foreign binder is outside the strict VC fragment.
     This does not refute its safe non-returning behavior below. -/
 theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
+  have execution : Vertraege.Pruefer.checkExecution w1vP w1vS
+      (Vertraege.Pruefer.requiresPolicy w1vP) (fun _ => none) {} none () =
+      .error (.unsupported "contract block is outside the checked control fragment") := by
+    simp only [Vertraege.Pruefer.checkExecution, Vertraege.Pruefer.checkEnvironment,
+      Invarianten.VC.invariantFormula, Invarianten.Pruefer.environments,
+      Vertraege.Pruefer.results, Vertraege.Pruefer.checkPostFormula,
+      Vertraege.Pruefer.postFormula, Vertraege.Pruefer.currentOnly,
+      Invarianten.Frag.translate, Vertraege.Pruefer.ending,
+      Vertraege.Pruefer.statement, Vertraege.Pruefer.block,
+      Invarianten.Pruefer.collect, w1vP, w1vD, g1D, g1Sig, w1vKopf,
+      List.filter_nil, bind, Except.bind, pure, Except.pure]
   have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
     unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
     simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
       Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction,
       w1vP, bind, Except.bind, pure, Except.pure]
-    rfl
+    cases replay : Invarianten.Pruefer.atomicReplay? w1vP () <;>
+      simp only [replay, execution, bind, Except.bind, Except.toOption, Option.isSome]
   simp only [Akzeptiert, Invarianten.Pruefer.invariantVCB, refused, Bool.and_false]
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
