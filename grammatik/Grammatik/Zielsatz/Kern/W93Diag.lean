@@ -182,6 +182,7 @@ example : invariantVCB akP1 akS akFs diagSources = true := by
 example : (checkFunction zPB zS zDiagSources {} none zEin).toOption.isSome = true := by
   decide +kernel
 
+set_option maxRecDepth 100000 in
 example : (checkFunction zPB zS zDiagSources {} none zLies).toOption.isSome = true := by
   decide +kernel
 
