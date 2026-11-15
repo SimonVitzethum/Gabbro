@@ -38,7 +38,7 @@ private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
 attribute [local irreducible] lower
-attribute [local semireducible] extendedEnd extendedStatement extendedBlock
+attribute [local semireducible] extendedEnd extendedStatement extendedBlock integerEquality
 attribute [local irreducible] freshImplication conj
 
 private theorem bounded_formula :
@@ -132,6 +132,7 @@ private def temporaryFormula : QF (Observation declaration) :=
     (fun value => .eq (.var (.glob false)) (.konst value.n))
     (fun value => post.subst (.glob false) (.konst value.n))
 
+set_option maxHeartbeats 50000 in
 private theorem temporary_formula : temporaryCompiled.formula = temporaryFormula := rfl
 
 theorem temporary_decided_zeuge :
@@ -142,11 +143,12 @@ theorem temporary_decided_zeuge :
   intro _
   rw [quoteQF_denote, lower_denote]
   intro initial
-  rw [quoteQF_denote, temporary_formula, temporaryFormula, snapshots_denote]
+  rw [quoteQF_denote, temporary_formula, temporaryFormula,
+    snapshots_denote (D := declaration) (kind := .int 0 10)]
   intro value _ selected
   simp only [LProp.denote, LTerm.denote] at selected
   simp only [post, lower_denote, entry, LProp.denote, LTerm.denote] at initial ⊢
   rw [subst_denote]
-  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind, ← selected] using initial.1
+  simpa [lower_denote, entry, LProp.denote, LTerm.denote, Assignment.bind, ← selected] using initial.1
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
