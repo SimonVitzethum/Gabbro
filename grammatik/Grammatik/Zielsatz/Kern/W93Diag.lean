@@ -5,6 +5,8 @@
 module
 public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 public import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
 public meta import Grammatik.Logik.Invarianten.Pruefer.Program
@@ -176,5 +178,65 @@ def diagNp : String :=
 
 #eval diagNp
 #eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))
+
+/-- Full-Bool kernel replicas of the PoolZeuge/Atomar edits (same computation
+    the witness theorems decide). -/
+example : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zDiagSources) = true := by
+  decide +kernel
+
+/-- Local replica of `SchwachZeuge.nS` (empty orte, vacuous inv; `S` is
+    computationally irrelevant for `nP` since no body uses a lock). -/
+def nSprobe : SperrInv nD := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
+
+def n1wsProbe : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
+
+example : AkzeptiertX nP nSprobe nFs [] nCs n1wsProbe = true := by
+  decide +kernel
+
+/-- `hP` replica (copied bodies/contract; atomic `konfig` read with genuinely
+    violated `tabB[0] == 1` ensures): the gate must refuse. -/
+def hCProbe : Expr nD [] [] .bool :=
+  .eq (.glob NGlob.konfig (nGd _ _)) (.slot NTab.tabB () nI0 (nDarf _ _))
+
+def hLiesProbe : Stmt nD (vertragVon nD NFn.zaehlB) false [] [] [] :=
+  .assignSlot NTab.tabB () nI0 (.glob NGlob.konfig (nGd _ _)) rfl (nDarf _ _)
+
+def hSetzeProbe (k : Int) (h0 : (0 : Int) ≤ k) (h9 : k ≤ 9) : Stmt nD (vertragVon nD NFn.zaehlB) false [] [] [] :=
+  .assignSlot NTab.tabB () nI0 (nW k h0 h9) rfl (nDarf _ _)
+
+def hTestProbe : Stmt nD (vertragVon nD NFn.zaehlB) false [] [] [] :=
+  .ite hCProbe (.cons (hSetzeProbe 1 (by decide) (by decide)) .nil) (.cons (hSetzeProbe 2 (by decide) (by decide)) .nil)
+
+def hRumpfProbe : Endblock nD (vertragVon nD NFn.zaehlB) false [] [] :=
+  .cons hLiesProbe (.cons hTestProbe (.ret .empty List.Perm.nil))
+
+def hEnsProbe : Expr nD (ErgCtx (nD.params NFn.zaehlB) (nD.erg NFn.zaehlB)) (vertragVon nD NFn.zaehlB).ende
+    .bool :=
+  .eq (.slot NTab.tabB () nI0 (nDarf _ _)) (nW 1 (by decide) (by decide))
+
+def hPProbe : Programm nD where
+  invariante := fun i => (nomatch i)
+  requires := fun _ => .tru
+  ensures
+    | .hauptA => .tru
+    | .hauptB => .tru
+    | .kern => .tru
+    | .ruhe => .tru
+    | .zaehlA => .tru
+    | .zaehlB => hEnsProbe
+    | .leck => .tru
+  rumpf
+    | .hauptA => nRumpfA
+    | .hauptB => nRumpfB
+    | .kern => nRumpfKern
+    | .ruhe => .ret .empty List.Perm.nil
+    | .zaehlA => nRumpfZA
+    | .zaehlB => hRumpfProbe
+    | .leck => nRumpfLeck
+
+def hwsProbe : List nD.Fn := [NFn.kern, NFn.zaehlB]
+
+example : AkzeptiertX hPProbe nSprobe nFs [] nCs hwsProbe = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.W93Diag
