@@ -121,7 +121,8 @@ theorem stateCounterexample_complete (base : World D) (keys : List (Observation 
   obtain ⟨values, selected⟩ := counterexample_complete keys (stateValidity keys formula) rejected
   have invalid := counterexample_sound keys (stateValidity keys formula) values selected
   have bounds : (observationBounds keys).denote values := by
-    by_contra absent
+    apply Classical.byContradiction
+    intro absent
     exact invalid (fun present => False.elim (absent present))
   refine ⟨snippetWorld base keys values, ?_⟩
   change (counterexample keys (stateValidity keys formula)).bind
