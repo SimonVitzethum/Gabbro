@@ -40,6 +40,11 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+-- Reuse the proved on-demand evaluator rather than constructing every unused
+-- callback at all 100000 source-lowering fuel levels.
+attribute [local cbv_opaque] Gabbro.Grammatik.Parser.UebersetzeAllg2.lowStufe
+attribute [local cbv_eval] Gabbro.Grammatik.Parser.UebersetzeAllg2.lowStufe_eq_schnell
+
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
     The value continuation uses first, and each handler returns a distinct value. -/
