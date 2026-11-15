@@ -235,22 +235,31 @@ theorem w1v_antworten : antwortenB w1vP [()] = true := by decide +kernel
 /-- The nontrivial-post foreign binder is outside the strict VC fragment.
     This does not refute its safe non-returning behavior below. -/
 theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
+  have invariants : w1vD.invs.filter (schuldet (D := w1vD) ()) = [] := rfl
+  have parameters : w1vD.params () = [] := rfl
+  have result : w1vD.erg () = none := rfl
+  have requires : w1vP.requires () = .tru := rfl
+  have ensures : w1vP.ensures () = .fls := rfl
+  have body : w1vP.rumpf () =
+      .cons (.ite .tru w1vKopf .nil) (.ret .empty List.Perm.nil) := rfl
   have execution : Vertraege.Pruefer.checkExecution w1vP w1vS
       (Vertraege.Pruefer.requiresPolicy w1vP) (fun _ => none) {} none () =
       .error (.unsupported "contract block is outside the checked control fragment") := by
     simp only [Vertraege.Pruefer.checkExecution, Vertraege.Pruefer.checkEnvironment,
+      invariants, parameters, result, requires, ensures, body,
       Invarianten.VC.invariantFormula, Invarianten.Pruefer.environments,
       Vertraege.Pruefer.results, Vertraege.Pruefer.checkPostFormula,
       Vertraege.Pruefer.postFormula, Vertraege.Pruefer.currentOnly,
       Invarianten.Frag.translate, Vertraege.Pruefer.ending,
       Vertraege.Pruefer.statement, Vertraege.Pruefer.block,
-      Invarianten.Pruefer.collect, w1vP, w1vD, g1D, g1Sig, w1vKopf,
+      Invarianten.Pruefer.collect, w1vKopf,
       List.filter_nil, bind, Except.bind, pure, Except.pure]
+  have basic : Vertraege.Pruefer.checkBasicFunction w1vP w1vS (fun _ => none) {} () = none := by
+    simp only [Vertraege.Pruefer.checkBasicFunction, requires, ensures]
   have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
     unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
     simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
-      Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction,
-      w1vP, bind, Except.bind, pure, Except.pure]
+      Vertraege.Pruefer.checkFunction, basic, bind, Except.bind, pure, Except.pure]
     cases replay : Invarianten.Pruefer.atomicReplay? w1vP () <;>
       simp only [replay, execution, bind, Except.bind, Except.toOption, Option.isSome]
   simp only [Akzeptiert, Invarianten.Pruefer.invariantVCB, refused, Bool.and_false]
