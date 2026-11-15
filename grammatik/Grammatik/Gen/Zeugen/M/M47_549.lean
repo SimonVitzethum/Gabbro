@@ -42,6 +42,7 @@ import all Init.Data.String.ToSlice
 
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false
+set_option maxRecDepth 100000
 
 namespace Gabbro.Grammatik.Gen.Zeugen.M47_549
 

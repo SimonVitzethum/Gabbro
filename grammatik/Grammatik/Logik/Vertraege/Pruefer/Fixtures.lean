@@ -11,7 +11,7 @@ open Invarianten.Frag Zielsatz
 
 /-- One real function, an input whose upper endpoint is excluded by requires,
     a non-singleton result, and ordinary memory in the declaration. -/
-def declaration : Deklaration :=
+abbrev declaration : Deklaration :=
   { Invarianten.Frag.Witness.declaration with
     Fn := Unit
     sig := fun _ => 0
