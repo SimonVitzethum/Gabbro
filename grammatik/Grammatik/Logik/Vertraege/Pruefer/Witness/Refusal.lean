@@ -46,7 +46,7 @@ theorem basic_none_of_current_refused (program : Programm D) (S : SperrInv D)
     checkBasicFunction program S sources budget f = none := by
   unfold checkBasicFunction
   split
-· rename_i expression post before
+  · rename_i _expression _before post
     have present : (currentOnly (program.ensures f)).toOption.isSome = true := by
       rw [post]
       rfl
@@ -54,8 +54,7 @@ theorem basic_none_of_current_refused (program : Programm D) (S : SperrInv D)
     cases rejected
   · rfl
 
-/-- A failed current-state syntax check
- is an actual post-translation refusal. -/
+/-- A failed current-state syntax check is an actual post-translation refusal. -/
 theorem post_refused (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
     (value : ErgVal D (D.erg f))
     (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
@@ -86,16 +85,9 @@ theorem environment_refused (program : Programm D) (S : SperrInv D) (policy : Ca
               (checkPostFormula program f locals) with
           | error cause => rfl
           | ok checked =>
-              have accepted := collect_each domain.values
-                (fun result => ∃ formula, postFormula program f locals result = .ok formula)
-                (checkPostFormula program f locals) (by rw [posts]; rfl)
-                value (domain.complete value)
-              have refusedCheck : (checkPostFormula program f locals value).toOption.isSome = false := by
-                cases actual : postFormula program f locals value with
-                | error cause => unfold checkPostFormula; rw [actual]; rfl
-                | ok formula => rw [actual] at rejected; cases rejected
-              rw [refusedCheck] at accepted
-              cases accepted
+              obtain ⟨formula, translated⟩ := checked.down value (domain.complete value)
+              rw [translated] at rejected
+              cases rejected
 
 /-- A typed parameter environment is a member of every successful complete
     enumeration. Its failed post check therefore prevents execution checking. -/
