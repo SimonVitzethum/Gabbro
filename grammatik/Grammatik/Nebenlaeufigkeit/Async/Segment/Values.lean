@@ -25,7 +25,7 @@ public inductive Value (D : Deklaration) where
 
 public theorem valueAt_typed (D : Deklaration) (type : Ty) (value : Wert D type) :
     valueAt D type (Value.typed type value) = some value := by
-  simp only [valueAt, dif_pos rfl]
+  simp only [valueAt, dif_pos rfl, dif_pos True.intro]
 
 /-- A child has its originating declaration and its exact by-value storage.
     Invalid is outside the representation invariant. -/
