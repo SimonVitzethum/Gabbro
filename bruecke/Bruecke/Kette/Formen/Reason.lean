@@ -20,9 +20,9 @@ theorem reasonArms_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       reasonArmsZ u k ft count offset ns ss = some (bs, tailZ, used) →
       tailZ = tail ∧ tail <:+ ss ∧ ReasonRelated u C c O passes R fn ns.active Λ count offset ga bs := by
   intro fuel
-  exact reasonArms_G_with fuel
-    (fun m _ k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB =>
-      laufSeq_G G S c hc O passes R hRR m k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
+  exact reasonArms_G_with fuel (by
+    intro m _ k ss _ fn ft ns _ p tail bs tailZ used hU hV hm hF hG hB
+    exact laufSeq_G G S c hc O passes R hRR m k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
     fuel (Nat.le_refl fuel)
 
 end Gabbro.Bruecke

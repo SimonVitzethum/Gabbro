@@ -133,7 +133,7 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       cases hgf
       have hctx : ty :: Γ = (fn.mitTy x ty).params.map (·.2) := by
         cases ty
-        case int | bool | prod => exact congrArg (List.cons _) hΓ
+        case int | bool | prod | opt => exact congrArg (List.cons _) hΓ
         all_goals cases hsh
       have hsub := lowRufKopf_writes S hc hk (CallsIn.bind hhead)
       have hframe := hF g (fnAt u head.callee) hf ⟨args, CallsIn.bind (List.mem_cons_self ..)⟩
