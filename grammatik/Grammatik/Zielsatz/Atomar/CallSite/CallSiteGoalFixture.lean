@@ -4,9 +4,9 @@
    starts: the one-function, memory-free declaration of `CallSiteZeuge`, now with a VALUE
    answer. The item `g(x : 0..1) -> 0..1` is declared software with the contract
    `requires x != 0`, `ensures result == 1`, and the declared summary `Q` "the answer is 1".
-   The body calls `g(1)` and returns the answer under `ensures result == 1`: its post is
-   provable only from `g`'s summary, which the class of the body duties grants only where `g`'s
-   pre held. The binding `echo` answers its argument: it meets the post exactly where the pre
+   The checked body calls `g(1)` and returns the answer under a literal-true function post.
+   `CallSiteGoalUser.summaryProgram` separately retains the stronger result = 1 duty
+   over the same body; its proof uses the summary only where `g`'s pre held. The binding `echo` answers its argument: it meets the post exactly where the pre
    holds, and breaks the summary at `x = 0`, so it is no oracle of the full premise of
    `GabbroZielVoll`.
 

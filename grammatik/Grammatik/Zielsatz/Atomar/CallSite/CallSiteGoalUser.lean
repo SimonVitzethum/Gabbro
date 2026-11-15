@@ -1,10 +1,9 @@
-/- C08 R3b: THE BODY DUTIES OF THE WITNESS UNIT (premise (b), `NutzerPflichtA`).
+/- C08 body duties for the accepted literal-post unit and its stronger companion.
 
-   The body `let r = g(1); return r` proves `ensures result == 1` against every frame-respecting
-   oracle of the conditional class `AxVertragOP (PreQ wP) wQ`: at the call the pre `1 != 0` holds,
-   so the class grants `g`'s summary "the answer is 1" (`body_out`). The duty USES that summary:
-   with the empty summary in its place the same duty is false (`summary_used`), since an oracle
-   answering `0` is then admitted and the body returns `0`. -/
+   Wave E's checked unit has a literal-true function post. The same body's
+   functional result = 1 post remains a separate program-logic proof: it holds
+   with the conditional foreign summary and fails without it. No acceptance
+   claim is made for that stronger companion. -/
 module
 
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalFixture
@@ -44,23 +43,45 @@ theorem body_out (O' : Orakel wD) (hQ : AxVertragOP (PreQ wP) wQ O') (S : SperrI
     exact of_decide_eq_true hq
   · exact Or.inr rfl
 
-/-- The body triple, the caller duty, and no `logik` outcome. -/
-theorem koerper (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
-    KoerperGutSA wP passes wQ (SperrInv.leer wD) T () := by
+/-- The same executable body with the original functional postcondition. -/
+def summaryProgram : Programm wD :=
+  { wP with ensures := fun _ => .eq (.var .here) (.lit 1) }
+
+private theorem body_duties (P : Programm wD)
+    (sameBody : P.rumpf () = wP.rumpf ()) (samePre : PreQ P = PreQ wP)
+    (post : ∀ (σ σ' : World wD) (ρ : Env wD (wD.params ()))
+      (v : ErgVal wD (wD.erg ())), zahl v = 1 → EnsAmRueck P () σ σ' ρ v)
+    (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
+    KoerperGutSA P passes wQ (SperrInv.leer wD) T () := by
   refine ⟨?_, ?_⟩
   · intro O' _ _ hQ U _ A _ R _ _ σ ρ _
+    rw [samePre] at hQ
     refine ⟨fun σ' v h => ?_, fun g h => ?_⟩
-    · rcases body_out O' hQ (SperrInv.leer wD) U A passes R σ ρ with ⟨σ'', v', hv, he⟩ | he
+    · rw [sameBody] at h
+      rcases body_out O' hQ (SperrInv.leer wD) U A passes R σ ρ with ⟨σ'', v', hv, he⟩ | he
       · rw [he] at h
         cases h
-        exact decide_eq_true hv
+        exact post _ _ _ _ hv
       · rw [he] at h
         cases h
-    · rcases body_out O' hQ (SperrInv.leer wD) U A passes (torRuf wP R) σ ρ with
+    · rw [sameBody] at h
+      rcases body_out O' hQ (SperrInv.leer wD) U A passes (torRuf P R) σ ρ with
         ⟨σ'', v', _, he⟩ | he <;> rw [he] at h <;> cases h
   · intro O' _ _ hQ U _ A _ R _ _ σ ρ _ e h
+    rw [samePre] at hQ
+    rw [sameBody] at h
     rcases body_out O' hQ (SperrInv.leer wD) U A passes R σ ρ with
       ⟨σ'', v', _, he⟩ | he <;> rw [he] at h <;> cases h
+
+/-- The accepted unit's literal post, caller duty and absence of logic outcomes. -/
+theorem koerper (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
+    KoerperGutSA wP passes wQ (SperrInv.leer wD) T () :=
+  body_duties wP rfl rfl (fun _ _ _ _ _ => rfl) passes T
+
+/-- The original functional post is proved over the same body and foreign contract. -/
+theorem summary_koerper (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
+    KoerperGutSA summaryProgram passes wQ (SperrInv.leer wD) T () :=
+  body_duties summaryProgram rfl rfl (fun _ _ _ _ h => decide_eq_true h) passes T
 
 theorem invRueck (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
     InvGutSA wP passes wQ (SperrInv.leer wD) T () := by
@@ -113,15 +134,23 @@ theorem zeroO_gut : GutO zeroO := by
     exact nomatch L
 
 /-- **THE DUTY USES `g`'s SUMMARY**: with the empty summary (`true`) in place of `wQ`, the body
-    duty of the same program is false -- `zeroO` is then in the class and the body returns `0`
+    duty of the stronger companion is false -- `zeroO` is then in the class and the body returns `0`
     against `ensures result == 1`. -/
 theorem summary_used (T : wD.Tab ⊕ wD.Glob → Prop) :
-    ¬ KoerperGutSA wP 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
+    ¬ KoerperGutSA summaryProgram 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
   intro h
   have hk := h.1 zeroO (gutO_rahmenO zeroO_gut) ⟨(fun r => nomatch r), (fun g => nomatch g)⟩
     (fun _ _ _ _ _ _ => rfl) (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
-    (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil wP))
-    (rufAusV_ohneVorbedingung (vertraegeOkR_nil wP).1) world .nil rfl
+    (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil summaryProgram))
+    (rufAusV_ohneVorbedingung (vertraegeOkR_nil summaryProgram).1) world .nil rfl
   exact absurd (hk.1 _ _ rfl) (by unfold EnsAmRueck; decide)
+
+/-- Body identity, summary-sensitive correctness and its concrete refutation coexist. -/
+theorem summary_used_zeuge : summaryProgram.rumpf () = wP.rumpf () ∧
+    PreQ summaryProgram = PreQ wP ∧
+    KoerperGutSA summaryProgram 0 wQ (SperrInv.leer wD) (fun _ => False) () ∧
+    ¬ KoerperGutSA summaryProgram 0 (fun _ _ _ => true)
+      (SperrInv.leer wD) (fun _ => False) () :=
+  ⟨rfl, rfl, summary_koerper 0 _, summary_used _⟩
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal
