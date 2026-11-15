@@ -157,13 +157,13 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
     (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
     is `true` on every program with no handler (`maskenB_ohne`). Since C18 it also has the
     reset component `resetB`; it is `true` on every program with no zero-less array static.
-    The invariant gate is retained explicitly: the old structural checks do not imply it. -/
+    The invariant and contract gates are retained explicitly: the old structural checks do not imply them. -/
 theorem akzeptiert_nodup_gleich [DecidableEq D.Ax]
     {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
     Akzeptiert P S fs ls cs ws =
       (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs &&
-        Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls) := by
+        Invarianten.Pruefer.invariantVCB P S fs (fun _ => none) {} (fun _ => none) ls) := by
   have hSchnitt : schnittstellenB P fs = true := by
     refine List.all_eq_true.mpr fun f _ => List.all_eq_true.mpr fun x _ => ?_
     cases x with
@@ -195,13 +195,13 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   exact of_decide_eq_true h.1.1.2
 
 /-- Old structural acceptance extends to the current checker when the handler,
-    reset and invariant gates also accept. -/
+    reset, invariant and contract gates also accept. -/
 theorem akzeptiert_vor_neu [DecidableEq D.Ax]
     {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true)
     (hR : resetB cs = true)
-    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true) :
+    (hI : Invarianten.Pruefer.invariantVCB P S fs (fun _ => none) {} (fun _ => none) ls = true) :
     Akzeptiert P S fs ls cs ws = true := by
   rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR, libraryB_immer _ _, hI]
   rfl

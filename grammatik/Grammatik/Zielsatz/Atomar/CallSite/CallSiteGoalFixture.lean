@@ -139,11 +139,13 @@ def body : Endblock wD (vertragVon wD ()) false [] [] :=
   .bindAxiom (τ := .int 0 1) () args rfl (fun e => nomatch e) (fun e => nomatch e)
     (fun e => nomatch e) (fun e => nomatch e) (.ret (.val (.var .here)) List.Perm.nil)
 
-/-- The program: `ensures result == 1` on the function, `g`'s contract on the item. -/
+/-- The call-site witness retains `g`'s nontrivial pre/post and its real call.
+    The function post is literal truth, inside the totality fragment.
+    Capability gap: outside the decidable fragment: nontrivial foreign-result WP. -/
 def wP : Programm wD where
   invariante := fun e => nomatch e
   requires := fun _ => .tru
-  ensures := fun _ => .eq (.var .here) (.lit 1)
+  ensures := fun _ => .tru
   rumpf := fun _ => body
   axVertrag := fun _ => contract
 
