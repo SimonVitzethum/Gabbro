@@ -304,10 +304,77 @@ theorem boolean_initializer_decided_zeuge :
   intro flag _ selected
   cases flag with
   | false =>
-      simpa [branchFormula_denote, LProp.denote, post, lower_denote] using initial.1
+      simpa [wahr?, branchFormula_denote, LProp.denote, post, lower_denote] using initial.1
   | true =>
       rw [branchFormula_denote]
       exact ⟨fun _ => stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid)
         values initial.1 selected, fun impossible => (impossible trivial).elim⟩
+
+private def bumpRelation (value : Zahl 0 10) : LProp (Observation declaration) :=
+  .and (.imp stepRange (.eq stepTerm (.konst value.n)))
+    (.imp (.not stepRange) (.eq (.var (.glob false)) (.konst value.n)))
+
+private def conditionalRelation (preserves : Bool) (value : Zahl 0 10) : LProp (Observation declaration) :=
+  let unchanged : LProp (Observation declaration) := .eq (.var (.glob false)) (.konst value.n)
+  .and (.imp guardFormula (if preserves then bumpRelation value else unchanged))
+    (.imp (.not guardFormula) (if preserves then unchanged else bumpRelation value))
+
+private def conditionalFormula (preserves : Bool) : QF (Observation declaration) :=
+  snapshots (kind := .int 0 10) (integerValues 0 10 11) (conditionalRelation preserves)
+    (fun value => post.subst (.glob false) (.konst value.n))
+
+set_option maxHeartbeats 50000 in
+private theorem conditional_formula (preserves : Bool) :
+    (conditionalCompiled preserves).formula = conditionalFormula preserves := by
+  cases preserves <;> rfl
+
+theorem conditional_initializer_decided_zeuge :
+    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, conditional_formula, conditionalFormula]
+  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
+  intro value _ relation
+  simp only [conditionalRelation, bumpRelation, stepRange, stepTerm, guardFormula,
+    ↓reduceIte, LProp.denote, LTerm.denote] at relation
+  have bound : value.n ≤ values (.glob true) := by
+    by_cases guarded : values (.glob false) < values (.glob true)
+    · have selected := relation.1 guarded
+      by_cases fits : 0 ≤ values (.glob false) + 1 ∧ values (.glob false) + 1 ≤ 10
+      · have := selected.1 fits; omega
+      · have := selected.2 fits; omega
+    · have := relation.2 guarded
+      have holds := initial.1
+      change values (.glob false) ≤ values (.glob true) at holds
+      omega
+  rw [subst_denote, post, lower_denote]
+  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using bound
+
+theorem conditional_initializer_refused_zeuge :
+    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by
+  apply (close_decide_false_iff _).mpr
+  refine ⟨assignment counterexampleWorld, ?_⟩
+  rw [writerMatrix, lower_denote]
+  intro valid
+  have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
+  rw [lower_denote] at step
+  have initial : entry.denote (assignment counterexampleWorld) ∧ True :=
+    ⟨by change (4 : Int) ≤ 4; decide, trivial⟩
+  have result := (quoteQF_denote _ _).mp (step initial)
+  rw [conditional_formula, conditionalFormula] at result
+  have checked := (snapshots_denote (kind := .int 0 10) _ _ _ _).mp result
+  let wrong : Zahl 0 10 := ⟨5, by decide, by decide⟩
+  have member : wrong ∈ integerValues 0 10 11 := integerValues_complete 0 10 wrong
+  have selected : (conditionalRelation false wrong).denote (assignment counterexampleWorld) := by
+    norm_num [conditionalRelation, bumpRelation, stepRange, stepTerm, guardFormula,
+      LProp.denote, LTerm.denote, assignment, counterexampleWorld, scalarValue, wrong]
+  have impossible := checked wrong member selected
+  rw [subst_denote, post, lower_denote] at impossible
+  norm_num [entry, LProp.denote, LTerm.denote, Assignment.bind, assignment,
+    counterexampleWorld, scalarValue, wrong] at impossible
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness

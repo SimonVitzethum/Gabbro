@@ -35,12 +35,6 @@ theorem over_budget_refused_zeuge :
     (extendedEnd program noFacts noLockFacts 0 none 64 boundedWriter .nil post).toOption.isNone = true := by
   decide +kernel
 
-theorem conditional_initializer_decided_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide +kernel
-
-theorem conditional_initializer_refused_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by decide +kernel
-
 theorem conditional_initializer_counterexample_zeuge :
     eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
     (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
