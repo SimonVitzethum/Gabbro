@@ -240,7 +240,9 @@ set_option maxHeartbeats 2000000 in
 theorem fremd_akzeptiert :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  have interfaces : schnittstellenB checkPFremd (List.finRange uFremd.fns.length) = true :=
+    (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, Bool.and_true, Bool.and_eq_true]
   and_intros
   all_goals
     foreign_gate_progress
@@ -253,7 +255,10 @@ set_option maxHeartbeats 2000000 in
 theorem fremdFallible_akzeptiert :
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  have interfaces : schnittstellenB checkPFremdFallible
+      (List.finRange uFremdFallible.fns.length) = true :=
+    (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, Bool.and_true, Bool.and_eq_true]
   and_intros
   all_goals
     foreign_gate_progress
