@@ -27,11 +27,11 @@ def vertragsFreiB (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : Boo
 omit [DecidableEq D.Fn] in
 theorem vertragsFreiB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) {c : D.Tab ⊕ D.Glob}
     (h : vertragsFreiB P fs c = true) : VertragsFrei P c := by
-  simp only [vertragsFreiB, Bool.and_eq_true] at h
+  simp only [vertragsFreiB, Bool.and_eq_true_iff] at h
   obtain ⟨hg, hiv⟩ := h
   refine ⟨fun g => ?_, fun i hi hc => ?_⟩
   · have h1 := (List.all_eq_true.mp hg) g (hvoll g)
-    simp only [Bool.and_eq_true, Bool.not_eq_true'] at h1
+    simp only [Bool.and_eq_true_iff, Bool.not_eq_true'] at h1
     obtain ⟨⟨h1, h2⟩, h3⟩ := h1
     refine ⟨fun hc => ?_, fun hc => ?_, fun hc => ?_⟩
     · rw [istIn_iff.mpr hc] at h1; cases h1
@@ -72,10 +72,10 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
   rw [← getrenntW_eq_lokW hvoll]
   have h1 := (List.all_eq_true.mp h) f (hvoll f)
-  simp only [Bool.and_eq_true] at h1
+  simp only [Bool.and_eq_true_iff] at h1
   refine ⟨fun c hc => ?_, fun c hc => (List.all_eq_true.mp h1.2) c hc⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
-  simp only [Bool.or_eq_true] at h2
+  simp only [Bool.or_eq_true_iff] at h2
   rcases h2 with ((h2 | h2) | h2) | h2
   · exact Or.inl (by simp only [h2, Bool.true_or])
   · exact Or.inl (by simp only [h2, Bool.or_true])
@@ -83,7 +83,7 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
     exact Or.inr (Or.inl ⟨L, waechterVon_mem.mp hL, istIn_iff.mp hc'⟩)
   · cases hg : getrenntW P fs ws c
     · refine Or.inr (Or.inr ?_)
-      simp only [geteiltVB, Bool.and_eq_true] at h2
+      simp only [geteiltVB, Bool.and_eq_true_iff] at h2
       obtain ⟨⟨ha, hw⟩, hv⟩ := h2
       refine ⟨⟨atomarB_iff.mp ha, fun L hL => ?_, fun hR => ?_⟩, vertragsFreiB_ok hvoll hv⟩
       · have := waechterVon_mem.mpr hL
@@ -105,10 +105,10 @@ theorem akzeptiertSpecX_of [RootNativeFloat.Hardware]
     {hints : Vertraege.Pruefer.LoopHints D}
     (h : AkzeptiertX P S fs ls cs ws aks checks [] [] sources hints = true) :
     AkzeptiertSpecX P S fs ws [] aks := by
-  have contractParts := Bool.and_eq_true.mp h
+  have contractParts := Bool.and_eq_true_iff.mp h
   have hK := Vertraege.Pruefer.KontrakteGeprueftB_sound hvoll contractParts.2
   have h := contractParts.1
-  have parts := Bool.and_eq_true.mp h
+  have parts := Bool.and_eq_true_iff.mp h
   have hI := Invarianten.Pruefer.programInvariantsB_sound P S fs sources {} hvoll parts.2
   have h := parts.1
   change (programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
@@ -117,7 +117,7 @@ theorem akzeptiertSpecX_of [RootNativeFloat.Hardware]
     Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks &&
     checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs &&
     GuestBoundary.admissionB []) = true at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff, and_assoc] at h
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, _h16⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact {
@@ -145,9 +145,9 @@ theorem akzeptiertSpecX_of [RootNativeFloat.Hardware]
 theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : AkzeptiertX P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
-  have h := (Bool.and_eq_true.mp (Bool.and_eq_true.mp h).1).1
+  have h := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
   dsimp only [AkzeptiertX] at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
 
@@ -155,10 +155,10 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
   refine List.all_eq_true.mpr fun f hf => ?_
   have h1 := (List.all_eq_true.mp h) f hf
-  simp only [Bool.and_eq_true] at h1 ⊢
+  simp only [Bool.and_eq_true_iff] at h1 ⊢
   refine ⟨List.all_eq_true.mpr fun c hc => ?_, h1.2⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
-  simp only [Bool.or_eq_true] at h2 ⊢
+  simp only [Bool.or_eq_true_iff] at h2 ⊢
   exact Or.inl h2
 
 /-- **EMBEDDING, as Bools: every unit the goal's checker accepts, `AkzeptiertX` accepts.** -/
@@ -166,15 +166,15 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
     {checks : List (CheckDecl D)} (h : Akzeptiert P S fs ls cs ws aks checks = true)
     (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
     AkzeptiertX P S fs ls cs ws aks checks = true := by
-  have invariantCheck := (Bool.and_eq_true.mp h).2
-  have h := (Bool.and_eq_true.mp h).1
+  have invariantCheck := (Bool.and_eq_true_iff.mp h).2
+  have h := (Bool.and_eq_true_iff.mp h).1
   unfold AkzeptiertX
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hK⟩
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, invariantCheck⟩
   dsimp only [Akzeptiert] at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h ⊢
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff, and_assoc] at h ⊢
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hSchnitt, hReset, h11, h12, h13, hS⟩ := h
   exact ⟨h1, h2, fussWXB_of_fussWB h3, h4, h5, h6, h7, h8, h9, h10,
     hSchnitt, h11, h12, h13, hReset, hS⟩
@@ -185,7 +185,7 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
 theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
     (h : VertragsFrei P c) : vertragsFreiB P fs c = true := by
   unfold vertragsFreiB
-  rw [Bool.and_eq_true]
+  rw [Bool.and_eq_true_iff]
   refine ⟨List.all_eq_true.mpr fun g _ => ?_, List.all_eq_true.mpr fun i hi => ?_⟩
   · obtain ⟨h1, h2, h3⟩ := h.1 g
     have e1 : !(istIn (P.requires g).orte c) = true := by
@@ -200,7 +200,7 @@ theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
       cases he : istIn (invOrteP P g) c with
       | true => exact absurd (istIn_iff.mp he) h3
       | false => rfl
-    simp only [Bool.and_eq_true]
+    simp only [Bool.and_eq_true_iff]
     exact ⟨⟨e1, e2⟩, e3⟩
   · cases he : istIn (P.invariante i).orte c with
     | true => exact absurd (istIn_iff.mp he) (h.2 i hi)
@@ -213,26 +213,26 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hF : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f) : fussWXB P S fs ws = true := by
   unfold fussWXB
   refine List.all_eq_true.mpr fun f _ => ?_
-  rw [Bool.and_eq_true]
+  rw [Bool.and_eq_true_iff]
   have e : ∀ c : D.Tab ⊕ D.Glob, getrenntW P fs ws c = lokW P fs ws c :=
     fun c => congrFun (getrenntW_eq_lokW hvoll) c
   refine ⟨List.all_eq_true.mpr fun c hc => ?_, List.all_eq_true.mpr fun c hc => ?_⟩
   · rcases (hF f).1 c hc with h | ⟨L, hB, hL⟩ | hGt
     · rw [(e c).symm] at h
-      simp only [Bool.or_eq_true]
-      exact Or.inl (Or.inl (by simpa only [Bool.or_eq_true] using h))
-    · simp only [Bool.or_eq_true]
+      simp only [Bool.or_eq_true_iff]
+      exact Or.inl (Or.inl (by simpa only [Bool.or_eq_true_iff] using h))
+    · simp only [Bool.or_eq_true_iff]
       exact Or.inl (Or.inr (List.any_eq_true.mpr ⟨L, waechterVon_mem.mpr hB, istIn_iff.mpr hL⟩))
     · obtain ⟨⟨ha, hG, _⟩, hV⟩ := hGt
       have hempty : waechterVon c = [] :=
         List.eq_nil_iff_forall_not_mem.mpr (fun L hL => hG L (waechterVon_mem.mp hL))
       have hg : geteiltVB P fs c = true := by
         unfold geteiltVB
-        simp only [Bool.and_eq_true]
+        simp only [Bool.and_eq_true_iff]
         refine ⟨⟨atomarB_iff.mpr ha, ?_⟩, vertragsFreiB_vollstaendig hV⟩
         rw [hempty]
         rfl
-      simp only [Bool.or_eq_true]
+      simp only [Bool.or_eq_true_iff]
       exact Or.inr hg
   · have h := (hF f).2 c hc
     rw [(e c).symm] at h
@@ -253,11 +253,11 @@ theorem akzeptiertX_of_spec [RootNativeFloat.Hardware]
     (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
     AkzeptiertX P S fs ls cs ws aks checks qs = true := by
   unfold AkzeptiertX
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hK⟩
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hI⟩
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc]
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff, and_assoc]
   exact ⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg, fussWXB_vollstaendig hvoll h.fuss,
     (stufenB_iff hvoll).mpr h.stufen, (sperrOrteB_iff hls).mpr h.sperrOrte,
     wurzelnB_iff.mpr h.wurzeln, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln,
