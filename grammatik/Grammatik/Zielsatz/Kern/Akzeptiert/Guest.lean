@@ -25,7 +25,7 @@ theorem akzeptiert_guest_eq (P : Programm D) (S : SperrInv D)
     (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D)) :
     Akzeptiert P S fs ls cs ws aks checks qs guests =
       (Akzeptiert P S fs ls cs ws aks checks qs && GuestBoundary.admissionB guests) := by
-  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 theorem akzeptiert_guest_sound {P : Programm D} {S : SperrInv D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
@@ -47,7 +47,7 @@ theorem akzeptiertX_guest_eq (P : Programm D) (S : SperrInv D)
     (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) :
     AkzeptiertX P S fs ls cs ws aks checks qs guests sources hints =
       (AkzeptiertX P S fs ls cs ws aks checks qs [] sources hints && GuestBoundary.admissionB guests) := by
-  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 end Bool
 
@@ -92,13 +92,13 @@ theorem Zielsatz.Pruefer.withGuests_empty (C : Pruefer)
     [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) :
     (C.withGuests (fun _ => [])).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
-  simp only [Pruefer.withGuests, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  simp only [Pruefer.withGuests, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 /-- The same exact verdict preservation includes all atomic and start checks. -/
 theorem Zielsatz.PrueferX.withGuests_empty (C : PrueferX)
     [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) :
     (C.withGuests (fun _ => [])).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
-  simp only [PrueferX.withGuests, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  simp only [PrueferX.withGuests, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 end Gabbro.Grammatik
