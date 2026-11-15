@@ -50,7 +50,7 @@ theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchran
   split
   · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg h]
   · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -n by omega), Option.map_some,
-  neg_neg]
+  Int.neg_neg]
 
 theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt} (ht : typS otab t = .ok st) (ha : artErg t = some a)
     (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
