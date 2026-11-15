@@ -214,6 +214,19 @@ def gE : Zielsatz.Einheit gD where
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 1
+      outside := fun f n outside => by
+        cases f
+        · change decide (0 = n) = false
+          exact decide_eq_false (by omega) }
+
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --

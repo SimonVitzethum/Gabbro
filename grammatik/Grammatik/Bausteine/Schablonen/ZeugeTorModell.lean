@@ -77,6 +77,7 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 import all Batteries.Data.Except
+meta import Grammatik.Logik.Vertraege.Pruefer.Unit
 @[expose] public section
 
 
@@ -253,6 +254,21 @@ def gE : Zielsatz.Einheit gD where
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
+  axiomSources := some
+    { items := [GAx.getpid, GAx.exit_group]
+      complete := fun item => by cases item <;> decide
+      resources := fun _ => []
+      expression := fun _ => .tru
+      correct := fun _ _ _ => rfl }
+  pointerSignatures := some
+    { count := 2
+      outside := fun f n outside => by
+        cases f
+        · change decide (0 = n) = false
+          exact decide_eq_false (by omega)
+        · change decide (1 = n) = false
+          exact decide_eq_false (by omega) }
+
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --
@@ -295,6 +311,10 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
+#eval match Zielsatz.checkUnitLogic gE gFs gLs with
+  | .ok _ => "integration logic check: accepted"
+  | .error cause => cause.message
+
 theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by
   rw [Zielsatz.akzeptiertX_pruefer_eq]
   decide +kernel
