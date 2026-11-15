@@ -49,15 +49,7 @@ open Gabbro.Grammatik.Zielsatz
 
 set_option Elab.async false
 
-#eval IO.FS.createDirAll "../.scratch-agent"
-
-open Lean Elab Tactic in
-elab "foreign_infallible_progress " label:str : tactic =>
-  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label.getString)
-
 attribute [local irreducible] checkPFremd
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:fragment_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -65,15 +57,11 @@ private theorem fragment_checked :
     programmImFragmentG checkPFremd (List.finRange uFremd.fns.length) = true := by
   decide +kernel
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:bounds_checked"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem bounds_checked :
     abgAlleB checkPFremd (List.finRange uFremd.fns.length) = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:footprints_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -81,15 +69,11 @@ private theorem footprints_checked :
     fussWXB checkPFremd (Cover.Differenz.sperrFamilie uFremd) (List.finRange uFremd.fns.length) [] = true := by
   decide +kernel
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:levels_checked"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem levels_checked :
     stufenB checkPFremd (List.finRange uFremd.fns.length) = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:pool_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -97,15 +81,11 @@ private theorem pool_checked :
     einzelnPoolB checkPFremd (List.finRange uFremd.fns.length) [] [] = true := by
   decide +kernel
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:races_checked"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem races_checked :
     rennB checkPFremd (List.finRange uFremd.fns.length) [] [] = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:answers_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -113,15 +93,11 @@ private theorem answers_checked :
     antwortenB checkPFremd (List.finRange uFremd.fns.length) = true := by
   decide +kernel
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:scopes_checked"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem scopes_checked :
     scopesOkProgB checkPFremd (List.finRange uFremd.fns.length) = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:invariants_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -129,15 +105,11 @@ private theorem invariants_checked :
     Invarianten.Pruefer.programInvariantsB checkPFremd (Cover.Differenz.sperrFamilie uFremd) (List.finRange uFremd.fns.length) (fun _ => none) = true := by
   decide +kernel
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:contracts_checked"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem contracts_checked :
     Vertraege.Pruefer.KontrakteGeprueftB checkPFremd (Cover.Differenz.sperrFamilie uFremd) (List.finRange uFremd.fns.length) = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Infallible.lean:compose"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -148,49 +120,12 @@ theorem fremd_akzeptiert :
   have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     maskenB_ohne (P := checkPFremd) (by
       delta checkPFremd
-      exact
-        lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
-  foreign_infallible_progress "Infallible:split"
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
-  foreign_infallible_progress "Infallible:and"
-  and_intros
-  · foreign_infallible_progress "Infallible:1"
-    exact fragment_checked
-  · foreign_infallible_progress "Infallible:2"
-    exact bounds_checked
-  · foreign_infallible_progress "Infallible:3"
-    exact footprints_checked
-  · foreign_infallible_progress "Infallible:4"
-    exact levels_checked
-  · foreign_infallible_progress "Infallible:5"
-    rfl
-  · foreign_infallible_progress "Infallible:6"
-    rfl
-  · foreign_infallible_progress "Infallible:7"
-    exact pool_checked
-  · foreign_infallible_progress "Infallible:8"
-    exact races_checked
-  · foreign_infallible_progress "Infallible:9"
-    exact answers_checked
-  · foreign_infallible_progress "Infallible:10"
-    exact masks
-  · foreign_infallible_progress "Infallible:11"
-    exact (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  · foreign_infallible_progress "Infallible:12"
-    exact libraryB_immer _ _
-  · foreign_infallible_progress "Infallible:13"
-    exact Kernzelle.accumulatorB_leer
-  · foreign_infallible_progress "Infallible:14"
-    exact fremd_checkB
-  · foreign_infallible_progress "Infallible:15"
-    rfl
-  · foreign_infallible_progress "Infallible:16"
-    exact scopes_checked
-  · foreign_infallible_progress "Infallible:17"
-    exact GuestBoundary.admissionB_nil
-  · foreign_infallible_progress "Infallible:18"
-    exact invariants_checked
-  · foreign_infallible_progress "Infallible:19"
-    exact contracts_checked
+      exact lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+  exact foreign_acceptance_of_components checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+    (List.finRange uFremd.fns.length) checkChecksFremd
+    fragment_checked bounds_checked footprints_checked levels_checked pool_checked races_checked
+    answers_checked masks
+    ((schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _))
+    fremd_checkB scopes_checked invariants_checked contracts_checked
 
 end Gabbro.Grammatik.Parser.Uebersetze

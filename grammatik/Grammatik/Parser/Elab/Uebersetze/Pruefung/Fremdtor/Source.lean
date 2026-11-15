@@ -233,4 +233,41 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
+/-- Compose the unchanged atomic checker over abstract inputs. Keeping this
+    Boolean factorization abstract avoids converting a complete closed front-end
+    result while assembling its independently checked component certificates. -/
+private theorem foreign_acceptance_of_components {D : Deklaration}
+    [DecidableEq D.Fn] [DecidableEq D.Ax]
+    (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (checks : List (CheckDecl D))
+    (fragment : programmImFragmentG P fs = true) (bounds : abgAlleB P fs = true)
+    (footprints : fussWXB P S fs [] = true) (levels : stufenB P fs = true)
+    (pool : einzelnPoolB P fs [] [] = true) (races : rennB P fs [] [] = true)
+    (answers : antwortenB P fs = true) (masks : maskenB P fs = true)
+    (interfaces : schnittstellenB P fs = true)
+    (duties : checkB P [] [] fs checks = true) (scopes : scopesOkProgB P fs = true)
+    (invariants : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) = true)
+    (contracts : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
+    AkzeptiertX P S fs [] [] [] [] checks = true := by
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  and_intros
+  · exact fragment
+  · exact bounds
+  · exact footprints
+  · exact levels
+  · rfl
+  · rfl
+  · exact pool
+  · exact races
+  · exact answers
+  · exact masks
+  · exact interfaces
+  · exact libraryB_immer _ _
+  · exact Kernzelle.accumulatorB_leer
+  · exact duties
+  · rfl
+  · exact scopes
+  · exact GuestBoundary.admissionB_nil
+  · exact invariants
+  · exact contracts
+
 end Gabbro.Grammatik.Parser.Uebersetze
