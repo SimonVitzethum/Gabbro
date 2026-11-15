@@ -41,18 +41,22 @@ attribute [local irreducible] lower
 
 private theorem bounded_formula :
     boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
-  unfold boundedCompiled compile
-  conv_lhs => whnf
-  conv_rhs => whnf
-  trace_state
+  simp only [boundedCompiled, compile, boundedWriter, extendedEnd, extendedStatement,
+    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
+    leafCondition, branchCondition, scalarWP, translateScalar, Frag.translate,
+    increment, guard, lengthValue, capacityValue, Condition.map,
+    bind, Except.bind, Except.map, pure, Except.pure, Except.toOption,
+    show (2 : Nat) ≤ 16 by decide, ↓reduceIte]
   rfl
 
 private theorem overflowing_formula :
     overflowingCompiled.formula = retryFormula .fls 2 := by
-  unfold overflowingCompiled compile
-  conv_lhs => whnf
-  conv_rhs => whnf
-  trace_state
+  simp only [overflowingCompiled, compile, overflowingWriter, extendedEnd, extendedStatement,
+    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
+    leafCondition, branchCondition, scalarWP, translateScalar, Frag.translate,
+    increment, guard, lengthValue, capacityValue, Condition.map,
+    bind, Except.bind, Except.map, pure, Except.pure, Except.toOption,
+    show (2 : Nat) ≤ 16 by decide, ↓reduceIte]
   rfl
 
 set_option maxRecDepth 100000 in
