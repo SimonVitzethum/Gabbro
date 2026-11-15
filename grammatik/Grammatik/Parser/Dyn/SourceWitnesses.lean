@@ -341,7 +341,7 @@ private def chunks : List Chunk :=
   IO.FS.createDirAll ".scratch-agent"
   IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "text"
 
-private theorem source_text : source = String.ofList (characters chunks) := by cbv
+private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
 
 private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
     (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
