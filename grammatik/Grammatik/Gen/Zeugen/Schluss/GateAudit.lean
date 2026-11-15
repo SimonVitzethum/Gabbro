@@ -3,6 +3,7 @@
 module
 
 public import Grammatik.Gen.Zeugen.Schluss.Teil2
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.AtomicReadAudit
 import all Grammatik.Logik.Invarianten.Frag.Observation
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -68,17 +69,10 @@ theorem refused_of_cause_zeuge : contractCause M99_824.e = some
 theorem m99_825_refused : M99_825.e.gueltig = false :=
   refused_of_cause _ _ m99_825_cause
 
-/-- Certifying the trivial contract does not bypass the independent
-    declaration/writer gate. This fixture remains refused by that gate. -/
-theorem m49_50_refused : M49_50.e.gueltig = false := by
-  have refused : Invarianten.Pruefer.programInvariantsB M49_50.e.P M49_50.e.S
-      M49_50.e.fs M49_50.e.lockSources {} M49_50.e.ls = false := by decide +kernel
-  cases verdict : M49_50.e.gueltig with
-  | false => rfl
-  | true =>
-      have accepted := (M49_50.e_gueltig_iff_gates.mp verdict).1
-      rw [refused] at accepted
-      exact Bool.noConfusion accepted
+/-- Literal-true lock predicates have no restoration duty. Both independent
+    gates accept the unchanged typed atomic-read fixture. -/
+theorem m49_50_checked : M49_50.e.gueltig = true :=
+  Vertraege.Pruefer.AtomicReadAudit.accepted_zeuge
 
 theorem m47_549_refused : M47_549.e.gueltig = false :=
   refused_of_cause _ _ m47_549_cause
