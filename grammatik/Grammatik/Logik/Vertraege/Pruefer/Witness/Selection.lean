@@ -54,11 +54,11 @@ theorem localBranches_valid (items : List (Wert D type))
       obtain ⟨tail, htail, hvalidTail⟩ := ih
       cases result : localBranches (value :: items) expression locals target compile with
       | error cause =>
-          simp only [localBranches, hrelation, hhead, htail, Except.bind, reduceCtorEq] at result
+          simp only [localBranches, hrelation, hhead, htail, bind, Except.bind, pure, Except.pure, reduceCtorEq] at result
       | ok out =>
-          refine ⟨out, result, ?_⟩
+          refine ⟨out, rfl, ?_⟩
           have shape : out.formula = conj (freshImplication type value relation.val head.formula) tail.formula := by
-            simp only [localBranches, hrelation, hhead, htail, Except.bind] at result
+            simp only [localBranches, hrelation, hhead, htail, bind, Except.bind, pure, Except.pure] at result
             exact (congrArg Condition.formula (Except.ok.inj result)).symm
           intro values ready
           rw [shape, conj_denote]
@@ -80,11 +80,11 @@ theorem localSelect_valid (budget : Nat)
   obtain ⟨pre, hpre, hvalid⟩ := localBranches_valid domain.values expression locals target compile premise valid
   cases result : localSelect budget expression locals target compile with
   | error cause =>
-      simp only [localSelect, hdomain, hpre, Except.bind, reduceCtorEq] at result
+      simp only [localSelect, hdomain, hpre, bind, Except.bind, pure, Except.pure, reduceCtorEq] at result
   | ok out =>
-      refine ⟨out, result, ?_⟩
+      refine ⟨out, rfl, ?_⟩
       have shape : out.formula = pre.formula := by
-        simp only [localSelect, hdomain, hpre, Except.bind] at result
+        simp only [localSelect, hdomain, hpre, bind, Except.bind, pure, Except.pure] at result
         exact (congrArg Condition.formula (Except.ok.inj result)).symm
       rw [shape]
       exact hvalid

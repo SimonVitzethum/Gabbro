@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Speichermodell.Atomar.Zulassung
-public import Grammatik.Speichermodell.Maschine.Zeuge
+public import Grammatik.Speichermodell.Maschine.WeakWitness
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
