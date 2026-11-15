@@ -15,11 +15,6 @@ open Gabbro.Grammatik.Invarianten.VC.Witness
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 400000 in
-theorem temporary_decided_zeuge :
-    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by decide +kernel
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
 theorem mutable_decided_zeuge :
     decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide +kernel
 

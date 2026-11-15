@@ -39,6 +39,7 @@ private def guardFormula : LProp (Observation declaration) :=
 
 attribute [local irreducible] lower
 attribute [local semireducible] extendedEnd extendedStatement extendedBlock
+attribute [local irreducible] freshImplication conj
 
 private theorem bounded_formula :
     boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
@@ -80,5 +81,70 @@ theorem overflow_decided_zeuge :
     subst_denote, stepRange, stepTerm, post, entry, LProp.denote, LTerm.denote,
     Assignment.bind, assignment, counterexampleWorld, scalarValue,
     declaration, Frag.Witness.declaration] at result
+
+private theorem freshImplication_iff {D : Deklaration} (kind : Ty) (value : Wert D kind)
+    (guard : LProp (Observation D)) (post : QF (Observation D))
+    (values : Assignment (Observation D)) :
+    (freshImplication kind value guard post).denote values ↔
+      (guard.denote values → post.denote values) := by
+  constructor
+  · intro checked selected
+    exact freshImplication_sound kind value guard post values checked selected
+  · intro implication
+    rw [freshImplication, dropLocalQF_denote, lower_denote]
+    intro number _
+    have projection : (fun key => (Assignment.bind (dropBase values) none number) (some key)) = values := by
+      funext key
+      simp [Assignment.bind, dropBase]
+    rw [quoteQF_denote, liftLocalQF_denote, lower_denote, quoteQF_denote, liftLocalQF_denote]
+    simpa only [projection] using implication
+
+private def snapshots {D : Deklaration} {kind : Ty} (items : List (Wert D kind))
+    (relation : Wert D kind → LProp (Observation D))
+    (continuation : Wert D kind → QF (Observation D)) : QF (Observation D) :=
+  items.foldr (fun value rest => conj (freshImplication kind value (relation value)
+    (continuation value)) rest) .tru
+
+private theorem snapshots_denote {D : Deklaration} {kind : Ty} (items : List (Wert D kind))
+    (relation : Wert D kind → LProp (Observation D))
+    (continuation : Wert D kind → QF (Observation D)) (values : Assignment (Observation D)) :
+    (snapshots items relation continuation).denote values ↔
+      ∀ value ∈ items, (relation value).denote values → (continuation value).denote values := by
+  induction items with
+  | nil => simp [snapshots, QF.denote]
+  | cons value items ih =>
+      change (conj (freshImplication kind value (relation value) (continuation value))
+        (snapshots items relation continuation)).denote values ↔ _
+      rw [conj_denote, freshImplication_iff, ih]
+      constructor
+      · rintro ⟨head, tail⟩ current member
+        rcases List.mem_cons.mp member with same | member
+        · subst current; exact head
+        · exact tail current member
+      · intro all
+        exact ⟨all value List.mem_cons_self,
+          fun current member => all current (List.mem_cons_of_mem value member)⟩
+
+private def temporaryFormula : QF (Observation declaration) :=
+  snapshots (integerValues 0 10 11)
+    (fun value => .eq (.var (.glob false)) (.konst value.n))
+    (fun value => post.subst (.glob false) (.konst value.n))
+
+private theorem temporary_formula : temporaryCompiled.formula = temporaryFormula := rfl
+
+theorem temporary_decided_zeuge :
+    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, temporary_formula, temporaryFormula, snapshots_denote]
+  intro value _ selected
+  simp only [LProp.denote, LTerm.denote] at selected
+  simp only [post, lower_denote, entry, LProp.denote, LTerm.denote] at initial ⊢
+  rw [subst_denote]
+  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind, ← selected] using initial.1
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
