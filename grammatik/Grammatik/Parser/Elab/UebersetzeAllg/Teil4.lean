@@ -172,6 +172,8 @@ def lowOpt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : 
                   if hL : (∀ wdd ∈ (declOf u).braucht ⟨pnum, h⟩, Res.von (declOf u) wdd ∈ Λ) then
                     do
                       let cap ← checkedTableCap u space pnum h
+                      -- The pointer's kind and declared type must identify the same table.
+                      let _ ← checkedPointerParam fn j ⟨space, ⟨true, w, none⟩, .table pnum⟩
                       pure (by rw [← hn]; exact durchTermO u Γ Λ pnum h oh pv cap.down i hL)
                   else .error "access without held guard"
             else .error "option of a foreign table"

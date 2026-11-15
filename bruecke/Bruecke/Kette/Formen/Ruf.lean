@@ -29,7 +29,7 @@ theorem resultCall_strecke {P : Programm (declOf u)} (G : GesenktC u C P)
     (hR : R k.callee (σ.lese Λ k.args.orte)
       (evalArgs (σ.lese Λ k.args.orte) k.args (σ.lese Λ k.args.orte) ρ) = .ok σ' v) :
     ∃ A s', Strecke_G u C A s s' [b] ∧ WGRel u σ' s'.world ∧
-      PositionalLRel (fn.mitTy x ty) (ns.push x).active 0 (Env.cons (ergWert he v) ρ) s'.local' := by
+      PositionalLRel (mitRuf u fn x k.callee ty) (ns.push x).active 0 (Env.cons (ergWert he v) ρ) s'.local' := by
   obtain ⟨hi, _, _⟩ := lowRufKopf_ok hk
   have hf : fnSuch u g = some (fnAt u k.callee) := fnIdx_find _ _ _ hi
   have hd := callee_getragen_calls S hc (CallsIn.bind hm) hf
@@ -80,7 +80,7 @@ theorem resultCall_strecke {P : Programm (declOf u)} (G : GesenktC u C P)
           simp only [entry, antwort, ergValOf_wert he v] <;> rfl
         simp only [Gabbro.Body.exec, hstep] },
       wgrel_bump w (wgrel_enc u σ' s.world),
-      hL.pushTy x (ns.fresh x) (BodyNames.fresh_not_active hU.valid x) hsh (ergWert he v)⟩
+      hL.pushRuf x (ns.fresh x) k.callee (BodyNames.fresh_not_active hU.valid x) hsh (ergWert he v)⟩
 
 theorem blockZiel_bindCall_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
@@ -95,21 +95,11 @@ theorem blockZiel_bindCall_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Or
       (evalArgs (σ.lese Λ head.args.orte) head.args (σ.lese Λ head.args.orte) ρ) = .ok σ₁ v)
     {A : List Eintrag} {s s₁ : Gabbro.Body.State} {b : Gabbro.Body.Stmt}
     {ys : List Gabbro.Body.Stmt} (hS : Strecke_G u C A s s₁ [b])
-    (ih : BlockZiel_G u C c O passes R (fn.mitTy x ty) (ns.push x).active rest σ₁
+    (ih : BlockZiel_G u C c O passes R (mitRuf u fn x head.callee ty) (ns.push x).active rest σ₁
       (Env.cons (ergWert he v) ρ) s₁ ys) :
     BlockZiel_G u C c O passes R fn ns.active
       (.bindCall head.callee head.args he head.hp hr rest) σ ρ s (b :: ys) := by
-  refine ⟨fun err h => ?_, fun σ' v' h => ?_, fun σ' ρ' h => ?_⟩
-  · simp only [execBlock, hR] at h
-    exact ih.1 err (schrumpfZ_logik h)
-  · simp only [execBlock, hR] at h
-    obtain ⟨A₂, hret⟩ := ih.2.1 σ' v' (schrumpfZ_zurueck h)
-    refine ⟨A ++ A₂, ?_⟩
-    rw [← List.singleton_append]
-    exact RueckZ_G.nach hS hret
-  · simp only [execBlock, hR] at h
-    obtain ⟨ρ'', hin, rfl⟩ := schrumpfZ_ok h
-    obtain ⟨A₂, s₂, hS₂, hW₂, hL₂⟩ := ih.2.2 σ' ρ'' hin
-    exact ⟨A ++ A₂, s₂, Strecke_G.cons hS hS₂, hW₂, hL₂.tailTy ht⟩
+  simpa only [BlockZiel_G, execBlock, hR, List.singleton_append] using
+    ausgangZiel_schrumpf hS (fun _ _ hl => hl.tailRuf) ih
 
 end Gabbro.Bruecke

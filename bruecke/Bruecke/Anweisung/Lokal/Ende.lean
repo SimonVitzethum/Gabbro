@@ -1,5 +1,6 @@
 module
 public import Bruecke.Anweisung.Lokal.Werte
+public import Bruecke.Anweisung.Option.Werte
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -13,6 +14,7 @@ variable {u : UProg}
 theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {r : URet} {eb : Endblock (declOf u) (verOf u c) false Γ Λ} {eB : List Gabbro.Body.Stmt}
     (h : lowEnd u c Γ Λ fn r = .ok eb) (hb : namedEnd u fn ns r = some eB)
+    (hn : ∀ n, r ≠ .why n)
     (hU : UmfangB Γ fn ns) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -153,6 +155,58 @@ theorem lowEnd_simB (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames
               trivial
           · cases hE
         · cases h
+  case opt v =>
+    simp only [namedEnd] at hb
+    cases hs : namedOption u fn ns v with
+    | none => rw [hs] at hb; cases hb
+    | some e =>
+      rw [hs] at hb
+      simp only [Option.map_some, Option.some.injEq] at hb
+      subst hb
+      simp only [lowEnd] at h
+      cases hE : lowErg u c Γ Λ fn (.opt v) with
+      | error err => simp only [hE, reduceCtorEq] at h
+      | ok E =>
+        simp only [hE] at h
+        split at h
+        · cases h
+          simp only [lowErg] at hE
+          split at hE
+          · rename_i n hErg
+            split at hE
+            · rename_i num count hOpt
+              split at hE
+              · rename_i hn
+                split at hE
+                · rename_i same
+                  split at hE
+                  · cases hE
+                  · rename_i ev hev
+                    cases hE
+                    refine ⟨_, _, rfl, wgrel_same u rfl rfl hW, fun ρB => ?_⟩
+                    have herg : (verOf u c).erg = some (.opt n) := by
+                      show (vertragVon (declOf u) c).erg = _
+                      rw [vErg_eq u c, hErg]
+                    generalize hσl : σ.lese _ _ = σl
+                    have hWl : WGRel u σl s.world := by
+                      rw [← hσl]
+                      exact wgrel_same u rfl rfl hW
+                    have hv := lowOption_named_sim hev hs hT σl σl ρ s hWl hL
+                    have hval := valOf_eval_heq (congrArg Ty.opt same)
+                      ev _ (mpr_heq (congrArg (Expr (declOf u) Γ Λ) (congrArg Ty.opt same).symm) ev).symm σl σl ρ
+                    rw [ergValOf_heq herg _
+                      (evalErg σl (ErgExpr.val (D := declOf u) _) σl ρ)
+                      (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+                    simp only [Gabbro.Body.exec, Gabbro.Body.step, hv,
+                      Gabbro.Body.finalState, Gabbro.Body.finalValue]
+                    exact ⟨trivial, congrArg some hval⟩
+                · cases hE
+              · cases hE
+            · cases hE
+          · cases hE
+          · cases hE
+        · cases h
+  case why n => exact (hn n rfl).elim
   all_goals simp only [namedEnd, reduceCtorEq] at hb
 
 end Gabbro.Bruecke

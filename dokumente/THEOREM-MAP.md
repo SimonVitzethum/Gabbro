@@ -7336,3 +7336,75 @@ of that Linux machine. Consequently `Lauf.waechst`, `Lauf.leben`, `Lauf.leben_wa
 proof additionally needs progress at the strategy's retry place under scheduler fairness. Those Linux
 statements and their assumptions remain intact; no spin liveness theorem is claimed here. FIFO and ghost
 refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-one remains unsupported.
+
+## 191. The bridge carries recursive units by a well-founded measure (2026-11-14)
+
+*Files: `bruecke/Bruecke/Kette/Mass/{Pflicht,Realisierung,Zeuge}.lean`, `Kette/{Simulation,Quelle,Pflichten}.lean`, `Vorlage.lean`, `GiftZyklus.lean`. No change of `Spec.lean`; the rank theorems keep their statements and are derived from the measure theorems.*
+
+| Theorem | File | Statement |
+|---|---|---|
+| `MassU`, `hypsM`, `meetsUM`, `MassPflichtU` (definitions) | `Kette/Mass/Pflicht.lean` | One well-founded measure per unit (values, order, `mass : String → State → Wert`). `meetsUM` is `meetsU` with each callee's contract assumed only on entry states strictly below the caller's entry value; frames stay unconditional. |
+| `meetsUM_of_rang`, `massPflichtU_of_rang` | `Kette/Mass/Pflicht.lean` | Under a call-graph rank, `meetsU` implies `meetsUM` for `MassU.rang rk`: every acyclic duty is a measure duty. |
+| `massEnv`, `massEnv_antwort` | `Kette/Mass/Realisierung.lean` | `massEnv u` answers each entry with an answer keeping the frame and meeting the contract where one exists; by well-founded induction one exists at every precondition-satisfying entry of a carried function. |
+| `realisiert_mass_G`, `realisiert_alle_mass_G` | `Kette/Mass/Realisierung.lean` | `Getragen u C`, `MassPflichtU u C M`, every carried body lowers: contracts and frames of every carried function in `massEnv u` -- recursion and mutual recursion included. |
+| `lauf_P_mass_G` (`lauf_P_G` derived) | `Kette/Simulation.lean` | The run of a carried function under a measure: handler-answered calls, ensures at every return. |
+| `bruecke_{koerperGutR,keineLogik,koerperGutS,logik,nutzer}_M`, `nutzer_aus_quelleM[_alle]`, `nutzerA_aus_quelleM` (the `_G` forms derived) | `Kette/Quelle.lean` | Premise (b) of the goal theorem from the measure duties; `PflichtenTeilM`/`PflichtenAlleM` (`Kette/Pflichten.lean`) drop the rank conjunct `rangB u (rangAuto u) = true`. |
+| `keine_massPflicht` | `GiftZyklus.lean` | The F2 poison unit (full-contract duties vacuously true, premise (b) false) is refused by the measure duties under every measure. |
+| `nutzer_mass_zeuge` | `Kette/Mass/Zeuge.lean` | `down` (self-recursive) and `ping`/`pong` (mutual): the rank gate refuses the unit, the measure `k` proves every `meetsUM` with the recursive call taken, and `bruecke_nutzer_M` gives `NutzerPflicht`. |
+
+The template (`Vorlage.lean`) emits the measure forms for a unit with a call-graph cycle instead
+of a refusal. The measure is supplied by the person (e.g. the values of the `decreases`
+clauses); it is not yet computed from `UFn.decreases` or fed from the checker's `MassPflicht`.
+
+## 192. The bridge measure computed from the `decreases` clauses (2026-11-14)
+
+*Files: `bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
+
+| Theorem | File | Statement |
+|---|---|---|
+| `quellWert`, `massTupel` (definitions), `quellWert_of_source` | `Kette/Mass/Wert.lean` | A `decreases` clause read on a Body binding; on a binding that reads every parameter at its position (`LRel`), it has exactly the value `SourceValue` denotes. |
+| `massTupel_wert`, `massTupel_eintritt` | `Kette/Mass/Wert.lean` | Preservation: the Body tuple is the exported canonical `Mass.wert` (`Measures.Export`, the measure `lowerAllg` checks); at the bridge entry state with unique parameter names. |
+| `massTupel_faellt`, `unterQ_of_lexLt` | `Kette/Mass/{Wert,Abstieg}.lean` | Where the canonical gate `massTor` admits a call (`lexLt` of the exported values), the Body source value of the callee entry lies below the caller's, i.e. the source guard `unterQ` admits it at the bridge entry states. |
+| `ErreichtU`, `ZyklusU`, `rangU`; `rangU_kante_le`, `rangU_kante_lt` | `Kette/Mass/Rang.lean` | The computed call-graph rank never rises along a call and falls off a cycle. |
+| `massQuelle`, `meetsUQ`, `meetsUM_of_meetsUQ`, `massPflichtU_quelle`, `meetsUQ_of_meetsU` | `Kette/Mass/Abstieg.lean` | The unit's measure (rank, `decreases` value) under `lexLt`/`lexLt_wf 2`; the source duty assumes callees off the cycle fully and callees on it below the caller's `decreases` value, and is a `meetsUM` duty under `massQuelle`. |
+| `lowering_ok_mass` | `Kette/Mass/Senkung.lean` | The lowering of a unit all of whose functions declare a measure (witness support). |
+| `nutzer_quelle_zeuge`, `wert_zeuge`, `top_wert_steigt` | `Kette/Mass/QuelleZeuge.lean` | Self, mutual and acyclic calls under `decreases k`: duties from the computed measure, the acyclic edge admitted by the rank where the source value rises, the exported value equal to the Body value, and `NutzerPflicht`. |
+
+Open: the run-level transport of the checker's `MassPflicht` (G runs behind `massTor`) to the
+Body duty. `unterQ_of_lexLt` covers the gate's test at encoded entries; the Body realisation
+quantifies over all Body states and Body environments, so a reverse simulation (Body run of a
+carried body ↦ G run, call by call) is still required.
+
+## 193. Terminal bridge scopes retain option tables and structured dispatch (2026-11-15)
+
+The canonical direct-call scope is `mitRuf`: when the declared result has `resOpt`, it
+uses `mitOpt` to retain the source table number and extent. The Body reader uses
+`mitTy` because its lookups depend on parameter types. The existing `mitRuf_params`,
+`Sicht.bindRuf` and `UmfangB.bindRuf` relate these scopes under the carried callee's
+`resultTypeB` check. Terminal sequences now use that relation, as ordinary blocks
+already did. Neither lowering nor the language model changes to identify the scopes.
+
+| Statement | File | Meaning |
+|---|---|---|
+| `lowEndL_bindOpt_ok` | `bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
+| `lowEndL_struct_ok` | same | Its structural-prefix inversion also covers option, tag and reason dispatch; each exposes the unchanged `lowStructL` result and following end block. |
+| `statischEndSeq_G`, `laufEndSeq_G` | `bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
+| `option_unit_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
+| `lowEndL_bindOpt_ok_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
+| `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
+| `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
+| `I104.einzahlen_post_eq`, `I104.lies_post_eq`, `I104.einzahlen_meets_eq`, `I104.lies_meets_eq` | same | Those clause certificates identify the original postconditions and frame-aware duty statements with the current bridge statements; the existing user-obligation theorems are retained. |
+
+`fieldIndex_none` (`Kodierung/Slots.lean`) proves that a missing declared name has no
+dependent field index. The concrete 104/108 shapes and the cyclic-duty counterexample
+reuse it. `Zyklus.fieldIndex_none_zeuge` checks it on the two-slot cycle fixture. That
+fixture and its actual lowering certificate now live in `Kette/Mass/CycleFixture.lean`;
+the model values, negative rank result, vacuous full-contract duties, failed machine
+premise and universal measure refusal keep their statements and remain connected.
+
+`OptionStorageZeuge.names_zeuge` proves the two distinct parameter names once for the
+existing read/write and return simulations. The option-value and storage fixtures also
+explicitly supply their absent integer-result field and import the canonical lowering
+theorem; their semantic witness statements are retained.
+
+No bridge duty, simulation premise, refusal witness or goal-theorem statement is weakened.

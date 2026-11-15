@@ -94,6 +94,22 @@ theorem ensSide_ohneCount {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.
     · exact sideExpr_ohneCount
         (ensSide_sonst h (fun b f ix e => hold ⟨b, f, ix, e⟩) herg).1
 
+/-- A read `bool` static: the first static of that name is declared `bool`, its Body form is
+    the global place, and the accumulator is unchanged. -/
+theorem ensExpr_globB {fn : UFn} {a a' : Acc} {g : String} {x : Gabbro.Body.Expr}
+    (h : ensExpr u fn a (.globB g) = some (x, a')) :
+    ∃ i, globIdx u.globs g = .ok i ∧ (globAt u i).ty = .bool ∧ x = .global g ∧ a' = a := by
+  simp only [ensExpr] at h
+  split at h
+  · cases h
+  · rename_i i hi
+    cases ht : (globAt u i).ty with
+    | bool =>
+      simp only [ht, Option.some.injEq, Prod.mk.injEq] at h
+      exact ⟨i, hi, ht, h.1.symm, h.2.symm⟩
+    | int lo hi' => simp only [ht, reduceCtorEq] at h
+    | wert ty => simp only [ht, reduceCtorEq] at h
+
 theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr},
     ensExpr u fn a e = some (x, a') → Vor a a'
   | .tru, a, a', x, h => by
@@ -103,16 +119,22 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, rfl⟩ := h; exact Vor.refl _
   | .cmp op l r, a, a', x, h => by
-      simp only [ensExpr] at h
-      split at h
-      · rename_i o le a1 _ hl
-        split at h
-        · rename_i re a2 hr
-          simp only [Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨_, rfl⟩ := h
-          exact (ensSide_vor hl).trans (ensSide_vor hr)
-        · cases h
-      · cases h
+      cases hbool : boolCmpExpr u fn op l r with
+      | some be =>
+        simp only [ensExpr, hbool, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact Vor.refl _
+      | none =>
+          simp only [ensExpr, hbool] at h
+          split at h
+          · rename_i o le a1 _ hl
+            split at h
+            · rename_i re a2 hr
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨_, rfl⟩ := h
+              exact (ensSide_vor hl).trans (ensSide_vor hr)
+            · cases h
+          · cases h
   | .and x y, a, a', z, h => by
       simp only [ensExpr] at h
       split at h
@@ -147,11 +169,21 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
       simp only [ensExpr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, rfl⟩ := h
       exact Vor.refl _
+  | .globB g, a, a', x, h => by
+      obtain ⟨_, _, _, _, rfl⟩ := ensExpr_globB h
+      exact Vor.refl _
+  | .istSome v num, a, a', x, h => by
+      simp only [ensExpr] at h
+      cases hr : optionExpr u fn v with
+      | none => simp [hr] at h
+      | some e =>
+        simp only [hr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨_, rfl⟩ := h
+        exact Vor.refl _
   -- All other predicates are outside the Body fragment (`ensExpr` returns `none`).
   | .slotB .., _, _, _, h | .tabB .., _, _, _, h
-  | .globB .., _, _, _, h
   | .alle .., _, _, _, h | .einige .., _, _, _, h
-  | .ergB, _, _, _, h | .istSome .., _, _, _, h
+  | .ergB, _, _, _, h
   | .held .., _, _, _, h | .imp .., _, _, _, h
   | .reach .., _, _, _, h | .member .., _, _, _, h
   | .filtered .., _, _, _, h | .arrayElements .., _, _, _, h => by cases h

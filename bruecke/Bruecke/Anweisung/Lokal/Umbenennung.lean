@@ -21,6 +21,7 @@ def renameScalar (name : String → Option String) : Expr → Option Expr
   | .name x => some (.name ((name x).getD x))
   | .global x => some (.global x)
   | .place c i f => (renameScalar name i).map (fun e => .place c e f)
+  | .someOf e => (renameScalar name e).map Expr.someOf
   | .un op e => (renameScalar name e).map (Expr.un op)
   | .bin op a b =>
       match renameScalar name a, renameScalar name b with
@@ -82,6 +83,15 @@ theorem eval_renameScalar (name : String → Option String) (s : State) :
         simp only [Option.map_some, Option.some.injEq] at h
         subst e'
         simp only [eval, eval_renameScalar name s i i' hi]
+  | .someOf e, e', h => by
+      simp only [renameScalar] at h
+      cases he : renameScalar name e with
+      | none => rw [he] at h; cases h
+      | some a =>
+        rw [he] at h
+        simp only [Option.map_some, Option.some.injEq] at h
+        subst e'
+        simp only [eval, eval_renameScalar name s e a he]
   | .un op e, e', h => by
       simp only [renameScalar] at h
       cases he : renameScalar name e with
@@ -136,7 +146,7 @@ theorem eval_renameScalar (name : String → Option String) (s : State) :
               simp only [renameScalar, hr, hv, bind, Option.bind, pure, Option.some.injEq] at h
               subst e'
               simp only [eval, eval_renameScalar name s e base hr, eval_renameScalar name s v val hv]
-  | .someOf _, _, h | .fieldOf _ _, _, h | .forallSlots _ _ _, _, h
+  | .fieldOf _ _, _, h | .forallSlots _ _ _, _, h
   | .existsSlots _ _ _, _, h | .reaches _ _ _ _ _, _, h | .chainFrom _ _ _ _ _, _, h
   | .wrapTo _ _ _, _, h | .tagOf _ _, _, h => by
       simp only [renameScalar] at h

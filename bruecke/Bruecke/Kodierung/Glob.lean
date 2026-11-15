@@ -5,10 +5,10 @@ public import Bruecke.Kodierung.Teil2
 @[expose] public section
 
 /-!
-# Numeric statics in the bridge world
+# Scalar statics in the bridge world
 
-`GRel` complements `WRel` without changing its slot-only meaning. The lookup and the
-numeric/aggregate distinction are exactly those of `lowGlobSide`.
+`GRel` complements `WRel` without changing its slot-only meaning. The lookup is that of
+`lowGlobSide`/`lowGlobBool`: integer and bool statics have a Body value, aggregates none.
 -/
 
 namespace Gabbro.Bruecke
@@ -19,21 +19,21 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 variable (u : UProg)
 
-/-- The first static named `g`, if it is declared as an integer range.
-    Boolean and aggregate statics have no numeric bridge value. -/
+/-- The first static named `g`, if it is declared as an integer range or as `bool`.
+    Aggregate statics have no bridge value. -/
 def globWert (σ : World (declOf u)) (g : String) : Option Gabbro.Body.Value :=
   match globIdx u.globs g with
   | .error _ => none
   | .ok i =>
     match (globAt u i).ty with
-    | .int .. => some (valOf ((declOf u).gtyp i) (σ.globs i))
-    | _ => none
+    | .int .. | .bool => some (valOf ((declOf u).gtyp i) (σ.globs i))
+    | .wert _ => none
 
-/-- Every declared numeric static has its G value in the Body world. -/
+/-- Every declared scalar static has its G value in the Body world. -/
 def GRel (σ : World (declOf u)) (w : Gabbro.Body.World) : Prop :=
   ∀ g v, globWert u σ g = some v → w (.global g) = v
 
-/-- Encode slots first, then overwrite just the declared numeric statics. -/
+/-- Encode slots first, then overwrite just the declared scalar statics. -/
 def encG (σ : World (declOf u)) (base : Gabbro.Body.World) : Gabbro.Body.World := fun p =>
   match p with
   | .global g => (globWert u σ g).getD (enc u σ base p)
@@ -72,16 +72,25 @@ theorem grel_lies {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u �
   apply hG
   simp only [globWert, hi, ht]
 
-/-- The range of the first static by name, only for a numeric static. -/
+/-- The Body static holds the truth value of the resolved G `bool` static. -/
+theorem grel_lies_bool {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u σ w)
+    (g : String) (i : Fin u.globs.length) (hi : globIdx u.globs g = .ok i)
+    (ht : (globAt u i).ty = .bool) :
+    w (.global g) = valOf ((declOf u).gtyp i) (σ.globs i) := by
+  apply hG
+  simp only [globWert, hi, ht]
+
+/-- The shape of the first static by name: its range for a number, `bool` for a truth value. -/
 def globShape (g : String) : Option Gabbro.Body.Shape :=
   match globIdx u.globs g with
   | .error _ => none
   | .ok i =>
     match (globAt u i).ty with
     | .int lo hi => some (.intIn lo hi)
-    | _ => none
+    | .bool => some .bool
+    | .wert _ => none
 
-/-- Extend the slot typing with numeric static ranges. -/
+/-- Extend the slot typing with scalar static shapes. -/
 def shapeOfUG : Gabbro.Body.Typing := fun p =>
   match p with
   | .global g => globShape u g
@@ -114,13 +123,26 @@ theorem wfG_of_grel {σ : World (declOf u)} {w : Gabbro.Body.World} (hG : GRel u
         intro x
         simp [x.lo_le, x.le_hi]
       exact hv (σ.globs i)
-    | bool => simp [ht] at hp
+    | bool =>
+      simp only [ht, Option.some.injEq] at hp
+      subst sh
+      rw [grel_lies_bool u hG g i hi ht]
+      have hty : (declOf u).gtyp i = .bool := by
+        show (globAt u i).ty.toTy = _
+        rw [ht]
+        rfl
+      have hv : ∀ x : Wert (declOf u) ((declOf u).gtyp i),
+          (valOf ((declOf u).gtyp i) x).hasShape .bool = true := by
+        rw [hty]
+        intro x
+        first | rfl | simp [Gabbro.Body.Value.hasShape]
+      exact hv (σ.globs i)
     | wert τ => simp [ht] at hp
 
 /-- Combine the existing slot typing theorem with the independent global relation. -/
 theorem wf_of_wrel_grel {σ : World (declOf u)} {w : Gabbro.Body.World}
     (hB : ∀ t : Fin u.tabs.length,
-      (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+      (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (hW : WRel u σ w) (hG : GRel u σ w) : Gabbro.Body.WF (shapeOfUG u) w := by
   intro p sh hp
   cases p with
@@ -128,7 +150,7 @@ theorem wf_of_wrel_grel {σ : World (declOf u)} {w : Gabbro.Body.World}
   | field c n => exact wf_of_wrel u hB hW (.field c n) sh hp
   | global g => exact wfG_of_grel u hG g sh hp
 
-/-- Slots and numeric statics are related to the same Body world. -/
+/-- Slots and scalar statics are related to the same Body world. -/
 def WGRel (σ : World (declOf u)) (w : Gabbro.Body.World) : Prop :=
   WRel u σ w ∧ GRel u σ w
 
@@ -143,20 +165,28 @@ theorem wgrel_lese {σ : World (declOf u)} {w : Gabbro.Body.World}
     (h : WGRel u σ w) (Λ) (orte) : WGRel u (σ.lese Λ orte) w :=
   wgrel_same u rfl rfl h
 
+theorem wgrel_store_index {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WGRel u σ w)
+    (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
+    (fld : String) (f : Fin (fieldCount u t)) (hf : fieldIndex u t fld = some f) (k : Int)
+    (x : Wert (declOf u) ((declOf u).typ t f)) :
+    WGRel u (σ.storeSlot t k f x)
+      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t f) x)) := by
+  refine ⟨wrel_store_index u h.1 c t ht fld f hf k x, ?_⟩
+  intro g v hv
+  have hg := grel_globs u (σ' := σ.storeSlot t k f x) rfl h.2 g v hv
+  exact (Gabbro.Body.store_elsewhere _ _ _ _ (by intro e; cases e)).trans hg
+
 theorem wgrel_store {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WGRel u σ w)
     (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
     (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int)
     (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
     WGRel u (σ.storeSlot t k fh.idx x)
-      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t fh.idx) x)) := by
-  refine ⟨wrel_store u h.1 c t ht fld fh hf k x, ?_⟩
-  intro g v hv
-  have hg := grel_globs u (σ' := σ.storeSlot t k fh.idx x) rfl h.2 g v hv
-  exact (Gabbro.Body.store_elsewhere _ _ _ _ (by intro e; cases e)).trans hg
+      (Gabbro.Body.store w (.slot c k fld) (valOf ((declOf u).typ t fh.idx) x)) :=
+  wgrel_store_index u h c t ht fld fh.idx (fieldIndex_int hf) k x
 
 theorem wf_of_wgrel {σ : World (declOf u)} {w : Gabbro.Body.World}
     (hB : ∀ t : Fin u.tabs.length,
-      (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+      (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (h : WGRel u σ w) : Gabbro.Body.WF (shapeOfUG u) w :=
   wf_of_wrel_grel u hB h.1 h.2
 

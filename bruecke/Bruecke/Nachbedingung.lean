@@ -139,15 +139,18 @@ theorem eval_heq2 {D : Deklaration} {Γ₁ Γ₂ : Ctx} {Λ₁ Λ₂ : List (Res
 
 /-- The bridge represents void, scalars and records whose complete shape is representable. -/
 def ErgSchlicht (f : UFn) : Prop :=
-  resultTypeB f = true ∧ f.resOpt = none ∧ f.resSum = none ∧ f.resWhy = none
+  resultTypeB f = true ∧ f.resSum = none ∧ f.resWhy = none
 
 /-- Aggregate results retain the canonical `resTy` precedence over scalar result flags. -/
 theorem ergTy_of {f : UFn} (h : ErgSchlicht f) :
     f.ergTy = match f.resTy with
       | some ty => some ty
-      | none => if f.resBool then some Ty.bool else f.res.map (fun r => Ty.int r.1 r.2) := by
-  obtain ⟨_, h2, h3, h4⟩ := h
-  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h2, h3, h4]
+      | none => if f.resBool then some Ty.bool else
+          match f.resOpt with
+          | some (_, n) => some (.opt n)
+          | none => f.res.map (fun r => Ty.int r.1 r.2) := by
+  obtain ⟨_, h3, h4⟩ := h
+  cases hr : f.resTy <;> simp only [UFn.ergTy, hr, h3, h4] <;> rfl
 
 theorem isSome_erg (f : Fin u.fns.length) :
     ((declOf u).erg f).isSome = (fnAt u f).ergTy.isSome := by
@@ -166,7 +169,8 @@ theorem resultClause_wahr (f : Fin u.fns.length) (hb : ErgSchlicht (fnAt u f)) :
       simp only [hrt] at he
       subst e
       have hs : (shapeOfTy ty).isSome = true := by
-        simpa only [resultTypeB, hrt] using hb.1
+        have hshape := (Bool.and_eq_true_iff.mp hb.1).1
+        simpa only [hrt] using hshape
       cases hsh : shapeOfTy ty with
       | none => rw [hsh] at hs; cases hs
       | some sh =>
@@ -185,19 +189,30 @@ theorem resultClause_wahr (f : Fin u.fns.length) (hb : ErgSchlicht (fnAt u f)) :
         exact ⟨v, rfl⟩
       | false =>
         simp only [hrb, Bool.false_eq_true, ↓reduceIte] at he
-        subst he
-        cases hr : (fnAt u f).res with
-        | none => simp only [resultClause, hrt, hrb, Bool.false_eq_true, ↓reduceIte, hr,
-            Option.map_none, Option.toList_none, List.not_mem_nil] at hq
-        | some lr =>
-          simp only [resultClause, hrt, hrb, Bool.false_eq_true, ↓reduceIte, hr,
-            Option.map_some, Option.toList_some, List.mem_singleton] at hq
-          subst hq
-          obtain ⟨lo, hi⟩ := lr
-          revert v
-          rw [hr]
-          intro v
-          exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
+        cases hopt : (fnAt u f).resOpt with
+        | some entry =>
+          obtain ⟨num, n⟩ := entry
+          simp only [hopt] at he
+          subst e
+          simp only [resultClause, hrt, hrb, Bool.false_eq_true, ↓reduceIte,
+            hopt, Option.toList_some, List.mem_singleton] at hq
+          subst q
+          exact ⟨valOf (.opt n) v, rfl, by cases v <;> rfl⟩
+        | none =>
+          simp only [hopt] at he
+          subst e
+          cases hr : (fnAt u f).res with
+          | none => simp only [resultClause, hrt, hrb, hopt, Bool.false_eq_true, ↓reduceIte, hr,
+              Option.map_none, Option.toList_none, List.not_mem_nil] at hq
+          | some lr =>
+            simp only [resultClause, hrt, hrb, hopt, Bool.false_eq_true, ↓reduceIte, hr,
+              Option.map_some, Option.toList_some, List.mem_singleton] at hq
+            subst hq
+            obtain ⟨lo, hi⟩ := lr
+            revert v
+            rw [hr]
+            intro v
+            exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
 
 /-- A record result clause retains every field, its arity and all declared field shapes. -/
 theorem resultClause_record_iff (f : UFn) (r : Option Gabbro.Body.Value) (id : Nat) (fs : List Ty)
@@ -237,7 +252,7 @@ def wfU (u : UProg) (s : Gabbro.Body.State) : Prop := Gabbro.Body.WF (shapeOfUG 
 theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.length)
     (hA : ArtStimmt (fnAt u f)) (hT : TabEindeutig u) (hN : NamenFrei (fnAt u f))
     (hO : OldsKurz u (fnAt u f)) (hD : PostDef u (fnAt u f))
-    (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+    (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
     (hW₀ : WGRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WGRel u σ' s'.world) :

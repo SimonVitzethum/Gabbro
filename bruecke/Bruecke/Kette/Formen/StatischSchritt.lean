@@ -58,9 +58,24 @@ theorem statisch_schritt_G {loopMode : Bool} (S : Getragen u C) (c : Fin u.fns.l
         cases hsv : sideExprG u fn v with
         | none => rw [hsv] at hx; cases hx
         | some ve => rw [hsv] at hx; simp at hx
+      case assignOpt b f ix v =>
+        simp only [stmtBody] at hx
+        split at hx
+        · simp only [Option.some.injEq] at hx; cases hx
+        · cases hx
+      case assignTabOpt b f ix v _ =>
+        simp only [stmtBody] at hx
+        cases hsv : optionExpr u fn v with
+        | none => rw [hsv] at hx; cases hx
+        | some ve => rw [hsv] at hx; simp at hx
       case assignGlob n v _ =>
         simp only [stmtBody] at hx
         cases he : sideExprG u fn v with
+        | none => rw [he] at hx; cases hx
+        | some e => rw [he] at hx; cases hx
+      case assignGlobB n v _ =>
+        simp only [stmtBody] at hx
+        cases he : rawCond u fn v with
         | none => rw [he] at hx; cases hx
         | some e => rw [he] at hx; cases hx
       all_goals simp only [stmtBody, reduceCtorEq] at hx
