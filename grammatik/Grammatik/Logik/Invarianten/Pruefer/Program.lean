@@ -91,9 +91,10 @@ theorem invariantDuties_congr {left right : Programm D} {S S' : SperrInv D} (f :
 def checkInvariantVC (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S) (budget : VCBudget := {})
     (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) (locks : List D.Lock := []) :
-    Except Frag.Refusal (PLift (∀ f ∈ functions, Vertraege.Pruefer.ContractDuties program S f)) := do
-  let _ ← checkProgram program S functions sources budget locks
-  Vertraege.Pruefer.checkContracts program S functions sources budget hints
+    Except Frag.Refusal (PLift (∀ f ∈ functions, Vertraege.Pruefer.ContractDuties program S f)) :=
+  match checkProgram program S functions sources budget locks with
+  | .error cause => .error cause
+  | .ok _ => Vertraege.Pruefer.checkContracts program S functions sources budget hints
 
 /-- Both algorithms remain checks: declaration/writer VCs and the strict
     contract/release VCs. The conjunction is shared by SC and atomic checkers. -/
@@ -121,7 +122,7 @@ theorem invariantVCB_certificate (program : Programm D) (S : SperrInv D)
   cases generated : checkProgram program S functions sources budget locks <;>
     cases contracted : Vertraege.Pruefer.checkContracts program S functions sources budget hints <;>
     simp [invariantVCB, checkInvariantVC, programInvariantsB,
-      Vertraege.Pruefer.KontrakteGeprueftB, generated, contracted, Except.toOption, Except.bind]
+      Vertraege.Pruefer.KontrakteGeprueftB, generated, contracted, Except.toOption]
 
 theorem invariantVCB_sound {program : Programm D} {S : SperrInv D}
     {functions : List D.Fn} {sources : LockSources S} {budget : VCBudget} {hints : Vertraege.Pruefer.LoopHints D} {locks : List D.Lock}
