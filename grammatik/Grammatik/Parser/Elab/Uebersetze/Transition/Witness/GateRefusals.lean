@@ -71,7 +71,7 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 /-- A clean binding: answer `rax` carried out, `rcx` destroyed, one mapped errno. -/
 @[expose] def sauberBind : SBind :=
-  { id := .lit 1, ins := [.binds "rdi" "fd"],
+  { id := .lit 1, ins := [.binds "rdi" "fd", .binds "rdx" "len"],
     outs := [.reg "rax"], stack := [], dirty := ["rcx"],
     codes := [("EBADF", none, "BadFd")] }
 
@@ -176,9 +176,11 @@ theorem n447_positiv_zeuge :
 
 /-- Stack-ness claimed twice (gift 1108). -/
 @[expose] def doppelStapel : SSyscall :=
-  { lesetor with way := (.lit "linux" "x86_64"
-    ({ sauberBind with stack := ["rsi", "rdx"] })
-    (.assum "linux_read_contract" (.probe "sonde_read"))) }
+  { lesetor with params := lesetor.params ++ [("childStack", .atom "u64")],
+    way := (.lit "linux" "x86_64"
+      ({ sauberBind with ins := [.binds "rdi" "fd", .binds "rsi" "len",
+          .binds "rdx" "childStack"], stack := ["rsi", "rdx"] })
+      (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n447_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] doppelStapel)
@@ -190,7 +192,10 @@ theorem n447_zeuge :
 @[expose] def byteBuffer : SSyscall :=
   { lesetor with params := [("fd", .atom "u32"),
       ("buf", .ptr "normal" "w" (.atom "u8")), ("len", .atom "u64")],
-    gate := sauberTor }
+    gate := sauberTor,
+    way := (.lit "linux" "x86_64"
+      ({ sauberBind with ins := [.binds "rdi" "fd", .binds "rsi" "buf", .binds "rdx" "len"] })
+      (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n464_positiv_zeuge :
     refused (uTorBindungPruef [] [] [leseGrund] byteBuffer) = false := by decide +kernel
@@ -198,7 +203,7 @@ theorem n464_positiv_zeuge :
 /-- Parameter order does not affect the bound: the length may precede the buffer. -/
 theorem n464_length_first_zeuge :
     refused (uTorBindungPruef [] [] [leseGrund]
-      { byteBuffer with params := [("len", .atom "u64"),
+      { byteBuffer with params := [("fd", .atom "u32"), ("len", .atom "u64"),
         ("buf", .ptr "normal" "w" (.atom "u8"))] }) = false := by decide +kernel
 
 /-- A boolean cannot stand in for the integer length of a transfer. -/
@@ -218,7 +223,7 @@ theorem n464_other_buffer_zeuge :
 /-- A mirrored bound and a signed byte buffer express the same transfer limit. -/
 theorem n464_mirrored_zeuge :
     refused (uTorBindungPruef [] [] [leseGrund]
-      { byteBuffer with params := [("buf", .ptr "normal" "w" (.atom "i8")),
+      { byteBuffer with params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "i8")),
           ("len", .atom "u64")],
         gate := { sauberTor with
           pre := [.bin ">=" (.built "lenof" [.variable "buf"]) (.variable "len")] } }) = false := by decide +kernel
@@ -230,7 +235,7 @@ theorem n464_lowering_refusal_zeuge :
 
 /-- A buffer of words where the kernel counts bytes (gift 1158). -/
 @[expose] def wortPuffer : SSyscall :=
-  { lesetor with
+  { byteBuffer with
     params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "u32")),
       ("len", .atom "u64")], gate := sauberTor }
 
@@ -240,9 +245,7 @@ theorem n464_wort_zeuge :
 
 /-- A read buffer with no bound on what the kernel writes (gift 1155). -/
 @[expose] def schrankenlos : SSyscall :=
-  { lesetor with
-    params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "u8")),
-      ("len", .atom "u64")],
+  { byteBuffer with
     gate := { sauberTor with pre := [.bin "<=" (.variable "len") (.lit 1024)] } }
 
 theorem n464_schranke_zeuge :
