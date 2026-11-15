@@ -51,7 +51,6 @@ public import Grammatik.Parser.Elab.Uebersetze.ReasonProben
 public import Grammatik.Kern.Semantik.Semantik.TransitionGuardZeuge
 public import Grammatik.Kern.Semantik.Semantik.TransitionShift
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Refusals
-public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.GateRefusals
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Proben
 public import Grammatik.Parser.TaggedDispatch.Witnesses
 public import Grammatik.Parser.TaggedDispatch.SignatureWitnesses

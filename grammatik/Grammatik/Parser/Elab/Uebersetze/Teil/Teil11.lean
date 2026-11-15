@@ -264,39 +264,8 @@ def uWurzeln (spaces : List String) (tabs : List UTab) (fns : List UFn) (ms : Li
   let a ← uNebenWurzeln spaces tabs fns ms
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
-
-/-- The open architectures: the closed set the profile decoder knows
-    (`ProfilBindung.wertVon .arch` decodes exactly these two, `SYNTAX.md` §12.1: every other
-    machine is sealed, `A006`). -/
-def archOffen (x : String) : Bool :=
-  strEq x "x86_64" || strEq x "aarch64"
-
-/-- The `arch X` clauses of a head, in order. -/
-def archAusKlauseln : List SKlausel → List String
-  | [] => []
-  | .arch x :: rest => x :: archAusKlauseln rest
-  | _ :: rest => archAusKlauseln rest
-
-/-- The machines a unit declares (`A005`): the `arch` of every `entry`, `entrust` and `boot`,
-    and the `arch` clause of every function with a body -- `fn`, including `= asm` bodies, whose
-    text is machine code for that machine (`A001` makes the clause mandatory there). Like every
-    other collector of the driver (`uSpeicherNamen`, `uFremdSig`, the assumption names) this reads
-    top-level items only: name resolution opens the modules before elaboration
-    (`Aufloesung.loese`). A bodiless foreign declaration (`extern`/`raw`/`prim`/`divergent`, and
-    the `axiom` items read as `extern`) merely claims a machine and never declares one: its
-    clause is held against this set. -/
-def uErklaerteArch : List SItemTief → List String
-  | [] => []
-  | .entryT e :: rest => e.arch :: uErklaerteArch rest
-  | .trustT _ _ a _ _ _ _ :: rest => a :: uErklaerteArch rest
-  | .bootT _ a _ _ :: rest => a :: uErklaerteArch rest
-  | .fnT sig _ :: rest => archAusKlauseln sig.klauseln ++ uErklaerteArch rest
-  | .asmT sig _ :: rest => archAusKlauseln sig.klauseln ++ uErklaerteArch rest
-  | _ :: rest => uErklaerteArch rest
-
 /-- Foreign effects are checked here; retained pre/postconditions lower through the shared contract gate. -/
-def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob)
-    (erklaert : List String := []) :
+def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
     List SKlausel → Except String UFnKopf
   | [] => .ok kopf
   | .effs es :: rest =>
@@ -304,23 +273,14 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob)
       match uEffekteAux kopf tabs [] globs es with
       | .error e => .error e
       | .ok eff =>
-        uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs erklaert rest
+        uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
   | .needs (.call "Held" _) :: _ => .error "foreign fn precondition cannot borrow a held lock"
-  | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs erklaert rest
-  | .cost _ :: rest => uAxKlauseln kopf tabs globs erklaert rest
-  | .arch x :: rest =>
-    -- `arch X` on a foreign body (`A005`/`A006`): the clause restricts the named assumption to
-    -- one machine, and the model has no rule that carries such a restriction -- so the clause is
-    -- refused, never dropped. A sealed machine is refused as sealed; an open one must stand among
-    -- the machines the unit declares (its own `= asm` body counts: it declares itself). A validated
-    -- clause is still not stored: `UFnKopf` has no machine slot, and the restriction travels with
-    -- the assumption set in the artefact, not in the elaborated head.
-    if !archOffen x then .error ("foreign arch sealed without G form: " ++ x)
-    else if erklaert.any (strEq · x) then uAxKlauseln kopf tabs globs erklaert rest
-    else .error ("foreign arch without declared machine without G form: " ++ x)
+  | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs rest
+  | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
+  | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
   -- `deadline <= n ops arch X falsifier p`: a named hardware outcome outside the goal (`Spec.lean`, NOT CLAIMED:
   -- time bounds), the same as at an implemented function
-  | .limit _ :: rest => uAxKlauseln kopf tabs globs erklaert rest
+  | .limit _ :: rest => uAxKlauseln kopf tabs globs rest
   | _ :: _ => .error "foreign fn clause without G form"
 end Gabbro.Grammatik.Parser.Uebersetze

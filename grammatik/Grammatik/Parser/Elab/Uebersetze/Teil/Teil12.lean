@@ -38,74 +38,50 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Reason
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
-public import Grammatik.Parser.Elab.Uebersetze.Transition.GateChecks
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
--- Whether a surface parameter type carries Gabbro code (`N574`): a function-pointer type,
--- walked through pointers, arrays and tuples. `entry fn` is the exception (`N575`--`N577`:
--- the kernel's thread-start handle, whose flow the binding owns) and never counts. Named
--- records and sums are opaque here: a name that resolves to no table, alias, `bool` or
--- reason case is refused downstream (`table unknown`, `type unknown`), never silently carried.
-mutual
-/-- A function-pointer type, walked through pointers, arrays and tuples. -/
-def sTypTraegtCode : STyp → Bool
-  | .raw r => r.startsWith "fn ("
-  | .entry _ _ => false
-  | .ptr _ _ t => sTypTraegtCode t
-  | .array t _ => sTypTraegtCode t
-  | .tuple ts => sTypTraegtCodeListe ts
-  | _ => false
-/-- The tuple elements. -/
-def sTypTraegtCodeListe : List STyp → Bool
-  | [] => false
-  | t :: rest => sTypTraegtCode t || sTypTraegtCodeListe rest
-end
-
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy)
     (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String)
     (eigner : List String := []) (spaces : List String := []) :
     Except String UFnKopf :=
-  match params.find? (fun (_, t) => sTypTraegtCode t) with
-  | some (n, _) => .error ("foreign parameter with a function pointer without G form: " ++ n)
-  | none =>
-    match uSeq (params.map (uParam alias tabs [] whys (spaces := spaces) (eigner := eigner))) with
+  match uSeq (params.map (uParam alias tabs [] whys (spaces := spaces) (eigner := eigner))) with
+  | .error e => .error e
+  | .ok ps =>
+    match (match fehler with
+        | .none => .ok none
+        | .some r =>
+          match whys.findIdx? (fun (w : UWhy) => strEq w.name r) with
+          | .none => .error ("reason unknown: " ++ r)
+          | .some k =>
+            match whys[k]? with
+            | .some w => if w.cases.isEmpty then .error "reason without cases" else .ok (some (k, w.cases.length))
+            | .none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) with
     | .error e => .error e
-    | .ok ps =>
-      match (match fehler with
-          | .none => .ok none
-          | .some r =>
-            match whys.findIdx? (fun (w : UWhy) => strEq w.name r) with
-            | .none => .error ("reason unknown: " ++ r)
-            | .some k =>
-              match whys[k]? with
-              | .some w => if w.cases.isEmpty then .error "reason without cases" else .ok (some (k, w.cases.length))
-              | .none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) with
-      | .error e => .error e
-      | .ok kn =>
-        let base : UFnKopf :=
-          { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
-            bits := params.map (fun p => uParamBreite p.2), held := [], ext := true, kanal := kn }
-        match res with
-        | .none => .ok base
-        | .some (.atom "never") => .ok { base with resNever := true }
-        | .some (.atom "bool") => .ok { base with resBool := true }
-        | .some (.index false tn) =>
-          match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
-          | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }
-          | .none => .error "foreign answer `index into` a table that is not open without G form"
-        | .some t =>
-          match uErgBereich alias t with
-          | .error e => .error e
-          | .ok r => .ok { base with res := .some r }
+    | .ok kn =>
+      let base : UFnKopf :=
+        { name, names := ps.map (·.1), kinds := ps.map (·.2.2), types := ps.map (·.2.1), res := .none,
+          bits := params.map (fun p => uParamBreite p.2), held := [], ext := true, kanal := kn }
+      match res with
+      | .none => .ok base
+      | .some (.atom "never") => .ok { base with resNever := true }
+      | .some (.atom "bool") => .ok { base with resBool := true }
+      | .some (.index false tn) =>
+        match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
+        | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }
+        | .none => .error "foreign answer `index into` a table that is not open without G form"
+      | .some t =>
+        match uErgBereich alias t with
+        | .error e => .error e
+        | .ok r => .ok { base with res := .some r }
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (asm : Bool) (eigner : List String := []) (spaces : List String := []) (erklaert : List String := []) : FnSig → Except String UFnKopf
+    (asm : Bool) (eigner : List String := []) (spaces : List String := []) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln, generics := _ } =>
     -- `extern`, `raw`, `prim` and `= asm { .. }`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
     -- answer is `never`
@@ -115,23 +91,15 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
     else
       match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler (eigner := eigner) (spaces := spaces) with
       | .error e => .error e
-      | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs erklaert klauseln
-
+      | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs klauseln
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (sc : SSyscall) (eigner : List String := []) (spaces : List String := []) : Except String UFnKopf :=
-  match uTorWegPruef sc.way with
-  | .error e => .error e
-  | .ok _ =>
   match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) (spaces := spaces) with
     | .error e => .error e
-    | .ok kopf =>
-    match uTorBindungPruef tabs whys sc with
-    | .error e => .error e
-    | .ok _ =>
-    uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [] [.effs sc.gate.uses]
+    | .ok kopf => uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [.effs sc.gate.uses]
 
 /-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
 def uStartNamen : Nat → SAnw → List String
