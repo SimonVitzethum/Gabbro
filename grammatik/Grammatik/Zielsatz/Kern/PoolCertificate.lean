@@ -27,21 +27,35 @@ theorem post_meaning (value : Zahl 0 100) (values : Assignment (Observation zD))
     (post value).val.denote values ↔ value.n = values (.slot () () 0) := by
   exact (lower_denote _ values).trans Iff.rfl
 
-def slotRelation (value : Zahl 0 100) :=
-  (localEquality (D := zD) (.slot () () zIdx zDarf) .nil value).toOption.get (by rfl)
+def slotRelation (value : Zahl 0 100) :
+    { formula : LProp (Observation zD) // ∀ world,
+      formula.denote (assignment world) ↔
+        eval world (.slot () () zIdx zDarf) world (.nil : Env zD []) = value } :=
+  ⟨.eq (.var (.slot () () 0)) (.konst value.n), fun _ =>
+    ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem slotRelation_result (value : Zahl 0 100) :
-    localEquality (D := zD) (.slot () () zIdx zDarf) .nil value = .ok (slotRelation value) := rfl
+    localEquality (D := zD) (.slot () () zIdx zDarf) .nil value = .ok (slotRelation value) := by
+  simp only [localEquality, integerEquality]
+  rfl
 
 theorem slotRelation_meaning (value : Zahl 0 100) (values : Assignment (Observation zD)) :
     (slotRelation value).val.denote values ↔ values (.slot () () 0) = value.n := Iff.rfl
 
-def varRelation (bound value : Zahl 0 100) :=
-  (localEquality (D := zD) (Λ := zL) (.var .here) (.cons bound .nil) value).toOption.get (by rfl)
+abbrev variableExpr : Expr zD [scalar] zL scalar := .var .here
+
+def varRelation (bound value : Zahl 0 100) :
+    { formula : LProp (Observation zD) // ∀ world,
+      formula.denote (assignment world) ↔
+        eval world variableExpr world (.cons bound .nil) = value } :=
+  ⟨.eq (.konst bound.n) (.konst value.n), fun _ =>
+    ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem varRelation_result (bound value : Zahl 0 100) :
-    localEquality (D := zD) (Λ := zL) (.var .here) (.cons bound .nil) value =
-      .ok (varRelation bound value) := rfl
+    localEquality variableExpr (.cons bound .nil) value =
+      .ok (varRelation bound value) := by
+  simp only [localEquality, integerEquality, variableExpr]
+  rfl
 
 theorem varRelation_meaning (bound value : Zahl 0 100) (values : Assignment (Observation zD)) :
     (varRelation bound value).val.denote values ↔ bound.n = value.n := Iff.rfl
