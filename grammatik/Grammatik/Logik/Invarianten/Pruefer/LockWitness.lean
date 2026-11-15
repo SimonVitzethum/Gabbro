@@ -191,4 +191,11 @@ theorem opaque_unit_refused_zeuge :
 #print axioms contracts_accepted_zeuge
 #print axioms contracts_refused_zeuge
 
+/-- The goal's actual unit checker receives the source through the canonical
+    metadata field, rather than losing it at the Bool adapter. -/
+theorem unit_checker_accepted_zeuge :
+    akzeptiertX_pruefer.akzeptiert (unit true) [()] [()]
+      [.inl (), .inr false, .inr true] = true := by
+  exact checker_accepted_zeuge
+
 end Gabbro.Grammatik.Invarianten.Pruefer.LockWitness

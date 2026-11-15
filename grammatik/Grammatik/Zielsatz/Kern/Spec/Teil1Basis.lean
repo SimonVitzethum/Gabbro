@@ -54,6 +54,7 @@ public import Grammatik.Kern.Syntax.Satz.Pruefung
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Logik.Ruf.FremdRuf.T4
 public import Grammatik.Zielsatz.Kern.Schnittstellen
+public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
 public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Sources
 

@@ -257,6 +257,19 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
     exact ⟨hSpec.mitBesitz hb hw,
       hs, Kernzelle.akkuStartB_sound hStart⟩
 
+/-- The concrete unit checker retains its declared lock syntax; its choice
+    of an internal axiom-equality instance does not affect the verdict. -/
+theorem akzeptiertX_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq : DecidableEq D.Ax]
+    (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
+    akzeptiertX_pruefer.akzeptiert E fs ls cs =
+      (AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+        besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls && nutzerPflichtGeprueftB E fs ls) := by
+  exact congrArg (fun inst : DecidableEq D.Ax =>
+    @AkzeptiertX D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+      besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
+        nutzerPflichtGeprueftB E fs ls)
+    (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
+
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
     (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
     `C.korrekt` (the lifted checker judges the unit's declared checks). -/
