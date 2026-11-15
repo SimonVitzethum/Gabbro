@@ -28,7 +28,6 @@ theorem lowEndL_bind_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf 
     simp only [hl, Except.bind] at h
     split at h
     · rename_i e he
-      simp only [he, Except.bind] at h
       cases h
     · rename_i v hv
       obtain ⟨q, tail'⟩ := v
@@ -53,7 +52,6 @@ theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
     simp only [hv, Except.bind] at h
     split at h
     · rename_i e he
-      simp only [he, Except.bind] at h
       cases h
     · rename_i v hv
       obtain ⟨q, tail'⟩ := v
@@ -78,7 +76,6 @@ theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
     simp only [hv, Except.bind] at h
     split at h
     · rename_i e he
-      simp only [he, Except.bind] at h
       cases h
     · rename_i v hv
       obtain ⟨q, tail'⟩ := v
