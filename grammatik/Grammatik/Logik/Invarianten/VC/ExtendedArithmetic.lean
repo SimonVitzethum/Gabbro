@@ -37,23 +37,13 @@ private def retryFormula (test : LProp (Observation declaration)) : Nat → QF (
 private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
+attribute [local irreducible] lower
+
 private theorem bounded_formula :
-    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
-  simp only [show (2 : Nat) ≤ 16 by decide, ↓reduceIte,
-    boundedCompiled, compile, boundedWriter, extendedEnd, extendedStatement,
-    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
-    leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
-    pure, Except.pure, Except.toOption]
-  rfl
+    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
 
 private theorem overflowing_formula :
-    overflowingCompiled.formula = retryFormula .fls 2 := by
-  simp only [show (2 : Nat) ≤ 16 by decide, ↓reduceIte,
-    overflowingCompiled, compile, overflowingWriter, extendedEnd, extendedStatement,
-    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
-    leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
-    pure, Except.pure, Except.toOption]
-  rfl
+    overflowingCompiled.formula = retryFormula .fls 2 := rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
