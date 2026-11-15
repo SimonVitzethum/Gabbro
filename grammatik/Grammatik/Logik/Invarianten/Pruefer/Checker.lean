@@ -40,11 +40,10 @@ theorem logikPflichtA_of_akzeptiertX (complete : ∀ f, f ∈ functions)
       accumulators checks queries guests sources = true)
     (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop)
     (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
-    (bodies : ∀ passes f, KoerperGutSA program passes Q S shared f)
     (locality : SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert program) :
     LogikPflichtA program S Q shared :=
   logikPflichtA_of_invariantVCB complete (invariantVCB_of_akzeptiertX accepted)
-    Q shared subset bodies locality
+    Q shared subset locality
 
 #print axioms invariantVCB_invGutA
 #print axioms invariantVCB_invGut

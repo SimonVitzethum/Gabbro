@@ -20,14 +20,17 @@ theorem invariantVCB_invGut (complete : ∀ f, f ∈ functions)
     (fun _ impossible => False.elim impossible) f
   exact ⟨invGutS_of_A facts.1, invGutGrund_of_A facts.2⟩
 
-/-- Reconstruct the existing SC duty from checker-derived invariants and the
-    unchanged remaining user logic. This does not change Spec or its duties. -/
+/-- Reconstruct the existing SC duty from the checker certificate. Only the
+    locality and pointer premises remain inputs; Spec itself is unchanged. -/
 theorem logikPflicht_of_invariantVCB (complete : ∀ f, f ∈ functions)
     (accepted : invariantVCB program S functions sources budget = true)
-    (Q : AxEns D) (bodies : ∀ passes f, KoerperGutS program passes Q S f)
+    (Q : AxEns D)
     (locality : SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert program) :
     LogikPflicht program S Q :=
-  ⟨fun passes f => ⟨bodies passes f, invariantVCB_invGut complete accepted passes Q f⟩,
+  ⟨fun passes f => ⟨koerperGutS_of_A
+      ((invariantVCB_sound complete accepted f passes Q (fun _ => False)
+        (fun _ impossible => False.elim impossible)).1),
+      invariantVCB_invGut complete accepted passes Q f⟩,
     locality⟩
 
 /-- The same adapter preserves the atomic rely rather than replacing shared
@@ -36,10 +39,9 @@ theorem logikPflichtA_of_invariantVCB (complete : ∀ f, f ∈ functions)
     (accepted : invariantVCB program S functions sources budget = true)
     (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop)
     (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
-    (bodies : ∀ passes f, KoerperGutSA program passes Q S shared f)
     (locality : SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert program) :
     LogikPflichtA program S Q shared :=
-  ⟨fun passes f => ⟨bodies passes f,
+  ⟨fun passes f => ⟨(invariantVCB_sound complete accepted f passes Q shared subset).1,
     invariantVCB_invGutA complete accepted passes Q shared subset f⟩, locality⟩
 
 end Gabbro.Grammatik.Invarianten.Pruefer
