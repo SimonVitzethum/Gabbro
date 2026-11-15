@@ -1,0 +1,68 @@
+module
+
+public import Grammatik.Logik.Vertraege.Pruefer.Decision
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
+
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
+
+variable {D : Deklaration}
+
+/-- Prove the actual generated branch VC symbolically, without replaying
+    integer elimination in the kernel. This lemma changes no decision gate. -/
+theorem freshImplication_valid (type : Ty) (value : Wert D type)
+    (guard : LProp (Observation D)) (post : QF (Observation D))
+    (values : Assignment (Observation D))
+    (valid : guard.denote values → post.denote values) :
+    (freshImplication type value guard post).denote values := by
+  apply (dropLocalQF_denote _ values).mpr
+  apply (lower_denote _ _).mpr
+  intro code _ selected
+  have projection :
+      (fun key => (Assignment.bind (dropBase values) none code) (some key)) = values := by
+    funext key
+    simp only [Assignment.bind, reduceCtorEq, ↓reduceIte, dropBase]
+  have present := (lower_denote _ _).mp
+    ((liftLocalQF_denote _ _).mp ((quoteQF_denote _ _).mp selected))
+  rw [projection] at present
+  apply (quoteQF_denote _ _).mpr
+  apply (liftLocalQF_denote _ _).mpr
+  rw [projection]
+  exact valid present
+
+variable {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
+  {Γ : Ctx} {Λ : List (Res D)} {type : Ty}
+
+/-- Balanced proof composition over the actual branch generator. Its inputs
+    certify successful translation and validity of each generated implication. -/
+theorem localBranches_valid (items : List (Wert D type))
+    (expression : Expr D Γ Λ type) (locals : Env D Γ)
+    (target : Wert D type → Runtime program checked S → World D → Prop)
+    (compile : ∀ value, Except Refusal (Condition (target value)))
+    (premise : Assignment (Observation D) → Prop)
+    (valid : ∀ value, ∃ relation head,
+      localEquality expression locals value = .ok relation ∧ compile value = .ok head ∧
+      ∀ values, premise values → relation.val.denote values → head.formula.denote values) :
+    ∃ result, localBranches items expression locals target compile = .ok result ∧
+      ∀ values, premise values → result.formula.denote values := by
+  induction items with
+  | nil => exact ⟨_, rfl, fun _ _ => trivial⟩
+  | cons value items ih =>
+      obtain ⟨relation, head, hrelation, hhead, hvalid⟩ := valid value
+      obtain ⟨tail, htail, hvalidTail⟩ := ih
+      cases result : localBranches (value :: items) expression locals target compile with
+      | error cause =>
+          simp only [localBranches, hrelation, hhead, htail, Except.bind, reduceCtorEq] at result
+      | ok out =>
+          refine ⟨out, result, ?_⟩
+          have shape : out.formula = conj (freshImplication type value relation.val head.formula) tail.formula := by
+            simp only [localBranches, hrelation, hhead, htail, Except.bind] at result
+            exact (congrArg Condition.formula (Except.ok.inj result)).symm
+          intro values ready
+          rw [shape, conj_denote]
+          exact ⟨freshImplication_valid type value relation.val head.formula values
+            (hvalid values ready), hvalidTail values ready⟩
+
+end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
