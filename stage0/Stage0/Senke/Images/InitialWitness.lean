@@ -58,17 +58,14 @@ def memory : Runner.Mem where
   wr _ := true
 
 private theorem loaded : BytesAt memory Runner.Prog.IMG bytes := by
+  have bound : Runner.Prog.IMG + bytes.length < 2 ^ 64 := by decide +kernel
+  unfold memory
+  generalize bytes = bs at *
   intro i hi
   refine ⟨rfl, rfl, ?_⟩
-  have size : bytes.length = 432 := by decide +kernel
-  have address : (BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG = i := by
-    simp only [BitVec.toNat_ofNat]
-    change i < bytes.length at hi
-    simp only [Runner.Prog.IMG] at *
-    omega
-  change (bytes[(BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG]?).getD 0 = bytes[i]
-  rw [address, List.getElem?_eq_getElem hi]
-  rfl
+  change (bs[(BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG]?).getD 0 = _
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  simp only [Nat.add_sub_cancel_left, List.getElem?_eq_getElem hi, Option.getD_some]
 
 private theorem storage : InitialLayout sourceUnit image.Y := by
   refine ⟨fun _ => rfl, fun _ _ => rfl, rfl, fun t => ?_⟩
