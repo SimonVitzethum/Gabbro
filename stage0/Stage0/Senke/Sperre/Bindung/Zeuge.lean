@@ -103,8 +103,7 @@ theorem nimmT_spin_retry_zeuge [Kern] :
     nimmT_check E state0 (At.whole _)
   refine ⟨m, f, state, ticket, seen, ?_, ?_, ?_⟩
   · exact nimmT_spin_retry E state (At.whole _) rfl compared (by rw [ticket, seen]; decide)
-  · rw [state.ag.rd_low (i := 3) (by decide) (by decide) (by decide)]
-    decide
+  · exact (state.ag.rd_low (i := 3) (by decide) E.far E.top).trans (by decide +kernel)
   · obtain ⟨m', f', read, retry, state', keep, _⟩ :=
       nimmT_spin_round E state (At.whole _) rfl (by rw [ticket]; decide)
     exact ⟨m', f', read.trans retry, state', keep.trans ticket⟩
