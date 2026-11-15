@@ -30,6 +30,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Maschine.Zeuge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+import all Batteries.Data.Except
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -75,7 +76,7 @@ local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 /-- The declared starts of configuration 1. -/
 abbrev n1ws : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
-theorem n1_akzeptiertX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true := by decide
+theorem n1_akzeptiertX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true := by decide +kernel
 
 theorem n1_alt_abgelehnt : Akzeptiert nP SchwachZeuge.nS nFs [] nCs n1ws = false :=
   AtomarZeuge.n1_abgelehnt
@@ -186,9 +187,11 @@ def hP : Programm nD where
 /-- `kern` writes `konfig`, `zaehlB` reads it. -/
 abbrev hws : List nD.Fn := [NFn.kern, NFn.zaehlB]
 
-/-- **Accepted by the checker with the rely** (`konfig` is shared and in no contract; `tabB` is
-    `zaehlB`'s alone) ... -/
-theorem hP_akzeptiertX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = true := by decide
+/-- **Refused by the checker with the rely** (`zaehlB`'s ensures `tabB[0] == 1`
+    is genuinely violated under the atomic rely, `hP_rely_nicht`): the old checker
+    left the duty to the user, the new gate decides it. `konfig` is shared and in
+    no contract; `tabB` is `zaehlB`'s alone — but the claimed contract is false. -/
+theorem hP_akzeptiertX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false := by decide +kernel
 
 /-- ... and refused by the goal's checker (the unguarded shared read). -/
 theorem hP_alt_abgelehnt : Akzeptiert hP SchwachZeuge.nS nFs [] nCs hws = false := by decide
@@ -310,10 +313,11 @@ theorem hP_rely_nicht :
 theorem hP_logikA_nicht : ¬ LogikPflichtA hP SchwachZeuge.nS (axWahr nD) (GeteiltA hP hws) :=
   fun h => hP_rely_nicht (h.1 0 NFn.zaehlB).1
 
-/-- **Both directions together**: accepted by `AkzeptiertX`, the old (b) holds for the body at
+/-- **Both directions together**: refused by `AkzeptiertX` (the gate now decides
+    the contract the old checker left to the user), the old (b) holds for the body at
     every budget, the new (b) fails. -/
 theorem hP_havoc_bites :
-    AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = true ∧
+    AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false ∧
       (∀ passes, KoerperGutS hP passes (axWahr nD) SchwachZeuge.nS NFn.zaehlB) ∧
       ¬ KoerperGutSA hP 0 (axWahr nD) SchwachZeuge.nS (GeteiltA hP hws) NFn.zaehlB :=
   ⟨hP_akzeptiertX, hP_seq, hP_rely_nicht⟩
@@ -402,7 +406,7 @@ theorem n1E_ziel [RootNativeFloat.Hardware] (ord : nD.mitRuhe.Glob → Ordnung) 
     `AkzeptiertX` (`zaehler` is shared and in no contract). -/
 theorem faltung_akzeptiertX :
     AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = true := by
-  decide
+  decide +kernel
 
 #print axioms faltung_akzeptiertX
 
