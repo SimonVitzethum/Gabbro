@@ -43,6 +43,7 @@ public inductive TaskRep (D : Deklaration) (types : TypeResolution) :
       TaskRep D types path (FutureExpr.call name args) (Task.leaf (Child.active name storage))
         (readyAnswer D (types.childState name) (types.childResult name) storage)
   | callReady (path : List Nat) (name : String) (args : List Parser.SExpr)
+      {value : Value D} {result : Wert D (types.childResult name)}
       (typed : valueAt D (types.childResult name) value = some result) :
       TaskRep D types path (FutureExpr.call name args) (Task.ready value)
         (pendingAnswer D (types.childState name) (types.childResult name) result)
