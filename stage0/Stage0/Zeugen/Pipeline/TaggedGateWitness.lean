@@ -1,6 +1,5 @@
 module
 public import Stage0.IRBild
-import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -50,7 +49,7 @@ def text : String :=
 def candidate : Except String (Emitted text 256) := emit text 256
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  kernel_rfl
+  decide +kernel
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
