@@ -72,7 +72,7 @@ private def infProbe : RumpTy uFremd ⟨1, by decide⟩ :=
         hg := fun g => nomatch g
         hk := ⟨[], List.Perm.refl [], List.nil_sublist _⟩
         hh := fun L => nomatch L }
-      rfl (.retScoped (.val (.var .here)) { scopes := [], genau := List.Perm.refl _ }))
+      rfl (.ret (.val (.var .here)) (List.Perm.refl _)))
 
 private def inf1 : { value : EnsTy uFremd ⟨1, by decide⟩ ×
     RumpTy uFremd ⟨1, by decide⟩ × ReqTy uFremd ⟨1, by decide⟩ //
@@ -121,7 +121,7 @@ private def fallProbe : RumpTy uFremdFallible ⟨1, by decide⟩ :=
         hg := fun g => nomatch g
         hk := ⟨[], List.Perm.refl [], List.nil_sublist _⟩
         hh := fun L => nomatch L }
-      rfl (.retScoped (.val (.var .here)) { scopes := [], genau := List.Perm.refl _ }))
+      rfl (.ret (.val (.var .here)) (List.Perm.refl _)))
 
 private def fall1 : { value : EnsTy uFremdFallible ⟨1, by decide⟩ ×
     RumpTy uFremdFallible ⟨1, by decide⟩ × ReqTy uFremdFallible ⟨1, by decide⟩ //
