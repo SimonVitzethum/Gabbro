@@ -196,20 +196,20 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowEndL_struct_ok (.inr ⟨x, tab, rfl⟩) hlow
       obtain _ | m := n
       · rw [lowStructL_zero] at hStruct; cases hStruct
-      obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
+      obtain ⟨_, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
       subst Λ₁
       cases hst
       rw [ht] at htZ
       cases htZ
       obtain ⟨hrBody, hsufBody, hBody⟩ := laufSeq_G G S c hc O passes R hRR m k ss
-        (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
+        (fn.mitIndex x tZ.val ((declOf u).count tZ)) (fT.mitIndex x tZ.val ((declOf u).count tZ))
         (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
-        (hU.index hF.1 t.val ((declOf u).count t)) (hS.index x t.val ((declOf u).count t))
+        (hU.index hF.1 tZ.val ((declOf u).count tZ)) (hS.index x tZ.val ((declOf u).count tZ))
         hmemss hF.2 hBodyG hBodyZ
       have htail : tailZ = tail := (List.cons.inj hrBody).2
       subst tailZ
       have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
-      have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
+      have hUsed := seqZ_used k (fT.mitIndex x tZ.val ((declOf u).count tZ))
         (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
       have hUrest := hU.resume (fun z hz => hUsed z (BodyNames.used_push ns x z hz))
       have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hUrest hS
