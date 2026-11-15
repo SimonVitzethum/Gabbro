@@ -110,7 +110,7 @@ public theorem nameCode_injective (left right : List Nat)
   unique := by
     intro phase
     cases phase <;> simp only [owned, List.map_cons, List.map_nil, List.nodup_cons,
-      List.not_mem_nil, List.nodup_nil, not_false_eq_true, and_self]
+      List.not_mem_nil, List.nodup_nil, not_false_eq_true, and_self] <;> decide
   resources := fun phase => savedResources (owned phase)
   exact := fun _ => rfl
 
