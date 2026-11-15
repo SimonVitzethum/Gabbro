@@ -77,10 +77,10 @@ theorem image_shape :
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- The actual nonempty image also instantiates the generic C01 export/simulation theorem. -/
-theorem exported_records_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
+theorem exported_records_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneAnswers] :
     ∃ result : Emitted text 256, emit text 256 = .ok result ∧ result.Correct ∧
       0 < result.bytes.length := by
   have image : irBild text 256 = .ok output.bytes := by

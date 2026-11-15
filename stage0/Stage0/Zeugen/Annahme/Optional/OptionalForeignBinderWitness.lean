@@ -204,7 +204,7 @@ theorem binding_shape :
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- Also exercise a fallible void binder at end-block level directly from source. -/
 def endText : String :=
@@ -288,6 +288,6 @@ theorem end_accepted_image : emit endText 256 = .ok endOutput :=
 theorem end_canonical_source : CanonicalSourceProgram endOutput.compiled :=
   compile_source_program endText endOutput.compiled
 
-theorem end_image_correct [Runner.IR.Kern] [Senke.CloneOK] : endOutput.Correct := endOutput.correct
+theorem end_image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : endOutput.Correct := endOutput.correct
 
 end Gabbro.Stage0.Pipeline.OptionalForeignBinderWitness

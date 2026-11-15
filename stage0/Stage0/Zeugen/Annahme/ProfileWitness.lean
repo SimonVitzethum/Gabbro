@@ -67,6 +67,6 @@ theorem elaborated_profilfrei :
   kernel_rfl
 
 /-- The same image satisfies the inherited execution correctness. -/
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 end Gabbro.Stage0.ProfileWitness
