@@ -81,11 +81,11 @@ def checkTextFremd : String :=
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
-/-- Both foreign-gated units elaborate. -/
 run_cmd liftIO do
   IO.FS.createDirAll "../.scratch-agent"
   IO.FS.writeFile "../.scratch-agent/foreign-progress" "elaboration"
 
+/-- Both foreign-gated units elaborate. -/
 theorem checkTextFremd_ok : (elabText checkTextFremd).toOption.isSome = true := by
   decide +kernel
 
