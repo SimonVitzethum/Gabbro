@@ -56,10 +56,16 @@ theorem concrete_contract_zeuge :
       _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.arguments
       ⟨6, by decide, by decide⟩ := by
   constructor
-  · decide
+  · change decide ((4 : Int) < 10) = true
+    decide
   constructor
-  · decide
-  constructor <;> decide
+  · change ¬ (decide ((10 : Int) < 10) = true)
+    decide
+  constructor
+  · change decide ((5 : Int) = 4 + 1) = true
+    decide
+  · change ¬ (decide ((6 : Int) = 4 + 1) = true)
+    decide
 
 /-- All four premise groups hold jointly on a declared start with input 4.
     Its requires excludes 10 and its ensures demands result = input + 1. -/
