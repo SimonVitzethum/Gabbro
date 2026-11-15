@@ -81,7 +81,7 @@ def checkTextFremd : String :=
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
-run_cmd liftIO do
+#eval do
   IO.FS.createDirAll "../.scratch-agent"
   IO.FS.writeFile "../.scratch-agent/foreign-progress" "elaboration"
 
@@ -134,7 +134,7 @@ theorem uFremdFallible_tabs_leer : uFremdFallible.tabs = [] := by kernel_rfl
 
 theorem uFremdFallible_globs_leer : uFremdFallible.globs = [] := by kernel_rfl
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "lowering"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "lowering"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -148,7 +148,7 @@ theorem uFremdFallible_lowered :
     (lowerAllg uFremdFallible).toOption.isSome = true := by
   decide +kernel
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "check extraction"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "check extraction"
 
 /-- The lowered programs behind the foreign-gate witnesses. -/
 def checkPFremd : Programm (declOf uFremd) :=
@@ -209,7 +209,7 @@ theorem fremdFallible_tor_threadet :
 
 /-! ## Acceptance with the real Duty -/
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "check admission"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "check admission"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -224,7 +224,7 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "infallible acceptance"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "infallible acceptance"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -236,7 +236,7 @@ theorem fremd_akzeptiert :
   and_intros
   all_goals first | exact fremd_checkB | decide +kernel
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -247,7 +247,7 @@ theorem fremdFallible_akzeptiert :
   and_intros
   all_goals first | exact fremdFallible_checkB | decide +kernel
 
-run_cmd liftIO <| IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
 
 /-- The admission Props follow from the Bools. -/
 theorem fremd_admission :
