@@ -27,6 +27,8 @@ theorem post_meaning (value : Zahl 0 100) (values : Assignment (Observation zD))
     (post value).val.denote values ↔ value.n = values (.slot () () 0) := by
   exact (lower_denote _ values).trans Iff.rfl
 
+abbrev slotExpr : Expr zD [] zL scalar := .slot () () zIdx zDarf
+
 def slotRelation (value : Zahl 0 100) :
     { formula : LProp (Observation zD) // ∀ world,
       formula.denote (assignment world) ↔
@@ -35,8 +37,9 @@ def slotRelation (value : Zahl 0 100) :
     ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem slotRelation_result (value : Zahl 0 100) :
-    localEquality (D := zD) (.slot () () zIdx zDarf) .nil value = .ok (slotRelation value) := by
-  simp only [localEquality, integerEquality]
+    localEquality (τ := scalar) slotExpr .nil value = .ok (slotRelation value) := by
+  simp only [localEquality, scalar]
+  simp only [slotExpr, integerEquality]
   rfl
 
 theorem slotRelation_meaning (value : Zahl 0 100) (values : Assignment (Observation zD)) :
