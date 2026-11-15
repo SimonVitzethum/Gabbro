@@ -242,7 +242,8 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   have interfaces : schnittstellenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, Bool.and_true, Bool.and_eq_true]
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, libraryB_immer,
+    Bool.and_true, Bool.and_eq_true]
   and_intros
   all_goals
     foreign_gate_progress
@@ -258,7 +259,8 @@ theorem fremdFallible_akzeptiert :
   have interfaces : schnittstellenB checkPFremdFallible
       (List.finRange uFremdFallible.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, Bool.and_true, Bool.and_eq_true]
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, libraryB_immer,
+    Bool.and_true, Bool.and_eq_true]
   and_intros
   all_goals
     foreign_gate_progress
