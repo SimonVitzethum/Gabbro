@@ -79,7 +79,7 @@ def mText : List String :=
    textVon Zeugen.Gap.M47_549.z Zeugen.Gap.M47_549.P Zeugen.Gap.M47_549.ws,
    textVon Zeugen.M169_350.z Zeugen.M169_350.P Zeugen.M169_350.ws,
    textVon Zeugen.M16_13.z Zeugen.M16_13.P Zeugen.M16_13.ws,
-   textVon Zeugen.M.M49_50.z Zeugen.M.M49_50.P Zeugen.M.M49_50.ws,
+   textVon Zeugen.M49_50.z Zeugen.M49_50.P Zeugen.M49_50.ws,
    textVon Zeugen.M103_803.z Zeugen.M103_803.P Zeugen.M103_803.ws,
    textVon Zeugen.M103_131.z Zeugen.M103_131.P Zeugen.M103_131.ws,
    textVon Zeugen.Gap.M99_825.z Zeugen.Gap.M99_825.P Zeugen.Gap.M99_825.ws,
