@@ -25,7 +25,7 @@ def declaration : Deklaration := { Frag.Witness.declaration with
   rzusage := fun r => nomatch r
   invarianten_gehalten := fun _ _ _ _ _ L => nomatch L }
 
-private theorem globalAccess (resources : List (Res declaration)) :
+theorem globalAccess (resources : List (Res declaration)) :
     gdarf declaration false resources := fun _ member => nomatch member
 
 /-- The positive predicate uses the declared type bound; the negative one is

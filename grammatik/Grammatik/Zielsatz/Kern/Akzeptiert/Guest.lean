@@ -16,8 +16,8 @@ section Bool
 
 variable [DecidableEq D.Fn] [DecidableEq D.Ax]
 
-/-- Guest admission is the final component, after all established program
-    checks. Removing it recovers precisely the checker of the same program,
+/-- Guest admission composes with the program and invariant checks.
+    Removing it recovers precisely the checker of the same program,
     accumulator queries and check declarations, with no guest descriptor. -/
 theorem akzeptiert_guest_eq (P : Programm D) (S : SperrInv D)
     (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
