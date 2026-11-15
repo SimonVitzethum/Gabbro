@@ -390,18 +390,18 @@ def n1E : Einheit nD where
   S := SchwachZeuge.nS
   Q := axWahr nD
   starts := [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩]
-sp0 := sp0
-axiomSources := some
-  { items := []
-    complete := fun item => nomatch item
-    resources := fun item => nomatch item
-    expression := fun item => nomatch item
-    correct := fun item => nomatch item }
-pointerSignatures := some
-  { count := 7
-    outside := fun f n outside => by
-      change decide (nSigOf f = n) = false
-      cases f <;> simp only [nSigOf] <;> exact decide_eq_false (by omega) }
+  sp0 := sp0
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 7
+      outside := fun f n outside => by
+        change decide (nSigOf f = n) = false
+        cases f <;> simp only [nSigOf] <;> exact decide_eq_false (by omega) }
 
 /-- The flag unit is accepted with its complete source descriptors. -/
 theorem n1E_akzeptiert : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = true := by

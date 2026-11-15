@@ -39,6 +39,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.Kern.CheckedMehrfaden
 public import Grammatik.Proben.ProbeD
 public import Grammatik.Proben.InvZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
@@ -176,17 +177,17 @@ def mE : Einheit mD where
   lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]
-sp0 := mSp
-axiomSources := some
-  { items := [], complete := fun item => nomatch item
-    resources := fun item => nomatch item
-    expression := fun item => nomatch item
-    correct := fun item => nomatch item }
-pointerSignatures := some
-  { count := 5
-    outside := fun f n outside => by
-      change decide (mSigOf f = n) = false
-      cases f <;> simp only [mSigOf] <;> exact decide_eq_false (by omega) }
+  sp0 := mSp
+  axiomSources := some
+    { items := [], complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 5
+      outside := fun f n outside => by
+        change decide (mSigOf f = n) = false
+        cases f <;> simp only [mSigOf] <;> exact decide_eq_false (by omega) }
 
 /-- The literal-true lock source shared by the probe, pool and linked fixtures. -/
 def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some

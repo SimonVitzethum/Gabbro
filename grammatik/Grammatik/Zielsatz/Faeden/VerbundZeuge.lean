@@ -81,12 +81,17 @@ def vzE : zD.Fn → Bool
   | .haupt => true
   | _ => false
 
-/-- The app's placeholder for `einzahlen`: a leaf. -/
-def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
-/-- The app's placeholder for `lies`: a leaf. -/
-def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL := .ret (.val zHundert) (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
-/-- The app's placeholder for `wrap`: a leaf. -/
-def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
+/-- Capability gap: outside the decidable fragment: ownership-aware imported stubs.
+    The replacement leaves satisfy their contracts independently, without calling
+    the imported writer; the composed call hull remains non-degenerate. -/
+def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := zRumpfEin
+
+def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL :=
+  .ret (.val (.slot () () zIdx zDarf)) (List.Perm.refl _)
+
+def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL :=
+  .cons (.assignSlot () () zIdx zHundert rfl zDarf) (.ret .empty (List.Perm.refl _))
+
 /-- The library's placeholder for `haupt`: a leaf. -/
 def vzStubHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .empty List.Perm.nil
 
@@ -136,7 +141,7 @@ def vzE2 : Einheit zD where
 
 /-- Each unit is accepted ALONE by the concrete checker. -/
 theorem vz_app_akzeptiert :
-    Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true := by decide
+    Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zPoolSources) = true := by decide +kernel
 
 theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] (sources := zPoolSources) = true := by
   decide +kernel
@@ -249,17 +254,16 @@ def vmLeser : Endblock mD (vertragVon mD mPruefeA) false [] [] :=
   .bind (.slot MTab.privB () mI0 (mDarfB _)) (.ret .empty List.Perm.nil)
 
 /-- The library's program: `pruefeA` reads `privB`; leaves for the app's functions. -/
-def vmBib : Programm mD := mitRumpf mP fun
-  | .setze => .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
-  | .hauptA => .ret .empty List.Perm.nil
-  | .hauptB => .ret .empty List.Perm.nil
+/-- The replacement supplies correct bodies for every imported function too. -/
+def vmBib : Programm mD := mitRumpf mFragment fun
   | .pruefeA => vmLeser
-  | .ruhe => .ret .empty List.Perm.nil
+  | f => mFragment.rumpf f
 
 /-- The library as a unit: no thread of its own. -/
 def vmE2 : Einheit mD where
   P := vmBib
-  S := mSI
+  S := mFragmentS
+  lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := []
   sp0 := mSp
@@ -277,14 +281,14 @@ def vmE2 : Einheit mD where
     on as thread-local (`LokBedarf`), and over the composed hulls it is not (`GetrenntV`
     fails). The whole-program checker refuses the linked program for the same reason. -/
 theorem vm_abgelehnt :
-    Akzeptiert mE.P mE.S mFs [()] mCs mE.ws = true ∧
-    Akzeptiert vmBib mSI mFs [()] mCs [] = true ∧
+    Akzeptiert mE.P mE.S mFs [()] mCs mE.ws (sources := CheckedMehrfaden.sources) = true ∧
+    Akzeptiert vmBib mFragmentS mFs [()] mCs [] (sources := CheckedMehrfaden.sources) = true ∧
     Verbindbar mE vmE2 ∧
     schnittstelleB mFs mCs vmE mE vmE2 = false ∧
     lokBedarfB mFs vmE mE vmE2 (.inl MTab.privB) = true ∧
     getrenntVB mFs vmE mE vmE2 (verbinde vmE mE vmE2).ws (.inl MTab.privB) = false ∧
-    Akzeptiert (verbinde vmE mE vmE2).P mSI mFs [()] mCs (verbinde vmE mE vmE2).ws = false :=
-  ⟨mP_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
+    Akzeptiert (verbinde vmE mE vmE2).P mFragmentS mFs [()] mCs (verbinde vmE mE vmE2).ws = false :=
+  ⟨mFragment_akzeptiert, by decide, ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩, by decide, by decide, by decide,
     by decide⟩
 
 /-- The refusal at the specification: no `SchnittstelleSpec` for this pair. -/
@@ -298,7 +302,12 @@ theorem vm_abgelehnt_spec : ¬ SchnittstelleSpec mFs vmE mE vmE2 := fun h => by
 /-! ## 3. REFUSAL: an exported contract too weak for the importer -/
 
 /-- The library as compiled against `zP`: `wrap` ensures only `true`. -/
-def vzBibSchwach : Programm zD := mitRumpf zP fun
+def vzSchwach : Programm zD :=
+  { zPB with ensures := fun f => match f with
+      | .wrap => .tru
+      | f => zPB.ensures f }
+
+def vzBibSchwach : Programm zD := mitRumpf vzSchwach fun
   | .haupt => vzStubHaupt
   | .ein => zRumpfEin
   | .lies => zRumpfLies
@@ -307,6 +316,7 @@ def vzBibSchwach : Programm zD := mitRumpf zP fun
 def vzE2Schwach : Einheit zD where
   P := vzBibSchwach
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := []
   sp0 := zSp
@@ -320,8 +330,8 @@ def vzE2Schwach : Einheit zD where
     `wrap`'s `ensures konto[0] == 100`; the library promises `ensures true`. The library alone
     is accepted; there is no link declaration for the pair (`Verbindbar` fails at `ensures`). -/
 theorem vz_vertrag_zu_schwach :
-    Akzeptiert vzBibSchwach zS zFs [()] [.inl ()] [] = true ∧ ¬ Verbindbar vzE1 vzE2Schwach := by
-  refine ⟨by decide, fun h => ?_⟩
+    Akzeptiert vzBibSchwach zS zFs [()] [.inl ()] [] (sources := zPoolSources) = true ∧ ¬ Verbindbar vzE1 vzE2Schwach := by
+  refine ⟨by decide +kernel, fun h => ?_⟩
   have e : zEnsWrapB = (Expr.tru : Expr zD (ErgCtx (zD.params zWrap) (zD.erg zWrap))
       (vertragVon zD zWrap).ende .bool) := congrFun h.ensures zWrap
   cases e
