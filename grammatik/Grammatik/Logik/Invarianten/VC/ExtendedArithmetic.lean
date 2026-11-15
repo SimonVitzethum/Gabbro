@@ -38,10 +38,20 @@ private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
 private theorem bounded_formula :
-    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
+    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
+  simp only [boundedCompiled, compile, boundedWriter, extendedEnd, extendedStatement,
+    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
+    leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
+    pure, Except.pure, Except.toOption]
+  rfl
 
 private theorem overflowing_formula :
-    overflowingCompiled.formula = retryFormula .fls 2 := rfl
+    overflowingCompiled.formula = retryFormula .fls 2 := by
+  simp only [overflowingCompiled, compile, overflowingWriter, extendedEnd, extendedStatement,
+    extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
+    leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
+    pure, Except.pure, Except.toOption]
+  rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
