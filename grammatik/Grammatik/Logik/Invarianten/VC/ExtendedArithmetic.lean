@@ -41,6 +41,7 @@ attribute [local irreducible] lower
 
 private theorem bounded_formula :
     boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
+  unfold boundedCompiled compile
   conv_lhs => whnf
   conv_rhs => whnf
   trace_state
@@ -48,6 +49,7 @@ private theorem bounded_formula :
 
 private theorem overflowing_formula :
     overflowingCompiled.formula = retryFormula .fls 2 := by
+  unfold overflowingCompiled compile
   conv_lhs => whnf
   conv_rhs => whnf
   trace_state
