@@ -59,7 +59,7 @@ theorem source_environment_zeuge :
     (Profil.parseOptions ["--environment", "unknown"] {}).isOk = false ∧
     (Profil.prepareItems {} (profile "unknown")).isOk = false ∧
     (Profil.prepareItems {} [.profT false [.mode "environment" "linux", .mode "environment" "freestanding"]]).isOk = false := by
-  decide
+  refine ⟨rfl, ?_, ?_, ?_, ?_⟩ <;> decide
 
 /-- Encoded memory for a contended freestanding lock, with a protected frame
     word and three actual ticket-lock words. -/
@@ -103,7 +103,7 @@ theorem nimmT_spin_retry_zeuge [Kern] :
     nimmT_check E state0 (At.whole _)
   refine ⟨m, f, state, ticket, seen, ?_, ?_, ?_⟩
   · exact nimmT_spin_retry E state (At.whole _) rfl compared (by rw [ticket, seen]; decide)
-  · rw [state.ag.rd_low (by decide) (by decide) (by decide)]
+  · rw [state.ag.rd_low (i := 3) (by decide) (by decide) (by decide)]
     decide
   · obtain ⟨m', f', read, retry, state', keep, _⟩ :=
       nimmT_spin_round E state (At.whole _) rfl (by rw [ticket]; decide)
