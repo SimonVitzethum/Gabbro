@@ -128,22 +128,6 @@ private structure ExportFacts (u : UProg) : Prop where
       checkedImage u (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
         (fun f => (pieces f).2.2) invariants pointers foreigns, List.finRange u.fns.length)
 
-private theorem functions_of_success (u : UProg)
-    (produced : ∀ f, (lowerFnAt u f).toOption.isSome = true)
-    (safe : ∀ invariants pointers foreigns,
-      checkedImage u (progOfFn u
-        (fun f => ((lowerFnAt u f).toOption.get (produced f)).1)
-        (fun f => ((lowerFnAt u f).toOption.get (produced f)).2.1)
-        (fun f => ((lowerFnAt u f).toOption.get (produced f)).2.2)
-        invariants pointers foreigns, List.finRange u.fns.length)) :
-    ∃ pieces : ∀ f : Fin u.fns.length, EnsTy u f × RumpTy u f × ReqTy u f,
-      (∀ f, lowerFnAt u f = .ok (pieces f)) ∧
-      ∀ invariants pointers foreigns,
-        checkedImage u (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
-          (fun f => (pieces f).2.2) invariants pointers foreigns, List.finRange u.fns.length) :=
-  ⟨(fun f => (lowerFnAt u f).toOption.get (produced f)),
-    (fun f => except_ok_get (produced f)), safe⟩
-
 -- Select complete phase values before unfolding the dependent checker goal.
 attribute [local irreducible] checkedImage
 
@@ -201,8 +185,9 @@ private theorem full_phases :
     case expansion => cbv <;> exact Eq.refl _
     case ordinary => cbv
   case elaboration =>
-    refine ⟨?unit, ?made, ?facts⟩
-    case made => cbv <;> exact Eq.refl _
+    let unit : UProg := ?unit
+    have made : elabU (pre108 ?items) = .ok unit := by cbv <;> exact Eq.refl _
+    refine ⟨unit, made, ?facts⟩
     case facts =>
       refine {
         gate := by cbv
@@ -210,13 +195,33 @@ private theorem full_phases :
         contracts := by cbv
         measures := by export_functions
         functions := ?_ }
-      refine functions_of_success _ ?produced ?safe
-      case produced => export_functions
+      have count : unit.fns.length = 3 := by cbv
+      let first : Fin unit.fns.length := ⟨0, by omega⟩
+      let second : Fin unit.fns.length := ⟨1, by omega⟩
+      let third : Fin unit.fns.length := ⟨2, by omega⟩
+      let value0 : EnsTy unit first × RumpTy unit first × ReqTy unit first := ?value0
+      have produced0 : lowerFnAt unit first = .ok value0 := by cbv <;> exact Eq.refl _
+      let value1 : EnsTy unit second × RumpTy unit second × ReqTy unit second := ?value1
+      have produced1 : lowerFnAt unit second = .ok value1 := by cbv <;> exact Eq.refl _
+      let value2 : EnsTy unit third × RumpTy unit third × ReqTy unit third := ?value2
+      have produced2 : lowerFnAt unit third = .ok value2 := by cbv <;> exact Eq.refl _
+      refine ⟨?pieces, ?equations, ?safe⟩
+      case pieces =>
+        change (f : Fin 3) → EnsTy unit f × RumpTy unit f × ReqTy unit f
+        exact Fin.cases value0 (Fin.cases value1 (Fin.cases value2 (fun f : Fin 0 => Fin.elim0 f)))
+      case equations =>
+        rintro ⟨index, bound⟩
+        have small : index < 3 := bound
+        have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+        rcases choices with h | h | h
+        · subst index; exact produced0
+        · subst index; exact produced1
+        · subst index; exact produced2
       case safe =>
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
-        all_goals rfl
+        all_goals cbv
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
