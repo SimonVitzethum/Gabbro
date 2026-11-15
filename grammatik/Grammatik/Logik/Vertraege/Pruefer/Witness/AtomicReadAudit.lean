@@ -2,7 +2,6 @@ module
 
 public import Grammatik.Gen.Zeugen.M.M49_50
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
-meta import Grammatik.Gen.Zeugen.M.M49_50
 
 @[expose] public section
 
@@ -48,6 +47,47 @@ theorem contract_duties_zeuge : ∀ f, ContractDuties original.P original.S f :=
 #print axioms invariant_duties_zeuge
 #print axioms contract_duties_zeuge
 
-#eval repr Gen.Zeugen.M49_50.z
+/-- One planted fault: only the second function's postcondition changes. -/
+def falseProgram : Programm declaration :=
+  { original.P with ensures := fun f => if f.val = 1 then .fls else original.P.ensures f }
+
+def negative : Einsatz :=
+  { original with P := falseProgram, hBoden := original.hBoden }
+
+theorem same_body_zeuge : negative.P.rumpf = original.P.rumpf := rfl
+
+theorem false_contract_refused_zeuge : negative.gueltig = false := by decide +kernel
+
+abbrev returnedFunction : declaration.Fn := ⟨1, by decide⟩
+
+/-- Every stored cell has Boolean type in this generated declaration. -/
+def world : World declaration where
+  slots t _ f := by
+    have types : ∀ t f, declaration.typ t f = .bool := by decide +kernel
+    rw [types t f]
+    exact false
+  globs g := by
+    have types : ∀ g, declaration.gtyp g = .bool := by decide +kernel
+    rw [types g]
+    exact false
+  spur := []
+
+def calls (f : declaration.Fn) (_ : World declaration)
+    (_ : Env declaration (declaration.params f)) : RufAusgang f := .logik .schleife
+
+/-- The changed post is false on a concrete entry/return pair. -/
+theorem false_contract_counterexample_zeuge :
+    ReqAmEintritt negative.P returnedFunction world .nil ∧
+      ¬ EnsAmRueck negative.P returnedFunction world world .nil () :=
+  ⟨rfl, Bool.false_ne_true⟩
+
+/-- The original return body really returns; the negative is not vacuous. -/
+theorem concrete_return_zeuge (O : Orakel declaration) :
+    execEnd O 0 calls (negative.P.rumpf returnedFunction) world .nil =
+      .zurueck world () := by rfl
+
+#print axioms false_contract_refused_zeuge
+#print axioms false_contract_counterexample_zeuge
+#print axioms concrete_return_zeuge
 
 end Gabbro.Grammatik.Vertraege.Pruefer.AtomicReadAudit
