@@ -121,11 +121,10 @@ def zellen : List Zelle := [
   ⟨9, 0, true, [false, true, false, false]⟩,
   ⟨9, 0, true, [false, true, false, true]⟩,
   ⟨9, 0, true, [false, false, false, false]⟩,
-  ⟨9, 0, true, [false, false, false, true]⟩]
+  ⟨9, 0, true, [false, false, false, true]⟩,
+  ⟨10, 0, true, [true]⟩]
 
-#reduce e.zellen.eraseDups
-
-theorem zellen_exact : e.zellen.eraseDups = zellen := by decide
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide +kernel
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member
