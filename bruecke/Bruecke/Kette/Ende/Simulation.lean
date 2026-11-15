@@ -126,7 +126,17 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       obtain ⟨hty, sh, hsh⟩ := resultCall_type hk he hbT
       subst bt
       have hb := (namedResult_sicht hS ns x g args).symm.trans hbT
-      rw [mitRuf_scalar fn x head.callee hsh] at hq
+      have hmit : mitRuf u fn x head.callee ty = fn.mitTy x ty := by
+        cases ty with
+        | int lo hi => exact mitRuf_int _ _ _ _ _ _
+        | bool => exact mitRuf_bool _ _ _ _
+        | prod id fs => simp only [mitRuf]
+        | opt n =>
+          cases ho : (fnAt u head.callee).resOpt with
+          | none => simp only [mitRuf, ho]
+          | some entry => simp only [mitRuf, ho]
+        | _ => simp only [shapeOfTy] at hsh; cases hsh
+      rw [hmit] at hq
       have hF' : BindFrischL (protectedNames (fn.mitTy x ty).params (fn.mitTy x ty).kinds) ss := by
         rw [protectedNames_mitTy fn x hsh]; exact hF.2
       have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitTy x ty) (fT.mitTy x ty)
@@ -175,7 +185,7 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       have hsuf := (List.suffix_cons _ _).trans (endBodyZ_suffix k fT ns ss errorBody _ hEZ)
       have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st h => hmemss st (mem_of_suffix hsuf h)
       have hErr := endBodyZ_sim G S c hc O passes R hRR n k ss fn fT ns err
-        (.blkEnd :: tail) errorBody hU hS hmemss hEG hEZ
+        (.blkEnd :: tail) errorBody hU hS hmemss (bindFrischL_suffix hF (List.suffix_cons _ _)) hEG hEZ
       have IH := ih n (Nat.lt_succ_self n) k tail (fn.mitBindung x (lo, hi))
         (fT.mitBindung x (lo, hi)) (ns.push x) q rest ys restZ used (hU.bind hF.1 (lo, hi))
         (hS.bind x (lo, hi) (lo, hi)) hmemTail (bindFrischL_suffix hF.2 hsuf) hm hQG hYZ
