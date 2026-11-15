@@ -7355,7 +7355,7 @@ The template (`Vorlage.lean`) emits the measure forms for a unit with a call-gra
 of a refusal. The measure is supplied by the person (e.g. the values of the `decreases`
 clauses); it is not yet computed from `UFn.decreases` or fed from the checker's `MassPflicht`.
 
-## 189. The bridge measure computed from the `decreases` clauses (2026-11-14)
+## 192. The bridge measure computed from the `decreases` clauses (2026-11-14)
 
 *Files: `bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
 
@@ -7373,3 +7373,22 @@ Open: the run-level transport of the checker's `MassPflicht` (G runs behind `mas
 Body duty. `unterQ_of_lexLt` covers the gate's test at encoded entries; the Body realisation
 quantifies over all Body states and Body environments, so a reverse simulation (Body run of a
 carried body ↦ G run, call by call) is still required.
+
+## 193. Terminal bridge scopes retain option tables and structured dispatch (2026-11-15)
+
+The canonical direct-call scope is `mitRuf`: when the declared result has `resOpt`, it
+uses `mitOpt` to retain the source table number and extent. The Body reader uses
+`mitTy` because its lookups depend on parameter types. The existing `mitRuf_params`,
+`Sicht.bindRuf` and `UmfangB.bindRuf` relate these scopes under the carried callee's
+`resultTypeB` check. Terminal sequences now use that relation, as ordinary blocks
+already did. Neither lowering nor the language model changes to identify the scopes.
+
+| Statement | File | Meaning |
+|---|---|---|
+| `lowEndL_bindOpt_ok` | `bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
+| `lowEndL_struct_ok` | same | Its structural-prefix inversion also covers option, tag and reason dispatch; each exposes the unchanged `lowStructL` result and following end block. |
+| `statischEndSeq_G`, `laufEndSeq_G` | `bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
+| `lowEndL_bindOpt_ok_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
+| `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
+
+No bridge duty, simulation premise, refusal witness or goal-theorem statement is weakened.
