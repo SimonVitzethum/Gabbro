@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Quelle
+public import Grammatik.Parser.Stmt.LibraryFixtureProofs
 public import Bruecke.Anweisung.Option.Speichern
 public import Bruecke.Anweisung.Option.Werte
 import all Init.Data.String.Length
@@ -54,7 +55,7 @@ attribute [local cbv_eval] lowEns.eq_def lowWertE.eq_def
     Both branches return from within a nested block after updating the same option field. -/
 def test : UFn :=
   { name := "storage", params := [("p", .ptr (.table 0 (true, true))), ("o", .opt 2)],
-    kinds := [.ptr (.table 0 (true, true)), .opt 0], resOpt := some (0, 2),
+    kinds := [.ptr (.table 0 (true, true)), .opt 0], res := none, resOpt := some (0, 2),
     held := [], puts := ["T"], gives := [],
     body := [.assignOpt "p" "next" (.lit 0) (.var "o"),
       .assignTabOpt "T" "next" (.lit 1) (.slot "p" "next" (.lit 0)),
@@ -113,6 +114,7 @@ theorem table_names : TabEindeutig unit := by
     have ht : t = ⟨0, by decide⟩ := Fin.ext (by
       have h := t.isLt
       change t.val < 1 at h
+      change t.val = 0
       omega)
     subst t
     cbv
@@ -135,11 +137,11 @@ theorem pointer_sim_zeuge (σ : World (declOf unit)) (base : Gabbro.Body.World)
   | ok ev =>
     refine ⟨ev, (by first | exact h | rfl | simp_all), ?_⟩
     exact lowOpt_sim h (by cbv) table_names σ σ ρ _ (wgrel_enc unit σ base).1
-      (lrel_bindAll test ρ (by cbv) rfl)
+      (lrel_bindAll test ρ (by decide) rfl)
 
 /-- The scope premise of both store simulations is satisfied by the same fixture. -/
 theorem scope : UmfangB (test.params.map (·.2)) test (BodyNames.start test) :=
-  UmfangB.start (u := unit) ⟨0, by decide⟩ (artB_ok (by cbv)) (by cbv)
+  UmfangB.start (u := unit) ⟨0, by decide⟩ (artB_ok (by cbv)) (by decide)
 
 section StoreSimulations
 variable (O : Orakel (declOf unit)) (passes : Nat)
@@ -151,7 +153,7 @@ variable (O : Orakel (declOf unit)) (passes : Nat)
 /-- The pointer writer's reader, lowering and state premises have a common witness. -/
 theorem pointer_store_sim_zeuge :
     ∃ (g : Stmt (declOf unit) (verOf unit ⟨0, by decide⟩) false
-        (test.params.map (·.2)) [] []) σ' cn k fld value,
+        (test.params.map (·.2)) [] []), ∃ σ' cn k fld value,
       lowAssignDurchOL (l := false) unit ⟨0, by decide⟩ (test.params.map (·.2)) test []
         "p" "next" (.lit 0) (.var "o") = .ok g ∧
       execStmt O passes R g σ ρ = .ok σ' ρ ∧
@@ -162,7 +164,7 @@ theorem pointer_store_sim_zeuge :
       (test.params.map (·.2)) test [] "p" "next" (.lit 0) (.var "o") with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsWrite
   | ok g =>
-    have hL := lrel_bindAll test ρ (by cbv) rfl
+    have hL := lrel_bindAll test ρ (by decide) rfl
     obtain ⟨σ', cn, k, fld, value, hex, _, hw, _⟩ :=
       lowAssignDurchO_simB ⟨0, by decide⟩ h (bst := .assign "T" (.lit (.int 0)) "next" (.name "o"))
         (by cbv) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL
@@ -171,7 +173,7 @@ theorem pointer_store_sim_zeuge :
 /-- The direct table writer uses the same scope and a genuine pointer option operand. -/
 theorem table_store_sim_zeuge :
     ∃ (g : Stmt (declOf unit) (verOf unit ⟨0, by decide⟩) false
-        (test.params.map (·.2)) [] []) σ' cn k fld value,
+        (test.params.map (·.2)) [] []), ∃ σ' cn k fld value,
       lowAssignTabOL (l := false) unit ⟨0, by decide⟩ (test.params.map (·.2)) test []
         "T" "next" (.lit 1) (.slot "p" "next" (.lit 0)) = .ok g ∧
       execStmt O passes R g σ ρ = .ok σ' ρ ∧
@@ -183,7 +185,7 @@ theorem table_store_sim_zeuge :
       (test.params.map (·.2)) test [] "T" "next" (.lit 1) (.slot "p" "next" (.lit 0)) with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsWrite
   | ok g =>
-    have hL := lrel_bindAll test ρ (by cbv) rfl
+    have hL := lrel_bindAll test ρ (by decide) rfl
     obtain ⟨σ', cn, k, fld, value, hex, _, hw, _⟩ :=
       lowAssignTabO_simB ⟨0, by decide⟩ h
         (bst := .assign "T" (.lit (.int 1)) "next" (.place "T" (.lit (.int 0)) "next"))
@@ -193,7 +195,7 @@ theorem table_store_sim_zeuge :
 /-- The nested-return simulation also has joint lowering and positional-state premises. -/
 theorem nested_return_sim_zeuge :
     ∃ (g : Stmt (declOf unit) (verOf unit ⟨0, by decide⟩) false
-        (test.params.map (·.2)) [] []) σ' v,
+        (test.params.map (·.2)) [] []), ∃ σ' v,
       lowRetStmt (l := false) unit ⟨0, by decide⟩ (test.params.map (·.2)) test [] []
         (.opt (.slot "p" "next" (.lit 1))) = .ok g ∧
       execStmt O passes R g σ ρ = .zurueck σ' v ∧ WGRel unit σ' (encG unit σ base) := by
@@ -204,8 +206,8 @@ theorem nested_return_sim_zeuge :
       (test.params.map (·.2)) test [] [] (.opt (.slot "p" "next" (.lit 1))) with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsReturn
   | ok g =>
-    have hL := PositionalLRel.start (by cbv : NamenEindeutig test)
-      (lrel_bindAll test ρ (by cbv) rfl)
+    have hL := PositionalLRel.start (by decide : NamenEindeutig test)
+      (lrel_bindAll test ρ (by decide) rfl)
     obtain ⟨σ', v, hex, hw, _⟩ := lowRet_sim ⟨0, by decide⟩ h
       (bst := .ret (some (.place "T" (.lit (.int 1)) "next")))
       (by cbv) (fun _ h => by cases h) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL

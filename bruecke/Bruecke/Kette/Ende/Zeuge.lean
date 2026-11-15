@@ -212,7 +212,8 @@ theorem continuation_refused :
 /-- The terminal path retains the table of a direct option result through another
     call, a local binding, a local update and both kinds of field update. -/
 def optionEnd : UFn :=
-  { OptionStorageZeuge.test with name := "terminal",
+  { OptionStorageZeuge.test with
+    name := "terminal",
     body := [.bindCall "answer" "lookup" [],
       .bindCall "again" "identity" [.oval (.var "answer")],
       .bindOpt "local" 0 (.var "again"), .setVarOpt "local" 0 .nichts,

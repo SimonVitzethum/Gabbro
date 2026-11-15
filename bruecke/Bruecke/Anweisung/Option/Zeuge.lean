@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Quelle
+public import Grammatik.Parser.Stmt.LibraryFixtureProofs
 public import Bruecke.Anweisung.Option.Kopf
 public import Bruecke.Anweisung.Option.Werte
 import all Init.Data.String.Length
@@ -54,7 +55,7 @@ attribute [local cbv_eval] lowEns.eq_def lowWertE.eq_def
     a block-local option. The function returns the resulting optional table index. -/
 def test : UFn :=
   { name := "test", params := [("o", .opt 2)], kinds := [.opt 0],
-    resOpt := some (0, 2), held := [], puts := [], gives := [],
+    res := none, resOpt := some (0, 2), held := [], puts := [], gives := [],
     body := [.bindOpt "x" 0 (.var "o"), .ifBeg (.istSome (.var "x") 0),
       .bindOpt "y" 0 (.etwas (.lit 1)), .setVarOpt "x" 0 (.var "y"),
       .ifElse, .setVarOpt "x" 0 .nichts, .blkEnd], ret := .opt (.var "x") }
@@ -97,6 +98,7 @@ theorem table_names : TabEindeutig unit := by
     have ht : t = ⟨0, by decide⟩ := Fin.ext (by
       have h := t.isLt
       change t.val < 1 at h
+      change t.val = 0
       omega)
     subst t
     cbv
@@ -132,13 +134,15 @@ theorem field_sim_zeuge (σ : World (declOf unit)) (base : Gabbro.Body.World)
       (wgrel_enc unit σ base).1 (by intro p j hp; cases hp)
 
 def lookup : UFn :=
-  { test with name := "lookup", params := [], kinds := [], body := [],
+  { test with
+    name := "lookup", params := [], kinds := [], body := [],
     ret := .opt (.etwas (.lit 1)) }
 
 def identity : UFn := { test with name := "identity", body := [], ret := .opt (.var "o") }
 
 def caller : UFn :=
-  { test with name := "caller", params := [], kinds := [],
+  { test with
+    name := "caller", params := [], kinds := [],
     body := [.bindCall "answer" "lookup" [],
       .bindCall "again" "identity" [.oval (.var "answer")]], ret := .opt (.var "again") }
 
