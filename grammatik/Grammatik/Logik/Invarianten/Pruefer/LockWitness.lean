@@ -137,7 +137,7 @@ theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit true) [()] [()] [.inl (), .inr false, .inr true] = true := by
   have core : AkzeptiertX (program true) family [()] [()] [.inl (), .inr false, .inr true]
       (unit true).ws [] [] [] [] cellSources = true := by
-    unfold AkzeptiertX
+    unfold AkzeptiertX invariantVCB
     rw [program_accepted_zeuge, contracts_accepted_zeuge]
     simp only [Bool.and_true]
     decide +kernel

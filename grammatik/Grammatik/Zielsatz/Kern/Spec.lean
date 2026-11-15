@@ -83,8 +83,10 @@
 
   nutzerPflicht_of_akzeptiert derives the existing NutzerPflichtA E from the concrete checker; gabbro_ziel_ohne_nutzerpflicht is a GabbroZielVoll corollary.
   The C08 headline keeps its software call-site and binding obligations. This strengthens acceptance and does not weaken any guarantee or add a
-  runtime contract check. The current checked fragment refuses old-memory contracts, oversized local domains, atomic-reading bodies and unsupported
-  control/foreign-call forms. In particular this package does not discharge C08's software foreign-call-site duty for an in-image binding.
+  runtime contract check. Symbolic VCs refuse old-memory contracts, oversized local domains and unsupported atomic/control/foreign-call forms.
+  Literal true requires/ensures with no owed invariant also admit a generic totality certificate against every atomic environment: typed writes,
+  oracle continuations, narrowing with checked success and fallback, and loops with a literal true annotation and a universally certified body.
+  No type range or VC budget is relaxed. In particular this package does not discharge C08's software foreign-call-site duty for an in-image binding.
 
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:

@@ -51,7 +51,7 @@ theorem checker_accepted_zeuge :
   have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide +kernel
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws [] [] [] [] unit.lockFormulas = true := by
-    unfold AkzeptiertX
+    unfold AkzeptiertX invariantVCB
     rw [programAccepted, contracts]
     simp only [Bool.and_true]
     decide +kernel

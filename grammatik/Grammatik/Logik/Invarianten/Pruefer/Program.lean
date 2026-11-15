@@ -111,6 +111,18 @@ theorem invariantVCB_eq (program : Programm D) (S : SperrInv D) (functions : Lis
       (programInvariantsB program S functions sources budget locks &&
         Vertraege.Pruefer.KontrakteGeprueftB program S functions sources budget hints) := rfl
 
+/-- The shared Bool succeeds exactly when its two traversals construct the
+    semantic certificate; no semantic proof is submitted to either traversal. -/
+theorem invariantVCB_certificate (program : Programm D) (S : SperrInv D)
+    (functions : List D.Fn) (sources : LockSources S) (budget : VCBudget)
+    (hints : Vertraege.Pruefer.LoopHints D) (locks : List D.Lock) :
+    invariantVCB program S functions sources budget hints locks = true ↔
+      ∃ certificate, checkInvariantVC program S functions sources budget hints locks = .ok certificate := by
+  cases generated : checkProgram program S functions sources budget locks <;>
+    cases contracted : Vertraege.Pruefer.checkContracts program S functions sources budget hints <;>
+    simp [invariantVCB, checkInvariantVC, programInvariantsB,
+      Vertraege.Pruefer.KontrakteGeprueftB, generated, contracted, Except.toOption]
+
 theorem invariantVCB_sound {program : Programm D} {S : SperrInv D}
     {functions : List D.Fn} {sources : LockSources S} {budget : VCBudget} {hints : Vertraege.Pruefer.LoopHints D} {locks : List D.Lock}
     (complete : ∀ f, f ∈ functions)
