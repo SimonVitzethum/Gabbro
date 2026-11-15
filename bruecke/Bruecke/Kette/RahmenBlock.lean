@@ -29,6 +29,8 @@ theorem statisch_control (ρB : Gabbro.Body.Env) (puts : List String) (leave : B
   cases leave <;> simp only [controlStmtB, Gabbro.Body.step, Gabbro.Body.finalState,
     Option.some.injEq] at he <;> cases he <;> rfl
 
+#check @reasonArms_statisch_with
+
 theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : Gabbro.Body.Env) :
     ∀ (n : Nat) {loopMode : Bool} (k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
       (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ')
