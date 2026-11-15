@@ -52,7 +52,7 @@ theorem lowEndL_narrow_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declO
             | cons marker remaining =>
               cases marker <;> try { cases h }
               case blkEnd =>
-                cases hq : lowEndL (l := false) u c _ (fn.mitBindung x (lo, hi)) n Λ [] remaining with
+                cases hq : lowEndL (l := false) u c (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ [] remaining with
                 | error e => simp only [hq, Except.bind] at h; cases h
                 | ok pair =>
                   obtain ⟨q, tail'⟩ := pair
