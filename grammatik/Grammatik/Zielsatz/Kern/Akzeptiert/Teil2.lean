@@ -154,7 +154,8 @@ theorem globsOf_voll {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.G
 theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
-    (h : Akzeptiert P S fs ls cs ws aks checks = true) :
+    {sources : Invarianten.Pruefer.LockSources S}
+    (h : Akzeptiert P S fs ls cs ws aks checks (sources := sources) = true) :
     AkzeptiertSpec P S fs ws aks := by
   dsimp only [Akzeptiert] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
@@ -171,7 +172,8 @@ theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
     outside `Spec` (which has no scope field). -/
 theorem scopesOkProg_of_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
-    (h : Akzeptiert P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
+    {sources : Invarianten.Pruefer.LockSources S}
+    (h : Akzeptiert P S fs ls cs ws aks checks (sources := sources) = true) : ScopesOkProg P := by
   dsimp only [Akzeptiert] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
   obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hScopes, _⟩ := h
@@ -198,8 +200,9 @@ theorem spec_akzeptiert [RootNativeFloat.Hardware]
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
     {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks)
-    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true) :
-    Akzeptiert P S fs ls cs ws aks checks qs = true := by
+    {sources : Invarianten.Pruefer.LockSources S}
+    (hI : Invarianten.Pruefer.programInvariantsB P S fs sources {} ls = true) :
+    Akzeptiert P S fs ls cs ws aks checks qs (sources := sources) = true := by
   unfold Akzeptiert
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc]
   exact ⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg, (fussWB_iff hvoll).mpr h.fuss,
@@ -236,7 +239,7 @@ theorem akzeptiert_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq 
     (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
     akzeptiert_pruefer.akzeptiert E fs ls cs = Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen := by
   exact congrArg (fun inst : DecidableEq D.Ax =>
-    @Akzeptiert D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [])
+    @Akzeptiert D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] (fun _ => none))
     (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
 
 end Pruefer

@@ -126,7 +126,7 @@ theorem fussWAB_of_fussWB (h : fussWB P S fs ws = true) : fussWAB P S fs ws = tr
 /-- **EMBEDDING: every program the goal's checker accepts, `AkzeptiertA` accepts.** -/
 theorem akzeptiertA_of_akzeptiert {axEq : DecidableEq D.Ax}
     {aks : List (Kernzelle.AccumulatorDecl D)}
-    (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] = true) :
+    (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] (fun _ => none) = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true] at h
