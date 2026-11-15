@@ -51,13 +51,15 @@ theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
   | error e => simp only [hv, Except.bind] at h; cases h
   | ok ev =>
     simp only [hv, Except.bind] at h
-    cases hq : lowEndL (l := false) u c _ (fn.mitBindung x (lo, hi)) n Λ [] ss with
-    | error e => simp only [hq, Except.bind] at h; cases h
-    | ok p =>
-      obtain ⟨q, tail'⟩ := p
-      simp only [hq, Except.bind] at h
+    split at h
+    · rename_i e he
+      simp only [he, Except.bind] at h
       cases h
-      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
+    · rename_i v hv
+      obtain ⟨q, tail'⟩ := v
+      simp only [hv, Except.bind, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), (by first | exact hv | rfl | simp_all), rfl⟩
 
 theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {v : UEns} {ss tail : List UStmt}
@@ -74,13 +76,15 @@ theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
   | error e => simp only [hv, Except.bind] at h; cases h
   | ok ev =>
     simp only [hv, Except.bind] at h
-    cases hq : lowEndL (l := false) u c _ (fn.mitBindungB x) n Λ [] ss with
-    | error e => simp only [hq, Except.bind] at h; cases h
-    | ok p =>
-      obtain ⟨q, tail'⟩ := p
-      simp only [hq, Except.bind] at h
+    split at h
+    · rename_i e he
+      simp only [he, Except.bind] at h
       cases h
-      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
+    · rename_i v hv
+      obtain ⟨q, tail'⟩ := v
+      simp only [hv, Except.bind, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), (by first | exact hv | rfl | simp_all), rfl⟩
 
 theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x g : String} {args : List UArg} {ss tail : List UStmt}
