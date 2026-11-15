@@ -117,15 +117,6 @@ set_option maxHeartbeats 2000000 in
 theorem fremdFallible_akzeptiert :
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
-  have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
-    maskenB_ohne (P := checkPFremdFallible) (by
-      delta checkPFremdFallible
-      exact lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
-  foreign_exact foreign_acceptance_of_components checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
-    (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible
-    fragment_checked bounds_checked footprints_checked levels_checked pool_checked races_checked
-    answers_checked masks
-    ((schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _))
-    fremdFallible_checkB scopes_checked invariants_checked contracts_checked
+  fail "inspect the preceding component certificates before composition"
 
 end Gabbro.Grammatik.Parser.Uebersetze
