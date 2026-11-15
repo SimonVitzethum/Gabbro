@@ -1,11 +1,37 @@
 module
 public import Bruecke.Kette.RecordZeuge
+import all Init.Data.String.Decode
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 import all Init.Data.String.Basic
 import all Init.Data.String.Defs
 import all Init.Data.String.Extra
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Length
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Ende
 @[expose] public section
@@ -96,9 +122,10 @@ theorem exec_error (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) :
 theorem exec_success (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) (n : Int)
     (h : Gabbro.Body.eval s (.name "k") = some (.int n)) (hb : 0 ≤ n ∧ n ≤ 3) :
     Gabbro.Body.exec ρB body s = .returned (successState s n) (some (.record [.int 3, .bool false])) := by
+  have hk : s.local' "k" = .int n := Option.some.inj h
   have ht := narrowTest_eval (lo := 0) (hi := 3) h
   have hf : (BodyNames.start clip).fresh "k" = "k##" := by cbv
-  simp [body, narrowStep, ht, hb, hf, h, successState, Gabbro.Body.exec, Gabbro.Body.step,
+  simp [body, narrowStep, ht, hb, hf, h, hk, successState, Gabbro.Body.exec, Gabbro.Body.step,
     Gabbro.Body.eval, Gabbro.Body.eval_recOf, Gabbro.Body.evalAll, Gabbro.Body.bindLocal_here]
 
 theorem exec_failure (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) (n : Int)
@@ -110,7 +137,7 @@ theorem exec_failure (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) (n : Int)
 
 theorem meets : meetsU unit (wfU unit) clip body := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "k").hasShape (.intIn 0 9))) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "k").hasShape (.intIn 0 9))) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨n, hn, _, _⟩ := Gabbro.Body.Value.hasShape_intIn_true (s.local' "k") 0 9 hshape
@@ -158,7 +185,7 @@ theorem inferred_nested_record_zeuge :
         | .bindW x _ v => .bindW x none v | other => other }
     let u := { RecordZeuge.nestedUnit with fns := [f] }
     (zuBodyZ u f).isSome = true ∧
-      (lowBodyF u ⟨0, by simp⟩ [RecordZeuge.schema.ty] f 20 [] f.body f.ret).toBool = true := by
+      (lowBodyF u ⟨0, by change 0 < 1; decide⟩ [RecordZeuge.schema.ty] f 20 [] f.body f.ret).toBool = true := by
   cbv
 
 /-- Missing ending statements and non-record inference remain explicit refusals. -/
