@@ -75,7 +75,12 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     every source form or of the extra descriptor gates.
     Re-pinned 2026-11-11: `Ty.decEq` (and the two front-end equalities beside it) recurse structurally
     instead of by a size measure, which changes the closures of `8 answers`, `komp` and `AkzeptiertX`
-    without changing what they decide; no component formula was touched. -/
+    without changing what they decide; no component formula was touched.
+    Re-pinned 2026-11-15: `AkzeptiertX` retains both invariant and contract VC gates,
+    including explicit lock sources and loop hints. The ten numbered component closures
+    and `komp` still match their pins, and their atoms and the appended reset cell still
+    follow their definitions. No cell kind, arity or verdict changed; the new VC gates
+    remain outside the numbered cell table rather than being claimed as covered cells. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -88,7 +93,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 3625294885073887937)]
+   ("AkzeptiertX", 4031485966108131684)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
