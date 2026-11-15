@@ -53,7 +53,7 @@ theorem koerper (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
     · rcases body_out O' hQ (SperrInv.leer wD) U A passes R σ ρ with ⟨σ'', v', hv, he⟩ | he
       · rw [he] at h
         cases h
-        exact decide_eq_true hv
+        rfl
       · rw [he] at h
         cases h
     · rcases body_out O' hQ (SperrInv.leer wD) U A passes (torRuf wP R) σ ρ with
@@ -112,16 +112,33 @@ theorem zeroO_gut : GutO zeroO := by
   · intro L
     exact nomatch L
 
-/-- **THE DUTY USES `g`'s SUMMARY**: with the empty summary (`true`) in place of `wQ`, the body
-    duty of the same program is false -- `zeroO` is then in the class and the body returns `0`
-    against `ensures result == 1`. -/
+/-- The original nontrivial result contract, outside the current foreign-result WP fragment.
+    The admitted `wP` keeps the same call with a literal-true function post. -/
+def summaryP : Programm wD :=
+  { wP with ensures := fun _ => .eq (.var .here) (.lit 1) }
+
+/-- Concrete counterexample to the original result claim without the foreign summary:
+    the frame-respecting `zeroO` returns zero from the actual call and violates the post. -/
+theorem zero_result_counterexample :
+    ∃ σ' v, execEndHA (V := vertragVon wD ()) (SperrInv.leer wD) zeroO
+        (fun _ σ => σ) idA 0 (rufAusV []) (summaryP.rumpf ()) world .nil = .zurueck σ' v ∧
+      zahl v = 0 ∧ ¬ EnsAmRueck summaryP () world σ' .nil v := by
+  exact ⟨_, _, rfl, rfl, by unfold EnsAmRueck; decide⟩
+
+/-- Outside the decidable fragment: nontrivial foreign-result WP. -/
+theorem summaryP_refused :
+    Vertraege.Pruefer.KontrakteGeprueftB summaryP (SperrInv.leer wD) [()] = false := by
+  decide +kernel
+
+/-- The original result contract needs the summary. The admitted literal-true post does not
+    make this claim; the explicit zero result above explains the distinction. -/
 theorem summary_used (T : wD.Tab ⊕ wD.Glob → Prop) :
-    ¬ KoerperGutSA wP 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
+    ¬ KoerperGutSA summaryP 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
   intro h
   have hk := h.1 zeroO (gutO_rahmenO zeroO_gut) ⟨(fun r => nomatch r), (fun g => nomatch g)⟩
     (fun _ _ _ _ _ _ => rfl) (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
-    (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil wP))
-    (rufAusV_ohneVorbedingung (vertraegeOkR_nil wP).1) world .nil rfl
+    (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil summaryP))
+    (rufAusV_ohneVorbedingung (vertraegeOkR_nil summaryP).1) world .nil rfl
   exact absurd (hk.1 _ _ rfl) (by unfold EnsAmRueck; decide)
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal

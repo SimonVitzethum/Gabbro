@@ -48,6 +48,7 @@ open NIZeuge
 open Zielsatz
 
 local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 
 /-- **The pool witness over W.** On the runtime's start of the pool unit `zPool` (accepted by
     the concrete checker), machine W runs thread 0, thread 1, thread 0 (both instances unfold,

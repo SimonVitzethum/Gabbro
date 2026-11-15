@@ -344,8 +344,10 @@ theorem g1PR_lauf (answers : G1FloatAnswers) (S : SperrInv g1D) (σ : World g1D)
 theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     (hQ : ∃ (v : Wert g1D g1Erg) (σ₀ : World g1D), E.Q g1Holen σ₀ v = true) :
     ¬ NutzerPflicht E := by
-  obtain ⟨P, S, Q, st, s, _, _, _⟩ := E
-  obtain rfl : P = g1PA := hP
+  let S := E.S
+  let Q := E.Q
+  let s := E.sp0
+  have hP' : E.P = g1PA := hP
   intro h
   obtain ⟨v, σ₀, hq⟩ := hQ
   have hAV : AxVertragO Q (g1O (summeRoh g1Fall v) 0) := by
@@ -357,7 +359,9 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     obtain rfl : u = v := Option.some.inj e
     exact (h.logik.2.2.1 g1Holen σ σ₀ u (fun t _ => (t : Empty).elim)
       (fun g _ => (g : Empty).elim)).trans hq
-  have hK := (h.logik.1 0 g1Haupt).1.1 (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
+  have hbody := (h.logik.1 0 g1Haupt).1.1
+  rw [hP'] at hbody
+  have hK := hbody (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
     (g1O_lokal _ _) (axVertragOP_of_O _ hAV) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PA) g1Ruf_ohne
     (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PA_lauf v S (s.welt [])
@@ -366,9 +370,13 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
 /-- **Probe G1-R is refuted**: no program with its code meets (b) -- whatever its lock
     family, declared axiom ensures, starts and initial memory. -/
 theorem g1PR_widerlegt (answers : G1FloatAnswers) : NutzerWiderlegt g1PR := by
-  rintro ⟨P, S, Q, st, s, _, _, _, _, _⟩ hP h
-  obtain rfl : P = g1PR := hP
-  have hK := (h.logik.1 0 g1Haupt).1.1 (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
+  intro E hP h
+  let S := E.S
+  let Q := E.Q
+  let s := E.sp0
+  have hbody := (h.logik.1 0 g1Haupt).1.1
+  rw [hP] at hbody
+  have hK := hbody (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
     (axVertragOP_of_O _ (g1O_schief_vertrag Q _)) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PR)
     g1Ruf_ohne (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PR_lauf answers S (s.welt [])

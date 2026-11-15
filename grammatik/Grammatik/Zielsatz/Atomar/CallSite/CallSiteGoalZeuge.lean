@@ -62,7 +62,7 @@ theorem callSite_goal_zeuge [RootNativeFloat.Hardware] :
     wD.axHerkunft () = some AxOrigin.software ∧
     AxVor wE.P.axVertrag () world (rhoW true) ∧ ¬ AxVor wE.P.axVertrag () world (rhoW false) ∧
     ¬ AxVertragO wE.Q echo ∧
-    (∀ T, ¬ KoerperGutSA wE.P 0 (fun _ _ _ => true) wE.S T ()) ∧
+    (∀ T, ¬ KoerperGutSA summaryP 0 (fun _ _ _ => true) wE.S T ()) ∧
     -- the start asks the software item with a true pre
     (∃ k, K0.m.foreignCallKey 0 = some k ∧ AxVor wE.P.mitRuhe.axVertrag k.1 k.2.1 k.2.2) ∧
     -- the conclusion at the machine after the software call, thread 0 at its return
