@@ -1,41 +1,14 @@
 /-
-  File:      Grammatik/Pflicht104.lean
-  Subject:   THE USER'S HALF for `beispiele/0104-referenz.gab`, proved once,
-             over the EXPORTED UNIT.
+  The exported 104 program's functional and start duties are proved here.
+  Its original old-memory postcondition remains a real, nontrivial obligation:
+  the actual deposit moves a slot from 0 to 100, while lowering it would break
+  the postcondition. All of these program-logic proofs are retained.
 
-  `GenOblig104.lean` is what `gabbro obligations --g` states over the
-  program: the unit `gE : Zielsatz.Einheit gD` (bodies, contracts, the lock
-  invariant family `gS`, the axiom `ensures`, the declared starts, the
-  declared initial memory `gSp0`), the stated duty `nutzerPflicht :=
-  Zielsatz.NutzerPflicht gE`, the decided member lists and checker premise,
-  and the closing theorem `gP_gabbro` -- the goal theorem `gabbro_ziel`
-  applied to this program, with the user's duty as its one open hypothesis.
-
-  This file is the person's half: `oblig_nutzer : Zielsatz.NutzerPflicht gE`,
-  COMPLETE -- every conjunct of `LogikPflicht` at EVERY budget and both
-  conjuncts of `StartPflicht`, with nothing assumed. `oblig_ziel` then closes
-  the chain "tool states -> user proves -> `Ziel` holds" on a concrete run,
-  with the native CPU hardware contract supplied explicitly, the remaining
-  `HardwareAnnahmen` clauses discharged here for the empty oracle, and A4
-  (`Zielsatz.Laufzeit`, discharged here by `laufzeit_initRuhe`) beside it.
-
-  MIGRATED 2026-09-15 (from the pre-`Einheit` obligation form). Until then
-  this file opened `pflicht`/`pflichtInv`/`startPflicht`/`gP_ziel`, which the
-  exporter no longer writes; §1 and §2 port unchanged (the exported bodies,
-  contracts and `gS` did not move), §3 is new -- the old `oblig_chain` kept
-  `StartExklusiv` as a hypothesis and reached a hand-assembled conclusion,
-  where `gP_gabbro` needs no start-configuration hypothesis at all: the goal
-  theorem derives exclusivity from the DECLARED starts (here: none, 104
-  declares no `concurrent` and no `entry`).
-
-  What is NOT claimed: `gE.starts = []` -- 104 declares no thread start --
-  so `Zielsatz.Laufzeit gE sp init` admits only assignments in which every
-  thread runs the runtime's idle root. The theorem below is therefore TRUE
-  AND ITS MACHINE IS IDLE. That is what the SOURCE declares, not a weakness
-  of the duty: the concurrent instance of the same chain is `Pflicht108.lean`
-  (`beispiele/0108-disjoint-start-locks.gab`, two declared starts). That the
-  program itself is not trivial is witnessed here by `oblig_ruf_bewegt`
-  (a call of `einzahlen` moves the slot `0 -> 100`).
+  The strict checker currently refuses this correct program: outside the
+  decidable fragment: old-memory postconditions (`oldS`). The proved user
+  duty does not replace that gate. `oblig_korrekt_abgelehnt` records both
+  the semantic duty and the actual refusal; no checked goal corollary is
+  claimed for this unchanged export.
 -/
 module
 public import Grammatik.Korpus.Programme.GenOblig104
@@ -87,7 +60,7 @@ namespace Gabbro.Grammatik
 
 open G104_referenz_oblig (GTab GLock GKontoFeld GFn g_einzahlen g_lies gCtx_einzahlen gCtx_lies
   gL_einzahlen gL_lies gDarf_einzahlen_Konto gDarf_lies_Konto gHp_einzahlen_lies gBody_einzahlen
-  gBody_lies gSig_einzahlen gSig_lies gD gP gFs gLs gCs gS gSp0 gE gP_gabbro)
+  gBody_lies gSig_einzahlen gSig_lies gD gP gFs gLs gCs gS gSp0 gE)
 
 /-! ## 1. The `KoerperGutZ` proofs -/
 
@@ -285,7 +258,7 @@ theorem oblig_nutzerA : Zielsatz.NutzerPflichtA G104_referenz_oblig.gE :=
     tool's word and the user's proof, held against each other. -/
 theorem oblig_nutzer_ist_stated : G104_referenz_oblig.nutzerPflicht := oblig_nutzerA
 
-/-! ## 4. The chain, closed -/
+/-! ## 4. Runtime data and the strict checker refusal -/
 
 /-- The oracle of `gD`: no axiom, register or global exists. -/
 def oO : Orakel G104_referenz_oblig.gD where
@@ -308,24 +281,13 @@ theorem oblig_laufzeit :
       (initRuhe G104_referenz_oblig.gE.starts) :=
   laufzeit_initRuhe G104_referenz_oblig.gE
 
-/-- **THE CHAIN, CLOSED ON 104**: what the exporter states, the user proved
-    above, and so the goal holds at every reachable machine of the run the
-    runtime starts under the supplied native CPU contract. `gP_gabbro` is the exporter's
-    own theorem; `oblig_nutzer`, `oblig_hw` and `oblig_laufzeit` are its
-    three premises, with their other clauses discharged here. -/
-theorem oblig_ziel [RootNativeFloat.Hardware] (passes : Nat) (M : RufMaschineG G104_referenz_oblig.gD.mitRuhe)
-    (hr : RufErreichbarGX G104_referenz_oblig.gE.P.mitRuhe oO.mitRuhe passes
-      (Zielsatz.GeteiltV (D := G104_referenz_oblig.gD) G104_referenz_oblig.gE.P
-        G104_referenz_oblig.gE.ws)
-      (RufStartG G104_referenz_oblig.gE.P.mitRuhe (speicherR G104_referenz_oblig.gE.sp0)
-        (initRuhe G104_referenz_oblig.gE.starts)) M) :
-    Zielsatz.ZielX G104_referenz_oblig.gE.P.mitRuhe G104_referenz_oblig.gE.S.mitRuhe
-      oO.mitRuhe passes
-      (Zielsatz.GeteiltV (D := G104_referenz_oblig.gD) G104_referenz_oblig.gE.P
-        G104_referenz_oblig.gE.ws)
-      (RufStartG G104_referenz_oblig.gE.P.mitRuhe (speicherR G104_referenz_oblig.gE.sp0)
-        (initRuhe G104_referenz_oblig.gE.starts)) M :=
-  gP_gabbro oblig_nutzerA oO oblig_hw passes _ _ oblig_laufzeit M hr
+/-- Capability gap: outside the decidable fragment: old-memory postconditions.
+    The program's actual semantic duty is proved, while the checker refuses it. -/
+theorem oblig_korrekt_abgelehnt :
+    Zielsatz.NutzerPflichtA G104_referenz_oblig.gE ∧
+    Zielsatz.akzeptiertX_pruefer.akzeptiert G104_referenz_oblig.gE
+      G104_referenz_oblig.gFs G104_referenz_oblig.gLs G104_referenz_oblig.gCs = false :=
+  ⟨oblig_nutzerA, G104_referenz_oblig.gCheck⟩
 
 /-! ## 5. Witnesses (rule 13) -/
 
@@ -336,7 +298,7 @@ def rho7 : Env G104_referenz_oblig.gD (G104_referenz_oblig.gD.params g_einzahlen
 /-- **THE EXPORTED PROGRAM IS NOT TRIVIAL**: `einzahlen(k, 0, 7)` from the
     DECLARED initial memory ends `ok` and moves the slot `0 -> 100`. Without
     this the duties above would be duties over a program that does nothing.
-    (The machine of `oblig_ziel` is idle only because 104 declares no start;
+    (The declared runtime is idle because 104 declares no start;
     the program it would run is this one.) -/
 theorem oblig_ruf_bewegt :
     ∃ σ' : World G104_referenz_oblig.gD,
@@ -364,7 +326,7 @@ theorem oblig_ens_faellt :
 
 #print axioms Gabbro.Grammatik.oblig_logik
 #print axioms Gabbro.Grammatik.oblig_nutzer
-#print axioms Gabbro.Grammatik.oblig_ziel
+#print axioms Gabbro.Grammatik.oblig_korrekt_abgelehnt
 #print axioms Gabbro.Grammatik.oblig_ruf_bewegt
 #print axioms Gabbro.Grammatik.oblig_ens_faellt
 
