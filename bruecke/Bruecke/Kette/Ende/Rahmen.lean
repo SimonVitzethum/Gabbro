@@ -117,8 +117,8 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (Ï
       subst bt
       have hmit : mitRuf u fn x head.callee ty = fn.mitTy x ty := by
         cases ty with
-        | int lo hi => exact mitRuf_int _ _ _ _ _
-        | bool => exact mitRuf_bool _ _ _
+        | int lo hi => exact mitRuf_int _ _ _ _ _ _
+        | bool => exact mitRuf_bool _ _ _ _
         | prod id fs => rfl
         | opt n =>
           cases ho : (fnAt u head.callee).resOpt with
