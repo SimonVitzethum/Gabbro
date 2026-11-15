@@ -3,6 +3,7 @@
   coverage. Cell-only checker equivalence is not asserted.
 -/
 module
+public import Grammatik.Gen.Zeugen.Schluss
 public import Grammatik.Gen.Text.Zeugen.M103_131
 public import Grammatik.Gen.Text.Zeugen.M103_803
 public import Grammatik.Gen.Text.Zeugen.M16_13

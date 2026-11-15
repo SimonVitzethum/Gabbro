@@ -1,11 +1,7 @@
 /- Checked coverage fixture; requested cells remain explicit even when absent. -/
 module
 
-public meta import Grammatik.Gen.Abdeckung.Satz.Raum
-public meta import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
-public meta import Grammatik.Gen.Druck.LeanZeuge
 
-import Grammatik.Gen.Druck.LeanZeuge
 
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Erzeuger.Entscheidung
@@ -38,13 +34,13 @@ abbrev z : Spez := ({
 
 /-- The ordinary read supplies the guarded footprint; the register is still read. -/
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.slot (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Tab) (⟨0, by decide⟩ : z.deklaration.Feld ⟨0, by decide⟩) (.lit 0) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl))
-    (.regRead (D := z.deklaration) ⟨0, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (.ret .empty (List.Perm.refl _)))
+  .bind (.slot (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Tab) (⟨0, by decide⟩ : z.deklaration.Feld ⟨0, by decide⟩) (.lit 0) (by decide))
+    (.regRead (D := z.deklaration) ⟨0, by decide⟩ (by decide) (.ret .empty (List.Perm.refl _)))
 
 /-- A repeated root can write the first guarded carrier; the third stays separate. -/
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
-  .cons (.locks (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Lock) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
-    (.cons (.call (D := z.deklaration) ⟨0, by decide⟩ .nil (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) .nil))
+  .cons (.locks (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Lock) (by decide)
+    (.cons (.call (D := z.deklaration) ⟨0, by decide⟩ .nil (by decide) (by decide)) .nil))
     (.ret .empty (List.Perm.refl _))
 
 def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
@@ -54,7 +50,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨1, by decide⟩, ⟨1, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
+def e : Einsatz := z.einsatz P [⟨1, by decide⟩, ⟨1, by decide⟩] (by decide) (by decide)
 
 def requested : List Zelle := [
   ⟨2, 0, true, [true, false, true, false]⟩,
@@ -79,7 +75,7 @@ theorem requested_present : ∀ x ∈ requested, e.Hat x := by decide
 
 theorem requested_refusal_zeuge : ⟨2, 0, true, [true, false, true, false]⟩ ∈ requested ∧
     e.Hat ⟨2, 0, true, [true, false, true, false]⟩ ∧ e.gueltig = false :=
-  ⟨by decide, requested_present _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl), e_refused⟩
+  ⟨by decide, requested_present _ (by decide), e_refused⟩
 
 /-- Input-side evidence, independent of the diagnostic evaluator. -/
 def RegInput : Prop :=
@@ -99,9 +95,52 @@ theorem e_cause_link_zeuge : RegInput ∧ cause = some (.unsupported
     "contract end block is outside the checked control fragment") ∧ e.gueltig = false :=
   ⟨e_input, e_cause_link e_input, e_refused⟩
 
--- Diagnostic output only; the final cell assertions are kernel checked.
-#eval e.gueltig
-#eval (requested.filter (fun x => !e.zellen.contains x)).map (·.lean)
-#eval e.zellen.eraseDups.map (·.lean)
+/-- Exact cell set, including every companion cell of this fixture. -/
+def zellen : List Zelle := [
+  ⟨0, 0, true, [true, false, false]⟩,
+  ⟨1, 0, true, [true, false, true]⟩,
+  ⟨1, 0, true, [true, false, false]⟩,
+  ⟨1, 0, true, [false, true, true]⟩,
+  ⟨1, 0, true, [false, false, false]⟩,
+  ⟨1, 0, true, [true, true, true]⟩,
+  ⟨2, 0, true, [true, false, true, false]⟩,
+  ⟨2, 2, false, [false, true, true]⟩,
+  ⟨2, 3, false, [false, false, true]⟩,
+  ⟨2, 1, true, [true, false]⟩,
+  ⟨2, 1, true, [false, true]⟩,
+  ⟨2, 2, false, [false, true, false]⟩,
+  ⟨2, 1, true, [true, true]⟩,
+  ⟨3, 0, true, [false, false]⟩,
+  ⟨3, 0, true, [true, true]⟩,
+  ⟨4, 0, true, [true, true]⟩,
+  ⟨4, 0, true, [false, false]⟩,
+  ⟨5, 0, true, [false, false]⟩,
+  ⟨6, 0, true, [true, false, false]⟩,
+  ⟨6, 1, true, [true, true, false, true]⟩,
+  ⟨6, 1, true, [true, true, false, false]⟩,
+  ⟨6, 1, true, [true, true, true, true]⟩,
+  ⟨7, 0, true, [true, true]⟩,
+  ⟨7, 1, false, [true, true, true]⟩,
+  ⟨7, 0, true, [false, true]⟩,
+  ⟨7, 1, false, [true, false, true]⟩,
+  ⟨8, 0, true, [true, false, true]⟩,
+  ⟨8, 0, true, [false, false, true]⟩,
+  ⟨9, 0, true, [false, true, false, false]⟩,
+  ⟨9, 0, true, [false, false, true, false]⟩,
+  ⟨9, 0, true, [false, true, true, false]⟩,
+  ⟨10, 0, true, [true]⟩]
+
+theorem zellen_exact : e.zellen.eraseDups = zellen := by decide
+
+theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
+  intro x member
+  rw [← zellen_exact] at member
+  exact List.mem_eraseDups.1 member
+
+theorem e_zeuge : e.gueltig = false ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
+  ⟨e_refused, e_hat _ (by decide)⟩
+
+/-- Missing requested cells are findings, never an altered checker verdict. -/
+def missing : List Zelle := requested.filter (fun x => !zellen.contains x)
 
 end Gabbro.Grammatik.Gen.Zeugen.Gap.F03_reg

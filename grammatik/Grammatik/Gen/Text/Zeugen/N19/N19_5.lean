@@ -44,7 +44,7 @@ namespace Gabbro.Grammatik.Gen.Text.Zeugen.N19_5
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.N19_5
 
-theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
+theorem check : textCheck z P ws e.zellen e.gueltig = true := by cbv
 
 /-- **The text of the witness reads back as the witness**, up to cells and verdict. -/
 theorem text : ∃ e', ausText (textVon z P ws) = .ok e' ∧ e'.zellen = e.zellen ∧ e'.gueltig = e.gueltig :=
