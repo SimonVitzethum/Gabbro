@@ -1,6 +1,7 @@
 /- Optional foreign binders through complete images and canonical source semantics. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.OptionalBinderWitness
@@ -128,6 +129,8 @@ def observed (valued fallible nested : Bool) (raw : Runner.W) : Int :=
   | .zurueck _ v => v.n
   | _ => -1
 
+attribute [local irreducible] image
+
 /-- Nonempty complete images exercise both generic binder cases and contexts. -/
 theorem accepted_images :
     (image false false false).toOption.isSome = true ∧
@@ -135,7 +138,7 @@ theorem accepted_images :
     (image false true false).toOption.isSome = true ∧
     (image false true true).toOption.isSome = true ∧
     (image true true false).toOption.isSome = true ∧
-    (image true true true).toOption.isSome = true := by decide_cbv
+    (image true true true).toOption.isSome = true := by decide +kernel
 
 /-- Void keeps local 23, values bind 7, and both handlers consume reason 0. -/
 theorem success_and_reason_paths :
@@ -164,7 +167,7 @@ theorem oracle_effect_is_retained :
     observedTrace false false true 7 = [.fremd (.inl (gate false false))] ∧
     observedTrace false true false 7 = [.fremd (.inl (gate false true))] ∧
     observedTrace false true true (BitVec.ofInt 64 (-9)) = [.fremd (.inl (gate false true))] := by
-  decide_cbv
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> kernel_rfl
 
 /-- Value decoding still rejects an answer outside its declared range. -/
 theorem invalid_value_answer :
