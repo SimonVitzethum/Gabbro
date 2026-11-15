@@ -7,13 +7,6 @@ public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 public import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
-public meta import Grammatik.Logik.Invarianten.Pruefer.Program
-public meta import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
-public meta import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
-public meta import Grammatik.Logik.Invarianten.VC.Calls
-public meta import Grammatik.Kern.Semantik.Semantik.T1.Teil1
-public meta import Grammatik.Logik.Vertraege.Pruefer.Duties
-public meta import Grammatik.Logik.Invarianten.VC.Compiler
 @[expose] public section
 
 namespace Gabbro.Grammatik.W93Diag
@@ -149,14 +142,14 @@ def akS : SperrInv akD := SperrInv.leer akD
 def diagSources : LockSources akS := fun _ => none
 
 -- stepwise compiled evaluations
-#eval ((invariantFormula akP1 ([] : List akD.Inv)).toOption.isSome)
-#eval ((translate (akP1.requires akA) (Env.nil : Env akD [])).toOption.isSome)
-#eval ((postFormula akP1 akA Env.nil ()).toOption.isSome)
-#eval ((checkFunction akP1 akS diagSources {} none akA).toOption.isSome)
-#eval ((checkFunction akP1 akS diagSources {} none akB).toOption.isSome)
-#eval ((checkFunction akP1 akS diagSources {} none akC).toOption.isSome)
-#eval ((checkFunction akP1 akS diagSources {} none akRuhe).toOption.isSome)
-#eval (invariantVCB akP1 akS akFs diagSources)
+-- #eval ((invariantFormula akP1 ([] : List akD.Inv)).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((translate (akP1.requires akA) (Env.nil : Env akD [])).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((postFormula akP1 akA Env.nil ()).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((checkFunction akP1 akS diagSources {} none akA).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((checkFunction akP1 akS diagSources {} none akB).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((checkFunction akP1 akS diagSources {} none akC).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval ((checkFunction akP1 akS diagSources {} none akRuhe).toOption.isSome)  (moved to compiled-only probe; see report)
+-- #eval (invariantVCB akP1 akS akFs diagSources)  (moved to compiled-only probe; see report)
 
 /-- Lock sources for `zS` (mirrors the PoolZeuge fixture edit): constantly-true
     invariant reified by closed `.tru`. -/
@@ -170,22 +163,36 @@ def diagZpb : String :=
   | .ok _ => "ok"
   | .error e => e.message
 
-#eval diagZpb
-#eval (invariantVCB zPB zS zFs zDiagSources)
+-- #eval diagZpb  (moved to compiled-only probe; see report)
+-- #eval (invariantVCB zPB zS zFs zDiagSources)  (moved to compiled-only probe; see report)
 
 def diagNp : String :=
   match checkInvariantVC nP (SperrInv.leer nD) nFs (fun _ => none) with
   | .ok _ => "ok"
   | .error e => e.message
 
-#eval diagNp
-#eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))
+-- #eval diagNp  (moved to compiled-only probe; see report)
+-- #eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))  (moved to compiled-only probe; see report)
 
--- VC-kernel replicas of the PoolZeuge/Atomar edits (the new gate conjunct;
--- old components passed pre-gate and are untouched by the gate change).
--- Kernel attempt disabled after slot timeout (see report); compiled #evals above decide it.
--- example : invariantVCB zPB zS zFs zDiagSources = true := by
---   decide +kernel
+-- Kernel feasibility probes (each in its own example so a slow one shows as
+-- the single remaining error; positive control first).
+example : invariantVCB akP1 akS akFs diagSources = true := by
+  decide +kernel
+
+example : (checkFunction zPB zS zDiagSources {} none zEin).toOption.isSome = true := by
+  decide +kernel
+
+example : (checkFunction zPB zS zDiagSources {} none zLies).toOption.isSome = true := by
+  decide +kernel
+
+example : (checkFunction zPB zS zDiagSources {} none zWrap).toOption.isSome = true := by
+  decide +kernel
+
+example : (checkFunction zPB zS zDiagSources {} none zHaupt).toOption.isSome = true := by
+  decide +kernel
+
+example : invariantVCB zPB zS zFs zDiagSources = true := by
+  decide +kernel
 
 /-- Local replica of `SchwachZeuge.nS` (empty orte, vacuous inv; `S` is
     computationally irrelevant for `nP` since no body uses a lock). -/
@@ -193,8 +200,8 @@ def nSprobe : SperrInv nD := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
 
 def n1wsProbe : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
--- example : invariantVCB nP nSprobe nFs (fun _ => none) = true := by
---   decide +kernel
+example : invariantVCB nP nSprobe nFs (fun _ => none) = true := by
+  decide +kernel
 
 /-- `hP` replica (copied bodies/contract; atomic `konfig` read with genuinely
     violated `tabB[0] == 1` ensures): the gate must refuse. -/
@@ -239,7 +246,7 @@ def hPProbe : Programm nD where
 
 def hwsProbe : List nD.Fn := [NFn.kern, NFn.zaehlB]
 
--- example : invariantVCB hPProbe nSprobe nFs (fun _ => none) = false := by
---   decide +kernel
+example : invariantVCB hPProbe nSprobe nFs (fun _ => none) = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.W93Diag
