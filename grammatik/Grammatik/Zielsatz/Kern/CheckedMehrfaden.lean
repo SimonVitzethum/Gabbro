@@ -43,15 +43,15 @@ theorem accepted_zeuge :
 
 /-- The actual checked certificate supplies the semantic body duties. -/
 theorem duties (f : mD.Fn) : Vertraege.Pruefer.ContractDuties program family f := by
-  have gate := (Bool.and_eq_true.mp accepted_zeuge).2
-  have contracts := (Bool.and_eq_true.mp gate).2
+  have gate := (Bool.and_eq_true_iff.mp accepted_zeuge).2
+  have contracts := (Bool.and_eq_true_iff.mp gate).2
   exact Vertraege.Pruefer.KontrakteGeprueftB_sound mFs_voll contracts f
 
 theorem bodies (passes : Nat) (f : mD.Fn) : KoerperGutS program passes (axWahr mD) family f :=
-  koerperGutS_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => h)).1)
+  koerperGutS_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => False.elim h)).1)
 
 theorem invariants (passes : Nat) (f : mD.Fn) : InvGutS program passes (axWahr mD) family f :=
-  invGutS_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => h)).2.1)
+  invGutS_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => False.elim h)).2.1)
 
 theorem family_local : SperrInvLokal family := fun _ _ _ _ => rfl
 

@@ -37,8 +37,7 @@ theorem n1E_gabbro [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → 
       (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
   gabbro_ziel_voll akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
     ⟨nCs, nCs_voll⟩
-    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
-        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩)
+    n1E_akzeptiert
     n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes _ _ (laufzeit_voll n1E)
     lebt0 K hK
 
@@ -54,8 +53,7 @@ theorem n1E_gabbro_callSite [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : F
   have hsw : ∀ a : nD.Ax, nD.axHerkunft a ≠ some AxOrigin.software := fun a => nomatch a
   gabbro_ziel akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
     ⟨nCs, nCs_voll⟩
-    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
-        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩)
+    n1E_akzeptiert
     n1E_nutzerPflichtA (callSitePflicht_ohne n1E hsw) (postDeckt_ohne n1E hsw) nO
     (foreignVertrag_ohne n1E nO hsw)
     (hardwareAnnahmenHw_of ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
