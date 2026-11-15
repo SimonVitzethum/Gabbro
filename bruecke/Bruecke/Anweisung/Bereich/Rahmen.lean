@@ -34,6 +34,10 @@ theorem retZ_form {fn : UFn} {ns : BodyNames} {r : URet} {b : Gabbro.Body.Stmt}
     cases he : namedOption u fn ns v with
     | none => rw [he] at h; cases h
     | some e => rw [he] at h; cases h; exact ⟨some e, rfl⟩
+  case why n =>
+    simp only [retZ] at h
+    cases h
+    exact ⟨_, rfl⟩
   all_goals cases h
 
 theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB : Gabbro.Body.Env) :
@@ -84,21 +88,21 @@ theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB :
         obtain ⟨e, he, rfl, rfl, rfl⟩ := schrittB_bind hs
         obtain ⟨ls, nextB, _, hnext, rfl⟩ := lowEnd_bind_ok hG
         exact .bindName _ _ _ (endBodyZ_statisch S hc ρB n k ss (fn.mitBindung x ls.range)
-          (ft.mitBindung x (0, 0)) (ns.push x) nextB tail ys
+          (ft.mitBindung x (0, 0)) (ns.push x) nextB rest ys
           (by rw [mitBindung_ctx]; exact congrArg (List.cons _) hΓ)
           (hV.bind x (0, 0) ls.range) hmem hnext hys hFrames)
       case bindMut x lo hi v =>
         obtain ⟨e, he, rfl, rfl, rfl⟩ := schrittB_bindMut hs
         obtain ⟨ev, nextB, _, hnext, rfl⟩ := lowEnd_bindMut_ok hG
         exact .bindName _ _ _ (endBodyZ_statisch S hc ρB n k ss (fn.mitBindung x (lo, hi))
-          (ft.mitBindung x (lo, hi)) (ns.push x) nextB tail ys
+          (ft.mitBindung x (lo, hi)) (ns.push x) nextB rest ys
           (by rw [mitBindung_ctx]; exact congrArg (List.cons _) hΓ)
           (hV.bind x (lo, hi) (lo, hi)) hmem hnext hys hFrames)
       case bindB x v =>
         obtain ⟨e, he, rfl, rfl, rfl⟩ := schrittB_bindB hs
         obtain ⟨ev, nextB, _, hnext, rfl⟩ := lowEnd_bindB_ok hG
         exact .bindName _ _ _ (endBodyZ_statisch S hc ρB n k ss (fn.mitBindungB x)
-          (ft.mitBindungB x) (ns.push x) nextB tail ys
+          (ft.mitBindungB x) (ns.push x) nextB rest ys
           (by rw [mitBindungB_ctx]; exact congrArg (List.cons _) hΓ)
           (hV.bindB x) hmem hnext hys hFrames)
       all_goals cases hl
@@ -106,7 +110,7 @@ theorem endBodyZ_statisch {loopMode : Bool} (S : Getragen u C) (hc : C c) (ρB :
       obtain ⟨ev, nextB, _, hnext, rfl⟩ := lowEnd_bindRecord_ok
         ((recordBinderType_sicht hV d v).symm.trans ht) hG
       exact .bindName _ _ _ (endBodyZ_statisch S hc ρB n k ss (fn.mitWert x (.prod id fs))
-        (ft.mitWert x (.prod id fs)) (ns.push x) nextB tail ys
+        (ft.mitWert x (.prod id fs)) (ns.push x) nextB rest ys
         (congrArg (List.cons _) hΓ) (hV.bindRecord x id fs) hmem hnext hys hFrames)
 
 end Gabbro.Bruecke
