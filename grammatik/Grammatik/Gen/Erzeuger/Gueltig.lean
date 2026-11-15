@@ -6,7 +6,7 @@
   Valid  = `AkzeptiertX P S fs ls cs ws = true` (the Bool of the goal theorem's checker with the atomic rely).
   TEN numbered components cover fragment, closedness, footprint, lock ranks, lock sites, roots,
   single-pool, race freedom, answers and masks; `komp c` is component `c`. The complete checker also retains
-  accumulator and reset admission; canonical interface/library checks and scopes follow as shown below.
+  accumulator, reset and invariant/contract admission; canonical interface/library checks and scopes follow below.
   Refused ONLY BY component `c` = component `c` is false and the other nine are true.
 
   Every `Programm D` is WELL TYPED by construction (the model's terms are intrinsically typed), so
