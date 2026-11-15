@@ -43,20 +43,22 @@ theorem check_measure_gate (u : UProg) (exported : Measures.Export u)
 theorem lowerMeasures_without_clauses (u : UProg)
     (absent : ∀ fn ∈ u.fns, fn.decreases = none) :
     ∃ exported, Measures.lowerMeasures u = .ok exported := by
-  let entries : (f : Fin u.fns.length) → Measures.At u f := fun f =>
+  let entries : (f : (declOf u).Fn) → Measures.At u f := fun f =>
     ⟨[], by simp only [Measures.SourceTuple, absent (fnAt u f) (List.get_mem u.fns f)]⟩
-  have each (f : Fin u.fns.length) : Measures.lowerAt u f = .ok (entries f) := by
+  have each (f : (declOf u).Fn) : Measures.lowerAt u f = .ok (entries f) := by
     unfold Measures.lowerAt
-    rw [absent (fnAt u f) (List.get_mem u.fns f)]
-    rfl
+    split
+    · rfl
+    · rename_i source found
+      cases found.symm.trans (absent (fnAt u f) (List.get_mem u.fns f))
   have collected :
       Measures.collect u.fns.length (Measures.At u) (Measures.lowerAt u) = .ok entries := by
-    rw [Measures.collect_eq_sammle]
-    exact sammle_ok _ _ _ entries each
-  refine ⟨⟨fun f => (entries f).tuple, fun f => (entries f).source⟩, ?_⟩
-  unfold Measures.lowerMeasures
-  rw [collected]
-  rfl
+    exact (Measures.collect_eq_sammle _ _ _).trans (sammle_ok _ _ _ entries each)
+  let assemble (values : (f : (declOf u).Fn) → Measures.At u f) : Measures.Export u :=
+    ⟨fun f => (values f).tuple, fun f => (values f).source⟩
+  refine ⟨assemble entries, ?_⟩
+  exact congrArg (fun result : Except String ((f : (declOf u).Fn) → Measures.At u f) =>
+    result.bind (fun values => Except.ok (assemble values))) collected
 
 /-- Successful invariant, function and contract checks, together with an actual
     empty-clause measure export, close the unchanged canonical lowering endpoint. -/
