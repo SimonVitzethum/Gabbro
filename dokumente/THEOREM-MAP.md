@@ -7231,3 +7231,8 @@ to `Pruefung/Witness/Closed104.lean`, re-exported by `Uebersetze.lean`. The five
 `u104elab`, `u104lower`, `u104data`, `u104fragment` and `u104fuss` are unchanged. The first
 two use kernel conversion in the isolated witness module instead of elaborator `cbv`;
 the generic Boolean equality helpers remain in `Teil16`.
+
+The private `Parser.Spec.function_block` evaluation equation includes the compiler-only
+field normalizer for every context, retaining all clause and refusal paths. Its joint
+`function_block_zeuge` fixture has a u64 record field, explicit narrow failure, the enabled
+compiler switch and a nonempty predicate context whose clause is actually elaborated.
