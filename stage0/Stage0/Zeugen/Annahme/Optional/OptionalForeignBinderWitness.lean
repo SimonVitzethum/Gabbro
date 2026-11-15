@@ -41,6 +41,25 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
+/-- Cache only the post-lex source phase, retaining its equation to the actual
+    frontend. The lexical proof is an input, never a trusted native result. -/
+def cacheLexedSource (src : String) (expected : List Gabbro.Grammatik.Parser.Token)
+    (lexed : Gabbro.Grammatik.Parser.lex src = .ok expected) :
+    { value : Except String (Frontend.Source src) // Frontend.source src = value } := by
+  refine ⟨?value, ?certificate⟩
+  case certificate =>
+    unfold Frontend.source
+    split
+    next error rejected =>
+      have impossible := lexed.symm.trans rejected
+      cases impossible
+    next tokens origin =>
+      have same : tokens = expected := Except.ok.inj (origin.symm.trans lexed)
+      subst tokens
+      have origin_eq : origin = lexed := Subsingleton.elim _ _
+      subst origin
+      rfl
+
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
     The value continuation uses first, and each handler returns a distinct value. -/
@@ -150,17 +169,8 @@ theorem source_lex_zeuge : Gabbro.Grammatik.Parser.lex text = .ok textTokens := 
 def checkedCandidate : { value : Except String (Emitted text 256) // emit text 256 = value } := by
   refine ⟨?value, ?certificate⟩
   case certificate =>
-    unfold emit compile Frontend.source
-    split
-    next error rejected =>
-      have impossible := source_lex_zeuge.symm.trans rejected
-      cases impossible
-    next tokens origin =>
-      have same : tokens = textTokens := Except.ok.inj (origin.symm.trans source_lex_zeuge)
-      subst tokens
-      have origin_eq : origin = source_lex_zeuge := Subsingleton.elim _ _
-      subst origin
-      rfl
+    unfold emit compile
+    rw [(cacheLexedSource text textTokens source_lex_zeuge).property]
 
 def candidate : Except String (Emitted text 256) := checkedCandidate.val
 
@@ -253,21 +263,19 @@ theorem end_lex_zeuge : Gabbro.Grammatik.Parser.lex endText = .ok endTokens := b
   decide +kernel
 
 
+/-- Both real source fixtures jointly inhabit the lexical phase interface. -/
+theorem cacheLexedSource_zeuge :
+    0 < textTokens.length ∧ 0 < endTokens.length ∧
+    (cacheLexedSource text textTokens source_lex_zeuge).val.toOption.isSome = true ∧
+    (cacheLexedSource endText endTokens end_lex_zeuge).val.toOption.isSome = true := by
+  decide +kernel
+
 def checkedEndCandidate :
     { value : Except String (Emitted endText 256) // emit endText 256 = value } := by
   refine ⟨?value, ?certificate⟩
   case certificate =>
-    unfold emit compile Frontend.source
-    split
-    next error rejected =>
-      have impossible := end_lex_zeuge.symm.trans rejected
-      cases impossible
-    next tokens origin =>
-      have same : tokens = endTokens := Except.ok.inj (origin.symm.trans end_lex_zeuge)
-      subst tokens
-      have origin_eq : origin = end_lex_zeuge := Subsingleton.elim _ _
-      subst origin
-      rfl
+    unfold emit compile
+    rw [(cacheLexedSource endText endTokens end_lex_zeuge).property]
 
 def endCandidate : Except String (Emitted endText 256) := checkedEndCandidate.val
 
