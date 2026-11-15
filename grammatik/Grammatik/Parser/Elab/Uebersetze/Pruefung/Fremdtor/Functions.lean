@@ -45,6 +45,18 @@ set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 
+-- Select the existing one-layer lowering equations instead of expanding the
+-- entire mutual fuel recursion while retaining a typed function result.
+private theorem foreign_seq_succ (u : UProg) (caller : Fin u.fns.length) (fuel : Nat)
+    {l : Bool} (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (entry : AtTop u caller Λ) (statements : List UStmt) :
+    lowSeqL (l := l) u caller Γ fn (fuel + 1) Λ entry statements =
+      lowSeqStep u caller (lowStufe u caller fuel) Γ fn Λ entry statements := rfl
+
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
+attribute [local cbv_eval] foreign_seq_succ lowStructL_succ lowEndL_succ
+  lowStufe_seq lowStufe_struct lowStufe_ende
+
 private def inf0 : { value : EnsTy uFremd ⟨0, by decide⟩ ×
     RumpTy uFremd ⟨0, by decide⟩ × ReqTy uFremd ⟨0, by decide⟩ //
     lowerFnAt uFremd ⟨0, by decide⟩ = .ok value } := by
