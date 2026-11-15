@@ -94,11 +94,15 @@ def checkTextFremdFallible : String :=
 
 -- Retain the actual front-end values once, together with their complete
 -- success equations. Dependent checker callbacks then read ordinary unit data.
-private def fremdElaborated : { unit : UProg // elabText checkTextFremd = .ok unit } := by
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+def fremdElaborated : { unit : UProg // elabText checkTextFremd = .ok unit } := by
   refine ⟨?unit, ?computed⟩
   case computed => cbv <;> exact Eq.refl _
 
-private def fremdFallibleElaborated :
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+def fremdFallibleElaborated :
     { unit : UProg // elabText checkTextFremdFallible = .ok unit } := by
   refine ⟨?unit, ?computed⟩
   case computed => cbv <;> exact Eq.refl _
