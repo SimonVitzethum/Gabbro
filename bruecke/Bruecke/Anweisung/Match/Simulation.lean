@@ -53,7 +53,7 @@ theorem stmtZiel_option_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (
     have ht := hL.pushIndex x hU.valid num ((declOf u).count ⟨num, hn⟩) value
     have hArm := hp σl (.cons value ρ) t hWl ht
     have hG : execStmt O passes R (.onOption ev pb ab) σ ρ =
-        (execBlock O passes R pb σl (.cons value ρ)).schrumpf := by
+        (execBlock O passes R pb σl (.cons value ρ)).schrumpf t ps := by
       first
         | (simp only [execStmt, σl, hh]; done)
         | (simp only [execStmt, σl] at *; simp only [hh])
