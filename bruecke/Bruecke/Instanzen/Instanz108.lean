@@ -84,6 +84,8 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         simp only [shapeOf, shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some,
           hfield, Option.bind_none]
         simp [hf, @eq_comm _ "v"]
+        rw [hfield]
+        rfl
     · simp [shapeOf, shapeOfUG, shapeOfU, Except.toOption,
         Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, hc, @eq_comm _ "T"]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
