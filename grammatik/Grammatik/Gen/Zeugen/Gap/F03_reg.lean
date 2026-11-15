@@ -91,8 +91,8 @@ def RegInput : Prop :=
 
 theorem e_input : RegInput := by
   constructor
-  · letI : DecidableEq z.deklaration.Reg := inferInstanceAs (DecidableEq (Fin z.regs.length))
-    decide
+  · change (⟨0, by decide⟩ : z.deklaration.Reg) ∈ [⟨0, by decide⟩]
+    exact List.mem_cons_self
   · decide
 
 theorem e_cause_link : RegInput → cause = some (.unsupported
