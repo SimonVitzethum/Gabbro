@@ -22,6 +22,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
+import all Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem.Teil1
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
 import all Init.Data.Repr
@@ -216,6 +217,10 @@ set_option maxHeartbeats 2000000 in
 theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
+
+attribute [local irreducible] checkPFremd checkPFremdFallible
+
+set_option smartUnfolding false
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
