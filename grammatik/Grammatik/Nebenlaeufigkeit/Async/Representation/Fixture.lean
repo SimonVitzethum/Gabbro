@@ -100,7 +100,7 @@ public theorem nameCode_injective (left right : List Nat)
   ownerNr := fun number => some number
 
 @[expose] public def owned : Phase → List (declaration.Marke × Nat)
-  | Phase.running _ | Phase.waiting _ _ => [(7, 0)]
+  | Phase.running _ | Phase.waiting _ _ => [((7 : Nat), 0)]
   | Phase.cancelled | Phase.completed => []
 
 @[expose] public def inventory : Inventory declaration where
