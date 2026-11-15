@@ -1,6 +1,8 @@
 /- Checked coverage fixture; requested cells remain explicit even when absent. -/
 module
 
+import Grammatik.Gen.Druck.LeanZeuge
+
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 
 @[expose] public section

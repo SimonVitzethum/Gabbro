@@ -3,6 +3,8 @@
   concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
+
+import Grammatik.Gen.Druck.LeanZeuge
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Erzeuger.Entscheidung
 public import Grammatik.Korpus.Zeugnis.Zeugnis.T1

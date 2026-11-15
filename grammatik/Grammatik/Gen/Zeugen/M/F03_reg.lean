@@ -1,6 +1,8 @@
 /- Checked coverage fixture; requested cells remain explicit even when absent. -/
 module
 
+import Grammatik.Gen.Druck.LeanZeuge
+
 public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Fein.Zellen
 public import Grammatik.Gen.Zeugen.Gap.F03_reg

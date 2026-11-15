@@ -1,6 +1,8 @@
 /- Accepted recovery candidates; exact cell records follow the slot measurement. -/
 module
 
+import Grammatik.Gen.Druck.LeanZeuge
+
 public import Grammatik.Gen.Zeugen.M.ScalarRead
 public import Grammatik.Gen.Zeugen.Reset
 public import Grammatik.Gen.Zeugen.M.F00_call
