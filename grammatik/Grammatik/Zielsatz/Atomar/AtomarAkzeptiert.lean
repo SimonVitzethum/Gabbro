@@ -146,7 +146,6 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : AkzeptiertX P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
   have h := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
-  dsimp only [AkzeptiertX] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
@@ -173,7 +172,6 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
   refine ⟨?_, hK⟩
   apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, invariantCheck⟩
-  dsimp only [Akzeptiert] at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true_iff, and_assoc] at h ⊢
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hSchnitt, hReset, h11, h12, h13, hS⟩ := h
   exact ⟨h1, h2, fussWXB_of_fussWB h3, h4, h5, h6, h7, h8, h9, h10,
