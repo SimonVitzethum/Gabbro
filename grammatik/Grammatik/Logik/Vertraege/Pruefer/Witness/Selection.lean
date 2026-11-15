@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Decision
+public import Grammatik.Logik.Vertraege.Pruefer.Duties
 
 @[expose] public section
 
@@ -138,5 +138,48 @@ theorem environment_success (program : Programm D) (S : SperrInv D) (policy : Ca
   · rfl
   · rename_i refused
     exact False.elim (refused decided)
+
+theorem success_of_isSome {α ε : Type} (result : Except ε α)
+    (ready : result.toOption.isSome = true) : ∃ value, result = .ok value := by
+  cases result with
+  | error cause => cases ready
+  | ok value => exact ⟨value, rfl⟩
+
+/-- The complete parameter traversal uses the same checked environment results. -/
+theorem execution_success (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
+    (hint : Option (QF (Observation D))) (f : D.Fn)
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (hinvariants : invariantFormula program (D.invs.filter (schuldet f)) = .ok invariants)
+    (domain : Invarianten.Pruefer.Environments D (D.params f))
+    (hdomain : Invarianten.Pruefer.environments (D := D) budget.expansion (D.params f) = .ok domain)
+    (ready : ∀ locals, (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true) :
+    (checkExecution program S policy sources budget hint f).toOption.isSome = true := by
+  obtain ⟨checked, hchecked⟩ := collect_success domain.values
+    (fun locals => CheckedEnvironment (S := S) policy f locals)
+    (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants)
+    (fun locals => success_of_isSome _ (ready locals))
+  unfold checkExecution
+  rw [hinvariants, hdomain]
+  dsimp only [bind, Except.bind]
+  rw [hchecked]
+  rfl
+
+/-- The actual function gate preserves its syntax certificate, atomic replay
+    and checked strict execution; this is a proof rule, not a new gate path. -/
+theorem function_success (program : Programm D) (S : SperrInv D)
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
+    (hint : Option (QF (Observation D))) (f : D.Fn)
+    (basic : checkBasicFunction program S sources budget f = none)
+    (replay : (atomicReplay? program f).isSome = true)
+    (execution : (checkExecution program S (requiresPolicy program) sources budget hint f).toOption.isSome = true) :
+    (checkFunction program S sources budget hint f).toOption.isSome = true := by
+  obtain ⟨checked, hchecked⟩ := success_of_isSome _ execution
+  cases h : atomicReplay? program f with
+  | none => simp only [h, Option.isSome_none, Bool.false_eq_true] at replay
+  | some certificate =>
+      unfold checkFunction
+      rw [basic, h, hchecked]
+      rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
