@@ -71,8 +71,8 @@ theorem endBodyZ_view {k : Nat} {fn : UFn} {ns : BodyNames} {ss tail : List UStm
       cases hb : retZ u fn ns r with
       | none => rw [hb] at h; cases h
       | some b => rw [hb] at h; cases h; exact .ret hb
-    case leave x => cases h; exact .control true x ss
-    case next x => cases h; exact .control false x ss
+    case leave x => cases h; exact .control true x tail
+    case next x => cases h; exact .control false x tail
     case bindW x d v =>
       simp only [endBodyZ] at h
       cases ht : recordBinderType u fn d v with

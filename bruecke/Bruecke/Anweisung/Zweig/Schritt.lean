@@ -220,6 +220,9 @@ theorem lowRet_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn
                       (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
                     simp only [Gabbro.Body.step, hv]
                     rw [hval]
+                    all_goals first
+                      | rfl
+                      | trivial
                 · cases hE
               · cases hE
             · cases hE

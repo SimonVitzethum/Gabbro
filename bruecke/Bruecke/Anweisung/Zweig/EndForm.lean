@@ -69,11 +69,12 @@ abbrev EndIfCases (u : UProg) (c : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (n : 
     (Λ : List (Res (declOf u))) (cnd : UEns) (ss : List UStmt)
     (b : Endblock (declOf u) (verOf u c) false Γ Λ) (tail : List UStmt) : Prop :=
     (∃ (cv : Expr (declOf u) Γ Λ .bool)
-      (t e : Endblock (declOf u) (verOf u c) false Γ Λ) rest1,
+      (t e : Endblock (declOf u) (verOf u c) false Γ Λ) (rest1 : List UStmt),
       lowEns u Γ Λ fn none cnd = .ok cv ∧
       lowEndL (l := false) u c Γ fn n Λ [] ss = .ok (t, .ifElse :: rest1) ∧
       lowEndL (l := false) u c Γ fn n Λ [] rest1 = .ok (e, .blkEnd :: tail) ∧ b = .ite cv t e) ∨
-    (∃ Λ₁ (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) rest
+    (∃ (Λ₁ : List (Res (declOf u))) (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
+      (rest : List UStmt)
       (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
       lowStructL (l := false) u c Γ fn n Λ [] (.ifBeg cnd) ss = .ok (⟨Λ₁, gs⟩, rest) ∧
       lowEndL (l := false) u c Γ fn n Λ₁ [] rest = .ok (q, tail) ∧ b = .cons gs q)

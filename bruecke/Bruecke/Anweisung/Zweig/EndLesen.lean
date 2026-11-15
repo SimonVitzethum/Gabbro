@@ -19,8 +19,7 @@ theorem stmtsBodyZ_ifEnde_some {k : Nat} {fn : UFn} {ns : BodyNames} {cnd : UEns
       seqZ u k fn ns ss = some (t, .ifElse :: rest1, used1) ∧
       seqZ u k fn (ns.resume used1) rest1 = some (e, [.blkEnd], used2) ∧
       bs = [.ite ce t e] := by
-  cases r <;> try { simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody,
-    Option.map_none, reduceCtorEq] at h }
+  cases r
   case keins =>
     simp only [stmtsBodyZ] at h
     cases hce : condZ u fn ns cnd with
@@ -56,6 +55,10 @@ theorem stmtsBodyZ_ifEnde_some {k : Nat} {fn : UFn} {ns : BodyNames} {cnd : UEns
                       (by first | exact hce | rfl | simp_all),
                       (by first | exact ht | rfl | simp_all),
                       (by first | exact he | rfl | simp_all), rfl⟩
+  all_goals
+    simp only [stmtsBodyZ, schrittB, namedStmt, stmtBody,
+      Option.map_none, reduceCtorEq] at h
+    cases h
 
 /-- The canonical whole-function terminal branch is lowered as two explicit endings. -/
 theorem lowBodyF_ifEnde_ok {Γ : Ctx} {fn : UFn} {n : Nat}
@@ -63,7 +66,7 @@ theorem lowBodyF_ifEnde_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     {b : Endblock (declOf u) (verOf u c) false Γ Λ}
     (h : lowBodyF u c Γ fn (n + 1) Λ (.ifEnde cnd :: ss) .keins = .ok b) :
     ∃ (cv : Expr (declOf u) Γ Λ .bool)
-      (t e : Endblock (declOf u) (verOf u c) false Γ Λ) rest1,
+      (t e : Endblock (declOf u) (verOf u c) false Γ Λ) (rest1 : List UStmt),
       lowEns u Γ Λ fn none cnd = .ok cv ∧
       lowEndL (l := false) u c Γ fn blockFuel Λ [] ss = .ok (t, .ifElse :: rest1) ∧
       lowEndL (l := false) u c Γ fn blockFuel Λ [] rest1 = .ok (e, [.blkEnd]) ∧
