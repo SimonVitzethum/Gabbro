@@ -205,6 +205,14 @@ def postCheck (value : ErgVal zD (zD.erg zLies)) :
   | .error cause => .error cause
   | .ok result => .ok ⟨⟨result, rfl⟩⟩
 
+theorem requirement_present : (translate (zPB.requires zLies) arguments).toOption.isSome = true := rfl
+
+def requirement := (translate (zPB.requires zLies) arguments).toOption.get requirement_present
+
+theorem requirement_result : translate (zPB.requires zLies) arguments = .ok requirement := rfl
+
+theorem requirement_payload : requirement.payload = .tru := rfl
+
 /-- The strict arithmetic gate accepts the original body and its original post. -/
 theorem environment_checked (sources : LockSources zS) :
     (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
@@ -225,15 +233,13 @@ theorem environment_checked (sources : LockSources zS) :
     intro _
     exact (quoteQF_denote _ _).mpr (valid values)
   unfold Vertraege.Pruefer.checkEnvironment
-  have requiresResult : translate (zPB.requires zLies) arguments =
-      .ok ((translate (zPB.requires zLies) arguments).toOption.get (by rfl)) := rfl
-  rw [requiresResult, resultDomain_result]
+  rw [requirement_result, resultDomain_result]
   dsimp only [bind, Except.bind]
   rw [hposts]
   dsimp only [bind, Except.bind]
   rw [hpre]
   dsimp only [bind, Except.bind]
-  rw [decided]
+  rw [requirement_payload, decided]
   rfl
 
 end Gabbro.Grammatik.Zielsatz.PoolCertificate
