@@ -146,6 +146,7 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
           (evalArgs (σ.lese Λ head.args.orte) head.args (σ.lese Λ head.args.orte) ρ) with
       | ok σ₁ v =>
         obtain ⟨A, s₁, hs, hw, hl⟩ := resultCall_strecke G S hc R hRR hk he hb hhead hU σ σ₁ ρ s hW hL v hR
+        rw [hmit] at hl
         have hrun : (∀ err, execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .logik err →
             execEnd O passes R q σ₁ (Env.cons (ergWert he v) ρ) = .logik err) ∧
             (∀ σ' v', execEnd O passes R (.bindCall head.callee head.args he head.hp hr q) σ ρ = .zurueck σ' v' →
