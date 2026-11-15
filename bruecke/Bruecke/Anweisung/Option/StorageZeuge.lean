@@ -119,6 +119,10 @@ theorem table_names : TabEindeutig unit := by
     subst t
     cbv
 
+theorem names_zeuge : NamenEindeutig test := by
+  change (["p", "o"] : List String).Nodup
+  decide
+
 /-- The pointer simulation's lowering, reader, world and environment premises hold jointly
     for every canonical world and every typed environment, including both stored constructors. -/
 theorem pointer_sim_zeuge (σ : World (declOf unit)) (base : Gabbro.Body.World)
@@ -137,11 +141,11 @@ theorem pointer_sim_zeuge (σ : World (declOf unit)) (base : Gabbro.Body.World)
   | ok ev =>
     refine ⟨ev, (by first | exact h | rfl | simp_all), ?_⟩
     exact lowOpt_sim h (by cbv) table_names σ σ ρ _ (wgrel_enc unit σ base).1
-      (lrel_bindAll test ρ (by decide) rfl)
+      (lrel_bindAll test ρ names_zeuge rfl)
 
 /-- The scope premise of both store simulations is satisfied by the same fixture. -/
 theorem scope : UmfangB (test.params.map (·.2)) test (BodyNames.start test) :=
-  UmfangB.start (u := unit) ⟨0, by decide⟩ (artB_ok (by cbv)) (by decide)
+  UmfangB.start (u := unit) ⟨0, by decide⟩ (artB_ok (by cbv)) names_zeuge
 
 section StoreSimulations
 variable (O : Orakel (declOf unit)) (passes : Nat)
@@ -164,7 +168,7 @@ theorem pointer_store_sim_zeuge :
       (test.params.map (·.2)) test [] "p" "next" (.lit 0) (.var "o") with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsWrite
   | ok g =>
-    have hL := lrel_bindAll test ρ (by decide) rfl
+    have hL := lrel_bindAll test ρ names_zeuge rfl
     obtain ⟨σ', cn, k, fld, value, hex, _, hw, _⟩ :=
       lowAssignDurchO_simB ⟨0, by decide⟩ h (bst := .assign "T" (.lit (.int 0)) "next" (.name "o"))
         (by cbv) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL
@@ -185,7 +189,7 @@ theorem table_store_sim_zeuge :
       (test.params.map (·.2)) test [] "T" "next" (.lit 1) (.slot "p" "next" (.lit 0)) with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsWrite
   | ok g =>
-    have hL := lrel_bindAll test ρ (by decide) rfl
+    have hL := lrel_bindAll test ρ names_zeuge rfl
     obtain ⟨σ', cn, k, fld, value, hex, _, hw, _⟩ :=
       lowAssignTabO_simB ⟨0, by decide⟩ h
         (bst := .assign "T" (.lit (.int 1)) "next" (.place "T" (.lit (.int 0)) "next"))
@@ -206,8 +210,8 @@ theorem nested_return_sim_zeuge :
       (test.params.map (·.2)) test [] [] (.opt (.slot "p" "next" (.lit 1))) with
   | error err => simp only [h, Except.toOption, Option.isSome_none, Bool.false_eq_true] at existsReturn
   | ok g =>
-    have hL := PositionalLRel.start (by decide : NamenEindeutig test)
-      (lrel_bindAll test ρ (by decide) rfl)
+    have hL := PositionalLRel.start names_zeuge
+      (lrel_bindAll test ρ names_zeuge rfl)
     obtain ⟨σ', v, hex, hw, _⟩ := lowRet_sim ⟨0, by decide⟩ h
       (bst := .ret (some (.place "T" (.lit (.int 1)) "next")))
       (by cbv) (fun _ h => by cases h) scope table_names O passes R σ ρ ⟨encG unit σ base, _⟩ (wgrel_enc unit σ base) hL
