@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Elim.Decision
+import Batteries.Data.Except
 
 public section
 
@@ -110,6 +111,6 @@ theorem budget_sufficient [DecidableEq α] (formula : LProp α) (fuel : Nat)
     simp [elimination, unbounded]
   have hspent : spent ≤ fuel := by simpa [Budget, computed] using enough
   have success := bounded fuel hspent
-  simp [decideWithBudget, closed, success, decideB, computed]
+  simp [decideWithBudget, closed, success, decideB, computed, Except.map_ok]
 
 end Gabbro.Grammatik.Invarianten.Elim.Korrekt
