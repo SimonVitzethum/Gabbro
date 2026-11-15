@@ -192,6 +192,8 @@ def locks : SperrInv D := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
     checker. This is a model fixture, not a source-to-IR witness. -/
 theorem checked_guest :
     Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] [] [guest] = true := by
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
+    Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
   decide +kernel
 
 theorem checked_missing_service :
