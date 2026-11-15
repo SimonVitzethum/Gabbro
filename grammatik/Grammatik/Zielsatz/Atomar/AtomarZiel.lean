@@ -225,7 +225,7 @@ theorem besitzB_sound {E : Einheit D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g 
       BesitzStart E := by
   have h' := List.all_eq_true.mp h
   refine ⟨fun a ha => ?_, fun a ha => ?_, ⟨fun a ha => ?_, fun a ha r hr => ?_⟩⟩ <;>
-    have h1 := h' a ha <;> simp only [Bool.and_eq_true, decide_eq_true_eq] at h1
+    have h1 := h' a ha <;> simp only [Bool.and_eq_true_iff, decide_eq_true_eq] at h1
   · exact Body.checkProgram_sound hvoll h1.1.1.1
   · exact h1.1.1.2
   · exact h1.1.2
@@ -247,10 +247,10 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
   korrekt := fun {D} _ E fs ls cs hardware h => by
     letI : RootNativeFloat.Hardware := hardware
     letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    have h := (Bool.and_eq_true.mp (Bool.and_eq_true.mp h).1).1
-    have h := (Bool.and_eq_true _ _).mp h
+    have h := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
+    have h := (Bool.and_eq_true_iff).mp h
     obtain ⟨hX, hStart⟩ := h
-    have hX' := (Bool.and_eq_true _ _).mp hX
+    have hX' := (Bool.and_eq_true_iff).mp hX
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hX'.2
     have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
       akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1
@@ -265,17 +265,17 @@ def Pruefer.alsX (C : Pruefer) : PrueferX where
     Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
       Vertraege.Pruefer.KontrakteGeprueftB E.P E.S fs E.lockFormulas {} E.loopHints
   korrekt := fun E fs ls cs hardware h => by
-    have outer := Bool.and_eq_true.mp h
+    have outer := Bool.and_eq_true_iff.mp h
     have hK := Vertraege.Pruefer.KontrakteGeprueftB_sound fs.2 outer.2
     have h := outer.1
-    have full := (Bool.and_eq_true.mp h)
+    have full := (Bool.and_eq_true_iff.mp h)
     have checked := (invariantenGeprueftB_iff E fs.1 ls.1 {}).mp full.2
     obtain ⟨certificate, result⟩ := checked
     have hI := fun f => certificate.program.writers f (fs.2 f)
     have h := full.1
-    have h := (Bool.and_eq_true _ _).mp h
+    have h := (Bool.and_eq_true_iff).mp h
     obtain ⟨hC, hStart⟩ := h
-    have hC' := (Bool.and_eq_true _ _).mp hC
+    have hC' := (Bool.and_eq_true_iff).mp hC
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hC'.2
     have hSpec : AkzeptiertSpecX E.P E.S fs.1 E.ws [] E.akku :=
       akzeptiertSpecX_of_spec (A := E.akku) (C.korrekt E fs ls cs hardware hC'.1) hI hK
@@ -290,9 +290,9 @@ theorem Pruefer.alsX_akzeptiert (C : Pruefer) {D : Deklaration} [DecidableEq D.F
     (h : C.akzeptiert E fs ls cs = true) (hI : invariantenGeprueftB E fs ls = true)
     (hK : Vertraege.Pruefer.KontrakteGeprueftB E.P E.S fs E.lockFormulas {} E.loopHints = true) :
     C.alsX.akzeptiert E fs ls cs = true := by
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hK⟩
-  apply Bool.and_eq_true.mpr
+  apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hI⟩
   show (C.akzeptiert E fs ls cs && besitzB E fs && Kernzelle.akkuStartB E E.akku) = true
   rw [h, besitzB_leer hB, hA]
