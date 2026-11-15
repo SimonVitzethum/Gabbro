@@ -176,9 +176,44 @@ local macro "export_functions" : tactic => `(tactic| (
 
 -- Each complete value below is inferred exclusively from a canonical success
 -- equation, before any dependent function or declaration projection is used.
+private def fullUnit : UProg where
+  tabs :=
+    [{ name := "a::Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] },
+     { name := "b::Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] }]
+  locks := []
+  fns :=
+    [{ name := "a::consume",
+       params := [("p", .ptr { space := 0, rights := { read := true }, target := .table 0 })],
+       kinds := [.ptr { space := 0, rights := { read := true }, target := .table 0 }],
+       res := none, held := [], puts := [], gives := [], body := [], ret := .empty },
+     { name := "b::consume",
+       params := [("p", .ptr { space := 0, rights := { read := true }, target := .table 1 })],
+       kinds := [.ptr { space := 0, rights := { read := true }, target := .table 1 }],
+       res := none, held := [], puts := [], gives := [], body := [], ret := .empty },
+     { name := "caller", params := [], kinds := [], res := none, held := [], puts := [], gives := [],
+       body := [.call "a::consume" [.freshPtr "a::Rows"
+         { space := 0, rights := { read := true }, target := .table 0 }]], ret := .empty }]
+
+private def produced0 : { value : EnsTy fullUnit ⟨0, by decide⟩ ×
+    RumpTy fullUnit ⟨0, by decide⟩ × ReqTy fullUnit ⟨0, by decide⟩ //
+    lowerFnAt fullUnit ⟨0, by decide⟩ = .ok value } := by
+  refine ⟨?value, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
+private def produced1 : { value : EnsTy fullUnit ⟨1, by decide⟩ ×
+    RumpTy fullUnit ⟨1, by decide⟩ × ReqTy fullUnit ⟨1, by decide⟩ //
+    lowerFnAt fullUnit ⟨1, by decide⟩ = .ok value } := by
+  refine ⟨?value, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
+private def produced2 : { value : EnsTy fullUnit ⟨2, by decide⟩ ×
+    RumpTy fullUnit ⟨2, by decide⟩ × ReqTy fullUnit ⟨2, by decide⟩ //
+    lowerFnAt fullUnit ⟨2, by decide⟩ = .ok value } := by
+  refine ⟨?value, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
 set_option diagnostics true in
 set_option profiler true in
-set_option maxHeartbeats 300000 in
 private theorem full_phases :
     ∃ items, parseTopTief fullTokens = .ok items ∧
       (∃ expanded, exportLibraryUnit (uMembers (pre108 items)) = .ok expanded ∧
@@ -192,9 +227,8 @@ private theorem full_phases :
     case expansion => cbv <;> exact Eq.refl _
     case ordinary => cbv
   case elaboration =>
-    let unit : UProg := ?unit
-    have made : elabU (pre108 items) = .ok unit := by cbv <;> exact Eq.refl _
-    refine ⟨unit, made, ?facts⟩
+    have made : elabU (pre108 items) = .ok fullUnit := by cbv
+    refine ⟨fullUnit, made, ?facts⟩
     case facts =>
       refine {
         gate := by cbv
@@ -202,28 +236,19 @@ private theorem full_phases :
         contracts := by cbv
         measures := by export_functions
         functions := ?_ }
-      have count : unit.fns.length = 3 := by cbv
-      let first : Fin unit.fns.length := ⟨0, by omega⟩
-      let second : Fin unit.fns.length := ⟨1, by omega⟩
-      let third : Fin unit.fns.length := ⟨2, by omega⟩
-      let value0 : EnsTy unit first × RumpTy unit first × ReqTy unit first := ?value0
-      have produced0 : lowerFnAt unit first = .ok value0 := by cbv <;> exact Eq.refl _
-      let value1 : EnsTy unit second × RumpTy unit second × ReqTy unit second := ?value1
-      have produced1 : lowerFnAt unit second = .ok value1 := by cbv <;> exact Eq.refl _
-      let value2 : EnsTy unit third × RumpTy unit third × ReqTy unit third := ?value2
-      have produced2 : lowerFnAt unit third = .ok value2 := by cbv <;> exact Eq.refl _
       refine ⟨?pieces, ?equations, ?safe⟩
       case pieces =>
-        change (f : Fin 3) → EnsTy unit f × RumpTy unit f × ReqTy unit f
-        exact Fin.cases value0 (Fin.cases value1 (Fin.cases value2 (fun f : Fin 0 => Fin.elim0 f)))
+        change (f : Fin 3) → EnsTy fullUnit f × RumpTy fullUnit f × ReqTy fullUnit f
+        exact Fin.cases produced0.val
+          (Fin.cases produced1.val (Fin.cases produced2.val (fun f : Fin 0 => Fin.elim0 f)))
       case equations =>
         rintro ⟨index, bound⟩
         have small : index < 3 := bound
         have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
         rcases choices with h | h | h
-        · subst index; exact produced0
-        · subst index; exact produced1
-        · subst index; exact produced2
+        · subst index; exact produced0.property
+        · subst index; exact produced1.property
+        · subst index; exact produced2.property
       case safe =>
         intro invariants pointers foreigns
         unfold checkedImage
