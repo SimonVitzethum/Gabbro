@@ -1,5 +1,6 @@
 module
-import Grammatik.Kern.Taktik.KernelValue
+public meta import Grammatik.Kern.Taktik.KernelValue
+public meta import Grammatik.Kern.Taktik.KernelRfl
 public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 
 import all Init.Data.Repr
