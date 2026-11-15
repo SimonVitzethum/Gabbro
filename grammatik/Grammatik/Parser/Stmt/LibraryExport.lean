@@ -221,10 +221,9 @@ private theorem full_phases :
         · subst index; exact produced2
       case safe =>
         intro invariants pointers foreigns
-        simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
-        and_intros
-        all_goals cbv
-        all_goals rfl
+        unfold checkedImage
+        cbv
+        rfl
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
