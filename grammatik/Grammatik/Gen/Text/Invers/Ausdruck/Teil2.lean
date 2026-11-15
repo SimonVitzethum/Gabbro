@@ -33,7 +33,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       simp only [Int.ofNat_eq_natCast, Int.toNat_of_nonneg h]
     · simp only [zahlE, h, ite_false]
       simp only [uRechne]
-      simp only [Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -m by omega), neg_neg]
+      simp only [Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -m by omega), Int.neg_neg]
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd
@@ -90,7 +90,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfS] at hu
-    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s u hd hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) s u hd hu
   | add a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with

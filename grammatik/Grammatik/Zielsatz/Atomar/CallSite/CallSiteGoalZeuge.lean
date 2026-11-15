@@ -6,16 +6,14 @@
    a literal-true post on the function) and the binding `echo` (answers its argument), ALL
    premises of `GabbroZiel` hold at once:
    (a) `akzeptiertX_pruefer` accepts the unit (`checker`);
-   (b) `NutzerPflichtA` (`user`: the body has a literal-true post and no logic stop),
-       `CallSitePflicht` (`call_sites`: every reached call meets the pre, over
+   (b) `NutzerPflichtA` (`user`: the accepted literal function post and the caller duties), `CallSitePflicht` (`call_sites`: every reached call meets the pre, over
        every run), `PostDeckt` (`post_cover`), `ForeignVertrag wE echo` (`binding`);
    (c) `HardwareAnnahmenHw echo wE.Q` (`hardware`: frame and register locality only, `g` being
        software);
    (d) `Laufzeit` of the runtime's start (`laufzeit_voll`).
    NON-DEGENERATE: `g` is software, its pre holds at `1` and fails at `0`, `echo` breaks the
-   full summary (so `GabbroZielVoll` does not apply to it). The separate stronger `summaryP`
-   needs `g`'s summary (`summary_used`) and is refused by the strict fragment checker.
-   THE CONCLUSION, EXHIBITED: one GX step of thread 0 from the
+   full summary (so `GabbroZielVoll` does not apply to it), and the stronger same-body companion proves result = 1 with the summary
+   (`summary_koerper`) and fails without it (`summary_used`). THE CONCLUSION, EXHIBITED: one GX step of thread 0 from the
    runtime's start runs the software call (the start's question has a true pre, `start_call`);
    the machine it reaches has thread 0 at its return (so the `StartEndeG` leg speaks about the
    answer of `echo`), and `gabbro_ziel` gives every leg of `ZielFX` there. -/
@@ -59,11 +57,12 @@ theorem callSite_goal_zeuge [RootNativeFloat.Hardware] :
     -- (d) the runtime
     Laufzeit wE sp0R initR ∧
     -- non-degenerate: a software item with a pre that bites, a binding outside the full summary,
-    -- the separate original result contract needs the summary
+    -- a stronger same-body functional duty that needs the summary
     wD.axHerkunft () = some AxOrigin.software ∧
     AxVor wE.P.axVertrag () world (rhoW true) ∧ ¬ AxVor wE.P.axVertrag () world (rhoW false) ∧
     ¬ AxVertragO wE.Q echo ∧
-    (∀ T, ¬ KoerperGutSA summaryP 0 (fun _ _ _ => true) wE.S T ()) ∧
+    (∀ T, KoerperGutSA summaryProgram 0 wQ wE.S T ()) ∧
+    (∀ T, ¬ KoerperGutSA summaryProgram 0 (fun _ _ _ => true) wE.S T ()) ∧
     -- the start asks the software item with a true pre
     (∃ k, K0.m.foreignCallKey 0 = some k ∧ AxVor wE.P.mitRuhe.axVertrag k.1 k.2.1 k.2.2) ∧
     -- the conclusion at the machine after the software call, thread 0 at its return
@@ -84,7 +83,7 @@ theorem callSite_goal_zeuge [RootNativeFloat.Hardware] :
     checker user call_sites post_cover echo binding hardware 0 sp0R initR (laufzeit_voll wE)
     (fun _ => true) _ hK1
   exact ⟨checker, user, call_sites, post_cover, binding, hardware, laufzeit_voll wE, rfl,
-    pre_true world, pre_false world, echo_not_summary, summary_used, start_call,
+    pre_true world, pre_false world, echo_not_summary, summary_koerper 0, summary_used, start_call,
     _, hK1, hs, hst, hret, hZ⟩
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal

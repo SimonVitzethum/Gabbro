@@ -12,8 +12,8 @@
   without device carriers):
   * `g1PA` -- `if true { let x = holen(); } return;` under `ensures false`;
   * `g1PR` -- `if true { let t = temp; } return;` under `ensures false`.
-  The strict contract checker refuses both (`g1PA_abgelehnt`, `g1PR_abgelehnt`).
-  The concrete fitting-answer runs below independently refute their false posts.
+  Both are refused by the strict VC checker (`g1PA_abgelehnt`, `g1PR_abgelehnt`);
+  the semantic refutations below independently retain the original counterexamples.
 
   BOTH DIRECTIONS, per probe:
   * THE ORACLE CAN ANSWER: an oracle meeting every hardware assumption (c) whose answer FITS
@@ -176,13 +176,10 @@ def g1PR : Programm g1D where
 /-- The lock family of `g1D`: there is no lock. -/
 def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-/-- Outside the decidable fragment: foreign-answer WP. The actual returning run below
-    also refutes the declared false post; it is no longer a positive checker witness. -/
+/-- The false-post foreign-call probe is refused by the strict VC gate. -/
 theorem g1PA_abgelehnt : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB g1PA g1S [g1Haupt] = false := by
-    decide +kernel
-  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
-  rw [refused, Bool.and_false, Bool.and_false]
+  have gate : Invarianten.Pruefer.invariantVCB g1PA g1S [g1Haupt] = false := by decide +kernel
+  simp only [Akzeptiert, gate, Bool.and_false]
 
 /-! ## 3. The oracles -/
 
@@ -220,13 +217,10 @@ def g1HalbW (answers : G1FloatAnswers) : Gleit (0, 1) (1, 1) :=
   ⟨Float.hwOfBits (UInt64.ofNat g1Halb.toNat), answers.finite_reply,
     answers.lower_reply, answers.upper_reply⟩
 
-/-- The false post is refused independently of native float replies.
-    The fitting-answer run below supplies a concrete semantic counterexample. -/
+/-- The false-post register probe is refused independently of native float replies. -/
 theorem g1PR_abgelehnt : Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB g1PR g1S [g1Haupt] = false := by
-    decide +kernel
-  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
-  rw [refused, Bool.and_false, Bool.and_false]
+  have gate : Invarianten.Pruefer.invariantVCB g1PR g1S [g1Haupt] = false := by decide +kernel
+  simp only [Akzeptiert, gate, Bool.and_false]
 
 /-- The word of `0.5` decodes through the actual word and range guards. -/
 theorem g1_temp_wort (answers : G1FloatAnswers) :
@@ -315,16 +309,6 @@ theorem g1PA_lauf0 (v : Wert g1D g1Erg) (σ : World g1D) :
     g1_holen_dekodiert, Ausgang.schrumpf, evalErg]
   exact ⟨_, rfl⟩
 
-/-- A concrete `err` answer reaches the false post; the fragment refusal does not
-    conceal a body that can only stop in hardware. -/
-theorem g1PA_counterexample (σ : World g1D) :
-    ∃ σ', execEnd (V := vertragVon g1D g1Haupt)
-        (g1O (summeRoh g1Fall (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg)) 0) 0 g1Ruf
-        (g1PA.rumpf g1Haupt) σ .nil = .zurueck σ' () ∧
-      ¬ EnsAmRueck g1PA g1Haupt σ σ' .nil () := by
-  obtain ⟨σ', returned⟩ := g1PA_lauf0 (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg) σ
-  exact ⟨σ', returned, Bool.false_ne_true⟩
-
 theorem g1PA_lauf (v : Wert g1D g1Erg) (S : SperrInv g1D) (σ : World g1D) :
     ∃ σ', execEndH (V := vertragVon g1D g1Haupt) S (g1O (summeRoh g1Fall v) 0) (fun L => nomatch L) 0
       g1Ruf (g1PA.rumpf g1Haupt) σ .nil = .zurueck σ' () := by
@@ -339,15 +323,6 @@ theorem g1PR_lauf0 (answers : G1FloatAnswers) (σ : World g1D) :
     g1_temp_dekodiert answers, Ausgang.schrumpf, evalErg]
   exact ⟨_, rfl⟩
 
-/-- The original raw half-word, with its named primitive range replies, reaches a
-    return that violates the post. No function contract is assumed. -/
-theorem g1PR_counterexample (answers : G1FloatAnswers) (σ : World g1D) :
-    ∃ σ', execEnd (V := vertragVon g1D g1Haupt) (g1O 3 g1Halb) 0 g1Ruf
-        (g1PR.rumpf g1Haupt) σ .nil = .zurueck σ' () ∧
-      ¬ EnsAmRueck g1PR g1Haupt σ σ' .nil () := by
-  obtain ⟨σ', returned⟩ := g1PR_lauf0 answers σ
-  exact ⟨σ', returned, Bool.false_ne_true⟩
-
 theorem g1PR_lauf (answers : G1FloatAnswers) (S : SperrInv g1D) (σ : World g1D) :
     ∃ σ', execEndH (V := vertragVon g1D g1Haupt) S (g1O 3 g1Halb) (fun L => nomatch L) 0
       g1Ruf (g1PR.rumpf g1Haupt) σ .nil = .zurueck σ' () := by
@@ -361,10 +336,8 @@ theorem g1PR_lauf (answers : G1FloatAnswers) (S : SperrInv g1D) (σ : World g1D)
 theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     (hQ : ∃ (v : Wert g1D g1Erg) (σ₀ : World g1D), E.Q g1Holen σ₀ v = true) :
     ¬ NutzerPflicht E := by
-  let S := E.S
-  let Q := E.Q
-  let s := E.sp0
-  have hP' : E.P = g1PA := hP
+  obtain ⟨P, S, Q, st, s, _, _, _⟩ := E
+  obtain rfl : P = g1PA := hP
   intro h
   obtain ⟨v, σ₀, hq⟩ := hQ
   have hAV : AxVertragO Q (g1O (summeRoh g1Fall v) 0) := by
@@ -376,9 +349,7 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     obtain rfl : u = v := Option.some.inj e
     exact (h.logik.2.2.1 g1Holen σ σ₀ u (fun t _ => (t : Empty).elim)
       (fun g _ => (g : Empty).elim)).trans hq
-  have hbody := (h.logik.1 0 g1Haupt).1.1
-  rw [hP'] at hbody
-  have hK := hbody (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
+  have hK := (h.logik.1 0 g1Haupt).1.1 (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
     (g1O_lokal _ _) (axVertragOP_of_O _ hAV) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PA) g1Ruf_ohne
     (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PA_lauf v S (s.welt [])
@@ -387,13 +358,9 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
 /-- **Probe G1-R is refuted**: no program with its code meets (b) -- whatever its lock
     family, declared axiom ensures, starts and initial memory. -/
 theorem g1PR_widerlegt (answers : G1FloatAnswers) : NutzerWiderlegt g1PR := by
-  intro E hP h
-  let S := E.S
-  let Q := E.Q
-  let s := E.sp0
-  have hbody := (h.logik.1 0 g1Haupt).1.1
-  rw [hP] at hbody
-  have hK := hbody (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
+  rintro ⟨P, S, Q, st, s, _, _, _, _, _⟩ hP h
+  obtain rfl : P = g1PR := hP
+  have hK := (h.logik.1 0 g1Haupt).1.1 (g1O 3 g1Halb) (g1O_rahmen _ _) (g1O_lokal _ _)
     (axVertragOP_of_O _ (g1O_schief_vertrag Q _)) (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PR)
     g1Ruf_ohne (s.welt []) .nil rfl
   obtain ⟨σ', hrun⟩ := g1PR_lauf answers S (s.welt [])

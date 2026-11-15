@@ -1,9 +1,9 @@
 module
 
 public import Grammatik.Gen.Zeugen.Erreicht
-public import Grammatik.Gen.Zeugen.M.M99_824
-public import Grammatik.Gen.Zeugen.M.M99_825
-public import Grammatik.Gen.Zeugen.M.M47_549
+public import Grammatik.Gen.Zeugen.Gap.M99_824
+public import Grammatik.Gen.Zeugen.Gap.M99_825
+public import Grammatik.Gen.Zeugen.Gap.M47_549
 public import Grammatik.Gen.Zeugen.M.M169_350
 public import Grammatik.Gen.Zeugen.M.M16_13
 public import Grammatik.Gen.Zeugen.M.M49_50
@@ -62,6 +62,8 @@ import all Init.Data.String.ToSlice
 set_option maxRecDepth 100000
 set_option maxHeartbeats 0
 namespace Gabbro.Grammatik.Gen.Zeugen
+
+open Gabbro.Grammatik.Gen.Zeugen.Gap
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz
 
 /-- The old witnesses cover structural cells. This does not assert that all

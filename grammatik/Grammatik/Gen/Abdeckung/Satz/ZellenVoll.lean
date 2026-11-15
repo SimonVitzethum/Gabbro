@@ -185,6 +185,10 @@ structure Tafel (M N : List Einsatz) : Prop where
   schlecht : ∀ z ∈ zellAlle, z.schlecht = true → ∀ e : Einsatz, e.Hat z →
     ∃ n ∈ N, ∀ w, n.Hat w → e.Hat w ∨ ∃ m ∈ M, m.Hat w
 
+/-- A separate annex records fragment refusals without changing M/N coverage. -/
+structure GapAnnex (G : List Einsatz) : Prop where
+  refused : ∀ g ∈ G, g.gueltig = false
+
 /-- Every cell of an accepted program is witnessed in M. This uses only the
     good-cell part of the table and does not characterize contract refusals. -/
 theorem zellen_deckt {M : List Einsatz}

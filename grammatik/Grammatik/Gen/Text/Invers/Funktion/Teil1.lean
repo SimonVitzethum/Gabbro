@@ -50,7 +50,7 @@ theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchran
   split
   · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg h]
   · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -n by omega), Option.map_some,
-  neg_neg]
+  Int.neg_neg]
 
 theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt} (ht : typS otab t = .ok st) (ha : artErg t = some a)
     (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
@@ -404,7 +404,7 @@ theorem wirkungen_append (a b : List SKlausel) :
 
 theorem griffe_append (devs : List String) : ∀ (ps q : List (String × STyp)) (k : Nat),
     (∀ p ∈ ps, uGriffTyp devs p.2 = none) → uGriffe devs k (ps ++ q) = uGriffe devs (k + ps.length) q
-  | [], q, k, _ => by simp only [List.nil_append, List.length_nil, add_zero]
+  | [], q, k, _ => by simp only [List.nil_append, List.length_nil, Nat.add_zero]
   | p :: ps, q, k, h => by
     simp only [List.cons_append, uGriffe, h p List.mem_cons_self]
     rw [griffe_append devs ps q (k + 1) (fun p' hm => h p' (List.mem_cons_of_mem _ hm))]
@@ -444,12 +444,12 @@ theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List �
   | nil => cases bs <;> simp_all
   | cons a as ih =>
     cases bs with
-    | nil => simp only [List.length_cons, List.length_nil, Nat.add_eq_zero_iff, List.length_eq_zero_iff, one_ne_zero,
+    | nil => simp only [List.length_cons, List.length_nil, Nat.add_eq_zero_iff, List.length_eq_zero_iff, Nat.one_ne_zero,
   and_false] at h1
     | cons b bs =>
       cases cs with
       | nil => simp only [List.length_nil, List.length_cons, Nat.right_eq_add, Nat.add_eq_zero_iff, List.length_eq_zero_iff,
-  one_ne_zero, and_false] at h2
+  Nat.one_ne_zero, and_false] at h2
       | cons c cs =>
         simp only [List.length_cons, Nat.add_right_cancel_iff] at h1 h2
         obtain ⟨i1, i2, i3⟩ := ih bs cs h1 h2

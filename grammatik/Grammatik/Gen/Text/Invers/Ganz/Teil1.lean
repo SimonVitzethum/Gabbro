@@ -173,7 +173,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     simp only [uCtxVon, kopfVon, mitGriffPs, ite_true]
     rw [griffe_append devs ps _ 0 hps_none]
     simp only [strEq_eq, uGriffe, uGriffTyp, List.any_eq_true, decide_eq_true_eq, exists_eq_right, hd, ↓reduceIte,
-  zero_add, List.map_cons, List.map_nil, decide_true, List.find?_cons_of_pos]
+  Nat.zero_add, List.map_cons, List.map_nil, decide_true, List.find?_cons_of_pos]
   reg := hL.reg
   kanal h := by
     simp only [vertragVon, Vertrag.vonSig] at h ⊢
@@ -220,7 +220,7 @@ theorem ergOk_mitErg {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ : L
   simp only [Option.some.injEq] at hn
   subst hn
   have h' : (τ :: Γ).reverse[Γ.length]? = some τ := by simp only [List.reverse_cons, List.length_append, List.length_reverse, List.length_cons, List.length_nil,
-  zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
+  Nat.zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
   refine ⟨by simp only [List.length_cons, Nat.lt_add_one], fun lo hi h => ?_, fun h => ?_⟩
   · rw [h'] at h
     simp only [Option.some.injEq] at h

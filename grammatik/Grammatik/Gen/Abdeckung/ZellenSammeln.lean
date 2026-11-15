@@ -11,58 +11,12 @@
              A cell text that names no cell of `zellAlle` stops the run (exit 1): the records belong to another model.
 -/
 module
-public import Grammatik.Gen.Abdeckung.ZellenBefund
+public import Grammatik.Gen.Abdeckung.Records
 public import Grammatik.Gen.Abdeckung.ZellenSchluss
 @[expose] public section
 
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
-
-/-- The cell of a text, from the universe. -/
-def zelleAus (t : String) : Option Zelle := zellAlle.find? (·.text == t)
-
-/-- What the records of all members say together. -/
-structure Summe where
-  zahlen : Nat × Nat × Nat := (0, 0, 0)
-  gut : List Zelle := []
-  schlecht : List Zelle := []
-  maskiert : List Zelle := []
-  schlGedruckt : List Zelle := []
-  quellen : List (String × String) := []
-  kand : List (String × List Zelle × Except String Unit) := []
-  grund : Std.HashMap String Nat := {}
-  formen : Std.HashMap String Nat := {}
-  fremd : List String := []
-  /-- Lean witness files: of valid programs (stem, cells, printed) and of isolated bad cells (stem, cell, printed) -/
-  leanG : List (String × List Zelle × Bool) := []
-  leanB : List (String × List Zelle × List Zelle × Bool) := []
-
-/-- One record line. -/
-def Summe.zeile (s : Summe) (l : String) : Summe :=
-  let zelle := fun t => match zelleAus t with | some x => (some x, s) | none => (none, { s with fremd := s.fremd ++ [t] })
-  let neu := fun (xs : List Zelle) (x : Zelle) => if xs.contains x then xs else xs ++ [x]
-  match l.splitOn "\t" with
-  | ["Z", a, b, c] => let (x, y, w) := s.zahlen; { s with zahlen := (x + a.toNat!, y + b.toNat!, w + c.toNat!) }
-  | ["G", t, _] => match zelle t with | (some x, s) => { s with gut := neu s.gut x } | (none, s) => s
-  | ["B", t, _] => match zelle t with | (some x, s) => { s with schlecht := neu s.schlecht x } | (none, s) => s
-  | ["X", t, _] => match zelle t with | (some x, s) => { s with maskiert := neu s.maskiert x } | (none, s) => s
-  | ["S", t, _] => match zelle t with | (some x, s) => { s with schlGedruckt := neu s.schlGedruckt x } | (none, s) => s
-  | ["Q", f, k] => { s with quellen := s.quellen ++ [(f, k)] }
-  | ["K", st, key, r] =>
-    let ts := if key.isEmpty then [] else key.splitOn ";"
-    let zs := ts.filterMap zelleAus
-    let s := if zs.length == ts.length then s else { s with fremd := s.fremd ++ ts.filter (zelleAus · |>.isNone) }
-    { s with kand := s.kand ++ [(st, zs, if r == "ok" then .ok () else .error r)] }
-  | ["LG", st, key, r] =>
-    let zs := (if key.isEmpty then [] else key.splitOn ";").filterMap zelleAus
-    { s with leanG := s.leanG ++ [(st, zs, r == "ok")] }
-  | ["LB", st, bad, key, r] =>
-    let bs := (if bad.isEmpty then [] else bad.splitOn ";").filterMap zelleAus
-    let zs := (if key.isEmpty then [] else key.splitOn ";").filterMap zelleAus
-    { s with leanB := s.leanB ++ [(st, bs, zs, r == "ok")] }
-  | ["R", m, n] => { s with grund := s.grund.insert m (s.grund.getD m 0 + n.toNat!) }
-  | ["F", m, n] => { s with formen := s.formen.insert m (s.formen.getD m 0 + n.toNat!) }
-  | _ => s
 
 def main (args : List String) : IO UInt32 := do
   match args with
@@ -123,6 +77,11 @@ def main (args : List String) : IO UInt32 := do
     for (f, k) in s.quellen do
       index := index ++ s!"{f}\t{k}\n"
       manifest := manifest ++ s!"{f}\t{k}\t\n"
+    let gaps := s.leanGap.filter (·.2.2)
+    let gWahl := gaps.map (·.1)
+    for (st, zs, _) in gaps do
+      index := index ++ s!"Gap/{st}.gab\tgap\n"
+      manifest := manifest ++ s!"Gap/{st}.gab\tgap\t{String.intercalate ";" (dedupStr (zs.map Zelle.text))}\n"
     IO.FS.writeFile s!"{dir}/index.tsv" index
     IO.FS.writeFile s!"{dir}/manifest.tsv" manifest
     -- the Lean witnesses: a greedy cover of the good cells by printed valid programs, one program per isolated bad cell
@@ -164,23 +123,29 @@ def main (args : List String) : IO UInt32 := do
         | _, _ => none
     let nWahl := dedupStr (schAlle.flatMap fun x => match schlW x with
       | some (.einfach st) => [st] | some (.wurzel s0 s1) => [s0, s1] | some (.pool st) => [st] | none => [])
+    IO.FS.createDirAll s!"{dir}/zeugen/Gap"
     let mut ohneText : List String := []
-    for st in wahl ++ nWahl do
+    for st in wahl ++ nWahl ++ gWahl.map ("Gap/" ++ ·) do
       if ← System.FilePath.pathExists s!"{dir}/lean/{st}.lean" then
         IO.FS.writeFile s!"{dir}/zeugen/{st}.lean" (← IO.FS.readFile s!"{dir}/lean/{st}.lean")
       -- the Gabbro source of the same program: valid candidates in kand/, single-fault programs beside the records
-      let quelle := if st.startsWith "M" then s!"{dir}/kand/{st}.gab" else s!"{dir}/{st}.gab"
+      let quelle := if wahl.contains st || st.startsWith "Gap/" then s!"{dir}/kand/{st}.gab" else s!"{dir}/{st}.gab"
       if ← System.FilePath.pathExists quelle then
         IO.FS.writeFile s!"{dir}/zeugen/{st}.gab" (← IO.FS.readFile quelle)
       else ohneText := ohneText ++ [st]
-    IO.println s!"GABBRO SOURCES of the witnesses: {(wahl ++ nWahl).length - ohneText.length} of {(wahl ++ nWahl).length}; without source: {ohneText}"
+    for st in gWahl do
+      let source := s!"{dir}/kand/Gap/{st}.gab"
+      if ← System.FilePath.pathExists source then
+        IO.FS.createDirAll s!"{dir}/Gap"
+        IO.FS.writeFile s!"{dir}/Gap/{st}.gab" (← IO.FS.readFile source)
+    IO.println s!"GABBRO SOURCES of the witnesses: {(wahl ++ nWahl ++ gWahl).length - ohneText.length} of {(wahl ++ nWahl ++ gWahl).length}; without source: {ohneText}"
     -- the good cells the chosen witnesses cover: the list N may draw its good cells from (`nGen … er`)
-    IO.FS.writeFile s!"{dir}/zeugen/Erreicht.lean" (s!"/-\n  File:      Grammatik/Gen/Zeugen/Erreicht.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`): the good cells the M witnesses cover; N keeps only programs whose\n             good cells outside it are needed cells of a test (`bnoetig`). Do not edit.\n-/\nimport Grammatik.Gen.Abdeckung.Satz.Raum\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik.Gen\n\ndef erreicht : List Zelle := [\n  " ++ String.intercalate ",\n  " (gutL.map Zelle.lean) ++ "]\n\nend Gabbro.Grammatik.Gen.Zeugen\n")
+    IO.FS.writeFile s!"{dir}/zeugen/Erreicht.lean" (s!"/-\n  File:      Grammatik/Gen/Zeugen/Erreicht.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`): the good cells the M witnesses cover; N keeps only programs whose\n             good cells outside it are needed cells of a test (`bnoetig`). Do not edit.\n-/\nmodule\npublic import Grammatik.Gen.Abdeckung.Satz.Raum\n\n@[expose] public section\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik.Gen\n\ndef erreicht : List Zelle := [\n  " ++ String.intercalate ",\n  " (gutL.map Zelle.lean) ++ "]\n\nend Gabbro.Grammatik.Gen.Zeugen\n")
     let schL := schAlle.filter fun x => (schlW x).isSome
     -- the closing file: every cell with its reason, or the open cells
     let gutW := fun (x : Zelle) => wahl.find? fun st => ((lg.find? (·.1 == st)).map (·.2.1.contains x)).getD false
-    let mods := "Grammatik.Gen.Zeugen.Erreicht" :: (wahl.map (s!"Grammatik.Gen.Zeugen.M.{·}")) ++ nWahl.map (s!"Grammatik.Gen.Zeugen.N.{·}")
-    match schlussText gutW schlW mods with
+    let mods := "Grammatik.Gen.Zeugen.Erreicht" :: (wahl.map (s!"Grammatik.Gen.Zeugen.M.{·}")) ++ nWahl.map (s!"Grammatik.Gen.Zeugen.N.{·}") ++ gWahl.map (s!"Grammatik.Gen.Zeugen.Gap.{·}")
+    match schlussTextExplicit gutW schlW wahl nWahl (gWahl.map ("Gap." ++ ·)) mods with
     | .ok text =>
       IO.FS.writeFile s!"{dir}/zeugen/Schluss.lean" text
       IO.println "CLOSING FILE written: every cell has its reason"
@@ -190,7 +155,7 @@ def main (args : List String) : IO UInt32 := do
     IO.println s!"LEAN WITNESSES: good cells {gutL.length} of {gutAlle.length} by {wahl.length} programs; bad cells with N tests {schL.length} of {schAlle.length}; files in {dir}/zeugen"
     for x in gutAlle.filter (fun x => s.gut.contains x && !gutL.contains x) do IO.println s!"{x.text}\tvalid program found, no Lean print"
     if ← System.FilePath.pathExists s!"{dir}/kand" then IO.FS.removeDirAll s!"{dir}/kand"
-    IO.println s!"sources: {u.gewaehlt.length} valid + {s.quellen.length} single-fault in {dir}"
+    IO.println s!"sources: {u.gewaehlt.length} valid + {s.quellen.length} single-fault + {gWahl.length} fragment-gap in {dir}"
     return (if anzF == 0 then 0 else 1)
   | _ =>
     IO.eprintln "usage: gen-zellen-sammeln DIR"

@@ -81,7 +81,7 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
     | some ix =>
     have hix := idx_ok H.einv t (sizeOf i + 1) i (by omega) i' ix hi hx
     have ha := anw1_slot H tabs koepfe t fd i' se ix hix hL
-    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
+    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
     simp only [List.length_singleton, List.singleton_append]
     simp only [hx, Option.bind_eq_bind, Option.bind_some] at hu
     split at hu
@@ -109,7 +109,7 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
     · simp only [reduceCtorEq] at hu
     · rename_i hat
       have ha := anw1_glob H tabs koepfe g (by simpa using hat) se
-      refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
+      refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
       simp only [List.length_singleton, List.singleton_append]
       split at hu
       · rename_i hb
@@ -136,13 +136,13 @@ theorem rumpf_satz_stmt : ∀ {z : Spez} {V : Vertrag z.deklaration}
     | none => simp only [hr, Option.map_none, reduceCtorEq] at hu
     | some r =>
     simp only [hr, Option.map_some, Option.some.injEq] at hu; subst hu
-    exact ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
+    exact ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
       simpa using reihe_ret tabs koepfe f ctx v tail r xs cE (ende_ok H rfl e v r hv hr) ht (delabR_foldFree e hv)⟩
   | retWhy r hΛ =>
     simp only [delabS, Except.ok.injEq] at hd
     subst hd
     simp only [uOfSt, Option.some.injEq] at hu; subst hu
-    exact ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
+    exact ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => by
       simpa using reihe_ret tabs koepfe f ctx _ tail _ xs cE (ende_why H r) ht
         (by intro value hv; cases hv; rfl)⟩
   | ite c t e =>
@@ -175,7 +175,7 @@ Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     subst hu
     simp only [Stmt.ite.sizeOf_spec, Bool.sizeOf_eq_one] at hn
     have hΛ := (ihB t ctx art (sizeOf t + 1) st tu (by omega) (by omega) H ht htu).1
-    refine ⟨hΛ, by simp only [List.isEmpty_iff, List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
+    refine ⟨hΛ, by simp only [List.isEmpty_iff, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
     simp only [Stmt.ite.sizeOf_spec, Bool.sizeOf_eq_one] at hf
     simp only [List.length_singleton, List.singleton_append]
     obtain ⟨_, cB, hT⟩ := ihB t ctx art f st tu (by omega) (by omega) H ht htu
@@ -208,9 +208,9 @@ Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some bu =>
     simp only [hbu, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp only [Stmt.locks.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn
-    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
-    simp only [Stmt.locks.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hf
+    simp only [Stmt.locks.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn
+    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
+    simp only [Stmt.locks.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hf
     simp only [List.length_singleton, List.singleton_append]
     obtain ⟨_, cB, hB⟩ := ihB body _ art f sb bu (by omega) (by omega) (H.lock L) hb hbu
     obtain ⟨lk, hlk⟩ := H.lockFind L
@@ -235,7 +235,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     | some bu =>
     simp only [hiv, hbu, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hn
+    simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hn
     have hk : ∃ i', (∃ x, ss = [.each (nVar Γ.length) none "slots" (.variable (nTab (tN z t))) "unvisited" "" i'
         (.block sb none)] ∧ x = ()) ∧ ((i' = none ∧ iv = .tru) ∨ ∃ p, i' = some p ∧ uBool ctx p = .ok iv) := by
       split at hd
@@ -254,8 +254,8 @@ Option.bind_fun_none, reduceCtorEq] at hu
     obtain ⟨cnt, hkopf⟩ := schleifenKopf_ok H t i' iv hi
     have H' := H.push (.index (z.deklaration.count t)) (.index (tN z t)) (.index cnt) 0 ctx.muts
       (nVar Γ.length :: ctx.loops) H.muts (by simp only [Ty.index, ScalarMeta])
-    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
-    simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, add_zero] at hf
+    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf hr => ?_⟩
+    simp only [Stmt.traverse.sizeOf_spec, Bool.sizeOf_eq_one, sizeOf_default, Nat.add_zero] at hf
     simp only [List.length_singleton, List.singleton_append]
     obtain ⟨_, cB, hB⟩ := ihB body _ _ f sb bu (by omega) (by omega) H' hb hbu
     have := reihe_each tabs koepfe f ctx _ _ _ i' sb tail _ iv bu xs cB cE hkopf hB hr
@@ -274,7 +274,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     simp only [hx, Option.map_some, Option.some.injEq] at hu
     subst hu
     obtain ⟨k, hf, hKP⟩ := hK f
-    refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun g tail ys cE hg ht => ?_⟩
+    refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun g tail ys cE hg ht => ?_⟩
     simp only [List.length_singleton, List.singleton_append]
     exact reihe_call tabs koepfe g ctx _ as tail _ ys cE (anw1_call H tabs f k hf hKP hp.hh hr args as xs ha hx) ht (delabA_foldFree args ha)
   | callInd p args hp hr =>
@@ -303,7 +303,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
           {ctx with unknownRanges := ctx.unknownRanges.filter (fun previous => previous != nZeiger Γ.length)}
         have HP : SInv z V ctxP Γ Λ art := H.unknownRanges _
         have H' := HP.pushZ Γ.length (.fnptr (z.deklaration.sig f)) (.fnptr (z.deklaration.sig f)) 0 ctx.loops
-        refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, Std.le_refl], _, H', fun g tail ys cE hg ht => ?_⟩
+        refine ⟨nach_ohne_marken hM _ Λ, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Std.le_refl], _, H', fun g tail ys cE hg ht => ?_⟩
         have h2 := reihe_call tabs koepfe g _ _ as tail _ ys cE
           (anw1_callInd HP tabs f k _ hf hk hKP hp.hh hr args as xs ha hx (HP.zb f) Γ.length ctx.loops) ht
           (delabA_foldFree args ha)
@@ -320,7 +320,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     simp only [he, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     have ha := anw1_regWrite H tabs koepfe r se
-    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
+    refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
     simp only [List.length_singleton, List.singleton_append]
     simp only [uOfSt] at hu
     split at hu
@@ -348,7 +348,7 @@ Option.bind_fun_none, reduceCtorEq] at hu
     split at hu
     · rename_i hat
       have ha := anw1_publish H tabs koepfe g hat se
-      refine ⟨rfl, by simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
+      refine ⟨rfl, by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceLeDiff], ctx, H, fun f tail xs cE hf ht => ?_⟩
       simp only [List.length_singleton, List.singleton_append]
       split at hu
       · rename_i hb

@@ -11,7 +11,7 @@ public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 namespace Gabbro.Grammatik.ConcreteGoalZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz
-open Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
+open _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
   nutzerPflicht_of_akzeptiert_zeuge)
 
 abbrev fs : Aufzaehlung declaration.Fn :=
@@ -45,21 +45,27 @@ abbrev initial : FadenMaschine declaration.mitRuhe :=
 /-- Both sides of the contract constrain values: 4 is admitted, 10 is
     refused, and only 5 (not 6) satisfies the postcondition at input 4. -/
 theorem concrete_contract_zeuge :
-    ReqAmEintritt unit.P () Vertraege.Pruefer.Witness.world
-      Vertraege.Pruefer.Witness.arguments ∧
-    ¬ ReqAmEintritt unit.P () Vertraege.Pruefer.Witness.world
+    ReqAmEintritt unit.P () _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world
+      _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.arguments ∧
+    ¬ ReqAmEintritt unit.P () _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world
       (.cons ⟨10, by decide, by decide⟩ .nil) ∧
-    EnsAmRueck unit.P () Vertraege.Pruefer.Witness.world
-      Vertraege.Pruefer.Witness.world Vertraege.Pruefer.Witness.arguments
+    EnsAmRueck unit.P () _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world
+      _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.arguments
       ⟨5, by decide, by decide⟩ ∧
-    ¬ EnsAmRueck unit.P () Vertraege.Pruefer.Witness.world
-      Vertraege.Pruefer.Witness.world Vertraege.Pruefer.Witness.arguments
+    ¬ EnsAmRueck unit.P () _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world
+      _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.world _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness.arguments
       ⟨6, by decide, by decide⟩ := by
   constructor
-  · decide
+  · change decide ((4 : Int) < 10) = true
+    decide
   constructor
-  · decide
-  constructor <;> decide
+  · change ¬ (decide ((10 : Int) < 10) = true)
+    decide
+  constructor
+  · change decide ((5 : Int) = 4 + 1) = true
+    decide
+  · change ¬ (decide ((6 : Int) = 4 + 1) = true)
+    decide
 
 /-- All four premise groups hold jointly on a declared start with input 4.
     Its requires excludes 10 and its ensures demands result = input + 1. -/

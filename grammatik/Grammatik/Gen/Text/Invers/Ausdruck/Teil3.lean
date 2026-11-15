@@ -248,7 +248,7 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     | some x =>
     simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
+    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
     simp only [(show ("slots" == "elems") = false from rfl),
@@ -267,7 +267,7 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     | some x =>
     simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp only [Expr.existsSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
+    simp only [Expr.existsSlots.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
     simp only [(show ("slots" == "elems") = false from rfl),
@@ -305,7 +305,7 @@ theorem seite_ohne_erg (art : Nat → UParamArt) (n : Nat) :
       simp only [seiteAltErg]
   | widen h1 h2 e =>
     simp only [uOfS] at hu
-    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) u hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) u hu
   | add a b | sub a b | mul a b =>
     simp only [uOfS] at hu
     simp only [Expr.add.sizeOf_spec, Expr.sub.sizeOf_spec, Expr.mul.sizeOf_spec] at hn
@@ -367,7 +367,7 @@ theorem ens_ohne_erg (n : Nat) :
     simp only [ensAltErg, ih a (by omega) _ xa]
   | forallSlots t body hL | existsSlots t body hL =>
     simp only [uOfB] at hu
-    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, add_zero, Expr.existsSlots.sizeOf_spec] at hn
+    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, Nat.add_zero, Expr.existsSlots.sizeOf_spec] at hn
     cases xa : uOfB z (artAuf (.index (tN z t)) art) none body <;> simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
     simp only [ensAltErg, ih body (by omega) _ xa]

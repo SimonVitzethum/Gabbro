@@ -21,7 +21,7 @@
   itself, never a substitute (`awaits` needs an atomic static in the model, as in the language).
 -/
 module
-public import Grammatik.Gen.Zeugen.Schluss
+public import Grammatik.Gen.Abdeckung.Waehlen
 public import Grammatik.Parser.Round.RundlaufProgramm
 public import Grammatik.Parser.Cover.Mitglieder
 import all Init.Data.Repr

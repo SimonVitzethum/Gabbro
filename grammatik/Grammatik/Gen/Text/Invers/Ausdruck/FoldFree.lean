@@ -34,7 +34,7 @@ theorem delabE_foldFree {Γ : Ctx} {Λ : List (Res z.deklaration)} {τ : Ty} {ko
         simp only [delabE, Except.ok.injEq] at hd; subst hd
         split <;> simp only [needsFoldExpansion]
       | widen _ _ e =>
-        simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn
+        simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn
         exact ih e (by omega) s hd
       | add a b | sub a b | mul a b | div _ _ a b | rem _ _ a b
       | sdiv _ a b | srem _ a b | band _ _ a b | bor _ _ _ _ _ a b

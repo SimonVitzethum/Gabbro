@@ -100,17 +100,18 @@ def kPv0 : Programm kD := { kPv with unterbricht := fun _ => false }
 /-- **Without a declared handler the checker accepts these bodies**: every component but the
     handler one is the same Bool on `kPv0` and `kPv`, and all of them pass. -/
 theorem kPv_ohne_handler :
-    Akzeptiert kPv0 kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = true := by decide
+    Akzeptiert kPv0 kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert]
+      (sources := kSources) = true := by decide +kernel
 
 /-- **The handler component refuses it**: the handler's graph takes `RING`. -/
 theorem handler_abgelehnt :
     maskenB kPv kFs = false ∧
-      Akzeptiert kPv kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = false := by
-  decide
+      Akzeptiert kPv kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] (sources := kSources) = false := by
+  decide +kernel
 
 /-- The variant as a unit, and its runtime start. -/
 def kEv : Zielsatz.Einheit kD :=
-  { P := kPv, S := kSI, Q := axWahr kD, starts := [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], sp0 := kSp }
+  { P := kPv, S := kSI, lockFormulas := kSources, Q := axWahr kD, starts := [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], sp0 := kSp }
 
 abbrev kMv0 : RufMaschineG kD.mitRuhe :=
   RufStartG kPv.mitRuhe (speicherR kSp) (initRuhe kEv.starts)

@@ -5,8 +5,8 @@
 -/
 module
 public import Grammatik.Gen.Text.Pruefung
-public import Grammatik.Gen.Zeugen.M.M99_824
-public import Grammatik.Gen.Zeugen.M.M99_825
+public import Grammatik.Gen.Zeugen.Gap.M99_824
+public import Grammatik.Gen.Zeugen.Gap.M99_825
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -43,7 +43,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M99_824
 
-open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.M99_824
+open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.Gap.M99_824
 
 theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
 
@@ -55,7 +55,7 @@ end Gabbro.Grammatik.Gen.Text.Zeugen.M99_824
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M99_825
 
-open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.M99_825
+open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.Gap.M99_825
 
 theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
 

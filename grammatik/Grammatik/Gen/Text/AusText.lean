@@ -15,6 +15,7 @@
 module
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Gen.Text.Delab
+public import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
 import all Init.Data.String.Basic

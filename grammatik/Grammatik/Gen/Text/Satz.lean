@@ -3,6 +3,7 @@
   coverage. Cell-only checker equivalence is not asserted.
 -/
 module
+public import Grammatik.Gen.Zeugen.Schluss
 public import Grammatik.Gen.Text.Zeugen.M103_131
 public import Grammatik.Gen.Text.Zeugen.M103_803
 public import Grammatik.Gen.Text.Zeugen.M16_13
@@ -70,16 +71,18 @@ def NeutralText (R : String → Bool) : Prop :=
 def NeutralKorrektText (K : String → Prop) : Prop :=
   ∃ ψ : Zelle → Prop, ∀ s e, ausText s = .ok e → (K s ↔ ∀ z, e.Hat z → ψ z)
 
-/-- The texts of the structural witnesses (the order of `structuralWitnesses`). -/
+/-- The texts of the structural witnesses (the order of `structuralWitnesses`).
+    TSV classes distinguish valid, wrong-program and gap records; these texts
+    assert structural correspondence only, not accepted-M membership. -/
 def mText : List String :=
-  [textVon Zeugen.M99_824.z Zeugen.M99_824.P Zeugen.M99_824.ws,
-   textVon Zeugen.M47_549.z Zeugen.M47_549.P Zeugen.M47_549.ws,
+  [textVon Zeugen.Gap.M99_824.z Zeugen.Gap.M99_824.P Zeugen.Gap.M99_824.ws,
+   textVon Zeugen.Gap.M47_549.z Zeugen.Gap.M47_549.P Zeugen.Gap.M47_549.ws,
    textVon Zeugen.M169_350.z Zeugen.M169_350.P Zeugen.M169_350.ws,
    textVon Zeugen.M16_13.z Zeugen.M16_13.P Zeugen.M16_13.ws,
    textVon Zeugen.M49_50.z Zeugen.M49_50.P Zeugen.M49_50.ws,
    textVon Zeugen.M103_803.z Zeugen.M103_803.P Zeugen.M103_803.ws,
    textVon Zeugen.M103_131.z Zeugen.M103_131.P Zeugen.M103_131.ws,
-   textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws,
+   textVon Zeugen.Gap.M99_825.z Zeugen.Gap.M99_825.P Zeugen.Gap.M99_825.ws,
    Zeugen.Reset.Good.text]
 
 /-- The texts of the refused witnesses (the order of `structuralRefusals`). -/

@@ -2739,9 +2739,8 @@ every other empty answer type is now REFUSED by the checker, and `nieZurueck` is
 nothing; register `temp : f64 in 0 .. 1` without device carriers.
 `g1PA` = `if true { let x = holen(); } return;`, `g1PR` = `if true { let t = temp; } return;`,
 both under `ensures false`; the strict contract checker refuses both (`g1PA_abgelehnt`,
-`g1PR_abgelehnt`). `g1PA_counterexample` supplies a concrete returning `err` answer;
-`g1PR_counterexample` supplies the returning raw half-word under its primitive range replies.
-Both runs violate the declared false post independently of the checker refusal.
+`g1PR_abgelehnt`). `g1PA_lauf0` and `g1PR_lauf0` retain the fitting-answer return runs;
+`g1PA_widerlegt` and `g1PR_widerlegt` refute their false posts independently of the checker refusal.
 
 * **The oracle can answer:** `g1_holen_antwortet` -- for a declared ensures holding at some
   answer, an oracle meets ALL of (c) (`GutO`, `RegLokal`, `AxVertragO`) and its answer to
@@ -2871,16 +2870,16 @@ list makes the round-6 probe meet `AkzeptiertSpec`; `w1_abgelehnt`: `akzeptiert_
 refuses every program with its code; `w1_bool`/`w1_sonst_alles`: computed, the Bool is
 `false`, the listed structural components are `true`, and `antwortenB` independently refuses. The same
 for an empty register range (`w1r_spec_nicht`, `w1r_bool`) and `.grund 0` (`w1g_bool`). The
-contrast: behind an axiom `-> never` the code with a literal-true function post is accepted
-(`w1v_bool`) and the head is `nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`).
-The original vacuous false post is refused outside the foreign-call WP fragment
-(`w1v_false_post_abgelehnt`). The current G1 probes are strict-checker refusals with the
+contrast: the answer-site component admits `-> never` (`w1v_antworten`) and the head is
+`nieZurueck` (`w1v_kopf`); at `hol()` it is not (`w1_kein_nie`). This retains the original
+false post and non-returning body without claiming full strict-checker acceptance.
+The current G1 probes are strict-checker refusals with the
 returning counterexamples described in §24.4.
 
 **Axioms.** `gabbro_ziel`, `schrittAnt`, `antInvG_erreichbar`, `antwortB_iff`,
 `w1_abgelehnt`: `propext`, `Classical.choice`, `Quot.sound`; `flt_trans_endlich`,
-`gleitBarB_iff`: `propext`, `Quot.sound`; `w1_bool`: `propext`. The current `w1v_bool` and
-`w1v_false_post_abgelehnt` use `propext`, `Classical.choice`, `Quot.sound`. No `sorry`, no new
+`gleitBarB_iff`: `propext`, `Quot.sound`; `w1_bool`: `propext`. The current `never` contrast
+states answer-site admission rather than full checker acceptance. No `sorry`, no new
 `axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
 green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
 
@@ -7159,13 +7158,12 @@ statements in the source; no build or axiom audit of them is recorded here (the 
 | `GabbroZiel` (definition) | `grammatik/Grammatik/Zielsatz/Kern/Spec/Fremd.lean` | (a) `C.akzeptiert`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag E O`, (c) `HardwareAnnahmenHw O E.Q`, (d) `Laufzeit` give `ZielFX` on every thread machine over GX reachable from the runtime's start. |
 | `gabbro_ziel` | `grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Fremd.lean` | Proof of `GabbroZiel`: the binding inhabits the question-world class (`axVertragOP_of_binding`), the call-site duty answers every reachable question (`relyQ_of_callSite`), then `zielFX_rely`. |
 | `GabbroZielVoll`, `gabbro_ziel_voll` | `grammatik/Grammatik/Zielsatz/Kern/Spec/Teil2.lean`, `.../BeweisAtomar/Voll.lean` | The goal under the unconditional summary premise `HardwareAnnahmen` (the statement of before, text unchanged). |
-| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with a literal-true function post; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start. The pre holds at `1` and fails at `0`; `echo` breaks the full summary; the separate original result contract `summaryP` needs the summary and is refused outside the foreign-result WP fragment. The start's question has a true pre; one GX step runs the software call and reaches a return, where `gabbro_ziel` gives `ZielFX`. |
+| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with a literal-true function post; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start. The pre holds at `1` and fails at `0`; `echo` breaks the full summary; the separate original result contract `summaryProgram` needs the summary; admission is asserted only for `wE`. The start's question has a true pre; one GX step runs the software call and reaches a return, where `gabbro_ziel` gives `ZielFX`. |
 | `CallSiteGoal.call_sites` | `.../CallSite/CallSiteGoalSites.lean` | `CallSitePflicht wE` over every binding, budget and start: the head invariant `Koepfe` (empty stacks; a return, or the call whose arguments meet the pre in every world) holds at every start and is kept by every G and GX step. |
 | `bindAxiom_ende_schritt` | `.../CallSite/CallSiteGoalStep.lean` | Generic: at a head `ende (let x = g(…); rest)` every step of the thread is `endeBindAxiom`; stack, frame function, arguments, entry world and log are kept and the residue is `ende rest` with an answer bound. |
 | `CallSiteGoal.user`, `CallSiteGoal.body_out` | `.../CallSite/CallSiteGoalUser.lean` | `NutzerPflichtA wE`: against every frame-respecting oracle of `AxVertragOP (PreQ wP) wQ` the body returns `1` (the class grants the summary because the pre `1 != 0` holds) or stops at the named hardware outcome of an undecodable answer. |
-| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | The separate `summaryP` with `ensures result == 1` fails its body duty with the empty summary: the frame-respecting oracle `zeroO` returns `0`. The admitted literal-true post makes no summary-necessity claim. |
-| `CallSiteGoal.empty_summary_suffices` | `.../CallSite/CallSiteGoalUser.lean` | The actual checker proves the admitted `wP`'s body duty with the empty summary too, formally refuting the former summary-necessity claim for its literal-true post. |
-| `CallSiteGoal.zero_result_counterexample`, `CallSiteGoal.summaryP_refused` | `.../CallSite/CallSiteGoalUser.lean` | The actual zero-answer run violates `summaryP`'s result post, and the strict contract gate refuses its unsupported foreign-result WP. |
+| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | The separate `summaryProgram` with `ensures result == 1` fails its body duty with the empty summary: the frame-respecting oracle `zeroO` returns `0`. The admitted literal-true post makes no summary-necessity claim. |
+| `CallSiteGoal.body_duties`, `CallSiteGoal.summary_koerper`, `CallSiteGoal.summary_used_zeuge` | `.../CallSite/CallSiteGoalUser.lean` | The shared body proof supplies the admitted literal post and the stronger functional post separately. The stronger companion has the same body and foreign precondition, is correct under `wQ`, and fails its duty under the empty summary. |
 | `CallSiteGoal.checker` | `.../CallSite/CallSiteGoalFixture.lean` | `akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true`, decided component by component over the one body (`schnittstellenB` through `schnittstellenB_iff`). |
 
 The three C08 blocker modules (`CallSiteConditionalBite`, `CallSiteQuestionBlocker`,

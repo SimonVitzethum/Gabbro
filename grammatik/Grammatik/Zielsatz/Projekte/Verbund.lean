@@ -340,8 +340,7 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
     hA.masken, hA.schnittstellen, (fun _ h => by cases h), (fun _ h => by cases h),
-    hA.bibliothek, Kernzelle.accumulatorAdmission_leer _ _, hA.pruef, hA.reset,
-    hA.invarianten, hA.kontrakte⟩,
+    hA.bibliothek, Kernzelle.accumulatorAdmission_leer _ _, hA.pruef, hA.reset, hA.invarianten, hA.kontrakte⟩,
     ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩, ?_⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by

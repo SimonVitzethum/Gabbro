@@ -202,7 +202,7 @@ theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Na
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfIdx] at hu
-    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s ix hd hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, Nat.add_zero] at hn; omega) s ix hd hu
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd

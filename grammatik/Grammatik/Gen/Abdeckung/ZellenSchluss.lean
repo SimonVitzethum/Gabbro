@@ -99,7 +99,8 @@ def schlechtBeweisT (x : Zelle) : NGrund → String
 
 /-- **The closing file**, or the open cells. `gut x` names the M witness of a good cell, `schl x` how N covers a bad
     cell; `mods` are the witness modules. -/
-def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund) (mods : List String) :
+def schlussTextExplicit (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
+    (mSt nSt gSt : List String) (mods : List String) :
     Except (List Zelle) String :=
   let gutT := fun (x : Zelle) => match gut x with
     | some st => some s!"Or.inl ⟨{st}.e, by simp [Mw], {st}.e_hat _ (by decide)⟩"
@@ -114,8 +115,6 @@ def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
   let pat := String.intercalate " | " (zellAlle.map fun _ => "rfl")
   let erreicht := zellAlle.filter fun x => !x.schlecht && (gut x).isSome
   let erreichtPat := String.intercalate " | " (erreicht.map fun _ => "rfl")
-  let mSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.M.")).map (·.drop "Grammatik.Gen.Zeugen.M.".length |>.toString)
-  let nSt := (mods.filter (·.startsWith "Grammatik.Gen.Zeugen.N.")).map (·.drop "Grammatik.Gen.Zeugen.N.".length |>.toString)
   let gutTF := String.join (zellAlle.map fun x =>
     if x.schlecht then "  · exact absurd hs (by decide)\n" else s!"  · exact {(gutT x).getD "?"}\n")
   let schlTF := String.join (zellAlle.map fun x =>
@@ -126,8 +125,14 @@ def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
   let nList := String.intercalate ", " (nSt.map (· ++ ".e"))
   let mPat := String.intercalate " | " (mSt.map fun _ => "rfl")
   let nPat := String.intercalate " | " (nSt.map fun _ => "rfl")
+  let gPat := String.intercalate " | " (gSt.map fun _ => "rfl")
+  let gProof := String.join (gSt.map fun st =>
+    s!"    · exact Gap.checked_gap {st}.e (by simp [Gap.fragmentGaps])\n")
+  let gList := String.intercalate ", " (gSt.map (· ++ ".e"))
+  let gapText := if gSt.isEmpty then "" else
+    s!"/-- Fragment refusals are an annex, never wrong-program coverage. -/\ntheorem gap_annex : GapAnnex ([{gList}] : List Einsatz) where\n  refused g hg := by\n    simp only [List.mem_cons, List.not_mem_nil, or_false] at hg\n    rcases hg with {gPat}\n{gProof}\n"
   let zeugenText :=
-    s!"/-! ## The witnesses alone: M and N as explicit lists of programs of the source -/\n\n/-- **M**: witnesses with a full checker acceptance proof. -/\ndef Mw : List Einsatz := [{mList}]\n\n/-- **N**: the refused tests. -/\ndef Nw : List Einsatz := [{nList}]\n\n" ++
+    s!"/-! ## The witnesses alone: M and N as explicit lists of programs of the source -/\n\n/-- **M**: witnesses with a full checker acceptance proof. -/\ndef Mw : List Einsatz := [{mList}]\n\n/-- **N**: wrong programs with structural model refusals. -/\ndef Nw : List Einsatz := [{nList}]\n\n" ++
     s!"theorem zeugen_m_akzeptiert : ∀ m ∈ Mw, m.gueltig = true := by\n  intro m hm\n  simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm\n" ++
       (if mSt.isEmpty then "" else s!"  rcases hm with {mPat}\n" ++
         String.join (mSt.map fun st => s!"  · exact {st}.e_gueltig\n")) ++ "\n" ++
@@ -140,8 +145,16 @@ def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
     "\n/-- **A neutral compiler correct on the witness list M is correct on every valid program of the source.** -/\ntheorem compiler_zeugen_korrekt (K : Einsatz → Prop) (hK : NeutralKorrekt K) (hM : ∀ m ∈ Mw, K m) (e : Einsatz)\n    (hv : e.gueltig = true) : K e := by\n  obtain ⟨ψ, hψ⟩ := hK\n  refine (hψ e).2 fun z hz => ?_\n  obtain ⟨m, hm, hmz⟩ := zellen_deckt zeugen_deckung e hv z hz\n  exact (hψ m).1 (hM m hm) z hmz\n\n"
   .ok (s!"/-\n  File:      Grammatik/Gen/Zeugen/Schluss.lean\n  Subject:   GENERATED (`gen-zellen-sammeln`, `ZellenSchluss.lean`): every cell of the universe has its reason, so\n             the accepted-program cell coverage yields the neutral compiler theorem. Do not edit.\n-/\n" ++
     "module\n" ++ String.join (mods.map fun m => s!"public import {m}\n") ++
-    "public import Grammatik.Gen.Abdeckung.Satz.Neutral\npublic import Grammatik.Gen.Abdeckung.Satz.Unmoeglich\n\n@[expose] public section\n\nset_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz\n\n" ++
-    s!"theorem zellAlle_liste : zellAlle = [\n    {liste}] := by decide\n\n" ++ zeugenText ++
+    "public import Grammatik.Gen.Zeugen.Gap\npublic import Grammatik.Gen.Abdeckung.Satz.Neutral\npublic import Grammatik.Gen.Abdeckung.Satz.Unmoeglich\n\n@[expose] public section\n\nset_option maxRecDepth 100000\nset_option maxHeartbeats 0\n\nnamespace Gabbro.Grammatik.Gen.Zeugen\n\nopen Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz\n\n" ++
+    s!"theorem zellAlle_liste : zellAlle = [\n    {liste}] := by decide\n\n" ++ gapText ++ zeugenText ++
     "end Gabbro.Grammatik.Gen.Zeugen\n")
+
+/-- Ad-hoc caller: infer candidates once; production uses explicit lists. -/
+def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
+    (mods : List String) : Except (List Zelle) String :=
+  let stems := fun pathPrefix => (mods.filter (·.startsWith pathPrefix)).map
+    (·.drop pathPrefix.length |>.toString)
+  schlussTextExplicit gut schl (stems "Grammatik.Gen.Zeugen.M.")
+    (stems "Grammatik.Gen.Zeugen.N.") [] mods
 
 end Gabbro.Grammatik.Gen
