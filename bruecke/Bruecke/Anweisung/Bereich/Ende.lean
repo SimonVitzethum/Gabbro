@@ -175,30 +175,33 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
         intro σ ρ s hW hL
         obtain ⟨bv, hstep, hWl, hL'⟩ := lowBind_named_sim (x := x) hv
           ((namedSide_sicht hV ns v).symm.trans he) hU S.tab hU.valid σ ρ s hW hL
-        apply endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tail) ?_ rfl
-        exact endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindung x ls.range)
-          (ft.mitBindung x (0, 0)) (ns.push x) nextB rest ys (hU.bind hF.1 ls.range)
-          (hV.bind x (0, 0) ls.range) hmem hF.2 hnext hys _ _ ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+        exact endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tail)
+          (endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindung x ls.range)
+            (ft.mitBindung x (0, 0)) (ns.push x) nextB rest ys (hU.bind hF.1 ls.range)
+            (hV.bind x (0, 0) ls.range) hmem hF.2 hnext hys _ _
+            ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL') rfl
       case bindMut x lo hi v =>
         obtain ⟨e, he, rfl, rfl, rfl⟩ := schrittB_bindMut hs
         obtain ⟨ev, nextB, hv, hnext, rfl⟩ := lowEnd_bindMut_ok hG
         intro σ ρ s hW hL
         obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindMut_named_sim (x := x) hv
           ((namedSide_sicht hV ns v).symm.trans he) hU S.tab hU.valid σ ρ s hW hL
-        apply endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tail) ?_ rfl
-        exact endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindung x (lo, hi))
-          (ft.mitBindung x (lo, hi)) (ns.push x) nextB rest ys (hU.bind hF.1 (lo, hi))
-          (hV.bind x (lo, hi) (lo, hi)) hmem hF.2 hnext hys _ _ ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+        exact endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tail)
+          (endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindung x (lo, hi))
+            (ft.mitBindung x (lo, hi)) (ns.push x) nextB rest ys (hU.bind hF.1 (lo, hi))
+            (hV.bind x (lo, hi) (lo, hi)) hmem hF.2 hnext hys _ _
+            ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL') rfl
       case bindB x v =>
         obtain ⟨e, he, rfl, rfl, rfl⟩ := schrittB_bindB hs
         obtain ⟨ev, nextB, hv, hnext, rfl⟩ := lowEnd_bindB_ok hG
         intro σ ρ s hW hL
         obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindB_named_sim (x := x) hv
           ((condZ_sicht hV ns v).symm.trans he) hU S.tab σ ρ s hW hL
-        apply endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tailB) ?_ rfl
-        exact endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindungB x)
-          (ft.mitBindungB x) (ns.push x) nextB rest ys (hU.bindB hF.1)
-          (hV.bindB x) hmem hF.2 hnext hys _ _ ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+        exact endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tailB)
+          (endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitBindungB x)
+            (ft.mitBindungB x) (ns.push x) nextB rest ys (hU.bindB hF.1)
+            (hV.bindB x) hmem hF.2 hnext hys _ _
+            ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL') rfl
       all_goals cases hl
     | @record x d v ss id fs e ys tail ht he hys =>
       obtain ⟨ev, nextB, hv, hnext, rfl⟩ := lowEnd_bindRecord_ok
@@ -206,10 +209,11 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
       intro σ ρ s hW hL
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindRecord_named_sim (x := x) hv
         ((namedSide_sicht hV ns v).symm.trans he) hU S.tab σ ρ s hW hL
-      apply endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tailRecord) ?_ rfl
-      exact endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitWert x (.prod id fs))
-        (ft.mitWert x (.prod id fs)) (ns.push x) nextB rest ys (hU.bindRecord hF.1 id fs)
-        (hV.bindRecord x id fs) hmem
-        (by simpa only [UFn.mitWert, uArtVon, protectedNames] using hF.2) hnext hys _ _ ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+      exact endZiel_bind_G (fun ρB _ => hstep ρB) (fun _ _ h => h.tailRecord)
+        (endBodyZ_sim G S c hc O passes R hRR n k ss (fn.mitWert x (.prod id fs))
+          (ft.mitWert x (.prod id fs)) (ns.push x) nextB rest ys (hU.bindRecord hF.1 id fs)
+          (hV.bindRecord x id fs) hmem
+          (by simpa only [UFn.mitWert, uArtVon, protectedNames] using hF.2) hnext hys _ _
+          ⟨s.world, Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL') rfl
 
 end Gabbro.Bruecke
