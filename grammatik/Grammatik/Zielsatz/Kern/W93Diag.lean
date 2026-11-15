@@ -5,6 +5,8 @@
 module
 public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
+public import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
 public meta import Grammatik.Logik.Invarianten.Pruefer.Program
 public meta import Grammatik.Logik.Invarianten.VC.Calls
 public meta import Grammatik.Kern.Semantik.Semantik.T1.Teil1
@@ -15,6 +17,7 @@ public meta import Grammatik.Logik.Invarianten.VC.Compiler
 namespace Gabbro.Grammatik.W93Diag
 
 open Invarianten Invarianten.Frag Invarianten.VC Invarianten.Pruefer Vertraege.Pruefer
+open Gabbro.Grammatik.NIZeuge
 
 inductive AkFn where
   | a
@@ -150,5 +153,28 @@ def diagSources : LockSources akS := fun _ => none
 #eval ((checkFunction akP1 akS diagSources {} none akC).toOption.isSome)
 #eval ((checkFunction akP1 akS diagSources {} none akRuhe).toOption.isSome)
 #eval (invariantVCB akP1 akS akFs diagSources)
+
+/-- Lock sources for `zS` (mirrors the PoolZeuge fixture edit): constantly-true
+    invariant reified by closed `.tru`. -/
+def zDiagSources : Invarianten.Pruefer.LockSources zS := fun _ => some
+  { resources := []
+    expression := .tru
+    correct := fun _ => rfl }
+
+def diagZpb : String :=
+  match checkInvariantVC zPB zS zFs zDiagSources with
+  | .ok _ => "ok"
+  | .error e => e.message
+
+#eval diagZpb
+#eval (invariantVCB zPB zS zFs zDiagSources)
+
+def diagNp : String :=
+  match checkInvariantVC nP (SperrInv.leer nD) nFs (fun _ => none) with
+  | .ok _ => "ok"
+  | .error e => e.message
+
+#eval diagNp
+#eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))
 
 end Gabbro.Grammatik.W93Diag
