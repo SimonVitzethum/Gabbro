@@ -113,15 +113,15 @@ local macro "ident_functions" : tactic => `(tactic| (
     cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)))
 
 private def identUnit : UProg where
-  tabs := [{ name := "sample::Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] }]
+  tabs := [{ name := "Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] }]
   locks := []
   fns :=
-    [{ name := "sample::consume",
+    [{ name := "consume",
        params := [("p", .ptr { space := 0, rights := { read := true }, target := .table 0 })],
        kinds := [.ptr { space := 0, rights := { read := true }, target := .table 0 }],
        res := none, held := [], puts := [], gives := [], body := [], ret := .empty },
      { name := "caller", params := [], kinds := [], res := none, held := [], puts := [], gives := [],
-       body := [.call "sample::consume" [.freshPtr "sample::Rows"
+       body := [.call "consume" [.freshPtr "Rows"
          { space := 0, rights := { read := true }, target := .table 0 }]], ret := .empty }]
 
 private def identProduced0 : { value : EnsTy identUnit ⟨0, by decide⟩ ×
