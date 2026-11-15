@@ -167,15 +167,13 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         have hm' := CallsIn.tail (by rfl) hm
         rcases arms_callee cs.length 0 ns ss arms tail allocated hAZ g args hm' with hf | hm1
         · exact .inl hf
-        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
-            (CallsIn.tail (by rfl) hm1)
+        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args hm1
       case matchWhyBeg x =>
         obtain ⟨count, e, arms, tail, allocated, ys, he, hAZ, hYZ, _⟩ := seqZ_reason_some h
         have hm' := CallsIn.tail (by rfl) hm
         rcases arms_callee count 0 ns ss arms tail allocated hAZ g args hm' with hf | hm1
         · exact .inl hf
-        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
-            (CallsIn.tail (by rfl) hm1)
+        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args hm1
       case call g' args' | bindCall x g' args' =>
         obtain ⟨b, fn', ns', ys, hs, hY, _⟩ := seqZ_schritt_some h (by exact True.intro)
         rcases CallsIn.head_or_tail hm with h' | h'
