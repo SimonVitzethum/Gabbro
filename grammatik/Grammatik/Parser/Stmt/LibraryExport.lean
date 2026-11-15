@@ -5,6 +5,7 @@ public import Grammatik.Parser.Stmt.LibraryFixtures
 public import Grammatik.Parser.Stmt.LibraryCertificates
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Grammatik.Parser.Stmt.LibraryQualifiedFixtures
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
@@ -105,6 +106,7 @@ private theorem export_seq_succ (u : UProg) (caller : Fin u.fns.length) (fuel : 
 
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
 attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
+  Vertraege.Pruefer.checkFunction
 attribute [local cbv_eval] export_seq_succ lowStructL_succ lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
 
@@ -166,11 +168,11 @@ local macro "export_functions" : tactic => `(tactic| (
   have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
   rcases choices with first | second | third
   · subst index
-    cbv <;> exact Eq.refl _
+    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl
   · subst index
-    cbv <;> exact Eq.refl _
+    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl
   · subst index
-    cbv <;> exact Eq.refl _))
+    cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl))
 
 -- Each complete value below is inferred exclusively from a canonical success
 -- equation, before any dependent function or declaration projection is used.
@@ -223,7 +225,11 @@ private theorem full_phases :
         intro invariants pointers foreigns
         unfold checkedImage
         cbv
-        with_unfolding_all rfl
+        simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+        constructor
+        · cbv
+        · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+          export_functions
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
