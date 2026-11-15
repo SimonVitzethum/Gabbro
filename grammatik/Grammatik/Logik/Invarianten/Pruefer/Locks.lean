@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.VC.Extended
+public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
 
 @[expose] public section
 
@@ -9,16 +10,6 @@ namespace Gabbro.Grammatik.Invarianten.Pruefer
 open Frag Elim VC Modell
 
 variable {D : Deklaration}
-
-/-- Optional source evidence for a semantic lock predicate. This is part of
-    the model value, not a proof submitted to or checked by the compiler.
-    The concrete invariant checker refuses a used lock without reification. -/
-structure ReifiedLock (S : SperrInv D) (lock : D.Lock) where
-  resources : List (Res D)
-  expression : Expr D [] resources .bool
-  correct : ∀ world, eval world expression world .nil = S.inv lock world.speicher
-
-abbrev LockSources (S : SperrInv D) := ∀ lock, Option (ReifiedLock S lock)
 
 /-- Reify a predicate defined by a closed source expression. This transports
     only its meaning; the checker still proves locality and every release VC. -/
