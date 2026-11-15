@@ -98,6 +98,9 @@ def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scala
   ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 127
     tail (.cons bound .nil) (goals.shrink scalar)
 
+#print branch
+#print equations Vertraege.Pruefer.ending
+
 /-- The return half of the actual 101-value binder, proved for every selected value. -/
 theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
     ∃ result, branch sources bound = .ok result ∧
