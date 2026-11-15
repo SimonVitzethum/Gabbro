@@ -130,6 +130,14 @@ def block {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           split
           · exact statement_shrink _ (checked.down S O U A passes R _ _)
           · exact end_statement _ (failed.down S O U A passes R _ locals)⟩
+    | .check condition fallback tail => do
+        let failed ← ending fuel fallback
+        let checked ← block fuel tail
+        return ⟨fun S O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          split
+          · exact checked.down S O U A passes R _ locals
+          · exact end_statement _ (failed.down S O U A passes R _ locals)⟩
     | _ => none
 
 def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
