@@ -43,7 +43,7 @@ set_option maxHeartbeats 2000000
 def text : String :=
   "module optional_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return 23; } }"
 
-def parsed := (lexL text.toList).bind parseTopTief
+def parsed := (lexL text.toList).mapError (fun _ => "lex") |>.bind parseTopTief
 
 theorem parsed_present : parsed.toOption.isSome = true := by decide +kernel
 
