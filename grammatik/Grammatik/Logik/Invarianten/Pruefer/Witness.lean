@@ -32,7 +32,7 @@ def unit : Einheit declaration where
 
 /-- The bad unit differs only in the writer body. -/
 def badUnit : Einheit declaration :=
-  { unit with P := { program with rumpf := fun _ => unguarded } }
+  { unit with P := { unit.P with rumpf := fun _ => unguarded } }
 
 /-- Evaluation is isolated in this witness module. The lead measures it
     against the few-seconds proof limit; it is not a compiler-path proof. -/
@@ -90,7 +90,7 @@ theorem counterexample_zeuge :
 /-- No writer may conceal an unsupported invariant declaration. Even a unit
     with no enumerated functions fails declaration translation first. -/
 def nonlinearUnit : Einheit declaration :=
-  { unit with P := { program with invariante := fun _ =>
+  { unit with P := { unit.P with invariante := fun _ =>
       .le (.mul lengthValue capacityValue) (.lit 10) } }
 
 theorem outside_fragment_refused_zeuge :
