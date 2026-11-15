@@ -26,6 +26,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.ProbenG1
+import all Batteries.Data.Except
 import all Grammatik.Logik.Vertraege.Pruefer.Program
 import all Grammatik.Logik.Vertraege.Pruefer.Duties
 import all Grammatik.Logik.Vertraege.Pruefer.Decision
