@@ -102,7 +102,7 @@ def zellen : List Zelle := [
   ⟨9, 0, true, [false, true, true, false]⟩,
   ⟨10, 0, true, [true]⟩]
 
-theorem zellen_exact : e.zellen.eraseDups = zellen := by decide
+theorem zellen_exact : e.zellen.eraseDups = zellen := by cbv
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member

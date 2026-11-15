@@ -58,7 +58,7 @@ def zellen : List Zelle := [
   ⟨5, 0, true, [false, false]⟩,
   ⟨6, 0, true, [false, false, false]⟩]
 
-theorem zellen_exact : e.zellen.eraseDups = zellen := by decide
+theorem zellen_exact : e.zellen.eraseDups = zellen := by cbv
 
 theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member
