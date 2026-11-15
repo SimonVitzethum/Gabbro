@@ -47,19 +47,10 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   `stack`), `A005`/`A006` (foreign `arch` clauses). One positive and one negative fixture
   per rule, as short surface structures in the style of `ElementTiefProben3.t41`.
 
-  Shape of the evidence: `refused` below is `true` exactly for the refused heads; every
-  negative witness pins its named error as well. Two frontiers stay open and are recorded
-  here, not weakened around:
-
-  * a byte-buffer gate that CARRIES its bound (`ptr<normal, w> u8` with
-    `requires len <= lenof(buf)`) still falls downstream -- `uTypIn` refuses every live byte
-    capability until the C01 value flow lands ("live byte capability requires C01 ..."). The
-    `N464` check runs first, so the boundless buffer already falls by name; the full positive
-    arrives with C01.
-  * the `arch` of an `assume` declaration is not held here: `assumT` items never reach the
-    head elaboration (their names alone travel into `UProg.annahmen`), and the item check
-    (`uRestFehler`) is shared with `GabbroV` by definitional unfolding, so no hook fits
-    without breaking that boundary. Gifts 462/463 stay for that wave.
+  Negative witnesses pin the exact diagnostic. The N464 positive buffer witnesses check
+  the binding layer itself: a valid byte buffer still meets the independent, existing
+  refusal of live byte capabilities when its signature is lowered. The scalar positive
+  witnesses exercise the full head elaborator. No byte capability is admitted here.
 -/
 
 /-- A head is refused exactly when elaboration answers with an error. -/
@@ -89,7 +80,7 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   { pre := [.bin "<=" (.variable "len") (.built "lenof" [.variable "buf"])],
     post := [.bin "<=" .res (.variable "len")], uses := [.pure], cost := none }
 
-/-- A clean gate: one length, one byte buffer beside it, one mapped errno. -/
+/-- A clean scalar gate with one mapped errno. -/
 @[expose] def lesetor : SSyscall :=
   { name := "gate_read",
     params := [("fd", .atom "u32"), ("len", .atom "u64")],
@@ -106,42 +97,42 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-! ## N064: the answer register is not clobbered -/
 
 theorem n064_positiv_zeuge :
-    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide
+    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide +kernel
 
 /-- `rax` carries the answer out and stands under `clobbers` at once (gift 803). -/
 @[expose] def zerstoerteAntwort : SSyscall :=
-  { lesetor with way := .lit "linux" "x86_64"
-    { sauberBind with outs := [.reg "rax"], dirty := ["rax", "rcx"] }
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with way := (.lit "linux" "x86_64"
+    ({ sauberBind with outs := [.reg "rax"], dirty := ["rax", "rcx"] })
+    (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n064_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] zerstoerteAntwort)
-      "syscall gate answer register clobbered without G form: rax" = true := by decide
+      "syscall gate answer register clobbered without G form: rax" = true := by decide +kernel
 
 /-! ## N067: the error map answers the declared channel -/
 
 theorem n067_positiv_zeuge :
-    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide
+    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide +kernel
 
 /-- An errno mapped to a reason the channel never declares (gift 804). -/
 @[expose] def fremderGrund : SSyscall :=
-  { lesetor with way := .lit "linux" "x86_64"
-    { sauberBind with codes := [("EBADF", none, "QuotenFehler")] }
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with way := (.lit "linux" "x86_64"
+    ({ sauberBind with codes := [("EBADF", none, "QuotenFehler")] })
+    (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n067_fremder_grund_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] fremderGrund)
-      "syscall gate error target without a declared case without G form: EBADF => QuotenFehler" = true := by decide
+      "syscall gate error target without a declared case without G form: EBADF => QuotenFehler" = true := by decide +kernel
 
 /-- Every listed errno has exactly one arm (gift 811). -/
 @[expose] def doppelErrno : SSyscall :=
-  { lesetor with way := .lit "linux" "x86_64"
-    { sauberBind with codes := [("EBADF", none, "BadFd"), ("EBADF", none, "Interrupted")] }
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with way := (.lit "linux" "x86_64"
+    ({ sauberBind with codes := [("EBADF", none, "BadFd"), ("EBADF", none, "Interrupted")] })
+    (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n067_doppelt_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] doppelErrno)
-      "syscall gate error listed twice without G form: EBADF" = true := by decide
+      "syscall gate error listed twice without G form: EBADF" = true := by decide +kernel
 
 /-- An errors map with no channel has nowhere to deliver (gift 812). -/
 @[expose] def kanalLos : SSyscall :=
@@ -149,7 +140,7 @@ theorem n067_doppelt_zeuge :
 
 theorem n067_ohne_kanal_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] kanalLos)
-      "syscall gate errors map without a reason channel without G form: EBADF" = true := by decide
+      "syscall gate errors map without a reason channel without G form: EBADF" = true := by decide +kernel
 
 /-- A channel that resolves nowhere is refused where the head is read. -/
 @[expose] def unbekannterKanal : SSyscall :=
@@ -157,12 +148,12 @@ theorem n067_ohne_kanal_zeuge :
 
 theorem n067_unbekannter_kanal_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] unbekannterKanal)
-      "reason unknown: GibtEsNicht" = true := by decide
+      "reason unknown: GibtEsNicht" = true := by decide +kernel
 
 /-! ## N068: the `kernel` pairing is refused -/
 
 theorem n068_positiv_zeuge :
-    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide
+    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide +kernel
 
 /-- With `kernel` the call is paired with a Gabbro kernel's dispatch entry (gift 806). -/
 @[expose] def kernpaarung : SSyscall :=
@@ -170,34 +161,49 @@ theorem n068_positiv_zeuge :
 
 theorem n068_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] kernpaarung)
-      "syscall gate kernel pairing without G form: kern::dispatch" = true := by decide
+      "syscall gate kernel pairing without G form: kern::dispatch" = true := by decide +kernel
 
 /-! ## N447: the stack clause stands at most once -/
 
 /-- One handed-stack register, bound, kept and answered (gift 1107 shape). -/
 @[expose] def einStapel : SSyscall :=
-  { lesetor with way := .lit "linux" "x86_64"
-    { sauberBind with stack := ["rsi"] }
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with way := (.lit "linux" "x86_64"
+    ({ sauberBind with stack := ["rsi"] })
+    (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n447_positiv_zeuge :
-    refused (elabGateKopf [] [] [leseGrund] [] einStapel) = false := by decide
+    refused (elabGateKopf [] [] [leseGrund] [] einStapel) = false := by decide +kernel
 
 /-- Stack-ness claimed twice (gift 1108). -/
 @[expose] def doppelStapel : SSyscall :=
-  { lesetor with way := .lit "linux" "x86_64"
-    { sauberBind with stack := ["rsi", "rsi"] }
-    (.assum "linux_read_contract" (.probe "sonde_read")) }
+  { lesetor with way := (.lit "linux" "x86_64"
+    ({ sauberBind with stack := ["rsi", "rsi"] })
+    (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n447_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] doppelStapel)
-      "syscall gate second stack clause without G form: rsi" = true := by decide
+      "syscall gate second stack clause without G form: rsi" = true := by decide +kernel
 
 /-! ## N464: a gate buffer points at bytes and carries its bound -/
 
-/-- A gate with no pointer parameter owes no buffer clause. -/
+/-- A byte buffer with its length bound passes the binding checks. -/
+@[expose] def byteBuffer : SSyscall :=
+  { lesetor with params := [("fd", .atom "u32"),
+      ("buf", .ptr "normal" "w" (.atom "u8")), ("len", .atom "u64")] }
+
 theorem n464_positiv_zeuge :
-    refused (elabGateKopf [] [] [leseGrund] [] lesetor) = false := by decide
+    refused (uTorBindungPruef [] [leseGrund] byteBuffer) = false := by decide +kernel
+
+/-- Parameter order does not affect the bound: the length may precede the buffer. -/
+theorem n464_length_first_zeuge :
+    refused (uTorBindungPruef [] [leseGrund]
+      { byteBuffer with params := [("len", .atom "u64"),
+        ("buf", .ptr "normal" "w" (.atom "u8"))] }) = false := by decide +kernel
+
+/-- Passing N464 does not bypass the existing refusal of live byte capabilities. -/
+theorem n464_lowering_refusal_zeuge :
+    refusalIs (elabGateKopf [] [] [leseGrund] [] byteBuffer)
+      "live byte capability requires C01 value flow, C08 grant generations and C09 loans" = true := by decide +kernel
 
 /-- A buffer of words where the kernel counts bytes (gift 1158). -/
 @[expose] def wortPuffer : SSyscall :=
@@ -207,7 +213,7 @@ theorem n464_positiv_zeuge :
 
 theorem n464_wort_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] wortPuffer)
-      "syscall gate buffer without byte pointee without G form: buf" = true := by decide
+      "syscall gate buffer without byte pointee without G form: buf" = true := by decide +kernel
 
 /-- A read buffer with no bound on what the kernel writes (gift 1155). -/
 @[expose] def schrankenlos : SSyscall :=
@@ -218,21 +224,21 @@ theorem n464_wort_zeuge :
 
 theorem n464_schranke_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] schrankenlos)
-      "syscall gate buffer without length bound without G form: buf" = true := by decide
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
 
 /-! ## N574: a foreign body takes no Gabbro code -/
 
 /-- The walk finds a function pointer behind a pointer (gift 1393 shape). -/
 theorem n574_weg_zeuge :
-    sTypTraegtCode (.ptr "normal" "r" (.raw "fn ( t : u32 ) costs <= 1 ops")) = true := by decide
+    sTypTraegtCode (.ptr "normal" "r" (.raw "fn ( t : u32 ) costs <= 1 ops")) = true := by decide +kernel
 
 /-- The walk looks through tuples. -/
 theorem n574_tupel_zeuge :
-    sTypTraegtCode (.tuple [.atom "u32", .raw "fn ( t : u32 ) costs <= 1 ops"]) = true := by decide
+    sTypTraegtCode (.tuple [.atom "u32", .raw "fn ( t : u32 ) costs <= 1 ops"]) = true := by decide +kernel
 
 /-- The walk spares the `entry fn` exception (`N575`--`N577`). -/
 theorem n574_ausnahme_zeuge :
-    sTypTraegtCode (.entry "params" none) = false := by decide
+    sTypTraegtCode (.entry "params" none) = false := by decide +kernel
 
 /-- A foreign body taking Gabbro code (gift 1392). -/
 @[expose] def codeSig : FnSig :=
@@ -241,11 +247,11 @@ theorem n574_ausnahme_zeuge :
 
 theorem n574_zeuge :
     refusalIs ((elabAxKopf [] [] [] [] false) codeSig)
-      "foreign parameter with a function pointer without G form: f" = true := by decide
+      "foreign parameter with a function pointer without G form: f" = true := by decide +kernel
 
 /-- A foreign body taking no code elaborates. -/
 theorem n574_positiv_zeuge :
-    refused ((elabAxKopf [] [] [] [] false) reineSig) = false := by decide
+    refused ((elabAxKopf [] [] [] [] false) reineSig) = false := by decide +kernel
 
 /-! ## A005/A006: a foreign `arch` names a declared, open machine -/
 
@@ -254,12 +260,15 @@ theorem n574_positiv_zeuge :
   { reineSig with klauseln := [.effs [.pure], .arch "x86_64"] }
 
 theorem a005_positiv_zeuge :
-    refused ((elabAxKopf [] [] [] [] false (erklaert := ["x86_64"])) erklaerteSig) = false := by decide
+    refused ((elabAxKopf [] [] [] [] false (erklaert := ["x86_64"])) erklaerteSig) = false := by decide +kernel
 
 /-- An `arch` no declaration names (gifts 805/1401 shape). -/
 theorem a005_zeuge :
     refusalIs ((elabAxKopf [] [] [] [] false) erklaerteSig)
-      "foreign arch without declared machine without G form: x86_64" = true := by decide
+      "foreign arch without declared machine without G form: x86_64" = true := by decide +kernel
+
+theorem a006_positiv_zeuge :
+    refused ((elabAxKopf [] [] [] [] false (erklaert := ["x86_64"])) erklaerteSig) = false := by decide +kernel
 
 /-- A sealed machine is refused as sealed, even where declared (gift 810 shape). -/
 @[expose] def versiegelteSig : FnSig :=
@@ -267,7 +276,7 @@ theorem a005_zeuge :
 
 theorem a006_zeuge :
     refusalIs ((elabAxKopf [] [] [] [] false (erklaert := ["riscv64"])) versiegelteSig)
-      "foreign arch sealed without G form: riscv64" = true := by decide
+      "foreign arch sealed without G form: riscv64" = true := by decide +kernel
 
 /-- A sealed machine at a gate is refused as sealed. -/
 @[expose] def versiegeltesTor : SSyscall :=
@@ -276,7 +285,7 @@ theorem a006_zeuge :
 
 theorem a006_tor_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] versiegeltesTor)
-      "syscall gate arch sealed without G form: riscv64" = true := by decide
+      "syscall gate arch sealed without G form: riscv64" = true := by decide +kernel
 
 /-! ## The declared set -/
 
@@ -288,6 +297,6 @@ theorem a006_tor_zeuge :
    .protoT { reineSig with klauseln := [.effs [.pure], .arch "aarch64"] }]
 
 theorem erklaerte_arch_zeuge :
-    uErklaerteArch beispielEinheit = ["x86_64"] := by decide
+    uErklaerteArch beispielEinheit = ["x86_64"] := by decide +kernel
 
 end Gabbro.Grammatik.Parser.GateRefusals

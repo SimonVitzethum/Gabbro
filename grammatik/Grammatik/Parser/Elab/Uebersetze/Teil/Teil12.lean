@@ -37,6 +37,7 @@ import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Reason
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Elaborate
+public import Grammatik.Parser.Elab.Uebersetze.Transition.GateChecks
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 
 @[expose] public section
@@ -116,134 +117,15 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
       | .error e => .error e
       | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs erklaert klauseln
 
-/-- The register a binding names: `rdi = fd` binds `rdi`, a bare `rax` names `rax`. -/
-def uBindReg : SRegBind → String
-  | .binds r _ => r
-  | .reg r => r
-
-/-- A `requires` bound on the bytes a gate moves through `p` (`N464`): `x <= lenof(p)` (or `<`),
-    with a length variable beside it -- a different parameter of the gate, the length the call
-    hands in. The mirrored `lenof(p) >= x` spellings count the same. -/
-def istLenof (p : String) : SExpr → Bool
-  | .built f [.variable q] => strEq f "lenof" && strEq q p
-  | _ => false
-
-/-- The length beside the buffer: a different parameter of the gate, the length the call
-    hands in. -/
-def istBand (params : List String) (p : String) : SExpr → Bool
-  | .variable v => !strEq v p && params.any (fun y => strEq y v)
-  | _ => false
-
-def istLaengenSchranke (params : List String) (p : String) : SExpr → Bool
-  | .bin op a b =>
-    ((strEq op "<=" || strEq op "<") && istBand params p a && istLenof p b) ||
-    ((strEq op ">=" || strEq op ">") && istLenof p a && istBand params p b)
-  | _ => false
-
-/-- The way a gate is bound: a `kernel` pairing is refused (`N068` -- the call would be paired
-    with a Gabbro kernel's dispatch entry and no assumption named, but the pairing check and
-    the stub are unbuilt), a sealed machine is refused (`A006`). A `via` variable carries no
-    binding of its own. -/
-def uTorWegPruef : SWay → Except String Unit
-  | .lit _ _ _ (.core p) =>
-    .error ("syscall gate kernel pairing without G form: " ++ "::".intercalate p)
-  | .lit _ arch _ _ =>
-    if archOffen arch then .ok ()
-    else .error ("syscall gate arch sealed without G form: " ++ arch)
-  | .via _ => .ok ()
-
-/-- The answer register against the clobbers (`N064`): what carries the answer out is not
-    destroyed. This is the string-level shadow of `TorAbi.gut` (`Hardware/Tor/Abi.lean`): the
-    elaborator cannot use that judgment directly -- the surface number is an `SExpr`, the trap
-    text and the number register do not exist yet, and registers are names here. -/
-def uTorAntwortPruef (outs : List SRegBind) (dirty : List String) : Except String Unit :=
-  match outs.find? (fun o => dirty.any (fun d => strEq d (uBindReg o))) with
-  | some o => .error ("syscall gate answer register clobbered without G form: " ++ uBindReg o)
-  | none => .ok ()
-
-/-- The handed-stack register (`N447`): the one clause that may claim stack-ness stands at most
-    once -- the stub hands one register to the child, and two names would split it. -/
-def uTorStapelPruef : List String → Except String Unit
-  | [] => .ok ()
-  | [_] => .ok ()
-  | _ :: s :: _ => .error ("syscall gate second stack clause without G form: " ++ s)
-
-/-- The `errors` map against the `or` channel (`N067`): every listed errno has exactly one arm,
-    and every target is a case of the declared channel. An errno outside the table stays what it
-    is -- the named hardware outcome "the kernel answered outside its contract" -- and is not
-    touched here. A gate without a channel carries no map; a channel that resolves nowhere is
-    refused where the head is read (`reason unknown`). -/
-def uTorFehlerPruef (fail : Option String) (whys : List UWhy)
-    (codes : List (String × Option SExpr × String)) : Except String Unit :=
-  match fail with
-  | none =>
-    match codes with
-    | [] => .ok ()
-    | (e, _, _) :: _ =>
-      .error ("syscall gate errors map without a reason channel without G form: " ++ e)
-  | some r =>
-    match whys.find? (fun w => strEq w.name r) with
-    | none => .ok ()
-    | some w =>
-      match codes.find? (fun c => 1 < (codes.filter (fun d => strEq d.1 c.1)).length) with
-      | some (e, _, _) => .error ("syscall gate error listed twice without G form: " ++ e)
-      | none =>
-        match codes.find? (fun c => !(w.cases.any (fun t => strEq t c.2.2))) with
-        | some (e, _, t) =>
-          .error ("syscall gate error target without a declared case without G form: " ++ e ++ " => " ++ t)
-        | none => .ok ()
-
-/-- The buffers a gate moves bytes through (`N464`): a parameter that points at numbers is a
-    buffer the kernel moves bytes through -- it points at `u8`/`i8`, and the gate bounds it by a
-    length clause `x <= lenof(p)` over one of its integer parameters. A pointer into a table is a
-    capability, not a transfer, and is not held to this clause. -/
-def uTorPufferPruef (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
-    Except String Unit :=
-  match params with
-  | [] => .ok ()
-  | (p, .ptr _ _ z) :: rest =>
-    match z with
-    | .atom a =>
-      if strEq a "u8" || strEq a "i8" then
-        if pre.any (istLaengenSchranke (params.map (·.1)) p) then uTorPufferPruef tabs rest pre
-        else .error ("syscall gate buffer without length bound without G form: " ++ p)
-      else
-        match uTabNr tabs a with
-        | .ok _ => uTorPufferPruef tabs rest pre
-        | .error _ => .error ("syscall gate buffer without byte pointee without G form: " ++ p)
-    | _ => .error ("syscall gate buffer without byte pointee without G form: " ++ p)
-  | _ :: rest => uTorPufferPruef tabs rest pre
-
-/-- The whole binding half of a gate: answer, stack, error map, buffers. A `via` variable
-    carries no binding -- only its contract travels. -/
-def uTorBindungPruef (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit :=
-  match sc.way with
-  | .via _ => .ok ()
-  | .lit _ _ bind _ =>
-    match uTorAntwortPruef bind.outs bind.dirty with
-    | .error e => .error e
-    | .ok _ =>
-    match uTorStapelPruef bind.stack with
-    | .error e => .error e
-    | .ok _ =>
-    match uTorFehlerPruef sc.fail whys bind.codes with
-    | .error e => .error e
-    | .ok _ => uTorPufferPruef tabs sc.params sc.gate.pre
-
-/-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
-    a precondition, a postcondition or a write has no form. -/
+/-- Validate the surface binding before lowering the foreign signature, so unsupported
+    byte capabilities cannot mask the gate's named binding refusals. -/
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (sc : SSyscall) (eigner : List String := []) (spaces : List String := []) : Except String UFnKopf :=
-  match uTorWegPruef sc.way with
-  | .error e => .error e
-  | .ok _ =>
-  match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) (spaces := spaces) with
-    | .error e => .error e
-    | .ok kopf =>
-    match uTorBindungPruef tabs whys sc with
-    | .error e => .error e
-    | .ok _ =>
-    uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [] [.effs sc.gate.uses]
+    (sc : SSyscall) (eigner : List String := []) (spaces : List String := []) : Except String UFnKopf := do
+  uTorWegPruef sc.way
+  uTorBindungPruef tabs whys sc
+  let kopf ← uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) (spaces := spaces)
+  uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives }
+    tabs globs [] [.effs sc.gate.uses]
 
 /-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
 def uStartNamen : Nat → SAnw → List String
