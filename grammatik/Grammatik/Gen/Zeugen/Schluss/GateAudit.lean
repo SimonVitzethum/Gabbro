@@ -50,8 +50,9 @@ theorem m99_824_cause : contractCause M99_824.e = some
 theorem m99_825_cause : contractCause M99_825.e = some
     (.unsupported "contract body reads atomic memory outside the checked VC fragment") := by decide +kernel
 
-theorem m49_50_cause : contractCause M49_50.e = some
-    (.unsupported "contract body reads atomic memory outside the checked VC fragment") := by decide +kernel
+/-- The typed atomic read has literal true contracts and no owed invariant.
+    Its totality certificate covers every value the atomic environment returns. -/
+theorem m49_50_contract_checked : contractCause M49_50.e = none := by decide +kernel
 
 /-- The indirect call still has no contract-WP rule. -/
 theorem m47_549_cause : contractCause M47_549.e = some
@@ -67,8 +68,9 @@ theorem refused_of_cause_zeuge : contractCause M99_824.e = some
 theorem m99_825_refused : M99_825.e.gueltig = false :=
   refused_of_cause _ _ m99_825_cause
 
-theorem m49_50_refused : M49_50.e.gueltig = false :=
-  refused_of_cause _ _ m49_50_cause
+theorem m49_50_checked : M49_50.e.gueltig = true := by
+  apply M49_50.e_gueltig_iff_gates.mpr
+  constructor <;> decide +kernel
 
 theorem m47_549_refused : M47_549.e.gueltig = false :=
   refused_of_cause _ _ m47_549_cause
