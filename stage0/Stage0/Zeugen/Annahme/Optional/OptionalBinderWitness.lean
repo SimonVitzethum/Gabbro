@@ -75,12 +75,14 @@ def body (valued fallible nested : Bool) :
     Endblock (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
       false [] [] := by
   cases fallible with
-  | true => exact .bind (.widen (by decide) (by decide) (.lit 23))
-        (if nested then .cons (.ite .tru (fallibleBlock valued) .nil)
-          (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued)
+  | true =>
+    exact .bind (.widen (by decide) (by decide) (.lit 23))
+      (if nested then .cons (.ite .tru (fallibleBlock valued) .nil)
+        (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued)
   | false =>
     cases valued with
-    | false => exact .bind (.widen (by decide) (by decide) (.lit 23))
+    | false =>
+      exact .bind (.widen (by decide) (by decide) (.lit 23))
         (if nested then .cons (.ite .tru plainBlock .nil)
           (retN false false 99 (by decide) (by decide)) else plainEnd)
     | true => exact retN true false 99 (by decide) (by decide)
