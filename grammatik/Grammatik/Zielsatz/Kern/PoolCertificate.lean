@@ -19,6 +19,8 @@ def zPCFragment : Programm zD := { zPC with ensures := fun _ => .tru }
 
 namespace PoolCertificate
 
+local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness Invarianten.Pruefer
 

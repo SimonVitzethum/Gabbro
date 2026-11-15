@@ -7,14 +7,14 @@
   meeting them, `E.sp0`, so `havocOk_misch_lokal` inhabits `HavocOk`):
   * `probeA_widerlegt_gilt`      -- probe A (`paP`; `paP_nicht_sperre`: `logik schleife` at 0);
   * `probeA_falsch_inv_nicht`    -- verdict P1: probe A with `invariant false` (`sFalsch`),
-                                    refuted by `StartPflicht.sperren`; the checker ACCEPTS
-                                    that program (`p1_akzeptiert`), so the refusal is (b)'s;
+                                    refuted by `StartPflicht.sperren`; the checker REFUSES
+                                    that program (`p1_abgelehnt`), and the start duty fails too;
   * `unerfuellbar_widerlegt`     -- P1 for the whole class: an unsatisfiable family refutes (b);
   * `start_req_widerlegt`        -- a declared start whose `requires` fails at `E.sp0`;
   * `probeD_widerlegt_gilt`      -- probe D (`fvP false`) at budget 1 (`probeD_nicht`);
   * `probeF1_widerlegt_gilt`     -- verdict F1: a float literal outside its range in front of
                                     every body (`f1P`) ends in `logik bereich` for every
-                                    oracle (`f1_lauf`); the checker ACCEPTS it (`f1_akzeptiert`);
+                                    oracle (`f1_lauf`); the checker REFUSES it (`f1_abgelehnt`);
   * `probeD_wahr_widerlegt_gilt` -- the `forever` variant with invariant `true` (`fwP_nicht`);
   * `tabelle_widerlegt_gilt`     -- the table-invariant breaker `ivPschlecht`.
   Refutations of (a) `AkzeptiertSpec`, for every program:
@@ -95,9 +95,14 @@ theorem probeA_widerlegt_gilt : probeA_widerlegt := by
 theorem probeA_falsch_inv_nicht : probeA_falsch_inv :=
   fun _ _ _ h => Bool.false_ne_true (h.start.sperren ())
 
-/-- The P1 program passes the checker (with `haupt` declared): the refutation above is by
-    (b), not by (a). -/
-theorem p1_akzeptiert : Akzeptiert paP sFalsch zFs [()] [.inl ()] [zHaupt] = true := by decide
+/-- The declared false lock family has explicit source metadata. -/
+def p1Sources : Invarianten.Pruefer.LockSources sFalsch := fun _ => some
+  { resources := [], expression := .fls, correct := fun _ => rfl }
+
+/-- The strengthened gate refuses P1. Its own counterexamples are the false
+    start invariant (`probeA_falsch_inv_nicht`) and local loop stop (`paP_lauf`). -/
+theorem p1_abgelehnt : Akzeptiert paP sFalsch zFs [()] [.inl ()] [zHaupt]
+    (sources := p1Sources) = false := by decide +kernel
 
 /-- **P1, the whole class at once**: no program whatever has an unsatisfiable lock-invariant
     family and meets (b). -/
@@ -151,9 +156,8 @@ theorem probeF1_widerlegt_gilt
   exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans
     (f1_lauf upper_reply zO 0 hwRuf zHaupt _ _)
 
-/-- The F1 program passes the checker (with `haupt` declared): the refutation above is by
-    (b), not by (a). -/
-theorem f1_akzeptiert : Akzeptiert f1P zS zFs [()] [.inl ()] [zHaupt] = true := by decide
+/-- The gate also refuses F1; `f1_lauf` supplies its own typed range-error counterexample. -/
+theorem f1_abgelehnt : Akzeptiert f1P zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = false := by decide +kernel
 
 theorem probeD_widerlegt_gilt : probeD_widerlegt := by
   rintro ⟨P, S, Q, st, s⟩ hP h
@@ -381,9 +385,9 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_falsch_inv_nicht
-#print axioms Gabbro.Grammatik.Zielsatz.p1_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.p1_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.probeF1_widerlegt_gilt
-#print axioms Gabbro.Grammatik.Zielsatz.f1_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.f1_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.unerfuellbar_widerlegt
 #print axioms Gabbro.Grammatik.Zielsatz.havocOk_bewohnt
 #print axioms Gabbro.Grammatik.Zielsatz.start_req_widerlegt

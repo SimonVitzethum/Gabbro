@@ -13,12 +13,12 @@
     for EVERY program with that code: no side condition on the lock invariants any more;
   * probe A with an unsatisfiable lock invariant (`sFalsch`, `invariant false`; verdict P1)
                                                                    -> (b), by the start
-    obligation `StartPflicht.sperren` (the checker's Bool ACCEPTS it, `p1_akzeptiert`);
+    obligation `StartPflicht.sperren` (the checker's Bool REFUSES it, `p1_abgelehnt`);
   * probe D (`fvP false`, `forever … invariant false { leave }`)   -> (b), at some budget;
   * probe F1 (`f1P`: probe A's contracts, a float literal outside its range in front of every
     body; verdict F1 of URTEIL-OPUS-2026-09-15b)                   -> (b), since the
     out-of-range float is `logik bereich` (it was `hardware ieee`; the checker ACCEPTS the
-    program, `f1_akzeptiert`, so the refusal is (b)'s);
+    program, `f1_abgelehnt`, and its body duty also fails);
   * a table-invariant breaker (`ivPschlecht`)                      -> (b);
   * an unguarded carrier one start reads and another writes        -> (a) `AkzeptiertSpec`
     (stated for EVERY program, so for every sound `Pruefer` the Bool is `false`);
