@@ -5,6 +5,7 @@ module
 
 public import Grammatik.Speichermodell.Atomar.Atomar
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Fortschritt.Fortschritt.T3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

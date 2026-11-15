@@ -28,7 +28,7 @@ def measurePolicy (program : Programm D) (measure : Mass D) (cycle : D.Fn → Bo
       apply and_congr ((lower_denote _ _).trans (requires.bool_iff world).symm)
       have same := measure.wert_welt f anchor world locals
       dsimp only [decreases]
-      rw [same]
+      simp only [same]
       cases cycle f <;> cases lexLt (measure.wert f world locals) entry <;> simp [QF.denote]⟩
 
 /-- The same checked WP proves MassPflicht when instantiated with massTor.
