@@ -63,21 +63,26 @@ def fallibleEnd : Endblock declaration contract false [] [] :=
     (fun item => nomatch item) (fun item => nomatch item)
     returned returned
 
-def optionalFits : RufPasst declaration contract (declaration.asignatur ()) [] where
+def optionalContract : Vertrag declaration := { contract with boden := none }
+
+def optionalReturned {Γ : Ctx} : Endblock declaration optionalContract false Γ [] :=
+  .ret .empty (List.Perm.refl _)
+
+def optionalFits : RufPasst declaration optionalContract (declaration.asignatur ()) [] where
   hw item := nomatch item
   hg item := nomatch item
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
-  hh item := nomatch item
+  hh _ impossible := by cases impossible
 
-def optionalBlock : Block declaration contract false [] [] [] :=
+def optionalBlock : Block declaration optionalContract false [] [] [] :=
   .bindAxiomOptElse (some .bool) () .nil rfl
     optionalFits (fun item => nomatch item) (fun item => nomatch item) (by decide)
-    returned .nil
+    optionalReturned .nil
 
-def optionalEnd : Endblock declaration contract false [] [] :=
+def optionalEnd : Endblock declaration optionalContract false [] [] :=
   .bindAxiomOptElse (some .bool) () .nil rfl
     optionalFits (fun item => nomatch item) (fun item => nomatch item) (by decide)
-    returned returned
+    optionalReturned optionalReturned
 
 /-- Both option-indexed value binders have joint generic certificate premises. -/
 theorem optional_some_zeuge :
