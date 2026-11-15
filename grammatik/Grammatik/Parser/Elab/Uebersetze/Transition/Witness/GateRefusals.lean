@@ -373,3 +373,8 @@ theorem a006_tor_zeuge :
       nest := none,
       dispatch := ["m", "w"] }),
    .protoT ({ reineSig with klauseln := [.effs [.pure], .arch "aarch64"] })]
+
+theorem erklaerte_arch_zeuge :
+    uErklaerteArch beispielEinheit = ["x86_64"] := by decide +kernel
+
+end Gabbro.Grammatik.Parser.GateRefusals
