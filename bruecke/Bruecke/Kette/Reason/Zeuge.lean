@@ -46,9 +46,10 @@ theorem related_world_zeuge (σ : World (declOf unit)) (w : Gabbro.Body.World) :
 theorem reasonHandler_zeuge (P : Programm (declOf unit))
     (answer : (declOf unit).Fn → World (declOf unit) → World (declOf unit)) :
     RespektiertRahmen P (fun f σ _ => .why (answer f σ)
-      ⟨1, by rw [sigGruende_eq]; rcases f with ⟨i, hi⟩
+      ⟨1, by rcases f with ⟨i, hi⟩
              have hz : i = 0 := by change i < 1 at hi; omega
              subst i
+             rw [sigGruende_eq]
              change 1 < 2
              omega⟩) :=
   reasonHandler_respektiertRahmen P _ answer
