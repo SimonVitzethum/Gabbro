@@ -67,7 +67,7 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
-      simp [Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
+      simp_all [Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
@@ -76,7 +76,7 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, uExp104, hc, hf, @eq_comm _ "stand"]
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, uExp104, @eq_comm _ "stand"]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
 
@@ -134,17 +134,17 @@ example : preExpr lies = lies_pre := rfl
 example : ein.puts = einzahlen_writes := rfl
 example : lies.puts = lies_writes := rfl
 
-example : (fun s s' r => (postU u wellFormed ein s s' r).getD False) = einzahlen_post := rfl
-example : (fun s s' r => (postU u wellFormed lies s s' r).getD False) = lies_post := rfl
+example : (fun s s' r => (postU u wellFormed ein s s' r).getD False) = einzahlen_post := by cbv
+example : (fun s s' r => (postU u wellFormed lies s s' r).getD False) = lies_post := by cbv
 example : preProp wellFormed ein = einzahlen_requires := rfl
 example : preProp wellFormed lies = lies_requires := rfl
 
-example : meetsU u wellFormed ein ((zuBodyZ u ein).getD []) = einzahlen_meets_statement := by
+theorem einzahlen_meets_eq : meetsU u wellFormed ein ((zuBodyZ u ein).getD []) = einzahlen_meets_statement := by
   rw [einzahlen_body_eq]
-  rfl
-example : meetsU u wellFormed lies ((zuBodyZ u lies).getD []) = lies_meets_statement := by
+  cbv
+theorem lies_meets_eq : meetsU u wellFormed lies ((zuBodyZ u lies).getD []) = lies_meets_statement := by
   rw [lies_body_eq]
-  rfl
+  cbv
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit104.E4 :=
@@ -167,8 +167,14 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨einzahlen_body, einzahlen_body_eq, einzahlen_meets⟩
-  | ⟨1, _⟩ => exact ⟨lies_body, lies_body_eq, lies_meets⟩
+  | ⟨0, _⟩ =>
+    have hm := einzahlen_meets
+    rw [← einzahlen_meets_eq, einzahlen_body_eq] at hm
+    exact ⟨einzahlen_body, einzahlen_body_eq, hm⟩
+  | ⟨1, _⟩ =>
+    have hm := lies_meets
+    rw [← lies_meets_eq, lies_body_eq] at hm
+    exact ⟨lies_body, lies_body_eq, hm⟩
 
 /-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 
@@ -179,8 +185,8 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
 
 theorem pflichten_104 (hPtr : SchnittstellenPflicht u) :
     PflichtenAlle Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide, by decide,
-    by decide, hPtr, fun c => by
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by cbv, by cbv, by cbv, by cbv,
+    by cbv, hPtr, fun c => by
       obtain ⟨body, hb, hm⟩ := meets_alle c
       exact ⟨body, hb, hm⟩⟩
 
