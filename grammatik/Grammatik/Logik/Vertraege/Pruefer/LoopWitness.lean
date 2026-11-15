@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Vertraege.Pruefer.Goal
 public import Grammatik.Logik.Invarianten.VC.Witness
 
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer.LoopWitness
@@ -28,23 +29,23 @@ def hints : LoopHints declaration := fun _ => some invariant
 theorem unrolling_accepted_zeuge :
     KontrakteGeprueftB (loopProgram 2) (SperrInv.leer declaration) [()]
       (fun _ => none) { expansion := 4 } = true := by
-  decide
+  decide +kernel
 
 theorem checked_hint_accepted_zeuge :
     KontrakteGeprueftB (loopProgram 100) (SperrInv.leer declaration) [()]
       (fun _ => none) { expansion := 4 } hints = true := by
-  decide
+  decide +kernel
 
 /-- The same large loop is refused when no hint is available. -/
 theorem absent_hint_refused_zeuge :
     KontrakteGeprueftB (loopProgram 100) (SperrInv.leer declaration) [()]
       (fun _ => none) { expansion := 4 } = false := by
-  decide
+  decide +kernel
 
 /-- A false hint fails its entry VC. -/
 theorem false_hint_refused_zeuge :
     KontrakteGeprueftB (loopProgram 100) (SperrInv.leer declaration) [()]
       (fun _ => none) { expansion := 4 } (fun _ => some .fls) = false := by
-  decide
+  decide +kernel
 
 end Gabbro.Grammatik.Vertraege.Pruefer.LoopWitness

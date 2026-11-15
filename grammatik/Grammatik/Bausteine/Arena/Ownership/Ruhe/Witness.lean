@@ -33,6 +33,11 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Logik.Vertraege.Pruefer.Unit
+meta import Grammatik.Logik.Vertraege.Pruefer.Unit
+meta import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+meta import Grammatik.Bausteine.Arena.Ownership.Body.Witness
+meta import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
 @[expose] public section
 
 
@@ -96,6 +101,17 @@ def E : Einheit FD where
   starts := [⟨(), .nil⟩]
   sp0 := sp0
   arenen := [⟨FA, I⟩]
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 1
+      outside := fun _ n outside => by
+        change decide (0 = n) = false
+        exact decide_eq_false (by omega) }
 
 def fs : List FD.Fn := [()]
 def cs : List (FD.Tab ⊕ FD.Glob) := [.inl (), .inr 0, .inr 1, .inr 2, .inr 3]
@@ -108,8 +124,12 @@ theorem cs_voll : ∀ c : FD.Tab ⊕ FD.Glob, c ∈ cs := by
   · cases t; simp only [cs, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false]
   · revert g; decide
 
+#eval match Zielsatz.checkUnitLogic E fs [] with
+  | .ok _ => "integration logic check: accepted"
+  | .error cause => cause.message
+
 /-- (a) The goal's concrete checker accepts the unit, its arena included. -/
-theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide
+theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide +kernel
 
 /-- The executable ownership check accepts the program. -/
 theorem owner_check : checkProgram E.P FA I fs = true := by decide

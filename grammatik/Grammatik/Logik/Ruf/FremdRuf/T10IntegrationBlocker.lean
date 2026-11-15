@@ -136,7 +136,7 @@ theorem recorded_key_not_twice (σ : World decl) :
 
 /-- Q is independent data in Einheit, not computed from the interface post. -/
 def falseQUnit : Einheit decl :=
-  { unit with Q := fun _ _ _ => false }
+  { CallSiteZeuge.unit with Q := fun _ _ _ => false }
 
 theorem foreign_falseQ : ForeignPflicht falseQUnit traceOracle [] where
   vertrag := by

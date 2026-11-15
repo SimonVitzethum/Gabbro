@@ -87,7 +87,8 @@ theorem execBlock_bindAxiom_never (O : Orakel D) (passes : Nat)
       (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none :=
     axiomAntwort_never_keine O a (by rw [he, hne]) _ _
-  simp only [execBlock, axiomAntwort, h2]
+  simp only [execBlock, axiomAntwort, Boundary.Check.trivial_requiredB,
+    Bool.false_eq_true, ↓reduceIte, h2]
 
 /-- ... and never in a `logik` outcome: the stop is the foreign code's, not the user's
     logic -- consistent with `KeinLogikHaltG` (ZielOrtGanz.lean). -/

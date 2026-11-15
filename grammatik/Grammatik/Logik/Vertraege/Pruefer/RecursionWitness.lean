@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
 
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer.RecursionWitness
@@ -49,12 +50,12 @@ def anchor : World declaration where
 theorem recursive_decreases_checked_zeuge :
     (checkMeasure (recursive true) (SperrInv.leer declaration) (fun _ => none) {} none
       measure (zykS (recursive true) [()]) anchor ()).toOption.isSome = true := by
-  decide
+  decide +kernel
 
 theorem unchanged_decreases_refused_zeuge :
     (checkMeasure (recursive false) (SperrInv.leer declaration) (fun _ => none) {} none
       measure (zykS (recursive false) [()]) anchor ()).toOption.isSome = false := by
-  decide
+  decide +kernel
 
 /-- The checked Bool derives MassPflicht, uniformly in execution budget,
     hardware contracts and the admitted atomic rely. -/

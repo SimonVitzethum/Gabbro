@@ -49,6 +49,8 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
+import all Grammatik.Logik.Vertraege.Pruefer.Unit
+meta import Grammatik.Logik.Vertraege.Pruefer.Unit
 @[expose] public section
 
 namespace Gabbro.Grammatik.Zielsatz.CallSiteGoal
@@ -163,6 +165,17 @@ def wE : Einheit wD where
   Q := wQ
   starts := [⟨(), .nil⟩]
   sp0 := memory
+  axiomSources := some
+    { items := [()]
+      complete := fun item => by cases item; exact List.mem_singleton_self _
+      resources := fun _ => []
+      expression := fun _ => .eq (.var .here) (.lit 1)
+      correct := fun _ _ _ => rfl }
+  pointerSignatures := some
+    { count := 1
+      outside := fun _ n outside => by
+        change decide (0 = n) = false
+        exact decide_eq_false (by omega) }
 
 /-- The answer of an argument list: its one number. -/
 def kopfN : Env wD [.int 0 1] → Int
@@ -271,6 +284,10 @@ theorem fs_voll : ∀ g : wD.Fn, g ∈ [()] := fun g => by
   cases g
   exact List.mem_singleton_self _
 
+#eval match checkUnitLogic wE [()] [] with
+  | .ok _ => "integration logic check: accepted"
+  | .error cause => cause.message
+
 /-- **(a)**: `akzeptiertX_pruefer` accepts the unit. The Bool is split into its components,
     each decided over the one body (no kernel computation over the whole unit at once). -/
 theorem checker : akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true := by
@@ -278,6 +295,6 @@ theorem checker : akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true := by
   and_intros
   all_goals first
     | exact (schnittstellenB_iff fs_voll).mpr (schnittstellen_standard _ _)
-    | decide
+    | decide +kernel
 
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal

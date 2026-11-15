@@ -65,6 +65,8 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Grammatik.Logik.Vertraege.Pruefer.Unit
+meta import Grammatik.Logik.Vertraege.Pruefer.Unit
 @[expose] public section
 
 
@@ -214,6 +216,20 @@ def gE : Zielsatz.Einheit gD where
   Q := fun _ _ _ => true
   starts := [⟨g_read_a, .nil⟩, ⟨g_read_c, .nil⟩]
   sp0 := gSp0
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 2
+      outside := fun f n outside => by
+        cases f
+        · change decide (0 = n) = false
+          exact decide_eq_false (by omega)
+        · change decide (1 = n) = false
+          exact decide_eq_false (by omega) }
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --
@@ -256,7 +272,11 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
-theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
+#eval match Zielsatz.checkUnitLogic gE gFs gLs with
+  | .ok _ => "integration logic check: accepted"
+  | .error cause => cause.message
+
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
 -- every run of machine GX with every thread live (`gabbro_ziel_gx`). The
