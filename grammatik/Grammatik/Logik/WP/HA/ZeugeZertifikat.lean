@@ -194,17 +194,13 @@ def gS : SperrInv gD where
 example : ((gS.orte GLock.K).elem (.inl GTab.A) = true) := by decide
 example : ((gD.braucht GTab.A).elem (Sum.inl GLock.K) = true) := by decide
 
-/-- The lock invariant `A[0].x ≤ 100` as a closed source expression over the
-    held lock, for the strict VC gate. Index `0` is within `count 2`; the
-    meaning is definitional (`rfl`). -/
-def gInvExpr : Expr gD [] [Res.held (D := gD) GLock.K] .bool :=
-  .le (.slot GTab.A GAFeld.x (.widen (by decide) (by decide) (.lit 0)) gDarf_auffuellen_in_K_A)
-    (.lit 100)
-
-/-- **Lock sources for `gS`**: the reified `A[0].x ≤ 100` invariant. -/
+/-- **Lock sources for `gS`**: the invariant `A[0].x ≤ 100` always holds
+    (every `A`-slot has type `0..100`), so it is reified by the closed
+    `.tru` expression, as the six-fixture migration does for constantly-true
+    invariants. -/
 def gSources : Invarianten.Pruefer.LockSources gS :=
   fun | .K => some (Invarianten.Pruefer.ReifiedLock.ofExpression
-    [Res.held (D := gD) GLock.K] gInvExpr gS GLock.K (fun _ => rfl))
+    [] .tru gS GLock.K (fun memory => decide_eq_true (memory.slots GTab.A 0 GAFeld.x).le_hi))
 
 -- The declared initial memory (`Speicher gD`): every slot at zero,
 -- every global at its DECLARED initialiser (a `static` names one).
