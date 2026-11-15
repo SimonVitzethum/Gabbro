@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Ruf.Guest.Boundary
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Guest
 public import Grammatik.Logik.Vertraege.Pruefer.Program
+meta import Grammatik.Logik.Vertraege.Pruefer.Program
 import all Batteries.Data.Except
 
 @[expose] public section
@@ -187,6 +188,8 @@ instance : DecidableEq D.Fn := inferInstanceAs (DecidableEq Unit)
 instance : DecidableEq D.Ax := inferInstanceAs (DecidableEq Bool)
 
 def locks : SperrInv D := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
+
+#eval Vertraege.Pruefer.KontrakteGeprueftB program locks [()]
 
 /-- The admission is actually conjoined with the existing whole-program
     checker. This is a model fixture, not a source-to-IR witness. -/
