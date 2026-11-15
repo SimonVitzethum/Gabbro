@@ -191,4 +191,52 @@ theorem compiled_valid (sources : LockSources zS) :
       rw [shape]
       exact fun values => valid values trivial
 
+def resultDomain : Results zD (zD.erg zLies) :=
+  { values := domain.values, complete := domain.complete }
+
+theorem resultDomain_result : results (D := zD) 128 (zD.erg zLies) = .ok resultDomain := rfl
+
+def postCheck (value : ErgVal zD (zD.erg zLies)) :
+    Except Frag.Refusal (PLift (∃ result, postFormula zPB zLies .nil value = .ok result)) :=
+  match postFormula zPB zLies .nil value with
+  | .error cause => .error cause
+  | .ok result => .ok ⟨⟨result, rfl⟩⟩
+
+/-- The strict arithmetic gate accepts the original body and its original post. -/
+theorem environment_checked (sources : LockSources zS) :
+    (checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants .nil).toOption.isSome = true := by
+  obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
+  obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
+    (fun value => ∃ result, postFormula zPB zLies .nil value = .ok result) postCheck (by
+      intro value
+      simp only [postCheck, post_result]
+      exact ⟨_, rfl⟩)
+  have decided : decideB (close (writerMatrix .tru .tru pre.formula))
+      (close_closed (writerMatrix .tru .tru pre.formula)) = true := by
+    apply (close_decide_true_iff _).mpr
+    intro values
+    apply (lower_denote _ _).mpr
+    intro _
+    apply (quoteQF_denote _ _).mpr
+    apply (lower_denote _ _).mpr
+    intro _
+    exact (quoteQF_denote _ _).mpr (valid values)
+  unfold checkEnvironment
+  have requiresResult : translate (zPB.requires zLies) (.nil : Env zD []) =
+      .ok ((translate (zPB.requires zLies) .nil).toOption.get (by rfl)) := rfl
+  rw [requiresResult, resultDomain_result]
+  dsimp only [bind, Except.bind]
+  change (do
+    let _ ← Invarianten.Pruefer.collect resultDomain.values
+      (fun value => ∃ result, postFormula zPB zLies .nil value = .ok result) postCheck
+    let checked ← compiled sources
+    if accepted : decideB (close (writerMatrix .tru .tru checked.formula))
+        (close_closed (writerMatrix .tru .tru checked.formula)) = true then
+      pure _
+    else .error _).toOption.isSome = true
+  rw [hposts]
+  dsimp only [bind, Except.bind]
+  rw [hpre, decided]
+  rfl
+
 end Gabbro.Grammatik.Zielsatz.PoolCertificate

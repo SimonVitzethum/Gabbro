@@ -89,4 +89,20 @@ theorem localSelect_valid (budget : Nat)
       rw [shape]
       exact hvalid
 
+/-- Compose successful proof-producing checks without normalizing their proofs. -/
+theorem collect_success {α : Type} (items : List α) (property : α → Prop)
+    (check : ∀ item, Except Frag.Refusal (PLift (property item)))
+    (success : ∀ item, ∃ result, check item = .ok result) :
+    ∃ result, Invarianten.Pruefer.collect items property check = .ok result := by
+  induction items with
+  | nil => exact ⟨_, rfl⟩
+  | cons item items ih =>
+      obtain ⟨head, hhead⟩ := success item
+      obtain ⟨tail, htail⟩ := ih
+      cases result : Invarianten.Pruefer.collect (item :: items) property check with
+      | error cause =>
+          simp only [Invarianten.Pruefer.collect, hhead, htail, bind, Except.bind,
+            pure, Except.pure, reduceCtorEq] at result
+      | ok out => exact ⟨out, rfl⟩
+
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
