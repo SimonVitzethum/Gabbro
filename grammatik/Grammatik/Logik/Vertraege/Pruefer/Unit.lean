@@ -15,7 +15,7 @@ variable {D : Deklaration} [DecidableEq D.Fn]
 /-- Every field is produced by a checker procedure below. Reification fields
     in Einheit describe syntax correspondence only; they carry no contract,
     invariant, decrease or interface-refinement proof. -/
-structure CheckedUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock) where
+structure CheckedUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock) : Type where
   contracts : ∀ f ∈ functions, ContractDuties E.P E.S f
   lockLocal : ∀ lock ∈ locks, ∀ s s', (∀ c ∈ E.S.orte lock, TraegerGleich s s' c) →
     E.S.inv lock s = E.S.inv lock s'
