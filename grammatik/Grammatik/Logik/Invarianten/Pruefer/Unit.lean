@@ -72,7 +72,7 @@ theorem invariantenGeprueftB_program {E : Einheit D} {functions : List D.Fn} {lo
   unfold programInvariantsB
   cases result : checkProgram E.P E.S functions E.lockFormulas budget locks with
   | error cause =>
-      simp [invariantenGeprueftB, checkInvariants, result, Except.bind,
+      simp [invariantenGeprueftB, checkInvariants, result, bind, Except.bind,
         Except.toOption] at accepted
   | ok checked => rfl
 

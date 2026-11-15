@@ -27,6 +27,7 @@ def checkLockLocal (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
           simpa only [speicher_welt_speicher] using source.correct (memory.welt [])
         rw [← sourceAt s, ← sourceAt s']
         exact eval_gleichAuf source.expression (checkCarriers_sound _ _ checked)
+          (σ := s.welt []) (σ' := s'.welt [])
           ⟨fun t member => same (.inl t) member, fun g member => same (.inr g) member⟩ .nil⟩
 
 /-- Oracle truth is an environment assumption. Locality of its SOURCE is a
