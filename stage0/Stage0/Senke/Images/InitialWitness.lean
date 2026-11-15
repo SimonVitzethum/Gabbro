@@ -2,11 +2,43 @@
    No source parser/kernel execution or compiler build is performed by this fixture. -/
 module
 public import Stage0.Senke.Images.InitialRead
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.InitialProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
+set_option maxRecDepth 100000
 
 /-- A wide field, nested array, empty product and typed product sum payload. -/
 def shape : Ty := .prod 101 [
@@ -14,13 +46,15 @@ def shape : Ty := .prod 101 [
   .sum [none, some (.prod 103 [.int 0 100, .bool])]]
 
 def sourceUnit : UProg := {
-  tabs := [{name := "Cells", count := 2, cols := [("matrix", (0, 0))],
+  tabs := [{
+    name := "Cells", count := 2, cols := [("matrix", (0, 0))],
     werte := [("matrix", .arr (.arr (.int 0 255) 2) 2)]}]
   locks := [{name := "CellsLock", rank := 0, guard := ["Cells"]}]
   fns := []
   globs := [
     {name := "PREFIX", ty := .int 0 255, init := 19},
-    {name := "RECORD", ty := .wert shape, init := 0,
+    {
+      name := "RECORD", ty := .wert shape, init := 0,
       initK := .product 101 [
         .zahl (2 ^ 80 + 7),
         .cons (.cons (.wahr true) (.cons (.wahr false) .nil))
