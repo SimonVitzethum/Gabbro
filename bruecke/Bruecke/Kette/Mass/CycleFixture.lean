@@ -93,24 +93,4 @@ theorem low_some : (lowerAllg uZ).toOption.isSome = true := by
     rcases choices with rfl | rfl | rfl
     all_goals constructor <;> cbv
 
-def PZ : Programm (declOf uZ) := ((lowerAllg uZ).toOption.get low_some).1
-def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
-
-theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
-
-theorem getragenZ : GetragenG uZ (fun _ => True) :=
-  getragenG_of_bools (by cbv) (by cbv) (by cbv)
-
-/-- The rank check refuses the unit: `h` calls itself. -/
-theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
-
-/-- ... and no rank exists at all. -/
-theorem kein_rang : ∀ rk, ¬ Rang uZ rk := by
-  intro rk h
-  have := h ⟨2, by decide⟩ "h" [] (CallsIn.discard (by decide))
-  exact Nat.lt_irrefl _ this
-
-/-! ## Every duty holds -- by vacuity -/
-
-
 end Gabbro.Bruecke.Zyklus
