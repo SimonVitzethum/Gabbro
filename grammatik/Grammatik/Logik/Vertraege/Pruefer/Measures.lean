@@ -50,10 +50,10 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
         massTor measure (cycle f) entry R := by
       funext g next args
       by_cases blocked : (cycle f g && !(lexLt (measure.wert g next args) entry)) = true
-      · simp [gate, massTor, blocked]
+      · simp only [gate, massTor, blocked, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
       · have declined : (cycle f g && !(lexLt (measure.wert g next args) entry)) = false :=
           Bool.eq_false_iff.mpr blocked
-        simp [gate, massTor, declined]
+        simp only [gate, massTor, declined, Bool.not_false, Bool.false_eq_true, ↓reduceIte]
     rw [← same]
     exact respectsGate R respects gate Logik.abstieg
   have errors : ∀ h next args, policy.holds h next args → ∀ error,
