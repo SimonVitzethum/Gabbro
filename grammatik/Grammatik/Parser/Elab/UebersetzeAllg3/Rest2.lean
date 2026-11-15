@@ -40,6 +40,7 @@ import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
+public import Grammatik.Korpus.Programme.Uebersetze104
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze

@@ -7268,7 +7268,7 @@ paths) and `guard-relation-u64.gab` (high bits, the unsigned limit and a false g
 certificates and actual runner execution are separate measurements.
 
 The bounded importer check also moves the existing closed 104 pins from `Teil/Teil16.lean`
-to `Pruefung/Witness/Closed104.lean`, re-exported by `Uebersetze.lean`. The five statements
+to `Korpus/Programme/Uebersetze104.lean`, re-exported by `Uebersetze.lean`. The five statements
 `u104elab`, `u104lower`, `u104data`, `u104fragment` and `u104fuss` are unchanged. The first
 two use kernel conversion in the isolated witness module instead of elaborator `cbv`;
 the generic Boolean equality helpers remain in `Teil16`.
