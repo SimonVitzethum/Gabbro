@@ -83,6 +83,7 @@ local instance poolZeugeAxGleich : DecidableEq zD.Ax := inferInstanceAs (Decidab
 def zPool : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
   sp0 := zSp

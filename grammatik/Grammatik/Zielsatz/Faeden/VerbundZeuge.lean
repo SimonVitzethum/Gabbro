@@ -110,6 +110,7 @@ def vzBib : Programm zD := mitRumpf zPB fun
 def vzE1 : Einheit zD where
   P := vzApp
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -123,6 +124,7 @@ def vzE1 : Einheit zD where
 def vzE2 : Einheit zD where
   P := vzBib
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := []
   sp0 := zSp
