@@ -134,7 +134,7 @@ theorem pick_exec (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State) (b : Bool)
 
 theorem pick_meets : meetsU unit (wfU unit) pick pickBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "b").hasShape .bool)) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "b").hasShape .bool)) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨b, hb⟩ := Gabbro.Body.Value.hasShape_bool_true (s.local' "b") hshape
@@ -146,7 +146,7 @@ theorem pick_meets : meetsU unit (wfU unit) pick pickBody := by
 
 theorem truth_meets : meetsU unit (wfU unit) truth truthBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "b").hasShape .bool)) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "b").hasShape .bool)) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨b, hb⟩ := Gabbro.Body.Value.hasShape_bool_true (s.local' "b") hshape
@@ -161,7 +161,7 @@ theorem truth_meets : meetsU unit (wfU unit) truth truthBody := by
 
 theorem stop_meets : meetsU unit (wfU unit) stop stopBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "b").hasShape .bool)) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "b").hasShape .bool)) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨b, hb⟩ := Gabbro.Body.Value.hasShape_bool_true (s.local' "b") hshape
@@ -176,7 +176,7 @@ theorem stop_meets : meetsU unit (wfU unit) stop stopBody := by
 
 theorem nested_meets : meetsU unit (wfU unit) nested nestedBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "b").hasShape .bool)) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "b").hasShape .bool)) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨b, hb⟩ := Gabbro.Body.Value.hasShape_bool_true (s.local' "b") hshape
@@ -211,15 +211,19 @@ theorem continuation_refused :
 
 /-- The terminal path retains the table of a direct option result through another
     call, a local binding, a local update and both kinds of field update. -/
+def optionStatements : List UStmt :=
+  [.bindCall "answer" "lookup" [],
+    .bindCall "again" "identity" [.oval (.var "answer")],
+    .bindOpt "local" 0 (.var "again"), .setVarOpt "local" 0 .nichts,
+    .assignOpt "p" "next" (.lit 0) (.var "local"),
+    .assignTabOpt "T" "next" (.lit 1) (.var "again"),
+    .ret (.opt (.var "local")), .blkEnd]
+
 def optionEnd : UFn :=
   { OptionStorageZeuge.test with
     name := "terminal",
-    body := [.bindCall "answer" "lookup" [],
-      .bindCall "again" "identity" [.oval (.var "answer")],
-      .bindOpt "local" 0 (.var "again"), .setVarOpt "local" 0 .nichts,
-      .assignOpt "p" "next" (.lit 0) (.var "local"),
-      .assignTabOpt "T" "next" (.lit 1) (.var "again"),
-      .ret (.opt (.var "local")), .blkEnd] }
+    body := [.ifEnde .fls, .ret (.opt .nichts), .ifElse] ++ optionStatements,
+    ret := .keins }
 
 def optionUnit : UProg :=
   { OptionValueZeuge.callUnit with
@@ -233,14 +237,27 @@ def optionBody : List Gabbro.Body.Stmt :=
     .assign "T" (.lit (.int 1)) "next" (.name "again"),
     .ret (some (.name "local"))]
 
+/-- The terminal fixture is also a carried, lowered whole unit; its option scope
+    is an actual branch of a function with explicit endings on both paths. -/
+theorem option_unit_zeuge : GetragenG optionUnit (fun _ => True) ∧
+    (lowerAllg optionUnit).toOption.isSome = true := by
+  refine ⟨getragenG_of_bools (by cbv) (by cbv) (by cbv), ?_⟩
+  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
+  · rfl
+  · cbv
+  · rintro ⟨index, bound⟩
+    have small : index < 3 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+    rcases choices with rfl | rfl | rfl <;> constructor <;> cbv
+
 /-- Joint nondegenerate premises for the option-end inversion and simulations:
     two table slots, actual call results, writable storage and an explicit closer. -/
 theorem lowEndL_bindOpt_ok_zeuge :
     (match lowEndL (l := false) optionUnit ⟨1, by decide⟩ (optionEnd.params.map (·.2))
-        optionEnd 12 [] [] optionEnd.body with
+        optionEnd 12 [] [] optionStatements with
       | .error _ => False
-      | .ok (_, tail) => tail = [.blkEnd]) ∧
-    (seqZ optionUnit 12 optionEnd (BodyNames.start optionEnd) optionEnd.body).map (·.1) =
+      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
+    (seqZ optionUnit 12 optionEnd (BodyNames.start optionEnd) optionStatements).map (·.1) =
       some optionBody := by
   constructor <;> cbv
 
@@ -251,17 +268,17 @@ theorem lowEndL_struct_ok_zeuge :
         OptionZeuge.test 12 [] []
         (OptionZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
       | .error _ => False
-      | .ok (_, tail) => tail = [.blkEnd]) ∧
+      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
     (match lowEndL (l := false) ReasonZeuge.unit ⟨0, by decide⟩ (ReasonZeuge.test.params.map (·.2))
         ReasonZeuge.test 12 [] []
         (ReasonZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
       | .error _ => False
-      | .ok (_, tail) => tail = [.blkEnd]) ∧
+      | .ok (_, tail) => tail = [UStmt.blkEnd]) ∧
     (match lowEndL (l := false) TagZeuge.unit ⟨0, by decide⟩ (TagZeuge.test.params.map (·.2))
         TagZeuge.test 12 [] []
         (TagZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
       | .error _ => False
-      | .ok (_, tail) => tail = [.blkEnd]) := by
+      | .ok (_, tail) => tail = [UStmt.blkEnd]) := by
   refine ⟨?_, ?_, ?_⟩ <;> cbv
 
 end Gabbro.Bruecke.EndeZeuge
