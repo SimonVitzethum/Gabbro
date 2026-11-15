@@ -186,11 +186,21 @@ theorem lowEndL_struct_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declO
     · simp only [lowEndStep, lowStufe_struct, lowStufe_ende]
       cases hg : lowStructL (l := false) u c Γ fn n Λ [] (.matchTagBeg sidx x bs) ss with
       | error err => rfl
-      | ok p => rcases p with ⟨⟨Λ₁, st⟩, remaining⟩; rfl
+      | ok p =>
+        rcases p with ⟨⟨Λ₁, st⟩, remaining⟩
+        simp only [Except.bind]
+        cases hq : lowEndL (l := false) u c Γ fn n Λ₁ [] remaining with
+        | error err => rfl
+        | ok q => rcases q with ⟨ending, tail⟩; rfl
     · simp only [lowEndStep, lowStufe_struct, lowStufe_ende]
       cases hg : lowStructL (l := false) u c Γ fn n Λ [] (.matchWhyBeg x) ss with
       | error err => rfl
-      | ok p => rcases p with ⟨⟨Λ₁, st⟩, remaining⟩; rfl
+      | ok p =>
+        rcases p with ⟨⟨Λ₁, st⟩, remaining⟩
+        simp only [Except.bind]
+        cases hq : lowEndL (l := false) u c Γ fn n Λ₁ [] remaining with
+        | error err => rfl
+        | ok q => rcases q with ⟨ending, tail⟩; rfl
   rw [hd] at h
   exact lowEndL_struct_result h
 
