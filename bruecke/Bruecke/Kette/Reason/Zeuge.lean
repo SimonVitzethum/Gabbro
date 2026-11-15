@@ -10,7 +10,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 def routine : UFn :=
-  { name := "reason", params := [], held := [], puts := [], gives := [],
+  { name := "reason", params := [], kinds := [], res := none, held := [], puts := [], gives := [],
     gruende := 2, body := [], ret := .why 1 }
 
 def unit : UProg := { tabs := [], locks := [], fns := [routine] }
