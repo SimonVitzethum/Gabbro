@@ -10,8 +10,7 @@
              (`Faelle*.lean`) with the statement for its direct sub-terms (`*Kinder`); the alternative "no foreign
              call or read-blind foreign answers" descends with it.
 
-             Corollaries: the body-running handler of the machine is read-blind (`rufRumpf_lg`, under the program
-             premise `LeseblindP`), so a run that reads more before every call stays related (`rufRumpf_lese_vorn`);
+             Corollaries: the body-running handler of the machine is read-blind (`rufRumpf_lg`, for every oracle), so a run that reads more before every call stays related (`rufRumpf_lese_vorn`);
              inversions of the outcome relations for the normal outcomes. The relation the image theorem needs
              between `rufAt` and `rufRumpf` (package P2) is `HandlerLG (fun _ => True) (rufAt P O passes n)
              (rufRumpf P O passes n)`; it is NOT proved here.
@@ -265,14 +264,14 @@ theorem RufLG.why_inv {f : D.Fn} {σ : World D} {r : Fin (D.gruende f)} {a : Ruf
 
 /-! ## 4. The body-running handler is read-blind -/
 
-/-- **`rufRumpf` respects `≈`**: under the oracle premise of the program (`LeseblindP`), the body-running handler of
+/-- **`rufRumpf` respects `≈`**: for every oracle (read-blind, `leseblindP_alle`), the body-running handler of
     machine G (`rufRumpf`) is related to itself on `≈` worlds at every depth, with no early failure. -/
-theorem rufRumpf_lg {P : Programm D} (hO : LeseblindP P O) :
+theorem rufRumpf_lg {P : Programm D} :
     ∀ n, HandlerLG Er (rufRumpf P O passes n) (rufRumpf P O passes n)
   | 0 => fun _ _ _ _ _ => .logik _
   | n + 1 => fun g σ σ' ρ h => by
       have he := execEnd_lg (passes := passes)
-        (rufRumpf_lg (P := P) hO n) hO.rs (P.rumpf g) (hO.rumpf g) h ρ
+        (rufRumpf_lg (P := P) n) (leseblindRS_alle O) (P.rumpf g) ((leseblindP_alle P O).rumpf g) h ρ
       simp only [rufRumpf]
       generalize execEnd O passes (rufRumpf P O passes n) (P.rumpf g) σ ρ = o₁ at he ⊢
       generalize execEnd O passes (rufRumpf P O passes n) (P.rumpf g) σ' ρ = o₂ at he ⊢
@@ -287,10 +286,10 @@ theorem rufRumpf_lg {P : Programm D} (hO : LeseblindP P O) :
       | fruehH hE => exact .fruehH hE
 
 /-- A run that reads more before every call stays related to the body-running run. -/
-theorem rufRumpf_lese_vorn {P : Programm D} (hO : LeseblindP P O) (n : Nat) (Λ : List (Res D))
+theorem rufRumpf_lese_vorn {P : Programm D} (n : Nat) (Λ : List (Res D))
     (os : List (D.Tab ⊕ D.Glob)) :
     HandlerLG Er (rufRumpf P O passes n) (fun g σ ρ => rufRumpf P O passes n g (σ.lese Λ os) ρ) :=
-  (rufRumpf_lg hO n).lese_vorn Λ os
+  (rufRumpf_lg (P := P) n).lese_vorn Λ os
 
 #print axioms execEnd_lg
 #print axioms rufRumpf_lg

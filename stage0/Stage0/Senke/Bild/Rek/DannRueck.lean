@@ -27,7 +27,7 @@ variable {D : Deklaration}
 
 /-- **Normal exit**: when the call `rufAt (j + 1) g σc ρc` ends normally and machine `M1` stands at the callee's exact
     entry (world `σm ≈ σc`), every world `≈` to the call's world has the entry's held set. -/
-theorem offen_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem offen_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {σc σ2 : World D} {ρc : Env D (D.params g)} {v : ErgVal D (D.erg g)}
     (hR : rufAt P O passes (j + 1) g σc ρc = .ok σ2 v) (hg : TiefAlle P Agl (j + 1) g) {M1 : RufMaschineG D}
@@ -35,13 +35,13 @@ theorem offen_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Lese
     {ziel : ErgVal D (D.erg g) → RufRahmenG D} (hart : PopArt g caller ziel) {σ'' : World D}
     (h2 : WeltGleich σ2 σ'') : offen σ''.spur = offen σm.spur := by
   obtain ⟨⟨log, hZ1⟩, hΛ1, hA1⟩ := hE
-  obtain ⟨σx, hRx, hwx⟩ := rufAt_ok_rufRumpf hO hw hR
+  obtain ⟨σx, hRx, hwx⟩ := rufAt_ok_rufRumpf hw hR
   obtain ⟨_, _, _, _, hoffx⟩ := (rufOk_tiefAlle P O passes thr Agl (j + 1)).1 g hg σm σx ρc v hRx M1 caller
     stapel log hZ1 ziel hart hΛ1 hA1
   exact (h2.symm.trans hwx).offen_eq.trans hoffx
 
 /-- **Reason exit**: as `offen_rueck_ok`, when the call answers a reason. -/
-theorem offen_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem offen_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {σc σ2 : World D} {ρc : Env D (D.params g)} {r : Fin (D.gruende g)}
     (hR : rufAt P O passes (j + 1) g σc ρc = .why σ2 r) (hg : TiefAlle P Agl (j + 1) g) {M1 : RufMaschineG D}
@@ -49,7 +49,7 @@ theorem offen_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Les
     {zielG : Fin (D.gruende g) → RufRahmenG D} (hart : PopGrund g caller zielG) {σ'' : World D}
     (h2 : WeltGleich σ2 σ'') : offen σ''.spur = offen σm.spur := by
   obtain ⟨⟨log, hZ1⟩, hΛ1, hA1⟩ := hE
-  obtain ⟨σx, hRx, hwx⟩ := rufAt_why_rufRumpf hO hw hR
+  obtain ⟨σx, hRx, hwx⟩ := rufAt_why_rufRumpf hw hR
   obtain ⟨_, _, _, _, hoffx⟩ := (rufOk_tiefAlle P O passes thr Agl (j + 1)).2 g hg σm σx ρc r hRx M1 caller
     stapel log hZ1 zielG hart hΛ1 hA1
   exact (h2.symm.trans hwx).offen_eq.trans hoffx
@@ -62,7 +62,7 @@ variable [Runner.IR.Kern]
     block-position boundary (`σ ≈ σm0`, locks `Λ`), the call `g(args)` ends normally with `v`, machine `M1` stood at the
     callee's exact entry, and `Me` stands at a boundary of the callee behind its decomposed prefix. Then `thr` alone
     pops from `Me` into `ziel v`, at a world `≈` to the call's world, holding the locks of `nach D g Λ`. -/
-theorem randDannGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randDannGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {Agl : D.Lock → Prop} {Γ : Ctx} {Λ : List (Res D)} {g : D.Fn}
     {args : Args D Γ Λ (D.params g)} {σ σm0 : World D} {ρ : Env D Γ} (hw : WeltGleich σ σm0)
     (hΛ : HeldB (vertragVon D f).boden Λ (offen σm0.spur)) {caller : RufRahmenG D} {M1 : RufMaschineG D}
@@ -80,8 +80,8 @@ theorem randDannGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO :
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ2 σ'' ∧
       GepopptG M' thr (ziel v) stapel g (rufEnv g σ Λ args ρ) σm lg v σ'' ∧
       HeldB (vertragVon D f).boden (nach D g Λ) (offen σ''.spur) ∧ FreiA Agl M' thr := by
-  obtain ⟨M', σ'', lg, hl, hw2, hGp, _⟩ := randGL_rueck_ruf_ok hO hR hg hkC hMe hart
-  have hoff : offen σ''.spur = offen σm.spur := offen_rueck_ok hO hR hg hw1 hE hart hw2
+  obtain ⟨M', σ'', lg, hl, hw2, hGp, _⟩ := randGL_rueck_ruf_ok hR hg hkC hMe hart
+  have hoff : offen σ''.spur = offen σm.spur := offen_rueck_ok hR hg hw1 hE hart hw2
   have hoffm : offen σm.spur = offen σm0.spur :=
     (hw1.symm.trans ((weltGleich_lese σ Λ args.orte).symm.trans hw)).offen_eq
   obtain ⟨_, _, _, _, hAe⟩ := hMe
@@ -90,7 +90,7 @@ theorem randDannGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO :
 
 /-- **Out of the callee, reason exit, into a block-position caller frame**: as `randDannGL_rueck_ok`, when the call
     answers the reason `r`; `thr` pops through the error channel into `zielG r`. -/
-theorem randDannGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randDannGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {Agl : D.Lock → Prop} {Γ : Ctx} {Λ : List (Res D)} {g : D.Fn}
     {args : Args D Γ Λ (D.params g)} {σ σm0 : World D} {ρ : Env D Γ} (hw : WeltGleich σ σm0)
     (hΛ : HeldB (vertragVon D f).boden Λ (offen σm0.spur)) {caller : RufRahmenG D} {M1 : RufMaschineG D}
@@ -108,8 +108,8 @@ theorem randDannGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ2 σ'' ∧
       GepopptGrundG M' thr (zielG r) stapel g (rufEnv g σ Λ args ρ) σm lg r σ'' ∧
       HeldB (vertragVon D f).boden (nach D g Λ) (offen σ''.spur) ∧ FreiA Agl M' thr := by
-  obtain ⟨M', σ'', lg, hl, hw2, hGp, _⟩ := randGL_rueck_ruf_why hO hR hg hkC hMe hart
-  have hoff : offen σ''.spur = offen σm.spur := offen_rueck_why hO hR hg hw1 hE hart hw2
+  obtain ⟨M', σ'', lg, hl, hw2, hGp, _⟩ := randGL_rueck_ruf_why hR hg hkC hMe hart
+  have hoff : offen σ''.spur = offen σm.spur := offen_rueck_why hR hg hw1 hE hart hw2
   have hoffm : offen σm.spur = offen σm0.spur :=
     (hw1.symm.trans ((weltGleich_lese σ Λ args.orte).symm.trans hw)).offen_eq
   obtain ⟨_, _, _, _, hAe⟩ := hMe
@@ -121,7 +121,7 @@ theorem randDannGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
 /-- **A plain call in a block, in and out** (`g(args); rest` at `.dann`): machine G descends into the callee, and from
     every boundary of the callee behind its decomposed prefix, `thr` returns to the caller's boundary in front of
     `rest`, at a world `≈` to the call's world. -/
-theorem randDannGL_ruf_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randDannGL_ruf_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
     {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)} {g : D.Fn} {args : Args D Γ Λ (D.params g)}
     {hp : RufPasst D (vertragVon D f) (D.signatur g) Λ} {hr : D.gruende g = 0}
@@ -145,11 +145,11 @@ theorem randDannGL_ruf_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat} (h
   refine ⟨M1, σm, hl1, randGL_von_eintritt hw1 hE, ?_⟩
   intro Me hMe
   obtain ⟨M', σ'', lg, hl, hw2, hGp, hΛ', hA'⟩ :=
-    randDannGL_rueck_ok hO hw hΛ hw1 hE hR hg hkC (PopArt.wie rfl) hMe
+    randDannGL_rueck_ok hw hΛ hw1 hE hR hg hkC (PopArt.wie rfl) hMe
   exact ⟨M', hl, σ'', hw2, ⟨_, hGp.1, hGp.2⟩, hΛ', hA'⟩
 
 /-- **`let x = g(…)` in a block, in and out**: the return binds the value into `rest`. -/
-theorem randDannGL_bindCall_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O)
+theorem randDannGL_bindCall_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat}
     {thr : Faden} {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D}
     {Agl : D.Lock → Prop} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} {g : D.Fn}
     {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {hp : RufPasst D (vertragVon D f) (D.signatur g) Λ}
@@ -174,11 +174,11 @@ theorem randDannGL_bindCall_ein_aus {P : Programm D} {O : Orakel D} {passes : Na
   refine ⟨M1, σm, hl1, randGL_von_eintritt hw1 hE, ?_⟩
   intro Me hMe
   obtain ⟨M', σ'', lg, hl, hw2, hGp, hΛ', hA'⟩ :=
-    randDannGL_rueck_ok hO hw hΛ hw1 hE hR hg hkC (PopArt.bind rest k ρ rfl he) hMe
+    randDannGL_rueck_ok hw hΛ hw1 hE hR hg hkC (PopArt.bind rest k ρ rfl he) hMe
   exact ⟨M', hl, σ'', hw2, ⟨_, hGp.1, hGp.2⟩, hΛ', hA'⟩
 
 /-- **`let x = g(…) else { err }` in a block, normal exit, in and out**: the return binds the value into `rest`. -/
-theorem randDannGL_bindCallElse_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O)
+theorem randDannGL_bindCallElse_ein_aus {P : Programm D} {O : Orakel D} {passes : Nat}
     {thr : Faden} {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D}
     {Agl : D.Lock → Prop} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} {g : D.Fn}
     {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {hp : RufPasst D (vertragVon D f) (D.signatur g) Λ}
@@ -205,12 +205,12 @@ theorem randDannGL_bindCallElse_ein_aus {P : Programm D} {O : Orakel D} {passes 
   refine ⟨M1, σm, hl1, randGL_von_eintritt hw1 hE, ?_⟩
   intro Me hMe
   obtain ⟨M', σ'', lg, hl, hw2, hGp, hΛ', hA'⟩ :=
-    randDannGL_rueck_ok hO hw hΛ hw1 hE hR hg hkC (PopArt.bindSonst (D.gruende g) err rest k ρ rfl he) hMe
+    randDannGL_rueck_ok hw hΛ hw1 hE hR hg hkC (PopArt.bindSonst (D.gruende g) err rest k ρ rfl he) hMe
   exact ⟨M', hl, σ'', hw2, ⟨_, hGp.1, hGp.2⟩, hΛ', hA'⟩
 
 /-- **`let x = g(…) else { err }` in a block, reason exit, in and out**: the return runs the else block with the
     reason bound. -/
-theorem randDannGL_bindCallElse_ein_aus_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O)
+theorem randDannGL_bindCallElse_ein_aus_why {P : Programm D} {O : Orakel D} {passes : Nat}
     {thr : Faden} {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D}
     {Agl : D.Lock → Prop} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} {g : D.Fn}
     {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {hp : RufPasst D (vertragVon D f) (D.signatur g) Λ}
@@ -237,7 +237,7 @@ theorem randDannGL_bindCallElse_ein_aus_why {P : Programm D} {O : Orakel D} {pas
   refine ⟨M1, σm, hl1, randGL_von_eintritt hw1 hE, ?_⟩
   intro Me hMe
   obtain ⟨M', σ'', lg, hl, hw2, hGp, hΛ', hA'⟩ :=
-    randDannGL_rueck_why hO hw hΛ hw1 hE hR hg hkC (PopGrund.sonst err rest k ρ rfl) hMe
+    randDannGL_rueck_why hw hΛ hw1 hE hR hg hkC (PopGrund.sonst err rest k ρ rfl) hMe
   exact ⟨M', hl, σ'', hw2, ⟨_, hGp.1, hGp.2⟩, hΛ', hA'⟩
 
 #print axioms randDannGL_rueck_ok

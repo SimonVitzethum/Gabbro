@@ -63,6 +63,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
           { table with breiten := uTableWidths widths item }))) with
   | .error e => .error e
   | .ok tabs0 =>
+  match uArenaSchranken consts ms with
+  | .error e => .error e
+  | .ok _ =>
   match uArenen consts alias ms widths with
   | .error e => .error e
   | .ok (arTabs, arGlobs) =>
@@ -110,6 +113,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uAkkuVorlauf consts alias ms fnItems with
   | .error e => .error e
   | .ok (fnItems, akkuFrage, fremdPaare) =>
+  match uFnNamenEindeutig fnItems with
+  | .error e => .error e
+  | .ok _ =>
   match uWhys ms alias with
   | .error e => .error e
   | .ok whys =>
