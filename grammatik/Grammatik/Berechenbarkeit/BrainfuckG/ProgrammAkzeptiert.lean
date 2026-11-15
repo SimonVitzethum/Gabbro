@@ -1,6 +1,7 @@
 module
 public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -27,10 +28,22 @@ def prog : Programm BD where
 say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
 
+set_option profiler true in
+set_option profiler.threshold 0 in
 /-- **The core checker accepts the program.** -/
 theorem prog_accepted_zeuge :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
       [.inl (), .inr 0, .inr 1, .inr 2, .inr 3, .inr 4, .inr 5, .inr 6] [()] [] = true := by decide +kernel
+
+/-- The same storage body with a false postcondition must enter the strict
+    VC path; the Basic totality certificate cannot accept this contract. -/
+def falseContract : Programm BD := { prog with ensures := fun _ => .fls }
+
+set_option profiler true in
+set_option profiler.threshold 0 in
+theorem false_contract_refused_zeuge :
+    Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer BD) [()] = false := by
+  decide +kernel
 
 
 /-- **The accepted function runs**: with budget 2 it returns normally, and its run is the halting Brainfuck run of `.`

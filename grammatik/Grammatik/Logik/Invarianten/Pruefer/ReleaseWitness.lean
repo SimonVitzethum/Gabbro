@@ -80,6 +80,13 @@ def unit (restore : Bool) : Einheit declaration where
   Q := fun item => nomatch item
   starts := [⟨(), .nil⟩]
   sp0 := world.speicher
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some { count := 0, outside := fun _ _ _ => rfl }
 
 theorem start_zeuge : StartPflicht (unit true) := by
   refine ⟨?_, fun _ _ => rfl⟩
@@ -109,13 +116,20 @@ theorem checker_refused_zeuge :
 
 /-- The goal's actual unit checker receives the source through the canonical
     metadata field, rather than losing it at the Bool adapter. -/
+theorem unit_invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by
+  decide +kernel
+
+theorem unit_logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by
+  decide +kernel
+
 theorem unit_checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit true) [()] [()]
       [.inl (), .inr false, .inr true] = true := by
   rw [akzeptiertX_pruefer_eq]
   change (AkzeptiertX (program true) family [()] [()]
-    [.inl (), .inr false, .inr true] (unit true).ws (sources := sources) && true && true) = true
-  rw [checker_accepted_zeuge]
+    [.inl (), .inr false, .inr true] (unit true).ws (sources := sources) && true && true &&
+      invariantenGeprueftB (unit true) [()] [()] && nutzerPflichtGeprueftB (unit true) [()] [()]) = true
+  rw [checker_accepted_zeuge, unit_invariants_accepted_zeuge, unit_logic_accepted_zeuge]
   rfl
 
 end Gabbro.Grammatik.Invarianten.Pruefer.ReleaseWitness
