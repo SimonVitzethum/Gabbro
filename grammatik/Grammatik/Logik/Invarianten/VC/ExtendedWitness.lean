@@ -39,7 +39,9 @@ theorem conditional_initializer_counterexample_zeuge :
     eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
     (match execEnd oracle 0 calls (conditionalWriter false) counterexampleWorld .nil with
       | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide +kernel
+      | _ => true) = false := by
+  change wahr? (eval counterexampleWorld invariant counterexampleWorld .nil) = true ∧ _
+  decide +kernel
 
 theorem traversal_contract_accepted_zeuge :
     Vertraege.Pruefer.KontrakteGeprueftB (traversalProgram true)
