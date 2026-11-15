@@ -188,6 +188,10 @@ def gS : SperrInv gD where
 example : ((gS.orte GLock.K).elem (.inl GTab.Plaetze) = true) := by decide
 example : ((gD.braucht GTab.Plaetze).elem (Sum.inl GLock.K) = true) := by decide
 
+/-- The declared lock predicate is literally true in every memory. -/
+def gSources : Invarianten.Pruefer.LockSources gS := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 -- The declared initial memory (`Speicher gD`): every slot at zero,
 -- every global at its DECLARED initialiser (a `static` names one).
 def gSp0 : Speicher gD :=
@@ -196,6 +200,7 @@ def gSp0 : Speicher gD :=
 def gE : Zielsatz.Einheit gD where
   P := gP
   S := gS
+  lockFormulas := gSources
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
