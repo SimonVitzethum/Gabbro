@@ -363,24 +363,56 @@ private theorem bounded13 : decide (chunk13.steps ≤ chunk13.characters.length)
 
 private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
 
-private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
-    (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
-    lex text = .ok ts := by
+private theorem lex_from_chunks (text : String) (pieces : List Chunk)
+    (textEq : text = String.ofList (characters pieces))
+    (bounded : pieces.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true) :
+    lex text = .ok (tokens pieces) := by
   rw [textEq, lex_ofList]
-  exact scanned
+  exact lex_chunks pieces
+    (Nat.le_trans (steps_le_length pieces bounded) (Nat.le_succ _))
+
+#eval do
+  IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "bounds-compose"
+
+private theorem all_bounds :
+    chunks.all (fun piece => decide (piece.steps ≤ piece.characters.length)) = true := by
+  unfold chunks
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded0, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded1, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded2, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded3, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded4, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded5, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded6, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded7, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded8, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded9, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded10, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded11, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded12, ?_⟩
+  rw [List.all_cons]
+  refine Bool.and_eq_true.mpr ⟨bounded13, ?_⟩
+  rfl
 
 #eval do
   IO.FS.createDirAll ".scratch-agent"
   IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "lexer"
 
-private theorem source_lexed : lex source = .ok (tokens chunks) :=
-  lex_from_characters source (characters chunks) (tokens chunks) source_text
-    (lex_chunks chunks
-      (Nat.le_trans (steps_le_length chunks (by
-        simp only [chunks, List.all_cons, List.all_nil, bounded0, bounded1,
-          bounded2, bounded3, bounded4, bounded5, bounded6, bounded7, bounded8,
-          bounded9, bounded10, bounded11, bounded12, bounded13, Bool.true_and]))
-        (Nat.le_succ _)))
+private theorem lex_from_chunks_zeuge : lex source = .ok (tokens chunks) :=
+  lex_from_chunks source chunks source_text all_bounds
 
 private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
     (scanned : lex source = .ok ts) (read : parseTopTief ts = .ok items) :
@@ -403,7 +435,7 @@ private theorem source_items_success :
     parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
 
 private theorem source_items_read : parsed = .ok source_items :=
-  parsed_from_phases source_lexed source_items_success
+  parsed_from_phases lex_from_chunks_zeuge source_items_success
 
 #eval do
   IO.FS.createDirAll ".scratch-agent"
