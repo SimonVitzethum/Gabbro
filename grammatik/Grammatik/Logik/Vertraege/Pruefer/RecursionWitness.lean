@@ -18,6 +18,8 @@ def declaration : Deklaration :=
         konsumiert := [], produziert := [] }
     passt_ok := fun _ _ impossible => by cases impossible }
 
+instance : DecidableEq declaration.Fn := inferInstanceAs (DecidableEq Unit)
+
 abbrev contract := vertragVon declaration ()
 
 def fits : RufPasst declaration contract (declaration.signatur ()) [] where
