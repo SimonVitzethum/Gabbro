@@ -230,7 +230,7 @@ theorem close_closed [DecidableEq α] (body : QF α) : closedUnderB [] (close bo
   closure_closed (qfKeys body).eraseDups [] (quoteQF body)
     (quoteQF_closed body _ (fun _ h => by simpa only [List.append_nil, List.mem_eraseDups] using h))
 
-theorem close_sound [DecidableEq α] (body : QF α) (accepted : decideB (close body) = true)
+theorem close_sound [DecidableEq α] (body : QF α) (accepted : decideB (close body) (close_closed body) = true)
     (values : Assignment α) : body.denote values := by
   apply closure_transfer (qfKeys body).eraseDups body values values
     (decideB_sound (close body) (close_closed body) accepted values)
@@ -239,7 +239,7 @@ theorem close_sound [DecidableEq α] (body : QF α) (accepted : decideB (close b
 /-- Decision completeness lets witnesses prove validity symbolically without
     reducing Cooper elimination again inside the kernel. -/
 theorem close_decide_true_iff [DecidableEq α] (body : QF α) :
-    decideB (close body) = true ↔ ∀ values, body.denote values := by
+    decideB (close body) (close_closed body) = true ↔ ∀ values, body.denote values := by
   constructor
   · exact close_sound body
   · intro valid
@@ -248,7 +248,7 @@ theorem close_decide_true_iff [DecidableEq α] (body : QF α) :
     exact fun values _ => valid values
 
 theorem close_decide_false_iff [DecidableEq α] (body : QF α) :
-    decideB (close body) = false ↔ ∃ values, ¬ body.denote values := by
+    decideB (close body) (close_closed body) = false ↔ ∃ values, ¬ body.denote values := by
   classical
   constructor
   · intro rejected

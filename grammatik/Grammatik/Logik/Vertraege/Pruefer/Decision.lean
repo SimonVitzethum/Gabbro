@@ -104,7 +104,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
       | .ok post => .ok ⟨⟨post, rfl⟩⟩)
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) locals (contractGoals program f locals invariants)
-  if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) = true then
+  if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) (close_closed (writerMatrix requires.payload .tru compiled.formula)) = true then
     return ⟨fun runtime world allowed safe entry => by
       have closed := (lower_denote _ (assignment world)).mp
         (close_sound _ accepted (assignment world))

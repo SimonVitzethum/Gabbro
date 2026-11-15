@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Locks
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
-public import Grammatik.Logik.Vertraege.Pruefer.Fixtures
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
 import all Batteries.Data.Except
 
 @[expose] public section

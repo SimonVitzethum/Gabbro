@@ -50,7 +50,7 @@ private theorem overflowing_formula :
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
 theorem bounded_decided_zeuge :
-    decideB (Extended.writerVC boundedCompiled entry .tru) = true := by
+    decideB (Extended.writerVC boundedCompiled entry .tru) (Extended.writerVC_closed boundedCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -66,7 +66,7 @@ theorem bounded_decided_zeuge :
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
 theorem overflow_decided_zeuge :
-    decideB (Extended.writerVC overflowingCompiled entry .tru) = false := by
+    decideB (Extended.writerVC overflowingCompiled entry .tru) (Extended.writerVC_closed overflowingCompiled entry .tru) = false := by
   apply (close_decide_false_iff _).mpr
   refine ⟨assignment counterexampleWorld, ?_⟩
   rw [writerMatrix, lower_denote]
@@ -136,7 +136,7 @@ set_option maxHeartbeats 50000 in
 private theorem temporary_formula : temporaryCompiled.formula = temporaryFormula := rfl
 
 theorem temporary_decided_zeuge :
-    decideB (Extended.writerVC temporaryCompiled entry .tru) = true := by
+    decideB (Extended.writerVC temporaryCompiled entry .tru) (Extended.writerVC_closed temporaryCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -197,7 +197,7 @@ private theorem traverse_preserves (count : Nat) :
       exact ⟨stepFormula_preserves _ ih values initial, fun _ => ih values initial⟩
 
 theorem traverse_decided_zeuge :
-    decideB (Extended.writerVC traverseCompiled entry .tru) = true := by
+    decideB (Extended.writerVC traverseCompiled entry .tru) (Extended.writerVC_closed traverseCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -218,7 +218,7 @@ private theorem inductive_formula : inductiveCompiled.formula =
     conj post (conj (havoc (fun _ => true) inductiveCheck) .tru) := rfl
 
 theorem inductive_decided_zeuge :
-    decideB (Extended.writerVC inductiveCompiled entry .tru) = true := by
+    decideB (Extended.writerVC inductiveCompiled entry .tru) (Extended.writerVC_closed inductiveCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -258,7 +258,7 @@ set_option maxHeartbeats 50000 in
 private theorem mutable_formula : mutableCompiled.formula = mutableFormula := rfl
 
 theorem mutable_decided_zeuge :
-    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by
+    decideB (Extended.writerVC mutableCompiled entry .tru) (Extended.writerVC_closed mutableCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -292,7 +292,7 @@ private def booleanFormula : QF (Observation declaration) :=
 private theorem boolean_formula : booleanCompiled.formula = booleanFormula := rfl
 
 theorem boolean_initializer_decided_zeuge :
-    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by
+    decideB (Extended.writerVC booleanCompiled entry .tru) (Extended.writerVC_closed booleanCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -329,7 +329,7 @@ private theorem conditional_formula (preserves : Bool) :
   cases preserves <;> rfl
 
 theorem conditional_initializer_decided_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by
+    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) (Extended.writerVC_closed (conditionalCompiled true) entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -355,7 +355,7 @@ theorem conditional_initializer_decided_zeuge :
   simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using bound
 
 theorem conditional_initializer_refused_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) = false := by
+    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) (Extended.writerVC_closed (conditionalCompiled false) entry .tru) = false := by
   apply (close_decide_false_iff _).mpr
   refine ⟨assignment counterexampleWorld, ?_⟩
   rw [writerMatrix, lower_denote]

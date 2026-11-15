@@ -3,7 +3,7 @@
    acceptance is made by this separate, contract-bearing fixture. -/
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Witness
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Contracts
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 
 @[expose] public section

@@ -49,7 +49,7 @@ def checkAxiomLocal (Q : AxEns D) (sources : AxiomSources Q) (a : D.Ax) :
     as function and invariant WPs. Refusals contain a counterexample assignment. -/
 def checkImplication (label : String) (pre : LProp (Observation D)) (post : QF (Observation D)) :
     Except Frag.Refusal (PLift (∀ world, pre.denote (assignment world) → post.denote (assignment world))) :=
-  if accepted : decideB (close (writerMatrix pre .tru post)) = true then
+  if accepted : decideB (close (writerMatrix pre .tru post)) (close_closed (writerMatrix pre .tru post)) = true then
     .ok ⟨fun world requires => by
       have closed := (lower_denote _ (assignment world)).mp (close_sound _ accepted (assignment world))
       have implication := (lower_denote _ (assignment world)).mp

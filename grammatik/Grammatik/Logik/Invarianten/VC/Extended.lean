@@ -47,7 +47,7 @@ theorem writerCounterexample_complete {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {code : Endblock D V l Γ Λ} {locals : Env D Γ} {terminal : QF (Observation D)}
     (compiled : EndCondition program checked S code locals terminal)
     (entry path : LProp (Observation D))
-    (rejected : decideB (writerVC compiled entry path) = false) :
+    (rejected : decideB (writerVC compiled entry path) (writerVC_closed compiled entry path) = false) :
     ∃ values, writerCounterexample compiled entry path = some values :=
   counterexample_complete _ _ rejected
 
@@ -55,7 +55,7 @@ theorem writerVC_wp_sound {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {code : Endblock D V l Γ Λ} {locals : Env D Γ} {terminal : QF (Observation D)}
     (compiled : EndCondition program checked S code locals terminal)
     (entry path : LProp (Observation D))
-    (accepted : decideB (writerVC compiled entry path) = true)
+    (accepted : decideB (writerVC compiled entry path) (writerVC_closed compiled entry path) = true)
     (runtime : Runtime program checked S) (world : World D)
     (initial : entry.denote (assignment world)) (onPath : path.denote (assignment world)) :
     runtime.wpE code (EndFlow terminal) world locals := by
@@ -75,7 +75,7 @@ theorem writerVC_sound (program : Programm D) (checked : D.Fn → List D.Inv)
     (compiled : ∀ locals : Env D (D.params f),
       EndCondition program checked S (program.rumpf f) locals post.formula)
     (entry path : LProp (Observation D))
-    (accepted : ∀ locals, decideB (writerVC (compiled locals) entry path) = true)
+    (accepted : ∀ locals, decideB (writerVC (compiled locals) entry path) (writerVC_closed (compiled locals) entry path) = true)
     (initial : ∀ world locals, ReqAmEintritt program f world locals →
       entry.denote (assignment world) ∧ path.denote (assignment world))
     (handlers : ∀ calls, RespektiertRahmen program calls →

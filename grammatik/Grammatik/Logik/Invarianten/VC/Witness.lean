@@ -91,7 +91,7 @@ private theorem guarded_formula : guardedCompiled.formula =
 
 private theorem unguarded_formula : unguardedCompiled.formula = incrementFormula := rfl
 
-theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) = true := by
+theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) (writerVC_closed guardedCompiled entry .tru) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   rw [writerMatrix, lower_denote]
@@ -128,7 +128,7 @@ theorem counterexample_step_zeuge :
       | .zurueck next _ => eval next invariant next .nil
       | _ => true) = false := by decide
 
-theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) = false := by
+theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) (writerVC_closed unguardedCompiled entry .tru) = false := by
   apply (close_decide_false_iff _).mpr
   refine ⟨assignment counterexampleWorld, ?_⟩
   rw [writerMatrix, lower_denote]
@@ -152,7 +152,7 @@ theorem counterexample_extracted_zeuge :
   writerCounterexample_complete unguardedCompiled entry .tru unguarded_decided_zeuge
 
 theorem checked_call_zeuge :
-    decideB (close (callWP (D := declaration) () post post)) = true := by
+    decideB (close (callWP (D := declaration) () post post)) (close_closed (callWP (D := declaration) () post post)) = true := by
   apply (close_decide_true_iff _).mpr
   intro values
   apply havoc_of_valid
@@ -161,7 +161,7 @@ theorem checked_call_zeuge :
   exact fun initial => initial.2
 
 theorem unchecked_call_havoc_zeuge :
-    decideB (close (callWP (D := declaration) () .tru post)) = false := by
+    decideB (close (callWP (D := declaration) () .tru post)) (close_closed (callWP (D := declaration) () .tru post)) = false := by
   apply (close_decide_false_iff _).mpr
   let next : World declaration :=
     { counterexampleWorld with globs := fun name => if (show Bool from name) = true then ⟨4, by decide, by decide⟩

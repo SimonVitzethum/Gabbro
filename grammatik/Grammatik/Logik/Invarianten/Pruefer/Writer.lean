@@ -101,7 +101,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (sources : LockSour
   let entry := writerEntry program f locals
   let compiled ← Extended.compileWriter program (fun _ => []) (lockFormula S sources) budget
     none (program.rumpf f) locals post.formula
-  if accepted : decideB (Extended.writerVC compiled entry.val .tru) = true then
+  if accepted : decideB (Extended.writerVC compiled entry.val .tru) (Extended.writerVC_closed compiled entry.val .tru) = true then
     return ⟨fun runtime world requires =>
       Extended.writerVC_wp_sound compiled entry.val .tru accepted runtime world
         (entry.property world requires) trivial⟩

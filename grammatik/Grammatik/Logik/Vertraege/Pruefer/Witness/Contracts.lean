@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Fixtures
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
 
 @[expose] public section
 
