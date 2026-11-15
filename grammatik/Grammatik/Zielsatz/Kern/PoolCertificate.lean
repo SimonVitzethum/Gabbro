@@ -38,10 +38,11 @@ def slotRelation (value : Zahl 0 100) :
 
 theorem slotRelation_result (value : Zahl 0 100) :
     localEquality (τ := scalar) slotExpr .nil value = .ok (slotRelation value) := by
-  simp only [localEquality, scalar]
-  simp only [slotExpr]
-  unfold integerEquality
-  rfl
+  with_unfolding_all
+    simp only [localEquality, scalar]
+    simp only [slotExpr]
+    unfold integerEquality
+    rfl
 
 theorem slotRelation_meaning (value : Zahl 0 100) (values : Assignment (Observation zD)) :
     (slotRelation value).val.denote values ↔ values (.slot () () 0) = value.n := Iff.rfl
@@ -97,35 +98,35 @@ def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Zahl 0 100) :
 theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Zahl 0 100) :
     ∃ result, branch sources bound = .ok result ∧
       ∀ values, values (.slot () () 0) = bound.n → result.formula.denote values := by
-  have each (value : Zahl 0 100) :
-      ∃ relation head, localEquality variableExpr (.cons bound .nil) value = .ok relation ∧
-        requireCondition (program := zPB) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
-        ∀ values, values (.slot () () 0) = bound.n → relation.val.denote values → head.formula.denote values := by
-    refine ⟨varRelation bound value, leaf value, varRelation_result bound value, leaf_result value, ?_⟩
-    intro values ready related
-    apply (leaf_meaning value values).mpr
-    have same := (varRelation_meaning bound value values).mp related
-    omega
-  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound .nil)
-    (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
-    (fun value => requireCondition (returned value)) domain domain_result
-    (fun values => values (.slot () () 0) = bound.n) each
-  cases result : branch sources bound with
-  | error cause =>
-      simp only [branch, tail] at result
-      rw [ending] at result
-      simp only [returnCondition, hpre, bind, Except.bind, pure,
-        Except.pure, reduceCtorEq] at result
-  | ok out =>
-      refine ⟨out, rfl, ?_⟩
-      have shape : out.formula = pre.formula := by
+  with_unfolding_all
+    have each (value : Zahl 0 100) :
+        ∃ relation head, localEquality variableExpr (.cons bound .nil) value = .ok relation ∧
+          requireCondition (program := zPB) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
+          ∀ values, values (.slot () () 0) = bound.n → relation.val.denote values → head.formula.denote values := by
+      refine ⟨varRelation bound value, leaf value, varRelation_result bound value, leaf_result value, ?_⟩
+      intro values ready related
+      apply (leaf_meaning value values).mpr
+      have same := (varRelation_meaning bound value values).mp related
+      omega
+    obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound .nil)
+      (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
+      (fun value => requireCondition (returned value)) domain domain_result
+      (fun values => values (.slot () () 0) = bound.n) each
+    cases result : branch sources bound with
+    | error cause =>
         simp only [branch, tail] at result
         rw [ending] at result
         simp only [returnCondition, hpre, bind, Except.bind, pure,
-          Except.pure] at result
-        exact (congrArg Condition.formula (Except.ok.inj result)).symm
-      rw [shape]
-      exact valid
+          Except.pure, reduceCtorEq] at result
+    | ok out =>
+        refine ⟨out, rfl, ?_⟩
+        have shape : out.formula = pre.formula := by
+          simp only [branch, tail] at result
+          rw [ending] at result
+          simp only [returnCondition, hpre, bind, Except.bind, pure,
+            Except.pure] at result
+          exact (congrArg Condition.formula (Except.ok.inj result)).symm
+        rw [shape]
+        exact valid
 
 end Gabbro.Grammatik.Zielsatz.PoolCertificate
-
