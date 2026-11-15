@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
+public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 
 @[expose] public section
