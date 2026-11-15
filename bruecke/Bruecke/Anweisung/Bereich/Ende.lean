@@ -150,11 +150,11 @@ theorem endBodyZ_sim {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u
         refine ⟨[], (by simp), (by simp [Oben]), List.Pairwise.nil, fun ρB _ _ => ⟨s, ?_, hw⟩⟩
         simp only [Gabbro.Body.exec, hstep ρB]
     | control leave x ss =>
-      obtain ⟨hl, -, -⟩ := lowEnd_control_ok hG
+      obtain ⟨hl, hE, -⟩ := lowEnd_control_ok hG
       intro σ ρ s hW hL
       have hh := stmtZiel_control_G (c := c) (C := C) (O := O) (passes := passes)
         (R := R) (Λ := Λ) leave hl σ ρ s hW hL
-      cases leave <;> simpa only [EndZiel_G, controlEnd, controlStmt, controlStmtB, execEnd,
+      cases leave <;> simpa only [hE, EndZiel_G, controlEnd, controlStmt, controlStmtB, execEnd,
         EndAusgang.zuAusgang, StmtZiel_G, execStmt, controlG, Bool.false_eq_true, ↓reduceIte] using hh
     | @leaf st ss b ys tail hleaf hs hys =>
       obtain ⟨hsN, _, _⟩ := schrittB_einzeln_sicht hV hs (endLeafB_ok hleaf)
