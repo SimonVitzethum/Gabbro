@@ -90,6 +90,6 @@ theorem seqZ_control_some {k : Nat} {fn : UFn} {ns : BodyNames} {leave : Bool} {
       obtain ⟨ys, tail, allocated⟩ := p
       simp only [hy, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      exact ⟨ys, hy, rfl⟩
+      exact ⟨ys, rfl, rfl⟩
 
 end Gabbro.Bruecke
