@@ -144,6 +144,8 @@ private theorem functions_of_success (u : UProg)
   ⟨(fun f => (lowerFnAt u f).toOption.get (produced f)),
     (fun f => except_ok_get (produced f)), safe⟩
 
+attribute [local irreducible] checkedImage
+
 private theorem export_lowered {u : UProg} (facts : ExportFacts u) :
     (lowerAllg u).toOption.isSome = true := by
   obtain ⟨pieces, origin, _⟩ := facts.functions
@@ -213,7 +215,7 @@ private theorem full_phases :
         intro invariants pointers foreigns
         simp only [checkedImage, Akzeptiert, Bool.and_eq_true]
         and_intros
-        all_goals cbv
+        all_goals decide +kernel
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
