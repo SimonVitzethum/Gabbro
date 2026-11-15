@@ -89,7 +89,11 @@ def RegInput : Prop :=
   (⟨0, by decide⟩ : z.deklaration.Reg) ∈ (P.rumpf ⟨0, by decide⟩).regs ∧
   e.HatF ⟨0, 6, 10, false, []⟩
 
-theorem e_input : RegInput := by unfold RegInput; decide
+theorem e_input : RegInput := by
+  constructor
+  · letI : DecidableEq z.deklaration.Reg := z.deklaration.decReg
+    decide
+  · decide
 
 theorem e_cause_link : RegInput → cause = some (.unsupported
     "contract end block is outside the checked control fragment") := fun _ => e_cause
