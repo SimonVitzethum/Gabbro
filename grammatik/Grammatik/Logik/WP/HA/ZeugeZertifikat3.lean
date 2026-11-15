@@ -150,19 +150,14 @@ theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=
   nutzerPflichtA_aus gE (fun passes f => pflicht passes f) sperrInvLokal (fun a => nomatch a)
     (ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)) startPflicht
 
-/-- **THE GOAL THEOREM FOR THE REFERENCE UNIT, WITHOUT AN OPEN LOGIC PREMISE.** -/
-theorem gP_gabbro_bewiesen (O : Orakel gD) (hH : HardwareAnnahmen O gE.Q) (passes : Nat)
-    (sp : Speicher gD.mitRuhe)
-    (init : Faden → Σ f : gD.mitRuhe.Fn, Env gD.mitRuhe (gD.mitRuhe.params f))
-    (hL : Laufzeit gE sp init) (lebt0 : Faden → Bool)
-    (K : FadenMaschine gD.mitRuhe)
-    (hK : FadenErreichbarX gE.P.mitRuhe O.mitRuhe passes (GeteiltV (D := gD) gE.P gE.ws)
-      (FadenStart gE.P.mitRuhe sp init lebt0) K) :
-    ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (GeteiltV (D := gD) gE.P gE.ws)
-      (RufStartG gE.P.mitRuhe sp init) [] K :=
-  gP_gabbro_f nutzerPflicht_bewiesen O hH passes sp init hL lebt0 K hK
+/-- The WP proof keeps the real old-memory contract. Capability gap: outside
+    the decidable fragment: old-memory ensures. Program logic is no fallback
+    for the strict checker's own decision. -/
+theorem gP_korrekt_abgelehnt : NutzerPflichtA gE ∧
+    akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = false :=
+  ⟨nutzerPflicht_bewiesen, gCheck⟩
 
-#print axioms gP_gabbro_bewiesen
+#print axioms gP_korrekt_abgelehnt
 
 end G104_referenz_oblig
 
