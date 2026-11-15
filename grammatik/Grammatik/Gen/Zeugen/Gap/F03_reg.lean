@@ -11,6 +11,7 @@ public import Grammatik.Gen.Abdeckung.Satz.Raum
 public import Grammatik.Gen.Erzeuger.Entscheidung
 public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
 public import Grammatik.Gen.Fein.Zellen
+public import Grammatik.Gen.Zeugen.Gap.Audit
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Defs
@@ -66,11 +67,7 @@ theorem e_strukturell : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
   change ∀ x ∈ e.zellen, gutTafel x = true
   decide
 
-def cause : Option Invarianten.Frag.Refusal :=
-  match @Vertraege.Pruefer.checkContracts e.D e.P e.S e.fs
-      e.lockSources {} (fun _ => none) with
-  | .error reason => some reason
-  | .ok _ => none
+def cause : Option Invarianten.Frag.Refusal := GateAudit.contractCause e
 
 theorem e_cause : cause = some (.unsupported
     "contract end block is outside the checked control fragment") := by decide +kernel

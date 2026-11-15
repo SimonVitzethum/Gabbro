@@ -98,7 +98,7 @@ theorem f03_reg_cause_link : RegisterGapInput F03_reg.e →
     GateAudit.contractCause F03_reg.e = some (.unsupported
       "contract end block is outside the checked control fragment") := by
   intro _
-  simpa only [GateAudit.contractCause, F03_reg.cause] using F03_reg.e_cause
+  simpa only [F03_reg.cause] using F03_reg.e_cause
 
 theorem f03_reg_cause_link_zeuge : RegisterGapInput F03_reg.e ∧
     GateAudit.contractCause F03_reg.e = some (.unsupported
