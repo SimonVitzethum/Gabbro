@@ -150,8 +150,8 @@ theorem getragen_zeuge : GetragenG unit carried := by
         omega
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
-    · exact ⟨rfl, rfl, rfl, rfl⟩
-    · exact ⟨rfl, rfl, rfl, rfl⟩
+    · exact ⟨rfl, rfl, rfl⟩
+    · exact ⟨rfl, rfl, rfl⟩
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
     · cbv

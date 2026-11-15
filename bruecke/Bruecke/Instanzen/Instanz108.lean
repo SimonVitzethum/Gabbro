@@ -62,7 +62,7 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "T" <;> by_cases hf : f = "v" <;>
-      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
+      simp [Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
