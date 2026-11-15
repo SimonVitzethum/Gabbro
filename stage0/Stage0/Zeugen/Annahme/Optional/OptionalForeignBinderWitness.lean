@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
 import Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -55,6 +56,32 @@ def text : String :=
   "module optional_binders { reason R { Denied = 9 \"denied\" exhaustive } assume boundary \"foreign fixture contracts\" falsifier boundary_probe; syscall ping() abi linux arch x86_64 number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; syscall value(fd : u64) -> u8 in 0 .. 10 or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; syscall action(fd : u64) or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; impl fn main() -> u8 { let saved = 23; let saved? = ping(); let first? = value(1) else (e) { match e { Denied => { return 9; } } return 0; } if true { let saved? = action(99) else (e) { match e { Denied => { return 11; } } return 0; } return saved; } return first; } }"
 
 -- Cache the checked lexing phase; later proof evaluation need not decode UTF-8 again.
+def textChars : List Char := [
+  'm', 'o', 'd', 'u', 'l', 'e', ' ', 'o', 'p', 't', 'i', 'o', 'n', 'a', 'l', '_', 'b', 'i', 'n', 'd', 'e', 'r', 's', ' ', '{', ' ', 'r', 'e', 'a', 's', 'o', 'n', ' ', 'R', ' ', '{', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '=', ' ', '9', ' ',
+  '"', 'd', 'e', 'n', 'i', 'e', 'd', '"', ' ', 'e', 'x', 'h', 'a', 'u', 's', 't', 'i', 'v', 'e', ' ', '}', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', ' ', '"', 'f', 'o', 'r', 'e', 'i', 'g', 'n', ' ', 'f',
+  'i', 'x', 't', 'u', 'r', 'e', ' ', 'c', 'o', 'n', 't', 'r', 'a', 'c', 't', 's', '"', ' ', 'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 's', 'y', 's', 'c',
+  'a', 'l', 'l', ' ', 'p', 'i', 'n', 'g', '(', ')', ' ', 'a', 'b', 'i', ' ', 'l', 'i', 'n', 'u', 'x', ' ', 'a', 'r', 'c', 'h', ' ', 'x', '8', '6', '_', '6', '4', ' ', 'n', 'u', 'm', 'b', 'e', 'r', ' ', '3', '9', ' ', 'r', 'e', 'g', 's', ' ',
+  'i', 'n', ' ', '{', ' ', '}', ' ', 'r', 'e', 'g', 's', ' ', 'o', 'u', 't', ' ', '{', ' ', 'r', 'a', 'x', ' ', '}', ' ', 'c', 'l', 'o', 'b', 'b', 'e', 'r', 's', ' ', '{', ' ', 'r', 'c', 'x', ',', ' ', 'r', '1', '1', ' ', '}', ' ', 'e', 'r',
+  'r', 'o', 'r', 's', ' ', '{', ' ', '}', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '8', ' ', 'o', 'p', 's', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ',
+  'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', ' ', 'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 's', 'y', 's', 'c', 'a', 'l', 'l', ' ', 'v', 'a', 'l', 'u', 'e',
+  '(', 'f', 'd', ' ', ':', ' ', 'u', '6', '4', ')', ' ', '-', '>', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '1', '0', ' ', 'o', 'r', ' ', 'R', ' ', 'a', 'b', 'i', ' ', 'l', 'i', 'n', 'u', 'x', ' ', 'a', 'r', 'c', 'h', ' ',
+  'x', '8', '6', '_', '6', '4', ' ', 'n', 'u', 'm', 'b', 'e', 'r', ' ', '3', ' ', 'r', 'e', 'g', 's', ' ', 'i', 'n', ' ', '{', ' ', 'r', 'd', 'i', ' ', '=', ' ', 'f', 'd', ' ', '}', ' ', 'r', 'e', 'g', 's', ' ', 'o', 'u', 't', ' ', '{', ' ',
+  'r', 'a', 'x', ' ', '}', ' ', 'c', 'l', 'o', 'b', 'b', 'e', 'r', 's', ' ', '{', ' ', 'r', 'c', 'x', ',', ' ', 'r', '1', '1', ' ', '}', ' ', 'e', 'r', 'r', 'o', 'r', 's', ' ', '{', ' ', 'E', 'B', 'A', 'D', 'F', ' ', '=', '>', ' ', 'D', 'e',
+  'n', 'i', 'e', 'd', ' ', '}', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '8', ' ', 'o', 'p', 's', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ', 'b', 'o',
+  'u', 'n', 'd', 'a', 'r', 'y', ' ', 'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 's', 'y', 's', 'c', 'a', 'l', 'l', ' ', 'a', 'c', 't', 'i', 'o', 'n', '(',
+  'f', 'd', ' ', ':', ' ', 'u', '6', '4', ')', ' ', 'o', 'r', ' ', 'R', ' ', 'a', 'b', 'i', ' ', 'l', 'i', 'n', 'u', 'x', ' ', 'a', 'r', 'c', 'h', ' ', 'x', '8', '6', '_', '6', '4', ' ', 'n', 'u', 'm', 'b', 'e', 'r', ' ', '3', ' ', 'r', 'e',
+  'g', 's', ' ', 'i', 'n', ' ', '{', ' ', 'r', 'd', 'i', ' ', '=', ' ', 'f', 'd', ' ', '}', ' ', 'r', 'e', 'g', 's', ' ', 'o', 'u', 't', ' ', '{', ' ', 'r', 'a', 'x', ' ', '}', ' ', 'c', 'l', 'o', 'b', 'b', 'e', 'r', 's', ' ', '{', ' ', 'r',
+  'c', 'x', ',', ' ', 'r', '1', '1', ' ', '}', ' ', 'e', 'r', 'r', 'o', 'r', 's', ' ', '{', ' ', 'E', 'B', 'A', 'D', 'F', ' ', '=', '>', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '}', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p',
+  'u', 'r', 'e', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '8', ' ', 'o', 'p', 's', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', ' ', 'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b',
+  'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'u', '8', ' ', '{', ' ', 'l', 'e', 't', ' ', 's', 'a', 'v', 'e', 'd', ' ',
+  '=', ' ', '2', '3', ';', ' ', 'l', 'e', 't', ' ', 's', 'a', 'v', 'e', 'd', '?', ' ', '=', ' ', 'p', 'i', 'n', 'g', '(', ')', ';', ' ', 'l', 'e', 't', ' ', 'f', 'i', 'r', 's', 't', '?', ' ', '=', ' ', 'v', 'a', 'l', 'u', 'e', '(', '1', ')',
+  ' ', 'e', 'l', 's', 'e', ' ', '(', 'e', ')', ' ', '{', ' ', 'm', 'a', 't', 'c', 'h', ' ', 'e', ' ', '{', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '=', '>', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '9', ';', ' ', '}', ' ', '}', ' ',
+  'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ';', ' ', '}', ' ', 'i', 'f', ' ', 't', 'r', 'u', 'e', ' ', '{', ' ', 'l', 'e', 't', ' ', 's', 'a', 'v', 'e', 'd', '?', ' ', '=', ' ', 'a', 'c', 't', 'i', 'o', 'n', '(', '9', '9', ')', ' ', 'e', 'l',
+  's', 'e', ' ', '(', 'e', ')', ' ', '{', ' ', 'm', 'a', 't', 'c', 'h', ' ', 'e', ' ', '{', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '=', '>', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '1', '1', ';', ' ', '}', ' ', '}', ' ', 'r', 'e',
+  't', 'u', 'r', 'n', ' ', '0', ';', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 's', 'a', 'v', 'e', 'd', ';', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'f', 'i', 'r', 's', 't', ';', ' ', '}', ' ', '}']
+
+theorem source_text_zeuge : text = String.ofList textChars := by kernel_rfl
+
 def textTokens : List Gabbro.Grammatik.Parser.Token :=
   [.wort "module", .ident "optional_binders", .zeichen "{", .wort "reason",
   .ident "R", .zeichen "{", .ident "Denied", .zeichen "=",
@@ -123,6 +150,7 @@ def textTokens : List Gabbro.Grammatik.Parser.Token :=
   .zeichen "}", .zeichen "}", .ende]
 
 theorem source_lex_zeuge : Gabbro.Grammatik.Parser.lex text = .ok textTokens := by
+  rw [source_text_zeuge, Gabbro.Grammatik.Parser.lex_ofList]
   decide +kernel
 
 attribute [local cbv_opaque] text
@@ -168,6 +196,21 @@ theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := outpu
 def endText : String :=
   "module optional_void_end { reason R { Denied = 9 \"denied\" exhaustive } assume boundary \"foreign fixture contract\" falsifier boundary_probe; syscall action(fd : u64) or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; impl fn main() -> u8 { let saved = 23; let saved? = action(99) else (e) { match e { Denied => { return 9; } } return 0; } return saved; } }"
 
+def endChars : List Char := [
+  'm', 'o', 'd', 'u', 'l', 'e', ' ', 'o', 'p', 't', 'i', 'o', 'n', 'a', 'l', '_', 'v', 'o', 'i', 'd', '_', 'e', 'n', 'd', ' ', '{', ' ', 'r', 'e', 'a', 's', 'o', 'n', ' ', 'R', ' ', '{', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '=', ' ', '9',
+  ' ', '"', 'd', 'e', 'n', 'i', 'e', 'd', '"', ' ', 'e', 'x', 'h', 'a', 'u', 's', 't', 'i', 'v', 'e', ' ', '}', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', ' ', '"', 'f', 'o', 'r', 'e', 'i', 'g', 'n', ' ',
+  'f', 'i', 'x', 't', 'u', 'r', 'e', ' ', 'c', 'o', 'n', 't', 'r', 'a', 'c', 't', '"', ' ', 'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 's', 'y', 's', 'c',
+  'a', 'l', 'l', ' ', 'a', 'c', 't', 'i', 'o', 'n', '(', 'f', 'd', ' ', ':', ' ', 'u', '6', '4', ')', ' ', 'o', 'r', ' ', 'R', ' ', 'a', 'b', 'i', ' ', 'l', 'i', 'n', 'u', 'x', ' ', 'a', 'r', 'c', 'h', ' ', 'x', '8', '6', '_', '6', '4', ' ',
+  'n', 'u', 'm', 'b', 'e', 'r', ' ', '3', ' ', 'r', 'e', 'g', 's', ' ', 'i', 'n', ' ', '{', ' ', 'r', 'd', 'i', ' ', '=', ' ', 'f', 'd', ' ', '}', ' ', 'r', 'e', 'g', 's', ' ', 'o', 'u', 't', ' ', '{', ' ', 'r', 'a', 'x', ' ', '}', ' ', 'c',
+  'l', 'o', 'b', 'b', 'e', 'r', 's', ' ', '{', ' ', 'r', 'c', 'x', ',', ' ', 'r', '1', '1', ' ', '}', ' ', 'e', 'r', 'r', 'o', 'r', 's', ' ', '{', ' ', 'E', 'B', 'A', 'D', 'F', ' ', '=', '>', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '}', ' ',
+  'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '8', ' ', 'o', 'p', 's', ' ', 'a', 's', 's', 'u', 'm', 'e', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', ' ',
+  'f', 'a', 'l', 's', 'i', 'f', 'i', 'e', 'r', ' ', 'b', 'o', 'u', 'n', 'd', 'a', 'r', 'y', '_', 'p', 'r', 'o', 'b', 'e', ';', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'u', '8', ' ', '{',
+  ' ', 'l', 'e', 't', ' ', 's', 'a', 'v', 'e', 'd', ' ', '=', ' ', '2', '3', ';', ' ', 'l', 'e', 't', ' ', 's', 'a', 'v', 'e', 'd', '?', ' ', '=', ' ', 'a', 'c', 't', 'i', 'o', 'n', '(', '9', '9', ')', ' ', 'e', 'l', 's', 'e', ' ', '(', 'e',
+  ')', ' ', '{', ' ', 'm', 'a', 't', 'c', 'h', ' ', 'e', ' ', '{', ' ', 'D', 'e', 'n', 'i', 'e', 'd', ' ', '=', '>', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '9', ';', ' ', '}', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0',
+  ';', ' ', '}', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 's', 'a', 'v', 'e', 'd', ';', ' ', '}', ' ', '}']
+
+theorem end_text_zeuge : endText = String.ofList endChars := by kernel_rfl
+
 def endTokens : List Gabbro.Grammatik.Parser.Token :=
   [.wort "module", .ident "optional_void_end", .zeichen "{", .wort "reason",
   .ident "R", .zeichen "{", .ident "Denied", .zeichen "=",
@@ -201,6 +244,7 @@ def endTokens : List Gabbro.Grammatik.Parser.Token :=
   .ende]
 
 theorem end_lex_zeuge : Gabbro.Grammatik.Parser.lex endText = .ok endTokens := by
+  rw [end_text_zeuge, Gabbro.Grammatik.Parser.lex_ofList]
   decide +kernel
 
 attribute [local cbv_opaque] endText
