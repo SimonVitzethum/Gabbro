@@ -10,7 +10,7 @@ open Gabbro.Code.Lower (Tkt)
 
 /-- The existing nineteen-step Linux contention/wake/handover fixture, through
     precisely the same interface used by the freestanding binding. -/
-def linux : WaitRun (waitModel .futex) where
+def linux : WaitRun (waitModel (N := 2) .futex) where
   z := Zeuge.zeuge.z
   akt := Zeuge.zeuge.akt
   step := Zeuge.zeuge.schritt
@@ -18,7 +18,7 @@ def linux : WaitRun (waitModel .futex) where
 
 /-- A real outstanding second ticket retries behind a holder. Both threads
     have already drawn; no thread is sleeping or registered as a waiter. -/
-def spin : WaitRun (waitModel .spin) where
+def spin : WaitRun (waitModel (N := 2) .spin) where
   z _ := Zeuge.z7
   akt _ := some 1
   step := by
@@ -51,10 +51,10 @@ theorem WaitRun_tkt_zeuge [Conf] :
       (∀ n, Nach ((spin.akt n).map Fin.val) (gh n) (gh (n + 1))) ∧
       tHalter (gh 0) = some 0 ∧ 1 ∈ tWarte (gh 0) := by
   have invariant : Inv 2 (spin.z 0) := waitModel_zeuge.2.1
-  obtain ⟨gh, matches, steps⟩ := spin.tkt (by decide) invariant
-  refine ⟨gh, matches, steps, ?_, ?_⟩
-  · exact (matches 0).halter.symm
-  · rw [← (matches 0).warte]
+  obtain ⟨gh, fits, steps⟩ := spin.tkt (by decide) invariant
+  refine ⟨gh, fits, steps, ?_, ?_⟩
+  · exact (fits 0).halter.symm
+  · rw [← (fits 0).warte]
     exact List.mem_singleton_self 1
 
 end Gabbro.Stage0.Senke.Faeden.WaitWitness
