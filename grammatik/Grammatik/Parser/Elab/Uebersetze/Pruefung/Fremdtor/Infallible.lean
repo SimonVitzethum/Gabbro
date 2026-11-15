@@ -1,8 +1,8 @@
-/- The infallible foreign gate: retain each checker component as its own
-   kernel-checked certificate, so one conversion never retains every reduction. -/
+/- Complete strict atomic acceptance of the exact elaborated unit value. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
 import all Init.Data.Repr
