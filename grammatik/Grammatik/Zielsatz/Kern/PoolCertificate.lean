@@ -214,6 +214,7 @@ theorem requirement_result : translate (zPB.requires zLies) arguments = .ok requ
 theorem requirement_payload : requirement.payload = .tru := rfl
 
 /-- The strict arithmetic gate accepts the original body and its original post. -/
+set_option backward.isDefEq.respectTransparency false in
 theorem environment_checked (sources : LockSources zS) :
     (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
   obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
