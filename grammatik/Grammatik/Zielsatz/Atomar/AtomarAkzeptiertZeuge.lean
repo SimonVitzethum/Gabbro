@@ -84,38 +84,8 @@ theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZe
 
 /-- The flag still satisfies the model's specification. This is a semantic
     witness, not an acceptance claim for the more conservative concrete checker. -/
-theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] := by
-  have closed := (abgAlleB_iff nFs_voll).mp (by decide : abgAlleB nP nFs = true)
-  exact {
-    frag := by decide
-    abg := closed
-    fuss := fussWXB_ok nFs_voll closed (by decide)
-    stufen := (stufenB_iff nFs_voll).mp (by decide)
-    sperrOrte := (sperrOrteB_iff (ls := []) (fun L => nomatch L)).mp (by decide)
-    wurzeln := wurzelnB_iff.mp (by decide)
-    einzeln := (einzelnPoolB_iff nFs_voll nCs_voll).mp (by decide)
-    renn := (rennB_iff nFs_voll nCs_voll).mp (by decide)
-    antworten := (antwortenB_iff nFs_voll).mp (by decide)
-    masken := (maskenB_iff nFs_voll).mp (by decide)
-    schnittstellen := (schnittstellenB_iff nFs_voll).mp (by decide)
-    besitz := fun _ h => nomatch h
-    worte := fun _ h => nomatch h
-    bibliothek := (libraryB_iff _ _).mp (libraryB_immer _ _)
-    akku := ((Kernzelle.accumulatorB_iff nFs_voll (tabsOf_voll nCs_voll)
-      (globsOf_voll nCs_voll)).mp (by decide)).1
-    pruef := ⟨[], (checkB_iff nFs_voll (tabsOf_voll nCs_voll)
-      (globsOf_voll nCs_voll)).mp (by decide)⟩
-    reset := (resetB_iff nCs_voll).mp (by decide)
-    invarianten := by
-      intro f passes Q shared subset
-      have same : Q = axWahr nD := by funext a; exact nomatch a
-      rw [same]
-      exact ((n1_logikA shared).1 passes f).2
-    kontrakte := by
-      intro f passes Q shared subset
-      have same : Q = axWahr nD := by funext a; exact nomatch a
-      rw [same]
-      exact (n1_logikA shared).1 passes f }
+theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
+  akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX
 
 /-- **THE FLAG, COVERED**: at every machine W reaches from configuration 1 -- every order
     assignment, budget, start memory -- every leg of `ZielAtomar`. -/

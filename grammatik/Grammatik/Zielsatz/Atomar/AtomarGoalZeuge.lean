@@ -59,10 +59,6 @@ theorem n1E_gabbro_callSite [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : F
     (hardwareAnnahmenHw_of ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
     passes _ _ (laufzeit_voll n1E) lebt0 K hK
 
-/-- The checker facts of configuration 1, as `AkzeptiertSpecX`. -/
-theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
-  akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX
-
 /-- `ZielX` at every machine GX reaches from configuration 1's start. -/
 theorem n1_zielX [RootNativeFloat.Hardware] (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)
     (hX : RufErreichbarGX nP nO passes (GeteiltV nP n1ws) (RufStartG nP sp init1) M) :
