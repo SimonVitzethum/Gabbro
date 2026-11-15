@@ -40,6 +40,7 @@
 module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
@@ -75,6 +76,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -232,6 +234,13 @@ def gS : SperrInv gD where
 example : ((gS.orte GLock.Schutz).elem (.inl GTab.Protokoll) = true) := by decide
 example : ((gD.braucht GTab.Protokoll).elem (Sum.inl GLock.Schutz) = true) := by decide
 
+/-- **Lock sources for `gS`**: its invariant is constantly `true`, reified by
+    the closed `.tru` expression, so every lock release VC holds trivially. -/
+def gSources : Invarianten.Pruefer.LockSources gS := fun _ => some
+  { resources := []
+    expression := .tru
+    correct := fun _ => rfl }
+
 -- The declared initial memory (`Speicher gD`): every slot at zero,
 -- every global at its DECLARED initialiser (a `static` names one).
 def gSp0 : Speicher gD :=
@@ -240,6 +249,7 @@ def gSp0 : Speicher gD :=
 def gE : Zielsatz.Einheit gD where
   P := gP
   S := gS
+  lockFormulas := gSources
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
@@ -285,7 +295,9 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
-theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide +kernel
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by
+  rw [Zielsatz.akzeptiertX_pruefer_eq]
+  decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
 -- every run of machine GX with every thread live (`gabbro_ziel_gx`). The
