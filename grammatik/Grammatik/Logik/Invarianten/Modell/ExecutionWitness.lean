@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Invarianten.Modell.Decision
 public import Grammatik.Logik.Invarianten.Frag.Witness
 public import Grammatik.Zielsatz.Kern.Spec.Teil1Basis
+import all Batteries.Data.Except
 
 @[expose] public section
 
