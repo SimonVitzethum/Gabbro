@@ -47,7 +47,8 @@ theorem reasonArms_statisch (S : Getragen u C) (hc : C c) (ρB : Gabbro.Body.Env
         · cases hn
           rw [hrG] at hrB
           cases hrB
-          have hsuf' : rest <:+ ss := (List.suffix_cons _ _).trans hsuf
+          have hsuf' : rest <:+ ss :=
+            (List.suffix_cons UStmt.ifElse rest).trans (by simpa only [hrG] using hsuf)
           obtain ⟨htail, hsufTail, hFrames⟩ := ih (m + 1) k (offset + 1) rest fn ft
             (ns.resume allocated) Λ grest tail bs' tailZ used hΓ hV
             (fun st h => hm st (mem_of_suffix hsuf' h)) hgrest hbrest

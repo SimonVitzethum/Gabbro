@@ -57,15 +57,15 @@ structure Inv (N : Nat) (σ : Zustand N) : Prop where
 theorem Inv.start : Inv N (start N) := by
   refine ⟨List.nodup_nil, ?_, ?_, rfl, ?_, rfl, ?_, ?_⟩
   · intro t
-    simp [start, Ort.ticket]
+    simp [Faeden.start, Ort.ticket]
   · intro i u h
-    simp [start] at h
+    simp [Faeden.start] at h
   · intro t h
-    simp [start, Ort.haelt] at h
+    simp [Faeden.start, Ort.haelt] at h
   · intro t
     exact trivial
   · intro t k s0 h
-    simp [start] at h
+    simp [Faeden.start] at h
 
 /-! ## 1. Consequences -/
 

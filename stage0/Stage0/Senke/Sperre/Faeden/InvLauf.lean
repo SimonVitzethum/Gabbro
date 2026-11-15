@@ -49,15 +49,14 @@ theorem Inv.gibt {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {k ls : Nat} (h : 
   · show σ.q.tail.head? = some u
     exfalso
     by_cases hut : u = t
-    · rw [hut, upd_self] at hu
-      simp [Ort.haelt] at hu
-    · rw [upd_ne σ.pc _ hut] at hu
+    · simp [hut, upd_self, Ort.haelt] at hu
+    · simp only [upd_ne σ.pc _ hut] at hu
       have hh := hI.haelt u hu
       rw [hhead] at hh
       exact hut (Option.some.inj hh).symm
   · show σ.w.wait = σ.q.tail.countP (fun u => (upd σ.pc t .gibW u).gezaehlt)
     have h1 : r.countP (fun u => (upd σ.pc t .gibW u).gezaehlt) = r.countP (fun u => (σ.pc u).gezaehlt) :=
-      List.countP_congr (fun x hx => by rw [upd_ne σ.pc _ (fun e => htr (e ▸ hx))])
+      List.countP_congr (fun x hx => by rw [upd_ne σ.pc _ (fun e : x = t => htr (e ▸ hx))])
     have h2 : σ.q.countP (fun u => (σ.pc u).gezaehlt) = r.countP (fun u => (σ.pc u).gezaehlt) := by
       rw [hr, List.countP_cons]
       simp [h, Ort.gezaehlt]
@@ -100,8 +99,7 @@ theorem Inv.weckt {σ : Zustand N} (hI : Inv N σ) {t : Fin N} (h : σ.pc t = .w
   refine hI.lokal σ.w (upd (wecke σ.pc) t .frei) rfl rfl hT ?_ (by rw [hf]; exact hI.wait) ?_ ?_
   · intro u hu
     by_cases hut : u = t
-    · rw [hut, upd_self] at hu
-      simp [Ort.haelt] at hu
+    · simp [hut, upd_self, Ort.haelt] at hu
     · rw [upd_ne _ _ hut, wecke_apply, geweckt_haelt] at hu
       exact hI.haelt u hu
   · intro u
@@ -130,36 +128,36 @@ theorem Inv.ort_an {σ : Zustand N} (hI : Inv N σ) {t : Fin N} {o : Ort} (h : �
 theorem Inv.schritt (hN : N ≤ 2147483647) {σ σ' : Zustand N} {t : Fin N} (hI : Inv N σ)
     (hs : Schritt σ t σ') : Inv N σ' := by
   cases hs with
-  | @beginnt σ t h => exact hI.still (o := .ladeN) h rfl rfl rfl rfl rfl trivial
-  | @ruht σ t h => exact hI
-  | @liestN σ t h => exact hI.still (o := .casN (σ.w.next % 18446744073709551616)) h rfl rfl rfl rfl rfl trivial
-  | @zieht σ t l h e => exact hI.zieht h
-  | @verfehlt σ t l h e => exact hI.still (o := .ladeN) h rfl rfl rfl rfl rfl trivial
-  | @tritt σ t k h e => exact hI.tritt_inv hN h e
-  | @wartet σ t k h e => exact hI.wartet h e
-  | @liestInc σ t k s0 h =>
-    exact hI.still (o := .incC k s0 σ.w.wait) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @erhoeht σ t k s0 lw h e => exact hI.erhoeht hN h e
-  | @erhoehtNicht σ t k s0 lw h e => exact hI.still (o := .incL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @schlaeft σ t k s0 h e => exact hI.schlaeft h e
-  | @kehrtZurueck σ t k s0 h e => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @scheinbar σ t k s0 h => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @liestDec σ t k s0 h =>
-    exact hI.still (o := .decC k s0 σ.w.wait) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @senkt σ t k s0 lw h e => exact hI.senkt hN h e
-  | @senktNicht σ t k s0 lw h e => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h)
-  | @arbeitet σ t k h => exact hI
-  | @verlaesst σ t k h => exact hI.still (o := .gibL k) h rfl rfl rfl rfl rfl trivial
-  | @liestGib σ t k h =>
+  | @beginnt h => exact hI.still (o := .ladeN) h rfl rfl rfl rfl rfl trivial
+  | @ruht h => exact hI
+  | @liestN h => exact hI.still (o := .casN (σ.w.next % 18446744073709551616)) h rfl rfl rfl rfl rfl trivial
+  | @zieht l h e => exact hI.zieht h
+  | @verfehlt l h e => exact hI.still (o := .ladeN) h rfl rfl rfl rfl rfl trivial
+  | @tritt k h e => exact hI.tritt_inv hN h e
+  | @wartet k h e => exact hI.wartet h e
+  | @liestInc k s0 h =>
+    exact hI.still (o := .incC k s0 σ.w.wait) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @erhoeht k s0 lw h e => exact hI.erhoeht hN h e
+  | @erhoehtNicht k s0 lw h e => exact hI.still (o := .incL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @schlaeft k s0 h e => exact hI.schlaeft h e
+  | @kehrtZurueck k s0 h e => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @scheinbar k s0 h => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @liestDec k s0 h =>
+    exact hI.still (o := .decC k s0 σ.w.wait) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @senkt k s0 lw h e => exact hI.senkt hN h e
+  | @senktNicht k s0 lw h e => exact hI.still (o := .decL k s0) h rfl rfl rfl rfl rfl (hI.ort_an h :)
+  | @arbeitet k h => exact hI
+  | @verlaesst k h => exact hI.still (o := .gibL k) h rfl rfl rfl rfl rfl trivial
+  | @liestGib k h =>
     exact hI.still (o := .gibC k (σ.w.serv % 18446744073709551616)) h rfl rfl rfl rfl rfl
       (show σ.w.serv % 18446744073709551616 = σ.w.serv % 18446744073709551616 from rfl)
-  | @gibt σ t k ls h e => exact hI.gibt h
-  | @gibtNicht σ t k ls h e =>
+  | @gibt k ls h e => exact hI.gibt h
+  | @gibtNicht k ls h e =>
     have ho := hI.ort_an h
     exact absurd (show ls = σ.w.serv % 18446744073709551616 from ho).symm e
-  | @keinWarter σ t h e => exact hI.keinWarter h e
-  | @warter σ t h e => exact hI.still (o := .weck) h rfl rfl rfl rfl rfl trivial
-  | @weckt σ t h => exact hI.weckt h
+  | @keinWarter h e => exact hI.keinWarter h e
+  | @warter h e => exact hI.still (o := .weck) h rfl rfl rfl rfl rfl trivial
+  | @weckt h => exact hI.weckt h
 
 /-- **The invariant along a run.** -/
 theorem Inv.lauf (hN : N ≤ 2147483647) (R : Lauf N) (h0 : Inv N (R.z 0)) : ∀ n, Inv N (R.z n)

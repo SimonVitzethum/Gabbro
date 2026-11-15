@@ -89,15 +89,15 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
       subst Λ₁
       cases hst
-      rw [ht] at htZ
-      cases htZ
+      have htEq : tZ = t := by
+        rw [ht] at htZ
+        exact (Except.ok.inj htZ).symm
+      subst tZ
       obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
         (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
         (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ
       subst tailZ
       have hmemTail : ∀ st ∈ tail, st ∈ (fnAt u c).body := fun st hm => hmemss st (mem_of_suffix hsuf hm)
-      have hUsed := seqZ_used k (fT.mitIndex x t.val ((declOf u).count t))
-        (ns.push x) ss bodyB (.blkEnd :: tail) allocated hBodyZ
       have hΓi : .index ((declOf u).count t) :: Γ =
           (fn.mitIndex x t.val ((declOf u).count t)).params.map (·.2) := congrArg (List.cons _) hΓ
       obtain ⟨_, _, hFrameBody⟩ := ih m (by omega) k ss

@@ -20,7 +20,7 @@ theorem BareArms.exec {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (R
     {reasons : GrundArms D V false Γ Λ Λ cs.length} (h : BareArms arms reasons)
     (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) :
     execArms O passes R arms v σ ρ = execGrund O passes R reasons v.1 σ ρ := by
-  induction h generalizing v with
+  induction h with
   | nil => exact (Nat.not_lt_zero _ v.1.isLt).elim
   | @cons cs b arms reasons h ih =>
     rcases v with ⟨⟨i, hi⟩, payload⟩
@@ -29,8 +29,8 @@ theorem BareArms.exec {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (R
     | succ i => exact ih ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, payload⟩
 
 /-- The canonical readers of bare tag arms and reason arms lower identical blocks. -/
-theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)))
-    cs binders ss (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs) tail,
+theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u))),
+    ∀ cs binders ss, ∀ (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs), ∀ tail,
     cs.all Option.isNone = true →
     lowArmsT u c Γ fn fuel Λ [] cs binders ss = .ok (arms, tail) →
     ∃ reasons : GrundArms (declOf u) (verOf u c) false Γ Λ Λ cs.length,
@@ -54,39 +54,50 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
         have hBare' : cs.all Option.isNone = true := by simpa only [List.all_cons, Option.isNone_none, Bool.true_and] using hBare
         change lowArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (none :: cs) binders ss = .ok (arms, tail) at h
         simp only [lowArmsStep, lowStufe_seq, lowStufe_arms] at h
-        cases hb : lowSeqL u c Γ fn fuel Λ [] ss with
-        | error err => simp only [hb, Except.bind] at h; cases h
-        | ok out =>
-          obtain ⟨⟨out, body⟩, remaining⟩ := out
-          simp only [hb, Except.bind] at h
+        cases hb : lowSeqL (l := false) u c Γ fn fuel Λ [] ss with
+        | error err => simp only [hb, bind, Except.bind] at h <;> cases h
+        | ok result =>
+          obtain ⟨⟨out, body⟩, remaining⟩ := result
+          simp only [hb, bind, Except.bind] at h
           cases cs with
           | nil =>
-            split at h
-            · rename_i same
-              subst out
-              cases h
+            by_cases same : out = Λ
+            · subst out
+              simp only [↓reduceDIte] at h
+              change Except.ok (Arms.cons body .nil, remaining) = .ok (arms, tail) at h
+              obtain ⟨harms, htail⟩ := Prod.mk.inj (Except.ok.inj h)
+              subst arms
+              subst tail
               refine ⟨.cons body .nil, ?_, .cons .nil⟩
-              change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] _ ss = _
-              simp only [lowGArmsStep, lowStufe_seq, hb, Except.bind, ↓reduceDIte]
-            · cases h
+              unfold lowGArmsL lowStufe
+              simp only [List.length_cons, List.length_nil, lowGArmsStep, lowStufe_seq,
+                hb, bind, Except.bind, ↓reduceDIte]
+            · simp only [same, ↓reduceDIte] at h <;> cases h
           | cons head cs =>
-            split at h
-            · rename_i rest hr
-              split at h
-              · cases h
-              · rename_i restArms restTail hrest
-                split at h
-                · rename_i same
-                  subst out
-                  cases h
-                  obtain ⟨reasons, hReasons, hRel⟩ := ih fn Λ (head :: cs) (binders.drop 1) rest restArms
-                    restTail hBare' hrest
-                  refine ⟨.cons body reasons, ?_, .cons hRel⟩
-                  change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] _ ss = _
-                  simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms, hb, Except.bind, hr,
-                    hReasons, ↓reduceDIte]
-                · cases h
-            · cases h
+            cases remaining with
+            | nil => cases h
+            | cons marker rest =>
+              cases marker <;> try { cases h }
+              case ifElse =>
+                cases hrest : lowArmsT (l := false) u c Γ fn fuel Λ [] (head :: cs) (binders.drop 1) rest with
+                | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
+                | ok result =>
+                  obtain ⟨restArms, restTail⟩ := result
+                  by_cases same : out = Λ
+                  · subst out
+                    simp only [hrest, bind, Except.bind, ↓reduceDIte] at h
+                    change Except.ok (Arms.cons body restArms, restTail) = .ok (arms, tail) at h
+                    obtain ⟨harms, htail⟩ := Prod.mk.inj (Except.ok.inj h)
+                    subst arms
+                    subst tail
+                    obtain ⟨reasons, hReasons, hRel⟩ := ih fn Λ (head :: cs) (binders.drop 1)
+                      rest restArms restTail hBare' (by first | exact hrest | rfl | simp_all)
+                    refine ⟨.cons body reasons, ?_, .cons hRel⟩
+                    simp only [List.length_cons] at hReasons
+                    unfold lowGArmsL lowStufe
+                    simp only [List.length_cons, lowGArmsStep, lowStufe_seq,
+                      lowStufe_garms, hb, bind, Except.bind, hReasons, ↓reduceDIte]
+                  · simp only [hrest, bind, Except.bind, same, ↓reduceDIte] at h <;> cases h
 
 /-- Only local, bare tag subjects enter this reader; statics and payload cases remain refused. -/
 theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
@@ -99,38 +110,52 @@ theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
       lowArmsT u c Γ fn fuel Λ [] cs binders ss = .ok (arms, .blkEnd :: tail) ∧
       Λ' = Λ ∧ HEq st (Stmt.onTag (Expr.var v) arms) := by
   rw [lowStructL_succ] at h
-  simp only [lowStructStep, dif_pos hn] at h
+  simp only [lowStructStep, dif_pos hn, lowStufe_arms] at h
   cases hj : paramPos fn.params x with
   | error err =>
     unfold valueParamTy at ht
     rw [paramPos_find_none _ _ _ hj] at ht
     cases ht
   | ok j =>
-    rw [hj] at h
+    simp only [hj] at h
     unfold valueParamTy at ht
     rw [paramPos_find _ _ _ hj] at ht
-    split at h
-    · rename_i name actual hq
-      simp only [hq, Option.some.injEq, Ty.sum.injEq] at ht
-      subst actual
-      split at h
-      · cases h
-      · rename_i v hv
-        simp only [lowStufe_arms] at h
-        split at h
-        · cases h
-        · rename_i arms remaining ha
-          cases h
-          exact ⟨j, v, arms, hj, hv, ha, rfl, HEq.rfl⟩
-      · cases h
-    · cases h
+    cases hp : fn.params[j]? with
+    | none => simp only [hp] at ht; cases ht
+    | some entry =>
+      obtain ⟨name, ty⟩ := entry
+      rw [hp] at ht
+      cases ty
+      case sum actual =>
+        simp only [Option.some.injEq, Ty.sum.injEq] at ht
+        subst actual
+        simp only [hp] at h
+        cases hv : lowVar Γ j (.sum cs) with
+        | error err => simp only [hv] at h <;> cases h
+        | ok v =>
+          simp only [hv] at h
+          cases ha : lowArmsT (l := false) u c Γ fn fuel Λ [] cs binders ss with
+          | error err => simp only [ha] at h <;> cases h
+          | ok result =>
+            obtain ⟨arms, remaining⟩ := result
+            simp only [ha] at h
+            cases remaining with
+            | nil => cases h
+            | cons marker rest =>
+              cases marker <;> try { cases h }
+              case blkEnd =>
+                cases h
+                exact ⟨j, v, arms, (by first | exact hj | rfl),
+                  (by first | exact hv | rfl), (by first | exact ha | rfl | simp_all),
+                  rfl, HEq.rfl⟩
+      all_goals cases ht
 
 theorem lowBodyF_tag_ok {Γ : Ctx} {fn : UFn} {n sidx : Nat} {Λ : List (Res (declOf u))}
     {x : String} {binders : List String} {ss : List UStmt} {r : URet}
     {b0 : Endblock (declOf u) (verOf u c) false Γ Λ}
     (h : lowBodyF u c Γ fn (n + 1) Λ (.matchTagBeg sidx x binders :: ss) r = .ok b0) :
-    ∃ Λ₁ (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) tail
-      (rest : Endblock (declOf u) (verOf u c) false Γ Λ₁),
+    ∃ Λ₁, ∃ (st : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁), ∃ tail,
+      ∃ (rest : Endblock (declOf u) (verOf u c) false Γ Λ₁),
       lowStructL u c Γ fn blockFuel Λ [] (.matchTagBeg sidx x binders) ss = .ok (⟨Λ₁, st⟩, tail) ∧
       lowBodyF u c Γ fn n Λ₁ tail r = .ok rest ∧ b0 = .cons st rest := by
   simp only [lowBodyF] at h

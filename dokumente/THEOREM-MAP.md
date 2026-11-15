@@ -2,7 +2,7 @@
 
 > **The C backend is removed (2026-10-18).** The Lean line for the C emitter (`grammatik/Grammatik/CBackend/`, the C correspondence chain `Korrespondenz/Kette/`, the C-certificate files, `korrOk`, `schlusssatz`, `SchablonenMetallSperre` over the C ticket lock, the C-layout half of `SchablonenT5Sem`) existed and lives in the tag `archiv/c-emitter-2026-10-17`. Sections marked "removed (C backend)" below are stubs; every other mention of the emitted C, `schlusssatz*`, `korrOk` or a deleted C file in a dated section is history, not present evidence. Moved, generic files keep their statements: `Korpus/` (was `Korrespondenz/`), `Parser/Elab/UebersetzePipeline.lean`, `Nebenlaeufigkeit/Sperren/Ressourceninvariante.lean` (was `CSLInvariante`), `Kern/Semantik/GanzzahlMatch.lean` (was `CFormMatch`), `Bausteine/Zeichenfolge/` (was `CBackend/Semantik/Zeichenfolge*`).
 
-*Note (2026-10-17): the dated blocks below name measuring scripts; those marked "retired" were removed on 2026-10-17 (see git history, `git show 414feafc:instrumente/<name>`) and their figures are historical results. Only the four guardians run by `instrumente/abnahme.py` and `cargo test` measure today.*
+*Note (2026-10-17): the dated blocks below name measuring scripts; those marked "retired" were removed on 2026-10-17 (see git history, `git show 414feafc:instrumente/<name>`) and their figures are historical results. Only the two guardians run by `instrumente/abnahme.py` measure today.*
 
 Replaces the class column of THEOREM-MAP-A (§2) with the four binding classes:
 (a) USER obligation, (b) HARDWARE assumption, (c) DISCHARGED by a merged
@@ -1693,7 +1693,7 @@ Axioms of every new theorem (`schrittMerk`, `merkInvG_erreichbar`,
 ### 16.6 What remains
 
 - **Checker link.** `K`, `AbgK`, `fussMehrB`, `StufenM` are decidable model
-  facts; no Rust rule computes them (as for `fussSperreB`, `SperrInvOk`).
+  facts with no Lean checker judgment yet (as for `fussSperreB`, `SperrInvOk`).
   Thread-locality is judged on DECLARED write permissions, not on the
   writes a body actually performs.
 - **Infinitely many active threads.** `GetrenntK` quantifies over all
@@ -1938,7 +1938,7 @@ active thread); `ziel_ort_mehrfaden` over every budget (no completion, no
 | `hI : ∀ passes f, InvGutS …` | (a) USER, at every budget | quantified (§18.1) |
 | `hStart`, `hSstart` | (a) boot duty | -- |
 | `hex` | (c)/(d) | -- |
-| `hGrund : StartOhneGrund init` | (c) decidable per start | NEW (§18.2); no Rust rule |
+| `hGrund : StartOhneGrund init` | (c) decidable per start | NEW (§18.2); not yet a Lean judgment |
 
 ### 18.5 Invariants at entry, while locks are held, at releases (item 4: named, not implemented)
 
@@ -2017,8 +2017,8 @@ Every theorem named in §18 -- `Endblock.execH_passes`,
 ### 18.7 What remains
 
 - §18.5: invariants at releases (`InvRuheG`) and at reason returns (the latter done in §19.1).
-- `StartOhneGrund`, `ohneEwigB` are decidable model facts without a Rust
-  rule (as `fussMehrB`, `StufenM`, §16.6).
+- `StartOhneGrund`, `ohneEwigB` are decidable model facts not yet decided by the
+  Lean checker (as `fussMehrB`, `StufenM`, §16.6).
 - Budget monotonicity (obligation at `n + 1` implies at `n`) is not proved;
   it is not needed (no budget is chosen), and "every budget `≥ B`" would be
   equivalent only with it.
@@ -2261,9 +2261,9 @@ must be answered alike -- a determinism fact about G.
 `invAmGrundG_erreichbarL`, `ziel_ort_mehrfaden_invGrund`,
 `ziel_ort_sperre_invL`, `ziel_ort_mehrfaden(_bei)`, `ziel_ort_*_ende(_bei)`,
 `ziel_ort_einfaden`, `fortschrittG_sperre`, `fortschrittG_mehrfaden`,
-`akzeptiert_mehrfaden`, and the witnesses' calls; the generator
-`obligations_g.rs` and its output `GenOblig104.lean` drop it too (string
-change only; the Rust test checks substrings that stay). The older replays
+`akzeptiert_mehrfaden`, and the witnesses' calls; the deleted generator
+`obligations_g.rs` and its output `GenOblig104.lean` dropped it too (string
+change only; its test checked substrings that stay). The older replays
 (`ziel_ort`, `ziel_ort_voll`, `ziel_ort_geraet`, `ziel_ort_rahmen`,
 `ziel_ort_ganz`, `AuditZiel` F) keep `e0`; the rows "`e0` … load-bearing"
 in §§11-18 describe those.
@@ -2526,11 +2526,11 @@ and `register_ohne_traeger_konstant`: `propext`. No `sorry`, no new `axiom`, no
 
 ### 22.6 What remains
 
-- The exporter (`lean_g.rs`) must produce an `Einheit`: `concurrent` as `starts` (with
-  arguments), the initializers as `sp0`, the source `requires` (today `.wahr`). Until then the
+- The exporter (then the deleted `lean_g.rs`) had to produce an `Einheit`: `concurrent` as `starts` (with
+  arguments), the initializers as `sp0`, the source `requires` (then `.wahr`). Until then the
   covered programs are hand-written terms.
-- The Rust checker computes neither `einzeln` nor the payload-inclusive `renn` as one Bool
-  (`H013` is stricter per entry; whether `concurrent { f, f }` is refused was not checked).
+- The deleted Rust checker computed neither `einzeln` nor the payload-inclusive `renn` as one Bool
+  (Lean: `H013` in `Kern/Syntax/Syntax/Teil1.lean`; whether `concurrent { f, f }` is refused was not checked).
 - `RegLokal` for volatile registers (a per-read oracle answer would need a change to the
   replay, not to G's rules).
 - The liveness entries of §21 (`LaufzeitAnnahme`, `HardwareImAbschnitt`) are not yet in the
@@ -2672,8 +2672,8 @@ answer is the foreign code breaking its declaration" -- there was no well-typed 
 
 ### 24.2 The decodings (Semantik.lean)
 
-* **`.sum cs` -- `summePasst`.** The emitter lays a `tagged` value out as
-  `struct { T_marke marke; union { … } last; }` (`emit.rs`, `markiert`): the case number as a C
+* **`.sum cs` -- `summePasst`.** The deleted emitter laid a `tagged` value out as
+  `struct { T_marke marke; union { … } last; }` (deleted `emit.rs`, `markiert`): the case number as a C
   `enum` (cases numbered `0, 1, …` in declaration order) and the payload of that case (no
   member for a bare case). The ONE raw word is that pair packed **mixed-radix, case number in
   the low digit: `roh = marke + |cases| * last`**, so `marke = roh % |cases|`,
@@ -2717,16 +2717,16 @@ unreachable, the obligation still covers everything before it, and the stop is n
 `AntwortLeer`; `KopfHalt .hardware` there now requires `¬ AntwortLeer`, so the two kinds
 partition the head's failures; `FortschrittG` lists the new kind (`fort_nie`, Fortschritt.lean,
 by `by_cases` on `AntwortLeer` at the three heads). Why not "only in tail position": for
-`-> never` the non-return IS the declaration -- the emitter writes `_Noreturn` on the
-prototype (`emit.rs`, `Noreturn`), so the code after the call is unreachable in the C exactly
+`-> never` the non-return IS the declaration -- the deleted emitter wrote `_Noreturn` on the
+prototype (deleted `emit.rs`, `Noreturn`), so the code after the call is unreachable in the C exactly
 as in G; and every outcome before the call (a `logik` outcome, a failed callee `requires`) is
 an outcome of the body, which `KoerperGutS` excludes. What stays vacuous is only the
 unreachable continuation and the function's own `ensures` -- partial correctness, as for a
 body that recurses forever. A foreign `never` body that returns breaks its declaration: a
 foreign-code fact like every entry of (c), named in the ONE list. Another empty type (`.grund 0`,
 an empty range) is the declaration making the call unanswerable, visible in the declaration
-like `Q := false`. No fragment refusal was added: the exporter emits no axiom today
-(`lean_g.rs`: `aerg := fun e => nomatch e`), and a refusal would have been a new checker
+like `Q := false`. No fragment refusal was added: the deleted exporter emitted no axiom
+(deleted `lean_g.rs`: `aerg := fun e => nomatch e`), and a refusal would have been a new checker
 obligation, where the named stop is a statement.
 
 **Superseded in part by §25 (W1):** the reason "unreachable in the C" holds for `-> never` only;
@@ -2817,7 +2817,7 @@ CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 mi
 - `roh` (a value as a raw word for a register WRITE) is not the inverse of `einpassen` for
   sums (the case number only), floats (truncation, the old `Float` model's) and pointers (`0`);
   the model's `regSchreib` answers `Unit`, so no outcome depends on it.
-- The exporter emits no axiom and no register of the G1 types; `GabbroZiel`'s programs with
+- The deleted exporter emitted no axiom and no register of the G1 types; `GabbroZiel`'s programs with
   such axioms are reached by hand-written terms (as before, §22.6).
 - Everything named in §23.7.
 
@@ -2910,7 +2910,7 @@ Removed on 2026-10-18 with the C backend: this section recorded the C runtime's 
 ## 33. `alloc` and `reset` get a form in the specification -- as sugar, not as constructors
 
 *Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/Bausteine/Arena/ArenaZucker.lean` (new), imported by
-`Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
+`Grammatik.lean`. Deleted Rust (`lean_g.rs`, the arena refusal by name; Lean: `LG001` in `ArenaZucker.lean`).
 Report: `messung/muse/OPUS-BERICHT-ALLOC.md` (retired report, in the history). Ledger: former work item O14.*
 
 **The finding** (`messung/muse/OPUS-BERICHT-GRAMMATIK-EMIT.md` (retired report, in the history) §2.2/§5.3): `let i = alloc A (v)
@@ -3031,11 +3031,11 @@ Removed on 2026-10-18 with the C backend: this section recorded the frame at eve
 
 Removed on 2026-10-18 with the C backend: this section recorded the checked clone handoff for the emitted C (`CloneHandoff`, `klon_ziel`). The C line existed and lives in the tag `archiv/c-emitter-2026-10-17`; nothing here is evidence of the present tree. 
 
-## 40. Integer `match`: coverage denoted in Lean, refused in Rust (lane 228; fix lane F1, 2026-09-21)
+## 40. Integer `match`: coverage denoted in Lean, refused by the deleted checker (lane 228; fix lane F1, 2026-09-21)
 
 **File:** `grammatik/Grammatik/Kern/Semantik/GanzzahlMatch.lean` (lane 228, corrected by fix lane F1 after
-review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, called from
-`m1.rs`).
+review G07 F3). **Deleted Rust:** `intmatch.rs` (`N411`-`N414`, called from
+`m1.rs`; Lean: `N411`/`N414` in the same `GanzzahlMatch.lean`).
 
 | Theorem | What it says | Tied to |
 |---|---|---|
@@ -3047,13 +3047,13 @@ review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, 
 
 **What is NOT claimed.**
 
-- The Rust checker does not run `erschoepfendB`. `N411` decides the same predicate by an
+- The deleted Rust checker did not run `erschoepfendB`. `N411` decided the same predicate by an
   interval sweep over M1's range of the scrutinee; the agreement is by reading.
 - The earlier conjuncts about the fixture's reached run (`refB_erreicht`, `refB_schreibt`) were
   dropped: the fixture program has no `match`, so they were decorative (G07 F3). (The tie of
   `fallListe` to the C `switch` the emitter wrote, `swFaelle`/`sw_erschoepfend_trifft`, was removed
   with the C backend.)
-- That the scrutinee's value lies in `lo .. hi` is a premise; in Rust it is M1's range,
+- That the scrutinee's value lies in `lo .. hi` is a premise; in the deleted checker it was M1's range,
   exactly as sound as every M1 index check.
 
 **Axioms:** the standard ones; `#print axioms gabbro_ziel` unchanged.
@@ -3062,16 +3062,16 @@ review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, 
 
 **Files:** `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean` (lane 241, reworked by fix lane F2 after review
 G08 F4), `grammatik/Grammatik/Bausteine/Arena/ArenaReset.lean` (lane 243, CUTS corrected after G08 F2).
-**Rust:** `crates/gabbro-check/src/arena.rs` (`N426` against the whole-run upper bound, `N211`
-across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena_grow`).
+**Deleted Rust:** `arena.rs` (`N426` against the whole-run upper bound, `N211`
+across calls and parameters; Lean: both in `Bausteine/Arena/ArenaDyn.lean`). **Deleted runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena_grow`).
 
 | Theorem | What it says | Tied to |
 |---|---|---|
 | `dynGrow_isSome`, `dynGrow_ueber_M` | one commit succeeds iff the bumped prefix stays within `M` | the runtime's ceiling test, by name |
 | `dynGrow1_gdw_alloc` | a one-slot commit agrees with `Arena.alloc` on `Kap ⟨hi, M⟩` | `Arena.lean` (`alloc_erfolg`/`alloc_fehlschlag`) |
-| `dynGrowListe_gelingt` | a run's commit sequence whose total fits the room above the prefix never reaches the stop, and ends at prefix + total | the rule `N426` enforces since fix lane F2 (upper bound of the total) |
+| `dynGrowListe_gelingt` | a run's commit sequence whose total fits the room above the prefix never reaches the stop, and ends at prefix + total | the rule `N426` (`Bausteine/Arena/ArenaDyn/Teil2.lean`) enforces since fix lane F2 (upper bound of the total) |
 | `dynGrowListe_scheitert` | a commit sequence whose total passes the room reaches the stop, in any order | why a per-path LOWER bound was not enough |
-| `dynGrowListe_gelingt_zeuge`, `_scheitert_zeuge`, `_zwilling` | `8, 8` under `max 24` reaches `24`; under `max 16` each commit fits alone and the run stops | the `paesse.rs` twins and gifts 1133/1135 |
+| `dynGrowListe_gelingt_zeuge`, `_scheitert_zeuge`, `_zwilling` | `8, 8` under `max 24` reaches `24`; under `max 16` each commit fits alone and the run stops | the deleted `paesse.rs` twins and gifts 1133/1135 |
 | `reset_alloc_rumpf_zeuge` et al. (`ArenaReset.lean`) | after `reset` the next `alloc` runs its body at index `0` | `ArenaZucker.lean` sugar |
 
 **What is NOT claimed.**
@@ -3079,7 +3079,7 @@ across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena
 - No refinement: `DynArena` is a Nat record carrying `c <= M` as a field. The former
   `dynVerfein` (membership restating that field) and `region_verpflichtet` (tied to a run only
   through a premise its witness discharged without the run) were removed, not renamed.
-- Nothing links `DynArena` to the Rust accounting or to the C by proof: the checker's per-path
+- Nothing links `DynArena` to the deleted checker's accounting by proof: the checker's per-path
   upper bound and `dynGrowListe`'s sum agree by reading. The run model the checker assumes
   (call-graph roots entered once per load) is not stated in `Spec.lean` (former work item O20).
 - The PLAN §9 work (`DynForm`, the four Block-form theorems, the simulation) and the two
@@ -3093,14 +3093,14 @@ gabbro_ziel` unchanged.
 ## 42. Gate contracts split: the caller's precondition and the hardware's ensures (lane 233; fix lane F5, 2026-09-22)
 
 **File:** `grammatik/Grammatik/Logik/Ruf/FremdRuf.lean` §9 (lane 233's fixture, section added by fix lane
-F5 after reviews G04 F2 and G10 F5). **Rust:** `crates/gabbro-check/src/rahmenlaenge.rs`,
-`m1.rs` (`transfer_bound_at_call`, `N463`), `syscall.rs` (`buffer_bound`, `N464`); `beispiele/149`
+F5 after reviews G04 F2 and G10 F5). **Deleted Rust:** `rahmenlaenge.rs`,
+`m1.rs` (`transfer_bound_at_call`, `N463`), `syscall.rs` (`buffer_bound`, `N464`); neither rule is yet a Lean judgment. `beispiele/149`
 (`path_nul_terminated`), `beispiele/150`.
 
 | Theorem | What it says | Tied to |
 |---|---|---|
 | `axVertragOP_of_O` | the restricted premise (ensures only at calls meeting the gate's precondition) is weaker than `AxVertragO` | premise (c) of `gabbro_ziel` |
-| `fremdruf_gate_gilt_pre` | at a call that meets the caller's obligation, the restricted premise gives the fitting answer's ensures and the gate's frame | the `V` obligation `gabbro obligations` counts at every gate call with `requires` |
+| `fremdruf_gate_gilt_pre` | at a call that meets the caller's obligation, the restricted premise gives the fitting answer's ensures and the gate's frame | the `V` obligation the deleted `gabbro obligations` counted at every gate call with `requires` |
 | `mitVorbedingung_gleich` | the re-dressed oracle answers every well-formed call exactly as the machine's oracle | -- |
 | `hardware_aus_vertragP` | frame, register locality and the restricted premise, plus raw words outside every declared result type, give the FULL `HardwareAnnahmen` for the re-dressed oracle | `Zielsatz.HardwareAnnahmen` (unchanged) |
 | `fdObad_vertragP`, `fdObad_nicht_voll`, `fdPflicht_verletzt` | an oracle that answers garbage to an ill-formed read (a descriptor it never handed out) meets the restricted premise and breaks the full one; the ill-formed call breaks the caller's obligation | the reviewers' point: a caller bug is the caller's, not the hardware's |
@@ -3121,9 +3121,9 @@ fixture's preconditions (a terminator slot, the handed-out descriptor) are analo
 ## 43. Bounded strings: the value model the checker's length rules rest on (lane 256; fix lane F6, 2026-09-22)
 
 **File:** `grammatik/Grammatik/Bausteine/Zeichenfolge/ZeichenfolgeGebunden.lean` (lane 256's value model; the
-theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Rust:**
-`crates/gabbro-check/src/zeichenfolge.rs` (`N453`-`N455`, `N465`); gifts 1118-1127,
-1159-1168; `crates/gabbro-check/tests/zeichenfolge.rs`.
+theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Deleted Rust:**
+`zeichenfolge.rs` (`N453`-`N455`, `N465`; Lean: the value model in this file); gifts 1118-1127,
+1159-1168; deleted `tests/zeichenfolge.rs`.
 
 | Theorem | What it says | Tied to |
 |---|---|---|
@@ -3135,7 +3135,7 @@ theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Rust:**
 | `bindex_geschuetzt`, `bindex_mindestlaenge` | `k < blaenge s`, or `n <= blaenge s` with `k < n`, gives a character | the guard forms `N454` accepts (`gift/1159`) |
 | `bounded_string_zeuge` | on non-empty, distinct strings: `"hi" + "!" = "hi!"` at max 8, index 2 reads `'!'` under `2 < blaenge`, the same index is refused on the empty string, `"hi!"` copies into max 8 and not into max 2 | non-degeneracy (the earlier reference-machine conjunct was decorative, review G12 F6, and is gone) |
 
-**What is NOT claimed.** No theorem says the Rust pass implements these rules: the link is
+**What is NOT claimed.** No theorem says the deleted Rust pass implemented these rules: the link was
 the gifts and the test pins, not a proof. The model has no representation (no NUL, no length
 word), no literal surface, no strings in aggregates, and no upper limit on `max`
 (former work item O24). No string program reaches Lean export.
@@ -3212,9 +3212,9 @@ runtime start), `Zielsatz/Kern/Beweis.lean` (`startZulaessig_aus`), `Zielsatz/Fa
 | `pool_fuss_paart_vorkommen` | `hauptA` (reads and writes `privA`) declared twice: the new footprint component refuses, the pre-F10 one accepted |
 | `pool_schreibt_nicht_voll`, `einzelnPoolB_iff_zeuge` | the lane-245 lemmas on COMPLETE member lists with a carrier the program writes (review G06 F4) |
 
-**Rust side.** `N304` decides `EinzelnPool` (on the exported fragment exactly: the exporter
-refuses `atomic` and `accumulates` items, so both sides read "every written carrier guarded");
-the footprint legs `N290`-`N293` always paired thread indices, which is the occurrence form of
+**Deleted-Rust side.** `N304` (Lean: `Zielsatz/Kern/Akzeptiert.lean`, `Zielsatz/Faeden/PoolSym.lean`) decided `EinzelnPool` (on the exported fragment exactly: the exporter
+refused `atomic` and `accumulates` items, so both sides read "every written carrier guarded");
+the footprint legs `N290`-`N293` (Lean: the `fussWB` occurrence-pairing theorems in `Zielsatz/Faeden/PoolZeuge.lean`; `N292`/`N294` are not yet Lean judgments) always paired thread indices, which is the occurrence form of
 `Getrennt`. `N315` (idle duplicate) is retired -- an idle routine is the empty pool and the goal
 covers it -- and gift 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
 lifted: `beispiele/0157-worker-pool.gab` exports with both occurrences and agrees
@@ -3231,7 +3231,7 @@ steps; `Ziel` at every other reachable machine is `gabbro_ziel`'s, not the witne
 (the witnesses on `Korpus59.lean`). Reviews G02 F1 and G12 F1, OFFEN O19.*
 
 **The gap.** An `entry … via idt` dispatch root travels into the model as an ordinary start,
-and G interleaves freely, so the deadlock the Rust `H102` refuses (`beispiele/gift/460`: a
+and G interleaves freely, so the deadlock the deleted checker's `H102` (Lean: `Nebenlaeufigkeit/Allgemein/Unterbrechung.lean`) refused (`beispiele/gift/460`: a
 handler takes, on the core it interrupted, a lock that core's thread holds without
 `masks irqs`) is no deadlock in G — there the holder steps on. `D.maskiert` was read by
 nothing in `Zielsatz/`.
@@ -3247,14 +3247,14 @@ nothing in `Zielsatz/`.
 | `masken_zeuge` | ONE core, two threads of `beispiele/59`: thread 1 takes `RING`, the handler then steps and stands at `locks TAKT` (masked) while the interrupted thread is inside its section; the leg — from `korpus59_ziel` — gives that `TAKT` is not held by that thread |
 | `masken_disziplin_59`, `masken_disziplin_460` | the discipline Bool accepts `takt_verteiler`'s graph and refuses `ruf_verteiler`'s (the `gift/460` shape); both roots pass the checker, so the refusal is the handler discipline and not (a) |
 
-**Rust side.** `H102` (`kontexte.rs`) decides the same over the handler's call-graph hull:
+**Deleted-Rust side.** `H102` (`kontexte.rs`) decided the same over the handler's call-graph hull:
 measured, `beispiele/gift/460` gives `[H102]` and `beispiele/59` is clean, exactly as the Lean
 Bool. No code, no gift, no example was added.
 
 **What is NOT claimed.** Which start is a handler and which core it shares is not in `Einheit`
 and G has no cores, so those are hypotheses of the leg and not components of (a)/(d)
-(OFFEN O19, narrowed). Rust's `H102` skips locks the unit does not declare and fires only on
-`via idt` (`beispiele/57`'s IPI is silent) — both named there. The emitted C realises no
+(OFFEN O19, narrowed). The deleted checker's `H102` skipped locks the unit does not declare and fires only on
+`via idt` (`beispiele/57`'s IPI is silent) — both named there. The deleted emitted C realised no
 masking at all (no `cli`/`sti`).
 
 ## 49. Threads created at run time: the thread machine in the goal theorem (Opus agent A, 2026-09-26)
@@ -3287,13 +3287,13 @@ reached `Ziel` only through `klon_ziel` (§39, outside the statement), a `start`
 | `spawn_start_ziel`, `spawn_kind_ziel` | `ZielF` via `gabbro_ziel` on spawn runs of ACCEPTED units (probe B's lock-guarded `haupt` as a run-time root), the spawned threads stepping and taking the lock |
 | `start_nicht_poolsicher_abgelehnt`, `_spec` | a `start` of a root writing an unguarded table is refused by the Bool at the pool component alone; the same routine as an ordinary start is accepted |
 | `kind_unter_sperre_abgelehnt`, `_spec` | a region lifted from inside `locks` needs the lock at entry (`wrap`), refused at the root component |
-| `start_unter_sperre_kein_schritt`, `start_unter_sperre_zeuge` | no step makes a thread holding a lock a joining starter (model side of `N461`), instantiated where thread 0 holds the lock |
+| `start_unter_sperre_kein_schritt`, `start_unter_sperre_zeuge` | no step makes a thread holding a lock a joining starter (model side of `N461` in `Nebenlaeufigkeit/Allgemein/Threads/FadenMaschine.lean`), instantiated where thread 0 holds the lock |
 | `klon_als_faden`, `klon_ziel_faden` | fix lane F9's clone machine is a special case: a clone spawn is a `kind` step |
 
-**Rust side.** The exporter carries every `start` root as `gE.gestartet` (parameterless, each
+**Deleted-Rust side.** The exporter carried every `start` root as `gE.gestartet` (parameterless, each
 once; `check_gestartet`), the statement leaves no G term, and a starter's lifted `locks` effect
 is no refusal. The retired `pruefe-akzeptiert-diff` rebuilt `ws` from the source with the roots doubled,
-pinned the export against it (K5), and compared `N458`/`N462` with `wurzeln`/`einzeln`; its
+pinned the export against it (K5), and compared `N458`/`N462` (Lean: `FadenMaschine.lean`) with `wurzeln`/`einzeln`; its
 self-test had a positive (`messung/proben/faden-start-pool.gab`) and a negative (a root needing a
 lock). A `child` still does not export: its stack gate is a foreign body (`Ax := Empty`).
 
@@ -3339,17 +3339,17 @@ over-approximation). Machine W is G over this memory, with the weak choice at th
 | `g_schritt_0`, `schwach_nicht_trivial` | (added 2026-09-26 after the Spec-diff verdict, F3) every G step of `hauptA` at that machine stores `3` (inversion over every rule of `RufSchrittG`); hence `¬ SchwachSC` there: the leg is false of some programs, as a theorem |
 | `gabbro_zielF_schwach` | (merge with Opus agent A) the weak leg at every reachable THREAD machine, `ZielF.g.schwach`; W is taken over G's runs, spawn/join are not synchronisation points of W |
 | `schwach_pool_zeuge` | on the accepted F10 pool, three W steps (both instances unfold, thread 0 takes the lock); every leg by `gabbro_ziel_schwach` |
-| `poolSicherRust_iff`, `proKern_schreiben_akzeptiert`, `proKern_lesen_abgelehnt` | O17: with a per-core accumulator read as a relaxed atomic, the Rust `N304` pool rule IS `PoolSicher`; a pool writing one relaxed atomic is accepted (and covered by `schwach`); a start reading an atomic another start writes is refused by `fuss` |
+| `poolSicherRust_iff`, `proKern_schreiben_akzeptiert`, `proKern_lesen_abgelehnt` | O17: with a per-core accumulator read as a relaxed atomic, the deleted Rust `N304` pool rule IS `PoolSicher`; a pool writing one relaxed atomic is accepted (and covered by `schwach`); a start reading an atomic another start writes is refused by `fuss` |
 
-**Rust side.** Nothing changed and nothing needed to: the DRF theorem uses no memory order, the
-emitter lowers every atomic access through an explicit `atomic_*_explicit` call (lane 152) and
-the driver's locks are `pthread_mutex`. retired `pruefe-akzeptiert-diff`: 19 agreements, 0 findings,
+**Deleted-Rust side.** Nothing changed and nothing needed to: the DRF theorem uses no memory order, the
+deleted emitter lowered every atomic access through an explicit `atomic_*_explicit` call (lane 152) and
+the deleted driver's locks were `pthread_mutex`. retired `pruefe-akzeptiert-diff`: 19 agreements, 0 findings,
 self-test both directions (the instrument now also reads the local `lean-probe`'s exit line).
 
 **Assumptions of the reading** (Spec.lean header, five, repaired after the Spec-diff verdict,
 F1/F2/F5): W over-approximates RC11 at G's step granularity; compiler and hardware implement C11
-atomics; EVERY lock primitive is acquire/release (driver `pthread_mutex`; own primitives under
-`N323`, orders NOT checked, OFFEN O26 -- checked since §52, `N481`-`N483`; foreign ones trusted); carriers are locations; unrecorded
+atomics; EVERY lock primitive is acquire/release (deleted driver `pthread_mutex`; own primitives under
+`N323` (not yet a Lean judgment), orders NOT checked, OFFEN O26 -- checked since §52, `N481`-`N483` (none yet a Lean judgment); foreign ones trusted); carriers are locations; unrecorded
 reads (`Orakel.wirkt`, `regLies`, `sichtbar`) are taken over G's memory.
 
 **What is NOT claimed.** Programs that RELY on an unguarded atomic read across threads (a flag, a
@@ -3360,13 +3360,13 @@ as release/acquire, no promises).
 ## 51. What a green build covers: one certificate per exported program, one list for the rest (Opus agent C, 2026-09-26)
 
 *Files: `grammatik/Grammatik/Zertifikat/*.lean` (generated certificates), `Zertifikat/REGISTER.txt`
-(the one list), `Grammatik/Korpus/Zeugnis/Zertifikate.lean` (umbrella), `crates/gabbro-check/tests/zertifikate.rs`
+(the one list), `Grammatik/Korpus/Zeugnis/Zertifikate.lean` (umbrella), deleted `tests/zertifikate.rs`
 (the guard), `Zielsatz/Kern/Spec.lean` header "WHAT A GREEN BUILD COVERS". Report
 `dokumente/PROOF.md`.*
 
 **The gap.** `lake build` green said nothing about a real program: only 104 and 108 had their
 exported unit judged by the Lean Bool in the build; 20 further exported programs were judged by
-the Rust checker alone, and 176 accepted programs the exporter refuses were judged by nothing,
+the deleted Rust checker alone, and 176 accepted programs the exporter refuses were judged by nothing,
 silently.
 
 | theorem (per certificate) | what it says |
@@ -3414,16 +3414,16 @@ lifted for ATOMIC carriers only (flags, spins, counters, per-core folds)?
 | `nutzlast_ohne_erwerb_abgelehnt`, `nutzlast_echt` | AtomarZeuge | the REFUSAL: a PLAIN table written by one start and read by another with no lock is refused by `AkzeptiertA` at its footprint component -- the exemption is for atomics only |
 | **`zaehler_zwei`**, `zaehler_lauf`, **`zaehler_verloren`** | Zaehler | a relaxed counter, two threads, one `fetch_add(1)` each: under an ATOMIC RMW (write at the read message's timestamp + 1) the newest message is 2 on every complete run; under W's `exchange` shape (write at any fresh timestamp) the lost update (newest 1, no 2) is reachable -- W cannot prove the counter |
 
-**Rust side (OFFEN O26 closed at the source level).** `namen.rs::sperrprimitiv_ordnung`,
+**Deleted-Rust side (OFFEN O26 closed at the source level).** The deleted `namen.rs::sperrprimitiv_ordnung`,
 sentence `namen.sperrprimitiv_ordnung`: `N481` (a take reading only relaxed atomics), `N482` (a
 give writing only relaxed atomics), `N483` (a bodied take and give of one lock releasing and
-acquiring on different ordered atomics). Gifts 1201 (relaxed test-and-set spinlock), 1202, 1203;
-positive: snippet tests `geordneter_spinlock_besteht`, `ticket_sperre_besteht` (the runtime's
-ticket lock shape). Corpus diff: only the three gifts. Measured: `N042` refuses every own or
+acquiring on different ordered atomics) — none of the three is yet a Lean judgment. Gifts 1201 (relaxed test-and-set spinlock), 1202, 1203;
+positive: snippet tests `geordneter_spinlock_besteht`, `ticket_sperre_besteht` (the deleted runtime's
+ticket lock shape). Corpus diff: only the three gifts. Measured: `N042` (not yet a Lean judgment) refuses every own or
 foreign `L_nimm`/`L_gib` beside `lock L`, so on accepted programs every lock is driver-defined.
-The Rust footprint legs `N290`-`N294` never counted atomics as carriers: on this component the
-Rust checker decides `fussWAB`, not `fussWB` (`messung/proben/o25-flagge-atomar.gab`: accepted by
-Rust, refused by the exporter, `LG001`).
+The deleted Rust footprint legs `N290`-`N294` never counted atomics as carriers (`N294` is not yet a Lean judgment): on this component the
+deleted Rust checker decided `fussWAB` (Lean: `Speichermodell/Atomar/AtomarZeuge`), not `fussWB` (`messung/proben/o25-flagge-atomar.gab`: accepted by
+the deleted checker, refused by the exporter, `LG001`).
 
 **What is NOT claimed (OFFEN O25, narrowed).** The CONTRACT legs of `Ziel` over GA -- they come
 from the replay of the user's sequential proof (`execEndH`), which reads an atomic from its own
@@ -3437,8 +3437,8 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 
 *Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/Eigenschaften/InvariantenZeuge.lean`
 (witnesses), `Zielsatz/Kern/Spec.lean` (definitions, the invariant block of the header),
-`Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `zielF_aus`); Rust `crates/gabbro-check/src/m1.rs`
-(`invarianten_buchen`), `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
+`Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `zielF_aus`); deleted Rust `m1.rs`
+(`invarianten_buchen`), deleted `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
 `messung/OPUS-D-INVARIANTEN.md` (retired report, in the history).*
 
 **The gap.** NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
@@ -3486,8 +3486,8 @@ argument, no reachable writer in the model, so `invSicht` adds nothing to `invRu
 ## 54. Linking separately compiled units under the same hardware assumptions (Opus agent E, 2026-09-26)
 
 *A SECOND statement in `Zielsatz/Kern/Spec.lean`, purely additive: `GabbroZiel` and every definition
-before it are unchanged. Files `grammatik/Grammatik/Zielsatz/{Verbund,VerbundZeuge}.lean`; Rust
-`crates/gabbro-check/src/verbund.rs`, `gabbro link`; report `messung/OPUS-E-LINKEN.md` (retired report, in the history).*
+before it are unchanged. Files `grammatik/Grammatik/Zielsatz/{Verbund,VerbundZeuge}.lean`; deleted Rust
+`verbund.rs`, deleted `gabbro link`; report `messung/OPUS-E-LINKEN.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -3503,23 +3503,23 @@ before it are unchanged. Files `grammatik/Grammatik/Zielsatz/{Verbund,VerbundZeu
 | **`vm_abgelehnt`**, `vm_abgelehnt_spec` | VerbundZeuge | REFUSAL: a read hidden behind an imported head (`privB`); each unit accepted alone, the link Bool false, the whole-program checker false on the linked program |
 | **`vz_vertrag_zu_schwach`** | VerbundZeuge | REFUSAL: the exported contract is weaker than the importer's -- no link declaration |
 
-**Rust side.** `verbund.rs::verbinde`, sentence `namen.verbund`: `N501` (signature, shared
+**Deleted-Rust side.** The deleted `verbund.rs::verbinde`, sentence `namen.verbund`: `N501` (signature, shared
 declarations, one body per function, exported), `N502` (contract), `N503` (effects, callback,
-threads on both sides), `N504` (costs), `N505` (hardware assumptions). Probes
+threads on both sides), `N504` (costs), `N505` (hardware assumptions) — none of the five is yet a Lean judgment. Probes
 `messung/proben/verbund/` 1241-1245 (each unit clean alone, the link refuses with exactly its
-code), positive pair `tabelle-bib.gab` + `tabelle-app.gab`; `crates/gabbro-cli/tests/verbund.rs`.
+code), positive pair `tabelle-bib.gab` + `tabelle-app.gab`; deleted `tests/verbund.rs`.
 
 **Note (Opus agent F, 2026-09-26, review E F1, `messung/OPUS-F-VERBUND-RENNEN.md` (retired report, in the history)).** No Lean
-change. The Rust side now decides the three whole-program components of `SchnittstelleSpec`
-instead of refusing around them: `verbund.rs::verbinde_alle` composes the units into the linked
+change. The deleted Rust side then decided the three whole-program components of `SchnittstelleSpec`
+instead of refusing around them: deleted `verbund.rs::verbinde_alle` composed the units into the linked
 program (`verbundtext`: each body from its owner, each unit's starts -- the surface of
-`verbinde e E₁ E₂`) and runs the whole checker over it, so `lok`/`renn`/`einzeln` are decided by
-`fusswache2.rs` over the linked call graphs, which under `KeinRueckruf` are the composed hulls
-(`huelle_of_reach`). The blanket `N503` for threads on both sides is gone; `N516` refuses a
+`verbinde e E₁ E₂`) and ran the whole checker over it, so `lok`/`renn`/`einzeln` were decided by
+deleted `fusswache2.rs` over the linked call graphs, which under `KeinRueckruf` are the composed hulls
+(`huelle_of_reach`). The blanket `N503` for threads on both sides is gone; `N516` (not yet a Lean judgment) refuses a
 module split over two units. Per unit, an imported head's declared READS join the importer's
-footprint (`fusswache2.rs`, `N291` at the call site, `N301` at the start) -- the Rust twin of
-`vm_abgelehnt` (probe 1246) now falls in `gabbro check --with` already, with the one-file codes.
-Contracts are compared as normal-form trees; `gabbro build` links two or more units.
+footprint (deleted `fusswache2.rs`, `N291`/`N301` named in Lean probe data only) -- the deleted Rust twin of
+`vm_abgelehnt` (probe 1246) then fell in deleted `gabbro check --with` already, with the one-file codes.
+Contracts were compared as normal-form trees; deleted `gabbro build` linked two or more units.
 
 **NOT claimed:** different hardware assumptions; callbacks through an import; a contract other
 than the exporter's; dynamic loading; foreign C; the C link step (OFFEN O28).
@@ -3561,21 +3561,21 @@ memory) answering a shared atomic read with any value -- and does the replay car
 | **`vertrag_atomar_abgelehnt`**, `vertrag_atomar_echt` | AtomarAkzeptiertZeuge | REFUSAL: a contract over the shared `konfig` is refused by `AkzeptiertX` at `fussWXB`, accepted by `AkzeptiertA` |
 | `faltung_akzeptiertX` | AtomarAkzeptiertZeuge | the per-core fold (O17) is admitted by `AkzeptiertX` |
 
-**Rust side: `N484`** (`fusswache2.rs::vertrag_atomar`, sentence `wirkungen.vertrag_atomar`): a
+**Deleted-Rust side: `N484`** (Lean: `N484` refused in `Zielsatz/Kern/Spec.lean`; deleted `fusswache2.rs::vertrag_atomar`, sentence `wirkungen.vertrag_atomar`): a
 `requires`/`ensures` reading an unguarded atomic that one started thread reaches and another may
 write is refused -- the contract condition `vertragsFreiB`. Before it, such a contract passed with
 0 errors (the footprint legs never counted atomics; `messung/proben/o25b-vertrag-atomar.gab`).
-Gift 1204; snippet tests in `tests/fusswache2.rs` (body-only shared read, thread-local atomic,
-single thread stay silent). Corpus diff: only the gift. With it, the Rust footprint legs decide
-`fussWXB` (atomics exempt as before, contracts over shared atomics refused), i.e. the Rust checker
-is the Bool of `AkzeptiertX` on this component -- measured by gift and snippets, not by
+Gift 1204; snippet tests in deleted `tests/fusswache2.rs` (body-only shared read, thread-local atomic,
+single thread stay silent). Corpus diff: only the gift. With it, the deleted Rust footprint legs decided
+`fussWXB` (atomics exempt as before, contracts over shared atomics refused), i.e. the deleted Rust checker
+was the Bool of `AkzeptiertX` on this component -- measured by gift and snippets, not by
 retired `pruefe-akzeptiert-diff`, which cannot compare atomic programs (the exporter refuses them,
 `LG001`; the script lists `N484` under `fuss`, 22/22 agree, self-test ok).
 
 **What is NOT claimed, and why `Spec.lean` is unchanged.** The thread machine (`ZielF`: spawn,
 join, `spawnSicht` over GX) and the linked statement (`GabbroZielVerbund`) are not re-proved with
-the rely, and no atomic program exports (`LG001`), so the Rust/Lean agreement on `AkzeptiertX`
-is not differentially measured; a Spec diff without the thread machine would drop legs
+the rely, and no atomic program exports (`LG001`), so the deleted-Rust/Lean agreement on `AkzeptiertX`
+was not differentially measured; a Spec diff without the thread machine would drop legs
 `GabbroZiel` has today, so none was made (a partial one was ruled out). RMW atomicity is a sub-machine (`RufSchrittWR`), not yet a condition of `SchrittW`; the
 payload rule for a plain carrier read after an `awaits` and the exporter for `atomic` items
 (`LG001`) are open. The per-core fold is covered as a shared atomic (`faltung_akzeptiertX`), but not exported.
@@ -3588,7 +3588,7 @@ and a per-thread CALL LOG. All four are statable there. `L24` (read observationa
 (an existence statement) are the invariant legs of §53 and their witness; `L50` and `L52` are one
 shape, "an event DIRECTLY behind a return in the call log", and `Ziel` gains the leg `folge` for
 it. Premise-free; no premise of `GabbroZiel` moved. Files `grammatik/Grammatik/{Folge,FolgeBeweis,
-FolgeZeuge,Zielsatz/FolgeZiel}.lean`; Rust `kbedingung.rs` (`N531`, `N532`); report `messung/OPUS-G-O1.md` (retired report, in the history).*
+FolgeZeuge,Zielsatz/FolgeZiel}.lean`; deleted Rust `kbedingung.rs` (`N531`, `N532` — neither yet a Lean judgment); report `messung/OPUS-G-O1.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
 |---|---|---|
@@ -3611,12 +3611,12 @@ write; its content -- no OTHER thread sees the pair half set -- is `invSicht` (t
 invariants) and `sperrSicht` + `sperrWechsel` (lock invariants), §53. `L34` is an existence
 statement about one program; `tabelle_gebrochen` (§53) is its shape.
 
-**Rust side.** `N531` (`kbedingung.breaking-rests-here`): a `breaking I` block without calls that
+**Deleted-Rust side.** `N531` (`kbedingung.breaking-rests-here`): a `breaking I` block without calls that
 writes no carrier of `I` is named for the wrong invariant -- the case `D013`'s sentence called
 open (*"a `breaking` on the wrong-but-existing invariant still passes"*). `N532`
 (`kbedingung.breaking-blocks-maintainers`): no call of a function that `maintains I` inside
 `breaking I` (LANGUAGE.md §8.3). Gifts 1291, 1292; clean sides examples 53 and 55;
-`crates/gabbro-check/tests/breaking_region.rs` pins both directions of both rules.
+deleted `tests/breaking_region.rs` pinned both directions of both rules.
 
 **NOT claimed:** an order of effects outside the call log (axioms, registers); an order across a
 compound statement, an indirect call or a lock block (refused by the check, not weakened); an
@@ -3630,7 +3630,7 @@ block's end) -- G unfolds the block without the name; which `Φ` a source progra
 (`NurMaskiert`, `MaskenDisziplin`, `AkzeptiertSpec.masken`, `HandlerVon`, `KernHaltE`, the leg,
 `Verbindbar.unterbricht`, `SchnittstelleSpec.masken`), `Zielsatz/Kern/Akzeptiert.lean` (`maskenB`),
 `Zielsatz/Eigenschaften/Masken.lean` (the discharge), `MitRuheStatisch.lean` (`mE_und`),
-`Zielsatz/Eigenschaften/MaskenZeuge.lean` (witnesses), `lean_g.rs` (the export). OFFEN O19; report
+`Zielsatz/Eigenschaften/MaskenZeuge.lean` (witnesses), deleted `lean_g.rs` (the export). OFFEN O19; report
 `messung/OPUS-H-KERNE.md` (retired report, in the history).*
 
 **The gap.** §48's leg was unconditional (`kernHaltG_gilt`): which threads are handlers, their
@@ -3640,7 +3640,7 @@ graphs and `H102` were hypotheses of the leg, so the conjunct added no content
 | theorem / definition | what it says |
 |---|---|
 | `Programm.unterbricht` (Syntax) | the function is entered by hardware (`entry … via idt`); default `fun _ => false`; `mitRuhe` carries it, the idle root is none |
-| `MaskenDisziplin P fs`, `AkzeptiertSpec.masken` (Spec) | every function the graph of a handler root reaches takes only `masks irqs` locks (`mE (NurMaskiert D)`) — the Rust `H102` |
+| `MaskenDisziplin P fs`, `AkzeptiertSpec.masken` (Spec) | every function the graph of a handler root reaches takes only `masks irqs` locks (`mE (NurMaskiert D)`) — the deleted checker's `H102` (Lean: `Masken.lean`) |
 | `maskenB`, `maskenB_iff`, `maskenB_ohne` (Akzeptiert) | the component of `Akzeptiert`, decides the field exactly; `true` on a program with no handler |
 | `HandlerVon P M0 t`, `KernHaltE` (Spec), the leg `Ziel.keinKernHalt` | for every core assignment and every run the core hardware admits (`KernPlan`, the named assumption), a thread whose root the program declares a handler never stands at a lock another thread of its core holds |
 | `kernHaltE_aus` (Masken) | the leg from (a): `abg` + `masken` give `MerkAbg` for `maskM` (`mE_maskM`, via `mE_und`/`mE_mono`), `merkInvG_start` at the start machine, then `kernHaltG_gilt` |
@@ -3651,7 +3651,7 @@ graphs and `H102` were hypotheses of the leg, so the conjunct added no content
 | `masken_zeuge`, `masken_59`, `kM0_handler` | example 59: the handler set is `{takt_verteiler}`, accepted; the handler preempts thread 1 inside `RING` and stands at `locks TAKT` — the leg of `korpus59_ziel` (from (a)) says `TAKT` is not held there |
 | `kPv_ohne_handler`, `handler_abgelehnt`, `kernHaltE_verletzt` | the `gift/460` shape (the handler takes unmasked `RING`): accepted with no handler declared, refused by `maskenB`, and the leg is FALSE on a real admitted run of it — the leg is contentful |
 
-**Rust side.** `H102` unchanged; the exporter writes `gP.unterbricht` for every `via idt` root
+**Deleted-Rust side.** `H102` unchanged; the deleted exporter wrote `gP.unterbricht` for every `via idt` root
 (only `beispiele/59` among the certified programs; every other certificate changed by one header
 line). the retired `pruefe-akzeptiert-diff` gained the component `masken` ↔ `H102`, pin K6 (exported
 handler set = source `via idt` roots), and a self-test pair (59 accepted; 59 without the mask =
@@ -3668,8 +3668,8 @@ sound against `AkzeptiertSpecX`), the user's logic with the rely (`NutzerPflicht
 `ZielFX` on every reachable thread machine over GX; the statement of before is `GabbroZielSC`,
 derived. Files `grammatik/Grammatik/Speichermodell/{GXMaschine,ZaehlerW}.lean`,
 `Zielsatz/Atomar/{BeweisAtomar,AtomarGoalZeuge,AtomarZertifikatZeuge}.lean` (`Zielsatz/BeweisAtomar.lean` is a pinned one-line re-export shim), the atomic-rely block of
-`Zielsatz/Kern/Spec.lean`; `MaschineW.lean` (`SchrittW.rmw`); Rust `lean_g.rs` (`read_atomic`,
-`Stmt.publish`), `obligations_g.rs` (certificates over the new statement); report
+`Zielsatz/Kern/Spec.lean`; `MaschineW.lean` (`SchrittW.rmw`); deleted Rust `lean_g.rs` (`read_atomic`,
+`Stmt.publish`), deleted `obligations_g.rs` (certificates over the new statement); report
 `messung/OPUS-O25C-ATOMICS.md` (retired report, in the history).*
 
 | theorem / definition | file | statement |
@@ -3696,10 +3696,10 @@ component's premise; both are recorded here because §57 reads differently now.
 | | |
 |---|---|
 | **before** | `masks irqs` was a promise about the environment with nothing keeping it in the emitted C, and `Kontext::unterbricht` -- the premise of `maskenB`/`H102` -- was the literal path word `idt` |
-| **now** | the RUNTIME keeps the promise per flavour: bare metal `METALL_SPERRE_MASKIERT` (Opus agent J), Linux kernel module the MASKED pair the program bound (`laufzeit/kmodul/sperre.h` over `bindung.h`; `raw_spin_lock_irqsave` in `bibliothek/linux-kmod`, under the named assumption `kern_bindung_maskiert` -- K7, 2026-09-28). `unterbricht` is "the entry carries a `via` path", in `kontexte.rs` and in `lean_g.rs` alike |
+| **now** | the deleted RUNTIME kept the promise per flavour: bare metal `METALL_SPERRE_MASKIERT` (Opus agent J), Linux kernel module the MASKED pair the program bound (deleted `laufzeit/kmodul/sperre.h` over `bindung.h`; `raw_spin_lock_irqsave` in deleted `bibliothek/linux-kmod`, under the named assumption `kern_bindung_maskiert` -- K7, 2026-09-28). `unterbricht` was "the entry carries a `via` path", in the deleted `kontexte.rs` and `lean_g.rs` alike |
 | **why it is strictly stronger** | more dispatch roots become handlers, so `maskenB` has to hold over more programs. 0 corpus diff: nine `via` words at an `entry`, all `idt`. Witnesses `beispiele/gift/1364` (0 errors before, `H102` after) and `beispiele/166` (the same with `masks irqs`, clean and CERTIFIED as `G166_eintritt_irq_maskiert`) |
 | **measured** | retired `pruefe-akzeptiert-diff`: all ten pins on 29/29 comparable programs, `--selbsttest` green both ways (`masken` accepts 59, refuses the `gift/460` shape at `masken` alone). In QEMU, retired `pruefe-kernelmodul` probe `takt`: `ticks=26 landed=0` -- 26 hardirq arrivals, none inside a critical section on the holding core -- and the unmasked mutation does not finish |
-| **what is still NOT claimed** | `KernPlan` is not RELATED to the C in translation validation: the C is measured to keep the promise, and the chain does not prove it. The vector, the registers and the steps still have no form in `Einheit`, and handler re-entry stays outside (OFFEN O19) |
+| **what is still NOT claimed** | `KernPlan` is not RELATED to the C in translation validation: the deleted C was measured to keep the promise, and the chain does not prove it. The vector, the registers and the steps still have no form in `Einheit`, and handler re-entry stays outside (OFFEN O19) |
 
 ## 60. Premise (b) for EVERY source text: the duties are computed in Lean (parser lane, 2026-09-30, P6)
 
@@ -3715,7 +3715,7 @@ that statement for premise (b) of the goal theorem, in `bruecke/Bruecke/Quelle.l
 | `lower_of_uebersetze`, `uOf_eq` | Quelle | the lowering is the last stage of `uebersetzeAllg`; the parse of a text is its `uOf` |
 | **`nutzer_aus_quelle`**, `nutzerA_aus_quelle` | Quelle | `Pflichten src → uebersetzeAllg src = .ok ⟨u, P, fs⟩ → ∃ hn, NutzerPflicht (einheitAllg u P hn)` -- **over every `src`**; the atomic-rely twin. Axioms `propext`, `Classical.choice`, `Quot.sound` |
 | `pflichten_104`, `pflichten_108`, `nutzer_generisch` | Instanz104/108 | WITNESSES (non-degeneracy): `Pflichten` holds on two real programs, with GabbroV's own duty proofs |
-| `vorlage` | Vorlage | `gabbro prove --template --source`: the person's file pinned to the text, the duties as the computed statement, the stage outputs as hints the kernel checks |
+| `vorlage` | Vorlage | deleted `gabbro prove --template --source`: the person's file pinned to the text, the duties as the computed statement, the stage outputs as hints the kernel checks |
 
 **What is NOT claimed:** the fragment premises -- no lock invariants, no axiom ensures, no declared
 starts, no atomics, `requires` lowered to `true`, the `ensures` forms `== < <=` with `and/or/not`,
@@ -3767,7 +3767,7 @@ channel for the reason (`aerg : Option Ty`); the exporter refused every unit wit
 | `fort_dann`/`fort_ende` (arms) | Fortschritt | progress: such a head steps (value or reason) or stands at the named `hardware` stop |
 | `sonstPasst_ru`, `axiomAntwortSonst_ruG` | MitRuheSemantik | the idle-root translation keeps the channel (`D.mitRuhe.agruende := D.agruende` -- a defaulted field would have dropped it silently) |
 | `axiomAntwortSonst_rel` | Nichtinterferenz/Lokal | noninterference: related worlds decode to the same outcome |
-| **`tor_fehlbar`** (+ `_wert`, `_grund`, `_zeuge`) | SchablonenOhneLibc §3 | THE TEMPLATE: for every kernel word and every errno table, the stub's decoding (`dekodiere`, Syscall.lean), packed (`packe`), is decoded by G exactly so -- value, reason, or the hardware stop. Row `tor.fehlbar` in `schablonen.rs`, every premise bound |
+| **`tor_fehlbar`** (+ `_wert`, `_grund`, `_zeuge`) | SchablonenOhneLibc §3 | THE TEMPLATE: for every kernel word and every errno table, the stub's decoding (`dekodiere`, Syscall.lean), packed (`packe`), is decoded by G exactly so -- value, reason, or the hardware stop. Row `tor.fehlbar` in deleted `schablonen.rs`, every premise bound |
 | arms in ~55 files | ZielOrt*, Rennfrei*, KostenG, SperreSem, AtomarSem, MitRuhe*, Folge*, ... | every property of blocks and end blocks carried through the new constructors; the replay proofs of the `Ziel` legs (`ZielOrtVoll`, `-Ax`, `-Geraet`, `-Rahmen`, `-Sperre`, `AtomarAkteur`) gained real cases, since the fragment predicates (`vOk`, `gOk`, `rOk`) admit the form |
 | `beispiele/182` | Zertifikat/G182_fallible_gate | WITNESS: a certified program with a fallible gate called at the top level |
 
@@ -3785,7 +3785,7 @@ refused by the emitter (`C183`); it lowers now, and the extent its contract name
 
 | Lean name | File | What it says |
 |---|---|---|
-| `regionStumpf` | SchablonenOhneLibc §4 | the emitted stub (`emit.rs`, `Antwort::Region`) statement by statement: the `-4095` fence, the errno comparisons in table order, the zero test, the address |
+| `regionStumpf` | SchablonenOhneLibc §4 | the deleted emitter's stub (deleted `emit.rs`, `Antwort::Region`) statement by statement: the `-4095` fence, the errno comparisons in table order, the zero test, the address |
 | **`tor_region`** | SchablonenOhneLibc §4 | THE TEMPLATE: for every word an `int64_t` holds and every errno table, the stub IS `dekodiere` (Syscall.lean) over the range `1 .. 2^63 - 1` -- the decoding `tor_fehlbar` proves against G's reason channel |
 | `tor_region_adresse`, `tor_region_fehler_kein_zeiger` | SchablonenOhneLibc §4 | the address handed over is the kernel's word and never zero; no error word becomes an address |
 | `Region`, `RegionVertrag` | SchablonenOhneLibc §4 | the generic form: the answer reaches at least `n` bytes and shares none with a region live at the call -- the gate's `ensures n <= lenof(result)` plus its assumption's sentence, user logic, no operating system |
@@ -3793,18 +3793,18 @@ refused by the emitter (`C183`); it lowers now, and the extent its contract name
 | `tor_region_zeuge` | SchablonenOhneLibc §4 | WITNESS: `mmap`'s table, a word of each kind, a 4096-byte region beside a live one |
 
 **The checker side** (no new `N` code): the extent clause of a body-less callee's `ensures … <=
-lenof(result)` is booked on the name a `let … else` binds the answer to (`m1.rs`,
+lenof(result)` is booked on the name a `let … else` binds the answer to (deleted `m1.rs`,
 `ergebnis_ausdehnung`), if that name is bound once and never assigned and the arguments name only
-constants and parameters the body leaves alone; `N571` and `N463` (the bare form too) read it like a
-`requires` clause. Gifts `1383`-`1387`, example `183` (built `nolibc`, runs, imports nothing).
+constants and parameters the body leaves alone; `N571` (Lean: `SchablonenOhneLibc/Teil1a.lean`) and `N463` (not yet a Lean judgment, the bare form too) read it like a
+`requires` clause. Gifts `1383`-`1387`, example `183` (built `nolibc`, ran, imports nothing).
 **Not claimed** (OFFEN O37): machine G has no byte pointers, so 183 stays `UNCERTIFIED` (first `LG003`, the gate's `ensures`; behind it `LG002`);
 nothing releases a region; a Gabbro body cannot pass an extent on.
 
 ## 64. The hosted arena runtime as a generated template: `arena.dyn` (C-free lane, 2026-09-30)
 
 **The gap.** `laufzeit/arena_dyn.c` was handwritten C behind premise (d) `Laufzeit.reserve` /
-`.commit`, handing the binding addresses as numbers. The generated hosted driver writes that
-runtime now (`treiber.rs`, `ARENA_LAUFZEIT`; `gabbro runtime arena` prints the same bytes for a
+`.commit`, handing the binding addresses as numbers. The generated hosted driver then wrote that
+runtime (deleted `treiber.rs`, `ARENA_LAUFZEIT`; deleted `gabbro runtime arena` printed the same bytes for a
 harness), and the binding's storage and report calls are Gabbro (`bibliothek/linux/linux.gab`:
 `gabbro_os_reserve` over a region gate, `gabbro_os_commit` over a protection gate under
 `requires bytes <= lenof(stelle)`, `gabbro_os_melden` over a write gate and constant tables,
@@ -3827,7 +3827,7 @@ caught; retired `miss-arena-decke` GREEN (10 MiB and 32 GiB ceilings, same binar
 ## 65. Hosted locks and the page return without C: `sperre.ticket`, `region.leeren` (C-free lane, 2026-09-30)
 
 **Locks.** The hosted driver writes the ticket lock `CTicket.lean` proves (THEOREM-MAP §32) in place
-of the binding's `pthread_mutex_t`: `treiber.rs::SPERRE_TICKET`, the four instructions word for word,
+of the binding's `pthread_mutex_t`: deleted `treiber.rs::SPERRE_TICKET`, the four instructions word for word,
 a zero `static` as the free lock (no initialiser any more), and every 64 spins the program's yield
 (`gabbro_os_nachgeben`, a Gabbro function over a `pure` gate) -- a stutter of `dreht`. Register row
 `sperre.ticket` cites `ticket_ausschluss`, `erreichbarT_exklusiv`, `ticket_fifo`,
@@ -3888,7 +3888,7 @@ moves the handed value out of the stack register, aligns the handed stack and CA
 | `kind_region_rueckkehr`, `kind_region_zeuge` | SchablonenFaden §3 | a returning region would run into the trap's `ud2`; WITNESS |
 
 Measured on hosted Linux with a real `clone` (`kratz/c/s10/kind`): a triple whose region reads the
-handed top and ends the process with 42 exits 42 at `-O0` and `-O2`. `tests/klon_faden.rs` pins the
+handed top and ends the process with 42 exits 42 at `-O0` and `-O2` (measured then). Deleted `tests/klon_faden.rs` pinned the
 new shape (no `asm goto`, no label, one call, one region function).
 
 ## 68. The kernel-module runtime as generated text: `arena.modul` and `modul.lebenslauf` (C-free lane, 2026-09-30, C2)
@@ -3896,8 +3896,8 @@ new shape (no `asm goto`, no label, one call, one region function).
 **The gap.** Every `.ko` a `module` unit became carried `laufzeit/kmodul/` -- `kmodul.c` (the
 loader's entry points), `arena.c` (a `vzalloc` per arena with a `module_param` budget),
 `sperre.h`, `bindung.h`, five type shims -- and, with an `atomic`, the 273-line LKMM table
-`bibliothek/linux-kmod/stdatomic.h`. Now `gabbro build` writes the module driver itself
-(`treiber.rs::erzeuge_kmod`): the arena storage is a static pool of the manifest's `provision`, the
+`bibliothek/linux-kmod/stdatomic.h`. The deleted `gabbro build` then wrote the module driver itself
+(deleted `treiber.rs::erzeuge_kmod`): the arena storage is a static pool of the manifest's `provision`, the
 loader's two entry symbols and the licence note are MANIFEST words (`kmod <kbuild> <load>
 <unload>`, `note .modinfo license=…`), the type headers and `<stdatomic.h>` are generated from the
 compiler's own predefined types and C11 builtins. No kernel header and no kernel name in the
@@ -3956,7 +3956,7 @@ carved by a counter, a commit budget), `include/math.h`, `include/string.h` and 
 functions at the head of `kern.c` -- handwritten C. Now the metal driver writes the PROVED
 `arena.modul` pool runtime (§68) behind a reservation by list position, and the build writes the
 four memory functions (`<unit>.metall.speicher.c`) and the two header names beside the image
-(`treiber.rs::metall_arena`, `METALL_SPEICHER`, `metall_koepfe`; `gabbro runtime metal-arena`,
+(deleted `treiber.rs::metall_arena`, `METALL_SPEICHER`, `metall_koepfe`; deleted `gabbro runtime metal-arena`,
 `metal-memory`, `metal-include <dir>` for harnesses).
 
 | Lean name | File | What it says |
@@ -3985,8 +3985,8 @@ files.
 
 **The gap.** The Gabbro-facing locks of a bare-metal image (`METALL_SPERRE`, `_GETEILT`,
 `_MASKIERT`, `_MASKIERT_GETEILT`), the rcu read side `METALL_RCU` and the flag helpers were 140
-handwritten lines of `laufzeit/metall/metall.h`. They are now the generator's header
-`<metall_sperren.h>` (`treiber.rs::METALL_SPERREN`), written by `gabbro build` and `gabbro runtime
+handwritten lines of `laufzeit/metall/metall.h`. They became the generator's header
+`<metall_sperren.h>` (deleted `treiber.rs::METALL_SPERREN`), written by the deleted `gabbro build` and deleted `gabbro runtime
 metal-include <dir>` beside `<math.h>`/`<string.h>` and included last by `metall.h`; the bytes of
 every macro are unchanged.
 
@@ -4016,8 +4016,8 @@ generated lock refines it step for step.
 
 **The gap.** The IDT -- the 256 gate descriptors, the encoding of one gate, the runtime's slots,
 `lidt`, and the two installers a metal driver calls for the program's entries -- was a part of
-`laufzeit/metall/kern.c`. It is now the generator's `<unit>.metall.idt.c`
-(`treiber.rs::METALL_IDT`; `gabbro runtime metal-idt` for harnesses), compiled and linked as a
+`laufzeit/metall/kern.c`. It became the generator's `<unit>.metall.idt.c`
+(deleted `treiber.rs::METALL_IDT`; deleted `gabbro runtime metal-idt` for harnesses), compiled and linked as a
 translation unit of its own; `kern.c` calls `metall_idt_bau`/`metall_idt_lade`, and the timer
 and wake vectors are one register (`METALL_TAKT_VEKTOR`, `METALL_WECK_VEKTOR` in `metall.h`).
 
@@ -4041,8 +4041,8 @@ names), that every core executes `lidt` before its first interrupt (the runtime'
 
 **The gap.** The section "Cores and threads" of `laufzeit/metall/kern.c` -- per-core run queues,
 the scheduler loop, the yield and the timer's C half, the first frame of a new thread, the
-thread start and the join -- was handwritten C. It is now the generator's
-`<unit>.metall.faden.c` (`treiber.rs::METALL_FADEN`; `gabbro runtime metal-threads`), a
+thread start and the join -- was handwritten C. It became the generator's
+`<unit>.metall.faden.c` (deleted `treiber.rs::METALL_FADEN`; deleted `gabbro runtime metal-threads`), a
 translation unit of its own; `kern.c` keeps the bring-up (LAPIC, ACPI, SMP) and reaches the
 cores through the interface in `metall.h` (`metall_kern_setze`, `metall_kern_apic_setze`,
 `metall_kern_stapel_oben`, `metall_kern_angekommen`, `metall_kern_schleife`,
@@ -4075,7 +4075,7 @@ proves the same in milliseconds.
 arguments share a root when one callee parameter is writable or `own`. What does the model need?
 In machine G a pointer type `Ty.ptr n rw` names its carrier STATICALLY (table `D.tabNr n`), and a
 pointer value is `Unit`. So the argument-to-carrier map of a call is fixed by the callee's
-signature, the same at every call site, and `own` reaches the model as read-write (`lean_g.rs`,
+signature, the same at every call site, and `own` reached the model as read-write (deleted `lean_g.rs`,
 `param_ty`). `ParamGetrennt` is therefore a property of the callee.
 
 | Lean name | File | What it says |
@@ -4140,13 +4140,13 @@ A1-OWN-PAPER.md §6, slice 2b). `Zielsatz/Kern/Spec.lean` unchanged; `gabbro_zie
 
 ## 76. Own, slices 3 and 4: the `R014` repair, the `R015` boundary hint, `noalias` (2026-10-17, `dokumente/A1-OWN-PAPER.md`)
 
-No new Lean theorem: this section books what the checker and the LLVM emitter did with §74/§75.
+No new Lean theorem: this section books what the deleted checker and LLVM emitter did with §74/§75 (2026-10-17).
 
 | What | Where | Status |
 |---|---|---|
-| **The repair of the slice-2b finding.** `getrennte_wurzeln` no longer skips a pair with an untraced name: a field read, an index, an indirect call, an unresolved callee, an argument that is no bare name and a re-view of an untraced pointer are `UNBEKANNT`, a root equal to every root; a fresh root is only for an answer that comes from no pointer argument. Pairs of two read-only parameters stay free | `crates/gabbro-check/src/m3.rs`, sentence `m3.zeiger_wurzel` (`saetze.rs`), `tests/wurzeln.rs` (10 rows, three of them new: function-pointer re-view, field pointer, read-only twin), probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` | measured: 0 new `R014` over every tracked `.gab` except the probe |
-| **`R015`**, the boundary: a function that assumes two pointer parameters distinct (one writable or `own`) and is `pub` or called by no body of its unit says so | `m3.rs`, sentence `m3.zeiger_wurzel_grenze` | a HINT, not a refusal; it is the Rust face of the hypothesis `ParamVerschieden` of `r014_objGetrennt` (§75) |
-| **`noalias`** on a writable pointer parameter of an *internal* function the checker holds the whole call of (not `pub`, has a body, called from a body of the unit, address never taken, named by no entry/boot/concurrent item, `effects` naming nothing but its own pointer parameters) | `crates/gabbro-check/src/llvm.rs`, `tests/noalias.rs` (one positive row, four refusing twins), `dokumente/LLVM-BACKEND.md` | measured: 10 `noalias` over `beispiele/` + `messung/*/` (was 2), IR verified with `opt`; **not a Lean judgment**: the model side is §74/§75, the rule itself is a Rust checker rule |
+| **The repair of the slice-2b finding.** `getrennte_wurzeln` no longer skips a pair with an untraced name: a field read, an index, an indirect call, an unresolved callee, an argument that is no bare name and a re-view of an untraced pointer are `UNBEKANNT`, a root equal to every root; a fresh root is only for an answer that comes from no pointer argument. Pairs of two read-only parameters stay free | deleted `m3.rs`, sentence `m3.zeiger_wurzel` (deleted `saetze.rs`), deleted `tests/wurzeln.rs` (10 rows, three of them new: function-pointer re-view, field pointer, read-only twin), probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` | measured: 0 new `R014` over every tracked `.gab` except the probe |
+| **`R015`**, the boundary: a function that assumes two pointer parameters distinct (one writable or `own`) and is `pub` or called by no body of its unit says so | deleted `m3.rs`, sentence `m3.zeiger_wurzel_grenze` | a HINT, not a refusal; it was the deleted checker's face of the hypothesis `ParamVerschieden` of `r014_objGetrennt` (§75; Lean: `ObjektWurzel.lean`) |
+| **`noalias`** on a writable pointer parameter of an *internal* function the checker holds the whole call of (not `pub`, has a body, called from a body of the unit, address never taken, named by no entry/boot/concurrent item, `effects` naming nothing but its own pointer parameters) | deleted `llvm.rs`, deleted `tests/noalias.rs` (one positive row, four refusing twins), `dokumente/LLVM-BACKEND.md` | measured: 10 `noalias` over `beispiele/` + `messung/*/` (was 2), IR verified with `opt`; **not a Lean judgment**: the model side is §74/§75; the decidable rule died with the deleted checker |
 
 NOT proved: the `let` walk of the checker over G syntax (the premise `HerkunftTreu`); `R004`/`R007` as
 special cases of `R014` (they stay separate rules); records over byte buffers (range objects, `LG005`/
@@ -4154,7 +4154,7 @@ special cases of `R014` (they stay separate rules); records over byte buffers (r
 
 ## 77. The Lean parser as a measured front end: coverage matrix, no new theorem (Track P, 2026-10-17)
 
-Statement-level facts: `lex_keywords` and `wortschatz_248` hold over the 248 words of `kw.rs` (five were missing);
+Statement-level facts: `lex_keywords` and `wortschatz_248` hold over the 248 words of the `wortschatz` table (five were missing);
 `u104parse`, `u104elab`, `u104lower`, `lowerAllg104*`, `lowerAllg108*` and the `ElementTiefProben1..7` probes hold over the
 changed readers (`lockT` 7 fields, `globT` 7, `arenaT` 6, `SSyscall` = `SWay` + `SGate`, `SAnw.each` structured).
 Statics (2026-10-18): `declOf` carries `Glob := Fin u.globs.length` (`gdarf_globs`: no static is guarded), the call rule
@@ -4265,8 +4265,8 @@ Third pass (2026-10-18, `PLAN-DYNAMIC.md` 8a.1; sub-folders `Formen/` and `Erken
 | witnesses (RUN on real worlds, soundness theorem applied) and planted defects: `baumHang_zeuge`, `baumSchnitt_zeuge`, `doppelHang_abgelehnt`, `fremdHang_abgelehnt`, `frischFrei_abgelehnt`; `kombiHang_zeuge`, `kombiVersetzen_zeuge`, `doppelGlied_abgelehnt` (a slot in both structures), `kombiEnde_zeuge`; `drain_zeuge`, `drainForever_zeuge`, `fuell_zeuge`, `schiebeSchleife_abgelehnt`; `erst_zeuge`, `bruder_zeuge`, `revoke_zeuge`, `bruderOhneVater_defekt`, `freiOhneSchnitt_defekt`; `push_zeuge`, `pop_zeuge`, `push_defekt` | `ArenaErkZeuge{Baum,Kombi,Schleife,Sib,Ende}`, `ArenaHashZeuge` | none |
 
 NOT proved: the recognizer is not a component of `Akzeptiert` and no generic statement says every accepted unit's structure writers are
-`ErkE`-derivable (8a.3 is a proposal, revised: an arena as an invariant name, the derivation a certificate in the unit); no `Block` the Rust
-checker accepts is translated to a derivation (no exporter for these forms); a recognized body calls no function; a walk that releases EVERY
+`ErkE`-derivable (8a.3 is a proposal, revised: an arena as an invariant name, the derivation a certificate in the unit); no `Block` the deleted Rust
+checker accepted is translated to a derivation (no exporter for these forms); a recognized body calls no function; a walk that releases EVERY
 slot of a revoked subtree (only the cut and the release of one orphan are proved); recognizers for hash chains and for the sibling demand
 (`SibOk`/`HashOk` have executed forms and witnesses only: the recognizer's `haengen` does not track the parent store); `leave`/`next` in loop
 bodies; a copy of an owned index (alias) and any other store into a link field have no derivation; concurrency (design note 8a.2). These
@@ -4274,7 +4274,7 @@ modules are not imported by `Zielsatz/`; `Spec.lean` unchanged; `gabbro_ziel` un
 
 ## 80. Message passing with a plain payload: happens-before over a payload, the counter-models and the litmus tests (Phase B item 1, 2026-10-18, `PLAN-DYNAMIC.md` §11)
 
-*Files: `grammatik/Grammatik/Speichermodell/Payload/{PayloadHb,PayloadLitmus,PayloadLB}.lean`. Model only: `Spec.lean`, the Rust checker and the exporter are unchanged, `gabbro_ziel` is untouched (nothing imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` (the litmus file needs only `propext`, `Quot.sound`).*
+*Files: `grammatik/Grammatik/Speichermodell/Payload/{PayloadHb,PayloadLitmus,PayloadLB}.lean`. Model only: `Spec.lean` unchanged, the deleted Rust checker and exporter untouched, `gabbro_ziel` is untouched (nothing imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` (the litmus file needs only `propext`, `Quot.sound`).*
 
 | Statement | File | Hypotheses |
 |---|---|---|
@@ -4312,7 +4312,7 @@ the migration D1 (analysed, not built); the exporter; `Spec.lean` unchanged, the
 
 ## 81. The per-core interrupt-mask state of machine G, `KernHaltE` derived, and the mask as `Code` (O19 rest, 2026-10-18, `PLAN-DYNAMIC.md` 8a.4)
 
-*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/{KernMaske,KernMaskeGleich,KernMaskeZeuge}.lean`, `grammatik/Grammatik/Code/Conc/{Mask,MaskNeed,MaskRel,MaskWitness}.lean`, `Code/Model/{Syntax,Semantics}.lean` (one instruction). Model only: `Spec.lean`, the Rust checker, the exporter and the LLVM backend are unchanged, `gabbro_ziel` is untouched (nothing in `Zielsatz/` imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` at most.*
+*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/{KernMaske,KernMaskeGleich,KernMaskeZeuge}.lean`, `grammatik/Grammatik/Code/Conc/{Mask,MaskNeed,MaskRel,MaskWitness}.lean`, `Code/Model/{Syntax,Semantics}.lean` (one instruction). Model only: `Spec.lean` unchanged, the deleted Rust checker, exporter and LLVM backend untouched, `gabbro_ziel` is untouched (nothing in `Zielsatz/` imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` at most.*
 
 | Statement | File | Hypotheses |
 |---|---|---|
@@ -4329,11 +4329,11 @@ the migration D1 (analysed, not built); the exporter; `Spec.lean` unchanged, the
 | `MaskCells` (cover: G masked implies the word is nonzero), `MaskDisj`, `maskCells_store_other`, **`maskCells_ticket`**, `lockRel_mask_store`, **`mask_on_step`**, **`maskCells_nach`**, **`mask_off_step`**, **`irq_guard`** (with `MaskHw`: a handler entry on core `c` happens only where `mk c = []`, the premise `eintritt` of `KernSchritt`) | `MaskRel` | layout facts `MaskDisj`; `hex`/`hx` ghost premises |
 | witnesses: **`mask_witness`** (one thread through the lowered section: `LockRel` and `MaskCells` at both stops), `maskHw_witness` (satisfiable), `maskHw_planted` (planted defect: a CPU that interrupts a masked core meets no `MaskHw`), `irq_refused_inside`; fixture `mD`/`mLay`/`mMod` | `MaskWitness` | none |
 
-NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.4: move the layer into `Spec.lean`, `KernHaltE := KernHaltM`, drop `KernPlan`), its GA twin `KernHaltEA`; the composition of the `Code` steps with the interleaving of ALL threads of a core (H3 is a named premise; the restore step has a ghost premise); handler re-entry and handler-on-handler preemption (a begun handler blocks every other thread of its core, as in `KernPlan`); a Rust/LLVM emitter for `imsk` (Lean first); several cores in the `Code` witness (one core).
+NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.4: move the layer into `Spec.lean`, `KernHaltE := KernHaltM`, drop `KernPlan`), its GA twin `KernHaltEA`; the composition of the `Code` steps with the interleaving of ALL threads of a core (H3 is a named premise; the restore step has a ghost premise); handler re-entry and handler-on-handler preemption (a begun handler blocks every other thread of its core, as in `KernPlan`); an emitter for `imsk` (Lean first); several cores in the `Code` witness (one core).
 
 ## 82. The reader/writer lock: the layer `RwSchritt` over machine G, its legs, and the lowering as `Code` (2026-10-18, `PLAN-DYNAMIC.md` 8a.5)
 
-*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/{RwSchritt,RwRang,RwOrdnung,RwInv,RwZeuge,RwZeugeLeser}.lean`, `grammatik/Grammatik/Code/Conc/{RwLock,RwLockRel,RwLockWitness}.lean`. Model only: `Spec.lean`, the Rust checker, the exporter and the LLVM backend are unchanged, `gabbro_ziel` is untouched (nothing in `Zielsatz/Kern/` imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` at most.*
+*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/{RwSchritt,RwRang,RwOrdnung,RwInv,RwZeuge,RwZeugeLeser}.lean`, `grammatik/Grammatik/Code/Conc/{RwLock,RwLockRel,RwLockWitness}.lean`. Model only: `Spec.lean` unchanged, the deleted Rust checker, exporter and LLVM backend untouched, `gabbro_ziel` is untouched (nothing in `Zielsatz/Kern/` imports these modules; `Grammatik.lean` does). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` at most.*
 
 | Statement | File | Hypotheses |
 |---|---|---|
@@ -4351,23 +4351,23 @@ NOT proved: the `Spec.lean` restatement (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.4: mov
 | **`RwRel`** (ghost readers and writer, the word, G's held locks counted, the mode), `rwRel_step`, **`rwRel_exkl`** (it implies `RwExkl`), the steps **`rd_take_ok_step`** (= the layer's shared acquisition), **`wr_take_ok_step`** (= G's `dannLocks`, `RufFreiG`), **`rd_rel_step`**, **`wr_rel_step`** (= G's `freiGib`), the silent `rd_load_wait_step`, `rd_load_go_step`, `rd_take_fail_step`, `wr_take_fail_step`, `rw_store_post` | `RwLockRel` | `LayoutOk`; the ONE named assumption `hroom` (fewer than `2 ^ (wbits - 1) - 1` readers at once) |
 | witness **`rw_witness`** (two readers and a writer on the lowered blocks: a winning take, a LOSING take, both readers hold, the writer's take fails, both release, the writer takes alone; `RwRel` after every step); fixture `cD`/`cLay` | `RwLockWitness` | none |
 
-NOT proved: the `Spec.lean` change (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.5: the mode in G, recommended; or a layer statement) and the syntax (`lock L rank N rw`, `reads L { ... }`, the signature clause `reads L`: proposals); the legs of `Ziel` that are proved by induction over `RufErreichbarG` and have no layer twin (`schwach`, `vertrag`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `folge`, `fortschritt`, `zeit`, `keinKernHalt`: a layer-reachable machine is not G-reachable); the checker rule that DERIVES `LeserLos` (a PREMISE here); one mode per (thread, lock) in the layer; fairness (a stream of readers can starve a writer; a writer-preference bit is not modelled); the composition of the `Code` steps with ALL interleavings (the steps are per-thread, as the ticket lock's); a Rust/LLVM emitter (Lean first).
+NOT proved: the `Spec.lean` change (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.5: the mode in G, recommended; or a layer statement) and the syntax (`lock L rank N rw`, `reads L { ... }`, the signature clause `reads L`: proposals); the legs of `Ziel` that are proved by induction over `RufErreichbarG` and have no layer twin (`schwach`, `vertrag`, `invRueck`, `invGrund`, `invRuhe`, `invSicht`, `folge`, `fortschritt`, `zeit`, `keinKernHalt`: a layer-reachable machine is not G-reachable); the checker rule that DERIVES `LeserLos` (a PREMISE here); one mode per (thread, lock) in the layer; fairness (a stream of readers can starve a writer; a writer-preference bit is not modelled); the composition of the `Code` steps with ALL interleavings (the steps are per-thread, as the ticket lock's); an emitter (Lean first).
 
 ## 83. Comments: `//`, nesting `/* */`, `///` doc trivia (Simon's decision, 2026-10-18; lexical syntax, `SYNTAX.md` `comment`)
 
-*Files: `grammatik/Grammatik/Parser/Lex/{Lexer,LexerVertrauen,LexerDoku}.lean`, `crates/gabbro-syntax/src/lex.rs`. Model only for the lexer; `gabbro_ziel` is untouched (the statement does not mention comments).*
+*Files: `grammatik/Grammatik/Parser/Lex/{Lexer,LexerVertrauen,LexerDoku}.lean`, deleted `lex.rs`. Model only for the lexer; `gabbro_ziel` is untouched (the statement does not mention comments).*
 
 | Statement | File | Hypotheses |
 |---|---|---|
 | `nimmZeile`, `ueberBlock` (depth counter: `/*` opens one level, `*/` closes one, depth 0 ends the comment; `none` = the text ended inside), `ueberBlock_schliesst`, `ueberBlock_oeffnet`, `ueberBlock_null`; `scan` handles `//`, `////`+, `///` and `/*` before any other mark, so a marker inside a string is text (the `"` arm reads the whole string first) | `Lexer` | none |
 | witnesses: `lex_kommentar`, `lex_block`, **`lex_block_verschachtelt`** (`/* x /* y */ still comment */`), `lex_block_tief` (depth three), `lex_block_leer`, `lex_marker_im_text`, `lex_text_im_kommentar`, `lex_block_streuende_ende` (a stray `*/` is `*` `/`), **`lex_alter_strich_kein_kommentar`** (`--` is two minus marks) | `Lexer` | none |
-| refusals: **`lex_block_offen`**, `lex_block_offen_verschachtelt` (`.offenerKommentar`, Rust `L008`) | `Lexer` | none |
+| refusals: **`lex_block_offen`**, `lex_block_offen_verschachtelt` (`.offenerKommentar`; the deleted Rust `L008`, not a Lean judgment) | `Lexer` | none |
 | doc trivia: `lexDoku` keeps `///` as `Token.doku` (text after the three slashes), `lex_doku`, `lexDoku_doku`, `lexDoku_vier_striche` (`////` is ordinary), `lexDoku_zwei_striche`, `lexDoku_doku_im_block`, `lexDoku_doku_am_ende` | `Lexer` | none |
 | **`lex_ohne_doku`** (for EVERY source text, `lex` never holds a `Token.doku`: a doc comment cannot change what the parser reads), `scan_ohne_doku`, witness `lex_ohne_doku_zeuge` (a source whose `lexDoku` differs from `lex`), `lex_ohne_doku_beispiel` | `LexerDoku` | none |
 | planted defect: `ueberBlock_verschachtelt_flach` (the flat variant stops at the inner closer and differs from `ueberBlock`: the nesting witness is not vacuous), `ueberBlock_verschachtelt` | `Lexer` | none |
 | the trust gate (`codeZeichen`) skips both comment forms the way `scan` does: `quelle_kommentar_sauber`, `quelle_blockkommentar_sauber`, `quelle_bidi` (a bidi character is refused inside a comment too) | `LexerVertrauen` | none |
 
-NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the parser (the parser reads `lex`, so it holds by construction); the Rust lexer's agreement with `scan` beyond the probes (`gift/1471`, the Rust unit tests, the corpus rewritten to `//`). A tool that attaches doc comments to items does not exist yet.
+NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the parser (the parser reads `lex`, so it holds by construction); agreement of any second lexer with `scan` beyond the probes (`gift/1471`, the deleted Rust unit tests, the corpus rewritten to `//`). A tool that attaches doc comments to items does not exist yet.
 
 ## 84. Hardware-neutral gates: region provider, trap clause, process exit, join order, targets as data, the `Code` gate (2026-10-18, `PLAN-HARDWARE.md` §16, `LLVM-BACKEND.md` §11)
 
@@ -4389,7 +4389,7 @@ NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the p
 | the interrupt mask as a user gate: `maskSpec`, **`maskSpec_eindeutig`**, **`maskSpec_ist_imsk`**, `imsk_ist_maskSpec` (the exchange gate IS `Instr.imsk`) | `Maske` | `MaskHw` of `MaskNeed` stays the gate's assumption |
 | **neutrality**: `GabbroZielZ Z`, **`gabbro_ziel_zusatz`** (for EVERY family of extra named assumptions the statement holds), **`gabbro_ziel_leer`** (`GabbroZielZ (fun _ _ => True) ↔ GabbroZiel`); `AnbieterAnnahme`, `anbieter_leer`, `anbieter_praefix`, `lauf_append`, planted defect `anbieter_verletzt`, witness `anbieter_zeuge` | `Neutral` | none |
 
-NOT proved (open, named in `PLAN-HARDWARE.md` §16.11/§16.12): the bridge from ghost-carrier contracts to `PStep` (O-H1) and the run-level projection of the provider log (O-H2); the `Profil.lean` text/list entries (O-H3); the `Code`-side bridge has no resident bit, so commit and page return are shown to KEEP the correspondence but residency is not a `Code` fact; that any user text does what its gate says (that is the falsifier's job); frames larger than the stack guard; the layout/word consistency of a target (a checker rule); L5 stubs and the port-space accessors are design only; the Rust parser, checker and compiler are not changed.
+NOT proved (open, named in `PLAN-HARDWARE.md` §16.11/§16.12): the bridge from ghost-carrier contracts to `PStep` (O-H1) and the run-level projection of the provider log (O-H2); the `Profil.lean` text/list entries (O-H3); the `Code`-side bridge has no resident bit, so commit and page return are shown to KEEP the correspondence but residency is not a `Code` fact; that any user text does what its gate says (that is the falsifier's job); frames larger than the stack guard; the layout/word consistency of a target (a checker rule); L5 stubs and the port-space accessors are design only; the Lean parser, checker and compiler path is unchanged by this.
 
 ## 85. Adequacy of a test set: sufficiency, minimality and the count for Gabbro (Phase C item 8, 2026-10-19, `CHECKER.md` §16)
 
@@ -4407,7 +4407,7 @@ NOT proved (open, named in `PLAN-HARDWARE.md` §16.11/§16.12): the bridge from 
 | witnesses: a 3-constructor lock checker, `spezifiziert`, **`testmenge_zahl`** (32 tests), **`falsch_faellt`** (a planted wrong checker fails one), **`hinlaenglich_zeuge`**, **`wurzel_noetig_zeuge`**, `wurzel_schranke_zeuge` (13 ≤ \|M\|), **`kein_endlicher_test_zeuge`**, `deckung_zeuge` | `Zeugen` | none (kernel `decide`) |
 | Gabbro: the constructor table of the term families checked against the model at elaboration (`Signatur`); root-cell counts **`wurzel_z0`** (1 650), **`wurzel_z1`** (657 922 500), `wurzelFamilie`; pattern atoms of the ten components, `musterZellen_wert` (≤ 4 540) | `Gabbro/Signatur`, `Gabbro/Zaehlung` | the dimension table (H2, H3, H6) is a reading of the model, on paper |
 
-NOT proved: that the Rust checker and compiler are in any of these classes (hypotheses H1-H8 of `CHECKER.md` §16.1, an assumption about the code, measured by metamorphic tests); the Myhill-Nerode index of `AkzeptiertX` (only the presentation upper bound is computed); `|W| ≤ n - 1` and the witness height `m + n - 1` (paper); the exact minimum for `m = n` (open); that every presentation combination is reachable in a given declaration.
+NOT proved: that the deleted checker and compiler were in any of these classes (hypotheses H1-H8 of `CHECKER.md` §16.1, an assumption about the deleted code, measured by metamorphic tests); the Myhill-Nerode index of `AkzeptiertX` (only the presentation upper bound is computed); `|W| ≤ n - 1` and the witness height `m + n - 1` (paper); the exact minimum for `m = n` (open); that every presentation combination is reachable in a given declaration.
 
 ## 86. The budget is not a stop of the program: `budgetUnecht` (2026-10-22, review of `gabbro_ziel`, point 2)
 
@@ -4520,7 +4520,7 @@ witness is not a universal simulator. `Spec.lean`, `Akzeptiert` and the semantic
 
 Validation: `lake build` succeeds (1,775 jobs); `lake build Grammatik.Berechenbarkeit.Audit` checks 34 declarations
 using only `propext`, `Classical.choice` and `Quot.sound`, with exactly those three for `gabbro_ziel`.
-The Lean guardian's no-holes scan and the repository layout check pass. These are model checks, not a Rust or binary verification.
+The Lean guardian's no-holes scan and the repository layout check pass. These are model checks, not a binary verification.
 
 **Planned continuation:** [PROOF.md D5](PROOF.md#d5-complete-universality-proof-and-brainfuck-compiler-plan-2026-10-24)
 specifies the complete Brainfuck-to-finite-TM2-to-G compiler proof and the shared
@@ -4550,7 +4550,7 @@ No Gabbro construct, classifier, measure duty or goal premise changed. Still ope
 stack workers/protocol, their admission and initialization, the TM2-to-G simulation and the final universality theorem.
 
 Validation of this milestone: full `lake build` succeeds (1,849 jobs), the expanded axiom audit checks 73 declarations
-with standard axioms only, and the goal-axiom, no-holes and layout checks pass. No production Rust or binary claim follows.
+with standard axioms only, and the goal-axiom, no-holes and layout checks pass. No production binary claim follows.
 
 ### 91.2. Finite target entry, unbounded source tape and real G call/return storage (2026-10-24)
 
@@ -4586,7 +4586,7 @@ Plan and remaining closure conditions: `PLAN-DYNAMIC.md` section 12.
   changes the free-list head from 4 to 0, and leaves no access through a saved caller alias. All premises are instantiated jointly.
 
 Targeted module checks pass with standard axioms only. **Open:** a computed source ownership judgment discharging `Bodies`, general
-owning-result/alias admission and the central `Akzeptiert`/goal integration. This increment does not close the whole gap or certify Rust.
+owning-result/alias admission and the central `Akzeptiert`/goal integration. This increment does not close the whole gap or certify a checker.
 
 
 The next increment adds generic `factory_checked`, `factory_oom_path`, `factory_result`, `identity_result` and `borrow_result`, and
@@ -4692,7 +4692,7 @@ Authorization, architecture and open integration: `PLAN-DYNAMIC.md` section 13. 
 
 The complete `Grammatik` plus dedicated audit build succeeds (2,188 jobs), auditing 64 declarations with standard axioms; the original
 goal keeps exactly the standard three. Layout and no-holes checks pass. This component is
-**not yet a whole-program unbounded G heap**, a computed source admission judgment, a Rust feature or a Turing-completeness theorem.
+**not yet a whole-program unbounded G heap**, a computed source admission judgment or a Turing-completeness theorem.
 
 
 ### 93.1. Linked TM2/BF execution and conditional operation counts (2026-10-24)
@@ -4714,7 +4714,7 @@ counts, Brainfuck compilation and joint execution witnesses. `PLAN-DYNAMIC.md` 1
 
 Full library plus heap audit: 2,213 jobs; 68 new and 64 earlier storage/main axiom lists, all standard. Executed witnesses cover transfer,
 nested loops, wrap, empty input entry, OOM, fuel exhaustion, divergent output prefixes and peek followed by release. No G admission or
-Rust/universality claim is inferred from these component results.
+universality claim is inferred from these component results.
 
 ### 93.2. Actual G stack prefixes and terminating program witness (2026-10-24)
 
@@ -4944,8 +4944,8 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   merges two items); each with a `_zeuge`. Probes (kernel-decided): `zwei_ok`/`zwei_traeger`/
   `zwei_wirkung` (two `C`, one written through a `use`d function and one by path), `tief_ok`/`tief_traeger`,
   `unsichtbar_refused`, `falsch_getrennt` (an effect on `a::C` and a body writing `b::C` stay apart).
-* Not yet followed (Simon, 2026-10-25: Lean model only): the Rust parser, checker and LLVM still name items by
-  short name and refuse a second one (`N039`, `N042`) -- former work item O28.
+* Not yet followed (Simon, 2026-10-25: Lean model only): the deleted parser, checker and LLVM named items by
+  short name and refused a second one (`N039`, `N042` — neither yet a Lean judgment) -- former work item O28.
 
 
 ## 102. End-block forms: narrow, exchange and a two-armed `if` at the end of a body (2026-10-26)
@@ -4965,8 +4965,8 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
 * List-valued analyses of `ite` are ordered false arm first (`alsBlock` order); Bool-valued ones are commuted in
   their `alsBlock` lemmas.
 * Not claimed: arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them (false), a refusal, not an
-  acceptance; the generator does not draw them (size `unendlich`, `bekannteLuecken`: `G_ENDFORM`); the Rust exporter
-  does not construct them (LLVM register OPEN).
+  acceptance; the generator does not draw them (size `unendlich`, `bekannteLuecken`: `G_ENDFORM`); the deleted Rust exporter
+  did not construct them (LLVM register OPEN).
 * Fine cells: `Endblock` constructors 14-16; `kTab` regenerated; the pinned component hashes moved structurally only.
 * Front end (`Parser/Elab`): `narrow` at the top level of a body and in an `else` branch; `let x = A exchange
   update(v) [bounded … ops] [on_exceeded …] { [return] e } [publishes nothing]` (`UStmt.tausch`; the binder type, if
@@ -4988,7 +4988,7 @@ All axiom lists standard.
   them (`G_WENN`).
 * Front end (`Parser/Elab`), all checked by kernel probes in `UebersetzeProben18`:
   * the compare form `let x = A exchange e when p returns r …`: the new value `Expr.wenn p e old`, the binder `x`
-    the success `p` (a truth value, as the Rust checker types it), `old(A)` in `p` the old value;
+    the success `p` (a truth value, as the deleted checker typed it), `old(A)` in `p` the old value;
   * `update` bodies with `if`/`else if`/`else` and guarded `return`s: nested `Expr.wenn`, each arm reading the
     binder narrowed by its guard and the negated guards before it (`Expr.eng`, whose fallback is unreachable
     there), so `if v < 100 { return v + 1; }` fits `0 .. 100` and `if v < 101` does not;
@@ -5019,7 +5019,7 @@ hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
   `zu_ok`, `offen_refused`, `namensgleich_huelle`, `falscheArt_huelle`, `huelle_ohne_pub_zeuge`,
   `pub_sichtbar_zeuge`.
 * Round trip: `pubT` is outside `ItemGut`, like `gateT` (no print-parse claim for marked items yet).
-* Not yet followed (Lean model only): the Rust `N038` compares short names and its `pub` grammar is per kind.
+* Not yet followed (Lean model only): the deleted checker's `N038` compared short names and its `pub` grammar was per kind (Lean: `huelle_geschlossen` in `Parser/Namen/Oeffentlich.lean`).
 
 
 ## 105. Stage 0: the thread machine stepped, real system calls, OS threads (2026-10-26)
@@ -6123,7 +6123,7 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`zertifikat_uebersetzer_name_zeuge`**: Both fixtures select the translator named `build` by key.
 * **`nutzlast_inhalt_eindeutig`**: Two payloads of one certificate agree on content.
 * **`zertifikat_standort_gebunden_zeuge`**: The identity payload sits at the exact source call site.
-* **`rust_ausgabe_nachgerechnet_zeuge`**: The Rust printer's claimed payload re-decodes from raw tokens in Lean.
+* **`rust_ausgabe_nachgerechnet_zeuge`**: The deleted Rust printer's claimed payload re-decodes from raw tokens in Lean.
 
 `grammatik/Grammatik/Logik/Vertraege/UebersetzungReinheit.lean`:
 
@@ -7154,14 +7154,12 @@ statements in the source; no build or axiom audit of them is recorded here (the 
 | `GabbroZiel` (definition) | `grammatik/Grammatik/Zielsatz/Kern/Spec/Fremd.lean` | (a) `C.akzeptiert`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag E O`, (c) `HardwareAnnahmenHw O E.Q`, (d) `Laufzeit` give `ZielFX` on every thread machine over GX reachable from the runtime's start. |
 | `gabbro_ziel` | `grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Fremd.lean` | Proof of `GabbroZiel`: the binding inhabits the question-world class (`axVertragOP_of_binding`), the call-site duty answers every reachable question (`relyQ_of_callSite`), then `zielFX_rely`. |
 | `GabbroZielVoll`, `gabbro_ziel_voll` | `grammatik/Grammatik/Zielsatz/Kern/Spec/Teil2.lean`, `.../BeweisAtomar/Voll.lean` | The goal under the unconditional summary premise `HardwareAnnahmen` (the statement of before, text unchanged). |
-| `CallSiteAccepted.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteAcceptedFixture.lean` | JOINT WITNESS on `CallSiteReplayBlocker.goodUnit`: the concrete checker accepts a true function contract and immediate-return start, with one unused software item, explicit oracle-source and finite-pointer metadata, `NutzerPflichtA`, empty `CallSitePflicht`, `PostDeckt`, `ForeignVertrag`, `HardwareAnnahmenHw` and `Laufzeit`. The binding violates the unused full summary. `gabbro_ziel` gives every leg of `ZielFX` on every reachable machine, for every budget. This does not assert acceptance of a foreign-call body. |
-| `CallSiteGoal.callSite_refused_zeuge` | `.../CallSite/CallSiteGoalZeuge.lean` | REFUSED REGRESSION on the unchanged `wE`: the concrete checker refuses its foreign-call body. All original semantic witnesses remain jointly true: user and call-site duties, binding and post cover, hardware, runtime, pre true at 1 and false at 0, failure of the full summary, dependence on that summary, and a GX step executing the software call. No accepted-goal conclusion is claimed for this fixture. |
+| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with `ensures result == 1`; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start -- and: the pre holds at `1` and fails at `0`; `echo` breaks the full summary (`¬ AxVertragO`, so `GabbroZielVoll` does not apply to it); the body duty is false without `g`'s summary; the start's question has a true pre; one GX step of thread 0 runs the software call and reaches a machine with thread 0 at its return, where `gabbro_ziel` gives `ZielFX`. |
 | `CallSiteGoal.call_sites` | `.../CallSite/CallSiteGoalSites.lean` | `CallSitePflicht wE` over every binding, budget and start: the head invariant `Koepfe` (empty stacks; a return, or the call whose arguments meet the pre in every world) holds at every start and is kept by every G and GX step. |
 | `bindAxiom_ende_schritt` | `.../CallSite/CallSiteGoalStep.lean` | Generic: at a head `ende (let x = g(…); rest)` every step of the thread is `endeBindAxiom`; stack, frame function, arguments, entry world and log are kept and the residue is `ende rest` with an answer bound. |
 | `CallSiteGoal.user`, `CallSiteGoal.body_out` | `.../CallSite/CallSiteGoalUser.lean` | `NutzerPflichtA wE`: against every frame-respecting oracle of `AxVertragOP (PreQ wP) wQ` the body returns `1` (the class grants the summary because the pre `1 != 0` holds) or stops at the named hardware outcome of an undecodable answer. |
 | `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | With the empty summary in place of `wQ` the body duty is false: an oracle answering `0` is then admitted. |
-| `CallSiteGoal.checker`, `CallSiteGoal.contract_refusal` | `.../CallSite/CallSiteGoalFixture.lean` | Concrete acceptance is `false`; the contract verdict is exactly `contract end block is outside the checked control fragment`. The generator has no foreign-call rule, even for this typed call with proved binding and call-site duties. |
-| `CallSiteReplayBlocker.checker`, `CallSiteReplayBlocker.good_checker` | `.../CallSite/CallSiteReplayBlocker.lean` | The false function post is refused; the separate immediate-return `goodUnit` with a true function post and complete source metadata is accepted. `good_call_sites` proves its empty call-site duty. |
+| `CallSiteGoal.checker` | `.../CallSite/CallSiteGoalFixture.lean` | `akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true`, decided component by component over the one body (`schnittstellenB` through `schnittstellenB_iff`). |
 
 The three C08 blocker modules (`CallSiteConditionalBite`, `CallSiteQuestionBlocker`,
 `CallSiteReplayBlocker`) moved with the witness into `Zielsatz/Atomar/CallSite/` (layout rule

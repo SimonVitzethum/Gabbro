@@ -1,5 +1,4 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0073SugarWidths
 import all Init.Data.Repr
@@ -202,50 +201,62 @@ def grenze_f : UFn := u.fns[3]'(by decide)
 def minus_f : UFn := u.fns[4]'(by decide)
 def voll_f : UFn := u.fns[5]'(by decide)
 
-example : zuBody u eins_f = some eins_body := rfl
-example : zuBody u dreizehn_f = some dreizehn_body := rfl
-example : zuBody u wandle_f = some wandle_body := rfl
-example : zuBody u grenze_f = some grenze_body := rfl
-example : zuBody u minus_f = some minus_body := rfl
-example : zuBody u voll_f = some voll_body := rfl
+theorem eins_body_eq : zuBodyZ u eins_f = some eins_body := by cbv
+theorem dreizehn_body_eq : zuBodyZ u dreizehn_f = some dreizehn_body := by cbv
+theorem wandle_body_eq : zuBodyZ u wandle_f = some wandle_body := by cbv
+theorem grenze_body_eq : zuBodyZ u grenze_f = some grenze_body := by cbv
+theorem minus_body_eq : zuBodyZ u minus_f = some minus_body := by cbv
+theorem voll_body_eq : zuBodyZ u voll_f = some voll_body := by cbv
 example : preExpr wandle_f = wandle_pre := rfl
 example : preExpr grenze_f = grenze_pre := rfl
-example : meetsU u wellFormed eins_f ((zuBody u eins_f).getD []) = eins_meets_statement := rfl
-example : meetsU u wellFormed dreizehn_f ((zuBody u dreizehn_f).getD []) = dreizehn_meets_statement := rfl
-example : meetsU u wellFormed wandle_f ((zuBody u wandle_f).getD []) = wandle_meets_statement := rfl
-example : meetsU u wellFormed grenze_f ((zuBody u grenze_f).getD []) = grenze_meets_statement := rfl
-example : meetsU u wellFormed minus_f ((zuBody u minus_f).getD []) = minus_meets_statement := rfl
-example : meetsU u wellFormed voll_f ((zuBody u voll_f).getD []) = voll_meets_statement := rfl
+example : meetsU u wellFormed eins_f ((zuBodyZ u eins_f).getD []) = eins_meets_statement := by
+  rw [eins_body_eq]
+  rfl
+example : meetsU u wellFormed dreizehn_f ((zuBodyZ u dreizehn_f).getD []) = dreizehn_meets_statement := by
+  rw [dreizehn_body_eq]
+  rfl
+example : meetsU u wellFormed wandle_f ((zuBodyZ u wandle_f).getD []) = wandle_meets_statement := by
+  rw [wandle_body_eq]
+  rfl
+example : meetsU u wellFormed grenze_f ((zuBodyZ u grenze_f).getD []) = grenze_meets_statement := by
+  rw [grenze_body_eq]
+  rfl
+example : meetsU u wellFormed minus_f ((zuBodyZ u minus_f).getD []) = minus_meets_statement := by
+  rw [minus_body_eq]
+  rfl
+example : meetsU u wellFormed voll_f ((zuBodyZ u voll_f).getD []) = voll_meets_statement := by
+  rw [voll_body_eq]
+  rfl
 
 /-- The duty of `eins`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_0 : ∃ body, zuBodyZ u (fnAt u ⟨0, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
-  ⟨eins_body, (by kernel_rfl), by rw [wfU_eq]; exact eins_meets⟩
+  ⟨eins_body, eins_body_eq, by rw [wfU_eq]; exact eins_meets⟩
 
 /-- The duty of `dreizehn`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_1 : ∃ body, zuBodyZ u (fnAt u ⟨1, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨1, by decide⟩) body :=
-  ⟨dreizehn_body, (by kernel_rfl), by rw [wfU_eq]; exact dreizehn_meets⟩
+  ⟨dreizehn_body, dreizehn_body_eq, by rw [wfU_eq]; exact dreizehn_meets⟩
 
 /-- The duty of `wandle`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_2 : ∃ body, zuBodyZ u (fnAt u ⟨2, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨2, by decide⟩) body :=
-  ⟨wandle_body, (by kernel_rfl), by rw [wfU_eq]; exact wandle_meets⟩
+  ⟨wandle_body, wandle_body_eq, by rw [wfU_eq]; exact wandle_meets⟩
 
 /-- The duty of `grenze`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_3 : ∃ body, zuBodyZ u (fnAt u ⟨3, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨3, by decide⟩) body :=
-  ⟨grenze_body, (by kernel_rfl), by rw [wfU_eq]; exact grenze_meets⟩
+  ⟨grenze_body, grenze_body_eq, by rw [wfU_eq]; exact grenze_meets⟩
 
 /-- The duty of `minus`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_4 : ∃ body, zuBodyZ u (fnAt u ⟨4, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨4, by decide⟩) body :=
-  ⟨minus_body, (by kernel_rfl), by rw [wfU_eq]; exact minus_meets⟩
+  ⟨minus_body, minus_body_eq, by rw [wfU_eq]; exact minus_meets⟩
 
 /-- The duty of `voll`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_5 : ∃ body, zuBodyZ u (fnAt u ⟨5, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨5, by decide⟩) body :=
-  ⟨voll_body, (by kernel_rfl), by rw [wfU_eq]; exact voll_meets⟩
+  ⟨voll_body, voll_body_eq, by rw [wfU_eq]; exact voll_meets⟩
 
 theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
   have duties : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧

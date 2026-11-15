@@ -40,7 +40,7 @@ def z15 : Zustand 2 := z14.mit 0 .weck
 def z16 : Zustand 2 := ⟨z15.w, upd (wecke z15.pc) 0 .frei, z15.q⟩
 def z17 : Zustand 2 := z16.mit 1 (.decC 1 z7.w.serv z16.w.wait)
 def z18 : Zustand 2 :=
-  ⟨⟨z17.w.next, z17.w.serv, (z16.w.wait + 18446744073709551615) % 18446744073709551616⟩,
+  ⟨⟨z17.w.next, z17.w.serv, wrapDec z16.w.wait⟩,
     upd z17.pc 1 (.ladeS 1), z17.q⟩
 def z19 : Zustand 2 := z18.mit 1 (.drin 1)
 
@@ -70,8 +70,8 @@ theorem s18 : Schritt z18 1 z19 := Schritt.tritt (k := 1) (by decide) (by decide
 
 theorem s19 (t : Fin 2) : Schritt z19 t z19 :=
   match t with
-  | ⟨0, _⟩ => Schritt.ruht (by decide)
-  | ⟨1, _⟩ => Schritt.arbeitet (k := 1) (by decide)
+  | ⟨0, _⟩ => Schritt.ruht rfl
+  | ⟨1, _⟩ => Schritt.arbeitet (k := 1) rfl
   | ⟨n + 2, h⟩ => absurd h (by omega)
 
 /-! ## The run -/
@@ -171,8 +171,8 @@ theorem zeuge_scheinbar : zeuge.ScheinbarEndlich := by
   show ((zz j).pc v).schlaeft = false
   rw [zz_ende (n := j) (by omega)]
   match v with
-  | ⟨0, _⟩ => decide
-  | ⟨1, _⟩ => decide
+  | ⟨0, _⟩ => rfl
+  | ⟨1, _⟩ => rfl
   | ⟨k + 2, hk⟩ => exact absurd hk (by omega)
 
 /-- **The premises of the liveness theorem hold jointly** on the witness run, for the blocked thread. -/

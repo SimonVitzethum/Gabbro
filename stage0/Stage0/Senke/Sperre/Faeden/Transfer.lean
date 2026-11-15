@@ -24,7 +24,7 @@
 -/
 module
 public import Stage0.Senke.Sperre.Faeden.Fenster
-public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Teil1
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Voll
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.Faeden

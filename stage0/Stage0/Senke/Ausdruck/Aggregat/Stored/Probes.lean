@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Satz
 public import Stage0.Senke.Welt.AnordnungLayout
+public import Stage0.Senke.Images.BildLese
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.StoredProbe
@@ -36,7 +37,7 @@ def memory : Runner.Mem where
 
 theorem bytes : BytesAt memory 0 (code.flatMap encII) := by
   intro i hi
-  have length : (code.flatMap encII).length = 128 := by decide
+  have length : (code.flatMap encII).length = 128 := by decide +kernel
   have small : i < 2 ^ 64 := by omega
   refine ⟨rfl, rfl, ?_⟩
   simp only [memory, Nat.zero_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small,
@@ -50,7 +51,7 @@ theorem source : ValueAt layout memory 4096 4 shape value := by
   rw [encoding]
   intro i hi
   have cases : i = 0 ∨ i = 1 ∨ i = 2 := by change i < 3 at hi; omega
-  rcases cases with rfl | rfl | rfl <;> decide
+  rcases cases with rfl | rfl | rfl <;> rfl
 
 theorem pre [Kern] : PreS layout memory 0 4096 16 7 code env := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,

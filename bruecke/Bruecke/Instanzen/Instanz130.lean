@@ -1,5 +1,4 @@
 module
-import Grammatik.Kern.Taktik.KernelRfl
 public import Bruecke.Kette.Quelle
 public import Duty.Duty0130DerivedContractPure
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -126,17 +125,19 @@ theorem wfU_eq : wfU u = wellFormed := by
 
 def add : UFn := u.fns[0]'(by decide)
 
-example : zuBody u add = some add_body := rfl
+theorem add_body_eq : zuBodyZ u add = some add_body := by cbv
 example : preExpr add = add_pre := rfl
 example : add.puts = add_writes := rfl
 example : (fun s s' r => (postU u wellFormed add s s' r).getD False) = add_post := rfl
 example : preProp wellFormed add = add_requires := rfl
-example : meetsU u wellFormed add ((zuBody u add).getD []) = add_meets_statement := rfl
+example : meetsU u wellFormed add ((zuBodyZ u add).getD []) = add_meets_statement := by
+  rw [add_body_eq]
+  rfl
 
 /-- The duty of `add`: the computed statement, closed by GabbroV's proof. -/
 theorem pflicht_0 : ∃ body, zuBodyZ u (fnAt u ⟨0, by decide⟩) = some body ∧
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
-  ⟨add_body, (by kernel_rfl), by rw [wfU_eq]; exact add_meets⟩
+  ⟨add_body, add_body_eq, by rw [wfU_eq]; exact add_meets⟩
 
 theorem pflichten (hPtr : SchnittstellenPflicht u) : PflichtenAlle quelle := by
   have duties : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = some body ∧

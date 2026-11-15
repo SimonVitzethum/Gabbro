@@ -45,7 +45,7 @@ theorem functions_at : PCode memory addresses target 4096 256 := by
     intro a outside
     simp only [memory]
     split
-    · next inside => exfalso; simp only [inSlots, BitVec.toNat_ofNat] at outside; omega
+    · next inside => exfalso; simp only [inSlots, BitVec.toNat_ofNat, show (2048 : BitVec 64).toNat = 2048 from rfl] at outside; omega
     · rfl
   have below : ∀ f : Fin 3, addresses f + 16 * (target f).length ≤ 2048 := by
     apply allFin
@@ -56,7 +56,8 @@ theorem functions_at : PCode memory addresses target 4096 256 := by
   refine ⟨(targets_code f).1.agree changed ?_, (targets_code f).2⟩
   have bound := below f
   have address := addresses_bound f
-  simp only [CodeFar, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : addresses f < 2 ^ 64)]
+  simp only [CodeFar, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : addresses f < 2 ^ 64),
+    show (2048 : BitVec 64).toNat = 2048 from rfl]
   constructor
   · omega
   · constructor

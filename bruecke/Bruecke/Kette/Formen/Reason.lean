@@ -63,7 +63,7 @@ theorem reasonArms_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       · rcases hcB with ⟨hn, _⟩ | ⟨m', restZ, bs', hn, hrB, hbrest, rfl⟩
         · cases hn
         · cases hn
-          rw [hrG] at hrB
+          subst hrG
           cases hrB
           have hsuf' : rest <:+ ss := (List.suffix_cons _ _).trans hsuf
           obtain ⟨htail, hsufTail, hRelated⟩ := ih (m + 1) k
@@ -82,7 +82,7 @@ theorem ReasonRelated.select {Γ : Ctx} {fn : UFn} {ids : List String} {Λ : Lis
       (∀ ρB s, Gabbro.Body.pickArm ρB bs (caseLabel (offset + i.val)) s = Gabbro.Body.exec ρB bb s) ∧
       (∀ σ ρ s, WGRel u σ s.world → PositionalLRel fn ids 0 ρ s.local' →
         BlockZiel_G u C c O passes R fn ids b σ ρ s bb) := by
-  induction h generalizing i with
+  induction h with
   | nil => exact (Nat.not_lt_zero _ i.isLt).elim
   | @cons n offset b rest bb bs hBody hRest ih =>
     rcases i with ⟨i, hi⟩

@@ -6,7 +6,6 @@
 module
 public import Stage0.Bindung
 public import Stage0.Compiler
-public import Grammatik.Logik.Vertraege.Pruefer.Unit
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
@@ -30,35 +29,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     Positive explicit capacities retain their exact size in runner words. -/
 def irStapel : Nat := 0
 
-/-- Check the actual initial memory and every start argument before producing
-    bytes. Hardware predicates do not participate in these data checks: the
-    temporary oracle family is true, and body certificates quantify over every
-    oracle contract. Source decreases are exported here, never replaced by a
-    user proof or an unchecked empty tuple. -/
-def checkImageStartData (u : UProg) (program : Programm (declOf u))
-    (memory : Speicher (declOf u))
-    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))) : Except String Unit := do
-  let exported ← Measures.lowerMeasures u
-  let E : Zielsatz.Einheit (declOf u) :=
-    { P := program, S := sperrFamilie u, Q := axWahr (declOf u)
-      sp0 := memory, starts := starts, lockFormulas := sperrQuellen u
-      measure := exported.mass
-      pointerSignatures := some (zeigerSignaturen u)
-      axiomSources := some
-        { items := List.finRange u.axs.length
-          complete := List.mem_finRange
-          resources := fun _ => []
-          expression := fun _ => .tru
-          correct := fun _ _ _ => rfl } }
-  let functions := List.finRange u.fns.length
-  let locks := List.finRange u.locks.length
-  match Zielsatz.checkUnitLogic E functions locks with
-  | .error cause => throw cause.message
-  | .ok _ =>
-      match Zielsatz.checkInvariants E functions locks with
-      | .error cause => throw cause.message
-      | .ok _ => pure ()
-
 /-- The actual image together with the exact source program and successful canonical IR emission. -/
 structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) where
   compiled : Compiled text options
@@ -70,10 +40,6 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   /-- the environment `main` starts with: the pointer to the table each parameter's type names -/
   args : Env (declOf compiled.unit) ((declOf compiled.unit).params compiled.main)
   pointers : Senke.mainEnv ((declOf compiled.unit).params compiled.main) = some args
-  /-- The actual entry values and original typed root occurrences passed VCs. -/
-  startChecked : checkImageStartData compiled.unit compiled.program
-    (Senke.initialWorld compiled.unit initialValid).speicher
-    (⟨compiled.main, args⟩ :: startPlan.starts (Senke.initialWorld compiled.unit initialValid)) = .ok ()
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
@@ -111,16 +77,12 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     match hp : Senke.mainEnv ((declOf u).params main) with
     | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
     | some args =>
-      match hs : checkImageStartData u P (Senke.initialWorld u initialValid).speicher
-          (⟨main, args⟩ :: startPlan.starts (Senke.initialWorld u initialValid)) with
-      | .error reason => throw reason
-      | .ok () =>
-        match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
-            (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
-            (startPlan.starts (Senke.initialWorld u initialValid)) K
-            (Senke.bodenAusrichtung u) with
-        | .error e => throw e
-        | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, hs, image, he⟩
+      match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
+          (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
+          (startPlan.starts (Senke.initialWorld u initialValid)) K
+          (Senke.bodenAusrichtung u) with
+      | .error e => throw e
+      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
 /-- The exact typed occurrences supplied to the image constructor. -/

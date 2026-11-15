@@ -44,11 +44,13 @@ theorem lowRetEnd_sim {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : 
       have hStmt : lowRetStmt (l := loopMode) u c Γ fn Λ [] r =
           .ok (.ret erg (of_decide_eq_true hp)) := by
         cases r
-        all_goals first
-          | (simp only [lowRetStmt, he, Except.bind, hp, ↓reduceDIte])
-          | exact (hn _ rfl).elim
+        case why i => exact (hn i rfl).elim
+        all_goals simp only [lowRetStmt, he, Except.bind, hp, ↓reduceDIte]
       obtain ⟨σ', v, hex, hw, hs⟩ := lowRet_sim c hStmt hb hU hT O passes R σ ρ s hW hL
-      exact ⟨σ', v, by simpa only [execStmt, execEnd] using hex, hw, hs⟩
+      refine ⟨σ', v, ?_, hw, hs⟩
+      simp only [execStmt] at hex
+      cases hex
+      rfl
     · cases h
 
 /-- Explicit endings cannot fall through; successful G returns are matched by Body returns. -/

@@ -2,7 +2,7 @@
 
 **Status (source audit 2026-11-03): Lean front ends are present for steps 1a–3c, within the
 checked domains below.** This replaces the stale “planned, not started” claim; it does not claim
-that every planned form reaches a Stage-0 image or that the Rust/Lean pipeline was rebuilt.
+that every planned form reaches a Stage-0 image.
 Paths are relative to `grammatik/Grammatik/Parser/`; no build was run for this audit.
 
 | Step | Code-derived status | Missing or restricted part |
@@ -20,9 +20,9 @@ The owner decisions of 2026-11-02 and the intended scope below remain the design
 the table records code already present, independently of the historical implementation order.
 
 Every form below follows §3 of `AGENTS.md`: the Lean model first (front end, exporter, the generic theorem of
-the desugaring, or the G extension with `gabbro_ziel` on the standard axioms), then the Rust checker and
-compiler, then `SYNTAX.md` and `LANGUAGE.md`. Every new refusal gets its code (next free `N`, re-measured),
-its sentence in `saetze.rs` and a poison probe in the same commit.
+the desugaring, or the G extension with `gabbro_ziel` on the standard axioms), then `SYNTAX.md` and
+`LANGUAGE.md`. Every new refusal gets its code (next free `N`, re-measured),
+its diagnostic sentence and a poison probe in the same commit.
 
 ---
 
@@ -316,7 +316,7 @@ Jobs::push(t)?;
    uses only existing forms, and a `_zeuge` on a non-degenerate fixture.
 3. Soundness does not depend on conformance: every instance is checked against the real contracts of its
    implementation. Conformance gives modularity, stable interfaces and early, precise refusals.
-4. Rust instantiates identically (a difference is a checker bug); Stage 0, IR and LLVM need nothing new.
+4. Expansion instantiates identically in every frontend (a difference is a checker bug); Stage 0 and IR need nothing new.
 5. Measure check time per instance and code size. Model B (a generic body checked once inside G) only if the
    measurement asks for it.
 
@@ -422,7 +422,7 @@ explicit style). §15 of `SYNTAX.md` stands as it is. `async fn`/`.await` is sep
 | 3c | O43 | **G extension** | contract in `SigPasst`, indirect call | medium–large |
 
 Rough estimate: phase 1 is 2–4 agent rounds, phase 2 6–12, 3a 1–2, 3b 6–10, 3c 4–8. The critical path is
-2a → 2b → 3b. Every step: Lean first, then Rust parser and checker (identical desugaring), `SYNTAX.md` and
+2a → 2b → 3b. Every step: Lean first (identical desugaring), `SYNTAX.md` and
 `LANGUAGE.md` (vocabulary +1 at 3b), refusal codes with sentences and poison probes, positive examples.
 
 ---
@@ -482,10 +482,10 @@ warning[W004]: filtered traversal over `Orders` (count 65536)
 
 ### 9.4 Obligations
 
-- Rust only (`crates/gabbro-check` for the static facts, `gabbro build` for the IR facts and LLVM remarks);
-  no Lean model change, off the trust path. The cost numbers come from the checker's `costs` computation, and
+- Lean only (the `Akzeptiert` judgment for the static facts, Stage 0 for the IR facts);
+  no Lean model change beyond this plan, off the trust path. The cost numbers come from the checker's `costs` computation, and
   a test holds them equal to it.
-- Every code: its sentence in `saetze.rs`, a positive example that fires and a negative example that must stay
+- Every code: its diagnostic sentence, a positive example that fires and a negative example that must stay
   silent; generic analyses only (nothing for particular programs).
 - Order: W004–W008, W011–W014, W016–W018 need none of the new forms and can start right after the C packages;
   W009, W010 and W015 follow phases 2 and 3.
