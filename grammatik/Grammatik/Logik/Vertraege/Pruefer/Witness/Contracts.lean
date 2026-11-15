@@ -41,7 +41,7 @@ theorem checker_accepted_zeuge :
     decide +kernel
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws unit.akku unit.pruefungen [] [] unit.lockFormulas unit.loopHints = true := by
-    unfold AkzeptiertX
+    unfold AkzeptiertX invariantVCB
     rw [invariants, contracts]
     simp only [Bool.and_true]
     decide +kernel
