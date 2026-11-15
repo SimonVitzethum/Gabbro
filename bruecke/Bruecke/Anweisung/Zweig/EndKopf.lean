@@ -104,16 +104,18 @@ theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     split at h
     · cases h
     · rename_i ty he
-      cases hq : lowEndL (l := false) u c _ (mitRuf u fn x head.callee ty) n
-          (nach (declOf u) head.callee Λ) [] ss with
-      | error e => simp only [hq, Except.bind] at h; cases h
-      | ok p =>
-        obtain ⟨q, tail'⟩ := p
-        simp only [hq, Except.bind] at h
+      split at h
+      · rename_i e he'
+        simp only [he', Except.bind] at h
+        cases h
+      · rename_i v hv
+        obtain ⟨q, tail'⟩ := v
+        simp only [hv, Except.bind, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
         split at h
         · rename_i hr
           cases h
-          exact ⟨head, ty, he, hr, q, (by first | exact hk | rfl | simp_all), hq, rfl⟩
+          exact ⟨head, ty, he, hr, q, (by first | exact hk | rfl | simp_all), (by first | exact hv | rfl | simp_all), rfl⟩
         · cases h
 
 /-- Invert the common structured-prefix continuation without unfolding either body. -/
