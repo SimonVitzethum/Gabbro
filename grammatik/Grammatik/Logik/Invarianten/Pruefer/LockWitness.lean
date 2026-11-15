@@ -27,18 +27,22 @@ open Frag Zielsatz
 
 /-- A single parameterless writer and one lock protecting a real scalar cell.
     Its invariant is not a constant predicate over arbitrary memories. -/
-def declaration : Deklaration :=
+abbrev declaration : Deklaration :=
   { Vertraege.Pruefer.Witness.declaration with
     Lock := Unit
     decLock := inferInstance
     rang := fun _ => 0
     maskiert := fun _ => false
+    braucht := fun _ => []
     gbraucht := fun name => if name then [] else [.inl ()]
     sigNr := fun _ =>
       { params := [], erg := none, gruende := 0
         haelt := [], schreibt := fun _ => false, gschreibt := fun name => !name
         konsumiert := [], produziert := [] }
-    passt_ok := fun _ _ impossible => by cases impossible }
+    passt_ok := fun _ _ impossible => by cases impossible
+    geteilt_bewacht := fun _ impossible => by cases impossible
+    invarianten_gehalten := fun _ item => nomatch item
+    ggeteilt_bewacht := fun _ impossible => by cases impossible }
 
 abbrev held : List (Res declaration) := [.held ()]
 abbrev contract := vertragVon declaration ()
