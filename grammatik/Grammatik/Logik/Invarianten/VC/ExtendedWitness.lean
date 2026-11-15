@@ -3,6 +3,10 @@ module
 public import Grammatik.Logik.Invarianten.VC.Extended
 public import Grammatik.Logik.Invarianten.VC.Witness
 public import Grammatik.Logik.Vertraege.Pruefer.Program
+import all Grammatik.Logik.Invarianten.Elim.Decision
+import all Grammatik.Logik.Invarianten.Frag.Observation
+import all Grammatik.Logik.Invarianten.VC.Compiler
+import all Grammatik.Logik.Invarianten.VC.Witness
 import Lean.Elab.Tactic.Cbv
 
 @[expose] public section

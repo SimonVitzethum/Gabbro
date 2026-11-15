@@ -2,6 +2,10 @@ module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Goal
 public import Grammatik.Logik.Invarianten.VC.Witness
+import all Grammatik.Logik.Invarianten.Elim.Decision
+import all Grammatik.Logik.Invarianten.Frag.Observation
+import all Grammatik.Logik.Invarianten.VC.Compiler
+import all Grammatik.Logik.Invarianten.VC.Witness
 import Lean.Elab.Tactic.Cbv
 
 @[expose] public section
@@ -46,7 +50,8 @@ theorem accepted_zeuge : invariantenGeprueftB unit [()] [] = true := by decide_c
 theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [.inl (), .inr false, .inr true] = true := by
   have programAccepted := invariantenGeprueftB_program accepted_zeuge
-  have contracts : Vertraege.Pruefer.KontrakteGeprueftB unit.P unit.S [()] = true := by decide_cbv
+  have contracts : Vertraege.Pruefer.KontrakteGeprueftB unit.P unit.S [()] unit.lockFormulas = true := by
+    decide_cbv
   have logic : nutzerPflichtGeprueftB unit [()] [] = true := by decide_cbv
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws [] [] [] [] unit.lockFormulas = true := by
