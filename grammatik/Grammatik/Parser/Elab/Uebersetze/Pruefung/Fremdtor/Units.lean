@@ -18,8 +18,7 @@ def foreignGatePrefix : List UFn :=
    { name := "p#report#0", params := [("f0", .bool), ("v", .bool)],
      kinds := [.bool, .bool], res := none, resBool := true, held := [], puts := [],
      gives := [], body := [], ret := .bool (.and (.var "v") (.var "f0")),
-     checkReturn := some { check := "p", point := 0, samples := [("x", none)],
-       floorStart := 0, floorCount := 1 } }]
+     checkReturn := some { check := "p", point := 0, samples := [("x", none)], floorStart := 0, floorCount := 1 } }]
 
 /-- The exact elaborated check, including its real Duty and foreign gate. -/
 def foreignGateCheck : UCheck :=
@@ -51,9 +50,9 @@ def uFremdFallible : UProg where
          .blkEnd, .ret (.why 0), .blkEnd], ret := .val (.param "ans"),
        nimmt := ["p#duty"], gibt := ["p#duty"] }]
   axs := [{ name := "f", params := [], kinds := [],
-    res := some (.int 0 18446744073709551615), gruende := 1 }]
+            res := some (.int 0 18446744073709551615), gruende := 1 }]
   whys := [{ name := "R", cases := ["A"],
-    descriptor := some { name := 0, codes := [0], closed := true, distinct := by decide } }]
+            descriptor := some { name := 0, codes := [0], closed := true, distinct := by decide } }]
   checks := [foreignGateCheck]
   marken := ["p#duty"]
 
