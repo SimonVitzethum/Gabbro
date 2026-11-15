@@ -247,19 +247,11 @@ theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
         (Invarianten.Pruefer.lockFormula w1vS (fun _ => none)) {} none 128
         (w1vP.rumpf ()) .nil goals =
         .error (.unsupported "contract block is outside the checked control fragment") := by
-    rw [body]
-    simp only [Vertraege.Pruefer.ending, Vertraege.Pruefer.statement,
-      Vertraege.Pruefer.block, w1vKopf, bind, Except.bind, pure, Except.pure]
+    rfl
   have execution : Vertraege.Pruefer.checkExecution w1vP w1vS
       (Vertraege.Pruefer.requiresPolicy w1vP) (fun _ => none) {} none () =
       .error (.unsupported "contract block is outside the checked control fragment") := by
-    simp only [Vertraege.Pruefer.checkExecution, Vertraege.Pruefer.checkEnvironment,
-      invariants, parameters, result, requires, ensures, compiled,
-      Invarianten.VC.invariantFormula, Invarianten.Pruefer.environments,
-      Vertraege.Pruefer.results, Vertraege.Pruefer.checkPostFormula,
-      Vertraege.Pruefer.postFormula, Vertraege.Pruefer.currentOnly,
-      Invarianten.Frag.translate, Invarianten.Pruefer.collect,
-      List.filter_nil, bind, Except.bind, pure, Except.pure]
+    rfl
   have basic : Vertraege.Pruefer.checkBasicFunction w1vP w1vS (fun _ => none) {} () = none := rfl
   have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
     unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
