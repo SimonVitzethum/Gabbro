@@ -2803,8 +2803,8 @@ CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 mi
 `Classical.choice`, `Quot.sound`. `einpassen_voll`, `antwortLeer_iff`, `summePasst_voll`,
 `gleitWortPasst_voll`, `g1_holen_antwortet`, `g1_temp_antwortet`, `g1_nicht_leer`: `propext`,
 `Quot.sound`. The current G1 checker statements are refusals, as described above. No `sorry`, no new `axiom`, no
-`native_decide`; the three facts of the decoded `0.5` (`g1HalbW`) are `decide +kernel`
-(kernel evaluation, no native code) -- the elaborator's `rfl` ran out of recursion depth.
+`native_decide`. The decoded `0.5` (`g1HalbW`) retains the three explicitly supplied
+primitive range replies in `G1FloatAnswers`; its decoding theorem does not compute them.
 
 ### 24.8 What remains
 
