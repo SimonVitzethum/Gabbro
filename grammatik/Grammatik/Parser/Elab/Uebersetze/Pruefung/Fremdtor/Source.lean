@@ -217,4 +217,20 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- The exact source unit passes every component of the strict atomic checker. -/
+theorem fremd_akzeptiert :
+    AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
+  decide +kernel
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- The exact source unit passes every component of the strict atomic checker. -/
+theorem fremdFallible_akzeptiert :
+    AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -9,8 +9,7 @@
    dropping it would drop the Duty's discharge path. -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Infallible
-public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Fallible
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
 import all Init.Data.Repr
