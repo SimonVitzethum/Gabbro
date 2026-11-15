@@ -49,8 +49,6 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
-import all Grammatik.Logik.Vertraege.Pruefer.Unit
-meta import Grammatik.Logik.Vertraege.Pruefer.Unit
 @[expose] public section
 
 namespace Gabbro.Grammatik.Zielsatz.CallSiteGoal
@@ -283,10 +281,6 @@ theorem echo_not_summary : ¬ AxVertragO wE.Q echo := by
 theorem fs_voll : ∀ g : wD.Fn, g ∈ [()] := fun g => by
   cases g
   exact List.mem_singleton_self _
-
-#eval match checkUnitLogic wE [()] [] with
-  | .ok _ => "integration logic check: accepted"
-  | .error cause => cause.message
 
 /-- **(a)**: `akzeptiertX_pruefer` accepts the unit. The Bool is split into its components,
     each decided over the one body (no kernel computation over the whole unit at once). -/
