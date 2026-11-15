@@ -27,10 +27,10 @@ theorem lowEndL_bind_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf 
   | ok ls =>
     simp only [hl, Except.bind] at h
     cases hq : lowEndL (l := false) u c _ (fn.mitBindung x ls.range) n Λ [] ss with
-    | error e => simp only [hq, Except.bind] at h; cases h
+    | error e => simp only [hq, Except.bind, bind] at h; cases h
     | ok p =>
       obtain ⟨q, tail'⟩ := p
-      simp only [hq, Except.bind] at h
+      simp only [hq, Except.bind, bind] at h
       cases h
       exact ⟨ls, q, (by first | exact hl | rfl | simp_all), hq, rfl⟩
 
@@ -54,8 +54,8 @@ theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
     | ok p =>
       obtain ⟨q, tail'⟩ := p
       simp only [hq, Except.bind] at h
-      cases h
-      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), hq, rfl⟩
+        cases h
+        exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
 
 theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {v : UEns} {ss tail : List UStmt}
@@ -77,8 +77,8 @@ theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
     | ok p =>
       obtain ⟨q, tail'⟩ := p
       simp only [hq, Except.bind] at h
-      cases h
-      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), hq, rfl⟩
+        cases h
+        exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
 
 theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x g : String} {args : List UArg} {ss tail : List UStmt}
@@ -119,8 +119,8 @@ theorem lowEndL_struct_result {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (d
     (h : ((lowStructL (l := false) u c Γ fn n Λ [] st ss).bind (fun p =>
       (lowEndL (l := false) u c Γ fn n p.1.1 [] p.2).bind
         (fun q => .ok (.cons p.1.2 q.1, q.2)))) = .ok (b, tail)) :
-    ∃ Λ₁ (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) rest
-      (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
+    ∃ (Λ₁ : List (Res (declOf u))) (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
+      (rest : List UStmt) (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
       lowStructL (l := false) u c Γ fn n Λ [] st ss = .ok (⟨Λ₁, gs⟩, rest) ∧
       lowEndL (l := false) u c Γ fn n Λ₁ [] rest = .ok (q, tail) ∧ b = .cons gs q := by
   cases hg : lowStructL (l := false) u c Γ fn n Λ [] st ss with
@@ -141,8 +141,8 @@ theorem lowEndL_struct_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declO
     {st : UStmt} {ss tail : List UStmt} {b : Endblock (declOf u) (verOf u c) false Γ Λ}
     (hs : (∃ cnd, st = .ifBeg cnd) ∨ (∃ x tab, st = .loopBeg x tab .tru))
     (h : lowEndL (l := false) u c Γ fn (n + 1) Λ [] (st :: ss) = .ok (b, tail)) :
-    ∃ Λ₁ (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁) rest
-      (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
+    ∃ (Λ₁ : List (Res (declOf u))) (gs : Stmt (declOf u) (verOf u c) false Γ Λ Λ₁)
+      (rest : List UStmt) (q : Endblock (declOf u) (verOf u c) false Γ Λ₁),
       lowStructL (l := false) u c Γ fn n Λ [] st ss = .ok (⟨Λ₁, gs⟩, rest) ∧
       lowEndL (l := false) u c Γ fn n Λ₁ [] rest = .ok (q, tail) ∧ b = .cons gs q := by
   rw [lowEndL_succ] at h

@@ -52,7 +52,15 @@ theorem lowEndWhy_ok {c : Fin u.fns.length} {Γ : Ctx} {fn : UFn}
     (h : lowEnd u c Γ Λ fn (.why n) = .ok st) :
     ∃ (hn : n < (verOf u c).gruende) (hp : Λ.Perm (verOf u c).ende),
       st = .retWhy ⟨n, hn⟩ hp := by
-  exact lowRetWhyEnd_ok (by simpa only [lowEnd, lowRetEnd] using h)
+  simp only [lowEnd] at h
+  split at h
+  · rename_i hn
+    split at h
+    · rename_i hp
+      cases h
+      exact ⟨hn, of_decide_eq_true hp, rfl⟩
+    · cases h
+  · cases h
 
 /-- No answer-table sample is needed for a local reason return. -/
 theorem ausgangZiel_why {l : Bool} {c : Fin u.fns.length}
