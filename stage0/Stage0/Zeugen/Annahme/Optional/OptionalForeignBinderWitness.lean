@@ -151,7 +151,7 @@ def checkedCandidate : { value : Except String (Emitted text 256) // emit text 2
   refine ⟨?value, ?certificate⟩
   case certificate =>
     unfold emit compile Frontend.source
-    rw [source_lex_zeuge]
+    simp only [source_lex_zeuge]
 
 def candidate : Except String (Emitted text 256) := checkedCandidate.val
 
@@ -249,7 +249,7 @@ def checkedEndCandidate :
   refine ⟨?value, ?certificate⟩
   case certificate =>
     unfold emit compile Frontend.source
-    rw [end_lex_zeuge]
+    simp only [end_lex_zeuge]
 
 def endCandidate : Except String (Emitted endText 256) := checkedEndCandidate.val
 
