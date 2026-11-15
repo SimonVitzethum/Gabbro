@@ -1,4 +1,5 @@
 module
+import Grammatik.Kern.Taktik.KernelValue
 public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 
 import all Init.Data.Repr
@@ -39,8 +40,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
 set_option maxRecDepth 100000
 
--- Chunk data projections unfold only named transparent values. The actual lexer
--- success and arbitrary-continuation scanner proofs have opaque proof cuts.
+-- Compute each chunk's data once. Kernel conversion checks both its origin and
+-- the scanner equation for every continuation and remaining fuel.
 scoped macro "rights_cut " name:ident " as " text:str : command => do
   let letters : Array (Lean.TSyntax `term) := text.getString.toList.toArray.map fun char =>
     ⟨(Lean.Syntax.mkCharLit char).raw⟩
@@ -55,21 +56,21 @@ scoped macro "rights_cut " name:ident " as " text:str : command => do
   let lexical : Lean.TSyntax `command ← `(command|
     def $lexicalName : { emitted : List Token // lexL $charsName = .ok emitted } := by
       refine ⟨?emitted, ?decoded⟩
-      case decoded => as_aux_lemma => cbv <;> exact Eq.refl _)
+      case decoded => kernel_value)
   let tokens : Lean.TSyntax `command ← `(command|
     def $tokensName : List Token := ($lexicalName).val.dropLast)
   let count : Lean.TSyntax `command ← `(command|
     def $countName : { count : Nat //
         (($charsName).filter istLeer).length + ($lexicalName).val.length - 1 = count } := by
       refine ⟨?count, ?counted⟩
-      case counted => as_aux_lemma => cbv <;> exact Eq.refl _)
+      case counted => kernel_value)
   let steps : Lean.TSyntax `command ← `(command|
     def $stepsName : Nat := ($countName).val)
   let scanned : Lean.TSyntax `command ← `(command|
     theorem $scannedName (rest : List Char) (remaining : Nat) :
         scan false ($charsName ++ rest) (remaining + $stepsName) =
           ($tokensName).foldr (fun token answer => Except.map (token :: ·) answer)
-            (scan false rest remaining) := by cbv)
+            (scan false rest remaining) := by kernel_rfl)
   let chunk : Lean.TSyntax `command ← `(command|
     def $name : Chunk where
       characters := $charsName
