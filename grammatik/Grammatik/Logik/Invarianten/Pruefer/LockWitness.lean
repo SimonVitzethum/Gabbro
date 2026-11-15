@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Witness
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
 
 @[expose] public section
 
