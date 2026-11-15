@@ -1,6 +1,7 @@
 /- Optional foreign binders through complete images and canonical source semantics. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.OptionalBinderWitness
@@ -14,10 +15,10 @@ def result (valued : Bool) : Option Ty := if valued then some (.int 0 10) else n
 
 def u (valued fallible : Bool) : UProg := { ControlProbe.u with
   axs := [{ name := "gate", params := [], kinds := [], res := result valued,
-    gruende := if fallible then 1 else 0 }] }
+            gruende := if fallible then 1 else 0 }] }
 abbrev D (valued fallible : Bool) := declOf (u valued fallible)
-abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, by decide⟩
-abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, by decide⟩
+abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, Nat.le_of_ble_eq_true rfl⟩
+abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, Nat.le_of_ble_eq_true rfl⟩
 
 def admission (valued fallible : Bool) :
     RufPasst (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
@@ -49,14 +50,14 @@ def fallibleEnd (valued : Bool) :
     Endblock (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler valued)
     (.ret (.val (answer valued true)) (.refl []))
 
 def fallibleBlock (valued : Bool) :
     Block (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler valued)
     (.cons (.ret (.val (answer valued true)) (.refl [])) .nil)
 
 def plainEnd : Endblock (D false false)
@@ -75,12 +76,14 @@ def body (valued fallible nested : Bool) :
     Endblock (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
       false [] [] := by
   cases fallible with
-  | true => exact .bind (.widen (by decide) (by decide) (.lit 23))
+  | true =>
+    exact .bind (.widen (by decide) (by decide) (.lit 23))
       (if nested then .cons (.ite .tru (fallibleBlock valued) .nil)
         (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued)
   | false =>
     cases valued with
-    | false => exact .bind (.widen (by decide) (by decide) (.lit 23))
+    | false =>
+      exact .bind (.widen (by decide) (by decide) (.lit 23))
         (if nested then .cons (.ite .tru plainBlock .nil)
           (retN false false 99 (by decide) (by decide)) else plainEnd)
     | true => exact retN true false 99 (by decide) (by decide)
@@ -96,7 +99,7 @@ def program (valued fallible nested : Bool) : Programm (D valued fallible) where
     exact body valued fallible nested
 
 def binding (fallible : Bool) : TorB :=
-  ⟨1, [none, none, none, none, none, none], if fallible then [(-9, 0)] else []⟩
+  ⟨1, [none, none, none, none, none, none], (if fallible then [(-9, 0)] else []), none⟩
 
 def image (valued fallible nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program valued fallible nested)
@@ -126,6 +129,8 @@ def observed (valued fallible nested : Bool) (raw : Runner.W) : Int :=
   | .zurueck _ v => v.n
   | _ => -1
 
+attribute [local irreducible] image
+
 /-- Nonempty complete images exercise both generic binder cases and contexts. -/
 theorem accepted_images :
     (image false false false).toOption.isSome = true ∧
@@ -133,7 +138,7 @@ theorem accepted_images :
     (image false true false).toOption.isSome = true ∧
     (image false true true).toOption.isSome = true ∧
     (image true true false).toOption.isSome = true ∧
-    (image true true true).toOption.isSome = true := by decide_cbv
+    (image true true true).toOption.isSome = true := by decide +kernel
 
 /-- Void keeps local 23, values bind 7, and both handlers consume reason 0. -/
 theorem success_and_reason_paths :
@@ -162,7 +167,7 @@ theorem oracle_effect_is_retained :
     observedTrace false false true 7 = [.fremd (.inl (gate false false))] ∧
     observedTrace false true false 7 = [.fremd (.inl (gate false true))] ∧
     observedTrace false true true (BitVec.ofInt 64 (-9)) = [.fremd (.inl (gate false true))] := by
-  decide_cbv
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> kernel_rfl
 
 /-- Value decoding still rejects an answer outside its declared range. -/
 theorem invalid_value_answer :
