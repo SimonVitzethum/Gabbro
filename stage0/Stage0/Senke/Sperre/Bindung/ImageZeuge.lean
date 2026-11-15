@@ -78,17 +78,6 @@ theorem image_binding_zeuge :
       (freestandingImage.image.code.filter fun i => i.o == 23).length + 4 := by
   decide +kernel
 
-/-- Inspect the actual emitted function body after the common startup prefix.
-    The nonempty freestanding body is syscall-free; Linux contains the wait
-    and all three release syscalls in that same source function. -/
-theorem image_lock_body_zeuge :
-    0 < (freestandingImage.image.code.drop (headLen freestandingImage.image.roots.length)).length ∧
-    ((freestandingImage.image.code.drop (headLen freestandingImage.image.roots.length)).all
-      fun i => i.o != 23) = true ∧
-    ((linuxImage.image.code.drop (headLen linuxImage.image.roots.length)).filter
-      fun i => i.o == 23).length = 4 := by
-  decide +kernel
-
 /-- The generic production-image binding theorem has jointly satisfiable
     premises for both environments and an actual scoped-lock source program. -/
 theorem Emitted_lockWait_zeuge :
@@ -104,6 +93,23 @@ def freestandingLock : (declOf freestandingImage.compiled.unit).Lock :=
 
 def linuxLock : (declOf linuxImage.compiled.unit).Lock :=
   ⟨0, image_binding_zeuge.2.2.2.1⟩
+
+/-- The complete take/release blocks occur contiguously in the actual emitted
+    function bodies. The freestanding blocks contain no syscall; other image
+    bindings (including checked failure exits) have their own contracts. -/
+theorem image_lock_body_zeuge :
+    let fs := frei [] (functionFrame freestandingImage.compiled.program
+      freestandingImage.compiled.main).bodyReserved
+    let ls := frei [] (functionFrame linuxImage.compiled.program linuxImage.compiled.main).bodyReserved
+    let fa := freestandingImage.image.Y.lk freestandingLock
+    let la := linuxImage.image.Y.lk linuxLock
+    (nimmT freestandingImage.image.Y fa fs <:+: freestandingImage.image.code) ∧
+    (gibT freestandingImage.image.Y fa fs <:+: freestandingImage.image.code) ∧
+    (nimmT linuxImage.image.Y la ls <:+: linuxImage.image.code) ∧
+    (gibT linuxImage.image.Y la ls <:+: linuxImage.image.code) ∧
+    ((nimmT freestandingImage.image.Y fa fs ++ gibT freestandingImage.image.Y fa fs).all
+      fun i => i.o != 23) = true := by
+  decide +kernel
 
 /-- Instantiate the generic no-syscall theorem at the real emitted lock address;
     the corresponding Linux image retains its wait and wake syscall sites. -/

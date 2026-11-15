@@ -7217,8 +7217,8 @@ Joint witnesses are `Prepared_imageEnvironment_eq_zeuge`, `profile_lock_zeuge`, 
 `Emitted_lock_spin_no_syscall_zeuge` under `Sperre/Bindung/`. The image witnesses run the complete
 production `emit` pipeline on a nonempty scoped-lock source program with each admitted source profile;
 the complete Linux image has exactly four additional syscall instructions (wait and three release paths).
-`image_lock_body_zeuge` checks the actual emitted nonempty function body after the common startup prefix:
-no syscall for freestanding, exactly the four wait/release syscalls for Linux.
+`image_lock_body_zeuge` proves that the complete take/release blocks occur contiguously in each actual
+emitted function body, using its computed scratch offset; the freestanding blocks contain no syscall.
 
 **Liveness finding (no weakened theorem):** the existing `Faeden.Lauf` models Linux waiter registration,
 FUTEX_WAIT blocking and WAKE-all. Its `Lauf.ScheinbarEndlich` bounds spontaneous returns from a blocked place;
