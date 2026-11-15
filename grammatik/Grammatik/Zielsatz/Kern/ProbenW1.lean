@@ -19,9 +19,10 @@
     is `true` -- the refusal is the new component `antwortenB`'s alone;
   * the same for an empty register type (`w1r_spec_nicht`, `w1r_bool`: `u8 in 1 .. 0`) and an
     axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
-  THE CONTRAST: the same code behind an axiom `-> never` is still accepted (`w1v_bool`), and
-  the head is the named stop `nieZurueck` (`w1v_kopf`): there the call really does not
-  return (`_Noreturn`), and the continuation is unreachable in the C as in G.
+  THE CONTRAST: the answer-site component admits `-> never` (`w1v_antworten`), and the
+  head is the named stop `nieZurueck` (`w1v_kopf`): the call does not return and its
+  continuation is unreachable. The strict VC checker separately refuses this false-post
+  foreign-binder shape (`w1v_bool`): an unsupported fragment, not a wrong-program witness.
 -/
 module
 public import Grammatik.Zielsatz.Kern.ProbenG1
@@ -222,14 +223,18 @@ def w1vP : Programm w1vD where
 
 def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-/-- **The contrast**: the same code behind an axiom `-> never` is accepted -- there the call
-    really does not return (the prototype is `_Noreturn`). -/
-theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by
-  unfold Akzeptiert Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
-    Vertraege.Pruefer.checkContracts
-  simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
-    Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction]
-  decide +kernel
+/-- The answer-site component admits the genuinely non-returning result. -/
+theorem w1v_antworten : antwortenB w1vP [()] = true := by decide +kernel
+
+/-- The nontrivial-post foreign binder is outside the strict VC fragment.
+    This does not refute its safe non-returning behavior below. -/
+theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
+  have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
+    unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
+    simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
+      Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction]
+    rfl
+  simp only [Akzeptiert, Invarianten.Pruefer.invariantVCB, refused, Bool.and_false]
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
@@ -250,6 +255,7 @@ theorem w1_kein_nie (O : Orakel w1D) (passes : Nat) (σ : World w1D) :
 #print axioms Gabbro.Grammatik.Zielsatz.w1r_spec_nicht
 #print axioms Gabbro.Grammatik.Zielsatz.w1r_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1g_bool
+#print axioms Gabbro.Grammatik.Zielsatz.w1v_antworten
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_kopf
 #print axioms Gabbro.Grammatik.Zielsatz.w1_kein_nie

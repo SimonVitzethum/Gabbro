@@ -121,7 +121,7 @@ theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
         (RufStartG unit.P.mitRuhe sp init) [] K := by
   have accepted : profilAkzeptiert akzeptiertX_pruefer (profileUnit mode)
       fs.1 ls.1 cs.1 = true :=
-    Bool.and_eq_true.mpr ⟨checker_accepted_zeuge, profile_admitted_zeuge mode⟩
+    Bool.and_eq_true_iff.mpr ⟨checker_accepted_zeuge, profile_admitted_zeuge mode⟩
   have hardware : ProfilAnnahmen (profileUnit mode) oracle :=
     (profilAnnahmen_iff (profileUnit mode) oracle).mpr hardware_zeuge
   refine ⟨accepted, nutzerPflicht_of_akzeptiert_zeuge, hardware, laufzeit_voll unit, ?_⟩
