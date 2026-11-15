@@ -79,7 +79,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
     cases hex : execBlock O passes R body σ (.cons i ρ) with
     | ok σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.1 σ₁ ρ₁ hex
-        have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
+      have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
           refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
           intro ρB hT hF
           rw [Gabbro.Body.exec_singleton,
@@ -94,7 +94,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | next hloop σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 false hloop σ₁ ρ₁ hex
-        have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
+      have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
           refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
           intro ρB hT hF
           rw [Gabbro.Body.exec_singleton,
@@ -109,7 +109,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | leave hloop σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 true hloop σ₁ ρ₁ hex
-        have trace : Strecke_G u C A s s₁ [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs] := by
+      have trace : Strecke_G u C A s s₁ [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs] := by
           refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
           intro ρB hT hF
           rw [Gabbro.Body.exec_singleton, List.map_cons,
