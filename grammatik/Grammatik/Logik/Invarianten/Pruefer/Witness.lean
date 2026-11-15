@@ -147,7 +147,7 @@ theorem adapter_zeuge : LogikPflichtA unit.P unit.S unit.Q (GeteiltA unit.P unit
     fun _ present => present.1
   apply logikPflichtA_of_akzeptiertX complete checker_accepted_zeuge unit.Q
     (GeteiltA unit.P unit.ws) subset
-  exact ⟨fun lock => nomatch lock, fun item => nomatch item,
+  exact ⟨(fun lock => nomatch lock), (fun item => nomatch item),
     fun _ _ impossible => by cases impossible⟩
 
 theorem user_duty_zeuge : NutzerPflichtA unit := ⟨adapter_zeuge, start_zeuge⟩
