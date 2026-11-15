@@ -35,6 +35,8 @@
 module
 public import Grammatik.Zielsatz.Kern.Proben
 public import Grammatik.Zielsatz.Faeden.PoolSym
+public import Grammatik.Logik.Invarianten.Pruefer.Locks
+import all Batteries.Data.Except
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -81,6 +83,7 @@ local instance poolZeugeAxGleich : DecidableEq zD.Ax := inferInstanceAs (Decidab
 def zPool : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -102,9 +105,16 @@ theorem zPool_poolSicher : PoolSicherW zPB zFs zHaupt :=
 theorem zPool_schreibt : reachB zPB zFs zHaupt zEin = true ∧
     TraegerSchreibt zEin (.inl () : zD.Tab ⊕ zD.Glob) = true := by decide
 
+/-- **Lock sources for `zS`**: its invariant is constantly `true`, reified by
+    the closed `.tru` expression, so every lock release VC holds trivially. -/
+def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
+  { resources := []
+    expression := .tru
+    correct := fun _ => rfl }
+
 /-- **The concrete checker accepts the pool.** -/
-theorem zPool_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true := by
-  decide
+theorem zPool_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zPoolSources) = true := by
+  decide +kernel
 
 /-- **The checker before fix lane F10 refused it** (`einzelnB`: the starts were not distinct). -/
 theorem zPool_vor_abgelehnt :

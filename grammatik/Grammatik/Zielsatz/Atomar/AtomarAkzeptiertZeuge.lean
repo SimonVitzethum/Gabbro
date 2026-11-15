@@ -9,6 +9,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Maschine.Zeuge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+import all Batteries.Data.Except
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -54,11 +55,7 @@ local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 /-- The declared starts of configuration 1. -/
 abbrev n1ws : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
-/-- Atomic reads are outside the current contract-checker fragment. -/
-theorem n1_abgelehntX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs = false := by decide
-  change (_ && Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs) = false
-  rw [refused, Bool.and_false]
+theorem n1_akzeptiertX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true := by decide +kernel
 
 theorem n1_alt_abgelehnt : Akzeptiert nP SchwachZeuge.nS nFs [] nCs n1ws = false :=
   AtomarZeuge.n1_abgelehnt
@@ -326,7 +323,7 @@ theorem hP_logikA_nicht : ¬ LogikPflichtA hP SchwachZeuge.nS (axWahr nD) (Getei
 
 /-- The strengthened checker refuses the body whose contract fails under the
     atomic rely. The refusal follows from soundness, independently of evaluation. -/
-theorem hP_abgelehntX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false := by
+theorem hP_akzeptiertX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false := by
   cases accepted : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws with
   | false => rfl
   | true =>
@@ -342,7 +339,7 @@ theorem hP_havoc_bites :
     AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false ∧
       (∀ passes, KoerperGutS hP passes (axWahr nD) SchwachZeuge.nS NFn.zaehlB) ∧
       ¬ KoerperGutSA hP 0 (axWahr nD) SchwachZeuge.nS (GeteiltA hP hws) NFn.zaehlB :=
-  ⟨hP_abgelehntX, hP_seq, hP_rely_nicht⟩
+  ⟨hP_akzeptiertX, hP_seq, hP_rely_nicht⟩
 
 /-! ## 3. The refusal: a contract over a shared atomic -/
 
@@ -413,13 +410,13 @@ theorem n1E_nutzerPflichtA : NutzerPflichtA n1E :=
 
 /-! ## 5. The per-core fold (OFFEN O17) -/
 
-/-- The fold is also refused by the current atomic-read contract gate. -/
-theorem faltung_abgelehntX :
-    AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs = false := by decide
-  change (_ && Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs) = false
-  rw [refused, Bool.and_false]
+/-- **The fold is admitted with the rely**: `zaehlA` twice writing the atomic `zaehler`, `zaehlB`
+    reading it -- refused by the goal's checker (`AtomarZeuge.faltung_abgelehnt`), accepted by
+    `AkzeptiertX` (`zaehler` is shared and in no contract). -/
+theorem faltung_akzeptiertX :
+    AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = true := by
+  decide +kernel
 
-#print axioms faltung_abgelehntX
+#print axioms faltung_akzeptiertX
 
 end Gabbro.Grammatik.AtomarXZeuge

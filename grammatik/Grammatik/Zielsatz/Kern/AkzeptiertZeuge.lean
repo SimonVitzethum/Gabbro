@@ -26,6 +26,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Korpus.Programme.Export104
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -404,7 +405,7 @@ theorem ak1_ein_schreiber :
       false ∧
     startB akP1 akS akFs [()] akCs [akA] ⟨[⟨akA, .nil⟩, ⟨akA, .nil⟩], ⟨akRuhe, .nil⟩⟩ akSp =
       false := by
-  decide
+  decide +kernel
 
 /-- **A lock-floor violation is refused**: `c` (floor `1`) takes the lock
     of rank `0`. Every other component holds: the floor check alone

@@ -33,6 +33,7 @@ module
 public import Grammatik.Zielsatz.Faeden.Verbund
 public import Grammatik.Zielsatz.Faeden.PoolZeuge
 public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
+import all Batteries.Data.Except
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -109,6 +110,7 @@ def vzBib : Programm zD := mitRumpf zPB fun
 def vzE1 : Einheit zD where
   P := vzApp
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -122,6 +124,7 @@ def vzE1 : Einheit zD where
 def vzE2 : Einheit zD where
   P := vzBib
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := []
   sp0 := zSp
@@ -135,7 +138,8 @@ def vzE2 : Einheit zD where
 theorem vz_app_akzeptiert :
     Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true := by decide
 
-theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] = true := by decide
+theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] (sources := zPoolSources) = true := by
+  decide +kernel
 
 theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
