@@ -1,6 +1,11 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
 public import Bruecke.Kette.Ende.Simulation
+public import Bruecke.Anweisung.Option.Zeuge
+public import Bruecke.Anweisung.Option.StorageZeuge
+public import Bruecke.Kette.Formen.OptionZeuge
+public import Bruecke.Kette.Formen.ReasonZeuge
+public import Bruecke.Kette.Formen.TagZeuge
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -202,5 +207,60 @@ theorem terminal_zeuge : GetragenG unit (fun _ => True) ∧
 /-- Extra top-level statements after the closing marker are still refused. -/
 theorem continuation_refused :
     zuBodyZ unit { truth with body := truth.body ++ [.call "truth" [.bval .tru]] } = none := by cbv
+
+
+/-- The terminal path retains the table of a direct option result through another
+    call, a local binding, a local update and both kinds of field update. -/
+def optionEnd : UFn :=
+  { OptionStorageZeuge.test with name := "terminal",
+    body := [.bindCall "answer" "lookup" [],
+      .bindCall "again" "identity" [.oval (.var "answer")],
+      .bindOpt "local" 0 (.var "again"), .setVarOpt "local" 0 .nichts,
+      .assignOpt "p" "next" (.lit 0) (.var "local"),
+      .assignTabOpt "T" "next" (.lit 1) (.var "again"),
+      .ret (.opt (.var "local")), .blkEnd] }
+
+def optionUnit : UProg :=
+  { OptionValueZeuge.callUnit with
+    fns := [OptionValueZeuge.lookup, optionEnd, OptionValueZeuge.identity] }
+
+def optionBody : List Gabbro.Body.Stmt :=
+  [.bindCall "answer" "lookup" [] [] (.lit (.bool true)),
+    .bindCall "again" "identity" ["o"] [.name "answer"] (.hasShape "o" .opt),
+    .bindName "local" (.name "again"), .bindName "local" (.lit .absent),
+    .assign "T" (.lit (.int 0)) "next" (.name "local"),
+    .assign "T" (.lit (.int 1)) "next" (.name "again"),
+    .ret (some (.name "local"))]
+
+/-- Joint nondegenerate premises for the option-end inversion and simulations:
+    two table slots, actual call results, writable storage and an explicit closer. -/
+theorem lowEndL_bindOpt_ok_zeuge :
+    (match lowEndL (l := false) optionUnit ⟨1, by decide⟩ (optionEnd.params.map (·.2))
+        optionEnd 12 [] [] optionEnd.body with
+      | .error _ => False
+      | .ok (_, tail) => tail = [.blkEnd]) ∧
+    (seqZ optionUnit 12 optionEnd (BodyNames.start optionEnd) optionEnd.body).map (·.1) =
+      some optionBody := by
+  constructor <;> cbv
+
+/-- The three dispatch forms are ordinary structured prefixes before an explicit
+    terminal return. Their existing two-arm fixtures keep every arm nonempty. -/
+theorem lowEndL_struct_ok_zeuge :
+    (match lowEndL (l := false) OptionZeuge.unit ⟨0, by decide⟩ (OptionZeuge.test.params.map (·.2))
+        OptionZeuge.test 12 [] []
+        (OptionZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
+      | .error _ => False
+      | .ok (_, tail) => tail = [.blkEnd]) ∧
+    (match lowEndL (l := false) ReasonZeuge.unit ⟨0, by decide⟩ (ReasonZeuge.test.params.map (·.2))
+        ReasonZeuge.test 12 [] []
+        (ReasonZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
+      | .error _ => False
+      | .ok (_, tail) => tail = [.blkEnd]) ∧
+    (match lowEndL (l := false) TagZeuge.unit ⟨0, by decide⟩ (TagZeuge.test.params.map (·.2))
+        TagZeuge.test 12 [] []
+        (TagZeuge.test.body ++ [.ret (.val (.lit 0)), .blkEnd]) with
+      | .error _ => False
+      | .ok (_, tail) => tail = [.blkEnd]) := by
+  refine ⟨?_, ?_, ?_⟩ <;> cbv
 
 end Gabbro.Bruecke.EndeZeuge
