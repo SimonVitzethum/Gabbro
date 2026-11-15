@@ -7395,6 +7395,13 @@ already did. Neither lowering nor the language model changes to identify the sco
 | `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
 | `I104.einzahlen_post_eq`, `I104.lies_post_eq`, `I104.einzahlen_meets_eq`, `I104.lies_meets_eq` | same | Those clause certificates identify the original postconditions and frame-aware duty statements with the current bridge statements; the existing user-obligation theorems are retained. |
 
+`fieldIndex_none` (`Kodierung/Slots.lean`) proves that a missing declared name has no
+dependent field index. The concrete 104/108 shapes and the cyclic-duty counterexample
+reuse it. `Zyklus.fieldIndex_none_zeuge` checks it on the two-slot cycle fixture. That
+fixture and its actual lowering certificate now live in `Kette/Mass/CycleFixture.lean`;
+the model values, negative rank result, vacuous full-contract duties, failed machine
+premise and universal measure refusal keep their statements and remain connected.
+
 `OptionStorageZeuge.names_zeuge` proves the two distinct parameter names once for the
 existing read/write and return simulations. The option-value and storage fixtures also
 explicitly supply their absent integer-result field and import the canonical lowering
