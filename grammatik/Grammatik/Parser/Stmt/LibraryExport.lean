@@ -65,6 +65,7 @@ open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
+set_option smartUnfolding false
 
 /-! ## Connected export witness: a qualified library call through the pipeline.
 
@@ -174,8 +175,8 @@ local macro "export_functions" : tactic => `(tactic| (
   · subst index
     cbv <;> first | exact Eq.refl _ | with_unfolding_all rfl))
 
--- Each complete value below is inferred exclusively from a canonical success
--- equation, before any dependent function or declaration projection is used.
+-- The unit is tied to the actual elaborator result below. Each function value
+-- is retained together with its canonical success equation before checking.
 private def fullUnit : UProg where
   tabs :=
     [{ name := "a::Rows", count := 2, cols := [("v", 0, 10)], breiten := [("v", 8)] },
