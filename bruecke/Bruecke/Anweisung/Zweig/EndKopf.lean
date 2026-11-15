@@ -26,12 +26,15 @@ theorem lowEndL_bind_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf 
   | error e => simp only [hl, Except.bind] at h; cases h
   | ok ls =>
     simp only [hl, Except.bind] at h
-    cases hq : lowEndL (l := false) u c _ (fn.mitBindung x ls.range) n Λ [] ss with
-    | error e => cases h
-    | ok p =>
-      obtain ⟨q, tail'⟩ := p
+    split at h
+    · rename_i e he
+      simp only [he, Except.bind] at h
       cases h
-      exact ⟨ls, q, (by first | exact hl | rfl | simp_all), (by first | exact hq | rfl | simp_all), rfl⟩
+    · rename_i v hv
+      obtain ⟨q, tail'⟩ := v
+      simp only [hv, Except.bind, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨ls, q, (by first | exact hl | rfl | simp_all), (by first | exact hv | rfl | simp_all), rfl⟩
 
 theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {lo hi : Int} {v : USide} {ss tail : List UStmt}
