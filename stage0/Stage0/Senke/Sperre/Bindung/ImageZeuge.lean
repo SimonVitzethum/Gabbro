@@ -74,6 +74,17 @@ theorem image_binding_zeuge :
       (freestandingImage.image.code.filter fun i => i.o == 23).length + 4 := by
   decide +kernel
 
+/-- Inspect the actual emitted function body after the common startup prefix.
+    The nonempty freestanding body is syscall-free; Linux contains the wait
+    and all three release syscalls in that same source function. -/
+theorem image_lock_body_zeuge :
+    0 < (freestandingImage.image.code.drop (headLen freestandingImage.image.roots.length)).length ∧
+    ((freestandingImage.image.code.drop (headLen freestandingImage.image.roots.length)).all
+      fun i => i.o != 23) = true ∧
+    ((linuxImage.image.code.drop (headLen linuxImage.image.roots.length)).filter
+      fun i => i.o == 23).length = 4 := by
+  decide +kernel
+
 /-- The generic production-image binding theorem has jointly satisfiable
     premises for both environments and an actual scoped-lock source program. -/
 theorem Emitted_lockWait_zeuge :
