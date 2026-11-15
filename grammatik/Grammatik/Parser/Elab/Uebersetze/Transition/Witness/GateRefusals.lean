@@ -230,7 +230,7 @@ theorem n464_mirrored_zeuge :
 
 /-- Passing N464 does not bypass the existing refusal of live byte capabilities. -/
 theorem n464_lowering_refusal_zeuge :
-    refusalIs (elabGateKopf [] [] [leseGrund] [] byteBuffer)
+    refusalIs (elabGateKopf [] [] [leseGrund] [] byteBuffer (spaces := ["normal"]))
       "live byte capability requires C01 value flow, C08 grant generations and C09 loans" = true := by decide +kernel
 
 /-- A buffer of words where the kernel counts bytes (gift 1158). -/
@@ -240,7 +240,7 @@ theorem n464_lowering_refusal_zeuge :
       ("len", .atom "u64")], gate := sauberTor }
 
 theorem n464_wort_zeuge :
-    refusalIs (elabGateKopf [] [] [leseGrund] [] wortPuffer)
+    refusalIs (elabGateKopf [] [] [leseGrund] [] wortPuffer (spaces := ["normal"]))
       "syscall gate buffer without byte pointee without G form: buf" = true := by decide +kernel
 
 /-- A read buffer with no bound on what the kernel writes (gift 1155). -/
@@ -249,7 +249,7 @@ theorem n464_wort_zeuge :
     gate := { sauberTor with pre := [.bin "<=" (.variable "len") (.lit 1024)] } }
 
 theorem n464_schranke_zeuge :
-    refusalIs (elabGateKopf [] [] [leseGrund] [] schrankenlos)
+    refusalIs (elabGateKopf [] [] [leseGrund] [] schrankenlos (spaces := ["normal"]))
       "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
 
 /-! ## N574: a foreign body takes no Gabbro code -/
