@@ -65,24 +65,37 @@ def lies : UFn := u.fns[1]'(by decide)
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
-  dsimp only [u, uExp104]
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
-  · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
-      (try subst c) <;> (try subst f) <;>
-      simp_all [beq_iff_eq, Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.boolFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.optFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, uExp104, @eq_comm _ "Konto", @eq_comm _ "stand"]
-    have hbeq : ("stand" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
-    simp only [hbeq, Bool.false_eq_true, ↓reduceIte, Option.bind_none]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+  · by_cases hc : c = "Konto"
+    · subst c
+      by_cases hf : f = "stand"
+      · subst f
+        rfl
+      · have hbeq : ("stand" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
+        have hfield : fieldIndex u ⟨0, by decide⟩ f = none := by
+          unfold fieldIndex
+          split
+          · rfl
+          · rename_i w hw
+            have hn : Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos
+                (Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt u ⟨0, by decide⟩).cols f = none := by
+              change (if ("stand" == f) = true then some (0, 100) else none) = none
+              rw [hbeq]
+              rfl
+            rw [hn] at hw
+            cases hw
+        have ht : Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx u.tabs "Konto" =
+            .ok ⟨0, by decide⟩ := rfl
+        simp only [shapeOf, shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some,
+          hfield, Option.bind_none]
+        simp [hf, @eq_comm _ "stand"]
+    · simp [shapeOf, shapeOfUG, shapeOfU, Except.toOption,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx, u, uExp104, hc, @eq_comm _ "Konto"]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+
 
 theorem wf_eq : wellFormed = fun s => WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]

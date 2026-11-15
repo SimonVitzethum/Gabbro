@@ -60,24 +60,37 @@ def rc : UFn := u.fns[1]'(by decide)
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
-  dsimp only [u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
-  · by_cases hc : c = "T" <;> by_cases hf : f = "v" <;>
-      (try subst c) <;> (try subst f) <;>
-      simp_all [beq_iff_eq, Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.boolFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.optFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, @eq_comm _ "T", @eq_comm _ "v"]
-    have hbeq : ("v" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
-    simp only [hbeq, Bool.false_eq_true, ↓reduceIte, Option.bind_none]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
+  · by_cases hc : c = "T"
+    · subst c
+      by_cases hf : f = "v"
+      · subst f
+        rfl
+      · have hbeq : ("v" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
+        have hfield : fieldIndex u ⟨0, by decide⟩ f = none := by
+          unfold fieldIndex
+          split
+          · rfl
+          · rename_i w hw
+            have hn : Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos
+                (Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt u ⟨0, by decide⟩).cols f = none := by
+              change (if ("v" == f) = true then some (0, 4294967295) else none) = none
+              rw [hbeq]
+              rfl
+            rw [hn] at hw
+            cases hw
+        have ht : Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx u.tabs "T" =
+            .ok ⟨0, by decide⟩ := rfl
+        simp only [shapeOf, shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some,
+          hfield, Option.bind_none]
+        simp [hf, @eq_comm _ "v"]
+    · simp [shapeOf, shapeOfUG, shapeOfU, Except.toOption,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, hc, @eq_comm _ "T"]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
+
 
 theorem read_a_body_eq : zuBodyZ u ra = some read_a_body := by cbv
 theorem read_c_body_eq : zuBodyZ u rc = some read_c_body := by cbv
