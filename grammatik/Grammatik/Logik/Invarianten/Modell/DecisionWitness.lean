@@ -165,6 +165,7 @@ theorem insufficient_budget_refused_zeuge (fuel : Nat)
 theorem nonlinear_still_refused_zeuge :
     decideInvariant (Frag.Witness.declaration.traeger ()) Frag.Witness.product =
       .error (.translation (.within "left" .nonlinear)) := by
-  simp only [decideInvariant, Frag.Witness.product_refused_zeuge]
+  unfold decideInvariant
+  rw [Frag.Witness.product_refused_zeuge]
 
 end Gabbro.Grammatik.Invarianten.Modell.DecisionWitness
