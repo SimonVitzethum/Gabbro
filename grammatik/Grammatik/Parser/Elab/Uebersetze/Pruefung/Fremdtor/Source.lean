@@ -70,17 +70,6 @@ open Gabbro.Grammatik.Zielsatz
 -- otherwise retain several complete front-end reductions in the same process.
 set_option Elab.async false
 
--- As with `kernel_rfl`, leave the final conversion to Lean's kernel. The
--- elaborator otherwise normalizes the complete closed front-end result while
--- matching the conclusion of an already constructed component proof.
-open Lean Elab Tactic in
-elab "foreign_exact " value:term : tactic => withMainContext do
-  let proof ← Term.elabTerm value none
-  Term.synthesizeSyntheticMVarsNoPostponing
-  let proof ← instantiateMVars proof
-  (← getMainGoal).assign proof
-  replaceMainGoal []
-
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper
@@ -213,25 +202,6 @@ theorem fremdFallible_tor_threadet :
     .ok true := by
   decide +kernel
 
-/-- Recover handler absence through the successful assembler, without evaluating
-    bodies under an abstract function index. -/
-private theorem lowered_no_handlers (u : UProg)
-    (lowered : (lowerAllg u).toOption.isSome = true) (noHandlers : u.hands = []) :
-    ∀ f, (((lowerAllg u).toOption.get lowered).1).unterbricht f = false := by
-  have h := except_ok_get lowered
-  generalize hp : (lowerAllg u).toOption.get lowered = result at h ⊢
-  unfold lowerAllg at h
-  split at h
-  · cases h
-  · split at h
-    · cases h
-    · split at h
-      · have fields := Measures.checkedProgram_eq h
-        rw [fields.1]
-        intro f
-        simp only [progOfFn, noHandlers, List.any_nil]
-      · cases h
-
 /-! ## Acceptance with the real Duty -/
 
 set_option maxRecDepth 100000 in
@@ -246,42 +216,5 @@ set_option maxHeartbeats 2000000 in
 theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
-
-/-- Compose the unchanged atomic checker over abstract inputs. Keeping this
-    Boolean factorization abstract avoids converting a complete closed front-end
-    result while assembling its independently checked component certificates. -/
-private theorem foreign_acceptance_of_components {D : Deklaration}
-    [DecidableEq D.Fn] [DecidableEq D.Ax]
-    (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (checks : List (CheckDecl D))
-    (fragment : programmImFragmentG P fs = true) (bounds : abgAlleB P fs = true)
-    (footprints : fussWXB P S fs [] = true) (levels : stufenB P fs = true)
-    (pool : einzelnPoolB P fs [] [] = true) (races : rennB P fs [] [] = true)
-    (answers : antwortenB P fs = true) (masks : maskenB P fs = true)
-    (interfaces : schnittstellenB P fs = true)
-    (duties : checkB P [] [] fs checks = true) (scopes : scopesOkProgB P fs = true)
-    (invariants : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) = true)
-    (contracts : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
-    AkzeptiertX P S fs [] [] [] [] checks = true := by
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
-  and_intros
-  · exact fragment
-  · exact bounds
-  · exact footprints
-  · exact levels
-  · rfl
-  · rfl
-  · exact pool
-  · exact races
-  · exact answers
-  · exact masks
-  · exact interfaces
-  · exact libraryB_immer _ _
-  · exact Kernzelle.accumulatorB_leer
-  · exact duties
-  · rfl
-  · exact scopes
-  · exact GuestBoundary.admissionB_nil
-  · exact invariants
-  · exact contracts
 
 end Gabbro.Grammatik.Parser.Uebersetze
