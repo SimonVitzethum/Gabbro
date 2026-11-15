@@ -149,19 +149,9 @@ def zellen : List Zelle := [
 
 theorem zellen_exact : e.zellen.eraseDups = zellen := by
   letI := e.aufz
-  change (Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨0, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨1, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨2, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨3, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨4, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨5, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨6, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨7, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨8, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨9, by decide⟩ ++
-      Gen.zellen e.P e.S e.fs e.ls e.cs e.ws ⟨10, by decide⟩ ++ []).eraseDups = zellen
+  unfold Einsatz.zellen alleZellen Gen.zellen
   -- Reuse the proved executable closure instead of reducing the exponential specification.
-  simp only [Gen.zellen, getrenntZellen, schreibGetrenntZellen,
+  simp only [getrenntZellen, schreibGetrenntZellen,
     getrenntW, schreibGetrenntW, reachB_eq_schnell]
   decide +kernel
 

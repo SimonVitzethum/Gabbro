@@ -42,7 +42,7 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M103_131
 
-open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.M.M103_131
+open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.M103_131
 
 theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
 
