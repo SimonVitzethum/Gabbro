@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Gen.Zeugen.M.M49_50
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+meta import Grammatik.Gen.Zeugen.M.M49_50
 
 @[expose] public section
 
