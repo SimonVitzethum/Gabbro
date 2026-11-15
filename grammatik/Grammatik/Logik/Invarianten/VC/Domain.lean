@@ -156,7 +156,7 @@ def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : We
               exact Bool.noConfusion (absent.symm.trans actual)⟩
   | .ptr _ => .ok ⟨.tru, fun world => by
       change True ↔ (eval world expression world locals : Unit) = (value : Unit)
-      exact ⟨fun _ => Subsingleton.elim _ _, fun _ => trivial⟩⟩
+      exact ⟨fun _ => Subsingleton.elim (α := Unit) _ _, fun _ => trivial⟩⟩
   | _ => .error (.unsupported "local initializer is outside the supported local fragment")
 
 /-- Conjoin certified branches. The chosen domain is complete; empty types are
