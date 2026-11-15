@@ -253,7 +253,8 @@ theorem akzeptiertX_of_spec [RootNativeFloat.Hardware]
     (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true)
     (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
     AkzeptiertX P S fs ls cs ws aks checks qs = true := by
-  unfold AkzeptiertX
+  unfold AkzeptiertX Invarianten.Pruefer.invariantVCB
+  simp only [← Bool.and_assoc]
   apply Bool.and_eq_true_iff.mpr
   refine ⟨?_, hK⟩
   apply Bool.and_eq_true_iff.mpr
