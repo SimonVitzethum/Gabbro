@@ -28,7 +28,7 @@ def measurePolicy (program : Programm D) (measure : Mass D) (cycle : D.Fn → Bo
       apply and_congr ((lower_denote _ _).trans (requires.bool_iff world).symm)
       have same := measure.wert_welt f anchor world locals
       dsimp only [decreases]
-      rw [same]
+      simp only [same]
       cases cycle f <;> cases lexLt (measure.wert f world locals) entry <;> simp [QF.denote]⟩
 
 /-- The same checked WP proves MassPflicht when instantiated with massTor.
@@ -62,7 +62,9 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
       | false => simp only [tested, Bool.false_and]
       | true => simp only [tested, obligation.2 tested, Bool.not_true, Bool.and_false]
     simp only [massTor, disabled, Bool.false_eq_true, ↓reduceIte] at reply
-    exact fun g => noDecrease h next args g reply
+    intro g forbidden
+    subst error
+    exact noDecrease h next args g reply
   have valid := checkedEnvironment_atomic policy f locals (checked locals) free shared subset
     O oracleLocal passes U havoc A atomic (massTor measure (cycle f) entry R) gated
     (fun error => ∀ g, error ≠ Logik.abstieg g) errors world requires
@@ -102,6 +104,6 @@ theorem MassGeprueftB_iff (program : Programm D) (S : SperrInv D) (sources : Loc
     MassGeprueftB program S sources budget hint measure cycle anchor f = true ↔
       ∃ certificate, checkMeasure program S sources budget hint measure cycle anchor f = .ok certificate := by
   unfold MassGeprueftB
-  cases checkMeasure program S sources budget hint measure cycle anchor f <;> simp
+  cases checkMeasure program S sources budget hint measure cycle anchor f <;> simp [Except.toOption]
 
 end Gabbro.Grammatik.Vertraege.Pruefer

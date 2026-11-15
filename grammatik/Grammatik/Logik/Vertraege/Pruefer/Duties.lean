@@ -21,10 +21,12 @@ theorem respectsGate
       (fun f world locals => if gate f world locals then calls f world locals else .logik (error f)) := by
   constructor
   · intro f world locals requires next value returned
+    dsimp only at returned
     split at returned
     · exact respects.1 f world locals requires next value returned
     · cases returned
   · intro f world locals next value returned
+    dsimp only at returned
     split at returned
     · exact respects.2 f world locals next value returned
     · cases returned
