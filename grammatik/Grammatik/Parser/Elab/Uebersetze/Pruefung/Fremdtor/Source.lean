@@ -251,6 +251,10 @@ private theorem foreign_checked_image (u : UProg)
         exact checked _ _
       · cases emitted
 
+private theorem fremd_foreign_contracts : axContractsB uFremd = true := by decide +kernel
+private theorem fremdFallible_foreign_contracts : axContractsB uFremdFallible = true := by
+  decide +kernel
+
 attribute [local irreducible] checkPFremd checkPFremdFallible
 
 set_option maxRecDepth 100000 in
@@ -264,7 +268,13 @@ theorem fremd_akzeptiert :
     ForeignGateFunctions.infPieces_ok checkChecksFremd
     (except_ok_get uFremd_lowered)
   intro invariants foreignGate
-  cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+  have emptyFamily : invariants = (fun i => Fin.elim0 (show Fin 0 from i)) := by
+    funext i
+    exact Fin.elim0 (show Fin 0 from i)
+  subst invariants
+  have sameProof : foreignGate = fremd_foreign_contracts := Subsingleton.elim _ _
+  subst foreignGate
+  decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -277,6 +287,12 @@ theorem fremdFallible_akzeptiert :
     ForeignGateFunctions.fallPieces_ok checkChecksFremdFallible
     (except_ok_get uFremdFallible_lowered)
   intro invariants foreignGate
-  cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+  have emptyFamily : invariants = (fun i => Fin.elim0 (show Fin 0 from i)) := by
+    funext i
+    exact Fin.elim0 (show Fin 0 from i)
+  subst invariants
+  have sameProof : foreignGate = fremdFallible_foreign_contracts := Subsingleton.elim _ _
+  subst foreignGate
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
