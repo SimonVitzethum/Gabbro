@@ -5,11 +5,11 @@ public import Grammatik.Gen.Zeugen.Reset
 public import Grammatik.Gen.Zeugen.Gap.M99_824
 public import Grammatik.Gen.Zeugen.Gap.M99_825
 public import Grammatik.Gen.Zeugen.Gap.M47_549
-public import Grammatik.Gen.Zeugen.Gap.M169_350
+public import Grammatik.Gen.Zeugen.M.M169_350
 public import Grammatik.Gen.Zeugen.M.M16_13
 public import Grammatik.Gen.Zeugen.Gap.M49_50
-public import Grammatik.Gen.Zeugen.Gap.M103_803
-public import Grammatik.Gen.Zeugen.Gap.M103_131
+public import Grammatik.Gen.Zeugen.M.M103_803
+public import Grammatik.Gen.Zeugen.M.M103_131
 public import Grammatik.Gen.Zeugen.N.N16_5
 public import Grammatik.Gen.Zeugen.N.N18_0
 public import Grammatik.Gen.Zeugen.N.N18_4

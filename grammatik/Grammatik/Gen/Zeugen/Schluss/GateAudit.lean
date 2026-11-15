@@ -1,4 +1,4 @@
-/- Current classification of the earlier structural candidates. -/
+/- Current classification keeps accepted restorations separate from fragment findings. -/
 module
 
 public import Grammatik.Gen.Zeugen.Gap.Audit
@@ -11,32 +11,48 @@ namespace Gabbro.Grammatik.Gen.Zeugen.GateAudit
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 open Gabbro.Grammatik.Gen.Zeugen.Gap
 
-private theorem verdict_iff_accepted (e : Einsatz) (refused : e.gueltig = false) :
-    e.gueltig = true ↔ e = Reset.Good.e ∨ e = M16_13.e := by
+/-- These earlier structural candidates carry full acceptance proofs. -/
+def restored : List Einsatz :=
+  [Reset.Good.e, M16_13.e, M169_350.e, M103_803.e, M103_131.e]
+
+theorem restored_checked : ∀ e ∈ restored, e.gueltig = true := by
+  intro e member
+  simp only [restored, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl
+  · exact Reset.Good.e_gueltig
+  · exact M16_13.e_gueltig
+  · exact M169_350.e_gueltig
+  · exact M103_803.e_gueltig
+  · exact M103_131.e_gueltig
+
+private theorem verdict_iff_restored (e : Einsatz) (refused : e.gueltig = false) :
+    e.gueltig = true ↔ e ∈ restored := by
   constructor
   · intro accepted
     rw [refused] at accepted
     exact Bool.noConfusion accepted
-  · rintro (rfl | rfl)
-    · rw [Reset.Good.e_gueltig] at refused
-      exact Bool.noConfusion refused
-    · rw [M16_13.e_gueltig] at refused
-      exact Bool.noConfusion refused
+  · intro member
+    have accepted := restored_checked e member
+    rw [refused] at accepted
+    exact Bool.noConfusion accepted
 
-/-- Preserved lock syntax restores M16, while secondary fragment gaps remain. -/
+/-- The updated gates restore all four coordinated lock fixtures. -/
 theorem structural_candidates_verdicts : ∀ e ∈ structuralWitnesses,
-    e.gueltig = true ↔ e = Reset.Good.e ∨ e = M16_13.e := by
+    e.gueltig = true ↔ e ∈ restored := by
   intro e member
   simp only [structuralWitnesses, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact verdict_iff_accepted _ m99_824_refused
-  · exact verdict_iff_accepted _ m47_549_refused
-  · exact verdict_iff_accepted _ m169_350_refused
-  · exact ⟨fun _ => Or.inr rfl, fun _ => M16_13.e_gueltig⟩
-  · exact verdict_iff_accepted _ m49_50_refused
-  · exact verdict_iff_accepted _ m103_803_refused
-  · exact verdict_iff_accepted _ m103_131_refused
-  · exact verdict_iff_accepted _ m99_825_refused
-  · exact ⟨fun _ => Or.inl rfl, fun _ => Reset.Good.e_gueltig⟩
+  · exact verdict_iff_restored _ m99_824_refused
+  · exact verdict_iff_restored _ m47_549_refused
+  · exact ⟨fun _ => by simp [restored], fun _ => M169_350.e_gueltig⟩
+  · exact ⟨fun _ => by simp [restored], fun _ => M16_13.e_gueltig⟩
+  · exact verdict_iff_restored _ m49_50_refused
+  · exact ⟨fun _ => by simp [restored], fun _ => M103_803.e_gueltig⟩
+  · exact ⟨fun _ => by simp [restored], fun _ => M103_131.e_gueltig⟩
+  · exact verdict_iff_restored _ m99_825_refused
+  · exact ⟨fun _ => by simp [restored], fun _ => Reset.Good.e_gueltig⟩
+
+theorem restored_checked_zeuge : M169_350.e ∈ restored ∧ M169_350.e.gueltig = true :=
+  ⟨by simp [restored], M169_350.e_gueltig⟩
 
 end Gabbro.Grammatik.Gen.Zeugen.GateAudit

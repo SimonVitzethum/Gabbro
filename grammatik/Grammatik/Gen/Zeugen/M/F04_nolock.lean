@@ -35,7 +35,7 @@ def requested : List Zelle := [
   ⟨6, 0, true, [false, false, false]⟩,
   ⟨6, 0, true, [true, false, false]⟩]
 
-theorem e_gueltig : e.gueltig = true := by decide
+theorem e_gueltig : e.gueltig = true := by decide +kernel
 
 -- Diagnostic output only; the final cell assertions are kernel checked.
 #eval e.gueltig

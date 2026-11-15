@@ -2,6 +2,7 @@
 module
 
 public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Fein.Zellen
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Defs
@@ -63,9 +64,9 @@ def cause : Option Invarianten.Frag.Refusal :=
   | .ok _ => none
 
 theorem e_cause : cause = some (.unsupported
-    "contract end block is outside the checked control fragment") := by decide
+    "contract end block is outside the checked control fragment") := by decide +kernel
 
-theorem e_refused : e.gueltig = false := by decide
+theorem e_refused : e.gueltig = false := by decide +kernel
 
 /-- The intended footprint vectors exist even though the checker refuses the body. -/
 theorem requested_present : ∀ x ∈ requested, e.Hat x := by decide
@@ -76,7 +77,8 @@ theorem requested_refusal_zeuge : ⟨2, 0, true, [true, false, true, false]⟩ �
 
 /-- Input-side evidence, independent of the diagnostic evaluator. -/
 def RegInput : Prop :=
-  (⟨0, by decide⟩ : z.deklaration.Reg) ∈ (P.rumpf ⟨0, by decide⟩).regs
+  (⟨0, by decide⟩ : z.deklaration.Reg) ∈ (P.rumpf ⟨0, by decide⟩).regs ∧
+  e.HatF ⟨0, 6, 10, false, []⟩
 
 theorem e_input : RegInput := by decide
 

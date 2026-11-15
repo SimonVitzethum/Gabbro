@@ -33,7 +33,7 @@ def e : Einsatz := z.einsatz P [⟨0, by decide⟩] (by decide) (by decide)
 def requested : List Zelle := [
   ⟨1, 0, true, [false, true, false]⟩]
 
-theorem e_gueltig : e.gueltig = true := by decide
+theorem e_gueltig : e.gueltig = true := by decide +kernel
 
 -- Diagnostic output only; the final cell assertions are kernel checked.
 #eval e.gueltig
