@@ -11,34 +11,40 @@ open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC Invarianten.Pr
 /-- These computations are isolated from the compiler path. The lead must
     measure them against the repository's per-declaration time limit. -/
 theorem increment_accepted_zeuge : KontrakteGeprueftB increment (SperrInv.leer declaration) [()] = true := by
-  decide
+  decide +kernel
 
 theorem falseEnsures_refused_zeuge : KontrakteGeprueftB falseEnsures (SperrInv.leer declaration) [()] = false := by
-  decide
+  decide +kernel
 
 /-- The false ensures has a concrete, typed counterexample: x=4 and result=5. -/
 theorem falseEnsures_counterexample_zeuge :
     ReqAmEintritt falseEnsures () world arguments ∧
-    ¬ EnsAmRueck falseEnsures () world world arguments ⟨5, by decide, by decide⟩ := by
+    ¬ EnsAmRueck falseEnsures () world world arguments ⟨5, by decide +kernel, by decide +kernel⟩ := by
   constructor
-  · decide
-  · decide
+  · change decide ((4 : Int) < 10) = true
+    decide +kernel
+  · change ¬ (decide ((5 : Int) = 4 + 2) = true)
+    decide +kernel
 
 theorem unit_logic_accepted_zeuge : nutzerPflichtGeprueftB unit [()] [] = true := by
-  decide
+  decide +kernel
 
 theorem invariant_gate_zeuge : invariantenGeprueftB unit [()] [] = true := by
-  decide
+  decide +kernel
 
 /-- Full checker acceptance rules out a corollary whose new gate always
     refuses. Structural checks reuse the already established VC decisions. -/
 theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [.inl (), .inr false, .inr true] = true := by
-  have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true] unit.ws = true := by
+  have invariants := invariantenGeprueftB_program invariant_gate_zeuge
+  have contracts : KontrakteGeprueftB unit.P unit.S [()] unit.lockFormulas {} unit.loopHints = true := by
+    decide +kernel
+  have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
+      unit.ws unit.akku unit.pruefungen [] [] unit.lockFormulas unit.loopHints = true := by
     unfold AkzeptiertX
-    rw [increment_accepted_zeuge]
+    rw [invariants, contracts]
     simp only [Bool.and_true]
-    decide
+    decide +kernel
   exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
     ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨core, rfl⟩, Kernzelle.akkuStartB_leer unit⟩,
       invariant_gate_zeuge⟩, unit_logic_accepted_zeuge⟩
@@ -51,16 +57,17 @@ theorem nutzerPflicht_of_akzeptiert_zeuge : NutzerPflichtA unit :=
 /-- The strengthened concrete checker refuses a wrong postcondition. -/
 theorem checker_falseEnsures_refused_zeuge :
     akzeptiertX_pruefer.akzeptiert falseUnit [()] [] [.inl (), .inr false, .inr true] = false := by
-  have refused : nutzerPflichtGeprueftB falseUnit [()] [] = false := by decide
+  have refused : nutzerPflichtGeprueftB falseUnit [()] [] = false := by decide +kernel
   change (_ && nutzerPflichtGeprueftB falseUnit [()] []) = false
   rw [refused, Bool.and_false]
 
 /-- An actually conforming pointer target, with a nontrivial interface pre
     and result-dependent post. This exercises both refinement directions. -/
-def pointerDeclaration : Deklaration :=
+abbrev pointerDeclaration : Deklaration :=
   { declaration with
     passt := fun _ n => decide (n = 0)
-    passt_ok := fun _ _ _ => SigPasst.refl _ _ }
+    passt_ok := fun _ _ _ => SigPasst.refl _ _
+    rzusage := fun item => nomatch item }
 
 def pointerProgram : Programm pointerDeclaration where
   invariante := fun item => nomatch item
@@ -79,8 +86,8 @@ def pointerLayout : PointerSignatures pointerDeclaration where
     omega
 
 theorem pointer_refinement_accepted_zeuge :
-    (checkPointers pointerProgram [()] pointerLayout).toOption.isSome = true := by decide
+    (checkPointers pointerProgram [()] pointerLayout).toOption.isSome = true := by decide +kernel
 
-theorem pointer_target_present_zeuge : pointerDeclaration.passt () 0 = true := by decide
+theorem pointer_target_present_zeuge : pointerDeclaration.passt () 0 = true := by decide +kernel
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
