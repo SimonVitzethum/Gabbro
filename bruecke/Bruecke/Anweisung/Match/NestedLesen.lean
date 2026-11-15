@@ -48,8 +48,13 @@ theorem seqZ_option_some {k : Nat} {fn : UFn} {ns : BodyNames} {num : Nat}
                   | some out =>
                     obtain ⟨ys, tail', used'⟩ := out
                     simp only [hy, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
-                    exact ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, (by first | exact he | rfl | simp_all), hp, ha, ?_, ?_⟩
-                    all_goals first | exact hy | simp_all
+                    obtain ⟨rfl, rfl, rfl⟩ := h
+                    refine ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, ?_, ?_, ?_, ?_, ?_⟩
+                    · first | exact he | rfl | simp_all
+                    · first | exact hp | rfl | simp_all
+                    · first | exact ha | rfl | simp_all
+                    · first | exact hy | rfl | simp_all
+                    · first | rfl | simp_all
   · simp only [hn, ↓reduceDIte] at h; cases h
 
 end Gabbro.Bruecke
