@@ -15,7 +15,7 @@ theorem invariantDuties_mitRuhe (checked : ∀ f, InvariantDuties P S f) :
     ∀ f, InvariantDuties P.mitRuhe S.mitRuhe f := by
   intro f passes Q shared subset
   cases f with
-  | none => exact ⟨invGutSA_ruhe, invGutGrundA_ruhe⟩
+  | none => exact ⟨invGutSA_ruhe P passes Q S.mitRuhe shared, invGutGrundA_ruhe⟩
   | some f =>
       have facts := checked f passes (axWahr D) shared subset
       have normal := invGutSA_mitRuhe facts.1

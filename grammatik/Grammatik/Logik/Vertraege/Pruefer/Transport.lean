@@ -14,7 +14,8 @@ theorem contractDuties_mitRuhe (checked : ∀ f, ContractDuties P S f) :
     ∀ f, ContractDuties P.mitRuhe S.mitRuhe f := by
   intro f passes Q shared subset
   cases f with
-  | none => exact ⟨koerperGutSA_ruhe, invGutSA_ruhe, invGutGrundA_ruhe⟩
+  | none => exact ⟨koerperGutSA_ruhe P passes Q S.mitRuhe shared,
+      invGutSA_ruhe P passes Q S.mitRuhe shared, invGutGrundA_ruhe⟩
   | some f =>
       have facts := checked f passes (axWahr D) shared subset
       have body := koerperGutSA_mitRuhe facts.1
