@@ -2,37 +2,6 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 import Grammatik.Kern.Taktik.KernelRfl
-import all Init.Data.Repr
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Decode
-import all Init.Data.String.Defs
-import all Init.Data.String.Extra
-import all Init.Data.String.FindPos
-import all Init.Data.String.Hashable
-import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iterate
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.Modify
-import all Init.Data.String.OrderInstances
-import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
-import all Init.Data.String.Pattern.Char
-import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
-import all Init.Data.String.PosRaw
-import all Init.Data.String.Search
-import all Init.Data.String.Slice
-import all Init.Data.String.Stream
-import all Init.Data.String.Subslice
-import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
-import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.OptionalBinderWitness
@@ -45,12 +14,11 @@ set_option maxHeartbeats 2000000
 def result (valued : Bool) : Option Ty := if valued then some (.int 0 10) else none
 
 def u (valued fallible : Bool) : UProg := { ControlProbe.u with
-  axs := [{
-    name := "gate", params := [], kinds := [], res := result valued,
-    gruende := if fallible then 1 else 0 }] }
+  axs := [{ name := "gate", params := [], kinds := [], res := result valued,
+            gruende := if fallible then 1 else 0 }] }
 abbrev D (valued fallible : Bool) := declOf (u valued fallible)
-abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, by change 0 < 1; decide⟩
-abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, by change 0 < 1; decide⟩
+abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, Nat.le_of_ble_eq_true rfl⟩
+abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, Nat.le_of_ble_eq_true rfl⟩
 
 def admission (valued fallible : Bool) :
     RufPasst (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
@@ -82,14 +50,14 @@ def fallibleEnd (valued : Bool) :
     Endblock (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by change 0 < 1; decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler valued)
     (.ret (.val (answer valued true)) (.refl []))
 
 def fallibleBlock (valued : Bool) :
     Block (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by change 0 < 1; decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (Nat.le_of_ble_eq_true rfl) (handler valued)
     (.cons (.ret (.val (answer valued true)) (.refl [])) .nil)
 
 def plainEnd : Endblock (D false false)
@@ -108,14 +76,16 @@ def body (valued fallible nested : Bool) :
     Endblock (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
       false [] [] := by
   cases fallible with
-  | true => exact (.bind (.widen (by decide) (by decide) (.lit 23))
+  | true =>
+    exact .bind (.widen (by decide) (by decide) (.lit 23))
       (if nested then .cons (.ite .tru (fallibleBlock valued) .nil)
-        (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued))
+        (retN valued true 99 (by decide) (by decide)) else fallibleEnd valued)
   | false =>
     cases valued with
-    | false => exact (.bind (.widen (by decide) (by decide) (.lit 23))
+    | false =>
+      exact .bind (.widen (by decide) (by decide) (.lit 23))
         (if nested then .cons (.ite .tru plainBlock .nil)
-          (retN false false 99 (by decide) (by decide)) else plainEnd))
+          (retN false false 99 (by decide) (by decide)) else plainEnd)
     | true => exact retN true false 99 (by decide) (by decide)
 
 def program (valued fallible nested : Bool) : Programm (D valued fallible) where
@@ -128,10 +98,8 @@ def program (valued fallible nested : Bool) : Programm (D valued fallible) where
     subst f
     exact body valued fallible nested
 
-def binding (fallible : Bool) : TorB where
-  nr := 1
-  regs := [none, none, none, none, none, none]
-  fehler := if fallible then [(-9, 0)] else []
+def binding (fallible : Bool) : TorB :=
+  ⟨1, [none, none, none, none, none, none], (if fallible then [(-9, 0)] else []), none⟩
 
 def image (valued fallible nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program valued fallible nested)
@@ -161,6 +129,8 @@ def observed (valued fallible nested : Bool) (raw : Runner.W) : Int :=
   | .zurueck _ v => v.n
   | _ => -1
 
+attribute [local irreducible] image
+
 /-- Nonempty complete images exercise both generic binder cases and contexts. -/
 theorem accepted_images :
     (image false false false).toOption.isSome = true ∧
@@ -178,12 +148,12 @@ theorem success_and_reason_paths :
     observed false true false (BitVec.ofInt 64 (-9)) = 9 ∧
     observed false true true (BitVec.ofInt 64 (-9)) = 9 ∧
     observed true true false (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide +kernel
+    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide_cbv
 
 /-- The current canonical void decoder also accepts unlisted errno words. -/
 theorem unlisted_void_answer :
     observed false true false (BitVec.ofInt 64 (-8)) = 23 ∧
-    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide +kernel
+    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide_cbv
 
 /-- In particular, preserving local 23 cannot be implemented by deleting the call. -/
 def observedTrace (valued fallible nested : Bool) (raw : Runner.W) : List (Ereignis (D valued fallible)) :=
@@ -201,6 +171,6 @@ theorem oracle_effect_is_retained :
 
 /-- Value decoding still rejects an answer outside its declared range. -/
 theorem invalid_value_answer :
-    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide +kernel
+    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide_cbv
 
 end Gabbro.Stage0.OptionalBinderWitness

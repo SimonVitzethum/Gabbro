@@ -3,7 +3,6 @@ module
 public import Stage0.Senke.Anweisung.Bindung.TorLauf
 public import Runner.Prog.IRAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -94,11 +93,10 @@ theorem world_at : WeltAt memory layout world := by
   obtain ⟨f, hf⟩ := f
   have : f = 0 := by change f < 1 at hf; omega
   subst f
-  kernel_change ValueAt layout memory (BitVec.ofNat 64 (2048 + 8 * k)) 0
-    (.int 0 255) (⟨0, by decide, by decide⟩ : Wert D (.int 0 255))
   have : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by change (k : Int) < 4 at hk; omega
   rcases this with rfl | rfl | rfl | rfl <;>
-    refine ValueAt.of_enc (w := 0) rfl ?_ rfl <;> kernel_rfl
+    apply ValueAt.of_enc (by rfl) (w := 0)
+  all_goals first | decide +kernel +revert | rfl
 
 theorem environment_at : EnvAt layout memory 1024 environment := by
   intro τ x

@@ -89,6 +89,7 @@ public import Grammatik.Parser.Elab.Modules.MatchWildcardZeuge
 public import Grammatik.Parser.Elab.Modules.MatchNumberZeuge
 public import Grammatik.Parser.Elab.Tuples.Witnesses
 public import Grammatik.Parser.Elab.Uebersetze.Records.TruthZeuge
+public import Grammatik.Parser.Elab.Uebersetze.Records.NarrowingWitness
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.EqualityZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.PayloadKindsZeuge
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowingWitness

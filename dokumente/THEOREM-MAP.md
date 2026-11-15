@@ -7232,3 +7232,107 @@ NOT claimed by the image theorems of this section:
 Witnesses still missing for the statements above (open, assigned separately): a joint witness of `gabbroZielLeben_faeden` with
 `GSicht` and the new `Fenster` (review IDs A1/F3); a joint witness of any `Emitted.bild_ziel*` on an `Emitted` value with a
 non-empty decomposed prefix and a non-trivial callee prefix (B1/F5); a recursive-callee fixture that runs the call (B2).
+
+## 189. Stage-0 numeric wildcards, record-field narrowing and u64 differences (2026-11-14)
+
+The existing numeric-match expansion (`Modules/MatchNumber.lean`) feeds the ordinary
+conditional lowering. With the compiler's `UCtx.narrow` switch, `Records/Narrowing.lean`
+expands a local record-field narrow into a snapshot binding and the existing checked
+local narrow. Successful reads stop using that snapshot before mutation, shadowing or
+an unknown statement. `GuardRelation.lean` shares its runtime read traversal with this
+rewrite. The canonical exporter keeps the switch off. Full-range u64 differences use
+the existing relational `USide.eng` and verified wide-integer lowering; no G rule,
+acceptance rule, goal statement or named assumption changes.
+
+All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the last row.
+
+| Statement | File | Meaning |
+|---|---|---|
+| `NumberWildcardWitness.candidate_present`, `accepted_image` | `NumberWildcardWitness.lean` | Numeric arms `0`, `1` and `_` produce an actual `Emitted` image through `emit`. |
+| `NumberWildcardWitness.canonical_source`, `image_correct` | same | The same compiled source is canonical and instantiates the generic image correctness theorem, with its existing hardware/runtime premises. |
+| `NumberWildcardWitness.missing_fallback_refused_zeuge`, `duplicate_pattern_refused_zeuge` | same | Whole-source emission refuses a missing fallback and duplicate numeric patterns. |
+| `FieldNarrowingWitness.candidate_present`, `accepted_image` | `FieldNarrowingWitness.lean` | A u64 record field narrowed to `0 .. 63`, with a sibling-field failure return, reaches an actual image. |
+| `FieldNarrowingWitness.canonical_source`, `image_correct` | same | The field source uses the canonical program and inherited generic image correctness. |
+| `FieldNarrowingWitness.model_shape_zeuge` | same | Exactly one field snapshot and one existing local narrow occur; the final return reads that checked snapshot. |
+| `FieldNarrowingWitness.first_write_emitted_zeuge` | same | Narrowing a u64 field permits its first compound increment, with later reads at the record's declared type. |
+| `FieldNarrowingWitness.indexed_store_emitted_zeuge`, `stale_store_refused_zeuge` | same | A narrowed field indexes an actual table write; mutation of the record before that write invalidates the index fact and is refused. |
+| `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
+| `U64DifferenceWitness.candidate_present`, `accepted_image` | `U64DifferenceWitness.lean` | Full-width unsigned operands, including values above bit 63, compile through `emit`. |
+| `U64DifferenceWitness.canonical_source`, `image_correct` | same | The same source instantiates the canonical-program and generic image theorems. |
+| `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
+| `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
+| `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `first_write_value_zeuge`, `indexed_store_snapshot_zeuge`, `assignment_root_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, the first write value, store-index reads versus mutation roots, lexical barriers, unchanged historical reads and nonlocal refusal. |
+
+The integration guardian also includes `narrow-record-field.gab` (both success and failure
+paths) and `guard-relation-u64.gab` (high bits, the unsigned limit and a false guard). Emission
+certificates and actual runner execution are separate measurements.
+
+The bounded importer check also moves the existing closed 104 pins from `Teil/Teil16.lean`
+to `Korpus/Programme/Uebersetze104.lean`, re-exported by `Uebersetze.lean`. The five statements
+`u104elab`, `u104lower`, `u104data`, `u104fragment` and `u104fuss` are unchanged. The first
+two use kernel conversion in the isolated witness module instead of elaborator `cbv`;
+the generic Boolean equality helpers remain in `Teil16`.
+
+The private `Parser.Spec.function_block` evaluation equation includes the compiler-only
+field normalizer for every context, retaining all clause and refusal paths. Its joint
+`function_block_zeuge` fixture has a u64 record field, explicit narrow failure, the enabled
+compiler switch and a nonempty predicate context whose clause is actually elaborated.
+
+`kernel_value_zeuge` in `Kern/Taktik/KernelValue.lean` checks a nonempty computed
+list and its exact shape. The tactic normalizes a candidate with Lean Meta, assigns
+the requested output and leaves equality to kernel conversion. Dynamic source
+phase witnesses retain normalized values and all original statements.
+Their scanner-result continuation is named once and shared with the parsed fixture;
+the phase bridge composes its actual lexer equation instead of unfolding the closed
+source run during elaboration. Short scanner equations and text equality stay in
+the isolated source witness, checked by kernel conversion.
+
+`Measures/ClosedLowering.lean` moves `Uebersetze.check_measure_gate` out of the
+private check-witness phases with its statement unchanged. `Uebersetze.closed_lowering`
+combines successful invariant, function, pointer/foreign contract and actual measure
+exports when every source measure clause is absent; no check is bypassed. The
+nonempty implication source is its joint `ExportWitnesses.closed_lowering_zeuge`
+(formerly `implication_lowered`, with the same proposition). Existing exporter
+witnesses use that generic combination without reducing transported G bodies.
+
+`Uebersetze.lowerMeasures_without_clauses` derives an actual measure export from
+absent clauses with the existing dependent collector theorem. Its nonempty
+`ExportWitnesses.lowerMeasures_without_clauses_zeuge` also checks that every
+exported tuple is empty. `closed_lowering` derives this export itself; the
+concrete fixtures no longer normalize their source getters to produce it.
+## 190. Profile-bound ticket waiting (S7)
+
+The admitted `environment linux` / `environment freestanding` profile entry selects the execution-image binding;
+`--environment` must agree with an entry declared in source. The default remains the Linux runner image.
+`Prepared.imageEnvironment_eq` ties environment selection to the exact canonical source selection; the
+certificate carries equality between its binding and the binding extracted from that source.
+`Emitted.lockWait` proves that the selected binding survives the actual image constructor and relocation.
+`ticket_spin_no_syscall`, `locksCodeT_spin_no_syscall` and `Emitted.lock_spin_no_syscall` concern lock code only;
+the runner startup and declared gates have separate bindings. Linux retains private WAIT and WAKE-all
+(`ticket_futex_syscalls`). Both bindings keep every instruction offset and the existing uncontended simulation
+statements. The spin contention edge takes two instructions back to the serving read, preserving the complete
+memory (`nimmT_spin_retry`); its padded wait/wake blocks contain no syscall.
+`nimmT_spin_round` connects the complete serving read, comparison and retry, preserving the ticket and all
+three shared lock words along the fixed five-instruction attempt.
+
+`Sperre/Bindung/Simulation.lean` states the small safety interface `WaitModel`: a scheduled step stutters or is an
+existing ticket-machine step. `waitModel` proves both instances. For every such model, `WaitRun.inv`,
+`WaitRun.abbild`, `WaitRun.abstract`, `WaitRun.tkt` and `WaitRun.ausschluss` carry the same invariant, abstract
+FIFO order, ticket ghost and mutual exclusion. The existing machine-G coupling obligation is unchanged.
+Joint witnesses are `Prepared_imageEnvironment_eq_zeuge`, `profile_lock_zeuge`, `source_environment_zeuge`,
+`nimmT_spin_retry_zeuge`, `waitModel_zeuge`, `WaitRun_tkt_zeuge` and
+`image_binding_present_zeuge`, `image_binding_zeuge`, `image_lock_body_zeuge`, `Emitted_lockWait_zeuge` and
+`Emitted_lock_spin_no_syscall_zeuge` under `Sperre/Bindung/`. The image witnesses run the complete
+production `emit` pipeline on a nonempty scoped-lock source program with each admitted source profile;
+the complete Linux image has exactly four additional syscall instructions (wait and three release paths).
+`image_lock_body_zeuge` proves that the complete take/release blocks occur contiguously in each actual
+emitted function body, using its computed scratch offset; the freestanding blocks contain no syscall.
+
+**Liveness finding (no weakened theorem):** the existing `Faeden.Lauf` models Linux waiter registration,
+FUTEX_WAIT blocking and WAKE-all. Its `Lauf.ScheinbarEndlich` bounds spontaneous returns from a blocked place;
+it is not a progress contract for active spin retries. A spin retry at `ladeS` is a stutter, not a `Schritt`
+of that Linux machine. Consequently `Lauf.waechst`, `Lauf.leben`, `Lauf.leben_warte` and their
+`Stau`/`Potential` proof chain do not transfer through the safety-only `WaitModel` interface. A generic liveness
+proof additionally needs progress at the strategy's retry place under scheduler fairness. Those Linux
+statements and their assumptions remain intact; no spin liveness theorem is claimed here. FIFO and ghost
+refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-one remains unsupported.

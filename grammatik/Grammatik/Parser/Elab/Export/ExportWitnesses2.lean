@@ -1,39 +1,42 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.ClosedLowering
 public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
 public import Grammatik.Parser.Elab.Export.ExportComparisons
 public import Grammatik.Parser.Elab.Export.ExportArrays
 import all Init.Data.Repr
+-- Closed function dispatch also reduces the String pattern implementation.
+import all Init.Data.ToString.Basic
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
 import all Init.Data.String.Defs
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Legacy
+import all Init.Data.String.Slice
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.ToSlice
 import all Init.Data.String.Extra
 import all Init.Data.String.FindPos
 import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
 import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
 import all Init.Data.String.Length
 import all Init.Data.String.Modify
 import all Init.Data.String.OrderInstances
 import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
 import all Init.Data.String.Pattern.Char
 import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
 import all Init.Data.String.PosRaw
 import all Init.Data.String.Search
-import all Init.Data.String.Slice
 import all Init.Data.String.Stream
 import all Init.Data.String.Subslice
 import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
-import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportWitnesses2
@@ -67,7 +70,15 @@ def countItems := (parseTopTief countTokens).toOption.get count_parsed
 theorem count_elaborated : (elabU (pre108 countItems)).toOption.isSome = true := by decide +kernel
 def countUnit := (elabU (pre108 countItems)).toOption.get count_elaborated
 
-theorem count_lowered : (UebersetzeAllg2.lowerAllg countUnit).toOption.isSome = true := by decide +kernel
+theorem count_lowered : (UebersetzeAllg2.lowerAllg countUnit).toOption.isSome = true := by
+  apply closed_lowering countUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : countUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem count_source_zeuge : (uebersetzeAllg countText).toOption.isSome = true := by
   have lexed := except_ok_get count_lexed
@@ -113,7 +124,15 @@ def relationsItems := (parseTopTief relationsTokens).toOption.get relations_pars
 theorem relations_elaborated : (elabU (pre108 relationsItems)).toOption.isSome = true := by decide +kernel
 def relationsUnit := (elabU (pre108 relationsItems)).toOption.get relations_elaborated
 
-theorem relations_lowered : (UebersetzeAllg2.lowerAllg relationsUnit).toOption.isSome = true := by decide +kernel
+theorem relations_lowered : (UebersetzeAllg2.lowerAllg relationsUnit).toOption.isSome = true := by
+  apply closed_lowering relationsUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : relationsUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem relations_source_zeuge : (uebersetzeAllg relationsText).toOption.isSome = true := by
   have lexed := except_ok_get relations_lexed
@@ -159,7 +178,15 @@ def treeItems := (parseTopTief treeTokens).toOption.get tree_parsed
 theorem tree_elaborated : (elabU (pre108 treeItems)).toOption.isSome = true := by decide +kernel
 def treeUnit := (elabU (pre108 treeItems)).toOption.get tree_elaborated
 
-theorem tree_lowered : (UebersetzeAllg2.lowerAllg treeUnit).toOption.isSome = true := by decide +kernel
+theorem tree_lowered : (UebersetzeAllg2.lowerAllg treeUnit).toOption.isSome = true := by
+  apply closed_lowering treeUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : treeUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem tree_source_zeuge : (uebersetzeAllg treeText).toOption.isSome = true := by
   have lexed := except_ok_get tree_lexed
@@ -206,7 +233,15 @@ def stringsItems := (parseTopTief stringsTokens).toOption.get strings_parsed
 theorem strings_elaborated : (elabU (pre108 stringsItems)).toOption.isSome = true := by decide +kernel
 def stringsUnit := (elabU (pre108 stringsItems)).toOption.get strings_elaborated
 
-theorem strings_lowered : (UebersetzeAllg2.lowerAllg stringsUnit).toOption.isSome = true := by decide +kernel
+theorem strings_lowered : (UebersetzeAllg2.lowerAllg stringsUnit).toOption.isSome = true := by
+  apply closed_lowering stringsUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : stringsUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem strings_source_zeuge : (uebersetzeAllg stringsText).toOption.isSome = true := by
   have lexed := except_ok_get strings_lexed
@@ -242,7 +277,15 @@ def arraysItems := (parseTopTief arraysTokens).toOption.get arrays_parsed
 theorem arrays_elaborated : (elabU (pre108 arraysItems)).toOption.isSome = true := by decide +kernel
 def arraysUnit := (elabU (pre108 arraysItems)).toOption.get arrays_elaborated
 
-theorem arrays_lowered : (UebersetzeAllg2.lowerAllg arraysUnit).toOption.isSome = true := by decide +kernel
+theorem arrays_lowered : (UebersetzeAllg2.lowerAllg arraysUnit).toOption.isSome = true := by
+  apply closed_lowering arraysUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : arraysUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem arrays_source_zeuge : (uebersetzeAllg arraysText).toOption.isSome = true := by
   have lexed := except_ok_get arrays_lexed
@@ -293,7 +336,15 @@ def treeTraversalItems := (parseTopTief treeTraversalTokens).toOption.get treeTr
 theorem treeTraversal_elaborated : (elabU (pre108 treeTraversalItems)).toOption.isSome = true := by decide +kernel
 def treeTraversalUnit := (elabU (pre108 treeTraversalItems)).toOption.get treeTraversal_elaborated
 
-theorem treeTraversal_lowered : (UebersetzeAllg2.lowerAllg treeTraversalUnit).toOption.isSome = true := by decide +kernel
+theorem treeTraversal_lowered : (UebersetzeAllg2.lowerAllg treeTraversalUnit).toOption.isSome = true := by
+  apply closed_lowering treeTraversalUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : treeTraversalUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem treeTraversal_source_zeuge : (uebersetzeAllg treeTraversalText).toOption.isSome = true := by
   have lexed := except_ok_get treeTraversal_lexed
@@ -330,7 +381,15 @@ def arrayTraversalItems := (parseTopTief arrayTraversalTokens).toOption.get arra
 theorem arrayTraversal_elaborated : (elabU (pre108 arrayTraversalItems)).toOption.isSome = true := by decide +kernel
 def arrayTraversalUnit := (elabU (pre108 arrayTraversalItems)).toOption.get arrayTraversal_elaborated
 
-theorem arrayTraversal_lowered : (UebersetzeAllg2.lowerAllg arrayTraversalUnit).toOption.isSome = true := by decide +kernel
+theorem arrayTraversal_lowered : (UebersetzeAllg2.lowerAllg arrayTraversalUnit).toOption.isSome = true := by
+  apply closed_lowering arrayTraversalUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : arrayTraversalUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem arrayTraversal_source_zeuge : (uebersetzeAllg arrayTraversalText).toOption.isSome = true := by
   have lexed := except_ok_get arrayTraversal_lexed

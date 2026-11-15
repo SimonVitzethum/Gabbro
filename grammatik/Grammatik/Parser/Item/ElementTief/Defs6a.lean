@@ -192,10 +192,10 @@ def parseProfEintraege (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .wort s :: rest =>
+    | .wort s :: rest | .ident s :: rest =>
       if strEq s "arch" || strEq s "rounding" ||
           strEq s "fp_contract" || strEq s "memory_model" ||
-          strEq s "interrupt_routing" then match nimmName rest with
+          strEq s "interrupt_routing" || strEq s "environment" then match nimmName rest with
         | .error e => .error e
         | .ok (v, r1) => match fordereZeichen ";" r1 with
           | .error e => .error e

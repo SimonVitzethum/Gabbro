@@ -100,10 +100,11 @@ theorem local_popcount (ctx : UCtx) (name error : String) (position width : Nat)
     uWertBody ctx (.call "popcount" [.variable name]) = .ok (.ib1 .popcount width (.param name)) := by
   have stored := local_width ctx name position width resolved declared positive
   have builtin : uBitEin "popcount" = some .popcount := by cbv
-  have ordinary : "popcount".startsWith "#tuple:" = false := by decide +kernel
-  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, integer, builtin,
-    uWertBlatt, resolved, kind, stored, ordinary, Bool.not_false, ↓reduceIte]
-  rfl
+  have ordinary : (!"popcount".startsWith "#tuple:") = true := by cbv
+  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil,
+    Option.orElse_none, ordinary, ↓reduceIte, integer, builtin,
+    uWertBlatt, resolved, kind, stored]
+  all_goals rfl
 
 /-- Both rotation operands are read independently of the stored width. -/
 theorem local_rotl (ctx : UCtx) (name : String) (position width : Nat)
@@ -114,9 +115,11 @@ theorem local_rotl (ctx : UCtx) (name : String) (position width : Nat)
       .ok (.ib2 .rotl width (.param name) (.lit 1)) := by
   have stored := local_width ctx name position width resolved declared positive
   have builtin : uRotEin "rotl" = some .rotl := by cbv
-  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, builtin,
+  have ordinary : (!"rotl".startsWith "#tuple:") = true := by cbv
+  simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil,
+    Option.orElse_none, ordinary, ↓reduceIte, builtin,
     uWertBlatt, resolved, kind, stored]
-  rfl
+  all_goals rfl
 
 theorem alias_builtin_zeuge :
     uWertBody aliasContext (.call "popcount" [.variable "x"]) = .ok (.ib1 .popcount 32 (.param "x")) := by

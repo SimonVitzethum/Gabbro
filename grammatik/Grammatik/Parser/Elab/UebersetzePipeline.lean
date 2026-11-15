@@ -11,6 +11,7 @@
   `archiv/c-emitter-2026-10-17` -- and the generic pipeline moved here unchanged.)
 -/
 module
+public import Grammatik.Kern.Taktik.ExceptWitness
 public import Grammatik.Parser.Elab.Export.ExportPreservation
 @[expose] public section
 
@@ -74,14 +75,6 @@ theorem uebersetzeAllg_von_zeichen {l : List Char} {toks : List Token}
   rw [he]
   dsimp only
   rw [hw]
-
-/-- A successful computation is `.ok` of its extracted value (how a unit
-    instance names the parser's output without retyping it). -/
-theorem except_ok_get {ε α : Type} {x : Except ε α} (h : x.toOption.isSome = true) :
-    x = .ok (x.toOption.get h) := by
-  cases x with
-  | error e => simp only [Except.toOption, Option.isSome_none, Bool.false_eq_true] at h
-  | ok a => rfl
 
 /-- The declared starts of an elaborated unit, as functions of its declaration: the thread roots (the
     `concurrent` members, then the dispatch roots of the `entry` items, `UProg.roots`), the functions entered

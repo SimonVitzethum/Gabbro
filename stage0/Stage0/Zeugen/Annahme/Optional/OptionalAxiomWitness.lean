@@ -1,6 +1,5 @@
 module
 public import Stage0.SourceWitness
-import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -41,46 +40,33 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 
 /-- A value-returning foreign call using the optional binding spelling. -/
-def characters : List Char :=
-  ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'o', 'p', 't', 'i', 'o', 'n', 'a', 'l', '_',
-   'p', 'r', 'o', 'b', 'e', ' ', '{', ' ', 'a', 'x', 'i', 'o', 'm', ' ', 'a', 'x',
-   '(', ')', ' ', '-', '>', ' ', 'u', '8', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's',
-   ' ', '{', ' ', 'p', 'u', 'r', 'e', ' ', '}', ' ', 'u', 'n', 'f', 'a', 'l', 's',
-   'i', 'f', 'i', 'a', 'b', 'l', 'e', ' ', '\"', 'p', 'r', 'o', 'b', 'e', '\"', ';',
-   ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ',
-   '-', '>', ' ', 'u', '8', ' ', '{', ' ', 'l', 'e', 't', ' ', 'r', '?', ' ', '=',
-   ' ', 'a', 'x', '(', ')', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '2', '3',
-   ';', ' ', '}', ' ', '}']
+def text : String :=
+  "module optional_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return 23; } }"
 
-def text : String := String.ofList characters
+def parsed := (lexL text.toList).mapError (fun _ => "lex") |>.bind parseTopTief
 
-def parsed := ((lexL characters).mapError reprStr).bind parseTopTief
-
-/-- The staged lexer receives exactly the declared source characters. -/
-theorem parsed_from_text_zeuge :
-    parsed = ((lexL text.toList).mapError reprStr).bind parseTopTief := by
-  simp only [text, String.toList_ofList]
-  rfl
-
-theorem parsed_present : parsed.toOption.isSome = true := by kernel_rfl
+theorem parsed_present : parsed.toOption.isSome = true := by decide +kernel
 
 def unitCandidate := elabU (pre108 (parsed.toOption.get parsed_present))
-theorem unit_present : unitCandidate.toOption.isSome = true := by kernel_rfl
+theorem unit_present : unitCandidate.toOption.isSome = true := by decide +kernel
 def unit := unitCandidate.toOption.get unit_present
 
-theorem caller_present : 0 < unit.fns.length := by
-  have size : unit.fns.length = 1 := by kernel_rfl
-  rw [size]
-  decide
+theorem caller_present : 0 < unit.fns.length := by decide +kernel
 
+-- Elaborate dependent lowering over symbolic inputs before applying the source fixture.
 def blockCandidate :=
-  lowSeqL (l := false) unit ⟨0, caller_present⟩ [] (fnAt unit ⟨0, caller_present⟩)
-    20 (resOf unit ⟨0, caller_present⟩) [] [.bindOptBeg "r" "ax" []]
+  (fun (u : UProg) (caller : Fin u.fns.length) =>
+    lowSeqL (l := false) u caller [] (fnAt u caller)
+      20 (resOf u caller) [] [.bindOptBeg "r" "ax" []]) unit ⟨0, caller_present⟩
+
+-- Constructor matching must keep the computed source symbolic; the kernel
+-- still checks the complete closed equality below.
+attribute [local irreducible] unit
 
 /-- The actual sequence lowerer constructs the canonical optional axiom block. -/
 theorem optional_constructor :
     (match blockCandidate with
      | .ok (⟨_, .bindAxiomOpt ..⟩, _) => true
-     | _ => false) = true := by kernel_rfl
+     | _ => false) = true := by decide +kernel
 
 end Gabbro.Stage0.OptionalAxiomWitness

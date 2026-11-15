@@ -1,4 +1,6 @@
 module
+import Grammatik.Kern.Taktik.KernelValue
+import all Init.Data.ToString.Basic
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Expr.Ausdruck.Teil3
@@ -36,9 +38,29 @@ import all Init.Data.String.Pattern.Basic
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.ToSlice
 
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.Termination
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Dyn
+set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
@@ -88,10 +110,12 @@ def source : String :=
   "Scene[i].s = dyn Shape(c); let a = Shape::area(Scene[j].s); return a; }"
 
 -- Use the same lexer-error channel as the canonical source pipeline.
-def parsed : Except String (List SItemTief) :=
-  match lex source with
+def parse_tokens (answer : Except LexFehler (List Token)) : Except String (List SItemTief) :=
+  match answer with
   | .error _ => .error "lex"
   | .ok tokens => parseTopTief tokens
+
+def parsed : Except String (List SItemTief) := parse_tokens (lex source)
 
 def expanded : Except String (List SItemTief) := do
   exportDeclarationUnit (← parsed)
@@ -106,138 +130,138 @@ private def characters0 : List Char :=
   ['t', 'a', 'b', 'l', 'e', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', ' ', '{', ' ',
    's', 'l', 'o', 't', ' ', '{', ' ', 'r', ':', ' ', 'u', '6', '4', ',', ' ', '}', ' ', '}', ' ']
 
-private theorem lexed0 : (lexL characters0).toOption.isSome = true := by cbv
+private theorem lexed0 : (lexL characters0).toOption.isSome = true := by kernel_rfl
 
 private def chunk0 : Chunk where
   characters := characters0
   tokens := ((lexL characters0).toOption.get lexed0).dropLast
   steps := ((lexL characters0).toOption.get lexed0).length - 1 +
     (characters0.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters1 : List Char :=
   ['t', 'a', 'b', 'l', 'e', ' ', 'R', 'e', 'c', 't', 's', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', ' ', '{', ' ', 's', 'l',
    'o', 't', ' ', '{', ' ', 'r', ':', ' ', 'u', '6', '4', ',', ' ', '}', ' ', '}', ' ']
 
-private theorem lexed1 : (lexL characters1).toOption.isSome = true := by cbv
+private theorem lexed1 : (lexL characters1).toOption.isSome = true := by kernel_rfl
 
 private def chunk1 : Chunk where
   characters := characters1
   tokens := ((lexL characters1).toOption.get lexed1).dropLast
   steps := ((lexL characters1).toOption.get lexed1).length - 1 +
     (characters1.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters2 : List Char :=
   ['s', 'p', 'e', 'c', ' ', 'S', 'h', 'a', 'p', 'e', '[', 'T', ';', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', 'E', ']',
    ' ', '{', ' ', 'f', 'n', ' ', 'a', 'r', 'e', 'a', '(', 's', ':', ' ', 'T', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ']
 
-private theorem lexed2 : (lexL characters2).toOption.isSome = true := by cbv
+private theorem lexed2 : (lexL characters2).toOption.isSome = true := by kernel_rfl
 
 private def chunk2 : Chunk where
   characters := characters2
   tokens := ((lexL characters2).toOption.get lexed2).dropLast
   steps := ((lexL characters2).toOption.get lexed2).length - 1 +
     (characters2.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters3 : List Char :=
   ['e', 'n', 's', 'u', 'r', 'e', 's', ' ', 'r', 'e', 's', 'u', 'l', 't', ' ', '>', '=', ' ', '1', ' ', 'e', 'f', 'f', 'e',
    'c', 't', 's', ' ', '{', ' ', 'E', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '5', '0', ' ', 'o', 'p',
    's', ';', ' ', '}', ' ']
 
-private theorem lexed3 : (lexL characters3).toOption.isSome = true := by cbv
+private theorem lexed3 : (lexL characters3).toOption.isSome = true := by kernel_rfl
 
 private def chunk3 : Chunk where
   characters := characters3
   tokens := ((lexL characters3).toOption.get lexed3).dropLast
   steps := ((lexL characters3).toOption.get lexed3).length - 1 +
     (characters3.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters4 : List Char :=
   ['i', 'm', 'p', 'l', ' ', 'S', 'h', 'a', 'p', 'e', '[', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n', 't', 'o', ' ', 'C', 'i',
    'r', 'c', 'l', 'e', 's', ';', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'C',
    'i', 'r', 'c', 'l', 'e', 's', ' ', '}', ']', ' ', '{', ' ']
 
-private theorem lexed4 : (lexL characters4).toOption.isSome = true := by cbv
+private theorem lexed4 : (lexL characters4).toOption.isSome = true := by kernel_rfl
 
 private def chunk4 : Chunk where
   characters := characters4
   tokens := ((lexL characters4).toOption.get lexed4).dropLast
   steps := ((lexL characters4).toOption.get lexed4).length - 1 +
     (characters4.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters5 : List Char :=
   ['f', 'n', ' ', 'a', 'r', 'e', 'a', '(', 's', ':', ' ', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n', 't', 'o', ' ', 'C', 'i',
    'r', 'c', 'l', 'e', 's', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ', 'e', 'n', 's', 'u', 'r', 'e', 's', ' ', 'r', 'e',
    's', 'u', 'l', 't', ' ', '>', '=', ' ', '1', ' ']
 
-private theorem lexed5 : (lexL characters5).toOption.isSome = true := by cbv
+private theorem lexed5 : (lexL characters5).toOption.isSome = true := by kernel_rfl
 
 private def chunk5 : Chunk where
   characters := characters5
   tokens := ((lexL characters5).toOption.get lexed5).dropLast
   steps := ((lexL characters5).toOption.get lexed5).length - 1 +
     (characters5.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters6 : List Char :=
   ['e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ' ',
    '}', ' ', 'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '2', '0', ' ', 'o', 'p', 's', ' ', '{', ' ', 'r', 'e', 't', 'u',
    'r', 'n', ' ', '1', ';', ' ', '}', ' ', '}', ' ']
 
-private theorem lexed6 : (lexL characters6).toOption.isSome = true := by cbv
+private theorem lexed6 : (lexL characters6).toOption.isSome = true := by kernel_rfl
 
 private def chunk6 : Chunk where
   characters := characters6
   tokens := ((lexL characters6).toOption.get lexed6).dropLast
   steps := ((lexL characters6).toOption.get lexed6).length - 1 +
     (characters6.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters7 : List Char :=
   ['i', 'm', 'p', 'l', ' ', 'S', 'h', 'a', 'p', 'e', '[', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n', 't', 'o', ' ', 'R', 'e',
    'c', 't', 's', ';', ' ', 'e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'R', 'e', 'c',
    't', 's', ' ', '}', ']', ' ', '{', ' ']
 
-private theorem lexed7 : (lexL characters7).toOption.isSome = true := by cbv
+private theorem lexed7 : (lexL characters7).toOption.isSome = true := by kernel_rfl
 
 private def chunk7 : Chunk where
   characters := characters7
   tokens := ((lexL characters7).toOption.get lexed7).dropLast
   steps := ((lexL characters7).toOption.get lexed7).length - 1 +
     (characters7.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters8 : List Char :=
   ['f', 'n', ' ', 'a', 'r', 'e', 'a', '(', 's', ':', ' ', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n', 't', 'o', ' ', 'R', 'e',
    'c', 't', 's', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ', 'e', 'n', 's', 'u', 'r', 'e', 's', ' ', 'r', 'e', 's', 'u',
    'l', 't', ' ', '>', '=', ' ', '1', ' ']
 
-private theorem lexed8 : (lexL characters8).toOption.isSome = true := by cbv
+private theorem lexed8 : (lexL characters8).toOption.isSome = true := by kernel_rfl
 
 private def chunk8 : Chunk where
   characters := characters8
   tokens := ((lexL characters8).toOption.get lexed8).dropLast
   steps := ((lexL characters8).toOption.get lexed8).length - 1 +
     (characters8.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters9 : List Char :=
   ['e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'R', 'e', 'c', 't', 's', ' ', '}', ' ',
    'c', 'o', 's', 't', 's', ' ', '<', '=', ' ', '2', '0', ' ', 'o', 'p', 's', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n',
    ' ', '1', ';', ' ', '}', ' ', '}', ' ']
 
-private theorem lexed9 : (lexL characters9).toOption.isSome = true := by cbv
+private theorem lexed9 : (lexL characters9).toOption.isSome = true := by kernel_rfl
 
 private def chunk9 : Chunk where
   characters := characters9
   tokens := ((lexL characters9).toOption.get lexed9).dropLast
   steps := ((lexL characters9).toOption.get lexed9).length - 1 +
     (characters9.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters10 : List Char :=
   ['t', 'a', 'b', 'l', 'e', ' ', 'S', 'c', 'e', 'n', 'e', ' ', 'c', 'o', 'u', 'n', 't', ' ', '2', '5', '6', ' ', '{', ' ',
@@ -245,14 +269,14 @@ private def characters10 : List Char :=
    'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ',', ' ', 'r', 'e', 'a',
    'd', 's', ' ', 'R', 'e', 'c', 't', 's', ' ', '}', ',', ' ', '}', ' ', '}', ' ']
 
-private theorem lexed10 : (lexL characters10).toOption.isSome = true := by cbv
+private theorem lexed10 : (lexL characters10).toOption.isSome = true := by kernel_rfl
 
 private def chunk10 : Chunk where
   characters := characters10
   tokens := ((lexL characters10).toOption.get lexed10).dropLast
   steps := ((lexL characters10).toOption.get lexed10).length - 1 +
     (characters10.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters11 : List Char :=
   ['i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'd', 'r', 'a', 'w', '(', 'c', ':', ' ', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n',
@@ -260,14 +284,14 @@ private def characters11 : List Char :=
    'o', ' ', 'S', 'c', 'e', 'n', 'e', ',', ' ', 'j', ':', ' ', 'i', 'n', 'd', 'e', 'x', ' ', 'i', 'n', 't', 'o', ' ', 'S',
    'c', 'e', 'n', 'e', ')', ' ', '-', '>', ' ', 'u', '6', '4', ' ']
 
-private theorem lexed11 : (lexL characters11).toOption.isSome = true := by cbv
+private theorem lexed11 : (lexL characters11).toOption.isSome = true := by kernel_rfl
 
 private def chunk11 : Chunk where
   characters := characters11
   tokens := ((lexL characters11).toOption.get lexed11).dropLast
   steps := ((lexL characters11).toOption.get lexed11).length - 1 +
     (characters11.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters12 : List Char :=
   ['e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'r', 'e', 'a', 'd', 's', ' ', 'C', 'i', 'r', 'c', 'l', 'e', 's', ',',
@@ -275,35 +299,35 @@ private def characters12 : List Char :=
    'e', ',', ' ', 'w', 'r', 'i', 't', 'e', 's', ' ', 'S', 'c', 'e', 'n', 'e', ' ', '}', ' ', 'c', 'o', 's', 't', 's', ' ',
    '<', '=', ' ', '1', '0', '0', ' ', 'o', 'p', 's', ' ', '{', ' ']
 
-private theorem lexed12 : (lexL characters12).toOption.isSome = true := by cbv
+private theorem lexed12 : (lexL characters12).toOption.isSome = true := by kernel_rfl
 
 private def chunk12 : Chunk where
   characters := characters12
   tokens := ((lexL characters12).toOption.get lexed12).dropLast
   steps := ((lexL characters12).toOption.get lexed12).length - 1 +
     (characters12.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def characters13 : List Char :=
   ['S', 'c', 'e', 'n', 'e', '[', 'i', ']', '.', 's', ' ', '=', ' ', 'd', 'y', 'n', ' ', 'S', 'h', 'a', 'p', 'e', '(', 'c',
    ')', ';', ' ', 'l', 'e', 't', ' ', 'a', ' ', '=', ' ', 'S', 'h', 'a', 'p', 'e', ':', ':', 'a', 'r', 'e', 'a', '(', 'S',
    'c', 'e', 'n', 'e', '[', 'j', ']', '.', 's', ')', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'a', ';', ' ', '}']
 
-private theorem lexed13 : (lexL characters13).toOption.isSome = true := by cbv
+private theorem lexed13 : (lexL characters13).toOption.isSome = true := by kernel_rfl
 
 private def chunk13 : Chunk where
   characters := characters13
   tokens := ((lexL characters13).toOption.get lexed13).dropLast
   steps := ((lexL characters13).toOption.get lexed13).length - 1 +
     (characters13.filter istLeer).length
-  scanned := by intro rest remaining; cbv
+  scanned := by intro rest remaining; kernel_rfl
 
 private def chunks : List Chunk :=
   [chunk0, chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7, chunk8, chunk9, chunk10, chunk11, chunk12, chunk13]
 
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
-private theorem source_text : source = String.ofList (characters chunks) := by cbv
+private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
 
 private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
     (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
@@ -313,20 +337,19 @@ private theorem lex_from_characters (text : String) (cs : List Char) (ts : List 
 
 private theorem source_lexed : lex source = .ok (tokens chunks) :=
   lex_from_characters source (characters chunks) (tokens chunks) source_text
-    (lex_chunks chunks (by cbv))
+    (lex_chunks chunks
+      (Nat.le_trans (steps_le_length chunks (by kernel_rfl)) (Nat.le_succ _)))
 
 private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
     (scanned : lex source = .ok ts) (read : parseTopTief ts = .ok items) :
     parsed = .ok items := by
-  unfold parsed
-  rw [scanned]
-  exact read
+  exact (congrArg parse_tokens scanned).trans read
 
--- Retain normalized data from each real phase, including the parsed input.
+-- Retain kernel-checked normalized data from every real phase, including the parsed input.
 -- No later value contains a get that re-runs its producer chain.
 private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_items : List SItemTief := source_items_result.val
 private theorem source_items_success :
     parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
@@ -336,42 +359,42 @@ private theorem source_items_read : parsed = .ok source_items :=
 
 private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
     SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
 
 private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_close_value : List Closed × List SItemTief := source_close_result.val
 private theorem source_close_success :
     prepare source_fold_value = .ok source_close_value := source_close_result.property
 
 private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_tagged_value : List SItemTief × List String := source_tagged_result.val
 private theorem source_tagged_success :
     exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
 
 private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
     Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
 private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
     checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
 
 private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
   refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  case origin => kernel_value
 private def source_library_value : List SItemTief := source_library_result.val
 private theorem source_library_success :
     exportLibraryUnit source_checked_value = .ok source_library_value := source_library_result.property
