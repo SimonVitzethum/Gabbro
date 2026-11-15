@@ -11,6 +11,9 @@ open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Inva
 open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness Invarianten.Pruefer
 
 abbrev scalar := Ty.int 0 100
+abbrev context := zD.params zLies
+
+def arguments : Env zD context := .nil
 
 def cell : Observation zD := .slot () () 0
 
@@ -22,26 +25,26 @@ def domain : LocalDomain zD scalar :=
 theorem domain_result : localDomain (D := zD) 128 scalar = .ok domain := rfl
 
 def post (value : Wert zD scalar) :=
-  (postFormula zPB zLies .nil value).toOption.get (by rfl)
+  (postFormula zPB zLies arguments value).toOption.get (by rfl)
 
 theorem post_result (value : Wert zD scalar) :
-    postFormula zPB zLies .nil value = .ok (post value) := rfl
+    postFormula zPB zLies arguments value = .ok (post value) := rfl
 
 theorem post_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
     (post value).val.denote values ↔ number value = values cell := by
   exact (lower_denote _ values).trans Iff.rfl
 
-abbrev slotExpr : Expr zD [] zL scalar := .slot () () zIdx zDarf
+abbrev slotExpr : Expr zD context zL scalar := .slot () () zIdx zDarf
 
 def slotRelation (value : Wert zD scalar) :
     { formula : LProp (Observation zD) // ∀ world,
       formula.denote (assignment world) ↔
-        eval world (.slot () () zIdx zDarf) world (.nil : Env zD []) = value } :=
+        eval world (.slot () () zIdx zDarf) world arguments = value } :=
   ⟨.eq (.var cell) (.konst (number value)), fun _ =>
     ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem slotRelation_result (value : Wert zD scalar) :
-    localEquality (τ := scalar) slotExpr .nil value = .ok (slotRelation value) := by
+    localEquality (τ := scalar) slotExpr arguments value = .ok (slotRelation value) := by
   with_unfolding_all
     simp only [localEquality, scalar]
     simp only [slotExpr]
@@ -51,17 +54,17 @@ theorem slotRelation_result (value : Wert zD scalar) :
 theorem slotRelation_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
     (slotRelation value).val.denote values ↔ values cell = number value := Iff.rfl
 
-abbrev variableExpr : Expr zD [scalar] zL scalar := .var .here
+abbrev variableExpr : Expr zD (scalar :: context) zL scalar := .var .here
 
 def varRelation (bound value : Wert zD scalar) :
     { formula : LProp (Observation zD) // ∀ world,
       formula.denote (assignment world) ↔
-        eval world variableExpr world (.cons bound .nil) = value } :=
+        eval world variableExpr world (.cons bound arguments) = value } :=
   ⟨.eq (.konst (number bound)) (.konst (number value)), fun _ =>
     ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem varRelation_result (bound value : Wert zD scalar) :
-    localEquality variableExpr (.cons bound .nil) value =
+    localEquality variableExpr (.cons bound arguments) value =
       .ok (varRelation bound value) := by
   simp only [localEquality, integerEquality, variableExpr]
   rfl
@@ -72,8 +75,8 @@ theorem varRelation_meaning (bound value : Wert zD scalar) (values : Assignment 
 def invariants : InvariantFormula zPB (zD.invs.filter (schuldet zLies)) :=
   (invariantFormula zPB []).toOption.get (by rfl)
 
-def goals : Vertraege.Pruefer.Goals zD (vertragVon zD zLies) [] :=
-  contractGoals zPB zLies .nil invariants
+def goals : Vertraege.Pruefer.Goals zD (vertragVon zD zLies) context :=
+  contractGoals zPB zLies arguments invariants
 
 def returned (value : Wert zD scalar) := goals.returned value
 
@@ -91,23 +94,23 @@ theorem leaf_meaning (value : Wert zD scalar) (values : Assignment (Observation 
   simp only [QF.denote, and_true]
   exact post_meaning value values
 
-def returnExpr : ErgExpr zD [scalar] zL (vertragVon zD zLies).erg := .val (.var .here)
+def returnExpr : ErgExpr zD (scalar :: context) zL (vertragVon zD zLies).erg := .val (.var .here)
 
 theorem returnedResources : List.Perm zL (vertragVon zD zLies).ende := List.Perm.refl _
 
-def tail : Endblock zD (vertragVon zD zLies) false [scalar] zL :=
+def tail : Endblock zD (vertragVon zD zLies) false (scalar :: context) zL :=
   .ret returnExpr returnedResources
 
 theorem returnCondition_eq (bound : Wert zD scalar) :
-    returnCondition (program := zPB) (S := zS) 128 returnExpr (.cons bound .nil)
+    returnCondition (program := zPB) (S := zS) 128 returnExpr (.cons bound arguments)
       (goals.shrink scalar).returned =
-    localSelect 128 variableExpr (.cons bound .nil)
+    localSelect 128 variableExpr (.cons bound arguments)
       (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
       (fun value => requireCondition (returned value)) := rfl
 
 def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :=
   ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 127
-    tail (.cons bound .nil) (goals.shrink scalar)
+    tail (.cons bound arguments) (goals.shrink scalar)
 
 /-- The return half of the actual 101-value binder, proved for every selected value. -/
 theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
@@ -115,7 +118,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
       ∀ values, values cell = number bound → result.formula.denote values := by
   with_unfolding_all
     have each (value : Wert zD scalar) :
-        ∃ relation head, localEquality variableExpr (.cons bound .nil) value = .ok relation ∧
+        ∃ relation head, localEquality variableExpr (.cons bound arguments) value = .ok relation ∧
           requireCondition (program := zPB) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
           ∀ values, values cell = number bound → relation.val.denote values → head.formula.denote values := by
       refine ⟨varRelation bound value, leaf value, varRelation_result bound value, leaf_result value, ?_⟩
@@ -123,7 +126,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
       apply (leaf_meaning value values).mpr
       have same := (varRelation_meaning bound value values).mp related
       omega
-    obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound .nil)
+    obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound arguments)
       (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
       (fun value => requireCondition (returned value)) domain domain_result
       (fun values => values cell = number bound) each
@@ -147,32 +150,32 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
         rw [shape]
         exact valid
 
-def body : Endblock zD (vertragVon zD zLies) false [] zL := .bind slotExpr tail
+def body : Endblock zD (vertragVon zD zLies) false context zL := .bind slotExpr tail
 
 theorem body_eq : zPB.rumpf zLies = body := rfl
 
 def compiled (sources : LockSources zS) :=
-  ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128 body .nil goals
+  ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128 body arguments goals
 
 /-- The complete generated binder VC is valid for every integer assignment. -/
 theorem compiled_valid (sources : LockSources zS) :
     ∃ result, compiled sources = .ok result ∧ ∀ values, result.formula.denote values := by
   have each (value : Wert zD scalar) :
-      ∃ relation head, localEquality slotExpr .nil value = .ok relation ∧
+      ∃ relation head, localEquality slotExpr arguments value = .ok relation ∧
         branch sources value = .ok head ∧
         ∀ values, True → relation.val.denote values → head.formula.denote values := by
     obtain ⟨head, hhead, valid⟩ := branch_valid sources value
     refine ⟨slotRelation value, head, slotRelation_result value, hhead, ?_⟩
     intro values _ related
     exact valid values ((slotRelation_meaning value values).mp related)
-  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 slotExpr .nil _ (branch sources)
+  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 slotExpr arguments _ (branch sources)
     domain domain_result (fun _ => True) each
   cases result : compiled sources with
   | error cause =>
       delta compiled body at result
       rw [Vertraege.Pruefer.ending.eq_8] at result
       change (do
-        let pre ← localSelect 128 slotExpr .nil _ (branch sources)
+        let pre ← localSelect 128 slotExpr arguments _ (branch sources)
         pure ((pre.read zL slotExpr.orte).map _)) = .error cause at result
       rw [hpre] at result
       dsimp only [bind, Except.bind, pure, Except.pure] at result
@@ -183,7 +186,7 @@ theorem compiled_valid (sources : LockSources zS) :
         delta compiled body at result
         rw [Vertraege.Pruefer.ending.eq_8] at result
         change (do
-          let pre ← localSelect 128 slotExpr .nil _ (branch sources)
+          let pre ← localSelect 128 slotExpr arguments _ (branch sources)
           pure ((pre.read zL slotExpr.orte).map _)) = .ok out at result
         rw [hpre] at result
         dsimp only [bind, Except.bind, pure, Except.pure] at result
@@ -197,17 +200,17 @@ def resultDomain : Results zD (zD.erg zLies) :=
 theorem resultDomain_result : results (D := zD) 128 (zD.erg zLies) = .ok resultDomain := rfl
 
 def postCheck (value : ErgVal zD (zD.erg zLies)) :
-    Except Frag.Refusal (PLift (∃ result, postFormula zPB zLies .nil value = .ok result)) :=
-  match postFormula zPB zLies .nil value with
+    Except Frag.Refusal (PLift (∃ result, postFormula zPB zLies arguments value = .ok result)) :=
+  match postFormula zPB zLies arguments value with
   | .error cause => .error cause
   | .ok result => .ok ⟨⟨result, rfl⟩⟩
 
 /-- The strict arithmetic gate accepts the original body and its original post. -/
 theorem environment_checked (sources : LockSources zS) :
-    (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants .nil).toOption.isSome = true := by
+    (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
   obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
-    (fun value => ∃ result, postFormula zPB zLies .nil value = .ok result) postCheck (by
+    (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
       simp only [postCheck, post_result]
       exact ⟨_, rfl⟩)
@@ -222,8 +225,8 @@ theorem environment_checked (sources : LockSources zS) :
     intro _
     exact (quoteQF_denote _ _).mpr (valid values)
   unfold Vertraege.Pruefer.checkEnvironment
-  have requiresResult : translate (zPB.requires zLies) (.nil : Env zD []) =
-      .ok ((translate (zPB.requires zLies) .nil).toOption.get (by rfl)) := rfl
+  have requiresResult : translate (zPB.requires zLies) arguments =
+      .ok ((translate (zPB.requires zLies) arguments).toOption.get (by rfl)) := rfl
   rw [requiresResult, resultDomain_result]
   dsimp only [bind, Except.bind]
   rw [hposts]
