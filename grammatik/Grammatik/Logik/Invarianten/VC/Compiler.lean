@@ -14,7 +14,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D}
     unrolling. Neither limit is an assumption about runtime behaviour. -/
 structure VCBudget where
   depth : Nat := 128
-  expansion : Nat := 32
+  expansion : Nat := 128
 
 abbrev EndCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

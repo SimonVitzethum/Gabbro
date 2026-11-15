@@ -5,6 +5,7 @@ module
 
 public import Grammatik.Speichermodell.Atomar.Atomar
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Fortschritt.Fortschritt.T3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -125,7 +126,8 @@ theorem fussWAB_of_fussWB (h : fussWB P S fs ws = true) : fussWAB P S fs ws = tr
 /-- **EMBEDDING: every program the goal's checker accepts, `AkzeptiertA` accepts.** -/
 theorem akzeptiertA_of_akzeptiert {axEq : DecidableEq D.Ax}
     {aks : List (Kernzelle.AccumulatorDecl D)}
-    (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] = true) :
+    {sources : Invarianten.Pruefer.LockSources S}
+    (h : @Akzeptiert D _ axEq P S fs ls cs ws aks [] [] [] sources = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
   simp only [GuestBoundary.admissionB_nil, Bool.and_true] at h

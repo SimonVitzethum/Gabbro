@@ -67,7 +67,7 @@ def currentOnly (expression : Expr D Γ Λ τ) :
   | .not body => do
       let checked ← currentOnly body
       return ⟨fun old world locals => by simp only [eval, checked.down old world locals] <;> rfl⟩
-  | .slot table field index _ => do
+  | .slot table field index _ | .thru _ table _ field index _ => do
       let checked ← currentOnly index
       return ⟨fun old world locals => by simp only [eval, checked.down old world locals] <;> rfl⟩
   | _ => .error (.unsupported "contract needs an expression independent of old memory")
