@@ -252,10 +252,12 @@ theorem close_decide_false_iff [DecidableEq α] (body : QF α) :
   classical
   constructor
   · intro rejected
-    by_contra absent
+    apply Classical.byContradiction
+    intro absent
     have valid : ∀ values, body.denote values := by
       intro values
-      by_contra invalid
+      apply Classical.byContradiction
+      intro invalid
       exact absent ⟨values, invalid⟩
     have accepted := (close_decide_true_iff body).mpr valid
     exact Bool.noConfusion (rejected.symm.trans accepted)
