@@ -218,7 +218,6 @@ theorem fremdFallible_checkB :
     checkB checkPFremdFallible [] [] (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible = true := by
   decide +kernel
 
-attribute [local irreducible] checkPFremd checkPFremdFallible
 
 set_option smartUnfolding false
 
