@@ -147,4 +147,48 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
         rw [shape]
         exact valid
 
+def body : Endblock zD (vertragVon zD zLies) false [] zL := .bind slotExpr tail
+
+theorem body_eq : zPB.rumpf zLies = body := rfl
+
+def compiled (sources : LockSources zS) :=
+  ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128 body .nil goals
+
+/-- The complete generated binder VC is valid for every integer assignment. -/
+theorem compiled_valid (sources : LockSources zS) :
+    ∃ result, compiled sources = .ok result ∧ ∀ values, result.formula.denote values := by
+  have each (value : Wert zD scalar) :
+      ∃ relation head, localEquality slotExpr .nil value = .ok relation ∧
+        branch sources value = .ok head ∧
+        ∀ values, True → relation.val.denote values → head.formula.denote values := by
+    obtain ⟨head, hhead, valid⟩ := branch_valid sources value
+    refine ⟨slotRelation value, head, slotRelation_result value, hhead, ?_⟩
+    intro values _ related
+    exact valid values ((slotRelation_meaning value values).mp related)
+  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 slotExpr .nil _ (branch sources)
+    domain domain_result (fun _ => True) each
+  cases result : compiled sources with
+  | error cause =>
+      delta compiled body at result
+      rw [Vertraege.Pruefer.ending.eq_8] at result
+      change (do
+        let pre ← localSelect 128 slotExpr .nil _ (branch sources)
+        pure ((pre.read zL slotExpr.orte).map _)) = .error cause at result
+      rw [hpre] at result
+      dsimp only [bind, Except.bind, pure, Except.pure] at result
+      cases result
+  | ok out =>
+      refine ⟨out, rfl, ?_⟩
+      have shape : out.formula = pre.formula := by
+        delta compiled body at result
+        rw [Vertraege.Pruefer.ending.eq_8] at result
+        change (do
+          let pre ← localSelect 128 slotExpr .nil _ (branch sources)
+          pure ((pre.read zL slotExpr.orte).map _)) = .ok out at result
+        rw [hpre] at result
+        dsimp only [bind, Except.bind, pure, Except.pure] at result
+        exact (congrArg Condition.formula (Except.ok.inj result)).symm
+      rw [shape]
+      exact fun values => valid values trivial
+
 end Gabbro.Grammatik.Zielsatz.PoolCertificate
