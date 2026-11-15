@@ -22,19 +22,23 @@ variable [DecidableEq D.Fn] [DecidableEq D.Ax]
 theorem akzeptiert_guest_eq (P : Programm D) (S : SperrInv D)
     (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (aks : List (Kernzelle.AccumulatorDecl D))
-    (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D)) :
-    Akzeptiert P S fs ls cs ws aks checks qs guests =
-      (Akzeptiert P S fs ls cs ws aks checks qs && GuestBoundary.admissionB guests) := by
-  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
+    (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D))
+    (sources : Invarianten.Pruefer.LockSources S := fun _ => none) :
+    Akzeptiert P S fs ls cs ws aks checks qs guests sources =
+      (Akzeptiert P S fs ls cs ws aks checks qs (sources := sources) &&
+        GuestBoundary.admissionB guests) := by
+  simp only [Akzeptiert, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and,
+    Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
 
 theorem akzeptiert_guest_sound {P : Programm D} {S : SperrInv D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     {ws : List D.Fn} {aks : List (Kernzelle.AccumulatorDecl D)}
     {checks : List (CheckDecl D)} {qs : List D.Ax} {guests : List (GuestBoundary D)}
-    (h : Akzeptiert P S fs ls cs ws aks checks qs guests = true) :
-    Akzeptiert P S fs ls cs ws aks checks qs = true ∧
+    {sources : Invarianten.Pruefer.LockSources S}
+    (h : Akzeptiert P S fs ls cs ws aks checks qs guests sources = true) :
+    Akzeptiert P S fs ls cs ws aks checks qs (sources := sources) = true ∧
       ∀ g ∈ guests, g.admittedB = true := by
-  rw [akzeptiert_guest_eq] at h
+  rw [akzeptiert_guest_eq (sources := sources)] at h
   obtain ⟨hprogram, hguests⟩ := Bool.and_eq_true_iff.mp h
   exact ⟨hprogram, fun g hg => GuestBoundary.admissionB_each hguests g hg⟩
 
@@ -42,10 +46,13 @@ theorem akzeptiert_guest_sound {P : Programm D} {S : SperrInv D}
 theorem akzeptiertX_guest_eq (P : Programm D) (S : SperrInv D)
     (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
     (ws : List D.Fn) (aks : List (Kernzelle.AccumulatorDecl D))
-    (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D)) :
-    AkzeptiertX P S fs ls cs ws aks checks qs guests =
-      (AkzeptiertX P S fs ls cs ws aks checks qs && GuestBoundary.admissionB guests) := by
-  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
+    (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D))
+    (sources : Invarianten.Pruefer.LockSources S := fun _ => none) :
+    AkzeptiertX P S fs ls cs ws aks checks qs guests sources =
+      (AkzeptiertX P S fs ls cs ws aks checks qs (sources := sources) &&
+        GuestBoundary.admissionB guests) := by
+  simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and,
+    Bool.and_assoc, Bool.and_comm, Bool.and_left_comm]
 
 end Bool
 
