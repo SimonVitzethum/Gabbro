@@ -29,6 +29,10 @@ say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
 
 /-- **The core checker accepts the program.** -/
+#eval match Invarianten.Pruefer.checkInvariantVC prog (SperrInv.leer BD) [()] (fun _ => none) with
+  | .ok _ => "accepted"
+  | .error cause => cause.message
+
 theorem prog_accepted_zeuge :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
       [.inl (), .inr 0, .inr 1, .inr 2, .inr 3, .inr 4, .inr 5, .inr 6] [()] [] = true := by decide +kernel
