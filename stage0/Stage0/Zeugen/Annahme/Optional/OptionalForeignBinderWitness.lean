@@ -49,7 +49,7 @@ def text : String :=
 /-- This is the production source-to-image entry, with all three explicit gates. -/
 def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by decide_cbv
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
@@ -66,7 +66,7 @@ theorem image_shape :
       (fun | .bindOptBeg .. => true | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide +kernel
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide_cbv
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :
@@ -74,7 +74,7 @@ theorem binding_shape :
       (fun a => (output.tor a).map (·.nr))) = [some 39, some 3, some 3] ∧
     ((List.finRange output.compiled.unit.axs.length).map
       (fun a => (output.tor a).map (·.fehler))) = [some [], some [(-9, 0)], some [(-9, 0)]] := by
-  decide +kernel
+  decide_cbv
 
 /-- Retain the generic certificate, rather than a program-specific lowering rule. -/
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
@@ -88,7 +88,7 @@ def endText : String :=
 
 def endCandidate : Except String (Emitted endText 256) := emit endText 256
 
-theorem end_present : endCandidate.toOption.isSome = true := by decide +kernel
+theorem end_present : endCandidate.toOption.isSome = true := by decide_cbv
 
 def endOutput : Emitted endText 256 := endCandidate.toOption.get end_present
 
