@@ -1,7 +1,6 @@
 module
 public import Stage0.IRBild
 import Grammatik.Kern.Taktik.KernelRfl
-import Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -41,13 +40,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
-
-open Gabbro.Grammatik.Parser.UebersetzeAllg2
--- Reuse the existing callback-selection proofs used by source fixtures.
--- CBV must select a callback before evaluating the 100000-level fuel record.
-attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL
-attribute [local cbv_eval] Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.seq_succ
-  lowStructL_succ lowEndL_succ lowStufe_seq lowStufe_struct lowStufe_ende
 
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
@@ -153,18 +145,22 @@ theorem source_lex_zeuge : Gabbro.Grammatik.Parser.lex text = .ok textTokens := 
   rw [source_text_zeuge, Gabbro.Grammatik.Parser.lex_ofList]
   decide +kernel
 
-attribute [local cbv_opaque] text
-attribute [local cbv_eval] source_lex_zeuge
 
 /-- This is the production source-to-image entry, with all three explicit gates. -/
-def candidate : Except String (Emitted text 256) := emit text 256
+def checkedCandidate : { value : Except String (Emitted text 256) // emit text 256 = value } := by
+  refine ⟨?value, ?certificate⟩
+  case certificate =>
+    unfold emit compile Frontend.source
+    rw [source_lex_zeuge]
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide_cbv
+def candidate : Except String (Emitted text 256) := checkedCandidate.val
+
+theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
 theorem accepted_image : emit text 256 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
+  checkedCandidate.property.trans (Gabbro.Grammatik.except_ok_get candidate_present)
 
 /-- The exporter retains both payload shapes and optional constructors in the
     exact canonical unit passed into image generation. -/
@@ -176,7 +172,7 @@ theorem image_shape :
       (fun | .bindOptBeg .. => true | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide_cbv
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide +kernel
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :
@@ -184,7 +180,7 @@ theorem binding_shape :
       (fun a => (output.tor a).map (·.nr))) = [some 39, some 3, some 3] ∧
     ((List.finRange output.compiled.unit.axs.length).map
       (fun a => (output.tor a).map (·.fehler))) = [some [], some [(-9, 0)], some [(-9, 0)]] := by
-  decide_cbv
+  decide +kernel
 
 /-- Retain the generic certificate, rather than a program-specific lowering rule. -/
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
@@ -247,17 +243,22 @@ theorem end_lex_zeuge : Gabbro.Grammatik.Parser.lex endText = .ok endTokens := b
   rw [end_text_zeuge, Gabbro.Grammatik.Parser.lex_ofList]
   decide +kernel
 
-attribute [local cbv_opaque] endText
-attribute [local cbv_eval] end_lex_zeuge
 
-def endCandidate : Except String (Emitted endText 256) := emit endText 256
+def checkedEndCandidate :
+    { value : Except String (Emitted endText 256) // emit endText 256 = value } := by
+  refine ⟨?value, ?certificate⟩
+  case certificate =>
+    unfold emit compile Frontend.source
+    rw [end_lex_zeuge]
 
-theorem end_present : endCandidate.toOption.isSome = true := by decide_cbv
+def endCandidate : Except String (Emitted endText 256) := checkedEndCandidate.val
+
+theorem end_present : endCandidate.toOption.isSome = true := by decide +kernel
 
 def endOutput : Emitted endText 256 := endCandidate.toOption.get end_present
 
 theorem end_accepted_image : emit endText 256 = .ok endOutput :=
-  Gabbro.Grammatik.except_ok_get end_present
+  checkedEndCandidate.property.trans (Gabbro.Grammatik.except_ok_get end_present)
 
 theorem end_canonical_source : CanonicalSourceProgram endOutput.compiled :=
   compile_source_program endText endOutput.compiled
