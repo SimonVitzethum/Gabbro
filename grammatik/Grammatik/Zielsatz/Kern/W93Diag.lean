@@ -8,6 +8,8 @@ public import Grammatik.Logik.Vertraege.Pruefer.Decision
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 public import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
 public meta import Grammatik.Logik.Invarianten.Pruefer.Program
+public meta import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
+public meta import Grammatik.Nichtinterferenz.Zeuge.Teil1Basis
 public meta import Grammatik.Logik.Invarianten.VC.Calls
 public meta import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 public meta import Grammatik.Logik.Vertraege.Pruefer.Duties
@@ -179,8 +181,8 @@ def diagNp : String :=
 #eval diagNp
 #eval (invariantVCB nP (SperrInv.leer nD) nFs (fun _ => none))
 
-/-- VC-kernel replicas of the PoolZeuge/Atomar edits (the new gate conjunct;
-    old components passed pre-gate and are untouched by the gate change). -/
+-- VC-kernel replicas of the PoolZeuge/Atomar edits (the new gate conjunct;
+-- old components passed pre-gate and are untouched by the gate change).
 -- Kernel attempt disabled after slot timeout (see report); compiled #evals above decide it.
 -- example : invariantVCB zPB zS zFs zDiagSources = true := by
 --   decide +kernel
