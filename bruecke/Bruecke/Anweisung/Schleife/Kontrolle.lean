@@ -17,8 +17,7 @@ theorem Strecke_G.control_append {A : List Eintrag} {s s' : Gabbro.Body.State}
     {xs : List Gabbro.Body.Stmt} {leave : Bool}
     (h : Strecke_G u C A s s' xs (controlB leave)) (ys : List Gabbro.Body.Stmt) :
     Strecke_G u C A s s' (xs ++ ys) (controlB leave) := by
-  refine { gut := h.gut, oben := h.oben, unten := h.unten,
-    schluessel := h.schluessel, mono := h.mono, lauf := ?_ }
+  refine { gut := h.gut, oben := h.oben, unten := h.unten, schluessel := h.schluessel, mono := h.mono, lauf := ?_ }
   intro ρB hT hF
   rw [exec_append, h.lauf ρB hT hF]
   cases leave <;> rfl
