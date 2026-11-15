@@ -154,16 +154,10 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       obtain _ | m := n
       · rw [lowStructL_zero] at hStruct; cases hStruct
       obtain ⟨tabFin, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
-      have _probe : True := trivial
-      have _probe2 := tabFin
       subst Λ₁
-      have _probe3 := tabFin
       cases hst
-      have _probe4 := tabFin
       rw [ht] at htZ
-      have _probe5 := tabFin
-      cases htZ
-      have _probe6 := tabFin
+      clear htZ
       obtain ⟨hrBody, hsufBody, hFrame⟩ := statischSeq_G S c hc ρB m k ss
         (fn.mitIndex x tabFin.val ((declOf u).count tabFin)) (fT.mitIndex x tabFin.val ((declOf u).count tabFin))
         (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
