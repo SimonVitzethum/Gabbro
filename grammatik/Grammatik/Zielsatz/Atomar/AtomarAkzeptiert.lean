@@ -162,9 +162,10 @@ theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = tr
 
 /-- **EMBEDDING, as Bools: every unit the goal's checker accepts, `AkzeptiertX` accepts.** -/
 theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
-    {checks : List (CheckDecl D)} (h : Akzeptiert P S fs ls cs ws aks checks = true)
-    (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
-    AkzeptiertX P S fs ls cs ws aks checks = true := by
+    {checks : List (CheckDecl D)} {sources : Invarianten.Pruefer.LockSources S}
+    (h : Akzeptiert P S fs ls cs ws aks checks (sources := sources) = true)
+    (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs sources = true) :
+    AkzeptiertX P S fs ls cs ws aks checks (sources := sources) = true := by
   have invariantCheck := (Bool.and_eq_true_iff.mp h).2
   have h := (Bool.and_eq_true_iff.mp h).1
   unfold AkzeptiertX
