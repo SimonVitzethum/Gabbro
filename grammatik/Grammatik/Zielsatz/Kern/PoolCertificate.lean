@@ -241,7 +241,11 @@ theorem environment_checked (sources : LockSources zS) :
       (zPB.rumpf zLies) arguments (contractGoals zPB zLies arguments invariants) = .ok pre := hpre
   rw [actual]
   dsimp only [bind, Except.bind]
-  rw [requirement_payload, decided]
-  rfl
+  have actualDecided : decideB (close (writerMatrix requirement.payload .tru pre.formula))
+      (close_closed (writerMatrix requirement.payload .tru pre.formula)) = true := decided
+  split
+  · rfl
+  · rename_i refused
+    exact False.elim (refused actualDecided)
 
 end Gabbro.Grammatik.Zielsatz.PoolCertificate
