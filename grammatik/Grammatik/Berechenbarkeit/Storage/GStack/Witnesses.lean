@@ -155,7 +155,7 @@ theorem program_exec_zeuge (O : Orakel FD) (passes : Nat)
 
 theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .endet := by decide
 
-set_option pp.maxDepth 2000 in
+set_option pp.deepTerms true in
 set_option pp.maxSteps 1000000 in
 #reduce match Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none) with
   | .ok _ => []

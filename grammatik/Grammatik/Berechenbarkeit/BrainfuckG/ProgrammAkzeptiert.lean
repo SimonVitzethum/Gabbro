@@ -28,7 +28,7 @@ def prog : Programm BD where
 say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
 
-set_option pp.maxDepth 2000 in
+set_option pp.deepTerms true in
 set_option pp.maxSteps 1000000 in
 #reduce match Invarianten.Pruefer.checkInvariantVC prog (SperrInv.leer BD) [()] (fun _ => none) with
   | .ok _ => []
