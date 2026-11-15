@@ -78,6 +78,8 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
         Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, uExp104, @eq_comm _ "Konto", @eq_comm _ "stand"]
+    have hbeq : ("stand" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
+    simp only [hbeq, Bool.false_eq_true, ↓reduceIte, Option.bind_none]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
 
@@ -147,12 +149,14 @@ theorem lies_clause_zeuge :
 
 theorem einzahlen_post_eq (s s' : State) (r : Option Value) :
     (postU u wellFormed ein s s' r).getD False = einzahlen_post s s' r := by
-  simp only [postU, ensList, ensClause, einzahlen_clause_zeuge]
+  have hg : ein.gives = [.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))] := rfl
+  simp only [postU, hg, ensList, ensClause, einzahlen_clause_zeuge]
   rfl
 
 theorem lies_post_eq (s s' : State) (r : Option Value) :
     (postU u wellFormed lies s s' r).getD False = lies_post s s' r := by
-  simp only [postU, ensList, ensClause, lies_clause_zeuge]
+  have hg : lies.gives = [.cmp "==" .erg (.slot "k" "stand" (.param "i"))] := rfl
+  simp only [postU, hg, ensList, ensClause, lies_clause_zeuge]
   rfl
 
 example : preProp wellFormed ein = einzahlen_requires := rfl

@@ -73,6 +73,8 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
         Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, @eq_comm _ "T", @eq_comm _ "v"]
+    have hbeq : ("v" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
+    simp only [hbeq, Bool.false_eq_true, ↓reduceIte, Option.bind_none]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
 
