@@ -121,7 +121,7 @@ theorem invariantVCB_certificate (program : Programm D) (S : SperrInv D)
   cases generated : checkProgram program S functions sources budget locks <;>
     cases contracted : Vertraege.Pruefer.checkContracts program S functions sources budget hints <;>
     simp [invariantVCB, checkInvariantVC, programInvariantsB,
-      Vertraege.Pruefer.KontrakteGeprueftB, generated, contracted, Except.toOption]
+      Vertraege.Pruefer.KontrakteGeprueftB, generated, contracted, Except.toOption, Except.bind]
 
 theorem invariantVCB_sound {program : Programm D} {S : SperrInv D}
     {functions : List D.Fn} {sources : LockSources S} {budget : VCBudget} {hints : Vertraege.Pruefer.LoopHints D} {locks : List D.Lock}

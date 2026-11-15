@@ -128,7 +128,7 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
         resetB cs = true ∧
         Invarianten.Pruefer.programInvariantsB P S fs sources {} ls = true ∧
         Vertraege.Pruefer.KontrakteGeprueftB P S fs sources = true := by
-  unfold AkzeptiertX
+  unfold AkzeptiertX Invarianten.Pruefer.invariantVCB
   simp only [GuestBoundary.admissionB_nil, interface_components, libraryB_immer,
     checkB, List.all_nil, eindeutigeNamen, Bool.and_true, Bool.and_eq_true, and_assoc]
   constructor
