@@ -91,8 +91,17 @@ theorem leaf_meaning (value : Wert zD scalar) (values : Assignment (Observation 
   simp only [QF.denote, and_true]
   exact post_meaning value values
 
+def returnExpr : ErgExpr zD [scalar] zL (vertragVon zD zLies).erg := .val (.var .here)
+
 def tail : Endblock zD (vertragVon zD zLies) false [scalar] zL :=
-  .ret (.val (.var .here)) (List.Perm.refl _)
+  .ret returnExpr (List.Perm.refl _)
+
+theorem returnCondition_eq (bound : Wert zD scalar) :
+    returnCondition (program := zPB) (S := zS) 128 returnExpr (.cons bound .nil)
+      (goals.shrink scalar).returned =
+    localSelect 128 variableExpr (.cons bound .nil)
+      (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
+      (fun value => requireCondition (returned value)) := rfl
 
 def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :=
   ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 127
@@ -120,7 +129,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
     | error cause =>
         delta branch tail at result
         rw [Vertraege.Pruefer.ending.eq_2] at result
-        delta returnCondition at result
+        rw [returnCondition_eq] at result
         rw [hpre] at result
         dsimp only [bind, Except.bind, pure, Except.pure] at result
         cases result
@@ -129,7 +138,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
         have shape : out.formula = pre.formula := by
           delta branch tail at result
           rw [Vertraege.Pruefer.ending.eq_2] at result
-          delta returnCondition at result
+          rw [returnCondition_eq] at result
           rw [hpre] at result
           dsimp only [bind, Except.bind, pure, Except.pure] at result
           exact (congrArg Condition.formula (Except.ok.inj result)).symm
