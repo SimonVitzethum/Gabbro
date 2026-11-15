@@ -107,7 +107,7 @@ theorem zPool_schreibt : reachB zPB zFs zHaupt zEin = true ∧
 
 /-- **The concrete checker accepts the pool.** -/
 theorem zPool_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zPoolSources) = true := by
-  decide +kernel
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
 /-- **The checker before fix lane F10 refused it** (`einzelnB`: the starts were not distinct). -/
 theorem zPool_vor_abgelehnt :

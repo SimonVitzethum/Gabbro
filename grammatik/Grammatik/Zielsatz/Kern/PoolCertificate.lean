@@ -274,5 +274,13 @@ theorem contracts_checked : KontrakteGeprueftB zPB zS zFs zPoolSources = true :=
 
 #print axioms contracts_checked
 
+/-- Both existing VC gates accept; no invariant or contract duty is skipped. -/
+theorem vc_checked : Invarianten.Pruefer.invariantVCB zPB zS zFs zPoolSources {}
+    (fun _ => none) [()] = true := by
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, contracts_checked⟩
+
+#print axioms vc_checked
+
 end PoolCertificate
+
 end Gabbro.Grammatik.Zielsatz
