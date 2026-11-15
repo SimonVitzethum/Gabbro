@@ -86,6 +86,16 @@ theorem contractGoals_sound (program : Programm D) (f : D.Fn) (locals : Env D (D
   | logik error => exact valid
   | hardware error => trivial
 
+/-- Name the dependent post-translation match once so proof certificates and
+    the executable gate share the same matcher constant. This checks syntax
+    only; postcondition truth is still decided by the unchanged closed VC. -/
+def checkPostFormula (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
+    (value : ErgVal D (D.erg f)) :
+    Except Frag.Refusal (PLift (∃ post, postFormula program f locals value = .ok post)) :=
+  match postFormula program f locals value with
+  | .error cause => .error cause
+  | .ok post => .ok ⟨⟨post, rfl⟩⟩
+
 /-- Type facts, the caller requires and its accumulated WP form the closed
     arithmetic VC. No semantic truth proof is submitted to this procedure. -/
 def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
@@ -99,9 +109,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
   let domain ← results (D := D) budget.expansion (D.erg f)
   let _ ← collect domain.values
     (fun value => ∃ post, postFormula program f locals value = .ok post)
-    (fun value => match postFormula program f locals value with
-      | .error cause => .error cause
-      | .ok post => .ok ⟨⟨post, rfl⟩⟩)
+    (checkPostFormula program f locals)
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) locals (contractGoals program f locals invariants)
   if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) (close_closed (writerMatrix requires.payload .tru compiled.formula)) = true then

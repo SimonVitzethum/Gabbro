@@ -201,11 +201,8 @@ def resultDomain : Results zD (zD.erg zLies) :=
 
 theorem resultDomain_result : results (D := zD) 128 (zD.erg zLies) = .ok resultDomain := rfl
 
-def postCheck (value : ErgVal zD (zD.erg zLies)) :
-    Except Frag.Refusal (PLift (∃ result, postFormula zPB zLies arguments value = .ok result)) :=
-  match postFormula zPB zLies arguments value with
-  | .error cause => .error cause
-  | .ok result => .ok ⟨⟨result, rfl⟩⟩
+abbrev postCheck (value : ErgVal zD (zD.erg zLies)) :=
+  checkPostFormula zPB zLies arguments value
 
 theorem requirement_present : (translate (zPB.requires zLies) arguments).toOption.isSome = true := rfl
 
@@ -224,7 +221,7 @@ theorem environment_checked (sources : LockSources zS) :
     (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
       refine ⟨⟨⟨post value, post_result value⟩⟩, ?_⟩
-      simp only [postCheck, post_result])
+      simp only [postCheck, checkPostFormula, post_result])
   have decided : decideB (close (writerMatrix .tru .tru pre.formula))
       (close_closed (writerMatrix .tru .tru pre.formula)) = true := by
     apply (close_decide_true_iff _).mpr
@@ -238,7 +235,6 @@ theorem environment_checked (sources : LockSources zS) :
   unfold Vertraege.Pruefer.checkEnvironment
   rw [requirement_result, resultDomain_result]
   dsimp only [bind, Except.bind]
-  delta postCheck at hposts
   rw [hposts]
   dsimp only [bind, Except.bind]
   rw [body_eq]
