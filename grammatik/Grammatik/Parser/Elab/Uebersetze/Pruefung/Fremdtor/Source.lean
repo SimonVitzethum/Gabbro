@@ -92,19 +92,38 @@ def checkTextFremd : String :=
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
+-- Retain the actual front-end values once, together with their complete
+-- success equations. Dependent checker callbacks then read ordinary unit data.
+private def fremdElaborated : { unit : UProg // elabText checkTextFremd = .ok unit } := by
+  refine ⟨?unit, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
+private def fremdFallibleElaborated :
+    { unit : UProg // elabText checkTextFremdFallible = .ok unit } := by
+  refine ⟨?unit, ?computed⟩
+  case computed => cbv <;> exact Eq.refl _
+
 /-- Both foreign-gated units elaborate. -/
 theorem checkTextFremd_ok : (elabText checkTextFremd).toOption.isSome = true := by
-  decide +kernel
+  rw [fremdElaborated.property]
+  rfl
 
 theorem checkTextFremdFallible_ok :
     (elabText checkTextFremdFallible).toOption.isSome = true := by
-  decide +kernel
+  rw [fremdFallibleElaborated.property]
+  rfl
 
 /-- The elaborated units behind the foreign-gate witnesses. -/
-def uFremd : UProg := (elabText checkTextFremd).toOption.get checkTextFremd_ok
+def uFremd : UProg := fremdElaborated.val
 
-def uFremdFallible : UProg :=
-  (elabText checkTextFremdFallible).toOption.get checkTextFremdFallible_ok
+def uFremdFallible : UProg := fremdFallibleElaborated.val
+
+/-- Both retained units are exactly the successful source elaborations. -/
+theorem uFremd_from_source : elabText checkTextFremd = .ok uFremd :=
+  fremdElaborated.property
+
+theorem uFremdFallible_from_source : elabText checkTextFremdFallible = .ok uFremdFallible :=
+  fremdFallibleElaborated.property
 
 /-- The foreign bodies stay foreign: they elaborate to `axs`, never to `fns`. -/
 example : (elabText checkTextFremd).map (fun u => u.axs.map (·.name)) =
