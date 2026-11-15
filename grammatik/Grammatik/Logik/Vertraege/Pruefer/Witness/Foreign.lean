@@ -63,14 +63,20 @@ def fallibleEnd : Endblock declaration contract false [] [] :=
     (fun item => nomatch item) (fun item => nomatch item)
     returned returned
 
+def optionalFits : RufPasst declaration contract (declaration.asignatur ()) [] where
+  hw item := nomatch item
+  hg item := nomatch item
+  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+  hh item := nomatch item
+
 def optionalBlock : Block declaration contract false [] [] [] :=
   .bindAxiomOptElse (some .bool) () .nil rfl
-    (by decide) (fun item => nomatch item) (fun item => nomatch item) (by decide)
+    optionalFits (fun item => nomatch item) (fun item => nomatch item) (by decide)
     returned .nil
 
 def optionalEnd : Endblock declaration contract false [] [] :=
   .bindAxiomOptElse (some .bool) () .nil rfl
-    (by decide) (fun item => nomatch item) (fun item => nomatch item) (by decide)
+    optionalFits (fun item => nomatch item) (fun item => nomatch item) (by decide)
     returned returned
 
 /-- Both option-indexed value binders have joint generic certificate premises. -/
