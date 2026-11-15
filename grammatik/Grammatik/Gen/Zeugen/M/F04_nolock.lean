@@ -32,7 +32,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨0, by decide⟩, ⟨1, by decide⟩, ⟨1, by decide⟩] (by decide) (by decide)
+def e : Einsatz := z.einsatz P [⟨0, by decide⟩, ⟨1, by decide⟩, ⟨1, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨3, 0, true, [false, false]⟩,
@@ -77,7 +77,7 @@ theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   exact List.mem_eraseDups.1 member
 
 theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
-  ⟨e_gueltig, e_hat _ (by decide)⟩
+  ⟨e_gueltig, e_hat _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)⟩
 
 /-- Missing requested cells are findings, never an altered checker verdict. -/
 def missing : List Zelle := requested.filter (fun x => !zellen.contains x)
