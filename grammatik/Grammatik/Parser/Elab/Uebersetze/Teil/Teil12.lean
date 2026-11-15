@@ -122,7 +122,7 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (sc : SSyscall) (eigner : List String := []) (spaces : List String := []) : Except String UFnKopf := do
   uTorWegPruef sc.way
-  uTorBindungPruef tabs whys sc
+  uTorBindungPruef alias tabs whys sc
   let kopf ← uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) (spaces := spaces)
   uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives }
     tabs globs [] [.effs sc.gate.uses]

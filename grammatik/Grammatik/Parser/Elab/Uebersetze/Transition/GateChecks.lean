@@ -126,9 +126,11 @@ def uTorFehlerPruef (fail : Option String) (whys : List UWhy)
     buffer the kernel moves bytes through -- it points at `u8`/`i8`, and the gate bounds it by a
     length clause `x <= lenof(p)` over one of its integer parameters. A pointer into a table is a
     capability, not a transfer, and is not held to this clause. -/
-def uTorPufferPruef (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
+def uTorPufferPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
     Except String Unit :=
-  let names := params.map (·.1)
+  let names := params.filterMap fun (n, t) => match uTypIn alias tabs [] t with
+    | .ok (.int ..) => some n
+    | _ => none
   params.foldlM (fun _ (p, t) => match t with
     | .ptr _ _ (.atom a) =>
       if strEq a "u8" || strEq a "i8" then
@@ -143,7 +145,7 @@ def uTorPufferPruef (tabs : List UTab) (params : List (String × STyp)) (pre : L
 
 /-- The whole binding half of a gate: answer, stack, error map, buffers. A `via` variable
     carries no binding -- only its contract travels. -/
-def uTorBindungPruef (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit :=
+def uTorBindungPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit :=
   match sc.way with
   | .via _ => .ok ()
   | .lit _ _ bind _ =>
@@ -155,6 +157,6 @@ def uTorBindungPruef (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Exc
     | .ok _ =>
     match uTorFehlerPruef sc.fail whys bind.codes with
     | .error e => .error e
-    | .ok _ => uTorPufferPruef tabs sc.params sc.gate.pre
+    | .ok _ => uTorPufferPruef alias tabs sc.params sc.gate.pre
 
 end Gabbro.Grammatik.Parser.Uebersetze

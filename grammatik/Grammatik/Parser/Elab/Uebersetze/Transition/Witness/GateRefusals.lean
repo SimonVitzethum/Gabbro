@@ -87,7 +87,7 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     res := some (.atom "u64"), fail := some "ReadError",
     way := .lit "linux" "x86_64" sauberBind
       (.assum "linux_read_contract" (.probe "sonde_read")),
-    gate := sauberTor }
+    gate := { sauberTor with pre := [] } }
 
 /-- A clean foreign body. -/
 @[expose] def reineSig : FnSig :=
@@ -165,10 +165,10 @@ theorem n068_zeuge :
 
 /-! ## N447: the stack clause stands at most once -/
 
-/-- One handed-stack register, bound, kept and answered (gift 1107 shape). -/
+/-- One handed-stack register, bound in the inputs and preserved (gift 1107 shape). -/
 @[expose] def einStapel : SSyscall :=
   { lesetor with way := (.lit "linux" "x86_64"
-    ({ sauberBind with stack := ["rsi"] })
+    ({ sauberBind with ins := [.binds "rdi" "fd", .binds "rsi" "len"], stack := ["rsi"] })
     (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n447_positiv_zeuge :
@@ -177,28 +177,51 @@ theorem n447_positiv_zeuge :
 /-- Stack-ness claimed twice (gift 1108). -/
 @[expose] def doppelStapel : SSyscall :=
   { lesetor with way := (.lit "linux" "x86_64"
-    ({ sauberBind with stack := ["rsi", "rsi"] })
+    ({ sauberBind with stack := ["rsi", "rdx"] })
     (.assum "linux_read_contract" (.probe "sonde_read"))) }
 
 theorem n447_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] doppelStapel)
-      "syscall gate second stack clause without G form: rsi" = true := by decide +kernel
+      "syscall gate second stack clause without G form: rdx" = true := by decide +kernel
 
 /-! ## N464: a gate buffer points at bytes and carries its bound -/
 
 /-- A byte buffer with its length bound passes the binding checks. -/
 @[expose] def byteBuffer : SSyscall :=
   { lesetor with params := [("fd", .atom "u32"),
-      ("buf", .ptr "normal" "w" (.atom "u8")), ("len", .atom "u64")] }
+      ("buf", .ptr "normal" "w" (.atom "u8")), ("len", .atom "u64")],
+    gate := sauberTor }
 
 theorem n464_positiv_zeuge :
-    refused (uTorBindungPruef [] [leseGrund] byteBuffer) = false := by decide +kernel
+    refused (uTorBindungPruef [] [] [leseGrund] byteBuffer) = false := by decide +kernel
 
 /-- Parameter order does not affect the bound: the length may precede the buffer. -/
 theorem n464_length_first_zeuge :
-    refused (uTorBindungPruef [] [leseGrund]
+    refused (uTorBindungPruef [] [] [leseGrund]
       { byteBuffer with params := [("len", .atom "u64"),
         ("buf", .ptr "normal" "w" (.atom "u8"))] }) = false := by decide +kernel
+
+/-- A boolean cannot stand in for the integer length of a transfer. -/
+theorem n464_non_numeric_length_zeuge :
+    refusalIs (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with params := [("len", .atom "bool"),
+        ("buf", .ptr "normal" "w" (.atom "u8"))] })
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
+
+/-- A bound on another buffer does not bound this transfer. -/
+theorem n464_other_buffer_zeuge :
+    refusalIs (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with gate := { sauberTor with
+        pre := [.bin "<=" (.variable "len") (.built "lenof" [.variable "other"])] } })
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
+
+/-- A mirrored bound and a signed byte buffer express the same transfer limit. -/
+theorem n464_mirrored_zeuge :
+    refused (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with params := [("buf", .ptr "normal" "w" (.atom "i8")),
+          ("len", .atom "u64")],
+        gate := { sauberTor with
+          pre := [.bin ">=" (.built "lenof" [.variable "buf"]) (.variable "len")] } }) = false := by decide +kernel
 
 /-- Passing N464 does not bypass the existing refusal of live byte capabilities. -/
 theorem n464_lowering_refusal_zeuge :
@@ -209,7 +232,7 @@ theorem n464_lowering_refusal_zeuge :
 @[expose] def wortPuffer : SSyscall :=
   { lesetor with
     params := [("fd", .atom "u32"), ("buf", .ptr "normal" "w" (.atom "u32")),
-      ("len", .atom "u64")] }
+      ("len", .atom "u64")], gate := sauberTor }
 
 theorem n464_wort_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] wortPuffer)

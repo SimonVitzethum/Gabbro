@@ -269,7 +269,7 @@ def uWurzeln (spaces : List String) (tabs : List UTab) (fns : List UFn) (ms : Li
     (`ProfilBindung.wertVon .arch` decodes exactly these two, `SYNTAX.md` §12.1: every other
     machine is sealed, `A006`). -/
 def archOffen (x : String) : Bool :=
-  strEq x "x86_64" || strEq x "aarch64"
+  (ProfilBindung.wertVon .arch x).isSome
 
 /-- The `arch X` clauses of a head, in order. -/
 def archAusKlauseln : List SKlausel → List String
@@ -310,12 +310,8 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob)
   | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs erklaert rest
   | .cost _ :: rest => uAxKlauseln kopf tabs globs erklaert rest
   | .arch x :: rest =>
-    -- `arch X` on a foreign body (`A005`/`A006`): the clause restricts the named assumption to
-    -- one machine, and the model has no rule that carries such a restriction -- so the clause is
-    -- refused, never dropped. A sealed machine is refused as sealed; an open one must stand among
-    -- the machines the unit declares (its own `= asm` body counts: it declares itself). A validated
-    -- clause is still not stored: `UFnKopf` has no machine slot, and the restriction travels with
-    -- the assumption set in the artefact, not in the elaborated head.
+    -- Validate foreign architecture claims against the open machines declared by the unit.
+    -- Keep the original clause in `UFnKopf.clauses` for the later binding stages.
     if !archOffen x then .error ("foreign arch sealed without G form: " ++ x)
     else if erklaert.any (strEq · x) then uAxKlauseln kopf tabs globs erklaert rest
     else .error ("foreign arch without declared machine without G form: " ++ x)
