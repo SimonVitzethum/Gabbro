@@ -52,13 +52,15 @@ theorem reasonHandler_zeuge (P : Programm (declOf unit))
              rw [sigGruende_eq]
              change 1 < 2
              omega⟩) := by
-  have hreas : ∀ f : (declOf unit).Fn, Fin ((declOf unit).gruende f) :=
-    fun f => ⟨1, by rcases f with ⟨i, hi⟩
-      have hz : i = 0 := by change i < 1 at hi; omega
-      subst i
-      rw [sigGruende_eq]
-      change 1 < 2
-      omega⟩
+  have hreas : ∀ f : (declOf unit).Fn, Fin ((declOf unit).gruende f) := by
+    intro f
+    refine ⟨1, ?_⟩
+    rcases f with ⟨i, hi⟩
+    have hz : i = 0 := by change i < 1 at hi; omega
+    subst i
+    rw [sigGruende_eq]
+    change 1 < 2
+    omega
   exact reasonHandler_respektiertRahmen P hreas answer
 
 end Gabbro.Bruecke.ReasonReturnZeuge
