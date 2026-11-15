@@ -69,6 +69,17 @@ open Gabbro.Grammatik.Zielsatz
 -- otherwise retain several complete front-end reductions in the same process.
 set_option Elab.async false
 
+-- As with `kernel_rfl`, leave the final conversion to Lean's kernel. The
+-- elaborator otherwise normalizes the complete closed front-end result while
+-- matching the conclusion of an already constructed component proof.
+open Lean Elab Tactic in
+elab "foreign_exact " value:term : tactic => withMainContext do
+  let proof ← Term.elabTerm value none
+  Term.synthesizeSyntheticMVarsNoPostponing
+  let proof ← instantiateMVars proof
+  (← getMainGoal).assign proof
+  replaceMainGoal []
+
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper

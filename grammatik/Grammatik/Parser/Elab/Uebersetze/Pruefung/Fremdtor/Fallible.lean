@@ -121,7 +121,7 @@ theorem fremdFallible_akzeptiert :
     maskenB_ohne (P := checkPFremdFallible) (by
       delta checkPFremdFallible
       exact lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
-  exact foreign_acceptance_of_components checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
+  foreign_exact foreign_acceptance_of_components checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
     (List.finRange uFremdFallible.fns.length) checkChecksFremdFallible
     fragment_checked bounds_checked footprints_checked levels_checked pool_checked races_checked
     answers_checked masks

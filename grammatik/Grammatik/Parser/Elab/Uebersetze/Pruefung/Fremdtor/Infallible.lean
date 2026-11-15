@@ -121,7 +121,7 @@ theorem fremd_akzeptiert :
     maskenB_ohne (P := checkPFremd) (by
       delta checkPFremd
       exact lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
-  exact foreign_acceptance_of_components checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+  foreign_exact foreign_acceptance_of_components checkPFremd (Cover.Differenz.sperrFamilie uFremd)
     (List.finRange uFremd.fns.length) checkChecksFremd
     fragment_checked bounds_checked footprints_checked levels_checked pool_checked races_checked
     answers_checked masks
