@@ -6,8 +6,8 @@
              `RandL` keeps the image side exact (`RandIR` at the sequential world, which IS the world in the
              image's memory) and takes machine G up to read events (`RandGL`). `randL_schritt`/`randL_bind`,
              `KorrespondenzL` and `korrespondenzL_lauf` are `rand_schritt`/`rand_bind`, `Korrespondenz` and
-             `korrespondenz_lauf` with `RandL` for `Rand` and the call obligation `RufOkGleich` for `RufOk`, under
-             the named oracle property `LeseblindOK`. A call of an admitted callee is ONE decomposed step, as before.
+             `korrespondenz_lauf` with `RandL` for `Rand` and the call obligation `RufOkGleich` for `RufOk`.
+             Read-blindness of the oracle is a theorem (`leseblindRS_alle`), not a premise. A call of an admitted callee is ONE decomposed step, as before.
              The exact forms stay (`Korrespondenz.lean`); an exact boundary is one up to read events (`randL_von`),
              and so is an exact correspondence (`korrespondenzL_von`).
 -/
@@ -47,7 +47,7 @@ theorem randL_von {B : BodyFrame D} {thr : Faden} {stapel : List (RufRahmenG D)}
 /-- **One statement, both sides, with calls**: the image runs the code of `s` (a call of an admitted callee
     included), thread `thr` runs its own steps, and the boundary behind `s` corresponds again, machine G up to read
     events. -/
-theorem randL_schritt {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] [LeseblindOK B.O] (hB : B.Ok)
+theorem randL_schritt {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] (hB : B.Ok)
     {Cg : D.Fn → Prop} {thr : Faden} {stapel : List (RufRahmenG D)} {rho : Env D (D.params B.f)} {s0 : World D}
     {Agl : D.Lock → Prop} (hRuf : RufOkGleich B.P B.O B.passes thr Agl B.R Cg) {mr l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {s : Stmt D (vertragVon D B.f) l Γ Λ Λ'} {rest : Endblock D (vertragVon D B.f) l Γ Λ'}
@@ -59,7 +59,7 @@ theorem randL_schritt {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] [Leseblind
       RufLaufG B.P B.O B.passes thr M M' ∧
       RandL B thr stapel rho s0 Agl rest (pc + BitVec.ofNat 64 (16 * n)) m1 M' σ1 ρ1 := by
   obtain ⟨cr, cs, tr, ts, m1, _, _, s1, a1, hR1⟩ := BodyFrame.randIR_schritt hB h.1 hex
-  obtain ⟨M', hl, hG⟩ := randGL_schritt (leseblind_von B.O) hRuf hs hex h.2
+  obtain ⟨M', hl, hG⟩ := randGL_schritt hRuf hs hex h.2
   exact ⟨cs.length, m1, M', s1, a1, hl, hR1, hG⟩
 
 /-- **One binding, both sides**: the image runs the code of `e`, thread `thr` takes `endeBind`, and the boundary of
@@ -107,7 +107,7 @@ theorem korrespondenzL_von {B : BodyFrame D} {thr : Faden} {stapel : List (RufRa
     decomposed prefix, every prefix of `n` memory-only image steps either lies inside a decomposed step and
     corresponds to a machine that `thr` reaches from `M`, or has passed the boundary in front of `ebe`, which
     corresponds to a machine that `thr` reaches from `M`. -/
-theorem korrespondenzL_lauf {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] [LeseblindOK B.O] (hB : B.Ok)
+theorem korrespondenzL_lauf {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] (hB : B.Ok)
     {Agl : D.Lock → Prop} {Cg : D.Fn → Prop} {thr : Faden} {stapel : List (RufRahmenG D)}
     {rho : Env D (D.params B.f)} {s0 : World D} (hRuf : RufOkGleich B.P B.O B.passes thr Agl B.R Cg)
     {l : Bool} {Γ Γe : Ctx} {Λ Λe : List (Res D)} {eb : Endblock D (vertragVon D B.f) l Γ Λ}

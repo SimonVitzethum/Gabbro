@@ -1,12 +1,10 @@
 /-
   File:      stage0/Stage0/Senke/Bild/Ruf/Hardware.lean
-  Subject:   **The oracle premises of the image theorem hold for every oracle.** Machine G hands the oracle the world
+  Subject:   **Read-blindness needs no assumption; the counting-oracle witness.** Machine G hands the oracle the world
              WITHOUT its read events (`Orakel.wirkt`, grammatik Kern/Semantik/Semantik/T1/Lese.lean, 2026-11-13), so
-             register and visibility answers (`LeseblindOK`, `leseblindOK_alle`) and foreign answers (`LeseblindW`,
-             `leseblindW_alle`) never look at read events, whatever the oracle. The register/visibility half also
-             follows from the named hardware assumption `RegLokal` (`leseblindOK_regLokal`, the route before the
-             interface was read-blind); the program premise `LeseblindP` needs neither the hardware assumptions nor a
-             program without foreign calls (`leseblindP_hardware` is kept as the special case).
+             register and visibility answers (`leseblindRS_alle`) and foreign answers (`leseblindW_alle`) never look
+             at read events, whatever the oracle: read-blindness is a theorem (`leseblindP_alle`), not a premise, and
+             not a consequence of the hardware assumptions either.
 
              Witness (`zaehlOrakel`): an oracle whose foreign answer COUNTS the history of the thread -- every question,
              write and lock move before the call -- still answers alike before and after a read
@@ -26,31 +24,6 @@ open Gabbro.Grammatik
 set_option linter.unusedSectionVars false
 
 variable {D : Deklaration}
-
-/-- `≈` worlds agree on every footprint. -/
-theorem WeltGleich.gleichAuf {σ σ' : World D} (h : WeltGleich σ σ') (S : List (D.Tab ⊕ D.Glob)) :
-    GleichAuf S σ σ' :=
-  ⟨fun t _ => congrFun h.slots t, fun g _ => congrFun h.globs g⟩
-
-/-- **Register locality gives read-blind register and visibility answers.** -/
-theorem leseblindRS_regLokal {O : Orakel D} (h : RegLokal O) : LeseblindRS O :=
-  ⟨fun r σ σ' hw => h.1 r σ σ' (hw.gleichAuf _), fun g σ σ' hw => h.2 g σ σ' (hw.gleichAuf _)⟩
-
-/-- **The named oracle property from the named hardware assumption.** -/
-theorem leseblindOK_regLokal {O : Orakel D} (h : RegLokal O) : LeseblindOK O :=
-  ⟨leseblindRS_regLokal h⟩
-
-/-- **Every oracle of the goal theorem has the named oracle property** (as every oracle does). -/
-theorem leseblindOK_hardware {O : Orakel D} {Q : AxEns D} (_h : Zielsatz.HardwareAnnahmen O Q) :
-    LeseblindOK O :=
-  leseblindOK_alle O
-
-/-- **The program premise from the hardware assumptions**, for a program without foreign calls -- the special case
-    of `leseblindP_alle`. -/
-theorem leseblindP_hardware {P : Programm D} {O : Orakel D} {Q : AxEns D} (h : Zielsatz.HardwareAnnahmen O Q)
-    (hP : FremdFrei P) : LeseblindP P O := by
-  unfold Zielsatz.HardwareAnnahmen at h
-  exact leseblindP_frei (leseblindRS_regLokal h.2.1) hP
 
 /-- An oracle that answers from the history: a foreign call answers the length of the thread's trace without reads
     (every question, write and lock move before it). Registers read `0`, every publication is visible. -/
@@ -81,7 +54,5 @@ theorem zaehlOrakel_fragt (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) (
   rw [zaehlOrakel_wirkt, zaehlOrakel_wirkt, World.rang_fragt]
   omega
 
-#print axioms leseblindOK_hardware
-#print axioms leseblindP_hardware
 
 end Gabbro.Stage0.Senke.BildLauf

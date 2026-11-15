@@ -24,7 +24,8 @@ def zbei : Nat → Abs Nat := zeuge.bei (fun n => n)
 /-- Its scheduler, threads by number. -/
 def zakt : Nat → Option Nat := fun n => (zeuge.akt n).map Fin.val
 
-theorem zeuge_absLauf : AbsLauf zakt zbei := zeuge.absLauf (by decide) zeuge_inv (Fenster.id zeuge)
+theorem zeuge_absLauf : AbsLauf zakt zbei :=
+  zeuge.absLauf (by decide) zeuge_inv (Fenster.id (by decide) zeuge zeuge_inv)
 
 /-- **The `FifoLauf` facts along the witness**: each once, first come first served, only the head takes. -/
 theorem zeuge_fifo : (∀ n, (zbei n).queue.Nodup) ∧
@@ -44,7 +45,7 @@ theorem zeuge_schlange : zbei 3 = ⟨none, [0]⟩ ∧ zbei 11 = ⟨some 0, [1]�
 theorem zeuge_tkt [Conf] : ∃ gh : Nat → Tkt, (∀ n, Passt (gh n) (zbei n)) ∧
     (∀ n, Nach (zakt n) (gh n) (gh (n + 1))) ∧ tHalter (gh 4) = some 0 ∧ 1 ∈ tWarte (gh 11) ∧
     tHalter (gh 11) = some 0 ∧ tHalter (gh 19) = some 1 := by
-  obtain ⟨gh, hP, hT⟩ := zeuge.tkt (by decide) zeuge_inv (Fenster.id zeuge)
+  obtain ⟨gh, hP, hT⟩ := zeuge.tkt (by decide) zeuge_inv (Fenster.id (by decide) zeuge zeuge_inv)
   have h4 : (zbei 4).holder = some 0 := by
     simp [zbei, Lauf.bei, Abs.karte, zeuge, zz, zs, z4, z3, z2, z1, z0,
       start, Zustand.mit, upd, bild, bildAus, Ort.haelt]

@@ -7,7 +7,8 @@
              * the scheduler is weakly fair over the threads not blocked in FUTEX_WAIT (`Lauf.Fair`; a blocked
                thread is never required to step), and
              * FUTEX_WAIT returns spuriously only finitely often (`Lauf.ScheinbarEndlich`, the named futex
-               fairness premise),
+               fairness premise: `Lauf.leben` NEEDS it -- the proof uses it, it is an assumption about the futex
+               environment that carries part of the liveness, not something the machine implies),
              a thread waiting with its ticket takes the lock, or some thread holds the lock from some step on for
              ever (`Lauf.leben`; stated over the abstract lock: `Lauf.leben_warte`). The proof: while it waits,
              `serving` stays at most its ticket; from every step on `serving` grows (`Lauf.waechst`), because
@@ -15,7 +16,10 @@
              situation reaches the quiet one (`Stau.ruhe`), which is impossible (`Ruhe.falsch`).
              NOT claimed: that a thread before its draw ever draws -- the draw is a `cas` loop on `next`, lock-free
              but not wait-free, so other threads that keep drawing can make it fail for ever under a fair scheduler.
-             The model's `locks L` step corresponds to the successful draw.
+             The draw is NOT the model's `locks L` step: machine G's `locks L` step (`dannLocks`) is the ENTER
+             (`Tritt`, `GSicht.nimmt`); the emitted draw belongs to the G step that EXPOSES `locks L` as the thread's
+             head (the step of the statement before it, or the release `freiGib` of an earlier `locks L`), after
+             which the thread counts as waiting (`AnSperre`, Faeden/Transfer.lean).
 -/
 module
 public import Stage0.Senke.Sperre.Faeden.Kette
@@ -84,7 +88,8 @@ theorem Lauf.waechst (hN : N ≤ 2147483647) (R : Lauf N) (hI : ∀ j, Inv N (R.
 
 /-- **LIVENESS OF THE EMITTED LOCK**: on every weakly fair run with finitely many spurious returns of
     FUTEX_WAIT, a thread waiting with ticket `k` enters the lock with it, or some thread holds the lock from some
-    step on for ever. -/
+    step on for ever. `hS : R.ScheinbarEndlich` is a premise the liveness depends on (a futex assumption, not derived
+    from the machine). -/
 theorem Lauf.leben (hN : N ≤ 2147483647) (R : Lauf N) (h0 : Inv N (R.z 0)) (hF : R.Fair)
     (hS : R.ScheinbarEndlich) (n : Nat) (t : Fin N) (k : Nat) (hw : WartetMit k ((R.z n).pc t)) :
     (∃ j, n ≤ j ∧ (R.z j).pc t = .drin k) ∨ ∃ u m, ∀ j, m ≤ j → ((R.z j).pc u).haelt = true := by

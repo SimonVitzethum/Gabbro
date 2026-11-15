@@ -67,12 +67,13 @@ def uMeasureClause (alias : List (String × (Int × Int))) (ks : List SKlausel) 
 
 /-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`,
     `by`, `advances`, `retires`. `costs`, `section` and `payload` travel nowhere and are ignored, like in
-    `lean_g.rs`; so is `deadline <= n ops arch X falsifier p` (with its `arch` word): the date is owed to the
-    machine and discharged by a probe, so the clause is dropped like `costs` (lane 255 of the exporter). -/
+    `lean_g.rs`. `deadline <= n ops arch X falsifier p` (with its `arch` word) is a declared time
+    bound the language does not check: it is REFUSED, never silently dropped. -/
 def uOhneKlauselForm : List SKlausel → Except String Unit
   | [] => .ok ()
   | .moves _ _ :: _ => .error "clause without G form"
   | .quits _ :: _ => .error "clause without G form"
+  | .limit _ :: _ => .error "deadline not modelled: a declared time bound the language does not check"
   | _ :: rest => uOhneKlauselForm rest
 
 /-- Deduplicate while keeping order (the `seen` loop of
