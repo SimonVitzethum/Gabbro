@@ -40,12 +40,13 @@ mutual
 
 /-- A syntax certificate for total typed primitives. It reasons about the actual
     atomic semantics for every read environment, without replaying SC reads.
-    Locks, calls, annotations and other potentially failing forms are excluded. -/
+    Locks, program calls, annotations and potentially failing forms are excluded.
+    A typed oracle answer is checked through its entire continuation. -/
 def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (fuel : Nat) → (code : Stmt D V l Γ Λ Λ') → Option (PLift (StatementSafe code))
   | 0, _ => none
   | fuel + 1, code => match code with
-    | .assignSlot .. | .assignThru .. | .assignGlob .. | .assignVar ..
+    | .assignSlot .. | .assignThru .. | .assignSlotRef .. | .assignGlob .. | .assignVar ..
       | .ret .. | .retWhy .. | .leave .. | .next .. =>
         some ⟨fun _ _ _ _ _ _ _ _ => trivial⟩
     | .breaking _ body => do
@@ -81,6 +82,15 @@ def block {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         let checked ← block fuel tail
         return ⟨fun S O U A passes R world locals =>
           statement_shrink _ (checked.down S O U A passes R _ _)⟩
+    | .bindAxiom item arguments same _ _ _ _ tail => do
+        let checked ← block fuel tail
+        return ⟨fun S O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          cases answer : axiomAntwort O item _ _ with
+          | mk next value =>
+              cases value with
+              | none => trivial
+              | some value => exact statement_shrink _ (checked.down S O U A passes R _ _)⟩
     | _ => none
 
 end
@@ -105,6 +115,15 @@ def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         let checked ← ending fuel tail
         return ⟨fun S O U A passes R world locals =>
           end_shrink _ (checked.down S O U A passes R _ _)⟩
+    | .bindAxiom item arguments same _ _ _ _ tail => do
+        let checked ← ending fuel tail
+        return ⟨fun S O U A passes R world locals => by
+          dsimp only [execEndHA]
+          cases answer : axiomAntwort O item _ _ with
+          | mk next value =>
+              cases value with
+              | none => trivial
+              | some value => exact end_shrink _ (checked.down S O U A passes R _ _)⟩
     | .ite condition yes no => do
         let yesChecked ← ending fuel yes
         let noChecked ← ending fuel no
