@@ -10,6 +10,8 @@ namespace Gabbro.Grammatik.Zielsatz.PoolCertificate
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness Invarianten.Pruefer
 
+attribute [local implicit_reducible] Invarianten.Frag.Payload
+
 abbrev scalar := Ty.int 0 100
 abbrev context := zD.params zLies
 
