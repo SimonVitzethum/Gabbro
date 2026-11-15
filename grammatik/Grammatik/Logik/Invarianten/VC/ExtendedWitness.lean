@@ -13,7 +13,7 @@ set_option maxHeartbeats 400000
 namespace Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
 
 open Frag Elim Elim.Korrekt Modell
-open Witness
+open Gabbro.Grammatik.Invarianten.VC.Witness
 
 /-- `while len < cap bounded 2` is the canonical retry of the negated test. -/
 def boundedWriter : Endblock declaration contract false [] [] :=
@@ -175,7 +175,8 @@ theorem conditional_initializer_counterexample_zeuge :
 /-- The strict traversal rule must preserve the declared invariant and must
     reject the model's annotation logic stop, even with an empty body. -/
 def traversalProgram (annotationHolds : Bool) : Programm declaration :=
-  { program with rumpf := fun _ =>
+  { program with
+    rumpf := fun _ =>
       .cons (.traverse () (if annotationHolds then .tru else .fls) .nil)
         (.ret .empty (List.Perm.refl _)) }
 

@@ -20,8 +20,10 @@ def unit : Einheit declaration where
   starts := [⟨(), .nil⟩]
   sp0 := counterexampleWorld.speicher
   axiomSources := some
-    { items := [], complete := fun item => nomatch item
-      resources := fun item => nomatch item, expression := fun item => nomatch item
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
       correct := fun item => nomatch item }
   pointerSignatures := some
     { count := 1
@@ -71,8 +73,6 @@ theorem initial_zeuge : ∀ item ∈ declaration.invs, InvHaelt unit.P item (uni
 
 theorem refused_zeuge : invariantenGeprueftB badUnit [()] [] = false := by decide_cbv
 
-/-- A concrete typed counterexample accompanies the refused unguarded writer:
-    len = cap = 4 initially, then len = 5 and cap = 4 after the writer. -/
 /-- A false invariant decision gates the complete checker regardless of the
     other structural components. -/
 theorem checker_refused_zeuge :
@@ -80,6 +80,8 @@ theorem checker_refused_zeuge :
   change ((_ && invariantenGeprueftB badUnit [()] []) && _) = false
   rw [refused_zeuge, Bool.and_false, Bool.false_and]
 
+/-- A concrete typed counterexample accompanies the refused unguarded writer:
+    len = cap = 4 initially, then len = 5 and cap = 4 after the writer. -/
 theorem counterexample_zeuge :
     eval counterexampleWorld invariant counterexampleWorld .nil = true ∧
     (match execEnd oracle 0 calls unguarded counterexampleWorld .nil with
@@ -90,8 +92,9 @@ theorem counterexample_zeuge :
 /-- No writer may conceal an unsupported invariant declaration. Even a unit
     with no enumerated functions fails declaration translation first. -/
 def nonlinearUnit : Einheit declaration :=
-  { unit with P := { unit.P with invariante := fun _ =>
-      .le (.mul lengthValue capacityValue) (.lit 10) } }
+  { unit with
+    P := { unit.P with
+      invariante := fun _ => .le (.mul lengthValue capacityValue) (.lit 10) } }
 
 theorem outside_fragment_refused_zeuge :
     invariantenGeprueftB nonlinearUnit [] [] = false := by decide_cbv

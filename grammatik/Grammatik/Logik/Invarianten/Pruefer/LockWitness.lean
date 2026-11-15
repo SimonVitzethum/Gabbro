@@ -102,8 +102,10 @@ def unit (preserves : Bool) : Einheit declaration where
   sp0 := initial.speicher
   lockFormulas := cellSources
   axiomSources := some
-    { items := [], complete := fun item => nomatch item
-      resources := fun item => nomatch item, expression := fun item => nomatch item
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
       correct := fun item => nomatch item }
   pointerSignatures := some { count := 0, outside := fun _ _ _ => rfl }
 
@@ -155,7 +157,8 @@ theorem checker_refused_zeuge :
 /-- Lexical return crosses the acquired scope and must establish the same
     cell predicate before cleanup. This also exercises scopedReturnCondition. -/
 def scopedProgram (preserves : Bool) : Programm declaration :=
-  { program preserves with rumpf := fun _ =>
+  { program preserves with
+    rumpf := fun _ =>
       .cons (.locks () (fun _ member => nomatch member)
         (.cons (writeCell preserves)
           (.cons (.retScoped .empty { scopes := [()], genau := List.Perm.refl _ }) .nil)))
