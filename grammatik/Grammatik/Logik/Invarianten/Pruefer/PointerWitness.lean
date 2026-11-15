@@ -65,7 +65,7 @@ def calls (f : declaration.Fn) (entry : World declaration)
 
 def arguments : Env declaration [capability] := .cons () .nil
 
-#eval match checkInvariantVC (program true) (SperrInv.leer declaration) [()] (fun _ => none) with
+#reduce match checkInvariantVC (program true) (SperrInv.leer declaration) [()] (fun _ => none) with
   | .ok _ => "accepted"
   | .error cause => cause.message
 
