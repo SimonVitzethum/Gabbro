@@ -60,6 +60,7 @@ def rc : UFn := u.fns[1]'(by decide)
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
+  dsimp only [u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "T" <;> by_cases hf : f = "v" <;>
       (try subst c) <;> (try subst f) <;>

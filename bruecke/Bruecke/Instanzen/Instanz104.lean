@@ -65,6 +65,7 @@ def lies : UFn := u.fns[1]'(by decide)
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
+  dsimp only [u, uExp104]
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
       (try subst c) <;> (try subst f) <;>
