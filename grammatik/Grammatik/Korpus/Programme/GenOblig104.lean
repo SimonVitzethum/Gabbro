@@ -290,7 +290,7 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
     This is a refusal of a correct program, not an invalid-contract verdict.
     The unchanged export is retained; no user-duty fallback supplies acceptance. -/
 theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = false := by
-  rw [akzeptiertX_pruefer_eq]
+  rw [Zielsatz.akzeptiertX_pruefer_eq]
   decide +kernel
 
 -- RELEASE OBLIGATIONS (stated, not discharged -- O12).

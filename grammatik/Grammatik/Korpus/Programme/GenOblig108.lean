@@ -271,7 +271,7 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
 theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by
-  rw [akzeptiertX_pruefer_eq]
+  rw [Zielsatz.akzeptiertX_pruefer_eq]
   decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
