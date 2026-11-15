@@ -32,7 +32,7 @@ theorem source_identity_zeuge :
       StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
   output.starts_source
 
-theorem image_start_zeuge [Runner.IR.Kern] [CloneOK] : output.Correct := output.correct
+theorem image_start_zeuge [Runner.IR.Kern] [CloneAnswers] : output.Correct := output.correct
 
 def wideText : String :=
   "module startup { impl fn worker(i : u128 in 0 .. 18446744073709551617) effects { pure } { } impl fn main() effects { pure } { } concurrent { worker(18446744073709551617), worker(2) }; }"
@@ -49,7 +49,7 @@ theorem complete_words_zeuge :
     wideOutput.image.rootArgs = [[1, 1], [2, 0]] ∧ wideOutput.starts.length = 2 := by
   decide +kernel
 
-theorem wide_image_start_zeuge [Runner.IR.Kern] [CloneOK] : wideOutput.Correct := wideOutput.correct
+theorem wide_image_start_zeuge [Runner.IR.Kern] [CloneAnswers] : wideOutput.Correct := wideOutput.correct
 
 def namedSpaceText : String :=
   "module startup { table T count 2 owner sharedData { slot { v : u32 in 0 .. 9, } } impl fn worker(p : ptr<sharedData, r> T, i : u32 in 0 .. 9) effects { pure } { } impl fn main() effects { pure } { } concurrent { worker(&T, 7), worker(&T, 2) }; }"
@@ -72,7 +72,7 @@ theorem named_space_frames_zeuge :
   refine ⟨by decide +kernel, by decide +kernel, by decide +kernel, ?_⟩
   rfl
 
-theorem named_space_image_start_zeuge [Runner.IR.Kern] [CloneOK] :
+theorem named_space_image_start_zeuge [Runner.IR.Kern] [CloneAnswers] :
     namedSpaceOutput.Correct := namedSpaceOutput.correct
 
 /-- Stack positions are occurrence identities, even when the function identity repeats. -/

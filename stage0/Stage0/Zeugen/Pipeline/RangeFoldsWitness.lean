@@ -77,7 +77,7 @@ theorem bounds_accepted : emit boundsText 256 = .ok boundsOutput :=
 theorem bounds_canonical : CanonicalSourceProgram boundsOutput.compiled :=
   compile_source_program boundsText boundsOutput.compiled
 
-theorem bounds_correct [Runner.IR.Kern] [Senke.CloneOK] : boundsOutput.Correct :=
+theorem bounds_correct [Runner.IR.Kern] [Senke.CloneAnswers] : boundsOutput.Correct :=
   boundsOutput.correct
 
 def minCandidate : Except String (Emitted minText 256) := emit minText 256
@@ -93,7 +93,7 @@ theorem min_accepted : emit minText 256 = .ok minOutput :=
 theorem min_canonical : CanonicalSourceProgram minOutput.compiled :=
   compile_source_program minText minOutput.compiled
 
-theorem min_correct [Runner.IR.Kern] [Senke.CloneOK] : minOutput.Correct :=
+theorem min_correct [Runner.IR.Kern] [Senke.CloneAnswers] : minOutput.Correct :=
   minOutput.correct
 
 def nestedCandidate : Except String (Emitted nestedText 256) := emit nestedText 256
@@ -109,7 +109,7 @@ theorem nested_accepted : emit nestedText 256 = .ok nestedOutput :=
 theorem nested_canonical : CanonicalSourceProgram nestedOutput.compiled :=
   compile_source_program nestedText nestedOutput.compiled
 
-theorem nested_correct [Runner.IR.Kern] [Senke.CloneOK] : nestedOutput.Correct :=
+theorem nested_correct [Runner.IR.Kern] [Senke.CloneAnswers] : nestedOutput.Correct :=
   nestedOutput.correct
 
 /-- A fold outside a direct return: the loop hoists before the binding. -/
@@ -143,7 +143,7 @@ theorem let_accepted : emit letText 256 = .ok letOutput :=
 theorem let_canonical : CanonicalSourceProgram letOutput.compiled :=
   compile_source_program letText letOutput.compiled
 
-theorem let_correct [Runner.IR.Kern] [Senke.CloneOK] : letOutput.Correct :=
+theorem let_correct [Runner.IR.Kern] [Senke.CloneAnswers] : letOutput.Correct :=
   letOutput.correct
 
 def rowNestedCandidate : Except String (Emitted rowNestedText 256) := emit rowNestedText 256
@@ -160,7 +160,7 @@ theorem rowNested_accepted : emit rowNestedText 256 = .ok rowNestedOutput :=
 theorem rowNested_canonical : CanonicalSourceProgram rowNestedOutput.compiled :=
   compile_source_program rowNestedText rowNestedOutput.compiled
 
-theorem rowNested_correct [Runner.IR.Kern] [Senke.CloneOK] : rowNestedOutput.Correct :=
+theorem rowNested_correct [Runner.IR.Kern] [Senke.CloneAnswers] : rowNestedOutput.Correct :=
   rowNestedOutput.correct
 
 end Gabbro.Stage0.Pipeline.RangeFoldsWitness

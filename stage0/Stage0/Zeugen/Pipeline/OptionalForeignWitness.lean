@@ -67,7 +67,7 @@ theorem image_shape :
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- Keep optional binding and a value-discarding fallible foreign statement in one
     source program. The statement handler consumes its reason and has a distinct answer. -/

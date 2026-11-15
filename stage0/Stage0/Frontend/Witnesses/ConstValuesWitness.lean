@@ -76,7 +76,7 @@ theorem portable_source_pipeline_zeuge :
     Compiled.accepted _⟩
 
 /-- The portable path continues to use the one production image theorem. -/
-theorem portable_image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
+theorem portable_image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneAnswers]
     (K : Nat) (bytes : List Runner.B) (emitted : irBild boolText K = .ok bytes) :
     ∃ output : Emitted boolText K,
       emit boolText K = .ok output ∧ output.bytes = bytes ∧ output.Correct := by

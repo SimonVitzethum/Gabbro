@@ -77,16 +77,26 @@ def startLen : Nat := 8
 
 theorem startC_len (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : (startC A f n e keep).length = startLen := by rfl
 
+/-- The exit code of a refused thread creation: the kernel answered a `clone` of the image's startup with an error
+    (a negative word) instead of a thread id. The process stops with it (`exit_group`); the code lies outside the
+    logic (101 ..) and hardware (110 ..) codes of G's outcomes. -/
+def cloneCode : Nat := 120
+
 /-- `main`'s first code: for every root, its start code's address and its frame's address into the scratch slots `s`,
-    `s + 1` (`s` is `main`'s `startScratch`), then `spawn` (the thread id into `s + 2`). -/
+    `s + 1` (`s` is `main`'s `startScratch`), then `spawn` (the thread id, or the kernel's error, into `s + 2`), then
+    the check of the answer: slot `s + 4` holds `0 <s answer` and `guardC` stops with `cloneCode` when it is zero.
+    Ten instructions per root. -/
 def spawnC (s : Nat) : List (Nat × Nat) → List II
   | [] => []
-  | (a, f) :: r => [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0,
-      ci 24 ((s + 2 : Nat) : Int) s 0] ++ spawnC s r
+  | (a, f) :: r => [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0, ci 24 ((s + 2 : Nat) : Int) s 0,
+      ci 1 ((s + 3 : Nat) : Int) 0 0, ci 13 ((s + 4 : Nat) : Int) ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int)] ++
+      guardC (s + 4) cloneCode s ++ spawnC s r
 
-theorem spawnC_len (s : Nat) : (l : List (Nat × Nat)) → (spawnC s l).length = 3 * l.length
+theorem spawnC_len (s : Nat) : (l : List (Nat × Nat)) → (spawnC s l).length = 10 * l.length
   | [] => rfl
-  | _ :: r => by simp only [spawnC, List.length_append, List.length_cons, List.length_nil, spawnC_len s r]; omega
+  | _ :: r => by
+    simp only [spawnC, guardC, stopC, sysC, List.length_append, List.length_cons, List.length_nil, spawnC_len s r]
+    omega
 
 /-- The start codes of the roots, one after the other. -/
 def rootsC (A : D.Fn → Nat) (n : Nat) : List D.Fn → List II
@@ -98,7 +108,7 @@ theorem rootsC_len (A : D.Fn → Nat) (n : Nat) : (r : List D.Fn) → (rootsC A 
   | f :: r => by simp only [rootsC, List.length_append, startC_len, rootsC_len A n r, List.length_cons]; rw [Nat.mul_succ]; omega
 
 /-- The code before the functions, for `k` roots: the spawns, `main`'s start, the roots' starts. -/
-def headLen (k : Nat) : Nat := 3 * k + startLen + startLen * k
+def headLen (k : Nat) : Nat := 10 * k + startLen + startLen * k
 
 /-- The start address of every piece, from `b` on. -/
 def addrs : Nat → List Nat → List Nat
@@ -210,7 +220,7 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
     | .ok cs =>
       let body := cs.flatMap (·.1)
       let n := depthOf Ks (maxTop cs)
-      let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
+      let sp := (List.range k).map fun j => (codeBase + 16 * (10 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
       if BildGut D main roots lens cs fp0 Ks K Yb code ∧
           fp0 = codeBase + 16 * (headLen k + body.length) ∧

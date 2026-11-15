@@ -59,7 +59,7 @@ theorem accepted_image : emit text 256 = .ok output :=
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- The poison differs only by the missing exhaustive fallback. -/
 def missingFallback : String :=

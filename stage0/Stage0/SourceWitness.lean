@@ -72,14 +72,14 @@ theorem InitialState.loaded [Runner.IR.Kern]
     (state : InitialState image) : Senke.WeltAt state.memory image.image.Y state.world :=
   loaded_initial_world state.bytes
 
-theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneOK]
+theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneAnswers]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
     (state : InitialState image) : image.Simulates state.oracle state.memory state.world :=
   (image.source_correct.2 state.oracle state.memory state.bytes state.gates state.view).1
 
 /-- The same loaded image and canonical world realize every ordered root occurrence,
     with the exact typed environment selected by its source start plan. -/
-theorem InitialState.roots_simulate [Runner.IR.Kern] [Senke.CloneOK]
+theorem InitialState.roots_simulate [Runner.IR.Kern] [Senke.CloneAnswers]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
     (state : InitialState image) :
     ∀ j (hj : j < image.starts.length), image.RootSimulates state.oracle state.memory state.world j hj :=
@@ -179,7 +179,7 @@ def world : World D := Senke.initialWorld output.compiled.unit output.initialVal
 variable [RootNativeFloat.Hardware]
 
 local instance kernel : Runner.IR.Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
-local instance clone : Senke.CloneOK where
+local instance clone : Senke.CloneAnswers where
   ans _ := ⟨1, 0, by decide, trivial⟩
 
 theorem emptyGates [Runner.IR.Kern] (u : UProg) (ha : u.axs.length = 0)
