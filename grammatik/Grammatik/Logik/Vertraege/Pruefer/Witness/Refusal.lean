@@ -46,7 +46,12 @@ theorem basic_none_of_current_refused (program : Programm D) (S : SperrInv D)
     checkBasicFunction program S sources budget f = none := by
   unfold checkBasicFunction
   split
-  · simp_all only [currentOnly, Except.toOption, Option.isSome_some, Bool.true_eq_false]
+· rename_i expression post before
+    have present : (currentOnly (program.ensures f)).toOption.isSome = true := by
+      rw [post]
+      rfl
+    rw [present] at rejected
+    cases rejected
   · rfl
 
 /-- A failed current-state syntax check
@@ -85,11 +90,12 @@ theorem environment_refused (program : Programm D) (S : SperrInv D) (policy : Ca
                 (fun result => ∃ formula, postFormula program f locals result = .ok formula)
                 (checkPostFormula program f locals) (by rw [posts]; rfl)
                 value (domain.complete value)
-              cases actual : postFormula program f locals value with
-              | error cause =>
-                  simp only [checkPostFormula, actual, Except.toOption, Option.isSome_none,
-                    Bool.false_eq_true] at accepted
-              | ok formula => rw [actual] at rejected; cases rejected
+              have refusedCheck : (checkPostFormula program f locals value).toOption.isSome = false := by
+                cases actual : postFormula program f locals value with
+                | error cause => unfold checkPostFormula; rw [actual]; rfl
+                | ok formula => rw [actual] at rejected; cases rejected
+              rw [refusedCheck] at accepted
+              cases accepted
 
 /-- A typed parameter environment is a member of every successful complete
     enumeration. Its failed post check therefore prevents execution checking. -/
@@ -104,7 +110,7 @@ theorem execution_refused (program : Programm D) (S : SperrInv D) (policy : Call
   | ok invariants =>
       dsimp only [bind, Except.bind]
       cases domainResult : environments (D := D) budget.expansion (D.params f) with
-      | error cause => rw [domainResult]; rfl
+      | error cause => rfl
       | ok domain =>
           dsimp only [bind, Except.bind]
           cases checked : collect domain.values
