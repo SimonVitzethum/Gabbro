@@ -179,7 +179,18 @@ theorem lowEndL_struct_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declO
       (lowStructL (l := false) u c Γ fn n Λ [] st ss).bind (fun p =>
         (lowEndL (l := false) u c Γ fn n p.1.1 [] p.2).bind
           (fun q => .ok (.cons p.1.2 q.1, q.2))) := by
-    rcases hs with ⟨cnd, rfl⟩ | ⟨x, tab, rfl⟩ | ⟨num, v, x, rfl⟩ | ⟨sidx, x, bs, rfl⟩ | ⟨x, rfl⟩ <;> rfl
+    rcases hs with ⟨cnd, rfl⟩ | ⟨x, tab, rfl⟩ | ⟨num, v, x, rfl⟩ | ⟨sidx, x, bs, rfl⟩ | ⟨x, rfl⟩
+    · rfl
+    · rfl
+    · rfl
+    · simp only [lowEndStep, lowStufe_struct, lowStufe_ende]
+      cases hg : lowStructL (l := false) u c Γ fn n Λ [] (.matchTagBeg sidx x bs) ss with
+      | error err => rfl
+      | ok p => rcases p with ⟨⟨Λ₁, st⟩, remaining⟩; rfl
+    · simp only [lowEndStep, lowStufe_struct, lowStufe_ende]
+      cases hg : lowStructL (l := false) u c Γ fn n Λ [] (.matchWhyBeg x) ss with
+      | error err => rfl
+      | ok p => rcases p with ⟨⟨Λ₁, st⟩, remaining⟩; rfl
   rw [hd] at h
   exact lowEndL_struct_result h
 
