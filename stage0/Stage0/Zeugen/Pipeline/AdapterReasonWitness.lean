@@ -1,7 +1,5 @@
 module
 public import Stage0.IRBild
-import Grammatik.Kern.Taktik.KernelRfl
-import all Init.Data.ToString.Basic
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,20 +46,18 @@ def text : String :=
 
 /-- Lexing, parsing, profile selection and source-scope collection all succeed. -/
 theorem source_present : (Frontend.source text).toOption.isSome = true := by
-  kernel_rfl
+  decide +kernel
 
 /-- This candidate uses the production compiler and image emitter, including shared expansion. -/
 def candidate : Except String (Emitted text 256) := emit text 256
 
 theorem candidate_present : candidate.toOption.isSome = true := by
-  kernel_rfl
+  decide +kernel
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
 theorem accepted_image : emit text 256 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
-
-attribute [local irreducible] output
 
 /-- The adapter and both reason-propagating functions survive into a nonempty IR image. -/
 theorem image_shape :
@@ -85,15 +81,13 @@ def propagationText : String :=
 def propagationCandidate : Except String (Emitted propagationText 256) := emit propagationText 256
 
 theorem propagation_candidate_present : propagationCandidate.toOption.isSome = true := by
-  kernel_rfl
+  decide +kernel
 
 def propagationOutput : Emitted propagationText 256 :=
   propagationCandidate.toOption.get propagation_candidate_present
 
 theorem propagation_accepted_image : emit propagationText 256 = .ok propagationOutput :=
   Gabbro.Grammatik.except_ok_get propagation_candidate_present
-
-attribute [local irreducible] propagationOutput
 
 theorem propagation_image_shape :
     propagationOutput.compiled.unit.fns.length = 3 ∧
