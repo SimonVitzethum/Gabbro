@@ -207,7 +207,7 @@ theorem stmtZiel_loop_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (de
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active (.traverse (l := loopMode) t Expr.tru body) σ ρ s
       (.forEach (ns.fresh x) (loopIndices u t) bs) := by
-  simpa only [StmtZiel_G, execStmt, Expr.orte, lese_nil, eval, wahr?, loopIndices] using
+  exact
     finiteBody_sim (loopMode := loopMode) body bs hU hBody (alleIndizes ((declOf u).count t)) σ ρ s hW hL
 
 end Gabbro.Bruecke
