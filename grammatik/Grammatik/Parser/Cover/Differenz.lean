@@ -133,8 +133,7 @@ def leereAxQuellen (u : UProg) (Q : AxEns (declOf u)) :
   if empty : u.axs.length = 0 then
     let absent : (declOf u).Ax → False := fun a => by
       have inside := a.isLt
-      rw [empty] at inside
-      exact Nat.not_lt_zero _ inside
+      exact Nat.not_lt_zero _ (Nat.lt_of_lt_of_le inside (Nat.le_of_eq empty))
     some
       { items := []
         complete := fun a => False.elim (absent a)
