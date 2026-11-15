@@ -130,7 +130,7 @@ def uTorFehlerPruef (fail : Option String) (whys : List UWhy)
     capability, not a transfer, and is not held to this clause. -/
 def uTorPufferPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
     Except String Unit :=
-  let names := params.filterMap fun (n, t) => match uTypIn alias tabs [] t with
+  let names := params.filterMap fun (n, t) => match uTypIn alias tabs [] [] [] t with
     | .ok (.int ..) => some n
     | _ => none
   params.foldlM (fun _ (p, t) => match t with
