@@ -52,8 +52,8 @@ theorem programInvariantsB_iff (program : Programm D) (S : SperrInv D) (function
       ProgramInvariantsChecked program S functions sources budget locks := by
   unfold programInvariantsB ProgramInvariantsChecked
   cases result : checkProgram program S functions sources budget locks with
-  | error cause => simp
-  | ok checked => simp
+  | error cause => simp [Except.toOption]
+  | ok checked => simp [Except.toOption]
 
 theorem programInvariantsB_sound (program : Programm D) (S : SperrInv D)
     (functions : List D.Fn) (sources : LockSources S) (budget : VCBudget)

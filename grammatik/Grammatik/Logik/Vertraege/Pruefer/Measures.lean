@@ -102,6 +102,6 @@ theorem MassGeprueftB_iff (program : Programm D) (S : SperrInv D) (sources : Loc
     MassGeprueftB program S sources budget hint measure cycle anchor f = true ↔
       ∃ certificate, checkMeasure program S sources budget hint measure cycle anchor f = .ok certificate := by
   unfold MassGeprueftB
-  cases checkMeasure program S sources budget hint measure cycle anchor f <;> simp
+  cases checkMeasure program S sources budget hint measure cycle anchor f <;> simp [Except.toOption]
 
 end Gabbro.Grammatik.Vertraege.Pruefer

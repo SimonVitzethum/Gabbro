@@ -62,8 +62,8 @@ theorem invariantenGeprueftB_iff (E : Einheit D) (functions : List D.Fn) (locks 
     invariantenGeprueftB E functions locks budget = true ↔ InvariantenGeprueft E functions locks budget := by
   unfold invariantenGeprueftB InvariantenGeprueft
   cases result : checkInvariants E functions locks budget with
-  | error cause => simp
-  | ok checked => simp
+  | error cause => simp [Except.toOption]
+  | ok checked => simp [Except.toOption]
 
 /-- The unit gate includes exactly the program gate used by AkzeptiertX. -/
 theorem invariantenGeprueftB_program {E : Einheit D} {functions : List D.Fn} {locks : List D.Lock}

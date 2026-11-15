@@ -44,7 +44,7 @@ theorem KontrakteGeprueftB_iff (program : Programm D) (S : SperrInv D) (function
     KontrakteGeprueftB program S functions sources budget hints = true ↔
       KontrakteGeprueft program S functions sources budget hints := by
   unfold KontrakteGeprueftB KontrakteGeprueft
-  cases checkContracts program S functions sources budget hints <;> simp
+  cases checkContracts program S functions sources budget hints <;> simp [Except.toOption]
 
 theorem KontrakteGeprueftB_sound {program : Programm D} {S : SperrInv D} {functions : List D.Fn}
     {sources : LockSources S} {budget : VCBudget} {hints : LoopHints D}
