@@ -91,6 +91,28 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
   | 0, _, _, _, _, _, _, h, _, _, _ => by simp only [seqZ, reduceCtorEq] at h
   | k + 1, _, _, [], _, _, _, _, _, _, hm => by obtain ⟨st, hm, _⟩ := hm; cases hm
   | k + 1, fn, ns, s0 :: ss, t, rest, used, h, g, args, hm => by
+      have arms_callee : ∀ (c offset : Nat) (ns : BodyNames) (ss : List UStmt)
+          (arms : List (String × List Gabbro.Body.Stmt)) (tail : List UStmt) (allocated : List String),
+          reasonArmsZ u k fn c offset ns ss = some (arms, .blkEnd :: tail, allocated) →
+          ∀ (g : String) (args : List UArg), CallsIn ss g args →
+            (∃ gf, fnSuch u g = some gf) ∨ CallsIn tail g args := by
+        intro c
+        induction c with
+        | zero =>
+          intro offset ns ss arms tail allocated h g args hm
+          simp only [reasonArmsZ, readReasonArms, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl, rfl⟩ := h
+          exact .inr (CallsIn.tail (by rfl) hm)
+        | succ c ih =>
+          intro offset ns ss arms tail allocated h g args hm
+          obtain ⟨body, remaining, allocated', hb, hc⟩ := reasonArmsZ_succ h
+          have hBody := seqZ_callee k fn ns ss body remaining allocated' hb g args hm
+          rcases hBody with hf | hm1
+          · exact .inl hf
+          · rcases hc with ⟨_, _, rfl, _⟩ | ⟨m, rest, restArms, rfl, rfl, hr, _⟩
+            · exact .inr hm1
+            · exact ih (offset + 1) (ns.resume allocated) rest restArms tail allocated hr g args
+                (CallsIn.tail (by rfl) hm1)
       cases s0
       case blkEnd | ifElse =>
         simp only [seqZ, Option.some.injEq, Prod.mk.injEq] at h
@@ -143,16 +165,14 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
       case matchTagBeg sidx x binders =>
         obtain ⟨cs, e, arms, tail, allocated, ys, hn, he, hAZ, hYZ, _⟩ := seqZ_tag_some h
         have hm' := CallsIn.tail (by rfl) hm
-        rcases reasonArmsZ_callee k fn cs.length 0 ns ss arms (.blkEnd :: tail) allocated hAZ
-            g args hm' with hf | hm1
+        rcases arms_callee cs.length 0 ns ss arms tail allocated hAZ g args hm' with hf | hm1
         · exact .inl hf
         · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
             (CallsIn.tail (by rfl) hm1)
       case matchWhyBeg x =>
         obtain ⟨count, e, arms, tail, allocated, ys, he, hAZ, hYZ, _⟩ := seqZ_reason_some h
         have hm' := CallsIn.tail (by rfl) hm
-        rcases reasonArmsZ_callee k fn count 0 ns ss arms (.blkEnd :: tail) allocated hAZ
-            g args hm' with hf | hm1
+        rcases arms_callee count 0 ns ss arms tail allocated hAZ g args hm' with hf | hm1
         · exact .inl hf
         · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
             (CallsIn.tail (by rfl) hm1)
