@@ -120,7 +120,8 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
     | error cause =>
         delta branch tail at result
         rw [ending] at result
-        rw [returnCondition, hpre] at result
+        delta returnCondition at result
+        rw [hpre] at result
         dsimp only [bind, Except.bind, pure, Except.pure] at result
         cases result
     | ok out =>
@@ -128,7 +129,8 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
         have shape : out.formula = pre.formula := by
           delta branch tail at result
           rw [ending] at result
-          rw [returnCondition, hpre] at result
+          delta returnCondition at result
+          rw [hpre] at result
           dsimp only [bind, Except.bind, pure, Except.pure] at result
           exact (congrArg Condition.formula (Except.ok.inj result)).symm
         rw [shape]
