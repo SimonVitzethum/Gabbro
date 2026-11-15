@@ -152,8 +152,8 @@ def schlussTextExplicit (gut : Zelle → Option String) (schl : Zelle → Option
 /-- Ad-hoc caller: infer candidates once; production uses explicit lists. -/
 def schlussText (gut : Zelle → Option String) (schl : Zelle → Option NGrund)
     (mods : List String) : Except (List Zelle) String :=
-  let stems := fun prefix => (mods.filter (·.startsWith prefix)).map
-    (·.drop prefix.length |>.toString)
+  let stems := fun pathPrefix => (mods.filter (·.startsWith pathPrefix)).map
+    (·.drop pathPrefix.length |>.toString)
   schlussTextExplicit gut schl (stems "Grammatik.Gen.Zeugen.M.")
     (stems "Grammatik.Gen.Zeugen.N.") [] mods
 

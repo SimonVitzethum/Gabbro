@@ -36,13 +36,13 @@ abbrev z : Spez := ({
 
 /-- The ordinary read supplies the guarded footprint; the register is still read. -/
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.slot ⟨0, by decide⟩ ⟨0, by decide⟩ (.lit 0) (by decide))
+  .bind (.slot (⟨0, by decide⟩ : z.deklaration.Tab) (⟨0, by decide⟩ : z.deklaration.Feld ⟨0, by decide⟩) (.lit 0) (by decide))
     (.cons (.ite .tru (.regRead ⟨0, by decide⟩ (by decide) .nil) .nil)
       (.ret .empty (List.Perm.refl _)))
 
 /-- A repeated root can write the first guarded carrier; the third stays separate. -/
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
-  .cons (.locks ⟨0, by decide⟩ (by decide)
+  .cons (.locks (⟨0, by decide⟩ : z.deklaration.Lock) (by decide)
     (.cons (.call ⟨0, by decide⟩ .nil (by decide) (by decide)) .nil))
     (.ret .empty (List.Perm.refl _))
 
