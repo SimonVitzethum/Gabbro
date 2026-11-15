@@ -278,7 +278,7 @@ theorem fremd_akzeptiert :
   and_intros
   all_goals
     foreign_gate_progress
-    decide +kernel
+    trace_state
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
 
@@ -302,7 +302,7 @@ theorem fremdFallible_akzeptiert :
   and_intros
   all_goals
     foreign_gate_progress
-    decide +kernel
+    trace_state
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
 
