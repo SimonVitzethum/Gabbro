@@ -13,25 +13,24 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
 /-- M contains only fixtures with a full acceptance proof. -/
 def Mw : List Einsatz :=
-  [ScalarRead.e, Reset.Good.e, M16_13.e, M169_350.e, M103_803.e, M103_131.e, M49_50.e]
+  [ScalarRead.e, Reset.Good.e, M16_13.e, M169_350.e, M103_803.e, M103_131.e]
 
 /-- N includes fragment refusals as well as structural refusals. GateAudit
     records why the former candidates are refused; it does not call their
     contracts false. -/
 def Nw : List Einsatz := structuralRefusals ++
-  [M99_824.e, M47_549.e, M99_825.e]
+  [M99_824.e, M47_549.e, M49_50.e, M99_825.e]
 
 theorem checked_m : ∀ m ∈ Mw, m.gueltig = true := by
   intro m member
   simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl
   · exact ScalarRead.e_gueltig
   · exact Reset.Good.e_gueltig
   · exact M16_13.e_gueltig
   · exact M169_350.e_gueltig
   · exact M103_803.e_gueltig
   · exact M103_131.e_gueltig
-  · exact GateAudit.m49_50_checked
 
 theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   intro n member
@@ -39,7 +38,7 @@ theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
     List.not_mem_nil, or_false] at member
   rcases member with
     (rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl) |
-    (rfl | rfl | rfl)
+    (rfl | rfl | rfl | rfl)
   · exact N16_5.e_gueltig
   · exact N18_0.e_gueltig
   · exact N18_4.e_gueltig
@@ -56,6 +55,7 @@ theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   · exact Reset.Bad.e_gueltig
   · exact GateAudit.m99_824_refused
   · exact GateAudit.m47_549_refused
+  · exact GateAudit.m49_50_refused
   · exact GateAudit.m99_825_refused
 
 /-- The scalar-read fine cell survives with full checker acceptance. -/
