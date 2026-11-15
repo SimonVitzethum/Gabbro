@@ -62,14 +62,18 @@ abbrev returnedFunction : declaration.Fn := ⟨1, by decide⟩
 
 /-- Every stored cell has Boolean type in this generated declaration. -/
 def world : World declaration where
-  slots t _ f := by
-    have types : ∀ (t : Fin 2) (f : Fin 1), declaration.typ t f = .bool := by decide +kernel
-    rw [types t f]
-    exact false
-  globs g := by
-    have types : ∀ g : Fin 4, declaration.gtyp g = .bool := by decide +kernel
-    rw [types g]
-    exact false
+  slots
+    | ⟨0, _⟩, _, ⟨0, _⟩ => false
+    | ⟨1, _⟩, _, ⟨0, _⟩ => false
+    | ⟨0, _⟩, _, ⟨n + 1, h⟩ => by have : n + 1 < 1 := h; omega
+    | ⟨1, _⟩, _, ⟨n + 1, h⟩ => by have : n + 1 < 1 := h; omega
+    | ⟨n + 2, h⟩, _, _ => by have : n + 2 < 2 := h; omega
+  globs
+    | ⟨0, _⟩ => false
+    | ⟨1, _⟩ => false
+    | ⟨2, _⟩ => false
+    | ⟨3, _⟩ => false
+    | ⟨n + 4, h⟩ => by have : n + 4 < 4 := h; omega
   spur := []
 
 def calls (f : declaration.Fn) (_ : World declaration)
