@@ -30,6 +30,7 @@
 module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
@@ -67,6 +68,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -192,6 +194,18 @@ def gS : SperrInv gD where
 example : ((gS.orte GLock.K).elem (.inl GTab.A) = true) := by decide
 example : ((gD.braucht GTab.A).elem (Sum.inl GLock.K) = true) := by decide
 
+/-- The lock invariant `A[0].x ≤ 100` as a closed source expression over the
+    held lock, for the strict VC gate. Index `0` is within `count 2`; the
+    meaning is definitional (`rfl`). -/
+def gInvExpr : Expr gD [] [Res.held (D := gD) GLock.K] .bool :=
+  .le (.slot GTab.A GAFeld.x (.widen (by decide) (by decide) (.lit 0)) gDarf_auffuellen_in_K_A)
+    (.lit 100)
+
+/-- **Lock sources for `gS`**: the reified `A[0].x ≤ 100` invariant. -/
+def gSources : Invarianten.Pruefer.LockSources gS :=
+  fun | .K => some (Invarianten.Pruefer.ReifiedLock.ofExpression
+    [Res.held (D := gD) GLock.K] gInvExpr gS GLock.K (fun _ => rfl))
+
 -- The declared initial memory (`Speicher gD`): every slot at zero,
 -- every global at its DECLARED initialiser (a `static` names one).
 def gSp0 : Speicher gD :=
@@ -200,6 +214,7 @@ def gSp0 : Speicher gD :=
 def gE : Zielsatz.Einheit gD where
   P := gP
   S := gS
+  lockFormulas := gSources
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
@@ -245,7 +260,7 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
-theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
 -- every run of machine GX with every thread live (`gabbro_ziel_gx`). The
