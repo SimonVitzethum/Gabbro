@@ -79,11 +79,12 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
     cases hex : execBlock O passes R body σ (.cons i ρ) with
     | ok σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.1 σ₁ ρ₁ hex
-      have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] :=
-        { hp with lauf := fun ρB hT hF => by
-            rw [Gabbro.Body.exec_singleton,
-              Gabbro.Body.forEach_cons_running ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
-            rfl }
+        have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
+          refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
+          intro ρB hT hF
+          rw [Gabbro.Body.exec_singleton,
+            Gabbro.Body.forEach_cons_running ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
+          rfl
       have ih := finiteBody_sim body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
       have hh := ausgangZiel_nach_lauf first ih
         (zs := [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs])
@@ -93,11 +94,12 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | next hloop σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 false hloop σ₁ ρ₁ hex
-      have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] :=
-        { hp with lauf := fun ρB hT hF => by
-            rw [Gabbro.Body.exec_singleton,
-              Gabbro.Body.forEach_cons_next ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
-            rfl }
+        have first : Strecke_G u C A s s₁ [.forEach (ns.fresh x) [i.n] bs] := by
+          refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
+          intro ρB hT hF
+          rw [Gabbro.Body.exec_singleton,
+            Gabbro.Body.forEach_cons_next ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
+          rfl
       have ih := finiteBody_sim body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
       have hh := ausgangZiel_nach_lauf first ih
         (zs := [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs])
@@ -107,10 +109,11 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
       simpa only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] using hh
     | leave hloop σ₁ ρ₁ =>
       obtain ⟨A, s₁, hp, hw, hl⟩ := hPass.2.2.2.1 true hloop σ₁ ρ₁ hex
-      have trace : Strecke_G u C A s s₁ [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs] :=
-        { hp with lauf := fun ρB hT hF => by
-            rw [Gabbro.Body.exec_singleton, List.map_cons,
-              Gabbro.Body.forEach_cons_leave ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s₁ (hp.lauf ρB hT hF)] }
+        have trace : Strecke_G u C A s s₁ [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs] := by
+          refine { gut := hp.gut, oben := hp.oben, unten := hp.unten, schluessel := hp.schluessel, mono := hp.mono, lauf := ?_ }
+          intro ρB hT hF
+          rw [Gabbro.Body.exec_singleton, List.map_cons,
+            Gabbro.Body.forEach_cons_leave ρB (ns.fresh x) i.n (indices.map (·.n)) bs s s₁ (hp.lauf ρB hT hF)]
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro e he
         simp only [traverseLauf, Bool.true_eq_false, ↓reduceIte, hex] at he; cases he
