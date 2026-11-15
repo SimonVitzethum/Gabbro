@@ -6,6 +6,8 @@ public import Bruecke.Anweisung.Bereich.Lesen
 public import Bruecke.Anweisung.Schleife.Lesen
 public import Bruecke.Anweisung.Match.ReasonLesen
 public import Bruecke.Anweisung.Match.TagLesen
+public import Bruecke.Anweisung.Match.NestedLesen
+public import Bruecke.Anweisung.Match.DispatchLesen
 public import Bruecke.Anweisung.Zweig.EndLesen
 @[expose] public section
 
@@ -127,6 +129,33 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
         obtain ⟨id, fields, e, ys, _, _, hY, _⟩ := seqZ_bindRecord_some h
         exact seqZ_callee k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys rest used hY g args
           (CallsIn.tail (by rfl) hm)
+      case matchBeg num v x =>
+        obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, _, hPZ, hAZ, hYZ, _⟩ := seqZ_option_some h
+        have hm' := CallsIn.tail (by rfl) hm
+        rcases seqZ_callee k (fn.mitIndex x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) ss pb _ used1 hPZ
+            g args hm' with hf | hm1
+        · exact .inl hf
+        · rcases seqZ_callee k fn (ns.resume used1) r1 ab _ used2 hAZ g args
+              (CallsIn.tail (by rfl) hm1) with hf | hm2
+          · exact .inl hf
+          · exact seqZ_callee k fn (ns.resume used2) r2 ys rest used hYZ g args
+              (CallsIn.tail (by rfl) hm2)
+      case matchTagBeg sidx x binders =>
+        obtain ⟨cs, e, arms, tail, allocated, ys, hn, he, hAZ, hYZ, _⟩ := seqZ_tag_some h
+        have hm' := CallsIn.tail (by rfl) hm
+        rcases reasonArmsZ_callee k fn cs.length 0 ns ss arms (.blkEnd :: tail) allocated hAZ
+            g args hm' with hf | hm1
+        · exact .inl hf
+        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
+            (CallsIn.tail (by rfl) hm1)
+      case matchWhyBeg x =>
+        obtain ⟨count, e, arms, tail, allocated, ys, he, hAZ, hYZ, _⟩ := seqZ_reason_some h
+        have hm' := CallsIn.tail (by rfl) hm
+        rcases reasonArmsZ_callee k fn count 0 ns ss arms (.blkEnd :: tail) allocated hAZ
+            g args hm' with hf | hm1
+        · exact .inl hf
+        · exact seqZ_callee k fn (ns.resume allocated) tail ys rest used hYZ g args
+            (CallsIn.tail (by rfl) hm1)
       case call g' args' | bindCall x g' args' =>
         obtain ⟨b, fn', ns', ys, hs, hY, _⟩ := seqZ_schritt_some h (by exact True.intro)
         rcases CallsIn.head_or_tail hm with h' | h'
