@@ -45,7 +45,7 @@ def finding : Summe := ({} : Summe).zeile "LGAP\tfinding\t\tok"
 
 theorem gap_class_zeuge : finding.leanG = [] ∧ finding.leanB = [] ∧
     finding.leanGap = [("finding", [], true)] := by
-  simp [finding, Summe.zeile, String.splitOn]
+  simp [finding, Summe.zeile, String.splitOn, String.splitOnAux]
 
 /-- All three nonempty classes coexist without promoting a fragment finding. -/
 def mixed : Summe :=
@@ -54,6 +54,6 @@ def mixed : Summe :=
 theorem mixed_classes_zeuge : mixed.leanG = [("accepted", [], true)] ∧
     mixed.leanB = [("wrong", [], [], true)] ∧
     mixed.leanGap = [("finding", [], true)] := by
-  simp [mixed, finding, Summe.zeile, String.splitOn]
+  simp [mixed, finding, Summe.zeile, String.splitOn, String.splitOnAux]
 
 end Gabbro.Grammatik.Gen.Zeugen.Gap.GeneratorWitness
