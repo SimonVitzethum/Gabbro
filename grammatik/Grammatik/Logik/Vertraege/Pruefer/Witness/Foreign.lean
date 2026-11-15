@@ -169,7 +169,8 @@ theorem trivial_pointer_refinement_zeuge :
   pointerCertificate.down (by decide)
 
 def traversalProgram (holds : Bool) : Programm Witness.pointerDeclaration :=
-  { trivialPointerProgram with rumpf := fun f =>
+  { trivialPointerProgram with
+    rumpf := fun f =>
       .cons (.traverse () (if holds then .tru else .fls) .nil)
         (Witness.pointerProgram.rumpf f) }
 
