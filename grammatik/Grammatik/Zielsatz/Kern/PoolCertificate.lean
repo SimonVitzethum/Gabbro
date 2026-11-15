@@ -93,8 +93,10 @@ theorem leaf_meaning (value : Wert zD scalar) (values : Assignment (Observation 
 
 def returnExpr : ErgExpr zD [scalar] zL (vertragVon zD zLies).erg := .val (.var .here)
 
+theorem returnedResources : List.Perm zL (vertragVon zD zLies).ende := List.Perm.refl _
+
 def tail : Endblock zD (vertragVon zD zLies) false [scalar] zL :=
-  .ret returnExpr (List.Perm.refl _)
+  .ret returnExpr returnedResources
 
 theorem returnCondition_eq (bound : Wert zD scalar) :
     returnCondition (program := zPB) (S := zS) 128 returnExpr (.cons bound .nil)
