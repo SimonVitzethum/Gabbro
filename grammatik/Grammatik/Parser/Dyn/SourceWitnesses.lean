@@ -1,4 +1,7 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+public import Grammatik.Kern.Taktik.ExceptWitness
+import all Init.Data.ToString.Basic
 
 public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Expr.Ausdruck.Teil3
@@ -35,6 +38,25 @@ import all Init.Data.String.Pattern.String
 import all Init.Data.String.Pattern.Basic
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.ToSlice
+
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.Termination
 
 @[expose] public section
 
@@ -303,7 +325,7 @@ private def chunks : List Chunk :=
 
 -- The text is unchanged. Only this bridge handles its complete String value;
 -- every scanner equation above retains an arbitrary suffix and remaining fuel.
-private theorem source_text : source = String.ofList (characters chunks) := by cbv
+private theorem source_text : source = String.ofList (characters chunks) := by kernel_rfl
 
 private theorem lex_from_characters (text : String) (cs : List Char) (ts : List Token)
     (textEq : text = String.ofList cs) (scanned : lexL cs = .ok ts) :
@@ -322,11 +344,10 @@ private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
   rw [scanned]
   exact read
 
--- Retain normalized data from each real phase, including the parsed input.
--- No later value contains a get that re-runs its producer chain.
+-- Certify every actual phase with the general success/extraction lemma.
+-- The kernel checks each closed success premise.
 private def source_items_result : { actual : List SItemTief // parseTopTief (tokens chunks) = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := parseTopTief (tokens chunks)) (by kernel_rfl)⟩
 private def source_items : List SItemTief := source_items_result.val
 private theorem source_items_success :
     parseTopTief (tokens chunks) = .ok source_items := source_items_result.property
@@ -335,43 +356,37 @@ private theorem source_items_read : parsed = .ok source_items :=
   parsed_from_phases source_lexed source_items_success
 
 private def source_fold_result : { actual : List SItemTief // SourceFolds.prepare source_items = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := SourceFolds.prepare source_items) (by kernel_rfl)⟩
 private def source_fold_value : List SItemTief := source_fold_result.val
 private theorem source_fold_success :
     SourceFolds.prepare source_items = .ok source_fold_value := source_fold_result.property
 
 private def source_close_result : { actual : List Closed × List SItemTief // prepare source_fold_value = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := prepare source_fold_value) (by kernel_rfl)⟩
 private def source_close_value : List Closed × List SItemTief := source_close_result.val
 private theorem source_close_success :
     prepare source_fold_value = .ok source_close_value := source_close_result.property
 
 private def source_tagged_result : { actual : List SItemTief × List String // exportTaggedUnitDetailed source_close_value.2 = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := exportTaggedUnitDetailed source_close_value.2) (by kernel_rfl)⟩
 private def source_tagged_value : List SItemTief × List String := source_tagged_result.val
 private theorem source_tagged_success :
     exportTaggedUnitDetailed source_close_value.2 = .ok source_tagged_value := source_tagged_result.property
 
 private def source_spec_result : { actual : List SItemTief // Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := Spec.prepare (finish source_close_value.1 source_tagged_value.1)) (by kernel_rfl)⟩
 private def source_spec_value : List SItemTief := source_spec_result.val
 private theorem source_spec_success :
     Spec.prepare (finish source_close_value.1 source_tagged_value.1) = .ok source_spec_value := source_spec_result.property
 
 private def source_checked_result : { actual : List SItemTief // checkedOutput source_tagged_value.1 source_spec_value = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := checkedOutput source_tagged_value.1 source_spec_value) (by kernel_rfl)⟩
 private def source_checked_value : List SItemTief := source_checked_result.val
 private theorem source_checked_success :
     checkedOutput source_tagged_value.1 source_spec_value = .ok source_checked_value := source_checked_result.property
 
 private def source_library_result : { actual : List SItemTief // exportLibraryUnit source_checked_value = .ok actual } := by
-  refine ⟨?actual, ?origin⟩
-  case origin => cbv <;> exact Eq.refl _
+  exact ⟨_, except_ok_get (x := exportLibraryUnit source_checked_value) (by kernel_rfl)⟩
 private def source_library_value : List SItemTief := source_library_result.val
 private theorem source_library_success :
     exportLibraryUnit source_checked_value = .ok source_library_value := source_library_result.property
@@ -391,7 +406,7 @@ private theorem source_phases : ∃ items output,
       | _ => none) =
       [("#dyn0", "{ GabbroDyn0Case0(index into Circles), GabbroDyn0Case1(index into Rects) }")] := by
   refine ⟨source_items, source_library_value, source_items_read, source_exported, ?sum⟩
-  case sum => cbv
+  case sum => kernel_rfl
 
 /-- Source text, lexer, parser and the actual front-end expansion agree on the closed cases. -/
 public theorem dyn_source_scene_zeuge :

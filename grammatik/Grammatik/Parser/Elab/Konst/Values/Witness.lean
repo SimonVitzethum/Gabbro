@@ -1,4 +1,8 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+public import Grammatik.Kern.Taktik.ExceptWitness
+import all Init.Data.ToString.Basic
+import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Konst.Values.WitnessData
 import Grammatik.Parser.Elab.Konst.Values.WitnessReaders
 import Grammatik.Parser.Elab.Konst.Values.WitnessPhases
@@ -86,7 +90,7 @@ private theorem wrongTypeSource :
   apply elaborate_refused (source := (.lit 1)) rfl
   change Values.expression (D := declaration [.int 0 10] .bool)
     (locals [("x", .int 0 10)]) [] [] 64 .bool (.lit 1) = .error _
-  cbv
+  kernel_rfl
 
 private theorem wrongPayloadSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) } = .error "const value has a different declared type" := by
@@ -96,7 +100,7 @@ private theorem wrongPayloadSource :
          name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.call "Data" [.tru]) = .error _
-  cbv
+  kernel_rfl
 
 private theorem unknownTagSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) } = .error "const tagged constructor is unknown: Foreign" := by
@@ -106,14 +110,14 @@ private theorem unknownTagSource :
          name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Foreign") = .error _
-  cbv
+  kernel_rfl
 
 private theorem longTextSource :
     Values.elaborate (shortText "é") = .error "const string literal exceeds its declared maximum" := by
   apply elaborate_refused (source := (.ext .text ["é"] [])) rfl
   change Values.expression (D := declaration [] (.str 1))
     (locals []) [] [] 64 (.str 1) (.ext .text ["é"] []) = .error _
-  cbv
+  kernel_rfl
 
 private theorem missingPayloadSource :
     Values.elaborate { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) } = .error "const tagged constructor payload does not match its declared type" := by
@@ -123,40 +127,40 @@ private theorem missingPayloadSource :
          name := "Choice"
          cases := [("Empty", none), ("Data", some (.int 0 255)),
            ("Flag", some .bool), ("Text", some (.str 1))] }] 64 (.sum [none, some (.int 0 255), some .bool, some (.str 1)]) (.variable "Data") = .error _
-  cbv
+  kernel_rfl
 
 public theorem wrong_type_result :
     ersetzeSExpr [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] (.call "positive" [.lit 3]) = .error "const value has a different declared type" := by
   rw [substitute_portable [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] "positive" [.lit 3] [.lit 3] { positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+    (by kernel_rfl) (by kernel_rfl) (by rfl) (by kernel_rfl) (by kernel_rfl)]
   rw [checkCall_failed [{ positive with rumpf := .block [] (some (.ret (some (.lit 1)))) }] [] [.lit 3] "const value has a different declared type" wrongTypeSource]
   rfl
 
 public theorem wrong_payload_result :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] (.call "tagged" []) = .error "const value has a different declared type" := by
   rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+    (by kernel_rfl) (by kernel_rfl) (by rfl) (by kernel_rfl) (by kernel_rfl)]
   rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }] [] [] "const value has a different declared type" wrongPayloadSource]
   rfl
 
 public theorem unknown_tag_result :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] (.call "tagged" []) = .error "const tagged constructor is unknown: Foreign" := by
   rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+    (by kernel_rfl) (by kernel_rfl) (by rfl) (by kernel_rfl) (by kernel_rfl)]
   rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Foreign")))) }] [] [] "const tagged constructor is unknown: Foreign" unknownTagSource]
   rfl
 
 public theorem long_text_result :
     ersetzeSExpr [(shortText "é")] (.call "shortText" []) = .error "const string literal exceeds its declared maximum" := by
   rw [substitute_portable [(shortText "é")] "shortText" [] [] (shortText "é")
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+    (by kernel_rfl) (by kernel_rfl) (by rfl) (by kernel_rfl) (by kernel_rfl)]
   rw [checkCall_failed [(shortText "é")] [] [] "const string literal exceeds its declared maximum" longTextSource]
   rfl
 
 public theorem missing_payload_result :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] (.call "tagged" []) = .error "const tagged constructor payload does not match its declared type" := by
   rw [substitute_portable [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] "tagged" [] [] { emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }
-    (by cbv) (by cbv) (by rfl) (by cbv) (by cbv)]
+    (by kernel_rfl) (by kernel_rfl) (by rfl) (by kernel_rfl) (by kernel_rfl)]
   rw [checkCall_failed [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }] [] [] "const tagged constructor payload does not match its declared type" missingPayloadSource]
   rfl
 
@@ -171,7 +175,8 @@ theorem bool_values_zeuge :
 /-- Option absence and the actual present index remain distinct typed values. -/
 theorem option_values_zeuge :
     ersetzeSExpr [optional] (.call "optional" [.lit 3]) = .ok (.call "Some" [.lit 3]) ∧
-    ersetzeSExpr [absent] (.call "absent" []) = .ok (.call "None" []) := by cbv
+    ersetzeSExpr [absent] (.call "absent" []) = .ok (.call "None" []) := by
+  refine ⟨?_, ?_⟩ <;> kernel_rfl
 
 /-- Tag identity and complete numeric/Boolean/string payloads survive quotation. -/
 theorem tag_values_zeuge :
@@ -189,7 +194,9 @@ theorem string_values_zeuge :
 
 /-- The production collector binds the Boolean fixture to its actual source signature. -/
 theorem bool_collected_zeuge :
-    collectFunctions [.fnT positive.signature positive.rumpf] = .ok [positive] := by cbv
+    collectFunctions [.fnT positive.signature positive.rumpf] = .ok [positive] := by
+  dsimp only
+  kernel_rfl
 
 /-- A zero-byte maximum is checked separately from an empty string under maximum one. -/
 theorem zero_string_zeuge :
@@ -198,11 +205,15 @@ theorem zero_string_zeuge :
 
 /-- Ordinary reason-tag values keep both their owner and the exact selected case. -/
 theorem reason_value_zeuge :
-    ersetzeSExpr [reasonTag] (.call "reasonTag" []) = .ok (.why "Reason" "Second") := by cbv
+    ersetzeSExpr [reasonTag] (.call "reasonTag" []) = .ok (.why "Reason" "Second") := by
+  dsimp only
+  kernel_rfl
 
 theorem foreign_reason_refused_zeuge :
     ersetzeSExpr [{ reasonTag with rumpf := .block [] (some (.ret (some (.why "Foreign" "Second")))) }]
-      (.call "reasonTag" []) = .error "const reason owner is unknown: Foreign" := by cbv
+      (.call "reasonTag" []) = .error "const reason owner is unknown: Foreign" := by
+  dsimp only
+  kernel_rfl
 
 /-- The witnesses instantiate the generic G/literal theorem jointly with a
     successfully generated certificate and a checked complete result value. -/
@@ -217,8 +228,8 @@ theorem portable_call_sound_zeuge :
       Values.checkCall optional [optional] [] [.lit 3] = .ok call ∧
         call.value = some (⟨3, by decide, by decide⟩ : Zahl 0 3) := by
     refine ⟨?call, ?success, ?value⟩
-    case success => cbv <;> exact Eq.refl _
-    case value => cbv
+    case success => apply except_ok_get; kernel_rfl
+    case value => kernel_rfl
   obtain ⟨call, success, value⟩ := checked
   refine ⟨call, success, value, ?_⟩
   intro σ O passes depth
@@ -234,7 +245,9 @@ theorem option_bound_refused_zeuge :
     ersetzeSExpr [{ optional with
       params := []
       rumpf := .block [] (some (.ret (some (.call "Some" [.lit 4])))) }]
-      (.call "optional" []) = .error "const value interval is outside its declared type" := by cbv
+      (.call "optional" []) = .error "const value interval is outside its declared type" := by
+  dsimp only
+  kernel_rfl
 
 theorem tag_payload_refused_zeuge :
     ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.call "Data" [.tru])))) }]
@@ -253,7 +266,9 @@ theorem string_utf8_bound_refused_zeuge :
 
 theorem wide_string_refused_zeuge :
     ersetzeSExpr [shortText "A" 2] (.call "shortText" []) =
-      .error "const result type without a certified replacement at `shortText`" := by cbv
+      .error "const result type without a certified replacement at `shortText`" := by
+  dsimp only
+  kernel_rfl
 
 theorem portable_post_refused_zeuge :
     ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.gives .fls] } }]
@@ -286,13 +301,17 @@ theorem portable_statement_refused_zeuge :
     let items := [SItemTief.fnT positive.signature positive.rumpf,
       .fnT signature (.block [.call "positive" [.lit 3]] (some (.ret none)))]
     checkErsetzt items items =
-      .error "const call without certified value: refusing runtime export" := by cbv
+      .error "const call without certified value: refusing runtime export" := by
+  dsimp only
+  kernel_rfl
 
 /-- Original global names in both body and arguments reach their certificates.
     The parameter x shadows the captured global x even in the body derivation. -/
 theorem qualified_normalization_zeuge :
     ersetzeSExpr [captured] (.call "captured" [.bin "+" (.variable "math::K") (.lit 1)]) =
-      .ok (.lit 11) := by cbv
+      .ok (.lit 11) := by
+  dsimp only
+  kernel_rfl
 
 theorem normalization_denotation_zeuge :
     ∃ call : Scalar.CheckedCall captured [captured] captured.constants
@@ -308,8 +327,8 @@ theorem normalization_denotation_zeuge :
       Scalar.checkCall captured [captured] captured.constants
         [.bin "+" (.variable "math::K") (.lit 1)] = .ok call ∧ call.value = 11 := by
     refine ⟨?call, ?success, ?value⟩
-    case success => cbv <;> exact Eq.refl _
-    case value => cbv
+    case success => apply except_ok_get; kernel_rfl
+    case value => kernel_rfl
   obtain ⟨call, success, value⟩ := checked
   exact ⟨call, success, value, call.normalized_denotation⟩
 
@@ -317,7 +336,9 @@ theorem normalization_denotation_zeuge :
 theorem original_parameter_refused_zeuge :
     ersetzeSAnwIn ["x"] [captured]
       (.ret (some (.call "captured" [.variable "x"]))) =
-      .error "const open argument at `captured`: certified substitution needs closed arguments" := by cbv
+      .error "const open argument at `captured`: certified substitution needs closed arguments" := by
+  dsimp only
+  kernel_rfl
 
 /-- Quantifier variables, sequential locals and pattern payloads also remain open. -/
 theorem binder_refused_zeuge :
@@ -329,7 +350,8 @@ theorem binder_refused_zeuge :
       .error "const open argument at `captured`: certified substitution needs closed arguments" ∧
     ersetzeSAnw [captured] (.arm "Data" (some "x")
       (.ret (some (.call "captured" [.variable "x"])))) =
-      .error "const open argument at `captured`: certified substitution needs closed arguments" := by cbv
+      .error "const open argument at `captured`: certified substitution needs closed arguments" := by
+  refine ⟨?_, ?_, ?_⟩ <;> kernel_rfl
 
 /-- The normalization induction has a non-degenerate original qualified-name fixture. -/
 theorem source_meaning_normalized_zeuge :
@@ -368,8 +390,8 @@ theorem replacement_sound_zeuge :
       checkReplacement optional [optional] [] [.lit 3] = .ok replacement ∧
         replacement.syntax = .call "Some" [.lit 3] := by
     refine ⟨?replacement, ?success, ?literal⟩
-    case success => cbv <;> exact Eq.refl _
-    case literal => cbv
+    case success => apply except_ok_get; kernel_rfl
+    case literal => kernel_rfl
   obtain ⟨replacement, success, literal⟩ := checked
   exact ⟨replacement, success, literal, replacement.sound⟩
 
@@ -379,7 +401,7 @@ theorem substitution_certified_zeuge :
       checkReplacement optional [optional] [] [.lit 3] = .ok checked ∧
       SExpr.call "Some" [.lit 3] = checked.syntax ∧ checked.evidence.Sound := by
   exact ersetzeSExpr_call_certified [] [optional] "optional" [.lit 3] [.lit 3]
-    optional (.call "Some" [.lit 3]) (by cbv) (by cbv) (by cbv)
+    optional (.call "Some" [.lit 3]) (by kernel_rfl) (by kernel_rfl) (by kernel_rfl)
 
 /-- Generic quotation is instantiated with a complete noninteger G value. -/
 theorem reify_denotes_zeuge :
@@ -400,7 +422,7 @@ theorem source_function_normalized_zeuge :
   have checked : ∃ fn : Scalar.SourceFunction captured 0 20,
       Scalar.elaborate captured = .ok ⟨0, 20, fn⟩ := by
     refine ⟨?fn, ?success⟩
-    case success => cbv <;> exact Eq.refl _
+    case success => apply except_ok_get; kernel_rfl
   obtain ⟨fn, success⟩ := checked
   exact ⟨fn, success, fn.normalized⟩
 
