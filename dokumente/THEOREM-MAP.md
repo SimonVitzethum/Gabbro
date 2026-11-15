@@ -7336,6 +7336,7 @@ of that Linux machine. Consequently `Lauf.waechst`, `Lauf.leben`, `Lauf.leben_wa
 proof additionally needs progress at the strategy's retry place under scheduler fairness. Those Linux
 statements and their assumptions remain intact; no spin liveness theorem is claimed here. FIFO and ghost
 refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-one remains unsupported.
+
 ## 191. The bridge carries recursive units by a well-founded measure (2026-11-14)
 
 *Files: `bruecke/Bruecke/Kette/Mass/{Pflicht,Realisierung,Zeuge}.lean`, `Kette/{Simulation,Quelle,Pflichten}.lean`, `Vorlage.lean`, `GiftZyklus.lean`. No change of `Spec.lean`; the rank theorems keep their statements and are derived from the measure theorems.*
@@ -7388,7 +7389,13 @@ already did. Neither lowering nor the language model changes to identify the sco
 | `lowEndL_bindOpt_ok` | `bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
 | `lowEndL_struct_ok` | same | Its structural-prefix inversion also covers option, tag and reason dispatch; each exposes the unchanged `lowStructL` result and following end block. |
 | `statischEndSeq_G`, `laufEndSeq_G` | `bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
+| `option_unit_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
 | `lowEndL_bindOpt_ok_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
 | `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
+
+`OptionStorageZeuge.names_zeuge` proves the two distinct parameter names once for the
+existing read/write and return simulations. The option-value and storage fixtures also
+explicitly supply their absent integer-result field and import the canonical lowering
+theorem; their semantic witness statements are retained.
 
 No bridge duty, simulation premise, refusal witness or goal-theorem statement is weakened.
