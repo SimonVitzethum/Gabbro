@@ -92,7 +92,7 @@ theorem lowEnd_bindMut_ok {l : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
       rcases p with ⟨rest, remaining⟩
       simp only [hr, Except.bind] at h
       cases h
-      exact ⟨ev, rest, (by first | exact hv | rfl), hr, rfl⟩
+      exact ⟨ev, rest, (by first | exact hv | rfl), rfl, rfl⟩
 
 theorem lowEnd_bindB_ok {l : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
     {Λ : List (Res (declOf u))} {x : String} {v : UEns}
@@ -115,6 +115,6 @@ theorem lowEnd_bindB_ok {l : Bool} {n : Nat} {Γ : Ctx} {fn : UFn}
       rcases p with ⟨rest, remaining⟩
       simp only [hr, Except.bind] at h
       cases h
-      exact ⟨ev, rest, (by first | exact hv | rfl), hr, rfl⟩
+      exact ⟨ev, rest, (by first | exact hv | rfl), rfl, rfl⟩
 
 end Gabbro.Bruecke
