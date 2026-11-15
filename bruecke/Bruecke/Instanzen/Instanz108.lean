@@ -62,7 +62,8 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "T" <;> by_cases hf : f = "v" <;>
-      simp_all [Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
+      (try subst c) <;> (try subst f) <;>
+      simp_all [beq_iff_eq, Except.toOption, shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
         Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
@@ -71,7 +72,7 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
         Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
         Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
-        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, @eq_comm _ "v"]
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108, @eq_comm _ "T", @eq_comm _ "v"]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108]
 
