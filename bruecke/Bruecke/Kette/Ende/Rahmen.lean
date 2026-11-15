@@ -58,10 +58,8 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
           case empty => exact ⟨none, hr.symm⟩
           case val | bool | wert => obtain ⟨e, _, he⟩ := hr; exact ⟨some e, he.symm⟩
           case opt v =>
-            simp only [retZ, Option.map_eq_some_iff, Option.some.injEq, reduceCtorEq] at hr
             obtain ⟨e, _, he⟩ := hr; exact ⟨some e, he.symm⟩
           case why n =>
-            simp only [retZ] at hr
             cases hr
             exact ⟨_, rfl⟩
         obtain ⟨e, rfl⟩ := hret
@@ -155,15 +153,15 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowEndL_struct_ok (.inr ⟨x, tab, rfl⟩) hlow
       obtain _ | m := n
       · rw [lowStructL_zero] at hStruct; cases hStruct
-      obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
+      obtain ⟨tabFin, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
       subst Λ₁
       cases hst
       rw [ht] at htZ
       cases htZ
       obtain ⟨hrBody, hsufBody, hFrame⟩ := statischSeq_G S c hc ρB m k ss
-        (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
+        (fn.mitIndex x tabFin.val ((declOf u).count tabFin)) (fT.mitIndex x tabFin.val ((declOf u).count tabFin))
         (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
-        (congrArg (List.cons _) hΓ) (hS.index x t.val ((declOf u).count t)) hmemss hBodyG hBodyZ hFss
+        (congrArg (List.cons _) hΓ) (hS.index x tabFin.val ((declOf u).count tabFin)) hmemss hBodyG hBodyZ hFss
       have htail : tailZ = tail := (List.cons.inj hrBody).2
       subst tailZ
       have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
