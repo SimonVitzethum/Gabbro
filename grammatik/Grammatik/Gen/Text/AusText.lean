@@ -13,6 +13,7 @@
   check of a printed program never runs the lexer.
 -/
 module
+public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Gen.Text.Delab
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
