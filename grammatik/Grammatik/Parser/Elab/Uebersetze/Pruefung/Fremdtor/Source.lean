@@ -273,7 +273,7 @@ theorem fremd_akzeptiert :
     exact Fin.elim0 (show Fin 0 from i)
   subst invariants
   have sameProof : foreignGate = fremd_foreign_contracts := Subsingleton.elim _ _
-  subst foreignGate
+  subst sameProof
   decide +kernel
 
 set_option maxRecDepth 100000 in
@@ -292,7 +292,7 @@ theorem fremdFallible_akzeptiert :
     exact Fin.elim0 (show Fin 0 from i)
   subst invariants
   have sameProof : foreignGate = fremdFallible_foreign_contracts := Subsingleton.elim _ _
-  subst foreignGate
+  subst sameProof
   decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
