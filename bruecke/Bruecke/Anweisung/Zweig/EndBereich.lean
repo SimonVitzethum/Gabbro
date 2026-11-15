@@ -39,6 +39,7 @@ theorem endZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes 
     have hs : ∀ ρB, Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s = .running s₁ := by
       intro ρB
       simp only [narrowStep, Gabbro.Body.step, ht, hb, and_self, decide_true, Gabbro.Body.exec, hval]
+      rfl
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     have hr := hRest σl (.cons value ρ) s₁ hWl hL₁
     rw [endZiel_false_iff] at hr ⊢
