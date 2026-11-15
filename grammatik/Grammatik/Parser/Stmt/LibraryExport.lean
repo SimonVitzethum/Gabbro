@@ -223,7 +223,9 @@ private theorem full_phases :
         intro invariants pointers foreigns
         unfold checkedImage
         cbv
-        rfl
+        unfold Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
+          Vertraege.Pruefer.checkContracts
+        cbv
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
