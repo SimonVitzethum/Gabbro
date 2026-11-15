@@ -110,8 +110,8 @@ theorem seqZ_callee : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt
           rcases hBody with hf | hm1
           · exact .inl hf
           · rcases hc with ⟨_, _, rfl, _⟩ | ⟨m, rest, restArms, rfl, rfl, hr, _⟩
-            · exact .inr hm1
-            · exact ih (offset + 1) (ns.resume allocated) rest restArms tail allocated hr g args
+            · exact .inr (CallsIn.tail (by rfl) hm1)
+            · exact ih (offset + 1) (ns.resume allocated') rest restArms tail allocated hr g args
                 (CallsIn.tail (by rfl) hm1)
       cases s0
       case blkEnd | ifElse =>
