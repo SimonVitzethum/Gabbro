@@ -86,7 +86,7 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
         (by simpa only [UFn.mitWert, uArtVon, protectedNames] using hF') hq hys
       refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindRecord_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
-      exact blockZiel_bind_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
+      exact blockZiel_bindRecord_G (fun ρB _ => hstep ρB) (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case bindMut x lo hi v =>
       obtain ⟨bT, fT', ns', ys, hstepT, hys, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
@@ -142,9 +142,9 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       subst Λ₁
       cases hst
       have hF0 := bindFrischL_sonst (by rfl) hF
-      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m
-        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB =>
-          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m (by
+          intro fuel hlt k ss _ fn ft ns _ p tail bs tailZ used hU hV hm hF hG hB
+          exact ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
         m (Nat.le_refl m) count k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hU hS hmemss hF0 hAG hAZ
       have ht : tailZ = tail := (List.cons.inj hr).2
@@ -169,9 +169,9 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       cases hst
       obtain ⟨ga, hAG, hBareRel⟩ := lowArms_bare m fn Λ cs binders ss tagG (.blkEnd :: tail) hBare hTagG
       have hF0 := bindFrischL_sonst (by rfl) hF
-      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m
-        (fun fuel hlt k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB =>
-          ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
+      obtain ⟨hr, hsuf, hArms⟩ := reasonArms_G_with m (by
+          intro fuel hlt k ss _ fn ft ns _ p tail bs tailZ used hU hV hm hF hG hB
+          exact ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hU hV hm hF hG hB)
         m (Nat.le_refl m) cs.length k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hU hS hmemss hF0 hAG hAZ
       have ht : tailZ = tail := (List.cons.inj hr).2
