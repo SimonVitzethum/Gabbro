@@ -69,18 +69,6 @@ open Gabbro.Grammatik.Zielsatz
 -- otherwise retain several complete front-end reductions in the same process.
 set_option Elab.async false
 
-open Lean Elab Tactic in
-elab "foreign_gate_progress" : tactic => do
-  let target ← getMainTarget
-  let label := match target.eq? with
-    | some (_, lhs, _) => lhs.getAppFn.constName!.toString
-    | none => "non-equality"
-  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label)
-
-open Lean Elab Tactic in
-elab "foreign_gate_stage " label:str : tactic =>
-  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label.getString)
-
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper
@@ -92,10 +80,6 @@ def checkTextFremd : String :=
     with `bindAxElse`; the error branch preserves the reason channel. -/
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
-
-#eval do
-  IO.FS.createDirAll "../.scratch-agent"
-  IO.FS.writeFile "../.scratch-agent/foreign-progress" "elaboration"
 
 /-- Both foreign-gated units elaborate. -/
 theorem checkTextFremd_ok : (elabText checkTextFremd).toOption.isSome = true := by
@@ -146,8 +130,6 @@ theorem uFremdFallible_tabs_leer : uFremdFallible.tabs = [] := by kernel_rfl
 
 theorem uFremdFallible_globs_leer : uFremdFallible.globs = [] := by kernel_rfl
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "lowering"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Both units lower. -/
@@ -159,8 +141,6 @@ set_option maxHeartbeats 2000000 in
 theorem uFremdFallible_lowered :
     (lowerAllg uFremdFallible).toOption.isSome = true := by
   decide +kernel
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "check extraction"
 
 /-- The lowered programs behind the foreign-gate witnesses. -/
 def checkPFremd : Programm (declOf uFremd) :=
@@ -232,14 +212,13 @@ private theorem lowered_no_handlers (u : UProg)
   · split at h
     · cases h
     · split at h
-      · obtain ⟨rfl, _⟩ := Measures.checkedProgram_eq h
+      · have fields := Measures.checkedProgram_eq h
+        rw [fields.1]
         intro f
         simp only [progOfFn, noHandlers, List.any_nil]
       · cases h
 
 /-! ## Acceptance with the real Duty -/
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "check admission"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -256,8 +235,6 @@ theorem fremdFallible_checkB :
 
 attribute [local irreducible] checkPFremd checkPFremdFallible
 
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "infallible acceptance"
-
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- End-to-end acceptance from source text with a real Duty. -/
@@ -266,21 +243,29 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   have interfaces : schnittstellenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     maskenB_ohne (P := checkPFremd) (by
       simpa only [checkPFremd] using
         lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
-  foreign_gate_stage "acceptance split"
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
-    Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks,
+    GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremd_checkB, Bool.and_true, Bool.and_eq_true]
   and_intros
-  all_goals
-    foreign_gate_progress
-    trace_state
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · exact libraryB_immer _ _
+  · exact Kernzelle.accumulatorB_leer
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -290,21 +275,29 @@ theorem fremdFallible_akzeptiert :
   have interfaces : schnittstellenB checkPFremdFallible
       (List.finRange uFremdFallible.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  foreign_gate_stage "mask proof"
   have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
     maskenB_ohne (P := checkPFremdFallible) (by
       simpa only [checkPFremdFallible] using
         lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
-  foreign_gate_stage "acceptance split"
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
-    Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks,
+    GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremdFallible_checkB, Bool.and_true, Bool.and_eq_true]
   and_intros
-  all_goals
-    foreign_gate_progress
-    trace_state
-
-#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · exact libraryB_immer _ _
+  · exact Kernzelle.accumulatorB_leer
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
 
 /-- The admission Props follow from the Bools. -/
 theorem fremd_admission :
