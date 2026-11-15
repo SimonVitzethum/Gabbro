@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -67,7 +68,7 @@ def nestedText : String :=
 def boundsCandidate : Except String (Emitted boundsText 256) := emit boundsText 256
 
 theorem bounds_present : boundsCandidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def boundsOutput : Emitted boundsText 256 := boundsCandidate.toOption.get bounds_present
 
@@ -83,7 +84,7 @@ theorem bounds_correct [Runner.IR.Kern] [Senke.CloneAnswers] : boundsOutput.Corr
 def minCandidate : Except String (Emitted minText 256) := emit minText 256
 
 theorem min_present : minCandidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def minOutput : Emitted minText 256 := minCandidate.toOption.get min_present
 
@@ -99,7 +100,7 @@ theorem min_correct [Runner.IR.Kern] [Senke.CloneAnswers] : minOutput.Correct :=
 def nestedCandidate : Except String (Emitted nestedText 256) := emit nestedText 256
 
 theorem nested_present : nestedCandidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def nestedOutput : Emitted nestedText 256 := nestedCandidate.toOption.get nested_present
 
@@ -133,7 +134,7 @@ def rowNestedText : String :=
 def letCandidate : Except String (Emitted letText 256) := emit letText 256
 
 theorem let_present : letCandidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def letOutput : Emitted letText 256 := letCandidate.toOption.get let_present
 
@@ -149,7 +150,7 @@ theorem let_correct [Runner.IR.Kern] [Senke.CloneAnswers] : letOutput.Correct :=
 def rowNestedCandidate : Except String (Emitted rowNestedText 256) := emit rowNestedText 256
 
 theorem rowNested_present : rowNestedCandidate.toOption.isSome = true := by
-  decide +kernel
+  kernel_rfl
 
 def rowNestedOutput : Emitted rowNestedText 256 :=
   rowNestedCandidate.toOption.get rowNested_present
