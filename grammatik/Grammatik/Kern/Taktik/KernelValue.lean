@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Taktik.KernelRfl
-public meta import Lean.Meta.Reduce
+public meta import Lean.Meta.Tactic.Cbv
 
 public section
 
@@ -12,7 +12,8 @@ elab "kernel_value" : tactic => withMainContext do
   let goal ← getMainGoal
   let type ← instantiateMVars (← goal.getType)
   let some (_, lhs, rhs) := type.eq? | throwError "kernel_value: the goal is not an equality"
-  let value ← withTransparency .all (reduce lhs)
+  let computed ← Lean.Meta.Tactic.Cbv.cbvEntry lhs
+  let value := computed.getResultExpr lhs
   unless ← withAssignableSyntheticOpaque (isDefEq rhs value) do
     throwError "kernel_value: the computed candidate does not match the requested result"
   evalTactic (← `(tactic| kernel_rfl))
