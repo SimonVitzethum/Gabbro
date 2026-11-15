@@ -59,4 +59,3 @@ theorem reason_invariants (passes : Nat) (f : mD.Fn) : InvGutGrund program passe
 theorem family_local : SperrInvLokal family := fun _ _ _ _ => rfl
 
 end Gabbro.Grammatik.CheckedMehrfaden
-

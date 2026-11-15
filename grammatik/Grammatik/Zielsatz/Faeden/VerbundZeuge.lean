@@ -303,9 +303,11 @@ theorem vm_abgelehnt_spec : ¬ SchnittstelleSpec mFs vmE mE vmE2 := fun h => by
 
 /-- The library as compiled against `zP`: `wrap` ensures only `true`. -/
 def vzSchwach : Programm zD :=
-  { zPB with ensures := fun f => match f with
-      | .wrap => .tru
-      | f => zPB.ensures f }
+  { zPB with
+    ensures := fun f => match f with
+      | .ein => zEnsHundert
+      | .lies => zEnsLies
+      | _ => .tru }
 
 def vzBibSchwach : Programm zD := mitRumpf vzSchwach fun
   | .haupt => vzStubHaupt

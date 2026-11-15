@@ -184,10 +184,7 @@ def mE : Einheit mD where
       expression := fun item => nomatch item
       correct := fun item => nomatch item }
   pointerSignatures := some
-    { count := 5
-      outside := fun f n outside => by
-        change decide (mSigOf f = n) = false
-        cases f <;> simp only [mSigOf] <;> exact decide_eq_false (by omega) }
+    { count := 0, outside := fun _ _ _ => rfl }
 
 /-- The literal-true lock source shared by the probe, pool and linked fixtures. -/
 def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some

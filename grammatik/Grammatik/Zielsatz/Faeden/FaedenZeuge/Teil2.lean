@@ -243,8 +243,9 @@ theorem spawn_kind_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschin
     twice in `ws`, and the checker Bool refuses -- at the pool component alone. The same routine
     as an ordinary declared start beside `hauptA` is accepted: the refusal is the spawn's. -/
 def mStartB : Einheit mD where
-  P := mP
-  S := mSI
+  P := mFragment
+  S := mFragmentS
+  lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := [⟨mHauptA, .nil⟩]
   sp0 := mSp
@@ -256,20 +257,20 @@ def mStartB : Einheit mD where
 
 theorem start_nicht_poolsicher_abgelehnt :
     akzeptiert_pruefer.akzeptiert mStartB mFs [()] mCs = false ∧
-    (programmImFragmentG mP mFs && abgAlleB mP mFs &&
-      fussWB mP mSI mFs [mHauptA, mHauptB, mHauptB] && stufenB mP mFs && sperrOrteB mSI [()] &&
-      wurzelnB [mHauptA, mHauptB, mHauptB] && rennB mP mFs mCs [mHauptA, mHauptB, mHauptB] &&
-      antwortenB mP mFs) = true ∧
-    einzelnPoolB mP mFs mCs [mHauptA, mHauptB, mHauptB] = false ∧
-    Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true := by
-  refine ⟨?_, by decide, by decide, mP_akzeptiert⟩
+    (programmImFragmentG mFragment mFs && abgAlleB mFragment mFs &&
+      fussWB mFragment mFragmentS mFs [mHauptA, mHauptB, mHauptB] && stufenB mFragment mFs && sperrOrteB mFragmentS [()] &&
+      wurzelnB [mHauptA, mHauptB, mHauptB] && rennB mFragment mFs mCs [mHauptA, mHauptB, mHauptB] &&
+      antwortenB mFragment mFs) = true ∧
+    einzelnPoolB mFragment mFs mCs [mHauptA, mHauptB, mHauptB] = false ∧
+    Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB] (sources := CheckedMehrfaden.sources) = true := by
+  refine ⟨?_, by decide, by decide, mFragment_akzeptiert⟩
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB, mHauptB] = false
+  show Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB, mHauptB] (sources := CheckedMehrfaden.sources) = false
   decide
 
 /-- The same refusal at the specification: no `AkzeptiertSpec` for `mStartB`, because a
     run-time root must be pool-safe (`akzeptiertSpec_gestartet`). -/
-theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws mStartB.akku := fun h =>
+theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mFragment mFragmentS mFs mStartB.ws mStartB.akku := fun h =>
   pool_abgelehnt.2.2.2 (akzeptiertSpec_gestartet mStartB mFs h ⟨mHauptB, .nil⟩
     (List.mem_singleton_self _)).2.2
 
