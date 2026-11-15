@@ -172,7 +172,8 @@ theorem writerCounterexample_sound {program : Programm D} {checked : D.Fn → Li
     apply matrixInvalid
     exact (lower_denote _ _).mpr (fun _ => (quoteQF_denote _ _).mpr h)
   have initial : entry.denote values ∧ path.denote values := by
-    by_contra absent
+    apply Classical.byContradiction
+    intro absent
     apply bodyInvalid
     exact (lower_denote _ _).mpr (fun h => False.elim (absent h))
   refine ⟨initial.1, initial.2, ?_⟩
