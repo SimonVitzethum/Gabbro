@@ -85,7 +85,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
           rw [Gabbro.Body.exec_singleton,
             Gabbro.Body.forEach_cons_running ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
           rfl
-      have ih := finiteBody_sim body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
+      have ih := finiteBody_sim (loopMode := loopMode) body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
       have hh := ausgangZiel_nach_lauf first ih
         (zs := [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs])
         (fun ρB hT hF => by
@@ -100,7 +100,7 @@ theorem finiteBody_sim {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (dec
           rw [Gabbro.Body.exec_singleton,
             Gabbro.Body.forEach_cons_next ρB (ns.fresh x) i.n [] bs s s₁ (hp.lauf ρB hT hF)]
           rfl
-      have ih := finiteBody_sim body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
+      have ih := finiteBody_sim (loopMode := loopMode) body bs hU hBody indices σ₁ ρ₁.tail s₁ hw hl.tailIndex
       have hh := ausgangZiel_nach_lauf first ih
         (zs := [.forEach (ns.fresh x) ((i :: indices).map (·.n)) bs])
         (fun ρB hT hF => by
