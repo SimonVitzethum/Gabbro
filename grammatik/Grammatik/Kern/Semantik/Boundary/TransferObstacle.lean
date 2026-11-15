@@ -24,6 +24,7 @@ theorem probe_at_bound_encoding (z : Int → Option probeD.Fn) (word : Int)
   split at h
   · rename_i htag
     change word % 2 = 0 at htag
+    dsimp only [probeAtBound] at h
     cases hv : einpassenErg z (some (.int 0 65535)) (word / 2) with
     | none =>
         rw [hv] at h
