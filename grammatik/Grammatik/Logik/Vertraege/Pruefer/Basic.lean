@@ -5,9 +5,6 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
 
 @[expose] public section
 
-set_option profiler true
-set_option profiler.threshold 0
-
 namespace Gabbro.Grammatik.Vertraege.Pruefer.Basic
 
 open Invarianten.Pruefer

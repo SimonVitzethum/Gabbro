@@ -86,7 +86,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     refinement. The strict VC path and all numbered component formulas are unchanged;
     the existing 126 cells (21 bad) therefore need no new kind or constructor numbering.
     Re-pinned after naming the dependent post-translation match once. This pure
-    factoring preserves the strict contract decision and all numbered cell formulas. -/
+    factoring preserves the strict contract decision and all numbered cell formulas.
+    Re-pinned for the approved option-indexed foreign-binder totality certificate:
+    both continuations are certified for every environment, including void results.
+    No strict VC rule, numbered component or cell data changed. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -99,7 +102,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 3054572711946717270)]
+   ("AkzeptiertX", 9825804211679157507)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

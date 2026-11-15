@@ -7,9 +7,6 @@ import all Batteries.Data.Except
 
 @[expose] public section
 
-set_option profiler true
-set_option profiler.threshold 0
-
 namespace Gabbro.Grammatik.GuestWitness
 
 def code : DataCapTy := .table 0 (true, false)
