@@ -57,7 +57,7 @@ def leafCondition {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 apply pre.sound
                 rw [assignment_lese]
                 exact valid }
-  | .assignSlot table field index expression _ _ => do
+  | .assignSlot table field index expression _ _ | .assignThru _ table _ field index expression _ _ => do
       match h : goals.normal locals with
       | .error cause => .error cause
       | .ok normal => do

@@ -31,7 +31,8 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .glob name _ =>
       encodeObservation (D.gtyp name) (.glob name) (fun world => world.globs name)
         rfl (fun _ => rfl)
-  | .slot table field index _ => do
+  -- A capability pointer has a Unit value; canonical reads use the table and index.
+  | .slot table field index _ | .thru _ table _ field index _ => do
       let indexTerm ← located "slot.index" (translate index locals)
       let offset ← located "slot.index" indexTerm.constantIndex
       let result ← encodeObservation (D.typ table field) (.slot table field offset.val)

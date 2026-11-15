@@ -65,7 +65,7 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             apply pre.sound
             rw [assignment_lese]
             exact valid }
-  | .assignSlot table field index expression _ _ => do
+  | .assignSlot table field index expression _ _ | .assignThru _ table _ field index expression _ _ => do
       let encodedIndex ← translate index locals
       let offset ← encodedIndex.constantIndex
       let pre ← scalarWP expression locals (.slot table field offset.val) normal
