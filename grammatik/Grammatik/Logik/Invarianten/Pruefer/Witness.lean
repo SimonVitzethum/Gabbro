@@ -27,6 +27,9 @@ def declaration : Deklaration :=
     traeger := fun _ => [.inr false]
     invarianten_gehalten := fun _ _ _ _ _ lock => nomatch lock }
 
+instance : DecidableEq declaration.Fn := inferInstanceAs (DecidableEq Unit)
+instance : DecidableEq declaration.Ax := inferInstanceAs (DecidableEq Empty)
+
 abbrev contract := vertragVon declaration ()
 
 def access (name : declaration.Glob) : gdarf declaration name [] := fun _ member => nomatch member
@@ -64,9 +67,11 @@ def unit : Einheit declaration where
 def badUnit : Einheit declaration := { unit with P := { program with rumpf := fun _ => breaking } }
 
 theorem start_zeuge : StartPflicht unit :=
-  ⟨fun lock => nomatch lock, fun _ _ => rfl⟩
+  ⟨(fun lock => nomatch lock), fun _ _ => rfl⟩
 
-theorem initial_zeuge : InvHaelt unit.P () (unit.sp0.welt []) := by decide +kernel
+theorem initial_zeuge : InvHaelt unit.P () (unit.sp0.welt []) := by
+  change eval (unit.sp0.welt []) invariant (unit.sp0.welt []) .nil = true
+  decide +kernel
 
 def oracle : Orakel declaration where
   wirktL := fun item => nomatch item
@@ -105,7 +110,8 @@ theorem invariant_not_valid_zeuge :
     Modell.decideInvariant (declaration.traeger ()) invariant = .ok false := by decide +kernel
 
 def preserving : Programm declaration :=
-  { program with requires := fun _ => invariant
+  { program with
+    requires := fun _ => invariant
     rumpf := fun _ => .ret .empty (List.Perm.refl _) }
 
 /-- Ordinary preservation uses the entry invariant when requires states it. -/
@@ -147,7 +153,8 @@ theorem adapter_zeuge : LogikPflichtA unit.P unit.S unit.Q (GeteiltA unit.P unit
 theorem user_duty_zeuge : NutzerPflichtA unit := ⟨adapter_zeuge, start_zeuge⟩
 
 def nonlinear : Programm declaration :=
-  { program with invariante := fun _ =>
+  { program with
+    invariante := fun _ =>
       .le (.mul (.glob false (access false)) (.glob false (access false))) (.lit 10) }
 
 /-- Declaration admission is checked even with no enumerated writer. -/
@@ -176,7 +183,7 @@ def program (restore : Bool) : Programm declaration where
   ensures := fun _ => .tru
   rumpf := fun _ =>
     .cons (store (if restore then 0 else 1) (by cases restore <;> decide))
-      (.retWhy ⟨0, by decide⟩ (List.Perm.refl _))
+      (.retWhy ⟨0, Nat.zero_lt_succ 0⟩ (List.Perm.refl _))
 
 theorem accepted_zeuge : invariantVCB (program true) (SperrInv.leer declaration) [()] = true := by
   decide +kernel

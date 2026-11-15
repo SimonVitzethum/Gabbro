@@ -10,6 +10,8 @@ namespace Gabbro.Grammatik.Invarianten.Pruefer.AtomicWitness
 
 open Zielsatz NIZeuge
 
+local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- The original flag fixture has real atomic readers and a writer. Its true
     contracts are checked against arbitrary typed atomic answers. -/
 theorem accepted_zeuge : invariantVCB nP (SperrInv.leer nD) nFs = true := by decide +kernel

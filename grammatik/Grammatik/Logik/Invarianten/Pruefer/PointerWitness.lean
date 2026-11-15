@@ -22,6 +22,9 @@ def declaration : Deklaration :=
     traeger := fun _ => [.inl ()]
     invarianten_gehalten := fun _ _ _ _ _ lock => nomatch lock }
 
+instance : DecidableEq declaration.Fn := inferInstanceAs (DecidableEq Unit)
+instance : DecidableEq declaration.Ax := inferInstanceAs (DecidableEq Empty)
+
 def access : darf declaration () [] := fun _ member => nomatch member
 
 def position {Γ : Ctx} : Expr declaration Γ [] (.index (declaration.count ())) :=

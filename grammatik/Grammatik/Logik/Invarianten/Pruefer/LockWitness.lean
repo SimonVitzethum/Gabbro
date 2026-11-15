@@ -23,6 +23,9 @@ def declaration : Deklaration :=
     invs := []
     invarianten_gehalten := fun _ item => nomatch item }
 
+instance : DecidableEq declaration.Fn := inferInstanceAs (DecidableEq Unit)
+instance : DecidableEq declaration.Ax := inferInstanceAs (DecidableEq Empty)
+
 abbrev contract := vertragVon declaration ()
 
 def access : gdarf declaration false [.held ()] := by
