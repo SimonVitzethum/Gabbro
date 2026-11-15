@@ -13,6 +13,7 @@ abbrev capability : Ty := .ptr (.table 0 (true, true))
 
 def declaration : Deklaration :=
   { Witness.declaration with
+    count := fun _ => 1
     tabNr := fun n => if n = 0 then some () else none
     anbieter_passt := fun _ item => nomatch item
     sigNr := fun _ =>
@@ -64,10 +65,6 @@ def calls (f : declaration.Fn) (entry : World declaration)
     (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok entry ()
 
 def arguments : Env declaration [capability] := .cons () .nil
-
-#reduce match checkInvariantVC (program true) (SperrInv.leer declaration) [()] (fun _ => none) with
-  | .ok _ => "accepted"
-  | .error cause => cause.message
 
 theorem accepted_zeuge : invariantVCB (program true) (SperrInv.leer declaration) [()] = true := by
   decide +kernel

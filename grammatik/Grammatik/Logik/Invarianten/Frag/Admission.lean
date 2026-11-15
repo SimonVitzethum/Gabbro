@@ -35,13 +35,13 @@ def localSlotB (scope : Option D.Tab) (table : D.Tab)
   decide (D.count table = 1) ||
     (scope == some table && boundIndexB index)
 
-/-- Check the WHOLE syntax before expanding any bounded quantifier, including
-    predicates over empty tables. Thus an empty domain cannot hide a nonlinear
-    term, a nested binder, or an unsupported constructor. -/
+/-- Check predicate syntax before expanding bounded quantifiers, including
+    empty tables. Static pointer authority is carried in its type; its value
+    does not select a table or row in G's `thru` semantics. -/
 def checkShape (scope : Option D.Tab) : Expr D Γ Λ τ → Except Refusal Unit
   | .lit _ | .tru | .fls | .var _ | .strLit _ _ => .ok ()
   | .glob name _ => checkMemoryType (D.gtyp name)
-  | .slot table field index _ =>
+  | .slot table field index _ | .thru _ table _ field index _ =>
       if localSlotB scope table index then do
         located "slot.index" (checkShape scope index)
         checkMemoryType (D.typ table field)
@@ -65,7 +65,7 @@ def checkShape (scope : Option D.Tab) : Expr D Γ Λ τ → Except Refusal Unit
   | .fllt .. | .flle .. => .error (.unsupported "floating comparison")
   | .reaches .. => .error (.unsupported "reaches: maintain a linear counter instead")
   | .count .. => .error (.unsupported "count fold: maintain a scalar counter instead")
-  | .thru .. | .thruOwn .. | .slotRef .. => .error (.unsupported "indirect field access")
+  | .thruOwn .. | .slotRef .. => .error (.unsupported "indirect field access")
   | .ptrOf .. | .fnref .. | .refEq .. => .error (.unsupported "capability expression")
   | .div .. | .rem .. | .sdiv .. | .srem .. => .error (.unsupported "division or remainder")
   | .getBytes .. => .error (.unsupported "byte extraction")
