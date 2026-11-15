@@ -228,6 +228,42 @@ theorem n464_mirrored_zeuge :
         gate := { sauberTor with
           pre := [.bin ">=" (.built "lenof" [.variable "buf"]) (.variable "len")] } }) = false := by decide +kernel
 
+/-- A binding variable supplies registers, not a waiver of the buffer contract. -/
+theorem n464_via_zeuge :
+    refusalIs (elabGateKopf [] [] [leseGrund] []
+      { byteBuffer with way := .via "binding", gate := { sauberTor with pre := [] } }
+      (spaces := ["normal"]))
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
+
+theorem n464_via_positiv_zeuge :
+    refused (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with way := .via "binding" }) = false := by decide +kernel
+
+/-- Either conjunct is a promise of the complete precondition. -/
+theorem n464_conjunction_zeuge :
+    refused (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with gate := { sauberTor with
+        pre := [.bin "&&" .tru sauberTor.pre.head!] } }) = false := by decide +kernel
+
+/-- A bound in just one alternative supplies no unconditional transfer bound. -/
+theorem n464_disjunction_zeuge :
+    refusalIs (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with gate := { sauberTor with
+        pre := [.bin "||" sauberTor.pre.head! .tru] } })
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
+
+/-- Fixed-size transfers need a positive extent, as in the deleted checker's object case. -/
+theorem n464_constant_zeuge :
+    refused (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with gate := { sauberTor with
+        pre := [.bin "<=" (.lit 4) (.built "lenof" [.variable "buf"])] } }) = false := by decide +kernel
+
+theorem n464_zero_constant_zeuge :
+    refusalIs (uTorBindungPruef [] [] [leseGrund]
+      { byteBuffer with gate := { sauberTor with
+        pre := [.bin "<=" (.lit 0) (.built "lenof" [.variable "buf"])] } })
+      "syscall gate buffer without length bound without G form: buf" = true := by decide +kernel
+
 /-- Passing N464 does not bypass the existing refusal of live byte capabilities. -/
 theorem n464_lowering_refusal_zeuge :
     refusalIs (elabGateKopf [] [] [leseGrund] [] byteBuffer (spaces := ["normal"]))

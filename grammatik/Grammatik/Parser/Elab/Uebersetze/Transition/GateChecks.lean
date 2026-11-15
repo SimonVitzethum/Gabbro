@@ -50,23 +50,25 @@ def uBindReg : SRegBind → String
   | .binds r _ => r
   | .reg r => r
 
-/-- A `requires` bound on the bytes a gate moves through `p` (`N464`): `x <= lenof(p)` (or `<`),
-    with a length variable beside it -- a different parameter of the gate, the length the call
-    hands in. The mirrored `lenof(p) >= x` spellings count the same. -/
+/-- The capacity of this exact pointer parameter. -/
 def istLenof (p : String) : SExpr → Bool
   | .built f [.variable q] => strEq f "lenof" && strEq q p
   | _ => false
 
-/-- The length beside the buffer: a different parameter of the gate, the length the call
-    hands in. -/
-def istBand (params : List String) (p : String) : SExpr → Bool
+/-- A transfer length: another integer parameter, or a positive constant extent.
+    A strict comparison with zero also requires at least one byte. -/
+def istBand (params : List String) (p : String) (strict : Bool) : SExpr → Bool
   | .variable v => !strEq v p && params.any (fun y => strEq y v)
+  | .lit n => strict || decide (0 < n)
   | _ => false
 
+/-- Find a bound through conjunctions only: disjunctions do not promise either arm. -/
 def istLaengenSchranke (params : List String) (p : String) : SExpr → Bool
   | .bin op a b =>
-    ((strEq op "<=" || strEq op "<") && istBand params p a && istLenof p b) ||
-    ((strEq op ">=" || strEq op ">") && istLenof p a && istBand params p b)
+    if strEq op "&&" then istLaengenSchranke params p a || istLaengenSchranke params p b
+    else
+      ((strEq op "<=" || strEq op "<") && istBand params p (strEq op "<") a && istLenof p b) ||
+      ((strEq op ">=" || strEq op ">") && istLenof p a && istBand params p (strEq op ">") b)
   | _ => false
 
 /-- The way a gate is bound: a `kernel` pairing is refused (`N068` -- the call would be paired
@@ -124,7 +126,7 @@ def uTorFehlerPruef (fail : Option String) (whys : List UWhy)
 
 /-- The buffers a gate moves bytes through (`N464`): a parameter that points at numbers is a
     buffer the kernel moves bytes through -- it points at `u8`/`i8`, and the gate bounds it by a
-    length clause `x <= lenof(p)` over one of its integer parameters. A pointer into a table is a
+    length clause `x <= lenof(p)` over an integer parameter or a positive constant. A pointer into a table is a
     capability, not a transfer, and is not held to this clause. -/
 def uTorPufferPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (params : List (String × STyp)) (pre : List SExpr) :
     Except String Unit :=
@@ -143,20 +145,15 @@ def uTorPufferPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (
     | .ptr .. => .error ("syscall gate buffer without byte pointee without G form: " ++ p)
     | _ => .ok ()) ()
 
-/-- The whole binding half of a gate: answer, stack, error map, buffers. A `via` variable
-    carries no binding -- only its contract travels. -/
-def uTorBindungPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit :=
+/-- Check the concrete binding when present, then the buffer contract for every gate.
+    A `via` variable supplies the binding, but never exempts its contract from N464. -/
+def uTorBindungPruef (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) : Except String Unit := do
   match sc.way with
-  | .via _ => .ok ()
-  | .lit _ _ bind _ =>
-    match uTorAntwortPruef bind.outs bind.dirty with
-    | .error e => .error e
-    | .ok _ =>
-    match uTorStapelPruef bind.stack with
-    | .error e => .error e
-    | .ok _ =>
-    match uTorFehlerPruef sc.fail whys bind.codes with
-    | .error e => .error e
-    | .ok _ => uTorPufferPruef alias tabs sc.params sc.gate.pre
+  | .via _ => pure ()
+  | .lit _ _ bind _ => do
+    uTorAntwortPruef bind.outs bind.dirty
+    uTorStapelPruef bind.stack
+    uTorFehlerPruef sc.fail whys bind.codes
+  uTorPufferPruef alias tabs sc.params sc.gate.pre
 
 end Gabbro.Grammatik.Parser.Uebersetze
