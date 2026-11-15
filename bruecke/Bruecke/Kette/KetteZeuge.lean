@@ -124,7 +124,6 @@ theorem getragen_zeuge : GetragenG unit carried := by
     schreibt := fun c hc => schreibtB_ok (carried_checks c hc).2.2.2.2.2.1
     gschreibt := fun c hc => gschreibtB_ok (carried_checks c hc).2.2.2.2.2.1
     ohneReq := ?_
-    ohneGrund := ?_
     ohneInv := rfl
     statics := staticsB_ok (by cbv)
     ohneTransition := fun c _ => ohneTransitionB_ok (by cbv) c }
@@ -153,10 +152,6 @@ theorem getragen_zeuge : GetragenG unit carried := by
     rcases carried_indices c hc with rfl | rfl
     · exact ⟨rfl, rfl, rfl, rfl⟩
     · exact ⟨rfl, rfl, rfl, rfl⟩
-  · intro c hc
-    rcases carried_indices c hc with rfl | rfl
-    · cbv
-    · cbv
   · intro c hc
     rcases carried_indices c hc with rfl | rfl
     · cbv

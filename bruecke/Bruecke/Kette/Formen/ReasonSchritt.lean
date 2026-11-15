@@ -1,16 +1,16 @@
 module
-public import Bruecke.Kette.Formen.Reason
+public import Bruecke.Kette.Formen.ReasonRelation
 @[expose] public section
 namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg} {C : Fin u.fns.length → Prop}
 
-theorem stmtZiel_reason_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
+theorem stmtZiel_reason_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
     {count j : Nat} {x id : String} {v : Var Γ (.why count)}
-    {ga : GrundArms (declOf u) (verOf u c) false Γ Λ Λ count}
+    {ga : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ count}
     {bs : List (String × List Gabbro.Body.Stmt)}
     (hj : paramPos fn.params x = .ok j) (hv : lowVar Γ j (.why count) = .ok v)
     (hid : ns.lookup fn x = some id)

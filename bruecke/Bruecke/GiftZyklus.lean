@@ -41,7 +41,7 @@ import all Init.Data.String.ToSlice
 
 
 /-!
-# Finding F2, measured: without a rank of the call graph the bridge would be FALSE
+# Finding F2, measured: with full callee contracts on a cycle the bridge would be FALSE
 
 Three functions over one table `T` (two slots, field `v : 0 .. 10`), in the parser's fragment:
 
@@ -54,7 +54,10 @@ contracts for EVERY entry state (`Contract`), and no environment keeps `h`'s (`e
 `g`'s (a claim about a slot `g` does not write) -- so each duty is true by vacuity. Premise (b) of
 the goal theorem FAILS (`nicht_koerperGutR`): its handler class asks a callee's contract only
 where the call is made, and a handler may answer `g` normally where slot 0 happens to be 7 -- then
-`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself).
+`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself),
+and so do the measure duties of recursive units (`keine_massPflicht`): under every well-founded
+measure, `h` may assume its own contract only strictly below its entry, so its duty is no longer
+vacuous -- and the chain would otherwise prove the failing premise.
 -/
 
 namespace Gabbro.Bruecke.Zyklus
@@ -120,29 +123,19 @@ theorem wf_t0 : wfU uZ t0 := by
   intro p sh hp
   cases p with
   | slot c k fld =>
-    obtain ⟨t, _, hf⟩ := slotShape_tabIdx _ c fld sh hp
-    have ht : t = ⟨0, by decide⟩ := Fin.ext (by
-      have := t.isLt
-      simp [uZ] at this
-      show t.val = 0
-      omega)
-    subst ht
-    by_cases hv : fld = "v"
-    · subst hv
-      have e : sh = .intIn 0 10 := by
-        have h2 : ((uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == "v")).map
-            (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some (.intIn 0 10) := rfl
-        rw [h2] at hf
-        exact (Option.some.inj hf).symm
-      subst e
-      rfl
-    · have h2 : (uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == fld) = none := by
-        show [("v", ((0 : Int), (10 : Int)))].find? (fun q => q.1 == fld) = none
-        simp only [List.find?]
-        have : ("v" == fld) = false := by simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hv e.symm
-        rw [this]
-      rw [h2] at hf
-      cases hf
+    by_cases hc : c = "T"
+    · subst c
+      by_cases hf : fld = "v"
+      · subst fld
+        have hs : sh = .intIn 0 10 := by
+          simpa [wfU, shapeOfUG, shapeOfU, fieldIndex, shapeOfTy,
+            tabIdx, fieldAtPos, fieldPos, typAt, boolFeldAt, optFeldAt,
+            optNumAt, wertFeldAt, fieldRangeO, tabAt, fieldCount, uZ] using hp.symm
+        subst sh
+        rfl
+      · simp [shapeOfUG, shapeOfU, fieldIndex, tabIdx, fieldAtPos, tabAt, uZ,
+          hf, Ne.symm hf] at hp
+    · simp [shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
   | field c n => simp [shapeOfUG, shapeOfU] at hp
   | global n => simp [shapeOfUG, globShape, globIdx, uZ] at hp
 
@@ -359,7 +352,13 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   · rw [hR] at hR'; cases hR'
   · rw [hR] at hR'; cases hR'
 
+/-- **The measure duties refuse the unit**: under no well-founded measure do all duties of `uZ`
+    hold, for they would carry premise (b) through `bruecke_koerperGutR_M`, and it fails. -/
+theorem keine_massPflicht : ∀ M : MassU, ¬ MassPflichtU uZ (fun _ => True) M := fun M hZ =>
+  nicht_koerperGutR (bruecke_koerperGutR_M lowZ getragenZ M hZ 0 fI True.intro)
+
 #print axioms alle_pflichten
 #print axioms nicht_koerperGutR
+#print axioms keine_massPflicht
 
 end Gabbro.Bruecke.Zyklus

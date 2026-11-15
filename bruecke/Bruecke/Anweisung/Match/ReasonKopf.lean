@@ -7,11 +7,11 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg} {c : Fin u.fns.length}
 
-theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
-    {ss tail : List UStmt} {arms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ (n + 1)}
+theorem lowGArms_succ {loopMode : Bool} {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+    {ss tail : List UStmt} {arms : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ (n + 1)}
     (h : lowGArmsL u c Γ fn (fuel + 1) Λ [] (n + 1) ss = .ok (arms, tail)) :
-    ∃ (body : Block (declOf u) (verOf u c) false Γ Λ Λ)
-      (restArms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ n), ∃ remaining,
+    ∃ (body : Block (declOf u) (verOf u c) loopMode Γ Λ Λ)
+      (restArms : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ n), ∃ remaining,
       lowSeqL u c Γ fn fuel Λ [] ss = .ok (⟨Λ, body⟩, remaining) ∧
       ((n = 0 ∧ remaining = tail) ∨
        ∃ m rest, n = m + 1 ∧ remaining = .ifElse :: rest ∧
@@ -19,7 +19,7 @@ theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (decl
       arms = .cons body restArms := by
   change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (n + 1) ss = .ok (arms, tail) at h
   simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms] at h
-  cases hb : lowSeqL (l := false) u c Γ fn fuel Λ [] ss with
+  cases hb : lowSeqL (l := loopMode) u c Γ fn fuel Λ [] ss with
   | error err => simp only [hb, bind, Except.bind] at h <;> cases h
   | ok result =>
     obtain ⟨⟨out, body⟩, remaining⟩ := result
@@ -39,7 +39,7 @@ theorem lowGArms_succ {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ : List (Res (decl
       | cons marker rest =>
         cases marker <;> try { cases h }
         case ifElse =>
-          cases hrest : lowGArmsL (l := false) u c Γ fn fuel Λ [] (m + 1) rest with
+          cases hrest : lowGArmsL (l := loopMode) u c Γ fn fuel Λ [] (m + 1) rest with
           | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
           | ok result =>
             obtain ⟨restArms, remaining'⟩ := result
@@ -69,13 +69,13 @@ theorem lowBodyF_reason_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
       cases h
       exact ⟨Λ₁, st, tail, rest, hs, hr, rfl⟩
 
-theorem lowStruct_reason_ok {fuel count : Nat} {Γ : Ctx} {fn : UFn}
+theorem lowStruct_reason_ok {loopMode : Bool} {fuel count : Nat} {Γ : Ctx} {fn : UFn}
     {Λ Λ' : List (Res (declOf u))} {x : String} {ss tail : List UStmt}
-    {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
+    {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ'}
     (ht : valueParamTy fn x = some (.why count))
     (h : lowStructL u c Γ fn (fuel + 1) Λ [] (.matchWhyBeg x) ss = .ok (⟨Λ', st⟩, tail)) :
     ∃ j, ∃ (v : Var Γ (.why count))
-      (arms : GrundArms (declOf u) (verOf u c) false Γ Λ Λ count),
+      (arms : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ count),
       paramPos fn.params x = .ok j ∧ lowVar Γ j (.why count) = .ok v ∧
       lowGArmsL u c Γ fn fuel Λ [] count ss = .ok (arms, .blkEnd :: tail) ∧
       Λ' = Λ ∧ HEq st (Stmt.onWhy (Expr.var v) arms) := by
@@ -101,7 +101,7 @@ theorem lowStruct_reason_ok {fuel count : Nat} {Γ : Ctx} {fn : UFn}
         | error err => simp only [hv] at h <;> cases h
         | ok v =>
           simp only [hv] at h
-          cases ha : lowGArmsL (l := false) u c Γ fn fuel Λ [] count ss with
+          cases ha : lowGArmsL (l := loopMode) u c Γ fn fuel Λ [] count ss with
           | error err => simp only [ha] at h <;> cases h
           | ok result =>
             obtain ⟨arms, remaining⟩ := result

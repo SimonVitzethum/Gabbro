@@ -1,6 +1,7 @@
 module
 public import Bruecke.Anweisung.Lokal.Benannt
 public import Bruecke.Anweisung.Lokal.RecordScope
+public import Bruecke.Anweisung.Option.ValueScope
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -71,6 +72,7 @@ theorem UmfangB.bindTy {Γ : Ctx} {fn : UFn} {ns : BodyNames} (h : UmfangB Γ fn
   case int lo hi => exact h.bind hx (lo, hi)
   case bool => exact h.bindB hx
   case prod id fs => exact h.bindRecord hx id fs
+  case opt cnt => exact h.bindOptionValue hx cnt
   all_goals cases ht
 
 theorem Sicht.bindTy {ft fn : UFn} (h : Sicht u ft fn) (x : String) {ty : Ty}
@@ -80,6 +82,7 @@ theorem Sicht.bindTy {ft fn : UFn} (h : Sicht u ft fn) (x : String) {ty : Ty}
   case int lo hi => exact h.bind x (lo, hi) (lo, hi)
   case bool => exact h.bindB x
   case prod id fs => exact h.bindRecord x id fs
+  case opt cnt => exact h.bindOptionValue x cnt
   all_goals cases ht
 
 theorem PositionalLRel.pushTy {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : List String}
@@ -92,6 +95,7 @@ theorem PositionalLRel.pushTy {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : Lis
   case int lo hi => exact h.push x id (lo, hi) hfresh v
   case bool => exact h.pushB x id hfresh v
   case prod rid fs => exact h.pushRecord x id rid fs hfresh v
+  case opt cnt => exact h.pushOptionValue x id cnt hfresh v
   all_goals cases ht
 
 theorem PositionalLRel.tailTy {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : List String}
@@ -102,7 +106,7 @@ theorem PositionalLRel.tailTy {D : Deklaration} {Γ : Ctx} {fn : UFn} {ids : Lis
   cases ty
   case int => exact h.tail
   case bool => exact h.tailB
-  case prod =>
+  case prod | opt =>
     have hp : PositionalLRel (fn.mitBindung x (0, 0)) (id :: ids) 0 ρ β :=
       ⟨h.length, h.distinct, h.values⟩
     exact hp.tail

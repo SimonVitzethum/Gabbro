@@ -7,17 +7,17 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg} {c : Fin u.fns.length}
 
 /-- The common finite dispatch mechanism applies precisely to cases without payloads. -/
-inductive BareArms {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} :
-    {cs : List (Option Ty)} → Arms D V false Γ Λ Λ cs → GrundArms D V false Γ Λ Λ cs.length → Prop where
+inductive BareArms {loopMode : Bool} {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} :
+    {cs : List (Option Ty)} → Arms D V loopMode Γ Λ Λ cs → GrundArms D V loopMode Γ Λ Λ cs.length → Prop where
   | nil : BareArms .nil .nil
-  | cons {cs : List (Option Ty)} {b : Block D V false Γ Λ Λ}
-      {arms : Arms D V false Γ Λ Λ cs} {reasons : GrundArms D V false Γ Λ Λ cs.length} :
+  | cons {cs : List (Option Ty)} {b : Block D V loopMode Γ Λ Λ}
+      {arms : Arms D V loopMode Γ Λ Λ cs} {reasons : GrundArms D V loopMode Γ Λ Λ cs.length} :
       BareArms arms reasons → BareArms (cs := none :: cs) (.cons b arms) (.cons b reasons)
 
-theorem BareArms.exec {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+theorem BareArms.exec {loopMode : Bool} {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
     (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    {cs : List (Option Ty)} {arms : Arms D V false Γ Λ Λ cs}
-    {reasons : GrundArms D V false Γ Λ Λ cs.length} (h : BareArms arms reasons)
+    {cs : List (Option Ty)} {arms : Arms D V loopMode Γ Λ Λ cs}
+    {reasons : GrundArms D V loopMode Γ Λ Λ cs.length} (h : BareArms arms reasons)
     (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) :
     execArms O passes R arms v σ ρ = execGrund O passes R reasons v.1 σ ρ := by
   induction h with
@@ -29,11 +29,11 @@ theorem BareArms.exec {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (R
     | succ i => exact ih ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, payload⟩
 
 /-- The canonical readers of bare tag arms and reason arms lower identical blocks. -/
-theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u))),
-    ∀ cs binders ss, ∀ (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs), ∀ tail,
+theorem lowArms_bare {loopMode : Bool} : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u))),
+    ∀ cs binders ss, ∀ (arms : Arms (declOf u) (verOf u c) loopMode Γ Λ Λ cs), ∀ tail,
     cs.all Option.isNone = true →
     lowArmsT u c Γ fn fuel Λ [] cs binders ss = .ok (arms, tail) →
-    ∃ reasons : GrundArms (declOf u) (verOf u c) false Γ Λ Λ cs.length,
+    ∃ reasons : GrundArms (declOf u) (verOf u c) loopMode Γ Λ Λ cs.length,
       lowGArmsL u c Γ fn fuel Λ [] cs.length ss = .ok (reasons, tail) ∧ BareArms arms reasons := by
   intro fuel
   induction fuel with
@@ -54,7 +54,7 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
         have hBare' : cs.all Option.isNone = true := by simpa only [List.all_cons, Option.isNone_none, Bool.true_and] using hBare
         change lowArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (none :: cs) binders ss = .ok (arms, tail) at h
         simp only [lowArmsStep, lowStufe_seq, lowStufe_arms] at h
-        cases hb : lowSeqL (l := false) u c Γ fn fuel Λ [] ss with
+        cases hb : lowSeqL (l := loopMode) u c Γ fn fuel Λ [] ss with
         | error err => simp only [hb, bind, Except.bind] at h <;> cases h
         | ok result =>
           obtain ⟨⟨out, body⟩, remaining⟩ := result
@@ -79,7 +79,7 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
             | cons marker rest =>
               cases marker <;> try { cases h }
               case ifElse =>
-                cases hrest : lowArmsT (l := false) u c Γ fn fuel Λ [] (head :: cs) (binders.drop 1) rest with
+                cases hrest : lowArmsT (l := loopMode) u c Γ fn fuel Λ [] (head :: cs) (binders.drop 1) rest with
                 | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
                 | ok result =>
                   obtain ⟨restArms, restTail⟩ := result
@@ -100,12 +100,12 @@ theorem lowArms_bare : ∀ fuel {Γ : Ctx} (fn : UFn) (Λ : List (Res (declOf u)
                   · simp only [hrest, bind, Except.bind, same, ↓reduceDIte] at h <;> cases h
 
 /-- Only local, bare tag subjects enter this reader; statics and payload cases remain refused. -/
-theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
+theorem lowStruct_tag_ok {loopMode : Bool} {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
     {Λ Λ' : List (Res (declOf u))} {x : String} {binders : List String} {cs : List (Option Ty)}
-    {ss tail : List UStmt} {st : Stmt (declOf u) (verOf u c) false Γ Λ Λ'}
+    {ss tail : List UStmt} {st : Stmt (declOf u) (verOf u c) loopMode Γ Λ Λ'}
     (hn : sidx < u.sums.length) (ht : valueParamTy fn x = some (.sum cs))
     (h : lowStructL u c Γ fn (fuel + 1) Λ [] (.matchTagBeg sidx x binders) ss = .ok (⟨Λ', st⟩, tail)) :
-    ∃ j, ∃ (v : Var Γ (.sum cs)) (arms : Arms (declOf u) (verOf u c) false Γ Λ Λ cs),
+    ∃ j, ∃ (v : Var Γ (.sum cs)) (arms : Arms (declOf u) (verOf u c) loopMode Γ Λ Λ cs),
       paramPos fn.params x = .ok j ∧ lowVar Γ j (.sum cs) = .ok v ∧
       lowArmsT u c Γ fn fuel Λ [] cs binders ss = .ok (arms, .blkEnd :: tail) ∧
       Λ' = Λ ∧ HEq st (Stmt.onTag (Expr.var v) arms) := by
@@ -134,7 +134,7 @@ theorem lowStruct_tag_ok {fuel sidx : Nat} {Γ : Ctx} {fn : UFn}
         | error err => simp only [hv] at h <;> cases h
         | ok v =>
           simp only [hv] at h
-          cases ha : lowArmsT (l := false) u c Γ fn fuel Λ [] cs binders ss with
+          cases ha : lowArmsT (l := loopMode) u c Γ fn fuel Λ [] cs binders ss with
           | error err => simp only [ha] at h <;> cases h
           | ok result =>
             obtain ⟨arms, remaining⟩ := result

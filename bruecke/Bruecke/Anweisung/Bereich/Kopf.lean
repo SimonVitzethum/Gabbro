@@ -1,6 +1,7 @@
 module
-public import Bruecke.Anweisung.Bereich.Lesen
+public import Bruecke.Anweisung.Bereich.Bindung
 public import Bruecke.Anweisung.Zweig.Kopf
+public import Bruecke.Anweisung.Schleife.Kontrolle
 @[expose] public section
 
 namespace Gabbro.Bruecke
@@ -131,7 +132,7 @@ theorem lowEndL_leaf_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : 
       (lowStmtL (l := loopMode) u c Γ fn Λ st).bind (fun p =>
         (lowEndL (l := loopMode) u c Γ fn n p.1 [] ss).bind (fun e => .ok (.cons p.2 e.1, e.2))) := by
     cases st
-    case assign | assignTab | assignGlob | call | setVar | setVarB => rfl
+    case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call | setVar | setVarB | setVarOpt => rfl
     all_goals cases hs
   rw [hd] at h
   cases hg : lowStmtL (l := loopMode) u c Γ fn Λ st with
@@ -147,6 +148,24 @@ theorem lowEndL_leaf_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : 
       cases h
       exact ⟨Λ', gs, rest, (by first | exact hg | rfl), he, rfl⟩
 
+def controlEnd {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (leave : Bool) (hl : l = true) : Endblock D V l Γ Λ :=
+  if leave then .leave hl else .next hl
+
+theorem lowEnd_control_ok {loopMode : Bool} {Γ : Ctx} {fn : UFn} {n : Nat}
+    {Λ : List (Res (declOf u))} {leave : Bool} {x : String} {ss tail : List UStmt}
+    {ending : Endblock (declOf u) (verOf u c) loopMode Γ Λ}
+    (h : lowEndL (l := loopMode) u c Γ fn (n + 1) Λ [] (controlU leave x :: ss) = .ok (ending, tail)) :
+    ∃ hl : loopMode = true, ending = controlEnd leave hl ∧ tail = ss := by
+  cases leave <;> rw [lowEndL_succ] at h <;>
+    simp only [controlU, Bool.false_eq_true, ↓reduceIte, lowEndStep] at h
+  all_goals
+    split at h
+    · rename_i hl
+      cases h
+      exact ⟨hl, rfl, rfl⟩
+    · cases h
+
 theorem endBodyZ_rest {loopMode : Bool} : ∀ n k ss {Γ : Ctx} (fn ft : UFn) (ns : BodyNames)
     {Λ : List (Res (declOf u))} (ending : Endblock (declOf u) (verOf u c) loopMode Γ Λ)
     (rest tail : List UStmt) (bs : List Gabbro.Body.Stmt),
@@ -156,13 +175,41 @@ theorem endBodyZ_rest {loopMode : Bool} : ∀ n k ss {Γ : Ctx} (fn ft : UFn) (n
   | _ + 1, 0, _, _, _, _, _, _, _, _, _, _, _, h => by cases h
   | _ + 1, _ + 1, [], _, _, _, _, _, _, _, _, _, _, h => by cases h
   | n + 1, k + 1, st :: ss, Γ, fn, ft, ns, Λ, ending, rest, tail, bs, hG, hB => by
-    rcases endBodyZ_cases hB with ⟨r, b, rfl, _, _, rfl⟩ | ⟨b, ys, hleaf, _, hys, _⟩
-    · rw [lowEndL_succ] at hG
+    cases endBodyZ_view hB with
+    | @ret r ss b hr =>
+      rw [lowEndL_succ] at hG
       simp only [lowEndStep] at hG
       cases hg : lowRetEnd (l := loopMode) u c Γ fn Λ [] r with
       | error e => simp only [hg, Except.map] at hG; cases hG
       | ok e => simp only [hg, Except.map] at hG; cases hG; rfl
-    · obtain ⟨Λ', gs, nextB, _, hnext, _⟩ := lowEndL_leaf_ok (endLeafB_ok hleaf) hG
-      exact endBodyZ_rest n k ss fn ft ns nextB rest tail ys hnext hys
+    | control leave x ss =>
+      obtain ⟨_, _, rfl⟩ := lowEnd_control_ok hG
+      rfl
+    | leaf hleaf hs hys =>
+      obtain ⟨Λ', gs, nextB, _, hnext, _⟩ := lowEndL_leaf_ok (endLeafB_ok hleaf) hG
+      exact endBodyZ_rest n k _ fn ft ns nextB rest tail _ hnext hys
+    | @binding st ss b ft' ns' ys tail hl hs hys =>
+      cases st
+      case bind x d v =>
+        obtain ⟨e, _, _, rfl, rfl⟩ := schrittB_bind hs
+        obtain ⟨ls, nextB, _, hnext, _⟩ := lowEnd_bind_ok hG
+        exact endBodyZ_rest n k ss (fn.mitBindung x ls.range) (ft.mitBindung x (0, 0))
+          (ns.push x) nextB rest tail ys hnext hys
+      case bindMut x lo hi v =>
+        obtain ⟨e, _, _, rfl, rfl⟩ := schrittB_bindMut hs
+        obtain ⟨ev, nextB, _, hnext, _⟩ := lowEnd_bindMut_ok hG
+        exact endBodyZ_rest n k ss (fn.mitBindung x (lo, hi)) (ft.mitBindung x (lo, hi))
+          (ns.push x) nextB rest tail ys hnext hys
+      case bindB x v =>
+        obtain ⟨e, _, _, rfl, rfl⟩ := schrittB_bindB hs
+        obtain ⟨ev, nextB, _, hnext, _⟩ := lowEnd_bindB_ok hG
+        exact endBodyZ_rest n k ss (fn.mitBindungB x) (ft.mitBindungB x)
+          (ns.push x) nextB rest tail ys hnext hys
+      all_goals cases hl
+    | @record x d v ss id fs e ys tail ht he hys =>
+      obtain ⟨w, nextB, _, hnext, _⟩ := lowEnd_bindW_ok hG
+      exact endBodyZ_rest n k ss (fn.mitWert x w.ty) (ft.mitWert x (.prod id fs))
+        (ns.push x) nextB rest tail ys hnext hys
+
 
 end Gabbro.Bruecke

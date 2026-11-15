@@ -76,6 +76,11 @@ theorem slotPlace_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : USide) :
     slotPlace u fT s = slotPlace u fn s := by
   cases s <;> simp [slotPlace, h.2.1]
 
+theorem optionExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (v : UOpt) :
+    optionExpr u fT v = optionExpr u fn v := by
+  cases v <;> simp only [optionExpr, h.2.1]
+
+mutual
 theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
     numericSideExprG u fT sd = numericSideExprG u fn sd := by
   have recurse (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) :
@@ -84,57 +89,52 @@ theorem numericSideExprG_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
   cases sd with
   | param p => simp only [numericSideExprG, h.1 p]
   | slot p fld i => simp only [numericSideExprG, slotPlace_sicht h]
-  | add x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | sub x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | mul x y =>
+  | add x y | sub x y | mul x y | band x y | bor x y | bxor x y
+  | div x y | rem x y | shl x y | shr x y =>
     have hx := recurse x (by simp_wf; omega)
     have hy := recurse y (by simp_wf; omega)
     simp only [numericSideExprG, hx, hy]
   | conv lo hi x =>
     have hx := recurse x (by simp_wf; omega)
     simp only [numericSideExprG, hx]
-  | band x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | bor x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
-  | bxor x y =>
-    have hx := recurse x (by simp_wf; omega)
-    have hy := recurse y (by simp_wf; omega)
-    simp only [numericSideExprG, hx, hy]
+  | neg x =>
+    have hx := recurse x (by simp_wf <;> omega)
+    simp only [numericSideExprG, hx]
+  | field base name => simp only [numericSideExprG, recordRead_sicht h base]
   | _ => simp [numericSideExprG, slotPlace_sicht h]
-termination_by sizeOf sd
-decreasing_by assumption
-
-mutual
-theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
-    recordRead u fT (numericSideExprG u fT) sd = recordRead u fn (numericSideExprG u fn) sd := by
-  cases sd with
-  | param p => simp only [recordRead, h.2.2.2.2 p, numericSideExprG_sicht h]
-  | product id order fields => simp only [recordRead, recordReads_sicht h fields]
-  | field base name => simp only [recordRead, recordRead_sicht h base]
-  | replace base name value =>
-      simp only [recordRead, recordRead_sicht h base, recordRead_sicht h value]
-  | _ => simp only [recordRead, numericSideExprG_sicht h]
 termination_by 3 * sizeOf sd
 decreasing_by all_goals (simp_wf <;> omega)
 
+theorem recordRead_sicht {fT fn : UFn} (h : Sicht u fT fn) (sd : USide) :
+    recordRead u fT sd = recordRead u fn sd := by
+  have recN (sd' : USide) (hle : sizeOf sd' ≤ sizeOf sd) :
+      numericSideExprG u fT sd' = numericSideExprG u fn sd' :=
+    numericSideExprG_sicht h sd'
+  have recR (sd' : USide) (hlt : sizeOf sd' < sizeOf sd) :
+      recordRead u fT sd' = recordRead u fn sd' :=
+    recordRead_sicht h sd'
+  have recRs (fs : List (Ty × USide)) (hlt : sizeOf fs < sizeOf sd) :
+      recordReads u fT fs = recordReads u fn fs :=
+    recordReads_sicht h fs
+  cases sd with
+  | param p => simp only [recordRead, h.2.2.2.2 p, recN _ (Nat.le_refl _)]
+  | product id order fields =>
+      simp only [recordRead, recRs fields (by simp <;> omega)]
+  | present n value => simp only [recordRead, recR value (by simp <;> omega)]
+  | field base name => simp only [recordRead, recR base (by simp <;> omega)]
+  | replace base name value =>
+      simp only [recordRead, recR base (by simp <;> omega), recR value (by simp <;> omega)]
+  | _ => simp only [recordRead, recN _ (Nat.le_refl _), optionExpr_sicht h]
+termination_by 3 * sizeOf sd + 1
+decreasing_by all_goals (simp_wf <;> omega)
+
 theorem recordReads_sicht {fT fn : UFn} (h : Sicht u fT fn) (fields : List (Ty × USide)) :
-    recordReads u fT (numericSideExprG u fT) fields =
-      recordReads u fn (numericSideExprG u fn) fields := by
+    recordReads u fT fields =
+      recordReads u fn fields := by
   match fields with
   | [] => simp only [recordReads]
   | (ty, sd) :: rest => simp only [recordReads, recordRead_sicht h sd, recordReads_sicht h rest]
-termination_by 3 * sizeOf fields + 1
+termination_by 3 * sizeOf fields + 2
 decreasing_by all_goals (simp_wf <;> omega)
 end
 
@@ -146,6 +146,10 @@ theorem ensSide_sicht {fT fn : UFn} (h : Sicht u fT fn) (a : Acc) (sd : USide) :
     ensSide u fT a sd = ensSide u fn a sd := by
   cases sd <;> simp [ensSide, slotPlace_sicht h, numericSideExprG_sicht h]
 
+theorem boolCmpExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (op : String) (l r : USide) :
+    boolCmpExpr u fT op l r = boolCmpExpr u fn op l r := by
+  simp only [boolCmpExpr, recordRead_sicht h]
+
 theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     ensExpr u fT a e = ensExpr u fn a e := by
   have recurse (e' : UEns) (hlt : sizeOf e' < sizeOf e) (a' : Acc) :
@@ -153,7 +157,7 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     ensExpr_sicht h e' a'
   cases e with
   | cmp op l r =>
-    simp only [ensExpr, ensSide_sicht h]
+    simp only [ensExpr, boolCmpExpr_sicht h, ensSide_sicht h]
   | and x y =>
     have hx := recurse x (by simp_wf <;> omega)
     have hy := recurse y (by simp_wf <;> omega)
@@ -180,13 +184,19 @@ theorem ensExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (e : UEns) (a : Acc) :
     have hx := recurse x (by simp_wf <;> omega)
     simp only [ensExpr]
     rw [hx a]
+  | istSome v num => simp only [ensExpr, optionExpr_sicht h]
   | _ => rfl
 termination_by sizeOf e
 decreasing_by assumption
 
+theorem rawCond_sicht {fT fn : UFn} (h : Sicht u fT fn) (c : UEns) :
+    rawCond u fT c = rawCond u fn c := by
+  unfold rawCond
+  rw [ensExpr_sicht h]
+
 theorem argExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) (a : UArg) :
     argExpr u fT a = argExpr u fn a := by
-  cases a <;> simp only [argExpr, rawCond, ensExpr_sicht h, h.2.2.1, sideExprG_sicht h]
+  cases a <;> simp only [argExpr, rawCond, ensExpr_sicht h, h.2.2.1, sideExprG_sicht h, optionExpr_sicht h]
 
 theorem argsExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) :
     ∀ as : List UArg, argsExpr u fT as = argsExpr u fn as
@@ -195,7 +205,7 @@ theorem argsExpr_sicht {fT fn : UFn} (h : Sicht u fT fn) :
 
 theorem stmtBody_sicht {fT fn : UFn} (h : Sicht u fT fn) (s : UStmt) :
     stmtBody u fT s = stmtBody u fn s := by
-  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h]
+  cases s <;> simp [stmtBody, h.2.1, sideExprG_sicht h, argsExpr_sicht h, rawCond_sicht h, optionExpr_sicht h]
 
 
 end Gabbro.Bruecke

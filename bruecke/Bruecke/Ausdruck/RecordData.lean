@@ -17,50 +17,38 @@ def valueParamTy (f : UFn) (name : String) : Option Ty :=
   match f.params.find? (fun q => q.1 == name) with
   | some (_, ty@(.prod ..)) => some ty
   | some (_, .bool) => some .bool
+  | some (_, ty@(.opt _)) => some ty
   | some (_, ty@(.why _)) => some ty
   | some (_, ty@(.sum _)) => some ty
   | _ => none
 
-mutual
-/-- A Body value together with optional exact type information. Scalar leaves retain the
-    existing reader; record operations resolve nominal schemas and typed positions using
-    the very same lookups as `lowWertE`. The lowerer separately checks every field value. -/
-def recordRead (u : UProg) (f : UFn) (scalar : USide → Option Expr) :
-    USide → Option (Option Ty × Expr)
-  | .param p =>
-      match valueParamTy f p with
-      | some ty => some (some ty, .name p)
-      | none => (scalar (.param p)).map (none, ·)
-  | .truth b => some (some .bool, .lit (.bool b))
-  | .product identity _ fields => do
-      let _ ← (uRecordOf u.records (.prod identity (fields.map (·.1)))).toOption
-      let es ← recordReads u f scalar fields
-      pure (some (.prod identity (fields.map (·.1))), .recOf es)
-  | .field base name => do
-      let (some ty, e) ← recordRead u f scalar base | none
-      let sch ← (uRecordOf u.records ty).toOption
-      let pos ← (uRecordPosition sch.val.fields name).toOption
-      pure (some pos.1, .recGet e (recordIndex pos.2))
-  | .replace base name value => do
-      let (some ty, e) ← recordRead u f scalar base | none
-      let sch ← (uRecordOf u.records ty).toOption
-      let pos ← (uRecordPosition sch.val.fields name).toOption
-      let (_, v) ← recordRead u f scalar value
-      pure (some sch.val.ty, .recSet e (recordIndex pos.2) v)
-  | sd => (scalar sd).map (none, ·)
-termination_by sd => 3 * sizeOf sd
-decreasing_by all_goals (simp_wf <;> omega)
+/-- The name of the table a pointer parameter points at. -/
+def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
+  match f.params.find? (fun q => q.1 == p) with
+  | some (_, .ptr ⟨_, _, .table t⟩) => (u.tabs[t]?).map (·.name)
+  | _ => none
 
-def recordReads (u : UProg) (f : UFn) (scalar : USide → Option Expr) :
-    List (Ty × USide) → Option (List Expr)
-  | [] => some []
-  | (_, sd) :: rest => do
-      let (_, e) ← recordRead u f scalar sd
-      let es ← recordReads u f scalar rest
-      pure (e :: es)
-termination_by ss => 3 * sizeOf ss + 1
-decreasing_by all_goals (simp_wf <;> omega)
-end
+def idxExpr : UIdx → Expr
+  | .lit n => .lit (.int n)
+  | .param p => .name p
+
+/-- Read optional table indices with the same places as ordinary slot reads. The
+    canonical lowerer checks the table identity and index bounds. -/
+def optionExpr (u : UProg) (f : UFn) : UOpt → Option Expr
+  | .nichts => some (.lit .absent)
+  | .etwas ix => some (.someOf (idxExpr ix))
+  | .var x => some (.name x)
+  | .slot p fld ix => (ptrTab u f p).map (fun t => .place t (idxExpr ix) fld)
+  | .tab t fld ix => some (.place t (idxExpr ix) fld)
+  | .glob _ => none
+
+/-- Project a named field using the canonical nominal schema and typed position. -/
+def recordProject (u : UProg) (base : Option (Option Ty × Expr)) (name : String) :
+    Option (Option Ty × Expr) := do
+  let (some ty, e) ← base | none
+  let sch ← (uRecordOf u.records ty).toOption
+  let pos ← (uRecordPosition sch.val.fields name).toOption
+  pure (some pos.1, .recGet e (recordIndex pos.2))
 
 mutual
 /-- Shapes erase nominal identity, while the source reader checks it with `uRecordOf`.
@@ -68,6 +56,7 @@ mutual
 def shapeOfTy : Ty → Option Shape
   | .int lo hi => some (.intIn lo hi)
   | .bool => some .bool
+  | .opt _ => some .opt
   | .prod _ fs => (shapesOfTys fs).map Shape.record
   | _ => none
 termination_by structural ty => ty

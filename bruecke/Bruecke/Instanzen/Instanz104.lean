@@ -67,7 +67,16 @@ theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
   · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
-      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, slotShape, u, uExp104, hc, hf, @eq_comm _ "stand"]
+      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, fieldIndex, shapeOfTy, Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldAtPos,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldPos,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.typAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.boolFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.optFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.optNumAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.wertFeldAt,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.fieldRangeO,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabAt, u, uExp104, hc, hf, @eq_comm _ "stand"]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
   · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
 

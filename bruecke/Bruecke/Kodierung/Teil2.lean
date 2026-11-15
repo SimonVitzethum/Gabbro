@@ -5,7 +5,8 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt.Teil3
 public import Grammatik.Kern.Syntax.Satz
 public import Gabbro.Body
 public import Bruecke.Pflichten
-public import Bruecke.Kodierung.Teil1
+public import Bruecke.Kodierung.Slots
+public import Bruecke.Kodierung.Records
 
 @[expose] public section
 
@@ -16,45 +17,26 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable (u : UProg)
 
-theorem fieldHit_of (t : Fin u.tabs.length) (fld : String) (w : Int × Int)
-    (hB : (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
-    (h : fieldAtPos (tabAt u t).cols fld = some w) : ∃ fh, fieldHit u t fld = .ok fh ∧ fh.range = w := by
-  unfold fieldHit
-  split
-  · rename_i h'; rw [h] at h'; cases h'
-  · rename_i w' h'
-    rw [h] at h'
-    cases h'
-    have hnb : ∀ f : Fin (fieldCount u t), boolFeldAt u t f = false := by
-      intro f; unfold boolFeldAt; rw [hB.1]; cases (tabAt u t).cols[f.val]? <;> simp
-    have hno : ∀ f : Fin (fieldCount u t), optFeldAt u t f = none := by
-      intro f; unfold optFeldAt optNumAt; rw [hB.2.1]; cases (tabAt u t).cols[f.val]? <;> simp
-    have hnw : ∀ f : Fin (fieldCount u t), wertFeldAt u t f = none := by
-      intro f; unfold wertFeldAt; rw [hB.2.2]; cases (tabAt u t).cols[f.val]? <;> simp
-    rw [dif_pos (hnb _), dif_pos (hno _), dif_pos (hnw _)]
-    exact ⟨_, rfl, rfl⟩
-
-/-- **A related world is well-typed** (the duty file's `wellFormed`, hypothesis `U2`). -/
+/-- A related world has every represented field shape, including optional indices. -/
 theorem wf_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World}
-    (hB : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []) (hW : WRel u σ w) :
-    Gabbro.Body.WF (shapeOfU u) w := by
+    (_hB : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).werte = [])
+    (hW : WRel u σ w) : Gabbro.Body.WF (shapeOfU u) w := by
   intro p sh hp
   cases p with
   | slot c k fld =>
-    obtain ⟨t, ht, hf⟩ := slotShape_tabIdx u.tabs c fld sh hp
-    cases hq : (u.tabs.get t).cols.find? (fun q => q.1 == fld) with
-    | none => rw [hq] at hf; cases hf
-    | some q =>
-      rw [hq] at hf
-      simp only [Option.map_some, Option.some.injEq] at hf
-      subst hf
-      have hfa : fieldAtPos (tabAt u t).cols fld = some q.2 := by
-        rw [fieldAtPos_find]; simp only [tabAt]; rw [hq]; rfl
-      obtain ⟨fh, hfh, hw⟩ := fieldHit_of u t fld q.2 (hB t) hfa
-      rw [wrel_lies_k u hW c t ht fld fh hfh k]
-      obtain ⟨n, hn, hlo, hhi⟩ := valOf_feld u t fh (σ.slots t k fh.idx)
-      rw [hn, ← hw]
-      simp [hlo, hhi]
+    change (do
+      let t ← (tabIdx u.tabs c).toOption
+      let f ← fieldIndex u t fld
+      shapeOfTy ((declOf u).typ t f)) = some sh at hp
+    cases ht : tabIdx u.tabs c with
+    | error err => simp [ht, Except.toOption] at hp
+    | ok t =>
+      cases hf : fieldIndex u t fld with
+      | none => simp [ht, hf, Except.toOption] at hp
+      | some f =>
+        simp only [ht, Except.toOption, hf, bind, Option.bind_some] at hp
+        rw [wrel_lies_index u hW c t ht fld f hf k]
+        exact valOf_shape _ (σ.slots t k f) sh hp
   | field c n => simp [shapeOfU] at hp
   | global n => simp [shapeOfU] at hp
 

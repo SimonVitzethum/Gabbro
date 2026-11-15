@@ -1,5 +1,7 @@
 module
 public import Bruecke.Anweisung.Zweig.Lesen
+public import Bruecke.Anweisung.Match.NestedLesen
+public import Bruecke.Anweisung.Match.DispatchLesen
 public import Bruecke.Anweisung.Bereich.Lesen
 public import Bruecke.Anweisung.Schleife.Lesen
 @[expose] public section
@@ -27,6 +29,12 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   case bindB x v =>
     obtain ⟨e, _, _, _, rfl⟩ := schrittB_bindB h
     exact BodyNames.used_push ns x
+  case bindOpt x num v =>
+    obtain ⟨hn, e, _, _, _, rfl⟩ := schrittB_bindOpt h
+    exact BodyNames.used_push ns x
+  case setVarOpt x num v =>
+    obtain ⟨id, e, _, _, _, _, rfl⟩ := schrittB_setVarOpt h
+    exact fun _ hx => hx
   case bindCall x g args =>
     obtain ⟨ty, _, _, rfl⟩ := schrittB_bindCall h
     exact BodyNames.used_push ns x
@@ -36,7 +44,7 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   all_goals
     obtain ⟨_, _, rfl⟩ := schrittB_stmt h (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     exact fun _ hx => hx
 
 /-- Returned histories include allocations from both arms and the continuation. -/
@@ -61,6 +69,34 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have he := seqZ_used k fn (ns.resume used1) r1 eb _ used2 hE
         have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
         exact fun x hx => hy x (he x (ht x hx))
+      case matchWhyBeg x =>
+        obtain ⟨count, e, arms, tail, allocated, ys, _, hA, hY, _⟩ := seqZ_reason_some h
+        have hUsed := readReasonArms_used (read := seqZ u k fn)
+          (fun ns ss bs tail used hr => seqZ_used k fn ns ss bs tail used hr)
+          count 0 ns ss arms (.blkEnd :: tail) allocated hA
+        have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY
+        exact fun x hx => hTail x (hUsed x hx)
+      case matchTagBeg sidx x binders =>
+        obtain ⟨cs, e, arms, tail, allocated, ys, _, _, hA, hY, _⟩ := seqZ_tag_some h
+        have hUsed := readReasonArms_used (read := seqZ u k fn)
+          (fun ns ss bs tail used hr => seqZ_used k fn ns ss bs tail used hr)
+          cs.length 0 ns ss arms (.blkEnd :: tail) allocated hA
+        have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY
+        exact fun x hx => hTail x (hUsed x hx)
+      case matchBeg num v x =>
+        obtain ⟨hn, e, pb, ab, r1, r2, ys, used1, used2, _, hP, hA, hY, _⟩ := seqZ_option_some h
+        have hp := seqZ_used k (fn.mitIndex x num ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count ⟨num, hn⟩))
+          (ns.push x) ss pb _ used1 hP
+        have ha := seqZ_used k fn (ns.resume used1) r1 ab _ used2 hA
+        have hy := seqZ_used k fn (ns.resume used2) r2 ys rest used hY
+        exact fun z hz => hy z (ha z (hp z (BodyNames.used_push ns x z hz)))
+      case leave x | next x =>
+        obtain ⟨ys, hY, _⟩ := (by first | exact seqZ_control_some (leave := true) h | exact seqZ_control_some (leave := false) h)
+        exact seqZ_used k fn ns ss ys rest used hY
+      case bindW x d v =>
+        obtain ⟨id, fields, e, ys, htT, _, hY, _⟩ := seqZ_bindRecord_some h
+        have hy := seqZ_used k (fn.mitWert x (.prod id fields)) (ns.push x) ss ys rest used hY
+        exact fun y hm => hy y (BodyNames.used_push ns x y hm)
       case ret r =>
         obtain ⟨b, ys, _, hY, _⟩ := seqZ_ret_some h
         exact seqZ_used k fn ns ss ys rest used hY
@@ -69,7 +105,7 @@ theorem seqZ_used : ∀ (k : Nat) (fn : UFn) (ns : BodyNames) (ss : List UStmt)
         have hy := seqZ_used k (fn.mitBindung x (lo, hi)) (ns.push x) tail ys rest used hY
         exact fun y hm => hy y (BodyNames.used_push ns x y hm)
       case loopBeg x tab inv =>
-        obtain ⟨rfl, _, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
+        obtain ⟨rfl, t, body, tail, allocated, ys, _, hB, hY, _⟩ := seqZ_loop_some h
         have hBody := seqZ_used k (fn.mitIndex x t.val ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).count t))
           (ns.push x) ss body _ allocated hB
         have hTail := seqZ_used k fn (ns.resume allocated) tail ys rest used hY

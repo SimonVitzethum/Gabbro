@@ -356,6 +356,50 @@ theorem storage_and_contract_refusals :
     ensExpr unit identity {} (.cmp "==" (.param "r") (.param "r")) = none := by
   cbv
 
+/-- A record return inside a narrow failure branch is read like the trailing record return. -/
+theorem nested_record_return_zeuge :
+    (zuBodyZ unit { identity with
+      params := [("r", schema.ty), ("k", .int 0 255)]
+      kinds := [.wert, .int]
+      body := [.narrowBeg "k" 0 9, .ret (.wert (.param "r")), .blkEnd] }).isSome = true := by
+  cbv
+
+/-- A record field remains a numeric operand rather than a top-level-only value. -/
+theorem arithmetic_record_field_zeuge :
+    numericSideExprG unit proj (.add (.field (.param "r") "a") (.lit 2)) =
+      some (.bin .add (.recGet (.name "r") 0) (.lit (.int 2))) ∧
+    (lowWertE unit [schema.ty] [] proj none
+      (.add (.field (.param "r") "a") (.lit 2))).toBool = true := by
+  cbv
+
+/-- The source predicate `if r.b` is exported as Boolean equality, not as a number. -/
+theorem boolean_record_field_zeuge :
+    ensExpr unit identity {} (.cmp "==" (.field (.param "r") "b") (.truth true)) =
+      some (.bin .eq (.recGet (.name "r") 1) (.lit (.bool true)), {}) ∧
+    (lowEns unit [schema.ty] [] identity none
+      (.cmp "==" (.field (.param "r") "b") (.truth true))).toBool = true ∧
+    numericSideExprG unit identity (.field (.param "r") "b") = none := by
+  cbv
+
+def nestedFields : UFn :=
+  { identity with
+    body := [.ifBeg (.cmp "==" (.field (.param "r") "b") (.truth true)),
+      .bindW "out" (some schema.ty) (.replace (.param "r") "a"
+        (.sub (.field (.param "r") "a") (.lit 0))),
+      .ret (.wert (.param "out")), .ifElse,
+      .ret (.wert (.product 0 false
+        [(.int 0 9, .field (.param "r") "a"), (.bool, .truth false)])), .blkEnd] }
+
+def nestedUnit : UProg := { unit with fns := [nestedFields] }
+
+/-- One fixture jointly carries a field condition, field arithmetic, a nested record local,
+    and both a local record return and a constructor return inside the branch. -/
+theorem nested_record_fields_zeuge :
+    (zuBodyZ nestedUnit nestedFields).isSome = true ∧
+    (lowBodyF nestedUnit ⟨0, by simp [nestedUnit]⟩ [schema.ty] nestedFields 20 []
+      nestedFields.body nestedFields.ret).toBool = true := by
+  cbv
+
 #print axioms nutzer_aus_quelleG_record_zeuge
 
 end Gabbro.Bruecke.RecordZeuge
