@@ -91,7 +91,7 @@ def RegInput : Prop :=
 
 theorem e_input : RegInput := by
   constructor
-  · letI : DecidableEq z.deklaration.Reg := z.deklaration.decReg
+  · letI : DecidableEq z.deklaration.Reg := inferInstanceAs (DecidableEq (Fin z.regs.length))
     decide
   · decide
 
