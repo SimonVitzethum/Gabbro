@@ -96,15 +96,15 @@ def goals : Vertraege.Pruefer.Goals zD (vertragVon zD zLies) context :=
 
 def returned (value : Wert zD scalar) := goals.returned value
 
-def leaf (value : Wert zD scalar) :
-    Condition (fun (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world) :=
+def leaf (program : Programm zD) (value : Wert zD scalar) :
+    Condition (fun (_ : Runtime program (fun _ => []) zS) world => denotes (returned value) world) :=
   (requireCondition (returned value)).toOption.get (by rfl)
 
-theorem leaf_result (value : Wert zD scalar) :
-    requireCondition (returned value) = .ok (leaf value) := rfl
+theorem leaf_result (program : Programm zD) (value : Wert zD scalar) :
+    requireCondition (returned value) = .ok (leaf program value) := rfl
 
-theorem leaf_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (leaf value).formula.denote values ↔ number value = values cell := by
+theorem leaf_meaning (program : Programm zD) (value : Wert zD scalar) (values : Assignment (Observation zD)) :
+    (leaf program value).formula.denote values ↔ number value = values cell := by
   change (conj (post value).val .tru).denote values ↔ _
   rw [conj_denote]
   simp only [QF.denote, and_true]
@@ -118,35 +118,35 @@ def tail : Endblock zD (vertragVon zD zLies) false (scalar :: context) zL :=
   .ret returnExpr returnedResources
 
 theorem returnCondition_eq (bound : Wert zD scalar) :
-    returnCondition (program := zPB) (S := zS) 128 returnExpr (.cons bound arguments)
+    returnCondition (program := program) (S := zS) 128 returnExpr (.cons bound arguments)
       (goals.shrink scalar).returned =
     localSelect 128 variableExpr (.cons bound arguments)
-      (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
+      (fun value (_ : Runtime program (fun _ => []) zS) world => denotes (returned value) world)
       (fun value => requireCondition (returned value)) := rfl
 
-def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :=
-  ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 127
+def branch (program : Programm zD) (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :=
+  ending (S := zS) (requiresPolicy program) (lockFormula zS sources) {} none 127
     tail (.cons bound arguments) (goals.shrink scalar)
 
 /-- The return half of the actual 101-value binder, proved for every selected value. -/
-theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
-    ∃ result, branch sources bound = .ok result ∧
+theorem branch_valid (program : Programm zD) (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
+    ∃ result, branch program sources bound = .ok result ∧
       ∀ values, values cell = number bound → result.formula.denote values := by
   with_unfolding_all
     have each (value : Wert zD scalar) :
         ∃ relation head, localEquality variableExpr (.cons bound arguments) value = .ok relation ∧
-          requireCondition (program := zPB) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
+          requireCondition (program := program) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
           ∀ values, values cell = number bound → relation.val.denote values → head.formula.denote values := by
-      refine ⟨varRelation bound value, leaf value, varRelation_result bound value, leaf_result value, ?_⟩
+      refine ⟨varRelation bound value, leaf program value, varRelation_result bound value, leaf_result program value, ?_⟩
       intro values ready related
-      apply (leaf_meaning value values).mpr
+      apply (leaf_meaning program value values).mpr
       have same := (varRelation_meaning bound value values).mp related
       omega
     obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound arguments)
-      (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
+      (fun value (_ : Runtime program (fun _ => []) zS) world => denotes (returned value) world)
       (fun value => requireCondition (returned value)) domain domain_result
       (fun values => values cell = number bound) each
-    cases result : branch sources bound with
+    cases result : branch program sources bound with
     | error cause =>
         delta branch tail at result
         rw [Vertraege.Pruefer.ending.eq_2] at result
@@ -170,28 +170,28 @@ def body : Endblock zD (vertragVon zD zLies) false context zL := .bind slotExpr 
 
 theorem body_eq : zPB.rumpf zLies = body := rfl
 
-def compiled (sources : LockSources zS) :=
-  ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128 body arguments goals
+def compiled (program : Programm zD) (sources : LockSources zS) :=
+  ending (S := zS) (requiresPolicy program) (lockFormula zS sources) {} none 128 body arguments goals
 
 /-- The complete generated binder VC is valid for every integer assignment. -/
-theorem compiled_valid (sources : LockSources zS) :
-    ∃ result, compiled sources = .ok result ∧ ∀ values, result.formula.denote values := by
+theorem compiled_valid (program : Programm zD) (sources : LockSources zS) :
+    ∃ result, compiled program sources = .ok result ∧ ∀ values, result.formula.denote values := by
   have each (value : Wert zD scalar) :
       ∃ relation head, localEquality slotExpr arguments value = .ok relation ∧
-        branch sources value = .ok head ∧
+        branch program sources value = .ok head ∧
         ∀ values, True → relation.val.denote values → head.formula.denote values := by
-    obtain ⟨head, hhead, valid⟩ := branch_valid sources value
+    obtain ⟨head, hhead, valid⟩ := branch_valid program sources value
     refine ⟨slotRelation value, head, slotRelation_result value, hhead, ?_⟩
     intro values _ related
     exact valid values ((slotRelation_meaning value values).mp related)
-  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 slotExpr arguments _ (branch sources)
+  obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 slotExpr arguments _ (branch program sources)
     domain domain_result (fun _ => True) each
-  cases result : compiled sources with
+  cases result : compiled program sources with
   | error cause =>
       delta compiled body at result
       rw [Vertraege.Pruefer.ending.eq_8] at result
       change (do
-        let pre ← localSelect 128 slotExpr arguments _ (branch sources)
+        let pre ← localSelect 128 slotExpr arguments _ (branch program sources)
         pure ((pre.read zL slotExpr.orte).map _)) = .error cause at result
       rw [hpre] at result
       dsimp only [bind, Except.bind, pure, Except.pure] at result
@@ -202,7 +202,7 @@ theorem compiled_valid (sources : LockSources zS) :
         delta compiled body at result
         rw [Vertraege.Pruefer.ending.eq_8] at result
         change (do
-          let pre ← localSelect 128 slotExpr arguments _ (branch sources)
+          let pre ← localSelect 128 slotExpr arguments _ (branch program sources)
           pure ((pre.read zL slotExpr.orte).map _)) = .ok out at result
         rw [hpre] at result
         dsimp only [bind, Except.bind, pure, Except.pure] at result
@@ -230,7 +230,7 @@ set_option backward.isDefEq.respectTransparency false in
 /-- The strict arithmetic gate accepts the original body and its original post. -/
 theorem environment_checked (sources : LockSources zS) :
     (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments).toOption.isSome = true := by
-  obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
+  obtain ⟨pre, hpre, valid⟩ := compiled_valid zPB sources
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
     (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
