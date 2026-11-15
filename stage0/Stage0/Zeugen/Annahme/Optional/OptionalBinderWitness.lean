@@ -1,6 +1,38 @@
 /- Optional foreign binders through complete images and canonical source semantics. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.OptionalBinderWitness
@@ -136,7 +168,7 @@ theorem accepted_images :
     (image false true false).toOption.isSome = true ∧
     (image false true true).toOption.isSome = true ∧
     (image true true false).toOption.isSome = true ∧
-    (image true true true).toOption.isSome = true := by decide_cbv
+    (image true true true).toOption.isSome = true := by decide +kernel
 
 /-- Void keeps local 23, values bind 7, and both handlers consume reason 0. -/
 theorem success_and_reason_paths :
@@ -146,12 +178,12 @@ theorem success_and_reason_paths :
     observed false true false (BitVec.ofInt 64 (-9)) = 9 ∧
     observed false true true (BitVec.ofInt 64 (-9)) = 9 ∧
     observed true true false (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide_cbv
+    observed true true true (BitVec.ofInt 64 (-9)) = 9 := by decide +kernel
 
 /-- The current canonical void decoder also accepts unlisted errno words. -/
 theorem unlisted_void_answer :
     observed false true false (BitVec.ofInt 64 (-8)) = 23 ∧
-    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide_cbv
+    observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide +kernel
 
 /-- In particular, preserving local 23 cannot be implemented by deleting the call. -/
 def observedTrace (valued fallible nested : Bool) (raw : Runner.W) : List (Ereignis (D valued fallible)) :=
@@ -165,10 +197,10 @@ theorem oracle_effect_is_retained :
     observedTrace false false true 7 = [.fremd (.inl (gate false false))] ∧
     observedTrace false true false 7 = [.fremd (.inl (gate false true))] ∧
     observedTrace false true true (BitVec.ofInt 64 (-9)) = [.fremd (.inl (gate false true))] := by
-  decide_cbv
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> kernel_rfl
 
 /-- Value decoding still rejects an answer outside its declared range. -/
 theorem invalid_value_answer :
-    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide_cbv
+    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide +kernel
 
 end Gabbro.Stage0.OptionalBinderWitness
