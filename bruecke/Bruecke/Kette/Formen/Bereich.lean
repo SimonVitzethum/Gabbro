@@ -73,7 +73,8 @@ theorem laufZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
         first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact endSchrumpf_zurueck h
       · intro σ' r' h
-        simp only [execEnd, eval, hb, ↓reduceDIte] at h
+        simp only [execEnd, eval] at h
+        first | simp only [hb, and_self, dite_true, ↓reduceDIte] at h | simp only [hb, dite_false, ↓reduceDIte] at h
         exact endSchrumpf_why h
     · exact hs
     · exact fun w => Int.le_refl _
@@ -138,7 +139,7 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
       rfl
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     have ih := hRest σl (.cons value ρ) s₁ hWl hL₁
-    simpa only [BlockZiel_G, execBlock, eval, hb, ↓reduceDIte, List.singleton_append] using
+    simpa only [BlockZiel_G, execBlock, eval, hb, and_self, dite_true, ↓reduceDIte, List.singleton_append] using
       ausgangZiel_schrumpf (Strecke_G.schritt hs (fun w => Int.le_refl _))
         (fun _ _ hl => hl.tail) ih
   · have hstep : ∀ ρB, Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s =
@@ -152,6 +153,6 @@ theorem blockZiel_narrow_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel 
         simp only [hh, EndAusgang.zuAusgang] at he <;> cases he) ys
     unfold BlockZiel_G
     simp only [execBlock, eval, hb, ↓reduceDIte]
-    exact ausgangZiel_map hfull (fun ρB => by simp only [exec_append, Gabbro.Body.exec, hstep ρB])
+    exact ausgangZiel_map hfull (fun ρB => by simp only [exec_append, Gabbro.Body.exec, hstep ρB]; rfl)
 
 end Gabbro.Bruecke
