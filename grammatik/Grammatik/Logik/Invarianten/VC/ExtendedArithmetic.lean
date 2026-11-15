@@ -40,10 +40,18 @@ private def guardFormula : LProp (Observation declaration) :=
 attribute [local irreducible] lower
 
 private theorem bounded_formula :
-    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
+    boundedCompiled.formula = retryFormula (.not guardFormula) 2 := by
+  conv_lhs => whnf
+  conv_rhs => whnf
+  trace_state
+  rfl
 
 private theorem overflowing_formula :
-    overflowingCompiled.formula = retryFormula .fls 2 := rfl
+    overflowingCompiled.formula = retryFormula .fls 2 := by
+  conv_lhs => whnf
+  conv_rhs => whnf
+  trace_state
+  rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 10000 in
