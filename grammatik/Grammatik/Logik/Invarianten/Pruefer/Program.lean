@@ -29,7 +29,8 @@ def checkProgram (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
           return ⟨fun _ => ⟨formula⟩⟩)
   let invariants ← invariantFormula program D.invs
   let writers ← collect functions (InvariantDuties program S)
-    (fun f => checkWriter program S sources budget f (locks.any fun lock => (sources lock).isSome))
+    (fun f => checkWriter program S sources budget f (locks.any fun lock =>
+      (sources lock).isSome && (Vertraege.Pruefer.Basic.trivialLock sources lock).isNone))
   return {
       invariants := invariants, writers := writers.down }
 
