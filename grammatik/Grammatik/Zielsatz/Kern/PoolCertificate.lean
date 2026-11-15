@@ -266,7 +266,11 @@ theorem reader_checked (sources : LockSources zS) :
 theorem contracts_checked : KontrakteGeprueftB zPB zS zFs zPoolSources = true := by
   apply contracts_success zPB zS zPoolSources {} zFs
   intro f
-  cases f <;> first | exact reader_checked zPoolSources | decide +kernel
+  cases f with
+  | ein => decide +kernel
+  | lies => exact reader_checked zPoolSources
+  | wrap => decide +kernel
+  | haupt => decide +kernel
 
 #print axioms contracts_checked
 
