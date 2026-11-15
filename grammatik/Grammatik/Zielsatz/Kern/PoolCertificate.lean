@@ -242,13 +242,16 @@ theorem environment_checked_for (bodies : Bodies) (same : bodies zLies = body)
     (sources : LockSources zS) :
     (Vertraege.Pruefer.checkEnvironment (withBodies bodies) zS (requiresPolicy (withBodies bodies))
       sources {} none zLies (invariantsFor bodies) arguments).toOption.isSome = true := by
-  obtain ⟨pre, hpre, valid⟩ := compiled_valid (withBodies bodies) sources
+  have ready : ∃ pre : Vertraege.Pruefer.EndCondition (S := zS)
+      (requiresPolicy (withBodies bodies)) (bodies zLies) arguments goals,
+      ending (requiresPolicy (withBodies bodies)) (lockFormula zS sources) {} none 128
+        (bodies zLies) arguments goals = .ok pre ∧ ∀ values, pre.formula.denote values := by
+    rw [same]
+    exact compiled_valid (withBodies bodies) sources
+  obtain ⟨pre, hpre, valid⟩ := ready
   have hbody : ending (S := zS) (requiresPolicy (withBodies bodies)) (lockFormula zS sources)
       {} none 128 ((withBodies bodies).rumpf zLies) arguments
-      (contractGoals (withBodies bodies) zLies arguments (invariantsFor bodies)) = .ok pre := by
-    change ending _ _ _ _ _ (bodies zLies) _ goals = .ok pre
-    rw [same]
-    exact hpre
+      (contractGoals (withBodies bodies) zLies arguments (invariantsFor bodies)) = .ok pre := hpre
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
     (fun value => ∃ result, postFormula zPB zLies arguments value = .ok result) postCheck (by
       intro value
