@@ -64,7 +64,7 @@ theorem schnitt_komponiere (E : Einheit D) (eigen : D.Fn → Bool) :
   rw [hP, hQ]
   simp only [dif_pos rfl]
   cases E
-  simp only [mitRumpf, schnitt, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+  simp only [mitRumpf, schnitt, List.flatMap_cons, List.flatMap_nil, List.append_nil, dif_pos True.intro]
 
 /-- Each part owes what the whole unit owes. -/
 theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool}
