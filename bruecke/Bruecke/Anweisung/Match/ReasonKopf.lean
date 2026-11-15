@@ -19,7 +19,7 @@ theorem lowGArms_succ {loopMode : Bool} {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ
       arms = .cons body restArms := by
   change lowGArmsStep u c (lowStufe u c fuel) Γ fn Λ [] (n + 1) ss = .ok (arms, tail) at h
   simp only [lowGArmsStep, lowStufe_seq, lowStufe_garms] at h
-  cases hb : lowSeqL (l := false) u c Γ fn fuel Λ [] ss with
+  cases hb : lowSeqL (l := loopMode) u c Γ fn fuel Λ [] ss with
   | error err => simp only [hb, bind, Except.bind] at h <;> cases h
   | ok result =>
     obtain ⟨⟨out, body⟩, remaining⟩ := result
@@ -39,7 +39,7 @@ theorem lowGArms_succ {loopMode : Bool} {fuel n : Nat} {Γ : Ctx} {fn : UFn} {Λ
       | cons marker rest =>
         cases marker <;> try { cases h }
         case ifElse =>
-          cases hrest : lowGArmsL (l := false) u c Γ fn fuel Λ [] (m + 1) rest with
+          cases hrest : lowGArmsL (l := loopMode) u c Γ fn fuel Λ [] (m + 1) rest with
           | error err => simp only [hrest, bind, Except.bind] at h <;> cases h
           | ok result =>
             obtain ⟨restArms, remaining'⟩ := result
@@ -101,7 +101,7 @@ theorem lowStruct_reason_ok {loopMode : Bool} {fuel count : Nat} {Γ : Ctx} {fn 
         | error err => simp only [hv] at h <;> cases h
         | ok v =>
           simp only [hv] at h
-          cases ha : lowGArmsL (l := false) u c Γ fn fuel Λ [] count ss with
+          cases ha : lowGArmsL (l := loopMode) u c Γ fn fuel Λ [] count ss with
           | error err => simp only [ha] at h <;> cases h
           | ok result =>
             obtain ⟨arms, remaining⟩ := result
