@@ -13,11 +13,6 @@ namespace Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
 open Frag Elim Elim.Korrekt Modell
 open Gabbro.Grammatik.Invarianten.VC.Witness
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 400000 in
-theorem mutable_decided_zeuge :
-    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by decide +kernel
-
 /-- The false decision has both an extracted arithmetic assignment and an
     actual typed G execution that destroys the invariant. -/
 theorem overflow_assignment_zeuge :
@@ -39,9 +34,6 @@ theorem temporary_execution_zeuge :
 theorem over_budget_refused_zeuge :
     (extendedEnd program noFacts noLockFacts 0 none 64 boundedWriter .nil post).toOption.isNone = true := by
   decide +kernel
-
-theorem boolean_initializer_decided_zeuge :
-    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by decide +kernel
 
 theorem conditional_initializer_decided_zeuge :
     decideB (Extended.writerVC (conditionalCompiled true) entry .tru) = true := by decide +kernel

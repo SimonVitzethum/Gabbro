@@ -180,6 +180,7 @@ private def traverseFormula : Nat → QF (Observation declaration)
   | count + 1 => branchFormula .tru
       (branchFormula guardFormula (stepFormula (traverseFormula count)) (traverseFormula count)) .tru
 
+set_option maxHeartbeats 50000 in
 private theorem traverse_formula : traverseCompiled.formula = traverseFormula 3 := rfl
 
 private theorem traverse_preserves (count : Nat) :
@@ -237,5 +238,76 @@ theorem inductive_decided_zeuge :
   refine ⟨stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid) other holds ?_,
     (lower_denote _ _).mpr holds⟩
   simpa only [LProp.denote, not_not] using guarded
+
+private def mutationRelation (captured : Zahl 0 10) (next : Zahl 0 10) : LProp (Observation declaration) :=
+  let term : LTerm (Observation declaration) := .add (.konst captured.n) (.konst 1)
+  let fits : LProp (Observation declaration) := .and (.le (.konst 0) term) (.le term (.konst 10))
+  .and (.imp fits (.eq term (.konst next.n)))
+    (.imp (.not fits) (.eq (.konst captured.n) (.konst next.n)))
+
+private def mutationFormula (captured : Zahl 0 10) : QF (Observation declaration) :=
+  snapshots (kind := .int 0 10) (integerValues 0 10 11) (mutationRelation captured)
+    (fun next => post.subst (.glob false) (.konst next.n))
+
+private def mutableFormula : QF (Observation declaration) :=
+  snapshots (kind := .int 0 10) (integerValues 0 10 11)
+    (fun value => .eq (.var (.glob false)) (.konst value.n))
+    (fun value => branchFormula (.lt (.konst value.n) (.var (.glob true))) (mutationFormula value) post)
+
+set_option maxHeartbeats 50000 in
+private theorem mutable_formula : mutableCompiled.formula = mutableFormula := rfl
+
+theorem mutable_decided_zeuge :
+    decideB (Extended.writerVC mutableCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, mutable_formula, mutableFormula]
+  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
+  intro captured _ selected
+  rw [branchFormula_denote]
+  refine ⟨fun guarded => ?_, fun _ => (lower_denote _ _).mpr initial.1⟩
+  unfold mutationFormula
+  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
+  intro next _ relation
+  simp only [mutationRelation, LProp.denote, LTerm.denote] at relation
+  simp only [LProp.denote, LTerm.denote] at selected guarded
+  have bound : next.n ≤ values (.glob true) := by
+    by_cases fits : 0 ≤ captured.n + 1 ∧ captured.n + 1 ≤ 10
+    · have := relation.1 fits
+      omega
+    · have := relation.2 fits
+      omega
+  rw [subst_denote, post, lower_denote]
+  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using bound
+
+private def booleanFormula : QF (Observation declaration) :=
+  snapshots (kind := .bool) ([false, true] : List Bool)
+    (fun flag => if flag then guardFormula else .not guardFormula)
+    (fun flag => branchFormula (if flag then .tru else .fls) (stepFormula post) post)
+
+private theorem boolean_formula : booleanCompiled.formula = booleanFormula := rfl
+
+theorem boolean_initializer_decided_zeuge :
+    decideB (Extended.writerVC booleanCompiled entry .tru) = true := by
+  apply (close_decide_true_iff _).mpr
+  intro values
+  rw [writerMatrix, lower_denote]
+  intro _
+  rw [quoteQF_denote, lower_denote]
+  intro initial
+  rw [quoteQF_denote, boolean_formula, booleanFormula]
+  apply (snapshots_denote (kind := .bool) _ _ _ values).mpr
+  intro flag _ selected
+  cases flag with
+  | false =>
+      simpa [branchFormula_denote, LProp.denote, post, lower_denote] using initial.1
+  | true =>
+      rw [branchFormula_denote]
+      exact ⟨fun _ => stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid)
+        values initial.1 selected, fun impossible => (impossible trivial).elim⟩
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness
