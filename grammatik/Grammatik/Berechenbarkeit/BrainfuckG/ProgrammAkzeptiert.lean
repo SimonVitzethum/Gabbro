@@ -28,7 +28,9 @@ def prog : Programm BD where
 say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
 
-#reduce (Invarianten.Pruefer.checkInvariantVC prog (SperrInv.leer BD) [()] (fun _ => none)).toOption.isSome
+#reduce match Invarianten.Pruefer.checkInvariantVC prog (SperrInv.leer BD) [()] (fun _ => none) with
+  | .ok _ => "accepted"
+  | .error cause => cause.message
 
 /-- **The core checker accepts the program.** -/
 theorem prog_accepted_zeuge :
