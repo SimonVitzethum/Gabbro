@@ -226,17 +226,11 @@ theorem environment_checked (sources : LockSources zS) :
       .ok ((translate (zPB.requires zLies) .nil).toOption.get (by rfl)) := rfl
   rw [requiresResult, resultDomain_result]
   dsimp only [bind, Except.bind]
-  change (do
-    let _ ← Invarianten.Pruefer.collect resultDomain.values
-      (fun value => ∃ result, postFormula zPB zLies .nil value = .ok result) postCheck
-    let checked ← compiled sources
-    if accepted : decideB (close (writerMatrix .tru .tru checked.formula))
-        (close_closed (writerMatrix .tru .tru checked.formula)) = true then
-      pure _
-    else .error _).toOption.isSome = true
   rw [hposts]
   dsimp only [bind, Except.bind]
-  rw [hpre, decided]
+  rw [hpre]
+  dsimp only [bind, Except.bind]
+  rw [decided]
   rfl
 
 end Gabbro.Grammatik.Zielsatz.PoolCertificate
