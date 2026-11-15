@@ -255,50 +255,6 @@ theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
     rw [ptrPost4]
     exact hv
 
-/-- A finite view of the actual image, proved from its projections. Checker
-    computation over this view never replays the dependent whole-unit lowering. -/
-private theorem image4_eq : P4 = {
-    invariante := fun i => Fin.elim0 i
-    requires := fun _ => .tru
-    ensures := Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
-    rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
-    unterbricht := fun _ => false
-    ptrVertrag := ptrVertragOf uExp104
-    axVertrag := fun a => Fin.elim0 a } := by
-  have inv : P4.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
-  have req : P4.requires = fun _ => .tru := funext req4
-  have post : P4.ensures = Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
-    funext f
-    rcases fn_zwei f with rfl | rfl
-    · exact ens_ein4
-    · exact ens_lies4
-  have body : P4.rumpf = Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
-    funext f
-    rcases fn_zwei f with rfl | rfl
-    · exact rumpf_ein4
-    · exact rumpf_lies4
-  have dispatch : P4.unterbricht = fun _ => false := by
-    have assembled := low4
-    unfold lowerAllg at assembled
-    split at assembled
-    · cases assembled
-    · split at assembled
-      · cases assembled
-      · split at assembled
-        · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
-          rw [same]
-          rfl
-        · cases assembled
-  have ptr : P4.ptrVertrag = ptrVertragOf uExp104 := funext assembly4.2
-  have ax : P4.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
-  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
-  revert inv req post body dispatch ptr ax
-  generalize P4 = P
-  cases P
-  intro inv req post body dispatch ptr ax
-  subst inv req post body dispatch ptr ax
-  rfl
-
 /-! ## 3. The enumerations of the declaration's members -/
 
 def fsA : Aufzaehlung D4.Fn := ⟨[ein4, lies4], fun f => by
@@ -488,5 +444,7 @@ theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
     axVertragO_wahr O4, inferInstance⟩
 
+#print axioms Gabbro.Grammatik.Einheit104.contracts_refused4_zeuge
+#print axioms Gabbro.Grammatik.Einheit104.abgelehnt4
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
 end Gabbro.Grammatik.Einheit104
