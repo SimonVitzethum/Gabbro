@@ -63,11 +63,11 @@ theorem writer_owes_zeuge :
     This proof deliberately does not use either semantic validity equivalence. -/
 theorem positive_computed_zeuge :
     decideInvariant (declaration.traeger ()) ((unit true).P.invariante ()) = .ok true := by
-  decide
+  decide +kernel
 
 theorem negative_computed_zeuge :
     decideInvariant (declaration.traeger ()) ((unit false).P.invariante ()) = .ok false := by
-  decide
+  decide +kernel
 
 /-- Execute the extractor as well, without imposing a particular choice of
     counterexample among the nonzero typed values. -/
