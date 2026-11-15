@@ -49,7 +49,11 @@ open Gabbro.Grammatik.Zielsatz
 
 set_option Elab.async false
 
+#eval IO.FS.createDirAll "../.scratch-agent"
+
 attribute [local irreducible] checkPFremdFallible
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:fragment_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -57,11 +61,15 @@ private theorem fragment_checked :
     programmImFragmentG checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
 
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:bounds_checked"
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem bounds_checked :
     abgAlleB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:footprints_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -69,11 +77,15 @@ private theorem footprints_checked :
     fussWXB checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible) (List.finRange uFremdFallible.fns.length) [] = true := by
   decide +kernel
 
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:levels_checked"
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem levels_checked :
     stufenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:pool_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -81,11 +93,15 @@ private theorem pool_checked :
     einzelnPoolB checkPFremdFallible (List.finRange uFremdFallible.fns.length) [] [] = true := by
   decide +kernel
 
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:races_checked"
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem races_checked :
     rennB checkPFremdFallible (List.finRange uFremdFallible.fns.length) [] [] = true := by
   decide +kernel
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:answers_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -93,11 +109,15 @@ private theorem answers_checked :
     antwortenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
 
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:scopes_checked"
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem scopes_checked :
     scopesOkProgB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:invariants_checked"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -105,11 +125,15 @@ private theorem invariants_checked :
     Invarianten.Pruefer.programInvariantsB checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible) (List.finRange uFremdFallible.fns.length) (fun _ => none) = true := by
   decide +kernel
 
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:contracts_checked"
+
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 private theorem contracts_checked :
     Vertraege.Pruefer.KontrakteGeprueftB checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible) (List.finRange uFremdFallible.fns.length) = true := by
   decide +kernel
+
+#eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:compose"
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
