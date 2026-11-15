@@ -10,6 +10,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Units
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Functions
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Falte
@@ -219,7 +220,38 @@ theorem fremdFallible_checkB :
   decide +kernel
 
 
-set_option smartUnfolding false
+/-- Transfer a checked canonical function family to the actual successful
+    assembler result. Interface contracts remain exactly the source contracts. -/
+private theorem foreign_checked_image (u : UProg)
+    (pieces : ∀ f : Fin u.fns.length, EnsTy u f × RumpTy u f × ReqTy u f)
+    (origin : ∀ f, lowerFnAt u f = .ok (pieces f))
+    (checks : List (CheckDecl (declOf u)))
+    {image : Programm (declOf u) × List (declOf u).Fn}
+    (emitted : lowerAllg u = .ok image)
+    (checked : ∀ (invariants : ∀ i : Fin u.invs.length, InvTy u i)
+      (foreignGate : axContractsB u = true),
+      AkzeptiertX (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
+        (fun f => (pieces f).2.2) invariants (ptrVertragOf u)
+        (fun a => axVertragOf u a foreignGate)) (Cover.Differenz.sperrFamilie u)
+        (List.finRange u.fns.length) [] [] [] [] checks = true) :
+    AkzeptiertX image.1 (Cover.Differenz.sperrFamilie u)
+      (List.finRange u.fns.length) [] [] [] [] checks = true := by
+  rcases image with ⟨program, functions⟩
+  have selected (f : Fin u.fns.length) (proof : ∃ value, lowerFnAt u f = .ok value) :
+      lowerAtPair u f proof = pieces f := lowerAtPair_of_ok u f proof (origin f)
+  unfold lowerAllg at emitted
+  split at emitted
+  · cases emitted
+  · split at emitted
+    · cases emitted
+    · split at emitted
+      · obtain ⟨programEq, _⟩ := Measures.checkedProgram_eq emitted
+        rw [programEq]
+        simp only [selected]
+        exact checked _ _
+      · cases emitted
+
+attribute [local irreducible] checkPFremd checkPFremdFallible
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -227,6 +259,11 @@ set_option maxHeartbeats 2000000 in
 theorem fremd_akzeptiert :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
+  delta checkPFremd
+  apply foreign_checked_image uFremd ForeignGateFunctions.infPieces
+    ForeignGateFunctions.infPieces_ok checkChecksFremd
+    (except_ok_get uFremd_lowered)
+  intro invariants foreignGate
   decide +kernel
 
 set_option maxRecDepth 100000 in
@@ -235,6 +272,11 @@ set_option maxHeartbeats 2000000 in
 theorem fremdFallible_akzeptiert :
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
+  delta checkPFremdFallible
+  apply foreign_checked_image uFremdFallible ForeignGateFunctions.fallPieces
+    ForeignGateFunctions.fallPieces_ok checkChecksFremdFallible
+    (except_ok_get uFremdFallible_lowered)
+  intro invariants foreignGate
   decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
