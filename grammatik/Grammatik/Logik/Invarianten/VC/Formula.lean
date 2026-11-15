@@ -51,13 +51,13 @@ theorem termKeys_congr (term : LTerm α) (values other : Assignment α)
   | var name => exact agree name (by simp [termKeys])
   | konst _ => rfl
   | add left right ihLeft ihRight =>
-      exact congrArg₂ (· + ·)
-        (ihLeft (fun name h => agree name (List.mem_append_left _ h)))
-        (ihRight (fun name h => agree name (List.mem_append_right _ h)))
+      change left.denote values + right.denote values = left.denote other + right.denote other
+      rw [ihLeft (fun name h => agree name (List.mem_append_left _ h)),
+        ihRight (fun name h => agree name (List.mem_append_right _ h))]
   | sub left right ihLeft ihRight =>
-      exact congrArg₂ (· - ·)
-        (ihLeft (fun name h => agree name (List.mem_append_left _ h)))
-        (ihRight (fun name h => agree name (List.mem_append_right _ h)))
+      change left.denote values - right.denote values = left.denote other - right.denote other
+      rw [ihLeft (fun name h => agree name (List.mem_append_left _ h)),
+        ihRight (fun name h => agree name (List.mem_append_right _ h))]
   | scale k term ih => exact congrArg (k * ·) (ih agree)
 
 theorem qfKeys_congr (body : QF α) (values other : Assignment α)

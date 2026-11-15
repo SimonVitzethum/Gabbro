@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Pruefer.Witness
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
 
 @[expose] public section
 
@@ -15,7 +16,14 @@ def declaration : Deklaration :=
     Lock := Unit, decLock := inferInstance
     rang := fun _ => 0
     maskiert := fun _ => false
-    gbraucht := fun name => if name then [] else [.inl ()]
+    braucht := fun _ => []
+    gbraucht := fun (name : Bool) => if name then [] else [.inl ()]
+    sigNr := fun _ =>
+      { params := [], erg := none, gruende := 0, haelt := []
+        schreibt := fun _ => false, gschreibt := fun (name : Bool) => !name
+        konsumiert := [], produziert := [] }
+    passt_ok := fun _ _ impossible => by cases impossible
+    eigner_nie_erzeugt := fun _ _ _ _ impossible => by cases impossible
     geteilt_bewacht := fun _ impossible => nomatch impossible
     ggeteilt_bewacht := fun _ impossible => nomatch impossible
     Inv := Empty
@@ -68,6 +76,7 @@ def world : World declaration where
 def unit (restore : Bool) : Einheit declaration where
   P := program restore
   S := family
+  lockFormulas := sources
   Q := fun item => nomatch item
   starts := [⟨(), .nil⟩]
   sp0 := world.speicher
@@ -97,5 +106,16 @@ theorem checker_refused_zeuge :
       (unit false).ws (sources := sources) = false := by
   unfold AkzeptiertX
   rw [lock_refused_zeuge, Bool.and_false]
+
+/-- The goal's actual unit checker receives the source through the canonical
+    metadata field, rather than losing it at the Bool adapter. -/
+theorem unit_checker_accepted_zeuge :
+    akzeptiertX_pruefer.akzeptiert (unit true) [()] [()]
+      [.inl (), .inr false, .inr true] = true := by
+  rw [akzeptiertX_pruefer_eq]
+  change (AkzeptiertX (program true) family [()] [()]
+    [.inl (), .inr false, .inr true] (unit true).ws (sources := sources) && true && true) = true
+  rw [checker_accepted_zeuge]
+  rfl
 
 end Gabbro.Grammatik.Invarianten.Pruefer.LockWitness

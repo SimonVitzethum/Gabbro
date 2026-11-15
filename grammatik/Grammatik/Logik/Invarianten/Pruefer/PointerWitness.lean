@@ -13,7 +13,9 @@ abbrev capability : Ty := .ptr (.table 0 (true, true))
 
 def declaration : Deklaration :=
   { Witness.declaration with
+    count := fun _ => 1
     tabNr := fun n => if n = 0 then some () else none
+    anbieter_passt := fun _ item => nomatch item
     sigNr := fun _ =>
       { params := [capability], erg := none, gruende := 0, haelt := []
         schreibt := fun _ => true, gschreibt := fun _ => false
@@ -31,7 +33,7 @@ def position {Γ : Ctx} : Expr declaration Γ [] (.index (declaration.count ()))
   .widen (by decide) (by decide) (.lit 0)
 
 def invariant : Expr declaration [] [] .bool :=
-  .eq (.thru (.ptrOf () 0 rfl (true, true)) () rfl () position access) (.lit 0)
+  .eq (.thru (.ptrOf (space := 0) () 0 rfl (true, true)) () rfl () position access) (.lit 0)
 
 abbrev contract := vertragVon declaration ()
 
