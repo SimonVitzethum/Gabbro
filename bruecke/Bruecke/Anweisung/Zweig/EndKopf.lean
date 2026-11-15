@@ -105,8 +105,7 @@ theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     · cases h
     · rename_i ty he
       split at h
-      · rename_i e he'
-        simp only [he', Except.bind] at h
+      · rename_i e he
         cases h
       · rename_i v hv
         obtain ⟨q, tail'⟩ := v
