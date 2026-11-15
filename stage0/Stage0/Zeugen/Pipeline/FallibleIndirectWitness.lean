@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -81,9 +82,9 @@ def statementText : String :=
 theorem statement_parser_refused :
     ((Gabbro.Grammatik.Parser.lex statementText).mapError (fun _ => "lex")).bind
       Gabbro.Grammatik.Parser.parseTopTief = .error "wanted ;" := by
-  decide +kernel
+  kernel_rfl
 
 theorem statement_image_refused : emit statementText 256 = .error "wanted ;" := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.FallibleIndirectWitness
