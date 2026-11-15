@@ -86,6 +86,20 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       obtain ⟨bv, hs, hw, hl⟩ := lowBind_named_sim (x := x) hls
         ((namedSide_sicht hS ns v).symm.trans heT) hU S.tab hU.valid σ ρ s hW hL
       exact endZiel_bind_G hs (fun w => Int.le_refl _) (IH.2.2 _ _ _ hw hl)
+    case bindW x d v =>
+      obtain ⟨id, fields, eT, ys, htT, heT, hy, rfl⟩ := seqZ_bindRecord_some hbs
+      have hx : NameFrisch (protectedNames fn.params fn.kinds) x := hF.1
+      have hF' : BindFrischL (protectedNames fn.params fn.kinds) ss := hF.2
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowEnd_bindRecord_ok ((recordBinderType_sicht hS d v).symm.trans htT) hlow
+      have heB : namedSide u fn ns v = some eT := (namedSide_sicht hS ns v).symm.trans heT
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitWert x (.prod id fields))
+        (fT.mitWert x (.prod id fields)) (ns.push x) q rest ys restZ used
+        (hU.bindRecord hx id fields) (hS.bindRecord x id fields) hmemss
+        (by simpa only [UFn.mitWert, uArtVon, protectedNames] using hF') hm hq hy
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindRecord_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
+      exact endZiel_bind_G hstep (fun w => Int.le_refl _)
+        (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case bindMut x lo hi v =>
       obtain ⟨bT, fT', ns', ys, ht, hy, rfl⟩ := seqZ_schritt_some hbs (by trivial)
       obtain ⟨eT, heT, rfl, rfl, rfl⟩ := schrittB_bindMut ht
