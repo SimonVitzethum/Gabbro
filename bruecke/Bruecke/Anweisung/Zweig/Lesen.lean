@@ -83,11 +83,11 @@ theorem seqZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
   | none => rw [ht] at h; cases h
   | some ty =>
     obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
-    rw [ht] at h
+    simp only [ht] at h
     cases he : namedSide u fn ns v with
     | none => rw [he] at h; cases h
     | some e =>
-      rw [he] at h
+      simp only [he] at h
       cases hy : seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest with
       | none => rw [hy] at h; cases h
       | some result =>
@@ -109,11 +109,11 @@ theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : St
   | none => rw [ht] at h; cases h
   | some ty =>
     obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
-    rw [ht] at h
+    simp only [ht] at h
     cases he : namedSide u fn ns v with
     | none => rw [he] at h; cases h
     | some e =>
-      rw [he] at h
+      simp only [he] at h
       cases hy : stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r with
       | none => rw [hy] at h; cases h
       | some ys =>
