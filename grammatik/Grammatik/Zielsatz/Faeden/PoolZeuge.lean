@@ -17,9 +17,9 @@
     threads 0 and 1 both run `haupt`, a run in which BOTH instances step (thread 0 unfolds its
     body, thread 1 unfolds its body, thread 0 takes the lock) reaches a machine at which
     `gabbro_ziel` gives every leg of `Ziel`, with the lock held by thread 0.
-  * `pool_abgelehnt` -- REFUSAL. `hauptB` of the two-thread fixture `mP` writes its private
+  * `pool_abgelehnt` -- REFUSAL. `hauptB` of the two-thread replacement `mFragment` writes its private
     table `privB` UNGUARDED. Declared once beside `hauptA` it is accepted
-    (`mP_akzeptiert`); declared TWICE it is refused, and exactly by the pool component: every
+    (`mFragment_akzeptiert`); declared TWICE it is refused, and exactly by the pool component: every
     other component of `Akzeptiert` accepts, `einzelnPoolB` refuses, `hauptB` is not
     pool-safe. That is the write-write race of two `hauptB` instances on `privB`, which the
     race component cannot see (it pairs DIFFERENT routines).
@@ -208,13 +208,16 @@ theorem pool_ziel_zeuge [RootNativeFloat.Hardware] : ∃ M1 M2 M3 : RufMaschineG
     component passes, and the race component pairs only DIFFERENT routines, so it passes too.
     `einzelnPoolB` refuses: two `hauptB` threads race on `privB`. -/
 theorem pool_abgelehnt :
-    Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptB, mHauptB] = false ∧
+    Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptB, mHauptB] (sources := CheckedMehrfaden.sources) = false ∧
     (programmImFragmentG mFragment mFs && abgAlleB mFragment mFs && fussWB mFragment mFragmentS mFs [mHauptB, mHauptB] &&
       stufenB mFragment mFs && sperrOrteB mFragmentS [()] && wurzelnB [mHauptB, mHauptB] &&
-      rennB mFragment mFs mCs [mHauptB, mHauptB] && antwortenB mFragment mFs) = true ∧
+      rennB mFragment mFs mCs [mHauptB, mHauptB] && antwortenB mFragment mFs &&
+      Invarianten.Pruefer.invariantVCB mFragment mFragmentS mFs CheckedMehrfaden.sources {}
+        (fun _ => none) [()]) = true ∧
     einzelnPoolB mFragment mFs mCs [mHauptB, mHauptB] = false ∧
     ¬ PoolSicherW mFragment mFs mHauptB := by
-  refine ⟨by decide, by decide, by decide, fun h => ?_⟩
+  refine ⟨by decide, Bool.and_eq_true_iff.mpr
+    ⟨by decide, (Bool.and_eq_true_iff.mp mFragment_akzeptiert).2⟩, by decide, fun h => ?_⟩
   have e := (poolSicherWB_iff mFs_voll mCs_voll).mpr h
   revert e
   decide

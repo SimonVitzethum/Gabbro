@@ -17,7 +17,7 @@
   * probe D (`fvP false`, `forever … invariant false { leave }`)   -> (b), at some budget;
   * probe F1 (`f1P`: probe A's contracts, a float literal outside its range in front of every
     body; verdict F1 of URTEIL-OPUS-2026-09-15b)                   -> (b), since the
-    out-of-range float is `logik bereich` (it was `hardware ieee`; the checker ACCEPTS the
+    out-of-range float is `logik bereich` (it was `hardware ieee`; the checker REFUSES the
     program, `f1_abgelehnt`, and its body duty also fails);
   * a table-invariant breaker (`ivPschlecht`)                      -> (b);
   * an unguarded carrier one start reads and another writes        -> (a) `AkzeptiertSpec`

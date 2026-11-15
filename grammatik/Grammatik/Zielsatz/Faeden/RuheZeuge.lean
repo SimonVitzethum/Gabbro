@@ -3,16 +3,11 @@
   Subject:   witnesses for the runtime's idle root (A4): the programs that
              had NO admissible start before have one on `P.mitRuhe`.
 
-  * The export of `beispiele/104` (`gP_start_leer`: no start of `gP`
-    itself): on `gP.mitRuhe` the root on every thread is admissible
-    (`gP_mitRuhe_start`), and the checker's Bool holds there
-    (`gP_mitRuhe_akzeptiert`, from the Bool on `gP` by
-    `akzeptiert_mitRuhe`).
-  * Probes B/C (`zPB`, `zPC` over `zD`, no idle function): admissible starts
-    on `zPB.mitRuhe`, `zPC.mitRuhe` (`probeB_start`, `probeC_start`).
-  * The two-thread fixture `mP`: its declared starts `hauptA`, `hauptB` on
-    threads 0 and 1 and the root everywhere else (`mP_mitRuhe_start`, by
-    `startZulaessig_mitRuhe`), and the Bool on `mP.mitRuhe`.
+  * The export's idle start is admissible (`gP_mitRuhe_start`), while its
+    old-memory contracts stay outside the strict checker fragment.
+  * Probes B/C retain their admissible idle starts.
+  * The original two-thread start remains admissible; the in-fragment
+    replacement also witnesses strict acceptance after adding the idle root.
 -/
 module
 public import Grammatik.Zielsatz.Faeden.Ruhe
