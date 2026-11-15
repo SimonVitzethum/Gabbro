@@ -99,39 +99,51 @@ def uRelErsetzeEL (x y n : String) : List SExpr → List SExpr
   | a :: rest => uRelErsetzeE x y n a :: uRelErsetzeEL x y n rest
 end
 
-/-- `uRelErsetzeE` in the value of a `return`. -/
-def uRelErsetzeEnde (x y n : String) : Option SEnde → Option SEnde
-  | some (.ret (some v)) => some (.ret (some (uRelErsetzeE x y n v)))
+/-- Rewrite the value of a return, preserving all other endings. -/
+def uRewriteRuntimeReturn (rewrite : SExpr → SExpr) : Option SEnde → Option SEnde
+  | some (.ret (some v)) => some (.ret (some (rewrite v)))
   | en => en
 
-/-- `uRelErsetzeE` in the values and tests of a statement and in its nested blocks. The caller rewrites only a
-    statement that binds none of `x`, `y`, `n` anywhere (`uBindetS`), so the nested blocks read the same names. -/
-def uRelErsetzeS (x y n : String) : Nat → SAnw → SAnw
+/-- Shared traversal of runtime reads for snapshot substitutions. The caller must first
+    exclude every statement that can change or hide the substituted place (`uBindetS`). -/
+def uRewriteRuntimeReads (rewrite : SExpr → SExpr) : Nat → SAnw → SAnw
   | 0, s => s
   | f + 1, s =>
     match s with
-    | .bind m v t a => .bind m v t (uRelErsetzeE x y n a)
-    | .bindQ m v t a => .bindQ m v t (uRelErsetzeE x y n a)
-    | .bindElse v t a r b => .bindElse v t (uRelErsetzeE x y n a) r (uRelErsetzeS x y n f b)
-    | .set p o a => .set (uRelErsetzeE x y n p) o (uRelErsetzeE x y n a)
-    | .call g xs => .call g (uRelErsetzeEL x y n xs)
-    | .callQ g xs => .callQ g (uRelErsetzeEL x y n xs)
-    | .callElse g xs r b => .callElse g (uRelErsetzeEL x y n xs) r (uRelErsetzeS x y n f b)
+    | .bind m v t a => .bind m v t (rewrite a)
+    | .bindQ m v t a => .bindQ m v t (rewrite a)
+    | .bindElse v t a r b => .bindElse v t (rewrite a) r (uRewriteRuntimeReads rewrite f b)
+    | .set p o a => .set (rewrite p) o (rewrite a)
+    | .call g xs => .call g (xs.map rewrite)
+    | .callQ g xs => .callQ g (xs.map rewrite)
+    | .callElse g xs r b => .callElse g (xs.map rewrite) r (uRewriteRuntimeReads rewrite f b)
     | .cond c t ei els =>
-      .cond (uRelErsetzeE x y n c) (uRelErsetzeS x y n f t) (ei.map (uRelErsetzeS x y n f))
-        (els.map (uRelErsetzeS x y n f))
-    | .elsif c b => .elsif (uRelErsetzeE x y n c) (uRelErsetzeS x y n f b)
-    | .cases c as => .cases (uRelErsetzeE x y n c) (as.map (uRelErsetzeS x y n f))
-    | .arm c k b => .arm c k (uRelErsetzeS x y n f b)
-    | .locks sh l b => .locks sh l (uRelErsetzeS x y n f b)
-    | .child b => .child (uRelErsetzeS x y n f b)
-    | .ret v => .ret (v.map (uRelErsetzeE x y n))
-    | .block as en => .block (as.map (uRelErsetzeS x y n f)) (uRelErsetzeEnde x y n en)
+      .cond (rewrite c) (uRewriteRuntimeReads rewrite f t) (ei.map (uRewriteRuntimeReads rewrite f))
+        (els.map (uRewriteRuntimeReads rewrite f))
+    | .elsif c b => .elsif (rewrite c) (uRewriteRuntimeReads rewrite f b)
+    | .cases c as => .cases (rewrite c) (as.map (uRewriteRuntimeReads rewrite f))
+    | .arm c k b => .arm c k (uRewriteRuntimeReads rewrite f b)
+    | .locks sh l b => .locks sh l (uRewriteRuntimeReads rewrite f b)
+    | .child b => .child (uRewriteRuntimeReads rewrite f b)
+    | .ret v => .ret (v.map rewrite)
+    | .block as en => .block (as.map (uRewriteRuntimeReads rewrite f)) (uRewriteRuntimeReturn rewrite en)
     | s => s
 termination_by structural fuel => fuel
 
-/-- The names a statement may bind or change, nested blocks included: every binder, every name an assigned place
-    mentions, and `"*"` (every name) for a raw statement, a form not listed here and a walk out of fuel. -/
+/-- Relational narrowing uses the common read traversal after its binder barrier check. -/
+def uRelErsetzeS (x y n : String) := uRewriteRuntimeReads (uRelErsetzeE x y n)
+
+def uRelErsetzeEnde (x y n : String) := uRewriteRuntimeReturn (uRelErsetzeE x y n)
+
+/-- The root changed by an assignment. Indices are reads, rather than additional targets.
+    Unknown place forms conservatively stand for every local. -/
+def uAssignmentRoots : SExpr → List String
+  | .variable name => [name]
+  | .field base _ | .index base _ | .arrow base _ => uAssignmentRoots base
+  | _ => ["*"]
+
+/-- The names a statement may bind or change, nested blocks included: every binder,
+    the root of each assigned place, and `"*"` for an unknown form or exhausted fuel. -/
 def uBindetS : Nat → SAnw → List String
   | 0, _ => ["*"]
   | f + 1, a => match a with
@@ -139,7 +151,7 @@ def uBindetS : Nat → SAnw → List String
     | .reset x _ | .retires x => [x]
     | .await x _ _ w | .swap x _ _ w => [x, w]
     | .bindElse x _ _ r b | .bindAxiomOptElse x _ _ r b => x :: r :: uBindetS f b
-    | .set p _ _ => uLiestE f p
+    | .set p _ _ => uAssignmentRoots p
     | .shift p o w => uLiestE f p ++ [o, w]
     | .call .. | .lcall .. | .callQ .. | .genericCall .. | .leave .. | .next .. | .ret .. | .free ..
     | .start .. => []
@@ -198,5 +210,10 @@ def uRelBlock (ctx : UCtx) (fs : List (String × String × Int)) (ss : List SAnw
         let (stmt, ctx') := uRelBindung acc.2.1 pq.1 pq.2 lo hi
         (acc.1 ++ [stmt], ctx', ss', e')
       else acc) ([], ctx, ss, e)
+
+-- Keep a partially applied large-fuel visitor as a function during closed cbv checks.
+-- Its canonical equation evaluates only the fully supplied statement.
+attribute [cbv_opaque] uRewriteRuntimeReads
+attribute [cbv_eval] uRewriteRuntimeReads.eq_def
 
 end Gabbro.Grammatik.Parser.Uebersetze

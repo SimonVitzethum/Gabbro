@@ -5,6 +5,8 @@ public import Stage0.Senke.Images.BildSatz
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
+
+variable {lockWait : LockWait}
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
 variable [Kern]
 /-- **The program theorem for an elaborated program** (`stage0 --ir`): the image of `bild` with the world laid out
@@ -14,7 +16,7 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))} {Ks req : Nat}
     {b : Bild (declOf u)} {ρ : Env (declOf u) ((declOf u).params main)}
-    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρ starts Ks req = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params main) τ), ValueValid b.Y τ (ρ.get x))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
@@ -24,8 +26,8 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
-  have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x)
-    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ hval hWa hT hV
+  have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in (lockWait := lockWait) u tor x h) (fun x => layU_dis (lockWait := lockWait) u tor x)
+    (fun x => by simp only [layU]; omega) (fun x => layU_sync (lockWait := lockWait) u tor x) hm σ hval hWa hT hV
   generalize rufAt P O b.passes b.depth main σ ρ = o at h ⊢
   cases o <;> exact h
 
@@ -34,7 +36,7 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}
     {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))} {Ks req : Nat}
     {b : Bild (declOf u)} {ρm : Env (declOf u) ((declOf u).params main)}
-    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main ρm starts Ks req = .ok b)
+    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU (lockWait := lockWait) u tor) fs pos name main ρm starts Ks req = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat)
     (hj : j < starts.length) (σ : World (declOf u))
     (hval : ∀ τ (x : Var ((declOf u).params starts[j].1) τ), ValueValid b.Y τ (starts[j].2.get x))
@@ -48,8 +50,8 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * starts.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
-  have h := bild_wurzel_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h)
-    (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm j hj σ hval hWa hT hV
+  have h := bild_wurzel_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in (lockWait := lockWait) u tor x h)
+    (fun x => layU_dis (lockWait := lockWait) u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync (lockWait := lockWait) u tor x) hm j hj σ hval hWa hT hV
   generalize (rufAt (D := declOf u) P O b.passes b.depth (starts[j]'hj).1 σ (starts[j]'hj).2 :
     RufAusgang (D := declOf u) (starts[j]'hj).1) = o at h ⊢
   cases o <;> exact h

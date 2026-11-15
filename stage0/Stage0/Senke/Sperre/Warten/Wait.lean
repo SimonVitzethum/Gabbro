@@ -17,7 +17,7 @@ variable {m0 m : Mem} {pc fp : W} {s a p : Nat} {code : List II}
     compare operand is the serving value READ into slot five, including when
     it differs from a subsequently observed serving word. My ticket survives. -/
 theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
-    (hc : At code p (nimmT L a s)) {t : W} (ticket : f 2 = t)
+    (hc : At code p (nimmT L a s)) (binding : L.lockWait = .futex) {t : W} (ticket : f 2 = t)
     (compared : f 6 = bool (f 5 == f 2)) (waiting : t ≠ f 5)
     (hinv : TicketInvW T n u w) (room : w.toNat + 1 ≤ (n - u).toNat) :
     ∃ mw fw, Star ⟨pc + BitVec.ofNat 64 (16 * (p + 10)), fp⟩ m
@@ -26,12 +26,14 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
       FutexArgs fw (BitVec.ofNat 64 (a + 8)) 128 (f 5) ∧ fw 2 = t ∧ fw 5 = f 5 ∧
       StopAt ⟨pc + BitVec.ofNat 64 (16 * (p + 26)), fp⟩ mw
         (futexReq (BitVec.ofNat 64 (a + 8)) 128 (f 5)) := by
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
+    futexC, List.map_cons, List.map_nil] at hc
   have branch := ls_brz_zero E h (hc.get (j := 10) rfl) (e := 6) (k := 2)
     rfl rfl (by omega) (by omega)
     (by rw [compared, ticket]; exact bool_ne (Ne.symm waiting))
   have inc : At code (p + 12) (addC (a + 16) (s + 7) 1) := by
     intro j hj
-    have := hc (12 + j) (by change j < 7 at hj; rw [nimmT_len]; omega)
+    have := hc (12 + j) (by change j < 7 at hj; change 12 + j < 35; omega)
     rw [show p + 12 + j = p + (12 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl
@@ -39,7 +41,7 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
   obtain ⟨m1, f1, steps1, state1, keep1⟩ := add_waiters E h inc (by decide) (by decide)
   have prep : At code (p + 19) (futexC (a + 8) 128 (s + 5) (s + 10) none) := by
     intro j hj
-    have := hc (19 + j) (by change j < 8 at hj; rw [nimmT_len]; omega)
+    have := hc (19 + j) (by change j < 8 at hj; change 19 + j < 35; omega)
     rw [show p + 19 + j = p + (19 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl
@@ -59,7 +61,7 @@ theorem nimmT_wait_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
     returns to index seven without changing my ticket in slot two. -/
 theorem nimmT_wait_retry {spurious : W → W → Mem → Mem → Prop} [FutexOK spurious]
     (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
-    (hc : At code p (nimmT L a s)) {seen r x n' u' w' : W} {mr : Mem}
+    (hc : At code p (nimmT L a s)) (binding : L.lockWait = .futex) {seen r x n' u' w' : W} {mr : Mem}
     (args : FutexArgs f (BitVec.ofNat 64 (a + 8)) 128 seen)
     (answer : Kern.ans (futexReq (BitVec.ofNat 64 (a + 8)) 128 seen) m (some (r, x)) mr)
     (resume : LS m0 mr fp s a f n' u' w') (invariant : TicketInvW T n' u' w')
@@ -70,11 +72,13 @@ theorem nimmT_wait_retry {spurious : W → W → Mem → Mem → Prop} [FutexOK 
         ⟨pc + BitVec.ofNat 64 (16 * (p + 7)), fp⟩ m' ∧
       LS m0 m' fp s a f' n' u' (w' - 1) ∧ TicketInvW T n' u' (w' - 1) ∧
       f' 2 = f 2 ∧ f' 5 = f 5 := by
+  simp only [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell,
+    futexC, List.map_cons, List.map_nil] at hc
   refine ⟨FutexOK.wait_return _ _ _ _ _ _ answer, ?_⟩
   obtain ⟨m1, steps1, state1⟩ := futex_return E h (hc.get (j := 26) rfl) args answer resume
   have dec : At code (p + 27) (addC (a + 16) (s + 7) (-1)) := by
     intro j hj
-    have := hc (27 + j) (by change j < 7 at hj; rw [nimmT_len]; omega)
+    have := hc (27 + j) (by change j < 7 at hj; change 27 + j < 35; omega)
     rw [show p + 27 + j = p + (27 + j) by omega, this]
     match j, hj with
     | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl

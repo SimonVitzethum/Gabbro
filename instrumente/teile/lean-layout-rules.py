@@ -2,6 +2,10 @@
 # First matching regex wins; the second element is the sub-folder below `folder` (may be nested).
 # Keep every resulting folder well under 20 entries: new lanes add files, and the check is a hard gate.
 
+rules('stage0/Stage0', [
+    (r'^LockWait$', 'Senke/Sperre/Bindung'),
+])
+
 rules('grammatik/Grammatik/X86', [
     # --- GabbroV bridge modules (lanes write them under X86/ because lane ownership allows only that tree)
     (r'^Gv[A-Z]\w*$', '../GabbroV'),

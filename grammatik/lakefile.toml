@@ -27,6 +27,11 @@ path = "../nativefloat"
 [[lean_lib]]
 name = "Grammatik"
 
+# An explicit module target for importer checks; the default build stays Grammatik.
+[[lean_lib]]
+name = "GrammarReview"
+roots = ["Nachpruefung"]
+
 # The coverage driver of the program generator (`Gen/Abdeckung/Lauf.lean`): a native executable, so that the generator
 # reaches sizes the interpreter cannot (`instrumente/pruefe-lean.py`, stage 6, and the measurement in CHECKER.md section 11).
 [[lean_exe]]

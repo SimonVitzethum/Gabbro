@@ -94,7 +94,9 @@ theorem world_at : WeltAt memory layout world := by
   have : f = 0 := by change f < 1 at hf; omega
   subst f
   have : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 := by change (k : Int) < 4 at hk; omega
-  rcases this with rfl | rfl | rfl | rfl <;> exact ⟨0, by decide +kernel +revert, rfl⟩
+  rcases this with rfl | rfl | rfl | rfl <;>
+    apply ValueAt.of_enc (by rfl) (w := 0)
+  all_goals first | decide +kernel +revert | rfl
 
 theorem environment_at : EnvAt layout memory 1024 environment := by
   intro τ x
@@ -129,6 +131,9 @@ theorem lowR_ok_zeuge [Kern] :
     obtain ⟨t, ht⟩ := t
     have : t = 0 := by change t < 1 at ht; omega
     subst t
+    obtain ⟨f, hf⟩ := f
+    have : f = 0 := by change f < 1 at hf; omega
+    subst f
     change (k : Int) < 4 at hk
     change 2048 ≤ 2048 + 8 * k ∧ 2048 + 8 * k + 8 ≤ 2080
     omega

@@ -356,7 +356,7 @@ def brauchtF (ctx : UCtx) : SKlausel → Option (Except String UEns)
   | _ => none
 
 theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss : List SAnw) (ende : Option SEnde)
-    (hsp : ctx.specs = []) :
+    (hsp : ctx.specs = []) (hnar : ctx.narrow = false) :
     elabFn ctx koepfe kl (.block ss ende) =
       match uSeq (kl.filterMap (gibtF ctx)) with
       | .error e => .error e
@@ -380,7 +380,7 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
                   else .error e
                 | .ok r => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, r) := by
   unfold elabFn elabKlauseln
-  simp only [hsp, List.isEmpty_nil, ↓reduceIte]
+  simp only [hsp, hnar, List.isEmpty_nil, Bool.false_eq_true, ↓reduceIte]
   have givesReader : (fun clause : SKlausel => match clause with
       | .gives e => some (uSichert ctx e)
       | _ => none) = gibtF ctx := by

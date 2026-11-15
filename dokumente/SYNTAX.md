@@ -1483,6 +1483,8 @@ comparison, with the same branch and continuation scope. `a >= b` makes `a - b` 
 both operand ranges supply the interval. A fresh binding computes it once at entry; rewrites
 stop before a possible rebinding of either operand or the generated name. Mutable operands
 and unresolved ranges are excluded (`guard-relation.gab`).
+Full-range `u64` operands use the same total `eng` form and the verified multiword
+lowering for the signed 65-bit intermediate (`guard-relation-u64.gab`).
 
 `GuardMutable.lean` permits unary facts for mutable number locals via an immutable snapshot at
 entry to the then block or a plain else block. Only straight-line reads before a possible
@@ -1495,6 +1497,15 @@ or the continuation, even after a returning then block (`guard-mutable-counter.g
 Each inserted fact uses a total narrowing binding (`USide.eng`): the checked guard and unchanged
 value make its fallback unreachable. Its range test counts in costs, with no extra return
 path or `ensures` duty. Other cases still need explicit `narrow … else`.
+
+With that compiler switch, `Records/Narrowing.lean` expands an explicit narrow of a
+local record field chain into a field snapshot and the existing local `narrow`.
+Successful reads, including the block's ending, use the snapshot until a possible
+mutation or rebinding of the root; unknown statements are barriers. Failure arms keep
+the original record. The first write's value can still use the snapshot, including through
+ordinary compound-assignment expansion; its target and later reads retain the original record.
+This adds no G constructor or acceptance rule
+(`narrow-record-field.gab`, `Records/NarrowingWitness.lean`).
 
 `return f(args);` inside a branch or match arm is lifted to a binding and a return of its result;
 a final top-level call remains direct. Record-field arguments such as `return nxt(r.node, r.pos);`
@@ -2703,7 +2714,7 @@ against one set, decidable and cheap.
 profiledecl     = "profile" "{" { profileentry } "}" ";" ;
 requiresprofile = "requires" "profile" "{" { profileentry } "}" ";" ;
 profileentry    = ( "arch" | "rounding" | "fp_contract" | "memory_model"
-                  | "interrupt_routing" ) ident ";"
+                  | "interrupt_routing" | "environment" ) ident ";"
                 | "assume" ident ";" ;
 ```
 
@@ -2754,6 +2765,14 @@ things only a profile can fail:
   (`LANGUAGE.md` §3.4); an `arch` the unit never declares contradicts the
   declared machines (`N218`). Without declared machines nothing is
   refused — a unit with no machine named constrains no machine.
+
+`environment linux;` selects the Stage-0 ticket lock's private futex WAIT and WAKE-all binding;
+`environment freestanding;` selects a syscall-free spin retry on the serving ticket. `environment`
+is contextual inside a profile, not a reserved identifier elsewhere. Both bindings retain the same
+FIFO ticket order and lock safety theorems. `--environment linux|freestanding`, when supplied,
+must agree with the source profile; without either declaration the existing Linux runner image
+is selected. This binds lock waiting only; other image facilities retain their own checked bindings.
+The existing Linux futex liveness theorem is not a spin-progress theorem (S7 finding in the theorem map).
 
 **The manifest** lists every keyed profile entry (with the
 `-ffp-contract=off` flag where the profile says `fp_contract off`) and

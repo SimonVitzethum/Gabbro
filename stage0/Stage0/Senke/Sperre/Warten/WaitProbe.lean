@@ -26,13 +26,13 @@ theorem nimmT_wait_retry_zeuge :
     (by decide +kernel) (by decide +kernel) (by decide +kernel)
   obtain ⟨m1, f1, steps1, state1, ticket, seen, compared⟩ := nimmT_check E initial (At.whole takeCode)
   obtain ⟨mw, fw, stepsw, statew, invw, args, ticketw, seenw, entry⟩ :=
-    nimmT_wait_entry E state1 (At.whole takeCode) ticket compared (by rw [seen]; decide)
+    nimmT_wait_entry (binding := rfl) E state1 (At.whole takeCode) ticket compared (by rw [seen]; decide)
       (T := 2) (by unfold TicketInvW; decide +kernel) (by decide)
   have args' : FutexArgs fw 8200 128 0 := by simpa [seen] using args
   have answer : Kern.ans (futexReq 8200 128 0) mw (some (0, 0)) mw :=
     ⟨rfl, 8200, 0, Or.inl rfl, rfl⟩
   obtain ⟨_, m', f', stepsr, stater, invr, ticketr, seenr⟩ :=
-    nimmT_wait_retry (spurious := fun _ _ _ _ => True) E statew (At.whole takeCode)
+    nimmT_wait_retry (binding := rfl) (spurious := fun _ _ _ _ => True) E statew (At.whole takeCode)
       args' answer statew invw (by decide)
   refine ⟨mw, fw, m', f', steps1.trans stepsw, ?_, stepsr, stater, invr, args', ?_, ?_, ?_⟩
   · simpa [seen] using entry

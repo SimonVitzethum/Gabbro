@@ -13,6 +13,8 @@ public import Stage0.Senke.Welt.AnordnungLayouta
 
 namespace Gabbro.Stage0.Senke
 
+variable {lockWait : LockWait}
+
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Every enumerated relative start lies on the common grid of its own alignment. -/
@@ -35,7 +37,7 @@ theorem globStarts_wordAlign_dvd {G : Type} (gs : List G) (o : Nat)
 theorem layU_ga_lcm_dvd (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (g : Fin u.globs.length) (hpos : 0 < globAlign u g)
     (hbase : Nat.lcm 8 (globAlign u g) ∣ b) :
-    Nat.lcm 8 (globAlign u g) ∣ (layU u tor b).ga g := by
+    Nat.lcm 8 (globAlign u g) ∣ (layU (lockWait := lockWait) u tor b).ga g := by
   have hmem : (g, globStartOf (List.finRange u.globs.length) 0 (globSz u)
       (fun g => wordAlign (globAlign u g)) g) ∈
       globStarts (List.finRange u.globs.length) 0 (globSz u)
@@ -52,15 +54,15 @@ theorem layU_ga_lcm_dvd (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : N
 theorem layU_ga_aligned (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (g : Fin u.globs.length) (hpos : 0 < globAlign u g)
     (hbase : Nat.lcm 8 (globAlign u g) ∣ b) :
-    globAlign u g ∣ (layU u tor b).ga g :=
-  Nat.dvd_trans (Nat.dvd_lcm_right 8 (globAlign u g)) (layU_ga_lcm_dvd u tor b g hpos hbase)
+    globAlign u g ∣ (layU (lockWait := lockWait) u tor b).ga g :=
+  Nat.dvd_trans (Nat.dvd_lcm_right 8 (globAlign u g)) (layU_ga_lcm_dvd (lockWait := lockWait) u tor b g hpos hbase)
 
 /-- **Absolute addresses keep eight-byte storage alignment.** -/
 theorem layU_ga_word_aligned (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (g : Fin u.globs.length) (hpos : 0 < globAlign u g)
     (hbase : Nat.lcm 8 (globAlign u g) ∣ b) :
-    8 ∣ (layU u tor b).ga g :=
-  Nat.dvd_trans (Nat.dvd_lcm_left 8 (globAlign u g)) (layU_ga_lcm_dvd u tor b g hpos hbase)
+    8 ∣ (layU (lockWait := lockWait) u tor b).ga g :=
+  Nat.dvd_trans (Nat.dvd_lcm_left 8 (globAlign u g)) (layU_ga_lcm_dvd (lockWait := lockWait) u tor b g hpos hbase)
 
 /-- One step of the required base alignment: skip globals without a positive alignment. -/
 def bodenSchritt (u : UProg) (acc : Nat) (g : Fin u.globs.length) : Nat :=

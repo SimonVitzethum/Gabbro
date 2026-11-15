@@ -1,4 +1,7 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.ToString.Basic
+import all Init.Data.Repr
 
 public import Grammatik.Parser.Spec.Expand
 import all Grammatik.Parser.Spec.Walk
@@ -28,6 +31,26 @@ import all Init.Data.String.Slice
 import all Init.Data.String.Pattern.String
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.ToSlice
+
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.Termination
 
 @[expose] public section
 
@@ -148,22 +171,27 @@ private theorem function_block (ctx : UCtx) (heads : List UFnKopf)
       match elabKlauseln ctx clauses with
       | .error error => .error error
       | .ok (gives, needs) =>
-        match uAnwReihe ctx.tabs heads 1000000 ctx statements with
-        | .error error => .error error
-        | .ok (body, afterBody) =>
-          match expandFoldEnd afterBody ending with
+        match (if ctx.narrow then
+            (FieldNarrowing.expand 1000 ctx.names 0 (.block statements ending)).1
+          else .block statements ending) with
+        | .block statements ending =>
+          match uAnwReihe ctx.tabs heads 1000000 ctx statements with
           | .error error => .error error
-          | .ok (beforeEnd, afterEnd, ending) =>
-            match expandReturnCall afterEnd heads ending with
+          | .ok (body, afterBody) =>
+            match expandFoldEnd afterBody ending with
             | .error error => .error error
-            | .ok (beforeCall, afterCall, returning) =>
-              match uEnde afterCall returning with
-              | .error error =>
-                if returning.isNone &&
-                    (match statements.getLast? with | some s => uEndetTief 64 s | none => false) then
-                  .ok (gives, needs, body, .keins)
-                else .error error
-              | .ok result => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, result) := by
+            | .ok (beforeEnd, afterEnd, ending) =>
+              match expandReturnCall afterEnd heads ending with
+              | .error error => .error error
+              | .ok (beforeCall, afterCall, returning) =>
+                match uEnde afterCall returning with
+                | .error error =>
+                  if returning.isNone &&
+                      (match statements.getLast? with | some s => uEndetTief 64 s | none => false) then
+                    .ok (gives, needs, body, .keins)
+                  else .error error
+                | .ok result => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, result)
+        | _ => .error "fn body without G form" := by
   rfl
 
 -- These equations apply only to fully selected operations. They keep unused
@@ -173,6 +201,32 @@ attribute [local cbv_opaque] uSpecEin sErsetze elabFn uAnwReihe uAnwReiheCore
 attribute [local cbv_eval] spec_expression_select substitution_select function_block
   row_nil row_cons core_bind bound_names_select pointer_source_select start_source_select
   sonden_nil wrappers_nil
+
+namespace FunctionBlockWitnessData
+
+/-- A real numeric record, with a predicate retained in the elaborator context. -/
+def record : URecord :=
+  { name := "Entry", identity := 0, fields := [("pos", .int 0 18446744073709551615)],
+    breiten := [("pos", 64)] }
+
+def context : UCtx :=
+  { names := ["entry"], kinds := [.wert], types := [record.ty], bits := [0],
+    records := [record], tabs := [], locks := [], held := [], res := some (0, 63),
+    fname := "fieldBlock", alias := [], lits := [], narrow := true,
+    specs := [("Ready", [], .tru)] }
+
+def body : SAnw :=
+  .block [.trim (.field (.variable "entry") "pos") "0 .. 63"
+    (.block [] (some (.ret (some (.lit 0)))))]
+    (some (.ret (some (.field (.variable "entry") "pos"))))
+
+end FunctionBlockWitnessData
+
+/-- The full block equation admits a field narrow with the compiler switch and a real spec clause. -/
+theorem function_block_zeuge :
+    (elabFn FunctionBlockWitnessData.context [] [.gives (.call "Ready" [])]
+      FunctionBlockWitnessData.body).toOption.isSome = true := by
+  kernel_rfl
 
 private theorem elaboration_from_phases {source : List SItemTief}
     {prepared : List SItemTief × List (STyp × String)} {unit : UProg}

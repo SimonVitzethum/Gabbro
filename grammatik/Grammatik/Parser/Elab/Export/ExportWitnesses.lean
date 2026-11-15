@@ -1,8 +1,40 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.ClosedLowering
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
-import all Init.Data.String.Defs
+-- Closed function dispatch also reduces the String pattern implementation.
+import all Init.Data.ToString.Basic
 import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Legacy
+import all Init.Data.String.Slice
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.ToSlice
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.Termination
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportWitnesses
@@ -27,14 +59,35 @@ def implicationItems := (parseTopTief implicationTokens).toOption.get implicatio
 theorem implication_elaborated : (elabU (pre108 implicationItems)).toOption.isSome = true := by decide +kernel
 def implicationUnit := (elabU (pre108 implicationItems)).toOption.get implication_elaborated
 
-theorem implication_lowered : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by decide +kernel
+theorem closed_lowering_zeuge : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by
+  apply closed_lowering implicationUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : implicationUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
+
+/-- The nonempty source exports a real measure family, empty at every declared function. -/
+theorem lowerMeasures_without_clauses_zeuge :
+    ∃ exported, Measures.lowerMeasures implicationUnit = .ok exported ∧
+      ∀ f, exported.mass f = [] := by
+  have all : implicationUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+    kernel_rfl
+  have absent (fn : UFn) (member : fn ∈ implicationUnit.fns) : fn.decreases = none :=
+    of_decide_eq_true (List.all_eq_true.mp all fn member)
+  obtain ⟨exported, made⟩ := lowerMeasures_without_clauses implicationUnit absent
+  refine ⟨exported, made, fun f => ?_⟩
+  exact Measures.lowerMeasures_absent implicationUnit exported f
+    (absent (fnAt implicationUnit f) (List.get_mem implicationUnit.fns f))
 
 theorem implication_source_zeuge :
     (uebersetzeAllg implicationText).toOption.isSome = true := by
   have hl := except_ok_get implication_lexed
   have hp := except_ok_get implication_parsed
   have he := except_ok_get implication_elaborated
-  have hw := except_ok_get implication_lowered
+  have hw := except_ok_get closed_lowering_zeuge
   have pipeline := uebersetzeAllg_von_zeichen hl hp he hw
   rw [show implicationText = String.ofList implicationCharacters from rfl, pipeline]
   rfl
@@ -58,7 +111,15 @@ def heldItems := (parseTopTief heldTokens).toOption.get held_parsed
 theorem held_elaborated : (elabU (pre108 heldItems)).toOption.isSome = true := by decide +kernel
 def heldUnit := (elabU (pre108 heldItems)).toOption.get held_elaborated
 
-theorem held_lowered : (UebersetzeAllg2.lowerAllg heldUnit).toOption.isSome = true := by decide +kernel
+theorem held_lowered : (UebersetzeAllg2.lowerAllg heldUnit).toOption.isSome = true := by
+  apply closed_lowering heldUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : heldUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem held_source_zeuge :
     (uebersetzeAllg heldText).toOption.isSome = true := by
@@ -90,7 +151,15 @@ def nestedElseItems := (parseTopTief nestedElseTokens).toOption.get nestedElse_p
 theorem nestedElse_elaborated : (elabU (pre108 nestedElseItems)).toOption.isSome = true := by decide +kernel
 def nestedElseUnit := (elabU (pre108 nestedElseItems)).toOption.get nestedElse_elaborated
 
-theorem nestedElse_lowered : (UebersetzeAllg2.lowerAllg nestedElseUnit).toOption.isSome = true := by decide +kernel
+theorem nestedElse_lowered : (UebersetzeAllg2.lowerAllg nestedElseUnit).toOption.isSome = true := by
+  apply closed_lowering nestedElseUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : nestedElseUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem nestedElse_source_zeuge :
     (uebersetzeAllg nestedElseText).toOption.isSome = true := by
@@ -123,7 +192,15 @@ def resultScopeItems := (parseTopTief resultScopeTokens).toOption.get resultScop
 theorem resultScope_elaborated : (elabU (pre108 resultScopeItems)).toOption.isSome = true := by decide +kernel
 def resultScopeUnit := (elabU (pre108 resultScopeItems)).toOption.get resultScope_elaborated
 
-theorem resultScope_lowered : (UebersetzeAllg2.lowerAllg resultScopeUnit).toOption.isSome = true := by decide +kernel
+theorem resultScope_lowered : (UebersetzeAllg2.lowerAllg resultScopeUnit).toOption.isSome = true := by
+  apply closed_lowering resultScopeUnit
+  · kernel_rfl
+  · kernel_rfl
+  · kernel_rfl
+  · have all : resultScopeUnit.fns.all (fun fn => decide (fn.decreases = none)) = true := by
+      kernel_rfl
+    intro fn member
+    exact of_decide_eq_true (List.all_eq_true.mp all fn member)
 
 theorem resultScope_source_zeuge :
     (uebersetzeAllg resultScopeText).toOption.isSome = true := by

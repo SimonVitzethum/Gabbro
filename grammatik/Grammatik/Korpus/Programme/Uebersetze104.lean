@@ -1,26 +1,56 @@
-/-
-  File:      Grammatik/Korpus/Programme/Uebersetze104.lean
-  Subject:   witness home of the concrete 104 pins of the
-             surface-to-U elaborator (`Parser.Elab.Uebersetze.Teil.Teil16`):
-             the elaboration pin `u104elab`, the lowering pin `u104lower`,
-             the projections they are checked through, the declaration data
-             agreement `u104data`, and the fragment/footprint checks
-             `u104fragment`/`u104fuss` on the Lean-parsed program.
-
-  Pure move out of `Teil16` (AGENTS.md §5: heavy kernel evaluation
-  belongs in a witness module of its own): no statement or name
-  changes, same namespace, `Teil16` keeps only the generic `beq*`
-  shape equalities.
--/
 module
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.ToString.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil16
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Elab.Export.ExportMetadata
+import all Init.Data.Repr
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil15
+import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
+import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+import all Grammatik.Parser.Elab.Generic.StaticConformance
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
 theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
-  cbv
+  kernel_rfl
 
 /-! ## The 104 instance: lowering pin, data, checks -/
 
@@ -28,7 +58,7 @@ theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
     (definitional: proof irrelevance covers the proof terms). -/
 theorem u104lower :
     lowerProg uExp104 =
-      .ok (G104_referenz.gP, G104_referenz.gFs) := by cbv
+      .ok (G104_referenz.gP, G104_referenz.gFs) := by kernel_rfl
 
 /-- Projections of the elaborated program (the left column of
     the data agreement below). -/
@@ -107,6 +137,64 @@ theorem u104fuss :
 
 end Gabbro.Grammatik.Parser.Uebersetze
 
+/-
+  CUTS: what is not proved here, and every deliberate
+  difference against `crates/gabbro-check/src/lean_g.rs`.
+
+  1. No single whole-pipeline `decide`: `lex` + `parseTopTief`
+     + `elabU` + `lowerProg` in one kernel evaluation exceeds
+     the heartbeat budget (the lane-135 finding), and
+     `Except String UProg` has no `DecidableEq` instance for a
+     propositional pin. The loop closes in stages instead,
+     each with its own kernel check: `u104lex` (source to
+     tokens), `u104parse` (tokens to `items104`, a `beqTopTief`
+     pin like `tEnd`), `u104elab` (surface to `uExp104`, a
+     `beqElabU` pin), `u104lower` (U to `(gP, gFs)` by kernel conversion,
+     proof irrelevance covering the proof terms). Chaining
+     them is prose, as in `Export104.lean` (whose equality
+     across declaration types is not even statable).
+  2. Indices, sides and predicates use their canonical decidable equality.
+     The remaining `beqTy`/`beqUArg`/
+     `beqUStmt`/`beqURet`/`beqUTab`/`beqULock`/`beqUFn`/
+     `beqUProg`/`beqElabU` are not proved sound or complete
+     (the same cut as `beqSItemTief` in `ElementTief.lean`).
+  3. The lowering targets the exporter's declaration universe
+     `G104_referenz.gD` only: any table but `Konto`, any lock
+     but `M`, any field but `stand`, any function but
+     `einzahlen`/`lies` is an explicit error. The surface to U
+     stage (`elabU`) is generic over the fragment; the proof
+     carrying lowerers (`varNumEin`, `varNumLies`,
+     `varEnsLies`, the `darf`/`RufPasst` witnesses) are keyed
+     to the known signatures.
+  4. Lowering restrictions beyond `elabU` (each an explicit
+     error): at most one call per body and none after a call
+     (no second `RufPasst` proof); `lies` bodies are empty
+     with a value return (a statement in a read-only function
+     has no lowered guard proof here); calls only to `lies`
+     from `einzahlen` (the one named `RufPasst` proof);
+     the `lies` return of a same-range slot read is direct
+     (the no-op arm of the exporter's `fit`), every other
+     value widens through `weiter`.
+  5. Against `lean_g.rs`, deliberately: bare-word types are
+     refused (no full-range rule; 104 needs none); slot
+     extras (`@bitpos`, `offset_into`, `where`, `reserved`,
+     `by ops`) are refused where the exporter ignores some;
+     `use` items and nested modules are refused; an index
+     literal is range-checked against `count`. Mirrored
+     exactly: the refused clause rows, the one-directional
+     `locks`-without-`Held` refusal, writes deduplication,
+     the `rw`-to-`r` fresh pointer, the fall-off rule, and
+     ignoring `reads`/`costs`/`section`/`payload`.
+  6. The `u104fragment`/`u104fuss` match form carries a
+     `false` error branch; `u104lower` shows it dead for 104.
+  7. Corpus text is quoted comment-free (comments lex away,
+     the probe precedent); `u104lex` runs at 3200000
+     heartbeats, `u104parse`/`u104elab` at default. The fragment and
+     footprint checks follow the exact lowering pin and the export's theorems.
+-/
+
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104lex
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.u104parse
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.u104elab
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.u104lower
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.u104data

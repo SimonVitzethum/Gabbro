@@ -746,5 +746,6 @@
  "Grammatik.Zielsatz.SpecProben": "Grammatik.Zielsatz.Kern.SpecProben",
  "Grammatik.Zielsatz.Verbund": "Grammatik.Zielsatz.Faeden.Verbund",
  "Grammatik.Zielsatz.VerbundZeuge": "Grammatik.Zielsatz.Faeden.VerbundZeuge",
- "Grammatik.Zucker": "Grammatik.Kern.Syntax.Zucker"
+ "Grammatik.Zucker": "Grammatik.Kern.Syntax.Zucker",
+ "Stage0.LockWait": "Stage0.Senke.Sperre.Bindung.LockWait"
 }
