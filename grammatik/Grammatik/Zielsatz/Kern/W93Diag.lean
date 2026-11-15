@@ -102,6 +102,8 @@ def akD : Deklaration where
 
 instance : DecidableEq akD.Fn := inferInstanceAs (DecidableEq AkFn)
 instance : DecidableEq akD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance probeZAxiom : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
+local instance probeNAxiom : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 
 def akA : akD.Fn := AkFn.a
 def akB : akD.Fn := AkFn.b
