@@ -98,9 +98,6 @@ def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scala
   ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 127
     tail (.cons bound .nil) (goals.shrink scalar)
 
-#print branch
-#print equations Vertraege.Pruefer.ending
-
 /-- The return half of the actual 101-value binder, proved for every selected value. -/
 theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
     ∃ result, branch sources bound = .ok result ∧
@@ -122,7 +119,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
     cases result : branch sources bound with
     | error cause =>
         delta branch tail at result
-        rw [ending] at result
+        rw [Vertraege.Pruefer.ending.eq_2] at result
         delta returnCondition at result
         rw [hpre] at result
         dsimp only [bind, Except.bind, pure, Except.pure] at result
@@ -131,7 +128,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
         refine ⟨out, rfl, ?_⟩
         have shape : out.formula = pre.formula := by
           delta branch tail at result
-          rw [ending] at result
+          rw [Vertraege.Pruefer.ending.eq_2] at result
           delta returnCondition at result
           rw [hpre] at result
           dsimp only [bind, Except.bind, pure, Except.pure] at result
