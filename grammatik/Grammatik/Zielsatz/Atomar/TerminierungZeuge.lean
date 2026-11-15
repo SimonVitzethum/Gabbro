@@ -53,14 +53,14 @@ theorem mX_akzeptiert : akzeptiertX_pruefer.akzeptiert mE mFs [()] mCs = true :=
 
 theorem mE_nutzerA : NutzerPflichtA mE := nutzerPflichtA_ohne_atomar (fun g => nomatch g) mE_nutzerPflicht
 
-/-- No function of `mP` lies on a cycle. -/
-theorem mZykS : ∀ f g : mD.Fn, zykS mP mFs f g = false := by
+/-- No function of `mE.P` lies on a cycle. -/
+theorem mZykS : ∀ f g : mD.Fn, zykS mE.P mFs f g = false := by
   intro f g
   cases f <;> cases g <;> decide
 
 /-- Both starts are of class `endet`. -/
-theorem mKlasse_A : klasse mP mFs (Mass.leer (D := mD)).hat mHauptA = .endet := by decide
-theorem mKlasse_B : klasse mP mFs (Mass.leer (D := mD)).hat mHauptB = .endet := by decide
+theorem mKlasse_A : klasse mE.P mFs (Mass.leer (D := mD)).hat mHauptA = .endet := by decide
+theorem mKlasse_B : klasse mE.P mFs (Mass.leer (D := mD)).hat mHauptB = .endet := by decide
 
 /-- Every declared start is of class `endet`. -/
 theorem mStart_endet (t : Faden) (w : mD.Fn) (hw : (initRuhe mE.starts t).1 = some w) :
@@ -81,12 +81,12 @@ theorem terminierung_zeuge [RootNativeFloat.Hardware] :
     R.K 0 = FadenStart mE.P.mitRuhe (speicherR mSp) (initRuhe mE.starts) (fun _ => true) ∧ R.akt 0 = some 0 ∧
     (R.K 1).m.speicher ≠ speicherR mSp ∧
     ∀ t, (∃ N, ∀ j, N ≤ j → R.akt j ≠ some t) ∧ ∀ j, ¬ HaltBenannt mO.mitRuhe 0 (R.K j).m .budget t := by
-  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
-    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mE.P.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mE.P.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   let R0 : LaufGX mE.P.mitRuhe mO.mitRuhe 0 (GeteiltV (D := mD) mE.P mE.ws) :=
-    { M := fun n => if n = 0 then RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩])
+    { M := fun n => if n = 0 then RufStartG mE.P.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩])
         else M1
       akt := fun n => if n = 0 then some 0 else none
       schritt := fun n u h => by
@@ -112,7 +112,7 @@ theorem terminierung_zeuge [RootNativeFloat.Hardware] :
   have hL : Laufzeit mE (speicherR mSp) (initRuhe mE.starts) := laufzeit_initRuhe mE
   have hT := gabbro_ziel_terminierung akzeptiertX_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
     ⟨mCs, mCs_voll⟩ mX_akzeptiert mE_nutzerA 0 Mass.leer
-    (fun f => massPflicht_ohne_zyklus mP mFs 0 _ _ _ _ f (mZykS f))
+    (fun f => massPflicht_ohne_zyklus mE.P mFs 0 _ _ _ _ f (mZykS f))
     (fun f g h => absurd (h.symm.trans (mZykS f g)) (by decide))
     mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ _ _ hL (fun _ => true) R rfl
   refine ⟨R, rfl, rfl, ?_, fun t => ⟨(hT t).1, (hT t).2 fun w hw => ?_⟩⟩

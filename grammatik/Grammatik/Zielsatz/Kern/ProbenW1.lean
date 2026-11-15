@@ -25,6 +25,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.ProbenG1
+import all Grammatik.Logik.Vertraege.Pruefer.Program
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
