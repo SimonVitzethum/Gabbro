@@ -351,6 +351,7 @@ public import Grammatik.Logik.Invarianten.VC.Witness
 public import Grammatik.Logik.Invarianten.VC.ExtendedWitness
 public import Grammatik.Logik.Invarianten.Pruefer.Witness
 public import Grammatik.Logik.Invarianten.Pruefer.LockWitness
+public import Grammatik.Logik.Invarianten.Pruefer.KeywordWitness
 public import Grammatik.Logik.Vertraege.Pruefer.Witness
 public import Grammatik.Logik.Vertraege.Pruefer.LoopWitness
 public import Grammatik.Logik.Vertraege.Pruefer.RecursionWitness
