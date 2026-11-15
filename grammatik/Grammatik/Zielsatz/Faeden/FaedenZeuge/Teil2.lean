@@ -111,6 +111,7 @@ theorem spawn_start_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschi
 def zKind : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -281,6 +282,7 @@ theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mFragment mFragmentS mFs
 def zKindUnterSperre : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -294,10 +296,10 @@ theorem kind_unter_sperre_abgelehnt :
     zD.haelt zWrap = [()] ∧
     akzeptiert_pruefer.akzeptiert zKindUnterSperre zFs [()] [.inl ()] = false ∧
     wurzelnB [zHaupt, zWrap, zWrap] = false ∧
-    Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] = true := by
+    Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = true := by
   refine ⟨rfl, ?_, by decide, zPB_akzeptiert⟩
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zWrap, zWrap] = false
+  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zWrap, zWrap] (sources := zPoolSources) = false
   decide
 
 theorem kind_unter_sperre_spec : ¬ AkzeptiertSpec zPB zS zFs zKindUnterSperre.ws zKindUnterSperre.akku := fun h => by

@@ -41,6 +41,9 @@ theorem accepted_zeuge :
       (sources := sources) = true := by
   decide +kernel
 
+theorem contracts_checked : Vertraege.Pruefer.KontrakteGeprueftB program family mFs sources = true :=
+  (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp accepted_zeuge).2).2
+
 /-- The actual checked certificate supplies the semantic body duties. -/
 theorem duties (f : mD.Fn) : Vertraege.Pruefer.ContractDuties program family f := by
   have gate := (Bool.and_eq_true_iff.mp accepted_zeuge).2

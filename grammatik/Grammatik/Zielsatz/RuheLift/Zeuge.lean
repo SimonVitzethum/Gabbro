@@ -68,6 +68,7 @@ theorem ruheLift_ziel_zeuge [RootNativeFloat.Hardware] :
     exact mFragment_akzeptiert
   have hC : akzeptiert_pruefer.alsX.akzeptiert mE mFs [()] mCs = true :=
     Pruefer.alsX_akzeptiert akzeptiert_pruefer (E := mE) rfl rfl hC0
+      (by decide +kernel) CheckedMehrfaden.contracts_checked
   obtain ⟨Me, hr, hR, hZ⟩ := ruheLift_ziel akzeptiert_pruefer.alsX mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
     ⟨mCs, mCs_voll⟩ hC (nutzerPflichtA_of_akzeptiert mFs_voll hA0 mE_nutzerPflicht) mO
     ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ 0 ruheLiftR 0 mHauptA .nil

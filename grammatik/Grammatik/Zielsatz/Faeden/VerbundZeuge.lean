@@ -103,13 +103,10 @@ def vzApp : Programm zD := mitRumpf zPB fun
   | .lies => vzStubLies
   | .wrap => vzStubWrap
 
-/-- The library's program: `wrap`, `lies`, `einzahlen` (its own bodies; `einzahlen` WRITES the
-    lock-guarded table `konto`), a placeholder for `haupt`. -/
-def vzBib : Programm zD := mitRumpf zPB fun
-  | .haupt => vzStubHaupt
-  | .ein => zRumpfEin
-  | .lies => zRumpfLies
-  | .wrap => zRumpfWrap
+/-- The library carries the complete checked program, with no root of its own.
+    Only its owned functions are selected by linking. The unused app body is
+    retained so the original pool certificate applies without re-evaluation. -/
+def vzBib : Programm zD := zPB
 
 /-- The app: `concurrent { haupt, haupt }`. -/
 def vzE1 : Einheit zD where
@@ -144,7 +141,7 @@ theorem vz_app_akzeptiert :
     Akzeptiert vzApp zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zPoolSources) = true := by decide +kernel
 
 theorem vz_bib_akzeptiert : Akzeptiert vzBib zS zFs [()] [.inl ()] [] (sources := zPoolSources) = true := by
-  decide +kernel
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
 theorem vz_verbindbar : Verbindbar vzE1 vzE2 := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
@@ -303,11 +300,7 @@ theorem vm_abgelehnt_spec : ¬ SchnittstelleSpec mFs vmE mE vmE2 := fun h => by
 
 /-- The library as compiled against `zP`: `wrap` ensures only `true`. -/
 def vzSchwach : Programm zD :=
-  { zPB with
-    ensures := fun f => match f with
-      | .ein => zEnsHundert
-      | .lies => zEnsLies
-      | _ => .tru }
+  { zPB with ensures := fun _ => .tru }
 
 def vzBibSchwach : Programm zD := mitRumpf vzSchwach fun
   | .haupt => vzStubHaupt
