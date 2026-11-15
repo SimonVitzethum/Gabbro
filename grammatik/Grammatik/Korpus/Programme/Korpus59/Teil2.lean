@@ -62,6 +62,7 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 def kE : Zielsatz.Einheit kD where
   P := kP
   S := kSI
+  lockFormulas := kSources
   Q := axWahr kD
   starts := [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩]
   sp0 := kSp
