@@ -22,10 +22,11 @@ def program : Programm mD :=
   { mP with
     invariante := fun _ => localBound
     requires := fun f => match f with
-      | .setze => .tru
-      | _ => mP.requires f }
+      | .pruefeA => mA7
+      | _ => .tru }
 
-def family : SperrInv mD := SperrInv.leer mD
+def family : SperrInv mD :=
+  { orte := mSI.orte, inv := fun _ _ => true }
 
 def sources : Invarianten.Pruefer.LockSources family := fun _ => some
   { resources := [], expression := .tru, correct := fun _ => rfl }
