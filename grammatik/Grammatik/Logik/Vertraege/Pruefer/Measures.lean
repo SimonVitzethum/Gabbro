@@ -62,7 +62,9 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
       | false => simp only [tested, Bool.false_and]
       | true => simp only [tested, obligation.2 tested, Bool.not_true, Bool.and_false]
     simp only [massTor, disabled, Bool.false_eq_true, ↓reduceIte] at reply
-    exact fun g => noDecrease h next args g reply
+    intro g forbidden
+    subst error
+    exact noDecrease h next args g reply
   have valid := checkedEnvironment_atomic policy f locals (checked locals) replay shared subset
     O locality passes U havoc A atomic (massTor measure (cycle f) entry R) gated
     (fun error => ∀ g, error ≠ Logik.abstieg g) errors world requires
