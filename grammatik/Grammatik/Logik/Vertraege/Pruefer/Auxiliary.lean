@@ -22,7 +22,10 @@ def checkLockLocal (S : SperrInv D) (sources : LockSources S) (lock : D.Lock) :
   | .error cause => .error cause
   | .ok _ =>
       return ⟨fun s s' same => by
-        rw [← source.correct (s.welt []), ← source.correct (s'.welt [])]
+        have sourceAt (memory : Speicher D) :
+            eval (memory.welt []) source.expression (memory.welt []) .nil = S.inv lock memory := by
+          simpa only [speicher_welt_speicher] using source.correct (memory.welt [])
+        rw [← sourceAt s, ← sourceAt s']
         exact eval_gleichAuf source.expression (checkCarriers_sound _ _ checked)
           ⟨fun t member => same (.inl t) member, fun g member => same (.inr g) member⟩ .nil⟩
 

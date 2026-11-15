@@ -72,8 +72,8 @@ theorem invariantenGeprueftB_program {E : Einheit D} {functions : List D.Fn} {lo
   unfold programInvariantsB
   cases result : checkProgram E.P E.S functions E.lockFormulas budget locks with
   | error cause =>
-      simp only [invariantenGeprueftB, checkInvariants, result, Except.bind,
-        Except.toOption, Option.isSome_none, Bool.false_eq_true] at accepted
+      simp [invariantenGeprueftB, checkInvariants, result, Except.bind,
+        Except.toOption] at accepted
   | ok checked => rfl
 
 /-- Both value and reason return duties, uniformly in execution budget and
