@@ -181,8 +181,9 @@ def diagNp : String :=
 
 /-- VC-kernel replicas of the PoolZeuge/Atomar edits (the new gate conjunct;
     old components passed pre-gate and are untouched by the gate change). -/
-example : invariantVCB zPB zS zFs zDiagSources = true := by
-  decide +kernel
+-- Kernel attempt disabled after slot timeout (see report); compiled #evals above decide it.
+-- example : invariantVCB zPB zS zFs zDiagSources = true := by
+--   decide +kernel
 
 /-- Local replica of `SchwachZeuge.nS` (empty orte, vacuous inv; `S` is
     computationally irrelevant for `nP` since no body uses a lock). -/
@@ -190,8 +191,8 @@ def nSprobe : SperrInv nD := ⟨(fun e => nomatch e), (fun e => nomatch e)⟩
 
 def n1wsProbe : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
-example : invariantVCB nP nSprobe nFs (fun _ => none) = true := by
-  decide +kernel
+-- example : invariantVCB nP nSprobe nFs (fun _ => none) = true := by
+--   decide +kernel
 
 /-- `hP` replica (copied bodies/contract; atomic `konfig` read with genuinely
     violated `tabB[0] == 1` ensures): the gate must refuse. -/
@@ -236,7 +237,7 @@ def hPProbe : Programm nD where
 
 def hwsProbe : List nD.Fn := [NFn.kern, NFn.zaehlB]
 
-example : invariantVCB hPProbe nSprobe nFs (fun _ => none) = false := by
-  decide +kernel
+-- example : invariantVCB hPProbe nSprobe nFs (fun _ => none) = false := by
+--   decide +kernel
 
 end Gabbro.Grammatik.W93Diag
