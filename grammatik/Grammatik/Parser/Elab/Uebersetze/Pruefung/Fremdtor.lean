@@ -215,6 +215,24 @@ theorem fremdFallible_tor_threadet :
     .ok true := by
   decide +kernel
 
+/-- Recover handler absence through the successful assembler, without evaluating
+    bodies under an abstract function index. -/
+private theorem lowered_no_handlers (u : UProg)
+    (lowered : (lowerAllg u).toOption.isSome = true) (noHandlers : u.hands = []) :
+    ∀ f, (((lowerAllg u).toOption.get lowered).1).unterbricht f = false := by
+  have h := except_ok_get lowered
+  generalize hp : (lowerAllg u).toOption.get lowered = result at h ⊢
+  unfold lowerAllg at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · split at h
+      · obtain ⟨rfl, _⟩ := Measures.checkedProgram_eq h
+        intro f
+        simp only [progOfFn, noHandlers, List.any_nil]
+      · cases h
+
 /-! ## Acceptance with the real Duty -/
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "check admission"
@@ -242,7 +260,9 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   have interfaces : schnittstellenB checkPFremd (List.finRange uFremd.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, libraryB_immer,
+  have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
+    maskenB_ohne (lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremd_checkB, Bool.and_true, Bool.and_eq_true]
   and_intros
@@ -260,7 +280,9 @@ theorem fremdFallible_akzeptiert :
   have interfaces : schnittstellenB checkPFremdFallible
       (List.finRange uFremdFallible.fns.length) = true :=
     (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, libraryB_immer,
+  have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
+    maskenB_ohne (lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, interfaces, masks, libraryB_immer,
     Kernzelle.accumulatorB_leer, GuestBoundary.admissionB_nil, tabsOf, globsOf,
     List.filterMap_nil, fremdFallible_checkB, Bool.and_true, Bool.and_eq_true]
   and_intros
