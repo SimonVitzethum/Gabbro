@@ -57,13 +57,13 @@ public inductive Child (D : Deklaration) (types : TypeResolution) where
 
 public theorem argumentsEnv_bool_zeuge (D : Deklaration) :
     argumentsEnv D [Ty.bool] [Value.typed Ty.bool true] =
-      some (Env.cons (true : Wert D Ty.bool) Env.nil) := rfl
+      some (Env.cons (τ := Ty.bool) true Env.nil) := rfl
 
 @[expose] public def boolFrame (D : Deklaration) : Frame (Value D) :=
   ⟨[("saved", Value.typed Ty.bool true)], [7]⟩
 
 public theorem localsEnv_bool_zeuge (D : Deklaration) :
     localsEnv D [("saved", Ty.bool)] (boolFrame D) =
-      some (Env.cons (true : Wert D Ty.bool) Env.nil) := rfl
+      some (Env.cons (τ := Ty.bool) true Env.nil) := rfl
 
 end Gabbro.Grammatik.Async.Segment

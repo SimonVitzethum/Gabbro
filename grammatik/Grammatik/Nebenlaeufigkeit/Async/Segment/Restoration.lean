@@ -102,7 +102,7 @@ public theorem restoreSlot_present_zeuge (O : Orakel D) (passes : Nat)
       (restoreSlot (Expr.case [none, some Ty.bool] (presentIndex Ty.bool)
         (NutzlastExpr.val Expr.tru)) (restoreBoolBody D V l))
       world (Env.cons previous Env.nil) =
-      Ausgang.ok world (Env.cons (true : Wert D Ty.bool) Env.nil) := by
+      Ausgang.ok world (Env.cons (τ := Ty.bool) true Env.nil) := by
   cases world
   rfl
 
