@@ -40,17 +40,18 @@ def CheckedExecution (policy : CallPolicy program) (f : D.Fn) : Prop :=
 def invalidMessage (label : String) (formula : LProp (Observation D))
     (pre : QF (Observation D)) : String :=
   let matrix := writerMatrix formula .tru pre
-  match Modell.counterexample (qfKeys matrix) (quoteQF matrix) with
+  let names := (qfKeys matrix).eraseDups
+  match Modell.counterexample names (quoteQF matrix) with
   | none => label ++ ": false VC (no counterexample extracted)"
   | some values => label ++ ": false VC; counterexample in observation order = " ++
-      reprStr ((qfKeys matrix).map values)
+      reprStr (names.map values)
 
 /-- Diagnostics retain the concrete decoded arguments selected by the VC
     generator, including when the arithmetic counterexample has no memory keys. -/
 def environmentValues : {context : Ctx} → Env D context → List Int
   | [], .nil => []
   | .int _ _ :: _, .cons value rest => value.n :: environmentValues rest
-  | .bool :: _, .cons value rest => (if wahr? value then 1 else 0) :: environmentValues rest
+  | .bool :: _, .cons value rest => (if wahr? value = true then 1 else 0) :: environmentValues rest
   | τ :: _, .cons value rest => scalarValue τ value :: environmentValues rest
 
 /-- The return formula conjoins checked ensures with all owed invariants. -/
@@ -91,7 +92,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
     (f : D.Fn) (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
     (locals : Env D (D.params f)) :
-    Except Invarianten.Frag.Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world allowed,
+    Except Frag.Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world allowed,
       HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
       runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals)) := do
   let requires ← translate (program.requires f) locals
@@ -103,7 +104,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
       | .ok post => .ok ⟨⟨post, rfl⟩⟩)
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) locals (contractGoals program f locals invariants)
-  if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) (close_closed _) = true then
+  if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) = true then
     return ⟨fun runtime world allowed safe entry => by
       have closed := (lower_denote _ (assignment world)).mp
         (close_sound _ accepted (assignment world))
@@ -118,7 +119,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
 /-- Check every decoded parameter environment in a complete budgeted domain. -/
 def checkExecution (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
-    Except Invarianten.Frag.Refusal (PLift (CheckedExecution (S := S) policy f)) := do
+    Except Frag.Refusal (PLift (CheckedExecution (S := S) policy f)) := do
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
   let domain ← environments (D := D) budget.expansion (D.params f)
   let checked ← collect domain.values

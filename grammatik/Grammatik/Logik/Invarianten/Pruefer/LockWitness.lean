@@ -1,121 +1,201 @@
 module
 
-public import Grammatik.Logik.Invarianten.Pruefer.Witness
-public import Grammatik.Zielsatz.Atomar.AtomarZiel
+public import Grammatik.Logik.Invarianten.Pruefer.Locks
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
+public import Grammatik.Logik.Vertraege.Pruefer.Fixtures
+import all Batteries.Data.Except
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Invarianten.Pruefer.LockWitness
 
+/-- A real lock identifier from the existing concurrent fixture. The source
+    evidence states correspondence, not truth of arbitrary memory. -/
+def sources : LockSources (SperrInv.leer mD) := fun _ => some
+  { resources := []
+    expression := .tru
+    correct := fun _ => rfl }
+
+theorem reified_zeuge :
+    (lockFormula (SperrInv.leer mD) sources ()).toOption.isSome = true := by rfl
+
+/-- Absence of syntax does not become a fabricated true predicate. -/
+theorem opaque_zeuge :
+    (lockFormula (SperrInv.leer mD) (fun _ => none) ()).toOption.isSome = false := by rfl
+
 open Frag Zielsatz
 
-/-- One protected scalar, a real lock, and no ordinary owed invariant.
-    Release must therefore be checked even when D.invs is empty. -/
-def declaration : Deklaration :=
-  { Witness.declaration with
-    Lock := Unit, decLock := inferInstance
+/-- A single parameterless writer and one lock protecting a real scalar cell.
+    Its invariant is not a constant predicate over arbitrary memories. -/
+abbrev declaration : Deklaration :=
+  { Vertraege.Pruefer.Witness.declaration with
+    Lock := Unit
+    decLock := inferInstance
     rang := fun _ => 0
     maskiert := fun _ => false
     braucht := fun _ => []
-    gbraucht := fun (name : Bool) => if name then [] else [.inl ()]
+    gbraucht := fun name => if name then [] else [.inl ()]
     sigNr := fun _ =>
-      { params := [], erg := none, gruende := 0, haelt := []
-        schreibt := fun _ => false, gschreibt := fun (name : Bool) => !name
+      { params := [], erg := none, gruende := 0
+        haelt := [], schreibt := fun _ => false, gschreibt := fun name => !name
         konsumiert := [], produziert := [] }
     passt_ok := fun _ _ impossible => by cases impossible
-    eigner_nie_erzeugt := fun _ _ _ _ impossible => by cases impossible
-    geteilt_bewacht := fun _ impossible => nomatch impossible
-    ggeteilt_bewacht := fun _ impossible => nomatch impossible
-    Inv := Empty
-    traeger := fun item => nomatch item
-    invs := []
-    invarianten_gehalten := fun _ item => nomatch item }
+    geteilt_bewacht := fun _ impossible => by cases impossible
+    invarianten_gehalten := fun _ item => nomatch item
+    ggeteilt_bewacht := fun _ impossible => by cases impossible }
 
-instance : DecidableEq declaration.Fn := inferInstanceAs (DecidableEq Unit)
-instance : DecidableEq declaration.Ax := inferInstanceAs (DecidableEq Empty)
-
+abbrev held : List (Res declaration) := [.held ()]
 abbrev contract := vertragVon declaration ()
 
-def access : gdarf declaration false [.held ()] := by
-  intro guard member
-  have same : guard = .inl () := List.mem_singleton.mp member
-  subst guard
+theorem cell_access : gdarf declaration false held := by
+  intro resource member
+  have same : resource = .inl () := List.mem_singleton.mp member
+  subst resource
   exact List.mem_cons_self
 
-def invariant : Expr declaration [] [.held ()] .bool := .eq (.glob false access) (.lit 0)
+def invariant : Expr declaration [] held .bool :=
+  .eq (.glob false cell_access) (.lit 0)
 
 def family : SperrInv declaration where
   orte := fun _ => [.inr false]
-  inv := fun _ memory => eval (memory.welt []) invariant (memory.welt []) .nil
+  inv := fun _ memory => decide ((memory.globs false).n = 0)
 
-def sources : LockSources family := fun _ => some
-  { resources := [.held ()], expression := invariant
-    correct := fun _ => rfl }
+def cellSources : LockSources family := fun _ => some
+  (ReifiedLock.ofExpression held invariant family () (fun _ => rfl))
 
-def store (value : Nat) (bounded : value ≤ 10) :
-    Stmt declaration contract false [] [.held ()] [.held ()] :=
-  .assignGlob false (.widen (by omega) (by omega) (.lit (value : Int))) rfl access
+/-- The generic source correspondence and formula soundness apply jointly
+    to a predicate that distinguishes zero from one in a real guarded cell. -/
+theorem lockFormula_sound_zeuge :
+    ∃ fact : VC.LockFormula family (), lockFormula family cellSources () = .ok fact ∧
+      ∀ world, fact.formula.denote (assignment world) ↔
+        family.inv () world.speicher = true := by
+  have available : (lockFormula family cellSources ()).toOption.isSome = true := by decide +kernel
+  cases computed : lockFormula family cellSources () with
+  | error cause => simp only [computed, Except.toOption, Option.isSome] at available; cases available
+  | ok fact => exact ⟨fact, rfl, lockFormula_sound family cellSources () fact computed⟩
 
-def body (restore : Bool) : Endblock declaration contract false [] [] :=
-  .cons (.locks () (fun _ member => nomatch member)
-    (.cons (store 1 (by decide))
-      (if restore then .cons (store 0 (by decide)) .nil else .nil)))
-    (.ret .empty (List.Perm.refl _))
+/-- The same section either restores zero or violates the release condition.
+    The bad body remains well typed; only the checked invariant distinguishes it. -/
+def writeCell (preserves : Bool) : Stmt declaration contract false [] held held :=
+  .assignGlob false
+    (if preserves then .widen (by decide +kernel) (by decide +kernel) (.lit 0)
+      else .widen (by decide +kernel) (by decide +kernel) (.lit 1))
+    rfl cell_access
 
-def program (restore : Bool) : Programm declaration where
+def sectionBody (preserves : Bool) : Block declaration contract false [] held held :=
+  .cons (writeCell preserves) .nil
+
+def program (preserves : Bool) : Programm declaration where
   invariante := fun item => nomatch item
   requires := fun _ => .tru
   ensures := fun _ => .tru
-  rumpf := fun _ => body restore
+  rumpf := fun _ =>
+    .cons (.locks () (fun _ member => nomatch member) (sectionBody preserves))
+      (.ret .empty (List.Perm.refl _))
 
-def world : World declaration where
-  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
-  globs := fun _ => ⟨0, by decide, by decide⟩
+def initial : World declaration where
+  slots := fun _ _ _ => ⟨0, by decide +kernel, by decide +kernel⟩
+  globs := fun _ => ⟨0, by decide +kernel, by decide +kernel⟩
   spur := []
 
-def unit (restore : Bool) : Einheit declaration where
-  P := program restore
+def unit (preserves : Bool) : Einheit declaration where
+  P := program preserves
   S := family
-  lockFormulas := sources
   Q := fun item => nomatch item
   starts := [⟨(), .nil⟩]
-  sp0 := world.speicher
+  sp0 := initial.speicher
+  lockFormulas := cellSources
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some { count := 0, outside := fun _ _ _ => rfl }
 
-theorem start_zeuge : StartPflicht (unit true) := by
-  refine ⟨?_, fun _ _ => rfl⟩
-  intro lock
-  cases lock
+theorem invariant_nontrivial_zeuge :
+    family.inv () initial.speicher = true ∧
+    family.inv () ({ initial with globs := fun _ => ⟨1, by decide +kernel, by decide +kernel⟩ }).speicher = false := by
   decide +kernel
 
-theorem lock_accepted_zeuge : invariantVCB (program true) family [()] sources = true := by decide +kernel
+theorem lock_initial_checked_zeuge :
+    (checkUnitLock (unit true) ()).toOption.isSome = true := by decide +kernel
 
-theorem lock_refused_zeuge : invariantVCB (program false) family [()] sources = false := by decide +kernel
+theorem program_accepted_zeuge :
+    programInvariantsB (program true) family [()] cellSources {} [()] = true := by decide +kernel
 
-theorem missing_syntax_refused_zeuge : invariantVCB (program true) family [()] = false := by decide +kernel
+theorem contracts_accepted_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (program true) family [()] cellSources = true := by decide +kernel
 
+theorem invariants_accepted_zeuge : invariantenGeprueftB (unit true) [()] [()] = true := by decide +kernel
+
+theorem logic_accepted_zeuge : nutzerPflichtGeprueftB (unit true) [()] [()] = true := by decide +kernel
+
+/-- Acceptance through the complete concrete checker, including both new unit
+    gates, the program invariant gate and the contract gate. -/
 theorem checker_accepted_zeuge :
-    AkzeptiertX (program true) family [()] [()] [.inl (), .inr false, .inr true]
-      (unit true).ws (sources := sources) = true := by
-  unfold AkzeptiertX
-  rw [lock_accepted_zeuge]
-  simp only [Bool.and_true, Bool.and_eq_true]
-  decide +kernel
+    akzeptiertX_pruefer.akzeptiert (unit true) [()] [()] [.inl (), .inr false, .inr true] = true := by
+  have core : AkzeptiertX (program true) family [()] [()] [.inl (), .inr false, .inr true]
+      (unit true).ws [] [] [] [] cellSources = true := by
+    unfold AkzeptiertX
+    rw [program_accepted_zeuge, contracts_accepted_zeuge]
+    simp only [Bool.and_true]
+    decide +kernel
+  exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+    ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨core, besitzB_leer rfl⟩,
+      Kernzelle.akkuStartB_leer (unit true)⟩, invariants_accepted_zeuge⟩, logic_accepted_zeuge⟩
+
+theorem program_refused_zeuge :
+    programInvariantsB (program false) family [()] cellSources {} [()] = false := by decide +kernel
+
+theorem contracts_refused_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (program false) family [()] cellSources = false := by decide +kernel
+
+theorem logic_refused_zeuge : nutzerPflichtGeprueftB (unit false) [()] [()] = false := by decide +kernel
 
 theorem checker_refused_zeuge :
-    AkzeptiertX (program false) family [()] [()] [.inl (), .inr false, .inr true]
-      (unit false).ws (sources := sources) = false := by
-  unfold AkzeptiertX
-  rw [lock_refused_zeuge, Bool.and_false]
+    akzeptiertX_pruefer.akzeptiert (unit false) [()] [()] [.inl (), .inr false, .inr true] = false := by
+  change (_ && nutzerPflichtGeprueftB (unit false) [()] [()]) = false
+  rw [logic_refused_zeuge, Bool.and_false]
+
+/-- Lexical return crosses the acquired scope and must establish the same
+    cell predicate before cleanup. This also exercises scopedReturnCondition. -/
+def scopedProgram (preserves : Bool) : Programm declaration :=
+  { program preserves with
+    rumpf := fun _ =>
+      .cons (.locks () (fun _ member => nomatch member)
+        (.cons (writeCell preserves)
+          (.cons (.retScoped .empty { scopes := [()], genau := List.Perm.refl _ }) .nil)))
+        (.ret .empty (List.Perm.refl _)) }
+
+theorem scoped_return_accepted_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (scopedProgram true) family [()] cellSources = true := by
+  decide +kernel
+
+theorem scoped_return_refused_zeuge :
+    Vertraege.Pruefer.KontrakteGeprueftB (scopedProgram false) family [()] cellSources = false := by
+  decide +kernel
+
+def invalidInitial : Einheit declaration :=
+  { unit true with sp0 :=
+      ({ initial with globs := fun _ => ⟨1, by decide +kernel, by decide +kernel⟩ }).speicher }
+
+theorem false_initial_refused_zeuge :
+    (checkUnitLock invalidInitial ()).toOption.isSome = false := by decide +kernel
+
+theorem opaque_unit_refused_zeuge :
+    (checkUnitLock { unit true with lockFormulas := fun _ => none } ()).toOption.isSome = false := by
+  decide +kernel
+
+#print axioms lockFormula_sound_zeuge
+#print axioms contracts_accepted_zeuge
+#print axioms contracts_refused_zeuge
 
 /-- The goal's actual unit checker receives the source through the canonical
     metadata field, rather than losing it at the Bool adapter. -/
 theorem unit_checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert (unit true) [()] [()]
       [.inl (), .inr false, .inr true] = true := by
-  rw [akzeptiertX_pruefer_eq]
-  change (AkzeptiertX (program true) family [()] [()]
-    [.inl (), .inr false, .inr true] (unit true).ws (sources := sources) && true && true) = true
-  rw [checker_accepted_zeuge]
-  rfl
+  exact checker_accepted_zeuge
 
 end Gabbro.Grammatik.Invarianten.Pruefer.LockWitness

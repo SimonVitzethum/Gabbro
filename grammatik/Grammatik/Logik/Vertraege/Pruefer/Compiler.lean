@@ -12,7 +12,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm 
 
 section Compiler
 
-variable (policy : CallPolicy program) (facts : ∀ lock, Except Invarianten.Frag.Refusal (LockFormula S lock))
+variable (policy : CallPolicy program) (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock))
     (budget : VCBudget) (hint : Option (QF (Observation D)))
 
 mutual
@@ -21,7 +21,7 @@ mutual
     engine here: soundness refers only to execStmtH/execBlockH/execEndH. -/
 def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
+    Except Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -50,6 +50,13 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           | some invariant => retryInvariantCondition policy budget.expansion count invariant test body overflow
               (fun env target => block fuel body env target)
               (fun env target => block fuel overflow env target) locals goals
+    | .traverse table annotation body =>
+        if (D.count table).toNat ≤ budget.expansion then do
+          let pre ← traverseCondition policy (V := V) (l := l) table annotation body
+            (fun env target => block fuel body env target)
+            (alleIndizes (D.count table)) locals goals
+          return pre.map (fun _ _ ready => ready)
+        else .error (.unsupported "traverse static count exceeds the contract VC budget")
     | .locks lock rank body => do
         let fact ← facts lock
         let pre ← block fuel body locals (goals.releasing fact.formula)
@@ -72,7 +79,7 @@ termination_by fuel
 
 def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Block D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Invarianten.Frag.Refusal (BlockCondition (S := S) policy code locals goals) :=
+    Except Frag.Refusal (BlockCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>
@@ -123,12 +130,18 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           | why next reason => exact (Fin.cast hr reason).elim0
           | logik error => simpa only [reply, Goals.holds] using ready
           | hardware error => trivial)
+    | .regRead register readable .nil => do
+        let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
+        return pre.map (fun runtime world ready allowed _ =>
+          registerReadEmpty_sound runtime register readable world locals (goals.holds allowed)
+            (fun next same => (denotes_assignment _ world next same.symm).mp ready)
+            (fun _ => trivial))
     | _ => .error (.unsupported "contract block is outside the checked control fragment")
 termination_by fuel
 
 def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (code : Endblock D V l Γ Λ) (locals : Env D Γ) (goals : Goals D V Γ) :
-    Except Invarianten.Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
+    Except Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
   match fuel with
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 =>

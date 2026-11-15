@@ -1,18 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/Satz/ErzeugtMN.lean
-  Subject:   M AND N ARE WHAT THE GENERATOR EMITS (their completeness: `ErzeugtVoll.lean`). `mGen` is every
-             `Gutes` the generator emits over all members at their bounds (`grenzenVon`), `nGen` every `Abgelehntes`; both
-             are definitions the run evaluates and the proofs only reason
-             about.
-
-    * `mGen_gueltig`   every program of M is valid -- from the proof each `Gutes` carries, nothing is evaluated;
-    * `nGen_abgelehnt` every program of N is refused -- from the proof each `Abgelehntes` carries;
-    * `raumGut_mGen`   every valid program of the generator's space is in M (completeness of the stream and of
-                       `erzeugeAus`), so a good cell that a valid program of the space has is witnessed in M;
-    * `raumSchlecht_nGen` the same for the single-fault programs and N;
-    * `tafel_erzeugt`  the cell table `Tafel` of `ZellenVoll.lean` for M and N, and with it Theorem 5 over every
-                       program of the model (`erzeugt_hinreichend`), from one fact per cell: it occurs in the space
-                       (`RaumGut`/`RaumSchlecht`) or no program can need it (`ZellenUnmoeglich.lean`).
+  The generated M and N carry their actual checker verdicts. Their cell table covers accepted programs; semantic gate refusals are not structural cells.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.ErzeugtListe
@@ -64,6 +51,7 @@ def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaratio
   zahlen := z.zahlen
   P := P
   S := z.sperreMax
+  lockSources := z.lockSources
   fs := z.fnListe
   ls := z.lockListe
   cs := z.traegerListe
@@ -87,7 +75,7 @@ def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaratio
     simp only [hax, List.length_nil, Nat.not_lt_zero] at this
 
 theorem Spez.einsatz_gueltig (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn)
-    (hax : z.axs = []) (hb : z.bodenOk P = true) : (z.einsatz P ws hax hb).gueltig = z.gutB P z.sperreMax (z.wurzelnVon P ws) := by rfl
+    (hax : z.axs = []) (hb : z.bodenOk P = true) : (z.einsatz P ws hax hb).gueltig = z.gutB P (z.wurzelnVon P ws) := by rfl
 
 /-! ## M and N: the generator's output -/
 

@@ -81,11 +81,13 @@ variable [DecidableEq D.Fn]
 /-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.**
     The checks ride along unchanged (the admission is over the same program). -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    {A : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A) :
+    {A : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A)
+    (hI : ∀ f, Invarianten.Pruefer.InvariantDuties P S f)
+    (hK : ∀ f, Vertraege.Pruefer.ContractDuties P S f) :
     AkzeptiertSpecX P S fs ws [] A :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
     h.einzeln, h.renn, h.antworten, h.masken, h.schnittstellen, (fun _ h => nomatch h),
-    (fun _ h => nomatch h), h.bibliothek, h.akku, h.pruef, h.reset⟩
+    (fun _ h => nomatch h), h.bibliothek, h.akku, h.pruef, h.reset, hI, hK⟩
 
 /-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
     do not read the arenas hold for every arena list. -/
@@ -188,8 +190,10 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
       unfold lokW at hc
       exact @of_decide_eq_true _ (Classical.propDecidable _) hc)
   have hK := fun f => koerperGutSA_mono hT ((hN.1 passes f).1)
-  have hI := fun f => invGutSA_mono hT ((hN.1 passes f).2.1)
-  have hIG := fun f => invGutGrundA_mono hT ((hN.1 passes f).2.2)
+  have hI := fun f => invGutSA_mono hT
+    ((hA.invarianten f passes Q (GeteiltA P ws) (fun _ h => h.1)).1)
+  have hIG := fun f => invGutGrundA_mono hT
+    ((hA.invarianten f passes Q (GeteiltA P ws) (fun _ h => h.1)).2)
   have hex := startExklusiv_ohne_haelt init hLeer
   intro W hr
   have hZW := ziel_atomar_w P O passes ord Q S ls (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
@@ -247,5 +251,6 @@ theorem rennfrei_atomar_spec (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
     (fun k => (Ws k).g) ts n hlGA i j c hij hjn hfg hzi hzj hw hAt
 
 end Spec
+
 
 end Gabbro.Grammatik.Zielsatz

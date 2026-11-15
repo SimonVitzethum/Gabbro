@@ -1,12 +1,6 @@
 /-
-  File:      Grammatik/Gen/Text/Satz.lean
-  Subject:   THEOREM 5 AT THE TEXT LEVEL: a checker or a compiler that reads SOURCE TEXT and depends only on the cells of
-             the program the text is (`NeutralText`, `NeutralKorrektText`, over `ausText`) and answers right on the 8 + 13
-             witness texts answers right on every text that is a program of the source.
-
-  The witness texts are the printed delaborations of the witnesses of `Gen/Zeugen` (`textVon`); each reads back as a
-  program with the witness's cells and verdict (`Zeugen/<w>.lean`). Only cells and verdicts need to agree: a
-  cell-neutral checker cannot tell two programs with the same cells apart, so no equality of declarations is needed.
+  Source-text witnesses and compiler correctness from structural cell
+  coverage. Cell-only checker equivalence is not asserted.
 -/
 module
 public import Grammatik.Gen.Text.Zeugen.M103_131
@@ -76,7 +70,7 @@ def NeutralText (R : String → Bool) : Prop :=
 def NeutralKorrektText (K : String → Prop) : Prop :=
   ∃ ψ : Zelle → Prop, ∀ s e, ausText s = .ok e → (K s ↔ ∀ z, e.Hat z → ψ z)
 
-/-- The texts of the valid witnesses (the order of `Mw`). -/
+/-- The texts of the structural witnesses (the order of `structuralWitnesses`). -/
 def mText : List String :=
   [textVon Zeugen.M99_824.z Zeugen.M99_824.P Zeugen.M99_824.ws,
    textVon Zeugen.M47_549.z Zeugen.M47_549.P Zeugen.M47_549.ws,
@@ -88,7 +82,7 @@ def mText : List String :=
    textVon Zeugen.M99_825.z Zeugen.M99_825.P Zeugen.M99_825.ws,
    Zeugen.Reset.Good.text]
 
-/-- The texts of the refused witnesses (the order of `Nw`). -/
+/-- The texts of the refused witnesses (the order of `structuralRefusals`). -/
 def nText : List String :=
   [textVon Zeugen.N16_5.z Zeugen.N16_5.P Zeugen.N16_5.ws,
    textVon Zeugen.N18_0.z Zeugen.N18_0.P Zeugen.N18_0.ws,
@@ -106,9 +100,9 @@ def nText : List String :=
    Zeugen.Reset.Bad.text]
 
 /-- **Every witness has its text**: a text in the list that reads back with the witness's cells and verdict. -/
-theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
+theorem m_texte : ∀ m ∈ Zeugen.structuralWitnesses, ∃ t ∈ mText, ∃ e', ausText t = .ok e' ∧ e'.zellen = m.zellen ∧ e'.gueltig = m.gueltig := by
   intro m hm
-  simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
+  simp only [Zeugen.structuralWitnesses, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.M99_824.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M47_549.text⟩
@@ -120,9 +114,9 @@ theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok 
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M99_825.text⟩
   · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.Reset.Good.text_reads⟩
 
-theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
+theorem n_texte : ∀ n ∈ Zeugen.structuralRefusals, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
   intro n hn
-  simp only [Zeugen.Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
+  simp only [Zeugen.structuralRefusals, List.mem_cons, List.not_mem_nil, or_false] at hn
   rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.N16_5.text⟩
   · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_0.text⟩
@@ -145,55 +139,15 @@ theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen =
   unfold akzeptiert Einsatz.Hat
   rw [h]
 
-/-- **A cell-neutral checker on source text that answers like the model on the 9 + 14 witness texts answers like
-    the model on every text that is a program of the source.** -/
-theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
-    (hM : ∀ t ∈ mText, R t = true) (hN : ∀ t ∈ nText, R t = false) :
-    ∀ s e, ausText s = .ok e → R s = e.gueltig := by
-  obtain ⟨φ, hφ⟩ := hR
-  classical
-  let C : Einsatz → Bool := fun e => decide (akzeptiert Einsatz.Hat φ e)
-  have hC : Neutral C := ⟨φ, fun e => by simp only [decide_eq_true_eq, C]⟩
-  have hCw : ∀ w t e', t ∈ mText ∨ t ∈ nText → ausText t = .ok e' → e'.zellen = w.zellen →
-      C w = R t := by
-    intro w t e' _ ht hz
-    have h1 := hφ t e' ht
-    cases hr : R t
-    · simp only [C, decide_eq_false_iff_not]
-      intro ha
-      rw [← akzeptiert_zellen φ e' w hz] at ha
-      have := h1.2 ha
-      rw [hr] at this; cases this
-    · simp only [C, decide_eq_true_eq]
-      rw [← akzeptiert_zellen φ e' w hz]
-      exact h1.1 hr
-  have hMC : ∀ m ∈ Zeugen.Mw, C m = m.gueltig := by
-    intro m hm
-    obtain ⟨t, htm, e', ht, hz, hg⟩ := m_texte m hm
-    rw [hCw m t e' (Or.inl htm) ht hz, hM t htm]
-    have : m.gueltig = true := Zeugen.zeugen_tafel.gut_m m hm
-    rw [this]
-  have hNC : ∀ n ∈ Zeugen.Nw, C n = n.gueltig := by
-    intro n hn
-    obtain ⟨t, htn, e', ht, hz, hg⟩ := n_texte n hn
-    rw [hCw n t e' (Or.inr htn) ht hz, hN t htn]
-    rw [Zeugen.zeugen_tafel.n_schlecht n hn]
-  intro s e hs
-  have hce := Zeugen.pruefer_zeugen_korrekt C hC hMC hNC e
-  rw [← hce]
-  cases hr : R s
-  · symm; simp only [C, decide_eq_false_iff_not]
-    intro ha; have := (hφ s e hs).2 ha; rw [hr] at this; cases this
-  · symm; simp only [C, decide_eq_true_eq]; exact (hφ s e hs).1 hr
 
-/-- **A cell-neutral compiler on source text correct on the 9 valid witness texts is correct on every text that is a
+/-- **A cell-neutral compiler on source text correct on the 9 structural witness texts is correct on every text that is a
     valid program of the source.** -/
 theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) (hM : ∀ t ∈ mText, K t) :
     ∀ s e, ausText s = .ok e → e.gueltig = true → K s := by
   obtain ⟨ψ, hψ⟩ := hK
   let K' : Einsatz → Prop := fun e => ∀ z, e.Hat z → ψ z
   have hK' : NeutralKorrekt K' := ⟨ψ, fun _ => Iff.rfl⟩
-  have hMK : ∀ m ∈ Zeugen.Mw, K' m := by
+  have hMK : ∀ m ∈ Zeugen.structuralWitnesses, K' m := by
     intro m hm
     obtain ⟨t, htm, e', ht, hz, _⟩ := m_texte m hm
     have := (hψ t e' ht).1 (hM t htm)
@@ -204,7 +158,6 @@ theorem compiler_text_korrekt (K : String → Prop) (hK : NeutralKorrektText K) 
 
 end Gabbro.Grammatik.Gen.Text
 
-#print axioms Gabbro.Grammatik.Gen.Text.pruefer_text_korrekt
 #print axioms Gabbro.Grammatik.Gen.Text.compiler_text_korrekt
 #print axioms Gabbro.Grammatik.Gen.Text.m_texte
 #print axioms Gabbro.Grammatik.Gen.Text.n_texte

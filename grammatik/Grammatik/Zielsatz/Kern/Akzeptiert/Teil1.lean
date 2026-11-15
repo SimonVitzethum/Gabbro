@@ -32,7 +32,6 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Logik.Ruf.Guest.Boundary
-public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Kern.Syntax.Satz.T3
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
@@ -383,7 +382,8 @@ def Akzeptiert [DecidableEq D.Ax] (P : Programm D) (S : SperrInv D) (fs : List D
     (sources : Invarianten.Pruefer.LockSources S := fun _ => none) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && scopesOkProgB P fs && GuestBoundary.admissionB guests && Invarianten.Pruefer.invariantVCB P S fs sources
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && scopesOkProgB P fs && GuestBoundary.admissionB guests &&
+    Invarianten.Pruefer.invariantVCB P S fs sources {} (fun _ => none) ls
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

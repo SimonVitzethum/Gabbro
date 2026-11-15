@@ -80,26 +80,33 @@ def endBlock (program : Programm D) (checked : D.Fn → List D.Inv)
             let read := world.lese Λ condition.orte
             have branches := (lower_denote _ (assignment world)).mp valid
             have agree : assignment read = assignment world := assignment_lese _ _ _
-            cases tested : eval (world.lese Λ condition.orte) condition
-                (world.lese Λ condition.orte) locals with
+            cases tested : eval read condition read locals with
             | true =>
                 have present := (guard.correct read).mp tested
                 rw [agree] at present
                 have result := yesVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.1 present))
-                simpa only [WP.wpE, execEnd, tested, wahr?, eq_self,
-                  Bool.false_eq_true, ↓reduceIte] using result
+                simp only [WP.wpE, execEnd]
+                split
+                · exact result
+                · rename_i other
+                  exact (other tested).elim
             | false =>
                 have absent : ¬ guard.payload.denote (assignment world) := by
                   intro h
                   rw [← agree] at h
-                  exact Bool.false_ne_true (tested.symm.trans ((guard.correct read).mpr h))
+                  have := (guard.correct read).mpr h
+                  rw [tested] at this
+                  exact Bool.noConfusion this
                 have result := noVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.2 absent))
-                simpa only [WP.wpE, execEnd, tested, wahr?, eq_self,
-                  Bool.false_eq_true, ↓reduceIte] using result }
+                simp only [WP.wpE, execEnd]
+                split
+                · rename_i taken
+                  exact Bool.noConfusion (taken.symm.trans tested)
+                · exact result }
   | .bind .. => .error (.unsupported "local bindings need a symbolic local environment")
   | .bindCall .. => .error (.unsupported "bound call results need a symbolic local environment")
   | _ => .error (.unsupported "writer end block: binding, loop, or scoped operation")
@@ -137,14 +144,14 @@ def writerCounterexample {program : Programm D} {checked : D.Fn → List D.Inv}
     (compiled : EndVC program checked code locals terminal)
     (entry path : LProp (Observation D)) : Option (Assignment (Observation D)) :=
   let matrix := writerMatrix entry path compiled.formula
-  counterexample (qfKeys matrix) (quoteQF matrix)
+  counterexample (qfKeys matrix).eraseDups (quoteQF matrix)
 
 theorem writerCounterexample_complete {program : Programm D} {checked : D.Fn → List D.Inv}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {code : Endblock D V l Γ Λ} {locals : Env D Γ} {terminal : QF (Observation D)}
     (compiled : EndVC program checked code locals terminal)
     (entry path : LProp (Observation D))
-    (rejected : decideB (writerVC compiled entry path) (writerVC_closed compiled entry path) = false) :
+    (rejected : decideB (writerVC compiled entry path) = false) :
     ∃ values, writerCounterexample compiled entry path = some values :=
   counterexample_complete _ _ rejected
 
@@ -179,7 +186,7 @@ theorem writerVC_wp_sound {program : Programm D} {checked : D.Fn → List D.Inv}
     {code : Endblock D V l Γ Λ} {locals : Env D Γ} {terminal : QF (Observation D)}
     (compiled : EndVC program checked code locals terminal)
     (entry path : LProp (Observation D))
-    (accepted : decideB (writerVC compiled entry path) (writerVC_closed compiled entry path) = true)
+    (accepted : decideB (writerVC compiled entry path) = true)
     (O : Orakel D) (passes : Nat)
     (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (evidence : CallEvidence program checked calls) (world : World D)
@@ -203,7 +210,7 @@ theorem writerVC_sound (program : Programm D) (checked : D.Fn → List D.Inv)
     (compiled : ∀ locals : Env D (D.params f),
       EndVC program checked (program.rumpf f) locals post.formula)
     (entry path : LProp (Observation D))
-    (accepted : ∀ locals, decideB (writerVC (compiled locals) entry path) (writerVC_closed (compiled locals) entry path) = true)
+    (accepted : ∀ locals, decideB (writerVC (compiled locals) entry path) = true)
     (initial : ∀ world locals, ReqAmEintritt program f world locals →
       entry.denote (assignment world) ∧ path.denote (assignment world))
     (handlers : ∀ calls, RespektiertRahmen program calls →

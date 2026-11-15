@@ -88,26 +88,33 @@ def statement {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             let read := world.lese Λ condition.orte
             have branches := (lower_denote _ (assignment world)).mp valid
             have agree : assignment read = assignment world := assignment_lese _ _ _
-            cases tested : eval (world.lese Λ condition.orte) condition
-                (world.lese Λ condition.orte) locals with
+            cases tested : eval read condition read locals with
             | true =>
                 have present := (guard.correct read).mp tested
                 rw [agree] at present
                 have result := yesVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.1 present))
-                simpa only [WP.wpS, WP.wpB, execStmt, tested, wahr?, eq_self,
-                  Bool.false_eq_true, ↓reduceIte] using result
+                simp only [WP.wpS, WP.wpB, execStmt]
+                split
+                · exact result
+                · rename_i other
+                  exact (other tested).elim
             | false =>
                 have absent : ¬ guard.payload.denote (assignment world) := by
                   intro h
                   rw [← agree] at h
-                  exact Bool.false_ne_true (tested.symm.trans ((guard.correct read).mpr h))
+                  have := (guard.correct read).mpr h
+                  rw [tested] at this
+                  exact Bool.noConfusion this
                 have result := noVC.sound O passes calls evidence read (by
                   rw [agree]
                   exact (quoteQF_denote _ _).mp (branches.2 absent))
-                simpa only [WP.wpS, WP.wpB, execStmt, tested, wahr?, eq_self,
-                  Bool.false_eq_true, ↓reduceIte] using result }
+                simp only [WP.wpS, WP.wpB, execStmt]
+                split
+                · rename_i taken
+                  exact Bool.noConfusion (taken.symm.trans tested)
+                · exact result }
   | .call f args _ noReasons => do
       let facts ← invariantFormula program (checked f)
       return {

@@ -352,6 +352,15 @@ public import Grammatik.Logik.Invarianten.Pruefer.AtomicWitness
 public import Grammatik.Logik.Invarianten.Pruefer.KeywordWitness
 public import Grammatik.Logik.WP.BoundedWhile
 public import Grammatik.Logik.WP.BoundedWhileWitness
+public import Grammatik.Logik.Invarianten.Modell.Witness
+public import Grammatik.Logik.Invarianten.VC.Witness
+public import Grammatik.Logik.Invarianten.VC.ExtendedWitness
+public import Grammatik.Logik.Invarianten.Pruefer.Witness
+public import Grammatik.Logik.Invarianten.Pruefer.LockWitness
+public import Grammatik.Logik.Invarianten.Pruefer.KeywordWitness
+public import Grammatik.Logik.Vertraege.Pruefer.Witness
+public import Grammatik.Logik.Vertraege.Pruefer.LoopWitness
+public import Grammatik.Logik.Vertraege.Pruefer.RecursionWitness
 public import Grammatik.Logik.WP.Zeuge
 public import Grammatik.Logik.WP.ZeugeRuf
 public import Grammatik.Logik.WP.ZeugeRel
@@ -429,3 +438,13 @@ public import Grammatik.Niedrig.Bytes.Grants
 public import Grammatik.Niedrig.Bytes.GrantsSaetze
 public import Grammatik.Niedrig.Bytes.Erreichbar
 public import Grammatik.Niedrig.Bytes.GrantsZeuge
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Binding
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Waiting
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Witnesses
+public import Grammatik.Kern.Semantik.Boundary.Proben
+public import Grammatik.Kern.Semantik.Boundary.TransferObstacle
+
+public import Grammatik.Logik.Invarianten.Pruefer.WriterWitness
+public import Grammatik.Logik.Invarianten.Pruefer.ReleaseWitness

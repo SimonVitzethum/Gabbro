@@ -1,17 +1,21 @@
 /-
   File:      Grammatik/Parser/Cover/Differenz.lean
-  Subject:   Source verdicts from the canonical Lean checker.
+  Subject:   Track P as a CHECKER: the Lean verdict on source text with no Rust exporter in the loop.
 
-  `verdict` lexes, parses and elaborates source text, lowers every function to a G term (`lowerAllg`),
-  and runs `AkzeptiertX` with the elaborated lock family, retained lock expressions, complete carrier
-  lists and declared thread roots. Its invariant and contract VCs are part of the checker verdict.
-  The answer is one of
+  `verdict` runs the whole Lean pipeline on a source text -- lex, parse in depth, elaborate (`elabU`),
+  lower every function to a G term (`lowerAllg`) -- and evaluates the Bool of the goal theorem's checker,
+  `AkzeptiertX`, on the lowered program with the lock family `SperrInv.leer`, the elaborated locks and
+  carriers, and the elaborated thread roots (`UProg.roots`). The answer is one of
 
     `accept` / `reject`     -- the pipeline decided and `AkzeptiertX` is `true` / `false`;
     `lex-err`, `parse-err`, `elab-err`, `lower-err` + message
-                            -- the first source-pipeline stage that refused, with its message.
+                            -- the fragment of Track P does not cover the program (the first stage that
+                               refused, with its message): no verdict, never a guess.
 
-  `DifferenzLauf.lean` runs every `*.gab` file in a directory and emits `NAME<TAB>VERDICT`.
+  `DifferenzLauf.lean` is the runner (`main`: every `*.gab` of a directory, `NAME<TAB>VERDICT`); the Rust
+  differential harness (`crates/gabbro-check/tests/differenzial`) runs it over the generated programs and
+  compares it with the Rust checker AND with the exporter route, so the pure-Lean path validates the
+  exporter and the checker from source, and the coverage of the generated space it decides is measured.
 -/
 module
 public import Grammatik.GabbroV.GvZensus
@@ -98,8 +102,8 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
       | some e => wahr? (eval (s.welt []) e (s.welt []) Env.nil)
       | none => (lockAt u L).inv.isNone }
 
-/-- Retain the elaborated lock predicate for verification-condition generation.
-    The correspondence is computed from the same source as the semantic family. -/
+/-- Preserve the source predicate beside its semantic lock family. This
+    correspondence is computed by elaboration; users supply no Lean proof. -/
 def sperrQuellen (u : UProg) : Invarianten.Pruefer.LockSources (sperrFamilie u) := fun lock =>
   match source : sperrInvTerm u lock with
   | some expression => some
@@ -111,6 +115,38 @@ def sperrQuellen (u : UProg) : Invarianten.Pruefer.LockSources (sperrFamilie u) 
         correct := fun world => by
           simp only [sperrFamilie, source]
           cases (lockAt u lock).inv.isNone <;> rfl }
+
+/-- The declaration's finite interface layout is elaborator data, independent
+    of contract truth. Every admitted target is covered, used or unused. -/
+def zeigerSignaturen (u : UProg) : Vertraege.Pruefer.PointerSignatures (declOf u) where
+  count := (sigFns u).length
+  outside := fun f n beyond => by
+    cases tested : (declOf u).passt f n with
+    | false => rfl
+    | true => exact False.elim ((Nat.not_lt_of_ge beyond) (passtAt_lt u f n tested))
+
+/-- With no oracle declarations the source/model correspondence is computed
+    for any (necessarily empty) oracle family. Other families need their
+    actual expression reification, never an assumed locality proof. -/
+def leereAxQuellen (u : UProg) (Q : AxEns (declOf u)) :
+    Option (Vertraege.Pruefer.AxiomSources Q) :=
+  if empty : u.axs.length = 0 then
+    let absent : (declOf u).Ax → False := fun a => by
+      have inside := a.isLt
+      exact Nat.not_lt_zero _ (Nat.lt_of_lt_of_le inside (Nat.le_of_eq empty))
+    some
+      { items := []
+        complete := fun a => False.elim (absent a)
+        resources := fun a => False.elim (absent a)
+        expression := fun a => False.elim (absent a)
+        correct := fun a => False.elim (absent a) }
+  else none
+
+/-- The source exporter supplies the unit's measure. Failed exports cannot
+    reach the image path: lowerAllg and checkImageStartData both refuse them.
+    The empty value keeps this total metadata projection inert on failures. -/
+def massVon (u : UProg) : Mass (declOf u) :=
+  ((Measures.lowerMeasures u).toOption.map (·.mass)).getD Mass.leer
 
 /-- **The checker of the goal theorem on an elaborated unit**: the lowered program, the lock family
     `sperrFamilie`, every lock and every carrier (tables then statics) enumerated, the thread roots of the
@@ -128,12 +164,12 @@ def akzeptiertU (u : UProg) : Except String Bool :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
     match sourceGuests u with
     | .error error => .error error
-    | .ok guests => .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u))
+    | .ok guests => Vertraege.Pruefer.contractVerdict P (sperrFamilie u) fs (sperrQuellen u)
+        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u))
 
 /-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
     in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,
-    einzelnPool, renn, antworten, masken, bibliothek, invariant VCs.
-    For finding which component refuses a program. -/
+    einzelnPool, renn, antworten, masken, bibliothek. For finding which component refuses a program. -/
 def komponenten (u : UProg) : Except String String :=
   match lowerAllg u with
   | .error e => .error e
@@ -147,8 +183,7 @@ def komponenten (u : UProg) : Except String String :=
     let z (b : Bool) : String := if b then "1" else "0"
     .ok (String.join [z (programmImFragmentG P fs), z (abgAlleB P fs), z (fussWXB P S fs ws),
       z (stufenB P fs), z (sperrOrteB S ls), z (wurzelnB ws), z (einzelnPoolB P fs cs ws),
-      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs), z (libraryB P fs),
-      z (Invarianten.Pruefer.invariantVCB P S fs (sperrQuellen u))])
+      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs), z (libraryB P fs)])
 
 /-- The verdict on a source text (see the header). -/
 def verdict (src : String) : String :=

@@ -1,13 +1,5 @@
 /-
-  File:      Grammatik/Gen/Abdeckung/Satz/ZellenVoll.lean
-  Subject:   THEOREM 5 FOR THE WHOLE MODEL, reduced to a finite table. A program of the model is an `Einsatz`: any
-             declaration, any program, lock family, member lists that are complete, and starts. Its cells are
-             `alleZellen`, and every cell lies in the universe `zellAlle` (126 cells, `zellen_im_universum`), so the
-             four conditions of `Vollstaendig` (`Adaequanz/Vollstaendig.lean`) become one obligation PER CELL of the
-             universe: a good cell has a valid test in M or no valid program has it; a bad cell has an isolated test in
-             N or every program that has it also has a bad cell with an isolated test in N (`vollstaendig_aus_tafel`).
-             With that, every conjunctive checker agreeing with the model on M and N agrees with the model's
-             `AkzeptiertX` on every program of the model (`einsatz_hinreichend`).
+  Structural cells, full checker acceptance with explicit verification gates, and coverage of accepted programs by a witness table.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
@@ -127,6 +119,8 @@ structure Einsatz where
   zahlen : Zahlen
   P : Programm D
   S : SperrInv D
+  /-- Source syntax for lock predicates; no contract truth is supplied here. -/
+  lockSources : Invarianten.Pruefer.LockSources S := fun _ => none
   fs : List D.Fn
   ls : List D.Lock
   cs : List (D.Tab ⊕ D.Glob)
@@ -153,22 +147,22 @@ instance (e : Einsatz) (z : Zelle) : Decidable (e.Hat z) := inferInstanceAs (Dec
 
 /-- The Lean model's Bool on a program. -/
 def Einsatz.gueltig (e : Einsatz) : Bool :=
-  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] []
+  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] [] e.lockSources (fun _ => none)
 
 /-- The model's table: a cell is admitted when it is not bad. -/
 def gutTafel (z : Zelle) : Bool := !z.schlecht
 
-/-- The conjunctive verdict of the model's table IS the model's Bool (step 1, `akzeptiertX_zellen`). -/
-theorem einsatz_akzeptiert (e : Einsatz) : akzeptiert Einsatz.Hat gutTafel e ↔ e.gueltig = true := by
+/-- The finite structural cells need both verification gates to characterize
+    full acceptance. Neither gate is determined by the old cell summary. -/
+theorem einsatz_akzeptiert (e : Einsatz) : e.gueltig = true ↔
+    akzeptiert Einsatz.Hat gutTafel e ∧
+      @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs e.lockSources {} e.ls = true ∧
+      @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) = true := by
   letI := e.aufz
   letI := e.zahlen
-  rw [Einsatz.gueltig, akzeptiertX_zellen e.P e.S e.fs e.ls e.cs e.ws [] e.hvoll e.hls e.hcs]
-  constructor
-  · intro h
-    refine ⟨?_, Kernzelle.accumulatorB_leer⟩
-    simpa only [akzeptiert, Einsatz.Hat, Einsatz.zellen, gutTafel, Bool.not_eq_true'] using h
-  · intro h
-    simpa only [akzeptiert, Einsatz.Hat, Einsatz.zellen, gutTafel, Bool.not_eq_true'] using h.1
+  rw [Einsatz.gueltig, akzeptiertX_zellen e.P e.S e.fs e.ls e.cs e.ws [] e.hvoll e.hls e.hcs e.lockSources]
+  simp only [Kernzelle.accumulatorB_leer, true_and, akzeptiert, Einsatz.Hat,
+    Einsatz.zellen, gutTafel, Bool.not_eq_true']
 
 theorem Einsatz.im_universum (e : Einsatz) {z : Zelle} (h : e.Hat z) : z ∈ zellAlle := by
   letI := e.aufz
@@ -191,39 +185,21 @@ structure Tafel (M N : List Einsatz) : Prop where
   schlecht : ∀ z ∈ zellAlle, z.schlecht = true → ∀ e : Einsatz, e.Hat z →
     ∃ n ∈ N, ∀ w, n.Hat w → e.Hat w ∨ ∃ m ∈ M, m.Hat w
 
-/-- **The table gives Theorem 5's condition** over every program of the model. -/
-theorem vollstaendig_aus_tafel {M N : List Einsatz} (t : Tafel M N) : Vollstaendig Einsatz.Hat gutTafel M N where
-  gut_m m hm := (einsatz_akzeptiert m).2 (t.gut_m m hm)
-  gut p z hz hp := by
-    have hzs : z.schlecht = false := by
-      have := hp z hz
-      simpa [gutTafel] using this
-    rcases t.gut z (p.im_universum hz) hzs with h | h
-    · exact h
-    · have := h p hz
-      rw [(einsatz_akzeptiert p).1 hp] at this
-      exact absurd this (by decide)
-  n_schlecht n hn ha := by
-    have := (einsatz_akzeptiert n).1 ha
-    rw [t.n_schlecht n hn] at this
-    cases this
-  schlecht p hp := by
-    have : ∃ z, p.Hat z ∧ z.schlecht = true := by
-      simp only [akzeptiert, not_forall] at hp
-      obtain ⟨z, hz, hf⟩ := hp
-      exact ⟨z, hz, by simpa [gutTafel] using hf⟩
-    obtain ⟨z, hz, hzs⟩ := this
-    exact t.schlecht z (p.im_universum hz) hzs p hz
-
-/-- **Theorem 5 for the whole model.** When the table holds for M and N, every conjunctive checker over the cells
-    that agrees with the model on M and on N agrees with the model's `AkzeptiertX` on EVERY program of the model. -/
-theorem einsatz_hinreichend {M N : List Einsatz} (t : Tafel M N) (φ : Zelle → Bool)
-    (hM : ∀ m ∈ M, akzeptiert Einsatz.Hat φ m ↔ m.gueltig = true)
-    (hN : ∀ n ∈ N, akzeptiert Einsatz.Hat φ n ↔ n.gueltig = true) (e : Einsatz) :
-    akzeptiert Einsatz.Hat φ e ↔ e.gueltig = true := by
-  rw [← einsatz_akzeptiert e]
-  exact vollstaendig_hinreichend Einsatz.Hat (vollstaendig_aus_tafel t) φ
-    (fun m hm => (hM m hm).trans (einsatz_akzeptiert m).symm)
-    (fun n hn => (hN n hn).trans (einsatz_akzeptiert n).symm) e
+/-- Every cell of an accepted program is witnessed in M. This uses only the
+    good-cell part of the table and does not characterize contract refusals. -/
+theorem zellen_deckt {M : List Einsatz}
+    (coverage : ∀ z ∈ zellAlle, z.schlecht = false →
+      (∃ m ∈ M, m.Hat z) ∨ (∀ e : Einsatz, e.Hat z → e.gueltig = false)) (e : Einsatz)
+    (accepted : e.gueltig = true) (z : Zelle) (member : e.Hat z) :
+    ∃ m ∈ M, m.Hat z := by
+  have structural := ((einsatz_akzeptiert e).mp accepted).1
+  have good : z.schlecht = false := by
+    have checked := structural z member
+    simpa only [gutTafel, Bool.not_eq_true'] using checked
+  rcases coverage z (e.im_universum member) good with witness | absent
+  · exact witness
+  · have rejected := absent e member
+    rw [accepted] at rejected
+    cases rejected
 
 end Gabbro.Grammatik.Gen

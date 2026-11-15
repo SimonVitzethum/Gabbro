@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.Pruefer.Witness
+public import Grammatik.Logik.Invarianten.Pruefer.WriterWitness
 
 @[expose] public section
 
@@ -12,7 +12,7 @@ open Frag Zielsatz
 abbrev capability : Ty := .ptr (.table 0 (true, true))
 
 def declaration : Deklaration :=
-  { Witness.declaration with
+  { WriterWitness.declaration with
     count := fun _ => 1
     tabNr := fun n => if n = 0 then some () else none
     anbieter_passt := fun _ item => nomatch item

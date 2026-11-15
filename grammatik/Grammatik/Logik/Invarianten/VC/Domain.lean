@@ -58,7 +58,7 @@ def localDomain (budget : Nat) (τ : Ty) : Except Frag.Refusal (LocalDomain D τ
           { values := [show Wert D (.ptr capability) from ()]
             complete := fun value => by cases value; exact List.mem_cons_self }
       else .error (.unsupported "pointer capability exceeds the VC budget")
-  | _ => .error (.unsupported "local observation needs a bounded integer, Boolean or pointer capability type")
+  | _ => .error (.unsupported "local observation needs a bounded integer or Boolean type")
 
 /-- Piecewise scalar initialization, including the model's narrowing fallback.
     The equality is exact in both arms, so local snapshots retain correlations. -/
@@ -157,7 +157,7 @@ def localEquality (expression : Expr D Γ Λ τ) (locals : Env D Γ) (value : We
   | .ptr _ => .ok ⟨.tru, fun world => by
       change True ↔ (eval world expression world locals : Unit) = (value : Unit)
       exact ⟨fun _ => Subsingleton.elim (α := Unit) _ _, fun _ => trivial⟩⟩
-  | _ => .error (.unsupported "local initializer is outside the supported local fragment")
+  | _ => .error (.unsupported "local initializer is outside the scalar fragment")
 
 /-- Conjoin certified branches. The chosen domain is complete; empty types are
     handled constructively, without assuming the existence of a decoded value. -/

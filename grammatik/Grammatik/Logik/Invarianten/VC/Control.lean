@@ -66,6 +66,28 @@ def Runtime.wpE (runtime : Runtime program checked S)
     (world : World D) (locals : Env D Γ) : Prop :=
   post (execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls code world locals)
 
+/-- A discarded register result changes only the event trace. Both failed
+    decoding and a failed device promise retain their model hardware stops. -/
+theorem registerReadEmpty_sound {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (runtime : Runtime program checked S) (register : D.Reg)
+    (readable : (D.rklasse register).lesbar = true) (world : World D) (locals : Env D Γ)
+    (post : Ausgang V l Γ → Prop)
+    (normal : ∀ next, assignment next = assignment world → post (.ok next locals))
+    (stopped : ∀ error, post (.hardware error)) :
+    runtime.wpB (.regRead register readable (.nil (Λ := Λ))) post world locals := by
+  unfold Runtime.wpB
+  simp only [execBlockH]
+  cases answer : einpassen runtime.oracle.zeiger (D.rtyp register)
+      (runtime.oracle.regLies register (world.fragt (.inr (.inl register)))) with
+  | none => exact stopped _
+  | some value =>
+      dsimp only
+      split
+      · apply normal
+        funext key
+        cases key <;> rfl
+      · exact stopped _
+
 structure Condition {program : Programm D} {checked : D.Fn → List D.Inv}
     (target : Runtime program checked S → World D → Prop) where
   formula : QF (Observation D)

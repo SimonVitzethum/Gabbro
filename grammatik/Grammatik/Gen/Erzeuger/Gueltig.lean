@@ -6,7 +6,8 @@
   Valid  = `AkzeptiertX P S fs ls cs ws = true` (the Bool of the goal theorem's checker with the atomic rely).
   TEN numbered components cover fragment, closedness, footprint, lock ranks, lock sites, roots,
   single-pool, race freedom, answers and masks; `komp c` is component `c`. The complete checker also retains
-  accumulator, reset and invariant/contract admission; canonical interface/library checks and scopes follow below.
+  accumulator, reset, invariant and contract admission; canonical interface/library checks and scopes follow
+  as shown below.
   Refused ONLY BY component `c` = component `c` is false and the other nine are true.
 
   Every `Programm D` is WELL TYPED by construction (the model's terms are intrinsically typed), so
@@ -113,8 +114,8 @@ private theorem scopes_of_components {P : Programm D} {fs : List D.Fn}
     (hcount_anfang (D.signatur f))
 
 /-- The ten numbered components, accumulator admission at the actual query list,
-    reset admission and the invariant VC gate characterize the checker without check or guest
-    descriptors. Canonical interfaces and library binding hold by construction;
+    reset admission and both verification-condition gates characterize the checker
+    without check or guest descriptors. Canonical interfaces and library binding hold by construction;
     the scope gate follows from component 3 rather than becoming a new premise. -/
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
@@ -124,13 +125,15 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     AkzeptiertX P S fs ls cs ws aks [] aqs [] sources = true ↔
       (∀ c, komp P S fs ls cs ws c = true) ∧
         Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks = true ∧
-        resetB cs = true ∧ Invarianten.Pruefer.invariantVCB P S fs sources = true := by
+        resetB cs = true ∧
+        Invarianten.Pruefer.programInvariantsB P S fs sources {} ls = true ∧
+        Vertraege.Pruefer.KontrakteGeprueftB P S fs sources = true := by
   unfold AkzeptiertX
   simp only [GuestBoundary.admissionB_nil, interface_components, libraryB_immer,
     checkB, List.all_nil, eindeutigeNamen, Bool.and_true, Bool.and_eq_true, and_assoc]
   constructor
-  · rintro ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hr, _, hI⟩
-    refine ⟨?_, h10, hr, hI⟩
+  · rintro ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hr, _, hI, hK⟩
+    refine ⟨?_, h10, hr, hI, hK⟩
     intro c
     rcases c with ⟨n, hn⟩
     match n, hn with
@@ -145,9 +148,9 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     | 8, _ => exact h8
     | 9, _ => exact h9
     | n + 10, hn => exact absurd hn (by omega)
-  · rintro ⟨h, h10, hr, hI⟩
+  · rintro ⟨h, h10, hr, hI, hK⟩
     exact ⟨h 0, h 1, h 2, h 3, h 4, h 5, h 6, h 7, h 8, h 9,
-      h10, hr, scopes_of_components (h 3), hI⟩
+      h10, hr, scopes_of_components (h 3), hI, hK⟩
 
 /-- **Refused only by component `c`**: `c` is false, the other nine components are true. -/
 def NurAn (c : Fin 10) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -265,16 +268,18 @@ theorem bad_alle (hvoll : ∀ g : D.Fn, g ∈ fs) {c : Fin 10} (h : Haut D) (hv 
     unfold groesseHaut
     exact le_summe (fun f => groesseEnd (h.rumpf f)) (Aufz.fn_mem f)) hu⟩
 
-/-- After reset and the VC gate pass, structural refusal is complete. -/
+/-- Once the reset and verification gates pass, acceptance is decided by the
+    ten structural components. -/
 theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hr : resetB cs = true)
-    (hI : Invarianten.Pruefer.invariantVCB P S fs = true) :
+    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true)
+    (hK : Vertraege.Pruefer.KontrakteGeprueftB P S fs = true) :
     AkzeptiertX P S fs ls cs ws = true ∨ ∃ c, komp P S fs ls cs ws c = false := by
   by_cases h : AkzeptiertX P S fs ls cs ws = true
   · exact Or.inl h
   · right
     refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2
-      ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr, hI⟩)
+      ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr, hI, hK⟩)
     cases hc : komp P S fs ls cs ws c
     · exact absurd ⟨c, hc⟩ hn
     · rfl

@@ -26,13 +26,14 @@ def observationType : Observation D → Ty
 /-- Only these memory representations can occur in a successful translation. -/
 def ScalarObservation (key : Observation D) : Prop :=
   match observationType key with
-  | .int _ _ | .str _ => True
+  | .int _ _ | .bool | .str _ => True
   | _ => False
 
-/-- Only the integer and string branches are admitted by the translator. The
+/-- Integers, Boolean bits and string lengths are admitted by the translator. The
     remaining branches make the assignment total without accepting those types. -/
 def scalarValue : (τ : Ty) → Wert D τ → Int
   | .int _ _, value => value.n
+  | .bool, value => if wahr? value = true then 1 else 0
   | .str _, value => value.val.length
   | _, _ => 0
 
@@ -59,6 +60,7 @@ def Refusal.message : Refusal → String
   | .invalid detail => detail
   | .unsupported ctorName => "unsupported invariant constructor: " ++ ctorName
   | .within part cause => part ++ ": " ++ cause.message
+  | .invalid detail => detail
 
 /-- Encodings exist for integers, Boolean predicates, and string lengths only. -/
 def Payload (D : Deklaration) : Ty → Type
@@ -145,8 +147,8 @@ def encodeConstant (τ : Ty) (value : Wert D τ) :
         supported := by simp [PayloadSupported, payloadObservations, LTerm.variables] }
   | _, _ => .error (.unsupported "non-scalar local")
 
-/-- The type test is explicit and refuses Boolean memory and every non-linear
-    aggregate representation. Integer fields and string lengths share one variable. -/
+/-- Boolean memory is represented by its exact 0/1 bit. Aggregate values and
+    string contents remain outside this scalar representation. -/
 def encodeObservation (τ : Ty) (key : Observation D) (value : World D → Wert D τ)
     (typed : observationType key = τ)
     (same : ∀ world, assignment world key = scalarValue τ (value world)) :
@@ -162,6 +164,15 @@ def encodeObservation (τ : Ty) (key : Observation D) (value : World D → Wert 
         correct := same
         supported := by
           simp [PayloadSupported, payloadObservations, LTerm.variables, ScalarObservation, typed] }
+  | .bool, value, typed, same => .ok
+      { payload := .eq (.var key) (.konst 1)
+        correct := fun world => by
+          change value world = true ↔ assignment world key = 1
+          rw [same world]
+          cases actual : value world <;> simp [scalarValue, actual, wahr?] <;> rfl
+        supported := by
+          simp [PayloadSupported, payloadObservations, LProp.freeVariables,
+            LTerm.variables, ScalarObservation, typed] }
   | _, _, _, _ => .error (.unsupported "non-integer memory or string contents")
 
 /-- Evaluate a certified constant term without consulting the world. -/

@@ -139,6 +139,12 @@ def Spez.sperreMax (z : Spez) : SperrInv z.deklaration where
   orte := fun L => (z.traegerListe.filter fun c => decide (L ∈ waechterVon c))
   inv := fun _ _ => true
 
+/-- The maximal family's source predicate is `true`, preserved as syntax
+    alongside its semantic meaning rather than discarded by the generator. -/
+def Spez.lockSources (z : Spez) : Invarianten.Pruefer.LockSources z.sperreMax :=
+  fun lock => some (Invarianten.Pruefer.ReifiedLock.ofExpression [] .tru
+    z.sperreMax lock (fun _ => rfl))
+
 /-- The empty lock family. -/
 def Spez.sperreLeer (z : Spez) : SperrInv z.deklaration := SperrInv.leer z.deklaration
 

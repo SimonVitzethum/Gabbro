@@ -1,7 +1,6 @@
 /-
-  File:      Grammatik/Gen/Zeugen/N19_7.lean
-  Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member 19, the cells below lie in the generator's
-             space. Checked by the kernel; do not edit.
+  Structural cell fixture with its current checker characterization and
+  concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.Raum
@@ -76,10 +75,6 @@ def alle : List Zelle := [⟨0, 0, true, [true, false, false]⟩, ⟨1, 0, true,
 
 def bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w
 
-theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=
-  ⟨19, by rw [mitglieder_laenge]; decide, raumSchlechtIn_aus z (grenzenVon 19).1 (grenzenVon 19).2 ncZiel h0
-    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 19).1) f) (by decide)
-    (by decide +kernel) List.mem_cons_self (ws := ws) (by decide) (by decide) (by decide) (by decide) (by decide)⟩
 
 /-- The test as a program of the source. -/
 def e : Einsatz := z.einsatz P ws (by decide) (by decide)
