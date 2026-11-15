@@ -63,10 +63,9 @@ def x104Sp : Speicher x104D :=
   ⟨fun t _ f => match t, f with
     | .Konto, .stand => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
 
-/-- **The checker's Bool holds on the export with the runtime's root.** -/
-theorem gP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
-    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = true :=
-  akzeptiert_mitRuhe x104P x104Fs_voll x104Ls_voll x104Cs_voll gP_akzeptiert (by decide)
+/-- Capability gap: outside the decidable fragment: translated old-memory postconditions. -/
+theorem gP_mitRuhe_abgelehnt :
+    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = false := by decide +kernel
 
 /-- **An admissible start of `gP.mitRuhe`** -- the export itself has none
     (`gP_start_leer`). -/
@@ -94,9 +93,14 @@ theorem probeC_start :
 
 /-! ## 3. The two-thread fixture with its declared starts -/
 
-theorem mP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
-    Akzeptiert mP.mitRuhe mSI.mitRuhe (fsRuhe mFs) [()] mCs (wsRuhe [mHauptA, mHauptB]) = true :=
-  akzeptiert_mitRuhe mP mFs_voll mLocks_voll mCs_voll mP_akzeptiert (by decide)
+def mFragmentIdleSources : Invarianten.Pruefer.LockSources mFragmentS.mitRuhe := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
+/-- The replacement still witnesses admission after adding the runtime root. -/
+theorem mFragment_mitRuhe_akzeptiert :
+    Akzeptiert mFragment.mitRuhe mFragmentS.mitRuhe (fsRuhe mFs) [()] mCs
+      (wsRuhe [mHauptA, mHauptB]) (sources := mFragmentIdleSources) = true := by
+  decide +kernel
 
 /-- **`hauptA` on thread 0, `hauptB` on thread 1, the root everywhere
     else, is admissible on `mP.mitRuhe`.** -/
@@ -120,11 +124,11 @@ theorem mP_mitRuhe_start :
     decide
 
 #print axioms Gabbro.Grammatik.startZulaessig_mitRuhe_P
-#print axioms Gabbro.Grammatik.gP_mitRuhe_akzeptiert
+#print axioms Gabbro.Grammatik.gP_mitRuhe_abgelehnt
 #print axioms Gabbro.Grammatik.gP_mitRuhe_start
 #print axioms Gabbro.Grammatik.probeB_start
 #print axioms Gabbro.Grammatik.probeC_start
-#print axioms Gabbro.Grammatik.mP_mitRuhe_akzeptiert
+#print axioms Gabbro.Grammatik.mFragment_mitRuhe_akzeptiert
 #print axioms Gabbro.Grammatik.mP_mitRuhe_start
 
 end Gabbro.Grammatik

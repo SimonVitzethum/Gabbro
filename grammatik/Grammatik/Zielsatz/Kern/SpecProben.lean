@@ -171,16 +171,32 @@ theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
 /-- The two-thread program as ONE declaration: code `mP`, family `mSI`, trivial axiom
     ensures, declared starts `hauptA`, `hauptB` (no parameters), initial memory `mSp`. -/
 def mE : Einheit mD where
-  P := mP
-  S := mSI
+  P := CheckedMehrfaden.program
+  S := CheckedMehrfaden.family
+  lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]
-  sp0 := mSp
+sp0 := mSp
+axiomSources := some
+  { items := [], complete := fun item => nomatch item
+    resources := fun item => nomatch item
+    expression := fun item => nomatch item
+    correct := fun item => nomatch item }
+pointerSignatures := some
+  { count := 5
+    outside := fun f n outside => by
+      change decide (mSigOf f = n) = false
+      cases f <;> simp only [mSigOf] <;> exact decide_eq_false (by omega) }
+
+/-- The literal-true lock source shared by the probe, pool and linked fixtures. -/
+def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
 
 /-- Probe B as ONE declaration: declared start `haupt`, initial memory `zSp`. -/
 def zEB : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -189,6 +205,7 @@ def zEB : Einheit zD where
 def zEC : Einheit zD where
   P := zPC
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp

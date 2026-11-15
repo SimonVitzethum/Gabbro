@@ -254,23 +254,25 @@ theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []
   unfold initRuhe
   rw [hi]
 
+/-- All semantic duties of the replacement follow from the checked certificates. -/
 theorem mE_nutzerPflicht : NutzerPflicht mE :=
-  ⟨⟨fun passes f => ⟨mP_koerper_alle passes f, mP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
-    ⟨fun L => by cases L; decide, fun a ha => by
+  ⟨⟨fun passes f => ⟨CheckedMehrfaden.bodies passes f, CheckedMehrfaden.invariants passes f,
+      CheckedMehrfaden.reason_invariants passes f⟩, CheckedMehrfaden.family_local,
+      axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
+    ⟨fun _ => rfl, fun a ha => by
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 theorem zweiFaeden_erfuellbar_gilt [RootNativeFloat.Hardware] : zweiFaeden_erfuellbar :=
-  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mP_akzeptiert,
+  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mFragment_akzeptiert,
     mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩,
     speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE rfl⟩
 
 /-- **The runtime's start of `mE` moves memory**: one step of thread 0 (`hauptA`'s first
     statement `privA[0] = 7`) changes the shared memory. -/
 theorem zweiFaeden_bewegt_gilt : zweiFaeden_bewegt := by
-  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
-    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mFragment.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mFragment.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   refine ⟨speicherR mSp, _, 0, M1, laufzeit_initRuhe mE, .schritt _ _ _ .start s1, ?_⟩
@@ -301,7 +303,7 @@ theorem zInvGutGrund {P : Programm zD} {passes : Nat} {Q : AxEns zD} {S : SperrI
 
 theorem zS_lokal : SperrInvLokal zS := fun _ _ _ _ => rfl
 
-theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] = true := by decide
+theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = true := by decide +kernel
 
 theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt] = true := by decide
 
@@ -345,8 +347,8 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
     RufErreichbarG mE.P.mitRuhe mO.mitRuhe 0 (RufStartG mE.P.mitRuhe sp init) M ∧
     M.speicher ≠ sp ∧
     Ziel mE.P.mitRuhe mE.S.mitRuhe mO.mitRuhe 0 (RufStartG mE.P.mitRuhe sp init) M := by
-  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
-    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mFragment.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mFragment.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hL : Laufzeit mE (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]) :=
@@ -359,7 +361,7 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
     decide
   · exact gabbro_ziel_g akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
-      (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true; exact mP_akzeptiert)
+      (by rw [akzeptiert_pruefer_eq]; exact mFragment_akzeptiert)
       mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ 0 _ _ hL M1
       (.schritt _ _ _ .start s1)
 

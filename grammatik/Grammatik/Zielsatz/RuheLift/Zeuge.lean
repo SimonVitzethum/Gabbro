@@ -62,10 +62,10 @@ theorem ruheLift_ziel_zeuge [RootNativeFloat.Hardware] :
       Ziel mE.P.mitRuhe mE.S.mitRuhe mO.mitRuhe 0
         (RufStartG mE.P.mitRuhe (speicherR mE.sp0) (initEin 0 mHauptA .nil)) Me := by
   have hA0 : AkzeptiertSpec mE.P mE.S mFs mE.ws mE.akku :=
-    akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mP_akzeptiert
+    akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mFragment_akzeptiert
   have hC0 : akzeptiert_pruefer.akzeptiert mE mFs [()] mCs = true := by
-    show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true
-    exact mP_akzeptiert
+    rw [akzeptiert_pruefer_eq]
+    exact mFragment_akzeptiert
   have hC : akzeptiert_pruefer.alsX.akzeptiert mE mFs [()] mCs = true :=
     Pruefer.alsX_akzeptiert akzeptiert_pruefer (E := mE) rfl rfl hC0
   obtain ⟨Me, hr, hR, hZ⟩ := ruheLift_ziel akzeptiert_pruefer.alsX mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩

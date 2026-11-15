@@ -53,6 +53,9 @@ theorem bodies (passes : Nat) (f : mD.Fn) : KoerperGutS program passes (axWahr m
 theorem invariants (passes : Nat) (f : mD.Fn) : InvGutS program passes (axWahr mD) family f :=
   invGutS_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => False.elim h)).2.1)
 
+theorem reason_invariants (passes : Nat) (f : mD.Fn) : InvGutGrund program passes (axWahr mD) family f :=
+  invGutGrund_of_A ((duties f passes (axWahr mD) (fun _ => False) (fun _ h => False.elim h)).2.2)
+
 theorem family_local : SperrInvLokal family := fun _ _ _ _ => rfl
 
 end Gabbro.Grammatik.CheckedMehrfaden
