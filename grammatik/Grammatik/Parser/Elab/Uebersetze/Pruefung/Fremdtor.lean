@@ -65,6 +65,10 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
+-- Check the closed source witnesses serially; overlapping kernel decisions
+-- otherwise retain several complete front-end reductions in the same process.
+set_option Elab.async false
+
 /-! ## The foreign-gated units, from source text -/
 
 /-- The infallible foreign gate: the `axiom` body stays foreign, the wrapper
