@@ -51,6 +51,10 @@ set_option Elab.async false
 
 #eval IO.FS.createDirAll "../.scratch-agent"
 
+open Lean Elab Tactic in
+elab "foreign_fallible_progress " label:str : tactic =>
+  liftM (IO.FS.writeFile "../.scratch-agent/foreign-progress" label.getString)
+
 attribute [local irreducible] checkPFremdFallible
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "Fallible.lean:fragment_checked"
@@ -143,28 +147,50 @@ theorem fremdFallible_akzeptiert :
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
   have masks : maskenB checkPFremdFallible (List.finRange uFremdFallible.fns.length) = true :=
     maskenB_ohne (P := checkPFremdFallible) (by
-      simpa only [checkPFremdFallible] using
+      delta checkPFremdFallible
+      exact
         lowered_no_handlers uFremdFallible uFremdFallible_lowered (by kernel_rfl))
+  foreign_fallible_progress "Fallible:split"
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  foreign_fallible_progress "Fallible:and"
   and_intros
-  · exact fragment_checked
-  · exact bounds_checked
-  · exact footprints_checked
-  · exact levels_checked
-  · rfl
-  · rfl
-  · exact pool_checked
-  · exact races_checked
-  · exact answers_checked
-  · exact masks
-  · exact (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
-  · exact libraryB_immer _ _
-  · exact Kernzelle.accumulatorB_leer
-  · exact fremdFallible_checkB
-  · rfl
-  · exact scopes_checked
-  · exact GuestBoundary.admissionB_nil
-  · exact invariants_checked
-  · exact contracts_checked
+  · foreign_fallible_progress "Fallible:1"
+    exact fragment_checked
+  · foreign_fallible_progress "Fallible:2"
+    exact bounds_checked
+  · foreign_fallible_progress "Fallible:3"
+    exact footprints_checked
+  · foreign_fallible_progress "Fallible:4"
+    exact levels_checked
+  · foreign_fallible_progress "Fallible:5"
+    rfl
+  · foreign_fallible_progress "Fallible:6"
+    rfl
+  · foreign_fallible_progress "Fallible:7"
+    exact pool_checked
+  · foreign_fallible_progress "Fallible:8"
+    exact races_checked
+  · foreign_fallible_progress "Fallible:9"
+    exact answers_checked
+  · foreign_fallible_progress "Fallible:10"
+    exact masks
+  · foreign_fallible_progress "Fallible:11"
+    exact (schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _)
+  · foreign_fallible_progress "Fallible:12"
+    exact libraryB_immer _ _
+  · foreign_fallible_progress "Fallible:13"
+    exact Kernzelle.accumulatorB_leer
+  · foreign_fallible_progress "Fallible:14"
+    exact fremdFallible_checkB
+  · foreign_fallible_progress "Fallible:15"
+    rfl
+  · foreign_fallible_progress "Fallible:16"
+    exact scopes_checked
+  · foreign_fallible_progress "Fallible:17"
+    exact GuestBoundary.admissionB_nil
+  · foreign_fallible_progress "Fallible:18"
+    exact invariants_checked
+  · foreign_fallible_progress "Fallible:19"
+    exact contracts_checked
 
 end Gabbro.Grammatik.Parser.Uebersetze
