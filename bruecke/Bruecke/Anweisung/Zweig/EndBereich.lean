@@ -38,21 +38,21 @@ theorem endZiel_narrow_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes 
       ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) (.int (ρ.get v).n)⟩
     have hs : ∀ ρB, Gabbro.Body.step ρB (narrowStep ns x lo hi (.name id) errorBody) s = .running s₁ := by
       intro ρB
-      simp only [narrowStep, Gabbro.Body.step, ht, hb, decide_true, Gabbro.Body.exec, hval]
+      simp only [narrowStep, Gabbro.Body.step, ht, hb, and_self, decide_true, Gabbro.Body.exec, hval]
     have hL₁ := hL.push x (ns.fresh x) (lo, hi) (BodyNames.fresh_not_active hU.valid x) value
     have hr := hRest σl (.cons value ρ) s₁ hWl hL₁
     rw [endZiel_false_iff] at hr ⊢
     refine ⟨fun e he => hr.1 e ?_, fun σ' v' he => ?_, fun σ' r' he => ?_⟩
-    · simp only [execEnd, eval, hb, ↓reduceDIte] at he
+    · simp only [execEnd, eval, hb, and_self, dite_true, ↓reduceDIte] at he
       exact EndAusgang.schrumpf_logik he
-    · simp only [execEnd, eval, hb, ↓reduceDIte] at he
+    · simp only [execEnd, eval, hb, and_self, dite_true, ↓reduceDIte] at he
       obtain ⟨A, hr⟩ := hr.2.1 σ' v' (endSchrumpf_zurueck he)
       exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) (fun w => Int.le_refl _) hr⟩
-    · simp only [execEnd, eval, hb, ↓reduceDIte] at he
+    · simp only [execEnd, eval, hb, and_self, dite_true, ↓reduceDIte] at he
       obtain ⟨A, hr⟩ := hr.2.2 σ' r' (endSchrumpf_why he)
       exact ⟨A, RueckZ_G.vor (fun ρB _ => hs ρB) (fun w => Int.le_refl _) hr⟩
   · apply endZiel_of_G (q := err) (σl := σl) ys
-      (by simp only [execEnd, eval, hb, ↓reduceDIte])
+      (by simp only [execEnd, eval, hb, ↓reduceDIte]; rfl)
       (fun ρB => by simp only [narrowStep, Gabbro.Body.step, ht, hb, decide_false])
       (hErr σl ρ s hWl hL)
 
