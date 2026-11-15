@@ -212,8 +212,6 @@ private def produced2 : { value : EnsTy fullUnit ⟨2, by decide⟩ ×
   refine ⟨?value, ?computed⟩
   case computed => cbv <;> exact Eq.refl _
 
-set_option diagnostics true in
-set_option profiler true in
 private theorem full_phases :
     ∃ items, parseTopTief fullTokens = .ok items ∧
       (∃ expanded, exportLibraryUnit (uMembers (pre108 items)) = .ok expanded ∧
