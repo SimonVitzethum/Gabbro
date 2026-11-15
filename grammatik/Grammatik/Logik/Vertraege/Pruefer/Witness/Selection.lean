@@ -40,7 +40,7 @@ variable {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
 theorem localBranches_valid (items : List (Wert D type))
     (expression : Expr D Γ Λ type) (locals : Env D Γ)
     (target : Wert D type → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Refusal (Condition (target value)))
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value)))
     (premise : Assignment (Observation D) → Prop)
     (valid : ∀ value, ∃ relation head,
       localEquality expression locals value = .ok relation ∧ compile value = .ok head ∧
@@ -65,4 +65,29 @@ theorem localBranches_valid (items : List (Wert D type))
           exact ⟨freshImplication_valid type value relation.val head.formula values
             (hvalid values ready), hvalidTail values ready⟩
 
+/-- Lift the branch certificate through the actual complete typed domain. -/
+theorem localSelect_valid (budget : Nat)
+    (expression : Expr D Γ Λ type) (locals : Env D Γ)
+    (target : Wert D type → Runtime program checked S → World D → Prop)
+    (compile : ∀ value, Except Frag.Refusal (Condition (target value)))
+    (domain : LocalDomain D type) (hdomain : localDomain budget type = .ok domain)
+    (premise : Assignment (Observation D) → Prop)
+    (valid : ∀ value, ∃ relation head,
+      localEquality expression locals value = .ok relation ∧ compile value = .ok head ∧
+      ∀ values, premise values → relation.val.denote values → head.formula.denote values) :
+    ∃ result, localSelect budget expression locals target compile = .ok result ∧
+      ∀ values, premise values → result.formula.denote values := by
+  obtain ⟨pre, hpre, hvalid⟩ := localBranches_valid domain.values expression locals target compile premise valid
+  cases result : localSelect budget expression locals target compile with
+  | error cause =>
+      simp only [localSelect, hdomain, hpre, Except.bind, reduceCtorEq] at result
+  | ok out =>
+      refine ⟨out, result, ?_⟩
+      have shape : out.formula = pre.formula := by
+        simp only [localSelect, hdomain, hpre, Except.bind] at result
+        exact (congrArg Condition.formula (Except.ok.inj result)).symm
+      rw [shape]
+      exact hvalid
+
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness
+
