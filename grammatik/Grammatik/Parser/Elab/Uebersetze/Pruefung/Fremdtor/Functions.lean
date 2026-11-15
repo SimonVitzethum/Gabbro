@@ -63,11 +63,21 @@ private def inf0 : { value : EnsTy uFremd ⟨0, by decide⟩ ×
   refine ⟨?value, ?computed⟩
   case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
+-- The probe's actual two bindings: a true verdict and the reporter result.
+private def infProbe : RumpTy uFremd ⟨1, by decide⟩ :=
+  .bind .tru
+    (.bindCall ⟨2, by decide⟩
+      (.cons (.le (.lit 1) (.lit 2)) (.cons (.var .here) .nil)) rfl
+      { hw := fun t => nomatch t
+        hg := fun g => nomatch g
+        hk := ⟨[], List.Perm.refl [], List.nil_sublist _⟩
+        hh := fun L => nomatch L }
+      rfl (.retScoped (.val (.var .here)) { scopes := [], genau := List.Perm.refl _ }))
+
 private def inf1 : { value : EnsTy uFremd ⟨1, by decide⟩ ×
     RumpTy uFremd ⟨1, by decide⟩ × ReqTy uFremd ⟨1, by decide⟩ //
-    lowerFnAt uFremd ⟨1, by decide⟩ = .ok value } := by
-  refine ⟨?value, ?computed⟩
-  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+    lowerFnAt uFremd ⟨1, by decide⟩ = .ok value } :=
+  ⟨(.tru, infProbe, .tru), by kernel_rfl⟩
 
 private def inf2 : { value : EnsTy uFremd ⟨2, by decide⟩ ×
     RumpTy uFremd ⟨2, by decide⟩ × ReqTy uFremd ⟨2, by decide⟩ //
@@ -102,11 +112,21 @@ private def fall0 : { value : EnsTy uFremdFallible ⟨0, by decide⟩ ×
   refine ⟨?value, ?computed⟩
   case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
+-- The probe's actual two bindings: a true verdict and the reporter result.
+private def fallProbe : RumpTy uFremdFallible ⟨1, by decide⟩ :=
+  .bind .tru
+    (.bindCall ⟨2, by decide⟩
+      (.cons (.le (.lit 1) (.lit 2)) (.cons (.var .here) .nil)) rfl
+      { hw := fun t => nomatch t
+        hg := fun g => nomatch g
+        hk := ⟨[], List.Perm.refl [], List.nil_sublist _⟩
+        hh := fun L => nomatch L }
+      rfl (.retScoped (.val (.var .here)) { scopes := [], genau := List.Perm.refl _ }))
+
 private def fall1 : { value : EnsTy uFremdFallible ⟨1, by decide⟩ ×
     RumpTy uFremdFallible ⟨1, by decide⟩ × ReqTy uFremdFallible ⟨1, by decide⟩ //
-    lowerFnAt uFremdFallible ⟨1, by decide⟩ = .ok value } := by
-  refine ⟨?value, ?computed⟩
-  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+    lowerFnAt uFremdFallible ⟨1, by decide⟩ = .ok value } :=
+  ⟨(.tru, fallProbe, .tru), by kernel_rfl⟩
 
 private def fall2 : { value : EnsTy uFremdFallible ⟨2, by decide⟩ ×
     RumpTy uFremdFallible ⟨2, by decide⟩ × ReqTy uFremdFallible ⟨2, by decide⟩ //
