@@ -23,6 +23,9 @@ def program : Programm mD :=
     invariante := fun _ => localBound
     requires := fun f => match f with
       | .pruefeA => mA7
+      | _ => .tru
+    ensures := fun f => match f with
+      | .hauptA => mA7
       | _ => .tru }
 
 def family : SperrInv mD :=
