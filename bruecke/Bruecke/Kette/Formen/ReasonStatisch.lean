@@ -19,9 +19,9 @@ theorem reasonArms_statisch (S : Getragen u C) (hc : C c) (ρB : Gabbro.Body.Env
         Gabbro.Body.Frame ρB name (writesU gf)) →
       tailZ = tail ∧ tail <:+ ss ∧ (∀ arm ∈ bs, Statisch ρB (writesU (fnAt u c)) arm.2) := by
   intro fuel
-  exact reasonArms_statisch_with ρB fuel
-    (fun m _ k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF =>
-      statischSeq_G S c hc ρB m k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
+  exact reasonArms_statisch_with ρB fuel (by
+    intro m _ k ss _ fn ft ns _ p tail bs tailZ used hΓ hV hm hG hB hF
+    exact statischSeq_G S c hc ρB m k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
     fuel (Nat.le_refl fuel)
 
 end Gabbro.Bruecke
