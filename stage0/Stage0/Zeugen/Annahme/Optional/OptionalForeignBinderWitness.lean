@@ -54,6 +54,80 @@ attribute [local cbv_eval] Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.se
 def text : String :=
   "module optional_binders { reason R { Denied = 9 \"denied\" exhaustive } assume boundary \"foreign fixture contracts\" falsifier boundary_probe; syscall ping() abi linux arch x86_64 number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; syscall value(fd : u64) -> u8 in 0 .. 10 or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; syscall action(fd : u64) or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; impl fn main() -> u8 { let saved = 23; let saved? = ping(); let first? = value(1) else (e) { match e { Denied => { return 9; } } return 0; } if true { let saved? = action(99) else (e) { match e { Denied => { return 11; } } return 0; } return saved; } return first; } }"
 
+-- Cache the checked lexing phase; later proof evaluation need not decode UTF-8 again.
+def textTokens : List Gabbro.Grammatik.Parser.Token :=
+  [.wort "module", .ident "optional_binders", .zeichen "{", .wort "reason",
+  .ident "R", .zeichen "{", .ident "Denied", .zeichen "=",
+  .num 9, .text "denied", .wort "exhaustive", .zeichen "}",
+  .wort "assume", .ident "boundary", .text "foreign fixture contracts", .wort "falsifier",
+  .ident "boundary_probe", .zeichen ";", .wort "syscall", .ident "ping",
+  .zeichen "(", .zeichen ")", .wort "abi", .ident "linux",
+  .wort "arch", .ident "x86_64", .wort "number", .num 39,
+  .wort "regs", .wort "in", .zeichen "{", .zeichen "}",
+  .wort "regs", .wort "out", .zeichen "{", .ident "rax",
+  .zeichen "}", .wort "clobbers", .zeichen "{", .ident "rcx",
+  .zeichen ",", .ident "r11", .zeichen "}", .wort "errors",
+  .zeichen "{", .zeichen "}", .wort "effects", .zeichen "{",
+  .wort "pure", .zeichen "}", .wort "costs", .zeichen "<=",
+  .num 8, .wort "ops", .wort "assume", .ident "boundary",
+  .wort "falsifier", .ident "boundary_probe", .zeichen ";", .wort "syscall",
+  .ident "value", .zeichen "(", .ident "fd", .zeichen ":",
+  .wort "u64", .zeichen ")", .zeichen "->", .wort "u8",
+  .wort "in", .num 0, .zeichen "..", .num 10,
+  .wort "or", .ident "R", .wort "abi", .ident "linux",
+  .wort "arch", .ident "x86_64", .wort "number", .num 3,
+  .wort "regs", .wort "in", .zeichen "{", .ident "rdi",
+  .zeichen "=", .ident "fd", .zeichen "}", .wort "regs",
+  .wort "out", .zeichen "{", .ident "rax", .zeichen "}",
+  .wort "clobbers", .zeichen "{", .ident "rcx", .zeichen ",",
+  .ident "r11", .zeichen "}", .wort "errors", .zeichen "{",
+  .ident "EBADF", .zeichen "=>", .ident "Denied", .zeichen "}",
+  .wort "effects", .zeichen "{", .wort "pure", .zeichen "}",
+  .wort "costs", .zeichen "<=", .num 8, .wort "ops",
+  .wort "assume", .ident "boundary", .wort "falsifier", .ident "boundary_probe",
+  .zeichen ";", .wort "syscall", .ident "action", .zeichen "(",
+  .ident "fd", .zeichen ":", .wort "u64", .zeichen ")",
+  .wort "or", .ident "R", .wort "abi", .ident "linux",
+  .wort "arch", .ident "x86_64", .wort "number", .num 3,
+  .wort "regs", .wort "in", .zeichen "{", .ident "rdi",
+  .zeichen "=", .ident "fd", .zeichen "}", .wort "regs",
+  .wort "out", .zeichen "{", .ident "rax", .zeichen "}",
+  .wort "clobbers", .zeichen "{", .ident "rcx", .zeichen ",",
+  .ident "r11", .zeichen "}", .wort "errors", .zeichen "{",
+  .ident "EBADF", .zeichen "=>", .ident "Denied", .zeichen "}",
+  .wort "effects", .zeichen "{", .wort "pure", .zeichen "}",
+  .wort "costs", .zeichen "<=", .num 8, .wort "ops",
+  .wort "assume", .ident "boundary", .wort "falsifier", .ident "boundary_probe",
+  .zeichen ";", .wort "impl", .wort "fn", .ident "main",
+  .zeichen "(", .zeichen ")", .zeichen "->", .wort "u8",
+  .zeichen "{", .wort "let", .ident "saved", .zeichen "=",
+  .num 23, .zeichen ";", .wort "let", .ident "saved",
+  .zeichen "?", .zeichen "=", .ident "ping", .zeichen "(",
+  .zeichen ")", .zeichen ";", .wort "let", .ident "first",
+  .zeichen "?", .zeichen "=", .ident "value", .zeichen "(",
+  .num 1, .zeichen ")", .wort "else", .zeichen "(",
+  .ident "e", .zeichen ")", .zeichen "{", .wort "match",
+  .ident "e", .zeichen "{", .ident "Denied", .zeichen "=>",
+  .zeichen "{", .wort "return", .num 9, .zeichen ";",
+  .zeichen "}", .zeichen "}", .wort "return", .num 0,
+  .zeichen ";", .zeichen "}", .wort "if", .wort "true",
+  .zeichen "{", .wort "let", .ident "saved", .zeichen "?",
+  .zeichen "=", .ident "action", .zeichen "(", .num 99,
+  .zeichen ")", .wort "else", .zeichen "(", .ident "e",
+  .zeichen ")", .zeichen "{", .wort "match", .ident "e",
+  .zeichen "{", .ident "Denied", .zeichen "=>", .zeichen "{",
+  .wort "return", .num 11, .zeichen ";", .zeichen "}",
+  .zeichen "}", .wort "return", .num 0, .zeichen ";",
+  .zeichen "}", .wort "return", .ident "saved", .zeichen ";",
+  .zeichen "}", .wort "return", .ident "first", .zeichen ";",
+  .zeichen "}", .zeichen "}", .ende]
+
+theorem source_lex_zeuge : Gabbro.Grammatik.Parser.lex text = .ok textTokens := by
+  decide +kernel
+
+attribute [local cbv_opaque] text
+attribute [local cbv_eval] source_lex_zeuge
+
 /-- This is the production source-to-image entry, with all three explicit gates. -/
 def candidate : Except String (Emitted text 256) := emit text 256
 
@@ -93,6 +167,44 @@ theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := outpu
 /-- Also exercise a fallible void binder at end-block level directly from source. -/
 def endText : String :=
   "module optional_void_end { reason R { Denied = 9 \"denied\" exhaustive } assume boundary \"foreign fixture contract\" falsifier boundary_probe; syscall action(fd : u64) or R abi linux arch x86_64 number 3 regs in { rdi = fd } regs out { rax } clobbers { rcx, r11 } errors { EBADF => Denied } effects { pure } costs <= 8 ops assume boundary falsifier boundary_probe; impl fn main() -> u8 { let saved = 23; let saved? = action(99) else (e) { match e { Denied => { return 9; } } return 0; } return saved; } }"
+
+def endTokens : List Gabbro.Grammatik.Parser.Token :=
+  [.wort "module", .ident "optional_void_end", .zeichen "{", .wort "reason",
+  .ident "R", .zeichen "{", .ident "Denied", .zeichen "=",
+  .num 9, .text "denied", .wort "exhaustive", .zeichen "}",
+  .wort "assume", .ident "boundary", .text "foreign fixture contract", .wort "falsifier",
+  .ident "boundary_probe", .zeichen ";", .wort "syscall", .ident "action",
+  .zeichen "(", .ident "fd", .zeichen ":", .wort "u64",
+  .zeichen ")", .wort "or", .ident "R", .wort "abi",
+  .ident "linux", .wort "arch", .ident "x86_64", .wort "number",
+  .num 3, .wort "regs", .wort "in", .zeichen "{",
+  .ident "rdi", .zeichen "=", .ident "fd", .zeichen "}",
+  .wort "regs", .wort "out", .zeichen "{", .ident "rax",
+  .zeichen "}", .wort "clobbers", .zeichen "{", .ident "rcx",
+  .zeichen ",", .ident "r11", .zeichen "}", .wort "errors",
+  .zeichen "{", .ident "EBADF", .zeichen "=>", .ident "Denied",
+  .zeichen "}", .wort "effects", .zeichen "{", .wort "pure",
+  .zeichen "}", .wort "costs", .zeichen "<=", .num 8,
+  .wort "ops", .wort "assume", .ident "boundary", .wort "falsifier",
+  .ident "boundary_probe", .zeichen ";", .wort "impl", .wort "fn",
+  .ident "main", .zeichen "(", .zeichen ")", .zeichen "->",
+  .wort "u8", .zeichen "{", .wort "let", .ident "saved",
+  .zeichen "=", .num 23, .zeichen ";", .wort "let",
+  .ident "saved", .zeichen "?", .zeichen "=", .ident "action",
+  .zeichen "(", .num 99, .zeichen ")", .wort "else",
+  .zeichen "(", .ident "e", .zeichen ")", .zeichen "{",
+  .wort "match", .ident "e", .zeichen "{", .ident "Denied",
+  .zeichen "=>", .zeichen "{", .wort "return", .num 9,
+  .zeichen ";", .zeichen "}", .zeichen "}", .wort "return",
+  .num 0, .zeichen ";", .zeichen "}", .wort "return",
+  .ident "saved", .zeichen ";", .zeichen "}", .zeichen "}",
+  .ende]
+
+theorem end_lex_zeuge : Gabbro.Grammatik.Parser.lex endText = .ok endTokens := by
+  decide +kernel
+
+attribute [local cbv_opaque] endText
+attribute [local cbv_eval] end_lex_zeuge
 
 def endCandidate : Except String (Emitted endText 256) := emit endText 256
 
