@@ -216,14 +216,18 @@ set_option maxHeartbeats 2000000 in
 theorem fremd_akzeptiert :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
-  decide +kernel
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  and_intros
+  all_goals first | exact fremd_checkB | decide +kernel
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem fremdFallible_akzeptiert :
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
-  decide +kernel
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  and_intros
+  all_goals first | exact fremdFallible_checkB | decide +kernel
 
 /-- The admission Props follow from the Bools. -/
 theorem fremd_admission :
