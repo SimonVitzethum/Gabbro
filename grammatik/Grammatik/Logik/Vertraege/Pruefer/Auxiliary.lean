@@ -95,12 +95,22 @@ def checkPointerEnvironment (program : Programm D) (budget : VCBudget)
 
 def checkPointerTarget (program : Programm D) (budget : VCBudget) (f : D.Fn) (n : Nat) :
     Except Frag.Refusal (PLift (∀ target : D.passt f n = true, PtrZielVerfeinert program f n target)) :=
-  if target : D.passt f n = true then do
-    let domain ← environments (D := D) budget.expansion (D.sigNr n).params
-    let checked ← collect domain.values _ (checkPointerEnvironment program budget f n target)
-    return ⟨fun _ => ⟨fun old locals requires => (checked.down locals (domain.complete locals)).1 old requires,
-      fun old next locals value requires ensures =>
-        (checked.down locals (domain.complete locals)).2 old next value requires ensures⟩⟩
+  if target : D.passt f n = true then
+    match required : program.requires f, program.ensures f,
+        (program.ptrVertrag n).pre, returned : (program.ptrVertrag n).post with
+    | .tru, .tru, .tru, .tru =>
+        .ok ⟨fun _ => by
+          constructor
+          · intro old locals _
+            simp only [ReqAmEintritt, required, eval, wahr?]
+          · intro old next locals value _ _
+            simp only [CallContract.postHolds, returned, eval, wahr?]⟩
+    | _, _, _, _ => do
+        let domain ← environments (D := D) budget.expansion (D.sigNr n).params
+        let checked ← collect domain.values _ (checkPointerEnvironment program budget f n target)
+        return ⟨fun _ => ⟨fun old locals requires => (checked.down locals (domain.complete locals)).1 old requires,
+          fun old next locals value requires ensures =>
+            (checked.down locals (domain.complete locals)).2 old next value requires ensures⟩⟩
   else .ok ⟨fun impossible => False.elim (target impossible)⟩
 
 /-- The finite interface table, not a finite observed run, covers all possible

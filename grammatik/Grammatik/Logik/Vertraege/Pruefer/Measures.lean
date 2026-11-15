@@ -76,24 +76,39 @@ theorem massPflicht_of_execution (measure : Mass D) (cycle : D.Fn → D.Fn → B
   rw [same, returned] at valid
   exact valid g rfl
 
-/-- A measure check is a finite family of decideB-backed path VCs. -/
+/-- Unconditional totality also excludes every descent-gate error. This is
+    independent of the measure and does not assume any oracle contract. -/
+theorem massPflicht_of_basic (f : D.Fn) (checked : Basic.EndSafe S (program.rumpf f))
+    (measure : Mass D) (cycle : D.Fn → D.Fn → Bool)
+    (passes : Nat) (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop) :
+    MassPflicht program passes Q S shared measure cycle f := by
+  intro O _ _ _ U _ A _ R _ _ _ world locals _ g _
+  exact Basic.noLogic checked O U A passes
+    (massTor measure (cycle f) (measure.wert f world locals) R) world locals (.abstieg g)
+
+/-- A totality certificate carries the descent duty directly. Other bodies
+    retain the finite family of decideB-backed path VCs. -/
 def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D)))
     (measure : Mass D) (cycle : D.Fn → D.Fn → Bool) (anchor : World D) (f : D.Fn) :
     Except Frag.Refusal (PLift (∀ passes Q shared,
       (∀ carrier, shared carrier → AtomarAusgenommen carrier) →
-      MassPflicht program passes Q S shared measure cycle f)) := do
-  if let some replay := atomicReplay? program f then
-    let domain ← environments (D := D) budget.expansion (D.params f)
-    let invariants ← invariantFormula program (D.invs.filter (schuldet f))
-    let executions ← collect domain.values
-      (fun locals => CheckedEnvironment (S := S)
-        (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) f locals)
-      (fun locals => checkEnvironment program S
-        (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) sources budget hint f invariants locals)
-    return ⟨massPflicht_of_execution measure cycle anchor f
-      (fun locals => executions.down locals (domain.complete locals)) replay.down⟩
-  else .error (.unsupported "decreases body reads atomic memory outside the checked VC fragment")
+      MassPflicht program passes Q S shared measure cycle f)) :=
+  match Basic.ending S sources budget.depth (program.rumpf f) with
+  | some checked => .ok ⟨fun passes Q shared _ =>
+      massPflicht_of_basic f checked.down measure cycle passes Q shared⟩
+  | none => do
+      if let some replay := atomicReplay? program f then
+        let domain ← environments (D := D) budget.expansion (D.params f)
+        let invariants ← invariantFormula program (D.invs.filter (schuldet f))
+        let executions ← collect domain.values
+          (fun locals => CheckedEnvironment (S := S)
+            (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) f locals)
+          (fun locals => checkEnvironment program S
+            (measurePolicy program measure (cycle f) anchor (measure.wert f anchor locals)) sources budget hint f invariants locals)
+        return ⟨massPflicht_of_execution measure cycle anchor f
+          (fun locals => executions.down locals (domain.complete locals)) replay.down⟩
+      else .error (.unsupported "decreases body reads atomic memory outside the checked VC fragment")
 
 /-- Public Bool for the source decreases obligation of one function. -/
 def MassGeprueftB (program : Programm D) (S : SperrInv D) (sources : LockSources S)

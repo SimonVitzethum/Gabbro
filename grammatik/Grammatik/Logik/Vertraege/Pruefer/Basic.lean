@@ -53,6 +53,31 @@ theorem forever_safe (annotation : D.Annahme)
       | logik error => simpa only [reply, StatementResult] using valid
       | _ => trivial
 
+/-- Every finite traversal is total when its annotation is always true and
+    each typed iteration is total, including the final and leave checks. -/
+theorem traverse_safe {τ : Ty}
+    (step : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
+    (invariant : World D → Env D Γ → World D × Bool)
+    (safe : ∀ world locals, StatementResult (step world locals))
+    (truth : ∀ world locals, (invariant world locals).2 = true) :
+    ∀ indices world locals,
+      StatementResult (traverseLauf (l := l) step invariant indices world locals) := by
+  intro indices
+  induction indices with
+  | nil =>
+      intro world locals
+      simp only [traverseLauf, truth, ↓reduceIte, StatementResult]
+  | cons value indices ih =>
+      intro world locals
+      simp only [traverseLauf, truth, Bool.true_eq_false, ↓reduceIte]
+      have valid := safe (invariant world locals).1 (.cons value locals)
+      cases result : step (invariant world locals).1 (.cons value locals) with
+      | ok next env => exact ih next env.tail
+      | next _ next env => exact ih next env.tail
+      | leave _ next env => simp only [truth, ↓reduceIte, StatementResult]
+      | logik error => simpa only [result, StatementResult] using valid
+      | _ => trivial
+
 abbrev StatementSafe (S : SperrInv D) {Λ Λ' : List (Res D)} (code : Stmt D V l Γ Λ Λ') :=
   ∀ O U A passes R world locals,
     StatementResult (execStmtHA S O U A passes R code world locals)
@@ -109,6 +134,11 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
         return ⟨fun O U A passes R world locals =>
           forever_safe annotation _ _ (checked.down O U A passes R)
             (fun _ _ => rfl) passes world locals⟩
+    | .traverse table .tru body => do
+        let checked ← block S sources fuel body
+        return ⟨fun O U A passes R world locals =>
+          traverse_safe _ _ (checked.down O U A passes R)
+            (fun _ _ => rfl) (alleIndizes (D.count table)) world locals⟩
     | .locks lock _ body => do
         let truth ← trivialLock sources lock
         let checked ← block S sources fuel body
