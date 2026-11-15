@@ -19,10 +19,10 @@ abbrev z : Spez := ({
     fns := [0, 0, 0] } : Spez).einzeln
 
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .cons (.call ⟨1, by decide⟩ .nil (by decide) (by decide)) (.ret .empty (List.Perm.refl _))
+  .cons (.call (D := z.deklaration) ⟨1, by decide⟩ .nil (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.ret .empty (List.Perm.refl _))
 
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
-  .cons (.call ⟨2, by decide⟩ .nil (by decide) (by decide)) (.ret .empty (List.Perm.refl _))
+  .cons (.call (D := z.deklaration) ⟨2, by decide⟩ .nil (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.ret .empty (List.Perm.refl _))
 
 def b2 : Rumpf z.deklaration ⟨2, by decide⟩ :=
   .ret .empty (List.Perm.refl _)
@@ -35,7 +35,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨0, by decide⟩] (by decide) (by decide)
+def e : Einsatz := z.einsatz P [⟨0, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨1, 0, true, [false, true, false]⟩]

@@ -32,7 +32,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨0, by decide⟩] (by decide) (by decide)
+def e : Einsatz := z.einsatz P [⟨0, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨8, 0, true, [false, false, false]⟩,

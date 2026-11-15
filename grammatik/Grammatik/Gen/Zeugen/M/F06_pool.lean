@@ -21,7 +21,7 @@ abbrev z : Spez := ({
     sigs := [{ gschreibt := [0, 1] }, { gschreibt := [0] }, {}], fns := [0, 1, 2] } : Spez).einzeln
 
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.glob ⟨1, by decide⟩ (by decide)) (.ret .empty (List.Perm.refl _))
+  .bind (.glob (D := z.deklaration) ⟨1, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.ret .empty (List.Perm.refl _))
 
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
   .ret .empty (List.Perm.refl _)
@@ -37,7 +37,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨0, by decide⟩, ⟨1, by decide⟩, ⟨1, by decide⟩, ⟨2, by decide⟩] (by decide) (by decide)
+def e : Einsatz := z.einsatz P [⟨0, by decide⟩, ⟨1, by decide⟩, ⟨1, by decide⟩, ⟨2, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨6, 1, true, [false, false, false, false]⟩,

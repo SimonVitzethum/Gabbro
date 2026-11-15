@@ -25,10 +25,10 @@ abbrev z : Spez := ({
     fns := [0, 1, 2, 3, 4, 5] } : Spez).einzeln
 
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.glob ⟨0, by decide⟩ (by decide)) (.bind (.glob ⟨4, by decide⟩ (by decide)) (.ret .empty (List.Perm.refl _)))
+  .bind (.glob (D := z.deklaration) ⟨0, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.bind (.glob (D := z.deklaration) ⟨4, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.ret .empty (List.Perm.refl _)))
 
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
-  .bind (.glob ⟨1, by decide⟩ (by decide)) (.bind (.glob ⟨5, by decide⟩ (by decide)) (.ret .empty (List.Perm.refl _)))
+  .bind (.glob (D := z.deklaration) ⟨1, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.bind (.glob (D := z.deklaration) ⟨5, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.ret .empty (List.Perm.refl _)))
 
 def b2 : Rumpf z.deklaration ⟨2, by decide⟩ :=
   .ret .empty (List.Perm.refl _)
@@ -37,7 +37,7 @@ def b3 : Rumpf z.deklaration ⟨3, by decide⟩ :=
   .ret .empty (List.Perm.refl _)
 
 def b4 : Rumpf z.deklaration ⟨4, by decide⟩ :=
-  .cons (.locks ⟨0, by decide⟩ (by decide) (.bind (.glob ⟨5, by decide⟩ (by decide)) (.cons (.call ⟨1, by decide⟩ .nil (by decide) (by decide)) (.nil)))) (.ret .empty (List.Perm.refl _))
+  .cons (.locks (D := z.deklaration) ⟨0, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (.bind (.glob (D := z.deklaration) ⟨5, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.cons (.call (D := z.deklaration) ⟨1, by decide⟩ .nil (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) (.nil)))) (.ret .empty (List.Perm.refl _))
 
 def b5 : Rumpf z.deklaration ⟨5, by decide⟩ :=
   .ret .empty (List.Perm.refl _)
@@ -57,7 +57,7 @@ def P : Programm z.deklaration :=
 
 def e : Einsatz := z.einsatz P
   [⟨0, by decide⟩, ⟨2, by decide⟩, ⟨2, by decide⟩, ⟨3, by decide⟩, ⟨4, by decide⟩]
-  (by decide) (by decide)
+  (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨2, 0, true, [false, true, false, false]⟩,

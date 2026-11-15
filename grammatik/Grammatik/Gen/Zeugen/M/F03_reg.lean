@@ -36,14 +36,14 @@ abbrev z : Spez := ({
 
 /-- The ordinary read supplies the guarded footprint; the register is still read. -/
 def b0 : Rumpf z.deklaration ⟨0, by decide⟩ :=
-  .bind (.slot (⟨0, by decide⟩ : z.deklaration.Tab) (⟨0, by decide⟩ : z.deklaration.Feld ⟨0, by decide⟩) (.lit 0) (by decide))
-    (.cons (.ite .tru (.regRead ⟨0, by decide⟩ (by decide) .nil) .nil)
+  .bind (.slot (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Tab) (⟨0, by decide⟩ : z.deklaration.Feld ⟨0, by decide⟩) (.lit 0) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl))
+    (.cons (.ite .tru (.regRead (D := z.deklaration) ⟨0, by decide⟩ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) .nil) .nil)
       (.ret .empty (List.Perm.refl _)))
 
 /-- A repeated root can write the first guarded carrier; the third stays separate. -/
 def b1 : Rumpf z.deklaration ⟨1, by decide⟩ :=
-  .cons (.locks (⟨0, by decide⟩ : z.deklaration.Lock) (by decide)
-    (.cons (.call ⟨0, by decide⟩ .nil (by decide) (by decide)) .nil))
+  .cons (.locks (D := z.deklaration) (⟨0, by decide⟩ : z.deklaration.Lock) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
+    (.cons (.call (D := z.deklaration) ⟨0, by decide⟩ .nil (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)) .nil))
     (.ret .empty (List.Perm.refl _))
 
 def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
@@ -53,7 +53,7 @@ def r : (f : z.deklaration.Fn) → Rumpf z.deklaration f
 
 def P : Programm z.deklaration := (⟨r, fun _ => false⟩ : Haut z.deklaration).programm
 
-def e : Einsatz := z.einsatz P [⟨1, by decide⟩, ⟨1, by decide⟩] (by decide) (by decide)
+def e : Einsatz := z.einsatz P [⟨1, by decide⟩, ⟨1, by decide⟩] (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl) (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)
 
 def requested : List Zelle := [
   ⟨2, 0, true, [true, false, true, false]⟩,
