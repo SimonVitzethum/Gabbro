@@ -1,5 +1,7 @@
 module
 public import Stage0.IRBild
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.ToString.Basic
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -49,12 +51,14 @@ def text : String :=
 /-- This is the production source-to-image entry, with all three explicit gates. -/
 def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
 theorem accepted_image : emit text 256 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
+
+attribute [local irreducible] output
 
 /-- The exporter retains both payload shapes and optional constructors in the
     exact canonical unit passed into image generation. -/
@@ -88,7 +92,7 @@ def endText : String :=
 
 def endCandidate : Except String (Emitted endText 256) := emit endText 256
 
-theorem end_present : endCandidate.toOption.isSome = true := by decide +kernel
+theorem end_present : endCandidate.toOption.isSome = true := by kernel_rfl
 
 def endOutput : Emitted endText 256 := endCandidate.toOption.get end_present
 
