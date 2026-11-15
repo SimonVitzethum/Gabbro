@@ -43,7 +43,7 @@ set_option maxHeartbeats 2000000
 def text : String :=
   "module optional_probe { axiom ax() -> u8 effects { pure } unfalsifiable \"probe\"; impl fn main() -> u8 { let r? = ax(); return 23; } }"
 
-def parsed := ((lexL text.toList).mapError (fun _ => "lex")).bind parseTopTief
+def parsed := (lexL text.toList).mapError (fun _ => "lex") |>.bind parseTopTief
 
 theorem parsed_present : parsed.toOption.isSome = true := by decide +kernel
 
@@ -53,9 +53,15 @@ def unit := unitCandidate.toOption.get unit_present
 
 theorem caller_present : 0 < unit.fns.length := by decide +kernel
 
+-- Elaborate dependent lowering over symbolic inputs before applying the source fixture.
 def blockCandidate :=
-  lowSeqL (l := false) unit ⟨0, caller_present⟩ [] (fnAt unit ⟨0, caller_present⟩)
-    20 (resOf unit ⟨0, caller_present⟩) [] [.bindOptBeg "r" "ax" []]
+  (fun (u : UProg) (caller : Fin u.fns.length) =>
+    lowSeqL (l := false) u caller [] (fnAt u caller)
+      20 (resOf u caller) [] [.bindOptBeg "r" "ax" []]) unit ⟨0, caller_present⟩
+
+-- Constructor matching must keep the computed source symbolic; the kernel
+-- still checks the complete closed equality below.
+attribute [local irreducible] unit
 
 /-- The actual sequence lowerer constructs the canonical optional axiom block. -/
 theorem optional_constructor :
