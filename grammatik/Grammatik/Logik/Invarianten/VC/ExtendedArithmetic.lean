@@ -38,7 +38,7 @@ private def guardFormula : LProp (Observation declaration) :=
   .lt (.var (.glob false)) (.var (.glob true))
 
 attribute [local irreducible] lower
-attribute [local semireducible] extendedEnd extendedStatement extendedBlock scalarWP Frag.translate
+attribute [local semireducible] extendedEnd extendedStatement extendedBlock
 
 private theorem bounded_formula :
     boundedCompiled.formula = retryFormula (.not guardFormula) 2 := rfl
