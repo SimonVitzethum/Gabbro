@@ -7241,3 +7241,11 @@ compiler switch and a nonempty predicate context whose clause is actually elabor
 list and its exact shape. The tactic normalizes a candidate with Lean Meta, assigns
 the requested output and leaves equality to kernel conversion. Dynamic source
 phase witnesses retain normalized values and all original statements.
+
+`Measures/ClosedLowering.lean` moves `Uebersetze.check_measure_gate` out of the
+private check-witness phases with its statement unchanged. `Uebersetze.closed_lowering`
+combines successful invariant, function, pointer/foreign contract and actual measure
+exports when every source measure clause is absent; no check is bypassed. The
+nonempty implication source is its joint `ExportWitnesses.closed_lowering_zeuge`
+(formerly `implication_lowered`, with the same proposition). Existing exporter
+witnesses use that generic combination without reducing transported G bodies.
