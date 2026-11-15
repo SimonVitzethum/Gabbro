@@ -1,4 +1,7 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
+import all Init.Data.ToString.Basic
+import all Init.Data.Repr
 
 public import Grammatik.Parser.Spec.Expand
 import all Grammatik.Parser.Spec.Walk
@@ -28,6 +31,26 @@ import all Init.Data.String.Slice
 import all Init.Data.String.Pattern.String
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.ToSlice
+
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.Termination
 
 @[expose] public section
 
@@ -202,7 +225,8 @@ end FunctionBlockWitnessData
 /-- The full block equation admits a field narrow with the compiler switch and a real spec clause. -/
 theorem function_block_zeuge :
     (elabFn FunctionBlockWitnessData.context [] [.gives (.call "Ready" [])]
-      FunctionBlockWitnessData.body).toOption.isSome = true := by cbv
+      FunctionBlockWitnessData.body).toOption.isSome = true := by
+  kernel_rfl
 
 private theorem elaboration_from_phases {source : List SItemTief}
     {prepared : List SItemTief × List (STyp × String)} {unit : UProg}
