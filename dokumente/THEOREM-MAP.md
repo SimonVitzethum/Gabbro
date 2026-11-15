@@ -2738,8 +2738,10 @@ every other empty answer type is now REFUSED by the checker, and `nieZurueck` is
 `g1D`: no table, global or lock; `haupt`; axiom `holen() -> ok (0 .. 10) | err` writing
 nothing; register `temp : f64 in 0 .. 1` without device carriers.
 `g1PA` = `if true { let x = holen(); } return;`, `g1PR` = `if true { let t = temp; } return;`,
-both under `ensures false`; both pass the concrete checker (`g1PA_akzeptiert`,
-`g1PR_akzeptiert`), so a refusal is (b)'s.
+both under `ensures false`; the strict contract checker refuses both (`g1PA_abgelehnt`,
+`g1PR_abgelehnt`). `g1PA_counterexample` supplies a concrete returning `err` answer;
+`g1PR_counterexample` supplies the returning raw half-word under its primitive range replies.
+Both runs violate the declared false post independently of the checker refusal.
 
 * **The oracle can answer:** `g1_holen_antwortet` -- for a declared ensures holding at some
   answer, an oracle meets ALL of (c) (`GutO`, `RegLokal`, `AxVertragO`) and its answer to
@@ -2800,7 +2802,7 @@ CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 mi
 `koerperGutS_mitRuhe`, `orakelRu_zurueck`, `g1PA_widerlegt`, `g1PR_widerlegt`: `propext`,
 `Classical.choice`, `Quot.sound`. `einpassen_voll`, `antwortLeer_iff`, `summePasst_voll`,
 `gleitWortPasst_voll`, `g1_holen_antwortet`, `g1_temp_antwortet`, `g1_nicht_leer`: `propext`,
-`Quot.sound`. `g1PA_akzeptiert`, `g1PR_akzeptiert`: `propext`. No `sorry`, no new `axiom`, no
+`Quot.sound`. The current G1 checker statements are refusals, as described above. No `sorry`, no new `axiom`, no
 `native_decide`; the three facts of the decoded `0.5` (`g1HalbW`) are `decide +kernel`
 (kernel evaluation, no native code) -- the elaborator's `rfl` ran out of recursion depth.
 
@@ -7154,11 +7156,12 @@ statements in the source; no build or axiom audit of them is recorded here (the 
 | `GabbroZiel` (definition) | `grammatik/Grammatik/Zielsatz/Kern/Spec/Fremd.lean` | (a) `C.akzeptiert`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag E O`, (c) `HardwareAnnahmenHw O E.Q`, (d) `Laufzeit` give `ZielFX` on every thread machine over GX reachable from the runtime's start. |
 | `gabbro_ziel` | `grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Fremd.lean` | Proof of `GabbroZiel`: the binding inhabits the question-world class (`axVertragOP_of_binding`), the call-site duty answers every reachable question (`relyQ_of_callSite`), then `zielFX_rely`. |
 | `GabbroZielVoll`, `gabbro_ziel_voll` | `grammatik/Grammatik/Zielsatz/Kern/Spec/Teil2.lean`, `.../BeweisAtomar/Voll.lean` | The goal under the unconditional summary premise `HardwareAnnahmen` (the statement of before, text unchanged). |
-| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with `ensures result == 1`; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start -- and: the pre holds at `1` and fails at `0`; `echo` breaks the full summary (`¬ AxVertragO`, so `GabbroZielVoll` does not apply to it); the body duty is false without `g`'s summary; the start's question has a true pre; one GX step of thread 0 runs the software call and reaches a machine with thread 0 at its return, where `gabbro_ziel` gives `ZielFX`. |
+| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with a literal-true function post; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start. The pre holds at `1` and fails at `0`; `echo` breaks the full summary; the separate original result contract `summaryP` needs the summary and is refused outside the foreign-result WP fragment. The start's question has a true pre; one GX step runs the software call and reaches a return, where `gabbro_ziel` gives `ZielFX`. |
 | `CallSiteGoal.call_sites` | `.../CallSite/CallSiteGoalSites.lean` | `CallSitePflicht wE` over every binding, budget and start: the head invariant `Koepfe` (empty stacks; a return, or the call whose arguments meet the pre in every world) holds at every start and is kept by every G and GX step. |
 | `bindAxiom_ende_schritt` | `.../CallSite/CallSiteGoalStep.lean` | Generic: at a head `ende (let x = g(…); rest)` every step of the thread is `endeBindAxiom`; stack, frame function, arguments, entry world and log are kept and the residue is `ende rest` with an answer bound. |
 | `CallSiteGoal.user`, `CallSiteGoal.body_out` | `.../CallSite/CallSiteGoalUser.lean` | `NutzerPflichtA wE`: against every frame-respecting oracle of `AxVertragOP (PreQ wP) wQ` the body returns `1` (the class grants the summary because the pre `1 != 0` holds) or stops at the named hardware outcome of an undecodable answer. |
-| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | With the empty summary in place of `wQ` the body duty is false: an oracle answering `0` is then admitted. |
+| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | The separate `summaryP` with `ensures result == 1` fails its body duty with the empty summary: the frame-respecting oracle `zeroO` returns `0`. The admitted literal-true post makes no summary-necessity claim. |
+| `CallSiteGoal.zero_result_counterexample`, `CallSiteGoal.summaryP_refused` | `.../CallSite/CallSiteGoalUser.lean` | The actual zero-answer run violates `summaryP`'s result post, and the strict contract gate refuses its unsupported foreign-result WP. |
 | `CallSiteGoal.checker` | `.../CallSite/CallSiteGoalFixture.lean` | `akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true`, decided component by component over the one body (`schnittstellenB` through `schnittstellenB_iff`). |
 
 The three C08 blocker modules (`CallSiteConditionalBite`, `CallSiteQuestionBlocker`,
