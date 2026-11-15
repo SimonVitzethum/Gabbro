@@ -2,6 +2,7 @@
    No source parser/kernel execution or compiler build is performed by this fixture. -/
 module
 public import Stage0.Senke.Images.InitialRead
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.InitialProbe
@@ -29,7 +30,7 @@ def sourceUnit : UProg := {
       placement := some ⟨["RECORD"], 64, none, true⟩},
     {name := "EMPTY", ty := .wert (.prod 104 []), init := 0, initK := .product 104 []}] }
 
-theorem initialValid : GabbroV.sp0OkB sourceUnit = true := by decide +kernel
+theorem initialValid : GabbroV.sp0OkB sourceUnit = true := by exact of_decide_eq_true (by kernel_rfl)
 
 def layout : Lay (declOf sourceUnit) := {
   layU sourceUnit (fun _ => none) (Runner.Prog.IMG + 192) with
@@ -60,7 +61,7 @@ def memory : Runner.Mem where
 private theorem loaded : BytesAt memory Runner.Prog.IMG bytes := by
   intro i hi
   refine ⟨rfl, rfl, ?_⟩
-  have size : bytes.length = 432 := by decide +kernel
+  have size : bytes.length = 432 := by exact of_decide_eq_true (by kernel_rfl)
   have address : (BitVec.ofNat 64 (Runner.Prog.IMG + i)).toNat - Runner.Prog.IMG = i := by
     simp only [BitVec.toNat_ofNat]
     change i < bytes.length at hi
@@ -85,8 +86,8 @@ theorem initialWorldBytes_zeuge :
     (initialWorldBytes sourceUnit initialValid layout).length = 216 ∧
     layout.ga ⟨1, by decide⟩ = Runner.Prog.IMG + 256 ∧
     layout.elem ⟨0, by decide⟩ ⟨0, by decide⟩ 1 = Runner.Prog.IMG + 376 := by
-  exact ⟨initialValid, by decide +kernel, by decide +kernel, by decide +kernel,
-    by decide +kernel, by decide +kernel, by decide +kernel⟩
+  exact ⟨initialValid, by exact of_decide_eq_true (by kernel_rfl), by exact of_decide_eq_true (by kernel_rfl), by exact of_decide_eq_true (by kernel_rfl),
+    by exact of_decide_eq_true (by kernel_rfl), by exact of_decide_eq_true (by kernel_rfl), by exact of_decide_eq_true (by kernel_rfl)⟩
 
 /-- Every premise of the single-payload loaded-image theorem holds jointly. The fixture
     has a genuine alignment gap, a nonzero wide record, two full nested-array cells,
@@ -98,12 +99,12 @@ theorem initializedBytes_loaded_zeuge :
     WeltAt memory image.Y (initialWorld sourceUnit initialValid) ∧
     BytesAt memory image.Y.hi (List.replicate (image.Y.sye - image.Y.hi) 0) := by
   have made : startStackBytes image.Ks (FB + FB) (image.args :: image.rootArgs) =
-      some (List.replicate 128 0) := by decide +kernel
+      some (List.replicate 128 0) := by exact of_decide_eq_true (by kernel_rfl)
   have all := image.initializedBytes_loaded initialValid storage made (by decide) (by decide)
-    (by decide +kernel) (by decide +kernel) (by decide +kernel) loaded
-  exact ⟨image.initializedBytes_length initialValid storage (by decide +kernel) (by decide +kernel),
-    image.initializedBytes_take initialValid (by decide +kernel),
-    image.initializedBytes_drop initialValid storage (by decide +kernel) (by decide +kernel), all.2.2⟩
+    (by exact of_decide_eq_true (by kernel_rfl)) (by exact of_decide_eq_true (by kernel_rfl)) (by exact of_decide_eq_true (by kernel_rfl)) loaded
+  exact ⟨image.initializedBytes_length initialValid storage (by exact of_decide_eq_true (by kernel_rfl)) (by exact of_decide_eq_true (by kernel_rfl)),
+    image.initializedBytes_take initialValid (by exact of_decide_eq_true (by kernel_rfl)),
+    image.initializedBytes_drop initialValid storage (by exact of_decide_eq_true (by kernel_rfl)) (by exact of_decide_eq_true (by kernel_rfl)), all.2.2⟩
 
 /-- The high word and the selected sum payload read from the emitted bytes. This
     cannot be satisfied by a zero image or a low-word-only initializer. -/
@@ -112,13 +113,13 @@ theorem initializedBytes_readback_zeuge :
     memory.rd64 (BitVec.ofNat 64 (Runner.Prog.IMG + 320)) = some 37 ∧
     memory.rd64 (BitVec.ofNat 64 (Runner.Prog.IMG + 336)) = some 0 ∧
     memory.rd64 (BitVec.ofNat 64 (Runner.Prog.IMG + 424)) = some 0 := by
-  decide +kernel
+  exact of_decide_eq_true (by kernel_rfl)
 
 /-- The existing source check still refuses an unspecified product initializer.
     No field is silently defaulted to make a world exist. -/
 theorem product_without_initializer_refused_zeuge :
     GabbroV.sp0OkB {sourceUnit with globs := [
       {name := "MISSING", ty := .wert shape, init := 0, initK := .null}]} = false := by
-  decide +kernel
+  exact of_decide_eq_true (by kernel_rfl)
 
 end Gabbro.Stage0.Senke.InitialProbe
