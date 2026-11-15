@@ -16,10 +16,10 @@ def declaration : Deklaration :=
     rang := fun _ => 0
     maskiert := fun _ => false
     braucht := fun _ => []
-    gbraucht := fun name => if name then [] else [.inl ()]
+    gbraucht := fun (name : Bool) => if name then [] else [.inl ()]
     sigNr := fun _ =>
       { params := [], erg := none, gruende := 0, haelt := []
-        schreibt := fun _ => false, gschreibt := fun name => !name
+        schreibt := fun _ => false, gschreibt := fun (name : Bool) => !name
         konsumiert := [], produziert := [] }
     passt_ok := fun _ _ impossible => by cases impossible
     eigner_nie_erzeugt := fun _ _ _ _ impossible => by cases impossible

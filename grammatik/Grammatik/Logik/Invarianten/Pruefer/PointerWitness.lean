@@ -32,7 +32,7 @@ def position {Γ : Ctx} : Expr declaration Γ [] (.index (declaration.count ()))
   .widen (by decide) (by decide) (.lit 0)
 
 def invariant : Expr declaration [] [] .bool :=
-  .eq (.thru (.ptrOf () 0 rfl (true, true)) () rfl () position access) (.lit 0)
+  .eq (.thru (.ptrOf (space := 0) () 0 rfl (true, true)) () rfl () position access) (.lit 0)
 
 abbrev contract := vertragVon declaration ()
 
