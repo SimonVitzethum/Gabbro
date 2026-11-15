@@ -1,7 +1,6 @@
 module
 public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
 public import Grammatik.Zielsatz.Kern.Akzeptiert
-import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -27,12 +26,6 @@ def prog : Programm BD where
 /-- The structural classifier: a conditional loop (`bedingt`); `programm_korrekt` and `programm_vollstaendig`
 say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
-
-set_option pp.deepTerms true in
-set_option pp.maxSteps 1000000 in
-#reduce match Invarianten.Pruefer.checkInvariantVC prog (SperrInv.leer BD) [()] (fun _ => none) with
-  | .ok _ => []
-  | .error cause => cause.message.toList.map Char.toNat
 
 /-- **The core checker accepts the program.** -/
 theorem prog_accepted_zeuge :

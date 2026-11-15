@@ -2,7 +2,6 @@ module
 public import Grammatik.Berechenbarkeit.Storage.GStack.Termination
 public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
 public import Grammatik.Zielsatz.Kern.Akzeptiert
-import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -154,12 +153,6 @@ theorem program_exec_zeuge (O : Orakel FD) (passes : Nat)
   rfl
 
 theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .endet := by decide
-
-set_option pp.deepTerms true in
-set_option pp.maxSteps 1000000 in
-#reduce match Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none) with
-  | .ok _ => []
-  | .error cause => cause.message.toList.map Char.toNat
 
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
