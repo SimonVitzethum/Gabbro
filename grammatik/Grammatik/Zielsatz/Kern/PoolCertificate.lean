@@ -14,6 +14,8 @@ abbrev scalar := Ty.int 0 100
 
 def cell : Observation zD := .slot () () 0
 
+def number (value : Wert zD scalar) : Int := value.n
+
 def domain : LocalDomain zD scalar :=
   (localDomain (D := zD) 128 scalar).toOption.get (by rfl)
 
@@ -26,7 +28,7 @@ theorem post_result (value : Wert zD scalar) :
     postFormula zPB zLies .nil value = .ok (post value) := rfl
 
 theorem post_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (post value).val.denote values ↔ value.n = values cell := by
+    (post value).val.denote values ↔ number value = values cell := by
   exact (lower_denote _ values).trans Iff.rfl
 
 abbrev slotExpr : Expr zD [] zL scalar := .slot () () zIdx zDarf
@@ -35,7 +37,7 @@ def slotRelation (value : Wert zD scalar) :
     { formula : LProp (Observation zD) // ∀ world,
       formula.denote (assignment world) ↔
         eval world (.slot () () zIdx zDarf) world (.nil : Env zD []) = value } :=
-  ⟨.eq (.var cell) (.konst value.n), fun _ =>
+  ⟨.eq (.var cell) (.konst (number value)), fun _ =>
     ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem slotRelation_result (value : Wert zD scalar) :
@@ -47,7 +49,7 @@ theorem slotRelation_result (value : Wert zD scalar) :
     rfl
 
 theorem slotRelation_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (slotRelation value).val.denote values ↔ values cell = value.n := Iff.rfl
+    (slotRelation value).val.denote values ↔ values cell = number value := Iff.rfl
 
 abbrev variableExpr : Expr zD [scalar] zL scalar := .var .here
 
@@ -55,7 +57,7 @@ def varRelation (bound value : Wert zD scalar) :
     { formula : LProp (Observation zD) // ∀ world,
       formula.denote (assignment world) ↔
         eval world variableExpr world (.cons bound .nil) = value } :=
-  ⟨.eq (.konst bound.n) (.konst value.n), fun _ =>
+  ⟨.eq (.konst (number bound)) (.konst (number value)), fun _ =>
     ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
 
 theorem varRelation_result (bound value : Wert zD scalar) :
@@ -65,7 +67,7 @@ theorem varRelation_result (bound value : Wert zD scalar) :
   rfl
 
 theorem varRelation_meaning (bound value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (varRelation bound value).val.denote values ↔ bound.n = value.n := Iff.rfl
+    (varRelation bound value).val.denote values ↔ number bound = number value := Iff.rfl
 
 def invariants : InvariantFormula zPB (zD.invs.filter (schuldet zLies)) :=
   (invariantFormula zPB []).toOption.get (by rfl)
@@ -83,7 +85,7 @@ theorem leaf_result (value : Wert zD scalar) :
     requireCondition (returned value) = .ok (leaf value) := rfl
 
 theorem leaf_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (leaf value).formula.denote values ↔ value.n = values cell := by
+    (leaf value).formula.denote values ↔ number value = values cell := by
   change (conj (post value).val .tru).denote values ↔ _
   rw [conj_denote]
   simp only [QF.denote, and_true]
@@ -99,12 +101,12 @@ def branch (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scala
 /-- The return half of the actual 101-value binder, proved for every selected value. -/
 theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :
     ∃ result, branch sources bound = .ok result ∧
-      ∀ values, values cell = bound.n → result.formula.denote values := by
+      ∀ values, values cell = number bound → result.formula.denote values := by
   with_unfolding_all
     have each (value : Wert zD scalar) :
         ∃ relation head, localEquality variableExpr (.cons bound .nil) value = .ok relation ∧
           requireCondition (program := zPB) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
-          ∀ values, values cell = bound.n → relation.val.denote values → head.formula.denote values := by
+          ∀ values, values cell = number bound → relation.val.denote values → head.formula.denote values := by
       refine ⟨varRelation bound value, leaf value, varRelation_result bound value, leaf_result value, ?_⟩
       intro values ready related
       apply (leaf_meaning value values).mpr
@@ -113,7 +115,7 @@ theorem branch_valid (sources : Invarianten.Pruefer.LockSources zS) (bound : Wer
     obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound .nil)
       (fun value (_ : Runtime zPB (fun _ => []) zS) world => denotes (returned value) world)
       (fun value => requireCondition (returned value)) domain domain_result
-      (fun values => values cell = bound.n) each
+      (fun values => values cell = number bound) each
     cases result : branch sources bound with
     | error cause =>
         delta branch tail at result
