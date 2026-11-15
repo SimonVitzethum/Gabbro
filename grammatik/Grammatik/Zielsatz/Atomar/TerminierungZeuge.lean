@@ -47,7 +47,9 @@ namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik
 
-theorem mX_akzeptiert : akzeptiertX_pruefer.akzeptiert mE mFs [()] mCs = true := by decide
+theorem mX_akzeptiert : akzeptiertX_pruefer.akzeptiert mE mFs [()] mCs = true := by
+  rw [akzeptiertX_pruefer_eq]
+  decide +kernel
 
 theorem mE_nutzerA : NutzerPflichtA mE := nutzerPflichtA_ohne_atomar (fun g => nomatch g) mE_nutzerPflicht
 

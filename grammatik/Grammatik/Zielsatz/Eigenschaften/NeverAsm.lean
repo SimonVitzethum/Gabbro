@@ -1,37 +1,13 @@
 /-
-  File:    Grammatik/Zielsatz/NeverAsm.lean -- `-> never` with an `asm` body that has `out`.
-
-  THE DEFECT (emitter side, Rust only, not touched here). A function declared `-> never`
-  whose body is `asm { … out { result } }` is contradictory: `-> never` lowers to
-  `_Noreturn` (`prototyp_kern`, emit.rs), an `out { result }` operand lowers to
-  `return result;` (the `asm` branch, emit.rs). Together that is not C. The checker
-  accepts it: `S009` (`nie_rueckkehr`, schleifen.rs) returns early on every non-`Block`
-  body (`let FnRumpf::Block(b) = &f.rumpf else { return };`), so an `asm` body is never
-  held against its `-> never` declaration -- phase 2 reports 0 errors.
-
-  THE MODEL SIDE (this file, Lean only). A foreign body is `a : D.Ax` (Syntax.lean); its
-  declared result is `D.aerg a`, and an `out` that delivers a value is an oracle answer
-  that FITS (`einpassenErg`, Semantik.lean). For `D.aerg a = some .never` no raw word
-  fits, for any image (`antwortLeer_never`, EinpassenVoll.lean):
-  * (a) `AxNeverGut` -- the goodness condition: a `never` axiom delivers no out value;
-    proved for every declaration (`axNeverGut_gilt`), and at the oracle
-    (`axiomAntwort_never_keine`);
-  * (b) the call never continues: `execBlock` of such a `bindAxiom` ends in
-    `hardware (annahme a)` (`execBlock_bindAxiom_never`) -- the model error -- never in
-    a `logik` outcome (`bindAxiom_never_kein_logik`, consistent with `KeinLogikHaltG`);
-    progress names the head `nieZurueck` (`kopf_nieZurueck_never`), never `hardware`
-    (`kein_hardware_an_never`, consistent with `FortschrittG`/`fort_dann`).
-  The acceptance side keeps admitting the PURE `-> never` axiom (`stelleOk_never_ax`,
-  the contrast `w1v_bool` in ProbenW1.lean): forbidding the contradictory `out` is the
-  checker's job (proposed sentence below, not implemented here).
-
-  PROPOSED CHECKER SENTENCE (not implemented): a `-> never` function with an `asm` body
-  that names `out { result }` is refused -- `_Noreturn` together with `return result` is
-  not C; whoever reads the assembler's result declares a result type, whoever never
-  returns writes no `out`.
+  A foreign result declared `never` has no fitting oracle answer. Its call
+  cannot continue, and progress classifies its head as the named stop
+  `nieZurueck`. The answer-site rule admits this result type. These semantic
+  statements and their standalone witness are independent of whole-program
+  contract acceptance in the separate G1/W1 probes.
 -/
 module
-public import Grammatik.Zielsatz.Kern.ProbenW1
+
+public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 @[expose] public section
 
@@ -87,7 +63,8 @@ theorem execBlock_bindAxiom_never (O : Orakel D) (passes : Nat)
       (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none :=
     axiomAntwort_never_keine O a (by rw [he, hne]) _ _
-  simp only [execBlock, axiomAntwort, h2]
+  simp only [execBlock, axiomAntwort, Boundary.Check.trivial_requiredB,
+    Bool.false_eq_true, ↓reduceIte, h2]
 
 /-- ... and never in a `logik` outcome: the stop is the foreign code's, not the user's
     logic -- consistent with `KeinLogikHaltG` (ZielOrtGanz.lean). -/
@@ -108,8 +85,7 @@ theorem bindAxiom_never_kein_logik (O : Orakel D) (passes : Nat)
 
 /-! ## 3. Progress names it `nieZurueck`, never `hardware` -/
 
-/-- The acceptance side keeps admitting the PURE `-> never` axiom: it is `StelleOk` by
-    its declaration (the contrast `w1v_bool`, ProbenW1.lean). -/
+/-- The answer-site rule admits a declared `never` result. -/
 theorem stelleOk_never_ax (a : D.Ax) (h : D.aerg a = some .never) :
     StelleOk D (.inl a) :=
   Or.inl h
@@ -141,35 +117,53 @@ theorem kein_hardware_an_never (O : Orakel D) (passes : Nat) (σ : World D) (ρ 
   intro hH
   exact hH.2 (axNeverGut_gilt a h)
 
-/-! ## 4. Witness: the `never` contrast of ProbenW1 -/
+/-! ## 4. A standalone never fixture, independent of unrelated probe contracts -/
 
-/-- The witness declaration `w1vD` (ProbenW1.lean: one axiom `-> never`) meets the
+/-- One inhabited foreign name whose result has no value. -/
+def nvD : Deklaration :=
+  { BudgetZeuge.bD with
+    Ax := Unit
+    aparams := fun _ => []
+    aerg := fun _ => some .never
+    agruende := fun _ => 0
+    axHerkunft := fun _ => none
+    axBeleg := fun _ => none
+    aschreibt := fun _ item => nomatch item
+    agschreibt := fun _ item => nomatch item
+    anbieter := fun item => nomatch item
+    anbieter_passt := fun item => nomatch item }
+
+def nvKopf : Block nvD (vertragVon nvD ()) false [] [] [] :=
+  .bindAxiom (τ := .never) () .nil rfl (fun item => nomatch item) (fun item => nomatch item)
+    (fun item => nomatch item) (fun item => nomatch item) .nil
+
+
+/-- The standalone witness declaration (one axiom `-> never`) meets the
     goodness condition. -/
-theorem nv_zeuge_gut : AxNeverGut w1vD :=
+theorem nv_zeuge_gut : AxNeverGut nvD :=
   axNeverGut_gilt
 
 /-- At the witness axiom no oracle answer fits. -/
-theorem nv_zeuge_kein_out (O : Orakel w1vD) (σ : World w1vD)
-    (ρ : Env w1vD (w1vD.aparams ())) :
-    einpassenErg O.zeiger (w1vD.aerg ()) (O.wirkt () σ ρ).2 = none :=
+theorem nv_zeuge_kein_out (O : Orakel nvD) (σ : World nvD)
+    (ρ : Env nvD (nvD.aparams ())) :
+    einpassenErg O.zeiger (nvD.aerg ()) (O.wirkt () σ ρ).2 = none :=
   axiomAntwort_never_keine O () rfl σ ρ
 
 /-- Non-degeneracy: the witness HAS a `never` axiom, the site is admissible, and no
-    oracle answer to it fits. (That the same code is accepted is `w1v_bool`, and that
-    its head is the named stop `nieZurueck` is `w1v_kopf`, ProbenW1.lean.) -/
+    oracle answer to it fits; both head classifications are proved jointly below. -/
 theorem nv_zeuge_nicht_leer :
-    ∃ a : w1vD.Ax, w1vD.aerg a = some .never ∧ StelleOk w1vD (.inl a) ∧
-      ∀ (O : Orakel w1vD) (σ : World w1vD) (ρ : Env w1vD (w1vD.aparams a)),
-        einpassenErg O.zeiger (w1vD.aerg a) (O.wirkt a σ ρ).2 = none :=
+    ∃ a : nvD.Ax, nvD.aerg a = some .never ∧ StelleOk nvD (.inl a) ∧
+      ∀ (O : Orakel nvD) (σ : World nvD) (ρ : Env nvD (nvD.aparams a)),
+        einpassenErg O.zeiger (nvD.aerg a) (O.wirkt a σ ρ).2 = none :=
   ⟨(), rfl, Or.inl rfl, fun O σ ρ => axiomAntwort_never_keine O () rfl σ ρ⟩
 
 /-- At the witness head both classifications hold together: `nieZurueck` structurally,
     never `hardware`. -/
-theorem nv_zeuge_kopf_benannt (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
-    KopfHalt O passes σ (.nil : Env w1vD []) .nieZurueck w1vKopf ∧
-      ¬ KopfHalt O passes σ (.nil : Env w1vD []) .hardware w1vKopf :=
-  ⟨w1v_kopf O passes σ,
-    kein_hardware_an_never O passes σ (.nil : Env w1vD []) () .nil rfl
+theorem nv_zeuge_kopf_benannt (O : Orakel nvD) (passes : Nat) (σ : World nvD) :
+    KopfHalt O passes σ (.nil : Env nvD []) .nieZurueck nvKopf ∧
+      ¬ KopfHalt O passes σ (.nil : Env nvD []) .hardware nvKopf :=
+  ⟨by rfl,
+    kein_hardware_an_never O passes σ (.nil : Env nvD []) () .nil rfl
       (fun e => nomatch e) (fun e => nomatch e) (fun e => nomatch e) (fun e => nomatch e)
       .nil rfl⟩
 

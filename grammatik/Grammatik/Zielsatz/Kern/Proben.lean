@@ -7,14 +7,14 @@
   meeting them, `E.sp0`, so `havocOk_misch_lokal` inhabits `HavocOk`):
   * `probeA_widerlegt_gilt`      -- probe A (`paP`; `paP_nicht_sperre`: `logik schleife` at 0);
   * `probeA_falsch_inv_nicht`    -- verdict P1: probe A with `invariant false` (`sFalsch`),
-                                    refuted by `StartPflicht.sperren`; the checker ACCEPTS
-                                    that program (`p1_akzeptiert`), so the refusal is (b)'s;
+                                    refuted by `StartPflicht.sperren`; the checker REFUSES
+                                    that program (`p1_abgelehnt`), and the start duty fails too;
   * `unerfuellbar_widerlegt`     -- P1 for the whole class: an unsatisfiable family refutes (b);
   * `start_req_widerlegt`        -- a declared start whose `requires` fails at `E.sp0`;
   * `probeD_widerlegt_gilt`      -- probe D (`fvP false`) at budget 1 (`probeD_nicht`);
   * `probeF1_widerlegt_gilt`     -- verdict F1: a float literal outside its range in front of
                                     every body (`f1P`) ends in `logik bereich` for every
-                                    oracle (`f1_lauf`); the checker ACCEPTS it (`f1_akzeptiert`);
+                                    oracle (`f1_lauf`); the checker REFUSES it (`f1_abgelehnt`);
   * `probeD_wahr_widerlegt_gilt` -- the `forever` variant with invariant `true` (`fwP_nicht`);
   * `tabelle_widerlegt_gilt`     -- the table-invariant breaker `ivPschlecht`.
   Refutations of (a) `AkzeptiertSpec`, for every program:
@@ -95,9 +95,14 @@ theorem probeA_widerlegt_gilt : probeA_widerlegt := by
 theorem probeA_falsch_inv_nicht : probeA_falsch_inv :=
   fun _ _ _ h => Bool.false_ne_true (h.start.sperren ())
 
-/-- The P1 program passes the checker (with `haupt` declared): the refutation above is by
-    (b), not by (a). -/
-theorem p1_akzeptiert : Akzeptiert paP sFalsch zFs [()] [.inl ()] [zHaupt] = true := by decide
+/-- The declared false lock family has explicit source metadata. -/
+def p1Sources : Invarianten.Pruefer.LockSources sFalsch := fun _ => some
+  { resources := [], expression := .fls, correct := fun _ => rfl }
+
+/-- The strengthened gate refuses P1. Its own counterexamples are the false
+    start invariant (`probeA_falsch_inv_nicht`) and local loop stop (`paP_lauf`). -/
+theorem p1_abgelehnt : Akzeptiert paP sFalsch zFs [()] [.inl ()] [zHaupt]
+    (sources := p1Sources) = false := by decide +kernel
 
 /-- **P1, the whole class at once**: no program whatever has an unsatisfiable lock-invariant
     family and meets (b). -/
@@ -151,9 +156,8 @@ theorem probeF1_widerlegt_gilt
   exact (Endblock.execH_ohne S zO _ 0 hwRuf _ hl _ _).trans
     (f1_lauf upper_reply zO 0 hwRuf zHaupt _ _)
 
-/-- The F1 program passes the checker (with `haupt` declared): the refutation above is by
-    (b), not by (a). -/
-theorem f1_akzeptiert : Akzeptiert f1P zS zFs [()] [.inl ()] [zHaupt] = true := by decide
+/-- The gate also refuses F1; `f1_lauf` supplies its own typed range-error counterexample. -/
+theorem f1_abgelehnt : Akzeptiert f1P zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = false := by decide +kernel
 
 theorem probeD_widerlegt_gilt : probeD_widerlegt := by
   rintro ⟨P, S, Q, st, s⟩ hP h
@@ -254,23 +258,25 @@ theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []
   unfold initRuhe
   rw [hi]
 
+/-- All semantic duties of the replacement follow from the checked certificates. -/
 theorem mE_nutzerPflicht : NutzerPflicht mE :=
-  ⟨⟨fun passes f => ⟨mP_koerper_alle passes f, mP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
-    ⟨fun L => by cases L; decide, fun a ha => by
+  ⟨⟨fun passes f => ⟨CheckedMehrfaden.bodies passes f, CheckedMehrfaden.invariants passes f,
+      CheckedMehrfaden.reason_invariants passes f⟩, CheckedMehrfaden.family_local,
+      axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
+    ⟨fun _ => rfl, fun a ha => by
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 theorem zweiFaeden_erfuellbar_gilt [RootNativeFloat.Hardware] : zweiFaeden_erfuellbar :=
-  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mP_akzeptiert,
+  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mFragment_akzeptiert,
     mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩,
     speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE rfl⟩
 
 /-- **The runtime's start of `mE` moves memory**: one step of thread 0 (`hauptA`'s first
     statement `privA[0] = 7`) changes the shared memory. -/
 theorem zweiFaeden_bewegt_gilt : zweiFaeden_bewegt := by
-  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
-    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mFragment.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mFragment.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   refine ⟨speicherR mSp, _, 0, M1, laufzeit_initRuhe mE, .schritt _ _ _ .start s1, ?_⟩
@@ -301,9 +307,23 @@ theorem zInvGutGrund {P : Programm zD} {passes : Nat} {Q : AxEns zD} {S : SperrI
 
 theorem zS_lokal : SperrInvLokal zS := fun _ _ _ _ => rfl
 
-theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] = true := by decide
+theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = true := by
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
-theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt] = true := by decide
+/-- Capability gap: outside the decidable fragment: old-memory posts on the
+    original probe's imported functions. Its replacement keeps the actual read/write. -/
+theorem zPC_abgelehnt : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt]
+    (sources := zPoolSources) = false := by decide +kernel
+
+theorem zPCFragment_akzeptiert : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
+    (sources := zPoolSources) = true := PoolCertificate.c_accepted
+
+theorem zPCFragment_logik : LogikPflicht zPCFragment zS (axWahr zD) := by
+  have duties := Vertraege.Pruefer.KontrakteGeprueftB_sound zFs_voll PoolCertificate.c_contracts_checked
+  refine ⟨fun passes f => ?_, zS_lokal, axEnsLokal_wahr,
+    ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
+  have checked := duties f passes (axWahr zD) (fun _ => False) (fun _ h => False.elim h)
+  exact ⟨koerperGutS_of_A checked.1, invGutS_of_A checked.2.1, invGutGrund_of_A checked.2.2⟩
 
 /-- The start obligation of a `zD` program declaring `haupt` from `zSp` under `zS`. -/
 theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHaupt, .nil⟩])
@@ -323,9 +343,8 @@ theorem probeB_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEB ⟨z
     initRuhe_laeuft zEB rfl⟩
 
 theorem probeC_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
-  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPC_akzeptiert,
-    ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
+  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPCFragment_akzeptiert,
+    ⟨zPCFragment_logik, zStartPflicht zEC rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩, _, _, laufzeit_initRuhe zEC,
     initRuhe_laeuft zEC rfl⟩
 
@@ -345,8 +364,8 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
     RufErreichbarG mE.P.mitRuhe mO.mitRuhe 0 (RufStartG mE.P.mitRuhe sp init) M ∧
     M.speicher ≠ sp ∧
     Ziel mE.P.mitRuhe mE.S.mitRuhe mO.mitRuhe 0 (RufStartG mE.P.mitRuhe sp init) M := by
-  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mP.mitRuhe) (O := mO.mitRuhe) (passes := 0)
-    (M := RufStartG mP.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
+  obtain ⟨M1, s1, hZ1⟩ := w_blatt (P := mFragment.mitRuhe) (O := mO.mitRuhe) (passes := 0)
+    (M := RufStartG mFragment.mitRuhe (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]))
     (f := 0) rfl _ _ _ rfl rfl (fun _ h => nomatch h) _ _
     (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _) ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
   have hL : Laufzeit mE (speicherR mSp) (initRuhe [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]) :=
@@ -359,16 +378,16 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
     decide
   · exact gabbro_ziel_g akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
-      (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true; exact mP_akzeptiert)
+      (by rw [akzeptiert_pruefer_eq]; exact mFragment_akzeptiert)
       mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ 0 _ _ hL M1
       (.schritt _ _ _ .start s1)
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_falsch_inv_nicht
-#print axioms Gabbro.Grammatik.Zielsatz.p1_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.p1_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.probeF1_widerlegt_gilt
-#print axioms Gabbro.Grammatik.Zielsatz.f1_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.f1_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.unerfuellbar_widerlegt
 #print axioms Gabbro.Grammatik.Zielsatz.havocOk_bewohnt
 #print axioms Gabbro.Grammatik.Zielsatz.start_req_widerlegt

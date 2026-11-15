@@ -48,7 +48,7 @@ theorem fadenG_blatt (e0 : Ereignis D) (hO : GutO O) {z : RufFadenG D} {W : Worl
           intro O' R σ hz hw
           rw [hsem]
           apply ZErg.folgt_of_eq
-          simp only [execStmt, axiomAntwort, hw]
+          simp only [execStmt, axiomAntwort, hw, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax

@@ -45,6 +45,7 @@ namespace K109
 def kE : Zielsatz.Einheit kD where
   P := kP
   S := kSI
+  lockFormulas := kSources
   Q := axWahr kD
   starts := [⟨kDistA, .nil⟩, ⟨kDistB, .nil⟩]
   sp0 := kSp

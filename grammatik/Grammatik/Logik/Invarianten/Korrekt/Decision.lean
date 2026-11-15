@@ -67,20 +67,20 @@ theorem closed_congr [DecidableEq α] (bound : List α) (formula : LProp α)
 /-- No semantic precondition is imposed on formulas beyond syntactic closedness. -/
 theorem decideB_true_iff [DecidableEq α] (formula : LProp α)
     (closed : closedUnderB [] formula = true) (values : Assignment α) :
-    decideB formula = true ↔ formula.denote values := by
+    decideB formula closed = true ↔ formula.denote values := by
   unfold decideB
   rw [qf_eval, elimination_denote]
   exact closed_congr [] formula (fun _ => 0) values closed (by simp)
 
 /-- P15: a true result proves the closed formula under every assignment. -/
 theorem decideB_sound [DecidableEq α] (formula : LProp α)
-    (closed : closedUnderB [] formula = true) (accepted : decideB formula = true)
+    (closed : closedUnderB [] formula = true) (accepted : decideB formula closed = true)
     (values : Assignment α) : formula.denote values :=
   (decideB_true_iff formula closed values).mp accepted
 
 /-- P16: false is a proof of falsehood, never an inconclusive QE result. -/
 theorem decideB_complete [DecidableEq α] (formula : LProp α)
-    (closed : closedUnderB [] formula = true) (rejected : decideB formula = false)
+    (closed : closedUnderB [] formula = true) (rejected : decideB formula closed = false)
     (values : Assignment α) : ¬ formula.denote values := by
   intro holds
   have accepted := (decideB_true_iff formula closed values).mpr holds
@@ -89,18 +89,18 @@ theorem decideB_complete [DecidableEq α] (formula : LProp α)
 
 theorem decideB_false_iff [DecidableEq α] (formula : LProp α)
     (closed : closedUnderB [] formula = true) (values : Assignment α) :
-    decideB formula = false ↔ ¬ formula.denote values := by
+    decideB formula closed = false ↔ ¬ formula.denote values := by
   constructor
   · exact fun rejected => decideB_complete formula closed rejected values
   · intro invalid
-    cases h : decideB formula with
+    cases h : decideB formula closed with
     | false => rfl
     | true => exact False.elim (invalid (decideB_sound formula closed h values))
 
 /-- Completeness in the conventional validity-to-acceptance direction as well. -/
 theorem decideB_of_valid [DecidableEq α] (formula : LProp α)
     (closed : closedUnderB [] formula = true) (values : Assignment α)
-    (valid : formula.denote values) : decideB formula = true :=
+    (valid : formula.denote values) : decideB formula closed = true :=
   (decideB_true_iff formula closed values).mpr valid
 
 /-- At the exact engineering budget, both logical answers have their full meaning. -/

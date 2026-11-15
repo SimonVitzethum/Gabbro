@@ -74,7 +74,7 @@ theorem nie_tor_kehrt_nicht_zurueck (a : D.Ax) (h : D.aerg a = some Ty.never)
   simp only [execBlock, axiomAntwort]
   have hleer : ∀ n, einpassenErg O.zeiger (D.aerg a) n = none := by
     intro n; rw [h]; rfl
-  rw [hleer]
+  simp only [hleer, Boundary.Check.trivial_requiredB, Bool.false_eq_true, reduceIte]
 
 /-- **The stop is NAMED.** The head of such a call is the goal theorem's stop
     `nieZurueck` (`KopfHalt`, Zielsatz/Spec.lean) -- the kind `FortschrittG`

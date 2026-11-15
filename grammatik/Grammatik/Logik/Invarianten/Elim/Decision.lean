@@ -113,11 +113,11 @@ def elimination [DecidableEq α] (formula : LProp α) : QF α × Nat :=
     callers should supply their own finite allowance to `decideWithBudget`. -/
 def Budget [DecidableEq α] (formula : LProp α) : Nat := (elimination formula).2
 
-/-- The total Boolean decision on CLOSED formulas. For open syntax, this only
-    evaluates the remaining free variables at zero; use the refusing entry point
-    below whenever closedness is not already guaranteed by construction.
-    `Korrekt.Decision` proves both answers correct under syntactic closedness. -/
-def decideB [DecidableEq α] (formula : LProp α) : Bool :=
+/-- The total Boolean decision requires syntactic closedness. Open input must
+    use `decideWithBudget`, which returns the explicit `freeVariables` refusal.
+    The proof argument has no runtime cost. -/
+def decideB [DecidableEq α] (formula : LProp α)
+    (_closed : closedUnderB [] formula = true) : Bool :=
   (elimination formula).1.eval (fun _ => 0)
 
 /-- Declaration-time resource and closedness refusals are distinct from a false

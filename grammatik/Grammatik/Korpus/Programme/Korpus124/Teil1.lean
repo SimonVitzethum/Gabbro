@@ -121,6 +121,9 @@ theorem kFs_voll : ∀ g : kD.Fn, g ∈ kFs := by
 def kSI : SperrInv kD :=
   ⟨fun _ => [.inl KTab.konto], fun _ s => decide ((s.slots KTab.konto 0 ()).n = (s.slots KTab.konto 1 ()).n)⟩
 
+def kSources : Invarianten.Pruefer.LockSources kSI := fun _ => some
+  { resources := kL, expression := kGleich, correct := fun _ => rfl }
+
 theorem kSI_ok : SperrInvOk kSI := by
   refine ⟨fun L c hc => ?_, fun L s s' h => ?_⟩
   · cases L
@@ -141,9 +144,10 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   · cases t <;> simp only [kCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
   · exact (nomatch g)
 
-/-- **The checker accepts the program** with its declared starts `hauptA`,
-    `hauptB` (`concurrent { hauptA, hauptB }`). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] [] = true := by decide
+/-- Capability gap: outside the decidable fragment: cross-slot lock relations.
+    The concrete correct program retains its source bodies and contracts. -/
+theorem kP_abgelehnt : Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] []
+    (sources := kSources) = false := by decide +kernel
 
 /-! ## 3. The user obligations -/
 

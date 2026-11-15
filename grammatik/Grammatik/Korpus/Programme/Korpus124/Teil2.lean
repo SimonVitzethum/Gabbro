@@ -155,6 +155,7 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 def kE : Zielsatz.Einheit kD where
   P := kP
   S := kSI
+  lockFormulas := kSources
   Q := axWahr kD
   starts := [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩]
   sp0 := kSp
@@ -199,27 +200,20 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ =>
 theorem kO_hw [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen kO kE.Q :=
   ⟨kO_gut, kO_lokal, axVertragO_wahr kO, inferInstance⟩
 
-theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = true := by
+theorem kE_abgelehnt : akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = false := by
   rw [akzeptiert_pruefer_eq]
-  exact kP_akzeptiert
+  exact kP_abgelehnt
 
-/-- **The goal theorem on `beispiele/124`**: for every oracle meeting (c), every
-    budget, every runtime start meeting (d), and every reachable machine of
-    `kP.mitRuhe`, the conclusion `Ziel` holds -- `gabbro_ziel` with the
-    concrete checker. -/
-theorem k124_ziel (O : Orakel kD) (hO : Zielsatz.HardwareAnnahmen O kE.Q) (passes : Nat)
-    (sp : Speicher kD.mitRuhe)
-    (init : Faden → Σ f : kD.mitRuhe.Fn, Env kD.mitRuhe (kD.mitRuhe.params f))
-    (hL : Zielsatz.Laufzeit kE sp init) (M : RufMaschineG kD.mitRuhe)
-    (hM : RufErreichbarG kE.P.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M) :
-    Zielsatz.Ziel kE.P.mitRuhe kE.S.mitRuhe O.mitRuhe passes (RufStartG kE.P.mitRuhe sp init) M :=
-  Zielsatz.gabbro_ziel_g akzeptiert_pruefer kD kE ⟨kFs, kFs_voll⟩ ⟨[()], kLocks_voll⟩ ⟨kCs, kCs_voll⟩
-    kE_akzeptiert kE_nutzerPflicht O hO passes sp init hL M hM
+/-- The preserved program logic does not replace the checker's own decision.
+    Its cross-slot lock relation remains outside the decidable fragment. -/
+theorem k124_korrekt_abgelehnt : Zielsatz.NutzerPflicht kE ∧
+    akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = false :=
+  ⟨kE_nutzerPflicht, kE_abgelehnt⟩
 
 end K124
 
-#print axioms K124.kP_akzeptiert
+#print axioms K124.kP_abgelehnt
 #print axioms K124.kE_nutzerPflicht
-#print axioms K124.k124_ziel
+#print axioms K124.k124_korrekt_abgelehnt
 
 end Gabbro.Grammatik

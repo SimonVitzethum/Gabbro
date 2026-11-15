@@ -42,11 +42,11 @@ theorem akteurA_dannAxiomCallElseOk {D : Deklaration} {P : Programm D} {O : Orak
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -59,7 +59,7 @@ theorem akteurA_dannAxiomCallElseOk {D : Deklaration} {P : Programm D} {O : Orak
   apply ZErg.folgt_of_eq
   rw [semV_dann_cons]
   simp only [execStmt, axiomAntwortSonst, hwk,
-    (show O'.zeiger = O.zeiger from hz), hv]
+    (show O'.zeiger = O.zeiger from hz), hv, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
   rfl
 
 set_option maxHeartbeats 4000000 in
@@ -99,11 +99,11 @@ theorem akteurA_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : O
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this.symm
   have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
     have := congrArg Prod.snd hax
-    simp only [axiomAntwortSonst] at this
+    simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
     exact this
   have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
   rw [← e2] at hfr
@@ -119,7 +119,7 @@ theorem akteurA_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : O
   apply ZErg.folgt_of_eq
   rw [semV_dann_cons]
   simp only [execStmt, axiomAntwortSonst, hwk,
-    (show O'.zeiger = O.zeiger from hz), hv]
+    (show O'.zeiger = O.zeiger from hz), hv, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
   refine Eq.trans ?_ (semV_alsBlock_schrumpf O' passes R err k _ _).symm
   have key : ∀ {τ : Ty} (o : EndAusgang (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ)),
       weiterZ O' passes R (GRest.dann rest k) o.schrumpf.zuAusgang =

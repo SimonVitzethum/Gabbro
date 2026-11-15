@@ -17,9 +17,9 @@
     threads 0 and 1 both run `haupt`, a run in which BOTH instances step (thread 0 unfolds its
     body, thread 1 unfolds its body, thread 0 takes the lock) reaches a machine at which
     `gabbro_ziel` gives every leg of `Ziel`, with the lock held by thread 0.
-  * `pool_abgelehnt` -- REFUSAL. `hauptB` of the two-thread fixture `mP` writes its private
+  * `pool_abgelehnt` -- REFUSAL. `hauptB` of the two-thread replacement `mFragment` writes its private
     table `privB` UNGUARDED. Declared once beside `hauptA` it is accepted
-    (`mP_akzeptiert`); declared TWICE it is refused, and exactly by the pool component: every
+    (`mFragment_akzeptiert`); declared TWICE it is refused, and exactly by the pool component: every
     other component of `Akzeptiert` accepts, `einzelnPoolB` refuses, `hauptB` is not
     pool-safe. That is the write-write race of two `hauptB` instances on `privB`, which the
     race component cannot see (it pairs DIFFERENT routines).
@@ -35,6 +35,8 @@
 module
 public import Grammatik.Zielsatz.Kern.Proben
 public import Grammatik.Zielsatz.Faeden.PoolSym
+public import Grammatik.Logik.Invarianten.Pruefer.Locks
+import all Batteries.Data.Except
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -81,6 +83,7 @@ local instance poolZeugeAxGleich : DecidableEq zD.Ax := inferInstanceAs (Decidab
 def zPool : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -103,8 +106,8 @@ theorem zPool_schreibt : reachB zPB zFs zHaupt zEin = true ∧
     TraegerSchreibt zEin (.inl () : zD.Tab ⊕ zD.Glob) = true := by decide
 
 /-- **The concrete checker accepts the pool.** -/
-theorem zPool_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] = true := by
-  decide
+theorem zPool_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt] (sources := zPoolSources) = true := by
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
 /-- **The checker before fix lane F10 refused it** (`einzelnB`: the starts were not distinct). -/
 theorem zPool_vor_abgelehnt :
@@ -205,25 +208,28 @@ theorem pool_ziel_zeuge [RootNativeFloat.Hardware] : ∃ M1 M2 M3 : RufMaschineG
     component passes, and the race component pairs only DIFFERENT routines, so it passes too.
     `einzelnPoolB` refuses: two `hauptB` threads race on `privB`. -/
 theorem pool_abgelehnt :
-    Akzeptiert mP mSI mFs [()] mCs [mHauptB, mHauptB] = false ∧
-    (programmImFragmentG mP mFs && abgAlleB mP mFs && fussWB mP mSI mFs [mHauptB, mHauptB] &&
-      stufenB mP mFs && sperrOrteB mSI [()] && wurzelnB [mHauptB, mHauptB] &&
-      rennB mP mFs mCs [mHauptB, mHauptB] && antwortenB mP mFs) = true ∧
-    einzelnPoolB mP mFs mCs [mHauptB, mHauptB] = false ∧
-    ¬ PoolSicherW mP mFs mHauptB := by
-  refine ⟨by decide, by decide, by decide, fun h => ?_⟩
+    Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptB, mHauptB] (sources := CheckedMehrfaden.sources) = false ∧
+    (programmImFragmentG mFragment mFs && abgAlleB mFragment mFs && fussWB mFragment mFragmentS mFs [mHauptB, mHauptB] &&
+      stufenB mFragment mFs && sperrOrteB mFragmentS [()] && wurzelnB [mHauptB, mHauptB] &&
+      rennB mFragment mFs mCs [mHauptB, mHauptB] && antwortenB mFragment mFs &&
+      Invarianten.Pruefer.invariantVCB mFragment mFragmentS mFs CheckedMehrfaden.sources {}
+        (fun _ => none) [()]) = true ∧
+    einzelnPoolB mFragment mFs mCs [mHauptB, mHauptB] = false ∧
+    ¬ PoolSicherW mFragment mFs mHauptB := by
+  refine ⟨by decide, Bool.and_eq_true_iff.mpr
+    ⟨by decide, (Bool.and_eq_true_iff.mp mFragment_akzeptiert).2⟩, by decide, fun h => ?_⟩
   have e := (poolSicherWB_iff mFs_voll mCs_voll).mpr h
   revert e
   decide
 
 /-- The same routine declared ONCE beside another is accepted: the refusal is about the
     second instance, not about `hauptB`. -/
-theorem pool_abgelehnt_einmal_ok : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true :=
-  mP_akzeptiert
+theorem pool_abgelehnt_einmal_ok : Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB] (sources := CheckedMehrfaden.sources) = true :=
+  mFragment_akzeptiert
 
 /-- The refusal at the specification: no `AkzeptiertSpec` for the doubled `hauptB`. -/
 theorem pool_abgelehnt_spec {A : List (Kernzelle.AccumulatorDecl mD)} :
-    ¬ AkzeptiertSpec mP mSI mFs [mHauptB, mHauptB] A := fun h =>
+    ¬ AkzeptiertSpec mFragment mFragmentS mFs [mHauptB, mHauptB] A := fun h =>
   absurd (h.einzeln mHauptB (List.Sublist.refl _)) pool_abgelehnt.2.2.2
 
 /-- **The footprint component pairs OCCURRENCES** (fix lane F10, `Getrennt` with
@@ -234,9 +240,9 @@ theorem pool_abgelehnt_spec {A : List (Kernzelle.AccumulatorDecl mD)} :
     paired thread indices; `pool_fussabdruck_paart_vorkommen` in
     `crates/gabbro-check/tests/fusswache2.rs` is their surface probe.) -/
 theorem pool_fuss_paart_vorkommen :
-    fussWB mP mSI mFs [mHauptA, mHauptA] = false ∧
-    fussWBVor mP mSI mFs [mHauptA, mHauptA] = true ∧
-    fussWB mP mSI mFs [mHauptA, mHauptB] = true := by
+    fussWB mFragment mFragmentS mFs [mHauptA, mHauptA] = false ∧
+    fussWBVor mFragment mFragmentS mFs [mHauptA, mHauptA] = true ∧
+    fussWB mFragment mFragmentS mFs [mHauptA, mHauptB] = true := by
   decide
 
 /-! ## 4. The lane-245 lemmas on complete member lists (review G06 F4) -/
@@ -246,13 +252,13 @@ theorem pool_fuss_paart_vorkommen :
     not atomic, and `hauptA` -- outside `pruefeA`'s graph -- writes it: the lemma's conclusion
     is not a property of the carrier (the program writes it) but of the graph. -/
 theorem pool_schreibt_nicht_voll :
-    PoolSicherW mP mFs mPruefeA ∧
+    PoolSicherW mFragment mFs mPruefeA ∧
     (∀ L, ¬ Bewacht (.inl MTab.privA : mD.Tab ⊕ mD.Glob) L) ∧
     ¬ AtomarAusgenommen (.inl MTab.privA : mD.Tab ⊕ mD.Glob) ∧
     TraegerSchreibt mHauptA (.inl MTab.privA : mD.Tab ⊕ mD.Glob) = true ∧
-    ∀ g, reachB mP mFs mPruefeA g = true →
+    ∀ g, reachB mFragment mFs mPruefeA g = true →
       TraegerSchreibt g (.inl MTab.privA : mD.Tab ⊕ mD.Glob) = false := by
-  have hpool : PoolSicherW mP mFs mPruefeA := (poolSicherWB_iff mFs_voll mCs_voll).mp (by decide)
+  have hpool : PoolSicherW mFragment mFs mPruefeA := (poolSicherWB_iff mFs_voll mCs_voll).mp (by decide)
   have hB : ∀ L, ¬ Bewacht (.inl MTab.privA : mD.Tab ⊕ mD.Glob) L := fun L h => by
     have e := waechterVon_mem.mpr h
     have hw : waechterVon (D := mD) (.inl MTab.privA) = [] := rfl
@@ -270,8 +276,8 @@ theorem pool_schreibt_nicht_voll :
 theorem einzelnPoolB_iff_zeuge :
     (einzelnPoolB zPB zFs [.inl ()] [zHaupt, zHaupt] = true ∧
       EinzelnPool zPB zFs [zHaupt, zHaupt]) ∧
-    (einzelnPoolB mP mFs mCs [mHauptB, mHauptB] = false ∧
-      ¬ EinzelnPool mP mFs [mHauptB, mHauptB]) := by
+    (einzelnPoolB mFragment mFs mCs [mHauptB, mHauptB] = false ∧
+      ¬ EinzelnPool mFragment mFs [mHauptB, mHauptB]) := by
   refine ⟨⟨by decide, (einzelnPoolB_iff zFs_voll zCs_voll).mp (by decide)⟩, ⟨by decide, ?_⟩⟩
   intro h
   have e := (einzelnPoolB_iff mFs_voll mCs_voll).mpr h

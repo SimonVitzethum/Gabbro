@@ -1,12 +1,6 @@
 /-
-  File:      Grammatik/Gen/Zeugen/N/N47_P.lean
-  Subject:   HAND-WRITTEN witness of member 47 for the fragment cell [true, true, true] (an indirect call
-             through a type a function fits, whose contract carrier lies outside the caller's footprint).
-             It replaces the generated `N47_20`, whose program (a `requires` on the function whose own
-             pointer type is called) cannot be written in source text since pointer types carry contracts.
-             Here `fn0` ensures the static `g1` and `fn1` calls through `&fn1` and `&fn0`; the source
-             text `PText` calls through `&fn1` alone and has the same cells, because the front end admits
-             `fn0` as a value of the pointer type of `fn1`. Checked by the kernel.
+  Structural cell fixture with its current checker characterization and
+  concrete cell occurrences. Generated-space completeness is not asserted.
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.Raum
@@ -99,16 +93,12 @@ def alle : List Zelle := e.zellen
 
 def bnoetig : List Zelle := alle.filter fun w => w.schlecht || !erreicht.contains w
 
-theorem zellen : RaumSchlecht ncZiel erreicht bnoetig :=
-  ⟨47, by rw [mitglieder_laenge]; decide, raumSchlechtIn_aus z (grenzenVon 47).1 (grenzenVon 47).2 ncZiel h0
-    (fun f => (by decide +kernel : ∀ f : Fin z.fns.length, @groesseEnd z.deklaration z.zahlen _ _ _ _ (h0.rumpf f) ≤ (grenzenVon 47).1) f) (by decide)
-    (by decide +kernel) (vertragsL_ens z ncZiel h0 fv ve ve_klein ve_endlich) (ws := ws) (by decide) (by decide) (by decide +kernel) (by decide +kernel) (by decide +kernel)⟩
 
-theorem e_gueltig : e.gueltig = false := by decide +kernel
+theorem e_gueltig : e.gueltig = false := by decide
 
-theorem e_gedeckt : gedeckt erreicht bnoetig e.zellen = true := by decide +kernel
+theorem e_gedeckt : gedeckt erreicht bnoetig e.zellen = true := by decide
 
 /-- The only cell the witness is needed for. -/
-theorem bnoetig_zelle : ∀ w ∈ bnoetig, w = ⟨0, 0, true, [true, true, true]⟩ := by decide +kernel
+theorem bnoetig_zelle : ∀ w ∈ bnoetig, w = ⟨0, 0, true, [true, true, true]⟩ := by decide
 
 end Gabbro.Grammatik.Gen.Zeugen.N47_P

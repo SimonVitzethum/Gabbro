@@ -66,7 +66,8 @@ theorem decideInvariant_at_budget (carriers : List (D.Tab ⊕ D.Glob))
     (translated : uebersetzeB carriers expression = .ok formula) (allowance : Option Nat)
     (enough : Budget (closedInvariant formula) ≤
       allowance.getD (Budget (closedInvariant formula))) :
-    decideInvariant carriers expression allowance = .ok (decideB (closedInvariant formula)) := by
+    decideInvariant carriers expression allowance =
+      .ok (decideB (closedInvariant formula) (closedInvariant_closed formula)) := by
   have computed := budget_sufficient (closedInvariant formula) _
     (closedInvariant_closed formula) enough
   simp only [decideInvariant, translated, enough, ↓reduceIte, computed]
@@ -75,7 +76,8 @@ theorem decideInvariant_at_budget (carriers : List (D.Tab ⊕ D.Glob))
 theorem decideInvariant_total (carriers : List (D.Tab ⊕ D.Glob))
     (expression : Expr D [] Λ .bool) (formula : LProp (Observation D))
     (translated : uebersetzeB carriers expression = .ok formula) :
-    decideInvariant carriers expression = .ok (decideB (closedInvariant formula)) :=
+    decideInvariant carriers expression =
+      .ok (decideB (closedInvariant formula) (closedInvariant_closed formula)) :=
   decideInvariant_at_budget carriers expression formula translated none
     (by simp only [Option.getD_none, Nat.le_refl])
 
@@ -92,7 +94,7 @@ private theorem decideInvariant_result (carriers : List (D.Tab ⊕ D.Glob))
     (expression : Expr D [] Λ .bool) (allowance : Option Nat) (answer : Bool)
     (success : decideInvariant carriers expression allowance = .ok answer) :
     ∃ formula : LProp (Observation D), uebersetzeB carriers expression = .ok formula ∧
-      decideB (closedInvariant formula) = answer := by
+      decideB (closedInvariant formula) (closedInvariant_closed formula) = answer := by
   cases translated : uebersetzeB carriers expression with
   | error cause => simp [decideInvariant, translated] at success
   | ok formula =>
@@ -157,7 +159,7 @@ theorem decideInvariant_true_iff (base : World D) (carriers : List (D.Tab ⊕ D.
     exact decideInvariant_sound carriers expression none accepted world
   · intro valid
     have total := decideInvariant_total carriers expression formula translated
-    cases computed : decideB (closedInvariant formula) with
+    cases computed : decideB (closedInvariant formula) (closedInvariant_closed formula) with
     | true => exact total.trans (congrArg Except.ok computed)
     | false =>
         have rejected : decideInvariant carriers expression = .ok false := by
@@ -179,7 +181,7 @@ theorem decideInvariant_false_iff (base : World D) (carriers : List (D.Tab ⊕ D
     exact ⟨world, invalid⟩
   · rintro ⟨world, invalid⟩
     have total := decideInvariant_total carriers expression formula translated
-    cases computed : decideB (closedInvariant formula) with
+    cases computed : decideB (closedInvariant formula) (closedInvariant_closed formula) with
     | false => exact total.trans (congrArg Except.ok computed)
     | true =>
         have accepted : decideInvariant carriers expression = .ok true := by

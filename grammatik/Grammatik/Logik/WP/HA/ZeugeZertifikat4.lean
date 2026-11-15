@@ -202,6 +202,19 @@ def gE : Zielsatz.Einheit gD where
   Q := fun _ _ _ => true
   starts := []
   sp0 := gSp0
+  axiomSources := some
+    { items := [GAx.write]
+      complete := fun item => by cases item <;> decide
+      resources := fun _ => []
+      expression := fun _ => .tru
+      correct := fun _ _ _ => rfl }
+  pointerSignatures := some
+    { count := 1
+      outside := fun f n outside => by
+        cases f
+        · change decide (0 = n) = false
+          exact decide_eq_false (by omega) }
+
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --
@@ -244,7 +257,9 @@ theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
 -- goal theorem (`akzeptiertX_pruefer`, the Bool `AkzeptiertX`) accepts
 -- this program on these lists. Where it does not, this `decide` fails --
 -- loudly, not wrongly.
-theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by decide
+theorem gCheck : Zielsatz.akzeptiertX_pruefer.akzeptiert gE gFs gLs gCs = true := by
+  rw [Zielsatz.akzeptiertX_pruefer_eq]
+  decide +kernel
 
 -- THE CLOSING THEOREM: the conclusion of `GabbroZiel` for this program on
 -- every run of machine GX with every thread live (`gabbro_ziel_gx`). The

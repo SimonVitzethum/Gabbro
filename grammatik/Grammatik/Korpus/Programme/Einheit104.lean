@@ -3,8 +3,9 @@
   Subject:   `beispiele/0104-referenz.gab` as the goal theorem's UNIT, through the generic
              Lean pipeline: the real source text (`src104real`, byte-identical to the
              file) is parsed, elaborated and lowered (`uebersetzeAllg`), the program is
-             an `Einheit`, the checker's Bool accepts it by `decide`, and the user's logic
-             `NutzerPflicht` is proved for the parsed bodies at every budget.
+             an `Einheit`, and the user's logic `NutzerPflicht` is proved for the parsed
+             bodies at every budget. The strict checker refuses its old-memory
+             postcondition as outside the decidable fragment.
 
   (Until 2026-10-18 this was `Kette104.lean` + `Kette104Satz.lean`, the 104 instance of the
   C correspondence chain; the chain -- emitter layout, correspondence certificate, closing
@@ -14,6 +15,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
@@ -59,7 +61,6 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 @[expose] public section
-
 
 namespace Gabbro.Grammatik.Einheit104
 
@@ -254,50 +255,6 @@ theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
     rw [ptrPost4]
     exact hv
 
-/-- A finite view of the actual image, proved from its projections. Checker
-    computation over this view never replays the dependent whole-unit lowering. -/
-private theorem image4_eq : P4 = {
-    invariante := fun i => Fin.elim0 i
-    requires := fun _ => .tru
-    ensures := Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
-    rumpf := Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim))
-    unterbricht := fun _ => false
-    ptrVertrag := ptrVertragOf uExp104
-    axVertrag := fun a => Fin.elim0 a } := by
-  have inv : P4.invariante = fun i => Fin.elim0 i := by funext i; exact Fin.elim0 i
-  have req : P4.requires = fun _ => .tru := funext req4
-  have post : P4.ensures = Fin.cases ensEin4 (Fin.cases ensLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
-    funext f
-    rcases fn_zwei f with rfl | rfl
-    · exact ens_ein4
-    · exact ens_lies4
-  have body : P4.rumpf = Fin.cases bodyEin4 (Fin.cases bodyLies4 (fun i => (Nat.not_lt_zero _ i.isLt).elim)) := by
-    funext f
-    rcases fn_zwei f with rfl | rfl
-    · exact rumpf_ein4
-    · exact rumpf_lies4
-  have dispatch : P4.unterbricht = fun _ => false := by
-    have assembled := low4
-    unfold lowerAllg at assembled
-    split at assembled
-    · cases assembled
-    · split at assembled
-      · cases assembled
-      · split at assembled
-        · obtain ⟨same, _⟩ := Measures.checkedProgram_eq assembled
-          rw [same]
-          rfl
-        · cases assembled
-  have ptr : P4.ptrVertrag = ptrVertragOf uExp104 := funext assembly4.2
-  have ax : P4.axVertrag = fun a => Fin.elim0 a := by funext a; exact Fin.elim0 a
-  -- Decompose the opaque compiler result once; its fields are fixed by the projections.
-  revert inv req post body dispatch ptr ax
-  generalize P4 = P
-  cases P
-  intro inv req post body dispatch ptr ax
-  subst inv req post body dispatch ptr ax
-  rfl
-
 /-! ## 3. The enumerations of the declaration's members -/
 
 def fsA : Aufzaehlung D4.Fn := ⟨[ein4, lies4], fun f => by
@@ -324,22 +281,45 @@ def sp4 : Speicher D4 where
     exact (⟨0, by decide, by decide⟩ : Zahl 0 100)
   globs := fun g => nomatch g
 
+/-- The declared lock invariant is literally true, with honest source metadata. -/
+def sources4 : Invarianten.Pruefer.LockSources (SperrInv.leer D4) := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 /-- **104 as the goal theorem's unit**: the parsed code; no lock invariant
     (`lock M` declares none: the empty family), no axiom (the trivial axiom
     ensures), no declared start (104 has no `concurrent`), the zero memory. -/
 def E4 : Einheit D4 where
   P := P4
   S := SperrInv.leer D4
+  lockFormulas := sources4
   Q := axWahr D4
   starts := []
   sp0 := sp4
 
-/-- The checker accepts the unit, computing only over the certified finite image. -/
-theorem akzeptiert4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = true := by
-  rewrite [akzeptiert_pruefer_eq]
-  change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] [] = true
-  rewrite [image4_eq]
-  cbv
+/-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
+def rho7 : Env D4 (D4.params ein4) :=
+  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
+
+/-- Joint typed witness for the unchanged checker's refusal-composition rules. -/
+theorem contracts_refused4_zeuge : Vertraege.Pruefer.KontrakteGeprueftB P4
+    (SperrInv.leer D4) [ein4, lies4] sources4 = false := by
+  have current : (Vertraege.Pruefer.currentOnly (P4.ensures ein4)).toOption.isSome = false := by
+    rw [ens_ein4]
+    rfl
+  have basic := Vertraege.Pruefer.RefusalWitness.basic_none_of_current_refused
+    P4 (SperrInv.leer D4) sources4 {} ein4 current
+  have rejected := Vertraege.Pruefer.RefusalWitness.post_refused P4 ein4 rho7 () current
+  exact Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
+    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic rho7 () rejected
+
+/-- Capability gap: outside the decidable fragment: old-memory postconditions.
+    The actual post refusal prevents acceptance; the parsed body and contract stay. -/
+theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
+  rw [akzeptiert_pruefer_eq]
+  change Akzeptiert P4 (SperrInv.leer D4) [ein4, lies4] [m4] [.inl t4] []
+    (sources := sources4) = false
+  exact Bool.and_eq_false_iff.mpr (Or.inr
+    (Bool.and_eq_false_iff.mpr (Or.inr contracts_refused4_zeuge)))
 
 /-! ## 5. The user's logic on the parsed program -/
 
@@ -464,10 +444,7 @@ theorem hw4 [RootNativeFloat.Hardware] : HardwareAnnahmen O4 E4.Q :=
   ⟨(fun a => nomatch a), ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
     axVertragO_wahr O4, inferInstance⟩
 
-/-- Gabbro's arguments of `einzahlen(k, 0, 7)`. -/
-def rho7 : Env D4 (D4.params ein4) :=
-  .cons () (.cons ⟨0, by decide, by decide⟩ (.cons ⟨7, by decide, by decide⟩ .nil))
-
+#print axioms Gabbro.Grammatik.Einheit104.contracts_refused4_zeuge
+#print axioms Gabbro.Grammatik.Einheit104.abgelehnt4
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
-
 end Gabbro.Grammatik.Einheit104

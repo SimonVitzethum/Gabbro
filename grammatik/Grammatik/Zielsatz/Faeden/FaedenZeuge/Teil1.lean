@@ -213,6 +213,7 @@ theorem start_offen_leer {D : Deklaration} (P : Programm D) (sp : Speicher D)
 def zStart : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := []
   sp0 := zSp

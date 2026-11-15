@@ -113,7 +113,7 @@ theorem rejected_zeuge : klasse program [()] ohne () = .abgelehnt := by decide
 /-- The core safety checker accepts it. The termination classifier and its measure duty
     are additional conditions, not an implicit stack limit in `Akzeptiert`. -/
 theorem accepted_zeuge : Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [] [()] [] = true := by
-  decide
+  decide +kernel
 
 /-- Merely claiming that a measure exists does not supply a falling measure: the syntactic
     class changes, but the very same machine run is still present. -/

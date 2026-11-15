@@ -41,7 +41,7 @@ public import Grammatik.Kern.Semantik.Adressraum
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.LesenStabil
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Semantik.MaschinenKette
-public import Grammatik.Logik.Vertraege.QLeer
+public import Grammatik.Logik.Vertraege.Locations.QLeer
 public import Grammatik.Proben.BlattGegenbeispiel
 public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Logik.Ruf.RufAtNachB

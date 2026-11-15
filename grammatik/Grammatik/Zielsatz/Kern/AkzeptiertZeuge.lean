@@ -7,14 +7,13 @@
   * §1 The flagships from `Akzeptiert` + `StartZulaessig`: every decidable
     premise comes out of the two, only the user obligations, the hardware
     assumptions, the member lists and the run stay.
-  * §2 The two-thread fixture `mP` (MehrfadenZeuge.lean): `Akzeptiert` by
-    `decide`, `StartZulaessig` of its start `mInit` by `decide` over a start
-    table, and `ziel_ort_mehrfaden_ende` / `keine_verklemmungG` on it with no
-    decidable premise supplied by hand.
-  * §3 The export of `beispiele/104` (Export104.lean): `Akzeptiert` by
-    `decide` with the starts it declares (none); with its two functions as
-    starts it is refused (both hold `M` by signature); and NO start is
-    admitted (`gP_start_leer`) -- the export has no idle function.
+  * §2 The two-thread replacement `mFragment` retains both private writers,
+    an owed per-slot bound, the guarded calls and the actual start. Its strict
+    checker certificate supplies the body duties used by the goal corollaries.
+    The original cross-slot invariant/lock fixture is refused as outside the
+    decidable fragment.
+  * §3 The export of `beispiele/104` is refused for old-memory postconditions.
+    Its structural root refusal and lack of an idle start remain witnessed.
   * §4 Refusals: two declared starts writing one unguarded table
     (`ak1_zwei_schreiber`), a lock-floor violation (`ak2_boden_falsch`);
     and the review finding of 2026-09-14: two starts writing one unguarded
@@ -23,12 +22,12 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.CheckedMehrfaden
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Korpus.Programme.Export104
+import all Batteries.Data.Except
 @[expose] public section
-
-
 namespace Gabbro.Grammatik
 
 open Zielsatz
@@ -47,7 +46,8 @@ theorem akzeptiert_mehrfaden [RootNativeFloat.Hardware] (P : Programm D) (O : Or
     (ws : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init)
+    {sources : Invarianten.Pruefer.LockSources S}
+    (hA : Akzeptiert P S fs ls cs ws [] (sources := sources) = true) (hZ : StartZulaessig P S fs ws sp init)
     (hSL : SperrInvLokal S) (hlok : AxEnsLokal Q)
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hI : ∀ f : D.Fn, InvGutS P passes Q S f)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) :
@@ -66,7 +66,8 @@ theorem akzeptiert_verklemmung [RootNativeFloat.Hardware] {P : Programm D} {O : 
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
+    {sources : Invarianten.Pruefer.LockSources S}
+    (hA : Akzeptiert P S fs ls cs ws [] (sources := sources) = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
     {M : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     (hW : ∀ t, ¬ FertigG M t → WartetG M t) : ∀ t, FertigG M t := by
   obtain ⟨-, -, -, -, -, -, -, -, hSt, hLeer, -⟩ :=
@@ -78,7 +79,8 @@ theorem akzeptiert_rennfrei [RootNativeFloat.Hardware] {P : Programm D} {O : Ora
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
+    {sources : Invarianten.Pruefer.LockSources S}
+    (hA : Akzeptiert P S fs ls cs ws [] (sources := sources) = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
     (M : RufMaschineG D) : RennfreiBis P O passes (RufStartG P sp init) M :=
   rennfreiBis_of hvoll (akzeptiertSpec_of hvoll hls hcs [] hA) hZ hO passes M
 
@@ -111,16 +113,24 @@ theorem mCs_voll : ∀ c : mD.Tab ⊕ mD.Glob, c ∈ mCs := fun c => by
   · cases t <;> simp only [mCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
   · exact (nomatch g)
 
+/-- Capability gap: outside the decidable fragment: cross-slot invariant and
+    lock relations. The original correct program remains a refusal witness. -/
+theorem mP_abgelehnt : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] (sources := CheckedMehrfaden.originalSources) = false := by
+  decide +kernel
+
+abbrev mFragment := CheckedMehrfaden.program
+abbrev mFragmentS := CheckedMehrfaden.family
+
 /-- **`Akzeptiert` holds on the two-thread fixture**, its declared starts
     being `hauptA` and `hauptB`: each writes its OWN private table
     unguarded, and `konto` is guarded (race component). -/
-theorem mP_akzeptiert : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true := by decide
+theorem mFragment_akzeptiert : Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB] [] (sources := CheckedMehrfaden.sources) = true := CheckedMehrfaden.accepted_zeuge
 
 /-- `mInit` as a start table: thread 0 `hauptA`, thread 1 `hauptB`, every
     other thread `ruhe`. -/
 def mTafel : StartTafel mD := ⟨[⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩], ⟨mRuhe, .nil⟩⟩
 
-theorem mTafel_start : startB mP mSI mFs [()] mCs [mHauptA, mHauptB] mTafel mSp = true := by
+theorem mTafel_start : startB mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB] mTafel mSp = true := by
   decide
 
 theorem mTafel_init : mTafel.init = mInit := by
@@ -131,39 +141,39 @@ theorem mTafel_init : mTafel.init = mInit := by
   | _ + 2 => rfl
 
 /-- **`StartZulaessig` holds for the fixture's start.** -/
-theorem mP_startZulaessig : StartZulaessig mP mSI mFs [mHauptA, mHauptB] mSp mInit := by
+theorem mFragment_startZulaessig : StartZulaessig mFragment mFragmentS mFs [mHauptA, mHauptB] mSp mInit := by
   rw [← mTafel_init]
   exact startB_ok mFs_voll mLocks_voll mCs_voll mTafel_start
 
 /-- **The flagship on the fixture, fed by `Akzeptiert`**: only the user
-    obligations (`mP_koerper`, `mP_inv`, `mSI_ok.2`), the hardware (`mO`)
+    obligations (`mFragment_koerper`, `mFragment_inv`, `CheckedMehrfaden.family_local`), the hardware (`mO`)
     and the member lists are supplied by hand. -/
-theorem mP_ziel_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
-    RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
-      ((VertragAmOrtG mP M ∧ SperrInvG mSI M ∧ KeinLogikHaltG mO 0 M ∧
+theorem mFragment_ziel_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
+    RufErreichbarG mFragment mO 0 (RufStartG mFragment mSp mInit) M →
+      ((VertragAmOrtG mFragment M ∧ SperrInvG mFragmentS M ∧ KeinLogikHaltG mO 0 M ∧
         ∀ t : Faden, HeldGenau (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur) →
-          AnPruefungG M t → ∃ M', RufSchrittG mP mO 0 M t M') ∧
-      InvAmOrtG mP M) ∧ StartEndeG mP M :=
-  akzeptiert_mehrfaden mP mO 0 (axWahr mD) mSI mFs [()] mCs [mHauptA, mHauptB] mSp mInit
-    mFs_voll mLocks_voll mCs_voll mP_akzeptiert mP_startZulaessig mSI_ok.2 axEnsLokal_wahr
-    mP_koerper mP_inv mO_gut mO_lokal (axVertragO_wahr mO)
+          AnPruefungG M t → ∃ M', RufSchrittG mFragment mO 0 M t M') ∧
+      InvAmOrtG mFragment M) ∧ StartEndeG mFragment M :=
+  akzeptiert_mehrfaden mFragment mO 0 (axWahr mD) mFragmentS mFs [()] mCs [mHauptA, mHauptB] mSp mInit
+    mFs_voll mLocks_voll mCs_voll mFragment_akzeptiert mFragment_startZulaessig CheckedMehrfaden.family_local axEnsLokal_wahr
+    (CheckedMehrfaden.bodies 0) (CheckedMehrfaden.invariants 0) mO_gut mO_lokal (axVertragO_wahr mO)
 
-theorem mP_verklemmung_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
-    RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
+theorem mFragment_verklemmung_aus_akzeptiert [RootNativeFloat.Hardware] : ∀ M : RufMaschineG mD,
+    RufErreichbarG mFragment mO 0 (RufStartG mFragment mSp mInit) M →
       (∀ t, ¬ FertigG M t → WartetG M t) → ∀ t, FertigG M t :=
-  fun _ hr hW => akzeptiert_verklemmung mFs_voll mLocks_voll mCs_voll mP_akzeptiert
-    mP_startZulaessig mO_gut hr hW
+  fun _ hr hW => akzeptiert_verklemmung mFs_voll mLocks_voll mCs_voll mFragment_akzeptiert
+    mFragment_startZulaessig mO_gut hr hW
 
 /-- **Race freedom for every carrier on the fixture**, private tables
     included. -/
-theorem mP_rennfrei_aus_akzeptiert [RootNativeFloat.Hardware] (passes : Nat) (M : RufMaschineG mD) :
-    RennfreiBis mP mO passes (RufStartG mP mSp mInit) M :=
-  akzeptiert_rennfrei mFs_voll mLocks_voll mCs_voll mP_akzeptiert mP_startZulaessig mO_gut M
+theorem mFragment_rennfrei_aus_akzeptiert [RootNativeFloat.Hardware] (passes : Nat) (M : RufMaschineG mD) :
+    RennfreiBis mFragment mO passes (RufStartG mFragment mSp mInit) M :=
+  akzeptiert_rennfrei mFs_voll mLocks_voll mCs_voll mFragment_akzeptiert mFragment_startZulaessig mO_gut M
 
 /-- A second thread running `hauptA` is NOT admitted: `hauptA` is busy (it
     writes its private table), so it may run on one thread only. -/
 theorem mTafel_doppelt_falsch :
-    startB mP mSI mFs [()] mCs [mHauptA, mHauptB]
+    startB mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB]
       ⟨[⟨mHauptA, .nil⟩, ⟨mHauptA, .nil⟩], ⟨mRuhe, .nil⟩⟩ mSp = false := by decide
 
 /-! ## 3. The export of `beispiele/104` -/
@@ -179,6 +189,9 @@ abbrev x104Ls : List x104D.Lock := [G104_referenz.GLock.M]
 abbrev x104Cs : List (x104D.Tab ⊕ x104D.Glob) := [.inl G104_referenz.GTab.Konto]
 abbrev x104S : SperrInv x104D := SperrInv.leer x104D
 
+def x104Sources : Invarianten.Pruefer.LockSources x104S := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 theorem x104Ls_voll : ∀ L : x104D.Lock, L ∈ x104Ls := fun L => by
   cases L; exact List.mem_singleton_self _
 
@@ -192,9 +205,8 @@ theorem x104Fs_voll : ∀ g : x104D.Fn, g ∈ x104Fs := fun g => by
   · exact List.mem_cons_self
   · exact List.mem_cons_of_mem _ List.mem_cons_self
 
-/-- **`Akzeptiert` holds on the export** with the starts it declares: none
-    (`104` dropped `concurrent` for `N240`, tests/referenz.rs). -/
-theorem gP_akzeptiert : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] [] = true := by decide
+/-- Capability gap: outside the decidable fragment: old-memory postconditions. -/
+theorem gP_abgelehnt : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] [] (sources := x104Sources) = false := by decide +kernel
 
 /-- With its two functions as starts the export is refused by the start
     component (both hold `M` by signature); the other components hold. -/
@@ -404,7 +416,7 @@ theorem ak1_ein_schreiber :
       false ∧
     startB akP1 akS akFs [()] akCs [akA] ⟨[⟨akA, .nil⟩, ⟨akA, .nil⟩], ⟨akRuhe, .nil⟩⟩ akSp =
       false := by
-  decide
+  decide +kernel
 
 /-- **A lock-floor violation is refused**: `c` (floor `1`) takes the lock
     of rank `0`. Every other component holds: the floor check alone
@@ -468,12 +480,12 @@ theorem ak2_nicht_stufen : ¬ StufenM akP2 := fun h =>
 #print axioms Gabbro.Grammatik.akzeptiert_verklemmung
 #print axioms Gabbro.Grammatik.akzeptiert_rennfrei
 #print axioms Gabbro.Grammatik.akzeptiert_zeit
-#print axioms Gabbro.Grammatik.mP_akzeptiert
-#print axioms Gabbro.Grammatik.mP_startZulaessig
-#print axioms Gabbro.Grammatik.mP_ziel_aus_akzeptiert
-#print axioms Gabbro.Grammatik.mP_verklemmung_aus_akzeptiert
+#print axioms Gabbro.Grammatik.mFragment_akzeptiert
+#print axioms Gabbro.Grammatik.mFragment_startZulaessig
+#print axioms Gabbro.Grammatik.mFragment_ziel_aus_akzeptiert
+#print axioms Gabbro.Grammatik.mFragment_verklemmung_aus_akzeptiert
 #print axioms Gabbro.Grammatik.mTafel_doppelt_falsch
-#print axioms Gabbro.Grammatik.gP_akzeptiert
+#print axioms Gabbro.Grammatik.gP_abgelehnt
 #print axioms Gabbro.Grammatik.gP_als_starts
 #print axioms Gabbro.Grammatik.gP_start_leer
 #print axioms Gabbro.Grammatik.ak1_zwei_schreiber
@@ -481,6 +493,5 @@ theorem ak2_nicht_stufen : ¬ StufenM akP2 := fun h =>
 #print axioms Gabbro.Grammatik.ak2_boden_falsch
 #print axioms Gabbro.Grammatik.ak2_nicht_stufen
 #print axioms Gabbro.Grammatik.ak3_zwei_schreiber_ohne_lesen
-#print axioms Gabbro.Grammatik.mP_rennfrei_aus_akzeptiert
-
+#print axioms Gabbro.Grammatik.mFragment_rennfrei_aus_akzeptiert
 end Gabbro.Grammatik

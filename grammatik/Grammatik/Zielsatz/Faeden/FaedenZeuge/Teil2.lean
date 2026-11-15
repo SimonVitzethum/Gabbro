@@ -111,6 +111,7 @@ theorem spawn_start_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschi
 def zKind : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -125,8 +126,9 @@ theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := by rfl
 theorem zKind_akzeptiert :
     akzeptiert_pruefer.akzeptiert zKind zFs [()] [.inl ()] = true := by
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt] = true
-  decide
+  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zHaupt, zHaupt]
+    (sources := zPoolSources) = true
+  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
 theorem zKind_nutzerPflicht : NutzerPflicht zKind :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
@@ -243,8 +245,9 @@ theorem spawn_kind_ziel [RootNativeFloat.Hardware] : ∃ K2 K3 K4 : FadenMaschin
     twice in `ws`, and the checker Bool refuses -- at the pool component alone. The same routine
     as an ordinary declared start beside `hauptA` is accepted: the refusal is the spawn's. -/
 def mStartB : Einheit mD where
-  P := mP
-  S := mSI
+  P := mFragment
+  S := mFragmentS
+  lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := [⟨mHauptA, .nil⟩]
   sp0 := mSp
@@ -256,20 +259,20 @@ def mStartB : Einheit mD where
 
 theorem start_nicht_poolsicher_abgelehnt :
     akzeptiert_pruefer.akzeptiert mStartB mFs [()] mCs = false ∧
-    (programmImFragmentG mP mFs && abgAlleB mP mFs &&
-      fussWB mP mSI mFs [mHauptA, mHauptB, mHauptB] && stufenB mP mFs && sperrOrteB mSI [()] &&
-      wurzelnB [mHauptA, mHauptB, mHauptB] && rennB mP mFs mCs [mHauptA, mHauptB, mHauptB] &&
-      antwortenB mP mFs) = true ∧
-    einzelnPoolB mP mFs mCs [mHauptA, mHauptB, mHauptB] = false ∧
-    Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true := by
-  refine ⟨?_, by decide, by decide, mP_akzeptiert⟩
+    (programmImFragmentG mFragment mFs && abgAlleB mFragment mFs &&
+      fussWB mFragment mFragmentS mFs [mHauptA, mHauptB, mHauptB] && stufenB mFragment mFs && sperrOrteB mFragmentS [()] &&
+      wurzelnB [mHauptA, mHauptB, mHauptB] && rennB mFragment mFs mCs [mHauptA, mHauptB, mHauptB] &&
+      antwortenB mFragment mFs) = true ∧
+    einzelnPoolB mFragment mFs mCs [mHauptA, mHauptB, mHauptB] = false ∧
+    Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB] (sources := CheckedMehrfaden.sources) = true := by
+  refine ⟨?_, by decide, by decide, mFragment_akzeptiert⟩
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB, mHauptB] = false
+  show Akzeptiert mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB, mHauptB] (sources := CheckedMehrfaden.sources) = false
   decide
 
 /-- The same refusal at the specification: no `AkzeptiertSpec` for `mStartB`, because a
     run-time root must be pool-safe (`akzeptiertSpec_gestartet`). -/
-theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws mStartB.akku := fun h =>
+theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mFragment mFragmentS mFs mStartB.ws mStartB.akku := fun h =>
   pool_abgelehnt.2.2.2 (akzeptiertSpec_gestartet mStartB mFs h ⟨mHauptB, .nil⟩
     (List.mem_singleton_self _)).2.2
 
@@ -280,6 +283,7 @@ theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws mS
 def zKindUnterSperre : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
@@ -293,10 +297,10 @@ theorem kind_unter_sperre_abgelehnt :
     zD.haelt zWrap = [()] ∧
     akzeptiert_pruefer.akzeptiert zKindUnterSperre zFs [()] [.inl ()] = false ∧
     wurzelnB [zHaupt, zWrap, zWrap] = false ∧
-    Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] = true := by
+    Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = true := by
   refine ⟨rfl, ?_, by decide, zPB_akzeptiert⟩
   rw [akzeptiert_pruefer_eq]
-  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zWrap, zWrap] = false
+  show Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt, zWrap, zWrap] (sources := zPoolSources) = false
   decide
 
 theorem kind_unter_sperre_spec : ¬ AkzeptiertSpec zPB zS zFs zKindUnterSperre.ws zKindUnterSperre.akku := fun h => by

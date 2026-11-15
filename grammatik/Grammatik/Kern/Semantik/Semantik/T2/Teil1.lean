@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Semantik.Semantik.T1
+public import Grammatik.Kern.Semantik.Boundary.Answer
 
 @[expose] public section
 
@@ -170,11 +171,16 @@ variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 def keinGrund {f : D.Fn} (hr : D.gruende f = 0) (r : Fin (D.gruende f)) : α :=
   (Fin.cast hr r).elim0
 
-/-- Das Ergebnis eines Axioms, gegen seinen Typ gehalten. -/
-def axiomAntwort (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+/-- A foreign answer is decoded once, then held against the explicitly supplied
+    executable contract. A required check without a failure continuation belongs
+    to a refused call site; the trivial default represents no declared check. -/
+def axiomAntwort (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
+    (check : Boundary.Check D (ErgCtx (D.aparams a) (D.aerg a)) [] := .trivial) :
     World D × Option (ErgVal D (D.aerg a)) :=
-  let (σ', roh) := O.wirkt a (σ.fragt (.inl a)) ρ
-  (σ', einpassenErg O.zeiger (D.aerg a) roh)
+  let question := σ.fragt (.inl a)
+  let (σ', roh) := O.wirkt a question ρ
+  let decoded := einpassenErg O.zeiger (D.aerg a) roh
+  (σ', if check.requiredB then check.value question σ' ρ decoded else decoded)
 
 /-- **The raw word of a FALLIBLE foreign body** (C-free lane, 2026-09-30): the pair
     "value or reason" packed as a `tagged` value is (`summePasst`) -- the case number in the low
@@ -191,12 +197,19 @@ def sonstPasst (z : Int → Option D.Fn) (e : Option Ty) (n : Nat) (roh : Int) :
   else if h : 0 < tag ∧ tag ≤ n then some (Sum.inr ⟨(tag - 1).toNat, by omega⟩)
   else none
 
-/-- The answer of a fallible axiom: the world it leaves (as `axiomAntwort`) and the decoded
-    pair. -/
-def axiomAntwortSonst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+/-- A fallible foreign answer: after decoding, the normal answer is checked in
+    the post world with the question world as `old`. A false predicate or invalid
+    type uses the supplied declared failure code. Existing reasons are forwarded.
+    Calls with no declared predicate and no failure code retain decoding alone. -/
+def axiomAntwortSonst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a))
+    (check : Boundary.Check D (ErgCtx (D.aparams a) (D.aerg a)) [] := .trivial)
+    (failure : Option (Fin (D.agruende a)) := none) :
     World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a)) :=
-  let (σ', roh) := O.wirkt a (σ.fragt (.inl a)) ρ
-  (σ', sonstPasst O.zeiger (D.aerg a) (D.agruende a) roh)
+  let question := σ.fragt (.inl a)
+  let (σ', roh) := O.wirkt a question ρ
+  let decoded := sonstPasst O.zeiger (D.aerg a) (D.agruende a) roh
+  (σ', if check.requiredB || failure.isSome then
+    Boundary.gate (check.answer question σ' ρ) failure decoded else decoded)
 
 /-- The world a fallible axiom leaves is the world the oracle's effect leaves -- the same as
     `axiomAntwort`'s, so every frame lemma about the one is one about the other. -/

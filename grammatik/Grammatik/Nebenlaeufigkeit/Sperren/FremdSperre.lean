@@ -250,12 +250,7 @@ theorem axiomCall_haelt_waechter
         Rahmen.weiter hw hg (hfst ▸ hframe)
       exact hlese_frame.trans horacle_frame
     exact ⟨hguard, hguardG, hrahmen⟩
-  · rename_i hx
-    have h2 := congrArg Prod.snd hx
-    simp only [axiomAntwort] at h2
-    rw [h] at h2
-    simp only [einpassenErg] at h2
-    simp only [reduceCtorEq] at h2
+  · simp only [Ausgang.welt, reduceCtorEq] at hexec
 
 /-- **No guard, no derivation.** The table of `DF` is guarded, so `darf`
     at the empty trace is uninhabitable: a foreign call writing it is not

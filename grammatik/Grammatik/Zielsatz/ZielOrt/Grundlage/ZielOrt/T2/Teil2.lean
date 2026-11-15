@@ -73,7 +73,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
           have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
           exact this.symm
         have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
         rw [← e] at hfr
@@ -116,7 +116,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
           have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
           exact this.symm
         have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
         rw [← e] at hfr
@@ -184,7 +184,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
           have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
           exact this.symm
         have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
         rw [← e] at hfr
@@ -227,7 +227,7 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
           have := congrArg Prod.fst hax
-          simp only [axiomAntwort] at this
+          simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at this
           exact this.symm
         have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
         rw [← e] at hfr

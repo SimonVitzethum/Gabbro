@@ -148,6 +148,6 @@ theorem terminating_classes_zeuge :
 
 theorem accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] [] = true := by
-  decide
+  decide +kernel
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn

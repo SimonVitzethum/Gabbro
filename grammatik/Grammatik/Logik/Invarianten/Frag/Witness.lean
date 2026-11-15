@@ -6,7 +6,7 @@ public import Grammatik.Logik.Invarianten.Frag.Translation
 
 namespace Gabbro.Grammatik.Invarianten.Frag.Witness
 
-def declaration : Deklaration where
+abbrev declaration : Deklaration where
   Tab := Unit
   decTab := inferInstance
   count := fun _ => 3
@@ -160,8 +160,7 @@ theorem localBound_translated_zeuge :
     uebersetzeB (declaration.traeger ()) localBound = .ok localFormula := by rfl
 
 theorem localBound_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) localBound = true := by
-  simp only [imFragmentB, localBound_translated_zeuge]
+    imFragmentB (declaration.traeger ()) localBound = true := rfl
 
 /-- String contents never enter the arithmetic problem; their length does. -/
 def stringDeclaration : Deklaration :=
@@ -209,6 +208,20 @@ def atomicBound : Expr atomicDeclaration [] [] .bool :=
 
 theorem atomicBound_refused_zeuge :
     uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by rfl
+
+/-- Boolean memory keeps its value rather than becoming a constant predicate. -/
+def booleanDeclaration : Deklaration := { declaration with gtyp := fun _ => .bool }
+
+def booleanMemory : Expr booleanDeclaration [] [] .bool :=
+  .glob false (fun _ member => nomatch member)
+
+theorem booleanMemory_reified_zeuge :
+    uebersetzeB [.inr false] booleanMemory = .ok (.eq (.var (.glob false)) (.konst 1)) := rfl
+
+theorem booleanMemory_sound_zeuge (world : World booleanDeclaration) :
+    eval world booleanMemory world .nil = true ↔ assignment world (.glob false) = 1 :=
+  uebersetzeB_sound [.inr false] booleanMemory (.eq (.var (.glob false)) (.konst 1))
+    booleanMemory_reified_zeuge world
 
 theorem constant_sound_zeuge (values : Assignment Nat) :
     (LTerm.add (.scale (-3) (.konst 2)) (.konst 5)).denote values = -1 :=

@@ -96,6 +96,17 @@ def E : Einheit FD where
   starts := [⟨(), .nil⟩]
   sp0 := sp0
   arenen := [⟨FA, I⟩]
+  axiomSources := some
+    { items := []
+      complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 1
+      outside := fun _ n outside => by
+        change decide (0 = n) = false
+        exact decide_eq_false (by omega) }
 
 def fs : List FD.Fn := [()]
 def cs : List (FD.Tab ⊕ FD.Glob) := [.inl (), .inr 0, .inr 1, .inr 2, .inr 3]
@@ -109,7 +120,9 @@ theorem cs_voll : ∀ c : FD.Tab ⊕ FD.Glob, c ∈ cs := by
   · revert g; decide
 
 /-- (a) The goal's concrete checker accepts the unit, its arena included. -/
-theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide
+theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by
+  rw [akzeptiertX_pruefer_eq]
+  decide +kernel
 
 /-- The executable ownership check accepts the program. -/
 theorem owner_check : checkProgram E.P FA I fs = true := by decide

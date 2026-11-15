@@ -111,7 +111,7 @@ theorem einsatz_reset_abgelehnt (e : Einsatz) (h : e.Hat ⟨10, 0, true, [false]
     e.gueltig = false := by
   cases hv : e.gueltig
   · rfl
-  · have rejected := (einsatz_akzeptiert e).mpr hv _ h
+  · have rejected := ((einsatz_akzeptiert e).mp hv).1 _ h
     change false = true at rejected
     cases rejected
 

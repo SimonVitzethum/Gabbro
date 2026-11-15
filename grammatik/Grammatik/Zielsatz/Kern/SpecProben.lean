@@ -13,12 +13,12 @@
     for EVERY program with that code: no side condition on the lock invariants any more;
   * probe A with an unsatisfiable lock invariant (`sFalsch`, `invariant false`; verdict P1)
                                                                    -> (b), by the start
-    obligation `StartPflicht.sperren` (the checker's Bool ACCEPTS it, `p1_akzeptiert`);
+    obligation `StartPflicht.sperren` (the checker's Bool REFUSES it, `p1_abgelehnt`);
   * probe D (`fvP false`, `forever … invariant false { leave }`)   -> (b), at some budget;
   * probe F1 (`f1P`: probe A's contracts, a float literal outside its range in front of every
     body; verdict F1 of URTEIL-OPUS-2026-09-15b)                   -> (b), since the
-    out-of-range float is `logik bereich` (it was `hardware ieee`; the checker ACCEPTS the
-    program, `f1_akzeptiert`, so the refusal is (b)'s);
+    out-of-range float is `logik bereich` (it was `hardware ieee`; the checker REFUSES the
+    program, `f1_abgelehnt`, and its body duty also fails);
   * a table-invariant breaker (`ivPschlecht`)                      -> (b);
   * an unguarded carrier one start reads and another writes        -> (a) `AkzeptiertSpec`
     (stated for EVERY program, so for every sound `Pruefer` the Bool is `false`);
@@ -39,6 +39,8 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.Kern.CheckedMehrfaden
+public import Grammatik.Zielsatz.Kern.PoolCertificate
 public import Grammatik.Proben.ProbeD
 public import Grammatik.Proben.InvZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
@@ -171,24 +173,34 @@ theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
 /-- The two-thread program as ONE declaration: code `mP`, family `mSI`, trivial axiom
     ensures, declared starts `hauptA`, `hauptB` (no parameters), initial memory `mSp`. -/
 def mE : Einheit mD where
-  P := mP
-  S := mSI
+  P := CheckedMehrfaden.program
+  S := CheckedMehrfaden.family
+  lockFormulas := CheckedMehrfaden.sources
   Q := axWahr mD
   starts := [⟨mHauptA, .nil⟩, ⟨mHauptB, .nil⟩]
   sp0 := mSp
+  axiomSources := some
+    { items := [], complete := fun item => nomatch item
+      resources := fun item => nomatch item
+      expression := fun item => nomatch item
+      correct := fun item => nomatch item }
+  pointerSignatures := some
+    { count := 0, outside := fun _ _ _ => rfl }
 
 /-- Probe B as ONE declaration: declared start `haupt`, initial memory `zSp`. -/
 def zEB : Einheit zD where
   P := zPB
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp
 
 /-- Probe C as ONE declaration. -/
 def zEC : Einheit zD where
-  P := zPC
+  P := zPCFragment
   S := zS
+  lockFormulas := zPoolSources
   Q := axWahr zD
   starts := [⟨zHaupt, .nil⟩]
   sp0 := zSp

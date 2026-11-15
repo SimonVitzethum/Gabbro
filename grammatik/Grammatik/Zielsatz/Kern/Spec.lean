@@ -22,6 +22,16 @@
   reading a bool, record, array, string or reference schema does not enable its execution as a sum payload.
   This source-stage refactoring does not yet change the domain or meaning of the goal statements below.
 
+  ENVIRONMENT ENTRY CHECK FOUNDATION (owner, 2026-11-13). Executable contract clauses are syntactically separated from explicitly named predicates about unobservable device internals:
+  `Boundary.Contract.split_correct` states exactly `Q = Q_check && Q_rest`. The explicit check parameters of `axiomAntwort` and `axiomAntwortSonst` evaluate `Q_check` on a decoded
+  answer, in its post world with the question world as `old`; the fallible gate sends a failed check or invalid type to its declared failure reason, an ordinary reason edge.
+  The oracle is still the read-blind `Orakel.wirkt` derived from `wirktL`; the check uses the question and answer worlds seen by G, including the preserved question trace.
+  `AxVertragO_rest` covers only the named remainder for environment items; it excludes software items and is trivial for an empty remainder. `axiomAntwortSonst_contract` proves
+  the full written post at a successful explicit gate from that remainder alone. This is a foundation, not yet a change to the goal statements: existing G/GX call sites
+  still select the trivial default check, and `AkzeptiertSpec(X)` does not yet enforce error-arm admission. The C08 call-site duties, `ForeignVertrag`/`ForeignPflicht`,
+  `AxVertragOP (PreQ P) Q`, and the `GabbroZiel`/`GabbroZielVoll` split below are unchanged. In particular, the environment summaries remain in `HardwareAnnahmenHw`; replacing
+  them requires the connected checker, footprint and replay/duty transfer. Neither remainder-only global premises nor optimizer access to unchecked contracts is claimed.
+
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`, `Classical.choice`, `Quot.sound`):
   * `GabbroZiel` (Spec/Fremd.lean) -- safety, on every reached machine: the legs of `ZielFX` (below), with the
     call-site duties of software foreign items (C08 below). Proof `gabbro_ziel`. `GabbroZielVoll` -- the same
@@ -57,6 +67,26 @@
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool `AkzeptiertX`, not a deployed
   checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which carries none of the concurrent legs of `ZielFX`.
+
+  CHECKER-DECIDED LOGIC (owner 2026-11-13). Premise (a) is strengthened: AkzeptiertSpecX.invarianten and .kontrakte carry the semantic consequences
+  of verified arithmetic VC decisions. AkzeptiertX/AkzeptiertXVoll check every function's requires at calls, ensures at actual value returns and owed
+  invariants at value/reason returns. Callee ensures are used only inside the existing contract-respecting handler class; the whole function family is
+  checked together. Failed or unsupported obligations refuse acceptance. Bounded retry loops unroll exactly within the expansion budget. Larger
+  bounds require a reified hint, checked at entry, preservation, exit and overflow. Einheit carries these hint expressions; their source parser/exporter
+  connection remains open. The canonical decreases tuples add a strict-decrease condition to every call back into the caller's cycle, discharged by the same decider.
+  False arithmetic decisions report counterexample values in observation order.
+
+  The concrete akzeptiertX_pruefer additionally runs nutzerPflichtGeprueftB: lock formulas must be reified, local and initially true; lexical releases
+  are checked; every declared start meets requires; reified oracle predicates are local to their declared answer footprint; every function-pointer target
+  refines its finite source interface table. Einheit's source correspondence fields contain no proof of assertion truth, preservation or refinement.
+  They are elaborator output. Missing correspondence is a refusal, never a user-logic escape hatch. Oracle truth remains a named assumption in (c).
+
+  nutzerPflicht_of_akzeptiert derives the existing NutzerPflichtA E from the concrete checker; gabbro_ziel_ohne_nutzerpflicht is a GabbroZielVoll corollary.
+  The C08 headline keeps its software call-site and binding obligations. This strengthens acceptance and does not weaken any guarantee or add a
+  runtime contract check. Symbolic VCs refuse old-memory contracts, oversized local domains and unsupported atomic/control/foreign-call forms.
+  Literal true requires/ensures with no owed invariant also admit a generic totality certificate against every atomic environment: typed writes,
+  oracle continuations, narrowing with checked success and fallback, and loops with a literal true annotation and a universally certified body.
+  No type range or VC budget is relaxed. In particular this package does not discharge C08's software foreign-call-site duty for an in-image binding.
 
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:

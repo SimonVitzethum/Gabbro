@@ -3,16 +3,11 @@
   Subject:   witnesses for the runtime's idle root (A4): the programs that
              had NO admissible start before have one on `P.mitRuhe`.
 
-  * The export of `beispiele/104` (`gP_start_leer`: no start of `gP`
-    itself): on `gP.mitRuhe` the root on every thread is admissible
-    (`gP_mitRuhe_start`), and the checker's Bool holds there
-    (`gP_mitRuhe_akzeptiert`, from the Bool on `gP` by
-    `akzeptiert_mitRuhe`).
-  * Probes B/C (`zPB`, `zPC` over `zD`, no idle function): admissible starts
-    on `zPB.mitRuhe`, `zPC.mitRuhe` (`probeB_start`, `probeC_start`).
-  * The two-thread fixture `mP`: its declared starts `hauptA`, `hauptB` on
-    threads 0 and 1 and the root everywhere else (`mP_mitRuhe_start`, by
-    `startZulaessig_mitRuhe`), and the Bool on `mP.mitRuhe`.
+  * The export's idle start is admissible (`gP_mitRuhe_start`), while its
+    old-memory contracts stay outside the strict checker fragment.
+  * Probes B/C retain their admissible idle starts.
+  * The original two-thread start remains admissible; the in-fragment
+    replacement also witnesses strict acceptance after adding the idle root.
 -/
 module
 public import Grammatik.Zielsatz.Faeden.Ruhe
@@ -63,10 +58,13 @@ def x104Sp : Speicher x104D :=
   ⟨fun t _ f => match t, f with
     | .Konto, .stand => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
 
-/-- **The checker's Bool holds on the export with the runtime's root.** -/
-theorem gP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
-    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) = true :=
-  akzeptiert_mitRuhe x104P x104Fs_voll x104Ls_voll x104Cs_voll gP_akzeptiert
+def x104IdleSources : Invarianten.Pruefer.LockSources x104S.mitRuhe := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
+/-- Capability gap: outside the decidable fragment: translated old-memory postconditions. -/
+
+theorem gP_mitRuhe_abgelehnt :
+    Akzeptiert x104P.mitRuhe x104S.mitRuhe (fsRuhe x104Fs) x104Ls x104Cs (wsRuhe []) (sources := x104IdleSources) = false := by decide +kernel
 
 /-- **An admissible start of `gP.mitRuhe`** -- the export itself has none
     (`gP_start_leer`). -/
@@ -94,9 +92,14 @@ theorem probeC_start :
 
 /-! ## 3. The two-thread fixture with its declared starts -/
 
-theorem mP_mitRuhe_akzeptiert [RootNativeFloat.Hardware] :
-    Akzeptiert mP.mitRuhe mSI.mitRuhe (fsRuhe mFs) [()] mCs (wsRuhe [mHauptA, mHauptB]) = true :=
-  akzeptiert_mitRuhe mP mFs_voll mLocks_voll mCs_voll mP_akzeptiert
+def mFragmentIdleSources : Invarianten.Pruefer.LockSources mFragmentS.mitRuhe := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
+/-- The replacement still witnesses admission after adding the runtime root. -/
+theorem mFragment_mitRuhe_akzeptiert :
+    Akzeptiert mFragment.mitRuhe mFragmentS.mitRuhe (fsRuhe mFs) [()] mCs
+      (wsRuhe [mHauptA, mHauptB]) (sources := mFragmentIdleSources) = true := by
+  decide +kernel
 
 /-- **`hauptA` on thread 0, `hauptB` on thread 1, the root everywhere
     else, is admissible on `mP.mitRuhe`.** -/
@@ -120,11 +123,11 @@ theorem mP_mitRuhe_start :
     decide
 
 #print axioms Gabbro.Grammatik.startZulaessig_mitRuhe_P
-#print axioms Gabbro.Grammatik.gP_mitRuhe_akzeptiert
+#print axioms Gabbro.Grammatik.gP_mitRuhe_abgelehnt
 #print axioms Gabbro.Grammatik.gP_mitRuhe_start
 #print axioms Gabbro.Grammatik.probeB_start
 #print axioms Gabbro.Grammatik.probeC_start
-#print axioms Gabbro.Grammatik.mP_mitRuhe_akzeptiert
+#print axioms Gabbro.Grammatik.mFragment_mitRuhe_akzeptiert
 #print axioms Gabbro.Grammatik.mP_mitRuhe_start
 
 end Gabbro.Grammatik

@@ -3,6 +3,7 @@ public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Kern.Syntax.Koernung.Teil2
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -147,6 +148,14 @@ def prog : Programm rD where
 
 /-- **The core checker accepts the program with the open region.** -/
 theorem prog_akzeptiert :
-    Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide_cbv
+    Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide +kernel
+
+/-- The totality certificate cannot discharge a false declared postcondition,
+    even for the identical provider call and reference write. -/
+def falseContract : Programm rD := { prog with ensures := fun _ => .fls }
+
+theorem false_contract_refused :
+    Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer rD) [()] = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.GRegion

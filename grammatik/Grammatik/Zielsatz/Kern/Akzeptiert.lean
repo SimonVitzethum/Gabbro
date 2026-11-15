@@ -4,8 +4,8 @@
              (`Akzeptiert`), proved to be a `Pruefer` of `Spec.lean`
              (`akzeptiert_pruefer`): `akzeptiertSpec_of` yields
              `AkzeptiertSpec`; `spec_akzeptiert` reconstructs the Bool at an
-             explicitly admitted check list and connected query list, given
-             complete member lists. The start the PROOF works with is Spec's
+             explicitly admitted check list, connected query list and checked
+             invariant VCs, given complete member lists. The start the PROOF works with is Spec's
              `StartZulaessig` (derived from the runtime's start `Laufzeit`
              and the user's `StartPflicht`, `startZulaessig_aus`), with a
              Bool for finite start tables (`startB`).
@@ -30,6 +30,17 @@
   | `akku`           | `accumulatorB`                  | `AccumulatorAdmission P fs aks`: every per-core accumulator is admitted (descriptor, private cells with one exclusive lock each, exact core-query shape, confined and floored update/reduction graphs) | the staged accumulator leg (C15, 2026-11-02; no goal leg yet) |
   | `pruef`        | `checkB`               | `∃ checks, CheckAdmission P fs checks`: the Bool's actual list witnesses admission; a fixed list needs its explicit admission | the check-evidence leg (C16, 2026-11-02; `checkSitePflicht_aus`) |
 | `scopes`       | `scopesOkProgB`        | `ScopesOkProg P` (C11, no `Spec` field: derived from the floor field `stufen` via `scopesOkProg_of_spec`, kept out of `Spec.lean` by owner decision 2026-11-02) | the scope legs (`rufAt_gut`, `exec_gut` via `scopesOkProg_of_akzeptiert`) |
+
+  **Invariant verification conditions (2026-11-14):**
+  `invariantVCB` checks the actual writer bodies, owed invariants on value and
+  reason returns, and every lock release. Its shared contract WP also checks
+  requires/ensures. Missing reified lock syntax and unsupported VCs refuse.
+  The source exporter retains lock expressions; the optional `sources`
+  argument carries their correspondence to the semantic lock family.
+  `Spec.lean` and the existing user duties remain unchanged pending owner
+  review. The adapters in `Invarianten.Pruefer.Duties` reconstruct their
+  invariant components from acceptance. Reverse Bool lemmas require the new
+  VC conjunct explicitly; structural acceptance alone does not imply it.
 
   **Changes of 2026-11-02 (C11):**
   * `scopes` is NEW (`scopesOkProgB`, decided exactly by `scopesOkProgB_iff`):
@@ -136,6 +147,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil2
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil2
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil4

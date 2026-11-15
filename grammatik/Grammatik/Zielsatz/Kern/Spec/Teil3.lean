@@ -171,7 +171,14 @@ def verbindeP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Programm D :=
 def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   P := verbindeP e E₁ E₂
   S := E₁.S
+  lockFormulas := E₁.lockFormulas
+  -- Body-specific source metadata follows the same owner as the body.
+  loopHints := fun f => if e f then E₁.loopHints f else E₂.loopHints f
+  measure := fun f => if e f then E₁.measure f else E₂.measure f
   Q := E₁.Q
+  -- The linked contract family and pointer interfaces are E₁'s canonical ones.
+  axiomSources := E₁.axiomSources
+  pointerSignatures := E₁.pointerSignatures
   starts := E₁.starts ++ E₂.starts
   sp0 := E₁.sp0
   gestartet := E₁.gestartet ++ E₂.gestartet

@@ -2,6 +2,7 @@ module
 public import Grammatik.Berechenbarkeit.Storage.GStack.Termination
 public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+import all Batteries.Data.Except
 @[expose] public section
 
 
@@ -157,5 +158,13 @@ theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .e
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
       [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] [] = true := by decide +kernel
+
+/-- The same storage body with a false postcondition must enter the strict
+    VC path; the Basic totality certificate cannot accept this contract. -/
+def falseContract : Programm FD := { program with ensures := fun _ => .fls }
+
+theorem false_contract_refused_zeuge :
+    Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer FD) [()] = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses
