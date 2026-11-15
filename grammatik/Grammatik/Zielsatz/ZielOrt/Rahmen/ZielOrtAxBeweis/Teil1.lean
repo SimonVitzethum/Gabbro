@@ -3,7 +3,7 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis.Teil1Basis
 import all Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis.Teil1Basis
 
-public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 
 @[expose] public section
 

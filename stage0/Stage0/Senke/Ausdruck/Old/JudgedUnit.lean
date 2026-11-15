@@ -40,9 +40,7 @@ def einheitDer (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
     (roots gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
     (checks : List (CheckDecl (declOf u))) : Einheit (declOf u) :=
   { P := P, S := sperrFamilie u, Q := Q, starts := ⟨main, args⟩ :: roots, sp0 := sp,
-    gestartet := gestartet, arenen := [], akku := [], pruefungen := checks,
-    lockFormulas := sperrQuellen u, axiomSources := leereAxQuellen u Q,
-    pointerSignatures := some (zeigerSignaturen u), measure := massVon u }
+    gestartet := gestartet, arenen := [], akku := [], pruefungen := checks }
 
 /-- The judged `Einheit` starts the compiled entry first. -/
 theorem einheitDer_starts (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
@@ -132,16 +130,13 @@ theorem accepts_gibt_pruefer (u : UProg) (P : Programm (declOf u)) (Q : AxEns (d
     (hZ : zertifizierbar u = true) (hC : uCheckDecls u = .ok checks)
     (hr : roots.map (·.1) = u.roots.filterMap fun n => wurzelIdx u n)
     (hg : gestartet.map (·.1) = u.gestartet.filterMap fun n => wurzelIdx u n)
-    (h : accepts u P main = .ok true)
-    (hStart : unitStartGeprueftB (einheitDer u P Q sp main args roots gestartet checks)
-      (List.finRange u.fns.length) (List.finRange u.locks.length) = true) :
+    (h : accepts u P main = .ok true) :
     akzeptiertX_pruefer.akzeptiert (einheitDer u P Q sp main args roots gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
   rw [einheitDer_eq u P Q sp main args roots gestartet checks hZ hC]
-  rw [einheitDer_eq u P Q sp main args roots gestartet checks hZ hC] at hStart
   exact accepts_gibt_einheitVon u P Q sp main (⟨main, args⟩ :: roots) gestartet hFn
-    (einheitDer_ws u main args roots gestartet hr hg) h hStart
+    (einheitDer_ws u main args roots gestartet hr hg) h
 
 /-- **The bridge for a unit whose only start is the entry**: no declared roots, no run-time
     roots; the judged `Einheit` starts `main` alone and carries no check. -/
@@ -150,13 +145,11 @@ theorem accepts_gibt_pruefer_main (u : UProg) (P : Programm (declOf u)) (Q : AxE
     (args : Env (declOf u) ((declOf u).params main))
     (hFn : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length)))
     (hZ : zertifizierbar u = true) (hr : u.roots = []) (hg : u.gestartet = [])
-    (h : accepts u P main = .ok true)
-    (hStart : unitStartGeprueftB (einheitDer u P Q sp main args [] [] [])
-      (List.finRange u.fns.length) (List.finRange u.locks.length) = true) :
+    (h : accepts u P main = .ok true) :
     akzeptiertX_pruefer.akzeptiert (einheitDer u P Q sp main args [] [] [])
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true :=
   accepts_gibt_pruefer u P Q sp main args [] [] [] hFn hZ (uCheckDecls_zertifizierbar u hZ)
-    (roots_leer u hr) (gestartet_leer u hg) h hStart
+    (roots_leer u hr) (gestartet_leer u hg) h
 
 end Gabbro.Stage0.OldSource

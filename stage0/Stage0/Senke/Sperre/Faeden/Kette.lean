@@ -85,6 +85,7 @@ theorem Ruhe.nicht_decC0 (hN : N ≤ 2147483647) (hF : R.Fair) (Q : Ruhe R m s h
   have hlt := Q.W0_lt hN
   rcases (R.schritt j' h ha).von_decC hp' with ⟨_, e⟩ | ⟨e, _⟩
   · rw [hw2] at e
+    try rw [wrapDec_eq] at e
     omega
   · exact e hw1
 
@@ -103,6 +104,7 @@ theorem Ruhe.nicht_decC (hN : N ≤ 2147483647) (hF : R.Fair) (Q : Ruhe R m s h 
   have hlt := Q.W0_lt hN
   rcases (R.schritt j' h ha).von_decC hp' with ⟨e1, e⟩ | ⟨_, e⟩
   · rw [hw2] at e
+    try rw [wrapDec_eq] at e
     rw [hw1] at e1
     omega
   · exact Q.nicht_decL hN hF (Nat.le_trans hj (Nat.le_succ_of_le hj')) e
@@ -124,6 +126,7 @@ theorem Ruhe.nicht_incC0 (hN : N ≤ 2147483647) (hF : R.Fair) (Q : Ruhe R m s h
   have hlt := Q.W0_lt hN
   rcases (R.schritt j' h ha).von_incC hp' with ⟨_, e⟩ | ⟨e, _⟩
   · rw [hw2] at e
+    try rw [wrapDec_eq] at e
     omega
   · exact e hw1
 
@@ -142,6 +145,7 @@ theorem Ruhe.nicht_incC (hN : N ≤ 2147483647) (hF : R.Fair) (Q : Ruhe R m s h 
   have hlt := Q.W0_lt hN
   rcases (R.schritt j' h ha).von_incC hp' with ⟨e1, e⟩ | ⟨_, e⟩
   · rw [hw2] at e
+    try rw [wrapDec_eq] at e
     rw [hw1] at e1
     omega
   · exact Q.nicht_incL hN hF (Nat.le_trans hj (Nat.le_succ_of_le hj')) e

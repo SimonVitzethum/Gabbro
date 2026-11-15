@@ -147,7 +147,7 @@ public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge.Teil2
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsLauf.Teil2
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravLese.Teil3
-public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Foreign.CallElse
@@ -183,6 +183,7 @@ public import Grammatik.Parser.Namen.AufloesungProben
 public import Grammatik.Parser.Namen.Oeffentlich
 public import Grammatik.Parser.Namen.OeffentlichProben
 public import Grammatik.Parser.Stmt.AnweisungProben
+public import Grammatik.Parser.Elab.Proben.DeclRefusals
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3

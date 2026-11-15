@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 
 @[expose] public section
 

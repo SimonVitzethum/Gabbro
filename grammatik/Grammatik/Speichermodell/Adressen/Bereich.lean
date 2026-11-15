@@ -128,7 +128,7 @@ theorem execStmt_blatt_aussen {O : Orakel D} (hI : ImBereichO O) (p : Nat)
       · rename_i σ'' v hax
         simp only [Ausgang.ok.injEq] at h
         obtain ⟨rfl, -⟩ := h
-        simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at hax
+        simp only [axiomAntwort] at hax
         have e1 := congrArg Prod.fst hax
         simp only at e1
         rw [← e1]
@@ -168,7 +168,7 @@ theorem axiomAntwort_aussen {O : Orakel D} (hI : ImBereichO O) {a : D.Ax} {σ σ
     {ρ : Env D (D.aparams a)} {r : Option (ErgVal D (D.aerg a))} (hax : axiomAntwort O a σ ρ = (σ₂, r)) :
     AussenGleich σ.speicher σ₂.speicher := by
   have e := congrArg Prod.fst hax
-  simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at e
+  simp only [axiomAntwort] at e
   rw [← e]
   exact fun t k f hk => hI a (σ.fragt (.inl a)) ρ t k f hk
 
@@ -176,7 +176,7 @@ theorem axiomAntwortSonst_aussen {O : Orakel D} (hI : ImBereichO O) {a : D.Ax} {
     {ρ : Env D (D.aparams a)} {r : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
     (hax : axiomAntwortSonst O a σ ρ = (σ₂, r)) : AussenGleich σ.speicher σ₂.speicher := by
   have e := congrArg Prod.fst hax
-  simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at e
+  simp only [axiomAntwortSonst] at e
   rw [← e]
   exact fun t k f hk => hI a (σ.fragt (.inl a)) ρ t k f hk
 

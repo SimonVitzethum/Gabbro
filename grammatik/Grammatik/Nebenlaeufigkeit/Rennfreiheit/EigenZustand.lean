@@ -117,7 +117,7 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
               (evalArgs (σ.lese Λ args.orte) args
                 (σ.lese Λ args.orte) ρ)).1 := by
             have hA := hAns
-            simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at hA
+            simp only [axiomAntwort] at hA
             have hF := congrArg Prod.fst hA
             simp only at hF
             exact hF.symm

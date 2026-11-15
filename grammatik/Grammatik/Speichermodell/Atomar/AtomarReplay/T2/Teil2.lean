@@ -156,7 +156,7 @@ theorem fadenSA_blatt (hO : GutO O)
           intro O' R U A σ0 κ hz hκ hw
           rw [hsem]
           apply ZErgG.folgt_of_eq
-          simp only [execStmtHA, axiomAntwort, hκ, hw, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
+          simp only [execStmtHA, axiomAntwort, hκ, hw]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
       | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax

@@ -39,7 +39,6 @@ theorem sim_stmt_axiomCallElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List 
       axiomAntwortSonst (E.orakelΦ hZ pad Φ O') a σ₁ (evalArgs σ₁ args σ₁ ρ) =
         (response, sonstPasst (D := D) (fun _ => Option.none) (D.aerg a) (D.agruende a) reply.2) := by
     unfold axiomAntwortSonst
-    simp only [Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
     rw [hOracle Φ hP] <;> rfl
   have targetAnswer : axiomAntwortSonst O' (E.ax a) readWorld
       (castE (E.aparams a).symm (evalArgs readWorld (exA E args) readWorld ρ')) =

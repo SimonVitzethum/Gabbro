@@ -19,7 +19,7 @@
 -/
 module
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
-public import Grammatik.Speichermodell.Atomar.Zulassung
+public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Logik.Fortschritt.Fortschritt
 public import Grammatik.Logik.Vertraege.Locations.AntwortOrte
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG

@@ -169,7 +169,7 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken,
     schnittstellen_standard _ _, ?_, ?_, trivial, hL.akku,
-    ⟨(komponiere B ps).pruefungen, hL.pruef⟩, (hA p0 hp0).reset, ?_, ?_⟩
+    ⟨(komponiere B ps).pruefungen, hL.pruef⟩, (hA p0 hp0).reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -202,28 +202,6 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
   · intro a ha
     obtain ⟨p, hp, ha'⟩ := mem_arenen_komponiere ha
     exact (hA p hp).worte a ha'
-  · intro f
-    obtain ⟨p, hb⟩ := besitzer_da hD f
-    have hp := (besitzer_mem (B := B) hb).1
-    have same := passend_P (hV p hp)
-    apply Invarianten.Pruefer.invariantDuties_congr f
-      (show p.E.P.invariante = (komponiere B ps).P.invariante by rw [same]; rfl)
-      (show p.E.P.requires = (komponiere B ps).P.requires by rw [same]; rfl)
-      (show p.E.P.ensures = (komponiere B ps).P.ensures by rw [same]; rfl)
-      (komponiere_rumpf hb).symm (hV p hp).sperrInv.symm
-    exact (hA p hp).invarianten f
-
-  · intro f
-    obtain ⟨p, hb⟩ := besitzer_da hD f
-    have hp := (besitzer_mem (B := B) hb).1
-    have same := passend_P (hV p hp)
-    apply Vertraege.Pruefer.contractDuties_congr f
-      (show p.E.P.invariante = (komponiere B ps).P.invariante by rw [same]; rfl)
-      (show p.E.P.requires = (komponiere B ps).P.requires by rw [same]; rfl)
-      (show p.E.P.ensures = (komponiere B ps).P.ensures by rw [same]; rfl)
-      (komponiere_rumpf hb).symm (hV p hp).sperrInv.symm
-    exact (hA p hp).kontrakte f
-
 
 /-! ## The link check, decided -/
 

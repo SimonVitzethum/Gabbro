@@ -1,4 +1,4 @@
-// erwartet: N056
+// erwartet: deadline not modelled
 // **A deadline whose probe diverges but guards nothing.**
 //
 // The watchdog arm of `N056` at a `deadline` clause. `watch` answers `-> never`

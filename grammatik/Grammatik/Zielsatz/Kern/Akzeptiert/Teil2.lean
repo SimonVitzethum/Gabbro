@@ -156,26 +156,25 @@ theorem akzeptiertSpec_of [RootNativeFloat.Hardware]
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) :
     AkzeptiertSpec P S fs ws aks := by
-  dsimp only [Akzeptiert] at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14,
-    hChecks, _hScopes, _hInvariants⟩ := h
+  unfold Akzeptiert at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, _h16⟩ := h
   exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
     (schnittstellenB_iff hvoll).mp h11, (resetB_iff hcs).mp h12, (libraryB_iff _ _).mp h13,
     ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14).1,
-    ⟨checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp hChecks⟩⟩
+    ⟨checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h15⟩⟩
 
 /-- **The checker establishes the scope discipline** (C11): from the Bool,
     outside `Spec` (which has no scope field). -/
 theorem scopesOkProg_of_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
-  dsimp only [Akzeptiert] at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc] at h
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hScopes, _⟩ := h
-  exact (scopesOkProgB_iff hvoll).mp hScopes
+  unfold Akzeptiert at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
+  exact (scopesOkProgB_iff hvoll).mp h16
 
 /-- **The scope discipline follows from the floor field** (C11, owner
     2026-11-02): no new `Spec` field, no change to the meaning of `Spec.lean`. -/
@@ -197,21 +196,18 @@ theorem spec_akzeptiert [RootNativeFloat.Hardware]
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
-    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks)
-    (hI : Invarianten.Pruefer.programInvariantsB P S fs (fun _ => none) {} ls = true) :
+    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks) :
     Akzeptiert P S fs ls cs ws aks checks qs = true := by
   unfold Akzeptiert
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true, and_assoc]
-  exact ⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg, (fussWB_iff hvoll).mpr h.fuss,
-    (stufenB_iff hvoll).mpr h.stufen, (sperrOrteB_iff hls).mpr h.sperrOrte,
-    wurzelnB_iff.mpr h.wurzeln, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln,
-    (rennB_iff hvoll hcs).mpr h.renn,
-    (antwortenB_iff hvoll).mpr h.antworten, (maskenB_iff hvoll).mpr h.masken,
-    (schnittstellenB_iff hvoll).mpr h.schnittstellen, (resetB_iff hcs).mpr h.reset,
-    (libraryB_iff _ _).mpr h.bibliothek,
-    (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩,
-    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr hChecks,
-    (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_spec h), hI⟩
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
+    wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
+    (rennB_iff hvoll hcs).mpr h.renn⟩,
+    (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
+    (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr hChecks⟩,
+    (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_spec h)⟩
 
 end Komponenten
 

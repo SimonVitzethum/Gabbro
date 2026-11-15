@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,15 +49,20 @@ namespace Gabbro.Bruecke.SchleifeZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
 def tafel : UTab :=
   { name := "T"
     count := 3
-    cols := [("v", (0, 9))] }
+    cols := [("v", (0, 9))]
+    breiten := [("v", 8)] }
 
 def fill : UFn :=
   { name := "fill"
@@ -74,10 +80,59 @@ def unit : UProg :=
     locks := []
     fns := [fill] }
 
-def source : String :=
-  "module loops { table T count 3 { slot { v : u8 in 0 .. 9, } } " ++
-  "impl fn fill() effects { writes T.slots } { " ++
-  "traverse i over slots of T by unvisited touches writes T.slots { T.slots[i].v = 7; } } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module loops { table T count 3 { slot { v
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'l', 'o', 'o', 'p', 's', ' ', '{', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'T',
+    ' ', 'c', 'o', 'u', 'n', 't', ' ', '3', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', ' ', 'v', ' ']
+  tokens := [.wort "module", .ident "loops", .zeichen "{", .wort "table", .ident "T", .wort "count",
+    .num 3, .zeichen "{", .wort "slot", .zeichen "{", .ident "v"]
+  steps := 22
+  scanned := by intro rest remaining; cbv
+
+-- : u8 in 0 .. 9, } } impl fn fill()
+def sourceChunk1 : Chunk where
+  characters := [':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '9', ',', ' ', '}', ' ', '}', ' ', 'i', 'm',
+    'p', 'l', ' ', 'f', 'n', ' ', 'f', 'i', 'l', 'l', '(', ')', ' ']
+  tokens := [.zeichen ":", .wort "u8", .wort "in", .num 0, .zeichen "..", .num 9,
+    .zeichen ",", .zeichen "}", .zeichen "}", .wort "impl", .wort "fn", .ident "fill",
+    .zeichen "(", .zeichen ")"]
+  steps := 25
+  scanned := by intro rest remaining; cbv
+
+-- effects { writes T.slots } { traverse i
+def sourceChunk2 : Chunk where
+  characters := ['e', 'f', 'f', 'e', 'c', 't', 's', ' ', '{', ' ', 'w', 'r', 'i', 't', 'e', 's', ' ', 'T', '.', 's', 'l', 'o',
+    't', 's', ' ', '}', ' ', '{', ' ', 't', 'r', 'a', 'v', 'e', 'r', 's', 'e', ' ', 'i', ' ']
+  tokens := [.wort "effects", .zeichen "{", .wort "writes", .ident "T", .zeichen ".", .wort "slots",
+    .zeichen "}", .zeichen "{", .wort "traverse", .ident "i"]
+  steps := 18
+  scanned := by intro rest remaining; cbv
+
+-- over slots of T by unvisited touches
+def sourceChunk3 : Chunk where
+  characters := ['o', 'v', 'e', 'r', ' ', 's', 'l', 'o', 't', 's', ' ', 'o', 'f', ' ', 'T', ' ', 'b', 'y', ' ', 'u', 'n', 'v',
+    'i', 's', 'i', 't', 'e', 'd', ' ', 't', 'o', 'u', 'c', 'h', 'e', 's', ' ']
+  tokens := [.wort "over", .wort "slots", .wort "of", .ident "T", .wort "by", .wort "unvisited",
+    .wort "touches"]
+  steps := 14
+  scanned := by intro rest remaining; cbv
+
+-- writes T.slots { T.slots[i].v = 7; } } }
+def sourceChunk4 : Chunk where
+  characters := ['w', 'r', 'i', 't', 'e', 's', ' ', 'T', '.', 's', 'l', 'o', 't', 's', ' ', '{', ' ', 'T', '.', 's', 'l', 'o',
+    't', 's', '[', 'i', ']', '.', 'v', ' ', '=', ' ', '7', ';', ' ', '}', ' ', '}', ' ', '}']
+  tokens := [.wort "writes", .ident "T", .zeichen ".", .wort "slots", .zeichen "{", .ident "T",
+    .zeichen ".", .wort "slots", .zeichen "[", .ident "i", .zeichen "]", .zeichen ".",
+    .ident "v", .zeichen "=", .num 7, .zeichen ";", .zeichen "}", .zeichen "}",
+    .zeichen "}"]
+  steps := 27
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3, sourceChunk4]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def body : List Gabbro.Body.Stmt :=
   [.forEach "i" [0, 1, 2] [.assign "T" (.name "i") "v" (.lit (.int 7))]]
@@ -99,14 +154,18 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
-    Parser.parseTopTief scanned.val = .ok items } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+theorem parsed_some : (Parser.parseTopTief scanned.val).toOption.isSome = true := by cbv
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+noncomputable def parsed : { items : List Parser.SItemTief //
+    Parser.parseTopTief scanned.val = .ok items } :=
+  ⟨(Parser.parseTopTief scanned.val).toOption.get parsed_some, except_ok_get parsed_some⟩
+
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered
@@ -160,7 +219,10 @@ theorem carried_duties : PflichtenTeilG source (u := unit) (fun _ => True) := by
     getragenG_of_bools (by cbv) (by cbv) (by cbv),
     (by cbv), fun P fs hlow c _ => interfaces P fs hlow c, ?_, ?_⟩
   · intro c _
-    have hc : c = ⟨0, by decide⟩ := Fin.ext (by have h := c.isLt; change c.val < 1 at h; omega)
+    have hc : c = ⟨0, by decide⟩ := Fin.ext (by
+      change c.val = 0
+      have h : c.val < 1 := c.isLt
+      omega)
     subst c
     exact ⟨body, reader_form, meets⟩
   · intro c hc

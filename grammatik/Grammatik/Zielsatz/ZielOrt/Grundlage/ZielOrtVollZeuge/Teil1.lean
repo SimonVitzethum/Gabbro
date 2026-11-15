@@ -174,11 +174,8 @@ theorem vP_koerper_haupt : KoerperGutV vP 0 vHaupt := by
     · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h2 with h3 | ⟨σ3, ρ3, _, h3⟩
       · simp only [vLocks] at h3
         simp only [execStmt] at h3
-        split at h3
-        · cases h3
-        · cases h3
-        · exact execStmt_axiomCall_logik _ _ _ _ _ _ _ _ _ _ _ _ _
-            (execBlock_eins_logikV _ _ _ vAx _ _ (mapWelt_logikV h3))
+        exact execStmt_axiomCall_logik _ _ _ _ _ _ _ _ _ _ _ _ _
+          (execBlock_eins_logikV _ _ _ vAx _ _ (mapWelt_logikV h3))
       · simp only [execEnd] at h3
         cases h3
 

@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -48,8 +49,12 @@ namespace Gabbro.Bruecke.BereichZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
@@ -69,9 +74,39 @@ def unit : UProg :=
     locks := []
     fns := [clip] }
 
-def source : String :=
-  "module ranges { impl fn clip(x : u8 in 0 .. 9) -> u8 in 0 .. 3 { " ++
-  "narrow x to 0 .. 3 else { return 0; } return x; } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module ranges { impl fn clip(x : u8 in 0
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'r', 'a', 'n', 'g', 'e', 's', ' ', '{', ' ', 'i', 'm', 'p', 'l', ' ', 'f',
+    'n', ' ', 'c', 'l', 'i', 'p', '(', 'x', ' ', ':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ']
+  tokens := [.wort "module", .ident "ranges", .zeichen "{", .wort "impl", .wort "fn", .ident "clip",
+    .zeichen "(", .wort "x", .zeichen ":", .wort "u8", .wort "in", .num 0]
+  steps := 22
+  scanned := by intro rest remaining; cbv
+
+-- .. 9) -> u8 in 0 .. 3 { narrow x to 0 ..
+def sourceChunk1 : Chunk where
+  characters := ['.', '.', ' ', '9', ')', ' ', '-', '>', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '3', ' ',
+    '{', ' ', 'n', 'a', 'r', 'r', 'o', 'w', ' ', 'x', ' ', 't', 'o', ' ', '0', ' ', '.', '.', ' ']
+  tokens := [.zeichen "..", .num 9, .zeichen ")", .zeichen "->", .wort "u8", .wort "in",
+    .num 0, .zeichen "..", .num 3, .zeichen "{", .wort "narrow", .wort "x",
+    .wort "to", .num 0, .zeichen ".."]
+  steps := 29
+  scanned := by intro rest remaining; cbv
+
+-- 3 else { return 0; } return x; } }
+def sourceChunk2 : Chunk where
+  characters := ['3', ' ', 'e', 'l', 's', 'e', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ';', ' ', '}', ' ', 'r',
+    'e', 't', 'u', 'r', 'n', ' ', 'x', ';', ' ', '}', ' ', '}']
+  tokens := [.num 3, .wort "else", .zeichen "{", .wort "return", .num 0, .zeichen ";",
+    .zeichen "}", .wort "return", .wort "x", .zeichen ";", .zeichen "}", .zeichen "}"]
+  steps := 21
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def body : List Gabbro.Body.Stmt :=
   [narrowStep (BodyNames.start clip) "x" 0 3 (.name "x") [.ret (some (.lit (.int 0)))],
@@ -94,14 +129,18 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
 
-private def parsed : { items : List Parser.SItemTief //
-    Parser.parseTopTief scanned.val = .ok items } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
+theorem parsed_some : (Parser.parseTopTief scanned.val).toOption.isSome = true := by cbv
 
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+noncomputable def parsed : { items : List Parser.SItemTief //
+    Parser.parseTopTief scanned.val = .ok items } :=
+  ⟨(Parser.parseTopTief scanned.val).toOption.get parsed_some, except_ok_get parsed_some⟩
+
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered
@@ -118,7 +157,7 @@ theorem interfaces : SchnittstellenPflicht unit := by
 
 theorem meets : meetsU unit (wfU unit) clip body := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "x").hasShape (.intIn 0 9))) = some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "x").hasShape (.intIn 0 9))) = some (Gabbro.Body.Value.bool true) at hpre
   have hshape := Option.some.inj hpre
   injection hshape with hshape
   obtain ⟨n, hn, hlo, hhi⟩ := Gabbro.Body.Value.hasShape_intIn_true (s.local' "x") 0 9 hshape
@@ -130,7 +169,8 @@ theorem meets : meetsU unit (wfU unit) clip body := by
     have hfresh : (BodyNames.start clip).fresh "x" = "x##" := by cbv
     have hex : Gabbro.Body.exec ρB body s = .returned s' (some (.int n)) := by
       simp only [body, narrowStep, hfresh, Gabbro.Body.exec, Gabbro.Body.step, ht,
-        hb, decide_true, hv, Gabbro.Body.eval, Gabbro.Body.bindLocal_here]
+        hb, and_self, decide_true, hv, hn, Gabbro.Body.eval, Gabbro.Body.bindLocal_here]
+      rfl
     change ∃ t, Gabbro.Body.finalState (Gabbro.Body.exec ρB body s) = some t ∧
       (postU unit (wfU unit) clip s t (Gabbro.Body.finalValue (Gabbro.Body.exec ρB body s))).getD False
     rw [hex]
@@ -154,7 +194,10 @@ theorem carried_duties : PflichtenTeilG source (u := unit) (fun _ => True) := by
     getragenG_of_bools (by cbv) (by cbv) (by cbv),
     (by cbv), fun P fs hlow c _ => interfaces P fs hlow c, ?_, ?_⟩
   · intro c _
-    have hc : c = ⟨0, by decide⟩ := Fin.ext (by have h := c.isLt; change c.val < 1 at h; omega)
+    have hc : c = ⟨0, by decide⟩ := Fin.ext (by
+      change c.val = 0
+      have h : c.val < 1 := c.isLt
+      omega)
     subst c
     exact ⟨body, reader_form, meets⟩
   · intro c hc

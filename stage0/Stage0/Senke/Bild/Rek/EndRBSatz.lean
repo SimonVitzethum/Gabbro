@@ -63,7 +63,7 @@ theorem stmtR_fragB (a : D.Lock → Bool) (hA : ∀ L, a L = true → Agl L) {l 
   | .retWhy r hΛ, h => by
       simp only [Stmt.fragB] at h
       subst h
-      exact StmtR.retWhy r hΛ
+      exact StmtR.retWhy (A := Agl) (C := fun _ => True) (l := l) (Γ := Γ) (Λ := Λ) r hΛ
   | .assignSlot .., _ => StmtR.blatt _ (by constructor)
   | .assignThru .., _ => StmtR.blatt _ (by constructor)
   | .assignThruOwn .., _ => StmtR.blatt _ (by constructor)
@@ -104,9 +104,11 @@ theorem blockR_fragB (a : D.Lock → Bool) (hA : ∀ L, a L = true → Agl L) {l
   | .regReadElse r hk z sonst rest, h => by
       simp only [Block.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hm, hs, hr⟩ := h
+      have hRec0 := endR_fragB a hA sonst hs
+      have hRec1 := blockR_fragB a hA _ rest hr
       subst hl
       subst hm
-      exact BlockR.regReadElse r hk z sonst rest (endR_fragB a hA sonst hs) (blockR_fragB a hA true rest hr)
+      exact BlockR.regReadElse r hk z sonst rest hRec0 hRec1
   | .awaits g pl hp hL ha rest, h => by
       simp only [Block.fragB] at h
       exact BlockR.awaits g pl hp hL ha rest (blockR_fragB a hA mr rest h)
@@ -116,15 +118,19 @@ theorem blockR_fragB (a : D.Lock → Bool) (hA : ∀ L, a L = true → Agl L) {l
   | .narrow e lo' hi' sonst rest, h => by
       simp only [Block.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hm, hs, hr⟩ := h
+      have hRec0 := endR_fragB a hA sonst hs
+      have hRec1 := blockR_fragB a hA _ rest hr
       subst hl
       subst hm
-      exact BlockR.narrow e lo' hi' sonst rest (endR_fragB a hA sonst hs) (blockR_fragB a hA true rest hr)
+      exact BlockR.narrow e lo' hi' sonst rest hRec0 hRec1
   | .check c sonst rest, h => by
       simp only [Block.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hm, hs, hr⟩ := h
+      have hRec0 := endR_fragB a hA sonst hs
+      have hRec1 := blockR_fragB a hA _ rest hr
       subst hl
       subst hm
-      exact BlockR.check c sonst rest (endR_fragB a hA sonst hs) (blockR_fragB a hA true rest hr)
+      exact BlockR.check c sonst rest hRec0 hRec1
   | .float op x y lo hi rest, h => by
       simp only [Block.fragB] at h
       exact BlockR.float op x y lo hi rest (blockR_fragB a hA mr rest h)
@@ -137,16 +143,19 @@ theorem blockR_fragB (a : D.Lock → Bool) (hA : ∀ L, a L = true → Agl L) {l
   | .floatNarrow e lo hi sonst rest, h => by
       simp only [Block.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hm, hs, hr⟩ := h
+      have hRec0 := endR_fragB a hA sonst hs
+      have hRec1 := blockR_fragB a hA _ rest hr
       subst hl
       subst hm
-      exact BlockR.floatNarrow e lo hi sonst rest (endR_fragB a hA sonst hs) (blockR_fragB a hA true rest hr)
+      exact BlockR.floatNarrow e lo hi sonst rest hRec0 hRec1
   | .bindCallElse f args he hp hr err rest, h => by
       simp only [Block.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hm, hs, hrest⟩ := h
+      have hRec0 := endR_fragB a hA err hs
+      have hRec1 := blockR_fragB a hA _ rest hrest
       subst hl
       subst hm
-      exact BlockR.bindCallElse f args he hp hr err rest trivial (endR_fragB a hA err hs)
-        (blockR_fragB a hA true rest hrest)
+      exact BlockR.bindCallElse f args he hp hr err rest trivial hRec0 hRec1
   | .bindCallInd .., h => absurd h Bool.false_ne_true
   | .bindCallIndElse .., h => absurd h Bool.false_ne_true
   | .bindAxiom .., h => absurd h Bool.false_ne_true
@@ -164,37 +173,45 @@ theorem endR_fragB (a : D.Lock → Bool) (hA : ∀ L, a L = true → Agl L) {l :
   | .retWhy r hΛ, h => by
       simp only [Endblock.fragB, Bool.not_eq_true'] at h
       subst h
-      exact EndR.retWhy r hΛ
+      exact EndR.retWhy (A := Agl) (C := fun _ => True) (Γ := Γ) (Λ := Λ) r hΛ
   | .cons s rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hs, hr⟩ := h
+      have hRec0 := stmtR_fragB a hA _ s hs
+      have hRec1 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.cons s rest (stmtR_fragB a hA true s hs) (endR_fragB a hA rest hr)
+      exact EndR.cons s rest hRec0 hRec1
   | .bind e rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true'] at h
       obtain ⟨hl, hr⟩ := h
+      have hRec0 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.bind e rest (endR_fragB a hA rest hr)
+      exact EndR.bind e rest hRec0
   | .float op x y lo hi rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true'] at h
       obtain ⟨hl, hr⟩ := h
+      have hRec0 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.float op x y lo hi rest (endR_fragB a hA rest hr)
+      exact EndR.float op x y lo hi rest hRec0
   | .floatLit q lo hi rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true'] at h
       obtain ⟨hl, hr⟩ := h
+      have hRec0 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.floatLit q lo hi rest (endR_fragB a hA rest hr)
+      exact EndR.floatLit q lo hi rest hRec0
   | .floatOf e lo hi rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true'] at h
       obtain ⟨hl, hr⟩ := h
+      have hRec0 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.floatOf e lo hi rest (endR_fragB a hA rest hr)
+      exact EndR.floatOf e lo hi rest hRec0
   | .floatNarrow e lo hi sonst rest, h => by
       simp only [Endblock.fragB, Bool.and_eq_true, Bool.not_eq_true', and_assoc] at h
       obtain ⟨hl, hs, hr⟩ := h
+      have hRec0 := endR_fragB a hA sonst hs
+      have hRec1 := endR_fragB a hA rest hr
       subst hl
-      exact EndR.floatNarrow e lo hi sonst rest (endR_fragB a hA sonst hs) (endR_fragB a hA rest hr)
+      exact EndR.floatNarrow e lo hi sonst rest hRec0 hRec1
   | .leave .., h => absurd h Bool.false_ne_true
   | .next .., h => absurd h Bool.false_ne_true
   | .bindCall .., h => absurd h Bool.false_ne_true

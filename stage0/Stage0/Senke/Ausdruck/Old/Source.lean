@@ -181,8 +181,7 @@ def accepts (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) : Excep
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
   let guests ← sourceGuests u
-  Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u))
+  pure (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
 
 /-- `accepts` with the checker Bool that leaves out the closedness check, which is constant on the
     complete list of functions (`akzeptiertX_voll`). Compiled code runs this form. -/
@@ -197,8 +196,7 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
   let guests ← sourceGuests u
-  Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u))
+  pure (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
 
 /-- **The fast form answers exactly as the full checker.** -/
 @[csimp] theorem accepts_eq_schnell : @accepts = @acceptsSchnell := by
@@ -209,11 +207,10 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
   · cases sourceGuests u with
     | error e => rfl
     | ok guests =>
-      exact congrArg (Vertraege.Pruefer.contractVerdict P (sperrFamilie u)
-        (List.finRange u.fns.length) (sperrQuellen u))
+      exact congrArg Except.ok
         (@akzeptiertX_voll (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
           (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u) _
-          (fun g => List.mem_finRange g) _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none))
+          (fun g => List.mem_finRange g) _ _ _ _ _ _ _)
 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)
@@ -244,11 +241,9 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).
     | error error => simp [hg, Functor.map, Except.map] at accepted
     | ok guests =>
       simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure, Except.ok.injEq] at accepted
-      have accepted := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
       refine ⟨guests, rfl, sourceGuests_complete u guests hg, ?_⟩
       unfold AkzeptiertX at accepted
       exact fun guest member =>
-        GuestBoundary.admissionB_each
-          (Bool.and_eq_true.mp (Bool.and_eq_true.mp (Bool.and_eq_true.mp accepted).1).1).2 guest member
+        GuestBoundary.admissionB_each ((Bool.and_eq_true _ _).mp accepted).2 guest member
 
 end Gabbro.Stage0.OldSource

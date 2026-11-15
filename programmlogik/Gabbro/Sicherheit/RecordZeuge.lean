@@ -32,12 +32,12 @@ theorem recordDeclared : Deklariert recordD recordTyping :=
 theorem recordWF : WF recordTyping recordState.world := by
   intro p sh h
   cases h
-  decide
+  rfl
 
 theorem recordWFL : WFL recordScope recordState.local' := by
   intro n sh h
   cases h
-  decide
+  rfl
 
 theorem recordKetten : KettenWohlgeformt recordD recordState.world := by
   intro c via k h

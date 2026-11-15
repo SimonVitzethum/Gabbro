@@ -35,7 +35,7 @@ theorem axiomAntwort_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {AxT : D
     (axiomAntwort O a σ x).2 = (axiomAntwort O a τ x).2 ∧
       WRel T (axiomAntwort O a σ x).1 (axiomAntwort O a τ x).1 := by
   obtain ⟨e1, e2⟩ := hO a ha (σ.fragt (.inl a)) (τ.fragt (.inl a)) x (h.fragt _)
-  simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
+  simp only [axiomAntwort]
   exact ⟨by rw [e1], e2⟩
 
 /-- The same for a fallible axiom (C-free lane, 2026-09-30): the raw answer is the same, so is
@@ -46,7 +46,7 @@ theorem axiomAntwortSonst_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {Ax
     (axiomAntwortSonst O a σ x).2 = (axiomAntwortSonst O a τ x).2 ∧
       WRel T (axiomAntwortSonst O a σ x).1 (axiomAntwortSonst O a τ x).1 := by
   obtain ⟨e1, e2⟩ := hO a ha (σ.fragt (.inl a)) (τ.fragt (.inl a)) x (h.fragt _)
-  simp only [axiomAntwortSonst, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
+  simp only [axiomAntwortSonst]
   exact ⟨by rw [e1], e2⟩
 
 /-! ## 3. Two outcomes of the same shape -/

@@ -26,10 +26,8 @@ theorem gabbro_ziel_voll : GabbroZielVoll := by
     have h := logikPflichtA_mitRuhe hN.logik
     exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
         (h.1 passes f).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).2⟩,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
       h.2⟩
   have h := zielFX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
     (wsRuhe E.ws) hA hN' O.mitRuhe (hardware_mitRuhe hH) passes sp init
@@ -48,10 +46,8 @@ theorem gabbro_ziel_leben : GabbroZielLeben := by
     have h := logikPflichtA_mitRuhe hN.logik
     exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
         (h.1 passes f).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).2⟩,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
       h.2⟩
   have hH' := hardware_mitRuhe hH
   have hZ := startZulaessig_aus E fs.1 hN.start hL

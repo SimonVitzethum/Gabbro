@@ -61,7 +61,7 @@ theorem execEreignis_aus_axiomCall
     have hσ1 : σ1 = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 := by
       have hfst := congrArg Prod.fst ha
-      simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at hfst
+      simp only [axiomAntwort] at hfst
       exact hfst.symm
     have hlese : ((σ.lese Λ args.orte).fragt (.inl a)).spur =
         (Ereignis.fremd (.inl a) :: args.orte.map fun o => match o with

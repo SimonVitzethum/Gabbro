@@ -105,8 +105,10 @@ theorem laufSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u
       obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
       subst Λ₁
       cases hst
-      rw [ht] at htZ
-      cases htZ
+      have htEq : tZ = t := by
+        rw [ht] at htZ
+        exact (Except.ok.inj htZ).symm
+      subst tZ
       obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
         (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
         (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ

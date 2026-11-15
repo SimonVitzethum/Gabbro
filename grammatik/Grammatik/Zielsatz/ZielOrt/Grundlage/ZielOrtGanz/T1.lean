@@ -240,7 +240,7 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
         rw [if_neg hc]
         exact h
   | axiomCall a args h' hw hg' hd hgd =>
-      simp only [execStmt, axiomAntwort, Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte] at h
+      simp only [execStmt, axiomAntwort] at h
       split at h <;> cases h
   | ite => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | onOption => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb

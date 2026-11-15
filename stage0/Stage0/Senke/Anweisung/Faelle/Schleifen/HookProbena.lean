@@ -152,7 +152,7 @@ def sourceOutcome (budget mode : Nat) : Int :=
 theorem hook_outcomes_zeuge :
     (List.range 3).all (fun budget => (List.range 9).all
       (fun mode => decide (sourceOutcome budget mode = expected budget mode))) = true := by
-  decide_cbv
+  decide +kernel
 
 /-- All joint fixtures use the complete image producer and the actual source hook. -/
 theorem hook_images_zeuge :
@@ -169,7 +169,7 @@ theorem hook_images_zeuge :
     have cases : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 ∨ mode = 4 ∨
         mode = 5 ∨ mode = 6 ∨ mode = 7 ∨ mode = 8 := by omega
     rcases cases with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    all_goals decide_cbv
+    all_goals decide +kernel
 
 /-- Joint successful witnesses expose actual callee effects. Mode 8 performs
     two outer passes with two inner passes each; mode 7 initially satisfies its
@@ -180,7 +180,7 @@ theorem hook_effects_zeuge :
     sourceOutcome 1 8 = 111 ∧ sourceOutcome 2 8 = 4 ∧
     sourceOutcome 1 7 = 111 ∧ sourceOutcome 2 7 = 104 ∧
     (image 2 8).isOk = true := by
-  decide_cbv
+  decide +kernel
 
 
 end Gabbro.Stage0.Senke.ForeverHookProbe

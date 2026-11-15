@@ -1,11 +1,24 @@
 /-
-  Semantic witnesses of the atomic-rely model: the stale read is covered by
-  GX and cannot be a G step. No concrete-checker acceptance is asserted.
+  File:      Grammatik/Zielsatz/AtomarGoalZeuge.lean
+  Subject:   WITNESSES OF THE GOAL STATEMENT WITH THE ATOMIC RELY (Opus lane O25c, 2026-09-26):
+             `gabbro_ziel` itself on the flag program, and the weak run it covers.
+
+  * `n1E_gabbro` -- `GabbroZiel`'s conclusion on configuration 1 of the noninterference fixture
+    (`kern` stores the atomic `konfig`, `hauptA`/`hauptB` read it with no lock): the concrete
+    checker `akzeptiertX_pruefer` accepts the unit (the checker of before refuses it,
+    `n1_alt_abgelehnt`), (b) with the rely holds (`n1E_nutzerPflichtA`), and `gabbro_ziel`
+    gives `ZielFX` on every reachable thread machine over GX, from the runtime's full start.
+  * `n1_stale_x` -- NON-DEGENERATE: the stale read of W (`w_nicht_sc`: after `kern` wrote
+    `konfig := 3`, `hauptA` stores the INITIAL `konfig` into `tabA[0]`, where every G step of
+    it stores 3, `g_schritt_0`) is a step of machine GX over the admitted shared atomics, it is
+    NOT a step of G, and at the machine it reaches every leg of `ZielX` holds (`zielX_aus`). So
+    the new conclusion speaks about runs the statement of before did not contain.
+  * `n1_gx_nicht_g` -- the same step, as a sentence about the machines: GX strictly contains G on
+    an accepted program.
 -/
 module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
-public import Grammatik.Zielsatz.Atomar.ConcreteGoalZeuge
 @[expose] public section
 
 
@@ -15,6 +28,42 @@ open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge
 
 local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 
+/-- **`GabbroZiel` on configuration 1** (the flag): `ZielFX` on every reachable thread machine
+    over GX of the runtime's full start -- every budget, every set of initially live threads. -/
+theorem n1E_gabbro [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD.mitRuhe)
+    (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
+    ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
+  gabbro_ziel_voll akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
+    ⟨nCs, nCs_voll⟩
+    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩)
+    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes _ _ (laufzeit_voll n1E)
+    lebt0 K hK
+
+/-- **The headline `GabbroZiel` (call-site duties) on configuration 1**: all its premises hold
+    jointly; without a foreign item the software duties hold by `callSitePflicht_ohne`,
+    `postDeckt_ohne` and `foreignVertrag_ohne`, and (c) is the hardware part of the full premise. -/
+theorem n1E_gabbro_callSite [RootNativeFloat.Hardware] (passes : Nat) (lebt0 : Faden → Bool)
+    (K : FadenMaschine nD.mitRuhe)
+    (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
+    ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
+  have hsw : ∀ a : nD.Ax, nD.axHerkunft a ≠ some AxOrigin.software := fun a => nomatch a
+  gabbro_ziel akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
+    ⟨nCs, nCs_voll⟩
+    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩)
+    n1E_nutzerPflichtA (callSitePflicht_ohne n1E hsw) (postDeckt_ohne n1E hsw) nO
+    (foreignVertrag_ohne n1E nO hsw)
+    (hardwareAnnahmenHw_of ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
+    passes _ _ (laufzeit_voll n1E) lebt0 K hK
+
+/-- The checker facts of configuration 1, as `AkzeptiertSpecX`. -/
+theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
+  akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX
 
 /-- `ZielX` at every machine GX reaches from configuration 1's start. -/
 theorem n1_zielX [RootNativeFloat.Hardware] (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)
@@ -46,7 +95,7 @@ theorem n1_stale_x [RootNativeFloat.Hardware] (ord : nD.Glob → Ordnung) :
   rw [hg1] at hs'
   exact SchwachZeuge.g_schritt_0 hs'
 
-/-- **GX strictly contains G on the semantic flag fixture**: the stale step is a GX step and no G
+/-- **GX strictly contains G on an accepted program**: the stale step is a GX step and no G
     step. -/
 theorem n1_gx_nicht_g [RootNativeFloat.Hardware] :
     ∃ M M' : RufMaschineG nD,
@@ -57,6 +106,8 @@ theorem n1_gx_nicht_g [RootNativeFloat.Hardware] :
   have := hG _ hs
   omega
 
+#print axioms n1E_gabbro
+#print axioms n1E_gabbro_callSite
 #print axioms n1_stale_x
 #print axioms n1_gx_nicht_g
 

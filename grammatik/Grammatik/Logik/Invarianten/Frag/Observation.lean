@@ -48,7 +48,6 @@ inductive Refusal where
   | crossEntry
   | unsupported (ctorName : String)
   | within (part : String) (cause : Refusal)
-  | invalid (detail : String)
   deriving DecidableEq, Repr
 
 def Refusal.message : Refusal → String
@@ -58,7 +57,6 @@ def Refusal.message : Refusal → String
   | .crossEntry => "cross-entry relation; use one local predicate per slot"
   | .unsupported ctorName => "unsupported invariant constructor: " ++ ctorName
   | .within part cause => part ++ ": " ++ cause.message
-  | .invalid detail => detail
 
 /-- Encodings exist for integers, Boolean predicates, and string lengths only. -/
 def Payload (D : Deklaration) : Ty → Type

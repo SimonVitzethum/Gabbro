@@ -80,8 +80,10 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
         obtain ⟨t, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
         subst Λ₁
         cases hst
-        rw [ht] at htZ
-        cases htZ
+        have htEq : tZ = t := by
+          rw [ht] at htZ
+          exact (Except.ok.inj htZ).symm
+        subst tZ
         obtain ⟨htail, hsuf⟩ := loopWrites_rest m k ss
           (fn.mitIndex x t.val ((declOf u).count t)) (fT.mitIndex x t.val ((declOf u).count t))
           (ns.push x) bodyG tail tailZ bodyB allocated hg hBodyG hBodyZ

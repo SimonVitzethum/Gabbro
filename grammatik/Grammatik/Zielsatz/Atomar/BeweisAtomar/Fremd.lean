@@ -26,10 +26,8 @@ theorem gabbro_ziel : GabbroZiel := by
     have h := logikPflichtA_mitRuhe hN.logik
     exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc)
         (h.1 passes f).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).1,
-      (Invarianten.Pruefer.invariantDuties_mitRuhe hA0.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).2⟩,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hA0.abg hc) (h.1 passes f).2.2⟩,
       h.2⟩
   have hQ0 : AxVertragOP (PreQ E.P) E.Q O := axVertragOP_of_binding hFV hPD hH.2.2.1
   have hQ1 : AxVertragOP (PreQ E.P.mitRuhe) (axEnsRuhe E.Q) O.mitRuhe := axVertragOP_mitRuhe hQ0

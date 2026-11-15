@@ -167,7 +167,11 @@ theorem gabbro_ziel_sc_aus (h : GabbroZielVoll) (C : Pruefer) (D : Deklaration) 
     (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
     (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes (FadenStart E.P.mitRuhe sp init lebt0) K) :
     ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K := by
-  exact gabbro_ziel_sc C D E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
+  have hA0 := C.korrekt E fs ls cs hH.2.2.2 hC
+  have hZ := h C.alsX D E fs ls cs (C.alsX_akzeptiert hB hA hC) (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
+    init hL lebt0 K (fadenErreichbarX_of hK)
+  refine zielF_of_X ?_ hZ
+  exact fun c => geteiltV_leer fs.2 hA0 c
 
 /-! ## 6. Linked units -/
 
@@ -280,44 +284,6 @@ theorem nutzerTeilA_of {eigen : D.Fn → Bool} {E : Einheit D} {fs : List D.Fn}
 
 end Verbund
 
-/-- The owner of each linked body supplies its checker-proved invariant
-    duties. No contract proof or invariant proof from (b) is used here. -/
-private theorem invariantDuties_verbinde {D : Deklaration} [DecidableEq D.Fn]
-    {E₁ E₂ : Einheit D} {fs ws₁ ws₂ : List D.Fn}
-    {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)}
-    {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)} (e : D.Fn → Bool)
-    (left : AkzeptiertSpecX E₁.P E₁.S fs ws₁ B₁ A₁)
-    (right : AkzeptiertSpecX E₂.P E₂.S fs ws₂ B₂ A₂) (compatible : Verbindbar E₁ E₂) :
-    ∀ f, Invarianten.Pruefer.InvariantDuties (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S f := by
-  intro f
-  cases selected : e f with
-  | true =>
-      exact Invarianten.Pruefer.invariantDuties_congr f rfl rfl rfl
-        (by simp only [verbinde, verbindeP, mitRumpf, selected, ↓reduceIte]) rfl (left.invarianten f)
-  | false =>
-      exact Invarianten.Pruefer.invariantDuties_congr f compatible.invariante.symm
-        compatible.requires.symm compatible.ensures.symm
-        (by simp only [verbinde, verbindeP, mitRumpf, selected, Bool.false_eq_true, ↓reduceIte])
-        compatible.sperren.symm (right.invarianten f)
-
-private theorem contractDuties_verbinde {D : Deklaration} [DecidableEq D.Fn]
-    {E₁ E₂ : Einheit D} {fs ws₁ ws₂ : List D.Fn}
-    {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)}
-    {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)} (e : D.Fn → Bool)
-    (left : AkzeptiertSpecX E₁.P E₁.S fs ws₁ B₁ A₁)
-    (right : AkzeptiertSpecX E₂.P E₂.S fs ws₂ B₂ A₂) (compatible : Verbindbar E₁ E₂) :
-    ∀ f, Vertraege.Pruefer.ContractDuties (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S f := by
-  intro f
-  cases selected : e f with
-  | true =>
-      exact Vertraege.Pruefer.contractDuties_congr f rfl rfl rfl
-        (by simp only [verbinde, verbindeP, mitRumpf, selected, ↓reduceIte]) rfl (left.kontrakte f)
-  | false =>
-      exact Vertraege.Pruefer.contractDuties_congr f compatible.invariante.symm
-        compatible.requires.symm compatible.ensures.symm
-        (by simp only [verbinde, verbindeP, mitRumpf, selected, Bool.false_eq_true, ↓reduceIte])
-        compatible.sperren.symm (right.kontrakte f)
-
 /-- **LINKING WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
@@ -329,10 +295,6 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   -- would also require an explicit query list, which the linked goal does not enumerate.
   have hAX : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku :=
     akzeptiertSpecX_of_spec (A := E.akku) hA
-      (invariantDuties_verbinde e (C.korrekt E₁ fs ls cs hH.2.2.2 h₁).1
-        (C.korrekt E₂ fs ls cs hH.2.2.2 h₂).1 hV)
-      (contractDuties_verbinde e (C.korrekt E₁ fs ls cs hH.2.2.2 h₁).1
-        (C.korrekt E₂ fs ls cs hH.2.2.2 h₂).1 hV)
   have hAR := akzeptiertSpecX_mitRuhe E.P fs.2 hAX
   have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hAX.abg
   have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
@@ -342,10 +304,8 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
     have h := logikPflichtA_mitRuhe hN.logik
     exact ⟨fun passes f => ⟨koerperGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc)
         (h.1 passes f).1,
-      (hAR.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).1,
-      (hAR.invarianten f passes (axEnsRuhe E.Q)
-        (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) (fun _ h => h.1)).2⟩,
+      invGutSA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc) (h.1 passes f).2.1,
+      invGutGrundA_mono (fun c hc => geteiltA_mitRuhe_rueck E.P fs.2 hAX.abg hc) (h.1 passes f).2.2⟩,
       h.2⟩
   have hStart : Laufzeit E sp init := ⟨hL.lader, hL.start, hL.einmal⟩
   have hZ := zielFX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
@@ -371,8 +331,17 @@ theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : De
       (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K) :
     ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
       (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K := by
-  exact gabbro_ziel_verbund_sc C D E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH
-    passes sp init hL lebt0 K hK
+  have hSpec₁ := C.korrekt E₁ fs ls cs hH.2.2.2 h₁
+  have hSpec₂ := C.korrekt E₂ fs ls cs hH.2.2.2 h₂
+  have hZ := h C.alsX D E₁ E₂ e fs ls cs
+    (C.alsX_akzeptiert hB₁ hA₁ h₁) (C.alsX_akzeptiert hB₂ hA₂ h₂) hV hS
+    (nutzerTeilA_of fs.2 hSpec₁ hN₁) (nutzerTeilA_of fs.2 hSpec₂ hN₂)
+    hQ O hH passes sp init hL lebt0 K (fadenErreichbarX_of hK)
+  refine zielF_of_X ?_ hZ
+  exact fun c => geteiltV_leer fs.2
+    (akzeptiertSpec_verbindeX (E₁ := E₁) (E₂ := E₂) (e := e) fs.2
+      (akzeptiertSpecX_of_spec (A := E₁.akku) hSpec₁)
+      (akzeptiertSpecX_of_spec (A := E₂.akku) hSpec₂) hV hS) c
 
 #print axioms Gabbro.Grammatik.Zielsatz.zielX_aus
 #print axioms Gabbro.Grammatik.Zielsatz.zielFX_aus

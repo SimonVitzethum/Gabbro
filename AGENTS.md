@@ -1,483 +1,233 @@
-# AGENTS.md — how work on Gabbro is run
+# AGENTS.md — rules for working on Gabbro
 
-This is the operating manual for everyone who works in this repository, human or model (`CLAUDE.md` is a
-symlink to it, so Claude Code loads the same text); it states the goal, the standing rules, the procedures and
-the pitfalls. There is no work-list file in the repository (owner, 2026-11-11): open work and findings are not
-recorded in a tracked document; a lead keeps them in a gitignored scratch file. History (who decided what, when, and how earlier rounds
-were organised) is in `git log`, not here.
+This file holds the standing rules and recommendations for everyone who works in this repository, human or model
+(`CLAUDE.md` is a symlink to it). It contains no current work and no site details:
+
+- what is being worked on now, and in which order, is in the plans under `dokumente/`
+  ([PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) first);
+- the concrete workflow of a site (build hosts, slot scripts, memory caps, agent line-up, credentials) lives in an
+  untracked `CLAUDE.local.md` / `AGENTS.local.md` that instantiates these rules and is never pushed;
+- history (who decided what, when) is in `git log`.
 
 ---
 
-## Current work: Stage 0 and the C packages (state of 2026-11-02)
-
-This section is the ONE valid staffing and build order; it replaces every earlier one (earlier orders are in
-`git log`). Lane checkpoints, the fourteen work packages and the C-package designs are in
-[IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); staffing statements there are history, not orders.
-The Lean module-system migration and the split of every Lean file below 500 lines are merged (2026-11-02).
-
-### Team
-
-- **One lead** (the root session) runs [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) with agents
-  started through T3 `delegate_task` (owner, 2026-11-12). Upper limits of agents running at the same time:
-  - agents of the Claude family (owner, 2026-11-13, latest): EITHER one Opus 5.5 (`claude-opus-5-5`) OR two
-    Sonnet 5.5 (`claude-sonnet-5-5`) at the same time, never mixed; Fable 5.2 only as the lead session;
-  - **three** GPT Sol 6.1 (codex `gpt-6.1-sol`, started with `reasoningEffort: high`);
-  - **five** Muse (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
-    `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`).
-  Which model gets which kind of task follows [MODEL-EVALUATION.md](dokumente/MODEL-EVALUATION.md), not a fixed
-  role: the lead records there, per finished task, how well each model proves and how often it errs, and assigns
-  the next tasks by that record.
-- **Proved theorems are reviewed, their proofs are not.** A proof is valid once it builds without `sorry` and with
-  the standard axioms; what a reviewer reads is the STATEMENT: whether it says what its name and comment claim,
-  whether its premises can hold together (witness), whether it is vacuous. Reviews are tasks for agents too, and
-  the quality of each review is recorded in MODEL-EVALUATION.md.
-- **Work** is the plan in its phases; the C packages in their three rounds (Scope below) and the Stage-0 side
-  (`stage0/`, the runner, probes) are part of it.
-- **The owner is asked only about important things**: a change of the goal statement's meaning, a rule of the
-  language, a decision the plan lists as open. Everything else the lead decides.
-- **Only the lead builds.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
-  `.lake` (no Mathlib, no build cache). A lead checks its sub-agents' work in its own tree.
-- **One integration branch.** The lead merges the branches of all its agents and its own work
-  into ONE integration branch and builds/checks that branch only; never one build per agent.
-- **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
-  the shell. The two guardians stay root's tools.
-- Root owns form-based coverage measurement and reviews; agents implement.
-
-### Scope: every userspace Gabbro form to Stage-0 IR
-
-The active implementation task is to compile every existing Gabbro language form needed by userspace
-programs into Stage-0 IR and build the connected translation pipeline, formally verified, **and, from 2026-11-03
-(owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: target-binding calls,
-boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
-reads/writes/fallible reads/register transitions, and the proof boundary of that plan (binding/boot behaviour is user
-logic with explicit proof obligations, never silently a hardware assumption). The low-level work runs in parallel with the C packages (owner, 2026-11-13; before: only after them) and does NOT
-touch the assembly IR runner, Stage 0 or GabbroV: its scope is the Lean model, checker and parser/exporter. It follows the plan's
-own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
-the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
-(question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
-merged. Hard rules of that work (owner, 2026-11-03): there is NO `unsafe` anywhere (all low-level access is checked
-authority); boot code is user code, written in Gabbro and verified by the user under the generic theorems.
-The confirmed decisions O12/O13 of [PLAN-COMPILER-READY.md](dokumente/PLAN-COMPILER-READY.md) §4.1–§4.2 and §8
-(owner, 2026-11-12) supersede source ASM and the bundled boot-stub exception: no assembly anywhere; privileged
-operations are target-binding calls over linear `context<P>`, with GIR cells as their meaning and target-table
-rows as their bytes, and entry/exit code is generated from `entry` declarations.
-The first boot boundary is firmware entry in 64-bit mode on x86-64; further cores use a generated start item of
-the binding (K4, O17), never assembly text. Existing safe region/reference userspace memory stays in scope as before.
-Work is prioritized by completed, connected source-to-IR cases, not by the number of helper lemmas, commits or added
-lines. Cover the whole language rather than repeatedly expanding infrastructure for a small subset.
-
-- **The assembly IR runner is the execution backend.** Reuse it; change it only for a concrete missing or
-  incorrect capability needed by source-to-IR compilation. Do not start an adjacent runner or hardware project.
-- **The former Gabbro runtime implemented in Lean is retired and must be removed.** Do not develop, extend,
-  optimize or retain it as a fallback/reference execution path. Stage 0 compiles; the assembly runner executes.
-  The canonical language model, IR semantics and lowering correctness proofs remain required; they are not
-  the retired executable source interpreter.
-- **Native CPU floating point (owner, 2026-11-04):** all Stage-0 runtime operations execute in the assembly
-  runner; Lean only compiles and proves the IR. Replace Gabbro's software IEEE arithmetic with the toolchain's
-  native `Float`/`Float32` primitives in the model and physical CPU operations in the runner. Full-range UInt64
-  conversion uses a portable native instruction sequence. Retain finite/range duties and all other guarantees.
-  This decision supersedes the older references to Gabbro's kernel IEEE framework below.
-- First inventory every existing language form across the Lean model, source front end, IR emitter and
-  connected correctness theorem; distinguish missing model support from missing translation or proof.
-- **Every Gabbro-to-IR lowering must be formally verified.** Implement it in the actual compiler path,
-  connect its generic correctness proof through the whole translation pipeline, and compile that pipeline.
-  Tests, per-program witnesses, isolated emitters and detached proof fragments do not replace the generic
-  lowering theorem and do not make a language case complete.
-- Do not start separate generic instruction-cost, timing, hardware or proof-infrastructure projects.
-  Proof changes are limited to what is necessary to connect the actual source-to-IR implementation while
-  preserving existing guarantees. Do not weaken checks or semantics to enable a case.
-- Test emitted IR with the assembly runner when needed. Never add another Gabbro interpreter or restore the
-  retired Lean execution path.
-- **`grammatik/`** is changed only under these owner rules of 2026-11-01; outside them it is not touched for this
-  task (reuse its compiled artifacts, run affected Stage-0 checks directly):
-  - **Exports:** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for forms whose canonical model
-    rule already exists may be added, batched into ONE change by ONE agent with one grammar rebuild,
-    `gabbro_ziel` still on the standard axioms and the Lean guardian afterwards.
-  - **Model extension:** wherever the Lean model or machine G is not strong or complete enough for an existing
-    source form, extend it there (syntax, G semantics, `Akzeptiert`, proofs) instead of dropping the form. Every
-    extension keeps `gabbro_ziel` on the standard axioms, never weakens a guarantee, describes any change of
-    meaning of `Spec.lean` in its commit, and is followed by the Lean guardian. Several agents may change
-    `grammatik/` at the same time, each in its own worktree; root merges them one after the other.
-  - **C packages:** all 18 C packages may change `grammatik/` and machine G as designed in
-    `dokumente/IR-COMPILATION-LANES.md`, with the recommended answer to every owner question there, provided
-    `gabbro_ziel` stays proved on the standard axioms. They are done in three full `grammatik/` build rounds:
-    round 1 C13, C17, C05, C04, C03; round 2 C01, C06, C07, C08, C09, C11, C18; round 3 C10, C02, C12, C14, C15,
-    C16. Between rounds only single changed modules are checked.
-  - `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`); it is not turned into a runtime check.
-
-Report which language cases actually compile, which remain refused, and what was measured. The broader roadmap
-below is not authorization to start adjacent projects.
-
-### Builds, memory and CPU
-
-The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/CPU overload of 2026-11-01.
-
-- **At most two Lean builds or direct Lean checks run globally**, across all worktrees, including audits,
-  witnesses and `lean --run` compiler invocations. Each holds a slot lock
-  `/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N = 1, 2) and releases it after each module/check. Never
-  run two checks in one worktree or mutate artifacts another check reads (use isolated artifact overlays); never
-  interrupt another worker's running proof.
-- **Scopes** (`systemd-run --user --scope …`):
-
-  | Run | Locks | Scope |
-  |---|---|---|
-  | full `grammatik/` build (only one globally) | both | `LEAN_NUM_THREADS=3`, `-p AllowedCPUs=0-11 -p CPUQuota=1200% -p MemoryMax=<min(MemAvailable-6G, 13G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0` |
-  | Stage-0/runner `lake build` | both | `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below> -p MemorySwapMax=0` |
-  | single-module check | one | `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0` |
-
-- **Every `lake build` sets `LEAN_NUM_THREADS` (owner, 2026-11-12).** Lake has no job limit of its own; without
-  the variable it starts one `lean` per core. At the end of a full `grammatik/` build that means about fifteen
-  heavy parser probes (7–12 GB each) at once: the scope thrashes at `MemoryHigh` and finishes nothing (measured:
-  one hour stuck at job 3754/3943). Use the value of the table above (3 for a full `grammatik/` build, measured
-  ~30 min, 2 for Stage 0); a build that makes no progress for 10 minutes is stopped by its own PIDs and restarted
-  with the table's values, never left running.
-- **Rebuild single modules only (owner, 2026-11-02).** Check the changed modules and the modules that import
-  them, one module at a time in dependency order (`lake build <Module>` or `lean` on the file inside a
-  single-module scope); the module system keeps dependents unbuilt when no interface moved. A full package build
-  (`grammatik/`, `stage0/`) runs only when single-module checks cannot settle a question, at most once per C round,
-  and the lead says why in its report.
-- **Inside a single-module slot exactly ONE `lean` process runs**, with `-j4 -DElab.async=true -M4608`
-  (asynchronous elaboration is the standard; the threads of one process share its imports), module by module in
-  dependency order. Never run a `lake build` of `stage0/` inside such a slot: it spawns one `lean -M16384` per
-  module and thrashes inside the 5G scope.
-- **No swap for ANY run:** every process that can use real memory (`lean`, `lake`, the runner and
-  regression loops, guardians, Python measurement scripts) runs inside a scope with `-p MemorySwapMax=0` and a
-  MemoryMax/MemoryHigh. No exceptions.
-- **Nothing heavy starts** when the load average is above 16 or less than 8 GiB are available (`free -g` before
-  every heavy step); wait instead.
-- **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the kernel
-  (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the final
-  integration build of a round, never in single-module checks.
-- **Build less, keep working:** batch several finished edits into one check of the affected modules. While a check
-  runs or waits for memory or a slot, keep writing the next proofs and code; never stop a run because a check is
-  pending, and never end a run while a build it started still runs.
-- **One build per wave (owner, 2026-11-12).** The finished branches of a whole wave of agents are merged into the
-  integration branch and checked by ONE compiler build (and, before a push, one full `grammatik/` build); a
-  failing branch is repaired or dropped and the wave is built again, never branch by branch. The plan is to be
-  finished with as few builds as possible.
-- **A second worktree for writing (owner, 2026-11-12).** A tree is never edited while a build reads it, so a lead
-  that only builds in one tree waits most of its time. The lead keeps a writing tree beside the building one
-  (set up as in "One Mathlib for all trees"): while a build runs in one tree, the next piece is written in the
-  other and brought over by `git` when the build is done. Waiting for a build is not work.
-- **The full `grammatik/` build runs once before a push (owner, 2026-11-12)**, not after every block. A change
-  under `Parser/Elab` rebuilds nearly every parser witness, the heavy probes among them (about 30 minutes).
-  Between pushes the compiler build (`lake build stage0` in `stage0/`) is the check: it rebuilds everything
-  Stage 0 depends on. The full build and the guardians then run on the state that is pushed.
-- **One Mathlib for all trees:** the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
-  tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only its
-  own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
-- **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
-- **Nothing in `/tmp`:** it is RAM. Scratch goes to `.scratch-*` inside the own worktree (`TMPDIR` points there);
-  everything in `/tmp` together stays under 100 MB, and root removes leftovers no process holds open.
-
-### Small files and the Lean module system (fixed rules)
-
-**Keep every file small (owner, 2026-11-02).** Below 500 lines is the hard limit for every Lean file; aim for
-200–300 lines, split a file into cohesive modules as soon as it nears the limit (pure moves, no change of a
-statement or a name), and keep functions and proofs short. Small files are what makes single-module rebuilds
-cheap and keep build memory low.
-
-
-All Lean in the repository (`grammatik/`, `stage0/`, `runner/`, `programmlogik/`, `passlogik/`, `bruecke/` and
-every other Lean package) is migrated completely to the Lean module system (`module`, `public import`/`import`,
-explicit `public`/`@[expose]` visibility), and every new or changed Lean file must be a module that uses it: expose
-only what dependents must unfold, keep proof bodies and helpers private, so a change that does not move an
-interface does not rebuild dependents. A non-module Lean file is a layout finding.
-
 ## 1. The goal
 
-> **A Gabbro user proves only their own logic plus named hardware assumptions.** Memory safety, race freedom,
-> contracts where claimed — in concurrent runs too — and time are carried by the language.
+**A Gabbro user proves only the logic of their own program and chooses named assumptions about hardware and
+environment. Everything else is carried by the language**: memory safety, race freedom, lock discipline, contracts
+and invariants where declared, time and memory bounds, isolation, information flow — in concurrent runs too, on
+every supported target. The direction of every change is to move work from the user onto the language model, never
+the other way.
 
-The end sequence:
+The end sequence is:
 
-1. **The goal theorem** over the Lean model (`gabbro_ziel`, §2) — proved.
-2. **Transfer into the checker and the compiler**: everything the model proves becomes the verified checker
-   and compiler written in Lean (Stage 0 first), in the order of §3 (Lean model first).
-3. **Translation validation**: source → model → final machine bytes, checked in Lean, with W / GX reused for
-   concurrency.
+1. **The goal theorem** over the Lean model (`gabbro_ziel`, §3) — the language's promise, proved.
+2. **A verified checker and compiler** that carry that promise down to machine bytes: Stage 0 first, then the
+   compiler written in Gabbro and proved with GabbroV.
+3. **A system built on it**: the compiler compiles itself, and an operating-system kernel written in Gabbro runs on
+   it — with no assembly anywhere and no unverified runtime underneath.
 
-**Acceptance of a change to the model** (also a change of the goal statement): the full Lean build is green and
-the core theorems are proved — `gabbro_ziel` with exactly `propext`, `Classical.choice`, `Quot.sound`, no
-`sorry`, and the witnesses of the new theorems. A change that moves the meaning of `Spec.lean` is described in
-the commit and in the relevant plan section.
+Three targets from the start: x86-64, AArch64 and RISC-V 64 are reached by adding a target table and a binding,
+never by changing sources, IR, passes or proofs. Performance target: at least the faster of `gcc -O3`/`clang -O3` on
+equivalent C, per workload class and ISA; claims only where measured.
 
-**What may be said:** "The goal theorem is proved over the model, with a witness and non-degeneracy."
-**What may NOT be said:** "Gabbro is verified." The checker inside the statement is the Lean Bool `Akzeptiert`,
-not a deployed checker, and no bridge to any binary is built. The
-[proof-status section](README.md#5-proved-and-not-proved) says exactly this; keep it that way.
+**What may be said:** "The goal theorem is proved over the model, with a witness and non-degeneracy." **What may NOT
+be said:** "Gabbro is verified" — until the checker and the compiler in the statement are the deployed ones and the
+bridge to the bytes is built.
 
-## 2. The goal theorem — what a newcomer must know
+## 2. Where things belong
 
-- **Shape:**
-  ```
-  ∀ checker C, declaration D, unit E : Einheit D, enumerations …,
-    C.akzeptiert E … = true      (a) the checker Bool, components in Zielsatz/Akzeptiert.lean
-    → NutzerPflicht E            (b) user logic: LogikPflicht + StartPflicht, for every budget
-    → HardwareAnnahmen O E.Q     (c) named hardware assumptions (oracle O answers the axiom ensures Q)
-    → Laufzeit E sp init         (d) the runtime: declared starts, idle root (P.mitRuhe)
-    → every reachable machine M satisfies Ziel
-  ```
-- **What `Ziel` contains:**
-  - `SpurInv`;
-  - `RennfreiBis` (every carrier except atomics);
-  - `VertragAmOrtG`, `SperrInvG`, `InvAmOrtG`, `InvAmGrundG`;
-  - `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG`: invariants beyond the returns — wherever no writer
-    runs, at every lock move, and observed by the holder alone;
-  - `StartEndeG`, `KeinStartGrundG`, `KeinLogikHaltG`;
-  - no deadlock, `KeinWarteZyklus`, and `KernHaltE`: no same-core interrupt deadlock for the handlers the
-    program declares (`Programm.unterbricht`, `via idt`), under a named core schedule, for every core assignment;
-  - `FortschrittG`, whose stop kinds are hardware, flag, budget and `nieZurueck`;
-  - `ZeitAb`;
-  - `FolgeG`: the order of calls in every thread's call log;
-  - `speicherAdressen`: every cell a run changes lies in its extent and, under every correct layout, in the
-    region of its table (addresses are pairs (space, byte); an open region has a space of its own).
-- **The atomic rely:** (a) is a `PrueferX` (sound against `AkzeptiertSpecX`; the footprint rule admits a shared
-  atomic in no contract; concrete checker `akzeptiertX_pruefer`), (b) is `NutzerPflichtA` (every body against
-  every value a shared atomic read may return), and the conclusion is `ZielFX`/`ZielX` on the thread machine over
-  GX (G whose shared-atomic reads the weak memory answers). The sequentially consistent statement is
-  `GabbroZielSC`, derived by `gabbro_ziel_sc_aus`. Proof files: `Zielsatz/Atomar/BeweisAtomar.lean`
-  (`gabbro_ziel`), `Zielsatz/Kern/Beweis.lean` (`gabbro_ziel_sc`).
-- **Axioms:** `#print axioms gabbro_ziel` must be exactly `propext`, `Classical.choice`, `Quot.sound`. Every
-  change that touches `grammatik/` keeps it so.
-- **The header of `Spec.lean`** is the ONE list of named assumptions and the NOT CLAIMED list: termination and
-  waiting bounds, stack depth, the hardware, weak memory beyond DRF-SC, unguarded publish/await payloads, floats
-  beyond the named native hardware assumption, starvation freedom, invariants inside a running writer or a held
-  section, a start declared once running on several threads. Linking of separately compiled units is a second statement,
-  `GabbroZielVerbund`. Probabilistic statements are out of scope. Every extension of the goal is a diff of
-  `Spec.lean` (or of the definitions it uses) and is described as such.
+Every piece of work belongs to exactly one layer. Putting it in the wrong layer is a design error, not a shortcut.
 
-## 3. Standing rules
+| Layer | Holds | Never holds |
+|---|---|---|
+| **Lean model** (machine G, GX, `Akzeptiert`, `Spec.lean`) | the ONE definition of the language: syntax, semantics, typing and acceptance rules, the goal theorem | anything a particular program needs |
+| **Checker** | the language's rules, decided: types, authority, ownership, locks, flows, and every property a program declares *optionally* for it to decide (contracts and invariants in the decidable fragment, `decreases`, bounds, levels). It decides or refuses. | program logic beyond a decidable fragment; warnings in place of refusals |
+| **Compiler** (Stage 0, later the Gabbro compiler) | lowering and optimisation, each proved once for every program | per-program checks, translation validation, unproved fast paths |
+| **GabbroProve** | program logic: what is specific to one program and no language rule can carry — functional correctness of an algorithm, a driver following its device protocol, probability or cost bounds outside the decidable fragment. The user proves it in Lean over the generic model. | anything the language could carry generically |
+| **Named assumptions** (the list in the `Spec.lean` header) | what nobody can prove: that hardware behaves like its model (per target-table row), environment software outside the verified image (firmware, a host OS) with a declared contract, random sources, hardness of cryptographic primitives | assumptions that hide a missing proof of the language |
+| **The user** | their own program logic (through GabbroProve) and the choice of assumptions | anything else |
 
-**Language and model**
-- **The Lean model is the single source for language and syntax.** Any change to a construct, a clause, a type
-  rule or a rule that accepts or refuses a form goes into the Lean model FIRST (machine G, `Akzeptiert`,
-  `gabbro_ziel` on the standard axioms), then into the checker, the compiler and `SYNTAX.md`/`LANGUAGE.md`. A form
-  the checker accepts and the model lacks is a checker bug. A pure lowering of an existing form does not change
-  the language.
-- **Everything new is modelled in Lean before it is merged**: semantics in machine G, the checker side with
-  `gabbro_ziel` still proved, the front end and exporter, GabbroV's `Body` model with the bridge simulation, and
-  for the selected target the correspondence through the final machine bytes. Without its Lean part a feature
-  stays unmerged (`NEEDS LEAN`).
+Consequences:
+
+- **The model comes first.** A construct, clause, type rule or acceptance rule changes in the Lean model first
+  (machine G, `Akzeptiert`, `gabbro_ziel` still proved), then in the checker, the compiler and
+  `SYNTAX.md`/`LANGUAGE.md`. A form the checker accepts and the model lacks is a checker bug. Where the model has no
+  rule yet, refuse.
 - **Guarantees come from generic theorems only.** Nothing in the compiler, checker or printers exists for
-  particular programs; GabbroV is proved right for every program, with its statements computed in Lean from the
-  source. Per-program Lean files are witnesses only, off the trust path.
-- **Safety is never traded for features.** No change weakens a guarantee — memory safety, race freedom,
-  contracts, costs, lock discipline — to make a check go green. A wall that only yields by weakening is recorded
-  as a finding.
-- **Simplicity without losing a guarantee**: ceremony count down AND pass register
-  constant. Never derive `ensures`, never turn a refusal into a warning.
-- **Where the model has no rule yet, refuse** — never accept by default.
+  particular programs; per-program Lean files are witnesses, off the trust path.
+- **A decidable declared property is a capability of the language**, not user logic; once the checker decides it,
+  the user no longer owes it.
+- **Hardware enters only as named per-row or per-envelope assumptions** (a target-table row, a speculation
+  envelope, a persistence envelope); every statement above the table is hardware-independent.
+- **Software inside the verified image is user logic; software outside it is a named environment assumption with a
+  declared contract.** Nothing is OS-specific: a system or kernel call is a generic call whose contract the program
+  or its binding library declares.
+- **No assembly anywhere.** Privileged operations are target-binding calls over linear `context<P>`; their meaning
+  is a neutral IR cell, their bytes are target-table rows; entry and exit code is generated from `entry`
+  declarations. Boot code is user code in Gabbro.
+- **No `unsafe`.** All low-level access is checked authority; memory from outside comes as a region, never from a
+  number; no int→pointer conversion.
+- **Memory:** regions with a ceiling refuse when full; open regions without a ceiling stay admitted (the provider's
+  contract carries freshness); running out of memory is the program's own logic.
 
-**Compiler, checker, parser**
-- **No legacy**: only the newest state. What is replaced is deleted (history stays in git): no compatibility
-  layers, deprecated paths, old names or flag aliases, retired-but-kept codes.
-- **No Rust and no handwritten C in the repository (owner, 2026-11-10).** The Rust checker, CLI and LLVM
-  emitter (`crates/`) and the C probes were deleted; they are in git history before `254a5cc5c`, the older C
-  emitter in the tag `archiv/c-emitter-2026-10-17`. The compiler is the Lean Stage-0 path; the assembly runner
-  (`runner/runner.s`) executes. Nothing is rebuilt in Rust or C.
-- **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
-  in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
-  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
-- **Three targets from the start (owner, 2026-11-12):** everything is built so that x86-64, AArch64 and RISC-V 64
-  are reached by adding a target table and a binding, not by changing sources, IR, passes or proofs. A program
-  cross-compiles to each of them from one source, and a good compiler still reaches more than optimised C on each
-  (§11). Whatever is specific to one architecture lives in its table or binding and nowhere else.
-- **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
-  requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
-  obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
-- **Vendor neutrality**: the hardware model holds on all CPUs of an architecture. What a vendor calls undefined or
-  model-specific stays FREE (all allowed results, never one observed value).
-- **Optimisations**: a validated optimised image or a refusal, never "optimised but unchecked".
+## 3. The goal theorem
 
-**Operating system, memory, data**
-- **Software inside the verified image is user logic; software outside it is a named environment assumption
-  with a declared contract** (owner, 2026-11-12; PLAN-COMPILER-READY §4.4, O14): an operating system below a hosted
-  program and firmware before the entry belong to that environment class. Nothing is OS-specific: a system or
-  kernel call is a generic call whose contract the program or its binding library declares in Gabbro.
-- **No handwritten C in a finished Gabbro binary, as far as possible.** Runtimes and binding libraries are
-  written in Gabbro; OS access goes through Gabbro `syscall` items; hardware access through Gabbro's
-  register/port forms. Handwritten C or assembly stays only where Gabbro cannot express the thing, each piece
-  with its written reason, booked as a wall and counted. Code moved from C into Gabbro is checked like user code.
-- **Memory from outside comes as a REGION, never from a number.** A `syscall`/`extern` item may answer a region
-  (or a reference into one) whose contract says it is fresh and disjoint; no int→ptr or int→fn-ptr conversion.
-- **Dynamic data structures are in scope**: heap regions with a declared ceiling and refuse-on-full (the
-  default), and OPEN regions without a ceiling (`Deklaration.offen`) whose cells come only from
-  the program's provider. **OOM is user logic**: an allocation needs no source OOM path; that the provider has
-  memory to give is the program's own obligation. An arena's `else` at its declared ceiling is a capacity bound,
-  not OOM.
-- **Floats are in scope** (IEEE kernel model). Probabilistic statements are out of scope.
+- **Shape:** for every checker `C`, declaration `D`, unit `E` and enumerations: (a) the checker accepts →
+  (b) the user's duties hold → (c) the named hardware assumptions hold → (d) the runtime starts what is declared →
+  every reachable machine satisfies `Ziel`. The legs of `Ziel`, the atomic rely and the derived statements are
+  listed in `Spec.lean`; the proof files are `Zielsatz/Atomar/BeweisAtomar.lean` and `Zielsatz/Kern/Beweis.lean`.
+- **Axioms:** `#print axioms gabbro_ziel` is exactly `propext`, `Classical.choice`, `Quot.sound`. No change may move
+  it.
+- **The header of `Spec.lean` is the ONE list** of named assumptions and of what is NOT claimed. Every extension of
+  the goal is a diff of `Spec.lean` (or of what it uses) and is described as such in the commit.
+- **A change of meaning of the goal statement is the owner's decision**; it is shown as a concrete diff, with a
+  recommendation, before it is merged. Strengthening the language's promise is the default direction.
+- **Extensions stand beside the goal, not inside it,** when they are a different kind of statement (linking,
+  liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
+- **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
+  `sorry`, and every new theorem with a ∀-over-syntax premise has a witness on a non-degenerate fixture that
+  satisfies all premises jointly.
 
-**Lean layout**
-- **Every Lean file has fewer than 500 lines** (owner, 2026-11-01): also every OLD file — the 235 files above
-  the limit (largest `Uebersetze.lean`, 6455 lines) are split into cohesive modules, pure moves without changing
-  a statement or a name. Large files also cost most of the build memory.
-- Every folder holds at most **20 entries**, and every Lean file lives in a sensible folder. The placement rules
-  are `instrumente/teile/lean-layout-rules.py`; `python3 instrumente/teile/lean-layout.py --check` runs inside
-  the Lean guardian, `--apply` moves new modules into place and rewrites imports.
+## 4. Rules for the code
 
-**Repository**
-- **Language:** everything in the repository is English — documents (every `.md` and its file name), comments,
-  commit messages, diagnostics. The conversation with the project owner is in German.
-- **At most 30 `.md` files** in the repository. Reports, verdicts and interim states belong in git, not in the
-  tree.
-- **Commits** are plain `git commit` with a Conventional Commits subject (`type(scope): summary`, types `feat`,
-  `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`); no helper script, no extra trailers beyond
-  the model's `Co-Authored-By`. Write the message to a file outside the tree and commit with `git commit -F <file>`.
-- **Squash before pushing**: work that belongs together (e.g. a feature and its follow-up fix) becomes ONE commit
-  before it is pushed (`git reset --soft <base>` and recommit, or `git commit --fixup` + autosquash). Pushed
-  history is never rewritten (no force-push), so squash only what is not yet pushed.
-- **Commit every building step.** Work that builds is committed at once.
-- **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`: never commit into it.
-- **Tag milestones** at the push that reaches them.
+- **Safety is never traded for features.** No change weakens a guarantee, a check or a semantics to make a build
+  green; a wall that only yields by weakening is recorded as a finding.
+- **Simplicity without losing a guarantee:** fewer ceremonies for the user, the same set of checks. Never derive
+  `ensures`, never turn a refusal into a warning.
+- **No legacy:** only the newest state. What is replaced is deleted; no compatibility layers, deprecated paths, old
+  names or flag aliases. History is in git.
+- **No Rust, no handwritten C, no assembly** in the repository; runtimes and binding libraries are written in
+  Gabbro. The compiler path is Lean (Stage 0) and the assembly IR runner executes its output; nothing else
+  interprets Gabbro.
+- **Target portability:** source semantics, IR, optimisation and proofs stay generic; ABI, image and entry
+  requirements are checked profiles; whatever is specific to one architecture lives in its table or binding only.
+- **Vendor neutrality:** the hardware model holds on all CPUs of an architecture; what a vendor leaves undefined
+  stays free (all results allowed).
+- **Optimisations:** a proved optimised image or none — never "optimised but unchecked".
+- **Every lowering is formally verified** in the actual compiler path and connected through the whole pipeline;
+  tests and per-program witnesses do not replace the generic theorem.
+- **Work is measured in finished, connected cases**, not in helper lemmas, commits or added lines. Do not start
+  adjacent infrastructure, timing or hardware projects that the plan does not ask for.
 
-**Security**
-- Never write API keys or passwords into the repository, memory or logs.
-- When the permission classifier blocks something, do not work around it; ask.
+## 5. Rules for Lean
 
-## 4. Where things run
+- **Module system everywhere** (`module`, `public import`/`import`, `@[expose]`): expose only what dependents must
+  unfold; a non-module file is a layout finding. Do not put `private` helpers under `@[expose] public section` when
+  exposed definitions use them.
+- **Small files:** every Lean file below 500 lines, aim for 200–300; split into cohesive modules by pure moves. At
+  most 20 entries per folder; the layout tool places new modules.
+- **Toolchain truth, not training memory:** the pinned Lean and Mathlib decide; every lemma name is grepped from
+  the tree or the toolchain before use.
+- **Forbidden:** `sorry`, `admit`, `native_decide`, `axiom` (outside the allow-list), `unsafe`.
+- **Fast proofs only:** a module checks in well under two minutes, no declaration takes more than a few seconds. No
+  kernel evaluation (`decide +kernel`, kernel `rfl`) over strings, whole programs or images on the compiler path;
+  prove from general theorems with small explicit premises. Heavy evaluation belongs in a witness module of its
+  own. A slow module is a finding and is fixed.
+- **Proof tactics that hold up:** `split` (not `split_ifs`); `simp only [...]` with named lemmas where possible;
+  destructure `Except`/`Option` results with `cases h : … with` instead of splitting `do` blocks; after
+  `cases h : x`, prove leftovers with `first | exact h | rfl | simp_all`; use `match`/`termination_by` instead of
+  `cases` for recursion; a function matching an indexed family on a FIXED index is not structural — generalise the
+  index if it must reduce by `rfl`.
+- **New constructors go at the END of their inductive** (`Expr`, `Stmt`, `Block`, …): generators and cell tables
+  number them by position.
+- **Silicon over proof shape:** a green proof of a wrong hardware definition is a finding, not a result.
 
-Everything runs locally, in this checkout or in worktrees beside it: Lean builds, acceptance
-runs and QEMU stages. There is no build server. One exception (Simon, 2026-10-28): the differential tests of the
-x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HOSTING.md` §2.2).
+## 6. Builds and machines
 
-- **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key `~/.ssh/id_ed25519_github`; fetch
-  goes over https.
-- **One heavy run at a time per tree**, with `free -g` beside it. Heavy are `lake build`, direct `lean` checks and
-  the acceptance run. Every heavy run goes under a memory scope (`systemd-run --user --scope -p
-  MemoryHigh=… -p MemoryMax=… -p MemorySwapMax=0`); the soft limit lets the kernel reclaim before the hard limit
-  kills. An abort for lack of memory is not a finding.
-- Lean comes through `elan` (`ELAN_TOOLCHAIN` must not be set).
+- **Every heavy run is bounded**: `lake build`, `lean`, witnesses, guardians, the runner and measurement scripts run
+  inside a memory-limited scope (a hard limit with a soft limit below it) and never in swap.
+- **Every `lake build` sets `LEAN_NUM_THREADS`**, chosen so that threads × the largest module's memory fits the
+  scope; a build whose job counter stands still is stopped by its own PIDs and restarted with fewer threads.
+- **Cap concurrent builds by memory**, hold a lock per build slot, never run two builds in one tree, never mutate
+  artifacts another build reads, never interrupt another worker's proof; start nothing heavy when memory or load
+  is already tight.
+- **Build single modules** during work (changed modules and their importers, in dependency order); the full
+  package build runs before a push. Heavy probe modules are built in the integration build, not during work.
+- **One build per wave:** merge the finished branches, build once, repair or drop what fails, build again.
+- **Keep writing while a build runs**, in a second tree; never edit a tree a build reads; never end a run while a
+  build it started still runs.
+- **One Mathlib for all trees** by hard links to one read-only package store; build output is never shared by hard
+  links (Lean rewrites it in place).
+- **Disk is a budget:** delete worktrees and clones right after their merge or their agent's report; clean logs.
+- **Scripts that running jobs execute are replaced atomically** (write a new file, rename), never edited in place.
+- **No scratch in RAM-backed temp directories**; use a `.scratch-*` directory in the own tree and delete it.
+- `ELAN_TOOLCHAIN` is never set; Lean comes through `elan`.
 
-## 5. Procedure: branch, build, merge, push
+## 7. Working with agents
 
-- **Large changes run on a branch in a worktree beside the checkout** (`git worktree add -b NAME ../dir
-  master`), with the warm build cache set up as in "One Mathlib for all trees" (lead trees only), so that master
-  stays buildable for everyone else. Build,
-  commit there; merge when the acceptance of §1 holds.
-- **After every merge:** build `grammatik/` (also after a clean merge: a new structure field or a changed arity
-  only shows in the build), run the layout check, then the guardians.
-- **The push gate is the two guardians** (`./instrumente/abnahme.py`):
+- **One lead** decides, merges, builds the integration branch and pushes; it asks the owner only about a change of
+  the goal's meaning, a rule of the language, or a decision a plan lists as open — with a recommendation — and
+  decides everything else by the strongest variant (maximum safety and power; effort is no argument).
+- **Model choice by measured record**, not by fixed role: keep a record per finished task of how well each model
+  proves and how often it errs, and assign by it.
+- **Reviews read statements, not proofs:** does it say what its name and comment claim, can its premises hold
+  together (witness), is it vacuous. Reviews are tasks too; the lead checks every finding before acting on it.
+- **Every worker gets its own worktree** and scratch directory, never the lead's checkout; before starting in an
+  area, check that nobody else already works there.
+- **Agents build what they changed before they report**, in an isolated build slot where the site offers one
+  (single modules, never whole packages or heavy probes); a report names the green runs. The lead's integration
+  build stays the acceptance.
+- **Every brief ends with: report fully before stopping.** A brief is self-contained: goal, branch base, files,
+  rules, what is already known, what to deliver.
+- **One integration branch;** agent commits are merged as they are (no group commit over a wave); fold only a
+  not-yet-pushed fixup into its commit.
+- **Do not accumulate unmerged work:** merge and build in small waves; an unbuilt subsystem is never integrated.
+- No `.py` helper scripts for agents; agents use git, `lake`, `lean` and the shell.
 
-  | Guardian | Subject | What it checks |
-  |---|---|---|
-  | `instrumente/pruefe-lean.py` | the Lean model and stage 0 (`stage0/`) | `lake build` of both, `gabbro_ziel` on the standard axioms only, no `sorry`/`admit`/`native_decide`/`axiom`, layout |
-  | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, the bridge `bruecke/` built on the standard axioms over the tracked duty files |
+## 8. Repository
 
-  Exit code `0` measured and green, `1` measured and red, `2` nothing or not everything measured — that is not a
-  green. A third guardian is not built: a new check becomes a Lean theorem or a stage in one of the two.
-- **Push master after checked merges**, without asking: first grep the outgoing diff for keys; never push red;
-  never force-push; if origin moved, merge first and check again. No new branches on GitHub.
-- **Delete worktrees and clones right after their merge.**
+- **English** everywhere in the repository (documents and their file names, comments, commit messages,
+  diagnostics). At most 30 `.md` files; reports and interim states belong in git history, not in the tree. No
+  tracked work list: open work and findings live in plans or in a gitignored scratch file.
+- **Commits:** Conventional Commits (`type(scope): summary`), message from a file (`git commit -F`), the model's
+  `Co-Authored-By` line and no other trailers. Commit every building step. In a shared checkout commit by path.
+- **Push gate: the two guardians** (`./instrumente/abnahme.py`): `instrumente/pruefe-lean.py` (Lean model and
+  Stage 0: builds, `gabbro_ziel` on the standard axioms, no forbidden tokens, layout) and
+  `instrumente/pruefe-gabbrov.py` (GabbroV and the bridge). Exit `0` is green, `1` red, `2` not everything measured
+  — not a green. A new check becomes a Lean theorem or a stage of one of the two, never a third guardian.
+- **Push after checked merges** without asking: grep the outgoing diff for keys, addresses and other site data;
+  never push red; never force-push or rewrite pushed history; if the remote moved, merge and check again. No new
+  branches on the upstream remote. Tag milestones at the push that reaches them.
+- **Security:** never write keys or passwords into the repository, memory or logs; credentials are site
+  configuration. When a permission check blocks something, do not work around it; ask.
+- **Number ranges** (poison probes, examples): the next free number is one above the highest in use — measure it
+  (`ls beispiele beispiele/gift | tail`), never keep a ledger.
+- External reference material (e.g. the Caprock OS) is read-only: never commit into it.
 
-## 6. Parallel work
+## 9. Pitfalls that cost real time
 
-- **Every parallel worker (another session, a subagent) gets its OWN worktree** and scratch directory, never
-  this checkout; its tree is on `master` before it starts. Two runs in one tree measure a mixture.
-- A lead tree gets its warm caches (`grammatik/.lake`, `programmlogik/.lake`) as in "One Mathlib for all trees":
-  Mathlib hard-linked, never copied; with no cache `lake` goes off to clone Mathlib and hangs, and a stale
-  `.lake` is worse than none. Sub-agent trees carry no `.lake`.
-- Before starting work in an area, check whether another session already works there (worktrees, recent file
-  times) and do not duplicate it.
-- Reviews of theorem statements are delegated like other tasks (see "Team"); the lead checks every finding before
-  it acts on it and records the review's quality.
+- `pgrep -f` / `pkill -f` match their own command line: kill by PID.
+- A guardian that aborts reads like one that passed: look for the numbers it no longer prints.
+- Mechanical edits over many files: a regex can strip prefixes or indentation; non-ASCII names (`σ`, `t₂`) need a
+  UTF-8 aware tool; rebuild and read the diff after every mechanical edit.
+- A clean merge can still break: new structure fields and changed arities show only in the build. Recurring
+  conflicts: aggregate import files (take the union), duplicate section numbers in the theorem map (renumber), two
+  branches defining the same name (rename one).
+- A leaked `ELAN_TOOLCHAIN` rebuilds everything under the wrong Lean.
+- A build without `LEAN_NUM_THREADS` thrashes instead of failing.
+- Overwriting a script that a running shell executes corrupts the running job.
+- A "green" package build may have built only part of the package: compare the job count with a full build.
+- A theorem stated over a dependent `match` written inline twice creates two different matcher constants; name the
+  function instead.
 
-## 7. Number ranges and counters (free from here)
+## 10. Talking to the owner
 
-| Kind | Next free |
-|---|---|
-| Gift (poison-probe) numbers | **1488** (1448-1469 stay unused; 1149, 1150, 956, 957 and 958 retired) |
-| Example numbers | **1172** |
+- In the owner's language; direct and concrete: what was done, what is open, what is uncertain. Never claim more
+  than was measured.
+- Estimates as ranges, with the critical path named.
+- Short status lines while long jobs run.
+- A decision that is the owner's is asked once, with a recommendation and the concrete diff.
 
-Re-measure instead of trusting this table: `ls beispiele beispiele/gift | tail`. The highest number in the tree
-does not drift; a ledger does. Next free is always above the highest number in use. (The diagnostic-code range
-and the sentence register went with the Rust checker.)
-
-## 8. Files that matter
+## 11. Files that matter
 
 | What | Where |
 |---|---|
-| The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
-| Model | `Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/` (arenas, regions, ownership, floats) |
-| Code model and lowering | `grammatik/Grammatik/Code/` (`Model`, `Lower`, `Refine`, `Conc`, `Gate`) |
-| Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells) |
-| Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/MACHINE-IR-PLAN.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md`, `dokumente/ABSTRACTION-SYNTAX-PLAN.md` |
+| The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
+| The model | `grammatik/Grammatik/Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/`, `Niedrig/` |
+| Test sets M and N | `grammatik/Grammatik/Gen/` |
+| Stage 0 and the runner | `stage0/`, `runner/` |
+| GabbroV and the bridge | `programmlogik/`, `bruecke/` |
+| Plans | `dokumente/PLAN-COMPILER-READY.md` and the plans it names |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
-| Guardians | `instrumente/abnahme.py` and the two `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
-
-## 9. Pitfalls that cost real time (each happened)
-
-**Tools**
-- **`pgrep -f` / `pkill -f` match their own command line.** Kill by PID; wait by polling a file or `ps -C`.
-- **A guardian that aborts reads like one that passed.** Look for the numbers it no longer prints; measure the
-  base in a throwaway worktree before guessing. `set -e` in scripts stops counting at the first hit.
-- **Mechanical edits over many files:** a regex that matches a pattern alternative can strip its prefix or
-  indentation; patterns with non-ASCII characters (`t₂`, `σ`) need a UTF-8 aware tool. Rebuild after every
-  mechanical edit and read what it changed.
-
-**Merging**
-- Recurring conflicts: `Grammatik.lean` imports (take the union); duplicate THEOREM-MAP section numbers
-  (renumber); two branches defining the same Lean name (rename one).
-- **Semantic merge breaks** show up only in the build: a new structure field needs its value at every
-  positional literal; an arity change needs every caller updated. Always build after a merge.
-- **A new constructor of `Expr` or `Stmt`** belongs at the END of its inductive: the fine cells and the generator
-  number constructors by position, and the cached runs keep their names only then. Recursors of auxiliary
-  inductives (`StmtOhneRuf`, `BlattG`, …) take their premises in THEIR constructor order.
-- **Sorry is mechanically refused**: the Lean guardian fails on `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`
-  in `grammatik/` and on any `axiom` not in `instrumente/teile/kein-sorry-allowlist.txt`.
-
-**Machines**
-- **A leaked `ELAN_TOOLCHAIN` rebuilds everything under the wrong Lean.** After a toolchain incident replace a
-  poisoned `.lake` with the warm master cache.
-- **Low memory kills jobs silently**, and there is no swap. Twenty parallel `lean` processes of a full rebuild
-  exceed a 15 GB hard scope; use a soft limit (`MemoryHigh`) under the hard one.
-- **A full build without `LEAN_NUM_THREADS` thrashes instead of failing** (2026-11-12): the heavy probes at the
-  end all start together, sit at `MemoryHigh` and make no progress for an hour, with no error. Watch the job
-  counter (`[n/m]` in the log); if it stands still, stop the run and restart it with the table's values.
-- **`/tmp` is RAM.** Work in real folders; scratch files go to a scratch directory inside the tree that is not
-  committed, and are deleted after use.
-
-## 10. Talking to the project owner
-
-- **German, direct, concrete.** Say what was done, what is open and what is uncertain. Never claim more than was
-  measured.
-- **Estimates:** give ranges and name the critical path.
-- The owner follows from other devices: short status lines while long jobs run are welcome.
-- A decision that is the owner's (a change of the goal statement's meaning, a rule of the language) is asked,
-  with a recommendation; everything else is decided by the strongest variant (maximum safety and power,
-  effort is no argument).
-
-## 11. Direct compiler: goals that still stand
-
-The full compiler is written in Gabbro and formally verified, without refinement and without translation
-validation (owner, 2026-11-10): nothing is checked per compilation and refused. Its design is
-[MACHINE-IR-PLAN.md](dokumente/MACHINE-IR-PLAN.md): one architecture-neutral SSA IR (GIR) of micro-operations;
-every optimisation, register allocation and scheduling included, has a logic proof with GabbroV; real
-instructions are assigned to neutral cells of GIR by a per-target table; the test set M over the cells proves the
-emitted machine code and is the evidence of the one named hardware assumption. GabbroV is independent of M and N.
-Order: Stage 0 first, then GabbroV written in Gabbro with an initial Lean proof, then the compiler. Source safety,
-G/GX concurrency, floats, contracts, call logs and budget guarantees remain; OS and freestanding profiles stay
-generic.
-
-Performance against equivalent C built with `gcc -O3` or `clang -O3` (the faster of the two): minimum 100 % on every workload
-class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
-Fixed-work score `100 * Ctime / Gabbrotime`, throughput score `100 * Gabbrothroughput / Cthroughput`, per
-workload and class, on full validated direct binaries with matched hardware, ISA, semantics and settings.
-Compile latency includes checking, optimisation, production, validation and Lean kernel checking. Targets are
-OPEN until measured; no universal speed claim. 
-
-## 12. Working with Lean here
-
-- **Toolchain truth, not training memory.** `grammatik/` pins Lean v4.35.0 with Mathlib at the matching tag;
-  `split` (never `split_ifs`); `omega`/`decide`/`simp` available. Mathlib is allowed everywhere; `gabbro_ziel`
-  stays on the standard axioms (Mathlib adds none).
-- **Names are read, not guessed.** Every lemma name is grepped from the tree or the toolchain before use;
-  `unknown identifier` means a wrong name. Canonical definitions are reused, never duplicated.
-- **Witnesses:** every theorem with a ∀-over-syntax premise gets a `_zeuge` on a non-degenerate fixture that
-  satisfies all premises jointly.
-- **Silicon over proof shape.** A green proof of a wrong hardware definition is a finding, not a result.
-- **Fast proofs only (owner, 2026-11-13).** Every proof method used must be fast: a module checks in well under two
-  minutes, no declaration takes more than a few seconds. No `decide +kernel`/kernel `rfl` over Strings or whole
-  contexts or images; prove from the general theorems with small explicit premises; heavy evaluation belongs in a
-  witness module of its own, never on the compiler path. A slow module is a finding and is fixed, not waited out.
-- **Commit the green skeleton early**, one definition per check, and never stop with work pending.
+| Guardians | `instrumente/abnahme.py`, `instrumente/pruefe-*.py` |

@@ -171,7 +171,6 @@ def verbindeP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Programm D :=
 def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   P := verbindeP e E₁ E₂
   S := E₁.S
-  lockFormulas := E₁.lockFormulas
   Q := E₁.Q
   starts := E₁.starts ++ E₂.starts
   sp0 := E₁.sp0

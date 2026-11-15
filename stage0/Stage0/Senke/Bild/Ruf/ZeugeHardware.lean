@@ -7,9 +7,8 @@
              * the fragment check passes on the whole program by computation (`t4P_programmRB`, `rfl` over the four
                bodies -- no compiler run), so every body lies in the call fragment (`t4P_endR`) and the program has
                no foreign call (`t4P_fremdFrei`);
-             * the counting oracle meets the goal theorem's hardware assumptions (`zaehl_hardware`); the program
-               premise of the image theorems holds for it as for every oracle (`leseblindP_alle`), and also from the
-               hardware assumptions and the check (`leseblindP_hardware`);
+             * the counting oracle meets the goal theorem's hardware assumptions (`zaehl_hardware`); read-blindness
+               needs no premise for it, as for every oracle (`leseblindP_alle`);
              * the call obligation up to read events holds for `rufAt 1` under that oracle, and machine G realises
                the call step of `t4F` from a sequential world `≈` to (and different from) its start world.
              What it does not contain (H2, what remains): an `Emitted` value. One needs a `Frontend.Source text`
@@ -53,8 +52,13 @@ theorem t4P_fremdFrei : FremdFrei t4P :=
 def zaehlQ : AxEns t4D := fun a => nomatch a
 
 /-- **The counting oracle meets the goal theorem's hardware assumptions** on the fixture's declaration. -/
-theorem zaehl_hardware [RootNativeFloat.Hardware] : Zielsatz.HardwareAnnahmen (zaehlOrakel t4D) zaehlQ :=
-  ⟨fun a => nomatch a, zaehlOrakel_regLokal t4D, fun a => nomatch a, inferInstance⟩
+theorem zaehl_hardware [hw : RootNativeFloat.Hardware] :
+    Zielsatz.HardwareAnnahmen (zaehlOrakel t4D) zaehlQ := by
+  refine And.intro ?_ (And.intro (zaehlOrakel_regLokal t4D) (And.intro ?_ hw))
+  · intro a
+    exact nomatch a
+  · intro a
+    exact nomatch a
 
 /-- The leaf callee returns under the counting oracle, with a symbolic start world (no kernel run). -/
 theorem t4G_ruf_kehrt_zaehl (σ : World t4D) : ∃ (σ' : World t4D) (v : ErgVal t4D (t4D.erg t4G)),
@@ -73,17 +77,16 @@ theorem t4G_ruf_kehrt_zaehl (σ : World t4D) : ∃ (σ' : World t4D) (v : ErgVal
     machine G, started at the start world, realises the caller's call step from the sequential world after a read
     of `konto`, standing behind the call at a world `≈` to the sequential one. -/
 theorem zaehl_ruf_zeuge [RootNativeFloat.Hardware] :
-    LeseblindP t4P (zaehlOrakel t4D) ∧ Tief t4P (fun _ => False) 1 t4G ∧
+    Tief t4P (fun _ => False) 1 t4G ∧
     RufOkGleich t4P (zaehlOrakel t4D) 0 0 (fun _ => False) (rufAt t4P (zaehlOrakel t4D) 0 1)
       (Tief t4P (fun _ => False) 1) ∧
     ∃ (σ1 σm1 : World t4D) (M' : RufMaschineG t4D),
       execStmt (zaehlOrakel t4D) 0 (rufAt t4P (zaehlOrakel t4D) 0 1) t4Ruf zeugeWeltL Env.nil = .ok σ1 Env.nil ∧
       RufLaufG t4P (zaehlOrakel t4D) 0 0 (RufStartG t4P t4Sp zeugeInit) M' ∧ WeltGleich σ1 σm1 ∧
       RandG 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) t4FRest M' σm1 Env.nil := by
-  have hO : LeseblindP t4P (zaehlOrakel t4D) := leseblindP_alle t4P (zaehlOrakel t4D)
   have hRuf : RufOkGleich t4P (zaehlOrakel t4D) 0 0 (fun _ => False) (rufAt t4P (zaehlOrakel t4D) 0 1)
       (Tief t4P (fun _ => False) 1) :=
-    rufOk_gleich_tief hO 0 (fun _ => False) 1
+    rufOk_gleich_tief 0 (fun _ => False) 1
   obtain ⟨σ1, v, hG⟩ := t4G_ruf_kehrt_zaehl zeugeWeltL
   have hex : execStmt (zaehlOrakel t4D) 0 (rufAt t4P (zaehlOrakel t4D) 0 1) t4Ruf zeugeWeltL Env.nil =
       .ok σ1 Env.nil := by
@@ -99,8 +102,8 @@ theorem zaehl_ruf_zeuge [RootNativeFloat.Hardware] :
   have hGL : RandGL 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) (.cons t4Ruf t4FRest)
       (RufStartG t4P t4Sp zeugeInit) zeugeWeltL Env.nil :=
     ⟨zeugeWelt, hw, hG⟩
-  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt (P := t4P) hO.rs hRuf hs hex hGL
-  exact ⟨hO, t4G_tief _, hRuf, σ1, σm1, M', hex, hl, hw1, hG'⟩
+  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt (P := t4P) hRuf hs hex hGL
+  exact ⟨t4G_tief _, hRuf, σ1, σm1, M', hex, hl, hw1, hG'⟩
 
 #print axioms zaehl_ruf_zeuge
 #print axioms t4P_endR

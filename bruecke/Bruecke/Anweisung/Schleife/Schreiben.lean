@@ -113,8 +113,14 @@ theorem loopWrites_sim {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getra
       exact ⟨σ, ρ, s, rfl, ⟨[], Strecke_G.leer s⟩, hW, hL⟩
     case assign | assignTab | assignGlob | setVar | setVarB =>
       obtain ⟨b, ft', ns', ys, hb, hy, rfl⟩ := seqZ_schritt_some hB (by exact True.intro)
-      obtain ⟨hbN, rfl, rfl⟩ := schrittB_einzeln_sicht hV hb (by exact True.intro)
-      obtain ⟨Λ₁, gs, q, hgs, hq, rfl⟩ := lowSeq_einzeln_ok hG (by exact True.intro)
+      obtain ⟨hbN, hft, hns⟩ := schrittB_einzeln_sicht hV hb (by exact True.intro)
+      subst ft' ns'
+      obtain ⟨Λ₁, gs, ⟨Λ₂, restBlock⟩, hgs, hq, hblock⟩ :=
+        lowSeq_einzeln_ok hG (by exact True.intro)
+      have hΛ : Λ' = Λ₂ := congrArg Sigma.fst hblock
+      subst Λ'
+      have hcons : block = Block.cons gs restBlock := by cases hblock; rfl
+      subst block
       intro σ ρ s hW hL
       obtain ⟨σ₁, ρ₁, he⟩ := loopWrite_ok c hg (by intro h; cases h) hgs hbN hU S.tab S.statics
         O passes R σ ρ s hW hL
@@ -122,7 +128,7 @@ theorem loopWrites_sim {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getra
         (by exact True.intro) hgs hbN hU σ ρ s hW hL
       obtain ⟨A₁, s₁, hStretch, hW₁, hL₁⟩ := hSim.2.2 σ₁ ρ₁ he
       obtain ⟨σ₂, ρ₂, s₂, hex, ⟨A₂, hStretch₂⟩, hW₂, hL₂⟩ :=
-        loopWrites_sim G S c hc O passes R hRR n k ss fn ft ns q.2 tail ys used hU hV
+        loopWrites_sim G S c hc O passes R hRR n k ss fn ft ns restBlock tail ys used hU hV
           (fun st h => hm st (List.mem_cons_of_mem _ h)) hg hq hy σ₁ ρ₁ s₁ hW₁ hL₁
       refine ⟨σ₂, ρ₂, s₂, ?_, ⟨A₁ ++ A₂, Strecke_G.cons hStretch hStretch₂⟩, hW₂, hL₂⟩
       rw [execBlockZ_cons_ok O passes R _ _ he]

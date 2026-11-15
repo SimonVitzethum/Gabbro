@@ -177,9 +177,7 @@ theorem vLauf : ∃ M : RufMaschineG vD,
   try dsimp only at e13
   obtain ⟨M14, s14, hZ14⟩ := w_dannBlatt (P := vP) (O := vO) (passes := 0) e13 vAx .nil
     _ .nil rfl rfl
-    (vHgL (vHoff_e e13 hoff13)).heldIn _ _ (by
-      simp only [vAx, execStmt, axiomAntwort, Boundary.Check.trivial_requiredB,
-        Bool.false_eq_true, ↓reduceIte] <;> rfl)
+    (vHgL (vHoff_e e13 hoff13)).heldIn _ _ rfl
     ((Erw.lese _ _ _).trans ((Erw.fragt _ _).trans (vO_erw _ .nil)))
   have hr14 : RufErreichbarG vP vO 0 (RufStartG vP vSp vInit) M14 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _

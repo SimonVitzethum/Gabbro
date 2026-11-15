@@ -207,7 +207,6 @@ theorem axLauf : ∃ M : RufMaschineG axD,
     (fun _ _ => rfl) (fun e => nomatch e) (fun _ _ => axDarf) (fun e => nomatch e)
     (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) (.dann .nil (.ende axRetNull)) .nil
     rfl _ axEins (by
-      simp only [axiomAntwort, Boundary.Check.trivial_requiredB, Bool.false_eq_true, ↓reduceIte]
       show (_, einpassen axO.zeiger (.int 0 3) (axNeu ((M3.weltVon 0).lese axL [])).n) = _
       have hn : (axNeu ((M3.weltVon 0).lese axL [])).n = 1 := by
         show min ((M3.speicher.slots () 0 ()).n + 1) 3 = 1

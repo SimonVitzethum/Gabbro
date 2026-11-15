@@ -103,12 +103,12 @@ theorem Schritt.psi_selbst {σ σ' : Zustand N} {t : Fin N} (s : Nat) (hs : Schr
     simp [h, Ort.haelt] at hx
   | wartet h e => simp [Zustand.mit, upd_self, h, h1, Ort.psi]
   | liestInc h => simp [Zustand.mit, upd_self, h, Ort.psi]
-  | @erhoeht σ t k s0 lw h e =>
+  | @erhoeht k s0 lw h e =>
     by_cases hs0 : s0 = s <;> simp [upd_self, h, hs0, Ort.psi]
   | erhoehtNicht h e => simp [Zustand.mit, upd_self, h, Ort.psi]
-  | @schlaeft σ t k s0 h e =>
+  | @schlaeft k s0 h e =>
     by_cases hs0 : s0 = s <;> simp [Zustand.mit, upd_self, h, hs0, Ort.psi]
-  | @kehrtZurueck σ t k s0 h e =>
+  | @kehrtZurueck k s0 h e =>
     by_cases hs0 : s0 = s
     · exact absurd (by rw [h1, hs0]) e
     · simp [Zustand.mit, upd_self, h, hs0, Ort.psi]

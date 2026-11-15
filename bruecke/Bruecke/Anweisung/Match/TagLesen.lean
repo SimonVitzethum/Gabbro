@@ -11,18 +11,23 @@ theorem tagSubject_some {fn : UFn} {ns : BodyNames} {x : String} {cs : List (Opt
     ∃ id, valueParamTy fn x = some (.sum cs) ∧ cs.all Option.isNone = true ∧
       ns.lookup fn x = some id ∧ e = .name id := by
   unfold tagSubject at h
-  split at h
-  · rename_i fields ht
-    split at h
-    · cases h
-    · rename_i hBare
-      cases hi : ns.lookup fn x with
-      | none => simp only [hi, Option.bind_none] at h; cases h
-      | some id =>
-        simp only [hi, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact ⟨id, ht, by simpa using hBare, hi, rfl⟩
-  · cases h
+  cases ht : valueParamTy fn x with
+  | none => simp only [ht, bind, Option.bind_none] at h <;> cases h
+  | some ty =>
+    simp only [ht, bind, Option.bind_some] at h
+    cases ty <;> try { cases h }
+    case sum fields =>
+      cases hBare : fields.all Option.isNone with
+      | false => simp only [hBare, Bool.not_false, ↓reduceIte] at h <;> cases h
+      | true =>
+        simp only [hBare, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+        cases hi : ns.lookup fn x with
+        | none => simp only [hi, bind, Option.bind_none] at h <;> cases h
+        | some id =>
+          simp only [hi, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact ⟨id, (by first | exact ht | rfl), hBare,
+            (by first | exact hi | rfl), rfl⟩
 
 theorem stmtsBodyZ_tag_some {k sidx : Nat} {fn : UFn} {ns : BodyNames} {x : String}
     {binders : List String} {ss : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}
@@ -34,19 +39,26 @@ theorem stmtsBodyZ_tag_some {k sidx : Nat} {fn : UFn} {ns : BodyNames} {x : Stri
   split at h
   · rename_i hn
     cases he : tagSubject fn ns x with
-    | none => simp only [he, Option.bind_none] at h; cases h
+    | none => simp only [he, bind, Option.bind_none] at h <;> cases h
     | some pair =>
       obtain ⟨cs, e⟩ := pair
-      simp only [he, Option.bind_some] at h
-      split at h
-      · rename_i arms tail allocated ha
-        cases hy : stmtsBodyZ u k fn (ns.resume allocated) tail r with
-        | none => simp only [hy, Option.bind_none] at h; cases h
-        | some ys =>
-          simp only [hy, Option.bind_some, pure, Option.some.injEq] at h
-          subst bs
-          exact ⟨cs, e, arms, tail, allocated, ys, hn, he, ha, hy, rfl⟩
-      · cases h
+      simp only [he, bind, Option.bind_some] at h
+      cases ha : reasonArmsZ u k fn cs.length 0 ns ss with
+      | none => simp only [ha, bind, Option.bind_none] at h <;> cases h
+      | some out =>
+        obtain ⟨arms, ending, allocated⟩ := out
+        simp only [ha, bind, Option.bind_some] at h
+        cases ending with
+        | nil => cases h
+        | cons marker tail =>
+          cases marker <;> try { cases h }
+          case blkEnd =>
+            cases hy : stmtsBodyZ u k fn (ns.resume allocated) tail r with
+            | none => simp only [hy, bind, Option.bind_none] at h <;> cases h
+            | some ys =>
+              simp only [hy, bind, Option.bind_some, pure, Option.some.injEq] at h
+              exact ⟨cs, e, arms, tail, allocated, ys, hn,
+                (by first | exact he | rfl), ha, hy, h.symm⟩
   · cases h
 
 theorem pickTag_bare (ρB : Gabbro.Body.Env) : ∀ arms label payload s,

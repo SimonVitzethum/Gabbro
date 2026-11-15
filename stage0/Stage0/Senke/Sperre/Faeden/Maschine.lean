@@ -7,8 +7,13 @@
              as a hardware assumption:
              * one step of a thread is ONE access of the emitted code (`nimmT`, `gibT` in Ticket/Code.lean) to one
                of the three lock words -- a load, a `cas` (one `lock cmpxchg`), the WAIT or the WAKE request --
-               together with the frame-local instructions around it (they touch no shared word; the table at the
-               end pins every step to its instruction index);
+               together with the frame-local instructions around it (they touch no shared word; a modelling
+               claim the table does not check). What is proved about the CODE is only the table at the end:
+               the instruction at each named index of `nimmT`/`gibT` is the shared-word access the step names.
+               NOT proved: that the runner executing `nimmT`/`gibT` behaves like this machine -- the
+               runner-level semantics of the accesses (their atomicity, the interleaving of threads, the futex
+               calls) is an assumption of this model, not a theorem; nothing connects `Runner` runs of the
+               emitted code to `Lauf`;
              * FUTEX_WAIT on the serving word with value `v` compares the low 32 bits of the word with `v`
                ATOMICALLY with going to sleep: unequal returns at once (`kehrtZurueck`), equal blocks
                (`schlaeft`); a blocked thread may return at any time (`scheinbar`: spurious wake-ups, signals);
@@ -203,6 +208,19 @@ def wecke (pc : Fin N → Ort) : Fin N → Ort := fun u => (pc u).geweckt
 
 theorem wecke_apply (pc : Fin N → Ort) (u : Fin N) : wecke pc u = (pc u).geweckt := rfl
 
+/-- The waiter word after a successful decrement: minus one, wrapping at 2^64. Defined by cases so
+    that the kernel never unfolds the literal addition on a variable (`wrapDec_eq` gives the closed form). -/
+def wrapDec : Nat → Nat
+  | 0 => 18446744073709551615
+  | n + 1 => n % 18446744073709551616
+
+theorem wrapDec_eq (lw : Nat) : wrapDec lw = (lw + 18446744073709551615) % 18446744073709551616 := by
+  cases lw with
+  | zero => rfl
+  | succ n =>
+    show n % 18446744073709551616 = (n + 1 + 18446744073709551615) % 18446744073709551616
+    omega
+
 /-- **One step of thread `t`.** -/
 inductive Schritt : Zustand N → Fin N → Zustand N → Prop where
   | beginnt {σ : Zustand N} {t : Fin N} : σ.pc t = .frei → Schritt σ t (σ.mit t .ladeN)
@@ -234,7 +252,7 @@ inductive Schritt : Zustand N → Fin N → Zustand N → Prop where
   | liestDec {σ : Zustand N} {t : Fin N} {k s0 : Nat} : σ.pc t = .decL k s0 →
       Schritt σ t (σ.mit t (.decC k s0 σ.w.wait))
   | senkt {σ : Zustand N} {t : Fin N} {k s0 lw : Nat} : σ.pc t = .decC k s0 lw → σ.w.wait = lw →
-      Schritt σ t ⟨⟨σ.w.next, σ.w.serv, (lw + 18446744073709551615) % 18446744073709551616⟩,
+      Schritt σ t ⟨⟨σ.w.next, σ.w.serv, wrapDec lw⟩,
         upd σ.pc t (.ladeS k), σ.q⟩
   | senktNicht {σ : Zustand N} {t : Fin N} {k s0 lw : Nat} : σ.pc t = .decC k s0 lw → σ.w.wait ≠ lw →
       Schritt σ t (σ.mit t (.decL k s0))

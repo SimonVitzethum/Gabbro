@@ -29,7 +29,7 @@
 module
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInva
-public import Grammatik.Speichermodell.Atomar.Zulassung
+public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 @[expose] public section
 

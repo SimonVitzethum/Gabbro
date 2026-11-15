@@ -51,7 +51,7 @@ theorem Schritt.andere_fest {σ σ' : Zustand N} {t v : Fin N} (hs : Schritt σ 
 
 /-- The serving counter never decreases. -/
 theorem Schritt.serv_le {σ σ' : Zustand N} {t : Fin N} (hs : Schritt σ t σ') : σ.w.serv ≤ σ'.w.serv := by
-  cases hs <;> simp [Zustand.mit]
+  cases hs <;> first | exact Nat.le_refl _ | exact Nat.le_succ _
 
 /-- A thread that does not hold the lock and holds it after its own step entered it: the serving word showed
     its ticket. -/
@@ -130,7 +130,7 @@ theorem Schritt.von_decL (hs : Schritt σ t σ') {k s0 : Nat} (h : σ.pc t = .de
   cases hs <;> simp_all [Zustand.mit, upd]
 
 theorem Schritt.von_decC (hs : Schritt σ t σ') {k s0 lw : Nat} (h : σ.pc t = .decC k s0 lw) :
-    (σ.w.wait = lw ∧ σ'.w.wait = (lw + 18446744073709551615) % 18446744073709551616) ∨
+    (σ.w.wait = lw ∧ σ'.w.wait = wrapDec lw) ∨
       (σ.w.wait ≠ lw ∧ σ'.pc t = .decL k s0) := by
   cases hs <;> simp_all [Zustand.mit, upd]
 

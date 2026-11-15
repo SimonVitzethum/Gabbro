@@ -151,11 +151,6 @@ rules('grammatik/Grammatik/Logik/Ruf', [
     (r'^RufOhneHardware\w*$', 'Ohne'),
 ])
 
-# Keep the foreign-contract witness family together below the directory entry cap.
-rules('grammatik/Grammatik/Logik/Vertraege', [
-    (r'^AxiomVertrag[a-z]*$', 'Oracle'),
-])
-
 # The arena family: the dynamic structures over live slots (list, tree, recognizer; PLAN-DYNAMIC 8a) live in `Struktur`
 # (room for the 20-entry limit, 2026-10-18).
 rules('grammatik/Grammatik/Bausteine/Arena', [

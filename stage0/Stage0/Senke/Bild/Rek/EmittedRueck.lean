@@ -48,7 +48,7 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
     {ρr : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params r)}
     (hRuhig : Ruhig output.compiled.program output.fsA.1 r)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
-    {Q : AxEns (declOf output.compiled.unit)} (hStart : unitStartGeprueftB (output.einheit Q) output.fsA.1 output.lsA.1 = true)
+    {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
     [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
@@ -152,11 +152,8 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
               (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr))
               M')
           t m' := by
-  have hN : NutzerPflichtA (output.einheit Q) :=
-    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true.mp hStart).2
-
   -- (a′): the compiler's acceptance, the checker's soundness, no shared atomic
-  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2 hStart
+  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2
   -- (b): the logic without the rely, and the start duty of `main`
   have hL : LogikPflicht output.compiled.program (output.einheit Q).S Q := logikPflicht_of_A hN.logik
   have hmain : output.compiled.main ∈ (output.einheit Q).ws := by
@@ -185,8 +182,8 @@ theorem Emitted.bild_ziel_aufruf [Kern] (output : Emitted src K options)
   have hkR' : Zerlegung (output.rahmen O C Lm rp ens) Agl
       (TiefAlle output.compiled.program Agl (output.image.depth - 1)) rest σ1 ρ1 ebeR σeR ρeR :=
     zerlegung_rahmen hkR
-  have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (passes := output.image.passes)
-    (leseblindP_alle _ O) thr Agl (output.image.depth - 1)
+  have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (O := O) (passes := output.image.passes)
+    thr Agl (output.image.depth - 1)
   rcases hrun.weiche run0 with hvor | ⟨k, hnach⟩
   · exact Or.inl ⟨hvor, ziel_aus output.compiled.program (output.einheit Q).S Q output.fsA output.lsA
       (output.einheit Q).ws hA0 hL O hH output.image.passes output.sp0 _ hZ' _ RufErreichbarG.start⟩

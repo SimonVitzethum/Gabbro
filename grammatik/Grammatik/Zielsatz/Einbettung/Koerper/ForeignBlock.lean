@@ -37,7 +37,6 @@ theorem sim_block_bindAxiomOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
       axiomAntwort (E.orakelΦ hZ pad Φ O') a σ₁ (evalArgs σ₁ args σ₁ ρ) =
         (response, einpassenErg (fun _ => Option.none) (D.aerg a) reply.2) := by
     unfold axiomAntwort
-    simp only [Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
     rw [hOracle Φ hP] <;> rfl
   have targetAnswer : axiomAntwort O' (E.ax a) readWorld
       (castE (E.aparams a).symm (evalArgs readWorld (exA E args) readWorld ρ')) =
@@ -104,7 +103,6 @@ theorem sim_block_bindAxiomOptElse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ'
       axiomAntwortSonst (E.orakelΦ hZ pad Φ O') a σ₁ (evalArgs σ₁ args σ₁ ρ) =
         (response, sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) reply.2) := by
     unfold axiomAntwortSonst
-    simp only [Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or, Bool.or_false, Bool.false_eq_true, ↓reduceIte]
     rw [hOracle Φ hP] <;> rfl
   have targetAnswer : axiomAntwortSonst O' (E.ax a) readWorld
       (castE (E.aparams a).symm (evalArgs readWorld (exA E args) readWorld ρ')) =

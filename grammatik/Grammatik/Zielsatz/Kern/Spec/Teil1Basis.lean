@@ -54,8 +54,6 @@ public import Grammatik.Kern.Syntax.Satz.Pruefung
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Logik.Ruf.FremdRuf.T4
 public import Grammatik.Zielsatz.Kern.Schnittstellen
-public import Grammatik.Logik.Invarianten.Pruefer.Program
-public import Grammatik.Logik.Vertraege.Pruefer.Sources
 
 @[expose] public section
 namespace Gabbro.Grammatik.Zielsatz
@@ -108,17 +106,6 @@ structure Einheit (D : Deklaration) where
       grants at the start, proved by `GrantsStart`, not assumed empty. Default `[]`:
       a unit with no provider is the unit of before. -/
   grants0 : List (BoundaryRecord D) := []
-  /-- Expression-level correspondence for semantic lock predicates.
-      The concrete unit checker refuses a declared lock with no source formula. -/
-  lockFormulas : Invarianten.Pruefer.LockSources S := fun _ => none
-  /-- Reified source hints; entry, preservation and exit are checker VCs. -/
-  loopHints : Vertraege.Pruefer.LoopHints D := fun _ => none
-  /-- The source decreases clauses, checked against every recursive call. -/
-  measure : Mass D := Mass.leer
-  /-- Source/model correspondence for oracle declarations; elaborator output. -/
-  axiomSources : Option (Vertraege.Pruefer.AxiomSources Q) := none
-  /-- Finite source interface table; no semantic refinement proof is stored. -/
-  pointerSignatures : Option (Vertraege.Pruefer.PointerSignatures D) := none
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
     demands it pool-safe (the model side of `N462`/`N457`), `Getrennt` pairs it with itself and

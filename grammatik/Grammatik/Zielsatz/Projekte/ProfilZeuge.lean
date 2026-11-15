@@ -38,9 +38,15 @@ import all Init.Data.String.ToSlice
 
 @[expose] public section
 
-/-! Profile selection and placement witnesses in both build modes.
-The refused atomic flag retains its structural selection witnesses.
-The bounded increment supplies the concrete-checker profile goal witness. -/
+/-!
+  File:      Grammatik/Zielsatz/Projekte/ProfilZeuge.lean
+  Subject:   WITNESS of `gabbro_ziel_profil` (C14): the flag program of `AtomarGoalZeuge` as a selected unit
+             whose original items carry a profile with an `assume` and a library requirement, two aligned
+             statics in two region labels and a test-build gate; every premise of the statement holds
+             jointly (the checker and the structural admission, the user's logic with the rely, the
+             profile-selected hardware components, the runtime's full start), and the conclusion `ZielFX`
+             follows on every reachable thread machine. Both build modes are separate instances.
+-/
 
 namespace Gabbro.Grammatik.AtomarXZeuge
 
@@ -68,6 +74,26 @@ theorem pe_bedarfe_nicht_leer (m : Parser.Auswahl.BauModus) :
     (peE m).zert.bindung.bedarfe ≠ [] := by
   cases m <;> decide
 
+/-- **`gabbro_ziel_profil` on the flag program**, in either build mode: `ZielFX` on every reachable thread
+    machine over GX of the runtime's full start, every budget, every set of initially live threads. -/
+theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
+    (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
+    (K : FadenMaschine nD.mitRuhe)
+    (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
+    ZielFX n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
+      (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) [] K :=
+  gabbro_ziel_profil akzeptiertX_pruefer nD (peE m) ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
+    ⟨nCs, nCs_voll⟩
+    (by
+      have h1 : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = true := by
+        show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        exact (Bool.and_eq_true _ _).mpr ⟨n1_akzeptiertX, rfl⟩
+      simp only [profilAkzeptiert, Bool.and_eq_true]
+      exact ⟨h1, pe_zulaessig m⟩)
+    n1E_nutzerPflichtA nO ((profilAnnahmen_iff (peE m) nO).mpr
+      ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩)
+    passes _ _ (laufzeit_voll n1E) lebt0 K hK
 
 /-- The selection of the fixture differs by mode: the test build keeps the gated constant, the shipping
     build drops it (so a proof in one mode says nothing about the other). -/
@@ -87,48 +113,6 @@ theorem pe_profil_modell (m : Parser.Auswahl.BauModus) :
   obtain ⟨mb, hmb⟩ := profil_modell_einheit (peE m) (pe_zulaessig m) hp
   exact ⟨mb, _, by rw [hp]; exact List.mem_singleton_self _, hmb⟩
 
-end Gabbro.Grammatik.AtomarXZeuge
-
-namespace Gabbro.Grammatik.ConcreteGoalZeuge
-
-open Gabbro.Grammatik Speichermodell Zielsatz
-open Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
-  nutzerPflicht_of_akzeptiert_zeuge)
-
-/-- The accepted increment with the same nonempty profile and placement
-    certificate used above, in each of the two build modes. -/
-def profileUnit (mode : Parser.Auswahl.BauModus) : ProfilEinheit declaration :=
-  ⟨unit, mode, AtomarXZeuge.peItems, Parser.ProfilBindung.pzPol⟩
-
-theorem profile_admitted_zeuge (mode : Parser.Auswahl.BauModus) :
-    (profileUnit mode).zulaessig = true :=
-  AtomarXZeuge.pe_zulaessig mode
-
-/-- Joint accepted profile, user, hardware and runtime premises, followed
-    by the profile goal on every reachable machine. The entry is inhabited
-    by concrete_premises_zeuge and has a nontrivial increment contract. -/
-theorem gabbro_ziel_profil_zeuge [RootNativeFloat.Hardware]
-    (mode : Parser.Auswahl.BauModus) :
-    profilAkzeptiert akzeptiertX_pruefer (profileUnit mode) fs.1 ls.1 cs.1 = true ∧
-    NutzerPflichtA unit ∧ ProfilAnnahmen (profileUnit mode) oracle ∧
-    Laufzeit unit sp init ∧
-    ∀ passes K,
-      FadenErreichbarX unit.P.mitRuhe oracle.mitRuhe passes
-        (GeteiltV (D := declaration) unit.P unit.ws) initial K →
-      ZielFX unit.P.mitRuhe unit.S.mitRuhe oracle.mitRuhe passes
-        (GeteiltV (D := declaration) unit.P unit.ws)
-        (RufStartG unit.P.mitRuhe sp init) [] K := by
-  have accepted : profilAkzeptiert akzeptiertX_pruefer (profileUnit mode)
-      fs.1 ls.1 cs.1 = true :=
-    Bool.and_eq_true.mpr ⟨checker_accepted_zeuge, profile_admitted_zeuge mode⟩
-  have hardware : ProfilAnnahmen (profileUnit mode) oracle :=
-    (profilAnnahmen_iff (profileUnit mode) oracle).mpr hardware_zeuge
-  refine ⟨accepted, nutzerPflicht_of_akzeptiert_zeuge, hardware, laufzeit_voll unit, ?_⟩
-  intro passes K reached
-  exact gabbro_ziel_profil akzeptiertX_pruefer declaration (profileUnit mode) fs ls cs
-    accepted nutzerPflicht_of_akzeptiert_zeuge oracle hardware
-    passes sp init (laufzeit_voll unit) (fun _ => true) K reached
-
 #print axioms gabbro_ziel_profil_zeuge
 
-end Gabbro.Grammatik.ConcreteGoalZeuge
+end Gabbro.Grammatik.AtomarXZeuge

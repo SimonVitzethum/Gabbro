@@ -16,7 +16,7 @@
 module
 public import Grammatik.Logik.Fortschritt.KostenG
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
-public import Grammatik.Logik.Vertraege.Oracle.AxiomVertrag
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 @[expose] public section
 
 

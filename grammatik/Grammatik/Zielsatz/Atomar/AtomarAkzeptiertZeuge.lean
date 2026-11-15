@@ -1,7 +1,28 @@
 /-
-  Atomic-rely semantic witnesses and concrete checker refusals. The flag
-  satisfies the model specification; the current contract checker refuses
-  atomic reads. Sequential reasoning for hP fails under the atomic rely.
+  File:      Grammatik/Zielsatz/AtomarAkzeptiertZeuge.lean
+  Subject:   THE WITNESSES of the checker side of the atomic rely (Opus lane O25b, 2026-09-26),
+             on the noninterference fixture (`NIZeuge`: globals `konfig`, `zaehler` are `atomic`,
+             tables `tabA`, `tabB` plain).
+
+  * POSITIVE, the FLAG (`n1_ziel_atomar`): configuration 1 -- `kern` publishes the atomic
+    `konfig`, `hauptA`/`hauptB` read it with no lock -- is refused by the goal's checker and
+    accepted by `AkzeptiertX`; its user obligation WITH the rely holds (`n1_logikA`), and
+    `ziel_atomar_spec` gives every leg of `ZielAtomar` at every machine W reaches, for every
+    order assignment, budget and start memory. Non-degenerate: `konfig` IS an admitted shared
+    atomic (`n1_konfig_geteilt`), and W's stale read of it really happens on a covered run
+    (`n1_stale_gedeckt`: `hauptA` stores the initial `konfig` after `kern` wrote 3, where G
+    stores 3).
+  * THE RELY BITES (`hP_havoc_bites`): `zaehlB` of the program `hP` stores `konfig` into
+    `tabB[0]`, then tests `konfig == tabB[0]` and writes 1 or 2; it ensures `tabB[0] == 1`.
+    Accepted by `AkzeptiertX` (`hP_akzeptiertX`, `konfig` is in no contract). The OLD
+    obligation holds for the body (`hP_seq`: sequentially the second read equals the first),
+    the obligation with the rely FAILS (`hP_rely_nicht`): an environment that answers the second
+    read of `konfig` differently drives the body into `tabB[0] = 2`. So (b) with the rely is
+    strictly stronger than (b) on units with a shared atomic, and it refuses exactly the
+    sequential reasoning another thread breaks (`kern` writing between the two reads).
+  * THE REFUSAL (`vertrag_atomar_abgelehnt`): a contract over the shared atomic -- `kern`
+    ensures `konfig == 3` -- is refused by `AkzeptiertX` (component `fussWXB`), while
+    `AkzeptiertA` (Speichermodell/AtomarZeuge.lean, no contract condition) accepts it.
 -/
 module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
@@ -54,11 +75,7 @@ local instance : DecidableEq nD.Ax := inferInstanceAs (DecidableEq Empty)
 /-- The declared starts of configuration 1. -/
 abbrev n1ws : List nD.Fn := [NFn.hauptA, NFn.hauptB, NFn.kern]
 
-/-- Atomic reads are outside the current contract-checker fragment. -/
-theorem n1_abgelehntX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs = false := by decide
-  change (_ && Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs) = false
-  rw [refused, Bool.and_false]
+theorem n1_akzeptiertX : AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws = true := by decide
 
 theorem n1_alt_abgelehnt : Akzeptiert nP SchwachZeuge.nS nFs [] nCs n1ws = false :=
   AtomarZeuge.n1_abgelehnt
@@ -85,48 +102,13 @@ theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZe
   · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ r _
     cases f <;> exact r.elim0
 
-/-- The flag still satisfies the model's specification. This is a semantic
-    witness, not an acceptance claim for the more conservative concrete checker. -/
-theorem n1_specX [RootNativeFloat.Hardware] : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] := by
-  have closed := (abgAlleB_iff nFs_voll).mp (by decide : abgAlleB nP nFs = true)
-  exact {
-    frag := by decide
-    abg := closed
-    fuss := fussWXB_ok nFs_voll closed (by decide)
-    stufen := (stufenB_iff nFs_voll).mp (by decide)
-    sperrOrte := (sperrOrteB_iff (ls := []) (fun L => nomatch L)).mp (by decide)
-    wurzeln := wurzelnB_iff.mp (by decide)
-    einzeln := (einzelnPoolB_iff nFs_voll nCs_voll).mp (by decide)
-    renn := (rennB_iff nFs_voll nCs_voll).mp (by decide)
-    antworten := (antwortenB_iff nFs_voll).mp (by decide)
-    masken := (maskenB_iff nFs_voll).mp (by decide)
-    schnittstellen := (schnittstellenB_iff nFs_voll).mp (by decide)
-    besitz := fun _ h => nomatch h
-    worte := fun _ h => nomatch h
-    bibliothek := (libraryB_iff _ _).mp (libraryB_immer _ _)
-    akku := ((Kernzelle.accumulatorB_iff nFs_voll (tabsOf_voll nCs_voll)
-      (globsOf_voll nCs_voll)).mp (by decide)).1
-    pruef := ⟨[], (checkB_iff nFs_voll (tabsOf_voll nCs_voll)
-      (globsOf_voll nCs_voll)).mp (by decide)⟩
-    reset := (resetB_iff nCs_voll).mp (by decide)
-    invarianten := by
-      intro f passes Q shared subset
-      have same : Q = axWahr nD := by funext a; exact nomatch a
-      rw [same]
-      exact ((n1_logikA shared).1 passes f).2
-    kontrakte := by
-      intro f passes Q shared subset
-      have same : Q = axWahr nD := by funext a; exact nomatch a
-      rw [same]
-      exact (n1_logikA shared).1 passes f }
-
 /-- **THE FLAG, COVERED**: at every machine W reaches from configuration 1 -- every order
     assignment, budget, start memory -- every leg of `ZielAtomar`. -/
 theorem n1_ziel_atomar [RootNativeFloat.Hardware] (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : Nat) :
     ∀ W : RufMaschineW nD, RufErreichbarW nP nO passes ord (RufStartW (RufStartG nP sp init1)) W →
       ZielAtomar nP SchwachZeuge.nS nO passes ord (GeteiltV nP n1ws) (RufStartG nP sp init1) W :=
   ziel_atomar_spec nP SchwachZeuge.nS (axWahr nD) nFs_voll (ls := []) (fun L => nomatch L) n1ws
-    n1_specX
+    (akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX)
     (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩ passes ord sp init1
     (AtomarZeuge.n1_start sp)
 
@@ -204,7 +186,11 @@ def hP : Programm nD where
 /-- `kern` writes `konfig`, `zaehlB` reads it. -/
 abbrev hws : List nD.Fn := [NFn.kern, NFn.zaehlB]
 
-/-- Refused by the sequential checker because of the unguarded shared read. -/
+/-- **Accepted by the checker with the rely** (`konfig` is shared and in no contract; `tabB` is
+    `zaehlB`'s alone) ... -/
+theorem hP_akzeptiertX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = true := by decide
+
+/-- ... and refused by the goal's checker (the unguarded shared read). -/
 theorem hP_alt_abgelehnt : Akzeptiert hP SchwachZeuge.nS nFs [] nCs hws = false := by decide
 
 theorem hP_konfig_geteilt : GeteiltA hP hws (.inr NGlob.konfig) := by
@@ -324,25 +310,13 @@ theorem hP_rely_nicht :
 theorem hP_logikA_nicht : ¬ LogikPflichtA hP SchwachZeuge.nS (axWahr nD) (GeteiltA hP hws) :=
   fun h => hP_rely_nicht (h.1 0 NFn.zaehlB).1
 
-/-- The strengthened checker refuses the body whose contract fails under the
-    atomic rely. The refusal follows from soundness, independently of evaluation. -/
-theorem hP_abgelehntX : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false := by
-  cases accepted : AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws with
-  | false => rfl
-  | true =>
-      have contract : Vertraege.Pruefer.KontrakteGeprueftB hP SchwachZeuge.nS nFs = true :=
-        (Bool.and_eq_true.mp accepted).2
-      have checked := Vertraege.Pruefer.KontrakteGeprueftB_sound nFs_voll contract NFn.zaehlB
-      exact False.elim (hP_rely_nicht
-        (checked 0 (axWahr nD) (GeteiltA hP hws) (fun _ shared => shared.1)).1)
-
-/-- Sequential reasoning holds at every budget, but fails under the rely;
-    the full checker therefore refuses this program. -/
+/-- **Both directions together**: accepted by `AkzeptiertX`, the old (b) holds for the body at
+    every budget, the new (b) fails. -/
 theorem hP_havoc_bites :
-    AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = false ∧
+    AkzeptiertX hP SchwachZeuge.nS nFs [] nCs hws = true ∧
       (∀ passes, KoerperGutS hP passes (axWahr nD) SchwachZeuge.nS NFn.zaehlB) ∧
       ¬ KoerperGutSA hP 0 (axWahr nD) SchwachZeuge.nS (GeteiltA hP hws) NFn.zaehlB :=
-  ⟨hP_abgelehntX, hP_seq, hP_rely_nicht⟩
+  ⟨hP_akzeptiertX, hP_seq, hP_rely_nicht⟩
 
 /-! ## 3. The refusal: a contract over a shared atomic -/
 
@@ -395,31 +369,41 @@ def n1E : Einheit nD where
   starts := [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩]
   sp0 := sp0
 
-/-- The old flag unit is refused; its atomic reads are outside the checked fragment. -/
-theorem n1E_abgelehnt : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = false := by
-  change (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs &&
-    Kernzelle.akkuStartB n1E [] && invariantenGeprueftB n1E nFs [] &&
-    nutzerPflichtGeprueftB n1E nFs []) = false
-  rw [n1_abgelehntX]
-  rfl
-
 theorem n1E_ws : n1E.ws = n1ws := by rfl
-
 
 /-- (b) with the rely, bodies and start. -/
 theorem n1E_nutzerPflichtA : NutzerPflichtA n1E :=
   ⟨n1_logikA _, ⟨(fun L => nomatch L), fun _ _ => rfl⟩⟩
 
+/-- **`gabbro_ziel_atomar` on configuration 1**, with the concrete checker `akzeptiertX_pruefer`
+    (which accepts it, where the goal's checker refuses it: `n1_alt_abgelehnt`), the runtime's
+    full start: every leg of `ZielAtomar` at every machine W reaches, every order assignment,
+    every budget. -/
+theorem n1E_ziel [RootNativeFloat.Hardware] (ord : nD.mitRuhe.Glob → Ordnung) (passes : Nat) :
+    ∀ W : RufMaschineW nD.mitRuhe,
+      RufErreichbarW n1E.P.mitRuhe nO.mitRuhe passes ord
+        (RufStartW (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts))) W →
+      ZielAtomar n1E.P.mitRuhe n1E.S.mitRuhe nO.mitRuhe passes ord
+        (GeteiltV n1E.P.mitRuhe (wsRuhe n1E.ws))
+        (RufStartG n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts)) W :=
+  gabbro_ziel_atomar akzeptiertX_pruefer nD n1E ⟨nFs, nFs_voll⟩ ⟨[], fun L => nomatch L⟩
+    ⟨nCs, nCs_voll⟩
+    (by show (AkzeptiertX nP SchwachZeuge.nS nFs [] nCs n1ws && besitzB n1E nFs) = true
+        rw [n1_akzeptiertX]; rfl)
+    n1E_nutzerPflichtA nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO, inferInstance⟩
+    passes ord _ _ (laufzeit_voll n1E)
+
+#print axioms n1E_ziel
 
 /-! ## 5. The per-core fold (OFFEN O17) -/
 
-/-- The fold is also refused by the current atomic-read contract gate. -/
-theorem faltung_abgelehntX :
-    AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = false := by
-  have refused : Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs = false := by decide
-  change (_ && Vertraege.Pruefer.KontrakteGeprueftB nP SchwachZeuge.nS nFs) = false
-  rw [refused, Bool.and_false]
+/-- **The fold is admitted with the rely**: `zaehlA` twice writing the atomic `zaehler`, `zaehlB`
+    reading it -- refused by the goal's checker (`AtomarZeuge.faltung_abgelehnt`), accepted by
+    `AkzeptiertX` (`zaehler` is shared and in no contract). -/
+theorem faltung_akzeptiertX :
+    AkzeptiertX nP SchwachZeuge.nS nFs [] nCs [NFn.zaehlA, NFn.zaehlA, NFn.zaehlB] = true := by
+  decide
 
-#print axioms faltung_abgelehntX
+#print axioms faltung_akzeptiertX
 
 end Gabbro.Grammatik.AtomarXZeuge

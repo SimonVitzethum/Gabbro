@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Formen.ZeugenSchritte
+public import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Init.Data.String.Length
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -46,8 +47,12 @@ import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
 namespace Gabbro.Bruecke.RecordZeuge
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
+
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
+
+attribute [local cbv_eval] Parser.strEq_apply_eq_decide
 
 def schema : URecord :=
   { name := "R"
@@ -109,12 +114,79 @@ def unit : UProg :=
     fns := [build, proj, upd, identity]
     records := [schema] }
 
-def source : String :=
-  "module records { type R = { a : u8 in 0 .. 9, b : bool, }; " ++
-  "impl fn build() -> R { return R(a: 3, b: true); } " ++
-  "impl fn proj(r : R) -> u8 in 0 .. 9 { return r.a; } " ++
-  "impl fn upd(r : R) -> R { let mut out : R = r; out.a = 5; return out; } " ++
-  "impl fn identity(r : R) -> R { return r; } }"
+-- Each scanner certificate keeps an arbitrary suffix and remaining fuel.
+-- module records { type R = { a : u8 in 0
+def sourceChunk0 : Chunk where
+  characters := ['m', 'o', 'd', 'u', 'l', 'e', ' ', 'r', 'e', 'c', 'o', 'r', 'd', 's', ' ', '{', ' ', 't', 'y', 'p', 'e', ' ',
+    'R', ' ', '=', ' ', '{', ' ', 'a', ' ', ':', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ']
+  tokens := [.wort "module", .ident "records", .zeichen "{", .wort "type", .ident "R", .zeichen "=",
+    .zeichen "{", .ident "a", .zeichen ":", .wort "u8", .wort "in", .num 0]
+  steps := 24
+  scanned := by intro rest remaining; cbv
+
+-- .. 9, b : bool, }; impl fn build() -> R {
+def sourceChunk1 : Chunk where
+  characters := ['.', '.', ' ', '9', ',', ' ', 'b', ' ', ':', ' ', 'b', 'o', 'o', 'l', ',', ' ', '}', ';', ' ', 'i', 'm', 'p',
+    'l', ' ', 'f', 'n', ' ', 'b', 'u', 'i', 'l', 'd', '(', ')', ' ', '-', '>', ' ', 'R', ' ', '{', ' ']
+  tokens := [.zeichen "..", .num 9, .zeichen ",", .ident "b", .zeichen ":", .wort "bool",
+    .zeichen ",", .zeichen "}", .zeichen ";", .wort "impl", .wort "fn", .ident "build",
+    .zeichen "(", .zeichen ")", .zeichen "->", .ident "R", .zeichen "{"]
+  steps := 29
+  scanned := by intro rest remaining; cbv
+
+-- return R(a: 3, b: true); } impl fn proj(r
+def sourceChunk2 : Chunk where
+  characters := ['r', 'e', 't', 'u', 'r', 'n', ' ', 'R', '(', 'a', ':', ' ', '3', ',', ' ', 'b', ':', ' ', 't', 'r', 'u', 'e',
+    ')', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'p', 'r', 'o', 'j', '(', 'r', ' ']
+  tokens := [.wort "return", .ident "R", .zeichen "(", .ident "a", .zeichen ":", .num 3,
+    .zeichen ",", .ident "b", .zeichen ":", .wort "true", .zeichen ")", .zeichen ";",
+    .zeichen "}", .wort "impl", .wort "fn", .ident "proj", .zeichen "(", .wort "r"]
+  steps := 27
+  scanned := by intro rest remaining; cbv
+
+-- : R) -> u8 in 0 .. 9 { return r.a; } impl
+def sourceChunk3 : Chunk where
+  characters := [':', ' ', 'R', ')', ' ', '-', '>', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', '9', ' ', '{',
+    ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'r', '.', 'a', ';', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ']
+  tokens := [.zeichen ":", .ident "R", .zeichen ")", .zeichen "->", .wort "u8", .wort "in",
+    .num 0, .zeichen "..", .num 9, .zeichen "{", .wort "return", .wort "r",
+    .zeichen ".", .ident "a", .zeichen ";", .zeichen "}", .wort "impl"]
+  steps := 30
+  scanned := by intro rest remaining; cbv
+
+-- fn upd(r : R) -> R { let mut out : R = r;
+def sourceChunk4 : Chunk where
+  characters := ['f', 'n', ' ', 'u', 'p', 'd', '(', 'r', ' ', ':', ' ', 'R', ')', ' ', '-', '>', ' ', 'R', ' ', '{', ' ', 'l',
+    'e', 't', ' ', 'm', 'u', 't', ' ', 'o', 'u', 't', ' ', ':', ' ', 'R', ' ', '=', ' ', 'r', ';', ' ']
+  tokens := [.wort "fn", .ident "upd", .zeichen "(", .wort "r", .zeichen ":", .ident "R",
+    .zeichen ")", .zeichen "->", .ident "R", .zeichen "{", .wort "let", .wort "mut",
+    .wort "out", .zeichen ":", .ident "R", .zeichen "=", .wort "r", .zeichen ";"]
+  steps := 32
+  scanned := by intro rest remaining; cbv
+
+-- out.a = 5; return out; } impl fn
+def sourceChunk5 : Chunk where
+  characters := ['o', 'u', 't', '.', 'a', ' ', '=', ' ', '5', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'o', 'u', 't', ';',
+    ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ']
+  tokens := [.wort "out", .zeichen ".", .ident "a", .zeichen "=", .num 5, .zeichen ";",
+    .wort "return", .wort "out", .zeichen ";", .zeichen "}", .wort "impl", .wort "fn"]
+  steps := 20
+  scanned := by intro rest remaining; cbv
+
+-- identity(r : R) -> R { return r; } }
+def sourceChunk6 : Chunk where
+  characters := ['i', 'd', 'e', 'n', 't', 'i', 't', 'y', '(', 'r', ' ', ':', ' ', 'R', ')', ' ', '-', '>', ' ', 'R', ' ', '{',
+    ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'r', ';', ' ', '}', ' ', '}']
+  tokens := [.ident "identity", .zeichen "(", .wort "r", .zeichen ":", .ident "R", .zeichen ")",
+    .zeichen "->", .ident "R", .zeichen "{", .wort "return", .wort "r", .zeichen ";",
+    .zeichen "}", .zeichen "}"]
+  steps := 23
+  scanned := by intro rest remaining; cbv
+
+def sourceChunks : List Chunk :=
+  [sourceChunk0, sourceChunk1, sourceChunk2, sourceChunk3, sourceChunk4, sourceChunk5, sourceChunk6]
+
+def source : String := String.ofList (characters sourceChunks)
 
 def buildBody : List Gabbro.Body.Stmt :=
   [.ret (some (.recOf [.lit (.int 3), .lit (.bool true)]))]
@@ -143,11 +215,15 @@ def functions : List (declOf unit).Fn := ((lowerAllg unit).toOption.get lowered_
 
 theorem lowered : lowerAllg unit = .ok (program, functions) := except_ok_get lowered_some
 
-private def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private def parsed : { items : List Parser.SItemTief // Parser.parseTopTief scanned.val = .ok items } := by
-  refine ⟨?_, by cbv <;> exact Eq.refl _⟩
-private theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
+def scanned : { tokens : List Parser.Token // Parser.lex source = .ok tokens } :=
+  ⟨tokens sourceChunks, by
+    rw [source, Parser.lex_ofList]
+    exact lex_chunks sourceChunks (by cbv)⟩
+theorem parsed_some : (Parser.parseTopTief scanned.val).toOption.isSome = true := by cbv
+
+noncomputable def parsed : { items : List Parser.SItemTief // Parser.parseTopTief scanned.val = .ok items } :=
+  ⟨(Parser.parseTopTief scanned.val).toOption.get parsed_some, except_ok_get parsed_some⟩
+theorem exported : elabU (pre108 parsed.val) = .ok unit := by cbv
 
 theorem translated : uebersetzeAllg source = .ok ⟨unit, program, functions⟩ :=
   witness_translation scanned.property parsed.property exported lowered
@@ -163,7 +239,7 @@ theorem interfaces : SchnittstellenPflicht unit := by
   · intro n
     rcases n with _ | _ | _ | _ | n <;> constructor <;> cbv
 
-private theorem open_record (v : Gabbro.Body.Value)
+theorem open_record (v : Gabbro.Body.Value)
     (h : v.hasShape (.record [.intIn 0 9, .bool]) = true) :
     ∃ (n : Int) (b : Bool), v = .record [.int n, .bool b] ∧ 0 ≤ n ∧ n ≤ 9 := by
   obtain ⟨vs, rfl, hlen, hf⟩ := Gabbro.Body.Value.hasShape_rec_true v _ h
@@ -191,8 +267,8 @@ theorem build_meets : meetsU unit (wfU unit) build buildBody := by
 
 theorem proj_meets : meetsU unit (wfU unit) proj projBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
-    some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
+    some (Gabbro.Body.Value.bool true) at hpre
   have hshape : (s.local' "r").hasShape (.record [.intIn 0 9, .bool]) = true := by
     injection hpre with hpre
     injection hpre
@@ -208,8 +284,8 @@ theorem proj_meets : meetsU unit (wfU unit) proj projBody := by
 
 theorem upd_meets : meetsU unit (wfU unit) upd updBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
-    some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
+    some (Gabbro.Body.Value.bool true) at hpre
   have hshape : (s.local' "r").hasShape (.record [.intIn 0 9, .bool]) = true := by
     injection hpre with hpre
     injection hpre
@@ -229,8 +305,8 @@ theorem upd_meets : meetsU unit (wfU unit) upd updBody := by
 
 theorem identity_meets : meetsU unit (wfU unit) identity identityBody := by
   intro ρB s hW hpre
-  change some (.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
-    some (.bool true) at hpre
+  change some (Gabbro.Body.Value.bool ((s.local' "r").hasShape (.record [.intIn 0 9, .bool]))) =
+    some (Gabbro.Body.Value.bool true) at hpre
   have hshape : (s.local' "r").hasShape (.record [.intIn 0 9, .bool]) = true := by
     injection hpre with hpre
     injection hpre
@@ -275,13 +351,8 @@ theorem nutzer_aus_quelleG_record_zeuge :
 /-- No elaborated-unit measurement was run: record-typed slots and statics retain explicit
     refusal, and a record comparison does not enter the scalar contract fragment. -/
 theorem storage_and_contract_refusals :
-    keinBoolB { unit with tabs := [{ name := "Rows"
-                                    count := 1
-                                    cols := []
-                                    werte := [("payload", schema.ty)] }] } = false ∧
-    staticsB { unit with globs := [{ name := "saved"
-                                   ty := .wert schema.ty
-                                   init := 0 }] } = false ∧
+    keinBoolB { unit with tabs := [{ name := "Rows", count := 1, cols := [], werte := [("payload", schema.ty)] }] } = false ∧
+    staticsB { unit with globs := [{ name := "saved", ty := .wert schema.ty, init := 0 }] } = false ∧
     ensExpr unit identity {} (.cmp "==" (.param "r") (.param "r")) = none := by
   cbv
 

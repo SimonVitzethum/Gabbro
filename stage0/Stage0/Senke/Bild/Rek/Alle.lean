@@ -83,11 +83,11 @@ theorem rufOk_tiefAlle (P : Programm D) (O : Orakel D) (passes : Nat) (f : Faden
           (fun _ => caller) zielG (rufOk_tiefAlle P O passes f A n) (P.rumpf g) hC log σ1 rhoG
           (.why σ' r) hart (by rw [rufRumpf_grund hR]; rfl) M hZ hΛ hA
 
-/-- **THE CALL OBLIGATION OF `rufAt` AT EVERY DEPTH, RECURSION INCLUDED, UP TO READ EVENTS.** Under a read-blind
+/-- **THE CALL OBLIGATION OF `rufAt` AT EVERY DEPTH, RECURSION INCLUDED, UP TO READ EVENTS.** For every
     oracle the image's handler `rufAt n` keeps `RufOkGleich` for the callees `TiefAlle P A n`. -/
-theorem rufOk_gleich_tiefAlle {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) (f : Faden)
+theorem rufOk_gleich_tiefAlle {P : Programm D} {O : Orakel D} {passes : Nat} (f : Faden)
     (A : D.Lock → Prop) (n : Nat) : RufOkGleich P O passes f A (rufAt P O passes n) (TiefAlle P A n) :=
-  ⟨rufRumpf P O passes n, rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO n, rufOk_tiefAlle P O passes f A n⟩
+  ⟨rufRumpf P O passes n, rufAt_rufRumpf_lg_alle (P := P) (passes := passes) n, rufOk_tiefAlle P O passes f A n⟩
 
 /-! ## `TiefAlle` contains `Tief`, and holds for every function of a program in the fragment -/
 
