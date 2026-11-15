@@ -100,8 +100,9 @@ theorem local_popcount (ctx : UCtx) (name error : String) (position width : Nat)
     uWertBody ctx (.call "popcount" [.variable name]) = .ok (.ib1 .popcount width (.param name)) := by
   have stored := local_width ctx name position width resolved declared positive
   have builtin : uBitEin "popcount" = some .popcount := by cbv
+  have ordinary : "popcount".startsWith "#tuple:" = false := by decide +kernel
   simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, integer, builtin,
-    uWertBlatt, resolved, kind, stored]
+    uWertBlatt, resolved, kind, stored, ordinary, Bool.not_false, ↓reduceIte]
   rfl
 
 /-- Both rotation operands are read independently of the stored width. -/
