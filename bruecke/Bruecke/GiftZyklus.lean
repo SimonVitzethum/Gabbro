@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Quelle
+public import Bruecke.Kette.Mass.CycleFixture
 public import Bruecke.Pruefung
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
@@ -69,48 +70,6 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Bruecke
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
-
-def uZ : UProg :=
-  { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))], breiten := [] }],
-    locks := [],
-    fns := [
-      { name := "f", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], body := [.call "g" []],
-        ret := .empty, decreases := none, measureConstants := [] },
-      { name := "g", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], body := [.call "h" []],
-        ret := .empty, decreases := none, measureConstants := [] },
-      { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.fls], body := [.call "h" []], ret := .empty, decreases := none, measureConstants := [] }] }
-
-theorem low_some : (lowerAllg uZ).toOption.isSome = true := by
-  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
-  · rfl
-  · cbv
-  · rintro ⟨index, bound⟩
-    have small : index < 3 := bound
-    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
-    rcases choices with rfl | rfl | rfl
-    all_goals constructor <;> cbv
-
-def PZ : Programm (declOf uZ) := ((lowerAllg uZ).toOption.get low_some).1
-def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
-
-theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
-
-theorem getragenZ : GetragenG uZ (fun _ => True) :=
-  getragenG_of_bools (by cbv) (by cbv) (by cbv)
-
-/-- The rank check refuses the unit: `h` calls itself. -/
-theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
-
-/-- ... and no rank exists at all. -/
-theorem kein_rang : ∀ rk, ¬ Rang uZ rk := by
-  intro rk h
-  have := h ⟨2, by decide⟩ "h" [] (CallsIn.discard (by decide))
-  exact Nat.lt_irrefl _ this
-
-/-! ## Every duty holds -- by vacuity -/
 
 def fnF : UFn := uZ.fns[0]'(by decide)
 def fnG : UFn := uZ.fns[1]'(by decide)
