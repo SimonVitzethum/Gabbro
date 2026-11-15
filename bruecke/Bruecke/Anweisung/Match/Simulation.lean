@@ -65,8 +65,7 @@ theorem stmtZiel_option_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (
       simp only [Gabbro.Body.step, hval]; rfl
     have shrunk := ausgangZiel_schrumpf (Strecke_G.leer t)
       (fun _ _ hl => hl.tailIndex) hArm
-    have h' : AusgangZiel_G u C c R fn ns.active _ t ps :=
-      by simpa only [List.nil_append] using shrunk
+    have h' := by simpa only [List.nil_append] using shrunk
     unfold StmtZiel_G
     rw [hG]
     exact ausgangZiel_map_state h' rfl
