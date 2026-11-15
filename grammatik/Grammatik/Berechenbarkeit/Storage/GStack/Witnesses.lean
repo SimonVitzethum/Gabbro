@@ -155,8 +155,11 @@ theorem program_exec_zeuge (O : Orakel FD) (passes : Nat)
 
 theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .endet := by decide
 
-example : Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none) =
-    .error (.unsupported "local observation type range exceeds the VC budget") := by rfl
+set_option pp.maxDepth 2000 in
+set_option pp.maxSteps 1000000 in
+#reduce match Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none) with
+  | .ok _ => []
+  | .error cause => cause.message.toList.map Char.toNat
 
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
