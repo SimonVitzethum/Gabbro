@@ -105,4 +105,38 @@ theorem collect_success {α : Type} (items : List α) (property : α → Prop)
             pure, Except.pure, reduceCtorEq] at result
       | ok out => exact ⟨out, rfl⟩
 
+/-- Replay successful syntax/compilation results and a proved actual VC decision.
+    The checker still computes all of these results; this is an off-path proof
+    rule for its Bool, with no semantic proof supplied to the executable gate. -/
+theorem environment_success (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
+    (hint : Option (QF (Observation D))) (f : D.Fn)
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (locals : Env D (D.params f))
+    (entry : Encoded D .bool (fun world => eval world (program.requires f) world locals))
+    (hentry : translate (program.requires f) locals = .ok entry)
+    (domain : Results D (D.erg f)) (hdomain : results (D := D) budget.expansion (D.erg f) = .ok domain)
+    (posts : PLift (∀ value ∈ domain.values, ∃ post, postFormula program f locals value = .ok post))
+    (hposts : Invarianten.Pruefer.collect domain.values
+      (fun value => ∃ post, postFormula program f locals value = .ok post)
+      (checkPostFormula program f locals) = .ok posts)
+    (compiled : Vertraege.Pruefer.EndCondition (S := S) policy (program.rumpf f) locals
+      (contractGoals program f locals invariants))
+    (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
+      (program.rumpf f) locals (contractGoals program f locals invariants) = .ok compiled)
+    (decided : decideB (close (writerMatrix entry.payload .tru compiled.formula))
+      (close_closed (writerMatrix entry.payload .tru compiled.formula)) = true) :
+    (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true := by
+  unfold Vertraege.Pruefer.checkEnvironment
+  rw [hentry, hdomain]
+  dsimp only [bind, Except.bind]
+  rw [hposts]
+  dsimp only [bind, Except.bind]
+  rw [hcompiled]
+  dsimp only [bind, Except.bind]
+  split
+  · rfl
+  · rename_i refused
+    exact False.elim (refused decided)
+
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness

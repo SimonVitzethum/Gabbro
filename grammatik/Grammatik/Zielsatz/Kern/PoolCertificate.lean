@@ -232,20 +232,5 @@ theorem environment_checked (sources : LockSources zS) :
     apply (lower_denote _ _).mpr
     intro _
     exact (quoteQF_denote _ _).mpr (valid values)
-  unfold Vertraege.Pruefer.checkEnvironment
-  rw [requirement_result, resultDomain_result]
-  dsimp only [bind, Except.bind]
-  rw [hposts]
-  dsimp only [bind, Except.bind]
-  have actual : ending (S := zS) (requiresPolicy zPB) (lockFormula zS sources) {} none 128
-      (zPB.rumpf zLies) arguments (contractGoals zPB zLies arguments invariants) = .ok pre := hpre
-  rw [actual]
-  dsimp only [bind, Except.bind]
-  have actualDecided : decideB (close (writerMatrix requirement.payload .tru pre.formula))
-      (close_closed (writerMatrix requirement.payload .tru pre.formula)) = true := decided
-  split
-  · rfl
-  · rename_i refused
-    exact False.elim (refused actualDecided)
-
-end Gabbro.Grammatik.Zielsatz.PoolCertificate
+  exact environment_success zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments
+    requirement requirement_result resultDomain resultDomain_result posts hposts pre hpre decided
