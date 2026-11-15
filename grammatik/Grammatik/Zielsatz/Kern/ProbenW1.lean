@@ -227,6 +227,8 @@ def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty)
 theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by
   unfold Akzeptiert Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
     Vertraege.Pruefer.checkContracts
+  simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
+    Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction]
   decide +kernel
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/

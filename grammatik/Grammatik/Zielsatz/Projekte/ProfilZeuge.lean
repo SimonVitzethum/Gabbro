@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.Projekte.Profil
 public import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
+public import Grammatik.Zielsatz.Atomar.ConcreteGoalZeuge
 public import Grammatik.Parser.Profil.RegisterZeuge
 public import Grammatik.Parser.Profil.PlatzierungZeuge
 import all Init.Data.Repr
@@ -92,7 +93,7 @@ end Gabbro.Grammatik.AtomarXZeuge
 namespace Gabbro.Grammatik.ConcreteGoalZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz
-open Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
+open _root_.Gabbro.Grammatik.Vertraege.Pruefer.Witness (declaration unit checker_accepted_zeuge
   nutzerPflicht_of_akzeptiert_zeuge)
 
 /-- The accepted increment with the same nonempty profile and placement
