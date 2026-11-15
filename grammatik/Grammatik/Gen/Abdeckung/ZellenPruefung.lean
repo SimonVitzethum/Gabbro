@@ -80,7 +80,11 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     including explicit lock sources and loop hints. The ten numbered component closures
     and `komp` still match their pins, and their atoms and the appended reset cell still
     follow their definitions. No cell kind, arity or verdict changed; the new VC gates
-    remain outside the numbered cell table rather than being claimed as covered cells. -/
+    remain outside the numbered cell table rather than being claimed as covered cells.
+    Re-pinned after integrating generic totality for fallible foreign binders, literal-true
+    locks and finite traversals, its measure-duty transport, and tautological pointer
+    refinement. The strict VC path and all numbered component formulas are unchanged;
+    the existing 126 cells (21 bad) therefore need no new kind or constructor numbering. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -93,7 +97,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 4031485966108131684)]
+   ("AkzeptiertX", 10381383623694437510)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
