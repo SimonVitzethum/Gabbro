@@ -116,7 +116,10 @@ def ending {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     | _ => none
 
 theorem noLogic {Λ : List (Res D)} {code : Endblock D V l Γ Λ}
-    (checked : EndSafe code) (S O U A passes R world locals) (error : Logik D) :
+    (checked : EndSafe code) (S : SperrInv D) (O : Orakel D) (U : Umwelt D)
+    (A : AUmwelt D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (world : World D) (locals : Env D Γ) (error : Logik D) :
     execEndHA S O U A passes R code world locals ≠ .logik error := by
   intro returned
   have valid := checked S O U A passes R world locals
