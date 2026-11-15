@@ -27,10 +27,10 @@ theorem lowEndL_bind_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf 
   | ok ls =>
     simp only [hl, Except.bind] at h
     cases hq : lowEndL (l := false) u c _ (fn.mitBindung x ls.range) n Λ [] ss with
-    | error e => simp only [hq, Except.bind, bind] at h; cases h
+    | error e => try simp only [hq, Except.bind, bind] at h; cases h
     | ok p =>
       obtain ⟨q, tail'⟩ := p
-      simp only [hq, Except.bind, bind] at h
+      try simp only [hq, Except.bind, bind] at h
       cases h
       exact ⟨ls, q, (by first | exact hl | rfl | simp_all), hq, rfl⟩
 
