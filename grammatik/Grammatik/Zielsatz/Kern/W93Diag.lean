@@ -5,6 +5,10 @@
 module
 public import Grammatik.Logik.Invarianten.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Pruefer.Decision
+public meta import Grammatik.Logik.Invarianten.VC.Calls
+public meta import Grammatik.Kern.Semantik.Semantik.T1.Teil1
+public meta import Grammatik.Logik.Vertraege.Pruefer.Duties
+public meta import Grammatik.Logik.Invarianten.VC.Compiler
 @[expose] public section
 
 namespace Gabbro.Grammatik.W93Diag
