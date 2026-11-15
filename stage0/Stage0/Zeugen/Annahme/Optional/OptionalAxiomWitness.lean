@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -45,13 +46,16 @@ def text : String :=
 
 def parsed := ((lexL text.toList).mapError reprStr).bind parseTopTief
 
-theorem parsed_present : parsed.toOption.isSome = true := by decide +kernel
+theorem parsed_present : parsed.toOption.isSome = true := by kernel_rfl
 
 def unitCandidate := elabU (pre108 (parsed.toOption.get parsed_present))
-theorem unit_present : unitCandidate.toOption.isSome = true := by decide +kernel
+theorem unit_present : unitCandidate.toOption.isSome = true := by kernel_rfl
 def unit := unitCandidate.toOption.get unit_present
 
-theorem caller_present : 0 < unit.fns.length := by decide +kernel
+theorem caller_present : 0 < unit.fns.length := by
+  have size : unit.fns.length = 1 := by kernel_rfl
+  rw [size]
+  decide
 
 def blockCandidate :=
   lowSeqL (l := false) unit ⟨0, caller_present⟩ [] (fnAt unit ⟨0, caller_present⟩)
@@ -61,6 +65,6 @@ def blockCandidate :=
 theorem optional_constructor :
     (match blockCandidate with
      | .ok (⟨_, .bindAxiomOpt ..⟩, _) => true
-     | _ => false) = true := by decide +kernel
+     | _ => false) = true := by kernel_rfl
 
 end Gabbro.Stage0.OptionalAxiomWitness
