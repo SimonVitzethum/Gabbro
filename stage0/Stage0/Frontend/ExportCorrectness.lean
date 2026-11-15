@@ -14,7 +14,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- The export laws are for the actual elaborator/lowerer consumed by `compile_source_program`.
     This image certificate connects that program to the inherited IR simulation, with precisely
     the same initial-memory, gate/view, call-depth and environment-budget premises. -/
-theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
@@ -32,7 +32,7 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
 
 /-- C01's constructor export law applies to the exact unit checked and emitted by the
     source pipeline, together with the inherited whole-image simulation certificate. -/
-theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
@@ -65,7 +65,7 @@ theorem Compiled.constant_literal {text : String} {options : Profil.Options}
 
 /-- The whole-image certificate and original constant retention come from the same production
     result. No evaluator, fabricated declaration or caller-supplied constant certificate intervenes. -/
-theorem exported_constants_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem exported_constants_ir_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
@@ -131,7 +131,7 @@ theorem Compiled.initializer_exports {text : String} {options : Profil.Options} 
 /-- Every source image from the production compiler has the same canonical source program
     and IR simulation. Reach, tree and array exports retain the original-source duty gate
     at every lexical/result context, including nested and empty quantifiers. -/
-theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,

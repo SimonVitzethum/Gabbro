@@ -107,7 +107,7 @@ theorem arrayMeaning_collected_zeuge :
 variable [RootNativeFloat.Hardware]
 
 local instance kernel : Runner.IR.Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
-local instance clone : Senke.CloneOK where
+local instance clone : Senke.CloneAnswers where
   ans _ := ⟨1, 0, by decide, trivial⟩
 
 def initial : SourceWitness.InitialState output :=
@@ -154,7 +154,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 /-- An actual accepted nonempty nested-array source/image instantiates the generic
     certificate with the original initializer duty and canonical program jointly satisfied. -/
-theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
+theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneAnswers] :
     ∃ output : Emitted ArrayWitness.text 64,
       emit ArrayWitness.text 64 = .ok output ∧ output.Correct ∧
       CanonicalSourceProgram output.compiled ∧

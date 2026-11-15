@@ -126,7 +126,7 @@ theorem owner_space_independent :
     uPruefEigner [] (some "Mark") = .error "owner without declared linear mark: Mark" := by
   constructor <;> cbv
 
-theorem images_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct ∧ pointerOutput.Correct :=
+theorem images_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct ∧ pointerOutput.Correct :=
   ⟨output.correct, pointerOutput.correct⟩
 
 end Gabbro.Stage0.NamedSpaceWitness

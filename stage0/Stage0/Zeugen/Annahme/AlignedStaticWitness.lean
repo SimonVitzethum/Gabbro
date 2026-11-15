@@ -109,6 +109,6 @@ theorem addr_aligned : 16 ∣ output.image.Y.ga g0 ∧ 8 ∣ output.image.Y.ga g
   exact h
 
 /-- The same image satisfies the inherited execution correctness. -/
-theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 end Gabbro.Stage0.AlignedStaticWitness

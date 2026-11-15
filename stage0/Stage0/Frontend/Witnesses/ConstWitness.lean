@@ -126,7 +126,7 @@ theorem source_pipeline_zeuge :
     result.accepted⟩
 
 /-- The whole-image theorem remains the production one; const folding adds no runner. -/
-theorem image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
+theorem image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneAnswers]
     (K : Nat) (bytes : List Runner.B) (emitted : irBild text K = .ok bytes) :
     ∃ output : Emitted text K,
       emit text K = .ok output ∧ output.bytes = bytes ∧ output.Correct := by

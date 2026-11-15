@@ -86,7 +86,7 @@ theorem block_fits_image_zeuge : (emit blockFitsText 256).isOk = true := by kern
 
 /-- The accepted source image inherits the connected generic lowering theorem,
     including both allocation branches and the store-and-bump continuation. -/
-theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] : output.Correct :=
+theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct :=
   output.correct
 
 namespace Branches

@@ -82,7 +82,7 @@ theorem block_last_image_zeuge : (emit blockLastText 256).isOk = true := by kern
 
 /-- Instantiating the source-image theorem keeps the required stop and the
     successful store-and-bump path under the actual compiler's correctness proof. -/
-theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] : output.Correct :=
+theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct :=
   output.correct
 
 /-- The capacity outcome uses the same runtime stop at either nesting level. -/

@@ -11,6 +11,7 @@ public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
 public import Stage0.Senke.Images.StackReserve
 public import Stage0.Senke.Images.InitialExecution
+public import Stage0.Senke.Images.SpawnImage
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.GlobalAlignment
 public import Stage0.Senke.Welt.MainEnv
@@ -111,11 +112,13 @@ theorem irBild_emitted (src : String) (K : Nat) (bytes : List Runner.B) {options
     exact Except.ok.inj h
 
 /-- The inherited IR execution conclusion for this exact emitted program and entry state; `main` runs with the
-    environment whose words the image carries. -/
+    environment whose words the image carries. Either `main`'s thread behaves as G's sequential call, or the
+    startup stops with `Senke.cloneCode` because the kernel refused to create a declared thread (the checked answer
+    of the startup `spawn`s, `Senke.spawn1_ok`). -/
 def Emitted.Simulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) (O : Orakel (declOf output.compiled.unit))
     (m : Runner.Mem) (σ : World (declOf output.compiled.unit)) : Prop :=
-    match rufAt output.compiled.program O output.image.passes output.image.depth output.compiled.main σ output.args with
+    (match rufAt output.compiled.program O output.image.passes output.image.depth output.compiled.main σ output.args with
     | .ok _ v => ∃ t' m' q,
         Runner.IR.Star ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m t' m' ∧
         Runner.IR.StopAt t' m' q ∧ q.nr = 231 ∧
@@ -124,7 +127,7 @@ def Emitted.Simulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profi
         (Senke.logikCode e)
     | .hardware h => Senke.Stops ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m
         (Senke.hwCode h)
-    | _ => False
+    | _ => False) ∨ Senke.Stops ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m Senke.cloneCode
 
 /-- A root occurrence runs with its own original typed environment on stack `j + 1`.
     This is the existing individual-thread theorem, with no simultaneous GX claim. -/
@@ -134,7 +137,7 @@ def Emitted.RootSimulates [Runner.IR.Kern] {src : String} {K : Nat} {options : P
     (j : Nat) (hj : j < output.starts.length) : Prop :=
   let root := output.starts[j]
   let entry : Runner.IR.T :=
-    ⟨BitVec.ofNat 64 (Senke.codeBase + 16 * (3 * output.starts.length + Senke.startLen + Senke.startLen * j)),
+    ⟨BitVec.ofNat 64 (Senke.codeBase + 16 * (10 * output.starts.length + Senke.startLen + Senke.startLen * j)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
   match rufAt output.compiled.program O output.image.passes output.image.depth root.1 σ root.2 with
   | .ok _ _ => ∃ t' m' q, Runner.IR.Star entry m t' m' ∧ Runner.IR.StopAt t' m' q ∧ q.nr = 60
@@ -167,7 +170,7 @@ def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.
     Senke.WeltAt m output.image.Y σ → Senke.TorOK output.image.Y O → Senke.SichtOK O →
     output.Simulates O m σ ∧ ∀ j (hj : j < output.starts.length), output.RootSimulates O m σ j hj
 
-theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat} {options : Profil.Options}
+theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneAnswers] {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : output.Correct := by
   refine ⟨compile_source_program _ output.compiled, ?_⟩
   intro O m σ hm hWa hT hV
@@ -197,7 +200,7 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
 /-- Canonical source startup is an instance of the all-compatible-world theorem.
     The actual initialized payload establishes its world relation internally; no
     independent initial world or source execution is supplied by the caller. -/
-theorem Emitted.source_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem Emitted.source_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) :
     CanonicalSourceProgram output.compiled ∧
     ∀ (O : Orakel (declOf output.compiled.unit)) (m : Runner.Mem),
@@ -276,7 +279,7 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
 
 /-- The actual CLI payload retains the original canonical source, initialized main/root
     execution certificate and alignment guarantees under the inherited runner contracts. -/
-theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
+theorem irBild_correct [Runner.IR.Kern] [Senke.CloneAnswers] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
     ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧ output.Placed := by
   obtain ⟨output, he, hb⟩ := irBild_emitted src K bytes h
@@ -284,7 +287,7 @@ theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat)
 
 /-- The exact bytes returned by the CLI also realize canonical source startup.
     The general compatible-world certificate remains available for the same image. -/
-theorem irBild_source_correct [Runner.IR.Kern] [Senke.CloneOK]
+theorem irBild_source_correct [Runner.IR.Kern] [Senke.CloneAnswers]
     (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
     ∃ output : Emitted src K options,
@@ -299,5 +302,39 @@ theorem irBild_source_correct [Runner.IR.Kern] [Senke.CloneOK]
   refine ⟨output, emitted, payload, generic, placed, ?_⟩
   rw [← payload]
   exact output.source_correct.2
+
+/-! ## Premise (d): the startup's thread creation, read by the kernel (plan A5) -/
+
+/-- A kernel that answers every `clone` with a thread id lets `main`'s thread of an emitted image run through the
+    spawn sites of all its roots (`Senke.BildLage.spawn_entry`: the j-th site spawns the entry state of root `j`). -/
+theorem Emitted.spawned [Runner.IR.Kern] [Senke.CloneAnswers] {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) {m : Runner.Mem} (loaded : Senke.BytesAt m Runner.Prog.IMG output.bytes)
+    (hcreate : ∀ (m' : Runner.Mem) (r x : Runner.W), r ≠ 0 →
+      Runner.IR.Kern.ans Runner.cloneReq m' (some (r, x)) m' → 0 < r.toInt) :
+    ∃ m1, Runner.IR.Star ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m
+      ⟨BitVec.ofNat 64 (Senke.codeBase + 16 * (10 * output.starts.length)), BitVec.ofNat 64 output.image.fp0⟩ m1 ∧
+      Runner.IR.Agree (BitVec.ofNat 64 output.image.fp0) (Senke.startScratch output.compiled.main)
+        output.image.Ks m m1 := by
+  have hfs : ∀ g : (declOf output.compiled.unit).Fn,
+      (List.finRange output.compiled.unit.fns.length)[g.val]? = some g := by
+    intro g
+    simp only [List.finRange, List.getElem?_ofFn, g.isLt, ↓reduceDIte]
+    congr 1
+  exact Senke.bild_initialized_spawned_u output.initialValid output.emission hfs loaded hcreate
+
+/-- A kernel that refuses every `clone` stops the startup of an emitted image that declares a root with the exit
+    code `Senke.cloneCode`: a refused thread creation is a declared stop, never a silently missing root. -/
+theorem Emitted.refused [Runner.IR.Kern] [Senke.CloneAnswers] {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) {m : Runner.Mem} (loaded : Senke.BytesAt m Runner.Prog.IMG output.bytes)
+    (hroot : output.starts ≠ [])
+    (hrefuse : ∀ (m' : Runner.Mem) (r x : Runner.W), r ≠ 0 →
+      Runner.IR.Kern.ans Runner.cloneReq m' (some (r, x)) m' → r.toInt ≤ 0) :
+    Senke.Stops ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m Senke.cloneCode := by
+  have hfs : ∀ g : (declOf output.compiled.unit).Fn,
+      (List.finRange output.compiled.unit.fns.length)[g.val]? = some g := by
+    intro g
+    simp only [List.finRange, List.getElem?_ofFn, g.isLt, ↓reduceDIte]
+    congr 1
+  exact Senke.bild_initialized_refused_u output.initialValid output.emission hfs loaded hroot hrefuse
 
 end Gabbro.Stage0
