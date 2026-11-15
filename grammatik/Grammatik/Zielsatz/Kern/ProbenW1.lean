@@ -19,8 +19,10 @@
     is `true` -- the refusal is the new component `antwortenB`'s alone;
   * the same for an empty register type (`w1r_spec_nicht`, `w1r_bool`: `u8 in 1 .. 0`) and an
     axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
-  THE CONTRAST: the same code behind an axiom `-> never` is still accepted (`w1v_bool`), and
-  the head is the named stop `nieZurueck` (`w1v_kopf`): there the call really does not
+  THE CONTRAST: the same code with a literal-true function post behind an axiom `-> never`
+  is accepted (`w1v_bool`). The original false post is refused outside the foreign-call WP
+  fragment (`w1v_false_post_abgelehnt`). The head is the named stop `nieZurueck`
+  (`w1v_kopf`): there the call really does not
   return (`_Noreturn`), and the continuation is unreachable in the C as in G.
 -/
 module
@@ -216,14 +218,25 @@ def w1vKopf : Block w1vD (vertragVon w1vD ()) false [] [] [] :=
 def w1vP : Programm w1vD where
   invariante := fun i => (nomatch i)
   requires := fun _ => .tru
-  ensures := fun _ => .fls
+  ensures := fun _ => .tru
   rumpf _ := .cons (.ite .tru w1vKopf .nil) (.ret .empty List.Perm.nil)
 
 def w1vS : SperrInv w1vD := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-/-- **The contrast**: the same code behind an axiom `-> never` is accepted -- there the call
-    really does not return (the prototype is `_Noreturn`). -/
-theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by decide +kernel
+/-- **The contrast**: the same code with a literal-true function post behind an axiom
+    `-> never` is accepted; the call's head is the real named non-returning stop below. -/
+theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
+    Vertraege.Pruefer.checkContracts
+  decide +kernel
+
+/-- The original false post is semantically vacuous after `never`, but its foreign-call
+    WP is outside the current decidable fragment. This is a capability refusal. -/
+def w1vFalsePost : Programm w1vD := { w1vP with ensures := fun _ => .fls }
+
+theorem w1v_false_post_abgelehnt :
+    Vertraege.Pruefer.KontrakteGeprueftB w1vFalsePost w1vS [()] = false := by
+  decide +kernel
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
@@ -245,6 +258,7 @@ theorem w1_kein_nie (O : Orakel w1D) (passes : Nat) (σ : World w1D) :
 #print axioms Gabbro.Grammatik.Zielsatz.w1r_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1g_bool
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_bool
+#print axioms Gabbro.Grammatik.Zielsatz.w1v_false_post_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.w1v_kopf
 #print axioms Gabbro.Grammatik.Zielsatz.w1_kein_nie
 
