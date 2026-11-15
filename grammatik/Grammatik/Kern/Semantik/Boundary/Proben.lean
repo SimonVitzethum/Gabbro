@@ -102,12 +102,15 @@ def probeParts : Parts probeD [.int 0 65535] [] where
   }
   remainder := ["device.fifo"]
 
+def probeAnswer : Env probeD [.int 0 65535] :=
+  .cons ⟨4096, by decide, by decide⟩ .nil
+
 theorem split_correct_zeuge :
     probeContract.denote (fun _ _ _ _ => true) probeWorld probeWorld
-      (.cons ⟨4096, by decide, by decide⟩ .nil) =
-    (probeParts.Q_check probeWorld probeWorld (.cons ⟨4096, by decide, by decide⟩ .nil) &&
+      probeAnswer =
+    (probeParts.Q_check probeWorld probeWorld probeAnswer &&
       probeParts.Q_rest (fun _ _ _ _ => true) probeWorld probeWorld
-        (.cons ⟨4096, by decide, by decide⟩ .nil)) :=
+        probeAnswer) :=
   probeContract.split_correct probeParts rfl _ _ _ _
 
 def probeContracts : ∀ a : probeD.Ax,
@@ -128,7 +131,7 @@ theorem probe_rest : AxVertragO_rest probeEntryParts (fun _ _ _ _ _ => true)
 theorem axiomAntwortSonst_contract_zeuge :
     (probeContracts ()).denote (fun _ _ _ _ => true)
       (probeWorld.fragt (.inl ())) (probeWorld.fragt (.inl ()))
-      (.cons ⟨4096, by decide, by decide⟩ .nil) = true :=
+      probeAnswer = true :=
   axiomAntwortSonst_contract probeContracts probeEntryParts (fun _ _ _ _ _ => true)
     (fun _ => rfl) (probeOracle 8192) probe_rest () (by decide) probeWorld .nil
     probeFailure ⟨4096, by decide, by decide⟩ answer_4096_success_zeuge
