@@ -113,6 +113,16 @@ theorem zeroO_gut : GutO zeroO := by
   · intro L
     exact nomatch L
 
+/-- The old summary-necessity claim is false for the admitted literal-true post:
+    the actual checker supplies its body duty even with the empty summary. -/
+theorem empty_summary_suffices (T : wD.Tab ⊕ wD.Glob → Prop) :
+    KoerperGutSA wP 0 (fun _ _ _ => true) (SperrInv.leer wD) T () := by
+  have checked : Vertraege.Pruefer.KontrakteGeprueftB wP (SperrInv.leer wD) [()] = true := by
+    decide +kernel
+  have duties := Vertraege.Pruefer.KontrakteGeprueftB_sound fs_voll checked ()
+  exact (duties 0 (fun _ _ _ => true) T (fun carrier _ =>
+    match carrier with | .inl table => nomatch table | .inr global => nomatch global)).1
+
 /-- The original nontrivial result contract, outside the current foreign-result WP fragment.
     The admitted `wP` keeps the same call with a literal-true function post. -/
 def summaryP : Programm wD :=
