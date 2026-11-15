@@ -234,7 +234,7 @@ theorem fremd_akzeptiert :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   and_intros
-  all_goals first | exact fremd_checkB | decide +kernel
+  all_goals decide +kernel
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "fallible acceptance"
 
@@ -245,7 +245,7 @@ theorem fremdFallible_akzeptiert :
       (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   and_intros
-  all_goals first | exact fremdFallible_checkB | decide +kernel
+  all_goals decide +kernel
 
 #eval IO.FS.writeFile "../.scratch-agent/foreign-progress" "report proofs"
 
