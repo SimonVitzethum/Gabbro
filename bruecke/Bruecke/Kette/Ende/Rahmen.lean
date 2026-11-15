@@ -57,6 +57,13 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
           cases r <;> simp only [retZ, Option.map_eq_some_iff, Option.some.injEq, reduceCtorEq] at hr
           case empty => exact ⟨none, hr.symm⟩
           case val | bool | wert => obtain ⟨e, _, he⟩ := hr; exact ⟨some e, he.symm⟩
+          case opt v =>
+            simp only [retZ, Option.map_eq_some_iff, Option.some.injEq, reduceCtorEq] at hr
+            obtain ⟨e, _, he⟩ := hr; exact ⟨some e, he.symm⟩
+          case why n =>
+            simp only [retZ] at hr
+            cases hr
+            exact ⟨_, rfl⟩
         obtain ⟨e, rfl⟩ := hret
         exact .ret _ _ .nil
     case bind x d v =>
@@ -99,6 +106,7 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       obtain ⟨hx, -, -⟩ := schrittB_stmt htN (fun _ _ _ h => by cases h)
         (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
         (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+        (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
       obtain ⟨Λ₁, st, q, hst, hq, rfl⟩ := lowEndL_leaf_ok (by trivial) hlow
       have IH := ih n (Nat.lt_succ_self n) k ss fn _ _ q rest ys restZ used hΓ hS hmemss hm hq hy hFss
       exact ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _),
