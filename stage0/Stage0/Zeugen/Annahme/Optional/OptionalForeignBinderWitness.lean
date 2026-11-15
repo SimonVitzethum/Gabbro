@@ -57,8 +57,7 @@ def cacheLexedSource (src : String) (expected : List Gabbro.Grammatik.Parser.Tok
       have same : tokens = expected := Except.ok.inj (origin.symm.trans lexed)
       subst tokens
       have origin_eq : origin = lexed := Subsingleton.elim _ _
-      subst origin
-      rfl
+      rw [origin_eq]
 
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
