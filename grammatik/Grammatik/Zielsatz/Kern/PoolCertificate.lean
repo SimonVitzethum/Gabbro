@@ -204,7 +204,7 @@ def postCheck (value : ErgVal zD (zD.erg zLies)) :
 
 /-- The strict arithmetic gate accepts the original body and its original post. -/
 theorem environment_checked (sources : LockSources zS) :
-    (checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants .nil).toOption.isSome = true := by
+    (Vertraege.Pruefer.checkEnvironment zPB zS (requiresPolicy zPB) sources {} none zLies invariants .nil).toOption.isSome = true := by
   obtain ⟨pre, hpre, valid⟩ := compiled_valid sources
   obtain ⟨posts, hposts⟩ := collect_success resultDomain.values
     (fun value => ∃ result, postFormula zPB zLies .nil value = .ok result) postCheck (by
@@ -221,7 +221,7 @@ theorem environment_checked (sources : LockSources zS) :
     apply (lower_denote _ _).mpr
     intro _
     exact (quoteQF_denote _ _).mpr (valid values)
-  unfold checkEnvironment
+  unfold Vertraege.Pruefer.checkEnvironment
   have requiresResult : translate (zPB.requires zLies) (.nil : Env zD []) =
       .ok ((translate (zPB.requires zLies) .nil).toOption.get (by rfl)) := rfl
   rw [requiresResult, resultDomain_result]
