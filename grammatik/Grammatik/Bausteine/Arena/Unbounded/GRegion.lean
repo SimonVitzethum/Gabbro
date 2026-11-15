@@ -146,9 +146,6 @@ def prog : Programm rD where
   ensures := fun _ => Expr.tru
   rumpf := fun _ => rumpf
 
-set_option profiler true
-set_option profiler.threshold 0
-
 /-- **The core checker accepts the program with the open region.** -/
 theorem prog_akzeptiert :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide +kernel
