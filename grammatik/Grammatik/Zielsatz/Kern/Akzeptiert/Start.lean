@@ -57,7 +57,7 @@ section Pruefer
 noncomputable def akzeptiert_pruefer : Pruefer where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen
+    Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen (sources := E.lockFormulas)
   korrekt := fun {D} _ E fs ls cs hardware h =>
     letI : RootNativeFloat.Hardware := hardware
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
@@ -66,9 +66,10 @@ noncomputable def akzeptiert_pruefer : Pruefer where
 /-- The concrete checker Bool is independent of its internal axiom-equality instance. -/
 theorem akzeptiert_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq : DecidableEq D.Ax]
     (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
-    akzeptiert_pruefer.akzeptiert E fs ls cs = Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen := by
+    akzeptiert_pruefer.akzeptiert E fs ls cs =
+      Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen (sources := E.lockFormulas) := by
   exact congrArg (fun inst : DecidableEq D.Ax =>
-    @Akzeptiert D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] (fun _ => none))
+    @Akzeptiert D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas)
     (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
 
 end Pruefer

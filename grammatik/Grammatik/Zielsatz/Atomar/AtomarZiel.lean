@@ -235,7 +235,7 @@ end Besitz
 noncomputable def akzeptiertX_pruefer : PrueferX where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] && besitzB E fs &&
+    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas && besitzB E fs &&
       Kernzelle.akkuStartB E E.akku
   korrekt := fun {D} _ E fs ls cs hardware h => by
     letI : RootNativeFloat.Hardware := hardware
@@ -248,6 +248,18 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
       akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1
     exact ⟨hSpec.mitBesitz hb hw,
       hs, Kernzelle.akkuStartB_sound hStart⟩
+
+/-- The concrete unit checker retains its declared lock syntax; its choice
+    of an internal axiom-equality instance does not affect the verdict. -/
+theorem akzeptiertX_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq : DecidableEq D.Ax]
+    (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
+    akzeptiertX_pruefer.akzeptiert E fs ls cs =
+      (AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas &&
+        besitzB E fs && Kernzelle.akkuStartB E E.akku) := by
+  exact congrArg (fun inst : DecidableEq D.Ax =>
+    @AkzeptiertX D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas &&
+      besitzB E fs && Kernzelle.akkuStartB E E.akku)
+    (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
 
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
     (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
