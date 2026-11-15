@@ -146,9 +146,10 @@ def prog : Programm rD where
   ensures := fun _ => Expr.tru
   rumpf := fun _ => rumpf
 
+set_option profiler true
+set_option profiler.threshold 0
+
 /-- **The core checker accepts the program with the open region.** -/
-set_option profiler true in
-set_option profiler.threshold 0 in
 theorem prog_akzeptiert :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [.inl ()] [()] = true := by decide +kernel
 
@@ -156,8 +157,6 @@ theorem prog_akzeptiert :
     even for the identical provider call and reference write. -/
 def falseContract : Programm rD := { prog with ensures := fun _ => .fls }
 
-set_option profiler true in
-set_option profiler.threshold 0 in
 theorem false_contract_refused :
     Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer rD) [()] = false := by
   decide +kernel
