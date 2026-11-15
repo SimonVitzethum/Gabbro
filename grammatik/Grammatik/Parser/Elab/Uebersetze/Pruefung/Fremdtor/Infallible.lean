@@ -48,6 +48,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Zielsatz
 
 set_option Elab.async false
+set_option pp.raw true
 
 attribute [local irreducible] checkPFremd
 
@@ -117,6 +118,15 @@ set_option maxHeartbeats 2000000 in
 theorem fremd_akzeptiert :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
-  fail "inspect the preceding component certificates before composition"
+  have masks : maskenB checkPFremd (List.finRange uFremd.fns.length) = true :=
+    maskenB_ohne (P := checkPFremd) (by
+      delta checkPFremd
+      exact lowered_no_handlers uFremd uFremd_lowered (by kernel_rfl))
+  foreign_exact foreign_acceptance_of_components checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+    (List.finRange uFremd.fns.length) checkChecksFremd
+    fragment_checked bounds_checked footprints_checked levels_checked pool_checked races_checked
+    answers_checked masks
+    ((schnittstellenB_iff (fun g => List.mem_finRange g)).mpr (schnittstellen_standard _ _))
+    fremd_checkB scopes_checked invariants_checked contracts_checked
 
 end Gabbro.Grammatik.Parser.Uebersetze
