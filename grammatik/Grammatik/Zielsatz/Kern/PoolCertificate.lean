@@ -234,3 +234,25 @@ theorem environment_checked (sources : LockSources zS) :
     exact (quoteQF_denote _ _).mpr (valid values)
   exact environment_success zPB zS (requiresPolicy zPB) sources {} none zLies invariants arguments
     requirement requirement_result resultDomain resultDomain_result posts hposts pre hpre decided
+
+def inputDomain : Invarianten.Pruefer.Environments zD context :=
+  (Invarianten.Pruefer.environments (D := zD) 128 context).toOption.get (by rfl)
+
+theorem inputDomain_result : Invarianten.Pruefer.environments (D := zD) 128 context = .ok inputDomain := rfl
+
+/-- The original reader function, including its 101-value binder, is accepted. -/
+theorem reader_checked (sources : LockSources zS) :
+    (checkFunction zPB zS sources {} none zLies).toOption.isSome = true := by
+  apply function_success zPB zS sources {} none zLies
+  · rfl
+  · decide +kernel
+  · apply execution_success zPB zS (requiresPolicy zPB) sources {} none zLies
+      invariants rfl inputDomain inputDomain_result
+    intro locals
+    have same : locals = arguments := by cases locals; rfl
+    subst locals
+    exact environment_checked sources
+
+#print axioms reader_checked
+
+end Gabbro.Grammatik.Zielsatz.PoolCertificate

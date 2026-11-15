@@ -162,6 +162,7 @@ theorem execution_success (program : Programm D) (S : SperrInv D) (policy : Call
   unfold checkExecution
   rw [hinvariants, hdomain]
   dsimp only [bind, Except.bind]
+  delta CheckedEnvironment at hchecked
   rw [hchecked]
   rfl
 
@@ -171,11 +172,11 @@ theorem function_success (program : Programm D) (S : SperrInv D)
     (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
     (hint : Option (QF (Observation D))) (f : D.Fn)
     (basic : checkBasicFunction program S sources budget f = none)
-    (replay : (atomicReplay? program f).isSome = true)
+    (replay : (Invarianten.Pruefer.atomicReplay? program f).isSome = true)
     (execution : (checkExecution program S (requiresPolicy program) sources budget hint f).toOption.isSome = true) :
     (checkFunction program S sources budget hint f).toOption.isSome = true := by
   obtain ⟨checked, hchecked⟩ := success_of_isSome _ execution
-  cases h : atomicReplay? program f with
+  cases h : Invarianten.Pruefer.atomicReplay? program f with
   | none => simp only [h, Option.isSome_none, Bool.false_eq_true] at replay
   | some certificate =>
       unfold checkFunction
