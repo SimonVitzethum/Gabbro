@@ -7392,6 +7392,8 @@ already did. Neither lowering nor the language model changes to identify the sco
 | `option_unit_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
 | `lowEndL_bindOpt_ok_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
 | `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
+| `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
+| `I104.einzahlen_post_eq`, `I104.lies_post_eq`, `I104.einzahlen_meets_eq`, `I104.lies_meets_eq` | same | Those clause certificates identify the original postconditions and frame-aware duty statements with the current bridge statements; the existing user-obligation theorems are retained. |
 
 `OptionStorageZeuge.names_zeuge` proves the two distinct parameter names once for the
 existing read/write and return simulations. The option-value and storage fixtures also
