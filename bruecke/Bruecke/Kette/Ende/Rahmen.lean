@@ -153,15 +153,15 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowEndL_struct_ok (.inr ⟨x, tab, rfl⟩) hlow
       obtain _ | m := n
       · rw [lowStructL_zero] at hStruct; cases hStruct
-      obtain ⟨tabFin, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
+      obtain ⟨_, bodyG, ht, hBodyG, hΛ, hst⟩ := lowStruct_loop_ok hStruct
       subst Λ₁
       cases hst
       rw [ht] at htZ
-      clear htZ
+      cases htZ
       obtain ⟨hrBody, hsufBody, hFrame⟩ := statischSeq_G S c hc ρB m k ss
-        (fn.mitIndex x tabFin.val ((declOf u).count tabFin)) (fT.mitIndex x tabFin.val ((declOf u).count tabFin))
+        (fn.mitIndex x tZ.val ((declOf u).count tZ)) (fT.mitIndex x tZ.val ((declOf u).count tZ))
         (ns.push x) ⟨Λ, bodyG⟩ (.blkEnd :: tail) bodyB (.blkEnd :: tailZ) allocated
-        (congrArg (List.cons _) hΓ) (hS.index x tabFin.val ((declOf u).count tabFin)) hmemss hBodyG hBodyZ hFss
+        (congrArg (List.cons _) hΓ) (hS.index x tZ.val ((declOf u).count tZ)) hmemss hBodyG hBodyZ hFss
       have htail : tailZ = tail := (List.cons.inj hrBody).2
       subst tailZ
       have hsuf : tail <:+ ss := (List.suffix_cons _ _).trans hsufBody
