@@ -53,9 +53,11 @@ def unit := unitCandidate.toOption.get unit_present
 
 theorem caller_present : 0 < unit.fns.length := by decide +kernel
 
+-- Elaborate dependent lowering over symbolic inputs before applying the source fixture.
 def blockCandidate :=
-  lowSeqL (l := false) unit ⟨0, caller_present⟩ [] (fnAt unit ⟨0, caller_present⟩)
-    20 (resOf unit ⟨0, caller_present⟩) [] [.bindOptBeg "r" "ax" []]
+  (fun (u : UProg) (caller : Fin u.fns.length) =>
+    lowSeqL (l := false) u caller [] (fnAt u caller)
+      20 (resOf u caller) [] [.bindOptBeg "r" "ax" []]) unit ⟨0, caller_present⟩
 
 /-- The actual sequence lowerer constructs the canonical optional axiom block. -/
 theorem optional_constructor :
