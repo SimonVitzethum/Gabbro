@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Duties
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 
 @[expose] public section
 
@@ -182,5 +182,21 @@ theorem function_success (program : Programm D) (S : SperrInv D)
       unfold checkFunction
       rw [basic, h, hchecked]
       rfl
+
+/-- Compose successful function checks through the actual default-hint gate. -/
+theorem contracts_success (program : Programm D) (S : SperrInv D)
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget) (functions : List D.Fn)
+    (ready : ∀ f, (checkFunction program S sources budget none f).toOption.isSome = true) :
+    KontrakteGeprueftB program S functions sources budget = true := by
+  obtain ⟨checked, hchecked⟩ := collect_success functions (ContractDuties program S)
+    (fun f => do
+      let hint ← loopHint (fun _ => none) f
+      checkFunction program S sources budget hint f) (by
+        intro f
+        dsimp only [loopHint, bind, Except.bind]
+        exact success_of_isSome _ (ready f))
+  unfold KontrakteGeprueftB checkContracts
+  rw [hchecked]
+  rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SelectionWitness

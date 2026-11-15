@@ -40,6 +40,7 @@
 module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Zielsatz.Kern.CheckedMehrfaden
+public import Grammatik.Zielsatz.Kern.PoolCertificate
 public import Grammatik.Proben.ProbeD
 public import Grammatik.Proben.InvZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
@@ -185,10 +186,6 @@ def mE : Einheit mD where
       correct := fun item => nomatch item }
   pointerSignatures := some
     { count := 0, outside := fun _ _ _ => rfl }
-
-/-- The literal-true lock source shared by the probe, pool and linked fixtures. -/
-def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
-  { resources := [], expression := .tru, correct := fun _ => rfl }
 
 /-- Probe B as ONE declaration: declared start `haupt`, initial memory `zSp`. -/
 def zEB : Einheit zD where

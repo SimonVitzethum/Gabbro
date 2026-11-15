@@ -5,7 +5,13 @@ public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1Basis
 
 @[expose] public section
 
-namespace Gabbro.Grammatik.Zielsatz.PoolCertificate
+namespace Gabbro.Grammatik.Zielsatz
+
+/-- Shared source metadata for the probe, pool and linked library fixtures. -/
+def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
+namespace PoolCertificate
 
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 open Vertraege.Pruefer Vertraege.Pruefer.SelectionWitness Invarianten.Pruefer
@@ -255,4 +261,14 @@ theorem reader_checked (sources : LockSources zS) :
 
 #print axioms reader_checked
 
-end Gabbro.Grammatik.Zielsatz.PoolCertificate
+/-- Full function enumeration retains the strict gate; only the reader's
+    kernel proof uses the symbolic certificate above. -/
+theorem contracts_checked : KontrakteGeprueftB zPB zS zFs zPoolSources = true := by
+  apply contracts_success zPB zS zPoolSources {} zFs
+  intro f
+  cases f <;> first | exact reader_checked zPoolSources | decide +kernel
+
+#print axioms contracts_checked
+
+end PoolCertificate
+end Gabbro.Grammatik.Zielsatz
