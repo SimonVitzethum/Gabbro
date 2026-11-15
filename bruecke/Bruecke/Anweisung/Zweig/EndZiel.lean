@@ -31,7 +31,7 @@ theorem endZiel_false_iff {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
       fun σ' v he => h.2.1 σ' v (congrArg EndAusgang.zuAusgang he),
       fun σ' r he => h.2.2.2.2 σ' r (congrArg EndAusgang.zuAusgang he)⟩
   · rintro ⟨hlog, hret, hwhy⟩
-    refine ⟨?_, ?_, ?_, fun leave hl => by cases hl, ?_⟩
+    refine ⟨?_, ?_, ?_, fun leave hl σ' ρ' he => by cases hl, ?_⟩
     · intro e he
       apply hlog e
       cases hx : execEnd O passes R b σ ρ <;>
