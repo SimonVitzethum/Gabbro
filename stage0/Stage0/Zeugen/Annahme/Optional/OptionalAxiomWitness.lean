@@ -59,6 +59,10 @@ def blockCandidate :=
     lowSeqL (l := false) u caller [] (fnAt u caller)
       20 (resOf u caller) [] [.bindOptBeg "r" "ax" []]) unit ⟨0, caller_present⟩
 
+-- Constructor matching must keep the computed source symbolic; the kernel
+-- still checks the complete closed equality below.
+attribute [local irreducible] unit
+
 /-- The actual sequence lowerer constructs the canonical optional axiom block. -/
 theorem optional_constructor :
     (match blockCandidate with
