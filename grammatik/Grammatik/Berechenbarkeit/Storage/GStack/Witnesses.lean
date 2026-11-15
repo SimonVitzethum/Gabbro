@@ -2,6 +2,7 @@ module
 public import Grammatik.Berechenbarkeit.Storage.GStack.Termination
 public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+import all Batteries.Data.Except
 @[expose] public section
 
 
