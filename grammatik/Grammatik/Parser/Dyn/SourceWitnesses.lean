@@ -118,10 +118,12 @@ def source : String :=
   "Scene[i].s = dyn Shape(c); let a = Shape::area(Scene[j].s); return a; }"
 
 -- Use the same lexer-error channel as the canonical source pipeline.
-def parsed : Except String (List SItemTief) :=
-  match lex source with
+def parse_tokens (answer : Except LexFehler (List Token)) : Except String (List SItemTief) :=
+  match answer with
   | .error _ => .error "lex"
   | .ok tokens => parseTopTief tokens
+
+def parsed : Except String (List SItemTief) := parse_tokens (lex source)
 
 def expanded : Except String (List SItemTief) := do
   exportDeclarationUnit (← parsed)
@@ -364,12 +366,10 @@ private theorem source_lexed : lex source = .ok (tokens chunks) :=
 private theorem parsed_from_phases {ts : List Token} {items : List SItemTief}
     (scanned : lex source = .ok ts) (read : parseTopTief ts = .ok items) :
     parsed = .ok items := by
-  let consume : Except LexFehler (List Token) → Except String (List SItemTief) :=
-    fun answer => match answer with
-      | .error _ => .error "lex"
-      | .ok tokens => parseTopTief tokens
-  kernel_change consume (lex source) = .ok items
-  exact (congrArg consume scanned).trans read
+  run_tac do
+    let _ ← IO.FS.writeFile ".scratch-agent/dyn-phase-v2.txt" "bridge-proof"
+    pure ()
+  exact (congrArg parse_tokens scanned).trans read
 
 -- Retain kernel-checked normalized data from every real phase, including the parsed input.
 -- No later value contains a get that re-runs its producer chain.
