@@ -11,7 +11,7 @@ open Segment
   | [] => 0
   | head :: tail => Nat.pair head (nameCode tail) + 1
 
-private theorem nameCode_injective (left right : List Nat)
+public theorem nameCode_injective (left right : List Nat)
     (same : nameCode left = nameCode right) : left = right := by
   induction left generalizing right with
   | nil =>
@@ -76,7 +76,7 @@ private theorem nameCode_injective (left right : List Nat)
   sig := fun _ => 0
   sigNr := fun _ => {
     params := [childType], erg := some (Ty.sum [some scalarType, some childType]),
-    gruende := 0, haelt := [], schreibt := fun t => nomatch t,
+    gruende := 0, haelt := [], schreibt := (fun t => nomatch t),
     gschreibt := fun _ => true, konsumiert := [], produziert := [] }
   eigner_nie_erzeugt := fun _ t => nomatch t
   Inv := Empty
@@ -114,13 +114,9 @@ private theorem nameCode_injective (left right : List Nat)
   resources := fun phase => savedResources (owned phase)
   exact := fun _ => rfl
 
-private theorem ten_bounds : 0 ≤ (10 : Int) ∧ 10 ≤ 18446744073709551615 := by decide
-private theorem eleven_bounds : 0 ≤ (11 : Int) ∧ 11 ≤ 18446744073709551615 := by decide
-private theorem twenty_bounds : 0 ≤ (20 : Int) ∧ 20 ≤ 18446744073709551615 := by decide
-
-@[expose] public def ten : Wert declaration scalarType := ⟨10, ten_bounds.1, ten_bounds.2⟩
-@[expose] public def eleven : Wert declaration scalarType := ⟨11, eleven_bounds.1, eleven_bounds.2⟩
-@[expose] public def twenty : Wert declaration scalarType := ⟨20, twenty_bounds.1, twenty_bounds.2⟩
+@[expose] public def ten : Wert declaration scalarType := ⟨10, by decide, by decide⟩
+@[expose] public def eleven : Wert declaration scalarType := ⟨11, by decide, by decide⟩
+@[expose] public def twenty : Wert declaration scalarType := ⟨20, by decide, by decide⟩
 @[expose] public def zero : Wert declaration countdownType := ⟨0, Int.le_refl 0, (by decide)⟩
 
 @[expose] public def frame : Frame (Value declaration) :=
