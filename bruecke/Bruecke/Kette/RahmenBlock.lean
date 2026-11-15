@@ -29,8 +29,6 @@ theorem statisch_control (ρB : Gabbro.Body.Env) (puts : List String) (leave : B
   cases leave <;> simp only [controlStmtB, Gabbro.Body.step, Gabbro.Body.finalState,
     Option.some.injEq] at he <;> cases he <;> rfl
 
-#check @reasonArms_statisch_with
-
 theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : Gabbro.Body.Env) :
     ∀ (n : Nat) {loopMode : Bool} (k : Nat) (ss : List UStmt) {Γ : Ctx} (fn fT : UFn) (ns : BodyNames) {Λ : List (Res (declOf u))}
       (p : Σ Λ' : List (Res (declOf u)), Block (declOf u) (verOf u c) loopMode Γ Λ Λ')
@@ -124,7 +122,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       subst Λ₁
       cases hst
       obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m (by
-          intro fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF
+          intro fuel hlt k ss _ fn ft ns _ p tail bs tailZ used hΓ hV hm hG hB hF
           exact ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
         m (Nat.le_refl m) count k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
@@ -148,7 +146,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
       cases hst
       obtain ⟨ga, hAG, hBareRel⟩ := lowArms_bare m fn Λ cs binders ss tagG (.blkEnd :: tail) hBare hTagG
       obtain ⟨hr, hsuf, hArms⟩ := reasonArms_statisch_with ρB m (by
-          intro fuel hlt k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF
+          intro fuel hlt k ss _ fn ft ns _ p tail bs tailZ used hΓ hV hm hG hB hF
           exact ih fuel (by omega) k ss fn ft ns p tail bs tailZ used hΓ hV hm hG hB hF)
         m (Nat.le_refl m) cs.length k 0 ss fn fT ns Λ ga
         (.blkEnd :: tail) arms (.blkEnd :: tailZ) allocated hΓ hS hmemss hAG hAZ hFss
