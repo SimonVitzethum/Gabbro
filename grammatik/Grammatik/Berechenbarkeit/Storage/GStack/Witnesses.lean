@@ -155,8 +155,6 @@ theorem program_exec_zeuge (O : Orakel FD) (passes : Nat)
 
 theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .endet := by decide
 
-set_option profiler true in
-set_option profiler.threshold 0 in
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
       [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] [] = true := by decide +kernel
@@ -165,8 +163,6 @@ theorem program_accepted_zeuge :
     VC path; the Basic totality certificate cannot accept this contract. -/
 def falseContract : Programm FD := { program with ensures := fun _ => .fls }
 
-set_option profiler true in
-set_option profiler.threshold 0 in
 theorem false_contract_refused_zeuge :
     Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer FD) [()] = false := by
   decide +kernel

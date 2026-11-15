@@ -28,8 +28,6 @@ def prog : Programm BD where
 say when it completes. -/
 theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := by decide
 
-set_option profiler true in
-set_option profiler.threshold 0 in
 /-- **The core checker accepts the program.** -/
 theorem prog_accepted_zeuge :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
@@ -39,8 +37,6 @@ theorem prog_accepted_zeuge :
     VC path; the Basic totality certificate cannot accept this contract. -/
 def falseContract : Programm BD := { prog with ensures := fun _ => .fls }
 
-set_option profiler true in
-set_option profiler.threshold 0 in
 theorem false_contract_refused_zeuge :
     Invarianten.Pruefer.invariantVCB falseContract (SperrInv.leer BD) [()] = false := by
   decide +kernel
