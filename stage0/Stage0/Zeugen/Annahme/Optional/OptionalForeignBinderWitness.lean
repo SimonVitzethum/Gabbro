@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+import Grammatik.Parser.Stmt.LibraryTranslationFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -40,16 +41,12 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
--- Reuse the proved on-demand evaluator rather than constructing every unused
--- callback at all 100000 source-lowering fuel levels.
-attribute [local cbv_opaque] Gabbro.Grammatik.Parser.UebersetzeAllg2.lowStufe
-open Gabbro.Grammatik.Parser.UebersetzeAllg2 in
-/-- Apply the existing evaluator equivalence at the fully applied CBV head. -/
-theorem demand_level (u : UProg) (caller : Fin u.fns.length) (n : Nat) :
-    lowStufe u caller n = lowStufeSchnell u caller n :=
-  congrFun (congrFun (congrFun lowStufe_eq_schnell u) caller) n
-
-attribute [local cbv_eval] demand_level
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
+-- Reuse the existing callback-selection proofs used by source fixtures.
+-- CBV must select a callback before evaluating the 100000-level fuel record.
+attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL
+attribute [local cbv_eval] Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.seq_succ
+  lowStructL_succ lowEndL_succ lowStufe_seq lowStufe_struct lowStufe_ende
 
 /-- Real source bindings for nonfallible void, fallible value and fallible void.
     The void binder deliberately reuses a live name: it must not shadow saved.
@@ -78,13 +75,6 @@ theorem image_shape :
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
     0 < output.image.code.length ∧ 16 < output.bytes.length := by decide_cbv
-
-open Gabbro.Grammatik.Parser.UebersetzeAllg2 in
-/-- The evaluator rule applies to the actual nonempty three-gate source image. -/
-theorem demand_level_zeuge :
-    lowStufe output.compiled.unit output.compiled.main 100000 =
-      lowStufeSchnell output.compiled.unit output.compiled.main 100000 :=
-  demand_level _ _ _
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :
