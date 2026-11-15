@@ -2,9 +2,10 @@
 
    The body `let r = g(1); return r` proves `ensures result == 1` against every frame-respecting
    oracle of the conditional class `AxVertragOP (PreQ wP) wQ`: at the call the pre `1 != 0` holds,
-   so the class grants `g`'s summary "the answer is 1" (`body_out`). The duty USES that summary:
-   with the empty summary in its place the same duty is false (`summary_used`), since an oracle
-   answering `0` is then admitted and the body returns `0`. -/
+   so the class grants `g`'s summary "the answer is 1" (`body_out`). The accepted unit has a
+   literal-true post. The original result post is kept in `summaryP`: its duty uses the summary
+   (`summary_used`), while `zero_result_counterexample` exhibits the zero answer without it.
+   `summaryP_refused` records the current foreign-result WP capability gap. -/
 module
 
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalFixture

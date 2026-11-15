@@ -3,18 +3,19 @@
 
    `callSite_goal_zeuge`: on the unit `wE` of `CallSiteGoalFixture` (one function calling the
    software item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, with
-   `ensures result == 1` on the function) and the binding `echo` (answers its argument), ALL
+   a literal-true post on the function) and the binding `echo` (answers its argument), ALL
    premises of `GabbroZiel` hold at once:
    (a) `akzeptiertX_pruefer` accepts the unit (`checker`);
-   (b) `NutzerPflichtA` (`user`: the body's post follows only from `g`'s summary, granted where
-       `g`'s pre held), `CallSitePflicht` (`call_sites`: every reached call meets the pre, over
+   (b) `NutzerPflichtA` (`user`: the body has a literal-true post and no logic stop),
+       `CallSitePflicht` (`call_sites`: every reached call meets the pre, over
        every run), `PostDeckt` (`post_cover`), `ForeignVertrag wE echo` (`binding`);
    (c) `HardwareAnnahmenHw echo wE.Q` (`hardware`: frame and register locality only, `g` being
        software);
    (d) `Laufzeit` of the runtime's start (`laufzeit_voll`).
    NON-DEGENERATE: `g` is software, its pre holds at `1` and fails at `0`, `echo` breaks the
-   full summary (so `GabbroZielVoll` does not apply to it), and the body duty fails without
-   `g`'s summary (`summary_used`). THE CONCLUSION, EXHIBITED: one GX step of thread 0 from the
+   full summary (so `GabbroZielVoll` does not apply to it). The separate stronger `summaryP`
+   needs `g`'s summary (`summary_used`) and is refused by the strict fragment checker.
+   THE CONCLUSION, EXHIBITED: one GX step of thread 0 from the
    runtime's start runs the software call (the start's question has a true pre, `start_call`);
    the machine it reaches has thread 0 at its return (so the `StartEndeG` leg speaks about the
    answer of `echo`), and `gabbro_ziel` gives every leg of `ZielFX` there. -/
@@ -58,7 +59,7 @@ theorem callSite_goal_zeuge [RootNativeFloat.Hardware] :
     -- (d) the runtime
     Laufzeit wE sp0R initR ∧
     -- non-degenerate: a software item with a pre that bites, a binding outside the full summary,
-    -- a body duty that needs the summary
+    -- the separate original result contract needs the summary
     wD.axHerkunft () = some AxOrigin.software ∧
     AxVor wE.P.axVertrag () world (rhoW true) ∧ ¬ AxVor wE.P.axVertrag () world (rhoW false) ∧
     ¬ AxVertragO wE.Q echo ∧

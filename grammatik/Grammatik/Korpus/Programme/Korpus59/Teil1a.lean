@@ -108,6 +108,10 @@ theorem kFs_voll : ∀ g : kD.Fn, g ∈ kFs := by
 def kSI : SperrInv kD :=
   ⟨fun | KLock.takt => [.inl KTab.takte] | KLock.ring => [.inl KTab.auftraege], fun _ _ => true⟩
 
+/-- Canonical source evidence for the source's literal-true lock invariants. -/
+def kSources : Invarianten.Pruefer.LockSources kSI := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 theorem kSI_ok : SperrInvOk kSI := by
   refine ⟨fun L c hc => ?_, fun L s s' h => rfl⟩
   · cases L
@@ -128,7 +132,11 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `takt_verteiler`, `ruf_verteiler` (the two entry dispatch roots). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] [] = true := by decide +kernel
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] []
+    (sources := kSources) = true := by
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB Vertraege.Pruefer.KontrakteGeprueftB
+    Vertraege.Pruefer.checkContracts
+  decide +kernel
 
 /-! ## 3. The user obligations -/
 

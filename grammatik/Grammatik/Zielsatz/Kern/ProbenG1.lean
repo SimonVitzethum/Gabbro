@@ -12,7 +12,8 @@
   without device carriers):
   * `g1PA` -- `if true { let x = holen(); } return;` under `ensures false`;
   * `g1PR` -- `if true { let t = temp; } return;` under `ensures false`.
-  Both pass the checker (`g1PA_akzeptiert`, `g1PR_akzeptiert`), so a refusal is (b)'s.
+  The strict contract checker refuses both (`g1PA_abgelehnt`, `g1PR_abgelehnt`).
+  The concrete fitting-answer runs below independently refute their false posts.
 
   BOTH DIRECTIONS, per probe:
   * THE ORACLE CAN ANSWER: an oracle meeting every hardware assumption (c) whose answer FITS
@@ -175,10 +176,13 @@ def g1PR : Programm g1D where
 /-- The lock family of `g1D`: there is no lock. -/
 def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-/-- Both probes pass the checker (with `haupt` declared): a refusal is (b)'s. -/
-theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true := by
-  -- The answer-site check uses the well-founded `Ty.decEq` on `g1Erg` and `never`.
-  decide_cbv
+/-- Outside the decidable fragment: foreign-answer WP. The actual returning run below
+    also refutes the declared false post; it is no longer a positive checker witness. -/
+theorem g1PA_abgelehnt : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = false := by
+  have refused : Vertraege.Pruefer.KontrakteGeprueftB g1PA g1S [g1Haupt] = false := by
+    decide +kernel
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
+  rw [refused, Bool.and_false, Bool.and_false]
 
 /-! ## 3. The oracles -/
 
@@ -216,19 +220,13 @@ def g1HalbW (answers : G1FloatAnswers) : Gleit (0, 1) (1, 1) :=
   ⟨Float.hwOfBits (UInt64.ofNat g1Halb.toNat), answers.finite_reply,
     answers.lower_reply, answers.upper_reply⟩
 
-/-- The numerical answer-range gate uses the supplied primitive replies;
-    all other components are the unchanged concrete checker computation. -/
-theorem g1PR_akzeptiert [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
-    Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = true := by
-  have range : gleitBarB (0, 1) (1, 1) = true :=
-    (gleitBarB_iff _ _).mpr ⟨g1HalbW answers, trivial⟩
-  have checked : antwortenB g1PR [g1Haupt] = true := by
-    change ((gleitBarB (0, 1) (1, 1) && true) && true) = true
-    rw [range]
-    rfl
-  simp only [Akzeptiert, Bool.and_eq_true]
-  repeat' apply And.intro
-  all_goals first | exact checked | decide_cbv
+/-- Outside the decidable fragment: float-register WP. The refusal is independent of
+    native float replies; the fitting-answer run below refutes the false post. -/
+theorem g1PR_abgelehnt : Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = false := by
+  have refused : Vertraege.Pruefer.KontrakteGeprueftB g1PR g1S [g1Haupt] = false := by
+    decide +kernel
+  unfold Akzeptiert Invarianten.Pruefer.invariantVCB
+  rw [refused, Bool.and_false, Bool.and_false]
 
 /-- The word of `0.5` decodes through the actual word and range guards. -/
 theorem g1_temp_wort (answers : G1FloatAnswers) :
@@ -397,8 +395,8 @@ theorem g1_nicht_leer [RootNativeFloat.Hardware] (answers : G1FloatAnswers) :
   obtain ⟨v, hv⟩ := g1_temp_passt answers
   exact nicht_leer_von g1Temp v (einpassen_wertOk _ _ _ v hv)
 
-#print axioms Gabbro.Grammatik.Zielsatz.g1PA_akzeptiert
-#print axioms Gabbro.Grammatik.Zielsatz.g1PR_akzeptiert
+#print axioms Gabbro.Grammatik.Zielsatz.g1PA_abgelehnt
+#print axioms Gabbro.Grammatik.Zielsatz.g1PR_abgelehnt
 #print axioms Gabbro.Grammatik.Zielsatz.g1_holen_antwortet
 #print axioms Gabbro.Grammatik.Zielsatz.g1_temp_antwortet
 #print axioms Gabbro.Grammatik.Zielsatz.g1PA_widerlegt
