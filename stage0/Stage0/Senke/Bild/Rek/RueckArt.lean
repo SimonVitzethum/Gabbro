@@ -117,7 +117,7 @@ theorem rufRest_why {P : Programm D} {O : Orakel D} {passes j : Nat} {g : D.Fn} 
     body up to read events, the caller frame `caller` waiting on the stack; the residue is in the call fragment one
     level down and returns `v` under `rufAt j`. Then thread `thr` alone pops into the frame `ziel v` that `PopArt`
     names (the caller unchanged, or with `v` bound), at a world `≈` to the sequential one, with the locks of `σeC`. -/
-theorem randGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {ΓeC : Ctx} {ΛeC : List (Res D)} {ebeC : Endblock D (vertragVon D g) false ΓeC ΛeC}
     (hEC : EndR Agl (TiefAlle P Agl j) ebeC) {σeC : World D} {ρeC : Env D ΓeC} {rhoG : Env D (D.params g)}
@@ -129,7 +129,7 @@ theorem randGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Les
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ' σ'' ∧ GepopptG M' thr (ziel v) stapel g rhoG s0G lg v σ'' ∧
       offen σ''.spur = offen σeC.spur := by
   obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO j) hO.rs ebeC
+  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
     (Or.inl (axFrei_endR hEC)) hwe ρeC
   rw [hz] at hl
   obtain ⟨σ'', hz'', hw''⟩ := hl.zurueck_inv
@@ -142,7 +142,7 @@ theorem randGL_rueck_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Les
 
 /-- **Back into the caller, reason exit**: as `randGL_rueck_ok`, when the residue answers the reason `r`; thread
     `thr` pops through the error channel into the else block of the caller frame that `PopGrund` names. -/
-theorem randGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {ΓeC : Ctx} {ΛeC : List (Res D)} {ebeC : Endblock D (vertragVon D g) false ΓeC ΛeC}
     (hEC : EndR Agl (TiefAlle P Agl j) ebeC) {σeC : World D} {ρeC : Env D ΓeC} {rhoG : Env D (D.params g)}
@@ -154,7 +154,7 @@ theorem randGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Le
       RufLaufG P O passes thr Me M' ∧ WeltGleich σ' σ'' ∧
       GepopptGrundG M' thr (zielG r) stapel g rhoG s0G lg r σ'' ∧ offen σ''.spur = offen σeC.spur := by
   obtain ⟨σme, hwe, ⟨log, hZe⟩, hΛe, hAe⟩ := hMe
-  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (passes := passes) hO j) hO.rs ebeC
+  have hl := execEnd_lg (passes := passes) (rufAt_rufRumpf_lg_alle (P := P) (O := O) (passes := passes) j) (leseblindRS_alle O) ebeC
     (Or.inl (axFrei_endR hEC)) hwe ρeC
   rw [hz] at hl
   obtain ⟨σ'', hz'', hw''⟩ := hl.why_inv
@@ -171,7 +171,7 @@ theorem randGL_rueck_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Le
     the callee is admitted at `j + 1` (recursion included), its decomposed prefix (handler `rufAt j`) reaches `ebeC`,
     and machine `Me` stands there, the caller frame waiting. Then thread `thr` alone pops into `ziel v` at a world
     `≈` to the call's world. -/
-theorem randGL_rueck_ruf_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randGL_rueck_ruf_ok {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {σc σ2 : World D} {ρc : Env D (D.params g)} {v : ErgVal D (D.erg g)}
     (hR : rufAt P O passes (j + 1) g σc ρc = .ok σ2 v) (hg : TiefAlle P Agl (j + 1) g)
@@ -189,12 +189,12 @@ theorem randGL_rueck_ruf_ok {P : Programm D} {O : Orakel D} {passes : Nat} (hO :
   have hEC : EndR Agl (TiefAlle P Agl j) ebeC :=
     hkC.endR (show EndR Agl (TiefAlle P Agl j) (P.rumpf g) from hg)
   obtain ⟨σ', hz, hσ⟩ := rufRest_zurueck hR hkC
-  obtain ⟨M', σ'', lg, hl, hw, hGp, hoff⟩ := randGL_rueck_ok hO hEC hMe hz hart
+  obtain ⟨M', σ'', lg, hl, hw, hGp, hoff⟩ := randGL_rueck_ok hEC hMe hz hart
   exact ⟨M', σ'', lg, hl, hσ.symm.trans hw, hGp, hoff⟩
 
 /-- **The return of a call, reason exit**: as `randGL_rueck_ruf_ok`, when the call answers the reason `r`; thread
     `thr` pops through the error channel into `zielG r`. -/
-theorem randGL_rueck_ruf_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO : LeseblindP P O) {thr : Faden}
+theorem randGL_rueck_ruf_why {P : Programm D} {O : Orakel D} {passes : Nat} {thr : Faden}
     {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop} {g : D.Fn} {j : Nat}
     {σc σ2 : World D} {ρc : Env D (D.params g)} {r : Fin (D.gruende g)}
     (hR : rufAt P O passes (j + 1) g σc ρc = .why σ2 r) (hg : TiefAlle P Agl (j + 1) g)
@@ -211,7 +211,7 @@ theorem randGL_rueck_ruf_why {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       GepopptGrundG M' thr (zielG r) stapel g rhoG s0G lg r σ'' ∧ offen σ''.spur = offen σeC.spur := by
   have hEC : EndR Agl (TiefAlle P Agl j) ebeC :=
     hkC.endR (show EndR Agl (TiefAlle P Agl j) (P.rumpf g) from hg)
-  exact randGL_rueck_why hO hEC hMe (rufRest_why hR hkC) hart
+  exact randGL_rueck_why hEC hMe (rufRest_why hR hkC) hart
 
 #print axioms randGL_rueck_ruf_ok
 #print axioms randGL_rueck_ruf_why

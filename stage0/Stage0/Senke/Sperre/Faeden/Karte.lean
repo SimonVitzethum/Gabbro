@@ -57,6 +57,11 @@ theorem Opt.karte {r : Abs τ → Abs τ → Prop} {r' : Abs σ → Abs σ → P
   · exact Or.inl (by rw [e])
   · exact Or.inr (hr a b h)
 
+theorem Weg.karte {u : τ} {a d : Abs τ} (h : Weg u a d) : Weg (f u) (a.karte f) (d.karte f) := by
+  obtain ⟨b, c, h1, h2, h3⟩ := h
+  exact ⟨b.karte f, c.karte f, Opt.karte hf (fun _ _ h => Gibt.karte hf h) h1,
+    Opt.karte hf (fun _ _ h => Zieht.karte hf h) h2, Opt.karte hf (fun _ _ h => Tritt.karte hf h) h3⟩
+
 theorem AbsSchritt.karte {u : τ} {a b : Abs τ} (h : AbsSchritt u a b) :
     AbsSchritt (f u) (a.karte f) (b.karte f) := by
   cases h with

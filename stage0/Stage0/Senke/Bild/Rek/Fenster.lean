@@ -50,7 +50,7 @@ def ImRueck (B Bc : BodyFrame D) (thr : Faden) (stapel : List (RufRahmenG D)) (r
     RandL B thr stapel rho s0 Agl rest pcN mN M3 σ1 ρ1 ∧ Z M3
 
 /-- **THE GOAL LEGS ALONG A WHOLE CALL (T1 in and out of a callee, one thread).** Under the checker's facts (a′), the
-    user's logic (b), the named hardware assumptions (c), an admissible start (d′) and a read-blind oracle: let the
+    user's logic (b), the named hardware assumptions (c) and an admissible start (d′) (read-blindness of the oracle is a theorem): let the
     caller's boundary (frame `rumpfRahmen` at handler depth `k = j + 1`) in front of a plain call `g(args); rest`
     correspond to a reachable machine `M`, the call end normally under `rufAt k`, the callee be admitted at depth `k`
     (`TiefAlle`, recursion included), and the callee's decomposed prefix (callees admitted at depth `j`) reach `ebeC`.
@@ -105,10 +105,8 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
           (fun M' => RufErreichbarG P O passes (RufStartG P sp init) M' ∧
             Ziel P S O passes (RufStartG P sp init) M') t m' := by
   subst hkj
-  haveI : LeseblindOK O := leseblindOK_hardware hH
-  have hO : LeseblindP P O := leseblindP_alle P O
   -- the whole call as one step of the caller
-  have hRuf := rufOk_gleich_tiefAlle (P := P) (passes := passes) hO thr Agl (j + 1)
+  have hRuf := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl (j + 1)
   have hs : StmtR Agl (TiefAlle P Agl (j + 1)) false
       (.call g args hp hr : Stmt D (vertragVon D f) l Γ Λ (nach D g Λ)) :=
     StmtR.call _ g rfl hg
@@ -118,7 +116,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
   obtain ⟨fpc, rpc, Kc, Ksc, ensc, pcI, mI, M1, σm, sI, hl1, _, hOkC, hRI⟩ :=
     randL_ruf_eintritt (thr := thr) (stapel := stapel) (Agl := Agl) hc rfl hk64 hB h hex
   have hM1 := rufErreichbar_lauf hl1 hM
-  have hRufC := rufOk_gleich_tiefAlle (P := P) (passes := passes) hO thr Agl j
+  have hRufC := rufOk_gleich_tiefAlle (P := P) (O := O) (passes := passes) thr Agl j
   have hkC' : Zerlegung (rumpfRahmen Y O passes P A C Lm j g fpc Kc Ksc rpc fp (rufWelt P g σ Λ args)
       (rufEnv g σ Λ args ρ) H ensc) Agl (TiefAlle P Agl j) (P.rumpf g) (rufWelt P g σ Λ args)
       (rufEnv g σ Λ args ρ) ebeC σeC ρeC :=
@@ -132,7 +130,7 @@ theorem bild_ziel_fenster [DecidableEq D.Fn] {Y : Lay D} {O : Orakel D} [TorOK Y
       ⟨M', hK, hr', hz'⟩ | ⟨pce, me, Me, hRe, hre, hze, k', hk'⟩
     · exact Or.inr (Or.inl ⟨M', hK, hr', hz'⟩)
     · -- the return: the rest of the callee and the pop, to the caller's boundary behind the call
-      obtain ⟨M3, hl3, hG3⟩ := randGL_rueck hO hg h.2 hex hkC hRe.2
+      obtain ⟨M3, hl3, hG3⟩ := randGL_rueck hg h.2 hex hkC hRe.2
       have hM3 := rufErreichbar_lauf hl3 hre
       exact Or.inr (Or.inr ⟨pce, me, Me, M3, hRe, ⟨hre, hze⟩, ⟨k', hk'⟩, hvorB, hl3, ⟨hRB.1, hG3⟩, hM3,
         ziel_aus P S Q fs ls ws hA hN O hH passes sp init hZ M3 hM3⟩)

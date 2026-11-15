@@ -30,7 +30,7 @@ abbrev zeugeWeltL : World t4D := zeugeWelt.lese [] [.inl ()]
     at depth 2 (one nested call). -/
 theorem rufAt_rufRumpf_zeuge :
     RufLG VertragMarke (rufAt t4P t4O 0 2 t4F zeugeWelt Env.nil) (rufRumpf t4P t4O 0 2 t4F zeugeWeltL Env.nil) :=
-  rufAt_rufRumpf_lg (P := t4P) (passes := 0) (leseblind_t4O.toP t4P) 2 t4F zeugeWelt zeugeWeltL Env.nil
+  rufAt_rufRumpf_lg (P := t4P) (passes := 0) 2 t4F zeugeWelt zeugeWeltL Env.nil
     (weltGleich_lese _ _ _)
 
 /-- **The error set is needed**: with every `requires` false, `rufAt` answers a contract mark at the callee. -/
@@ -82,7 +82,7 @@ theorem t4F_body_kehrt {R : ∀ g : t4D.Fn, World t4D → Env t4D (t4D.params g)
 theorem rufAt_rufRumpf_gueltig_zeuge :
     RufLG (fun _ => False) (rufAt t4P t4O 0 2 t4F zeugeWelt Env.nil)
       (rufRumpf t4P t4O 0 2 t4F zeugeWeltL Env.nil) :=
-  rufAt_rufRumpf_gueltig (passes := 0) t4P_gueltig (leseblind_t4O.toP t4P) 2 t4F zeugeWelt zeugeWeltL Env.nil
+  rufAt_rufRumpf_gueltig (passes := 0) t4P_gueltig 2 t4F zeugeWelt zeugeWeltL Env.nil
     (weltGleich_lese _ _ _)
 
 /-- **The one-unfolding duty at the plain caller**: `requires` holds, the body under `rufAt` at depth 1 returns
@@ -112,8 +112,8 @@ theorem rufRumpf_ok_rufAt_zeuge :
     obtain ⟨σF, vF, hF⟩ := t4F_body_kehrt hG
     have hRF : rufAt t4P t4O 0 2 t4F zeugeWeltL Env.nil = .ok σF vF :=
       rufAt_t4D_ok_of_body rfl rfl hF
-    obtain ⟨σ₂, h₂, _⟩ := rufAt_ok_rufRumpf (leseblind_t4O.toP t4P) (WeltGleich.refl zeugeWeltL) hRF
+    obtain ⟨σ₂, h₂, _⟩ := rufAt_ok_rufRumpf (WeltGleich.refl zeugeWeltL) hRF
     exact ⟨σ₂, vF, h₂⟩
-  exact ⟨σ₂, v, h, rufRumpf_ok_rufAt (leseblind_t4O.toP t4P) vertragsfrei_t4F (weltGleich_lese _ _ _) h⟩
+  exact ⟨σ₂, v, h, rufRumpf_ok_rufAt vertragsfrei_t4F (weltGleich_lese _ _ _) h⟩
 
 end Gabbro.Stage0.Senke.BildLauf

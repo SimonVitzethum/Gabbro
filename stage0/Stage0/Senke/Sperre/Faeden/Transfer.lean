@@ -5,7 +5,8 @@
              is COUPLED with the abstract locks `a L` of the emitted locks (one per lock `L`):
              * `AbsLauf R.akt (a L)` -- each G step of thread `u` is what one G step can do to the lock (`Weg`),
                a stutter changes nothing; for an emitted lock this is PROVED from its run (`Lauf.absLauf`, under
-               the window condition `Fenster`);
+               the window condition `Fenster`: one G step can give `L` AND expose the next `locks L`, so a window holds
+               a give, a draw and an enter);
              * `GSicht R L (a L)` -- what G sees of `L` is the emitted lock: the threads standing at `locks L` are
                the waiting threads, the threads holding `L` are the holder. This is the simulation of the emitted
                code by machine G at this lock, NAMED here as a premise: it is not proved (the runner and the GX
@@ -80,7 +81,9 @@ end
     fair scheduled run `R` of machine G from the runtime's start that is coupled with abstract locks `a L` (each a
     run at G granularity, `AbsLauf`, and what G sees of `L`, `GSicht`): a thread waiting at the lock `L` becomes its
     holder, or some thread holds `L` from some step on for ever. An instance of `gabbro_ziel_leben` (on the
-    `FifoLauf` `fifoAus R a`), not an analog. -/
+    `FifoLauf` `fifoAus R a`), not an analog. It does NOT use the liveness of the emitted lock (`Lauf.leben`, with
+    its futex premise `ScheinbarEndlich`): the emitted lock enters only through the coupling premise `GSicht` and
+    the run `a L`, whose queue facts `AbsLauf` gives; the progress is machine G's (`Fair`, `gabbro_ziel_leben`). -/
 theorem gabbroZielLeben_emittiert (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflichtA E) (O : Orakel D) (hH : HardwareAnnahmen O E.Q)

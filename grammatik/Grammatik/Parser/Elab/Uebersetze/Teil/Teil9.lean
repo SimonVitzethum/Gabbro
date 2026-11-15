@@ -149,11 +149,16 @@ def uSumPlatz (ctx : UCtx) (e : SExpr) : Except String (USVal × Nat) :=
       | .tabelle t => .ok (.tab t f ix, k)
 
 
-/-- The statement ends the function on every path, looking through the last statement of each arm: an `if` with an
-    `else`, or a `match` (every arm of a `match` the model accepts is there: `Arms`/`GrundArms` are indexed by the
-    cases, an option match has both). Only then does a body without a trailing return get `URet.keins`. -/
+/-- The statement ends the function on every path, looking through an exclusive lock body or the last statement
+    of each arm: an `if` with an `else`, or a `match` (every arm of a `match` the model accepts is there:
+    `Arms`/`GrundArms` are indexed by the cases, an option match has both). Only then does a body without a
+    trailing return get `URet.keins`; the body and its scoped returns must still elaborate and lower. -/
 def uEndetTief : Nat → SAnw → Bool
   | 0, _ => false
+  | f + 1, .locks false _ b =>
+    match b with
+    | .block ss e => e.isSome || (match ss.getLast? with | some s => uEndetTief f s | none => false)
+    | _ => uEndetTief f b
   | f + 1, .cond _ t ei els =>
     let arm : SAnw → Bool := fun b => match b with
       | .block ss e => e.isSome || (match ss.getLast? with | some s => uEndetTief f s | none => false)

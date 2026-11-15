@@ -2,8 +2,7 @@
   File:      stage0/Stage0/Senke/Bild/Ruf/Zeuge.lean
   Subject:   Witness of package P3 (the image theorem admits calls) on the call fixture `t4` of `RufAdaequatRufG`:
              the plain caller `g(); konto[1] := 7; return 9` with ONE call of the callee `konto[0] := 5; return 3`,
-             contracts `true`, no locks, the read-blind fixture oracle. Jointly:
-             * the oracle carries the named property (`leseblindOK_t4O`);
+             contracts `true`, no locks, the fixture oracle (read-blind like every oracle). Jointly:
              * the call obligation up to read events holds for `rufAt` at depth 1 with the callees admitted there
                (`rufOk_gleich_tief`), and the callee IS admitted (`t4G_tief`), so the callee set is not empty;
              * the body's decomposed prefix takes the call as ONE step under the image's handler `rufAt 1`, in a frame
@@ -24,16 +23,6 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8a
 namespace Gabbro.Stage0.Senke.BildLauf
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke
-
-/-! ## The named oracle property is satisfiable -/
-
-/-- The fixture's oracle carries the named property. -/
-theorem leseblindOK_t4O : LeseblindOK t4O :=
-  leseblindOK_von leseblind_t4O
-
-/-- Every declaration has an oracle with the named property (the oracle that ignores the trace). -/
-theorem leseblindOK_still (D : Deklaration) : LeseblindOK (stillesOrakel D) :=
-  leseblindOK_von (leseblind_still D)
 
 /-! ## The fixture, split at its call -/
 
@@ -73,7 +62,7 @@ abbrev zeugeRahmen : BodyFrame t4D :=
     world `zeugeWelt` (`≈` to `zeugeWeltL`, not equal), running the call by steps of thread `0` to the boundary behind
     it, at a world `≈` to the sequential world behind the call. -/
 theorem bild_ruf_zeuge :
-    LeseblindOK t4O ∧ Tief t4P (fun _ => False) 1 t4G ∧
+    Tief t4P (fun _ => False) 1 t4G ∧
     RufOkGleich t4P t4O 0 0 (fun _ => False) (rufAt t4P t4O 0 1) (Tief t4P (fun _ => False) 1) ∧
     ∃ (σ1 σm1 : World t4D) (M' : RufMaschineG t4D),
       Zerlegung zeugeRahmen (fun _ => False) (Tief t4P (fun _ => False) 1) t4FRumpf zeugeWeltL Env.nil
@@ -81,7 +70,7 @@ theorem bild_ruf_zeuge :
       RufLaufG t4P t4O 0 0 (RufStartG t4P t4Sp zeugeInit) M' ∧ WeltGleich σ1 σm1 ∧
       RandG 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) t4FRest M' σm1 Env.nil := by
   have hRuf : RufOkGleich t4P t4O 0 0 (fun _ => False) (rufAt t4P t4O 0 1) (Tief t4P (fun _ => False) 1) :=
-    rufOk_gleich_tief (leseblind_t4O.toP _) 0 (fun _ => False) 1
+    rufOk_gleich_tief 0 (fun _ => False) 1
   obtain ⟨σ1, v, hG⟩ := t4G_ruf_kehrt zeugeWeltL
   have hex : execStmt t4O 0 (rufAt t4P t4O 0 1) t4Ruf zeugeWeltL Env.nil = .ok σ1 Env.nil := by
     -- Keep the read world folded so the symbolic handler return matches.
@@ -101,8 +90,8 @@ theorem bild_ruf_zeuge :
   have hGL : RandGL 0 [] t4F Env.nil (t4Sp.welt []) (fun _ => False) (.cons t4Ruf t4FRest)
       (RufStartG t4P t4Sp zeugeInit) zeugeWeltL Env.nil :=
     ⟨zeugeWelt, hw, hG⟩
-  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt leseblind_t4O.rs hRuf hs hex hGL
-  exact ⟨leseblindOK_t4O, t4G_tief _, hRuf, σ1, σm1, M', hk, hl, hw1, hG'⟩
+  obtain ⟨M', hl, σm1, hw1, hG'⟩ := randGL_schritt hRuf hs hex hGL
+  exact ⟨t4G_tief _, hRuf, σ1, σm1, M', hk, hl, hw1, hG'⟩
 
 #print axioms bild_ruf_zeuge
 
