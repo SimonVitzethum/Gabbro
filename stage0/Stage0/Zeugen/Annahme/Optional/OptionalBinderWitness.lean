@@ -17,8 +17,8 @@ def u (valued fallible : Bool) : UProg := { ControlProbe.u with
     name := "gate", params := [], kinds := [], res := result valued,
     gruende := if fallible then 1 else 0 }] }
 abbrev D (valued fallible : Bool) := declOf (u valued fallible)
-abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, by decide⟩
-abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, by decide⟩
+abbrev entry (valued fallible : Bool) : (D valued fallible).Fn := ⟨0, by change 0 < 1; decide⟩
+abbrev gate (valued fallible : Bool) : (D valued fallible).Ax := ⟨0, by change 0 < 1; decide⟩
 
 def admission (valued fallible : Bool) :
     RufPasst (D valued fallible) (vertragVon (D valued fallible) (entry valued fallible))
@@ -50,14 +50,14 @@ def fallibleEnd (valued : Bool) :
     Endblock (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by change 0 < 1; decide) (handler valued)
     (.ret (.val (answer valued true)) (.refl []))
 
 def fallibleBlock (valued : Bool) :
     Block (D valued true) (vertragVon (D valued true) (entry valued true))
       false [.int 0 100] [] [] :=
   .bindAxiomOptElse (result valued) (gate valued true) .nil rfl (admission valued true)
-    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide) (handler valued)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by change 0 < 1; decide) (handler valued)
     (.cons (.ret (.val (answer valued true)) (.refl [])) .nil)
 
 def plainEnd : Endblock (D false false)
