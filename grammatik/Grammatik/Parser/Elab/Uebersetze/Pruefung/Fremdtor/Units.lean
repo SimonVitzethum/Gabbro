@@ -51,8 +51,7 @@ def uFremdFallible : UProg where
        nimmt := ["p#duty"], gibt := ["p#duty"] }]
   axs := [{ name := "f", params := [], kinds := [],
             res := some (.int 0 18446744073709551615), gruende := 1 }]
-  whys := [{ name := "R", cases := ["A"],
-            descriptor := some { name := 0, codes := [0], closed := true, distinct := by decide } }]
+  whys := [{ name := "R", cases := ["A"], descriptor := some { name := 0, codes := [0], closed := true, distinct := by decide } }]
   checks := [foreignGateCheck]
   marken := ["p#duty"]
 
