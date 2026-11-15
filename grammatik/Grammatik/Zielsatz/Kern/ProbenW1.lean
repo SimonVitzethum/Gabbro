@@ -15,8 +15,8 @@
     `AkzeptiertSpec`: its one answer site is an axiom at an empty type other than `never`;
   * `w1_abgelehnt` -- so the checker of `GabbroZiel` (`akzeptiert_pruefer`) refuses EVERY
     program with this code, whatever its lock family, axiom ensures, starts and memory;
-  * `w1_bool` / `w1_sonst_alles` -- computed: the Bool is `false`, and every OTHER component
-    is `true` -- the refusal is the new component `antwortenB`'s alone;
+  * `w1_bool` / `w1_sonst_alles` -- the Bool is `false`; the historical structural prefix
+    accepts while the answer-site component refuses. The strict VC gates are additional.
   * the same for an empty register type (`w1r_spec_nicht`, `w1r_bool`: `u8 in 1 .. 0`) and an
     axiom returning `reason` with no reasons (`w1g_bool`: `.why 0`).
   THE CONTRAST: the answer-site component admits `-> never` (`w1v_antworten`), and the
@@ -27,6 +27,11 @@
 module
 public import Grammatik.Zielsatz.Kern.ProbenG1
 import all Grammatik.Logik.Vertraege.Pruefer.Program
+import all Grammatik.Logik.Vertraege.Pruefer.Duties
+import all Grammatik.Logik.Vertraege.Pruefer.Decision
+import all Grammatik.Logik.Vertraege.Pruefer.Compiler
+import all Grammatik.Logik.Invarianten.Pruefer.Locks
+import all Grammatik.Logik.Invarianten.Pruefer.Writer
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -144,7 +149,8 @@ theorem w1_abgelehnt (E : Einheit w1D) (hP : E.P = w1P) (fs : Aufzaehlung w1D.Fn
 /-- Computed: the checker's Bool on the probe (with `haupt` declared) is `false`. -/
 theorem w1_bool : Akzeptiert w1P w1S [()] [] [] [()] = false := by decide +kernel
 
-/-- Computed: every OTHER component accepts the probe -- the refusal is `antwortenB`'s. -/
+/-- The structural prefix accepts while the answer-site component refuses.
+    No claim about the additional strict VC gates is made here. -/
 theorem w1_sonst_alles :
     (programmImFragmentG w1P [()] && abgAlleB w1P [()] && fussWB w1P w1S [()] [()] &&
       stufenB w1P [()] && sperrOrteB w1S [] && wurzelnB (D := w1D) [()] &&
@@ -232,7 +238,8 @@ theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = false := by
   have refused : Vertraege.Pruefer.KontrakteGeprueftB w1vP w1vS [()] = false := by
     unfold Vertraege.Pruefer.KontrakteGeprueftB Vertraege.Pruefer.checkContracts
     simp only [Invarianten.Pruefer.collect, Vertraege.Pruefer.loopHint,
-      Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction]
+      Vertraege.Pruefer.checkFunction, Vertraege.Pruefer.checkBasicFunction,
+      w1vP, bind, Except.bind, pure, Except.pure]
     rfl
   simp only [Akzeptiert, Invarianten.Pruefer.invariantVCB, refused, Bool.and_false]
 

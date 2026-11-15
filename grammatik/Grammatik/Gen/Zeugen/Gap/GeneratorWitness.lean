@@ -1,7 +1,7 @@
 /- Explicit record classes keep fragment findings outside accepted M and wrong N. -/
 module
 
-public import Grammatik.Gen.Abdeckung.ZellenSammeln
+public import Grammatik.Gen.Abdeckung.Records
 import all Init.Core
 import all Init.Prelude
 import all Init.Data.Repr
