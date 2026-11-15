@@ -102,6 +102,7 @@ theorem local_popcount (ctx : UCtx) (name error : String) (position width : Nat)
   have builtin : uBitEin "popcount" = some .popcount := by cbv
   simp only [uWertBody, uRechne, uRecordConstructor, records, List.find?_nil, integer, builtin,
     uWertBlatt, resolved, kind, stored]
+  rfl
 
 /-- Both rotation operands are read independently of the stored width. -/
 theorem local_rotl (ctx : UCtx) (name : String) (position width : Nat)
