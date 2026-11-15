@@ -125,6 +125,9 @@ def nvD : Deklaration :=
     Ax := Unit
     aparams := fun _ => []
     aerg := fun _ => some .never
+    agruende := fun _ => 0
+    axHerkunft := fun _ => none
+    axBeleg := fun _ => none
     aschreibt := fun _ item => nomatch item
     agschreibt := fun _ item => nomatch item
     anbieter := fun item => nomatch item
