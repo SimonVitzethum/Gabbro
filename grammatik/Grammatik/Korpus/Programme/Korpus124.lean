@@ -2,7 +2,9 @@
   File:      Grammatik/Korpus124.lean
   Subject:   THE G PROGRAM OF `beispiele/0124-two-threads-private.gab`, with the
              bodies of the source (stage (b) of the translation-validation
-             plan, §7), and every premise group of the goal theorem on it.
+             plan, §7), and its preserved program-logic proofs. The strict
+             checker refuses its cross-slot lock relation as outside the
+             decidable fragment, so no checker-based goal corollary is asserted.
 
   WHY A NEW MODEL. The exporter refuses 124 (`gabbro lean-g`: `LG003
   requires-clause in setze has no G form`, measured 2026-09-15); its hand

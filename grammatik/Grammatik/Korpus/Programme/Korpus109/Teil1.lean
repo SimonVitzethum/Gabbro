@@ -104,6 +104,9 @@ theorem kFs_voll : ∀ g : kD.Fn, g ∈ kFs := by
 def kSI : SperrInv kD :=
   ⟨fun | KLock.l => [.inl KTab.t] | KLock.m => [.inl KTab.u], fun _ _ => true⟩
 
+def kSources : Invarianten.Pruefer.LockSources kSI := fun _ => some
+  { resources := [], expression := .tru, correct := fun _ => rfl }
+
 theorem kSI_ok : SperrInvOk kSI := by
   refine ⟨fun L c hc => ?_, fun L s s' h => rfl⟩
   · cases L
@@ -124,7 +127,8 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `distribute_a`, `distribute_b` (the two entry dispatch roots). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] [] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] []
+    (sources := kSources) = true := by decide +kernel
 
 /-! ## 3. The user obligations -/
 
