@@ -53,8 +53,9 @@ public theorem phaseRep_encoded (types : TypeResolution) (f : AsyncFn)
   | completed value result typed =>
     simp only [encodePhase, typed, Option.bind_eq_bind, Option.bind_some, Option.pure_def] <;> rfl
   | running tag frame value slots =>
-    simpa only [encodePhase, if_pos rfl, ite_true] using
-      frameRep_encoded types f (Phase.running tag) frame value slots
+    change (if tag = tag then encodeFrame D types f (Phase.running tag) frame else none) = some value
+    rw [if_pos rfl]
+    exact frameRep_encoded types f (Phase.running tag) frame value slots
   | waiting tag future frame task frameValue taskValue slots child =>
     simp only [encodePhase, if_pos rfl, Option.bind_eq_bind, Option.bind_some, Option.pure_def,
       frameRep_encoded types f (Phase.waiting tag future) frame frameValue slots,
@@ -161,7 +162,9 @@ public theorem inv_encoded (f : AsyncFn) (types : TypeResolution) (inventory : I
   obtain ⟨sum, tail⟩ := value
   cases tail
   have encoded := phaseListRep_encoded types f inventory (phases f) source sum represented
-  simp only [encode, encoded, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+  unfold encode
+  rw [encoded]
+  rfl
 
 public theorem cancelled_encoded (types : TypeResolution) (f : AsyncFn) :
     encode D types f State.cancelled = some (cancelledValue types f D) := rfl
