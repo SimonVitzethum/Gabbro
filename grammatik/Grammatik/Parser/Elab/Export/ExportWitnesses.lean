@@ -1,4 +1,5 @@
 module
+import Grammatik.Kern.Taktik.KernelRfl
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
 import all Init.Data.String.Defs
@@ -27,7 +28,7 @@ def implicationItems := (parseTopTief implicationTokens).toOption.get implicatio
 theorem implication_elaborated : (elabU (pre108 implicationItems)).toOption.isSome = true := by decide +kernel
 def implicationUnit := (elabU (pre108 implicationItems)).toOption.get implication_elaborated
 
-theorem implication_lowered : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by decide +kernel
+theorem implication_lowered : (UebersetzeAllg2.lowerAllg implicationUnit).toOption.isSome = true := by kernel_rfl
 
 theorem implication_source_zeuge :
     (uebersetzeAllg implicationText).toOption.isSome = true := by
@@ -58,7 +59,7 @@ def heldItems := (parseTopTief heldTokens).toOption.get held_parsed
 theorem held_elaborated : (elabU (pre108 heldItems)).toOption.isSome = true := by decide +kernel
 def heldUnit := (elabU (pre108 heldItems)).toOption.get held_elaborated
 
-theorem held_lowered : (UebersetzeAllg2.lowerAllg heldUnit).toOption.isSome = true := by decide +kernel
+theorem held_lowered : (UebersetzeAllg2.lowerAllg heldUnit).toOption.isSome = true := by kernel_rfl
 
 theorem held_source_zeuge :
     (uebersetzeAllg heldText).toOption.isSome = true := by
@@ -90,7 +91,7 @@ def nestedElseItems := (parseTopTief nestedElseTokens).toOption.get nestedElse_p
 theorem nestedElse_elaborated : (elabU (pre108 nestedElseItems)).toOption.isSome = true := by decide +kernel
 def nestedElseUnit := (elabU (pre108 nestedElseItems)).toOption.get nestedElse_elaborated
 
-theorem nestedElse_lowered : (UebersetzeAllg2.lowerAllg nestedElseUnit).toOption.isSome = true := by decide +kernel
+theorem nestedElse_lowered : (UebersetzeAllg2.lowerAllg nestedElseUnit).toOption.isSome = true := by kernel_rfl
 
 theorem nestedElse_source_zeuge :
     (uebersetzeAllg nestedElseText).toOption.isSome = true := by
@@ -123,7 +124,7 @@ def resultScopeItems := (parseTopTief resultScopeTokens).toOption.get resultScop
 theorem resultScope_elaborated : (elabU (pre108 resultScopeItems)).toOption.isSome = true := by decide +kernel
 def resultScopeUnit := (elabU (pre108 resultScopeItems)).toOption.get resultScope_elaborated
 
-theorem resultScope_lowered : (UebersetzeAllg2.lowerAllg resultScopeUnit).toOption.isSome = true := by decide +kernel
+theorem resultScope_lowered : (UebersetzeAllg2.lowerAllg resultScopeUnit).toOption.isSome = true := by kernel_rfl
 
 theorem resultScope_source_zeuge :
     (uebersetzeAllg resultScopeText).toOption.isSome = true := by
