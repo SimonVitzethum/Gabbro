@@ -176,7 +176,6 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         cases tested : eval (world.lese Λ annotation.orte) annotation (world.lese Λ annotation.orte) locals with
         | false =>
             simp only [wahr?, tested, Bool.false_eq_true, ↓reduceIte] at ready
-            exact ready.elim
         | true =>
             simp only [wahr?, tested, ↓reduceIte] at ready
             simpa only [traverseLauf, wahr?, tested, ↓reduceIte, Goals.holds] using ready allowed safe)
@@ -227,7 +226,6 @@ def traverseCondition {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         cases tested : eval (world.lese Λ annotation.orte) annotation (world.lese Λ annotation.orte) locals with
         | false =>
             simp only [wahr?, tested, Bool.false_eq_true, ↓reduceIte] at ready
-            exact ready.elim
         | true =>
             simp only [wahr?, tested, ↓reduceIte] at ready
             have ready := ready allowed safe
