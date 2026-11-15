@@ -112,13 +112,17 @@ theorem wf_t0 : wfU uZ t0 := by
             optNumAt, wertFeldAt, fieldRangeO, tabAt, fieldCount, uZ] using hp.symm
         subst sh
         rfl
-      · have ht : tabIdx uZ.tabs "T" = .ok ⟨0, by decide⟩ := rfl
-        have hi : fieldIndex uZ ⟨0, by decide⟩ fld = none := by
+      · let t : Fin uZ.tabs.length := ⟨0, by decide⟩
+        have ht : tabIdx uZ.tabs "T" = .ok t := rfl
+        have hi : fieldIndex uZ t fld = none := by
           apply fieldIndex_none
           change (if ("v" == fld) = true then some (0, 10) else none) = none
           rw [beq_eq_false_iff_ne.mpr (Ne.symm hf)]
           rfl
-        simp only [shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some] at hp
+        change ((tabIdx uZ.tabs "T").toOption.bind (fun t =>
+          (fieldIndex uZ t fld).bind (fun j => shapeOfTy (typAt uZ t j)))) = some sh at hp
+        rw [ht] at hp
+        change (fieldIndex uZ t fld).bind (fun j => shapeOfTy (typAt uZ t j)) = some sh at hp
         rw [hi] at hp
         cases hp
     · simp [Except.toOption, shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
