@@ -43,6 +43,7 @@ private theorem bounded_formula :
     extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
     leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
     pure, Except.pure, Except.toOption]
+  trace_state
   rfl
 
 private theorem overflowing_formula :
@@ -51,6 +52,7 @@ private theorem overflowing_formula :
     extendedBlock, retryCondition, generatedFormula, requireCondition, finalGoals,
     leafCondition, branchCondition, Condition.map, bind, Except.bind, Except.map,
     pure, Except.pure, Except.toOption]
+  trace_state
   rfl
 
 set_option maxRecDepth 100000 in
