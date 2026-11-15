@@ -27,12 +27,11 @@ theorem lowEndL_bind_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf 
   | ok ls =>
     simp only [hl, Except.bind] at h
     cases hq : lowEndL (l := false) u c _ (fn.mitBindung x ls.range) n Λ [] ss with
-    | error e => try simp only [hq, Except.bind, bind] at h; cases h
+    | error e => cases h
     | ok p =>
       obtain ⟨q, tail'⟩ := p
-      try simp only [hq, Except.bind, bind] at h
       cases h
-      exact ⟨ls, q, (by first | exact hl | rfl | simp_all), hq, rfl⟩
+      exact ⟨ls, q, (by first | exact hl | rfl | simp_all), (by first | exact hq | rfl | simp_all), rfl⟩
 
 theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {lo hi : Int} {v : USide} {ss tail : List UStmt}
@@ -54,8 +53,8 @@ theorem lowEndL_bindMut_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (decl
     | ok p =>
       obtain ⟨q, tail'⟩ := p
       simp only [hq, Except.bind] at h
-        cases h
-        exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
+      cases h
+      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
 
 theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf u))}
     {x : String} {v : UEns} {ss tail : List UStmt}
@@ -77,8 +76,8 @@ theorem lowEndL_bindB_ok {Γ : Ctx} {fn : UFn} {n : Nat} {Λ : List (Res (declOf
     | ok p =>
       obtain ⟨q, tail'⟩ := p
       simp only [hq, Except.bind] at h
-        cases h
-        exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
+      cases h
+      exact ⟨ev, q, (by first | exact hv | rfl | simp_all), rfl, rfl⟩
 
 theorem lowEndL_bindCall_ok {Γ : Ctx} {fn : UFn} {n : Nat}
     {Λ : List (Res (declOf u))} {x g : String} {args : List UArg} {ss tail : List UStmt}
