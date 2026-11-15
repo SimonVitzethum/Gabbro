@@ -9,6 +9,8 @@ public import Grammatik.Gen.Zeugen.M.Recovery
 
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 namespace Gabbro.Grammatik.Gen.Zeugen
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen

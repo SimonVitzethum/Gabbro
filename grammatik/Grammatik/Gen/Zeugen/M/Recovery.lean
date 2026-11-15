@@ -19,6 +19,8 @@ public import Grammatik.Gen.Zeugen.M.M103_131
 
 @[expose] public section
 
+set_option maxRecDepth 4096
+
 namespace Gabbro.Grammatik.Gen.Zeugen.Recovery
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
@@ -186,7 +188,7 @@ def missing : List Zelle := firm.filter (fun x => decide (x ∉ allCells))
 theorem counts : baselineCells.length = 12 ∧ cells.length = 80 ∧
     allCells.length = 80 ∧ newlyRecovered.length = 68 ∧
     firm.length = 69 ∧ (firm.filter allCells.contains).length = 62 ∧
-    (provisional.filter allCells.contains).length = 2 ∧ missing.length = 7 := by decide
+    (provisional.filter allCells.contains).length = 2 ∧ missing.length = 7 := by decide +kernel
 
 /-- No accepted M fixture contains a listed missing cell. -/
 theorem missing_not_covered : ∀ x ∈ missing, ¬ (∃ e ∈ allFixtures, e.Hat x) := by
@@ -207,7 +209,7 @@ theorem coverage_zeuge : F00_call.e ∈ fixtures ∧ F00_call.e ∈ allFixtures 
     (all_cells_iff _).mp ⟨_, member, present⟩, present⟩
 
 theorem missing_zeuge : ⟨2, 0, true, [false, false, true, false]⟩ ∈ missing ∧ ¬ (∃ e ∈ allFixtures, e.Hat ⟨2, 0, true, [false, false, true, false]⟩) :=
-  ⟨by decide, missing_not_covered _ (by decide)⟩
+  ⟨by decide +kernel, missing_not_covered _ (by decide +kernel)⟩
 
 #print axioms all_checked
 #print axioms all_cells_iff
