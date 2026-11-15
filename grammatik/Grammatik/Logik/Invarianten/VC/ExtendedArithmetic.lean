@@ -96,6 +96,8 @@ private theorem freshImplication_iff {D : Deklaration} (kind : Ty) (value : Wert
     have projection : (fun key => (Assignment.bind (dropBase values) none number) (some key)) = values := by
       funext key
       simp [Assignment.bind, dropBase]
+    change (quoteQF (liftLocalQF (lower guard))).denote _ →
+      (quoteQF (liftLocalQF post)).denote _
     rw [quoteQF_denote, liftLocalQF_denote, lower_denote, quoteQF_denote, liftLocalQF_denote]
     simpa only [projection] using implication
 
@@ -126,7 +128,7 @@ private theorem snapshots_denote {D : Deklaration} {kind : Ty} (items : List (We
           fun current member => all current (List.mem_cons_of_mem value member)⟩
 
 private def temporaryFormula : QF (Observation declaration) :=
-  snapshots (integerValues 0 10 11)
+  snapshots (kind := .int 0 10) (integerValues 0 10 11)
     (fun value => .eq (.var (.glob false)) (.konst value.n))
     (fun value => post.subst (.glob false) (.konst value.n))
 
