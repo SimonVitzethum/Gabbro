@@ -155,9 +155,7 @@ theorem program_exec_zeuge (O : Orakel FD) (passes : Nat)
 
 theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .endet := by decide
 
-#eval match Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none) with
-  | .ok _ => "accepted"
-  | .error cause => cause.message
+#reduce (Invarianten.Pruefer.checkInvariantVC program (SperrInv.leer FD) [()] (fun _ => none)).toOption.isSome
 
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
