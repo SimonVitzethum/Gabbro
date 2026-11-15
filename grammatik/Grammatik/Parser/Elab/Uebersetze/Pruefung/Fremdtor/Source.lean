@@ -9,6 +9,7 @@
    dropping it would drop the Duty's discharge path. -/
 module
 
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Units
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Falte
@@ -92,47 +93,21 @@ def checkTextFremd : String :=
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
-/-- The generated report index uses the ordinary decimal zero. -/
-private theorem fremd_repr_zero : Nat.repr 0 = "0" := by kernel_rfl
+/-- Both explicit unit values are exactly the successful source elaborations. -/
+theorem uFremd_from_source : elabText checkTextFremd = .ok uFremd := by kernel_rfl
 
-attribute [local cbv_eval] fremd_repr_zero
-
--- Retain the actual front-end values once, together with their complete
--- success equations. Dependent checker callbacks then read ordinary unit data.
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
-def fremdElaborated : { unit : UProg // elabText checkTextFremd = .ok unit } := by
-  refine ⟨?unit, ?computed⟩
-  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
-
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
-def fremdFallibleElaborated :
-    { unit : UProg // elabText checkTextFremdFallible = .ok unit } := by
-  refine ⟨?unit, ?computed⟩
-  case computed => cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+theorem uFremdFallible_from_source : elabText checkTextFremdFallible = .ok uFremdFallible := by
+  kernel_rfl
 
 /-- Both foreign-gated units elaborate. -/
 theorem checkTextFremd_ok : (elabText checkTextFremd).toOption.isSome = true := by
-  rw [fremdElaborated.property]
+  rw [uFremd_from_source]
   rfl
 
 theorem checkTextFremdFallible_ok :
     (elabText checkTextFremdFallible).toOption.isSome = true := by
-  rw [fremdFallibleElaborated.property]
+  rw [uFremdFallible_from_source]
   rfl
-
-/-- The elaborated units behind the foreign-gate witnesses. -/
-def uFremd : UProg := fremdElaborated.val
-
-def uFremdFallible : UProg := fremdFallibleElaborated.val
-
-/-- Both retained units are exactly the successful source elaborations. -/
-theorem uFremd_from_source : elabText checkTextFremd = .ok uFremd :=
-  fremdElaborated.property
-
-theorem uFremdFallible_from_source : elabText checkTextFremdFallible = .ok uFremdFallible :=
-  fremdFallibleElaborated.property
 
 /-- The foreign bodies stay foreign: they elaborate to `axs`, never to `fns`. -/
 example : (elabText checkTextFremd).map (fun u => u.axs.map (·.name)) =
