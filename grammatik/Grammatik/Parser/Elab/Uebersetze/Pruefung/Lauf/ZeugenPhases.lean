@@ -11,6 +11,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
 import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 import Grammatik.Kern.Taktik.KernelRfl
+meta import all Grammatik.Logik.Vertraege.Pruefer.Duties
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 import all Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
@@ -293,7 +294,15 @@ private theorem rejected_member (u : UProg) (P : Programm (declOf u))
   exact Bool.and_eq_false_iff.mpr (Or.inr
     (Bool.and_eq_false_iff.mpr (Or.inr contracts)))
 
+#eval show IO Unit from do
+  let result := Vertraege.Pruefer.checkFunction program.val.1
+    (Cover.Differenz.sperrFamilie unit) (fun _ => none) {} none index4
+  throw (IO.userError (match result with
+    | .error cause => "RETIRING CONSUMER: " ++ cause.message
+    | .ok _ => "RETIRING CONSUMER: ACCEPTED"))
+
 /-- The physical consumer is checked; its result domain exceeds the VC budget. -/
+
 private theorem consumer_fragment_refusal :
     (Vertraege.Pruefer.checkFunction program.val.1 (Cover.Differenz.sperrFamilie unit)
       (fun _ => none) {} none index4).map (fun _ => ()) =
