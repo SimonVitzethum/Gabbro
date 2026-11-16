@@ -83,15 +83,15 @@ def refusalReason (text : String) : Option String :=
     | .error cause => some cause.message
     | .ok _ => none
 
-/-- Outside the decidable fragment: the discarded fallible foreign call. -/
+/-- The reason dispatch still needs a quantified oracle/poststate WP. -/
 theorem named_refused_zeuge : acceptedText namedSource = false ∧
     refusalReason namedSource = some
-      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+      "unsupported invariant constructor: contract oracle call needs quantified answer and poststate observations" := by
   constructor <;> kernel_rfl
 
-theorem unnamed_refused_zeuge : acceptedText unnamedSource = false ∧
-    refusalReason unnamedSource = some
-      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+/-- Both typed oracle outcomes retain the original local and return safely. -/
+theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true ∧
+    refusalReason unnamedSource = none := by
   constructor <;> kernel_rfl
 
 theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by kernel_rfl
@@ -100,9 +100,8 @@ theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by k
 def nestedSource : String := foreignHead ++
   "impl fn f() -> u32 in 0 .. 9 { if true { rd(1) else { return 0; }; } return 1; }"
 
-theorem nested_refused_zeuge : acceptedText nestedSource = false ∧
-    refusalReason nestedSource = some
-      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+theorem nested_accepted_zeuge : acceptedText nestedSource = true ∧
+    refusalReason nestedSource = none := by
   constructor <;> kernel_rfl
 
 end Gabbro.Grammatik.Parser.CallElseProben
