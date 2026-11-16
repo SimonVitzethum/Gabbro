@@ -1,6 +1,6 @@
 /- C08 replay-blocker regression: the unused false software summary still
    makes the old global oracle class empty, but the conditional body class
-   is inhabited. The false body post is now refused by premise (b); a true
+   is inhabited. The false body post is now refused by the strict checker; a true
    body post remains provable. No goal or machine semantics is changed. -/
 module
 

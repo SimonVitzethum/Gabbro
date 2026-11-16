@@ -22,8 +22,8 @@ def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1
   | some type => specializationCount limit type
 
-/-- Interval widening does not create a new observation or split a decoded
-    value. Follow the same return rule as the semantic compiler. -/
+/-- Wide domains fail before enumeration and the constant fallback creates
+    one continuation. Interval widening shares the decoded input selection. -/
 def selectionSpecializations (expansion limit : Nat) {Γ Λ type} : Expr D Γ Λ type → Nat
   | .var _ => 1
   | .widen _ _ body => selectionSpecializations expansion limit body

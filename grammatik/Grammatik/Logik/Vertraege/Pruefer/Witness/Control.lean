@@ -83,7 +83,7 @@ theorem wide_selection_cost_zeuge :
     selectionSpecializations 128 100
       (D := declaration) (Γ := []) (Λ := [])
       (.add (.widen (by decide) (by decide) (.lit 2) : Expr declaration [] [] (.int 0 1000000))
-        (.widen (by decide) (by decide) (.lit 3))) = 1 := rfl
+        (.lit 3)) = 1 := rfl
 
 def writerContract : Vertrag declaration := { contract with schreibt := fun _ => true }
 

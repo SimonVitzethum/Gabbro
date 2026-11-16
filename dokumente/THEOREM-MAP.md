@@ -7504,3 +7504,29 @@ explicitly supply their absent integer-result field and import the canonical low
 theorem; their semantic witness statements are retained.
 
 No bridge duty, simulation premise, refusal witness or goal-theorem statement is weakened.
+
+## 194. Contract control certificates and a nonliteral accepted call-site fixture (2026-11-16)
+
+The strict contract compiler retains its semantic output: every successful condition
+implies the actual H weakest precondition in every world. It now handles scoped exits,
+reason arms, bind-else continuations and the admitted scalar stores. Neither the goal
+statement nor the hardware and software assumptions change. A failed sufficient WP
+is reported as an abstraction refusal, not as a source execution counterexample.
+
+| Name | File | Statement and boundary |
+|---|---|---|
+| `Basic.retry_safe` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Basic.lean` | A body and overflow that cannot stop with a logic error give the same property for every retry count and every world/environment, with arbitrary test observations. `Witness.Control.retry_safe_zeuge` instantiates a seven-step retry and its overflow. |
+| `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Complete successful parameter checks imply execution-check success, with the additional executable specialization-budget premise. `PoolCertificate.execution_success_zeuge` jointly witnesses a nonconstant 101-value reader. |
+| `PoolCertificate.returnCondition_eq` | `grammatik/Grammatik/Zielsatz/Kern/PoolCertificate.lean` | A decoded variable return checks its actual result once; it is equal to the corresponding bound return requirement. The reader certificate uses this equality. |
+| `Witness.Control.narrowedIncrement_zeuge`, `scopedIncrement_zeuge`, `currentOnly_zeuge`, `stored_seven_zeuge`, `return_local_without_enumeration_zeuge` | `.../Vertraege/Pruefer/Witness/Control.lean` | Actual nonconstant narrow/scoped bodies pass, a conditional post uses a memory observation, a slot write establishes seven, and a 64-bit decoded return avoids type enumeration. |
+| `Witness.Control.specialization_product_zeuge`, `continuation_cost_zeuge`, `wide_selection_cost_zeuge` | same | Saturation bounds a product before continuation generation, an early-return branch does not multiply its discarded tail, and a wide constant fallback costs one continuation. These are executable cost witnesses, not runtime assumptions. |
+| `CallSiteReplayBlocker.checker` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteReplayBlocker.lean` | The old false-post fixture is rejected, paired with the real executable contract-abstraction diagnostic. All other pre-existing theorem statements in this module are retained. |
+| `CallSiteReplayBlocker.Positive.good_checker_zeuge` | `.../CallSite/CallSitePositiveFixture.lean` | A two-valued Boolean result satisfies `ensures result`; the alternative false result is rejected and violates that same nonliteral contract. |
+| `CallSiteReplayBlocker.good_checker`, `good_call_sites`, `good_call_sites_zeuge` | `.../CallSite/CallSiteReplayBlocker.lean` | The nonliteral positive fixture is accepted and has no reachable foreign call head, jointly on the same unit. |
+| `CallSiteAccepted.callSite_goal_zeuge` | `.../CallSite/CallSiteAcceptedFixture.lean` | The positive fixture jointly satisfies checker acceptance, the software/hardware/runtime premises and the complete reachable-state goal. It retains a declared unused software item whose global summary fails. |
+| `kernel_rfl_subst_zeuge` | `grammatik/Grammatik/Kern/Taktik/KernelRfl.lean` | Metadata after substitution preserves an ordinary equality; `kernel_rfl` still supplies only `Eq.refl`, checked by the kernel. |
+
+The totality path requires literal-true source pre/postconditions and no owed function
+invariants. Its primitive and loop certificates quantify over every atomic observation;
+this does not admit atomic observations into a nontrivial contract WP. Entry snapshots,
+symbolic continuations, general atomic WPs and float/oracle bindings remain separate work.
