@@ -97,7 +97,7 @@ theorem post_cover : PostDeckt unit := by
   exact hp
 
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw oracle unit.Q :=
-  ⟨oracle_gut, ⟨fun r => nomatch r, fun g => nomatch g⟩,
+  ⟨oracle_gut, ⟨(fun r => nomatch r), (fun g => nomatch g)⟩,
     (fun a hsw => absurd rfl hsw), inferInstance⟩
 
 /-- A real call with argument one establishes the caller's true-result post.

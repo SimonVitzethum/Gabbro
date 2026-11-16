@@ -112,7 +112,7 @@ theorem oracle_good : GutO traceOracle := by
 
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle unit.Q := by
   refine ⟨oracle_good, ?_, (fun a hsw => absurd rfl hsw), inferInstance⟩
-  exact ⟨fun item => nomatch item, fun item => nomatch item⟩
+  exact ⟨(fun item => nomatch item), (fun item => nomatch item)⟩
 
 theorem no_global_summary : ¬ AxVertragO unit.Q traceOracle := by
   intro summary

@@ -60,7 +60,7 @@ theorem post_cover : PostDeckt unit := by
 
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle unit.Q := by
   refine ⟨traceOracle_gut, ?_, (fun a hsw => absurd rfl hsw), inferInstance⟩
-  exact ⟨fun r => nomatch r, fun g => nomatch g⟩
+  exact ⟨(fun r => nomatch r), (fun g => nomatch g)⟩
 
 /-- Unlike the global false summary, the conditional class has an actual
     frame-respecting, register-local member: the unused software pre is false. -/
@@ -78,7 +78,7 @@ theorem conditional_summary : AxVertragOP (PreQ program) unit.Q traceOracle := b
 theorem not_user : ¬ NutzerPflichtA unit := by
   intro h
   have hk := ((h.logik.1 0 ()).1).1 traceOracle (gutO_rahmenO traceOracle_gut)
-    ⟨fun r => nomatch r, fun g => nomatch g⟩ conditional_summary
+    ⟨(fun r => nomatch r), (fun g => nomatch g)⟩ conditional_summary
     (fun _ σ => σ) (fun L => nomatch L) idA (havocA_id _)
     (rufAusV []) (rufAusV_rahmen (vertraegeOkR_nil program))
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil program).1) world .nil rfl
