@@ -118,7 +118,9 @@ open GabbroDuty.Duty0130DerivedContractPure
 
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
-  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;> simp [shapeOf, shapeOfUG, shapeOfU, globShape, globIdx, slotShape, u]
+  rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n <;>
+    simp only [shapeOf, shapeOfUG, shapeOfU, globShape, globIdx,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx, u, Except.toOption] <;> rfl
 
 theorem wfU_eq : wfU u = wellFormed := by
   funext s; unfold wfU wellFormed; rw [shape_eq]

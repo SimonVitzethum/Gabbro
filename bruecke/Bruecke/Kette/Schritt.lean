@@ -1,6 +1,8 @@
 module
+public import Bruecke.Anweisung.Option.Speichern
 public import Bruecke.Kette.Verknuepfung
 public import Bruecke.Anweisung.Zweig.Schritt
+public import Bruecke.Anweisung.Zweig.ReasonReturn
 public import Bruecke.Teil.Lokal.Ruf
 public import Bruecke.Anweisung.Lokal.Glob
 public import Bruecke.Anweisung.Lokal.Ende
@@ -27,7 +29,9 @@ theorem stmtZiel_ok_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (decl
     fun σ' ρ' h => (by
       rw [hex] at h
       cases h
-      exact ⟨A, s₁, hS, hW₁, hL₁⟩)⟩
+      exact ⟨A, s₁, hS, hW₁, hL₁⟩),
+    fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
 
 theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
     (c : Fin u.fns.length) (hc : C c) (O : Orakel (declOf u)) (passes : Nat)
@@ -64,10 +68,22 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowSetVarB_named_sim c hsv hid heT hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
         hsl hL'
+  case setVarOpt x num v =>
+    obtain ⟨id, eT, hid, heT, rfl, -, -⟩ := schrittB_setVarOpt hb
+    simp only [lowStmtL] at hgst
+    cases hsv : lowSetVarOptL (l := loopMode) u c Γ fn Λ x num v with
+    | error err => simp only [hsv, Except.map] at hgst; cases hgst
+    | ok st1 =>
+      simp only [hsv, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, ρ₁, bv, hex, hsl, hstep, hL'⟩ :=
+        lowSetVarOpt_named_sim c hsv hid heT S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB) (fun w => Int.le_refl _))
+        hsl hL'
   case assign b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assign S.tab c Γ fn Λ b' f i v] at hgst
     cases stored : lowAssignDurchL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
@@ -81,7 +97,7 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
   case assignTab b' f i v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     rw [lowStmtL_assignTab S.tab c Γ fn Λ b' f i v] at hgst
     cases stored : lowAssignTabL (l := loopMode) u c Γ fn Λ b' f i v with
     | error err => simp only [stored, Except.map] at hgst <;> cases hgst
@@ -92,10 +108,38 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowAssignTab_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
         (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
+  case assignOpt b' f i v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignDurchOL (l := loopMode) u c Γ fn Λ b' f i v with
+    | error err => simp only [stored, Except.map] at hgst <;> cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, cn, k, fld, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignDurchO_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
+  case assignTabOpt b' f i v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignTabOL (l := loopMode) u c Γ fn Λ b' f i v with
+    | error err => simp only [stored, Except.map] at hgst <;> cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, cn, k, fld, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignTabO_named_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_slot w cn k fld s.world val).symm)) hW₁ hL
   case assignGlob n v =>
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     simp only [lowStmtL] at hgst
     cases stored : lowAssignGlobL (l := loopMode) u c Γ fn Λ n v with
     | error err => simp only [stored, Except.map] at hgst; cases hgst
@@ -106,11 +150,25 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
         lowAssignGlob_sim c stored hx S.statics hU S.tab O passes R σ ρ s hW hL
       exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
         (fun w => Int.le_of_eq (gz_store_global w n s.world val).symm)) hW₁ hL
+  case assignGlobB n v =>
+    obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
+      (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
+    simp only [lowStmtL] at hgst
+    cases stored : lowAssignGlobBL (l := loopMode) u c Γ fn Λ n v with
+    | error err => simp only [stored, Except.map] at hgst; cases hgst
+    | ok statement =>
+      simp only [stored, Except.map] at hgst
+      cases hgst
+      obtain ⟨σ₁, val, hex, hstep, hW₁, _⟩ :=
+        lowAssignGlobB_sim c stored hx hU S.tab O passes R σ ρ s hW hL
+      exact stmtZiel_ok_G hex (Strecke_G.schritt (fun ρB _ => hstep ρB)
+        (fun w => Int.le_of_eq (gz_store_global w n s.world val).symm)) hW₁ hL
   case call cname args =>
 
     obtain ⟨hx, -, -⟩ := schrittB_stmt hb (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     have hgst' : lowCallL (l := loopMode) u c Γ fn Λ cname args = .ok ⟨Λ', gst⟩ := hgst
     obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
       lowCall_sim_teilB c hgst' hx hU S.tab (fun d hd =>
@@ -169,9 +227,13 @@ theorem stmtZiel_einzeln_G {loopMode : Bool} {P : Programm (declOf u)} (G : Gese
               simp only [Gabbro.Body.exec, hs] }
         exact stmtZiel_ok_G hex hS hW₁ hL
     · exact ⟨fun e' h => (by rw [hex] at h; cases h; exact ⟨callee, σr, envA, hcc, hR⟩),
-        fun σ' v h => (by rw [hex] at h; cases h), fun σ' ρ' h => (by rw [hex] at h; cases h)⟩
+        fun σ' v h => (by rw [hex] at h; cases h), fun σ' ρ' h => (by rw [hex] at h; cases h),
+        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
     · exact ⟨fun e' h => (by rw [hex] at h; cases h), fun σ' v h => (by rw [hex] at h; cases h),
-        fun σ' ρ' h => (by rw [hex] at h; cases h)⟩
+        fun σ' ρ' h => (by rw [hex] at h; cases h),
+        fun leave hl σ' ρ' h => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h <;> cases h),
+        fun σ' r h => (by rw [hex] at h; cases h)⟩
   all_goals simp [LeseEinzeln] at hs
 
 theorem stmtZiel_ret_G {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn : UFn} {ns : BodyNames} {Λ : List (Res (declOf u))}
@@ -183,14 +245,46 @@ theorem stmtZiel_ret_G {loopMode : Bool} (c : Fin u.fns.length) {Γ : Ctx} {fn :
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active st σ ρ s bst := by
-  obtain ⟨σ', v, hex, hsl, hstep⟩ := lowRet_sim c h hb hU hT O passes R σ ρ s hW hL
+  by_cases hn : ∃ n, r = .why n
+  · obtain ⟨n, rfl⟩ := hn
+    obtain ⟨hlt, hp, rfl⟩ := lowRetWhyStmt_ok h
+    simp only [retZ, Option.some.injEq] at hb
+    subst bst
+    exact ausgangZiel_why ⟨n, hlt⟩ hW
+  have hn' : ∀ n, r ≠ .why n := fun n he => hn ⟨n, he⟩
+  obtain ⟨σ', v, hex, hsl, hstep⟩ := lowRet_sim c h hb hn' hU hT O passes R σ ρ s hW hL
+
   refine ⟨fun e h' => (by rw [hex] at h'; cases h'), fun σ'' v' h' => ?_,
-    fun σ'' ρ'' h' => (by rw [hex] at h'; cases h')⟩
+    fun σ'' ρ'' h' => (by rw [hex] at h'; cases h'),
+    fun leave hl σ'' ρ'' h' => (by cases leave <;> simp only [hex, controlG, Bool.false_eq_true, ↓reduceIte] at h' <;> cases h'),
+    fun σ'' r h' => (by rw [hex] at h'; cases h')⟩
   rw [hex] at h'
   cases h'
   refine ⟨[], fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     List.Pairwise.nil, fun ρB _ _ => ⟨s, ?_, hsl⟩⟩
   simp only [Gabbro.Body.exec, hstep ρB]
+
+/-- A control statement records the exact state on the corresponding Body channel. -/
+theorem stmtZiel_control_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
+    {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
+    {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {ids : List String}
+    (leave : Bool) (hl : loopMode = true)
+    (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
+    (hW : WGRel u σ s.world) (hL : PositionalLRel fn ids 0 ρ s.local') :
+    StmtZiel_G u C c O passes R fn ids (controlStmt (Λ := Λ) leave hl) σ ρ s (controlStmtB leave) := by
+  cases leave <;> refine ⟨(fun e he => by cases he), (fun σ' v he => by cases he),
+    (fun σ' ρ' he => by cases he), ?_, (fun σ' r he => by cases he)⟩
+  all_goals
+    intro leave' hl' σ' ρ' he
+    cases leave' <;> simp only [controlStmt, controlG, Bool.false_eq_true, ↓reduceIte, execStmt] at he
+    all_goals cases he
+    all_goals exact ⟨[], s, {
+      gut := fun _ h => absurd h List.not_mem_nil
+      oben := fun _ h => absurd h List.not_mem_nil
+      unten := fun _ h => absurd h List.not_mem_nil
+      schluessel := List.Pairwise.nil
+      mono := fun _ => Int.le_refl _
+      lauf := fun _ _ _ => rfl }, hW, hL⟩
 
 theorem stmtZiel_ite_G {loopMode : Bool} (hT : TabEindeutig u) {c : Fin u.fns.length} {O : Orakel (declOf u)}
     {passes : Nat}
@@ -207,21 +301,11 @@ theorem stmtZiel_ite_G {loopMode : Bool} (hT : TabEindeutig u) {c : Fin u.fns.le
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active (Stmt.ite cv tb eb) σ ρ s (.ite ce tt te) := by
-  have hceN : condZ u fn ns cnd = some ce := (condZ_sicht hS ns cnd).symm.trans hce
-  obtain ⟨raw, a, hens, hold, hres, hrename⟩ := condZ_some hceN
   have hWl : WGRel u (σ.lese Λ cv.orte) s.world := wgrel_same u rfl rfl hW
-  have hvL := hL.visible (ns := ns)
-  let sv : Gabbro.Body.State := ⟨s.world, ns.visible fn s.local'⟩
-  have hB : EnsBind fn none ρ sv a sv.local' :=
-    ⟨hvL, fun hr => (by rw [hres] at hr; cases hr),
-      fun i hi => (by rw [hold] at hi; exact absurd hi (Nat.not_lt_zero _))⟩
-  have hraw := lowEns_sim (er := none) hU.art hT (σ.lese Λ cv.orte) (σ.lese Λ cv.orte)
-    ρ sv s.world sv.local' a hWl hvL hWl hB cnd hens hcv (Vor.refl a)
-  change Gabbro.Body.eval ⟨s.world, visibleBinding (ns.lookup fn) s.local'⟩ raw =
-    some (.bool (wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ))) at hraw
   have hcond : Gabbro.Body.eval s ce =
       some (.bool (wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ))) :=
-    (eval_renameScalar (ns.lookup fn) s raw ce hrename).trans hraw
+    lowEns_named_sim hcv ((condZ_sicht hS ns cnd).symm.trans hce) hU.art hT
+      (σ.lese Λ cv.orte) (σ.lese Λ cv.orte) ρ s hWl hWl hL
   cases hb : wahr? (eval (σ.lese Λ cv.orte) cv (σ.lese Λ cv.orte) ρ) with
   | true =>
     rw [hb] at hcond

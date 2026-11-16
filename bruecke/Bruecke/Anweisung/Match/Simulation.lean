@@ -11,13 +11,13 @@ variable {u : UProg} {C : Fin u.fns.length → Prop}
 
 /-- An option arm binds the checked table index once. Normal completion removes its
     source entry while every outer positional value, sampled call and return survives. -/
-theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
+theorem stmtZiel_option_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes : Nat}
     {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
     {Γ : Ctx} {fn ft : UFn} {ns : BodyNames} {Λ Λ' : List (Res (declOf u))}
     {num : Nat} {hn : num < u.tabs.length} {v : UOpt} {x : String}
     {ev : Expr (declOf u) Γ Λ (.opt ((declOf u).count ⟨num, hn⟩))}
-    {pb : Block (declOf u) (verOf u c) false (.index ((declOf u).count ⟨num, hn⟩) :: Γ) Λ Λ'}
-    {ab : Block (declOf u) (verOf u c) false Γ Λ Λ'}
+    {pb : Block (declOf u) (verOf u c) loopMode (.index ((declOf u).count ⟨num, hn⟩) :: Γ) Λ Λ'}
+    {ab : Block (declOf u) (verOf u c) loopMode Γ Λ Λ'}
     {e : Gabbro.Body.Expr} {ps as : List Gabbro.Body.Stmt}
     (hU : UmfangB Γ fn ns) (hV : Sicht u ft fn)
     (hv : lowOpt u Γ Λ fn 0 num hn v = .ok ev) (he : optionZ ft ns v = some e)
@@ -63,15 +63,12 @@ theorem stmtZiel_option_G {c : Fin u.fns.length} {O : Orakel (declOf u)} {passes
       intro ρB
       simp only [hh, valOf] at hval
       simp only [Gabbro.Body.step, hval]; rfl
-    refine ⟨fun err h => hArm.1 err (schrumpfZ_logik (hG.symm.trans h)),
-      fun σ' result h => ?_, fun σ' env h => ?_⟩
-    · obtain ⟨A, hg, ho, hk, hr⟩ := hArm.2.1 σ' result (schrumpfZ_zurueck (hG.symm.trans h))
-      refine ⟨A, hg, ho, hk, fun ρB hT hF => ?_⟩
-      obtain ⟨s', hs, hw⟩ := hr ρB hT hF
-      exact ⟨s', by simp only [Gabbro.Body.exec, hB ρB, hs], hw⟩
-    · obtain ⟨env', hex, rfl⟩ := schrumpfZ_ok (hG.symm.trans h)
-      obtain ⟨A, s', hStretch, hw, hl⟩ := hArm.2.2 σ' env' hex
-      refine ⟨A, s', { hStretch with lauf := fun ρB hT hF => ?_ }, hw, hl.tailIndex⟩
-      simp only [Gabbro.Body.exec, hB ρB, hStretch.lauf ρB hT hF]
+    have shrunk := ausgangZiel_schrumpf (Strecke_G.leer t)
+      (fun _ _ hl => hl.tailIndex) hArm
+    have h' := by simpa only [List.nil_append] using shrunk
+    unfold StmtZiel_G
+    rw [hG]
+    exact ausgangZiel_map_state h' rfl
+      (fun ρB => by rw [Gabbro.Body.exec_singleton, hB])
 
 end Gabbro.Bruecke

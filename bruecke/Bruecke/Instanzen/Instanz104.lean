@@ -66,10 +66,31 @@ def lies : UFn := u.fns[1]'(by decide)
 theorem shape_eq : shapeOf = shapeOfUG u := by
   funext p
   rcases p with ⟨c, i, f⟩ | ⟨c, n⟩ | n
-  · by_cases hc : c = "Konto" <;> by_cases hf : f = "stand" <;>
-      simp [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, slotShape, u, uExp104, hc, hf, @eq_comm _ "stand"]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
-  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape, Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+  · by_cases hc : c = "Konto"
+    · subst c
+      by_cases hf : f = "stand"
+      · subst f
+        rfl
+      · have hbeq : ("stand" == f) = false := beq_eq_false_iff_ne.mpr (Ne.symm hf)
+        have hfield : fieldIndex u ⟨0, by decide⟩ f = none := by
+          apply fieldIndex_none
+          change (if ("stand" == f) = true then some (0, 100) else none) = none
+          rw [hbeq]
+          rfl
+        have ht : Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx u.tabs "Konto" =
+            .ok ⟨0, by decide⟩ := rfl
+        simp only [shapeOf, shapeOfUG, shapeOfU, ht, Except.toOption, Option.bind_some,
+          hfield, Option.bind_none]
+        simp [hf, @eq_comm _ "stand"]
+        rw [hfield]
+        rfl
+    · simp [shapeOf, shapeOfUG, shapeOfU, Except.toOption,
+        Gabbro.Grammatik.Parser.UebersetzeAllg.tabIdx, u, uExp104, hc, @eq_comm _ "Konto"]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+  · simp only [shapeOf, shapeOfUG, shapeOfU, globShape,
+      Gabbro.Grammatik.Parser.UebersetzeAllg.globIdx, u, uExp104]
+
 
 theorem wf_eq : wellFormed = fun s => WF (shapeOfUG u) s.world := by
   funext s; unfold wellFormed; rw [shape_eq]
@@ -125,16 +146,48 @@ example : preExpr lies = lies_pre := rfl
 example : ein.puts = einzahlen_writes := rfl
 example : lies.puts = lies_writes := rfl
 
-example : (fun s s' r => (postU u wellFormed ein s s' r).getD False) = einzahlen_post := rfl
-example : (fun s s' r => (postU u wellFormed lies s s' r).getD False) = lies_post := rfl
+theorem einzahlen_clause_zeuge :
+    ensExpr u ein {} (.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))) =
+      some (.bin .le (.name "old#1") (.place "Konto" (.name "i") "stand"),
+        { olds := [.place "Konto" (.name "i") "stand"] }) := by cbv
+
+theorem lies_clause_zeuge :
+    ensExpr u lies {} (.cmp "==" .erg (.slot "k" "stand" (.param "i"))) =
+      some (.bin .eq (.name "result") (.place "Konto" (.name "i") "stand"),
+        { result := true }) := by cbv
+
+theorem einzahlen_post_eq (s s' : State) (r : Option Value) :
+    (postU u wellFormed ein s s' r).getD False = einzahlen_post s s' r := by
+  have hg : ein.gives = [.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))] := rfl
+  simp only [postU, hg, ensList, ensClause, einzahlen_clause_zeuge]
+  rfl
+
+theorem lies_post_eq (s s' : State) (r : Option Value) :
+    (postU u wellFormed lies s s' r).getD False = lies_post s s' r := by
+  have hg : lies.gives = [.cmp "==" .erg (.slot "k" "stand" (.param "i"))] := rfl
+  simp only [postU, hg, ensList, ensClause, lies_clause_zeuge]
+  rfl
+
 example : preProp wellFormed ein = einzahlen_requires := rfl
 example : preProp wellFormed lies = lies_requires := rfl
 
-example : meetsU u wellFormed ein ((zuBodyZ u ein).getD []) = einzahlen_meets_statement := by
+theorem einzahlen_meets_eq : meetsU u wellFormed ein ((zuBodyZ u ein).getD []) = einzahlen_meets_statement := by
   rw [einzahlen_body_eq]
+  change (∀ (ρ : Env) (s : State), wellFormed s → eval s einzahlen_pre = some (.bool true) →
+    Contract ρ "lies" lies_requires (fun s s' r => (postU u wellFormed lies s s' r).getD False) →
+    Frame ρ "lies" [callClock] →
+    ∃ s', finalState (exec ρ einzahlen_body s) = some s' ∧
+      (postU u wellFormed ein s s' (finalValue (exec ρ einzahlen_body s))).getD False) =
+    einzahlen_meets_statement
+  simp only [einzahlen_post_eq, lies_post_eq]
   rfl
-example : meetsU u wellFormed lies ((zuBodyZ u lies).getD []) = lies_meets_statement := by
+
+theorem lies_meets_eq : meetsU u wellFormed lies ((zuBodyZ u lies).getD []) = lies_meets_statement := by
   rw [lies_body_eq]
+  change (∀ (ρ : Env) (s : State), wellFormed s → eval s lies_pre = some (.bool true) →
+    ∃ s', finalState (exec ρ lies_body s) = some s' ∧
+      (postU u wellFormed lies s s' (finalValue (exec ρ lies_body s))).getD False) = lies_meets_statement
+  simp only [lies_post_eq]
   rfl
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
@@ -158,8 +211,14 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
   intro c
   rw [wfU_eq]
   match c with
-  | ⟨0, _⟩ => exact ⟨einzahlen_body, einzahlen_body_eq, einzahlen_meets⟩
-  | ⟨1, _⟩ => exact ⟨lies_body, lies_body_eq, lies_meets⟩
+  | ⟨0, _⟩ =>
+    have hm := einzahlen_meets
+    rw [← einzahlen_meets_eq, einzahlen_body_eq] at hm
+    exact ⟨einzahlen_body, einzahlen_body_eq, hm⟩
+  | ⟨1, _⟩ =>
+    have hm := lies_meets
+    rw [← lies_meets_eq, lies_body_eq] at hm
+    exact ⟨lies_body, lies_body_eq, hm⟩
 
 /-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 
@@ -170,8 +229,8 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBodyZ u (fnAt u c) = 
 
 theorem pflichten_104 (hPtr : SchnittstellenPflicht u) :
     PflichtenAlle Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
-  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by decide, by decide, by decide, by decide,
-    by decide, hPtr, fun c => by
+  ⟨u, uOf_eq Gabbro.Grammatik.Einheit104.uebersetzt4, by cbv, by cbv, by cbv, by cbv,
+    by cbv, hPtr, fun c => by
       obtain ⟨body, hb, hm⟩ := meets_alle c
       exact ⟨body, hb, hm⟩⟩
 

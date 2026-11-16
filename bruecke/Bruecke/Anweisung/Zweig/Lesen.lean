@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 def LeseZ : UStmt → Prop
-  | .bind .. | .bindMut .. | .bindB .. | .bindCall .. | .setVar .. | .setVarB .. | .assign .. | .assignTab .. | .assignGlob .. | .call .. => True
+  | .bind .. | .bindMut .. | .bindB .. | .bindOpt .. | .bindCall .. | .setVar .. | .setVarB .. | .setVarOpt .. | .assign .. | .assignTab .. | .assignOpt .. | .assignTabOpt .. | .assignGlob .. | .assignGlobB .. | .call .. => True
   | _ => False
 
 theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : List UStmt}
@@ -22,7 +22,7 @@ theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : L
            (fun p => (b :: p.1, p.2.1, p.2.2))
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | call => rfl
+  case bind | bindMut | bindB | bindOpt | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
@@ -32,7 +32,7 @@ theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
        | some (b, fn', ns') => (stmtsBodyZ u k fn' ns' rest r).map (b :: ·)
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindCall | setVar | setVarB | assign | assignTab | assignGlob | call => rfl
+  case bind | bindMut | bindB | bindOpt | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem seqZ_schritt_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
@@ -69,30 +69,57 @@ theorem stmtsBodyZ_schritt_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt
       exact ⟨b, fn', ns', bs', hsb, hq, h.symm⟩
   · cases h
 
-/-- The whole-function record binder has an explicit nominal type. -/
+/-- Both annotated and inferred nominal binders retain their exact type in nested scopes. -/
+theorem seqZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
+    {d : Option Ty} {v : USide} {rest tail : List UStmt}
+    {bs : List Gabbro.Body.Stmt} {used : List String}
+    (h : seqZ u (k + 1) fn ns (.bindW x d v :: rest) = some (bs, tail, used)) :
+    ∃ (id : Nat) (fs : List Ty) (e : Gabbro.Body.Expr) (ys : List Gabbro.Body.Stmt),
+      recordBinderType u fn d v = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
+      seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest = some (ys, tail, used) ∧
+      bs = .bindName (ns.fresh x) e :: ys := by
+  simp only [seqZ] at h
+  cases ht : recordBinderType u fn d v with
+  | none => rw [ht] at h; cases h
+  | some ty =>
+    obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
+    simp only [ht] at h
+    cases he : namedSide u fn ns v with
+    | none => rw [he] at h; cases h
+    | some e =>
+      simp only [he] at h
+      cases hy : seqZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest with
+      | none => rw [hy] at h; cases h
+      | some result =>
+        obtain ⟨ys, tail', used'⟩ := result
+        simp only [hy, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
+
+/-- Whole-function record inference uses the same reader as nested record inference. -/
 theorem stmtsBodyZ_bindRecord_some {k : Nat} {fn : UFn} {ns : BodyNames} {x : String}
     {d : Option Ty} {v : USide} {rest : List UStmt} {r : URet} {bs : List Gabbro.Body.Stmt}
     (h : stmtsBodyZ u (k + 1) fn ns (.bindW x d v :: rest) r = some bs) :
     ∃ (id : Nat) (fs : List Ty) (e : Gabbro.Body.Expr) (ys : List Gabbro.Body.Stmt),
-      d = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
+      recordBinderType u fn d v = some (.prod id fs) ∧ namedSide u fn ns v = some e ∧
       stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r = some ys ∧
       bs = .bindName (ns.fresh x) e :: ys := by
-  cases d with
-  | none => cases h
+  simp only [stmtsBodyZ] at h
+  cases ht : recordBinderType u fn d v with
+  | none => rw [ht] at h; cases h
   | some ty =>
-      cases ty <;> try { simp only [stmtsBodyZ, reduceCtorEq] at h }
-      case prod id fs =>
-        simp only [stmtsBodyZ] at h
-        cases he : namedSide u fn ns v with
-        | none => rw [he] at h; cases h
-        | some e =>
-            rw [he] at h
-            cases hy : stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r with
-            | none => rw [hy] at h; cases h
-            | some ys =>
-                rw [hy] at h
-                cases h
-                exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
+    obtain ⟨id, fs, rfl⟩ := recordBinderType_prod ht
+    simp only [ht] at h
+    cases he : namedSide u fn ns v with
+    | none => rw [he] at h; cases h
+    | some e =>
+      simp only [he] at h
+      cases hy : stmtsBodyZ u k (fn.mitWert x (.prod id fs)) (ns.push x) rest r with
+      | none => rw [hy] at h; cases h
+      | some ys =>
+        simp only [hy, Option.map_some, Option.some.injEq] at h
+        subst h
+        exact ⟨id, fs, e, ys, rfl, rfl, hy, rfl⟩
 
 theorem seqZ_wenn_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {cnd : UEns}
     {rest r : List UStmt} {xs : List Gabbro.Body.Stmt} {used : List String}
@@ -183,10 +210,16 @@ theorem schrittB_einzeln_sicht {fT fn : UFn} {ns ns' : BodyNames}
     have hid' := (BodyNames.lookup_sicht hS ns x).symm.trans hid
     have he' := (condZ_sicht hS ns v).symm.trans he
     simp only [schrittB, hid', he']
-  case assign | assignTab | assignGlob | call =>
+  case setVarOpt x num v =>
+    obtain ⟨id, e, hid, he, rfl, hfT, hns⟩ := schrittB_setVarOpt h
+    refine ⟨?_, hfT, hns⟩
+    have hid' := (BodyNames.lookup_sicht hS ns x).symm.trans hid
+    have he' := (namedOption_sicht hS ns v).symm.trans he
+    simp only [schrittB, hid', he']
+  case assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call =>
     obtain ⟨hb, hfT, hns⟩ := schrittB_stmt h (fun _ _ _ h => by cases h)
       (fun _ _ _ _ h => by cases h) (fun _ _ h => by cases h)
-      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h)
+      (fun _ _ h => by cases h) (fun _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     have hb' := (namedStmt_sicht hS ns _).symm.trans hb
     exact ⟨by simp only [schrittB, hb', Option.map_some], hfT, hns⟩
   all_goals cases hs

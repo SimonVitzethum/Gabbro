@@ -18,6 +18,20 @@ namespace Gabbro.Bruecke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
+/-- Finite reason arms reuse the ordinary scoped block reader and its allocation history. -/
+def readReasonArms (read : BodyNames → List UStmt →
+    Option (List Gabbro.Body.Stmt × List UStmt × List String)) : Nat → Nat → BodyNames → List UStmt →
+    Option (List (String × List Gabbro.Body.Stmt) × List UStmt × List String)
+  | 0, _, ns, ss => some ([], ss, ns.used)
+  | n + 1, offset, ns, ss => do
+      let (body, remaining, allocated) ← read ns ss
+      match n with
+      | 0 => pure ([(caseLabel offset, body)], remaining, allocated)
+      | m + 1 =>
+        let .ifElse :: tail := remaining | none
+        let (arms, rest, used) ← readReasonArms read (m + 1) (offset + 1) (ns.resume allocated) tail
+        pure ((caseLabel offset, body) :: arms, rest, used)
+
 /-- The active list is scoped; the returned allocation history is function-wide. -/
 def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
     Option (List Gabbro.Body.Stmt × List UStmt × List String)
@@ -38,46 +52,72 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
               (fun p => (.ite ce tb eb :: p.1, p.2.1, p.2.2))
           | _ => none
         | _ => none
+  | k + 1, fn, ns, .matchTagBeg sidx x _ :: rest =>
+      if sidx < u.sums.length then do
+        let (cs, e) ← tagSubject fn ns x
+        let (arms, .blkEnd :: tail, allocated) ← readReasonArms (seqZ u k fn) cs.length 0 ns rest | none
+        let p ← seqZ u k fn (ns.resume allocated) tail
+        pure (.onTag e (tagArms arms) :: p.1, p.2.1, p.2.2)
+      else none
+  | k + 1, fn, ns, .matchWhyBeg x :: rest => do
+      let (count, e) ← reasonSubject fn ns x
+      let (arms, .blkEnd :: tail, allocated) ← readReasonArms (seqZ u k fn) count 0 ns rest | none
+      let p ← seqZ u k fn (ns.resume allocated) tail
+      pure (.onReason e arms :: p.1, p.2.1, p.2.2)
+  | k + 1, fn, ns, .matchBeg num v x :: rest =>
+      if hn : num < u.tabs.length then do
+        let e ← optionZ fn ns v
+        let (pb, .ifElse :: r1, used1) ← seqZ u k
+          (fn.mitIndex x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest | none
+        let (ab, .blkEnd :: r2, used2) ← seqZ u k fn (ns.resume used1) r1 | none
+        let p ← seqZ u k fn (ns.resume used2) r2
+        pure (.onOption e (ns.fresh x) pb ab :: p.1, p.2.1, p.2.2)
+      else none
   | k + 1, fn, ns, .loopBeg x tab .tru :: rest => do
-      if !loopWritesB rest then none else do
-        let t ← (tabIdx u.tabs tab).toOption
-        let (body, .blkEnd :: tail, used) ← seqZ u k
-          (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
-        let p ← seqZ u k fn (ns.resume used) tail
-        pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
+      let t ← (tabIdx u.tabs tab).toOption
+      let (body, .blkEnd :: tail, used) ← seqZ u k
+        (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
+      let p ← seqZ u k fn (ns.resume used) tail
+      pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
       let p ← seqZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail
       pure (narrowStep ns x lo hi e err :: p.1, p.2.1, p.2.2)
+  | k + 1, fn, ns, .leave _ :: rest =>
+      (seqZ u k fn ns rest).map (fun p => (.leave :: p.1, p.2.1, p.2.2))
+  | k + 1, fn, ns, .next _ :: rest =>
+      (seqZ u k fn ns rest).map (fun p => (.exit :: p.1, p.2.1, p.2.2))
   | k + 1, fn, ns, .ret r :: rest =>
       match retZ u fn ns r with
       | none => none
       | some b => (seqZ u k fn ns rest).map (fun p => (b :: p.1, p.2.1, p.2.2))
+  | k + 1, fn, ns, .bindW x d v :: rest =>
+      match recordBinderType u fn d v with
+      | none => none
+      | some ty => match namedSide u fn ns v with
+        | none => none
+        | some e => (seqZ u k (fn.mitWert x ty) (ns.push x) rest).map
+          (fun p => (.bindName (ns.fresh x) e :: p.1, p.2.1, p.2.2))
   | k + 1, fn, ns, st :: rest =>
       match schrittB u fn ns st with
       | some (b, fn', ns') =>
         (seqZ u k fn' ns' rest).map (fun p => (b :: p.1, p.2.1, p.2.2))
       | none => none
 
-/-- Finite reason arms reuse the ordinary scoped block reader and its allocation history. -/
-def reasonArmsZ (u : UProg) (k : Nat) (fn : UFn) : Nat → Nat → BodyNames → List UStmt →
-    Option (List (String × List Gabbro.Body.Stmt) × List UStmt × List String)
-  | 0, _, ns, ss => some ([], ss, ns.used)
-  | n + 1, offset, ns, ss => do
-      let (body, remaining, allocated) ← seqZ u k fn ns ss
-      match n with
-      | 0 => pure ([(caseLabel offset, body)], remaining, allocated)
-      | m + 1 =>
-        let .ifElse :: tail := remaining | none
-        let (arms, rest, used) ← reasonArmsZ u k fn (m + 1) (offset + 1) (ns.resume allocated) tail
-        pure ((caseLabel offset, body) :: arms, rest, used)
+/-- Finite reason arms specialize the shared scoped arm reader. -/
+def reasonArmsZ (u : UProg) (k : Nat) (fn : UFn) := readReasonArms (seqZ u k fn)
 
 /-- Read a whole function, retaining allocation history across both arms and the continuation. -/
 def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet →
     Option (List Gabbro.Body.Stmt)
   | 0, _, _, _, _ => none
   | _ + 1, fn, ns, [], r => namedEnd u fn ns r
+  | k + 1, fn, ns, .ifEnde c :: rest, .keins => do
+      let ce ← condZ u fn ns c
+      let (tb, .ifElse :: rest1, used1) ← seqZ u k fn ns rest | none
+      let (eb, [.blkEnd], _) ← seqZ u k fn (ns.resume used1) rest1 | none
+      pure [.ite ce tb eb]
   | k + 1, fn, ns, .ifBeg c :: rest, r =>
       match condZ u fn ns c with
       | none => none
@@ -111,25 +151,25 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
         pure (.onOption e (ns.fresh x) pb ab :: ys)
       else none
   | k + 1, fn, ns, .loopBeg x tab .tru :: rest, r => do
-      if !loopWritesB rest then none else do
-        let t ← (tabIdx u.tabs tab).toOption
-        let (body, .blkEnd :: tail, used) ← seqZ u k
-          (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
-        let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
-        pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
+      let t ← (tabIdx u.tabs tab).toOption
+      let (body, .blkEnd :: tail, used) ← seqZ u k
+        (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
+      let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
+      pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest, r => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
       let bs ← stmtsBodyZ u k (fn.mitBindung x (lo, hi)) (ns.push x) tail r
       pure (narrowStep ns x lo hi e err :: bs)
   -- An explicitly typed record local shares the positional identifier mechanism.
-  -- Inferred aggregates and aggregate binders inside structured blocks remain refused.
-  | k + 1, fn, ns, .bindW x (some ty@(.prod ..)) v :: rest, r =>
-      match namedSide u fn ns v with
+  -- Inferred aggregates remain refused; nested blocks use the same record scope.
+  | k + 1, fn, ns, .bindW x d v :: rest, r =>
+      match recordBinderType u fn d v with
       | none => none
-      | some e => (stmtsBodyZ u k (fn.mitWert x ty) (ns.push x) rest r).map
+      | some ty => match namedSide u fn ns v with
+        | none => none
+        | some e => (stmtsBodyZ u k (fn.mitWert x ty) (ns.push x) rest r).map
           (.bindName (ns.fresh x) e :: ·)
-  | _ + 1, _, _, .bindW .. :: _, _ => none
   | k + 1, fn, ns, st :: rest, r =>
       match schrittB u fn ns st with
       | some (b, fn', ns') => (stmtsBodyZ u k fn' ns' rest r).map (b :: ·)

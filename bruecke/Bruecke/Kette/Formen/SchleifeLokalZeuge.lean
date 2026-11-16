@@ -23,8 +23,22 @@ theorem loop_local_reader_zeuge (u : UProg) (fn : UFn) (ns : BodyNames)
       [.loopBeg binder tab .tru, .setVarB x .tru, .blkEnd] .empty =
         some [.forEach (ns.fresh binder) (loopIndices u t)
           [.bindName id (.lit (.bool true))]] := by
-  simp only [stmtsBodyZ, loopWritesB, Bool.not_true, Bool.false_eq_true, ↓reduceIte, ht, Except.toOption,
+  simp only [stmtsBodyZ, ht, Except.toOption,
     seqZ, schrittB, hx, condZ_true, namedEnd, bind, pure, Option.bind, Option.map]
+
+/-- A complete source body combines a local binding, a branch and both control leaves.
+    The only premise resolves the actual table; the reader has no write-only gate. -/
+theorem loop_full_reader_zeuge (u : UProg) (fn : UFn) (ns : BodyNames)
+    (binder tab localName : String) (t : Fin u.tabs.length)
+    (ht : tabIdx u.tabs tab = .ok t) :
+    stmtsBodyZ u 8 fn ns
+      [.loopBeg binder tab .tru, .bindB localName .tru, .ifBeg .tru, .next binder,
+        .ifElse, .leave binder, .blkEnd, .blkEnd] .empty =
+      some [.forEach (ns.fresh binder) (loopIndices u t)
+        [.bindName ((ns.push binder).fresh localName) (.lit (.bool true)),
+          .ite (.lit (.bool true)) [.exit] [.leave]]] := by
+  simp only [stmtsBodyZ, ht, Except.toOption, seqZ, schrittB, condZ_true,
+    namedEnd, bind, pure, Option.bind, Option.map]
 
 /-- The updated local is the output of the pass, rather than the old entry environment. -/
 theorem forEach_local_true (ρB : Gabbro.Body.Env) (s : Gabbro.Body.State)

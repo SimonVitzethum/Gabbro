@@ -242,7 +242,10 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {Λ : List (Res (declOf u))}
       | exact lowEns_raw_sim h hb hA hT σ₀ σ ρ s hW hL
       | (repeat' split at h
          all_goals cases h)
-  | oval _ | gval _ | fnref _ => simp only [argExpr, reduceCtorEq] at hb
+  | oval v =>
+    simp only [argExpr] at hb
+    exact lowCallOptionArg_sim h hb hT σ₀ σ ρ s hW hL
+  | gval _ | fnref _ => simp only [argExpr, reduceCtorEq] at hb
 
 
 /-- **The argument list.** -/

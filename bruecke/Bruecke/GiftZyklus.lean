@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Quelle
+public import Bruecke.Kette.Mass.CycleFixture
 public import Bruecke.Pruefung
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
@@ -41,7 +42,7 @@ import all Init.Data.String.ToSlice
 
 
 /-!
-# Finding F2, measured: without a rank of the call graph the bridge would be FALSE
+# Finding F2, measured: with full callee contracts on a cycle the bridge would be FALSE
 
 Three functions over one table `T` (two slots, field `v : 0 .. 10`), in the parser's fragment:
 
@@ -54,7 +55,10 @@ contracts for EVERY entry state (`Contract`), and no environment keeps `h`'s (`e
 `g`'s (a claim about a slot `g` does not write) -- so each duty is true by vacuity. Premise (b) of
 the goal theorem FAILS (`nicht_koerperGutR`): its handler class asks a callee's contract only
 where the call is made, and a handler may answer `g` normally where slot 0 happens to be 7 -- then
-`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself).
+`f` returns with slot 1 at 0. The rank check refuses the unit (`rang_faellt`: `h` calls itself),
+and so do the measure duties of recursive units (`keine_massPflicht`): under every well-founded
+measure, `h` may assume its own contract only strictly below its entry, so its duty is no longer
+vacuous -- and the chain would otherwise prove the failing premise.
 -/
 
 namespace Gabbro.Bruecke.Zyklus
@@ -67,36 +71,13 @@ open Gabbro.Bruecke
 
 attribute [local cbv_eval] Nat.log2_def lowEns.eq_def lowCmp.eq_def lowWertE.eq_def
 
-def uZ : UProg :=
-  { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))], breiten := [] }],
-    locks := [],
-    fns := [
-      { name := "f", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], body := [.call "g" []],
-        ret := .empty, decreases := none, measureConstants := [] },
-      { name := "g", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], body := [.call "h" []],
-        ret := .empty, decreases := none, measureConstants := [] },
-      { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.fls], body := [.call "h" []], ret := .empty, decreases := none, measureConstants := [] }] }
-
-theorem low_some : (lowerAllg uZ).toOption.isSome = true := by
-  apply Gabbro.Grammatik.Uebersetzung.LibraryFixtureProofs.lowering_ok
-  · rfl
-  · cbv
-  · rintro ⟨index, bound⟩
-    have small : index < 3 := bound
-    have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
-    rcases choices with rfl | rfl | rfl
-    all_goals constructor <;> cbv
-
 def PZ : Programm (declOf uZ) := ((lowerAllg uZ).toOption.get low_some).1
 def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
 
 theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
 
 theorem getragenZ : GetragenG uZ (fun _ => True) :=
-  getragenG_of_bools (by decide) (by decide) (by decide)
+  getragenG_of_bools (by cbv) (by cbv) (by cbv)
 
 /-- The rank check refuses the unit: `h` calls itself. -/
 theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
@@ -109,6 +90,7 @@ theorem kein_rang : ∀ rk, ¬ Rang uZ rk := by
 
 /-! ## Every duty holds -- by vacuity -/
 
+
 def fnF : UFn := uZ.fns[0]'(by decide)
 def fnG : UFn := uZ.fns[1]'(by decide)
 def fnH : UFn := uZ.fns[2]'(by decide)
@@ -120,29 +102,30 @@ theorem wf_t0 : wfU uZ t0 := by
   intro p sh hp
   cases p with
   | slot c k fld =>
-    obtain ⟨t, _, hf⟩ := slotShape_tabIdx _ c fld sh hp
-    have ht : t = ⟨0, by decide⟩ := Fin.ext (by
-      have := t.isLt
-      simp [uZ] at this
-      show t.val = 0
-      omega)
-    subst ht
-    by_cases hv : fld = "v"
-    · subst hv
-      have e : sh = .intIn 0 10 := by
-        have h2 : ((uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == "v")).map
-            (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some (.intIn 0 10) := rfl
-        rw [h2] at hf
-        exact (Option.some.inj hf).symm
-      subst e
-      rfl
-    · have h2 : (uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == fld) = none := by
-        show [("v", ((0 : Int), (10 : Int)))].find? (fun q => q.1 == fld) = none
-        simp only [List.find?]
-        have : ("v" == fld) = false := by simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hv e.symm
-        rw [this]
-      rw [h2] at hf
-      cases hf
+    by_cases hc : c = "T"
+    · subst c
+      by_cases hf : fld = "v"
+      · subst fld
+        have hs : sh = .intIn 0 10 := by
+          simpa [Except.toOption, wfU, shapeOfUG, shapeOfU, fieldIndex, shapeOfTy,
+            tabIdx, fieldAtPos, fieldPos, typAt, boolFeldAt, optFeldAt,
+            optNumAt, wertFeldAt, fieldRangeO, tabAt, fieldCount, uZ] using hp.symm
+        subst sh
+        rfl
+      · let t : Fin uZ.tabs.length := ⟨0, by decide⟩
+        have ht : tabIdx uZ.tabs "T" = .ok t := rfl
+        have hi : fieldIndex uZ t fld = none := by
+          apply fieldIndex_none
+          change (if ("v" == fld) = true then some (0, 10) else none) = none
+          rw [beq_eq_false_iff_ne.mpr (Ne.symm hf)]
+          rfl
+        change ((tabIdx uZ.tabs "T").toOption.bind (fun t =>
+          (fieldIndex uZ t fld).bind (fun j => shapeOfTy (typAt uZ t j)))) = some sh at hp
+        rw [ht] at hp
+        change (fieldIndex uZ t fld).bind (fun j => shapeOfTy (typAt uZ t j)) = some sh at hp
+        rw [hi] at hp
+        cases hp
+    · simp [Except.toOption, shapeOfUG, shapeOfU, tabIdx, tabAt, uZ, hc, Ne.symm hc] at hp
   | field c n => simp [shapeOfUG, shapeOfU] at hp
   | global n => simp [shapeOfUG, globShape, globIdx, uZ] at hp
 
@@ -161,7 +144,7 @@ theorem g_unhaltbar (ρ : Gabbro.Body.Env)
   have := hc t0 ⟨wf_t0, rfl⟩
   have hw : (ρ "g" t0).1.world (.slot "T" 0 "v") = .int 0 :=
     hf t0 _ (by simp [writesU, fnG, uZ, Gabbro.Body.Place.carrier, callClock])
-  simp [postP, postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+  simp [postP, postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
     clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnG, uZ, Gabbro.Body.eval, hw, Gabbro.Body.binop] at this
 
 theorem suche_g : fnSuch uZ "g" = some fnG := rfl
@@ -283,7 +266,7 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     have hv := platz hW 0
     rw [h7] at hv
     have hwf := wf_of_wgrel uZ getragenZ.boolTab hW
-    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
+    simp [postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
     exact ⟨hwf, hv⟩
@@ -351,7 +334,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
       simp only [Gabbro.Body.Value.int.injEq] at hp
       exact hp.symm
     rw [h0] at h1
-    simp [postU, ensList, ensClause, ensExpr, ensSide, numericSideExprG, slotPlace, opOf, idxExpr,
+    simp [postU, ensList, ensClause, ensExpr, boolCmpExpr, boolOpOf, recordRead, ensSide, numericSideExprG, slotPlace, opOf, idxExpr,
       clauseProp, clauseAux, chain, andAll, resultClause, Bool.false_eq_true, ↓reduceIte, fnAt, fI, uZ, Gabbro.Body.eval,
       Gabbro.Body.binop, s1] at hpost h1
     rw [hpost.2] at h1
@@ -359,7 +342,13 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   · rw [hR] at hR'; cases hR'
   · rw [hR] at hR'; cases hR'
 
+/-- **The measure duties refuse the unit**: under no well-founded measure do all duties of `uZ`
+    hold, for they would carry premise (b) through `bruecke_koerperGutR_M`, and it fails. -/
+theorem keine_massPflicht : ∀ M : MassU, ¬ MassPflichtU uZ (fun _ => True) M := fun M hZ =>
+  nicht_koerperGutR (bruecke_koerperGutR_M lowZ getragenZ M hZ 0 fI True.intro)
+
 #print axioms alle_pflichten
 #print axioms nicht_koerperGutR
+#print axioms keine_massPflicht
 
 end Gabbro.Bruecke.Zyklus
