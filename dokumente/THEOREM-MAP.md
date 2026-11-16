@@ -7530,3 +7530,14 @@ The totality path requires literal-true source pre/postconditions and no owed fu
 invariants. Its primitive and loop certificates quantify over every atomic observation;
 this does not admit atomic observations into a nontrivial contract WP. Entry snapshots,
 symbolic continuations, general atomic WPs and float/oracle bindings remain separate work.
+
+The unchanged `Gap.F03_reg` ending-register fixture is also checked by the
+literal-true totality path. Its `e_cause` is `none`, `e_gueltig` is true, and
+`requested_checked_zeuge`/`e_cause_link_zeuge` retain real register/fine-cell
+input evidence on that same accepted unit. `F03_reg.register_variants_zeuge`
+now checks both ending and block forms. Recovery retains both fixtures and
+their exact records; their numbered cell sets coincide. The refused annex
+contains only its two atomic fixtures and the indirect-call fixture, whose
+cause/link witnesses name the missing finite target dispatch. Old-post and
+pointer-cost witnesses keep their original source defects and assert the
+actual snapshot and early cost diagnostics respectively.
