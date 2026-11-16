@@ -9,6 +9,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
 import all Grammatik.Logik.Vertraege.Pruefer.Program
+public meta import Grammatik.Logik.Vertraege.Pruefer.Program
 
 @[expose] public section
 
@@ -117,9 +118,11 @@ theorem good_user : NutzerPflichtA goodUnit where
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }
 
+#eval Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false
+
+set_option maxRecDepth 4096 in
 /-- The strict checker refuses the false post and names the actual failed
     contract obligation. This is an executable diagnostic, not a guessed trace. -/
-set_option maxRecDepth 4096 in
 theorem checker :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
     Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =

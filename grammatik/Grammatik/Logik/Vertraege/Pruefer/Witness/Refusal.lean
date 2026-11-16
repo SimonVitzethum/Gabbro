@@ -124,41 +124,41 @@ theorem execution_refused (program : Programm D) (S : SperrInv D) (policy : Call
                   locals value rejected] at accepted
                 cases accepted
 
-  /-- The existing basic path must be absent; both atomic replay outcomes then
-      retain the actual failed execution check. -/
-  theorem function_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
-      (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn)
-      (basic : checkBasicFunction program S sources budget f = none)
-      (locals : Env D (D.params f)) (value : ErgVal D (D.erg f))
-      (rejected : (postFormula program f locals value).toOption.isSome = false) :
-      (checkFunction program S sources budget hint f).toOption.isSome = false := by
-    unfold checkFunction
-    rw [basic]
-    cases replay : Invarianten.Pruefer.atomicReplay? program f with
-    | none => rfl
-    | some certificate =>
-        have refused := execution_refused program S (requiresPolicy program) sources budget hint f locals value rejected
-        cases executed : checkExecution program S (requiresPolicy program) sources budget hint f with
-        | error cause => rfl
-        | ok checked => rw [executed] at refused; cases refused
+/-- The existing basic path must be absent; both atomic replay outcomes then
+    retain the actual failed execution check. -/
+theorem function_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
+    (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn)
+    (basic : checkBasicFunction program S sources budget f = none)
+    (locals : Env D (D.params f)) (value : ErgVal D (D.erg f))
+    (rejected : (postFormula program f locals value).toOption.isSome = false) :
+    (checkFunction program S sources budget hint f).toOption.isSome = false := by
+  unfold checkFunction
+  rw [basic]
+  cases replay : Invarianten.Pruefer.atomicReplay? program f with
+  | none => rfl
+  | some certificate =>
+      have refused := execution_refused program S (requiresPolicy program) sources budget hint f locals value rejected
+      cases executed : checkExecution program S (requiresPolicy program) sources budget hint f with
+      | error cause => rfl
+      | ok checked => rw [executed] at refused; cases refused
 
-  /-- A named function's actual post refusal propagates through the unchanged
-      default-hint contract gate. No compiler body or structural gate is evaluated. -/
-  theorem contracts_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
-      (budget : VCBudget) (functions : List D.Fn) (f : D.Fn) (member : f ∈ functions)
-      (basic : checkBasicFunction program S sources budget f = none)
-      (locals : Env D (D.params f)) (value : ErgVal D (D.erg f))
-      (rejected : (postFormula program f locals value).toOption.isSome = false) :
-      KontrakteGeprueftB program S functions sources budget = false := by
-    change (collect functions (ContractDuties program S)
-      (fun g => checkFunction program S sources budget none g)).toOption.isSome = false
-    cases collected : collect functions (ContractDuties program S)
-        (fun g => checkFunction program S sources budget none g) with
-    | error cause => rfl
-    | ok checked =>
-        have accepted := collect_each functions (ContractDuties program S)
-          (fun g => checkFunction program S sources budget none g) (by rw [collected]; rfl) f member
-        rw [function_refused program S sources budget none f basic locals value rejected] at accepted
-        cases accepted
+/-- A named function's actual post refusal propagates through the unchanged
+    default-hint contract gate. No compiler body or structural gate is evaluated. -/
+theorem contracts_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
+    (budget : VCBudget) (functions : List D.Fn) (f : D.Fn) (member : f ∈ functions)
+    (basic : checkBasicFunction program S sources budget f = none)
+    (locals : Env D (D.params f)) (value : ErgVal D (D.erg f))
+    (rejected : (postFormula program f locals value).toOption.isSome = false) :
+    KontrakteGeprueftB program S functions sources budget = false := by
+  change (collect functions (ContractDuties program S)
+    (fun g => checkFunction program S sources budget none g)).toOption.isSome = false
+  cases collected : collect functions (ContractDuties program S)
+      (fun g => checkFunction program S sources budget none g) with
+  | error cause => rfl
+  | ok checked =>
+      have accepted := collect_each functions (ContractDuties program S)
+        (fun g => checkFunction program S sources budget none g) (by rw [collected]; rfl) f member
+      rw [function_refused program S sources budget none f basic locals value rejected] at accepted
+      cases accepted
 
-  end Gabbro.Grammatik.Vertraege.Pruefer.RefusalWitness
+end Gabbro.Grammatik.Vertraege.Pruefer.RefusalWitness
