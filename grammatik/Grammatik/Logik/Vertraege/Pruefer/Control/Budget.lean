@@ -31,6 +31,29 @@ def returnSpecializations (limit : Nat) {Γ Λ kind} (expression : ErgExpr D Γ 
 
 mutual
 
+/-- This scan only refines the resource estimate. Actual admission still
+    comes from the unchanged semantic condition, including every early exit. -/
+def statementMayContinue {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Bool
+  | .ret .. | .retWhy .. | .retScoped .. | .retWhyScoped .. | .leave .. | .next .. => false
+  | .ite _ yes no => blockMayContinue yes || blockMayContinue no
+  | .breaking _ body | .locks _ _ body => blockMayContinue body
+  | .onWhy _ arms => reasonsMayContinue arms
+  | _ => true
+
+def blockMayContinue {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Bool
+  | .cons first rest => statementMayContinue first && blockMayContinue rest
+  | .bind _ rest | .bindCall _ _ _ _ _ rest | .bindCallElse _ _ _ _ _ _ rest
+    | .narrow _ _ _ _ rest | .narrowRequired _ _ _ rest | .check _ _ rest => blockMayContinue rest
+  | _ => true
+
+def reasonsMayContinue {l Γ Λ Λ' count} : GrundArms D V l Γ Λ Λ' count → Bool
+  | .nil => false
+  | .cons head tail => blockMayContinue head || reasonsMayContinue tail
+
+end
+
+mutual
+
 /-- Bound the finite-specialization compiler before executing it. Products
     include discarded call results and argument selection, not merely the
     largest individual type. Refusing this budget supplies no semantic fact. -/
@@ -52,8 +75,10 @@ def statementSpecializations (limit : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' 
 
 def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
   | .nil => 1
-  | .cons head tail => min (limit + 1)
-      (statementSpecializations limit head * blockSpecializations limit tail)
+  | .cons head tail =>
+      if statementMayContinue head then min (limit + 1)
+        (statementSpecializations limit head * blockSpecializations limit tail)
+      else statementSpecializations limit head
   | .bind (τ := type) _ tail => min (limit + 1)
       (specializationCount limit type * blockSpecializations limit tail)
   | .bindCall f _ _ _ _ tail => min (limit + 1)
@@ -74,8 +99,10 @@ def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' →
 
 def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
   | .ret expression _ | .retScoped expression _ => returnSpecializations limit expression
-  | .cons head tail => min (limit + 1)
-      (statementSpecializations limit head * endSpecializations limit tail)
+  | .cons head tail =>
+      if statementMayContinue head then min (limit + 1)
+        (statementSpecializations limit head * endSpecializations limit tail)
+      else statementSpecializations limit head
   | .bind (τ := type) _ tail => min (limit + 1)
       (specializationCount limit type * endSpecializations limit tail)
   | .bindCall f _ _ _ _ tail => min (limit + 1)
