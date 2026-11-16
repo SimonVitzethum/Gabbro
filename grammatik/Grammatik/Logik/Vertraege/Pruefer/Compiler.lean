@@ -228,7 +228,7 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         { formula := goals.reason
           sound := fun _ _ ready _ _ => ready }
     | .retScoped expression cleanup => do
-        let pre ← scopedReturnCondition (policy := policy) budget.expansion facts expression cleanup locals goals
+        let pre ← scopedReturnCondition (policy := policy) (l := l) budget.expansion facts expression cleanup locals goals
         return pre.map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpS at ready
@@ -237,7 +237,7 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           split <;> rename_i cleanupReady <;>
             simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
     | .retWhyScoped reason cleanup => do
-        let pre ← scopedReasonCondition (policy := policy) facts reason cleanup locals goals
+        let pre ← scopedReasonCondition (policy := policy) (l := l) facts reason cleanup locals goals
         return pre.map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpS at ready
@@ -379,8 +379,6 @@ def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {coun
 termination_by fuel
 
 end
-
-#check @endingCore
 
 /-- Bound specialization before constructing any path conditions. The core
     certificate still has precisely the original semantic soundness meaning. -/
