@@ -7541,3 +7541,9 @@ contains only its two atomic fixtures and the indirect-call fixture, whose
 cause/link witnesses name the missing finite target dispatch. Old-post and
 pointer-cost witnesses keep their original source defects and assert the
 actual snapshot and early cost diagnostics respectively.
+
+`GateAudit.atomic_restored_zeuge` also certifies the unchanged `M99_824`
+and `M99_825` typed register/await programs, with actual executed atomic
+reads. They join the exact accepted recovery records. The totality path
+restores three numbered coverage cells: 85 accepted cells, 73 beyond the
+baseline, and two remaining firm cells. No nontrivial atomic WP is added.

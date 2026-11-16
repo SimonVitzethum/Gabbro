@@ -1,17 +1,9 @@
-/- Fragment refusals are outside accepted M and wrong-program N. -/
+/- The remaining indirect-call refusal is outside accepted M and wrong-program N. -/
 module
 
 public import Grammatik.Gen.Zeugen.Gap.Audit
 public import Grammatik.Gen.Abdeckung.Mitglieder
 public import Grammatik.Gen.Fein.Zellen
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Defs
-import all Init.Data.String.Decode
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.OrderInstances
 
 @[expose] public section
 
@@ -21,13 +13,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 open Invarianten.Frag
 
 inductive GapGrund where
-  | atomar (f : Nat)
   | rufInd
   deriving DecidableEq, Repr
-
-def AtomicGapInput (g : Einsatz) (index : Nat) : Prop :=
-  letI := g.aufz
-  ∃ f ∈ g.fs, g.fs.idxOf f = index ∧ Invarianten.Pruefer.atomicFreeB g.P f = false
 
 def CallIndGapInput (g : Einsatz) : Prop :=
   letI := g.aufz
@@ -35,34 +22,10 @@ def CallIndGapInput (g : Einsatz) : Prop :=
     !(mE ⟨fun _ => true, fun _ => false, fun _ => true⟩ (g.P.rumpf f))) = true
 
 def GapBelegt (g : Einsatz) : GapGrund → Prop
-  | .atomar f => AtomicGapInput g f
   | .rufInd => CallIndGapInput g
 
-/-- The atomic/indirect inputs remain refused; the typed atomic reader and four lock fixtures have returned to M. -/
-def fragmentGaps : List Einsatz :=
-  [M99_824.e, M99_825.e, M47_549.e]
-
-theorem m99_824_input : AtomicGapInput M99_824.e 0 := by unfold AtomicGapInput; decide
-
-theorem m99_824_cause_link : AtomicGapInput M99_824.e 0 →
-    GateAudit.contractCause M99_824.e = some (.unsupported
-      "contract body reads atomic memory outside the checked VC fragment") := fun _ => GateAudit.m99_824_cause
-
-theorem m99_824_cause_link_zeuge : AtomicGapInput M99_824.e 0 ∧
-    GateAudit.contractCause M99_824.e = some (.unsupported
-      "contract body reads atomic memory outside the checked VC fragment") :=
-  ⟨m99_824_input, m99_824_cause_link m99_824_input⟩
-
-theorem m99_825_input : AtomicGapInput M99_825.e 0 := by unfold AtomicGapInput; decide
-
-theorem m99_825_cause_link : AtomicGapInput M99_825.e 0 →
-    GateAudit.contractCause M99_825.e = some (.unsupported
-      "contract body reads atomic memory outside the checked VC fragment") := fun _ => GateAudit.m99_825_cause
-
-theorem m99_825_cause_link_zeuge : AtomicGapInput M99_825.e 0 ∧
-    GateAudit.contractCause M99_825.e = some (.unsupported
-      "contract body reads atomic memory outside the checked VC fragment") :=
-  ⟨m99_825_input, m99_825_cause_link m99_825_input⟩
+/-- Typed atomic/register readers have checked totality; indirect calls remain outside. -/
+def fragmentGaps : List Einsatz := [M47_549.e]
 
 theorem m47_549_input : CallIndGapInput M47_549.e := by unfold CallIndGapInput; decide
 
@@ -77,34 +40,27 @@ theorem m47_549_cause_link_zeuge : CallIndGapInput M47_549.e ∧
 
 theorem checked_gap : ∀ g ∈ fragmentGaps, g.gueltig = false := by
   intro g member
-  simp only [fragmentGaps, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl
-  · exact GateAudit.m99_824_refused
-  · exact GateAudit.m99_825_refused
-  · exact GateAudit.m47_549_refused
+  have same : g = M47_549.e := List.mem_singleton.mp member
+  subst g
+  exact GateAudit.m47_549_refused
 
-/-- The input cells are structurally admitted, unlike the wrong programs of N. -/
 theorem gap_structural : ∀ g ∈ fragmentGaps,
     Adaequanz.akzeptiert Einsatz.Hat gutTafel g := by
   intro g member
-  simp only [fragmentGaps, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl
-  · exact M99_824.e_strukturell
-  · exact M99_825.e_strukturell
-  · exact M47_549.e_strukturell
+  have same : g = M47_549.e := List.mem_singleton.mp member
+  subst g
+  exact M47_549.e_strukturell
 
 theorem gap_grund : ∀ g ∈ fragmentGaps, ∃ grund : GapGrund, GapBelegt g grund := by
   intro g member
-  simp only [fragmentGaps, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl
-  · exact ⟨.atomar 0, m99_824_input⟩
-  · exact ⟨.atomar 0, m99_825_input⟩
-  · exact ⟨.rufInd, m47_549_input⟩
+  have same : g = M47_549.e := List.mem_singleton.mp member
+  subst g
+  exact ⟨.rufInd, m47_549_input⟩
 
-theorem gap_grund_zeuge : M99_824.e ∈ fragmentGaps ∧
-    GapBelegt M99_824.e (.atomar 0) ∧
-    Adaequanz.akzeptiert Einsatz.Hat gutTafel M99_824.e ∧ M99_824.e.gueltig = false :=
-  ⟨List.mem_cons_self, m99_824_input, M99_824.e_strukturell, GateAudit.m99_824_refused⟩
+theorem gap_grund_zeuge : M47_549.e ∈ fragmentGaps ∧
+    GapBelegt M47_549.e .rufInd ∧
+    Adaequanz.akzeptiert Einsatz.Hat gutTafel M47_549.e ∧ M47_549.e.gueltig = false :=
+  ⟨List.mem_cons_self, m47_549_input, M47_549.e_strukturell, GateAudit.m47_549_refused⟩
 
 theorem gap_annex : GapAnnex fragmentGaps := ⟨checked_gap⟩
 

@@ -51,12 +51,10 @@ theorem refused_of_cause (e : Einsatz) (cause : Refusal)
     rw [gate] at accepted
     exact Bool.noConfusion accepted
 
-/-- The guard runs before VC generation, including the lock rule. -/
-theorem m99_824_cause : contractCause M99_824.e = some
-    (.unsupported "contract body reads atomic memory outside the checked VC fragment") := by decide +kernel
+/-- Literal-true totality covers these typed register/atomic observations. -/
+theorem m99_824_cause : contractCause M99_824.e = none := by decide +kernel
 
-theorem m99_825_cause : contractCause M99_825.e = some
-    (.unsupported "contract body reads atomic memory outside the checked VC fragment") := by decide +kernel
+theorem m99_825_cause : contractCause M99_825.e = none := by decide +kernel
 
 /-- The typed atomic read has literal true contracts and no owed invariant.
     Its totality certificate covers every value the atomic environment returns. -/
@@ -66,15 +64,14 @@ theorem m49_50_contract_checked : contractCause M49_50.e = none := by decide +ke
 theorem m47_549_cause : contractCause M47_549.e = some
     (.unsupported "contract indirect call needs a checked finite target dispatch") := by decide +kernel
 
-theorem m99_824_refused : M99_824.e.gueltig = false :=
-  refused_of_cause _ _ m99_824_cause
+theorem m99_824_checked : M99_824.e.gueltig = true := by decide +kernel
 
-theorem refused_of_cause_zeuge : contractCause M99_824.e = some
-    (.unsupported "contract body reads atomic memory outside the checked VC fragment") ∧
-    M99_824.e.gueltig = false := ⟨m99_824_cause, m99_824_refused⟩
+theorem refused_of_cause_zeuge : contractCause M47_549.e = some
+    (.unsupported "contract indirect call needs a checked finite target dispatch") ∧
+    M47_549.e.gueltig = false :=
+  ⟨m47_549_cause, refused_of_cause _ _ m47_549_cause⟩
 
-theorem m99_825_refused : M99_825.e.gueltig = false :=
-  refused_of_cause _ _ m99_825_cause
+theorem m99_825_checked : M99_825.e.gueltig = true := by decide +kernel
 
 /-- Literal-true lock predicates have no restoration duty. Both independent
     gates accept the unchanged typed atomic-read fixture. -/
@@ -83,6 +80,15 @@ theorem m49_50_checked : M49_50.e.gueltig = true :=
 
 theorem m47_549_refused : M47_549.e.gueltig = false :=
   refused_of_cause _ _ m47_549_cause
+
+/-- Both unchanged fixtures are admitted despite real executed atomic reads. -/
+theorem atomic_restored_zeuge : contractCause M99_824.e = none ∧
+    M99_824.e.gueltig = true ∧ contractCause M99_825.e = none ∧
+    M99_825.e.gueltig = true ∧
+    Invarianten.Pruefer.atomicFreeB M99_824.e.P ⟨0, by decide⟩ = false ∧
+    Invarianten.Pruefer.atomicFreeB M99_825.e.P ⟨0, by decide⟩ = false := by
+  exact ⟨m99_824_cause, m99_824_checked, m99_825_cause, m99_825_checked,
+    by decide +kernel, by decide +kernel⟩
 
 /-- Omitting the actual source syntax is still refused. No default-true
     fallback has been introduced for an opaque semantic lock predicate. -/
