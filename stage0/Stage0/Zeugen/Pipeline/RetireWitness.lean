@@ -52,10 +52,14 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- Retire is checked; the full 256-value result still exceeds the local VC budget. -/
-theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
+/-- Uniform return and discarded-call certificates admit the unchanged source. -/
+theorem candidate_present : candidate.toOption.isSome = true := by
   kernel_rfl
+
+def output : Emitted text 256 := candidate.toOption.get candidate_present
+
+theorem accepted_image_zeuge : emit text 256 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
 
 /-- The unchanged source still elaborates with its real linear inventory. -/
 theorem unit_present : (uebersetzeAllg text).toOption.isSome = true := by kernel_rfl

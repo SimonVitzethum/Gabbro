@@ -6657,13 +6657,13 @@ Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
   `terminalReasonRetire_ok` (reason return), `ordinaryRetire_ok` (C16 ordinary consumption),
   `terminalMoveDropped_refused`, `borrowedRetire_refused`, `unheldRetire_refused`,
   `repeatedRetire_refused`, `handbackRetire_refused`.
-* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_refused` records the actual
-  strict refusal: the retire statement is outside the checked scalar/control fragment.
+* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_present` and
+  `accepted_image_zeuge` certify emission of the unchanged terminal-retire source.
   `unit_present`, `unit_shape` and `return_inventory` retain the actual frontend unit,
   terminal signatures, explicit retire and exact empty residual inventories.
   `retires_ghost` still states that generic `lowS` emits no instructions or extra scratch
   words for retire. `dropped_image_refused` and `borrowed_image_refused` retain the
-  genuine lowering refusals. No emitted image is claimed for the unsupported source.
+  genuine lowering refusals.
 * `ExportMetadata` admits only the plain nominal declaration `linear type Mark;` through the
   checked mark registry. It retains refusal of mint effects and ghost value types while the
   C08 software-call/root-once bridge is open (`mint_effect_metadata_refused`,
@@ -7563,9 +7563,15 @@ checker; this step does not provide entry snapshots or symbolic parameter gates.
 | `Witness.uniform_post_support_zeuge` | same | Postcondition support covers every decoded u32 result with expansion budget zero. |
 | `Witness.shared_call_results_zeuge` | same | A call with an inhabited full-width result and a real u32 argument accepts a shared continuation at budget zero, even when every specialization callback refuses. |
 | `Witness.uniform_wide_program_zeuge` | same | The actual contract gate accepts an acyclic two-function program with a real memory read and discarded u32 result at zero domain expansion and a four-case work budget. |
+| `RetireWitness.candidate_present`, `accepted_image_zeuge` | `stage0/Stage0/Zeugen/Pipeline/RetireWitness.lean` | The unchanged terminal-retire program passes the production compiler and has an emitted image. The old range-budget refusal is removed. |
 | `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Its work-budget premise now counts uniform returns and shared discarded-result calls once. Its successful execution-check conclusion is unchanged; the pool reader remains its joint witness. |
 
 `checkPostFormulas` returns support for every decoded result, so the existing
 refusal-composition statements retain their meaning. Acceptance still implies
 the same runtime WP and `ContractDuties`, including exclusion of local logic
 stops. No source execution counterexample is inferred from an abstract WP.
+
+`Fremdtor.Source.fremdFallible_fragment_refusal` now names the quantified
+foreign end-continuation gap reached after uniform post support, rather than
+the removed return-range precheck. Its source and refusal-composition claims
+are unchanged.

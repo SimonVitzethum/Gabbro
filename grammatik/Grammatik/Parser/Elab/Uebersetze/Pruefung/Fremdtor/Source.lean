@@ -1,6 +1,6 @@
 /- Exact source/lowering and Duty-check witnesses for C16 foreign gates.
    The strict checker accepts the unchanged void foreign statement and refuses
-   the wide fallible-result domain. Normal report completion and error-path Duty
+   the quantified fallible foreign continuation. Normal report completion and error-path Duty
    preservation remain separate model facts. The legacy axiom spelling also
    retains the front end's source-export refusal. -/
 module
@@ -306,12 +306,12 @@ private def fremdFallibleCanonical : Programm (declOf uFremdFallible) :=
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- Outside the decidable fragment: local observation type range exceeds the VC budget. -/
+/-- Uniform post support reaches the remaining quantified-oracle fragment gap. -/
 private theorem fremdFallible_fragment_refusal :
     (Vertraege.Pruefer.checkFunction fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
       (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
-      .error (.unsupported "local observation type range exceeds the VC budget") := by
-  decide +kernel
+      .error (.unsupported "contract oracle end binding needs quantified answer and poststate observations") := by
+  with_unfolding_all decide +kernel
 
 private theorem fremdFallibleCanonical_refused :
     AkzeptiertX fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
@@ -327,7 +327,7 @@ private theorem fremdFallibleCanonical_refused :
     (List.finRange uFremdFallible.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
 
--- The refusal collector is witnessed by the genuinely wide fallible result,
+-- The refusal collector is witnessed by the quantified foreign continuation,
 -- while the infallible void call above is accepted by the same checker.
 private theorem foreign_contracts_refused_zeuge :
     (⟨3, by decide⟩ : Fin uFremdFallible.fns.length) ∈ List.finRange uFremdFallible.fns.length ∧
