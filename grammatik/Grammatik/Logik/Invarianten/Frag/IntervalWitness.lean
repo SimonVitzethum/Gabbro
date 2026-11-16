@@ -88,6 +88,11 @@ theorem square_interval_valid :
 theorem intervalWP_zeuge : (intervalWP square .nil (.glob false) boundedPost).toOption.isSome = true := by
   simp only [intervalWP, square_interval_valid, ↓reduceDIte, Except.toOption, Option.isSome]
 
+/-- The production scalar dispatcher reaches the certified interval fallback. -/
+theorem scalarWP_zeuge : (scalarWP square .nil (.glob false) boundedPost).toOption.isSome = true := by
+  change (intervalWP square .nil (.glob false) boundedPost).toOption.isSome = true
+  exact intervalWP_zeuge
+
 /-- The same fixture has a well-typed model store, whose real successor world
     satisfies the decided postcondition. -/
 theorem interval_store_zeuge (world : World declaration) :
