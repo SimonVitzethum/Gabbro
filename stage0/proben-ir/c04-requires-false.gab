@@ -1,4 +1,4 @@
-// C04: the requires clause is false at use.
+// Refuse a transition call after storing 3 where its precondition requires 7.
 module c04_requires_false {
 table T count 2 { slot { s : u32 in 0 .. 2, v : u8, } }
 state S { transition begin { s : Idle -> Busy } requires T.slots[1].v == 7 effects { writes T.slots } }

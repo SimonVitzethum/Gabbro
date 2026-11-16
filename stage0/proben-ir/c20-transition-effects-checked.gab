@@ -1,0 +1,12 @@
+// A transition with declared effects is callable when the caller establishes its source state.
+module ir_transition_effects_checked {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S { transition begin { s : Idle -> Busy } effects { writes T.slots } }
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+    requires T.slots[1].s == 0
+{
+    transition T.slots[1].s : Idle -> Busy;
+    return T.slots[1].s;
+}
+}

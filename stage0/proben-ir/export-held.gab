@@ -1,3 +1,4 @@
+// Holding a lock does not establish that its protected value is 42.
 module ir_held {
 table T count 1 { slot { value : u32 in 0 .. 42, } }
 lock L protects { T } rank 1;

@@ -1,4 +1,4 @@
-// A nominal table space preserves the existing lock and memory-access duties.
+// A nominal table space does not make a held lock imply a protected value of 42.
 module named_space_held {
 table T count 1 space Data { slot { value : u32 in 0 .. 42, } }
 lock L protects { T } rank 1;
