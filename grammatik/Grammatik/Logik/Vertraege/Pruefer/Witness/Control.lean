@@ -90,4 +90,14 @@ theorem stored_seven_zeuge :
       (close_closed (writerMatrix .tru .tru storeCondition.formula)) = true := by
   decide +kernel
 
+def wideArguments : Env declaration [.int 0 (2 ^ 64 - 1)] :=
+  .cons ⟨7, by decide, by decide⟩ .nil
+
+/-- Returning a decoded 64-bit local compiles with a one-case budget; its
+    declared interval is never materialized or split into result branches. -/
+theorem return_local_without_enumeration_zeuge :
+    (returnCondition (program := increment) (S := SperrInv.leer declaration) (Λ := [])
+      1 (.val (.var .here)) wideArguments (fun _ => .ok .tru)).toOption.isSome = true := by
+  rfl
+
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness

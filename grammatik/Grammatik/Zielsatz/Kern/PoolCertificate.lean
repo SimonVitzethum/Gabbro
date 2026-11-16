@@ -70,24 +70,6 @@ theorem slotRelation_result (value : Wert zD scalar) :
 theorem slotRelation_meaning (value : Wert zD scalar) (values : Assignment (Observation zD)) :
     (slotRelation value).val.denote values ↔ values cell = number value := Iff.rfl
 
-abbrev variableExpr : Expr zD (scalar :: context) zL scalar := .var .here
-
-def varRelation (bound value : Wert zD scalar) :
-    { formula : LProp (Observation zD) // ∀ world,
-      formula.denote (assignment world) ↔
-        eval world variableExpr world (.cons bound arguments) = value } :=
-  ⟨.eq (.konst (number bound)) (.konst (number value)), fun _ =>
-    ⟨fun same => zahl_ext same, fun same => congrArg Zahl.n same⟩⟩
-
-theorem varRelation_result (bound value : Wert zD scalar) :
-    localEquality variableExpr (.cons bound arguments) value =
-      .ok (varRelation bound value) := by
-  simp only [localEquality, integerEquality, variableExpr]
-  rfl
-
-theorem varRelation_meaning (bound value : Wert zD scalar) (values : Assignment (Observation zD)) :
-    (varRelation bound value).val.denote values ↔ number bound = number value := Iff.rfl
-
 def invariants : InvariantFormula zPB (zD.invs.filter (schuldet zLies)) :=
   (invariantFormula zPB []).toOption.get (by rfl)
 
