@@ -159,8 +159,8 @@ private theorem retiring_wrapper_declared : retiringWrapper ∈ retiringCheck.ga
     Source, ordinary lowering and full admission hold jointly. -/
 theorem retiringU_accepted :
     AkzeptiertX retiringP (Cover.Differenz.sperrFamilie retiringU)
-      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = false :=
-  retiring_facts.refused
+      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = true :=
+  retiring_facts.accepted
 
 /-- The complete entry returns no physical Duty. -/
 theorem retiringDriver_empty_end :
