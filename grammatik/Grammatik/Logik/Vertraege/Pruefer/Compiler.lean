@@ -373,8 +373,9 @@ def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {coun
               rcases reason with ⟨ordinal, inside⟩
               cases ordinal with
               | zero => exact head.sound runtime world parts.1 allowed safe
-              | succ ordinal => exact tail.sound runtime world parts.2 allowed safe
-                  (show Fin remaining from ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩) }
+              | succ ordinal =>
+                  exact tail.sound runtime world parts.2 allowed safe
+                    (show Fin remaining from ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩) }
 termination_by fuel
 
 end
