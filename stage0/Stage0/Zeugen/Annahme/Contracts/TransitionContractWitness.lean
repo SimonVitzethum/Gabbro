@@ -44,17 +44,42 @@ set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
 
-/-- Recover the actual source contracts before the rejecting admission step. -/
-def sourceModel (source : String) : Except String (Σ u : UProg, Programm (declOf u)) := do
+/-- The actual scoped frontend output, before any dependent program getters. -/
+def sourceData (source : String) : Except String (List SItemTief × UProg) := do
   let parsed ← Frontend.source source {}
   let declarations := pre108 parsed.prepared.elaborierbar
   let unit ← (Frontend.elabWithScopes declarations
     parsed.scopes.values parsed.scopes.types parsed.scopes.functions
     (Frontend.tableWithEmpty parsed.scopes.values parsed.scopes.types)
     (widths := parsed.scopes.widths)).bind (Profil.selectUnit {})
-  let (raw, _) ← lowerAllg unit
-  let program ← OldSource.restore declarations unit raw
-  return ⟨unit, program⟩
+  return (declarations, unit)
+
+/-- Recover the actual source contracts before the rejecting admission step. -/
+def sourceModel (source : String) : Except String (Σ u : UProg, Programm (declOf u)) := do
+  let input ← sourceData source
+  let (raw, _) ← lowerAllg input.2
+  let program ← OldSource.restore input.1 input.2 raw
+  return ⟨input.2, program⟩
+
+/-- Successful lowering/restoration retains the actual frontend unit. -/
+theorem sourceModel_unit (source : String) (input : List SItemTief × UProg)
+    (parsed : sourceData source = .ok input)
+    (present : (sourceModel source).toOption.isSome = true) :
+    ((sourceModel source).toOption.get present).1 = input.2 := by
+  have emitted := except_ok_get present
+  unfold sourceModel at emitted
+  rw [parsed] at emitted
+  dsimp only [bind, Except.bind] at emitted
+  cases lowered : lowerAllg input.2 with
+  | error cause => simp only [lowered, bind, Except.bind, reduceCtorEq] at emitted
+  | ok pair =>
+    rcases pair with ⟨raw, functions⟩
+    simp only [lowered, bind, Except.bind] at emitted
+    cases restored : OldSource.restore input.1 input.2 raw with
+    | error cause => simp only [restored, bind, Except.bind, reduceCtorEq] at emitted
+    | ok program =>
+      simp only [restored, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at emitted
+      exact (congrArg Sigma.fst emitted).symm
 
 namespace Data
 
@@ -121,26 +146,26 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before refusal"
 
 theorem candidate_refused : candidate.toOption.isSome = false := by
   kernel_rfl
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before model"
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := { Data.sourceUnit false with merk := model.1.merk }
+theorem data_present : (sourceData text).toOption.isSome = true := by kernel_rfl
+def input : List SItemTief × UProg := (sourceData text).toOption.get data_present
+def unit : UProg := { Data.sourceUnit false with merk := input.2.merk }
+theorem data_unit : input.2 = unit := by kernel_rfl
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality false"
 
-theorem model_unit : model.1 = unit := by kernel_rfl
+theorem model_unit : model.1 = unit :=
+  (sourceModel_unit text input (except_ok_get data_present) model_present).trans data_unit
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before world"
 
 attribute [local irreducible] unit
 
@@ -173,7 +198,6 @@ def transitionArguments : Env (declOf unit) ((declOf unit).params transitionInde
   transition_params.symm ▸ .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩ .nil
 
 /-- The caller admits Busy=1, while its real transition callee requires Idle=0. -/
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before counterexample"
 
 theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArguments ∧
     ¬ ReqAmEintritt program transitionIndex busyWorld transitionArguments := by
@@ -187,7 +211,15 @@ theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArg
     rw [blocked] at accepted
     cases accepted
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A complete"
+
+/-- Both producer premises hold jointly on two real source functions. -/
+theorem sourceModel_unit_zeuge : sourceData text = .ok input ∧
+    (sourceModel text).toOption.isSome = true ∧ model.1 = input.2 ∧
+    input.2.fns.length = 2 := by
+  refine ⟨except_ok_get data_present, model_present,
+    sourceModel_unit text input (except_ok_get data_present) model_present, ?_⟩
+  rw [data_unit]
+  kernel_rfl
 
 namespace Ordered
 
@@ -196,12 +228,15 @@ def text : String :=
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := { Data.sourceUnit true with merk := model.1.merk }
+theorem data_present : (sourceData text).toOption.isSome = true := by kernel_rfl
+def input : List SItemTief × UProg := (sourceData text).toOption.get data_present
+def unit : UProg := { Data.sourceUnit true with merk := input.2.merk }
+theorem data_unit : input.2 = unit := by kernel_rfl
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality true"
 
 -- Retain the source's original cache together with the exact data fields.
-theorem model_unit : model.1 = unit := by kernel_rfl
+theorem model_unit : model.1 = unit :=
+  (sourceModel_unit text input (except_ok_get data_present) model_present).trans data_unit
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
