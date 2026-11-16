@@ -23,6 +23,10 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
+import all Grammatik.Logik.Vertraege.Pruefer.Program
+import all Grammatik.Logik.Vertraege.Pruefer.Duties
+import all Grammatik.Logik.Vertraege.Pruefer.Basic
+import all Grammatik.Logik.Invarianten.Pruefer.Locks
 import all Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem.Teil1
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
