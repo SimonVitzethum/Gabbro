@@ -1,1 +1,1 @@
-function contract: false VC; counterexample in observation order = [0, 0, 0]; parameters = []
+outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []

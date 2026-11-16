@@ -136,10 +136,9 @@ def compileChecked (source : Frontend.Source text options)
           match hr : OldSource.restore declarations unit raw with
           | .error e => throw e
           | .ok program => do
-            match ha : OldSource.accepts unit program main with
-            | .error e => throw e
-            | .ok false => throw "refused by the checker (AkzeptiertX)"
-            | .ok true => do
+            -- Source bounds have their own exact diagnostics, independent of
+            -- whether the logical checker can encode the result type.
+            do
               match hv : CostBinding.unvalued gateMembers with
               | some name => throw ("declared cost is no constant expression: " ++ name)
               | none =>
@@ -160,7 +159,11 @@ def compileChecked (source : Frontend.Source text options)
                   ((ForeverBinding.failing (ForeverBinding.declared gateMembers)
                     (CostBinding.declared gateMembers) unit program irDurchlaeufe).getD "?") ++
                   " has a forever body over its bound, or one that calls a function without a declared cost")
-              | true => pure {
+              | true =>
+              match ha : OldSource.accepts unit program main with
+              | .error e => throw e
+              | .ok false => throw "refused by the checker (AkzeptiertX)"
+              | .ok true => pure {
                 source := source
                 unit := unit
                 main := main

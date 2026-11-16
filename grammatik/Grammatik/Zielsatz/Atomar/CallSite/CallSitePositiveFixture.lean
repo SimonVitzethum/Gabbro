@@ -15,7 +15,8 @@ def decl : Deklaration :=
   { Gabbro.Grammatik.CallSiteZeuge.decl with
     sigNr := fun _ => { Gabbro.Grammatik.CallSiteZeuge.sig with erg := some .bool }
     passt := fun _ _ => false
-    passt_ok := fun _ _ impossible => by cases impossible }
+    passt_ok := fun _ _ impossible => by cases impossible
+    rzusage := fun item => nomatch item }
 
 instance : DecidableEq decl.Fn := inferInstanceAs (DecidableEq Unit)
 instance : DecidableEq decl.Ax := inferInstanceAs (DecidableEq Unit)
