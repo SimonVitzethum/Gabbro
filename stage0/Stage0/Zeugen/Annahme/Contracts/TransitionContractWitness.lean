@@ -63,10 +63,9 @@ def sourceModel (source : String) : Except String (Σ u : UProg, Programm (declO
 
 /-- Successful lowering/restoration retains the actual frontend unit. -/
 theorem sourceModel_unit (source : String) (input : List SItemTief × UProg)
+    (output : Σ u : UProg, Programm (declOf u))
     (parsed : sourceData source = .ok input)
-    (present : (sourceModel source).toOption.isSome = true) :
-    ((sourceModel source).toOption.get present).1 = input.2 := by
-  have emitted := except_ok_get present
+    (emitted : sourceModel source = .ok output) : output.1 = input.2 := by
   unfold sourceModel at emitted
   rw [parsed] at emitted
   dsimp only [bind, Except.bind] at emitted
@@ -160,7 +159,7 @@ theorem data_unit : input.2 = unit := by kernel_rfl
 
 
 theorem model_unit : model.1 = unit :=
-  (sourceModel_unit text input (except_ok_get data_present) model_present).trans data_unit
+  (sourceModel_unit text input model (except_ok_get data_present) (except_ok_get model_present)).trans data_unit
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
@@ -217,7 +216,7 @@ theorem sourceModel_unit_zeuge : sourceData text = .ok input ∧
     (sourceModel text).toOption.isSome = true ∧ model.1 = input.2 ∧
     input.2.fns.length = 2 := by
   refine ⟨except_ok_get data_present, model_present,
-    sourceModel_unit text input (except_ok_get data_present) model_present, ?_⟩
+    sourceModel_unit text input model (except_ok_get data_present) (except_ok_get model_present), ?_⟩
   rw [data_unit]
   kernel_rfl
 
@@ -236,7 +235,7 @@ theorem data_unit : input.2 = unit := by kernel_rfl
 
 -- Retain the source's original cache together with the exact data fields.
 theorem model_unit : model.1 = unit :=
-  (sourceModel_unit text input (except_ok_get data_present) model_present).trans data_unit
+  (sourceModel_unit text input model (except_ok_get data_present) (except_ok_get model_present)).trans data_unit
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
