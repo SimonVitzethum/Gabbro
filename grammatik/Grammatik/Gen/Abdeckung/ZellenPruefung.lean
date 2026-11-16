@@ -97,7 +97,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     those cells. Re-pinned after sharing decoded selections across contract
     bindings, assignments and arguments and matching the specialization scan
     to shared discarded-call continuations. These are VC implementation
-    changes; the numbered components, reset cell and `komp` remain unchanged. -/
+    changes; the numbered components, reset cell and `komp` remain unchanged.
+    The continuation-cost scan now charges tails only on reaching paths;
+    this changes the VC work gate, with no numbered cell change. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -110,7 +112,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 12056904869331888121)]
+   ("AkzeptiertX", 8822951950368130626)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

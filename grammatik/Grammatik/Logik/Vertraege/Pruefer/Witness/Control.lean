@@ -66,6 +66,13 @@ theorem retry_safe_zeuge :
 theorem specialization_product_zeuge :
     argumentSpecializations 100 [.int 0 10, .int 0 10] = 101 := by decide
 
+/-- One branch returns its input; only the other reaches the twenty-case
+    continuation. The early return is not multiplied by that continuation. -/
+def conditionalReturn : Stmt declaration contract false [.int 1 11] [] [] :=
+  .ite .tru (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) .nil
+
+theorem continuation_cost_zeuge : statementSpecializations 100 20 conditionalReturn = 21 := rfl
+
 def writerContract : Vertrag declaration := { contract with schreibt := fun _ => true }
 
 def storedSeven : Stmt declaration writerContract false [.int 0 10] [] [] :=
