@@ -165,6 +165,7 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .prodSet body field replacement =>
       foldBinary (prodSetW field) (constantValue body locals) (constantValue replacement locals)
   | _ => none
+termination_by structural expression
 
 
 def constantFields (fields : Args D Γ Λ types) (locals : Env D Γ) :
@@ -174,6 +175,7 @@ def constantFields (fields : Args D Γ Λ types) (locals : Env D Γ) :
   | .nil => some ⟨(), fun _ => rfl⟩
   | .cons head tail =>
       foldBinary Prod.mk (constantValue head locals) (constantFields tail locals)
+termination_by structural fields
 
 def constantPayload (payload : NutzlastExpr D Γ Λ type) (locals : Env D Γ) :
     Option { value : Nutzlast D.Fn D.passt type //
@@ -181,6 +183,7 @@ def constantPayload (payload : NutzlastExpr D Γ Λ type) (locals : Env D Γ) :
   match payload with
   | .empty => some ⟨(), fun _ => rfl⟩
   | .val expression => constantValue expression locals
+termination_by structural payload
 
 end
 
