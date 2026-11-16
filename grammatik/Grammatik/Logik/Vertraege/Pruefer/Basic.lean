@@ -163,10 +163,10 @@ mutual
     atomic semantics for every read environment, without replaying SC reads.
     Only source-reified literal-true locks are admitted; program calls and potentially failing forms remain excluded.
     A typed oracle answer is checked through its entire continuation. -/
-def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (fuel : Nat) → (code : Stmt D V l Γ Λ Λ') → Option (PLift (StatementSafe S code))
-  | 0, _ => none
-  | fuel + 1, code => match code with
+def statement (S : SperrInv D) (sources : LockSources S) :
+    (fuel : Nat) → {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (code : Stmt D V l Γ Λ Λ') → Option (PLift (StatementSafe S code))
+  | 0, _, _, _, _, _ => none
+  | fuel + 1, _, _, _, _, code => match code with
     | .assignSlot .. | .assignThru .. | .assignThruOwn .. | .assignSlotRef ..
       | .assignGlob .. | .assignVar .. | .putBytes .. | .publish ..
       | .regWrite .. | .transition .. | .advances .. | .retires ..
@@ -237,10 +237,10 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
           simpa only [result, StatementResult] using valid⟩
     | _ => none
 
-def block (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (fuel : Nat) → (code : Block D V l Γ Λ Λ') → Option (PLift (BlockSafe S code))
-  | 0, _ => none
-  | fuel + 1, code => match code with
+def block (S : SperrInv D) (sources : LockSources S) :
+    (fuel : Nat) → {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (code : Block D V l Γ Λ Λ') → Option (PLift (BlockSafe S code))
+  | 0, _, _, _, _, _ => none
+  | fuel + 1, _, _, _, _, code => match code with
     | .nil => some ⟨fun _ _ _ _ _ _ _ => trivial⟩
     | .cons head tail => do
         let headChecked ← statement S sources fuel head
@@ -329,10 +329,10 @@ def block (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ �
           · exact end_statement _ (failed.down O U A passes R _ locals)⟩
     | _ => none
 
-def ending (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
-    (fuel : Nat) → (code : Endblock D V l Γ Λ) → Option (PLift (EndSafe S code))
-  | 0, _ => none
-  | fuel + 1, code => match code with
+def ending (S : SperrInv D) (sources : LockSources S) :
+    (fuel : Nat) → {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → (code : Endblock D V l Γ Λ) → Option (PLift (EndSafe S code))
+  | 0, _, _, _, _ => none
+  | fuel + 1, _, _, _, code => match code with
     | .ret .. | .retWhy .. | .leave .. | .next .. =>
         some ⟨fun _ _ _ _ _ _ _ => trivial⟩
     | .retScoped expression cleanup => do
