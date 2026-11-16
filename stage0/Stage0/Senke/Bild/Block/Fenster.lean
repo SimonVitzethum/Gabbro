@@ -71,7 +71,7 @@ theorem BlockFenster.ziel [DecidableEq D.Fn] {B : BodyFrame D}
     hOk, sI, hl1, hI, sN, hl2, hN2, hout⟩ := h
   have hr1 := rufErreichbar_lauf hl1 hM
   have hr2 := rufErreichbar_lauf hl2 hM
-  have hRuf := rufOk_gleich_tiefAlle (P := B.P) (passes := B.passes) thr Agl j
+  have hRuf := rufOk_gleich_tiefAlle (P := B.P) (O := B.O) (passes := B.passes) thr Agl j
   have hkC' : Zerlegung (rumpfRahmen B.L B.O B.passes B.P B.A B.C Lm j g fpc Kc Ksc rpc B.fp
       σc ρc B.H ensc) Agl (TiefAlle B.P Agl j) (B.P.rumpf g) σc ρc ebe σe ρe :=
     zerlegung_rahmen hkC
