@@ -8,11 +8,34 @@ namespace Gabbro.Grammatik.Invarianten.Frag
 
 variable {D : Deklaration}
 
-theorem constantBinaryCongr (operation : α → β → γ) {a a' : α} {b b' : β}
-    (left : a = a') (right : b = b') : operation a b = operation a' b' := by
-  cases left
-  cases right
-  rfl
+/-- Share exact constant propagation and its semantic proof across operations. -/
+def foldUnary (operation : α → β) {source : κ → α}
+    (argument : Option { value : α // ∀ context, source context = value }) :
+    Option { value : β // ∀ context, operation (source context) = value } := do
+  let value ← argument
+  return ⟨operation value.val, fun context => congrArg operation (value.property context)⟩
+
+def foldBinary (operation : α → β → γ) {left : κ → α} {right : κ → β}
+    (a : Option { value : α // ∀ context, left context = value })
+    (b : Option { value : β // ∀ context, right context = value }) :
+    Option { value : γ // ∀ context, operation (left context) (right context) = value } := do
+  let a ← a
+  let b ← b
+  return ⟨operation a.val b.val, fun context => by
+    rw [a.property context, b.property context]⟩
+
+def foldTernary (operation : α → β → γ → δ)
+    {first : κ → α} {second : κ → β} {third : κ → γ}
+    (a : Option { value : α // ∀ context, first context = value })
+    (b : Option { value : β // ∀ context, second context = value })
+    (c : Option { value : γ // ∀ context, third context = value }) :
+    Option { value : δ // ∀ context,
+      operation (first context) (second context) (third context) = value } := do
+  let a ← a
+  let b ← b
+  let c ← c
+  return ⟨operation a.val b.val c.val, fun context => by
+    rw [a.property context, b.property context, c.property context]⟩
 
 mutual
 
@@ -28,135 +51,77 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .var name => some ⟨locals.get name, fun _ => rfl⟩
   | .ptrOf .. => some ⟨(), fun _ => rfl⟩
   | .fnref f _ conforms => some ⟨⟨f, conforms⟩, fun _ => rfl⟩
-  | .widen lower upper body => do
-      let value ← constantValue body locals
-      return ⟨Zahl.weiter lower upper value.val, fun world => congrArg _ (value.property world)⟩
-  | .add left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.add a.val b.val, fun world => constantBinaryCongr Zahl.add (a.property world) (b.property world)⟩
-  | .sub left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.sub a.val b.val, fun world => constantBinaryCongr Zahl.sub (a.property world) (b.property world)⟩
-  | .mul left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.mul a.val b.val, fun world => constantBinaryCongr Zahl.mul (a.property world) (b.property world)⟩
-  | .neg body => do
-      let value ← constantValue body locals
-      return ⟨Zahl.neg value.val, fun world => congrArg _ (value.property world)⟩
-  | .div nonzero positive left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.div nonzero positive a.val b.val, fun world => constantBinaryCongr (Zahl.div nonzero positive) (a.property world) (b.property world)⟩
-  | .rem nonzero positive left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.rem nonzero positive a.val b.val, fun world => constantBinaryCongr (Zahl.rem nonzero positive) (a.property world) (b.property world)⟩
-  | .sdiv nonzero left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.sdiv nonzero a.val b.val, fun world => constantBinaryCongr (Zahl.sdiv nonzero) (a.property world) (b.property world)⟩
-  | .srem nonzero left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.srem nonzero a.val b.val, fun world => constantBinaryCongr (Zahl.srem nonzero) (a.property world) (b.property world)⟩
-  | .band lower lower' left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.band lower lower' a.val b.val, fun world => constantBinaryCongr (Zahl.band lower lower') (a.property world) (b.property world)⟩
-  | .bor width lower lower' upper upper' left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.bor width lower lower' upper upper' a.val b.val, fun world => constantBinaryCongr (Zahl.bor width lower lower' upper upper') (a.property world) (b.property world)⟩
-  | .bxor width lower lower' upper upper' left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.bxor width lower lower' upper upper' a.val b.val, fun world => constantBinaryCongr (Zahl.bxor width lower lower' upper upper') (a.property world) (b.property world)⟩
-  | .shl width upper upper' lower lower' left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.shl width upper upper' lower lower' a.val b.val, fun world => constantBinaryCongr (Zahl.shl width upper upper' lower lower') (a.property world) (b.property world)⟩
-  | .shr width upper upper' lower lower' left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨Zahl.shr width upper upper' lower lower' a.val b.val, fun world => constantBinaryCongr (Zahl.shr width upper upper' lower lower') (a.property world) (b.property world)⟩
-  | .lt left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨decide (a.val.n < b.val.n), fun world => constantBinaryCongr ((fun a b => decide (Zahl.n a < Zahl.n b))) (a.property world) (b.property world)⟩
-  | .le left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨decide (a.val.n ≤ b.val.n), fun world => constantBinaryCongr ((fun a b => decide (Zahl.n a ≤ Zahl.n b))) (a.property world) (b.property world)⟩
-  | .eq left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨decide (a.val.n = b.val.n), fun world => constantBinaryCongr ((fun a b => decide (Zahl.n a = Zahl.n b))) (a.property world) (b.property world)⟩
-  | .and left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨wahr? a.val && wahr? b.val, fun world => constantBinaryCongr ((fun a b => wahr? a && wahr? b)) (a.property world) (b.property world)⟩
-  | .or left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨wahr? a.val || wahr? b.val, fun world => constantBinaryCongr ((fun a b => wahr? a || wahr? b)) (a.property world) (b.property world)⟩
-  | .not body => do
-      let value ← constantValue body locals
-      return ⟨!wahr? value.val, fun world => congrArg _ (value.property world)⟩
+  | .widen lower upper body =>
+      foldUnary (fun argument => Zahl.weiter lower upper argument) (constantValue body locals)
+  | .add left right =>
+      foldBinary Zahl.add (constantValue left locals) (constantValue right locals)
+  | .sub left right =>
+      foldBinary Zahl.sub (constantValue left locals) (constantValue right locals)
+  | .mul left right =>
+      foldBinary Zahl.mul (constantValue left locals) (constantValue right locals)
+  | .neg body =>
+      foldUnary (fun argument => Zahl.neg argument) (constantValue body locals)
+  | .div nonzero positive left right =>
+      foldBinary (Zahl.div nonzero positive) (constantValue left locals) (constantValue right locals)
+  | .rem nonzero positive left right =>
+      foldBinary (Zahl.rem nonzero positive) (constantValue left locals) (constantValue right locals)
+  | .sdiv nonzero left right =>
+      foldBinary (Zahl.sdiv nonzero) (constantValue left locals) (constantValue right locals)
+  | .srem nonzero left right =>
+      foldBinary (Zahl.srem nonzero) (constantValue left locals) (constantValue right locals)
+  | .band lower lower' left right =>
+      foldBinary (Zahl.band lower lower') (constantValue left locals) (constantValue right locals)
+  | .bor width lower lower' upper upper' left right =>
+      foldBinary (Zahl.bor width lower lower' upper upper') (constantValue left locals) (constantValue right locals)
+  | .bxor width lower lower' upper upper' left right =>
+      foldBinary (Zahl.bxor width lower lower' upper upper') (constantValue left locals) (constantValue right locals)
+  | .shl width upper upper' lower lower' left right =>
+      foldBinary (Zahl.shl width upper upper' lower lower') (constantValue left locals) (constantValue right locals)
+  | .shr width upper upper' lower lower' left right =>
+      foldBinary (Zahl.shr width upper upper' lower lower') (constantValue left locals) (constantValue right locals)
+  | .lt left right =>
+      foldBinary ((fun a b => decide (Zahl.n a < Zahl.n b))) (constantValue left locals) (constantValue right locals)
+  | .le left right =>
+      foldBinary ((fun a b => decide (Zahl.n a ≤ Zahl.n b))) (constantValue left locals) (constantValue right locals)
+  | .eq left right =>
+      foldBinary ((fun a b => decide (Zahl.n a = Zahl.n b))) (constantValue left locals) (constantValue right locals)
+  | .and left right =>
+      foldBinary ((fun a b => wahr? a && wahr? b)) (constantValue left locals) (constantValue right locals)
+  | .or left right =>
+      foldBinary ((fun a b => wahr? a || wahr? b)) (constantValue left locals) (constantValue right locals)
+  | .not body =>
+      foldUnary (fun argument => !wahr? argument) (constantValue body locals)
   | .none _ => some ⟨none, fun _ => rfl⟩
-  | .some body => do
-      let value ← constantValue body locals
-      return ⟨some value.val, fun world => congrArg _ (value.property world)⟩
-  | .istSome body => do
-      let value ← constantValue body locals
-      return ⟨value.val.isSome, fun world => congrArg _ (value.property world)⟩
-  | .case cases index payload => do
-      let value ← constantPayload payload locals
-      return ⟨⟨index, Fall.ofNutzlast _ _ _ _ value.val⟩, fun world => by
-        change (⟨index, Fall.ofNutzlast _ _ _ _ (evalNutz world payload world locals)⟩ :
-          Wert D (.sum cases)) = _
-        rw [value.property world]⟩
+  | .some body =>
+      foldUnary (fun argument => some argument) (constantValue body locals)
+  | .istSome body =>
+      foldUnary Option.isSome (constantValue body locals)
+  | .case cases index payload =>
+      foldUnary (fun value => (⟨index, Fall.ofNutzlast _ _ _ _ value⟩ : Wert D (.sum cases)))
+        (constantPayload payload locals)
   | .why _ reason => some ⟨reason, fun _ => rfl⟩
   | .arrNil => some ⟨fun index => index.elim0, fun _ => rfl⟩
-  | .arrCons head tail => do
-      let a ← constantValue head locals
-      let b ← constantValue tail locals
-      return ⟨arrConsW a.val b.val, fun world => constantBinaryCongr arrConsW (a.property world) (b.property world)⟩
-  | .arrGet array index => do
-      let a ← constantValue array locals
-      let i ← constantValue index locals
-      return ⟨a.val i.val.fin, fun world => by simp only [eval, a.property world, i.property world] <;> rfl⟩
-  | .arrSet array index value => do
-      let a ← constantValue array locals
-      let i ← constantValue index locals
-      let v ← constantValue value locals
-      return ⟨arrSetW a.val i.val.fin v.val, fun world => by
-        simp only [eval, a.property world, i.property world, v.property world] <;> rfl⟩
+  | .arrCons head tail =>
+      foldBinary arrConsW (constantValue head locals) (constantValue tail locals)
+  | .arrGet array index =>
+      foldBinary (fun a i => a (Zahl.fin i)) (constantValue array locals) (constantValue index locals)
+  | .arrSet array index value =>
+      foldTernary (fun a i v => arrSetW a (Zahl.fin i) v)
+        (constantValue array locals) (constantValue index locals) (constantValue value locals)
   | .strLit bytes bounded => some ⟨⟨bytes, bounded⟩, fun _ => rfl⟩
-  | .strLen body => do
-      let value ← constantValue body locals
-      return ⟨strLenW value.val, fun world => congrArg _ (value.property world)⟩
-  | .strCat left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨strCatW a.val b.val, fun world => constantBinaryCongr strCatW (a.property world) (b.property world)⟩
-  | .strGet string index => do
-      let s ← constantValue string locals
-      let i ← constantValue index locals
-      return ⟨strGetW s.val i.val.n, fun world => by simp only [eval, s.property world, i.property world] <;> rfl⟩
-  | .strEq left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨strEqW a.val b.val, fun world => constantBinaryCongr strEqW (a.property world) (b.property world)⟩
-  | .strLt left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨strLtW a.val b.val, fun world => constantBinaryCongr strLtW (a.property world) (b.property world)⟩
-  | .strWeit capacity body => do
-      let value ← constantValue body locals
-      return ⟨strWeitW capacity value.val, fun world => congrArg _ (value.property world)⟩
+  | .strLen body =>
+      foldUnary (fun argument => strLenW argument) (constantValue body locals)
+  | .strCat left right =>
+      foldBinary strCatW (constantValue left locals) (constantValue right locals)
+  | .strGet string index =>
+      foldBinary (fun s i => strGetW s (Zahl.n i))
+        (constantValue string locals) (constantValue index locals)
+  | .strEq left right =>
+      foldBinary strEqW (constantValue left locals) (constantValue right locals)
+  | .strLt left right =>
+      foldBinary strLtW (constantValue left locals) (constantValue right locals)
+  | .strWeit capacity body =>
+      foldUnary (fun argument => strWeitW capacity argument) (constantValue body locals)
   | .wenn test positive negative => do
       let guard ← constantValue test locals
       if chosen : wahr? guard.val = true then
@@ -189,44 +154,32 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
           have evaluated : eval world (.eng body lower upper fallback) world locals =
               eval world fallback world locals := dif_neg actual
           exact evaluated.trans (alternative.property world)⟩
-  | .intBuiltin1 operation body => do
-      let value ← constantValue body locals
-      return ⟨evalIntBuiltin1 operation value.val, fun world => congrArg _ (value.property world)⟩
-  | .intBuiltin2 operation left right => do
-      let a ← constantValue left locals
-      let b ← constantValue right locals
-      return ⟨evalIntBuiltin2 operation a.val b.val, fun world => constantBinaryCongr (evalIntBuiltin2 operation) (a.property world) (b.property world)⟩
-  | .prod _ fields => do
-      let values ← constantFields fields locals
-      return ⟨values.val, fun world => by simp only [eval, values.property world] <;> rfl⟩
-  | .prodGet body field => do
-      let value ← constantValue body locals
-      return ⟨prodGetW field value.val, fun world => congrArg _ (value.property world)⟩
-  | .prodSet body field replacement => do
-      let value ← constantValue body locals
-      let next ← constantValue replacement locals
-      return ⟨prodSetW field value.val next.val, fun world => by
-        simp only [eval, value.property world, next.property world] <;> rfl⟩
+  | .intBuiltin1 operation body =>
+      foldUnary (fun argument => evalIntBuiltin1 operation argument) (constantValue body locals)
+  | .intBuiltin2 operation left right =>
+      foldBinary (evalIntBuiltin2 operation) (constantValue left locals) (constantValue right locals)
+  | .prod _ fields => constantFields fields locals
+  | .prodGet body field =>
+      foldUnary (fun argument => prodGetW field argument) (constantValue body locals)
+  | .prodSet body field replacement =>
+      foldBinary (prodSetW field) (constantValue body locals) (constantValue replacement locals)
   | _ => none
+
 
 def constantFields (fields : Args D Γ Λ types) (locals : Env D Γ) :
     Option { values : ProdVal D.Fn D.passt types //
       ∀ world, evalProd world fields world locals = values } :=
   match fields with
   | .nil => some ⟨(), fun _ => rfl⟩
-  | .cons head tail => do
-      let a ← constantValue head locals
-      let b ← constantFields tail locals
-      return ⟨(a.val, b.val), fun world => by simp only [evalProd, a.property world, b.property world] <;> rfl⟩
+  | .cons head tail =>
+      foldBinary Prod.mk (constantValue head locals) (constantFields tail locals)
 
 def constantPayload (payload : NutzlastExpr D Γ Λ type) (locals : Env D Γ) :
     Option { value : Nutzlast D.Fn D.passt type //
       ∀ world, evalNutz world payload world locals = value } :=
   match payload with
   | .empty => some ⟨(), fun _ => rfl⟩
-  | .val expression => do
-      let value ← constantValue expression locals
-      return ⟨value.val, fun world => by simp only [evalNutz, value.property world] <;> rfl⟩
+  | .val expression => constantValue expression locals
 
 end
 

@@ -50,6 +50,7 @@ inductive Refusal where
   | unsupported (ctorName : String)
   | within (part : String) (cause : Refusal)
   | invalid (detail : String)
+  | outsideFragment (reason : String)
   deriving DecidableEq, Repr
 
 def Refusal.message : Refusal → String
@@ -60,6 +61,7 @@ def Refusal.message : Refusal → String
   | .invalid detail => detail
   | .unsupported ctorName => "unsupported invariant constructor: " ++ ctorName
   | .within part cause => part ++ ": " ++ cause.message
+  | .outsideFragment reason => "outside the decidable fragment: " ++ reason
 
 /-- Encodings exist for integers, Boolean predicates, and string lengths only. -/
 def Payload (D : Deklaration) : Ty → Type

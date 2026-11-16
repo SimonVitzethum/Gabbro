@@ -97,8 +97,7 @@ def intervalWP (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ)
           (eval world expression world locals).n
           (eval world expression world locals).lo_le
           (eval world expression world locals).le_hi }
-  else .error (.unsupported
-    "outside the decidable fragment: integer interval abstraction does not establish the VC")
+  else .error (.outsideFragment "integer interval abstraction does not establish the VC")
 
 /-- Backward substitution for stores, including the model's explicit narrowing
     fallback. Both arms are checked. The fallback is never treated as unreachable

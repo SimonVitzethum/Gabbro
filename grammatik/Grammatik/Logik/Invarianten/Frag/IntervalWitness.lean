@@ -92,9 +92,9 @@ private theorem impossible_interval :
 /-- Failed abstraction is refused before the concrete counterexample printer.
     It cannot report the independent interval variable as a real product. -/
 theorem intervalWP_refused_zeuge :
-    (intervalWP square .nil (.glob false) .fls).toOption.isSome = false := by
-  simp only [intervalWP, impossible_interval, Bool.false_eq_true, ↓reduceDIte,
-    Except.toOption, Option.isSome]
+    intervalWP square .nil (.glob false) .fls =
+      .error (.outsideFragment "integer interval abstraction does not establish the VC") := by
+  simp only [intervalWP, impossible_interval, Bool.false_eq_true, ↓reduceDIte]
 
 #print axioms u32_decided_zeuge
 #print axioms intervalWP_zeuge
