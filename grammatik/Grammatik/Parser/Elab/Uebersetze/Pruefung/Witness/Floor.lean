@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
@@ -84,6 +85,17 @@ public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
+  Vertraege.Pruefer.checkFunction
+
+-- Check each retained producer at its actual index before reducing contracts.
+local macro "floor_contract_functions" : tactic => `(tactic| (
+  rintro ⟨index, bound⟩
+  have small : index < 4 := bound
+  have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 := by omega
+  rcases choices with h | h | h | h <;> subst index <;>
+    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)))
 
 -- The emitted source stays unchanged; these proof equations select its real callbacks.
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
@@ -264,6 +276,11 @@ attribute [local cbv_eval] floorPassing_program floorPassing_checks
 -- These are computed only on the certified unit/program/check results above.
 private theorem floorPassing_facts : CheckWitness floorPassingUnitMade.val 1 := by
   constructor <;> cbv
+  simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  constructor
+  · cbv
+  · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+    floor_contract_functions
 
 end floorPassingAssembly
 
@@ -428,6 +445,11 @@ attribute [local cbv_eval] floorFailing_program floorFailing_checks
 -- These are computed only on the certified unit/program/check results above.
 private theorem floorFailing_facts : CheckWitness floorFailingUnitMade.val 1 := by
   constructor <;> cbv
+  simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  constructor
+  · cbv
+  · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+    floor_contract_functions
 
 end floorFailingAssembly
 

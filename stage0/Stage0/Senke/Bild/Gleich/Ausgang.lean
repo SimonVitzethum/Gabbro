@@ -119,6 +119,7 @@ theorem paarLG_axiomAntwort {O : Orakel D} (hO : LeseblindW O) (a : D.Ax) {σ σ
     PaarLG (axiomAntwort O a σ x) (axiomAntwort O a σ' x) := by
   have hw := hO a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
   unfold axiomAntwort
+  simp only [Boundary.Check.trivial_requiredB, Bool.false_eq_true, ↓reduceIte]
   generalize O.wirkt a (σ.fragt (.inl a)) x = A at hw ⊢
   generalize O.wirkt a (σ'.fragt (.inl a)) x = B at hw ⊢
   obtain ⟨σA, rA⟩ := A
@@ -135,6 +136,8 @@ theorem paarLG_axiomAntwortSonst {O : Orakel D} (hO : LeseblindW O) (a : D.Ax) {
     PaarLG (axiomAntwortSonst O a σ x) (axiomAntwortSonst O a σ' x) := by
   have hw := hO a (σ.fragt (.inl a)) (σ'.fragt (.inl a)) x (h.fragt (.inl a))
   unfold axiomAntwortSonst
+  simp only [Boundary.Check.trivial_requiredB, Option.isSome_none, Bool.false_or,
+    Bool.false_eq_true, ↓reduceIte]
   generalize O.wirkt a (σ.fragt (.inl a)) x = A at hw ⊢
   generalize O.wirkt a (σ'.fragt (.inl a)) x = B at hw ⊢
   obtain ⟨σA, rA⟩ := A
