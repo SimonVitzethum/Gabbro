@@ -52,9 +52,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- Outside the decidable fragment: full-width unsigned local observations. -/
+/-- Full-width call-result specialization exceeds the checked work budget. -/
 theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
+    "unsupported invariant constructor: contract VC specialization product exceeds the work budget" := by
   kernel_rfl
 
 /-- Source elaboration still retains the exact relational narrowing. -/

@@ -7353,7 +7353,7 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 | `FieldNarrowingWitness.first_write_emitted_zeuge` | same | Narrowing a u64 field permits its first compound increment, with later reads at the record's declared type. |
 | `FieldNarrowingWitness.indexed_store_emitted_zeuge`, `stale_store_refused_zeuge` | same | A narrowed field indexes an actual table write; mutation of the record before that write invalidates the index fact and is refused. |
 | `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
-| `U64DifferenceWitness.candidate_refused` | `U64DifferenceWitness.lean` | The unchanged full-width source is refused because its local observation range exceeds the VC budget. |
+| `U64DifferenceWitness.candidate_refused` | `U64DifferenceWitness.lean` | The unchanged full-width source is refused by the specialization work budget for its full-width call results. |
 | `U64DifferenceWitness.unit_present` | same | The actual scoped frontend still elaborates the unchanged source before admission. No emitted image is claimed. |
 | `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
 | `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
