@@ -90,6 +90,7 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     Re-pinned for the approved option-indexed foreign-binder totality certificate:
     both continuations are certified for every environment, including void results.
     No strict VC rule, numbered component or cell data changed.
+<<<<<<< HEAD
     Re-pinned 2026-11-16 after extending the contract control fragment,
     structural totality and decoded-local returns. The VC implementation and
     its work-budget preflight changed; the numbered components and reset cell
@@ -104,6 +105,12 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     and equation layout, preserving its cases and semantic certificates.
     Loop constructor dispatch is disjoint; the inner invariant/count matches
     preserve the same certificates without dependent overlap assumptions. -/
+=======
+    Re-pinned after reviewing constant local bindings and integer interval stores:
+    both extend the proved VC gates outside the numbered cell table. The eleven
+    cell formulas and their atoms remain unchanged; acceptance still conjoins
+    both VC gates, as stated by `akzeptiertX_zellen`. -/
+>>>>>>> 3e38456b1c3aa0d3da43ee2535af9f2749356bad
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -116,7 +123,11 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
+<<<<<<< HEAD
    ("AkzeptiertX", 67088888259381741)]
+=======
+   ("AkzeptiertX", 5707560159543684605)]
+>>>>>>> 3e38456b1c3aa0d3da43ee2535af9f2749356bad
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

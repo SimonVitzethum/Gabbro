@@ -52,12 +52,22 @@ def text : String :=
 
 def options : Profil.Options := { checkConsumer := some retiringSelection }
 
-/-- Outside the decidable fragment: the source's full-width measured local. -/
+/-- The constant u64 local passes. The selected consumer still needs a control
+    statement outside this checker's currently supported fragment. -/
 theorem selected_refused_zeuge : compile text options = .error
-    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
+    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
   kernel_rfl
 
-/-- The rejected request still explicitly selects the physical consumer's driver. -/
+/-- The request explicitly selects the physical consumer's driver. -/
 theorem selected_entry_requested_zeuge : Profil.entryName options = "p#driver#g" := rfl
+
+/-- A complete source request with a constant u64 local and a small result.
+    The binding is checked without enumerating the u64 range. -/
+def constantLocalSource : String :=
+  "impl fn main() -> u32 in 0 .. 1 { let x: u64 = 3; return 0; }"
+
+theorem constant_local_compiles_zeuge :
+    (compile constantLocalSource {}).toOption.isSome = true := by
+  kernel_rfl
 
 end Gabbro.Stage0.CheckConsumerWitness
