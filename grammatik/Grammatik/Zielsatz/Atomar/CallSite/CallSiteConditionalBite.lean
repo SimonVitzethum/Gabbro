@@ -15,7 +15,8 @@ def decl : Deklaration :=
     passt := fun _ _ => false
     passt_ok := fun _ _ impossible => by cases impossible
     rzusage := fun item => nomatch item
-    aerg := fun _ => some .bool }
+    aerg := fun _ => some .bool
+    anbieter_passt := fun table => nomatch table }
 
 def contract : CallContract decl (decl.asignatur ()) where
   pre := .fls
