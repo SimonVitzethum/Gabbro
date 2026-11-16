@@ -23,6 +23,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 import all Grammatik.Logik.Vertraege.Pruefer.Program
 import all Grammatik.Logik.Vertraege.Pruefer.Duties
 import all Grammatik.Logik.Vertraege.Pruefer.Basic
@@ -208,11 +209,11 @@ theorem fremdFallible_tor_threadet :
     .ok true := by
   decide +kernel
 
-/-! ## Acceptance with the real Duty -/
+/-! ## Duty admission and strict contract-fragment refusals -/
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- The lowered units with their derived checks are admitted. -/
+/-- The lowered units pass the Duty check with their actual derived checks. -/
 theorem fremd_checkB :
     checkB checkPFremd [] [] (List.finRange uFremd.fns.length) checkChecksFremd = true := by
   decide +kernel
@@ -232,14 +233,15 @@ private theorem foreign_checked_image (u : UProg)
     (checks : List (CheckDecl (declOf u)))
     {image : Programm (declOf u) × List (declOf u).Fn}
     (emitted : lowerAllg u = .ok image)
+    (verdict : Bool)
     (checked : ∀ (invariants : ∀ i : Fin u.invs.length, InvTy u i)
       (foreignGate : axContractsB u = true),
       AkzeptiertX (progOfFn u (fun f => (pieces f).1) (fun f => (pieces f).2.1)
         (fun f => (pieces f).2.2) invariants (ptrVertragOf u)
         (fun a => axVertragOf u a foreignGate)) (Cover.Differenz.sperrFamilie u)
-        (List.finRange u.fns.length) [] [] [] [] checks = true) :
+        (List.finRange u.fns.length) [] [] [] [] checks = verdict) :
     AkzeptiertX image.1 (Cover.Differenz.sperrFamilie u)
-      (List.finRange u.fns.length) [] [] [] [] checks = true := by
+      (List.finRange u.fns.length) [] [] [] [] checks = verdict := by
   rcases image with ⟨program, functions⟩
   have selected (f : Fin u.fns.length) (proof : ∃ value, lowerFnAt u f = .ok value) :
       lowerAtPair u f proof = pieces f := lowerAtPair_of_ok u f proof (origin f)
@@ -259,18 +261,96 @@ private theorem fremd_foreign_contracts : axContractsB uFremd = true := by decid
 private theorem fremdFallible_foreign_contracts : axContractsB uFremdFallible = true := by
   decide +kernel
 
+/-- A refused actual member blocks the unchanged default-hint collector. -/
+private theorem foreign_contracts_refused {D : Deklaration}
+    (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (f : D.Fn) (member : f ∈ fs)
+    (rejected : (Vertraege.Pruefer.checkFunction P S (fun _ => none) {} none f).toOption.isSome = false) :
+    Vertraege.Pruefer.KontrakteGeprueftB P S fs = false := by
+  change (Invarianten.Pruefer.collect fs (Vertraege.Pruefer.ContractDuties P S)
+    (fun g => Vertraege.Pruefer.checkFunction P S (fun _ => none) {} none g)).toOption.isSome = false
+  cases result : Invarianten.Pruefer.collect fs (Vertraege.Pruefer.ContractDuties P S)
+      (fun g => Vertraege.Pruefer.checkFunction P S (fun _ => none) {} none g) with
+  | error cause => rfl
+  | ok checked =>
+      have ready := Vertraege.Pruefer.RefusalWitness.collect_each fs
+        (Vertraege.Pruefer.ContractDuties P S)
+        (fun g => Vertraege.Pruefer.checkFunction P S (fun _ => none) {} none g)
+        (by rw [result]; rfl) f member
+      rw [rejected] at ready
+      cases ready
+
+private def fremdCanonical : Programm (declOf uFremd) :=
+  progOfFn uFremd (fun f => (ForeignGateFunctions.infPieces f).1)
+    (fun f => (ForeignGateFunctions.infPieces f).2.1)
+    (fun f => (ForeignGateFunctions.infPieces f).2.2)
+    (fun i => Fin.elim0 (show Fin 0 from i)) (ptrVertragOf uFremd)
+    (fun a => axVertragOf uFremd a fremd_foreign_contracts)
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Outside the decidable fragment: contract statement is outside the checked scalar/control fragment. -/
+theorem fremd_fragment_refusal :
+    (Vertraege.Pruefer.checkFunction fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
+      (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
+      .error (.unsupported "contract statement is outside the checked scalar/control fragment") := by
+  decide +kernel
+
+private theorem fremdCanonical_refused :
+    AkzeptiertX fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false := by
+  have rejected : (Vertraege.Pruefer.checkFunction fremdCanonical
+      (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
+    have reason := fremd_fragment_refusal
+    cases result : Vertraege.Pruefer.checkFunction fremdCanonical
+        (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩ with
+    | error cause => rfl
+    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
+  have contracts := foreign_contracts_refused fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
+    (List.finRange uFremd.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
+
+private def fremdFallibleCanonical : Programm (declOf uFremdFallible) :=
+  progOfFn uFremdFallible (fun f => (ForeignGateFunctions.fallPieces f).1)
+    (fun f => (ForeignGateFunctions.fallPieces f).2.1)
+    (fun f => (ForeignGateFunctions.fallPieces f).2.2)
+    (fun i => Fin.elim0 (show Fin 0 from i)) (ptrVertragOf uFremdFallible)
+    (fun a => axVertragOf uFremdFallible a fremdFallible_foreign_contracts)
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Outside the decidable fragment: local observation type range exceeds the VC budget. -/
+theorem fremdFallible_fragment_refusal :
+    (Vertraege.Pruefer.checkFunction fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
+      (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
+      .error (.unsupported "local observation type range exceeds the VC budget") := by
+  decide +kernel
+
+private theorem fremdFallibleCanonical_refused :
+    AkzeptiertX fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = false := by
+  have rejected : (Vertraege.Pruefer.checkFunction fremdFallibleCanonical
+      (Cover.Differenz.sperrFamilie uFremdFallible) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
+    have reason := fremdFallible_fragment_refusal
+    cases result : Vertraege.Pruefer.checkFunction fremdFallibleCanonical
+        (Cover.Differenz.sperrFamilie uFremdFallible) (fun _ => none) {} none ⟨3, by decide⟩ with
+    | error cause => rfl
+    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
+  have contracts := foreign_contracts_refused fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
+    (List.finRange uFremdFallible.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
+
 attribute [local irreducible] checkPFremd checkPFremdFallible
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- The exact source unit passes every component of the strict atomic checker. -/
-theorem fremd_akzeptiert :
+/-- The strict checker refuses the unchanged source unit for its certified fragment gap. -/
+theorem fremd_abgelehnt :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false := by
   delta checkPFremd
   apply foreign_checked_image uFremd ForeignGateFunctions.infPieces
     ForeignGateFunctions.infPieces_ok checkChecksFremd
-    (except_ok_get uFremd_lowered)
+    (except_ok_get uFremd_lowered) false
   intro invariants foreignGate
   have emptyFamily : invariants = (fun i => Fin.elim0 (show Fin 0 from i)) := by
     funext i
@@ -278,18 +358,18 @@ theorem fremd_akzeptiert :
   subst invariants
   have sameProof : foreignGate = fremd_foreign_contracts := Subsingleton.elim _ _
   subst sameProof
-  decide +kernel
+  exact fremdCanonical_refused
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- The exact source unit passes every component of the strict atomic checker. -/
-theorem fremdFallible_akzeptiert :
+/-- The strict checker refuses the unchanged source unit for its certified fragment gap. -/
+theorem fremdFallible_abgelehnt :
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
-      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = false := by
   delta checkPFremdFallible
   apply foreign_checked_image uFremdFallible ForeignGateFunctions.fallPieces
     ForeignGateFunctions.fallPieces_ok checkChecksFremdFallible
-    (except_ok_get uFremdFallible_lowered)
+    (except_ok_get uFremdFallible_lowered) false
   intro invariants foreignGate
   have emptyFamily : invariants = (fun i => Fin.elim0 (show Fin 0 from i)) := by
     funext i
@@ -297,6 +377,6 @@ theorem fremdFallible_akzeptiert :
   subst invariants
   have sameProof : foreignGate = fremdFallible_foreign_contracts := Subsingleton.elim _ _
   subst sameProof
-  decide +kernel
+  exact fremdFallibleCanonical_refused
 
 end Gabbro.Grammatik.Parser.Uebersetze
