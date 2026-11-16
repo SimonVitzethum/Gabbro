@@ -6969,6 +6969,15 @@ records the earlier pointer-observation fragment refusal. The new
 cost coverage on the actual scoped, lowered and restored source, including
 the original missing-cost diagnostic.
 
+`Stage0/Senke/Bild/EmittedZiel.lean`: `Emitted.akzeptiertSpec` is strengthened
+by removing the unnecessary checked-start Bool premise. Its structural facts
+come from the actual compiler acceptance and generic checker soundness, with
+the same invariant/contract certificates. `Emitted.bild_ziel` retains its
+checked-start premise; the call/recursive/block image theorems retain their
+semantic user/start duties. `Stage0/ArrayWitness.akzeptiertSpec_zeuge` jointly
+instantiates the strengthened helper on the actual emitted nested-array source,
+one real function, a certifiable unit, absent extra roots and non-atomic memory.
+
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
 
 On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.

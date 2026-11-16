@@ -1,6 +1,7 @@
 module
 public import Stage0.SourceWitness
 public import Stage0.Frontend.ExportCorrectness
+public import Stage0.Senke.Bild.EmittedZiel
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -145,6 +146,28 @@ theorem initialized_start_environments_zeuge :
     output.image.roots = output.starts.map (·.1) ∧
     output.image.rootArgs = output.starts.map (fun start => Senke.encodeEnv output.image.Y start.2) :=
   initial.start_environments
+
+/-- A real nonempty source/image jointly satisfies every structural bridge premise. -/
+theorem akzeptiertSpec_zeuge : emit text 64 = .ok output ∧
+    output.compiled.unit.fns.length = 1 ∧
+    OldSource.zertifizierbar output.compiled.unit = true ∧
+    output.compiled.unit.roots = [] ∧ output.compiled.unit.gestartet = [] ∧
+    (∀ g : (declOf output.compiled.unit).Glob,
+      (declOf output.compiled.unit).atomar g = false) ∧
+    Gabbro.Grammatik.Zielsatz.AkzeptiertSpec
+      (output.einheit (axWahr (declOf output.compiled.unit))).P
+      (output.einheit (axWahr (declOf output.compiled.unit))).S output.fsA.1
+      (output.einheit (axWahr (declOf output.compiled.unit))).ws
+      (output.einheit (axWahr (declOf output.compiled.unit))).akku := by
+  have certifiable : OldSource.zertifizierbar output.compiled.unit = true := by kernel_rfl
+  have roots : output.compiled.unit.roots = [] := by kernel_rfl
+  have started : output.compiled.unit.gestartet = [] := by kernel_rfl
+  have atoms : ∀ g : (declOf output.compiled.unit).Glob,
+      (declOf output.compiled.unit).atomar g = false := by
+    intro g
+    exact Fin.elim0 (Fin.cast carriers.1 g)
+  refine ⟨accepted_image, by kernel_rfl, certifiable, roots, started, atoms, ?_⟩
+  exact output.akzeptiertSpec _ certifiable roots started atoms inferInstance
 
 end Gabbro.Stage0.ArrayWitness
 

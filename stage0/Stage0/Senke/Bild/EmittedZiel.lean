@@ -45,14 +45,40 @@ abbrev Emitted.csA (output : Emitted src K options) :
 theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
     (hZ : OldSource.zertifizierbar output.compiled.unit = true) (hr : output.compiled.unit.roots = [])
     (hg : output.compiled.unit.gestartet = []) (hAt : ∀ g, (declOf output.compiled.unit).atomar g = false)
-    (hw : RootNativeFloat.Hardware)
-    (hStart : unitStartGeprueftB (output.einheit Q) output.fsA.1 output.lsA.1 = true) :
+    (hw : RootNativeFloat.Hardware) :
     AkzeptiertSpec (output.einheit Q).P (output.einheit Q).S output.fsA.1 (output.einheit Q).ws
       (output.einheit Q).akku := by
-  have hacc : akzeptiertX_pruefer.akzeptiert (output.einheit Q) output.fsA.1 output.lsA.1 output.csA.1 = true :=
-    (output.goal_checker_main Q output.sp0 hZ hr hg hStart).1
-  exact akzeptiertSpec_of_X (akzeptiertX_pruefer.korrekt (output.einheit Q) output.fsA output.lsA output.csA
-    hw hacc).1 (keinGeteiltV hAt)
+  letI : RootNativeFloat.Hardware := hw
+  -- Read the structural facts from actual compiler acceptance. The theorem's
+  -- separate user/start duties remain hN; no checked-start Bool is assumed.
+  have accepted := output.compiled.accepted
+  unfold OldSource.accepts at accepted
+  split at accepted
+  · cases accepted
+  · cases guests : Gabbro.Grammatik.Parser.UebersetzeAllg2.sourceGuests output.compiled.unit with
+    | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
+    | ok descriptors =>
+      simp only [guests, bind, Except.bind] at accepted
+      have checked := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
+      have split := (@akzeptiertX_guest_eq (declOf output.compiled.unit)
+        (inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length)))
+        (inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length)))
+        output.compiled.program (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit)
+        _ _ _ _ _ _ _ _ (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
+        (fun _ => none)).symm.trans checked
+      have structural := (Bool.and_eq_true_iff.mp split).1
+      letI : DecidableEq (declOf output.compiled.unit).Fn :=
+        inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length))
+      letI : DecidableEq (declOf output.compiled.unit).Ax :=
+        inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length))
+      have core := akzeptiertSpecX_of output.fsA.2 output.lsA.2 output.csA.2 [] structural
+      have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
+          (output.einheit Q).ws := by
+        change OldSource.judgedRoots output.compiled.unit output.compiled.main = [output.compiled.main]
+        simp only [OldSource.judgedRoots, hr, hg, List.append_nil, List.filterMap_nil]
+        rfl
+      rw [roots] at core
+      exact akzeptiertSpec_of_X core (keinGeteiltV hAt)
 
 /-- **The goal legs on what the emitted image runs through (one thread).** Let the image be what Stage 0 emits from
     a certifiable unit (`zertifizierbar`) without declared and run-time roots and without `atomic` globals; let the
@@ -139,7 +165,7 @@ theorem Emitted.bild_ziel [Kern] (output : Emitted src K options)
     nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true_iff.mp hStart).2
 
   -- (a′): the compiler's acceptance, the checker's soundness, no shared atomic
-  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2 hStart
+  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2
   -- (b): the logic without the rely, and the start duty of `main`
   have hL : LogikPflicht output.compiled.program (output.einheit Q).S Q := logikPflicht_of_A hN.logik
   have hmain : output.compiled.main ∈ (output.einheit Q).ws := by

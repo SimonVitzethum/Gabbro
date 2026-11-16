@@ -81,39 +81,7 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') := by
   -- (a′): the compiler's acceptance, the checker's soundness, no shared atomic
-  have hA0 : AkzeptiertSpec output.compiled.program (output.einheit Q).S
-      output.fsA.1 (output.einheit Q).ws (output.einheit Q).akku := by
-    letI : RootNativeFloat.Hardware := hH.2.2.2
-    -- Read the structural facts from actual compiler acceptance. The theorem's
-    -- separate user/start duties remain hN; no checked-start Bool is assumed.
-    have accepted := output.compiled.accepted
-    unfold OldSource.accepts at accepted
-    split at accepted
-    · cases accepted
-    · cases guests : Gabbro.Grammatik.Parser.UebersetzeAllg2.sourceGuests output.compiled.unit with
-      | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
-      | ok descriptors =>
-        simp only [guests, bind, Except.bind] at accepted
-        have checked := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
-        have split := (@akzeptiertX_guest_eq (declOf output.compiled.unit)
-          (inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length)))
-          (inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length)))
-          output.compiled.program (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit)
-          _ _ _ _ _ _ _ _ (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
-          (fun _ => none)).symm.trans checked
-        have structural := (Bool.and_eq_true_iff.mp split).1
-        letI : DecidableEq (declOf output.compiled.unit).Fn :=
-          inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length))
-        letI : DecidableEq (declOf output.compiled.unit).Ax :=
-          inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length))
-        have core := akzeptiertSpecX_of output.fsA.2 output.lsA.2 output.csA.2 [] structural
-        have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
-            (output.einheit Q).ws := by
-          change OldSource.judgedRoots output.compiled.unit output.compiled.main = [output.compiled.main]
-          simp only [OldSource.judgedRoots, hr, hg, List.append_nil, List.filterMap_nil]
-          rfl
-        rw [roots] at core
-        exact akzeptiertSpec_of_X core (keinGeteiltV hAt)
+  have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2
   -- (b): the logic without the rely, and the start duty of `main`
   have hL : LogikPflicht output.compiled.program (output.einheit Q).S Q := logikPflicht_of_A hN.logik
   have hmain : output.compiled.main ∈ (output.einheit Q).ws := by
