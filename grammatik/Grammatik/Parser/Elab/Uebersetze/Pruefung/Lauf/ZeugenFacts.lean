@@ -82,17 +82,21 @@ namespace RetiringWitness
 -- with the actual header/index facts needed by their typed consumers. It is
 -- transported as a whole; none of its computational packets is public data.
 private structure RetiringFacts (u : UProg) : Prop where
-  common : CheckWitness u 1
+  lowered : (lowerAllg u).toOption.isSome = true
+  derived : (uCheckDecls u).toOption.isSome = true
+  refused : AkzeptiertX ((lowerAllg u).toOption.get lowered).1
+    (Cover.Differenz.sperrFamilie u) (List.finRange u.fns.length) [] [] [] []
+    ((uCheckDecls u).toOption.get derived) = false
   functionCount : u.fns.length = 6
-  checkCount : ((uCheckDecls u).toOption.get common.derived).length = 1
+  checkCount : ((uCheckDecls u).toOption.get derived).length = 1
   driverEnd : ∀ f : (declOf u).Fn, f.val = 5 → (vertragVon (declOf u) f).ende = []
-  resources : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
+  resources : ∀ c ∈ (uCheckDecls u).toOption.get derived,
     ∀ producer consumer : (declOf u).Fn, producer.val = 1 → consumer.val = 4 →
       ((declOf u).signatur producer).inputMarks = [c.duty] ∧
       ((declOf u).signatur producer).outputMarks = [c.duty] ∧
       ((declOf u).signatur consumer).inputMarks = [c.duty] ∧
       ((declOf u).signatur consumer).outputMarks = []
-  descriptor : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
+  descriptor : ∀ c ∈ (uCheckDecls u).toOption.get derived,
     c.name = "p" ∧ c.probe.val = 1 ∧ c.gates.map Fin.val = [3]
   boolResult : ∀ f : (declOf u).Fn, f.val = 1 ∨ f.val = 2 →
     (declOf u).erg f = some .bool
@@ -102,7 +106,7 @@ private structure RetiringFacts (u : UProg) : Prop where
       checkEnvAtoms env = [some (.number 3), some (.truth true), some (.truth true)] →
       actualCheckReturn u f env (Eq.mpr (congrArg (ErgVal (declOf u)) truth) true) =
         some ("p", retiringReport)
-  verdict : ∀ c ∈ (uCheckDecls u).toOption.get common.derived,
+  verdict : ∀ c ∈ (uCheckDecls u).toOption.get derived,
     ∀ (f : (declOf u).Fn), f.val = 1 →
       ∀ (env : Env (declOf u) ((declOf u).params f))
         (truth : (declOf u).erg f = some .bool) (before after : World (declOf u)),
@@ -117,24 +121,24 @@ private structure RetiringFacts (u : UProg) : Prop where
       if strEq f.name "p#driver#g" then
         {f with body := f.body ++ [.call "p#consume#g" []]} else f}).toOption.isNone = true
 
-private theorem actual_checks : (uCheckDecls unit).toOption.get common.derived = checks.val :=
-  Except.ok.inj ((except_ok_get (x := uCheckDecls unit) common.derived).symm.trans checks_made)
+private theorem actual_checks : (uCheckDecls unit).toOption.get derived = checks.val :=
+  Except.ok.inj ((except_ok_get (x := uCheckDecls unit) derived).symm.trans checks_made)
 
 private theorem single_check : checks.val = [checks.val.get ⟨0, by change 0 < 1; decide⟩] := rfl
 
 private theorem check_member {c : CheckDecl (declOf unit)}
-    (member : c ∈ (uCheckDecls unit).toOption.get common.derived) :
+    (member : c ∈ (uCheckDecls unit).toOption.get derived) :
     c = checks.val.get ⟨0, by change 0 < 1; decide⟩ := by
   rw [actual_checks, single_check] at member
   exact List.mem_singleton.mp member
 
-private theorem check_descriptor : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
+private theorem check_descriptor : ∀ c ∈ (uCheckDecls unit).toOption.get derived,
     c.name = "p" ∧ c.probe.val = 1 ∧ c.gates.map Fin.val = [3] := by
   intro c member
   obtain rfl := check_member member
   cbv
 
-private theorem check_resources : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
+private theorem check_resources : ∀ c ∈ (uCheckDecls unit).toOption.get derived,
     ∀ producer consumer : (declOf unit).Fn, producer.val = 1 → consumer.val = 4 →
       ((declOf unit).signatur producer).inputMarks = [c.duty] ∧
       ((declOf unit).signatur producer).outputMarks = [c.duty] ∧
@@ -173,7 +177,7 @@ private theorem check_capture : ∀ (f : (declOf unit).Fn), f.val = 2 →
   rw [atoms]
   cbv
 
-private theorem check_verdict : ∀ c ∈ (uCheckDecls unit).toOption.get common.derived,
+private theorem check_verdict : ∀ c ∈ (uCheckDecls unit).toOption.get derived,
     ∀ (f : (declOf unit).Fn), f.val = 1 →
       ∀ (env : Env (declOf unit) ((declOf unit).params f))
         (truth : (declOf unit).erg f = some .bool) (before after : World (declOf unit)),
@@ -346,7 +350,7 @@ private theorem selected_double :
   exact function_refused _ _ "call without held mark" double_function
 
 private theorem facts : RetiringFacts unit := by
-  refine ⟨common, rfl, ?_, ?_, check_resources, check_descriptor, ?_,
+  refine ⟨lowered, derived, refused, rfl, ?_, ?_, check_resources, check_descriptor, ?_,
     check_capture, check_verdict, selected_unconsumed, selected_double⟩
   · rw [actual_checks]
     rfl

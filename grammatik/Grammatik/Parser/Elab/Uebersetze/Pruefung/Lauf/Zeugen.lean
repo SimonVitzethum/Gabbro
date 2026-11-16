@@ -102,13 +102,13 @@ private theorem retiring_facts : RetiringWitness.RetiringFacts retiringU :=
     RetiringWitness.facts
 
 theorem retiringU_lowered : (lowerAllg retiringU).toOption.isSome = true :=
-  retiring_facts.common.lowered
+  retiring_facts.lowered
 
 def retiringP : Programm (declOf retiringU) :=
   ((lowerAllg retiringU).toOption.get retiringU_lowered).1
 
 theorem retiringU_checks : (uCheckDecls retiringU).toOption.isSome = true :=
-  retiring_facts.common.derived
+  retiring_facts.derived
 
 def retiringChecks : List (CheckDecl (declOf retiringU)) :=
   (uCheckDecls retiringU).toOption.get retiringU_checks
@@ -155,12 +155,12 @@ private theorem retiring_wrapper_declared : retiringWrapper ∈ retiringCheck.ga
   obtain ⟨f, member, same⟩ := List.mem_map.mp member
   exact (Fin.ext same : f = retiringWrapper) ▸ member
 
-/-- Source text, ordinary lowering and the full acceptance Bool, with the
-    real declared check and selected physical consumer present. -/
-theorem retiringU_accepted :
+/-- Outside the decidable fragment: the selected physical consumer retires its Duty.
+    The source and ordinary lowering remain real; full admission is refused. -/
+theorem retiringU_refused :
     AkzeptiertX retiringP (Cover.Differenz.sperrFamilie retiringU)
-      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = true :=
-  retiring_facts.common.accepted
+      (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = false :=
+  retiring_facts.refused
 
 /-- The complete entry returns no physical Duty. -/
 theorem retiringDriver_empty_end :

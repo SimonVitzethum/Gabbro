@@ -52,28 +52,12 @@ def text : String :=
 
 def options : Profil.Options := { checkConsumer := some retiringSelection }
 
-theorem selected_compiles : (compile text options).toOption.isSome = true := by
+/-- Outside the decidable fragment: the source's full-width measured local. -/
+theorem selected_refused_zeuge : compile text options = .error
+    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
   kernel_rfl
 
-def compiled : Compiled text options :=
-  (compile text options).toOption.get selected_compiles
-
-/-- Acceptance is the actual compiler's full checker result. -/
-theorem selected_accepted :
-    OldSource.accepts compiled.unit compiled.program compiled.main = .ok true := compiled.accepted
-
-/-- Entry selection is retained in the source-to-program certificate. -/
-theorem selected_entry :
-    fnIdx compiled.unit.fns "p#driver#g" = .ok compiled.main := compiled.entry
-
-/-- The generated entry's returning resource inventory is empty. -/
-theorem selected_retired :
-    (Gabbro.Grammatik.vertragVon (declOf compiled.unit) compiled.main).ende = [] := by
-  kernel_rfl
-
-/-- The same canonical-source theorem used by every emitted image includes
-    the exact selected source tree and selected elaboration. -/
-theorem selected_canonical : CanonicalSourceProgram compiled :=
-  compile_source_program text compiled
+/-- The rejected request still explicitly selects the physical consumer's driver. -/
+theorem selected_entry_requested_zeuge : Profil.entryName options = "p#driver#g" := rfl
 
 end Gabbro.Stage0.CheckConsumerWitness
