@@ -43,7 +43,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-#eval candidate.map (fun _ => ())
+#eval IO.FS.writeFile "../.scratch-agent/state-verdict" (reprStr (candidate.map (fun _ => ())))
 
 theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 

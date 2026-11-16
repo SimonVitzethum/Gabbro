@@ -88,10 +88,11 @@ private def contractFailure (text : String) : Option String :=
     | .error cause => some cause.message
     | .ok _ => none
 
-#eval (acceptedText namedSource, contractFailure namedSource)
-#eval (acceptedText unnamedSource, contractFailure unnamedSource)
-#eval (acceptedText nestedSource, contractFailure nestedSource)
-#eval (acceptedText referenceSource, contractFailure referenceSource)
+#eval IO.FS.writeFile "../.scratch-agent/indirect-verdict" (reprStr
+  [(acceptedText namedSource, contractFailure namedSource),
+   (acceptedText unnamedSource, contractFailure unnamedSource),
+   (acceptedText nestedSource, contractFailure nestedSource),
+   (acceptedText referenceSource, contractFailure referenceSource)])
 
 theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
 theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
