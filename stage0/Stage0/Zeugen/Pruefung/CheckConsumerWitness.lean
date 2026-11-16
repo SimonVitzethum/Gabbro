@@ -52,10 +52,9 @@ def text : String :=
 
 def options : Profil.Options := { checkConsumer := some retiringSelection }
 
-/-- The constant u64 local passes. The selected consumer still needs a control
-    statement outside this checker's currently supported fragment. -/
-theorem selected_refused_zeuge : compile text options = .error
-    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+/-- The constant u64 binding and the physical retiring consumer both pass
+    the actual compiler; no full-width local enumeration is required. -/
+theorem selected_compiles_zeuge : (compile text options).toOption.isSome = true := by
   kernel_rfl
 
 /-- The request explicitly selects the physical consumer's driver. -/
