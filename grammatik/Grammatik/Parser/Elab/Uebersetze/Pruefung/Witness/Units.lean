@@ -127,7 +127,7 @@ private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
   | 0 => {header with name := "g", nimmt := [], gibt := [], body := [], ret := .empty}
   | 1 => {header with
     name := "p#probe", resBool := true, nimmt := ["p#duty"], gibt := ["p#duty"],
-    body := [.bind "x" (some (0, 18446744073709551615)) (.lit 3),
+    body := [.bind "x" none (.lit 3),
       .bindB "#checkVerdict" (.cmp ">=" (.param "x") (.lit bound)),
       .bind "#checkSample#0" none (.param "x"),
       .bindCall "#checkReport" "p#report#0" [.val (.param "#checkSample#0"),
@@ -135,7 +135,7 @@ private def floorMetadataFn (bound : Int) (index : Nat) (fn : UFn) : UFn :=
     ret := .bool (.var "#checkReport")}
   | 2 => {header with
     name := "p#report#0", resBool := true, nimmt := [], gibt := [],
-    params := [("s0", .int 0 18446744073709551615), ("f0", .bool), ("v", .bool)],
+    params := [("s0", .int 3 3), ("f0", .bool), ("v", .bool)],
     kinds := [.int, .bool, .bool], body := [], ret := .bool (.and (.var "v") (.var "f0"))}
   | 3 => {header with
     name := "p#tor#g", nimmt := ["p#duty"], gibt := ["p#duty"],

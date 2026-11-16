@@ -224,7 +224,7 @@ private def sondeProbeCall : UStmt := .bindCall "#checkReport" "p#report#0"
   [.val (.param "#checkSample#0"), .bval (.var "#checkVerdict")]
 private def sondeProbeSample : UStmt := .bind "#checkSample#0" none (.param "x")
 private def sondeProbeVerdict : UStmt := .bindB "#checkVerdict" (.cmp "<" (.param "x") (.lit 0))
-private def sondeProbeAnnotation : Option (Int × Int) := some (0, 18446744073709551615)
+private def sondeProbeAnnotation : Option (Int × Int) := none
 
 private theorem sonde_probe_body : sondeProbeFn0.body =
     [.bind "x" sondeProbeAnnotation (.lit 3), sondeProbeVerdict, sondeProbeSample, sondeProbeCall] := by cbv

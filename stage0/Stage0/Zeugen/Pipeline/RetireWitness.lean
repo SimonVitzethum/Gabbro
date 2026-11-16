@@ -37,6 +37,7 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Pipeline.RetireWitness
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg2 Runner.IR Senke
 
 set_option maxRecDepth 100000
@@ -50,31 +51,32 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by
-  decide +kernel
+/-- Outside the decidable fragment: the terminal retire statement. -/
+theorem candidate_refused : candidate = .error
+    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+  kernel_rfl
 
-def output : Emitted text 256 := candidate.toOption.get candidate_present
+/-- The unchanged source still elaborates with its real linear inventory. -/
+theorem unit_present : (elabText text).toOption.isSome = true := by kernel_rfl
 
-theorem accepted_image : emit text 256 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
+def unit : UProg := (elabText text).toOption.get unit_present
 
 /-- Both signatures are terminal transfers, with no ordinary owner consumption;
     the callee's explicit retire is retained in the actual compiler's U tree. -/
-theorem image_shape :
-    output.compiled.unit.fns.map (·.name) = ["finish", "main"] ∧
-    (output.compiled.unit.fns.map fun f => (mkSig output.compiled.unit f).owner.moves.map (·.after)) =
+theorem unit_shape :
+    unit.fns.map (·.name) = ["finish", "main"] ∧
+    (unit.fns.map fun f => (mkSig unit f).owner.moves.map (·.after)) =
       [[none], [none]] ∧
-    (output.compiled.unit.fns.map fun f => (mkSig output.compiled.unit f).konsumiert) = [[], []] ∧
-    (output.compiled.unit.fns.flatMap (·.body)).countP
-      (fun | .retires _ => true | _ => false) = 1 ∧
-    0 < output.image.code.length ∧ 16 < output.bytes.length := by
+    (unit.fns.map fun f => (mkSig unit f).konsumiert) = [[], []] ∧
+    (unit.fns.flatMap (·.body)).countP
+      (fun | .retires _ => true | _ => false) = 1 := by
   decide +kernel
 
 /-- Every function must return the exact empty residual inventory. -/
 theorem return_inventory :
-    ∀ f : (declOf output.compiled.unit).Fn, (verOf output.compiled.unit f).ende = [] := by
-  have empty : (List.finRange _).all (fun f : (declOf output.compiled.unit).Fn =>
-      (verOf output.compiled.unit f).ende.isEmpty) = true := by kernel_rfl
+    ∀ f : (declOf unit).Fn, (verOf unit f).ende = [] := by
+  have empty : (List.finRange _).all (fun f : (declOf unit).Fn =>
+      (verOf unit f).ende.isEmpty) = true := by kernel_rfl
   intro f
   exact List.isEmpty_iff.mp (List.all_eq_true.mp empty f (List.mem_finRange f))
 
@@ -89,11 +91,6 @@ theorem retires_ghost {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
     lowS (V := V) passes address layout frame post pinned exits
       (l := l) (Γ := Γ) (.retires mark stage held origin) reserved =
         some ([], frei Γ reserved) := by rfl
-
-theorem canonical_source : CanonicalSourceProgram output.compiled :=
-  compile_source_program text output.compiled
-
-theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- A signature alone cannot discharge the callee's terminal input. -/
 def droppedText : String :=

@@ -79,12 +79,12 @@ local instance floorAxiomEquality (u : UProg) : DecidableEq (declOf u).Ax :=
 
 /-- The passing floor: the probe answers `true`, the floor holds. -/
 def checkTextBodenWahr : String :=
-  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x >= 2; } floor x >= 2 }"
+  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x = 3; return x >= 2; } floor x >= 2 }"
 
 /-- The failing floor: the probe answers `false`, the floor fails -- a completed
     measurement with a negative verdict, never a missing run. -/
 def checkTextBodenFalsch : String :=
-  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x >= 4; } floor x >= 4 }"
+  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x = 3; return x >= 4; } floor x >= 4 }"
 
 -- The complete original strings pass the certified lexer/parser phases; the
 -- resulting unit is the canonical elaborator's output, not a hand-built fixture.
@@ -422,11 +422,11 @@ example : (elabText
 
 /-- A failed floor cannot be bypassed with an unrelated true return. -/
 example : (elabText
-    "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return true; } floor x >= 4 }").map
+    "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x = 3; return true; } floor x >= 4 }").map
     (fun u => (u.fns.find? (fun f => strEq f.name "p#report#0")).map (·.ret)) =
     .ok (some (.bool (.and (.var "v") (.var "f0")))) := by
   have source :
-      "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return true; } floor x >= 4 }" =
+      "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x = 3; return true; } floor x >= 4 }" =
         String.ofList bypassCharacters := by cbv
   rw [elabText_phases source bypass_lexed bypass_parsed, floorBypassUnit.property]
   exact congrArg (fun ret => (Except.ok ret : Except String (Option URet))) floor_bypass_report

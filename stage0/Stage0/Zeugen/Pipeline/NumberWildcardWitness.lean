@@ -42,9 +42,9 @@ open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 
-/-- Distinct numeric arms and the final wildcard use the existing conditional path. -/
+/-- Three live numeric cases stay within the strict checker's bounded domain. -/
 def text : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
+  "module number_wildcard { impl fn choose(n : u8 in 0 .. 2) -> u8 in 0 .. 17 { match n { 0 => { return 11; } 1 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 in 0 .. 17 { let answer = choose(2); return answer; } }"
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
@@ -63,7 +63,7 @@ theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := 
 
 /-- The poison differs only by the missing exhaustive fallback. -/
 def missingFallback : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 1 => { return 13; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
+  "module number_wildcard { impl fn choose(n : u8 in 0 .. 2) -> u8 in 0 .. 17 { match n { 0 => { return 11; } 1 => { return 13; } } } impl fn main() -> u8 in 0 .. 17 { let answer = choose(2); return answer; } }"
 
 theorem missing_fallback_refused_zeuge :
     (emit missingFallback 256).toOption.isSome = false := by
@@ -71,7 +71,7 @@ theorem missing_fallback_refused_zeuge :
 
 /-- Duplicate numeric patterns cannot silently select the first arm. -/
 def duplicatePattern : String :=
-  "module number_wildcard { impl fn choose(n : u8) -> u8 { match n { 0 => { return 11; } 0 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 { let answer = choose(2); return answer; } }"
+  "module number_wildcard { impl fn choose(n : u8 in 0 .. 2) -> u8 in 0 .. 17 { match n { 0 => { return 11; } 0 => { return 13; } _ => { return 17; } } } impl fn main() -> u8 in 0 .. 17 { let answer = choose(2); return answer; } }"
 
 theorem duplicate_pattern_refused_zeuge :
     (emit duplicatePattern 256).toOption.isSome = false := by

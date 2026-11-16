@@ -47,7 +47,7 @@ open Gabbro.Grammatik.Uebersetzung.LibraryFixtureScanning
 /-- The counterprobe unit: the probe answers `false`, the external probe `ext`
     with its text is bound to the check. -/
 def checkTextSonde : String :=
-  "impl fn g() { return; } impl fn ext() -> bool { return false; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x < 0; } counterprobe \"ext text\" expects ext }"
+  "impl fn g() { return; } impl fn ext() -> bool { return false; } check p { claim \"c\" measures x gates g can_fail { let x = 3; return x < 0; } counterprobe \"ext text\" expects ext }"
 
 -- Each cut proves the existing scanner's arbitrary-suffix equation. The
 -- complete source uses its original character-count fuel, never a new lexer.
@@ -87,8 +87,8 @@ counterprobe_cut sondeMeasure as "\"c\" measures x gates g "
   lexemes [.text "c", .wort "measures", .wort "x", .wort "gates", .ident "g"] fuelUsed 10
 counterprobe_cut sondeBodyHead as "can_fail { "
   lexemes [.wort "can_fail", .zeichen "{"] fuelUsed 4
-counterprobe_cut sondeBinding as "let x: u64 = 3; "
-  lexemes [.wort "let", .wort "x", .zeichen ":", .wort "u64", .zeichen "=",
+counterprobe_cut sondeBinding as "let x = 3; "
+  lexemes [.wort "let", .wort "x", .zeichen "=",
     .num 3, .zeichen ";"] fuelUsed 12
 counterprobe_cut sondeFalse as "return false; } "
   lexemes [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] fuelUsed 7

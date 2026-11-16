@@ -50,23 +50,20 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by
+/-- Outside the decidable fragment: full-width unsigned local observations. -/
+theorem candidate_refused : candidate = .error
+    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
   kernel_rfl
 
-def output : Emitted text 256 := candidate.toOption.get candidate_present
+/-- Source elaboration still retains the exact relational narrowing. -/
+theorem unit_present : (elabText text).toOption.isSome = true := by kernel_rfl
 
-theorem accepted_image : emit text 256 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
-
-theorem canonical_source : CanonicalSourceProgram output.compiled :=
-  compile_source_program text output.compiled
-
-theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
+def unit : UProg := (elabText text).toOption.get unit_present
 
 /-- The actual frontend emits the existing exact subtraction inside total `eng`,
     narrowed to the complete unsigned range rather than a signed-word subset. -/
 theorem total_eng_zeuge :
-    output.compiled.unit.fns.any (fun fn => fn.body.any (fun
+    unit.fns.any (fun fn => fn.body.any (fun
       | .bind "#rel:a:b" (some (0, 18446744073709551615))
           (.eng (.sub (.param "a") (.param "b")) 0 18446744073709551615) => true
       | _ => false)) = true := by

@@ -43,19 +43,18 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 -- Reuse the certified gate/check/measurement prefix of the end-to-end exporter.
 private def passingTail : List Char :=
-  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ':', ' ',
-    'u', '6', '4', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ' ',
+  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ' ',
     '>', '=', ' ', '2', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=',
     ' ', '2', ' ', '}']
--- Built-in widths are vocabulary words in the actual lexer, including u64.
+-- Infer the singleton literal range, inside the strict contract fragment.
 private def passingTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "x", .zeichen ">=",
     .num 2, .zeichen ";", .zeichen "}", .wort "floor", .wort "x", .zeichen ">=",
     .num 2, .zeichen "}"]
 
 private theorem passing_scan (rest : List Char) (fuel : Nat) :
-    scan false (passingTail ++ rest) (fuel + 36) =
+    scan false (passingTail ++ rest) (fuel + 33) =
       passingTailTokens.foldr (fun token result => Except.map (token :: ·) result)
         (scan false rest fuel) := by cbv
 
@@ -66,28 +65,27 @@ private def passingTokens : List Token :=
 
 private theorem passing_lexed :
     lexL passingCharacters = .ok passingTokens := by
-  change scan false passingCharacters 122 = _
-  have complete := scan_compose (rfl : scan false [] 53 = .ok [.ende]) (passing_scan [] 53)
-  have complete := scan_compose complete (scan_measure_cg passingTail 89)
+  change scan false passingCharacters 117 = _
+  have complete := scan_compose (rfl : scan false [] 51 = .ok [.ende]) (passing_scan [] 51)
+  have complete := scan_compose complete (scan_measure_cg passingTail 84)
   have complete := scan_compose complete
-    (scan_head (measureCharacters 'c' 'g' ++ passingTail) 99)
+    (scan_head (measureCharacters 'c' 'g' ++ passingTail) 94)
   have complete := scan_compose complete
-    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ passingTail) 107)
+    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ passingTail) 102)
   simpa only [passingCharacters, passingTokens, List.append_assoc, List.append_nil] using complete
 
 private def failingTail : List Char :=
-  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ':', ' ',
-    'u', '6', '4', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ' ',
+  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'x', ' ',
     '>', '=', ' ', '4', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=',
     ' ', '4', ' ', '}']
 private def failingTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "x", .zeichen ">=",
     .num 4, .zeichen ";", .zeichen "}", .wort "floor", .wort "x", .zeichen ">=",
     .num 4, .zeichen "}"]
 
 private theorem failing_scan (rest : List Char) (fuel : Nat) :
-    scan false (failingTail ++ rest) (fuel + 36) =
+    scan false (failingTail ++ rest) (fuel + 33) =
       failingTailTokens.foldr (fun token result => Except.map (token :: ·) result)
         (scan false rest fuel) := by cbv
 
@@ -98,13 +96,13 @@ private def failingTokens : List Token :=
 
 private theorem failing_lexed :
     lexL failingCharacters = .ok failingTokens := by
-  change scan false failingCharacters 122 = _
-  have complete := scan_compose (rfl : scan false [] 53 = .ok [.ende]) (failing_scan [] 53)
-  have complete := scan_compose complete (scan_measure_cg failingTail 89)
+  change scan false failingCharacters 117 = _
+  have complete := scan_compose (rfl : scan false [] 51 = .ok [.ende]) (failing_scan [] 51)
+  have complete := scan_compose complete (scan_measure_cg failingTail 84)
   have complete := scan_compose complete
-    (scan_head (measureCharacters 'c' 'g' ++ failingTail) 99)
+    (scan_head (measureCharacters 'c' 'g' ++ failingTail) 94)
   have complete := scan_compose complete
-    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ failingTail) 107)
+    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ failingTail) 102)
   simpa only [failingCharacters, failingTokens, List.append_assoc, List.append_nil] using complete
 
 private def absentTail : List Char :=
@@ -137,17 +135,16 @@ private theorem absent_lexed :
   simpa only [absentCharacters, absentTokens, List.append_assoc, List.append_nil] using complete
 
 private def bypassTail : List Char :=
-  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ':', ' ',
-    'u', '6', '4', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 't', 'r',
+  ['c', 'a', 'n', '_', 'f', 'a', 'i', 'l', ' ', '{', ' ', 'l', 'e', 't', ' ', 'x', ' ', '=', ' ', '3', ';', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 't', 'r',
     'u', 'e', ';', ' ', '}', ' ', 'f', 'l', 'o', 'o', 'r', ' ', 'x', ' ', '>', '=', ' ', '4',
     ' ', '}']
 private def bypassTailTokens : List Token :=
-  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x", .zeichen ":", .wort "u64",
+  [.wort "can_fail", .zeichen "{", .wort "let", .wort "x",
     .zeichen "=", .num 3, .zeichen ";", .wort "return", .wort "true", .zeichen ";",
     .zeichen "}", .wort "floor", .wort "x", .zeichen ">=", .num 4, .zeichen "}"]
 
 private theorem bypass_scan (rest : List Char) (fuel : Nat) :
-    scan false (bypassTail ++ rest) (fuel + 32) =
+    scan false (bypassTail ++ rest) (fuel + 29) =
       bypassTailTokens.foldr (fun token result => Except.map (token :: ·) result)
         (scan false rest fuel) := by cbv
 
@@ -158,13 +155,13 @@ private def bypassTokens : List Token :=
 
 private theorem bypass_lexed :
     lexL bypassCharacters = .ok bypassTokens := by
-  change scan false bypassCharacters 120 = _
-  have complete := scan_compose (rfl : scan false [] 55 = .ok [.ende]) (bypass_scan [] 55)
-  have complete := scan_compose complete (scan_measure_cg bypassTail 87)
+  change scan false bypassCharacters 115 = _
+  have complete := scan_compose (rfl : scan false [] 53 = .ok [.ende]) (bypass_scan [] 53)
+  have complete := scan_compose complete (scan_measure_cg bypassTail 82)
   have complete := scan_compose complete
-    (scan_head (measureCharacters 'c' 'g' ++ bypassTail) 97)
+    (scan_head (measureCharacters 'c' 'g' ++ bypassTail) 92)
   have complete := scan_compose complete
-    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ bypassTail) 105)
+    (scan_gate (headCharacters ++ measureCharacters 'c' 'g' ++ bypassTail) 100)
   simpa only [bypassCharacters, bypassTokens, List.append_assoc, List.append_nil] using complete
 
 -- The unchanged parser must certify the complete block, bound and floor.
@@ -175,7 +172,7 @@ private def floorItems (bound : Nat) (localValue compare : Bool) : List SItemTie
     misst := [.variable "x"]
     gates := ["g"]
     canFail := .block
-      (if localValue then [.bind false "x" (some (.atom "u64")) (.lit 3)] else [])
+      (if localValue then [.bind false "x" none (.lit 3)] else [])
       (some (.ret (some (if compare then .bin ">=" (.variable "x") (.lit bound) else .tru))))
     boden := [.bin ">=" (.variable "x") (.lit bound)]
     sonde := none }]
