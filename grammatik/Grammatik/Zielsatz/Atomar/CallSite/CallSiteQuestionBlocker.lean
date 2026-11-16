@@ -10,9 +10,6 @@ public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteConditionalBite
 
 namespace Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker
 
-attribute [local reducible] CallSiteConditionalBite.decl
-  Gabbro.Grammatik.CallSiteZeuge.decl Gabbro.Grammatik.CallSiteZeuge.sig
-
 abbrev decl := CallSiteConditionalBite.decl
 
 def contract : CallContract decl (decl.asignatur ()) where
@@ -112,8 +109,7 @@ theorem on_pre_body (passes : Nat) : KoerperGutA program passes summary () := by
   have hρ : ρ = .nil := by cases ρ; rfl
   subst hρ
   have hpre : PreQ program () (σ.fragt (.inl ())) (rho true) = true := by
-    rw [preQ_sw program rfl]
-    rfl
+    with_unfolding_all rfl
   have hs := hQ () σ (rho true)
     (decide ((O.wirkt () (σ.fragt (.inl ())) (rho true)).2 ≠ 0)) hpre rfl
   refine ⟨?_, ?_⟩
@@ -134,7 +130,7 @@ theorem on_pre_body (passes : Nat) : KoerperGutA program passes summary () := by
 /-- The on-pre call actually returns true under the lawful binding. -/
 theorem on_pre_execution :
     execEnd oracle 0 (rufAusV []) body world .nil =
-      EndAusgang.zurueck (world.fragt (.inl ())) true := by
+      EndAusgang.zurueck (V := vertragVon decl ()) (world.fragt (.inl ())) true := by
   rfl
 
 /-- **The old every-world class was too strong.** It asks about the empty trace too,
@@ -143,8 +139,7 @@ theorem on_pre_execution :
 theorem old_class_too_strong : ¬ AxVertragOPAlle (PreQ unit.P) unit.Q oracle := by
   intro h
   have hp : PreQ unit.P () world (rho true) = true := by
-    rw [preQ_sw unit.P rfl]
-    rfl
+    with_unfolding_all rfl
   exact Bool.false_ne_true (h () world (rho true) false hp rfl)
 
 /-- The question-world class holds directly: every question world carries its
