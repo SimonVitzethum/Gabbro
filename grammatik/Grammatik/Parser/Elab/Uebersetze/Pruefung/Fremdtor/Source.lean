@@ -1,12 +1,8 @@
-/- C16 remaining forms (3): foreign gates end to end.
-
-   A gate may name a C08 foreign body. The wrapper is still an ordinary nullary
-   `UFn` threading the Duty; the gate call is the ordinary foreign call Stage 0
-   already lowers. The infallible answer-less case rides `axCall`; the fallible
-   `int`-answered case rides `bindAxElse` whose error branch rethrows the exact
-   reason while retaining the Duty. Only a normal gate return completes the
-   evidence fold. An unclosed error branch is refused by the lowering:
-   dropping it would drop the Duty's discharge path. -/
+/- Exact source/lowering and Duty-check witnesses for C16 foreign gates.
+   The strict checker refuses the unchanged void foreign statement and wide
+   fallible-result domain. Normal report completion and error-path Duty
+   preservation remain separate model facts. The legacy axiom spelling also
+   retains the front end's source-export refusal. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Units
@@ -225,7 +221,7 @@ theorem fremdFallible_checkB :
   decide +kernel
 
 
-/-- Transfer a checked canonical function family to the actual successful
+/-- Transfer a canonical checker verdict to the actual successful
     assembler result. Interface contracts remain exactly the source contracts. -/
 private theorem foreign_checked_image (u : UProg)
     (pieces : ∀ f : Fin u.fns.length, EnsTy u f × RumpTy u f × ReqTy u f)
@@ -378,5 +374,14 @@ theorem fremdFallible_abgelehnt :
   have sameProof : foreignGate = fremdFallible_foreign_contracts := Subsingleton.elim _ _
   subst sameProof
   exact fremdFallibleCanonical_refused
+
+/-- Joint non-degeneracy for the assembler/refusal proof rules: four real
+    functions, one foreign item, one derived Duty check, and an actual refusal. -/
+theorem foreign_checked_image_zeuge :
+    uFremd.fns.length = 4 ∧ uFremd.axs.length = 1 ∧ checkChecksFremd.length = 1 ∧
+    checkB checkPFremd [] [] (List.finRange uFremd.fns.length) checkChecksFremd = true ∧
+    AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false :=
+  ⟨rfl, rfl, by kernel_rfl, fremd_checkB, fremd_abgelehnt⟩
 
 end Gabbro.Grammatik.Parser.Uebersetze

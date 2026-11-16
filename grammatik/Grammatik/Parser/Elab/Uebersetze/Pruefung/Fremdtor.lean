@@ -1,12 +1,8 @@
-/- C16 remaining forms (3): foreign gates end to end.
-
-   A gate may name a C08 foreign body. The wrapper is still an ordinary nullary
-   `UFn` threading the Duty; the gate call is the ordinary foreign call Stage 0
-   already lowers. The infallible answer-less case rides `axCall`; the fallible
-   `int`-answered case rides `bindAxElse` whose error branch rethrows the exact
-   reason while retaining the Duty. Only a normal gate return completes the
-   evidence fold. An unclosed error branch is refused by the lowering:
-   dropping it would drop the Duty's discharge path. -/
+/- C16 foreign-gate report witnesses over the exact source units.
+   Only a normal gate return completes the evidence fold. Error returns
+   preserve the Duty's pending discharge path, and unclosed error branches
+   refuse lowering. Source.lean records the stricter contract-fragment
+   refusals without changing either source or these report facts. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Source
