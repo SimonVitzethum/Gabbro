@@ -15,6 +15,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D}
 structure VCBudget where
   depth : Nat := 128
   expansion : Nat := 128
+  /-- Refuse a large product before generating parameter and control cases. -/
   specializations : Nat := 16384
 
 abbrev EndCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)

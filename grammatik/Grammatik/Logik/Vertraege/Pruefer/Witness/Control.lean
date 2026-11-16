@@ -6,7 +6,7 @@ public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer.Witness
 
-open Invarianten Invarianten.Frag Invarianten.VC
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
 
 /-- Both arms return x+1; only the success arm receives the narrowed local. -/
 def narrowedIncrement : Programm declaration :=
@@ -31,11 +31,11 @@ theorem scopedIncrement_zeuge :
     KontrakteGeprueftB scopedIncrement (SperrInv.leer declaration) [()] = true := by
   decide +kernel
 
-/-- The newly admitted conditional shape contains a real memory observation
-    and two different integer results; it is not literal truth. -/
 theorem localGlobalAccess (name : declaration.Glob) : gdarf declaration name [] :=
   fun _ member => (List.not_mem_nil member).elim
 
+/-- The newly admitted conditional shape contains a real memory observation
+    and two different integer results; it is not literal truth. -/
 def conditionalPost : Expr declaration [] [] .bool :=
   .eq (.eng (.add (.glob false (localGlobalAccess false)) (.lit 1))
       0 10 (.glob false (localGlobalAccess false))) (.lit 3)
@@ -64,5 +64,30 @@ theorem retry_safe_zeuge :
     Saturation stops at 101, without constructing either continuation family. -/
 theorem specialization_product_zeuge :
     argumentSpecializations 100 [.int 0 10, .int 0 10] = 101 := by decide
+
+def writerContract : Vertrag declaration := { contract with schreibt := fun _ => true }
+
+def storedSeven : Stmt declaration writerContract false [.int 0 10] [] [] :=
+  .assignSlot () () (.widen (by decide) (by decide) (.lit 0))
+    (.widen (by decide) (by decide) (.lit 7)) rfl
+    (fun _ member => (List.not_mem_nil member).elim)
+
+def storeGoals : Goals declaration writerContract [.int 0 10] where
+  normal := fun _ => .ok (lower (.eq (.var (.slot () () 0)) (.konst 7)))
+  escape := fun _ => .ok .tru
+  again := fun _ => .ok .tru
+  returned := fun _ => .ok .tru
+  reason := .tru
+
+def storeCondition :=
+  (leafCondition (S := SperrInv.leer declaration) (requiresPolicy increment)
+    128 storedSeven arguments storeGoals).toOption.get (by decide +kernel)
+
+/-- The actual store WP proves the subsequent cell-equals-seven obligation
+    for every entry assignment, including entries where that cell was not 7. -/
+theorem stored_seven_zeuge :
+    decideB (close (writerMatrix .tru .tru storeCondition.formula))
+      (close_closed (writerMatrix .tru .tru storeCondition.formula)) = true := by
+  decide +kernel
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
