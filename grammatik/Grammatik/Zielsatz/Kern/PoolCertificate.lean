@@ -120,9 +120,7 @@ def tail : Endblock zD (vertragVon zD zLies) false (scalar :: context) zL :=
 theorem returnCondition_eq (bound : Wert zD scalar) :
     returnCondition (program := program) (S := zS) 128 returnExpr (.cons bound arguments)
       (goals.shrink scalar).returned =
-    localSelect 128 variableExpr (.cons bound arguments)
-      (fun value (_ : Runtime program (fun _ => []) zS) world => denotes (returned value) world)
-      (fun value => requireCondition (returned value)) := rfl
+    requireCondition (returned bound) := rfl
 
 def branch (program : Programm zD) (sources : Invarianten.Pruefer.LockSources zS) (bound : Wert zD scalar) :=
   ending (S := zS) (requiresPolicy program) (lockFormula zS sources) {} none 127
@@ -133,19 +131,11 @@ theorem branch_valid (program : Programm zD) (sources : Invarianten.Pruefer.Lock
     ∃ result, branch program sources bound = .ok result ∧
       ∀ values, values cell = number bound → result.formula.denote values := by
   with_unfolding_all
-    have each (value : Wert zD scalar) :
-        ∃ relation head, localEquality variableExpr (.cons bound arguments) value = .ok relation ∧
-          requireCondition (program := program) (checked := fun _ => []) (S := zS) (returned value) = .ok head ∧
-          ∀ values, values cell = number bound → relation.val.denote values → head.formula.denote values := by
-      refine ⟨varRelation bound value, leaf program value, varRelation_result bound value, leaf_result program value, ?_⟩
-      intro values ready related
-      apply (leaf_meaning program value values).mpr
-      have same := (varRelation_meaning bound value values).mp related
-      omega
-    obtain ⟨pre, hpre, valid⟩ := localSelect_valid 128 variableExpr (.cons bound arguments)
-      (fun value (_ : Runtime program (fun _ => []) zS) world => denotes (returned value) world)
-      (fun value => requireCondition (returned value)) domain domain_result
-      (fun values => values cell = number bound) each
+    let pre := leaf program bound
+    have hpre := leaf_result program bound
+    have valid : ∀ values, values cell = number bound → pre.formula.denote values := by
+      intro values ready
+      exact (leaf_meaning program bound values).mpr ready.symm
     cases result : branch program sources bound with
     | error cause =>
         delta branch tail at result

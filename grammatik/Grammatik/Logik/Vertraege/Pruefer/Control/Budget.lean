@@ -22,6 +22,13 @@ def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1
   | some type => specializationCount limit type
 
+/-- A bound variable is already a decoded value; returning it creates one
+    continuation, independently of the size of its declared result type. -/
+def returnSpecializations (limit : Nat) {Γ Λ kind} (expression : ErgExpr D Γ Λ kind) : Nat :=
+  match kind, expression with
+  | none, .empty | some _, .val (.var _) => 1
+  | some type, .val _ => specializationCount limit type
+
 mutual
 
 /-- Bound the finite-specialization compiler before executing it. Products
@@ -29,13 +36,14 @@ mutual
     largest individual type. Refusing this budget supplies no semantic fact. -/
 def statementSpecializations (limit : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
   | .assignVar (τ := type) _ _ => specializationCount limit type
-  | .ret _ _ | .retScoped _ _ => resultSpecializations limit V.erg
+  | .ret expression _ | .retScoped expression _ => returnSpecializations limit expression
   | .call f _ _ _ => min (limit + 1)
       (argumentSpecializations limit (D.params f) * resultSpecializations limit (D.erg f))
   | .ite _ yes no => min (limit + 1)
       (blockSpecializations limit yes + blockSpecializations limit no)
   | .breaking _ body | .locks _ _ body => blockSpecializations limit body
   | .onWhy _ arms => reasonSpecializations limit arms
+  | .retry 0 _ _ overflow => min (limit + 1) (1 + blockSpecializations limit overflow)
   | .retry count _ body overflow => min (limit + 1)
       ((count + 1) * blockSpecializations limit body + blockSpecializations limit overflow)
   | .traverse table _ body => min (limit + 1)
@@ -65,7 +73,7 @@ def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' →
   | _ => 1
 
 def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
-  | .ret _ _ | .retScoped _ _ => resultSpecializations limit V.erg
+  | .ret expression _ | .retScoped expression _ => returnSpecializations limit expression
   | .cons head tail => min (limit + 1)
       (statementSpecializations limit head * endSpecializations limit tail)
   | .bind (τ := type) _ tail => min (limit + 1)

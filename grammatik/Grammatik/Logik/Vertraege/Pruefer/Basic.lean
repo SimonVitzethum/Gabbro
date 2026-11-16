@@ -213,6 +213,13 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
         return ⟨fun O U A passes R world locals =>
           traverse_safe _ _ (checked.down O U A passes R)
             (fun _ _ => rfl) (alleIndizes (D.count table)) world locals⟩
+    | .retry 0 test _ overflow => do
+        let exceeded ← block S sources fuel overflow
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execStmtHA, retryLauf]
+          split
+          · trivial
+          · exact exceeded.down O U A passes R _ _⟩
     | .retry count test body overflow => do
         let checked ← block S sources fuel body
         let exceeded ← block S sources fuel overflow

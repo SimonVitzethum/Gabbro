@@ -41,6 +41,7 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Opti
       denotes (returned (evalErg world expression world locals)) world)) :=
   match result, expression, returned with
   | none, .empty, returned => requireCondition (returned ())
+  | some _, .val (.var name), returned => requireCondition (returned (locals.get name))
   | some _, .val expression, returned =>
       localSelect budget expression locals
         (fun value _ world => denotes (returned value) world)
