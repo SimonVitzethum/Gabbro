@@ -74,10 +74,10 @@ theorem stage0_anspruch_erfuellt :
     checkB checkP [] [] (List.finRange checkU.fns.length) checkChecks = true :=
   ⟨by kernel_rfl, checkU_checkB⟩
 
-/-- Both floor verdicts, the executable bound counterprobe, and both foreign
-    gate forms use the same source/elaboration/lowering/admission path. No
-    separate emitter or interpreter implements these forms. -/
-theorem stage0_c16_formen_akzeptiert :
+/-- Exact strict-checker verdicts for the floor and counterprobe units and
+    the unchanged foreign wrappers. The latter retain their certified
+    contract-fragment refusals. All use the same elaboration and lowering. -/
+theorem stage0_c16_formen_urteile :
     AkzeptiertX checkPBodenWahr (Cover.Differenz.sperrFamilie uBodenWahr)
       (List.finRange uBodenWahr.fns.length) [] [] [] [] checkChecksBodenWahr = true ∧
     AkzeptiertX checkPBodenFalsch (Cover.Differenz.sperrFamilie uBodenFalsch)
@@ -85,11 +85,11 @@ theorem stage0_c16_formen_akzeptiert :
     AkzeptiertX checkPSonde (Cover.Differenz.sperrFamilie uSonde)
       (List.finRange uSonde.fns.length) [] [] [] [] checkChecksSonde = true ∧
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true ∧
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false ∧
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
-      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true :=
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = false :=
   ⟨bodenWahr_akzeptiert, bodenFalsch_akzeptiert, sonde_akzeptiert,
-    fremd_akzeptiert, fremdFallible_akzeptiert⟩
+    fremd_abgelehnt, fremdFallible_abgelehnt⟩
 
 /-- Measured counterprobe evidence additionally passes the executable binding
     and exact-image gate; structural admission alone claims no external run. -/
