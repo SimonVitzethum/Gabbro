@@ -1,5 +1,5 @@
 /- An accepted C08 goal witness with a declared software item. Its function
-   contract is true and its sole start immediately returns. The call-site
+   contract requires its two-valued Boolean result to be true. The call-site
    duty is empty; this does not claim acceptance of foreign-call bodies. -/
 module
 
@@ -11,9 +11,10 @@ public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 namespace Gabbro.Grammatik.Zielsatz.CallSiteAccepted
 
 open Gabbro.Grammatik Speichermodell
-open Gabbro.Grammatik.CallSiteZeuge (decl)
-open Gabbro.Grammatik.CallSiteBlocker (traceOracle)
-open CallSiteReplayBlocker (goodUnit good_checker good_user good_call_sites)
+open CallSiteReplayBlocker.Positive (decl traceOracle good_user)
+open CallSiteReplayBlocker (good_checker good_call_sites)
+
+abbrev goodUnit := CallSiteReplayBlocker.Positive.unit
 
 abbrev sp0R : Speicher decl.mitRuhe := speicherR goodUnit.sp0
 abbrev initR : Faden → Σ f : decl.mitRuhe.Fn, Env decl.mitRuhe (decl.mitRuhe.params f) :=
@@ -41,11 +42,11 @@ theorem callSite_goal_zeuge [RootNativeFloat.Hardware] :
       ZielFX goodUnit.P.mitRuhe goodUnit.S.mitRuhe traceOracle.mitRuhe passes
         (GeteiltV (D := decl) goodUnit.P goodUnit.ws)
         (RufStartG goodUnit.P.mitRuhe sp0R initR) (goodUnit.arenen.map (·.mitRuhe)) K := by
-  have cover : PostDeckt goodUnit := CallSiteReplayBlocker.post_cover
-  have binding : ForeignVertrag goodUnit traceOracle := CallSiteReplayBlocker.binding
-  have hardware : HardwareAnnahmenHw traceOracle goodUnit.Q := CallSiteReplayBlocker.hardware
+  have cover : PostDeckt goodUnit := CallSiteReplayBlocker.Positive.post_cover
+  have binding : ForeignVertrag goodUnit traceOracle := CallSiteReplayBlocker.Positive.binding
+  have hardware : HardwareAnnahmenHw traceOracle goodUnit.Q := CallSiteReplayBlocker.Positive.hardware
   refine ⟨good_checker, good_user, good_call_sites, cover, binding, hardware,
-    laufzeit_voll goodUnit, rfl, CallSiteReplayBlocker.no_global_summary traceOracle, ?_⟩
+    laufzeit_voll goodUnit, rfl, CallSiteReplayBlocker.Positive.no_global_summary, ?_⟩
   intro passes K reached
   exact gabbro_ziel akzeptiertX_pruefer decl goodUnit
     ⟨[()], fs_voll⟩ ⟨[], fun L => nomatch L⟩

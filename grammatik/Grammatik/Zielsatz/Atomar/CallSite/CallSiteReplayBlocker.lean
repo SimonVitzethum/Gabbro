@@ -7,6 +7,7 @@ module
 public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
+public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
 
 @[expose] public section
 
@@ -15,6 +16,8 @@ namespace Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker
 open Gabbro.Grammatik Speichermodell
 open Gabbro.Grammatik.CallSiteZeuge (decl memory world rho)
 open Gabbro.Grammatik.CallSiteBlocker (traceOracle traceOracle_gut)
+
+local instance : DecidableEq decl.Fn := inferInstanceAs (DecidableEq Unit)
 
 /-- This software item is declared but never called. -/
 def contract : CallContract decl (decl.asignatur ()) where
@@ -55,9 +58,9 @@ theorem post_cover : PostDeckt unit := by
   intro a hsw σ0 ρ σ1 v hp
   exact False.elim (Bool.false_ne_true hp)
 
-theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle unit.Q :=
-  ⟨traceOracle_gut, ⟨fun r => nomatch r, fun g => nomatch g⟩,
-    (fun a hsw => absurd rfl hsw), inferInstance⟩
+theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw traceOracle unit.Q := by
+  refine ⟨traceOracle_gut, ?_, (fun a hsw => absurd rfl hsw), inferInstance⟩
+  exact ⟨fun r => nomatch r, fun g => nomatch g⟩
 
 /-- Unlike the global false summary, the conditional class has an actual
     frame-respecting, register-local member: the unused software pre is false. -/
@@ -113,16 +116,17 @@ theorem good_user : NutzerPflichtA goodUnit where
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }
 
-/-- Premise (a) does not check logical truth of a function's ensures. -/
-theorem checker : akzeptiertX_pruefer.akzeptiert unit [()] [] [] = true := by
-  have hvoll : ∀ f : decl.Fn, f ∈ [()] := fun f => by
-    cases f
-    exact List.mem_singleton_self _
-  simp only [akzeptiertX_pruefer, AkzeptiertX, Bool.and_eq_true]
-  and_intros
-  all_goals first
-    | exact (schnittstellenB_iff hvoll).mpr (schnittstellen_standard _ _)
-    | decide
+/-- The strict checker refuses the false post and names the actual failed
+    contract obligation. This is an executable diagnostic, not a guessed trace. -/
+theorem checker :
+    akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
+    Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =
+      .error "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
+  constructor
+  · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
+    change (_ && nutzerPflichtGeprueftB unit [()] []) = false
+    rw [refused, Bool.and_false]
+  · decide +kernel
 
 /- The following small invariant proves the full unit call-site duty, not just
    a duty on an empty chosen replay history. Every runtime start is already at
@@ -173,10 +177,12 @@ private theorem returnedHeads_start (sp : Speicher decl.mitRuhe)
     cases f with
     | none =>
       simp only [RufStartG, hi]
+      rw [hi]
       exact ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
     | some f =>
       cases f
       simp only [RufStartG, hi]
+      rw [hi]
       exact ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
 
 /-- No software call head is reachable, for any binding, budget or runtime. -/
@@ -190,6 +196,45 @@ theorem call_sites : CallSitePflicht unit := by
   have hn := returnedHeads_no_call (M := mitSpeicher M presented) hm t
   rw [hn] at hk
   cases hk
+
+/-- The separate positive fixture checks a result-dependent Boolean post. -/
+theorem good_checker : akzeptiertX_pruefer.akzeptiert Positive.unit [()] [] [] = true :=
+  Positive.good_checker
+
+private theorem positive_returnedHeads_start (sp : Speicher Positive.decl.mitRuhe)
+    (init : Faden → Σ f : Positive.decl.mitRuhe.Fn,
+      Env Positive.decl.mitRuhe (Positive.decl.mitRuhe.params f)) :
+    ReturnedHeads (RufStartG Positive.unit.P.mitRuhe sp init) := by
+  intro t
+  refine ⟨rfl, ?_⟩
+  cases hi : init t with
+  | mk f locals =>
+    cases f with
+    | none =>
+      simp only [RufStartG, hi]
+      rw [hi]
+      exact ⟨false, [], [], locals, .empty, List.Perm.nil, rfl⟩
+    | some f =>
+      cases f
+      simp only [RufStartG, hi]
+      rw [hi]
+      exact ⟨false, [], [], locals, .val .tru, List.Perm.nil, rfl⟩
+
+/-- Every positive runtime head is a return, so no foreign pre is owed. -/
+theorem good_call_sites : CallSitePflicht Positive.unit := by
+  intro O H hh hf passes sp init hl a σ locals reached hsw
+  obtain ⟨M, presented, t, history, _, key⟩ := reached
+  have heads : ReturnedHeads M := by
+    induction history with
+    | start => exact positive_returnedHeads_start sp init
+    | schritt M M' u _ step ih => exact returnedHeads_gx ih step
+  have absent := returnedHeads_no_call (M := mitSpeicher M presented) heads t
+  rw [absent] at key
+  cases key
+
+theorem good_call_sites_zeuge :
+    akzeptiertX_pruefer.akzeptiert Positive.unit [()] [] [] = true ∧
+    CallSitePflicht Positive.unit := ⟨good_checker, good_call_sites⟩
 
 /-- The actual runtime runs the sole declared start once and idles elsewhere. -/
 def initial (t : Faden) :
