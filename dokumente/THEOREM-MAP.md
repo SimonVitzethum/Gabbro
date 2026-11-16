@@ -6978,6 +6978,15 @@ semantic user/start duties. `Stage0/ArrayWitness.akzeptiertSpec_zeuge` jointly
 instantiates the strengthened helper on the actual emitted nested-array source,
 one real function, a certifiable unit, absent extra roots and non-atomic memory.
 
+The reachable block-image modules `Block/Praefix.lean`, `Fenster.lean` and
+`Emitted.lean` are aligned with the existing universal read-blindness theorem
+from `50769b304`: `randGL_zerlegung` uses the current step interface;
+`randL_zerlegung`, `BlockFenster.ziel` and `Emitted.bild_ziel_aufruf_im_if`
+no longer request the deleted `LeseblindOK` class. Their conclusions and all
+remaining image, call, hardware and user/start duties are unchanged. The
+existing block witness remains explicitly conditional on its loaded-image
+and frame premises.
+
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
 
 On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.

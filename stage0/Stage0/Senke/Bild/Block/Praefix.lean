@@ -26,7 +26,7 @@ theorem randGL_zerlegung {B : BodyFrame D} (hO : Leseblind B.O)
   induction hk generalizing M with
   | halt eb σ ρ => exact ⟨M, RufLaufG.refl M, h⟩
   | schritt s rest ebe σ σ1 σe ρ ρ1 ρe hs hex _ ih =>
-    obtain ⟨M1, hl, h1⟩ := randGL_schritt hO.rs hRuf hs hex h
+    obtain ⟨M1, hl, h1⟩ := randGL_schritt hRuf hs hex h
     obtain ⟨Me, hl', he⟩ := ih h1
     exact ⟨Me, hl.trans hl', he⟩
   | bind e rest ebe σ σe ρ ρe _ ih =>
@@ -36,7 +36,7 @@ theorem randGL_zerlegung {B : BodyFrame D} (hO : Leseblind B.O)
 
 /-- The finite decomposition reaches its endpoint on both sides. This is useful
     when descending into the final statement rather than executing it as a whole. -/
-theorem randL_zerlegung {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] [LeseblindOK B.O]
+theorem randL_zerlegung {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O]
     (hB : B.Ok) {Cg : D.Fn → Prop} {thr : Faden} {stapel : List (RufRahmenG D)}
     {rho : Env D (D.params B.f)} {s0 : World D} {Agl : D.Lock → Prop}
     (hRuf : RufOkGleich B.P B.O B.passes thr Agl B.R Cg) {l : Bool} {Γ Γe : Ctx}

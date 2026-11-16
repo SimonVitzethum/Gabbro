@@ -49,7 +49,7 @@ def BlockBild (B : BodyFrame D) (Lm j : Nat) (g : D.Fn) (σc : World D)
     or machine correspondence is assumed beyond the proved `BlockFenster`.
     Every machine named is reachable and carries every leg of the goal theorem. -/
 theorem BlockFenster.ziel [DecidableEq D.Fn] {B : BodyFrame D}
-    [TorOK B.L B.O] [SichtOK B.O] [LeseblindOK B.O]
+    [TorOK B.L B.O] [SichtOK B.O]
     {Lm j : Nat} {g : D.Fn} {σc : World D} {ρc : Env D (D.params g)}
     {thr : Faden} {caller : RufRahmenG D} {stapel : List (RufRahmenG D)} {Agl : D.Lock → Prop}
     {Γe : Ctx} {Λe : List (Res D)} {ebe : Endblock D (vertragVon D g) false Γe Λe}

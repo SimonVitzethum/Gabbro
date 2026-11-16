@@ -50,7 +50,7 @@ theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (decl
       (output.einheit Q).akku := by
   letI : RootNativeFloat.Hardware := hw
   -- Read the structural facts from actual compiler acceptance. The theorem's
-  -- separate user/start duties remain hN; no checked-start Bool is assumed.
+  -- image theorems retain their separate user/start duties.
   have accepted := output.compiled.accepted
   unfold OldSource.accepts at accepted
   split at accepted

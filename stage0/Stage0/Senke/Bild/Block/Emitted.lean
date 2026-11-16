@@ -29,7 +29,7 @@ theorem Emitted.bild_ziel_aufruf_im_if [Kern] (output : Emitted src K options)
     (hreqr : ReqAmEintritt output.compiled.program r (output.sp0.welt []) ρr)
     {Q : AxEns (declOf output.compiled.unit)} (hN : NutzerPflichtA (output.einheit Q))
     {O : Orakel (declOf output.compiled.unit)} (hH : HardwareAnnahmen O Q)
-    [TorOK output.image.Y O] [SichtOK O] [LeseblindOK O] {m : Runner.Mem}
+    [TorOK output.image.Y O] [SichtOK O] {m : Runner.Mem}
     (loaded : BytesAt m Runner.Prog.IMG output.bytes)
     {thr : Faden} {Agl : (declOf output.compiled.unit).Lock → Prop} {j : Nat}
     (hj : output.image.depth - 1 = j + 1)
