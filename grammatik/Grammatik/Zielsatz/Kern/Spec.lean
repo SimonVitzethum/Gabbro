@@ -195,10 +195,9 @@
     `start`/`child` step spawns them. Assumed about the runtime and the lowering: (1) a spawned root's arguments are
     the unit's and its ghost entry world is the start world; (2) spawns happen only where the checked conditions
     hold (no lock held at a `start`, `N461`; the starter waits for every root; a `child` is entered with nothing
-    held, `N456`); (3) every spawn succeeds (`Faden` is unbounded; thread creation failing is not modelled). For images
-    Stage 0 emits, a refused thread creation is a declared stop (`exit_group(cloneCode)`, `Senke.spawn1_ok`), not a
-    missing root; `Laufzeit`'s spawn-success assumption is thereby discharged for Stage-0 startups except that the
-    kernel answers at all.
+    held, `N456`); (3) every spawn succeeds (`Faden` is unbounded; thread creation failing is not modelled). For Stage-0
+    images a refused thread creation is a declared stop (`exit_group(cloneCode)`, `Senke.spawn1_ok`), not a missing
+    root; this discharges `Laufzeit`'s spawn-success assumption there, except that the kernel answers at all.
   * INSIDE A LEG, not in (c): `KernPlan` (`keinKernHalt`: masking works and a handler runs to completion on the
     core it preempted) and `ImBereichO` (`speicherAdressen`: foreign code writes inside the declared extents).
   * `GabbroZielLeben`: `Fair` -- the scheduler is weakly fair (a thread ready at every step from some point on
@@ -233,10 +232,9 @@
     entry function (`rufAt`), stops with that call's logic or hardware code, or reaches `exit_group(120)` when
     startup thread creation is refused. Its premises are the runner kernel class `Runner.IR.Kern` (which includes
     `RootNativeFloat.Hardware`), the clone answer contract `Senke.CloneAnswers` (a non-zero answer, memory
-    unchanged; success is not assumed), and the
-    image's initial-memory, gate and view conditions (`WeltAt`, `TorOK`, `SichtOK`). What it does NOT give: a
-    simulation of the thread machine over GX, so none of the concurrent legs of `ZielFX` (race freedom, the
-    invariants at every reached machine, deadlock freedom, `keinKernHalt`, time, call logs, ownership) is carried to
+    unchanged; success is not assumed), and the image's initial-memory, gate and view conditions (`WeltAt`,
+    `TorOK`, `SichtOK`). What it does NOT give: a simulation of the thread machine over GX, so none of the concurrent
+    legs of `ZielFX` (race freedom, the invariants at every reached machine, deadlock freedom, `keinKernHalt`, time, call logs, ownership) is carried to
     the image; coverage of every source form (Stage 0 refuses what it cannot lower, dokumente/IR-COMPILATION-LANES.md);
     that the runner's Lean model (`Runner.IR`) is what the CPU does (that is tested differentially against the CPU,
     not proved). Code/ holds further refinement pieces (`lowerS_ok`, `stmt_gx`, the ticket lock).
