@@ -110,6 +110,10 @@ theorem Emitted.bild_ziel_aufruf_im_if [Kern] (output : Emitted src K options)
   obtain ⟨pce, me, Me, st, hl, hRe⟩ := randL_zerlegung hOk hRuf hk' hSt
   obtain ⟨n1, n2, pc, mc, Mc, stB, hlB, hB⟩ := randL_ite_eintritt hOk hRe hcond
   have hreach := rufErreichbar_lauf (hl.trans hlB) RufErreichbarG.start
+  letI : TorOK (((output.rahmen O C Lm rp ens).suffix n1).suffix n2).L
+      (((output.rahmen O C Lm rp ens).suffix n1).suffix n2).O := by
+    change TorOK output.image.Y O
+    infer_instance
   have hwindow := randDannL_bindCall_ein_aus ((hOk.suffix n1).suffix n2) hcodes
     (by exact congrArg (rufAt output.compiled.program O output.image.passes) hj)
     (by exact congrArg (BitVec.ofNat 64) hj)
