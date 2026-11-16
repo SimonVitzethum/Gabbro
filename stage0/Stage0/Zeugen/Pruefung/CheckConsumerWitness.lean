@@ -61,4 +61,13 @@ theorem selected_refused_zeuge : compile text options = .error
 /-- The request explicitly selects the physical consumer's driver. -/
 theorem selected_entry_requested_zeuge : Profil.entryName options = "p#driver#g" := rfl
 
+/-- A complete source request with a constant u64 local and a small result.
+    The binding is checked without enumerating the u64 range. -/
+def constantLocalSource : String :=
+  "impl fn main() -> u32 in 0 .. 1 { let x: u64 = 3; return 0; }"
+
+theorem constant_local_compiles_zeuge :
+    (compile constantLocalSource {}).toOption.isSome = true := by
+  kernel_rfl
+
 end Gabbro.Stage0.CheckConsumerWitness

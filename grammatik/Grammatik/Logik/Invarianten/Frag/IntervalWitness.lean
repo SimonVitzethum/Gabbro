@@ -28,7 +28,11 @@ theorem u32_decided_zeuge :
       (close_closed _) = true :=
   (close_decide_true_iff _).mpr universalInterval_denote_zeuge
 
-abbrev declaration : Deklaration := Witness.declaration
+abbrev declaration : Deklaration :=
+  { Witness.declaration with
+    gtyp := fun name => if name then .int 0 10 else .int 0 100 }
+
+def access (name : declaration.Glob) : gdarf declaration name [] := fun _ h => nomatch h
 
 def program : Programm declaration where
   invariante := fun _ => .tru
@@ -62,7 +66,7 @@ theorem constantValue_zeuge : (constantValue productConstant .nil).isSome = true
   rfl
 
 def square : Expr declaration [] [] (.int 0 100) :=
-  .mul (.glob false (Witness.globalAccess false)) (.glob true (Witness.globalAccess true))
+  .mul (.glob true (access true)) (.glob true (access true))
 
 def boundedPost : QF (Observation declaration) :=
   lower (.le (.var (.glob false)) (.konst 100))
@@ -79,10 +83,21 @@ theorem square_interval_valid :
   rw [bind_same]
   exact upper
 
-/-- A product of two memory variables is proved through the result interval;
+/-- A nonlinear square of a memory observation is proved through its interval;
     no exact linear encoding of multiplication is claimed. -/
 theorem intervalWP_zeuge : (intervalWP square .nil (.glob false) boundedPost).toOption.isSome = true := by
   simp only [intervalWP, square_interval_valid, ↓reduceDIte, Except.toOption, Option.isSome]
+
+/-- The same fixture has a well-typed model store, whose real successor world
+    satisfies the decided postcondition. -/
+theorem interval_store_zeuge (world : World declaration) :
+    boundedPost.denote (assignment
+      (world.schreibGlob false [] (eval world square world .nil))) := by
+  rw [boundedPost, lower_denote, assignment_schreibGlob]
+  change ((assignment world).bind (.glob false)
+    (eval world square world .nil).n) (.glob false) ≤ 100
+  rw [bind_same]
+  exact (eval world square world .nil).le_hi
 
 theorem impossible_interval :
     decideB (close (universalInterval (.glob false : Observation declaration) 0 100 .fls))
