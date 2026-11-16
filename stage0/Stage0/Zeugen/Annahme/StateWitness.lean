@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+public meta import Stage0.IRBild
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -44,6 +45,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
+#eval match candidate with
+  | .error cause => cause
+  | .ok _ => "accepted"
 
 /-- The caller does not establish the transition's source state. -/
 theorem candidate_refused : candidate = .error

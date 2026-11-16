@@ -232,7 +232,9 @@ def statement (S : SperrInv D) (sources : LockSources S) :
             let checked ← block S sources fuel body
             let exceeded ← block S sources fuel overflow
             return ⟨fun O U A passes R world locals =>
-              retry_safe _ (leseBA A test) _ (checked.down O U A passes R)
+              retry_safe _ (fun next env =>
+                let observed := leseA A next _ test.orte
+                (observed, wahr? (eval observed test observed env))) _ (checked.down O U A passes R)
                 (exceeded.down O U A passes R) (count + 1) world locals⟩
     | .locks lock _ body => do
         let truth ← trivialLock sources lock
