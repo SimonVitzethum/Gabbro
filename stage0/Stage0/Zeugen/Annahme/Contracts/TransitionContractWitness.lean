@@ -55,6 +55,67 @@ def sourceModel (source : String) : Except String (Σ u : UProg, Programm (declO
   let program ← OldSource.restore declarations unit raw
   return ⟨unit, program⟩
 
+namespace Data
+
+def transition (ordered : Bool) : UTransition where
+  name := if ordered then "cycle" else "a"
+  writes := if ordered then
+    [{ place := .slot "T" "s" (.lit 0), source := .lit 0, target := .lit 1 },
+     { place := .slot "T" "s" (.lit 1), source := .lit 0, target := .tab "T" "s" (.lit 0) }]
+    else [{ place := .slot "T" "s" (.param "#transitionIndex"), source := .lit 0, target := .lit 1 }]
+  clause := .and .tru .tru
+  held := []
+  puts := ["T"]
+  gputs := []
+  primitive := false
+
+def transitionFunction (ordered : Bool) : UFn where
+  name := if ordered then "#transition#S#cycle" else "#transition#S#a"
+  params := if ordered then
+    [("#index0", .int 0 1), ("#source0", .int 0 2), ("#target0", .int 0 2),
+     ("#index1", .int 0 1), ("#source1", .int 0 2), ("#target1", .int 0 2)]
+    else [("#index0", .int 0 1)]
+  kinds := if ordered then [.index 0, .int, .int, .index 0, .int, .int] else [.index 0]
+  res := none
+  held := []
+  puts := ["T"]
+  gives := if ordered then
+    [.cmp "==" (.tab "T" "s" (.param "#index0")) (.param "#target0"),
+     .cmp "==" (.tab "T" "s" (.param "#index1")) (.param "#target1")]
+    else [.cmp "==" (.tab "T" "s" (.param "#index0")) (.lit 1)]
+  needs := if ordered then
+    [.and .tru .tru,
+     .cmp "==" (.param "#index0") (.lit 0),
+     .cmp "==" (.param "#source0") (.lit 0),
+     .cmp "==" (.param "#target0") (.lit 1),
+     .cmp "==" (.param "#index1") (.lit 1),
+     .cmp "==" (.param "#source1") (.lit 0),
+     .cmp "==" (.param "#target1") (.tab "T" "s" (.lit 0)),
+     .cmp "==" (.tab "T" "s" (.param "#index0")) (.param "#source0"),
+     .cmp "==" (.tab "T" "s" (.param "#index1")) (.param "#source1")]
+    else [.and .tru .tru, .cmp "==" (.tab "T" "s" (.param "#index0")) (.lit 0)]
+  body := if ordered then
+    [.assignTab "T" "s" (.param "#index0") (.param "#target0"),
+     .assignTab "T" "s" (.param "#index1") (.param "#target1")]
+    else [.shiftTab "T" "s" (.param "#index0") "S" 0 1]
+  ret := .empty
+
+def sourceUnit (ordered : Bool) : UProg where
+  tabs := [{ name := "T", count := 2, cols := [("s", 0, 2)], breiten := [("s", 32)] }]
+  locks := []
+  fns :=
+    [{ name := "main", params := [], kinds := [], res := some (0, 100), held := [],
+       puts := ["T"], gives := [],
+       body := [.call (if ordered then "#transition#S#cycle" else "#transition#S#a")
+         (if ordered then [.val (.lit 0), .val (.lit 0), .val (.lit 1), .val (.lit 1),
+           .val (.lit 0), .val (.tab "T" "s" (.lit 0))] else [.val (.lit 0)])],
+       ret := .val (.lit 23) }, transitionFunction ordered]
+  zustaende := [{ name := "S", stufen := if ordered then [] else ["Idle", "Busy"],
+    paare := if ordered then [] else [(0, 1)], transitions := [transition ordered] }]
+  regiert := [("T", "s", "S")]
+
+end Data
+
 def text : String :=
   "module transition_probe { table T count 2 { slot { s : u32 in 0 .. 2, } } state S { transition a { s : Idle -> Busy } requires true effects { writes T.slots } } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { transition T.slots[0].s : Idle -> Busy; return 23; } }"
 
@@ -69,8 +130,13 @@ theorem candidate_refused : candidate.toOption.isSome = false := by
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := model.1
-def program : Programm (declOf unit) := model.2
+def unit : UProg := Data.sourceUnit false
+
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality false"
+
+theorem model_unit : model.1 = unit := by kernel_rfl
+
+def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
 
@@ -135,8 +201,13 @@ theorem candidate_refused : candidate.toOption.isSome = false := by
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := model.1
-def program : Programm (declOf unit) := model.2
+def unit : UProg := Data.sourceUnit true
+
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality true"
+
+theorem model_unit : model.1 = unit := by kernel_rfl
+
+def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
 
