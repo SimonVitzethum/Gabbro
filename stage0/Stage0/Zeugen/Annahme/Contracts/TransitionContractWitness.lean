@@ -201,7 +201,8 @@ def unit : UProg := Data.sourceUnit true
 
 #eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality true"
 
-theorem model_unit : model.1 = unit := by kernel_rfl
+-- Cache representatives need only their existing quotient equality.
+theorem model_unit : model.1 = unit := by decide +kernel
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
