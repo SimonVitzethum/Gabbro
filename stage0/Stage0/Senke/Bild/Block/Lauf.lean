@@ -65,7 +65,9 @@ theorem randDannL_bindCall_ein_aus {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.
     BlockCallSite.eintritt hB hc hdv hcap hj hp (BodyFrame.randBIR_bindCall_site h.1) (rufAt_ok_req hR)
   obtain ⟨M1, σm, hl1, hG, hout⟩ := randDannGL_bindCall_ein_aus h.2 hR hg hkC
   have hRuf := rufOk_gleich_tiefAlle (P := B.P) (O := B.O) (passes := B.passes) thr Agl j
-  obtain ⟨Me, hlP, hGe⟩ := randGL_zerlegung hO hRuf hkC hG
+  obtain ⟨Me, hlP, hGe⟩ := randGL_zerlegung
+    (B := rufZRahmen B.L B.O B.passes B.P B.A j g
+      (rufWelt B.P g σ Λ args) (rufEnv g σ Λ args ρ)) hO hRuf hkC hG
   obtain ⟨M2, hl2, hG2⟩ := hout hGe
   refine ⟨fpc, rpc, Kc, Ksc, ensc, pcI, _, mI, mN, M1, M2, σm,
     hOk, sI, hl1, ⟨hI, hG⟩, sN, hl1.trans (hlP.trans hl2), ⟨hN, hG2⟩, ?_⟩
