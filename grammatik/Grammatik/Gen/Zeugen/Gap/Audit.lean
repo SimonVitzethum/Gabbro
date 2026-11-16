@@ -64,7 +64,7 @@ theorem m49_50_contract_checked : contractCause M49_50.e = none := by decide +ke
 
 /-- The indirect call still has no contract-WP rule. -/
 theorem m47_549_cause : contractCause M47_549.e = some
-    (.unsupported "contract statement is outside the checked scalar/control fragment") := by decide +kernel
+    (.unsupported "contract indirect call needs a checked finite target dispatch") := by decide +kernel
 
 theorem m99_824_refused : M99_824.e.gueltig = false :=
   refused_of_cause _ _ m99_824_cause

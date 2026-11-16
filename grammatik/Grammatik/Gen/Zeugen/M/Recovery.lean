@@ -31,6 +31,7 @@ def records : List (Einsatz × List Zelle) := [
   (F01_chain.e, F01_chain.zellen),
   (F02_foot.e, F02_foot.zellen),
   (F03_reg.e, F03_reg.zellen),
+  (Gap.F03_reg.e, Gap.F03_reg.zellen),
   (F04_nolock.e, F04_nolock.zellen),
   (F06_pool.e, F06_pool.zellen),
   (F07_race.e, F07_race.zellen),
@@ -50,7 +51,7 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
     ∀ x, p.1.Hat x ↔ x ∈ p.2 := by
   intro p member
   simp only [records, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · refine ⟨F00_call.e_gueltig, fun x => ?_⟩
     change x ∈ F00_call.e.zellen ↔ x ∈ F00_call.zellen
     rw [← F00_call.zellen_exact, List.mem_eraseDups]
@@ -63,6 +64,9 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
   · refine ⟨F03_reg.e_gueltig, fun x => ?_⟩
     change x ∈ F03_reg.e.zellen ↔ x ∈ F03_reg.zellen
     rw [← F03_reg.zellen_exact, List.mem_eraseDups]
+  · refine ⟨Gap.F03_reg.e_gueltig, fun x => ?_⟩
+    change x ∈ Gap.F03_reg.e.zellen ↔ x ∈ Gap.F03_reg.zellen
+    rw [← Gap.F03_reg.zellen_exact, List.mem_eraseDups]
   · refine ⟨F04_nolock.e_gueltig, fun x => ?_⟩
     change x ∈ F04_nolock.e.zellen ↔ x ∈ F04_nolock.zellen
     rw [← F04_nolock.zellen_exact, List.mem_eraseDups]

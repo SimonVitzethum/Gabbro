@@ -60,24 +60,23 @@ def requested : List Zelle := [
   ⟨2, 1, true, [false, true]⟩,
   ⟨2, 1, true, [true, true]⟩]
 
-/-- The model cells pass; register reads still lack a contract-VC rule. -/
+/-- The structural model cells pass independently of the contract certificate. -/
 theorem e_strukturell : Adaequanz.akzeptiert Einsatz.Hat gutTafel e := by
   change ∀ x ∈ e.zellen, gutTafel x = true
   decide
 
 def cause : Option Invarianten.Frag.Refusal := GateAudit.contractCause e
 
-theorem e_cause : cause = some (.unsupported
-    "contract end block is outside the checked control fragment") := by decide +kernel
+theorem e_cause : cause = none := by decide +kernel
 
-theorem e_refused : e.gueltig = false := by decide +kernel
+theorem e_gueltig : e.gueltig = true := by decide +kernel
 
-/-- The intended footprint vectors exist even though the checker refuses the body. -/
+/-- The intended footprint vectors exist and the checked register body is accepted. -/
 theorem requested_present : ∀ x ∈ requested, e.Hat x := by decide
 
-theorem requested_refusal_zeuge : ⟨2, 0, true, [true, false, true, false]⟩ ∈ requested ∧
-    e.Hat ⟨2, 0, true, [true, false, true, false]⟩ ∧ e.gueltig = false :=
-  ⟨by decide, requested_present _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl), e_refused⟩
+theorem requested_checked_zeuge : ⟨2, 0, true, [true, false, true, false]⟩ ∈ requested ∧
+    e.Hat ⟨2, 0, true, [true, false, true, false]⟩ ∧ e.gueltig = true :=
+  ⟨by decide, requested_present _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl), e_gueltig⟩
 
 /-- Input-side evidence, independent of the diagnostic evaluator. -/
 def RegInput : Prop :=
@@ -90,12 +89,10 @@ theorem e_input : RegInput := by
     exact List.mem_cons_self
   · decide
 
-theorem e_cause_link : RegInput → cause = some (.unsupported
-    "contract end block is outside the checked control fragment") := fun _ => e_cause
+theorem e_cause_link : RegInput → cause = none := fun _ => e_cause
 
-theorem e_cause_link_zeuge : RegInput ∧ cause = some (.unsupported
-    "contract end block is outside the checked control fragment") ∧ e.gueltig = false :=
-  ⟨e_input, e_cause_link e_input, e_refused⟩
+theorem e_cause_link_zeuge : RegInput ∧ cause = none ∧ e.gueltig = true :=
+  ⟨e_input, e_cause_link e_input, e_gueltig⟩
 
 /-- Exact cell set, including every companion cell of this fixture. -/
 def zellen : List Zelle := [
@@ -139,8 +136,8 @@ theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   rw [← zellen_exact] at member
   exact List.mem_eraseDups.1 member
 
-theorem e_zeuge : e.gueltig = false ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
-  ⟨e_refused, e_hat _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)⟩
+theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
+  ⟨e_gueltig, e_hat _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)⟩
 
 /-- Missing requested cells are findings, never an altered checker verdict. -/
 def missing : List Zelle := requested.filter (fun x => !zellen.contains x)

@@ -78,7 +78,7 @@ local instance : DecidableEq D.Ax :=
 /-- The unchanged old-memory post is outside the decidable contract fragment. -/
 theorem old_post_fragment_refused_zeuge :
     (Vertraege.Pruefer.currentOnly (program.ensures function)).map (fun _ => ()) =
-      .error (.unsupported "contract needs an expression independent of old memory") := by
+      .error (.unsupported "old memory needs a distinct entry-world snapshot observation") := by
   kernel_rfl
 
 /-- The complete singleton function/table/global enumeration is actually refused. -/

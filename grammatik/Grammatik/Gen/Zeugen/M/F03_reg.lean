@@ -64,10 +64,10 @@ def requested : List Zelle := [
 /-- The block rule checks a discarded register result in the current fragment. -/
 theorem e_gueltig : e.gueltig = true := by decide +kernel
 
-/-- The original end-block form remains a finding; the accepted block form is real. -/
-theorem register_variants_zeuge : Gap.F03_reg.e.gueltig = false ∧ e.gueltig = true ∧
+/-- The original ending and block forms both pass, with distinct fine cells. -/
+theorem register_variants_zeuge : Gap.F03_reg.e.gueltig = true ∧ e.gueltig = true ∧
     e.HatF ⟨0, 5, 8, false, []⟩ ∧ ¬ e.HatF ⟨0, 6, 10, false, []⟩ :=
-  ⟨Gap.F03_reg.e_refused, e_gueltig, by decide, by decide⟩
+  ⟨Gap.F03_reg.e_gueltig, e_gueltig, by decide, by decide⟩
 
 /-- Exact cell set, including every companion cell of this fixture. -/
 def zellen : List Zelle := [
