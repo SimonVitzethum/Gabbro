@@ -8,7 +8,7 @@ public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
-public import Grammatik.Logik.Vertraege.Pruefer.Program
+import all Grammatik.Logik.Vertraege.Pruefer.Program
 
 @[expose] public section
 
@@ -127,7 +127,8 @@ theorem checker :
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
     rw [refused, Bool.and_false]
-  · have diagnostic :
+  · unfold Vertraege.Pruefer.contractVerdict
+    have diagnostic :
         (match Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
         | .error reason => some reason
         | .ok _ => none) =
