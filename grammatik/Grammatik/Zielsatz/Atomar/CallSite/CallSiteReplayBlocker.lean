@@ -8,6 +8,7 @@ public import Grammatik.Logik.Ruf.FremdRuf.T10CallSiteZeuge
 public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 
 @[expose] public section
 
