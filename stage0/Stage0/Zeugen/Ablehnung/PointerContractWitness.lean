@@ -1,6 +1,5 @@
 module
 public import Stage0.SourceWitness
-public meta import Stage0.SourceWitness
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -45,15 +44,11 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
 
-#eval match emit text 64 with
-  | .error cause => cause
-  | .ok _ => "compiled"
-
 /-- The concrete function reference passes local selection; the checked contract
     control fragment still refuses before the later cost gate. -/
 theorem candidate_refused :
     emit text 64 = .error
-      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+      "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
   kernel_rfl
 
 /-- Run the original cost checker independently on the actual scoped, lowered
