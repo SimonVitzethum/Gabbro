@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Invarianten.VC.Formula
 public import Grammatik.Logik.Invarianten.Frag.Translation
+public import Grammatik.Logik.Invarianten.Frag.Constant
 
 @[expose] public section
 
@@ -79,6 +80,27 @@ def translateScalar (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
           correct := encoded.correct }
   | _ => .error (.unsupported "writer stores a non-scalar value")
 
+/-- An unsupported integer term may be forgotten only after the universally
+    quantified interval VC succeeds. The type's endpoints already carry the
+    model's proved interval arithmetic (including multiplication and division).
+    A failed over-approximation is a fragment refusal, not a counterexample. -/
+def intervalWP (expression : Expr D Γ Λ (.int lo hi)) (locals : Env D Γ)
+    (key : Observation D) (post : QF (Observation D)) :
+    Except Frag.Refusal (Precondition (fun world =>
+      post.denote ((assignment world).bind key (eval world expression world locals).n))) :=
+  let formula := universalInterval key lo hi post
+  if accepted : decideB (close formula) (close_closed formula) = true then
+    .ok {
+      formula := .tru
+      sound := fun world _ =>
+        (universalInterval_denote key lo hi post (assignment world)).mp
+          (close_sound formula accepted (assignment world))
+          (eval world expression world locals).n
+          (eval world expression world locals).lo_le
+          (eval world expression world locals).le_hi }
+  else .error (.unsupported
+    "outside the decidable fragment: integer interval abstraction does not establish the VC")
+
 /-- Backward substitution for stores, including the model's explicit narrowing
     fallback. Both arms are checked. The fallback is never treated as unreachable
     merely because the source author intended it to be. -/
@@ -142,14 +164,18 @@ def scalarWP (expression : Expr D Γ Λ τ) (locals : Env D Γ)
                 have selected := noVC.sound world
                   ((quoteQF_denote _ _).mp (branches.2 absent))
                 simpa only [eval, tested, wahr?, Bool.false_eq_true, ↓reduceIte] using selected }
-  | expression => do
-      let encoded ← translateScalar expression locals
-      return {
-          formula := post.subst key encoded.term
-          sound := fun world valid => by
-            have selected := (subst_denote key encoded.term post (assignment world)).mp valid
-            rw [encoded.correct world] at selected
-            exact selected }
+  | expression =>
+      match translateScalar expression locals with
+      | .ok encoded => .ok {
+            formula := post.subst key encoded.term
+            sound := fun world valid => by
+              have selected := (subst_denote key encoded.term post (assignment world)).mp valid
+              rw [encoded.correct world] at selected
+              exact selected }
+      | .error cause =>
+          match τ with
+          | .int _ _ => intervalWP expression locals key post
+          | _ => .error cause
 
 /-- Reading an expression changes the trace, but no scalar observation. -/
 def readPrecondition (resources : List (Res D)) (carriers : List (D.Tab ⊕ D.Glob))

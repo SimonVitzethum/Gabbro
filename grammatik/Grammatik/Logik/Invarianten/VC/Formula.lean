@@ -264,4 +264,23 @@ theorem close_decide_false_iff [DecidableEq α] (body : QF α) :
   · rintro ⟨values, invalid⟩
     exact Bool.eq_false_iff.mpr (fun accepted => invalid (close_sound body accepted values))
 
+/-- Eliminate an arbitrary integer in an inclusive interval. The work depends
+    on the linear formula, never on enumerating the interval's inhabitants. -/
+def universalInterval [DecidableEq α] (name : α) (lo hi : Int) (post : QF α) : QF α :=
+  lower (.all name (.imp
+    (.and (.le (.konst lo) (.var name)) (.le (.var name) (.konst hi)))
+    (quoteQF post)))
+
+theorem universalInterval_denote [DecidableEq α] (name : α) (lo hi : Int)
+    (post : QF α) (values : Assignment α) :
+    (universalInterval name lo hi post).denote values ↔
+      ∀ value : Int, lo ≤ value → value ≤ hi → post.denote (values.bind name value) := by
+  rw [universalInterval, lower_denote]
+  change (∀ value : Int,
+    (lo ≤ (values.bind name value) name ∧ (values.bind name value) name ≤ hi) →
+      (quoteQF post).denote (values.bind name value)) ↔ _
+  simp only [bind_same, quoteQF_denote]
+  exact ⟨fun valid value lower upper => valid value ⟨lower, upper⟩,
+    fun valid value bounds => valid value bounds.1 bounds.2⟩
+
 end Gabbro.Grammatik.Invarianten.VC

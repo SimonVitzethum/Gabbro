@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.VC.Fresh
+public import Grammatik.Logik.Invarianten.Frag.Constant
 public import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -191,11 +192,22 @@ def localSelect {program : Programm D} {checked : D.Fn → List D.Inv}
     (target : Wert D τ → Runtime program checked S → World D → Prop)
     (compile : ∀ value, Except Frag.Refusal (Condition (target value))) :
     Except Frag.Refusal (Condition (fun runtime world =>
-      target (eval world expression world locals) runtime world)) := do
-  let domain ← localDomain (D := D) budget τ
-  let branches ← localBranches domain.values expression locals target compile
-  return branches.map (fun runtime world valid =>
-    valid _ (domain.complete _) rfl)
+      target (eval world expression world locals) runtime world)) :=
+  let finite := do
+    let domain ← localDomain (D := D) budget τ
+    let branches ← localBranches domain.values expression locals target compile
+    return branches.map (fun runtime world valid =>
+      valid _ (domain.complete _) rfl)
+  match finite with
+  | .ok selected => .ok selected
+  | .error cause =>
+      match constantValue expression locals with
+      | none => .error cause
+      | some known => do
+          let selected ← compile known.val
+          return selected.map (fun runtime world ready => by
+            rw [known.property world]
+            exact ready)
 
 /-- Call results are unconstrained decoded values. No result/argument relation
     from the callee contract is smuggled into this conjunction. -/
