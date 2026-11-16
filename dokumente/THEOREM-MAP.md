@@ -5262,6 +5262,8 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`sourceModel_unit`, `sourceModel_unit_zeuge`**: successful actual scoped elaboration, lowering and postcondition restoration retain the frontend unit; the two-function source jointly satisfies these premises.
 * **`counterexample_zeuge`**: the actual restored caller admits the typed world with `s = 1`, while its transition callee requires `s = 0`.
 * **`Ordered.counterexample_zeuge`**: the typed table state `[0, 1]` satisfies the actual caller's precondition and violates the generated cycle callee's precondition.
+* **`checker_refused_of_contracts`**, witnessed by **`Ordered.checker_refused_of_contracts_zeuge`**: a refused actual source contract gate blocks production admission, jointly instantiated on the real two-function transition source.
+
 * **`Ordered.function_fragment_refusal`, `Ordered.contracts_refused`, `Ordered.checker_refused`**: the actual generated callee's parameter product exceeds the VC expansion budget; its refusal propagates through the unchanged contract collector and production admission. No image is claimed.
 * **`model_present`, `data_present`, `data_unit`, `model_unit`**, also in `Ordered`: producer success and exact source-unit transport; **`field_types`, `globals_empty`, `main_params`, `transition_params`** pin the actual finite types used by the concrete counterexamples.
 
