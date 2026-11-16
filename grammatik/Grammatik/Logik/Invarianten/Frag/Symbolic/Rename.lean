@@ -88,4 +88,28 @@ theorem rename_subst_denote [DecidableEq α] [DecidableEq β] (rename : α → �
   rw [renameQF_denote, subst_denote, renameQF_denote, renameTerm_denote,
     bind_rename rename injective]
 
+/-- Swapping a memory key with a fresh immutable key also renames every inner
+    binder. Its bijectivity prevents capture even across nested call havoc. -/
+def swapKey [DecidableEq α] (first last key : α) : α :=
+  if key = first then last else if key = last then first else key
+
+theorem swapKey_twice [DecidableEq α] (first last key : α) :
+    swapKey first last (swapKey first last key) = key := by
+  by_cases endpoints : first = last
+  · subst last
+    by_cases selected : key = first <;> simp [swapKey, selected]
+  · by_cases left : key = first
+    · subst key
+      simp [swapKey, endpoints, Ne.symm endpoints]
+    · by_cases right : key = last
+      · subst key
+        simp [swapKey, endpoints, Ne.symm endpoints]
+      · simp [swapKey, left, right]
+
+theorem swapKey_injective [DecidableEq α] (first last : α) :
+    Function.Injective (swapKey first last) := by
+  intro left right same
+  have twice := congrArg (swapKey first last) same
+  simpa only [swapKey_twice] using twice
+
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic
