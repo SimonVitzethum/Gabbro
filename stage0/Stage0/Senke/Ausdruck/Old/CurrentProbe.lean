@@ -75,11 +75,35 @@ def program : Programm D := { OldFunctionProbe.program with
 local instance : DecidableEq D.Ax :=
   inferInstanceAs (DecidableEq (Fin OldFunctionProbe.unit.axs.length))
 
-/-- The canonical checker accepts these raw-model old occurrences outside ensures.
-    The enumeration covers the complete singleton function, table and global domains. -/
-theorem raw_model_admission_zeuge :
-    AkzeptiertX program (SperrInv.leer D) [function] [] [.inl tab, .inr global] [] = true := by
+/-- The unchanged old-memory post is outside the decidable contract fragment. -/
+theorem old_post_fragment_refused_zeuge :
+    (Vertraege.Pruefer.currentOnly (program.ensures function)).map (fun _ => ()) =
+      .error (.unsupported "contract needs an expression independent of old memory") := by
   kernel_rfl
+
+/-- The complete singleton function/table/global enumeration is actually refused. -/
+theorem raw_model_refused_zeuge :
+    AkzeptiertX program (SperrInv.leer D) [function] [] [.inl tab, .inr global] [] = false := by
+  kernel_rfl
+
+/-- A typed entry with G=1 satisfies requires, but the body still writes/returns 1. -/
+def counterexampleWorld : World D :=
+  OldFunctionProbe.initial.storeGlob global ⟨1, by decide, by decide⟩
+
+/-- The actual return violates the inherited increment post: 1 differs from old(G)+1=2. -/
+theorem contract_counterexample_zeuge :
+    ReqAmEintritt program function counterexampleWorld OldFunctionProbe.params ∧
+    (match rufAt program OldFunctionProbe.oracle 1 1 function
+        counterexampleWorld OldFunctionProbe.params with
+      | .ok final value => value.n = 1 ∧
+          wahr? (eval counterexampleWorld (program.ensures function) final
+            (ergEnv (D.erg function) value OldFunctionProbe.params)) = false
+      | _ => False) := by
+  constructor
+  · unfold ReqAmEintritt
+    kernel_rfl
+  · kernel_change ((1 : Int) = 1 ∧ false = false)
+    exact ⟨rfl, rfl⟩
 
 /-- The connected function compiler accepts old in raw-model requires and body expressions.
     G returns the just-written 1, not the entry field 0, and the original ensures is preserved. -/

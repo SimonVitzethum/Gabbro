@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 public import Stage0.Senke.Ausdruck.Referenz.Proben
+import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -70,6 +71,11 @@ def admission : RufPasst D (vertragVon D entry) (D.asignatur gate) [] where
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh l := Fin.elim0 l
 
+/-- A single declared reason needs no constructor dispatch: its live error arm returns 9.
+    The separate statement probes retain reason-dispatch lowering coverage. -/
+def reasonHandler {Γ : Ctx} : Endblock D (vertragVon D entry) false (.why 1 :: Γ) [] :=
+  AxiomElseProbe.retN result 9 (by decide) (by decide)
+
 def success : Endblock D (vertragVon D entry) false [.bool] [] :=
   .ite (.var .here) (AxiomElseProbe.retN result 17 (by decide) (by decide))
     (AxiomElseProbe.retN result 19 (by decide) (by decide))
@@ -78,12 +84,12 @@ def bindEnd (optional : Bool) : Endblock D (vertragVon D entry) false [] [] :=
   if optional then
     .bindAxiomOptElse result gate .nil rfl admission
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide)
-      (AxiomElseProbe.handler result) success
+      (reasonHandler) success
   else
     .bindAxiomElse gate .nil rfl (by decide)
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g)
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g)
-      (AxiomElseProbe.handler result) success
+      (reasonHandler) success
 
 def successBlock : Block D (vertragVon D entry) false [.bool] [] [] :=
   .cons (.ite (.var .here)
@@ -94,12 +100,12 @@ def bindBlock (optional : Bool) : Block D (vertragVon D entry) false [] [] [] :=
   if optional then
     .bindAxiomOptElse result gate .nil rfl admission
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (by decide)
-      (AxiomElseProbe.handler result) successBlock
+      (reasonHandler) successBlock
   else
     .bindAxiomElse gate .nil rfl (by decide)
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g)
       (fun t => Fin.elim0 t) (fun g => Fin.elim0 g)
-      (AxiomElseProbe.handler result) successBlock
+      (reasonHandler) successBlock
 
 def body (optional nested : Bool) : Endblock D (vertragVon D entry) false [] [] :=
   if nested then .cons (.ite .tru (bindBlock optional) .nil)
@@ -134,7 +140,7 @@ theorem boolean_binder_admission_zeuge :
       [entry] [] [] [entry] = true ∧
     Akzeptiert (program true true) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
       [entry] [] [] [entry] = true := by
-  decide_cbv
+  constructor <;> kernel_rfl
 
 def oracle (raw : Runner.W) : Orakel D where
   wirktL _ σ _ := ({ σ with spur := [] }, rohW AxiomElseProbe.binding 1 raw)

@@ -6941,6 +6941,20 @@ tagged/option source: `option_payload_elaborates_zeuge` and
 the exact bounded-integer/Boolean observation-fragment refusal. The name-clash
 and statement-line diagnostics remain unchanged.
 
+`Stage0/Senke/Tore/Answers.lean` keeps `boolean_binder_admission_zeuge`
+positive on both binder APIs and both success/error continuations. Its sole
+reason now returns 9 directly, within the checked fragment; the separate
+`AxiomElseProbes` still cover explicit reason dispatch. Image and live
+false/true/error outcome witnesses remain.
+
+`Stage0/Senke/Ausdruck/Old/CurrentProbe.lean` keeps the original raw program and
+lowering/runtime witnesses. `old_post_fragment_refused_zeuge` pins the old-memory
+post refusal and `raw_model_refused_zeuge` replaces its stale admission claim.
+`contract_counterexample_zeuge` independently runs that actual program from a
+typed entry with `G = 1`: requires holds, but its returned 1 violates the inherited
+post demanding `old(G) + 1 = 2`. This is a concrete semantic counterexample as
+well as a fragment refusal.
+
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
 
 On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.
