@@ -1,6 +1,6 @@
 /- Exact source/lowering and Duty-check witnesses for C16 foreign gates.
-   The strict checker refuses the unchanged void foreign statement and wide
-   fallible-result domain. Normal report completion and error-path Duty
+   The strict checker accepts the unchanged void foreign statement and refuses
+   the wide fallible-result domain. Normal report completion and error-path Duty
    preservation remain separate model facts. The legacy axiom spelling also
    retains the front end's source-export refusal. -/
 module
@@ -205,7 +205,7 @@ theorem fremdFallible_tor_threadet :
     .ok true := by
   decide +kernel
 
-/-! ## Duty admission and strict contract-fragment refusals -/
+/-! ## Duty admission and checked contract-fragment boundaries -/
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -284,43 +284,18 @@ private def fremdCanonical : Programm (declOf uFremd) :=
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- Outside the decidable fragment: contract statement is outside the checked scalar/control fragment. -/
-private theorem fremd_fragment_refusal :
+/-- The void foreign call now has a generic totality certificate. -/
+private theorem fremd_contract_checked :
     (Vertraege.Pruefer.checkFunction fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
-      (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
-      .error (.unsupported "contract statement is outside the checked scalar/control fragment") := by
+      (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = true := by
   decide +kernel
 
-private theorem fremdCanonical_refused :
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+private theorem fremdCanonical_accepted :
     AkzeptiertX fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false := by
-  have rejected : (Vertraege.Pruefer.checkFunction fremdCanonical
-      (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
-    have reason := fremd_fragment_refusal
-    cases result : Vertraege.Pruefer.checkFunction fremdCanonical
-        (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩ with
-    | error cause => rfl
-    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
-  have contracts := foreign_contracts_refused fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
-    (List.finRange uFremd.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
-  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
-
--- The collector rule has an actual refused member of a four-function unit.
-private theorem foreign_contracts_refused_zeuge :
-    (⟨3, by decide⟩ : Fin uFremd.fns.length) ∈ List.finRange uFremd.fns.length ∧
-    (Vertraege.Pruefer.checkFunction fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
-      (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false ∧
-    Vertraege.Pruefer.KontrakteGeprueftB fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) = false := by
-  have rejected : (Vertraege.Pruefer.checkFunction fremdCanonical
-      (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
-    have reason := fremd_fragment_refusal
-    cases result : Vertraege.Pruefer.checkFunction fremdCanonical
-        (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩ with
-    | error cause => rfl
-    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
-  exact ⟨List.mem_finRange _, rejected,
-    foreign_contracts_refused _ _ _ _ (List.mem_finRange _) rejected⟩
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
+  decide +kernel
 
 private def fremdFallibleCanonical : Programm (declOf uFremdFallible) :=
   progOfFn uFremdFallible (fun f => (ForeignGateFunctions.fallPieces f).1)
@@ -352,18 +327,36 @@ private theorem fremdFallibleCanonical_refused :
     (List.finRange uFremdFallible.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
 
+-- The refusal collector is witnessed by the genuinely wide fallible result,
+-- while the infallible void call above is accepted by the same checker.
+private theorem foreign_contracts_refused_zeuge :
+    (⟨3, by decide⟩ : Fin uFremdFallible.fns.length) ∈ List.finRange uFremdFallible.fns.length ∧
+    (Vertraege.Pruefer.checkFunction fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
+      (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false ∧
+    Vertraege.Pruefer.KontrakteGeprueftB fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
+      (List.finRange uFremdFallible.fns.length) = false := by
+  have rejected : (Vertraege.Pruefer.checkFunction fremdFallibleCanonical
+      (Cover.Differenz.sperrFamilie uFremdFallible) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
+    have reason := fremdFallible_fragment_refusal
+    cases result : Vertraege.Pruefer.checkFunction fremdFallibleCanonical
+        (Cover.Differenz.sperrFamilie uFremdFallible) (fun _ => none) {} none ⟨3, by decide⟩ with
+    | error cause => rfl
+    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
+  exact ⟨List.mem_finRange _, rejected,
+    foreign_contracts_refused _ _ _ _ (List.mem_finRange _) rejected⟩
+
 attribute [local irreducible] checkPFremd checkPFremdFallible
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- The strict checker refuses the unchanged source unit for its certified fragment gap. -/
-theorem fremd_abgelehnt :
+/-- The elaborated void-call unit is accepted; source-export metadata is separate. -/
+theorem fremd_accepted :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false := by
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true := by
   delta checkPFremd
   apply foreign_checked_image uFremd ForeignGateFunctions.infPieces
     ForeignGateFunctions.infPieces_ok checkChecksFremd
-    (except_ok_get uFremd_lowered) false
+    (except_ok_get uFremd_lowered) true
   intro invariants foreignGate
   have emptyFamily : invariants = (fun i => Fin.elim0 (show Fin 0 from i)) := by
     funext i
@@ -371,7 +364,7 @@ theorem fremd_abgelehnt :
   subst invariants
   have sameProof : foreignGate = fremd_foreign_contracts := Subsingleton.elim _ _
   subst sameProof
-  exact fremdCanonical_refused
+  exact fremdCanonical_accepted
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
@@ -392,13 +385,13 @@ theorem fremdFallible_abgelehnt :
   subst sameProof
   exact fremdFallibleCanonical_refused
 
-/-- Joint non-degeneracy for the assembler/refusal proof rules: four real
-    functions, one foreign item, one derived Duty check, and an actual refusal. -/
+/-- Joint non-degeneracy for the assembler: four real functions, one foreign
+    item, one derived Duty check and an accepted void foreign call. -/
 theorem foreign_checked_image_zeuge :
     uFremd.fns.length = 4 ∧ uFremd.axs.length = 1 ∧ checkChecksFremd.length = 1 ∧
     checkB checkPFremd [] [] (List.finRange uFremd.fns.length) checkChecksFremd = true ∧
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = false :=
-  ⟨rfl, rfl, by kernel_rfl, fremd_checkB, fremd_abgelehnt⟩
+      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true :=
+  ⟨rfl, rfl, by kernel_rfl, fremd_checkB, fremd_accepted⟩
 
 end Gabbro.Grammatik.Parser.Uebersetze
