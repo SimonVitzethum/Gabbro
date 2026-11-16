@@ -37,7 +37,7 @@ theorem BodyFrame.randIR_stmt {B : BodyFrame D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  exact ⟨cr.length, cs, ts, hcs, by omega, by omega, pre.left, hlo, hu, hk, hw, hpr, hH⟩
+  exact ⟨cr.length, cs, ts, hcs, by change ts + B.cap ≤ B.Ks; omega, by omega, pre.left, hlo, hu, hk, hw, hpr, hH⟩
 
 /-- Split the first statement off a block boundary without executing code. -/
 theorem BodyFrame.randBIR_stmt {B : BodyFrame D} {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
@@ -50,7 +50,7 @@ theorem BodyFrame.randBIR_stmt {B : BodyFrame D} {l : Bool} {Γ : Ctx} {Λ Λ' �
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  exact ⟨cr.length, cs, ts, hcs, by omega, by omega, pre.left, hlo, hu, hk, hw, hpr, hH⟩
+  exact ⟨cr.length, cs, ts, hcs, by change ts + B.cap ≤ B.Ks; omega, by omega, pre.left, hlo, hu, hk, hw, hpr, hH⟩
 
 /-- Run only the condition and branch instruction. The selected block has its own
     image boundary; neither arm's body is run in the proof of this descent. -/
@@ -91,12 +91,13 @@ theorem BodyFrame.randSIR_ite {B : BodyFrame D} (hB : B.Ok) {l : Bool} {Γ : Ctx
   cases take with
   | true =>
     have sb := brz_stay q1.left.code (by have := pre.small; omega) pre.small
-      (by simpa only [hen] using hw1) (by decide : (1 : Runner.W) ≠ 0)
+      (by simpa only [hen, Bool.false_eq_true, ↓reduceIte] using hw1) (by decide : (1 : Runner.W) ≠ 0)
     exact ⟨ce.length + 1, _, m1, s1.trans sb,
-      ct, tt, hct, by omega, by omega, q2.left, hlo, hu1, hk1, world, hpr, hH⟩
+      ct, tt, hct, by change tt + B.cap ≤ B.Ks; omega, by omega, q2.left, hlo, hu1, hk1, world, hpr, hH⟩
   | false =>
     have sb := brz_go q1.left.code (by have := pre.small; omega) pre.small
-      (lit32_nat (by omega)) (by simpa only [hen] using hw1)
+      (by simpa only [Int.natCast_mul, Int.natCast_add] using
+        (lit32_nat (n := 16 * (ct.length + 2)) (by omega))) (by simpa only [hen, Bool.false_eq_true, ↓reduceIte] using hw1)
     have q3 := (q2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
       (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
     have sp : Star ⟨pc, B.fp⟩ m ⟨_, B.fp⟩ m1 := s1.trans sb
@@ -110,7 +111,7 @@ theorem BodyFrame.randSIR_ite {B : BodyFrame D} (hB : B.Ok) {l : Bool} {Γ : Ctx
       congr 2
       omega
     rw [target] at sp
-    refine ⟨0, _, m1, sp, ce, te, ?_, by omega, by omega, q3, hlo, hu1, hk1, world, hpr, hH⟩
-    simpa only [BodyFrame.suffix, exPlus, Int.natCast_zero, Int.mul_zero, Int.add_zero] using hce
+    refine ⟨0, _, m1, sp, ce, te, ?_, by change te + B.cap ≤ B.Ks; omega, by omega, q3, hlo, hu1, hk1, world, hpr, hH⟩
+    simpa only [BodyFrame.suffix, exPlus, Int.natCast_zero, Int.mul_zero, Int.add_zero, Bool.false_eq_true, ↓reduceIte] using hce
 
 end Gabbro.Stage0.Senke.BildLauf
