@@ -28,7 +28,7 @@ mutual
     include discarded call results and argument selection, not merely the
     largest individual type. Refusing this budget supplies no semantic fact. -/
 def statementSpecializations (limit : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
-  | .assignVar (_ : Var _ type) _ => specializationCount limit type
+  | .assignVar (τ := type) _ _ => specializationCount limit type
   | .ret _ _ | .retScoped _ _ => resultSpecializations limit V.erg
   | .call f _ _ _ => min (limit + 1)
       (argumentSpecializations limit (D.params f) * resultSpecializations limit (D.erg f))
@@ -45,7 +45,7 @@ def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' →
   | .nil => 1
   | .cons head tail => min (limit + 1)
       (statementSpecializations limit head * blockSpecializations limit tail)
-  | .bind (_ : Expr _ _ _ type) tail => min (limit + 1)
+  | .bind (τ := type) _ tail => min (limit + 1)
       (specializationCount limit type * blockSpecializations limit tail)
   | .bindCall f _ _ _ _ tail => min (limit + 1)
       (argumentSpecializations limit (D.params f) * resultSpecializations limit (D.erg f) *
@@ -56,8 +56,8 @@ def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' →
           D.gruende f * endSpecializations limit failure))
   | .check _ failure tail => min (limit + 1)
       (endSpecializations limit failure + blockSpecializations limit tail)
-  | .narrow (_ : Expr _ _ _ type) _ _ failure tail => min (limit + 1)
-      (specializationCount limit type *
+  | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
+      (specializationCount limit (.int lo hi) *
         (endSpecializations limit failure + blockSpecializations limit tail))
   | _ => 1
 
@@ -65,7 +65,7 @@ def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
   | .ret _ _ | .retScoped _ _ => resultSpecializations limit V.erg
   | .cons head tail => min (limit + 1)
       (statementSpecializations limit head * endSpecializations limit tail)
-  | .bind (_ : Expr _ _ _ type) tail => min (limit + 1)
+  | .bind (τ := type) _ tail => min (limit + 1)
       (specializationCount limit type * endSpecializations limit tail)
   | .bindCall f _ _ _ _ tail => min (limit + 1)
       (argumentSpecializations limit (D.params f) * resultSpecializations limit (D.erg f) *
@@ -76,8 +76,8 @@ def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
           D.gruende f * endSpecializations limit failure))
   | .ite _ yes no => min (limit + 1)
       (endSpecializations limit yes + endSpecializations limit no)
-  | .narrow (_ : Expr _ _ _ type) _ _ failure tail => min (limit + 1)
-      (specializationCount limit type *
+  | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
+      (specializationCount limit (.int lo hi) *
         (endSpecializations limit failure + endSpecializations limit tail))
   | _ => 1
 
