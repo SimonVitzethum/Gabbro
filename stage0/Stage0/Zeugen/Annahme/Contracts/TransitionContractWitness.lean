@@ -69,32 +69,47 @@ theorem candidate_refused : candidate.toOption.isSome = false := by
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-abbrev unit := model.1
+def unit : UProg := model.1
 def program : Programm (declOf unit) := model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
 
 #eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before world"
 
+attribute [local irreducible] unit
+
+theorem field_types (table : (declOf unit).Tab) (field : (declOf unit).Feld table) :
+    (declOf unit).typ table field = .int 0 2 := by
+  have checked : (List.finRange unit.tabs.length).all (fun t =>
+      (List.finRange (fieldCount unit t)).all (fun f =>
+        decide ((declOf unit).typ t f = .int 0 2))) = true := by kernel_rfl
+  exact of_decide_eq_true (List.all_eq_true.mp
+    (List.all_eq_true.mp checked table (List.mem_finRange _)) field (List.mem_finRange _))
+
+theorem globals_empty : unit.globs = [] := by kernel_rfl
+
+theorem main_params : (declOf unit).params mainIndex = [] := by kernel_rfl
+
+theorem transition_params : (declOf unit).params transitionIndex = [.int 0 1] := by
+  kernel_rfl
+
+def mainArguments : Env (declOf unit) ((declOf unit).params mainIndex) :=
+  main_params.symm ▸ Env.nil
+
 def busyWorld : World (declOf unit) where
-  slots := fun ⟨table, ht⟩ ⟨column, hc⟩ _ => by
-    have tableZero : table = 0 := by have bound : table < 1 := ht; omega
-    subst table
-    have columnZero : column = 0 := by have bound : column < 1 := hc; omega
-    subst column
-    exact ⟨1, by decide, by decide⟩
-  globs := fun g => Fin.elim0 (show Fin 0 from g)
+  slots := fun table index field =>
+    (field_types table field).symm ▸
+      (show Wert (declOf unit) (.int 0 2) from ⟨1, by decide, by decide⟩)
+  globs := fun g => Fin.elim0 (Fin.cast (congrArg List.length globals_empty) g)
   spur := []
 
-#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before arguments"
-
 def transitionArguments : Env (declOf unit) ((declOf unit).params transitionIndex) :=
-  .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩ .nil
+  transition_params.symm ▸ .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩ .nil
 
 /-- The caller admits Busy=1, while its real transition callee requires Idle=0. -/
 #eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before counterexample"
 
-theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld .nil ∧
+theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArguments ∧
     ¬ ReqAmEintritt program transitionIndex busyWorld transitionArguments := by
   constructor
   · unfold ReqAmEintritt
@@ -120,23 +135,40 @@ theorem candidate_refused : candidate.toOption.isSome = false := by
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-abbrev unit := model.1
+def unit : UProg := model.1
 def program : Programm (declOf unit) := model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
 
+attribute [local irreducible] unit
+
+theorem field_types (table : (declOf unit).Tab) (field : (declOf unit).Feld table) :
+    (declOf unit).typ table field = .int 0 2 := by
+  have checked : (List.finRange unit.tabs.length).all (fun t =>
+      (List.finRange (fieldCount unit t)).all (fun f =>
+        decide ((declOf unit).typ t f = .int 0 2))) = true := by kernel_rfl
+  exact of_decide_eq_true (List.all_eq_true.mp
+    (List.all_eq_true.mp checked table (List.mem_finRange _)) field (List.mem_finRange _))
+
+theorem globals_empty : unit.globs = [] := by kernel_rfl
+
+theorem main_params : (declOf unit).params mainIndex = [] := by kernel_rfl
+
+theorem transition_params : (declOf unit).params transitionIndex = [.int 0 1, .int 0 2, .int 0 2, .int 0 1, .int 0 2, .int 0 2] := by
+  kernel_rfl
+
+def mainArguments : Env (declOf unit) ((declOf unit).params mainIndex) :=
+  main_params.symm ▸ Env.nil
+
 def busyWorld : World (declOf unit) where
-  slots := fun ⟨table, ht⟩ ⟨column, hc⟩ index => by
-    have tableZero : table = 0 := by have bound : table < 1 := ht; omega
-    subst table
-    have columnZero : column = 0 := by have bound : column < 1 := hc; omega
-    subst column
-    exact ⟨if index.val = 0 then 0 else 1, by split <;> decide, by split <;> decide⟩
-  globs := fun g => Fin.elim0 (show Fin 0 from g)
+  slots := fun table index field =>
+    (field_types table field).symm ▸
+      (show Wert (declOf unit) (.int 0 2) from ⟨if index = 0 then 0 else 1, by split <;> decide, by split <;> decide⟩)
+  globs := fun g => Fin.elim0 (Fin.cast (congrArg List.length globals_empty) g)
   spur := []
 
 def transitionArguments : Env (declOf unit) ((declOf unit).params transitionIndex) :=
-  .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩
+  transition_params.symm ▸ .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩
     (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩
       (.cons (τ := .int 0 2) ⟨1, by decide, by decide⟩
         (.cons (τ := .int 0 1) ⟨1, by decide, by decide⟩
@@ -144,7 +176,7 @@ def transitionArguments : Env (declOf unit) ((declOf unit).params transitionInde
             (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩ .nil)))))
 
 /-- The typed state [0,1] satisfies main's precondition and violates cycle's. -/
-theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld .nil ∧
+theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArguments ∧
     ¬ ReqAmEintritt program transitionIndex busyWorld transitionArguments := by
   constructor
   · unfold ReqAmEintritt
