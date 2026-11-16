@@ -114,6 +114,9 @@ theorem Emitted.bild_ziel_aufruf_im_if [Kern] (output : Emitted src K options)
       (((output.rahmen O C Lm rp ens).suffix n1).suffix n2).O := by
     change TorOK output.image.Y O
     infer_instance
+  letI : SichtOK (((output.rahmen O C Lm rp ens).suffix n1).suffix n2).O := by
+    change SichtOK O
+    infer_instance
   have hwindow := randDannL_bindCall_ein_aus ((hOk.suffix n1).suffix n2) hcodes
     (by exact congrArg (rufAt output.compiled.program O output.image.passes) hj)
     (by exact congrArg (BitVec.ofNat 64) hj)
