@@ -203,29 +203,37 @@ def statement (S : SperrInv D) (sources : LockSources S) :
           split
           · exact yesChecked.down O U A passes R _ locals
           · exact noChecked.down O U A passes R _ locals⟩
-    | .forever annotation .tru body => do
-        let checked ← block S sources fuel body
-        return ⟨fun O U A passes R world locals =>
-          forever_safe annotation _ _ (checked.down O U A passes R)
-            (fun _ _ => rfl) passes world locals⟩
-    | .traverse table .tru body => do
-        let checked ← block S sources fuel body
-        return ⟨fun O U A passes R world locals =>
-          traverse_safe _ _ (checked.down O U A passes R)
-            (fun _ _ => rfl) (alleIndizes (D.count table)) world locals⟩
-    | .retry 0 test _ overflow => do
-        let exceeded ← block S sources fuel overflow
-        return ⟨fun O U A passes R world locals => by
-          dsimp only [execStmtHA, retryLauf]
-          split
-          · trivial
-          · exact exceeded.down O U A passes R _ _⟩
-    | .retry count test body overflow => do
-        let checked ← block S sources fuel body
-        let exceeded ← block S sources fuel overflow
-        return ⟨fun O U A passes R world locals =>
-          retry_safe _ _ _ (checked.down O U A passes R)
-            (exceeded.down O U A passes R) count world locals⟩
+    | .forever annotation invariant body =>
+        match invariant with
+        | .tru => do
+            let checked ← block S sources fuel body
+            return ⟨fun O U A passes R world locals =>
+              forever_safe annotation _ _ (checked.down O U A passes R)
+                (fun _ _ => rfl) passes world locals⟩
+        | _ => none
+    | .traverse table invariant body =>
+        match invariant with
+        | .tru => do
+            let checked ← block S sources fuel body
+            return ⟨fun O U A passes R world locals =>
+              traverse_safe _ _ (checked.down O U A passes R)
+                (fun _ _ => rfl) (alleIndizes (D.count table)) world locals⟩
+        | _ => none
+    | .retry count test body overflow =>
+        match count with
+        | 0 => do
+            let exceeded ← block S sources fuel overflow
+            return ⟨fun O U A passes R world locals => by
+              dsimp only [execStmtHA, retryLauf]
+              split
+              · trivial
+              · exact exceeded.down O U A passes R _ _⟩
+        | count + 1 => do
+            let checked ← block S sources fuel body
+            let exceeded ← block S sources fuel overflow
+            return ⟨fun O U A passes R world locals =>
+              retry_safe _ _ _ (checked.down O U A passes R)
+                (exceeded.down O U A passes R) (count + 1) world locals⟩
     | .locks lock _ body => do
         let truth ← trivialLock sources lock
         let checked ← block S sources fuel body
