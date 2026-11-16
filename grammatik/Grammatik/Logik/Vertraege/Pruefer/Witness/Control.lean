@@ -97,7 +97,11 @@ def wideArguments : Env declaration [.int 0 (2 ^ 64 - 1)] :=
     declared interval is never materialized or split into result branches. -/
 theorem return_local_without_enumeration_zeuge :
     (returnCondition (program := increment) (S := SperrInv.leer declaration) (Λ := [])
-      1 (.val (.var .here)) wideArguments (fun _ => .ok .tru)).toOption.isSome = true := by
-  rfl
+      1 (.val (.var .here)) wideArguments (fun _ => .ok .tru)).toOption.isSome = true ∧
+    (returnCondition (program := increment) (S := SperrInv.leer declaration) (Λ := [])
+      1 (.val (.widen (by decide) (by decide) (.var .here)) :
+        ErgExpr declaration [.int 0 (2 ^ 64 - 1)] [] (some (.int 0 (2 ^ 65 - 1))))
+      wideArguments (fun _ => .ok .tru)).toOption.isSome = true := by
+  constructor <;> rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
