@@ -3,6 +3,6 @@ module ir_result_quantifier {
 table T count 2 { slot { ready : bool, } }
 
 impl fn main() -> bool effects { reads T.slots } costs <= 0 ops
-    ensures forall i in slots of T : T.slots[i].ready => T.slots[i].ready
+    ensures forall i in slots of T : result => result
 { return true; }
 }
