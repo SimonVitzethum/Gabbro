@@ -79,21 +79,6 @@ def hasCanonicalHandler (text : String) : Bool :=
   | .ok ⟨u, program, functions⟩ =>
     (Cover.Mitglieder.mitglieder u program functions).contains "Stmt.callIndElse"
 
-private def contractFailure (text : String) : Option String :=
-  match uebersetzeAllg text with
-  | .error cause => some cause
-  | .ok ⟨u, program, functions⟩ =>
-    match Vertraege.Pruefer.checkContracts program (Cover.Differenz.sperrFamilie u)
-        functions (fun _ => none) with
-    | .error cause => some cause.message
-    | .ok _ => none
-
-#eval IO.FS.writeFile "../.scratch-agent/indirect-verdict" (reprStr
-  [(acceptedText namedSource, contractFailure namedSource),
-   (acceptedText unnamedSource, contractFailure unnamedSource),
-   (acceptedText nestedSource, contractFailure nestedSource),
-   (acceptedText referenceSource, contractFailure referenceSource)])
-
 theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
 theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
 theorem nested_accepted_zeuge : acceptedText nestedSource = true := by decide +kernel
