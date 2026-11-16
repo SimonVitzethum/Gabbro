@@ -96,29 +96,34 @@ def currentOnly (expression : Expr D Γ Λ τ) :
       return ⟨fun old world locals => by simp only [eval, checked.down old world locals] <;> rfl⟩
   | .forallSlots _ body _ | .existsSlots _ body _ | .count _ body => do
       let checked ← currentOnly body
-      return ⟨fun old world locals => by simp only [eval, checked.down old world]⟩
+      return ⟨fun old world locals => by simp only [eval, checked.down old world] <;> rfl⟩
   | .reaches _ _ _ left right _ => do
       let a ← currentOnly left
       let b ← currentOnly right
       return ⟨fun old world locals => by
-        simp only [eval, a.down old world locals, b.down old world locals]⟩
+        simp only [eval, a.down old world locals, b.down old world locals] <;> rfl⟩
   | .wenn test left right | .arrSet test left right => do
       let guard ← currentOnly test
       let a ← currentOnly left
       let b ← currentOnly right
       return ⟨fun old world locals => by
-        simp only [eval, guard.down old world locals, a.down old world locals, b.down old world locals]⟩
-  | .eng body _ _ fallback => do
+        simp only [eval, guard.down old world locals, a.down old world locals, b.down old world locals] <;> rfl⟩
+  | .eng body low high fallback => do
       let a ← currentOnly body
       let b ← currentOnly fallback
       return ⟨fun old world locals => by
-        simp only [eval, a.down old world locals, b.down old world locals]⟩
+        dsimp only [eval]
+        rw [b.down old world locals]
+        exact congrArg (fun value =>
+          if fits : low ≤ value.n ∧ value.n ≤ high then
+            (⟨value.n, fits.1, fits.2⟩ : Zahl low high)
+          else eval world fallback world locals) (a.down old world locals)⟩
   | .case _ _ payload => do
       let checked ← currentPayload payload
-      return ⟨fun old world locals => by simp only [eval, checked.down old world locals]⟩
+      return ⟨fun old world locals => by simp only [eval, checked.down old world locals] <;> rfl⟩
   | .prod _ fields => do
       let checked ← currentProduct fields
-      return ⟨fun old world locals => by simp only [eval, checked.down old world locals]⟩
+      return ⟨fun old world locals => by simp only [eval, checked.down old world locals] <;> rfl⟩
   | .oldG .. | .oldS .. =>
       .error (.unsupported "old memory needs a distinct entry-world snapshot observation")
 
@@ -140,7 +145,7 @@ def currentProduct (fields : Args D Γ Λ types) :
       let first ← currentOnly head
       let rest ← currentProduct tail
       return ⟨fun old world locals => by
-        simp only [evalProd, first.down old world locals, rest.down old world locals]⟩
+        simp only [evalProd, first.down old world locals, rest.down old world locals] <;> rfl⟩
 
 end
 

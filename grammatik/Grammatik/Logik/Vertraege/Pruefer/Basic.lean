@@ -180,6 +180,17 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
         let truth ← trivialScopes sources cleanup.scopes
         return ⟨fun _ _ _ _ _ _ _ => by
           simp only [execStmtHA, truth.down, ↓reduceIte, StatementResult]⟩
+    | .axiomCall .. => some ⟨fun O U A passes R world locals => by
+        dsimp only [execStmtHA]
+        split <;> trivial⟩
+    | .axiomCallElse _ _ _ _ _ _ _ _ failure => do
+        let checked ← ending S sources fuel failure
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execStmtHA]
+          split
+          · trivial
+          · exact end_statement _ (end_shrink _ (checked.down O U A passes R _ _))
+          · trivial⟩
     | .breaking _ body => do
         let checked ← block S sources fuel body
         return ⟨fun O U A passes R world locals =>
