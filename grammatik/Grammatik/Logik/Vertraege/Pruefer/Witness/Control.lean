@@ -76,7 +76,14 @@ theorem specialization_product_zeuge :
 def conditionalReturn : Stmt declaration contract false [.int 1 11] [] [] :=
   .ite .tru (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) .nil
 
-theorem continuation_cost_zeuge : statementSpecializations 100 20 conditionalReturn = 21 := rfl
+theorem continuation_cost_zeuge : statementSpecializations 128 100 20 conditionalReturn = 21 := rfl
+
+/-- Wide constants use one fallback continuation instead of enumerating their type. -/
+theorem wide_selection_cost_zeuge :
+    selectionSpecializations 128 100
+      (D := declaration) (Γ := []) (Λ := [])
+      (.add (.widen (by decide) (by decide) (.lit 2) : Expr declaration [] [] (.int 0 1000000))
+        (.widen (by decide) (by decide) (.lit 3))) = 1 := rfl
 
 def writerContract : Vertrag declaration := { contract with schreibt := fun _ => true }
 

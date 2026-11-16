@@ -293,11 +293,11 @@ private theorem rejected_member (u : UProg) (P : Programm (declOf u))
   exact Bool.and_eq_false_iff.mpr (Or.inr
     (Bool.and_eq_false_iff.mpr (Or.inr contracts)))
 
-/-- Outside the decidable fragment: the physical consumer's retire statement. -/
+/-- The physical consumer is checked; its result domain exceeds the VC budget. -/
 private theorem consumer_fragment_refusal :
     (Vertraege.Pruefer.checkFunction program.val.1 (Cover.Differenz.sperrFamilie unit)
       (fun _ => none) {} none index4).map (fun _ => ()) =
-      .error (.unsupported "contract statement is outside the checked scalar/control fragment") := by
+      .error (.unsupported "local observation type range exceeds the VC budget") := by
   kernel_rfl
 
 attribute [local irreducible] Vertraege.Pruefer.checkFunction Invarianten.Pruefer.collect

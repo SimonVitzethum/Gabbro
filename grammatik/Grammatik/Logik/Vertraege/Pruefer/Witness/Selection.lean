@@ -154,7 +154,7 @@ theorem execution_success (program : Programm D) (S : SperrInv D) (policy : Call
     (domain : Invarianten.Pruefer.Environments D (D.params f))
     (hdomain : Invarianten.Pruefer.environments (D := D) budget.expansion (D.params f) = .ok domain)
     (withinBudget : argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations budget.specializations (program.rumpf f) ≤ budget.specializations)
+      endSpecializations budget.expansion budget.specializations (program.rumpf f) ≤ budget.specializations)
     (ready : ∀ locals, (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true) :
     (checkExecution program S policy sources budget hint f).toOption.isSome = true := by
   obtain ⟨checked, hchecked⟩ := collect_success domain.values

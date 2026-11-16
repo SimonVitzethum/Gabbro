@@ -134,7 +134,7 @@ def checkExecution (program : Programm D) (S : SperrInv D) (policy : CallPolicy 
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
   let domain ← environments (D := D) budget.expansion (D.params f)
   if argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations budget.specializations (program.rumpf f) > budget.specializations then
+      endSpecializations budget.expansion budget.specializations (program.rumpf f) > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
   else pure ()
   let checked ← collect domain.values
