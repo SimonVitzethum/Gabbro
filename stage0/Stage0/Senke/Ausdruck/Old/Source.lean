@@ -241,7 +241,7 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).
   split at accepted
   · cases accepted
   · cases hg : sourceGuests u with
-    | error error => simp [hg, Functor.map, Except.map] at accepted
+    | error error => simp only [hg, bind, Except.bind, reduceCtorEq] at accepted
     | ok guests =>
       simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure, Except.ok.injEq] at accepted
       have accepted := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
@@ -249,6 +249,6 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).
       unfold AkzeptiertX at accepted
       exact fun guest member =>
         GuestBoundary.admissionB_each
-          (Bool.and_eq_true.mp (Bool.and_eq_true.mp (Bool.and_eq_true.mp accepted).1).1).2 guest member
+          (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp accepted).1).2 guest member
 
 end Gabbro.Stage0.OldSource
