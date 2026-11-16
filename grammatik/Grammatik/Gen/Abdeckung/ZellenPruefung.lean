@@ -107,7 +107,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     Re-pinned after reviewing constant local bindings and integer interval stores:
     both extend the proved VC gates outside the numbered cell table. The eleven
     cell formulas and their atoms remain unchanged; acceptance still conjoins
-    both VC gates, as stated by `akzeptiertX_zellen`. -/
+    both VC gates, as stated by `akzeptiertX_zellen`.
+    The specialization scan now distinguishes domains that enumerate from
+    wide constant fallback. The numbered cells and `komp` are unchanged. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -120,7 +122,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 67088888259381741)]
+   ("AkzeptiertX", 8780113147516630654)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
