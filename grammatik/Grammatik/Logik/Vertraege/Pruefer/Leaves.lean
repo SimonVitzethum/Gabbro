@@ -29,8 +29,8 @@ def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
         success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)
     (fun value => by
       by_cases fits : low ≤ value.n ∧ value.n ≤ high
-      · simpa only [fits, ↓reduceDIte] using compile ⟨value.n, fits.1, fits.2⟩
-      · simpa only [fits, ↓reduceDIte] using compileFailure)
+      · simpa only [dif_pos fits] using compile ⟨value.n, fits.1, fits.2⟩
+      · simpa only [dif_neg fits] using compileFailure)
 
 /-- A return is checked against its actual typed result. Complete finite
     domains are budgeted; an oversized range is refused, never sampled. -/
@@ -87,7 +87,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         (fun value _ world => denotes (goals.normal (locals.set name value)) world)
         (fun value => requireCondition (goals.normal (locals.set name value)))
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)
-  | .shift table field kind index source destination bounded _ _ access => do
+  | .shift (lo := lo) (hi := hi) table field kind index source destination bounded _ _ access => do
       match h : goals.normal locals with
       | .error cause => .error cause
       | .ok normal => do
@@ -100,6 +100,10 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               sound := fun runtime world valid allowed _ => by
                 have transport {a b : Ty} (same : a = b) (value : Wert D a) :
                     scalarValue b (same ▸ value) = scalarValue a value := by
+                  cases same
+                  rfl
+                have reverseTransport {a b : Ty} (same : a = b) (value : Wert D b) :
+                    scalarValue a (same ▸ value) = scalarValue b value := by
                   cases same
                   rfl
                 let read := world.lese Λ (.inl table :: index.orte)
@@ -115,7 +119,11 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 dsimp only [read] at taken
                 unfold Runtime.wpS
                 simp only [execStmtH, taken, ↓reduceIte, Goals.holds, h, denotes]
-                rw [assignment_schreibSlot, offset.property, transport]
+                rw [assignment_schreibSlot, offset.property]
+                have stored : scalarValue (D.typ table field)
+                    (kind ▸ (⟨destination, bounded.1, bounded.2⟩ : Zahl lo hi)) = destination :=
+                  reverseTransport kind _
+                rw [stored]
                 exact (subst_denote _ _ normal (assignment read)).mp ((quoteQF_denote _ _).mp parts.2) }
   | .advances .. | .retires .. | .transition .. => do
       let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)

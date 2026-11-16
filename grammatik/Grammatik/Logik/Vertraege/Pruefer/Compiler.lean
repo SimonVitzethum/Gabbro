@@ -162,9 +162,9 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           unfold Runtime.wpB
           simp only [execBlockH]
           split <;> rename_i fits
-          · simp only [fits, ↓reduceDIte] at ready
+          · simp only [dif_pos fits] at ready
             exact (goals.holds_shrink _ allowed _).mp (ready allowed safe)
-          · simp only [fits, ↓reduceDIte] at ready
+          · simp only [dif_neg fits] at ready
             have ready := ready allowed safe
             cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls
               failure (world.lese Λ expression.orte) locals <;>
@@ -312,9 +312,9 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           unfold Runtime.wpE
           simp only [execEndH]
           split <;> rename_i fits
-          · simp only [fits, ↓reduceDIte] at ready
+          · simp only [dif_pos fits] at ready
             exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
-          · simp only [fits, ↓reduceDIte] at ready
+          · simp only [dif_neg fits] at ready
             exact ready allowed safe)
     | _ => .error (.unsupported "contract end block is outside the checked control fragment")
 termination_by fuel
