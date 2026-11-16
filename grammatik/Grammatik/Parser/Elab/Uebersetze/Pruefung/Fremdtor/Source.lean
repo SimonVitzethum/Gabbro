@@ -305,6 +305,23 @@ private theorem fremdCanonical_refused :
     (List.finRange uFremd.fns.length) ⟨3, by decide⟩ (List.mem_finRange _) rejected
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, contracts, Bool.and_false]
 
+-- The collector rule has an actual refused member of a four-function unit.
+private theorem foreign_contracts_refused_zeuge :
+    (⟨3, by decide⟩ : Fin uFremd.fns.length) ∈ List.finRange uFremd.fns.length ∧
+    (Vertraege.Pruefer.checkFunction fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
+      (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false ∧
+    Vertraege.Pruefer.KontrakteGeprueftB fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
+      (List.finRange uFremd.fns.length) = false := by
+  have rejected : (Vertraege.Pruefer.checkFunction fremdCanonical
+      (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩).toOption.isSome = false := by
+    have reason := fremd_fragment_refusal
+    cases result : Vertraege.Pruefer.checkFunction fremdCanonical
+        (Cover.Differenz.sperrFamilie uFremd) (fun _ => none) {} none ⟨3, by decide⟩ with
+    | error cause => rfl
+    | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
+  exact ⟨List.mem_finRange _, rejected,
+    foreign_contracts_refused _ _ _ _ (List.mem_finRange _) rejected⟩
+
 private def fremdFallibleCanonical : Programm (declOf uFremdFallible) :=
   progOfFn uFremdFallible (fun f => (ForeignGateFunctions.fallPieces f).1)
     (fun f => (ForeignGateFunctions.fallPieces f).2.1)

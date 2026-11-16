@@ -53,6 +53,14 @@ private theorem foreign_seq_succ (u : UProg) (caller : Fin u.fns.length) (fuel :
     lowSeqL (l := l) u caller Γ fn (fuel + 1) Λ entry statements =
       lowSeqStep u caller (lowStufe u caller fuel) Γ fn Λ entry statements := rfl
 
+-- A real probe with a binding instantiates the one-layer equation.
+private theorem foreign_seq_succ_zeuge :
+    lowSeqL (l := false) uFremd ⟨1, by decide⟩ [] (fnAt uFremd ⟨1, by decide⟩)
+      2 [] [] [.bindB "#checkVerdict" .tru] =
+    lowSeqStep uFremd ⟨1, by decide⟩ (lowStufe uFremd ⟨1, by decide⟩ 1)
+      [] (fnAt uFremd ⟨1, by decide⟩) [] [] [.bindB "#checkVerdict" .tru] :=
+  foreign_seq_succ _ _ 1 _ _ _ _ _
+
 attribute [local cbv_opaque] lowStufe lowSeqL lowStructL lowEndL uFloatLimit
 attribute [local cbv_eval] foreign_seq_succ lowStructL_succ lowEndL_succ
   lowStufe_seq lowStufe_struct lowStufe_ende
