@@ -89,7 +89,12 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     factoring preserves the strict contract decision and all numbered cell formulas.
     Re-pinned for the approved option-indexed foreign-binder totality certificate:
     both continuations are certified for every environment, including void results.
-    No strict VC rule, numbered component or cell data changed. -/
+    No strict VC rule, numbered component or cell data changed.
+    Re-pinned 2026-11-16 after extending the contract control fragment,
+    structural totality and decoded-local returns. The VC implementation and
+    its work-budget preflight changed; the numbered components and reset cell
+    above were re-read and remain unchanged. No VC coverage is claimed by
+    those cells. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -102,7 +107,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 9825804211679157507)]
+   ("AkzeptiertX", 1136490958713594328)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
