@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.CounterprobeLowering
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Calls
@@ -160,7 +161,18 @@ private theorem sonde_return_orte_empty {Γ : Ctx}
 attribute [local cbv_eval] sonde_return_orte_empty
 
 private theorem sonde_common : CheckWitness sondeUnitMade.val 0 := by
+  attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
+    Vertraege.Pruefer.checkFunction
   constructor <;> cbv
+  simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+  constructor
+  · cbv
+  · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+    rintro ⟨index, bound⟩
+    have small : index < 6 := bound
+    have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 ∨ index = 4 ∨ index = 5 := by omega
+    rcases choices with h | h | h | h | h | h <;> subst index <;>
+      cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
 
 -- All declaration-indexed observations are packaged before the public getter
 -- is substituted. The final transport changes the entire proposition at once.
