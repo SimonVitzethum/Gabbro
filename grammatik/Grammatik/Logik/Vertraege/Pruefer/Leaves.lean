@@ -11,6 +11,23 @@ open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Inva
 variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm D}
 variable (policy : CallPolicy program)
 
+/-- A decoded local or interval transport selects exactly one continuation.
+    Memory-dependent expressions retain complete selection and its equality
+    guard. This shares the same rule at bindings, assignments and returns. -/
+def selectValue (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {type : Ty}
+    (expression : Expr D Γ Λ type) (locals : Env D Γ)
+    (target : Wert D type → Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ∀ value, Except Invarianten.Frag.Refusal (Condition (target value))) :
+    Except Invarianten.Frag.Refusal (Condition (fun runtime world =>
+      target (eval world expression world locals) runtime world)) :=
+  match type, expression, target, compile with
+  | _, .var name, _, compile => compile (locals.get name)
+  | .int _ _, .widen low high body, target, compile =>
+      selectValue budget body locals
+        (fun value => target (Zahl.weiter low high value))
+        (fun value => compile (Zahl.weiter low high value))
+  | _, expression, target, compile => localSelect budget expression locals target compile
+
 /-- A range check selects its exact typed value or the explicit failure arm.
     The original expression remains correlated with the selected branch. -/
 def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
@@ -23,7 +40,7 @@ def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
       let value := eval world expression world locals
       if fits : low ≤ value.n ∧ value.n ≤ high then
         success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)) :=
-  localSelect budget expression locals
+  selectValue budget expression locals
     (fun value runtime world =>
       if fits : low ≤ value.n ∧ value.n ≤ high then
         success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)
@@ -31,22 +48,6 @@ def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
       by_cases fits : low ≤ value.n ∧ value.n ≤ high
       · simpa only [dif_pos fits] using compile ⟨value.n, fits.1, fits.2⟩
       · simpa only [dif_neg fits] using compileFailure)
-
-/-- Decoded local returns and interval transports generate one continuation.
-    Other values retain complete budgeted selection, never a sample. -/
-def valueReturnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {type : Ty}
-    (expression : Expr D Γ Λ type) (locals : Env D Γ)
-    (returned : Wert D type → Except Invarianten.Frag.Refusal (QF (Observation D))) :
-    Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
-      denotes (returned (eval world expression world locals)) world)) :=
-  match type, expression, returned with
-  | _, .var name, returned => requireCondition (returned (locals.get name))
-  | .int _ _, .widen low high body, returned =>
-      valueReturnCondition budget body locals (fun value => returned (Zahl.weiter low high value))
-  | _, expression, returned =>
-      localSelect budget expression locals
-        (fun value _ world => denotes (returned value) world)
-        (fun value => requireCondition (returned value))
 
 /-- A void return checks its sole continuation; a value return uses the
     same typed observation rule as scoped and ordinary scalar exits. -/
@@ -57,7 +58,9 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Opti
       denotes (returned (evalErg world expression world locals)) world)) :=
   match result, expression, returned with
   | none, .empty, returned => requireCondition (returned ())
-  | some _, .val expression, returned => valueReturnCondition budget expression locals returned
+  | some _, .val expression, returned => selectValue budget expression locals
+      (fun value _ world => denotes (returned value) world)
+      (fun value => requireCondition (returned value))
 
 /-- Scalar updates reuse P20's substitution; the post is stronger at logic
     stops and value returns. Unsupported leaves have no accepting fallback. -/
@@ -97,7 +100,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 rw [assignment_lese]
                 exact valid }
   | .assignVar name expression => do
-      let pre ← localSelect budget expression locals
+      let pre ← selectValue budget expression locals
         (fun value _ world => denotes (goals.normal (locals.set name value)) world)
         (fun value => requireCondition (goals.normal (locals.set name value)))
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)

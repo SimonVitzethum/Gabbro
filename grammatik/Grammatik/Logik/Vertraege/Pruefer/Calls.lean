@@ -34,7 +34,7 @@ def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
   match params, args, target, compile with
   | [], .nil, _, compile => compile .nil
   | _ :: _, .cons head tail, target, compile => do
-      let selected ← localSelect budget head locals
+      let selected ← selectValue budget head locals
         (fun value runtime world => target (.cons value (evalArgs world tail world locals)) runtime world)
         (fun value => arguments budget tail locals
           (fun rest => target (.cons value rest)) (fun rest => compile (.cons value rest)))

@@ -114,7 +114,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           | logik error => simpa only [result, Goals.holds] using ready
           | hardware error => trivial)
     | .bind expression rest => do
-        let pre ← localSelect budget.expansion expression locals _
+        let pre ← selectValue budget.expansion expression locals _
           (fun value => block fuel rest (.cons value locals) (goals.shrink _))
         return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
@@ -272,7 +272,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
             simpa only [Runtime.wpE, execEndH, wahr?, tested,
               Bool.false_eq_true, ↓reduceIte] using ready)
     | .bind expression rest => do
-        let pre ← localSelect budget.expansion expression locals _
+        let pre ← selectValue budget.expansion expression locals _
           (fun value => ending fuel rest (.cons value locals) (goals.shrink _))
         return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
