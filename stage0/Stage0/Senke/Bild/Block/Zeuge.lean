@@ -53,9 +53,17 @@ theorem bild_block_zeuge {Y : Lay t4D} [TorOK Y t4O] [SichtOK t4O]
       (rufEnv t4G zeugeWeltB [] zeugeArgs Env.nil) (t4P.rumpf t4G)
       (rufWelt t4P t4G zeugeWeltB [] zeugeArgs) (rufEnv t4G zeugeWeltB [] zeugeArgs Env.nil) :=
     Zerlegung.halt _ _ _
+  let B := ((rumpfRahmen Y t4O 0 t4P A C Lm 1 t4B fp K Ks rp cfp
+    zeugeWelt Env.nil [] ens).suffix n1).suffix n2
+  letI : TorOK B.L B.O := by
+    change TorOK Y t4O
+    infer_instance
+  letI : SichtOK B.O := by
+    change SichtOK t4O
+    infer_instance
   exact ⟨n1, n2, pcC, mC, MC, σ2, v, st, hl, hC,
     randDannL_bindCall_ein_aus ((hB.suffix n1).suffix n2) hc rfl rfl rfl (by decide)
-      leseblind_t4O hC hR hg hkC⟩
+      (leseblind_alle t4O) hC hR hg hkC⟩
 
 #print axioms bild_block_zeuge
 
