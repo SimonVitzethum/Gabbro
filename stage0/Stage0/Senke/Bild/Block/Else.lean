@@ -54,8 +54,8 @@ theorem BodyFrame.randBIR_bindCallElse {B : BodyFrame D} (hB : B.Ok) {l : Bool} 
     ⟨σ2, v, m2, hR, st, a, pre2, hw2⟩ | ⟨σ2, r, m2, hR, st, a, pre2, hw2⟩ |
     ⟨e, hR, st⟩ | ⟨e, hR, st⟩
   · refine Or.inl ⟨σ2, v, _, m2, ce.length + 1, hR, st, a.mono hlo,
-      cr, tr, hcr, by omega, hsR, pre2, ?_, hu.agreeW hW a (by simp only [frei]; omega),
-      hk.agreeW hW a (by rw [← hB.lo0]; exact hlo), hw2, ?_, hH.sig⟩
+      cr, tr, hcr, by change tr + B.cap ≤ B.Ks; omega, hsR, pre2, ?_, hu.agreeW hW a (by simp only [frei]; omega),
+      hk.agreeW hW a (by change (functionFrame B.P B.f).internalResult ≤ frei Γ B.reserved; rw [← hB.lo0]; exact hlo), hw2, ?_, hH.sig⟩
     · simp only [BodyFrame.suffix, frei_cons]
       omega
     · intro i hi
@@ -64,7 +64,7 @@ theorem BodyFrame.randBIR_bindCallElse {B : BodyFrame D} (hB : B.Ok) {l : Bool} 
       omega
   · refine Or.inr (Or.inl ⟨σ2, r, _, m2, hR, st, a.mono hlo,
       ce, te, hce, by omega, hsE, pre2, ?_, hu.agreeW hW a (by simp only [frei]; omega),
-      hk.agreeW hW a (by rw [← hB.lo0]; exact hlo), hw2, ?_, hH.sig⟩)
+      hk.agreeW hW a (by change (functionFrame B.P B.f).internalResult ≤ frei Γ B.reserved; rw [← hB.lo0]; exact hlo), hw2, ?_, hH.sig⟩)
     · simp only [frei_cons]
       omega
     · intro i hi
