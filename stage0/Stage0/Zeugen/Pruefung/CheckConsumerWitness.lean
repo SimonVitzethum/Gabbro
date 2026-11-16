@@ -2,6 +2,8 @@ module
 
 public import Stage0.Compiler
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Zeugen
+public meta import Stage0.Compiler
+public meta import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Zeugen
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -52,12 +54,16 @@ def text : String :=
 
 def options : Profil.Options := { checkConsumer := some retiringSelection }
 
-/-- Outside the decidable fragment: the source's full-width measured local. -/
-theorem selected_refused_zeuge : compile text options = .error
-    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
+/-- The full-width measured local has the exact constant value three. It needs
+    no enumeration of its u64 type, and the selected source compiles. -/
+theorem selected_compiles_zeuge : (compile text options).toOption.isSome = true := by
   kernel_rfl
 
-/-- The rejected request still explicitly selects the physical consumer's driver. -/
+/-- The request explicitly selects the physical consumer's driver. -/
 theorem selected_entry_requested_zeuge : Profil.entryName options = "p#driver#g" := rfl
+
+#eval match compile text options with
+  | .ok _ => "selected constant-local consumer compiled"
+  | .error cause => cause
 
 end Gabbro.Stage0.CheckConsumerWitness
