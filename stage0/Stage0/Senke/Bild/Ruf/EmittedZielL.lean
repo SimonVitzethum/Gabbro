@@ -95,8 +95,17 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
       | ok descriptors =>
         simp only [guests, bind, Except.bind] at accepted
         have checked := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
-        rw [akzeptiertX_guest_eq] at checked
-        have structural := (Bool.and_eq_true_iff.mp checked).1
+        have split := (@akzeptiertX_guest_eq (declOf output.compiled.unit)
+          (inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length)))
+          (inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length)))
+          output.compiled.program (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit)
+          _ _ _ _ _ _ _ _ (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
+          (fun _ => none)).symm.trans checked
+        have structural := (Bool.and_eq_true_iff.mp split).1
+        letI : DecidableEq (declOf output.compiled.unit).Fn :=
+          inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length))
+        letI : DecidableEq (declOf output.compiled.unit).Ax :=
+          inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length))
         have core := akzeptiertSpecX_of output.fsA.2 output.lsA.2 output.csA.2 [] structural
         have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
             (output.einheit Q).ws := by
