@@ -119,6 +119,7 @@ theorem good_user : NutzerPflichtA goodUnit where
 
 /-- The strict checker refuses the false post and names the actual failed
     contract obligation. This is an executable diagnostic, not a guessed trace. -/
+set_option maxRecDepth 4096 in
 theorem checker :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
     Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =
