@@ -7575,3 +7575,10 @@ stops. No source execution counterexample is inferred from an abstract WP.
 foreign end-continuation gap reached after uniform post support, rather than
 the removed return-range precheck. Its source and refusal-composition claims
 are unchanged.
+
+Importer verification also exposed two existing memory-heavy `cbv` witnesses.
+`GvParserFragment.w108_elab` and its data move unchanged into
+`GabbroV/Start/GvParserWitness.lean`, re-exported by the original module.
+It and `Measures.Fixtures.countdown_elaborated_zeuge` use kernel conversion
+instead of constructing the whole elaborator reduction in the metaprogram.
+Both statements and their fixtures are unchanged.

@@ -3,6 +3,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Pipeline
 public import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Elab.UebersetzePipeline
+import Grammatik.Kern.Taktik.KernelRfl
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
 import all Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
@@ -78,7 +79,7 @@ def countdownItems : List SItemTief :=
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- The complete elaborated fixture, not only its measure projection, comes from these items. -/
-theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by cbv
+theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by kernel_rfl
 
 /-- The source clause reaches the elaborated function as exactly the written measure. -/
 theorem countdown_origin_zeuge :
