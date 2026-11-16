@@ -40,8 +40,7 @@
     (`gabbro_ziel_sc`), and on every unit without an arena a corollary (`gabbro_ziel_sc_aus`), kept as a name
     because corpus theorems and embeddings are stated over it.
   * `GabbroZielVerbund` -- a program LINKED from two separately compiled units, each accepted alone, under the link
-    check `SchnittstelleSpec` and the SAME hardware assumptions; conclusion `ZielF` on the linked unit
-    (`gabbro_ziel_verbund`).
+    check `SchnittstelleSpec` and the SAME hardware assumptions; conclusion `ZielF` on the linked unit (`gabbro_ziel_verbund`).
   * `GabbroZielLeben` -- liveness: on every weakly fair run of the ticket lock a thread standing at `locks L` takes
     `L`, or some thread holds `L` from some step on for ever (`gabbro_ziel_leben`).
   * `GabbroZielTerminierung` -- termination: under the measure duty (`decreases`, user logic), on every infinite run
@@ -133,8 +132,7 @@
     shared atomics: the weak memory adds no behaviour beyond the rely. (a), (c).
   * `vertrag`, `invRueck`, `invGrund`, `keinLogikHalt`, `startEnde`, `keinStartGrund` -- (b)'s sequential clauses at
     the places of the interleaved run: `requires` at every logged entry, `ensures` and owed invariants at every
-    logged return, no thread stuck at a `logik` check, a start finishes in its contract, no start at a reason.
-    (a), (b), (c).
+    logged return, no thread stuck at a `logik` check, a start finishes in its contract, no start at a reason. (a), (b), (c).
   * `sperrInv` -- every free lock has its invariant in shared memory. `sperrWechsel`, `sperrSicht` -- every acquire
     starts from it, every release leaves it, and no thread but the holder touches a protected carrier. (a), (b).
   * `invRuhe`, `invSicht` -- a table/group/global invariant holds wherever no unfinished thread is inside one of
