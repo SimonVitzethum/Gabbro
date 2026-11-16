@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
+import Grammatik.Kern.Taktik.KernelRfl
 import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Phases
@@ -96,7 +97,7 @@ local macro "floor_contract_functions" : tactic => `(tactic| (
   have small : index < 4 := bound
   have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 := by omega
   rcases choices with h | h | h | h <;> subst index <;>
-    cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)))
+    cbv <;> kernel_rfl))
 
 -- The emitted source stays unchanged; these proof equations select its real callbacks.
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
