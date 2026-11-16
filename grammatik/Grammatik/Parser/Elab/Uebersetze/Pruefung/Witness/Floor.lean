@@ -85,6 +85,7 @@ public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+set_option maxRecDepth 100000
 
 attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
   Vertraege.Pruefer.checkFunction

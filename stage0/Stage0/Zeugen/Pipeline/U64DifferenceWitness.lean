@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+public import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.ToString.Basic
@@ -56,9 +57,9 @@ theorem candidate_refused : candidate = .error
   kernel_rfl
 
 /-- Source elaboration still retains the exact relational narrowing. -/
-theorem unit_present : (elabText text).toOption.isSome = true := by kernel_rfl
+theorem unit_present : (uebersetzeAllg text).toOption.isSome = true := by kernel_rfl
 
-def unit : UProg := (elabText text).toOption.get unit_present
+def unit : UProg := ((uebersetzeAllg text).toOption.get unit_present).1
 
 /-- The actual frontend emits the existing exact subtraction inside total `eng`,
     narrowed to the complete unsigned range rather than a signed-word subset. -/

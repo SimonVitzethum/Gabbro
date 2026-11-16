@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+public import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -57,9 +58,9 @@ theorem candidate_refused : candidate = .error
   kernel_rfl
 
 /-- The unchanged source still elaborates with its real linear inventory. -/
-theorem unit_present : (elabText text).toOption.isSome = true := by kernel_rfl
+theorem unit_present : (uebersetzeAllg text).toOption.isSome = true := by kernel_rfl
 
-def unit : UProg := (elabText text).toOption.get unit_present
+def unit : UProg := ((uebersetzeAllg text).toOption.get unit_present).1
 
 /-- Both signatures are terminal transfers, with no ordinary owner consumption;
     the callee's explicit retire is retained in the actual compiler's U tree. -/
