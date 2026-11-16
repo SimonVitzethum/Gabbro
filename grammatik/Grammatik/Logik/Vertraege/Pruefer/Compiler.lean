@@ -73,7 +73,10 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         let normal ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callCondition policy budget.expansion f actual hr
-            (fun _ _ world => denotes (goals.normal locals) world) (fun _ => .ok normal))
+            (fun _ _ world => denotes (goals.normal locals) world) (fun _ => .ok normal)
+            (match program.ensures f with
+             | .tru => some (normal.map (fun _ _ ready _ => ready))
+             | _ => none))
         return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpS
@@ -231,7 +234,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | fuel + 1 =>
     match code with
     | .ret expression _ => do
-        let pre ← returnCondition (S := S) budget.expansion expression locals goals.returned
+        let pre ← returnCondition (S := S) budget.expansion expression locals goals.returned goals.uniformReturn
         return (pre.read Λ expression.orte).map (fun _ _ ready _ _ => ready)
     | .retWhy _ _ => .ok
         { formula := goals.reason

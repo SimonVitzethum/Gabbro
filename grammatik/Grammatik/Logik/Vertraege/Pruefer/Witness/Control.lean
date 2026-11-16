@@ -76,7 +76,8 @@ theorem specialization_product_zeuge :
 def conditionalReturn : Stmt declaration contract false [.int 1 11] [] [] :=
   .ite .tru (.cons (.ret (.val (.var .here)) (List.Perm.refl _)) .nil) .nil
 
-theorem continuation_cost_zeuge : statementSpecializations 128 100 20 conditionalReturn = 21 := rfl
+theorem continuation_cost_zeuge :
+    statementSpecializations increment false 128 100 20 conditionalReturn = 21 := rfl
 
 /-- Wide constants use one fallback continuation instead of enumerating their type. -/
 theorem wide_selection_cost_zeuge :
@@ -123,6 +124,56 @@ theorem return_local_without_enumeration_zeuge :
         ErgExpr declaration [.int 0 (2 ^ 64 - 1)] [] (some (.int 0 (2 ^ 65 - 1))))
       wideArguments (fun _ => .ok .tru)).toOption.isSome = true := by
   constructor <;> rfl
+
+/-- A full-width parameter and a memory-dependent initializer. The explicit
+    narrowing fallback remains part of the model's actual return value. -/
+def u32Declaration : Deklaration :=
+  { declaration with
+    sigNr := fun _ =>
+      { params := [.int 0 (2 ^ 32 - 1)], erg := some (.int 0 (2 ^ 32 - 1)), gruende := 0
+        haelt := [], schreibt := fun _ => false, gschreibt := fun _ => false
+        konsumiert := [], produziert := [] }
+    passt_ok := fun _ _ impossible => by cases impossible }
+
+def u32Program : Programm u32Declaration where
+  invariante := fun item => nomatch item
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => .ret (.val
+    (.eng (.add (.var .here) (.glob false (fun _ member => (List.not_mem_nil member).elim)))
+      0 (2 ^ 32 - 1) (.var .here))) (List.Perm.refl _)
+
+def u32Invariants : InvariantFormula u32Program (u32Declaration.invs.filter (schuldet ())) :=
+  (invariantFormula u32Program []).toOption.get (by rfl)
+
+/-- The actual environment VC accepts at expansion budget zero for every
+    u32 argument. Neither the argument's inhabitants nor the return range are
+    enumerated here; the outer parameter-domain gate is a separate obligation. -/
+theorem uniform_u32_environment_zeuge (locals : Env u32Declaration (u32Declaration.params ())) :
+    (checkEnvironment u32Program (SperrInv.leer u32Declaration) (requiresPolicy u32Program)
+      (fun _ => none) { expansion := 0 } none () u32Invariants locals).toOption.isSome = true := by
+  with_unfolding_all rfl
+
+/-- Uniform support covers all 2^32 decoded results with a zero-case budget. -/
+theorem uniform_post_support_zeuge (locals : Env u32Declaration (u32Declaration.params ())) :
+    (checkPostFormulas u32Program 0 () locals).toOption.isSome = true := by
+  rfl
+
+theorem postFormula_true_map_zeuge :
+    (postFormula u32Program () (.cons ⟨7, by decide, by decide⟩ .nil)
+      ⟨9, by decide, by decide⟩).map Subtype.val = .ok (lower .tru) :=
+  postFormula_true_map u32Program () _ _ rfl
+
+/-- An inhabited full-width result type and a real u32 argument jointly
+    exercise the shared call rule. The specialization callback refuses every
+    value, so acceptance also witnesses that it is never consulted. -/
+theorem shared_call_results_zeuge :
+    (callCondition (S := SperrInv.leer u32Declaration) (requiresPolicy u32Program) 0 ()
+      (.cons ⟨7, by decide, by decide⟩ .nil) rfl
+      (fun _ _ _ => True)
+      (fun _ => .error (.unsupported "result specialization must not run"))
+      (some { formula := .tru, sound := fun _ _ _ _ => trivial })).toOption.isSome = true := by
+  rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
 

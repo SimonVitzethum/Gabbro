@@ -127,17 +127,28 @@ theorem environment_success (program : Programm D) (S : SperrInv D) (policy : Ca
     (decided : decideB (close (writerMatrix entry.payload .tru compiled.formula))
       (close_closed (writerMatrix entry.payload .tru compiled.formula)) = true) :
     (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true := by
-  unfold Vertraege.Pruefer.checkEnvironment
-  rw [hentry, hdomain]
-  dsimp only [bind, Except.bind]
-  rw [hposts]
-  dsimp only [bind, Except.bind]
-  rw [hcompiled]
-  dsimp only [bind, Except.bind]
-  split
-  · rfl
-  · rename_i refused
-    exact False.elim (refused decided)
+  have supported : (checkPostFormulas program budget.expansion f locals).toOption.isSome = true := by
+    unfold checkPostFormulas
+    split
+    · rfl
+    · rw [hdomain]
+      dsimp only [bind, Except.bind]
+      rw [hposts]
+      rfl
+  cases postResult : checkPostFormulas program budget.expansion f locals with
+  | error cause => rw [postResult] at supported; cases supported
+  | ok _ =>
+    unfold Vertraege.Pruefer.checkEnvironment
+    rw [hentry]
+    dsimp only [bind, Except.bind]
+    rw [postResult]
+    dsimp only [bind, Except.bind]
+    rw [hcompiled]
+    dsimp only [bind, Except.bind]
+    split
+    · rfl
+    · rename_i refused
+      exact False.elim (refused decided)
 
 theorem success_of_isSome {α ε : Type} (result : Except ε α)
     (ready : result.toOption.isSome = true) : ∃ value, result = .ok value := by
@@ -154,7 +165,8 @@ theorem execution_success (program : Programm D) (S : SperrInv D) (policy : Call
     (domain : Invarianten.Pruefer.Environments D (D.params f))
     (hdomain : Invarianten.Pruefer.environments (D := D) budget.expansion (D.params f) = .ok domain)
     (withinBudget : argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations budget.expansion budget.specializations (program.rumpf f) ≤ budget.specializations)
+      endSpecializations program (uniformPost program f) budget.expansion budget.specializations
+        (program.rumpf f) ≤ budget.specializations)
     (ready : ∀ locals, (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true) :
     (checkExecution program S policy sources budget hint f).toOption.isSome = true := by
   obtain ⟨checked, hchecked⟩ := collect_success domain.values

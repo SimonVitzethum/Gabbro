@@ -22,6 +22,13 @@ def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1
   | some type => specializationCount limit type
 
+/-- This is the source case carrying a certified uniform return family and
+    permitting shared, result-independent call continuations. -/
+def uniformPost (program : Programm D) (f : D.Fn) : Bool :=
+  match program.ensures f with
+  | .tru => true
+  | _ => false
+
 /-- Wide domains fail before enumeration and the constant fallback creates
     one continuation. Interval widening shares the decoded input selection. -/
 def selectionSpecializations (expansion limit : Nat) {Γ Λ type} : Expr D Γ Λ type → Nat
@@ -44,73 +51,76 @@ mutual
 /-- Charge a continuation only on paths that reach it. Early returns carry
     their own cost; a discarded call shares its already compiled tail. This
     mirrors the WP compiler rather than multiplying unrelated exit families. -/
-def statementSpecializations (expansion limit continuation : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
+def statementSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit continuation : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
   | .assignVar _ expression => min (limit + 1)
       (selectionSpecializations expansion limit expression * continuation)
-  | .ret expression _ | .retScoped expression _ => returnSpecializations expansion limit expression
+  | .ret expression _ | .retScoped expression _ =>
+      if uniformReturn then 1 else returnSpecializations expansion limit expression
   | .retWhy .. | .retWhyScoped .. | .leave .. | .next .. => 1
   | .call f args _ _ => min (limit + 1)
-      (argumentSelectionSpecializations expansion limit args * resultSpecializations limit (D.erg f) + continuation)
+      (argumentSelectionSpecializations expansion limit args *
+        (if uniformPost program f then 1 else resultSpecializations limit (D.erg f)) + continuation)
   | .ite _ yes no => min (limit + 1)
-      (blockSpecializations expansion limit continuation yes + blockSpecializations expansion limit continuation no)
-  | .breaking _ body | .locks _ _ body => blockSpecializations expansion limit continuation body
-  | .onWhy _ arms => reasonSpecializations expansion limit continuation arms
+      (blockSpecializations program uniformReturn expansion limit continuation yes + blockSpecializations program uniformReturn expansion limit continuation no)
+  | .breaking _ body | .locks _ _ body => blockSpecializations program uniformReturn expansion limit continuation body
+  | .onWhy _ arms => reasonSpecializations program uniformReturn expansion limit continuation arms
   | .retry 0 _ _ overflow => min (limit + 1)
-      (continuation + blockSpecializations expansion limit continuation overflow)
+      (continuation + blockSpecializations program uniformReturn expansion limit continuation overflow)
   | .retry count _ body overflow => min (limit + 1)
-      ((count + 1) * blockSpecializations expansion limit continuation body +
-        blockSpecializations expansion limit continuation overflow)
+      ((count + 1) * blockSpecializations program uniformReturn expansion limit continuation body +
+        blockSpecializations program uniformReturn expansion limit continuation overflow)
   | .traverse table _ body => min (limit + 1)
-      ((D.count table).toNat * blockSpecializations expansion limit continuation body + continuation)
+      ((D.count table).toNat * blockSpecializations program uniformReturn expansion limit continuation body + continuation)
   | _ => continuation
 
-def blockSpecializations (expansion limit continuation : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
+def blockSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit continuation : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
   | .nil => continuation
-  | .cons head tail => statementSpecializations expansion limit (blockSpecializations expansion limit continuation tail) head
+  | .cons head tail => statementSpecializations program uniformReturn expansion limit (blockSpecializations program uniformReturn expansion limit continuation tail) head
   | .bind expression tail => min (limit + 1)
-      (selectionSpecializations expansion limit expression * blockSpecializations expansion limit continuation tail)
+      (selectionSpecializations expansion limit expression * blockSpecializations program uniformReturn expansion limit continuation tail)
   | .bindCall f args _ _ _ tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args * resultSpecializations limit (D.erg f) *
-        blockSpecializations expansion limit continuation tail)
+        blockSpecializations program uniformReturn expansion limit continuation tail)
   | .bindCallElse f args _ _ _ failure tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args *
-        (resultSpecializations limit (D.erg f) * blockSpecializations expansion limit continuation tail +
-          D.gruende f * endSpecializations expansion limit failure))
+        (resultSpecializations limit (D.erg f) * blockSpecializations program uniformReturn expansion limit continuation tail +
+          D.gruende f * endSpecializations program uniformReturn expansion limit failure))
   | .check _ failure tail => min (limit + 1)
-      (endSpecializations expansion limit failure + blockSpecializations expansion limit continuation tail)
+      (endSpecializations program uniformReturn expansion limit failure + blockSpecializations program uniformReturn expansion limit continuation tail)
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
-        (endSpecializations expansion limit failure + blockSpecializations expansion limit continuation tail))
+        (endSpecializations program uniformReturn expansion limit failure + blockSpecializations program uniformReturn expansion limit continuation tail))
   | .narrowRequired (lo := lo) (hi := hi) _ _ _ tail => min (limit + 1)
-      (specializationCount limit (.int lo hi) * blockSpecializations expansion limit continuation tail)
+      (specializationCount limit (.int lo hi) * blockSpecializations program uniformReturn expansion limit continuation tail)
   | _ => continuation
 
-def endSpecializations (expansion limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
-  | .ret expression _ | .retScoped expression _ => returnSpecializations expansion limit expression
-  | .cons head tail => statementSpecializations expansion limit (endSpecializations expansion limit tail) head
+def endSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
+  | .ret expression _ | .retScoped expression _ =>
+      if uniformReturn then 1 else returnSpecializations expansion limit expression
+  | .cons head tail => statementSpecializations program uniformReturn expansion limit (endSpecializations program uniformReturn expansion limit tail) head
   | .bind expression tail => min (limit + 1)
-      (selectionSpecializations expansion limit expression * endSpecializations expansion limit tail)
+      (selectionSpecializations expansion limit expression * endSpecializations program uniformReturn expansion limit tail)
   | .bindCall f args _ _ _ tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args * resultSpecializations limit (D.erg f) *
-        endSpecializations expansion limit tail)
+        endSpecializations program uniformReturn expansion limit tail)
   | .bindCallElse f args _ _ _ failure tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args *
-        (resultSpecializations limit (D.erg f) * endSpecializations expansion limit tail +
-          D.gruende f * endSpecializations expansion limit failure))
+        (resultSpecializations limit (D.erg f) * endSpecializations program uniformReturn expansion limit tail +
+          D.gruende f * endSpecializations program uniformReturn expansion limit failure))
   | .ite _ yes no => min (limit + 1)
-      (endSpecializations expansion limit yes + endSpecializations expansion limit no)
+      (endSpecializations program uniformReturn expansion limit yes + endSpecializations program uniformReturn expansion limit no)
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
-        (endSpecializations expansion limit failure + endSpecializations expansion limit tail))
+        (endSpecializations program uniformReturn expansion limit failure + endSpecializations program uniformReturn expansion limit tail))
   | .narrowRequired (lo := lo) (hi := hi) _ _ _ tail => min (limit + 1)
-      (specializationCount limit (.int lo hi) * endSpecializations expansion limit tail)
+      (specializationCount limit (.int lo hi) * endSpecializations program uniformReturn expansion limit tail)
   | _ => 1
 
-def reasonSpecializations (expansion limit continuation : Nat) {l Γ Λ Λ' count} :
+def reasonSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit continuation : Nat) {l Γ Λ Λ' count} :
     GrundArms D V l Γ Λ Λ' count → Nat
   | .nil => 0
   | .cons head tail => min (limit + 1)
-      (blockSpecializations expansion limit continuation head + reasonSpecializations expansion limit continuation tail)
+      (blockSpecializations program uniformReturn expansion limit continuation head + reasonSpecializations program uniformReturn expansion limit continuation tail)
 
 end
 

@@ -7546,3 +7546,25 @@ actual snapshot and early cost diagnostics respectively.
 Their full acceptance is recorded in the structural-candidate audit; this
 task does not enlarge the fixed recovery portfolio or add a nontrivial
 atomic WP.
+
+## 195. Certified uniform return and call continuations (2026-11-16)
+
+`UniformContinuation` certifies that one formula represents a return goal for
+all decoded values. Ordinary and scoped returns retain that certificate,
+including invariant conjunction on release. A literal-true callee post permits
+a shared discarded-result continuation that quantifies over all answers. The
+remaining value-dependent environments still use the existing complete domain
+checker; this step does not provide entry snapshots or symbolic parameter gates.
+
+| Name | File | Statement and boundary |
+|---|---|---|
+| `postFormula_true_map` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Current.lean` | If the declared ensures is literal truth, projecting its dependent post certificate yields the same successful formula for every decoded result. The u32 support witness instantiates the premise. |
+| `Witness.uniform_u32_environment_zeuge` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/Control.lean` | The actual environment VC accepts a memory-dependent, explicitly narrowed u32 return for every u32 argument at expansion budget zero. The outer parameter-domain gate is not claimed. |
+| `Witness.uniform_post_support_zeuge` | same | Postcondition support covers every decoded u32 result with expansion budget zero. |
+| `Witness.shared_call_results_zeuge` | same | A call with an inhabited full-width result and a real u32 argument accepts a shared continuation at budget zero, even when every specialization callback refuses. |
+| `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Its work-budget premise now counts uniform returns and shared discarded-result calls once. Its successful execution-check conclusion is unchanged; the pool reader remains its joint witness. |
+
+`checkPostFormulas` returns support for every decoded result, so the existing
+refusal-composition statements retain their meaning. Acceptance still implies
+the same runtime WP and `ContractDuties`, including exclusion of local logic
+stops. No source execution counterexample is inferred from an abstract WP.

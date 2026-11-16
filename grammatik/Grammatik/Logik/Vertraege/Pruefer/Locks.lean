@@ -70,7 +70,7 @@ def scopedReturnCondition (budget : Nat)
     Except Invarianten.Frag.Refusal
       (StatementCondition (S := S) policy (.retScoped (l := l) expression cleanup) locals goals) := do
   let releases ← cleanupFormula facts cleanup.scopes
-  let returned ← returnCondition (S := S) budget expression locals goals.returned
+  let returned ← returnCondition (S := S) budget expression locals goals.returned goals.uniformReturn
   return {
       formula := conj releases.formula returned.formula
       sound := fun runtime world valid allowed safe => by

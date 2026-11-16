@@ -63,6 +63,19 @@ def contractGoals (program : Programm D) (f : D.Fn) (locals : Env D (D.params f)
   again := fun _ => .ok .tru
   returned := fun value => (postFormula program f locals value).map (fun post => conj post.val invariants.formula)
   reason := invariants.formula
+  uniformReturn :=
+    match source : program.ensures f with
+    | .tru => some
+        { formula := conj (lower .tru) invariants.formula
+          realizes := fun value => by
+            have uniform := postFormula_true_map program f locals value source
+            cases result : postFormula program f locals value with
+            | error cause => rw [result] at uniform; cases uniform
+            | ok post =>
+                have same : post.val = lower .tru := Except.ok.inj (by
+                  simpa only [result, Except.map] using uniform)
+                simp only [result, Except.map, same] }
+    | _ => none
 
 theorem contractGoals_sound (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
     (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
@@ -96,6 +109,25 @@ def checkPostFormula (program : Programm D) (f : D.Fn) (locals : Env D (D.params
   | .error cause => .error cause
   | .ok post => .ok ⟨⟨post, rfl⟩⟩
 
+/-- Certify support for every decoded result. Literal truth has one uniform
+    certificate, independent of the result's range; other posts retain their
+    complete support check until their symbolic representation is available. -/
+def checkPostFormulas (program : Programm D) (budget : Nat) (f : D.Fn)
+    (locals : Env D (D.params f)) :
+    Except Frag.Refusal (PLift (∀ value, ∃ post, postFormula program f locals value = .ok post)) :=
+  match source : program.ensures f with
+  | .tru => .ok ⟨fun value => by
+      have uniform := postFormula_true_map program f locals value source
+      cases result : postFormula program f locals value with
+      | error cause => rw [result] at uniform; cases uniform
+      | ok post => exact ⟨post, by first | exact result | rfl⟩⟩
+  | _ => do
+      let domain ← results (D := D) budget (D.erg f)
+      let posts ← collect domain.values
+        (fun value => ∃ post, postFormula program f locals value = .ok post)
+        (checkPostFormula program f locals)
+      return ⟨fun value => posts.down value (domain.complete value)⟩
+
 /-- Type facts, the caller requires and its accumulated WP form the closed
     arithmetic VC. No semantic truth proof is submitted to this procedure. -/
 def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
@@ -106,10 +138,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
       HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
       runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals)) := do
   let requires ← translate (program.requires f) locals
-  let domain ← results (D := D) budget.expansion (D.erg f)
-  let _ ← collect domain.values
-    (fun value => ∃ post, postFormula program f locals value = .ok post)
-    (checkPostFormula program f locals)
+  let _ ← checkPostFormulas program budget.expansion f locals
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) locals (contractGoals program f locals invariants)
   if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) (close_closed (writerMatrix requires.payload .tru compiled.formula)) = true then
@@ -134,7 +163,8 @@ def checkExecution (program : Programm D) (S : SperrInv D) (policy : CallPolicy 
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
   let domain ← environments (D := D) budget.expansion (D.params f)
   if argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations budget.expansion budget.specializations (program.rumpf f) > budget.specializations then
+      endSpecializations program (uniformPost program f) budget.expansion budget.specializations
+        (program.rumpf f) > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
   else pure ()
   let checked ← collect domain.values

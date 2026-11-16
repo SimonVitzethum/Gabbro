@@ -60,11 +60,11 @@ theorem post_refused (program : Programm D) (f : D.Fn) (locals : Env D (D.params
     (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
     (postFormula program f locals value).toOption.isSome = false := by
   cases result : currentOnly (program.ensures f) with
-  | error cause => unfold postFormula; rw [result]; rfl
+  | error cause => unfold postFormula postEncoding; rw [result]; rfl
   | ok checked => rw [result] at rejected; cases rejected
 
 /-- One typed result whose post is unsupported prevents successful environment
-    checking. The complete result domain, not a sampled answer, supplies membership. -/
+    checking. Both uniform and specialized support certificates cover all results. -/
 theorem environment_refused (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
     (f : D.Fn) (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
@@ -76,18 +76,12 @@ theorem environment_refused (program : Programm D) (S : SperrInv D) (policy : Ca
   | error cause => rfl
   | ok encoded =>
       dsimp only [bind, Except.bind]
-      cases domainResult : results (D := D) budget.expansion (D.erg f) with
+      cases posts : checkPostFormulas program budget.expansion f locals with
       | error cause => rfl
-      | ok domain =>
-          dsimp only [bind, Except.bind]
-          cases posts : collect domain.values
-              (fun result => ∃ formula, postFormula program f locals result = .ok formula)
-              (checkPostFormula program f locals) with
-          | error cause => rfl
-          | ok checked =>
-              obtain ⟨formula, translated⟩ := checked.down value (domain.complete value)
-              rw [translated] at rejected
-              cases rejected
+      | ok checked =>
+          obtain ⟨formula, translated⟩ := checked.down value
+          rw [translated] at rejected
+          cases rejected
 
 /-- A typed parameter environment is a member of every successful complete
     enumeration. Its failed post check therefore prevents execution checking. -/

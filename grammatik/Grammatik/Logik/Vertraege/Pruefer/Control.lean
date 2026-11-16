@@ -43,6 +43,13 @@ def withHandlers (policy : CallPolicy program)
   formula := pre.formula
   sound := fun runtime world valid _ _ => pre.sound runtime world valid
 
+/-- A result-independent continuation is compiled once. The equality covers
+    every decoded result, including types too wide for finite specialization. -/
+structure UniformContinuation (D : Deklaration) (α : Type)
+    (continuation : α → Except Invarianten.Frag.Refusal (QF (Observation D))) where
+  formula : QF (Observation D)
+  realizes : ∀ value, continuation value = .ok formula
+
 /-- Return goals depend on the actual value. Local updates only affect the
     three ordinary continuations; the function's entry arguments stay fixed. -/
 structure Goals (D : Deklaration) (V : Vertrag D) (Γ : Ctx) where
@@ -51,6 +58,7 @@ structure Goals (D : Deklaration) (V : Vertrag D) (Γ : Ctx) where
   again : Env D Γ → Except Invarianten.Frag.Refusal (QF (Observation D))
   returned : ErgVal D V.erg → Except Invarianten.Frag.Refusal (QF (Observation D))
   reason : QF (Observation D)
+  uniformReturn : Option (UniformContinuation D (ErgVal D V.erg) returned) := none
 
 def Goals.holds {l : Bool} {Γ : Ctx} (goals : Goals D V Γ)
     (allowed : Logik D → Prop) : Ausgang V l Γ → Prop
@@ -77,6 +85,7 @@ def Goals.shrink {Γ : Ctx} (goals : Goals D V Γ) (τ : Ty) : Goals D V (τ :: 
   again := fun locals => goals.again locals.tail
   returned := goals.returned
   reason := goals.reason
+  uniformReturn := goals.uniformReturn
 
 theorem Goals.holds_shrink {l : Bool} {Γ : Ctx} (goals : Goals D V Γ)
     (τ : Ty) (allowed : Logik D → Prop) (outcome : Ausgang V l (τ :: Γ)) :
@@ -113,5 +122,8 @@ def Goals.releasing {Γ : Ctx} (goals : Goals D V Γ) (fact : QF (Observation D)
   again := fun env => (goals.again env).map (conj fact)
   returned := fun value => (goals.returned value).map (conj fact)
   reason := conj fact goals.reason
+  uniformReturn := goals.uniformReturn.map (fun known =>
+    { formula := conj fact known.formula
+      realizes := fun value => by rw [known.realizes value]; rfl })
 
 end Gabbro.Grammatik.Vertraege.Pruefer
