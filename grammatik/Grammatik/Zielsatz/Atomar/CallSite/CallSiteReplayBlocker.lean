@@ -13,8 +13,8 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 namespace Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker
 
 open Gabbro.Grammatik Speichermodell
-open Gabbro.Grammatik.CallSiteZeuge (decl memory world rho)
-open Gabbro.Grammatik.CallSiteBlocker (traceOracle traceOracle_gut)
+open CallSiteZeuge (decl memory world rho)
+open CallSiteBlocker (traceOracle traceOracle_gut)
 
 /-- This software item is declared but never called. -/
 def contract : CallContract decl (decl.asignatur ()) where
