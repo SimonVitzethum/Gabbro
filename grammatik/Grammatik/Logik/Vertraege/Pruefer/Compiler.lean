@@ -148,12 +148,18 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         let negative ← endingCore fuel failure locals goals
         let pre ← branchCondition test locals positive negative
         return pre.map (fun runtime world ready allowed safe => by
-          cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
-            simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
-            have ready := ready allowed safe <;>
-            simpa only [Runtime.wpB, Runtime.wpE, execBlockH, wahr?, tested,
-              Bool.false_eq_true, ↓reduceIte, Goals.endHolds, Goals.holds,
-              EndAusgang.zuAusgang] using ready)
+          unfold Runtime.wpB
+          simp only [execBlockH]
+          split
+          · rename_i taken
+            simp only [taken, ↓reduceIte] at ready
+            exact ready allowed safe
+          · rename_i untaken
+            simp only [untaken, ↓reduceIte] at ready
+            have ready := ready allowed safe
+            cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls
+              failure (world.lese Λ test.orte) locals <;>
+              simpa only [Runtime.wpE, outcome, Goals.holds, Goals.endHolds, EndAusgang.zuAusgang] using ready)
     | .narrow expression low high failure rest => do
         let pre ← narrowingCondition budget.expansion expression low high locals _ _
           (fun value => block fuel rest (.cons value locals) (goals.shrink _))
@@ -169,6 +175,19 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls
               failure (world.lese Λ expression.orte) locals <;>
               simpa only [Runtime.wpE, outcome, Goals.holds, Goals.endHolds, EndAusgang.zuAusgang] using ready)
+    | .narrowRequired expression low high rest => do
+        let refused : Condition (fun (_ : Runtime program (fun _ => []) S) (_ : World D) => False) :=
+          { formula := .fls, sound := fun _ _ impossible => False.elim impossible }
+        let pre ← narrowingCondition budget.expansion expression low high locals _ _
+          (fun value => block fuel rest (.cons value locals) (goals.shrink _)) (.ok refused)
+        return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
+          unfold Runtime.wpB
+          simp only [execBlockH]
+          split <;> rename_i fits
+          · simp only [dif_pos fits] at ready
+            exact (goals.holds_shrink _ allowed _).mp (ready allowed safe)
+          · simp only [dif_neg fits] at ready
+            exact False.elim ready)
     | .bindCallElse f args he hp hr failure rest => do
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callOutcomesCondition policy budget.expansion f actual _ _
@@ -216,7 +235,7 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           unfold Runtime.wpE
           simp only [execStmtH, execEndH] at ready ⊢
           split <;> rename_i cleanupReady <;>
-            simpa only [cleanupReady, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
+            simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
     | .retWhyScoped reason cleanup => do
         let pre ← scopedReasonCondition (policy := policy) facts reason cleanup locals goals
         return pre.map (fun runtime world ready allowed safe => by
@@ -225,7 +244,7 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           unfold Runtime.wpE
           simp only [execStmtH, execEndH] at ready ⊢
           split <;> rename_i cleanupReady <;>
-            simpa only [cleanupReady, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
+            simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
     | .leave _ => do
         let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.escape locals)
         return pre.map (fun _ _ ready _ _ => ready)
@@ -316,14 +335,27 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
             exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
           · simp only [dif_neg fits] at ready
             exact ready allowed safe)
+    | .narrowRequired expression low high rest => do
+        let refused : Condition (fun (_ : Runtime program (fun _ => []) S) (_ : World D) => False) :=
+          { formula := .fls, sound := fun _ _ impossible => False.elim impossible }
+        let pre ← narrowingCondition budget.expansion expression low high locals _ _
+          (fun value => endingCore fuel rest (.cons value locals) (goals.shrink _)) (.ok refused)
+        return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
+          unfold Runtime.wpE
+          simp only [execEndH]
+          split <;> rename_i fits
+          · simp only [dif_pos fits] at ready
+            exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
+          · simp only [dif_neg fits] at ready
+            exact False.elim ready)
     | _ => .error (.unsupported "contract end block is outside the checked control fragment")
 termination_by fuel
 
 def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Nat}
     (arms : GrundArms D V l Γ Λ Λ' count) (locals : Env D Γ) (goals : Goals D V Γ) :
     Except Frag.Refusal (Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
-      ∀ allowed, HandlerSafe policy runtime allowed → ∀ reason,
-        goals.holds allowed (execGrundH S runtime.oracle runtime.environment runtime.passes
+      ∀ allowed, HandlerSafe policy runtime allowed → ∀ reason : Fin count,
+        goals.holds (l := l) allowed (execGrundH S runtime.oracle runtime.environment runtime.passes
           runtime.calls arms reason world locals))) :=
   match fuel with
   | 0 => .error (.unsupported "contract reason dispatch syntax-depth budget exceeded")
@@ -354,7 +386,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     Except Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
   if endSpecializations budget.specializations code > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
-  else endingCore policy facts budget hint fuel code locals goals
+  else endingCore fuel code locals goals
 
 end Compiler
 

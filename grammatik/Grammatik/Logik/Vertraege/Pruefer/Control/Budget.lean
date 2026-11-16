@@ -60,6 +60,8 @@ def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' →
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
         (endSpecializations limit failure + blockSpecializations limit tail))
+  | .narrowRequired (lo := lo) (hi := hi) _ _ _ tail => min (limit + 1)
+      (specializationCount limit (.int lo hi) * blockSpecializations limit tail)
   | _ => 1
 
 def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
@@ -80,6 +82,8 @@ def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
         (endSpecializations limit failure + endSpecializations limit tail))
+  | .narrowRequired (lo := lo) (hi := hi) _ _ _ tail => min (limit + 1)
+      (specializationCount limit (.int lo hi) * endSpecializations limit tail)
   | _ => 1
 
 def reasonSpecializations (limit : Nat) {l Γ Λ Λ' count} :
