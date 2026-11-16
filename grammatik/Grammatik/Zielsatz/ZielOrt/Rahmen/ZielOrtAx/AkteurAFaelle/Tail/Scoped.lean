@@ -30,7 +30,7 @@ theorem akteurA_gruppe7 (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, Koerper
     exact akteurA_dannLeaveVerbrauch (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (hO := hO) (hQ := hQ) (hlok := hlok) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hleave := hleave) (hhead := hhead) (σ' := σ') (ρ' := ρ') (neu := neu) (hstep := hstep) (hneu := hneu) (hkein_nimmt := hkein_nimmt) (σm := σm) (hsm := hsm) (m' := m') (hm' := hm') (hfall := hfall) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu₁ := neu₁) (hneu₁ := hneu₁) (hΛ := hΛ)
   | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
     exact akteurA_dannNextVerbrauch (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (hO := hO) (hQ := hQ) (hlok := hlok) (hK := hK) (hFrag := hFrag) (e0 := e0) (M := M) (u := u) (hF := hF) (hL := hL) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hnext := hnext) (hhead := hhead) (σ' := σ') (ρ' := ρ') (neu := neu) (hstep := hstep) (hneu := hneu) (hkein_nimmt := hkein_nimmt) (σm := σm) (hsm := hsm) (m' := m') (hm' := hm') (hfall := hfall) (neum := neum) (hneum := hneum) (hΛ := hΛ)
-  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty _hniedrig =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self]
       refine ⟨fadenA_lokal hF hhead ρ (.aufraeumen ⟨.inl (evalErg σ₁ e σ₁ ρ), σ₁⟩ R.scopes)
@@ -63,7 +63,7 @@ theorem akteurA_gruppe7 (hO : GutO O) (hQ : AxVertragO Q O) (hK : ∀ f, Koerper
           cases a.1 <;> exact ZErg.folgt_refl _)
       refine fadenA_antwort hO hQ hK e0 _ hdone hL rfl ?_
       exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
-  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha _hniedrig =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
       have hdone := fadenA_lokal hF hhead (M.faeden u).kopf.rho

@@ -228,7 +228,7 @@ theorem axLauf : ∃ M : RufMaschineG axD,
   have e4 := hZ4.1
   try dsimp only at e4
   obtain ⟨M5, s5, hG5⟩ := w_dannRetP (P := axP) (O := axO) (passes := 0) e4 _ _ rfl
-    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (axHgL (axHoff e4 hoff4)).heldIn
+    (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (axHgL (axHoff e4 hoff4)).heldIn (by trivial)
   have hr5 : RufErreichbarG axP axO 0 (RufStartG axP axSp axInit) M5 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1)
       s2) s3) s4) s5

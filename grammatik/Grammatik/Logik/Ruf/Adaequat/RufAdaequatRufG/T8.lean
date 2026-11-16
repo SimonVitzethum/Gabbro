@@ -320,6 +320,6 @@ def t4Unten : RufRahmenG t4D :=
     `t4Unten`, with empty trace and log. -/
 def t4M (fn : t4D.Fn) (b : Endblock t4D (vertragVon t4D fn) false [] []) : RufMaschineG t4D :=
   ⟨t4Sp, fun _ => ⟨[t4Unten], ⟨fn, Env.nil, t4Sp.welt [], ⟨false, [], [], Env.nil, .ende b⟩⟩,
-    [], []⟩, [], t4Sp.welt []⟩
+    [], []⟩, [], t4Sp.welt [], LowLevel.ContextLedger.empty⟩
 
 end Gabbro.Grammatik

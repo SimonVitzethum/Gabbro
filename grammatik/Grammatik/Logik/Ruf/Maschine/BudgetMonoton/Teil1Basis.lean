@@ -38,6 +38,14 @@ def GRest.plus (j : Nat) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : L
   | _, _, _, .aufraeumen a remaining => .aufraeumen a remaining
   | _, _, _, .leer => .leer
 
+/-- Shifting loop budgets preserves the continuation-discard guard. Return
+    transport must use the original guard, rather than assume every residue
+    is free of low-level scopes. -/
+theorem GRest.plus_keinNiedrig (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (k : GRest D V l Γ Λ) :
+    (k.plus j).keinNiedrig ↔ k.keinNiedrig := by
+  induction k <;> simp only [GRest.plus, GRest.keinNiedrig, *]
+
 /-- A frame with its residue shifted. -/
 def RufRahmenG.plus (j : Nat) (r : RufRahmenG D) : RufRahmenG D :=
   ⟨r.f, r.rho, r.s0, ⟨r.rest.1, r.rest.2.1, r.rest.2.2.1, r.rest.2.2.2.1, r.rest.2.2.2.2.plus j⟩⟩
@@ -48,7 +56,7 @@ def RufFadenG.plus (j : Nat) (z : RufFadenG D) : RufFadenG D :=
 
 /-- A machine with every thread shifted. -/
 def RufMaschineG.plus (j : Nat) (M : RufMaschineG D) : RufMaschineG D :=
-  ⟨M.speicher, fun t => (M.faeden t).plus j, M.lauf, M.start⟩
+  ⟨M.speicher, fun t => (M.faeden t).plus j, M.lauf, M.start, M.kontexte⟩
 
 /-- A thread machine with its machine-G state shifted. -/
 def FadenMaschine.plus (j : Nat) (K : FadenMaschine D) : FadenMaschine D :=
@@ -241,9 +249,9 @@ theorem fertigG_plus (j : Nat) (M : RufMaschineG D) (t : Faden) : FertigG (M.plu
 
 /-- The successor machine of every step, shifted: the update of the acting thread, shifted. -/
 theorem RufMaschineG.plus_update (j : Nat) (sp : Speicher D) (m : Faden → RufFadenG D) (f : Faden)
-    (z : RufFadenG D) (la : Lauf D) (st : World D) :
-    RufMaschineG.plus j ⟨sp, rufUpdateG m f z, la, st⟩ =
-      ⟨sp, rufUpdateG (fun t => (m t).plus j) f (z.plus j), la, st⟩ := by
+    (z : RufFadenG D) (la : Lauf D) (st : World D) (ctx : LowLevel.ContextLedger D) :
+    RufMaschineG.plus j ⟨sp, rufUpdateG m f z, la, st, ctx⟩ =
+      ⟨sp, rufUpdateG (fun t => (m t).plus j) f (z.plus j), la, st, ctx⟩ := by
   simp only [RufMaschineG.plus, rufUpdateG_plus]
 
 /- **A step at budget `p` is a step at budget `p + j`** of the shifted machines. -/

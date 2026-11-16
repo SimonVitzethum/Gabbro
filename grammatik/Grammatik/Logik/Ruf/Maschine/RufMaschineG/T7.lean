@@ -79,7 +79,7 @@ def H7H : RufMaschineG rufDF :=
           (.wiederRest 0 bisH bodyH .nil
             (.dann .nil (.ende driverRet)))⟩⟩,
       (H6H.faeden 0).spur, (H6H.faeden 0).log⟩,
-   H6H.lauf, H6H.start⟩
+   H6H.lauf, H6H.start, H6H.kontexte⟩
 
 /-- Step 7 fires `peelSchrumpfLeave`: the bound value is dropped. -/
 theorem schritt7H : RufSchrittG hP rufOF 0 H6H 0 H7H :=
@@ -115,7 +115,7 @@ def H8H : RufMaschineG rufDF :=
         .dann .nil (.ende driverRet)⟩⟩,
       (H7H.weltVon 0).spur, (H7H.faeden 0).log⟩,
    H7H.lauf ++ rufEigenG 0 [],
-   H7H.start⟩
+   H7H.start, H7H.kontexte⟩
 
 /-- Step 8 fires `dannLeaveWieder`: the loop is exited. -/
 theorem schritt8H : RufSchrittG hP rufOF 0 H7H 0 H8H := by
@@ -164,7 +164,7 @@ def H9H : RufMaschineG rufDF :=
         nach rufDF rufIncF (Signatur.anfang rufDF (rufDF.signatur rufCallerF)),
         rhoCallerF, .ende driverRet⟩⟩,
       (H8H.faeden 0).spur, (H8H.faeden 0).log⟩,
-   H8H.lauf, H8H.start⟩
+   H8H.lauf, H8H.start, H8H.kontexte⟩
 
 /-- Step 9 fires `dannLeer`: the loop scaffolding is gone. -/
 theorem schritt9H : RufSchrittG hP rufOF 0 H8H 0 H9H :=

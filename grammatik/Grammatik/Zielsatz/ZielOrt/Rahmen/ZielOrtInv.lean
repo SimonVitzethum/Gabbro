@@ -320,7 +320,7 @@ theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (h
       dsimp only at hv hhead
       cases hv
       exact popS_last_inv hO hRL hQ hS hsp hK hI hFS hF ρ v vor L hhead
-    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha _hniedrig =>
       rename_i l Γ Λ
       simp only [rufUpdateG_self]
       apply antwort_invLogS ha
@@ -334,7 +334,7 @@ theorem invLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (h
       intro O' calls U σ
       exact semH_scopedWert S O' U passes calls r e R hret σ ρ
         (by simp only [hempty, scopesInvH, List.all_nil])
-    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha _hniedrig =>
       simp only [rufUpdateG_self]
       exact antwort_invLogS ha (fun _ h => by cases h)
     | _ => ohneRueck

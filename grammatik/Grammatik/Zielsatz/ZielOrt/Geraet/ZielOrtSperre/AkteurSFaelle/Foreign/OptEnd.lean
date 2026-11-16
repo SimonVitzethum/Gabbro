@@ -38,7 +38,7 @@ theorem akteurS_endeBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
             ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ, .ende rest⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenS P O passes Q S lok (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -113,7 +113,7 @@ theorem akteurS_endeBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
             ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ, .ende rest⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenS P O passes Q S lok (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -191,7 +191,7 @@ theorem akteurS_endeBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
              ⟨l, reasonTy (D.agruende a) :: Γ, nachSig D (D.asignatur a) Λ,
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ), .ende err⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenS P O passes Q S lok (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]

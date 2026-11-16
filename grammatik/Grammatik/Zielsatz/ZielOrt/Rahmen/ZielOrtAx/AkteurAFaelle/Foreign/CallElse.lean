@@ -36,7 +36,7 @@ theorem akteurA_dannAxiomCallElseOk {D : Deklaration} {P : Programm D} {O : Orak
             ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
              ⟨l, Γ, nachSig D (D.asignatur a) Λ, ρ, .dann rest k⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenA P O passes Q (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -93,7 +93,7 @@ theorem akteurA_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : O
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenA P O passes Q (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]

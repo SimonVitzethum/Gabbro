@@ -111,10 +111,10 @@ theorem stmtRetR_ret
   have hW := hZ.welt
   simp only [execStmt, Ausgang.ende?, Option.some.injEq] at hex
   subst hex
-  obtain ⟨M1, hs1, hG⟩ := w_dannRetP (P := P) (O := O) (passes := passes) hZ.1
+  obtain ⟨M1, hs1, hG⟩ := lauf_dannRetP (P := P) (O := O) (passes := passes) hZ.1
     caller rst rfl hpe e hperm rest k ρ rfl hΛ.heldIn
   rw [hW] at hG
-  exact ⟨M1, [], RufLaufG.einzeln hs1, hG, (Erw.lese _ _ _).offen⟩
+  exact ⟨M1, [], hs1.lauf, hG, (Erw.lese _ _ _).offen⟩
 
 set_option linter.unusedSectionVars false in
 theorem stmtRetR_retWhy 
@@ -130,10 +130,10 @@ theorem stmtRetR_retWhy
   have hW := hZ.welt
   simp only [execStmt, Ausgang.ende?, Option.some.injEq] at hex
   subst hex
-  obtain ⟨M1, hs1, hG⟩ := w_dannRetGrundP (P := P) (O := O) (passes := passes) hZ.1
+  obtain ⟨M1, hs1, hG⟩ := lauf_dannRetGrundP (P := P) (O := O) (passes := passes) hZ.1
     caller rst rfl hpe r hperm rest k ρ rfl hΛ.heldIn
   rw [hW] at hG
-  exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
+  exact ⟨M1, [], hs1.lauf, hG, rfl⟩
 
 set_option linter.unusedSectionVars false in
 theorem blockRetR_cons 

@@ -44,7 +44,7 @@ theorem akteurV_g7 (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     have hclean := fadenV_scopedFreigabe hF ρ a L [] hhead ((M.weltVon u).gibt L).spur
     refine fadenV_scopedAntwort hO hK e0 hclean hL ρ _ rfl ?_
     exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
-  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort _hniedrig =>
     subst σ₁
     rename_i l Γ Λ
     obtain ⟨scs, hg⟩ := R
@@ -55,7 +55,7 @@ theorem akteurV_g7 (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
       ((M.weltVon u).lese Λ e.orte).spur
     refine fadenV_scopedAntwort hO hK e0 hclean hL ρ _ rfl ?_
     exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
-  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
+  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort _hniedrig =>
     rename_i l Γ Λ
     obtain ⟨scs, hg⟩ := R
     dsimp only at hempty

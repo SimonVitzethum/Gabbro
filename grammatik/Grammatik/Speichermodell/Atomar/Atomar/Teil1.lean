@@ -67,7 +67,7 @@ def RufSchrittGA (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschine
     (∀ c, ¬ AtomarAusgenommen c → TraegerGleich σ M.speicher c) ∧
     (∀ c, SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M''.speicher c) ∧
     (∀ c, ¬ SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M.speicher c) ∧
-    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start
+    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start ∧ M'.kontexte = M''.kontexte
 
 /-- **The machines GA reaches** from `M0`. -/
 inductive RufErreichbarGA (P : Programm D) (O : Orakel D) (passes : Nat) (M0 : RufMaschineG D) :
@@ -85,7 +85,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
 theorem schrittGA_of_g {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittG P O passes M u M') :
     RufSchrittGA P O passes M u M' := by
   refine ⟨M.speicher, M', by rw [mitSpeicher_selbst]; exact hs, fun c _ => traegerGleich_refl _ c,
-    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl⟩
+    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl, rfl⟩
   have h := traegerGleich_of_nicht_schreib hw
   rw [mitSpeicher_selbst] at h
   exact h

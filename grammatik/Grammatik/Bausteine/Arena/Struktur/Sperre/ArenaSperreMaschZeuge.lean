@@ -49,7 +49,7 @@ def spurL : List (Ereignis FDL) := [Ereignis.nimmt () []]
 /-- A machine whose threads all run the writer's frame, holding `()`, over the scenario memory. -/
 def ML : RufMaschineG FDL :=
   ⟨w0L.speicher, fun _ => ⟨[untenL], ⟨(), Env.nil, w0L, ⟨false, [], HL, Env.nil, .ende schreiberL⟩⟩, spurL, []⟩, [],
-    w0L⟩
+    w0L, LowLevel.ContextLedger.empty⟩
 
 theorem ml_welt : (ML.weltVon 0).slots = w0L.slots ∧ (ML.weltVon 0).globs = w0L.globs := ⟨rfl, rfl⟩
 

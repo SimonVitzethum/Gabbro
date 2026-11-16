@@ -33,7 +33,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannPruefWahr (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (c : Expr D Γ Λ .bool)
@@ -54,7 +54,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann rest k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannPruefFalsch (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (c : Expr D Γ Λ .bool)
@@ -75,7 +75,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannBreaking (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (i : D.Inv)
@@ -92,7 +92,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann body (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannLocks (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D))
       (L : D.Lock)
@@ -117,7 +117,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             Ereignis.nimmt L (offen (M.faeden f).spur) :: (M.faeden f).spur,
             (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f [Ereignis.nimmt L (offen (M.faeden f).spur)],
-         M.start⟩
+         M.start, M.kontexte⟩
   | freiGib (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (L : D.Lock)
@@ -131,7 +131,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
+         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start, M.kontexte⟩
   | schrumpfVergiss (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty)
       (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
@@ -145,7 +145,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannTrav (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -164,7 +164,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ,
               .trav t inv body (alleIndizes (D.count t)) (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | travNext (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -188,7 +188,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨true, .index (D.count t) :: Γ, Λ, .cons i ρ,
               .dann body (.travRest t inv body is k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | travFort (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -207,7 +207,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .trav t inv body is k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | travDone (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -228,7 +228,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannRetry (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -246,7 +246,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .wieder n bis body ueber (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   /-- The budget is spent: `bis` is checked once more, as an `if` over the
       overflow block (a pass that made `bis` true is a success) -- the
       sequential `retryLauf`'s `0` case, corrected 2026-09-13. -/
@@ -266,7 +266,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann (.cons (.ite bis .nil ueber) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | wiederWeiter (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -287,7 +287,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | wiederSchritt (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -309,7 +309,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨true, Γ, Λ, ρ,
               .dann body (.wiederRest n bis body ueber k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | wiederFort (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -326,7 +326,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .wieder n bis body ueber k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannForever (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (a : D.Annahme) (inv : Expr D Γ Λ .bool)
@@ -343,7 +343,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .ewig a passes inv body (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | ewigWeiter (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
@@ -364,7 +364,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨true, Γ, Λ, ρ,
               .dann body (.ewigRest a n inv body k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | ewigFort (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
@@ -380,7 +380,7 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .ewig a n inv body k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | rufDann (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
       (g : D.Fn) (args : Args D Γ Λ (D.params g))
@@ -408,6 +408,6 @@ inductive RufSchrittG2 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

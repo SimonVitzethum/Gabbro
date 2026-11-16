@@ -39,7 +39,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .ende rest⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- The same at the top level of a body: a reason. -/
   | endeBindAxiomElseGrund
       (M : RufMaschineG D) (f : Faden)
@@ -67,7 +67,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, .why (D.agruende a) :: Γ, Λ, (Env.cons (τ := .why (D.agruende a)) r ρ), .ende err⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- The same at the top level of a body: an optional value («C08»). -/
   | endeBindAxiomOptElseOk
       (M : RufMaschineG D) (f : Faden)
@@ -96,7 +96,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ, .ende rest⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- The same at the top level of a body: a reason («C08»). -/
   | endeBindAxiomOptElseGrund
       (M : RufMaschineG D) (f : Faden)
@@ -126,7 +126,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, reasonTy (D.agruende a) :: Γ, nachSig D (D.asignatur a) Λ,
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ), .ende err⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
 
   | endeGleit (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
@@ -152,7 +152,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .ende rest⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | endeGleitLit (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (q lo hi : Int × Int)
@@ -171,7 +171,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .ende rest⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | endeGleitVon (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (l₁ h₁ : Int)
@@ -194,7 +194,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .ende rest⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | endeGleitNarrowOk (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (l₁ h₁ : Int × Int)
@@ -218,7 +218,7 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .ende rest⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | endeGleitNarrowElse (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (l₁ h₁ : Int × Int)
@@ -240,6 +240,6 @@ inductive RufSchrittG6 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .ende sonst⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

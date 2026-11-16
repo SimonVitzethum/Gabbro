@@ -43,7 +43,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ', .ewig a n inv body k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | peelDannLeave (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D)) {Λ1 Λ2 : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
@@ -64,7 +64,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.leave hleave) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ2 Λ2) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | peelDannNext (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D)) {Λ1 Λ2 : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true Γ Λ Λ1)
@@ -85,7 +85,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.next hnext) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ2 Λ2) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | peelSchrumpfLeave (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) {Λ1 : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ1)
@@ -105,7 +105,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.leave hleave) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | peelSchrumpfNext (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty) {Λ1 : List (Res D)}
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) true (τ :: Γ) Λ Λ1)
@@ -125,7 +125,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.next hnext) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | peelFreiLeave (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (L : D.Lock) {Λ1 : List (Res D)}
@@ -146,7 +146,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.leave hleave) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
+         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start, M.kontexte⟩
   | peelFreiNext (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (L : D.Lock) {Λ1 : List (Res D)}
@@ -167,7 +167,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.next hnext) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λ1 Λ1) .nil) k⟩⟩,
             Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start⟩
+         M.lauf ++ rufEigenG f [Ereignis.gibt L], M.start, M.kontexte⟩
   /-- `leave` out of an `else` branch: it reaches the continuation the
       branch was run in front of (`GRest.abbruch`, 2026-09-13). -/
   | peelAbbruchLeave (M : RufMaschineG D) (f : Faden)
@@ -189,7 +189,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.leave hleave) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λk Λk) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   /-- `next` out of an `else` branch, likewise. -/
   | peelAbbruchNext (M : RufMaschineG D) (f : Faden)
       (Γ : Ctx) (Λ Λ1 Λk : List (Res D))
@@ -210,7 +210,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann (.cons ((.next hnext) : Stmt D
                 (vertragVon D (M.faeden f).kopf.f) true Γ Λk Λk) .nil) k⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannRet (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ'' : List (Res D))
       (e : ErgExpr D Γ Λ (vertragVon D (M.faeden f).kopf.f).erg)
@@ -232,14 +232,15 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (neu : List (Ereignis D))
       (hneu : s1.spur = neu ++ (M.faeden f).spur)
-      (hnw : caller.wartend = false) :
+      (hnw : caller.wartend = false)
+      (hniedrig : k.keinNiedrig) :
       RufSchrittG4 P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
            ⟨rst, caller, s1.spur,
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | rueckCons (M : RufMaschineG D) (f : Faden)
       (caller : RufRahmenG D) (rst : List (RufRahmenG D))
       (hpop : (M.faeden f).stapel = caller :: rst) {lr : Bool}
@@ -267,7 +268,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
            ⟨rst, caller, s1.spur,
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
 
   | dannRetBind (M : RufMaschineG D) (f : Faden)
       (lk : Bool) (Γk : Ctx) (Λk Λk'' : List (Res D))
@@ -297,7 +298,8 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hv : v = hfg ▸ evalErg s1 e s1 ρ)
       (he : D.erg g = some τ)
       (neu : List (Ereignis D))
-      (hneu : s1.spur = neu ++ (M.faeden f).spur) :
+      (hneu : s1.spur = neu ++ (M.faeden f).spur)
+      (hniedrig : kk.keinNiedrig) :
       RufSchrittG4 P O passes M f
         ⟨s1.speicher,
          rufUpdateG M.faeden f
@@ -308,7 +310,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
             s1.spur,
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | rueckConsBind (M : RufMaschineG D) (f : Faden)
       (lk : Bool) (Γk : Ctx) (Λk : List (Res D))
       (e : ErgExpr D Γk Λk (vertragVon D (M.faeden f).kopf.f).erg)
@@ -347,7 +349,7 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
             s1.spur,
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
 
   /- The error channel of `let x = g(…) else { err }`: a callee that answers
      a reason (`retGrund r`, from `ende`, an `ende` cons head, or a block)
@@ -384,6 +386,6 @@ inductive RufSchrittG4 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.why g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

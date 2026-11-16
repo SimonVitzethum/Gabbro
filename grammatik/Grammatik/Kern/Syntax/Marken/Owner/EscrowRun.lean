@@ -144,7 +144,7 @@ def M1E : RufMaschineG escrowD :=
       (RufEreignisF.eintritt true rhoE s0E) ::
         (M0E.faeden 0).log⟩,
    M0E.lauf ++ rufEigenG 0 [],
-   M0E.start⟩
+   M0E.start, M0E.kontexte⟩
 
 /-- Step 1 fires the `ruf` rule on the caller frame. -/
 theorem schrittPushE : RufSchrittG progE orakelE 0 M0E 0 M1E := by
@@ -179,7 +179,7 @@ def M2E : RufMaschineG escrowD :=
       [RufEreignisF.rueck true rhoE vE s0E s1E] ++
         (M1E.faeden 0).log⟩,
    M1E.lauf ++ rufEigenG 0 [],
-   M1E.start⟩
+   M1E.start, M1E.kontexte⟩
 
 /-- Step 2 fires `rueck`: the callee frame pops to the waiting caller. -/
 theorem schrittPopE : RufSchrittG progE orakelE 0 M1E 0 M2E := by

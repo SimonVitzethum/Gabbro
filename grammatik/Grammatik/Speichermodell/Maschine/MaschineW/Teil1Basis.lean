@@ -126,6 +126,7 @@ structure SchrittW (P : Programm D) (O : Orakel D) (passes : Nat) (ord : D.Glob 
   faeden : W'.g.faeden = M''.faeden
   lauf : W'.g.lauf = M''.lauf
   start : W'.g.start = M''.start
+  kontexte : W'.g.kontexte = M''.kontexte
   /-- A written carrier gets its message. -/
   histS : ∀ c, SchreibG (mitSpeicher W.g σ) M'' u c →
     W'.hist c = nachricht (ordVon ord c) (vorSicht ord W u σ M'' wahl) c (neu c) W'.g.speicher

@@ -1,5 +1,6 @@
 module
 public import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
+public import Grammatik.Kern.Syntax.Typen.Frame
 @[expose] public section
 
 
@@ -12,11 +13,6 @@ No payload memory or allocator implementation is duplicated here.
 -/
 
 namespace Gabbro.Grammatik.ArenaOwnership
-
-structure Frame where
-  thread : Nat
-  activation : Nat
-  deriving DecidableEq, Repr
 
 structure Handle where
   slot : Int

@@ -46,7 +46,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .verbrauch t member edge inv bound mass body
                 ((D.count t).toNat + bound.toNat + 1) (.dann rest k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | verbrauchWeiter (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab)
@@ -83,7 +83,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann body (.verbrauchRest t member edge inv bound mass body
                 rest m k)⟩⟩,
             σ₃.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | verbrauchLeer (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab)
@@ -117,7 +117,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | verbrauchFort (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab)
@@ -146,7 +146,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ, .verbrauch t member edge inv bound mass body
                rest k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannLeaveVerbrauch (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab)
@@ -193,7 +193,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f (neu ++ neu₁), M.start⟩
+         M.lauf ++ rufEigenG f (neu ++ neu₁), M.start, M.kontexte⟩
   | dannNextVerbrauch (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab)
@@ -239,7 +239,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, Γ, Λ, ρ'.tail, .verbrauch t member edge inv bound mass body
                rest k⟩⟩,
             σm.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f (neu ++ neum), M.start⟩
+         M.lauf ++ rufEigenG f (neu ++ neum), M.start, M.kontexte⟩
 
   /-- Evaluate the source return once and keep every held lock. The saved
       world is the read world, before any lexical scope release. -/
@@ -255,14 +255,15 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
-      (hnonempty : R.scopes ≠ []) :
+      (hnonempty : R.scopes ≠ [])
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
               ⟨l, Γ, _, ρ, .aufraeumen ⟨.inl (evalErg σ₁ e σ₁ ρ), σ₁⟩ R.scopes⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-          M.lauf ++ rufEigenG f neu, M.start⟩
+          M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- Save the reason and its pre-release world without reading or releasing. -/
   | rueckScopedGrund (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
@@ -274,14 +275,15 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
-      (hnonempty : R.scopes ≠ []) :
+      (hnonempty : R.scopes ≠ [])
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
               ⟨l, Γ, _, ρ, .aufraeumen ⟨.inr grund, M.weltVon f⟩ R.scopes⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-          M.lauf, M.start⟩
+          M.lauf, M.start, M.kontexte⟩
   /-- Release exactly the next lexical lock. This step has no accesses. -/
   | rueckFreigabe (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
@@ -296,7 +298,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
               ⟨l, Γ, _, ρ, .aufraeumen a remaining⟩⟩,
             .gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
-          M.lauf ++ [⟨f, .gibt L⟩], M.start⟩
+          M.lauf ++ [⟨f, .gibt L⟩], M.start, M.kontexte⟩
   /-- The last release also delivers the saved answer. It has no reads. -/
   | rueckFreigabeLetzte (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
@@ -307,7 +309,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (z : RufFadenG D)
       (hantwort : rufAntwortG (M.faeden f) a.2 ((M.weltVon f).gibt L) a.1 = some z) :
       RufSchrittG7 P O passes M f
-        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ [⟨f, .gibt L⟩], M.start⟩
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ [⟨f, .gibt L⟩], M.start, M.kontexte⟩
 
   /-- Without lexical scopes, evaluation and delivery are a single step. -/
   | rueckScopedWertDirekt (M : RufMaschineG D) (f : Faden)
@@ -323,9 +325,10 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hempty : R.scopes = []) (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₁ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
+      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₁ (.inl (evalErg σ₁ e σ₁ ρ)) = some z)
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
-        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- Direct reason return, with no cleanup residue. -/
   | rueckScopedGrundDirekt (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
@@ -338,8 +341,9 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (hempty : R.scopes = []) (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) (M.weltVon f) (.inr grund) = some z) :
+      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) (M.weltVon f) (.inr grund) = some z)
+      (hniedrig : r.keinNiedrig) :
       RufSchrittG7 P O passes M f
-        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf, M.start⟩
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf, M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

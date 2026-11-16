@@ -35,7 +35,7 @@ def M6G : RufMaschineG rufDF :=
         Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
         .ende restF⟩⟩,
       (M5G.faeden 0).spur, (M5G.faeden 0).log⟩,
-   M5G.lauf, M5G.start⟩
+   M5G.lauf, M5G.start, M5G.kontexte⟩
 
 /-- Step 6 fires `dannLeer` again: the `if` scaffolding is gone. -/
 theorem schritt6G : RufSchrittG gP rufOF 0 M5G 0 M6G :=
@@ -68,7 +68,7 @@ def M7G : RufMaschineG rufDF :=
       [RufEreignisF.rueck rufIncF rufRhoF vF (M0G.weltVon 0) s1G] ++
         (M6G.faeden 0).log⟩,
    M6G.lauf ++ rufEigenG 0 [],
-   M6G.start⟩
+   M6G.start, M6G.kontexte⟩
 
 
 end Gabbro.Grammatik

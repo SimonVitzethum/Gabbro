@@ -21,11 +21,58 @@ theorem bind_view_zeuge :
 theorem bind_view_typing_zeuge :
     bindViewB span layout 2 100 4 1 LowLevel.Witness.readWriteRights [0] = true := by decide
 
+/-- The syntax/layout split has jointly inhabited premises on a real span. -/
+theorem bind_view_split_zeuge :
+    BindViewSynOk span 2 100 4 1 LowLevel.Witness.readWriteRights [0] ∧
+      SpacePairing span layout :=
+  (bindViewOk_iff_syn_pairing span layout 2 100 4 1 LowLevel.Witness.readWriteRights [0]).mp
+    ((bindViewB_iff span layout 2 100 4 1 LowLevel.Witness.readWriteRights [0]).mp
+      bind_view_typing_zeuge)
+
+theorem bind_view_syn_zeuge :
+    bindViewSynB span 2 100 4 1 LowLevel.Witness.readWriteRights [0] = true :=
+  (bindViewSynB_iff span 2 100 4 1 LowLevel.Witness.readWriteRights [0]).mpr
+    bind_view_split_zeuge.1
+
+/-- A correct layout discharges nominal realization, but not backing choice. -/
+theorem bind_view_pairing_zeuge :
+    SpacePairing span layout ↔ layout.raum span.table = span.space.backing :=
+  spacePairing_iff_backing layout_correct rfl
+
+/-- Static admission must never silently discharge the layout obligation:
+    changing only the backing preserves the syntax check and fails pairing. -/
+theorem bind_view_pairing_independent_zeuge :
+    bindViewSynB { span with space := { space with backing := 9 } } 2 100 4 1
+      LowLevel.Witness.readWriteRights [0] = true ∧
+    bindViewB { span with space := { space with backing := 9 } } layout 2 100 4 1
+      LowLevel.Witness.readWriteRights [0] = false :=
+  ⟨by decide, by decide⟩
+
+/-- Out-of-span requests, stale epochs, device memory and a reused frame
+    remain refused independently of the chosen layout. -/
+theorem bind_view_syn_refusal_zeuge :
+    bindViewSynB span 2 50 1 1 LowLevel.Witness.readWriteRights [0] = false ∧
+    bindViewSynB span 2 107 2 1 LowLevel.Witness.readWriteRights [0] = false ∧
+    bindViewSynB span 3 100 4 1 LowLevel.Witness.readWriteRights [0] = false ∧
+    bindViewSynB { span with memoryClass := .device } 2 100 4 1
+      LowLevel.Witness.readWriteRights [0] = false ∧
+    bindViewSynB span 2 100 4 0 LowLevel.Witness.readWriteRights [0] = false :=
+  ⟨by decide, by decide, by decide, by decide, by decide⟩
+
 theorem view_refusal_zeuge :
     (bindViewStep authority initial start 9 LowLevel.Witness.readWriteRights OwnerWitness.child before).1 =
       .error .bounds ∧
     bindViewB { span with memoryClass := .device } layout 2 100 4 1
       LowLevel.Witness.readWriteRights [0] = false := ⟨rfl, by decide⟩
+
+/-- A live, active write right alone does not cover every index of its
+    table. Ordinary writes need a cell check as well as a scope check. -/
+theorem writable_view_not_tablewide_zeuge :
+    view ∈ receipt.next.views ∧ receipt.next.frame = view.borrower ∧
+    view.rights.write = true ∧ ImBereich D false 7 ∧
+    ¬ view.Contains (layout.raum false, layout.adresse false 7 ()) ∧
+    viewPutB view layout () 7 resources (fun _ => true) = false :=
+  ⟨List.mem_cons_self .., rfl, rfl, by decide, by decide, by decide⟩
 
 theorem view_get_put_zeuge :
     (before.slots false 0 ()).n = 0 ∧

@@ -188,13 +188,14 @@ theorem schrittW_g {P : Programm D} {O : Orakel D} {passes : Nat} {ord : D.Glob 
   have e1 := h.faeden
   have e2 := h.lauf
   have e3 := h.start
+  have e4 := h.kontexte
   cases hW' : W'.g with
-  | mk sp fa la st =>
+  | mk sp fa la st ctx =>
     cases M'' with
-    | mk sp'' fa'' la'' st'' =>
-      rw [hW'] at esp e1 e2 e3
-      simp only at esp e1 e2 e3
-      subst esp e1 e2 e3
+    | mk sp'' fa'' la'' st'' ctx'' =>
+      rw [hW'] at esp e1 e2 e3 e4
+      simp only at esp e1 e2 e3 e4
+      subst esp e1 e2 e3 e4
       rfl
 
 /-! ## 5. Every run of G is a run of W (`w_aus_g`) -/
