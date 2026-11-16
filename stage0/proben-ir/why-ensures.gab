@@ -1,4 +1,4 @@
-// Failed contracts remain stops, even when an else handler is available.
+// Refuse ensures false on a value return even when the caller has an else handler.
 module ir_why_contract {
 reason Fault {
     Failed = 1 "reason channel"

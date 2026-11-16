@@ -1,4 +1,4 @@
-// IR retry probe: return exits the enclosing function; expected exit 102.
+// Refuse a false callee postcondition, including when called inside retry.
 module ir_retry {
 assume tick "The environment permits the bounded attempt." falsifier probe_tick;
 syscall sched_yield()
