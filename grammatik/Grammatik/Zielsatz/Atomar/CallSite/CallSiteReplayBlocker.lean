@@ -10,6 +10,7 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
 import all Grammatik.Logik.Vertraege.Pruefer.Program
 public meta import Grammatik.Logik.Vertraege.Pruefer.Program
+public meta import Grammatik.Logik.Ruf.FremdRuf.T10RunZeuge
 
 @[expose] public section
 
