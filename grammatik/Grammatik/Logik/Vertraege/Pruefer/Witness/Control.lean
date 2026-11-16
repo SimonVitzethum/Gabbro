@@ -9,6 +9,11 @@ namespace Gabbro.Grammatik.Vertraege.Pruefer.Witness
 
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
 
+-- Force equation generation here, before a frontend witness first needs cbv.
+#check Basic.statement.eq_1
+#check Basic.block.eq_1
+#check Basic.ending.eq_1
+
 /-- Both arms return x+1; only the success arm receives the narrowed local. -/
 def narrowedIncrement : Programm declaration :=
   { increment with
