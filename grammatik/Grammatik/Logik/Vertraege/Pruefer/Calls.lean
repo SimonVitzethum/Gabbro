@@ -43,15 +43,17 @@ def arguments (budget : Nat) (args : Args D Γ Λ params) (locals : Env D Γ)
 /-- Every result gets a separate checked continuation and callee ensures.
     All callees are checked as a conjunction at the program gate; this rule's
     semantic handler class is the existing contract-respecting class. -/
-def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
-    (actual : Env D (D.params f)) (noReasons : D.gruende f = 0)
+def callOutcomesCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
+    (actual : Env D (D.params f))
     (target : ErgVal D (D.erg f) → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ∀ value, Except Invarianten.Frag.Refusal (Condition (target value))) :
+    (failure : Fin (D.gruende f) → Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ∀ value, Except Invarianten.Frag.Refusal (Condition (target value)))
+    (compileFailure : ∀ reason, Except Invarianten.Frag.Refusal (Condition (failure reason))) :
     Except Invarianten.Frag.Refusal (Condition (fun runtime world => ∀ allowed,
       HandlerSafe policy runtime allowed →
       match runtime.calls f world actual with
       | .ok next value => target value runtime next
-      | .why _ _ => False
+      | .why next reason => failure reason runtime next
       | .logik error => allowed error
       | .hardware _ => True)) := do
   let pre ← policy.encode f actual
@@ -69,17 +71,48 @@ def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
             tail.sound runtime next (callWP_sound f post.val tail.formula world next valid
               (runtime.evidence.frame f world actual next value returned)
               ((post.property world next).mpr (respects.1 f world actual requires next value returned))) })
+  -- RespektiertRahmen promises a frame only for normal answers. A reason
+  -- handler therefore starts in an arbitrary typed world, with no reused
+  -- entry-memory facts or invented callee ensures.
+  let failures ← allConditions (List.finRange (D.gruende f))
+    (fun reason runtime _ => ∀ next, failure reason runtime next)
+    (fun reason => do
+      let tail ← compileFailure reason
+      return {
+          formula := havoc (fun _ => true)
+            (lower (.imp (typeFacts (qfKeys tail.formula)) (quoteQF tail.formula)))
+          sound := fun runtime world valid next => by
+            have universal := havoc_sound (fun _ => true) _ (assignment world) (assignment next)
+              valid (fun _ _ impossible => Bool.noConfusion impossible)
+            exact tail.sound runtime next ((quoteQF_denote _ _).mp
+              (((lower_denote _ _).mp universal) (typeFacts_sound _ next))) })
   return {
-      formula := conj pre.val branches.formula
+      formula := conj pre.val (conj branches.formula failures.formula)
       sound := fun runtime world valid allowed safe => by
         have parts := (conj_denote _ _ _).mp valid
+        have outcomes := (conj_denote _ _ _).mp parts.2
         have entry := (pre.property world).mp parts.1
         cases reply : runtime.calls f world actual with
         | ok next value =>
-            exact branches.sound runtime world parts.2 value (domain.complete value)
+            exact branches.sound runtime world outcomes.1 value (domain.complete value)
               (policy.requires f world actual entry) safe.1 next reply
-        | why next reason => exact (Fin.cast noReasons reason).elim0
+        | why next reason => exact failures.sound runtime world outcomes.2 reason (List.mem_finRange reason) next
         | logik error => exact safe.2 f world actual entry error reply
         | hardware _ => trivial }
+
+/-- An empty reason channel is the same rule with an impossible failure arm. -/
+def callCondition (policy : CallPolicy program) (budget : Nat) (f : D.Fn)
+    (actual : Env D (D.params f)) (noReasons : D.gruende f = 0)
+    (target : ErgVal D (D.erg f) → Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ∀ value, Except Invarianten.Frag.Refusal (Condition (target value))) :
+    Except Invarianten.Frag.Refusal (Condition (fun runtime world => ∀ allowed,
+      HandlerSafe policy runtime allowed →
+      match runtime.calls f world actual with
+      | .ok next value => target value runtime next
+      | .why _ _ => False
+      | .logik error => allowed error
+      | .hardware _ => True)) :=
+  callOutcomesCondition policy budget f actual target (fun _ _ _ => False) compile
+    (fun reason => (Fin.cast noReasons reason).elim0)
 
 end Gabbro.Grammatik.Vertraege.Pruefer

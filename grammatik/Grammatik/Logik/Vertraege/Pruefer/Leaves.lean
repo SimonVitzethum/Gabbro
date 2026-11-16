@@ -11,6 +11,22 @@ open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.VC
 variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D} {program : Programm D}
 variable (policy : CallPolicy program)
 
+/-- A range check selects its exact typed value or the explicit failure arm.
+    The original expression remains correlated with the selected branch. -/
+def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
+    (low high : Int) (locals : Env D Γ)
+    (success : Zahl low high → Runtime program (fun _ => []) S → World D → Prop)
+    (failure : Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ∀ value, Except Frag.Refusal (Condition (success value)))
+    (compileFailure : Except Frag.Refusal (Condition failure)) :
+    Except Frag.Refusal (Condition (fun runtime world =>
+      let value := eval world expression world locals
+      if fits : low ≤ value.n ∧ value.n ≤ high then
+        success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)) :=
+  localSelect budget expression locals _ (fun value =>
+    if fits : low ≤ value.n ∧ value.n ≤ high then
+      compile ⟨value.n, fits.1, fits.2⟩ else compileFailure)
+
 /-- A return is checked against its actual typed result. Complete finite
     domains are budgeted; an oversized range is refused, never sampled. -/
 def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Option Ty}
@@ -45,6 +61,20 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 apply pre.sound
                 rw [assignment_lese]
                 exact valid }
+  | .publish name expression _ _ _ _ => do
+      match h : goals.normal locals with
+      | .error cause => .error cause
+      | .ok normal => do
+          let pre ← scalarWP expression locals (.glob name) normal
+          return {
+              formula := pre.formula
+              sound := fun runtime world valid _ _ => by
+                unfold Runtime.wpS
+                simp only [execStmtH, Goals.holds, h, denotes]
+                rw [assignment_schreibGlob]
+                apply pre.sound
+                rw [assignment_lese]
+                exact valid }
   | .assignSlot table field index expression _ _ | .assignThru _ table _ field index expression _ _ => do
       match h : goals.normal locals with
       | .error cause => .error cause
@@ -66,6 +96,12 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         (fun value _ world => denotes (goals.normal (locals.set name value)) world)
         (fun value => requireCondition (goals.normal (locals.set name value)))
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)
+  | .advances .. | .retires .. | .transition .. => do
+      let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
+      return pre.map (fun _ _ ready _ _ => ready)
+  | .regWrite _ _ expression => do
+      let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
+      return (pre.read Λ expression.orte).map (fun _ _ ready _ _ => ready)
   | .ret expression _ => do
       let pre ← returnCondition (S := S) budget expression locals goals.returned
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)

@@ -85,4 +85,23 @@ def scopedReturnCondition (budget : Nat)
         exact (denotes_assignment _ read (cleanup.scopes.foldl World.gibt read)
           (assignment_cleanup read cleanup.scopes).symm).mp ready }
 
+/-- A reason return checks the same lexical cleanup as a value return. -/
+def scopedReasonCondition
+    (facts : ∀ lock, Except Invarianten.Frag.Refusal (LockFormula S lock))
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (reason : Fin V.gruende) (cleanup : RueckRessourcen D V Λ)
+    (locals : Env D Γ) (goals : Goals D V Γ) :
+    Except Invarianten.Frag.Refusal
+      (StatementCondition (S := S) policy (.retWhyScoped (l := l) reason cleanup) locals goals) := do
+  let releases ← cleanupFormula facts cleanup.scopes
+  return {
+      formula := conj releases.formula goals.reason
+      sound := fun runtime world valid allowed _ => by
+        have parts := (conj_denote _ _ _).mp valid
+        have cleanupReady := (releases.correct world).mp parts.1
+        unfold Runtime.wpS
+        simp only [execStmtH, cleanupReady, ↓reduceIte, Goals.holds]
+        rw [assignment_cleanup]
+        exact parts.2 }
+
 end Gabbro.Grammatik.Vertraege.Pruefer

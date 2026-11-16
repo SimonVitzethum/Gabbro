@@ -62,6 +62,7 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         let pre ← block fuel body locals (goals.releasing fact.formula)
         return lockCondition lock rank body locals goals fact pre
     | .retScoped expression cleanup => scopedReturnCondition budget.expansion facts expression cleanup locals goals
+    | .retWhyScoped reason cleanup => scopedReasonCondition facts reason cleanup locals goals
     | .call f args hp hr => do
         let normal ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
         let pre ← arguments budget.expansion args locals _ (fun actual =>
@@ -136,6 +137,55 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           registerReadEmpty_sound runtime register readable world locals (goals.holds allowed)
             (fun next same => (denotes_assignment _ world next same.symm).mp ready)
             (fun _ => trivial))
+    | .check test failure rest => do
+        let positive ← block fuel rest locals goals
+        let negative ← ending fuel failure locals goals
+        let pre ← branchCondition test locals positive negative
+        return pre.map (fun runtime world ready allowed safe => by
+          cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
+            simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
+            have ready := ready allowed safe <;>
+            simpa only [Runtime.wpB, Runtime.wpE, execBlockH, wahr?, tested,
+              Bool.false_eq_true, ↓reduceIte, Goals.endHolds, Goals.holds,
+              EndAusgang.zuAusgang] using ready)
+    | .narrow expression low high failure rest => do
+        let pre ← narrowingCondition budget.expansion expression low high locals _ _
+          (fun value => block fuel rest (.cons value locals) (goals.shrink _))
+          (ending fuel failure locals goals)
+        return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
+          unfold Runtime.wpB
+          simp only [execBlockH]
+          split <;> rename_i fits
+          · simp only [fits, ↓reduceDIte] at ready
+            exact (goals.holds_shrink _ allowed _).mp (ready allowed safe)
+          · simp only [fits, ↓reduceDIte] at ready
+            have ready := ready allowed safe
+            cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls
+              failure (world.lese Λ expression.orte) locals <;>
+              simpa only [Runtime.wpE, outcome, Goals.holds, Goals.endHolds, EndAusgang.zuAusgang] using ready)
+    | .bindCallElse f args he hp hr failure rest => do
+        let pre ← arguments budget.expansion args locals _ (fun actual =>
+          callOutcomesCondition policy budget.expansion f actual _ _
+            (fun value => block fuel rest (.cons (ergWert he value) locals) (goals.shrink _))
+            (fun reason => ending fuel failure (.cons reason locals) (goals.shrink _)))
+        return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
+          have ready := ready allowed safe
+          unfold Runtime.wpB
+          dsimp only [execBlockH]
+          cases reply : runtime.calls f (world.lese Λ args.orte)
+              (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) locals) with
+          | ok next value =>
+              rw [reply] at ready
+              exact (goals.holds_shrink _ allowed _).mp (ready allowed safe)
+          | why next reason =>
+              rw [reply] at ready
+              have ready := (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
+              cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls
+                failure next (.cons reason locals) <;>
+                simpa only [Runtime.wpE, outcome, Goals.holds, Goals.endHolds,
+                  EndAusgang.schrumpf, EndAusgang.zuAusgang] using ready
+          | logik error => simpa only [reply, Goals.holds] using ready
+          | hardware error => trivial)
     | _ => .error (.unsupported "contract block is outside the checked control fragment")
 termination_by fuel
 
@@ -152,6 +202,24 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     | .retWhy _ _ => .ok
         { formula := goals.reason
           sound := fun _ _ ready _ _ => ready }
+    | .retScoped expression cleanup => do
+        let pre ← scopedReturnCondition (policy := policy) budget.expansion facts expression cleanup locals goals
+        return pre.map (fun runtime world ready allowed safe => by
+          have ready := ready allowed safe
+          unfold Runtime.wpS at ready
+          unfold Runtime.wpE
+          simp only [execStmtH, execEndH] at ready ⊢
+          split <;> rename_i cleanupReady <;>
+            simpa only [cleanupReady, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
+    | .retWhyScoped reason cleanup => do
+        let pre ← scopedReasonCondition (policy := policy) facts reason cleanup locals goals
+        return pre.map (fun runtime world ready allowed safe => by
+          have ready := ready allowed safe
+          unfold Runtime.wpS at ready
+          unfold Runtime.wpE
+          simp only [execStmtH, execEndH] at ready ⊢
+          split <;> rename_i cleanupReady <;>
+            simpa only [cleanupReady, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
     | .leave _ => do
         let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.escape locals)
         return pre.map (fun _ _ ready _ _ => ready)
@@ -211,6 +279,37 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | why next reason => exact (Fin.cast hr reason).elim0
           | logik error => simpa only [reply, Goals.endHolds] using ready
           | hardware error => trivial)
+    | .bindCallElse f args he hp hr failure rest => do
+        let pre ← arguments budget.expansion args locals _ (fun actual =>
+          callOutcomesCondition policy budget.expansion f actual _ _
+            (fun value => ending fuel rest (.cons (ergWert he value) locals) (goals.shrink _))
+            (fun reason => ending fuel failure (.cons reason locals) (goals.shrink _)))
+        return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
+          have ready := ready allowed safe
+          unfold Runtime.wpE
+          dsimp only [execEndH]
+          cases reply : runtime.calls f (world.lese Λ args.orte)
+              (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) locals) with
+          | ok next value =>
+              rw [reply] at ready
+              exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
+          | why next reason =>
+              rw [reply] at ready
+              exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
+          | logik error => simpa only [reply, Goals.endHolds] using ready
+          | hardware error => trivial)
+    | .narrow expression low high failure rest => do
+        let pre ← narrowingCondition budget.expansion expression low high locals _ _
+          (fun value => ending fuel rest (.cons value locals) (goals.shrink _))
+          (ending fuel failure locals goals)
+        return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
+          unfold Runtime.wpE
+          simp only [execEndH]
+          split <;> rename_i fits
+          · simp only [fits, ↓reduceDIte] at ready
+            exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
+          · simp only [fits, ↓reduceDIte] at ready
+            exact ready allowed safe)
     | _ => .error (.unsupported "contract end block is outside the checked control fragment")
 termination_by fuel
 
