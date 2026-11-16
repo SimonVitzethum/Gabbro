@@ -2,6 +2,8 @@ module
 
 public import Grammatik.Logik.Invarianten.VC.Domain
 public import Grammatik.Logik.Invarianten.Frag.Witness
+public meta import Grammatik.Logik.Invarianten.VC.Formula
+public meta import Grammatik.Logik.Invarianten.Elim.Decision
 
 @[expose] public section
 
@@ -26,22 +28,22 @@ theorem u32_decided_zeuge :
       (close_closed _) = true :=
   (close_decide_true_iff _).mpr universalInterval_denote_zeuge
 
-private abbrev declaration : Deklaration := Witness.declaration
+abbrev declaration : Deklaration := Witness.declaration
 
-private def program : Programm declaration where
+def program : Programm declaration where
   invariante := fun _ => .tru
   requires := fun f => nomatch f
   ensures := fun f => nomatch f
   rumpf := fun f => nomatch f
 
-private def wideConstant : Expr declaration [] [] (.int 0 4294967295) :=
+def wideConstant : Expr declaration [] [] (.int 0 4294967295) :=
   .widen (by decide) (by decide) (.lit 7)
 
-private def constantTarget (value : Wert declaration (.int 0 4294967295))
+def constantTarget (value : Wert declaration (.int 0 4294967295))
     (_ : Runtime program (fun _ => []) (SperrInv.leer declaration)) (_ : World declaration) : Prop :=
   value.n = 7
 
-private def checkConstant (value : Wert declaration (.int 0 4294967295)) :
+def checkConstant (value : Wert declaration (.int 0 4294967295)) :
     Except Refusal (Condition (constantTarget value)) :=
   .ok {
     formula := lower (.eq (.konst value.n) (.konst 7))
@@ -53,19 +55,19 @@ theorem wide_local_selected_zeuge :
     (localSelect 0 wideConstant .nil constantTarget checkConstant).toOption.isSome = true := by
   rfl
 
-private def productConstant : Expr declaration [] [] (.prod 5 [.int 7 7, .bool]) :=
+def productConstant : Expr declaration [] [] (.prod 5 [.int 7 7, .bool]) :=
   .prod 5 (.cons (.lit 7) (.cons .tru .nil))
 
 theorem constantValue_zeuge : (constantValue productConstant .nil).isSome = true := by
   rfl
 
-private def square : Expr declaration [] [] (.int 0 100) :=
+def square : Expr declaration [] [] (.int 0 100) :=
   .mul (.glob false (Witness.globalAccess false)) (.glob true (Witness.globalAccess true))
 
-private def boundedPost : QF (Observation declaration) :=
+def boundedPost : QF (Observation declaration) :=
   lower (.le (.var (.glob false)) (.konst 100))
 
-private theorem square_interval_valid :
+theorem square_interval_valid :
     decideB (close (universalInterval (.glob false) 0 100 boundedPost))
       (close_closed _) = true := by
   apply (close_decide_true_iff _).mpr
@@ -82,7 +84,7 @@ private theorem square_interval_valid :
 theorem intervalWP_zeuge : (intervalWP square .nil (.glob false) boundedPost).toOption.isSome = true := by
   simp only [intervalWP, square_interval_valid, ↓reduceDIte, Except.toOption, Option.isSome]
 
-private theorem impossible_interval :
+theorem impossible_interval :
     decideB (close (universalInterval (.glob false : Observation declaration) 0 100 .fls))
       (close_closed _) = false := by
   apply (close_decide_false_iff _).mpr

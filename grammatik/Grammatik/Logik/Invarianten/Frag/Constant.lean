@@ -7,6 +7,7 @@ public import Grammatik.Logik.Invarianten.Frag.Bounded
 namespace Gabbro.Grammatik.Invarianten.Frag
 
 variable {D : Deklaration}
+variable {α β γ δ κ : Type}
 
 /-- Share exact constant propagation and its semantic proof across operations. -/
 def foldUnary (operation : α → β) {source : κ → α}
