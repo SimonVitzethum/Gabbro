@@ -264,7 +264,7 @@ theorem reader_checked_for (bodies : Bodies) (same : bodies zLies = body)
   · exact replay
   · apply execution_success (withBodies bodies) zS (requiresPolicy (withBodies bodies)) sources {}
       none zLies (invariantsFor bodies) (by rfl) inputDomain inputDomain_result
-    · change argumentSpecializations 16384 context * endSpecializations 16384 (bodies zLies) ≤ 16384
+    · change argumentSpecializations 16384 context * endSpecializations 128 16384 (bodies zLies) ≤ 16384
       rw [same]
       decide +kernel
     · intro locals
@@ -283,7 +283,7 @@ theorem execution_success_zeuge (sources : LockSources zS) :
     (checkExecution zPB zS (requiresPolicy zPB) sources {} none zLies).toOption.isSome = true := by
   apply execution_success zPB zS (requiresPolicy zPB) sources {} none zLies
     invariants (by rfl) inputDomain inputDomain_result
-  · change argumentSpecializations 16384 context * endSpecializations 16384 body ≤ 16384
+  · change argumentSpecializations 16384 context * endSpecializations 128 16384 body ≤ 16384
     decide +kernel
   · intro locals
     have equal : locals = arguments := by cases locals; rfl
