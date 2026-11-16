@@ -41,11 +41,11 @@ def success (bits : Nat) (fallible : Bool) :
     (retN bits fallible 17 (by decide) (by decide))
     (retN bits fallible 19 (by decide) (by decide))
 
+/-- Its sole nominal reason returns 9 directly, within the checked fragment.
+    Explicit reason dispatch remains covered by the separate statement probes. -/
 def handler (bits : Nat) :
     Endblock (D bits true) (vertragVon (D bits true) (entry bits true)) false [.why 1] [] :=
-  .cons (.onWhy (.var .here)
-    (.cons (.cons (.ret (.val (.widen (by decide) (by decide) (.lit 9))) (.refl [])) .nil) .nil))
-    (retN bits true 99 (by decide) (by decide))
+  retN bits true 9 (by decide) (by decide)
 
 def normal (bits : Nat) :
     Endblock (D bits false) (vertragVon (D bits false) (entry bits false)) false [] [] :=
