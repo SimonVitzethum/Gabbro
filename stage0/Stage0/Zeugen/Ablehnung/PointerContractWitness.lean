@@ -48,7 +48,7 @@ def text : String :=
     cost rejects the request before the contract gate. -/
 theorem candidate_refused :
     emit text 64 = .error
-      "a pointer type declares a cost and admits a function without a declared cost within it" := by
+      "declared costs do not hold: a pointer type declares a cost and admits a function without a declared cost within it" := by
   kernel_rfl
 
 /-- Run the original cost checker independently on the actual scoped, lowered

@@ -49,6 +49,18 @@ def fixtures : List Einsatz := records.map Prod.fst
 
 def cells : List Zelle := (records.flatMap Prod.snd).eraseDups
 
+/-- Deduplication preserves exact membership without evaluating a concrete program. -/
+theorem deduplicated_cells (e : Einsatz) (x : Zelle) :
+    e.Hat x ↔ x ∈ e.zellen.eraseDups := by
+  change x ∈ e.zellen ↔ x ∈ e.zellen.eraseDups
+  simp only [List.mem_eraseDups]
+
+/-- The generic record law and acceptance hold on a real atomic-read fixture. -/
+theorem deduplicated_cells_zeuge : Gap.M99_824.e.gueltig = true ∧
+    Invarianten.Pruefer.atomicFreeB Gap.M99_824.e.P ⟨0, by decide⟩ = false ∧
+    ∀ x, Gap.M99_824.e.Hat x ↔ x ∈ Gap.M99_824.e.zellen.eraseDups :=
+  ⟨GateAudit.m99_824_checked, by decide +kernel, deduplicated_cells _⟩
+
 private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
     ∀ x, p.1.Hat x ↔ x ∈ p.2 := by
   intro p member
@@ -100,12 +112,8 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
     change x ∈ M49_50.e.zellen ↔ x ∈ M49_50.zellen
     rw [← M49_50.zellen_exact, List.mem_eraseDups]
 
-  · refine ⟨GateAudit.m99_824_checked, fun x => ?_⟩
-    change x ∈ Gap.M99_824.e.zellen ↔ x ∈ Gap.M99_824.e.zellen.eraseDups
-    simp only [List.mem_eraseDups]
-  · refine ⟨GateAudit.m99_825_checked, fun x => ?_⟩
-    change x ∈ Gap.M99_825.e.zellen ↔ x ∈ Gap.M99_825.e.zellen.eraseDups
-    simp only [List.mem_eraseDups]
+  · exact ⟨GateAudit.m99_824_checked, deduplicated_cells _⟩
+  · exact ⟨GateAudit.m99_825_checked, deduplicated_cells _⟩
 
 theorem checked : ∀ e ∈ fixtures, e.gueltig = true := by
   intro e member
@@ -220,7 +228,7 @@ theorem atomic_reader_recovered_zeuge :
 /-- Atomic/register totality restores three more cells; two firm cells remain. -/
 theorem missing_exact : missing = [
     ⟨2, 3, false, [false, true, false]⟩,
-    ⟨2, 3, false, [true, true, false]⟩] := by decide
+    ⟨2, 3, false, [true, true, false]⟩] := by decide +kernel
 
 /-- No accepted M fixture contains a listed missing cell. -/
 theorem missing_not_covered : ∀ x ∈ missing, ¬ (∃ e ∈ allFixtures, e.Hat x) := by
