@@ -106,9 +106,11 @@ theorem nested_refused_zeuge : acceptedText nestedSource = false ∧
       "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
   constructor <;> kernel_rfl
 
+/-- The concrete function reference passes local selection; indirect `else`
+    still needs the checked control-fragment extension. -/
 theorem reference_refused_zeuge : acceptedText referenceSource = false ∧
     refusalReason referenceSource = some
-      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
   constructor <;> kernel_rfl
 
 theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by kernel_rfl

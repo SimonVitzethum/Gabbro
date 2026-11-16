@@ -44,10 +44,11 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
 
-/-- Full compilation now refuses the pointer observation before the later cost gate. -/
+/-- The concrete function reference passes local selection; the checked contract
+    control fragment still refuses before the later cost gate. -/
 theorem candidate_refused :
     emit text 64 = .error
-      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+      "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
   kernel_rfl
 
 /-- Run the original cost checker independently on the actual scoped, lowered
