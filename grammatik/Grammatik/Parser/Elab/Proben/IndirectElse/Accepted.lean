@@ -43,6 +43,7 @@ open Uebersetze UebersetzeAllg UebersetzeAllg2 Zielsatz
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
+set_option Elab.async false
 
 def reasonHead : String := "reason G { Weg = 1 \"failed\" exhaustive } "
 def pointerHead : String := reasonHead ++
@@ -77,6 +78,20 @@ def hasCanonicalHandler (text : String) : Bool :=
   | .error _ => false
   | .ok ⟨u, program, functions⟩ =>
     (Cover.Mitglieder.mitglieder u program functions).contains "Stmt.callIndElse"
+
+private def contractFailure (text : String) : Option String :=
+  match uebersetzeAllg text with
+  | .error cause => some cause
+  | .ok ⟨u, program, functions⟩ =>
+    match Vertraege.Pruefer.checkContracts program (Cover.Differenz.sperrFamilie u)
+        functions (fun _ => none) with
+    | .error cause => some cause.message
+    | .ok _ => none
+
+#eval (acceptedText namedSource, contractFailure namedSource)
+#eval (acceptedText unnamedSource, contractFailure unnamedSource)
+#eval (acceptedText nestedSource, contractFailure nestedSource)
+#eval (acceptedText referenceSource, contractFailure referenceSource)
 
 theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
 theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
