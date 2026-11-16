@@ -39,11 +39,11 @@ def valueReturnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {type : T
     (returned : Wert D type → Except Invarianten.Frag.Refusal (QF (Observation D))) :
     Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
       denotes (returned (eval world expression world locals)) world)) :=
-  match expression with
-  | .var name => requireCondition (returned (locals.get name))
-  | .widen low high body =>
+  match type, expression, returned with
+  | _, .var name, returned => requireCondition (returned (locals.get name))
+  | .int _ _, .widen low high body, returned =>
       valueReturnCondition budget body locals (fun value => returned (Zahl.weiter low high value))
-  | expression =>
+  | _, expression, returned =>
       localSelect budget expression locals
         (fun value _ world => denotes (returned value) world)
         (fun value => requireCondition (returned value))
