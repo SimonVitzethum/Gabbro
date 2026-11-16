@@ -95,6 +95,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+set_option maxRecDepth 100000
 open Gabbro.Grammatik.Zielsatz
 
 /-- The negative report of the counterprobe run: the sample was read, no floor
