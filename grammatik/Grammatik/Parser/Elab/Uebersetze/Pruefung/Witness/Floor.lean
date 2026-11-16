@@ -96,7 +96,7 @@ local macro "floor_contract_functions" : tactic => `(tactic| (
   rintro ⟨index, bound⟩
   have small : index < 4 := bound
   have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 := by omega
-  rcases choices with h | h | h | h <;> subst index))
+  rcases choices with h | h | h | h <;> subst index <;> kernel_rfl))
 
 -- The emitted source stays unchanged; these proof equations select its real callbacks.
 attribute [local cbv_opaque] uFloatLimit uAnwReihe uAnwReiheCore
