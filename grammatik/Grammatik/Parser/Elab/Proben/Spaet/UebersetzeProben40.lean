@@ -13,6 +13,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert
 import Init.Data.String.Lemmas.Intercalate
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
+import Grammatik.Kern.Taktik.KernelRfl
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2Basis
 import all Grammatik.Kern.Syntax.Typen.Shape
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
@@ -329,7 +330,11 @@ private theorem region_phases : ∃ items unit,
         have zero : index = 0 := by omega
         subst index
         exact produced
-      case safe => intro invariants pointers foreigns; cbv
+      case safe =>
+        intro invariants pointers foreigns
+        -- The kernel checks the Boolean without elaborating its certificate family.
+        unfold checkedImage
+        kernel_rfl
 
 private theorem elab_refused : ∃ items error,
     parseTopTief (tokens (sourceChunks true false)) = .ok items ∧
