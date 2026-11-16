@@ -127,18 +127,7 @@ theorem checker :
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
     rw [refused, Bool.and_false]
-  · have diagnostic :
-        (match Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
-        | .error reason => some reason
-        | .ok _ => none) =
-          some "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
-      simp only [Vertraege.Pruefer.contractVerdict, Bool.false_eq_true, ↓reduceIte]
-      decide +kernel
-    cases result : Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
-    | error reason =>
-        simp only [result, Option.some.injEq] at diagnostic
-        exact congrArg Except.error diagnostic
-    | ok accepted => simp only [result, reduceCtorEq] at diagnostic
+  · with_unfolding_all rfl
 
 /- The following small invariant proves the full unit call-site duty, not just
    a duty on an empty chosen replay history. Every runtime start is already at
