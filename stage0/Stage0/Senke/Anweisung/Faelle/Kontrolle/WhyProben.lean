@@ -76,17 +76,17 @@ def callMem (f : D.Fn) : Runner.Mem :=
 
 theorem target_lower : ∀ f : Fin 3, lowFun 1 P addresses callLayout f = some (target f, 13) := by
   exact @allFin 3 (fun f => lowFun 1 P addresses callLayout f = some (target f, 13))
-    (fun _ => inferInstance) (by first | decide_cbv | (revert g; apply allFin; decide_cbv))
+    (fun _ => inferInstance) (by first | (revert g; apply allFin; decide_cbv) | decide_cbv)
 
 theorem targets_code (g : D.Fn) : PCode (callMem g) addresses target 4096 256 := by
   have h : (List.finRange 3).all (fun f => (List.finRange (target f).length).all (fun k =>
       decide (InsAt (callMem g) (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
         (target f)[k.val].o (II.f (target f)[k.val].a) (II.f (target f)[k.val].b) (II.f (target f)[k.val].c)))) = true := by
-    first | decide_cbv | (revert g; apply allFin; decide_cbv)
+    first | (revert g; apply allFin; decide_cbv) | decide_cbv
   have hf : ∀ f : Fin 3, CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256 := by
     unfold CodeFar
     apply allFin
-    first | decide_cbv | (revert g; apply allFin; decide_cbv)
+    first | (revert g; apply allFin; decide_cbv) | decide_cbv
   change ∀ f : Fin 3, CodeAt (callMem g) (BitVec.ofNat 64 (addresses f)) (target f) ∧
     CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256
   refine fun f => ⟨fun k hk => ?_, hf f⟩
@@ -96,21 +96,21 @@ theorem caller_code (g : D.Fn) : CodeAt (callMem g) 2048 (caller g) := by
   have h : ∀ k : Fin (caller g).length, InsAt (callMem g) (2048 + BitVec.ofNat 64 (16 * k.val))
       (caller g)[k.val].o (II.f (caller g)[k.val].a) (II.f (caller g)[k.val].b) (II.f (caller g)[k.val].c) := by
     apply allFin
-    first | decide_cbv | (revert g; apply allFin; decide_cbv)
+    first | (revert g; apply allFin; decide_cbv) | decide_cbv
   exact fun k hk => h ⟨k, hk⟩
 
 theorem call_frame (g : D.Fn) : FrameOK (callMem g) 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
 theorem call_pre [Kern] (g : D.Fn) : PreS callLayout (callMem g) 2048 4096 256 4 (caller g) (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, call_frame g, caller_code g, ?_, ?_, trivial, wstab_true _ _⟩
-  · unfold CodeFar; first | decide_cbv | (revert g; apply allFin; decide_cbv)
+  · unfold CodeFar; first | (revert g; apply allFin; decide_cbv) | decide_cbv
   · intro _ x; nomatch x
 
 theorem call_world [Kern] (g : D.Fn) : WeltAt (callMem g) callLayout world := by
   refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
   refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
-  first | decide_cbv | (revert g; apply allFin; decide_cbv)
+  first | (revert g; apply allFin; decide_cbv) | decide_cbv
 
 theorem call_win : WIn callLayout 4096 128 256 := by
   refine ⟨⟨(fun t => nomatch t), fun g => by cases g; exact ⟨by decide, by decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
@@ -139,7 +139,7 @@ theorem call_sync (g : D.Fn) : TicketSync (callMem g) callLayout 4096 128 [] :=
     (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
 
 theorem call_umf [Kern] (g : D.Fn) : Umf callLayout addresses target 2 (callMem g) 4096 128 256 [] :=
-  ⟨targets_code g, by first | decide_cbv | (revert g; apply allFin; decide_cbv), by decide, call_sync g, by decide⟩
+  ⟨targets_code g, by first | (revert g; apply allFin; decide_cbv) | decide_cbv, by decide, call_sync g, by decide⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
@@ -156,7 +156,7 @@ theorem addresses_bound (f : D.Fn) : addresses f < 2 ^ 31 := by
 
 theorem target_bound : ∀ f : Fin 3, 16 * (target f).length < 2 ^ 31 := by
   apply allFin
-  first | decide_cbv | (revert g; apply allFin; decide_cbv)
+  first | (revert g; apply allFin; decide_cbv) | decide_cbv
 
 theorem call_spec [Kern] : FunSpec callLayout addresses target (rufAt P O 1 2) 2 39 := by
   exact lowFun_spec (P := P) (O := O) (passes := 1) (L := 13) rfl
