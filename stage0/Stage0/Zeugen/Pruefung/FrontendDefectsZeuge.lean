@@ -35,6 +35,8 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.FrontendDefects
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
@@ -57,8 +59,29 @@ def optionText : String :=
   "let selected : option index into T = Some(2); " ++
   "let message : Message = Item(selected); return value(message); }"
 
-/-- The option kind survives both source elaboration and lowering into the checked program. -/
-theorem option_payload_compiles_zeuge : (compile optionText).toOption.isSome = true := by kernel_rfl
+/-- The actual scoped frontend before the strict acceptance gate. -/
+def optionElaboration : Except String UProg := do
+  let parsed ← Frontend.source optionText {}
+  let declarations := pre108 parsed.prepared.elaborierbar
+  (Frontend.elabWithScopes declarations
+    parsed.scopes.values parsed.scopes.types parsed.scopes.functions
+    (Frontend.tableWithEmpty parsed.scopes.values parsed.scopes.types)
+    (widths := parsed.scopes.widths)).bind (Profil.selectUnit {})
+
+/-- The original nested tagged/option payload elaborates successfully. -/
+theorem option_payload_elaborates_zeuge : optionElaboration.toOption.isSome = true := by
+  kernel_rfl
+
+def optionUnit : UProg := optionElaboration.toOption.get option_payload_elaborates_zeuge
+
+/-- Its actual typed declaration still lowers before contract admission. -/
+theorem option_payload_lowers_zeuge : (lowerAllg optionUnit).toOption.isSome = true := by
+  kernel_rfl
+
+/-- Outside the decidable fragment: a tagged/option parameter observation. -/
+theorem option_payload_refused_zeuge : compile optionText = .error
+    "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+  kernel_rfl
 
 def diagnosticText : String :=
   String.intercalate "\n"

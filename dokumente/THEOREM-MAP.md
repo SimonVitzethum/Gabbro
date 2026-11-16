@@ -6934,6 +6934,13 @@ Continuation from `717635600` (implementation attempts only; **no Lean/lake/buil
 
 Validation boundary: the implementation and proof attempts above are uncompiled. C16 is not measured complete until the lead compiles the changed modules/importers, checks the generic source/return/history attachment attempts and the standard axioms of `gabbro_ziel`, then runs the guardians. A static finding already present at the task base is `Zielsatz/Kern/Spec/Teil4.lean:33`: it refers to `berich` whereas `CheckEvidenz` declares `bericht`; no file under `Spec` was edited. The pre-existing `Stage0/Zeugen/Annahme` folder has 24 entries; the new witness lives in a separate cohesive folder. No final emitted-image execution or external measurement was performed.
 
+`Stage0/Zeugen/Pruefung/FrontendDefectsZeuge.lean` retains the unchanged nested
+tagged/option source: `option_payload_elaborates_zeuge` and
+`option_payload_lowers_zeuge` prove actual frontend and typed-lowering success.
+`option_payload_refused_zeuge` replaces its stale full-compilation claim with
+the exact bounded-integer/Boolean observation-fragment refusal. The name-clash
+and statement-line diagnostics remain unchanged.
+
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
 
 On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.
