@@ -136,4 +136,19 @@ theorem SymEnv.extend_integer (symbols : SymEnv D α Γ) (actual : Env D Γ)
       (extend valuation value.n) world (.cons value actual) :=
   ⟨rfl, (symbols.realizes_lift actual valuation world value.n).mpr realized⟩
 
+/-- Exact finite environments remain a specialization of the symbolic one.
+    Recovering one requires a certificate covering every realizing valuation. -/
+def SymEnv.concrete? : (symbols : SymEnv D α Γ) → Option
+    { actual : Env D Γ // ∀ valuation world runtime,
+      symbols.Realizes valuation world runtime → runtime = actual }
+  | .nil => some ⟨.nil, fun _ _ runtime _ => by cases runtime; rfl⟩
+  | .cons (.integer _) _ => none
+  | .cons (.known value) rest => do
+      let tail ← rest.concrete?
+      return ⟨.cons value tail.val, fun valuation world runtime realized => by
+        cases runtime with
+        | cons head rest =>
+            change value = head ∧ _ at realized
+            rw [← realized.1, tail.property valuation world rest realized.2]⟩
+
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic
