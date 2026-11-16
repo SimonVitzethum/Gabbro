@@ -32,8 +32,24 @@ def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
       · simpa only [dif_pos fits] using compile ⟨value.n, fits.1, fits.2⟩
       · simpa only [dif_neg fits] using compileFailure)
 
-/-- A return is checked against its actual typed result. Complete finite
-    domains are budgeted; an oversized range is refused, never sampled. -/
+/-- Decoded local returns and interval transports generate one continuation.
+    Other values retain complete budgeted selection, never a sample. -/
+def valueReturnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {type : Ty}
+    (expression : Expr D Γ Λ type) (locals : Env D Γ)
+    (returned : Wert D type → Except Invarianten.Frag.Refusal (QF (Observation D))) :
+    Except Invarianten.Frag.Refusal (Condition (fun (_ : Runtime program (fun _ => []) S) world =>
+      denotes (returned (eval world expression world locals)) world)) :=
+  match expression with
+  | .var name => requireCondition (returned (locals.get name))
+  | .widen low high body =>
+      valueReturnCondition budget body locals (fun value => returned (Zahl.weiter low high value))
+  | expression =>
+      localSelect budget expression locals
+        (fun value _ world => denotes (returned value) world)
+        (fun value => requireCondition (returned value))
+
+/-- A void return checks its sole continuation; a value return uses the
+    same typed observation rule as scoped and ordinary scalar exits. -/
 def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Option Ty}
     (expression : ErgExpr D Γ Λ result) (locals : Env D Γ)
     (returned : ErgVal D result → Except Invarianten.Frag.Refusal (QF (Observation D))) :
@@ -41,15 +57,7 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Opti
       denotes (returned (evalErg world expression world locals)) world)) :=
   match result, expression, returned with
   | none, .empty, returned => requireCondition (returned ())
-  | some _, .val (.var name), returned => requireCondition (returned (locals.get name))
-  | some _, .val (.widen low high body), returned =>
-      returnCondition budget (.val body) locals (fun value => returned (Zahl.weiter low high value))
-  | some _, .val expression, returned =>
-      localSelect budget expression locals
-        (fun value _ world => denotes (returned value) world)
-        (fun value => requireCondition (returned value))
-termination_by sizeOf expression
-decreasing_by all_goals simp_wf
+  | some _, .val expression, returned => valueReturnCondition budget expression locals returned
 
 /-- Scalar updates reuse P20's substitution; the post is stronger at logic
     stops and value returns. Unsupported leaves have no accepting fallback. -/
