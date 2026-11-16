@@ -121,7 +121,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 simp only [execStmtH, taken, ↓reduceIte, Goals.holds, h, denotes]
                 rw [assignment_schreibSlot, offset.property]
                 have stored : scalarValue (D.typ table field)
-                    (kind ▸ (⟨destination, bounded.1, bounded.2⟩ : Zahl lo hi)) = destination :=
+                    (kind ▸ (show Wert D (.int lo hi) from ⟨destination, bounded.1, bounded.2⟩)) = destination :=
                   reverseTransport kind _
                 rw [stored]
                 exact (subst_denote _ _ normal (assignment read)).mp ((quoteQF_denote _ _).mp parts.2) }
