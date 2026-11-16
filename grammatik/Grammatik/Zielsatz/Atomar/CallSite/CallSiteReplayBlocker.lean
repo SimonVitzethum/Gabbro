@@ -126,7 +126,7 @@ theorem checker :
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
     rw [refused, Bool.and_false]
-  · decide +kernel
+  · rfl
 
 /- The following small invariant proves the full unit call-site duty, not just
    a duty on an empty chosen replay history. Every runtime start is already at
@@ -171,25 +171,24 @@ private theorem returnedHeads_start (sp : Speicher decl.mitRuhe)
     (init : Faden → Σ f : decl.mitRuhe.Fn, Env decl.mitRuhe (decl.mitRuhe.params f)) :
     ReturnedHeads (RufStartG unit.P.mitRuhe sp init) := by
   intro t
+  dsimp only [RufStartG]
+  generalize hi : init t = initial
   refine ⟨rfl, ?_⟩
-  cases hi : init t with
+  cases initial with
   | mk f ρ =>
     cases f with
     | none =>
-      simp only [RufStartG, hi]
-      rw [hi]
       exact ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
     | some f =>
       cases f
-      simp only [RufStartG, hi]
-      rw [hi]
       exact ⟨false, [], [], ρ, .empty, List.Perm.nil, rfl⟩
 
 /-- No software call head is reachable, for any binding, budget or runtime. -/
 theorem call_sites : CallSitePflicht unit := by
   intro O H hh hf passes sp init hl a σ ρ hreach hsw
-  obtain ⟨M, presented, t, hr, _, hk⟩ := hreach
+  obtain ⟨M, presented, t, hr, consistent, hk⟩ := hreach
   have hm : ReturnedHeads M := by
+    clear consistent hk
     induction hr with
     | start => exact returnedHeads_start sp init
     | schritt M M' u _ hs ih => exact returnedHeads_gx ih hs
@@ -206,25 +205,24 @@ private theorem positive_returnedHeads_start (sp : Speicher Positive.decl.mitRuh
       Env Positive.decl.mitRuhe (Positive.decl.mitRuhe.params f)) :
     ReturnedHeads (RufStartG Positive.unit.P.mitRuhe sp init) := by
   intro t
+  dsimp only [RufStartG]
+  generalize hi : init t = initial
   refine ⟨rfl, ?_⟩
-  cases hi : init t with
+  cases initial with
   | mk f locals =>
     cases f with
     | none =>
-      simp only [RufStartG, hi]
-      rw [hi]
       exact ⟨false, [], [], locals, .empty, List.Perm.nil, rfl⟩
     | some f =>
       cases f
-      simp only [RufStartG, hi]
-      rw [hi]
       exact ⟨false, [], [], locals, .val .tru, List.Perm.nil, rfl⟩
 
 /-- Every positive runtime head is a return, so no foreign pre is owed. -/
 theorem good_call_sites : CallSitePflicht Positive.unit := by
   intro O H hh hf passes sp init hl a σ locals reached hsw
-  obtain ⟨M, presented, t, history, _, key⟩ := reached
+  obtain ⟨M, presented, t, history, consistent, key⟩ := reached
   have heads : ReturnedHeads M := by
+    clear consistent key
     induction history with
     | start => exact positive_returnedHeads_start sp init
     | schritt M M' u _ step ih => exact returnedHeads_gx ih step
