@@ -173,7 +173,7 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
   split at h
   · cases h
   · cases hg : sourceGuests u with
-    | error e => simp [hg, Functor.map, Except.map] at h
+    | error e => simp only [hg, bind, Except.bind, reduceCtorEq] at h
     | ok guests =>
       simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure,
         Except.ok.injEq] at h
@@ -190,7 +190,7 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
       have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
           (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
           ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) = true := by
+          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none) = true := by
         rw [einheitVon_ws, hws]
         exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
           P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)).symm.trans hpre
@@ -200,9 +200,9 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
       have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
           (einheitVon u P Q sp starts gestartet).akku = true :=
         Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet)
-      have starts := Bool.and_eq_true.mp hStart
-      exact Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr
-        ⟨Bool.and_eq_true.mpr ⟨Bool.and_eq_true.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
+      have starts := Bool.and_eq_true_iff.mp hStart
+      exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+        ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
 
 /-- A minimal certifiable unit: one parameterless function declared as the
     only root. This witnesses certifiability independently of compilation. -/
