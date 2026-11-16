@@ -305,6 +305,19 @@ theorem reader_checked (sources : LockSources zS) :
     (checkFunction zPB zS sources {} none zLies).toOption.isSome = true :=
   reader_checked_for zPB.rumpf body_eq sources (by decide +kernel)
 
+/-- The execution-success premises hold together on the actual nonconstant
+    pool read, with its complete 101-value binder and return contract. -/
+theorem execution_success_zeuge (sources : LockSources zS) :
+    (checkExecution zPB zS (requiresPolicy zPB) sources {} none zLies).toOption.isSome = true := by
+  apply execution_success zPB zS (requiresPolicy zPB) sources {} none zLies
+    invariants (by rfl) inputDomain inputDomain_result
+  · change argumentSpecializations 16384 context * endSpecializations 16384 body ≤ 16384
+    decide +kernel
+  · intro locals
+    have equal : locals = arguments := by cases locals; rfl
+    subst locals
+    exact environment_checked sources
+
 #print axioms reader_checked
 
 /-- Full function enumeration retains the strict gate; only the reader's

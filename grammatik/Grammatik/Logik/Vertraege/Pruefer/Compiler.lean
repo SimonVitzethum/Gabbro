@@ -211,7 +211,16 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                   EndAusgang.schrumpf, EndAusgang.zuAusgang] using ready
           | logik error => simpa only [reply, Goals.holds] using ready
           | hardware error => trivial)
-    | _ => .error (.unsupported "contract block is outside the checked control fragment")
+    | .bindCallInd .. | .bindCallIndElse .. =>
+        .error (.unsupported "contract indirect binding needs a checked finite target dispatch")
+    | .bindAxiom .. | .bindAxiomElse .. | .bindAxiomOpt .. | .bindAxiomOptElse .. =>
+        .error (.unsupported "contract oracle binding needs quantified answer and poststate observations")
+    | .regRead .. | .regReadElse .. =>
+        .error (.unsupported "contract register binding needs a typed fresh result observation")
+    | .awaits .. | .exchange .. =>
+        .error (.unsupported "contract atomic binding needs rely-aware fresh observations")
+    | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. =>
+        .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
 termination_by fuel
 
 def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -348,7 +357,16 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simp only [execStmtH, execEndH] at ready ⊢
           split <;> rename_i cleanupReady <;>
             simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Goals.holds, Goals.endHolds] using ready)
-    | _ => .error (.unsupported "contract end block is outside the checked control fragment")
+    | .bindCallInd .. | .bindCallIndElse .. =>
+        .error (.unsupported "contract indirect end binding needs a checked finite target dispatch")
+    | .bindAxiom .. | .bindAxiomElse .. | .bindAxiomOpt .. | .bindAxiomOptElse .. =>
+        .error (.unsupported "contract oracle end binding needs quantified answer and poststate observations")
+    | .regRead .. | .regReadElse .. =>
+        .error (.unsupported "contract register end binding needs a typed fresh result observation")
+    | .awaits .. | .exchange .. =>
+        .error (.unsupported "contract atomic end binding needs rely-aware fresh observations")
+    | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. =>
+        .error (.unsupported "contract floating end binding needs an exact typed range-check certificate")
 termination_by fuel
 
 def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Nat}

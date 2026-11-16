@@ -124,7 +124,7 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
   -- A sufficient WP can contain call havoc and other overapproximations.
   -- Falsity of that WP is not evidence of a source execution violating its
   -- contract. Only the direct implication checker reports counterexamples.
-  else .error (.unsupported ("contract VC abstraction cannot establish the postcondition or a call obligation" ++
+  else .error (.unsupported ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
     "; parameters = " ++ reprStr (environmentValues locals)))
 
 /-- Check every decoded parameter environment in a complete budgeted domain. -/

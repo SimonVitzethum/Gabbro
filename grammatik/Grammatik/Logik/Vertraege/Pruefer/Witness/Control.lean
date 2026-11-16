@@ -21,7 +21,7 @@ def scopedIncrement : Programm declaration :=
   { increment with
     rumpf := fun _ =>
       .retScoped (.val (.add (.var .here) (.lit 1)))
-        (RueckRessourcen.vonGenau (List.Perm.refl _)) }
+        { scopes := [], genau := List.Perm.refl _ } }
 
 theorem narrowedIncrement_zeuge :
     KontrakteGeprueftB narrowedIncrement (SperrInv.leer declaration) [()] = true := by
@@ -33,9 +33,12 @@ theorem scopedIncrement_zeuge :
 
 /-- The newly admitted conditional shape contains a real memory observation
     and two different integer results; it is not literal truth. -/
+theorem localGlobalAccess (name : declaration.Glob) : gdarf declaration name [] :=
+  fun _ member => (List.not_mem_nil member).elim
+
 def conditionalPost : Expr declaration [] [] .bool :=
-  .eq (.eng (.add (.glob false (Invarianten.Frag.Witness.globalAccess false)) (.lit 1))
-      0 10 (.glob false (Invarianten.Frag.Witness.globalAccess false))) (.lit 3)
+  .eq (.eng (.add (.glob false (localGlobalAccess false)) (.lit 1))
+      0 10 (.glob false (localGlobalAccess false))) (.lit 3)
 
 theorem currentOnly_zeuge : (currentOnly conditionalPost).toOption.isSome = true := by
   decide +kernel

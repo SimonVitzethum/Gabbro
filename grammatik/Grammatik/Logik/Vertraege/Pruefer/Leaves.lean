@@ -66,7 +66,8 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                 apply pre.sound
                 rw [assignment_lese]
                 exact valid }
-  | .assignSlot table field index expression _ _ | .assignThru _ table _ field index expression _ _ => do
+  | .assignSlot table field index expression _ _ | .assignThru _ table _ field index expression _ _
+    | .assignThruOwn _ table _ field index expression _ _ _ _ _ _ _ => do
       match h : goals.normal locals with
       | .error cause => .error cause
       | .ok normal => do
@@ -143,6 +144,16 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .next _ => do
       let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.again locals)
       return pre.map (fun _ _ valid _ _ => valid)
-  | _ => .error (.unsupported "contract statement is outside the checked scalar/control fragment")
+  | .assignSlotRef .. => .error (.unsupported "contract reference store needs a tracked cell identity")
+  | .putBytes .. => .error (.unsupported "contract byte store needs bytewise observation substitution")
+  | .onOption .. => .error (.unsupported "contract option dispatch needs a typed payload observation")
+  | .onTag .. => .error (.unsupported "contract tagged dispatch needs a typed payload observation")
+  | .callInd .. | .callIndElse .. =>
+      .error (.unsupported "contract indirect call needs a checked finite target dispatch")
+  | .axiomCall .. | .axiomCallElse .. =>
+      .error (.unsupported "contract oracle call needs quantified answer and poststate observations")
+  | .forever .. => .error (.unsupported "contract forever loop needs a checked inductive invariant")
+  | .consumeTraverse .. => .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")
+  | _ => .error (.unsupported "contract structured statement needs the recursive control compiler")
 
 end Gabbro.Grammatik.Vertraege.Pruefer
