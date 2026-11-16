@@ -18,7 +18,7 @@ def restored : List Einsatz :=
 theorem restored_checked : ∀ e ∈ restored, e.gueltig = true := by
   intro e member
   simp only [restored, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact Reset.Good.e_gueltig
   · exact M16_13.e_gueltig
   · exact M169_350.e_gueltig

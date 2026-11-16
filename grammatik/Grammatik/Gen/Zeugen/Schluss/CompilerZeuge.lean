@@ -50,15 +50,15 @@ theorem compiler_zeugen_korrekt_zeuge :
     change false = true at bad
     exact Bool.false_ne_true bad
 
-/-- Atomic reads trigger the first refusal in the current checked fragment. -/
-theorem m99_refused_zeuge : M99_824.e.gueltig = false := GateAudit.m99_824_refused
+/-- Typed atomic observations have a totality certificate under true contracts. -/
+theorem m99_checked_zeuge : M99_824.e.gueltig = true := GateAudit.m99_824_checked
 
 /-- W2 cannot use these fixed M/N lists: the gut_m premise is contradictory.
     This does not assert that every possible replacement table is impossible. -/
 theorem old_tafel_impossible_zeuge : ¬ Tafel structuralWitnesses structuralRefusals := by
   intro table
-  have accepted := table.gut_m M99_824.e (by simp [structuralWitnesses])
-  rw [m99_refused_zeuge] at accepted
+  have accepted := table.gut_m M47_549.e (by simp [structuralWitnesses])
+  rw [GateAudit.m47_549_refused] at accepted
   exact Bool.noConfusion accepted
 
 #print axioms compiler_zeugen_korrekt_zeuge

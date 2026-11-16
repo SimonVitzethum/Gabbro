@@ -7537,7 +7537,7 @@ literal-true totality path. Its `e_cause` is `none`, `e_gueltig` is true, and
 input evidence on that same accepted unit. `F03_reg.register_variants_zeuge`
 now checks both ending and block forms. Recovery retains both fixtures and
 their exact records; their numbered cell sets coincide. The refused annex
-contains only its two atomic fixtures and the indirect-call fixture, whose
+contains only the indirect-call fixture, whose
 cause/link witnesses name the missing finite target dispatch. Old-post and
 pointer-cost witnesses keep their original source defects and assert the
 actual snapshot and early cost diagnostics respectively.
