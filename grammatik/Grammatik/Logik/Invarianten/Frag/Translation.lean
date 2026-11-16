@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.Frag.Bounded
+public import Grammatik.Logik.Invarianten.Frag.Constant
 
 @[expose] public section
 
@@ -88,7 +88,7 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .mul a b => do
       let left ← located "mul.left" (translate a locals)
       let right ← located "mul.right" (translate b locals)
-      if literalB a then
+      if left.payload.constant?.isSome then
         let coefficient ← left.constantIndex
         return {
             payload := .scale coefficient.val right.payload
@@ -97,7 +97,7 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
                 (eval world a world locals).n * (eval world b world locals).n
               rw [right.correct world, ← coefficient.property world]
             supported := right.supported }
-      else if literalB b then
+      else if right.payload.constant?.isSome then
         let coefficient ← right.constantIndex
         return {
             payload := .scale coefficient.val left.payload
@@ -213,7 +213,16 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       encodeAll (alleIndizes (D.count table))
         (fun index world => eval world body world (.cons index locals))
         (fun index => translate body (.cons index locals))
-  | _ => .error (.unsupported "expression outside the linear fragment")
+  | expression => do
+      let some known := constantValue expression locals
+        | .error (.unsupported "expression outside the linear fragment")
+      let encoded ← encodeConstant τ known.val
+      return {
+          payload := encoded.payload
+          correct := fun world => by
+            rw [known.property world]
+            exact encoded.correct world
+          supported := encoded.supported }
 
 /-- Admission and translation for a closed model invariant. `D.count` is a
     declaration-time integer and is represented by ordinary source literals.

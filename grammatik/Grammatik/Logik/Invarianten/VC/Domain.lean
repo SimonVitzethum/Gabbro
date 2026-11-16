@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Logik.Invarianten.VC.Fresh
-public import Grammatik.Logik.Invarianten.Frag.Constant
 public import Lean.Elab.Tactic.Omega
 
 @[expose] public section

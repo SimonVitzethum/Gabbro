@@ -2,7 +2,6 @@ module
 
 public import Grammatik.Logik.Invarianten.VC.Formula
 public import Grammatik.Logik.Invarianten.Frag.Translation
-public import Grammatik.Logik.Invarianten.Frag.Constant
 
 @[expose] public section
 

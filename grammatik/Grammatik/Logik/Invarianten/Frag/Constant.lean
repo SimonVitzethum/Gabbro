@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.Frag.Translation
+public import Grammatik.Logik.Invarianten.Frag.Bounded
 
 @[expose] public section
 
@@ -24,113 +24,97 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .fnref f _ conforms => some ⟨⟨f, conforms⟩, fun _ => rfl⟩
   | .widen lower upper body => do
       let value ← constantValue body locals
-      return ⟨Zahl.weiter lower upper value.val, fun world => by
-        simp only [eval, value.property world] <;> rfl⟩
+      return ⟨Zahl.weiter lower upper value.val, fun world => congrArg _ (value.property world)⟩
   | .add left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.add a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.add a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .sub left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.sub a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.sub a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .mul left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.mul a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.mul a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .neg body => do
       let value ← constantValue body locals
-      return ⟨Zahl.neg value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨Zahl.neg value.val, fun world => congrArg _ (value.property world)⟩
   | .div nonzero positive left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.div nonzero positive a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.div nonzero positive a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .rem nonzero positive left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.rem nonzero positive a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.rem nonzero positive a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .sdiv nonzero left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.sdiv nonzero a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.sdiv nonzero a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .srem nonzero left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.srem nonzero a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.srem nonzero a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .band lower lower' left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.band lower lower' a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.band lower lower' a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .bor width lower lower' upper upper' left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.bor width lower lower' upper upper' a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.bor width lower lower' upper upper' a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .bxor width lower lower' upper upper' left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.bxor width lower lower' upper upper' a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.bxor width lower lower' upper upper' a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .shl width upper upper' lower lower' left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.shl width upper upper' lower lower' a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.shl width upper upper' lower lower' a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .shr width upper upper' lower lower' left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨Zahl.shr width upper upper' lower lower' a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨Zahl.shr width upper upper' lower lower' a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .lt left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨decide (a.val.n < b.val.n), fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨decide (a.val.n < b.val.n), fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .le left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨decide (a.val.n ≤ b.val.n), fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨decide (a.val.n ≤ b.val.n), fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .eq left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨decide (a.val.n = b.val.n), fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨decide (a.val.n = b.val.n), fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .and left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨wahr? a.val && wahr? b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨wahr? a.val && wahr? b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .or left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨wahr? a.val || wahr? b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨wahr? a.val || wahr? b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .not body => do
       let value ← constantValue body locals
-      return ⟨!wahr? value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨!wahr? value.val, fun world => congrArg _ (value.property world)⟩
   | .none _ => some ⟨none, fun _ => rfl⟩
   | .some body => do
       let value ← constantValue body locals
-      return ⟨some value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨some value.val, fun world => congrArg _ (value.property world)⟩
   | .istSome body => do
       let value ← constantValue body locals
-      return ⟨value.val.isSome, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨value.val.isSome, fun world => congrArg _ (value.property world)⟩
   | .case cases index payload => do
       let value ← constantPayload payload locals
-      return ⟨⟨index, Fall.ofNutzlast _ _ _ _ value.val⟩, fun world => by
-        simp only [eval, value.property world] <;> rfl⟩
+      return ⟨⟨index, Fall.ofNutzlast _ _ _ _ value.val⟩, fun world => congrArg _ (value.property world)⟩
   | .why _ reason => some ⟨reason, fun _ => rfl⟩
   | .arrNil => some ⟨fun index => index.elim0, fun _ => rfl⟩
   | .arrCons head tail => do
       let a ← constantValue head locals
       let b ← constantValue tail locals
-      return ⟨arrConsW a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨arrConsW a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .arrGet array index => do
       let a ← constantValue array locals
       let i ← constantValue index locals
@@ -144,11 +128,11 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .strLit bytes bounded => some ⟨⟨bytes, bounded⟩, fun _ => rfl⟩
   | .strLen body => do
       let value ← constantValue body locals
-      return ⟨strLenW value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨strLenW value.val, fun world => congrArg _ (value.property world)⟩
   | .strCat left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨strCatW a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨strCatW a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .strGet string index => do
       let s ← constantValue string locals
       let i ← constantValue index locals
@@ -156,14 +140,14 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
   | .strEq left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨strEqW a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨strEqW a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .strLt left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨strLtW a.val b.val, fun world => by simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨strLtW a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .strWeit capacity body => do
       let value ← constantValue body locals
-      return ⟨strWeitW capacity value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨strWeitW capacity value.val, fun world => congrArg _ (value.property world)⟩
   | .wenn test positive negative => do
       let guard ← constantValue test locals
       if chosen : wahr? guard.val = true then
@@ -176,25 +160,37 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
       let value ← constantValue body locals
       if fits : lower ≤ value.val.n ∧ value.val.n ≤ upper then
         return ⟨⟨value.val.n, fits.1, fits.2⟩, fun world => by
-          simp only [eval, value.property world, fits, ↓reduceDIte] <;> rfl⟩
+          have actual : lower ≤ (eval world body world locals).n ∧
+              (eval world body world locals).n ≤ upper := by
+            rw [value.property world]
+            exact fits
+          have evaluated : eval world (.eng body lower upper fallback) world locals =
+              (⟨(eval world body world locals).n, actual.1, actual.2⟩ : Zahl lower upper) :=
+            dif_pos actual
+          exact evaluated.trans (zahl_ext (congrArg Zahl.n (value.property world)))⟩
       else
         let alternative ← constantValue fallback locals
         return ⟨alternative.val, fun world => by
-          simp only [eval, value.property world, fits, ↓reduceDIte, alternative.property world] <;> rfl⟩
+          have actual : ¬ (lower ≤ (eval world body world locals).n ∧
+              (eval world body world locals).n ≤ upper) := by
+            rw [value.property world]
+            exact fits
+          have evaluated : eval world (.eng body lower upper fallback) world locals =
+              eval world fallback world locals := dif_neg actual
+          exact evaluated.trans (alternative.property world)⟩
   | .intBuiltin1 operation body => do
       let value ← constantValue body locals
-      return ⟨evalIntBuiltin1 operation value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨evalIntBuiltin1 operation value.val, fun world => congrArg _ (value.property world)⟩
   | .intBuiltin2 operation left right => do
       let a ← constantValue left locals
       let b ← constantValue right locals
-      return ⟨evalIntBuiltin2 operation a.val b.val, fun world => by
-        simp only [eval, a.property world, b.property world] <;> rfl⟩
+      return ⟨evalIntBuiltin2 operation a.val b.val, fun world => congrArg₂ _ (a.property world) (b.property world)⟩
   | .prod _ fields => do
       let values ← constantFields fields locals
       return ⟨values.val, fun world => by simp only [eval, values.property world] <;> rfl⟩
   | .prodGet body field => do
       let value ← constantValue body locals
-      return ⟨prodGetW field value.val, fun world => by simp only [eval, value.property world] <;> rfl⟩
+      return ⟨prodGetW field value.val, fun world => congrArg _ (value.property world)⟩
   | .prodSet body field replacement => do
       let value ← constantValue body locals
       let next ← constantValue replacement locals
