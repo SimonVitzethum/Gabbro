@@ -43,6 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
+#eval candidate.map (fun _ => ())
+
 theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
 def output : Emitted text 64 := candidate.toOption.get candidate_present
