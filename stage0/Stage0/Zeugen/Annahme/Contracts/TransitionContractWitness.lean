@@ -2,6 +2,7 @@ module
 public import Stage0.SourceWitness
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.Kern.Taktik.KernelRfl
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -194,11 +195,6 @@ namespace Ordered
 def text : String :=
   "module ordered_transition_probe { table T count 2 { slot { s : u32 in 0 .. 2, } } state S { transition cycle { T.slots[0].s : 0 -> 1, T.slots[1].s : 0 -> T.slots[0].s } requires true effects { writes T.slots } } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { cycle(); return 23; } }"
 
-def candidate : Except String (Emitted text 64) := emit text 64
-
-theorem candidate_refused : candidate.toOption.isSome = false := by
-  kernel_rfl
-
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
 def unit : UProg := Data.sourceUnit true
@@ -245,6 +241,56 @@ def transitionArguments : Env (declOf unit) ((declOf unit).params transitionInde
         (.cons (τ := .int 0 1) ⟨1, by decide, by decide⟩
           (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩
             (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩ .nil)))))
+
+/-- Outside the decidable fragment: the complete transition parameter product. -/
+theorem function_fragment_refusal :
+    (Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+      (Cover.Differenz.sperrQuellen unit) {} none transitionIndex).map (fun _ => ()) =
+      .error (.unsupported "writer parameter product exceeds the VC expansion budget") := by
+  kernel_rfl
+
+/-- One refused real member blocks the actual unchanged contract collector. -/
+theorem contracts_refused : Vertraege.Pruefer.KontrakteGeprueftB program
+    (Cover.Differenz.sperrFamilie unit) (List.finRange unit.fns.length)
+    (Cover.Differenz.sperrQuellen unit) = false := by
+  have rejected : (Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+      (Cover.Differenz.sperrQuellen unit) {} none transitionIndex).toOption.isSome = false := by
+    have reason := function_fragment_refusal
+    cases h : Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+        (Cover.Differenz.sperrQuellen unit) {} none transitionIndex with
+    | error cause => rfl
+    | ok checked => simp only [h, Except.map, reduceCtorEq] at reason
+  change (Invarianten.Pruefer.collect (List.finRange unit.fns.length)
+    (Vertraege.Pruefer.ContractDuties program (Cover.Differenz.sperrFamilie unit))
+    (fun f => Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+      (Cover.Differenz.sperrQuellen unit) {} none f)).toOption.isSome = false
+  cases result : Invarianten.Pruefer.collect (List.finRange unit.fns.length)
+      (Vertraege.Pruefer.ContractDuties program (Cover.Differenz.sperrFamilie unit))
+      (fun f => Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+        (Cover.Differenz.sperrQuellen unit) {} none f) with
+  | error cause => rfl
+  | ok checked =>
+      have each := Vertraege.Pruefer.RefusalWitness.collect_each (List.finRange unit.fns.length)
+        (Vertraege.Pruefer.ContractDuties program (Cover.Differenz.sperrFamilie unit))
+        (fun f => Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
+          (Cover.Differenz.sperrQuellen unit) {} none f)
+        (by rw [result]; rfl) transitionIndex (List.mem_finRange _)
+      rw [rejected] at each
+      cases each
+
+/-- The exact restored source program cannot pass production admission. -/
+theorem checker_refused : OldSource.accepts unit program mainIndex ≠ .ok true := by
+  intro accepted
+  unfold OldSource.accepts at accepted
+  split at accepted
+  · cases accepted
+  · cases guests : sourceGuests unit with
+    | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
+    | ok items =>
+      simp only [guests, bind, Except.bind] at accepted
+      have gate := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
+      simp only [Zielsatz.AkzeptiertX, Invarianten.Pruefer.invariantVCB,
+        contracts_refused, Bool.and_false, Bool.false_eq_true] at gate
 
 /-- The typed state [0,1] satisfies main's precondition and violates cycle's. -/
 theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArguments ∧
