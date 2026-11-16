@@ -7582,3 +7582,7 @@ Importer verification also exposed two existing memory-heavy `cbv` witnesses.
 It and `Measures.Fixtures.countdown_elaborated_zeuge` use kernel conversion
 instead of constructing the whole elaborator reduction in the metaprogram.
 Both statements and their fixtures are unchanged.
+The text round-trip checks `Gen.Text.Zeugen.N47_P.gelesen` and
+`Gen.Text.Zeugen.N19_2.check` likewise retain their statements and fixtures;
+they first reuse the established model verdict and then use direct kernel
+conversion, avoiding `decide`'s expensive diagnostic reduction.

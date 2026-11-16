@@ -9,6 +9,7 @@
 module
 public import Grammatik.Gen.Text.Pruefung
 public import Grammatik.Gen.Zeugen.N.N47_P
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Int.Repr
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -70,7 +71,9 @@ def text : String :=
   | .ok its => renderText (druckItems its)
   | .error _ => ""
 
-theorem gelesen : textGelesenB text e.zellen e.gueltig = true := by decide +kernel
+theorem gelesen : textGelesenB text e.zellen e.gueltig = true := by
+  rw [e_gueltig]
+  kernel_rfl
 
 /-- **The text of the witness reads back with its cells and its verdict.** -/
 theorem text_reads : ∃ e', ausText text = .ok e' ∧ e'.zellen = e.zellen ∧ e'.gueltig = e.gueltig :=

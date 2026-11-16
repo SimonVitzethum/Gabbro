@@ -6,6 +6,7 @@
 module
 public import Grammatik.Gen.Text.Pruefung
 public import Grammatik.Gen.Zeugen.N.N19_2
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -44,7 +45,9 @@ namespace Gabbro.Grammatik.Gen.Text.Zeugen.N19_2
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Zeugen.N19_2
 
-theorem check : textCheck z P ws e.zellen e.gueltig = true := by decide +kernel
+theorem check : textCheck z P ws e.zellen e.gueltig = true := by
+  rw [e_gueltig]
+  kernel_rfl
 
 /-- **The text of the witness reads back as the witness**, up to cells and verdict. -/
 theorem text : ∃ e', ausText (textVon z P ws) = .ok e' ∧ e'.zellen = e.zellen ∧ e'.gueltig = e.gueltig :=
