@@ -118,8 +118,6 @@ theorem good_user : NutzerPflichtA goodUnit where
 
 /-- The strict checker refuses the false post and names the actual failed
     contract obligation. This is an executable diagnostic, not a guessed trace. -/
-#eval Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false
-
 theorem checker :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
     Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =
@@ -128,7 +126,17 @@ theorem checker :
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
     rw [refused, Bool.and_false]
-  · rfl
+  · have diagnostic :
+        (match Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
+        | .error reason => some reason
+        | .ok _ => none) =
+          some "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
+      decide +kernel
+    cases result : Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
+    | error reason =>
+        simp only [result, Option.some.injEq] at diagnostic
+        exact congrArg Except.error diagnostic
+    | ok accepted => simp only [result, reduceCtorEq] at diagnostic
 
 /- The following small invariant proves the full unit call-site duty, not just
    a duty on an empty chosen replay history. Every runtime start is already at
