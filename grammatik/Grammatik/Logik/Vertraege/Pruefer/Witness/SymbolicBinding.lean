@@ -67,7 +67,7 @@ def goals : Pruefer.Symbolic.Goals (program := program) (S := SperrInv.leer decl
 def candidate : Except Frag.Refusal (Pruefer.Symbolic.EndCondition (requiresPolicy program) body symbols goals) :=
   bindEndCondition (V := vertragVon declaration ()) (l := false)
   (requiresPolicy program) symbols SymbolicWitness.bounded_zeuge initializer tailCode goals
-  (fun more larger symbol bounded =>
+  (fun _more larger symbol bounded =>
     retEndCondition (V := vertragVon declaration ()) (l := false)
       (requiresPolicy program) (.cons symbol symbols)
       ⟨bounded, symbols.bounded_mono SymbolicWitness.bounded_zeuge larger⟩

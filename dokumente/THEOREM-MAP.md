@@ -7586,3 +7586,112 @@ The text round-trip checks `Gen.Text.Zeugen.N47_P.gelesen` and
 `Gen.Text.Zeugen.N19_2.check` likewise retain their statements and fixtures;
 they first reuse the established model verdict and then use direct kernel
 conversion, avoiding `decide`'s expensive diagnostic reduction.
+
+## 196. Symbolic scalar environments and canonical WP composition (2026-11-17)
+
+The scalar symbolic representation carries actual-environment and runtime-WP
+certificates. Integer parameters, bindings and result rules use quantified
+observations, not finite integer domains. Formulas remain `LProp` through
+binding, store and return composition; the witnesses pass their completed VCs
+to the verified Cooper procedure once.
+
+Boundary: these interfaces and their canonical-WP composition are checked,
+but the production recursive compiler and `Decision` parameter/result gates
+still use the concrete environment interface at this checkpoint. No additional
+production acceptance, entry-memory snapshot support or aggregate support is
+claimed here. The existing acceptance and `gabbro_ziel` statements are unchanged.
+
+The following names are in `Gabbro.Grammatik.Invarianten.Frag.Symbolic`, except
+where the contract-checker namespace is given explicitly.
+
+| Theorem | Statement |
+|---|---|
+| `renameTerm_denote` | Interpreting a renamed term equals interpretation under the precomposed valuation. |
+| `renameQF_denote` | Renaming preserves quantifier-free truth under precomposition. |
+| `bind_rename` | An injective key embedding commutes with valuation binding. |
+| `renameProp_denote` | Injective renaming preserves quantified truth, including shadowing. |
+| `rename_subst_denote` | Substitution before renaming agrees with substituting the renamed term and key. |
+| `swapKey_twice` | Swapping two keys is an involution. |
+| `swapKey_injective` | A key swap is injective, so it cannot capture an inner binder. |
+| `embed_injective` | Extending the immutable-key namespace preserves distinct existing keys. |
+| `embed_fresh` | The new immutable key cannot alias any embedded memory or existing local key. |
+| `values_extend` | Extending a valuation preserves every embedded observation. |
+| `SymValue.realizes_lift` | A lifted symbolic scalar realizes the same typed value after extension. |
+| `SymEnv.realizes_world` | Immutable local realizations survive memory and trace changes. |
+| `SymEnv.realizes_ofEnv` | Every exact concrete environment realizes its symbolic specialization. |
+| `SymEnv.realizes_get` | Lookup transports environment realization to the actual typed value. |
+| `SymEnv.realizes_set` | Setting a realizing symbolic value corresponds to the actual Env update. |
+| `SymEnv.realizes_lift` | Lifting an environment preserves all actual local values. |
+| `SymEnv.extend_integer` | Every actual typed integer extends a realizing environment at a fresh key. |
+| `SymEnv.bounded_get` | A local lookup retains the immutable-key scope bound. |
+| `values_bind` | Updating an immutable valuation changes exactly its disjoint observation key. |
+| `values_read` | Canonical reads preserve every symbolic observation. |
+| `SymValue.realizes_congr` | Agreement on a scalar's existing keys preserves its actual value across worlds. |
+| `SymEnv.realizes_congr` | Agreement on an environment's existing keys preserves all actual values. |
+| `SymValue.bounded_mono` | A scalar's key bound remains valid in a larger scope. |
+| `SymEnv.bounded_mono` | An environment's key bound remains valid in a larger scope. |
+| `Encoding.bool_iff` | Boolean translation is equivalent to actual evaluation under every realizing Env. |
+| `liftPayload_represents` | Embedding a memory payload preserves its actual scalar representation. |
+| `Vertraege.Pruefer.Symbolic.Goals.holds_shrink` | Symbolic statement goals agree with canonical output shrinkage. |
+| `Vertraege.Pruefer.Symbolic.Goals.endHolds_shrink` | Symbolic end goals agree with canonical end-output shrinkage. |
+| `Vertraege.Pruefer.Symbolic.values_store_swap` | A memory/fresh-key swap corresponds to the actual store and the preserved old observation. |
+
+The certificate-producing definitions carry these additional checked statements:
+
+* `Parameters.cover` extends any incoming valuation and covers every typed Env;
+  only finite non-integer choices create multiple templates.
+* `Encoding.correct` relates every open scalar expression to actual evaluation
+  under `SymEnv.Realizes`.
+* `Certificate.sound` quantifies every valuation, frozen entry datum, actual
+  runtime and world. `Continuation.encode` preserves that contract across scopes.
+* `integerSelection` and `selectValue` constrain a fresh integer by its type
+  bounds and defining relation; unsupported integer initializers use their
+  model-proved interval as a sufficient abstraction.
+* `storeCondition` preserves quantified posts by bijective renaming, without
+  an early elimination stage.
+* `resultCondition` constrains every normal scalar answer by the declared post
+  in its actual return world; unsupported entry-memory predicates still refuse.
+* `returnCondition`, `retEndCondition`, `bindBlockCondition` and `bindEndCondition`
+  compose with the canonical `execBlockH`/`execEndH` WPs and scope shrinkage.
+
+Witness statements in `Frag.Symbolic.Witness` instantiate the corresponding
+laws on an inhabited u32 Env and real memory:
+`realizes_zeuge`, `embed_injective_zeuge`, `embed_fresh_zeuge`,
+`values_extend_zeuge`, `renameTerm_denote_zeuge`, `renameQF_denote_zeuge`,
+`bind_rename_zeuge`, `renameProp_denote_zeuge`, `rename_subst_denote_zeuge`,
+`realizes_ofEnv_zeuge`, `realizes_get_zeuge`, `realizes_set_zeuge`,
+`realizes_value_lift_zeuge`, `realizes_lift_zeuge`, `extend_integer_zeuge`.
+
+Witness statements in `Vertraege.Pruefer.SymbolicWitness`:
+
+| Names | Statement |
+|---|---|
+| `bounded_zeuge`, `realizes_zeuge` | One real u32 argument jointly satisfies the scope and realization premises. |
+| `selection_present_zeuge`, `selection_decides_zeuge` | A memory-dependent scalar binding is constructed and its quantified VC has a true Cooper verdict. |
+| `parameter_u32_no_enumeration_zeuge`, `parameter_coverage_zeuge` | Expansion budget zero gives one template covering every u32 argument. |
+| `known_environment_zeuge` | The exact concrete specialization is inhabited. |
+| `world_correspondence_zeuge` | Immutable arguments survive a genuine memory store. |
+| `bounded_get_zeuge`, `value_bounded_mono_zeuge`, `environment_bounded_mono_zeuge` | Lookup and scope extension preserve the fixture's key bounds. |
+| `value_realizes_congr_zeuge`, `environment_realizes_congr_zeuge` | A fresh-key update preserves the actual scalar and environment. |
+| `values_bind_zeuge`, `values_read_zeuge` | Valuation updates and canonical reads have the specified observation effect. |
+| `bool_iff_zeuge`, `liftPayload_represents_zeuge` | Open predicate and real-memory payload interpretation agree with actual values. |
+| `goals_holds_shrink_zeuge`, `goals_endHolds_shrink_zeuge` | Nontrivial predicate goals commute with actual output shrinkage. |
+| `store_formula_zeuge`, `store_correspondence_zeuge` | A real typed global store satisfies the generated formula and semantic post. |
+| `swapKey_twice_zeuge`, `swapKey_injective_zeuge`, `values_store_swap_zeuge` | Memory and fresh immutable keys satisfy swap and actual-store correspondence jointly. |
+| `frozen_context_extension_zeuge` | An actual entry argument retains its realization after a fresh-key extension. |
+| `mixed_parameter_cases_zeuge`, `mixed_parameter_coverage_zeuge` | Two u32 parameters and a Boolean use exactly two cases while preserving prior observations. |
+| `result_present_zeuge`, `result_decides_zeuge`, `result_correspondence_zeuge` | An actual u32 identity contract has one quantified result rule, a true Cooper verdict and semantic correspondence. |
+
+`Vertraege.Pruefer.SymbolicBindingWitness` uses a real function with all u32
+parameters admitted, ordinary mutable memory, a fresh local binding and a
+widened return. Its value-dependent post is `result <= x + G`; the VC needs
+the typed parameter bound `0 <= x`.
+
+* `candidate_present_zeuge`: the canonical binding/return certificate is built.
+* `quantified_binding_vc_zeuge`: the completed quantified VC has a true verdict
+  from the existing verified Cooper decision procedure, without range expansion.
+* `post_correspondence_zeuge`: its symbolic output goal implies the existing
+  `EndPost`, including the unchanged treatment of errors and reason exits.
+* `runtime_binding_wp_zeuge`: every typed u32 argument, actual world and admitted
+  runtime satisfies the original runtime WP for this body. This is a model/WP
+  witness; it does not claim production program-gate acceptance.
