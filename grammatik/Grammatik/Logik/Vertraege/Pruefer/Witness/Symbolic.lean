@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Control.Selection
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Memory
 public import Grammatik.Logik.Invarianten.Frag.Symbolic.Parameters
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Control
 
@@ -132,5 +132,119 @@ theorem values_bind_zeuge :
 
 theorem values_read_zeuge : values valuation (world.lese [] [.inr false]) = values valuation world :=
   values_read valuation world [] [.inr false]
+
+def predicate : Expr declaration [u32] [] .bool := .lt (.var .here) (.lit 10)
+def predicateEncoding := (Invarianten.Frag.Symbolic.translate predicate symbols).toOption.get (by rfl)
+
+theorem bool_iff_zeuge :
+    wahr? (eval world predicate world actual) = true ↔ predicateEncoding.payload.denote (values valuation world) :=
+  predicateEncoding.bool_iff valuation world actual realizes_zeuge
+
+theorem liftPayload_represents_zeuge :
+    Represents valuation world u32
+      (liftPayload u32 (.add (.var (.glob false)) (.konst 7))) seven ↔
+      Frag.Represents world u32 (.add (.var (.glob false)) (.konst 7)) seven :=
+  liftPayload_represents u32 _ valuation world seven
+
+def predicateContinuation : Continuation (program := program) (S := SperrInv.leer declaration) context [u32] where
+  holds := fun _ _ world actual => wahr? (eval world predicate world actual) = true
+  encode := fun _ _ symbols _ => do
+    let encoded ← Invarianten.Frag.Symbolic.translate predicate symbols
+    return {
+      formula := encoded.payload
+      sound := fun valuation _ _ _ world valid actual realized =>
+        (encoded.bool_iff valuation world actual realized).mpr valid }
+
+def goals : Pruefer.Symbolic.Goals (program := program) (S := SperrInv.leer declaration)
+    context (vertragVon declaration ()) [u32] where
+  normal := predicateContinuation
+  escape := predicateContinuation
+  again := predicateContinuation
+  returned := predicateContinuation
+  reason := {
+    holds := fun _ _ _ _ => True
+    encode := fun _ _ _ _ => .ok {
+      formula := .tru
+      sound := fun _ _ _ _ _ _ _ _ => trivial } }
+
+theorem goals_holds_shrink_zeuge (runtime : VC.Runtime program (fun _ => []) (SperrInv.leer declaration)) :
+    (goals.shrink u32).holds (l := false) () runtime (fun _ => False) (.ok world (.cons seven actual)) ↔
+      goals.holds (l := false) () runtime (fun _ => False) (.ok world actual) :=
+  goals.holds_shrink u32 () runtime (fun _ => False) (.ok world (.cons seven actual))
+
+theorem goals_endHolds_shrink_zeuge (runtime : VC.Runtime program (fun _ => []) (SperrInv.leer declaration)) :
+    (goals.shrink u32).endHolds (l := false) () runtime (fun _ => False)
+      (.zurueck world seven : EndAusgang (vertragVon declaration ()) false [u32, u32]) ↔
+      goals.endHolds (l := false) () runtime (fun _ => False) (.zurueck world seven) :=
+  goals.endHolds_shrink u32 () runtime (fun _ => False) (.zurueck world seven)
+
+def nine : Wert declaration (.int 0 10) := ⟨9, by decide, by decide⟩
+
+def storeTarget (_ : Unit) (_ : VC.Runtime program (fun _ => []) (SperrInv.leer declaration))
+    (world : World declaration) (actual : Env declaration [u32]) : Prop :=
+  (world.globs false).n = 9 ∧ (actual.get .here).n = 7
+
+def storePost : Certificate context (fun valuation item runtime world => ∀ actual,
+    symbols.Realizes valuation world actual → storeTarget item runtime world actual) where
+  formula := .and (.eq (.var (.inl (.glob false))) (.konst 9)) (.eq (.var (.inr 0)) (.konst 7))
+  sound := fun valuation _ _ _ world valid actual realized => by
+    have head : valuation 0 = (actual.get .here).n := by cases actual; exact realized.1
+    change (world.globs false).n = 9 ∧ valuation 0 = 7 at valid
+    exact ⟨valid.1, head.symm.trans valid.2⟩
+
+def stored := storeCondition symbols bounded_zeuge (.known nine) trivial (.glob false)
+  (fun world value => world.schreibGlob false [] value)
+  (fun world value => VC.assignment_schreibGlob world false [] value) storeTarget storePost
+
+theorem store_formula_zeuge : stored.formula.denote (values valuation world) := by
+  change ∀ value : Int, value = 9 → value = 9 ∧ (7 : Int) = 7
+  exact fun _ same => ⟨same, rfl⟩
+
+theorem store_correspondence_zeuge (runtime : VC.Runtime program (fun _ => []) (SperrInv.leer declaration)) :
+    storeTarget () runtime (world.schreibGlob false [] nine) actual :=
+  stored.sound valuation () trivial runtime world store_formula_zeuge actual realizes_zeuge nine rfl
+
+theorem swapKey_twice_zeuge :
+    swapKey (.inl (.glob false)) (.inr 1)
+      (swapKey (.inl (.glob false)) (.inr 1) (.inl (.glob true) : Key declaration Nat)) = .inl (.glob true) :=
+  swapKey_twice _ _ _
+
+theorem swapKey_injective_zeuge :
+    swapKey (.inl (.glob false)) (.inr 1) (.inl (.glob false) : Key declaration Nat) ≠
+      swapKey (.inl (.glob false)) (.inr 1) (.inl (.glob true)) := by
+  intro same
+  have impossible := swapKey_injective _ _ same
+  cases impossible
+
+theorem values_store_swap_zeuge :
+    values (valuation.bind 1 9) world ∘ swapKey (.inl (.glob false)) (.inr 1) =
+      values (valuation.bind 1 (Frag.assignment world (.glob false))) (world.schreibGlob false [] nine) :=
+  values_store_swap valuation world (world.schreibGlob false [] nine) 1 (.glob false) 9
+    (VC.assignment_schreibGlob world false [] nine)
+
+def frozenContext : Context (Env declaration [u32]) 1 where
+  holds := fun valuation entry => symbols.Realizes valuation world entry
+  stable := fun valuation other entry agree =>
+    symbols.realizes_congr 1 bounded_zeuge valuation other agree world world entry
+
+theorem frozen_context_extension_zeuge :
+    frozenContext.holds (valuation.bind 1 9) actual := by
+  apply (frozenContext.stable valuation (valuation.bind 1 9) actual _).mp realizes_zeuge
+  intro key inside
+  have same : key = 0 := by omega
+  subst key
+  rfl
+
+def mixedDomain : Parameters declaration 2 [u32, .bool, u32] :=
+  (parameters 2 2 [u32, .bool, u32]).toOption.get (by rfl)
+
+theorem mixed_parameter_cases_zeuge : mixedDomain.next = 5 ∧ mixedDomain.templates.length = 2 := by
+  constructor <;> rfl
+
+theorem mixed_parameter_coverage_zeuge :
+    ∃ symbols ∈ mixedDomain.templates, ∃ valuation,
+      symbols.Realizes valuation world (.cons seven (.cons true (.cons seven .nil))) ∧
+      ∀ key, key < 2 → valuation key = 42 :=
+  mixedDomain.cover world (.cons seven (.cons true (.cons seven .nil))) (fun _ => 42)
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SymbolicWitness
