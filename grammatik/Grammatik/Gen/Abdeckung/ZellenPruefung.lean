@@ -101,7 +101,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     The continuation-cost scan now charges tails only on reaching paths;
     this changes the VC work gate, with no numbered cell change.
     Generalizing the totality recursion's syntax indices changes its closure
-    and equation layout, preserving its cases and semantic certificates. -/
+    and equation layout, preserving its cases and semantic certificates.
+    Loop constructor dispatch is disjoint; the inner invariant/count matches
+    preserve the same certificates without dependent overlap assumptions. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -114,7 +116,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 12755998485776357310)]
+   ("AkzeptiertX", 67088888259381741)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
