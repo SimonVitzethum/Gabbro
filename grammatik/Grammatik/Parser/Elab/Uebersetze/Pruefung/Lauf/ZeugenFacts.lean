@@ -84,9 +84,9 @@ namespace RetiringWitness
 private structure RetiringFacts (u : UProg) : Prop where
   lowered : (lowerAllg u).toOption.isSome = true
   derived : (uCheckDecls u).toOption.isSome = true
-  refused : AkzeptiertX ((lowerAllg u).toOption.get lowered).1
+  accepted : AkzeptiertX ((lowerAllg u).toOption.get lowered).1
     (Cover.Differenz.sperrFamilie u) (List.finRange u.fns.length) [] [] [] []
-    ((uCheckDecls u).toOption.get derived) = false
+    ((uCheckDecls u).toOption.get derived) = true
   functionCount : u.fns.length = 6
   checkCount : ((uCheckDecls u).toOption.get derived).length = 1
   driverEnd : ∀ f : (declOf u).Fn, f.val = 5 → (vertragVon (declOf u) f).ende = []
@@ -350,7 +350,7 @@ private theorem selected_double :
   exact function_refused _ _ "call without held mark" double_function
 
 private theorem facts : RetiringFacts unit := by
-  refine ⟨lowered, derived, refused, rfl, ?_, ?_, check_resources, check_descriptor, ?_,
+  refine ⟨lowered, derived, accepted, rfl, ?_, ?_, check_resources, check_descriptor, ?_,
     check_capture, check_verdict, selected_unconsumed, selected_double⟩
   · rw [actual_checks]
     rfl

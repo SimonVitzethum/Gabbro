@@ -11,7 +11,6 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Heads
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Witness.Assembly
 import Grammatik.Logik.Vertraege.Pruefer.Witness.Refusal
 import Grammatik.Kern.Taktik.KernelRfl
-meta import all Grammatik.Logik.Vertraege.Pruefer.Duties
 import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 import all Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil1
@@ -266,78 +265,25 @@ private theorem lowered : (lowerAllg unit).toOption.isSome = true :=
 private theorem derived : (uCheckDecls unit).toOption.isSome = true :=
   congrArg (fun result => result.toOption.isSome) checks_made
 
-/-- One actual rejected member blocks the unchanged complete acceptance gate. -/
-private theorem rejected_member (u : UProg) (P : Programm (declOf u))
-    (cs : List (CheckDecl (declOf u))) (f : (declOf u).Fn)
-    (rejected : (Vertraege.Pruefer.checkFunction P (Cover.Differenz.sperrFamilie u)
-      (fun _ => none) {} none f).toOption.isSome = false) :
-    AkzeptiertX P (Cover.Differenz.sperrFamilie u) (List.finRange u.fns.length)
-      [] [] [] [] cs = false := by
-  have contracts : Vertraege.Pruefer.KontrakteGeprueftB P
-      (Cover.Differenz.sperrFamilie u) (List.finRange u.fns.length) = false := by
-    change (Invarianten.Pruefer.collect (List.finRange u.fns.length)
-      (Vertraege.Pruefer.ContractDuties P (Cover.Differenz.sperrFamilie u))
-      (fun g => Vertraege.Pruefer.checkFunction P (Cover.Differenz.sperrFamilie u)
-        (fun _ => none) {} none g)).toOption.isSome = false
-    cases result : Invarianten.Pruefer.collect (List.finRange u.fns.length)
-        (Vertraege.Pruefer.ContractDuties P (Cover.Differenz.sperrFamilie u))
-        (fun g => Vertraege.Pruefer.checkFunction P (Cover.Differenz.sperrFamilie u)
-          (fun _ => none) {} none g) with
-    | error cause => rfl
-    | ok checked =>
-      have each := Vertraege.Pruefer.RefusalWitness.collect_each (List.finRange u.fns.length)
-        (Vertraege.Pruefer.ContractDuties P (Cover.Differenz.sperrFamilie u))
-        (fun g => Vertraege.Pruefer.checkFunction P (Cover.Differenz.sperrFamilie u)
-          (fun _ => none) {} none g) (by rw [result]; rfl) f (List.mem_finRange _)
-      rw [rejected] at each
-      cases each
-  exact Bool.and_eq_false_iff.mpr (Or.inr
-    (Bool.and_eq_false_iff.mpr (Or.inr contracts)))
-
-#eval show IO Unit from do
-  let result := Vertraege.Pruefer.checkFunction program.val.1
-    (Cover.Differenz.sperrFamilie unit) (fun _ => none) {} none index4
-  throw (IO.userError (match result with
-    | .error cause => "RETIRING CONSUMER: " ++ cause.message
-    | .ok _ => "RETIRING CONSUMER: ACCEPTED"))
-
-/-- The physical consumer is checked; its result domain exceeds the VC budget. -/
-
-private theorem consumer_fragment_refusal :
+/-- The physical consumer's retire transition is part of the checked fragment. -/
+private theorem consumer_checked :
     (Vertraege.Pruefer.checkFunction program.val.1 (Cover.Differenz.sperrFamilie unit)
-      (fun _ => none) {} none index4).map (fun _ => ()) =
-      .error (.unsupported "local observation type range exceeds the VC budget") := by
+      (fun _ => none) {} none index4).toOption.isSome = true := by
   kernel_rfl
 
-attribute [local irreducible] Vertraege.Pruefer.checkFunction Invarianten.Pruefer.collect
-
-private theorem consumer_refused :
-    (Vertraege.Pruefer.checkFunction program.val.1 (Cover.Differenz.sperrFamilie unit)
-      (fun _ => none) {} none index4).toOption.isSome = false := by
-  have reason := consumer_fragment_refusal
-  cases result : Vertraege.Pruefer.checkFunction program.val.1
-      (Cover.Differenz.sperrFamilie unit) (fun _ => none) {} none index4 with
-  | error cause => rfl
-  | ok checked => simp only [result, Except.map, reduceCtorEq] at reason
-
-private theorem refused : AkzeptiertX ((lowerAllg unit).toOption.get lowered).1
+private theorem accepted : AkzeptiertX ((lowerAllg unit).toOption.get lowered).1
     (Cover.Differenz.sperrFamilie unit) (List.finRange unit.fns.length) [] [] [] []
-    ((uCheckDecls unit).toOption.get derived) = false := by
-  have actualProgram : (lowerAllg unit).toOption.get lowered = program.val :=
-    Except.ok.inj ((except_ok_get lowered).symm.trans program_made)
-  have actualChecks : (uCheckDecls unit).toOption.get derived = checks.val :=
-    Except.ok.inj ((except_ok_get derived).symm.trans checks_made)
-  rw [actualProgram, actualChecks]
-  exact rejected_member unit program.val.1 checks.val index4 consumer_refused
+    ((uCheckDecls unit).toOption.get derived) = true := by
+  kernel_rfl
 
-/-- Six real source functions, with an actual rejected member and full refusal. -/
-private theorem rejected_member_zeuge : unit.fns.length = 6 ∧
+/-- Six real source functions, with a checked consumer and full admission. -/
+private theorem accepted_unit_zeuge : unit.fns.length = 6 ∧
     (Vertraege.Pruefer.checkFunction program.val.1 (Cover.Differenz.sperrFamilie unit)
-      (fun _ => none) {} none index4).toOption.isSome = false ∧
+      (fun _ => none) {} none index4).toOption.isSome = true ∧
     AkzeptiertX ((lowerAllg unit).toOption.get lowered).1
       (Cover.Differenz.sperrFamilie unit) (List.finRange unit.fns.length) [] [] [] []
-      ((uCheckDecls unit).toOption.get derived) = false :=
-  ⟨by kernel_rfl, consumer_refused, refused⟩
+      ((uCheckDecls unit).toOption.get derived) = true :=
+  ⟨by kernel_rfl, consumer_checked, accepted⟩
 
 -- These equations retain the actual call and resource transitions, selecting
 -- a single reader node before any concrete edited unit is substituted.

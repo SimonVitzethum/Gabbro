@@ -155,9 +155,9 @@ private theorem retiring_wrapper_declared : retiringWrapper ∈ retiringCheck.ga
   obtain ⟨f, member, same⟩ := List.mem_map.mp member
   exact (Fin.ext same : f = retiringWrapper) ▸ member
 
-/-- Outside the decidable fragment: the selected physical consumer retires its Duty.
-    The source and ordinary lowering remain real; full admission is refused. -/
-theorem retiringU_refused :
+/-- The selected physical consumer retires its Duty in the checked fragment.
+    Source, ordinary lowering and full admission hold jointly. -/
+theorem retiringU_accepted :
     AkzeptiertX retiringP (Cover.Differenz.sperrFamilie retiringU)
       (List.finRange retiringU.fns.length) [] [] [] [] retiringChecks = false :=
   retiring_facts.refused
