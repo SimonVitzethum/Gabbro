@@ -57,9 +57,17 @@ theorem candidate_refused : candidate = .error
   kernel_rfl
 
 /-- Source elaboration still retains the exact relational narrowing. -/
-theorem unit_present : (uebersetzeAllg text).toOption.isSome = true := by kernel_rfl
+def elaborated : Except String UProg := do
+  let source ← Frontend.source text {}
+  let declarations := pre108 source.prepared.elaborierbar
+  (Frontend.elabWithScopes declarations
+    source.scopes.values source.scopes.types source.scopes.functions
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)
+    (widths := source.scopes.widths)).bind (Profil.selectUnit {})
 
-def unit : UProg := ((uebersetzeAllg text).toOption.get unit_present).1
+theorem unit_present : elaborated.toOption.isSome = true := by kernel_rfl
+
+def unit : UProg := elaborated.toOption.get unit_present
 
 /-- The actual frontend emits the existing exact subtraction inside total `eng`,
     narrowed to the complete unsigned range rather than a signed-word subset. -/

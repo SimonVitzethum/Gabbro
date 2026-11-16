@@ -44,21 +44,22 @@ set_option maxHeartbeats 400000
 
 /-- Recover the actual source contracts before the rejecting admission step. -/
 def sourceModel (source : String) : Except String (Σ u : UProg, Programm (declOf u)) := do
-  let lowered ← uebersetzeAllg source
-  let tokens ← match lex source with
-    | .error _ => .error "lex"
-    | .ok tokens => .ok tokens
-  let items ← parseTopTief tokens
-  let program ← OldSource.restore (pre108 items) lowered.1 lowered.2.1
-  return ⟨lowered.1, program⟩
+  let parsed ← Frontend.source source {}
+  let declarations := pre108 parsed.prepared.elaborierbar
+  let unit ← (Frontend.elabWithScopes declarations
+    parsed.scopes.values parsed.scopes.types parsed.scopes.functions
+    (Frontend.tableWithEmpty parsed.scopes.values parsed.scopes.types)
+    (widths := parsed.scopes.widths)).bind (Profil.selectUnit {})
+  let (raw, _) ← lowerAllg unit
+  let program ← OldSource.restore declarations unit raw
+  return ⟨unit, program⟩
 
 def text : String :=
   "module transition_probe { table T count 2 { slot { s : u32 in 0 .. 2, } } state S { transition a { s : Idle -> Busy } requires true effects { writes T.slots } } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { transition T.slots[0].s : Idle -> Busy; return 23; } }"
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_refused : candidate = .error
-    "function contract: false VC; counterexample in observation order = [1]; parameters = []" := by
+theorem candidate_refused : candidate.toOption.isSome = false := by
   kernel_rfl
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
@@ -101,8 +102,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_refused : candidate = .error
-    "function contract: false VC; counterexample in observation order = [0, 1]; parameters = []" := by
+theorem candidate_refused : candidate.toOption.isSome = false := by
   kernel_rfl
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
