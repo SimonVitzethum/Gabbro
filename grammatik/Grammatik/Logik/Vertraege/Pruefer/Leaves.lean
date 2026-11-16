@@ -23,9 +23,14 @@ def narrowingCondition (budget : Nat) (expression : Expr D Γ Λ (.int lo hi))
       let value := eval world expression world locals
       if fits : low ≤ value.n ∧ value.n ≤ high then
         success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)) :=
-  localSelect budget expression locals _ (fun value =>
-    if fits : low ≤ value.n ∧ value.n ≤ high then
-      compile ⟨value.n, fits.1, fits.2⟩ else compileFailure)
+  localSelect budget expression locals
+    (fun value runtime world =>
+      if fits : low ≤ value.n ∧ value.n ≤ high then
+        success ⟨value.n, fits.1, fits.2⟩ runtime world else failure runtime world)
+    (fun value => by
+      by_cases fits : low ≤ value.n ∧ value.n ≤ high
+      · simpa only [fits, ↓reduceDIte] using compile ⟨value.n, fits.1, fits.2⟩
+      · simpa only [fits, ↓reduceDIte] using compileFailure)
 
 /-- A return is checked against its actual typed result. Complete finite
     domains are budgeted; an oversized range is refused, never sampled. -/
@@ -107,6 +112,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
                   rw [observed.correct read] at observedValue
                   change scalarValue _ (read.slots table (eval read index read locals).n field) = source at observedValue
                   exact (transport kind _).trans observedValue
+                dsimp only [read] at taken
                 unfold Runtime.wpS
                 simp only [execStmtH, taken, ↓reduceIte, Goals.holds, h, denotes]
                 rw [assignment_schreibSlot, offset.property, transport]

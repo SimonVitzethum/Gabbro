@@ -40,6 +40,11 @@ def statement (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     | .breaking _ body => do
         let pre ← block fuel body locals goals
         return pre.map (fun _ _ ready => ready)
+    | .onWhy expression arms => do
+        let pre ← reasonCases fuel arms locals goals
+        return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe =>
+          ready allowed safe (eval (world.lese Λ expression.orte) expression
+            (world.lese Λ expression.orte) locals))
     | .retry count test body overflow =>
         if count ≤ budget.expansion then
           retryCondition policy test body overflow
@@ -312,6 +317,32 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           · simp only [fits, ↓reduceDIte] at ready
             exact ready allowed safe)
     | _ => .error (.unsupported "contract end block is outside the checked control fragment")
+termination_by fuel
+
+def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Nat}
+    (arms : GrundArms D V l Γ Λ Λ' count) (locals : Env D Γ) (goals : Goals D V Γ) :
+    Except Frag.Refusal (Condition (fun runtime : Runtime program (fun _ => []) S => fun world =>
+      ∀ allowed, HandlerSafe policy runtime allowed → ∀ reason,
+        goals.holds allowed (execGrundH S runtime.oracle runtime.environment runtime.passes
+          runtime.calls arms reason world locals))) :=
+  match fuel with
+  | 0 => .error (.unsupported "contract reason dispatch syntax-depth budget exceeded")
+  | fuel + 1 => match arms with
+    | .nil => .ok
+        { formula := .tru
+          sound := fun _ _ _ _ _ reason => reason.elim0 }
+    | .cons first rest => do
+        let head ← block fuel first locals goals
+        let tail ← reasonCases fuel rest locals goals
+        return {
+            formula := conj head.formula tail.formula
+            sound := fun runtime world valid allowed safe reason => by
+              have parts := (Invarianten.Elim.Korrekt.conj_denote _ _ _).mp valid
+              rcases reason with ⟨ordinal, inside⟩
+              cases ordinal with
+              | zero => exact head.sound runtime world parts.1 allowed safe
+              | succ ordinal => exact tail.sound runtime world parts.2 allowed safe
+                  ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩ }
 termination_by fuel
 
 end

@@ -35,6 +35,7 @@ def statementSpecializations (limit : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' 
   | .ite _ yes no => min (limit + 1)
       (blockSpecializations limit yes + blockSpecializations limit no)
   | .breaking _ body | .locks _ _ body => blockSpecializations limit body
+  | .onWhy _ arms => reasonSpecializations limit arms
   | .retry count _ body overflow => min (limit + 1)
       ((count + 1) * blockSpecializations limit body + blockSpecializations limit overflow)
   | .traverse table _ body => min (limit + 1)
@@ -80,6 +81,12 @@ def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
       (specializationCount limit (.int lo hi) *
         (endSpecializations limit failure + endSpecializations limit tail))
   | _ => 1
+
+def reasonSpecializations (limit : Nat) {l Γ Λ Λ' count} :
+    GrundArms D V l Γ Λ Λ' count → Nat
+  | .nil => 0
+  | .cons head tail => min (limit + 1)
+      (blockSpecializations limit head + reasonSpecializations limit tail)
 
 end
 
