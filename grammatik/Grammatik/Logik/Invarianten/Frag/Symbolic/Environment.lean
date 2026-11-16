@@ -89,6 +89,17 @@ def SymEnv.Realizes (valuation : Assignment α) (world : World D) :
   | .cons symbol tail, .cons actual rest =>
       symbol.Realizes valuation world actual ∧ tail.Realizes valuation world rest
 
+/-- Immutable locals retain their values when memory or the event trace changes.
+    A memory-dependent initializer must first introduce a fresh immutable key. -/
+theorem SymEnv.realizes_world (symbols : SymEnv D α Γ) (actual : Env D Γ)
+    (valuation : Assignment α) (world after : World D) :
+    symbols.Realizes valuation world actual ↔ symbols.Realizes valuation after actual := by
+  induction symbols with
+  | nil => cases actual; rfl
+  | cons value rest ih =>
+      cases actual
+      cases value <;> exact and_congr Iff.rfl (ih _)
+
 theorem SymEnv.realizes_ofEnv (actual : Env D Γ) (valuation : Assignment α) (world : World D) :
     (SymEnv.ofEnv actual).Realizes valuation world actual := by
   induction actual with

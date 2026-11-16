@@ -19,6 +19,25 @@ def SymEnv.Bounded (next : Nat) : SymEnv D Nat Γ → Prop
   | .nil => True
   | .cons value rest => value.Bounded next ∧ rest.Bounded next
 
+theorem SymEnv.bounded_get (symbols : SymEnv D Nat Γ) (next : Nat)
+    (bounded : symbols.Bounded next) (name : Var Γ τ) : (symbols.get name).Bounded next := by
+  induction name with
+  | here => cases symbols; exact bounded.1
+  | there name ih => cases symbols; exact ih _ bounded.2
+
+theorem values_bind (valuation : Assignment Nat) (world : World D) (key : Nat) (value : Int) :
+    values (valuation.bind key value) world = (values valuation world).bind (.inr key) value := by
+  funext name
+  cases name <;> simp only [values, Assignment.bind, Sum.inr.injEq, reduceCtorEq, ↓reduceIte]
+
+theorem values_read (valuation : Assignment Nat) (world : World D)
+    (resources : List (Res D)) (carriers : List (D.Tab ⊕ D.Glob)) :
+    values valuation (world.lese resources carriers) = values valuation world := by
+  funext key
+  cases key with
+  | inl key => exact congrFun (assignment_lese world resources carriers) key
+  | inr key => rfl
+
 theorem SymValue.realizes_congr (symbol : SymValue D Nat τ) (next : Nat)
     (bounded : symbol.Bounded next) (valuation other : Assignment Nat)
     (agree : ∀ key, key < next → valuation key = other key)
@@ -75,18 +94,32 @@ def Context.empty : Context Unit 0 where
 /-- The formula remains quantified syntax until the arithmetic decision gate.
     Soundness covers every valuation, actual runtime and frozen entry datum. -/
 structure Certificate {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
-    (context : Context A next) (target : A → Runtime program checked S → World D → Prop) where
+    (context : Context A next)
+    (target : Assignment Nat → A → Runtime program checked S → World D → Prop) where
   formula : LProp (Key D Nat)
   sound : ∀ valuation item, context.holds valuation item → ∀ runtime world,
-    formula.denote (values valuation world) → target item runtime world
+    formula.denote (values valuation world) → target valuation item runtime world
 
 def Certificate.map {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
-    {context : Context A next} {target other : A → Runtime program checked S → World D → Prop}
+    {context : Context A next}
+    {target other : Assignment Nat → A → Runtime program checked S → World D → Prop}
     (pre : Certificate context target)
-    (implies : ∀ item runtime world, target item runtime world → other item runtime world) :
+    (implies : ∀ valuation item runtime world,
+      target valuation item runtime world → other valuation item runtime world) :
     Certificate context other where
   formula := pre.formula
   sound := fun valuation item present runtime world valid =>
-    implies item runtime world (pre.sound valuation item present runtime world valid)
+    implies valuation item runtime world (pre.sound valuation item present runtime world valid)
+
+def Certificate.read {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
+    {context : Context A next}
+    {target : Assignment Nat → A → Runtime program checked S → World D → Prop}
+    (pre : Certificate context target) (resources : List (Res D)) (carriers : List (D.Tab ⊕ D.Glob)) :
+    Certificate context (fun valuation item runtime world =>
+      target valuation item runtime (world.lese resources carriers)) where
+  formula := pre.formula
+  sound := fun valuation item present runtime world valid => pre.sound valuation item present runtime _ (by
+    rw [values_read]
+    exact valid)
 
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic
