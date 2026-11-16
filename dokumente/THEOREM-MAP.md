@@ -7562,6 +7562,7 @@ checker; this step does not provide entry snapshots or symbolic parameter gates.
 | `Witness.uniform_u32_environment_zeuge` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/Control.lean` | The actual environment VC accepts a memory-dependent, explicitly narrowed u32 return for every u32 argument at expansion budget zero. The outer parameter-domain gate is not claimed. |
 | `Witness.uniform_post_support_zeuge` | same | Postcondition support covers every decoded u32 result with expansion budget zero. |
 | `Witness.shared_call_results_zeuge` | same | A call with an inhabited full-width result and a real u32 argument accepts a shared continuation at budget zero, even when every specialization callback refuses. |
+| `Witness.uniform_wide_program_zeuge` | same | The actual contract gate accepts an acyclic two-function program with a real memory read and discarded u32 result at zero domain expansion and a four-case work budget. |
 | `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Its work-budget premise now counts uniform returns and shared discarded-result calls once. Its successful execution-check conclusion is unchanged; the pool reader remains its joint witness. |
 
 `checkPostFormulas` returns support for every decoded result, so the existing

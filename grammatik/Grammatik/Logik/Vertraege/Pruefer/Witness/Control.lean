@@ -175,6 +175,45 @@ theorem shared_call_results_zeuge :
       (some { formula := .tru, sound := fun _ _ _ _ => trivial })).toOption.isSome = true := by
   rfl
 
+/-- Two distinct functions retain a real memory read and a discarded u32
+    result. The caller must use the strict control compiler, since Basic
+    intentionally quantifies over arbitrary, potentially failing handlers. -/
+def sharedDeclaration : Deklaration :=
+  { u32Declaration with
+    Fn := Bool
+    sig := fun _ => 0
+    sigNr := fun _ =>
+      { params := [], erg := some (.int 0 (2 ^ 32 - 1)), gruende := 0
+        haelt := [], schreibt := fun _ => false, gschreibt := fun _ => false
+        konsumiert := [], produziert := [] }
+    passt := fun _ _ => false
+    passt_ok := fun _ _ impossible => by cases impossible
+    rzusage := fun item => nomatch item }
+
+def sharedFits : RufPasst sharedDeclaration (vertragVon sharedDeclaration true)
+    (sharedDeclaration.signatur false) [] where
+  hw := fun _ impossible => by cases impossible
+  hg := fun _ impossible => by cases impossible
+  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun _ impossible => nomatch impossible
+
+def sharedProgram : Programm sharedDeclaration where
+  invariante := fun item => nomatch item
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun branch => match branch with
+    | false => .ret (.val (.widen (by decide) (by decide)
+        (.glob false (fun _ member => (List.not_mem_nil member).elim)))) (List.Perm.refl _)
+    | true => .cons (.call false .nil sharedFits rfl)
+        (.ret (.val (.widen (by decide) (by decide) (.lit 7))) (List.Perm.refl _))
+
+/-- The actual program contract gate accepts both functions at zero domain
+    expansion and a four-case work budget, including the strict caller. -/
+theorem uniform_wide_program_zeuge :
+    KontrakteGeprueftB sharedProgram (SperrInv.leer sharedDeclaration) [false, true]
+      (fun _ => none) { depth := 8, expansion := 0, specializations := 4 } = true := by
+  with_unfolding_all rfl
+
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
