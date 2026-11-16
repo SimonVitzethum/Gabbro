@@ -7524,7 +7524,6 @@ is reported as an abstraction refusal, not as a source execution counterexample.
 | `CallSiteReplayBlocker.Positive.good_checker_zeuge` | `.../CallSite/CallSitePositiveFixture.lean` | A two-valued Boolean result satisfies `ensures result`; the alternative false result is rejected and violates that same nonliteral contract. |
 | `CallSiteReplayBlocker.good_checker`, `good_call_sites`, `good_call_sites_zeuge` | `.../CallSite/CallSiteReplayBlocker.lean` | The nonliteral positive fixture is accepted and has no reachable foreign call head, jointly on the same unit. |
 | `CallSiteAccepted.callSite_goal_zeuge` | `.../CallSite/CallSiteAcceptedFixture.lean` | The positive fixture jointly satisfies checker acceptance, the software/hardware/runtime premises and the complete reachable-state goal. It retains a declared unused software item whose global summary fails. |
-| `kernel_rfl_subst_zeuge` | `grammatik/Grammatik/Kern/Taktik/KernelRfl.lean` | Metadata after substitution preserves an ordinary equality; `kernel_rfl` still supplies only `Eq.refl`, checked by the kernel. |
 
 The totality path requires literal-true source pre/postconditions and no owed function
 invariants. Its primitive and loop certificates quantify over every atomic observation;
@@ -7535,15 +7534,15 @@ The unchanged `Gap.F03_reg` ending-register fixture is also checked by the
 literal-true totality path. Its `e_cause` is `none`, `e_gueltig` is true, and
 `requested_checked_zeuge`/`e_cause_link_zeuge` retain real register/fine-cell
 input evidence on that same accepted unit. `F03_reg.register_variants_zeuge`
-now checks both ending and block forms. Recovery retains both fixtures and
-their exact records; their numbered cell sets coincide. The refused annex
+now checks both ending and block forms. Both fixtures retain exact cell evidence; their numbered cell sets coincide.
+The fixed accepted recovery portfolio remains unchanged. The refused annex
 contains only the indirect-call fixture, whose
 cause/link witnesses name the missing finite target dispatch. Old-post and
 pointer-cost witnesses keep their original source defects and assert the
 actual snapshot and early cost diagnostics respectively.
 
-`GateAudit.atomic_restored_zeuge` also certifies the unchanged `M99_824`
-and `M99_825` typed register/await programs, with actual executed atomic
-reads. They join the exact accepted recovery records. The totality path
-restores three numbered coverage cells: 85 accepted cells, 73 beyond the
-baseline, and two remaining firm cells. No nontrivial atomic WP is added.
+`GateAudit.atomic_restored_zeuge` certifies the unchanged `M99_824` and
+`M99_825` typed register/await programs, with real executed atomic reads.
+Their full acceptance is recorded in the structural-candidate audit; this
+task does not enlarge the fixed recovery portfolio or add a nontrivial
+atomic WP.

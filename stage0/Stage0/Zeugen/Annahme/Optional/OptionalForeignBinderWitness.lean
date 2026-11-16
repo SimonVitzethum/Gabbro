@@ -173,7 +173,7 @@ def checkedCandidate : { value : Except String (Emitted text 256) // emit text 2
 
 def candidate : Except String (Emitted text 256) := checkedCandidate.val
 
-theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
+theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
 
 def output : Emitted text 256 := candidate.toOption.get candidate_present
 
@@ -190,9 +190,7 @@ theorem image_shape :
       (fun | .bindOptBeg .. => true | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.bytes.length := by
-  apply of_decide_eq_true
-  kernel_rfl
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide +kernel
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :
@@ -200,8 +198,7 @@ theorem binding_shape :
       (fun a => (output.tor a).map (·.nr))) = [some 39, some 3, some 3] ∧
     ((List.finRange output.compiled.unit.axs.length).map
       (fun a => (output.tor a).map (·.fehler))) = [some [], some [(-9, 0)], some [(-9, 0)]] := by
-  apply of_decide_eq_true
-  kernel_rfl
+  decide +kernel
 
 /-- Retain the generic certificate, rather than a program-specific lowering rule. -/
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
@@ -281,7 +278,7 @@ def checkedEndCandidate :
 
 def endCandidate : Except String (Emitted endText 256) := checkedEndCandidate.val
 
-theorem end_present : endCandidate.toOption.isSome = true := by kernel_rfl
+theorem end_present : endCandidate.toOption.isSome = true := by decide +kernel
 
 def endOutput : Emitted endText 256 := endCandidate.toOption.get end_present
 

@@ -31,7 +31,6 @@ def records : List (Einsatz × List Zelle) := [
   (F01_chain.e, F01_chain.zellen),
   (F02_foot.e, F02_foot.zellen),
   (F03_reg.e, F03_reg.zellen),
-  (Gap.F03_reg.e, Gap.F03_reg.zellen),
   (F04_nolock.e, F04_nolock.zellen),
   (F06_pool.e, F06_pool.zellen),
   (F07_race.e, F07_race.zellen),
@@ -41,31 +40,17 @@ def records : List (Einsatz × List Zelle) := [
   (M169_350.e, M169_350.zellen),
   (M103_803.e, M103_803.zellen),
   (M103_131.e, M103_131.zellen),
-  (M49_50.e, M49_50.zellen),
-  (Gap.M99_824.e, Gap.M99_824.e.zellen.eraseDups),
-  (Gap.M99_825.e, Gap.M99_825.e.zellen.eraseDups)]
+  (M49_50.e, M49_50.zellen)]
 
 def fixtures : List Einsatz := records.map Prod.fst
 
 def cells : List Zelle := (records.flatMap Prod.snd).eraseDups
 
-/-- Deduplication preserves exact membership without evaluating a concrete program. -/
-theorem deduplicated_cells (e : Einsatz) (x : Zelle) :
-    e.Hat x ↔ x ∈ e.zellen.eraseDups := by
-  change x ∈ e.zellen ↔ x ∈ e.zellen.eraseDups
-  simp only [List.mem_eraseDups]
-
-/-- The generic record law and acceptance hold on a real atomic-read fixture. -/
-theorem deduplicated_cells_zeuge : Gap.M99_824.e.gueltig = true ∧
-    Invarianten.Pruefer.atomicFreeB Gap.M99_824.e.P ⟨0, by decide⟩ = false ∧
-    ∀ x, Gap.M99_824.e.Hat x ↔ x ∈ Gap.M99_824.e.zellen.eraseDups :=
-  ⟨GateAudit.m99_824_checked, by decide +kernel, deduplicated_cells _⟩
-
 private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
     ∀ x, p.1.Hat x ↔ x ∈ p.2 := by
   intro p member
   simp only [records, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · refine ⟨F00_call.e_gueltig, fun x => ?_⟩
     change x ∈ F00_call.e.zellen ↔ x ∈ F00_call.zellen
     rw [← F00_call.zellen_exact, List.mem_eraseDups]
@@ -78,9 +63,6 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
   · refine ⟨F03_reg.e_gueltig, fun x => ?_⟩
     change x ∈ F03_reg.e.zellen ↔ x ∈ F03_reg.zellen
     rw [← F03_reg.zellen_exact, List.mem_eraseDups]
-  · refine ⟨Gap.F03_reg.e_gueltig, fun x => ?_⟩
-    change x ∈ Gap.F03_reg.e.zellen ↔ x ∈ Gap.F03_reg.zellen
-    rw [← Gap.F03_reg.zellen_exact, List.mem_eraseDups]
   · refine ⟨F04_nolock.e_gueltig, fun x => ?_⟩
     change x ∈ F04_nolock.e.zellen ↔ x ∈ F04_nolock.zellen
     rw [← F04_nolock.zellen_exact, List.mem_eraseDups]
@@ -111,9 +93,6 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
   · refine ⟨GateAudit.m49_50_checked, fun x => ?_⟩
     change x ∈ M49_50.e.zellen ↔ x ∈ M49_50.zellen
     rw [← M49_50.zellen_exact, List.mem_eraseDups]
-
-  · exact ⟨GateAudit.m99_824_checked, deduplicated_cells Gap.M99_824.e⟩
-  · exact ⟨GateAudit.m99_825_checked, deduplicated_cells Gap.M99_825.e⟩
 
 theorem checked : ∀ e ∈ fixtures, e.gueltig = true := by
   intro e member
@@ -211,10 +190,10 @@ def newlyRecovered : List Zelle := allCells.filter (fun x => !baselineCells.cont
 
 def missing : List Zelle := firm.filter (fun x => decide (x ∉ allCells))
 
-theorem counts : baselineCells.length = 12 ∧ cells.length = 85 ∧
-    allCells.length = 85 ∧ newlyRecovered.length = 73 ∧
-    firm.length = 69 ∧ (firm.filter allCells.contains).length = 67 ∧
-    (provisional.filter allCells.contains).length = 2 ∧ missing.length = 2 := by decide +kernel
+theorem counts : baselineCells.length = 12 ∧ cells.length = 82 ∧
+    allCells.length = 82 ∧ newlyRecovered.length = 70 ∧
+    firm.length = 69 ∧ (firm.filter allCells.contains).length = 64 ∧
+    (provisional.filter allCells.contains).length = 2 ∧ missing.length = 5 := by decide +kernel
 
 /-- Wave E's accepted atomic reader closes design cells 24 and 51. -/
 theorem atomic_reader_recovered_zeuge :
@@ -225,10 +204,13 @@ theorem atomic_reader_recovered_zeuge :
     ⟨(M49_50.e, M49_50.zellen), by simp [records], rfl⟩),
     GateAudit.m49_50_checked, M49_50.e_hat _ (by decide), M49_50.e_hat _ (by decide)⟩
 
-/-- Atomic/register totality restores three more cells; two firm cells remain. -/
+/-- The five remaining firm design cells are 20, 26, 46, 47 and 49. -/
 theorem missing_exact : missing = [
+    ⟨2, 0, true, [false, false, true, false]⟩,
+    ⟨2, 0, true, [false, true, false, true]⟩,
     ⟨2, 3, false, [false, true, false]⟩,
-    ⟨2, 3, false, [true, true, false]⟩] := by decide +kernel
+    ⟨2, 3, false, [true, true, false]⟩,
+    ⟨2, 3, false, [true, false, true]⟩] := by decide
 
 /-- No accepted M fixture contains a listed missing cell. -/
 theorem missing_not_covered : ∀ x ∈ missing, ¬ (∃ e ∈ allFixtures, e.Hat x) := by
@@ -248,7 +230,7 @@ theorem coverage_zeuge : F00_call.e ∈ fixtures ∧ F00_call.e ∈ allFixtures 
     (cells_iff _).mp ⟨_, recordMember, present⟩,
     (all_cells_iff _).mp ⟨_, member, present⟩, present⟩
 
-theorem missing_zeuge : ⟨2, 3, false, [false, true, false]⟩ ∈ missing ∧ ¬ (∃ e ∈ allFixtures, e.Hat ⟨2, 3, false, [false, true, false]⟩) :=
+theorem missing_zeuge : ⟨2, 0, true, [false, false, true, false]⟩ ∈ missing ∧ ¬ (∃ e ∈ allFixtures, e.Hat ⟨2, 0, true, [false, false, true, false]⟩) :=
   ⟨by decide +kernel, missing_not_covered _ (by decide +kernel)⟩
 
 #print axioms all_checked

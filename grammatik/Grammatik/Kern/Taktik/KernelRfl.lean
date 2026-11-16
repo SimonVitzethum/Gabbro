@@ -16,7 +16,7 @@ open Lean Elab Tactic Meta in
 elab "kernel_rfl" : tactic => do
   let goal ← getMainGoal
   let type ← instantiateMVars (← goal.getType)
-  let some (α, lhs, _) := type.consumeMData.eq? | throwError "kernel_rfl: the goal is not an equality"
+  let some (α, lhs, _) := type.eq? | throwError "kernel_rfl: the goal is not an equality"
   let level ← getLevel α
   goal.assign (mkApp2 (.const ``Eq.refl [level]) α lhs)
 
@@ -38,11 +38,6 @@ elab "kernel_change " t:term " at " h:ident : tactic => withMainContext do
 
 /-- The tactic closes a computed equality. -/
 theorem kernel_rfl_zeuge : (List.range 3).map (· + 1) = [1, 2, 3] := by kernel_rfl
-
-/-- Substitution may decorate the goal; metadata does not change its equality. -/
-theorem kernel_rfl_subst_zeuge (n : Nat) (zero : n = 0) : n + 1 = 1 := by
-  subst n
-  kernel_rfl
 
 /-- The goal and a hypothesis are restated through a computation. -/
 theorem kernel_change_zeuge (h : (List.range 2).length + 1 = 3) : (List.range 3).length = 3 := by

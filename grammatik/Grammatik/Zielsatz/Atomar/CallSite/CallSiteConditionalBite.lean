@@ -10,13 +10,9 @@ namespace Gabbro.Grammatik.Zielsatz.CallSiteConditionalBite
 
 /-- One boolean-returning function and software item, with the zero argument. -/
 def decl : Deklaration :=
-  { Gabbro.Grammatik.CallSiteZeuge.decl with
-    sigNr := fun _ => { Gabbro.Grammatik.CallSiteZeuge.sig with erg := some .bool }
-    passt := fun _ _ => false
-    passt_ok := fun _ _ impossible => by cases impossible
-    rzusage := fun item => nomatch item
-    aerg := fun _ => some .bool
-    anbieter_passt := fun table => nomatch table }
+  { CallSiteZeuge.decl with
+    sigNr := fun _ => { CallSiteZeuge.sig with erg := some .bool }
+    aerg := fun _ => some .bool }
 
 def contract : CallContract decl (decl.asignatur ()) where
   pre := .fls
