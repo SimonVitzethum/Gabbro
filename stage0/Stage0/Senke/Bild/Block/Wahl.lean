@@ -96,7 +96,7 @@ theorem BodyFrame.randSIR_ite {B : BodyFrame D} (hB : B.Ok) {l : Bool} {Γ : Ctx
       ct, tt, hct, by change tt + B.cap ≤ B.Ks; omega, by omega, q2.left, hlo, hu1, hk1, world, hpr, hH⟩
   | false =>
     have sb := brz_go q1.left.code (by have := pre.small; omega) pre.small
-      (by simpa only [Int.natCast_mul, Int.natCast_add, Int.natCast_ofNat] using
+      (by simpa only [Int.natCast_mul, Int.natCast_add, Int.cast_ofNat_Int] using
         (lit32_nat (n := 16 * (ct.length + 2)) (by omega))) (by simpa only [hen, Bool.false_eq_true, ↓reduceIte] using hw1)
     have q3 := (q2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
       (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
