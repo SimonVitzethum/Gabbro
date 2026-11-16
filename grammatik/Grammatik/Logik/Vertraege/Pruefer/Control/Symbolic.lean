@@ -21,6 +21,13 @@ structure Continuation (context : Context A next) (Γ : Ctx) where
       (fun valuation item runtime world => ∀ actual,
         symbols.Realizes valuation world actual → holds item runtime world actual))
 
+def Continuation.truth (context : Context A next) :
+    Continuation (program := program) (S := S) context Γ where
+  holds := fun _ _ _ _ => True
+  encode := fun _ _ _ _ => .ok {
+    formula := .tru
+    sound := fun _ _ _ _ _ _ _ _ => trivial }
+
 def Continuation.weaken {context : Context A next} (tail : Continuation (program := program) (S := S) context Γ)
     (larger : next ≤ more) : Continuation (program := program) (S := S) (context.weaken larger) Γ where
   holds := tail.holds

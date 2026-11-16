@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Memory
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Results
 public import Grammatik.Logik.Invarianten.Frag.Symbolic.Parameters
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Control
 
@@ -246,5 +247,61 @@ theorem mixed_parameter_coverage_zeuge :
       symbols.Realizes valuation world (.cons seven (.cons true (.cons seven .nil))) ∧
       ∀ key, key < 2 → valuation key = 42 :=
   mixedDomain.cover world (.cons seven (.cons true (.cons seven .nil))) (fun _ => 42)
+
+def resultPost : Expr declaration (ErgCtx [u32] (some u32)) [] .bool :=
+  .eq (.var .here) (.var (.there .here))
+
+def resultProgram : Programm declaration :=
+  { program with
+    ensures := fun _ => resultPost
+    rumpf := fun _ => .ret (.val (.var .here)) (List.Perm.refl _) }
+
+def resultTarget (value : ErgVal declaration (some u32)) (entry : Env declaration [u32])
+    (_ : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) (_ : World declaration) : Prop :=
+  value.n = (entry.get .here).n
+
+def resultCompiler : ResultCompiler frozenContext (some u32) resultTarget :=
+  fun _ _ resultSymbols _ => do
+    let encoded ← encodeValue (resultSymbols.get .here)
+    return {
+      formula := .eq encoded.val (.var (.inr 0))
+      sound := fun valuation entry present _ world valid value realized => by
+        change symbols.Realizes valuation _ entry at present
+        have input : valuation 0 = (entry.get .here).n := by cases entry; exact present.1
+        have selected := resultSymbols.realizes_get (ergEnv (some u32) value .nil) valuation world .here realized
+        have number := encoded.property valuation world value selected
+        change encoded.val.denote (values valuation world) = value.n at number
+        change encoded.val.denote (values valuation world) = valuation 0 at valid
+        exact number.symm.trans (valid.trans input) }
+
+def resultCandidate := resultCondition symbols bounded_zeuge 0 (some u32)
+  (resultProgram.ensures ()) resultTarget resultCompiler
+
+theorem result_present_zeuge : resultCandidate.toOption.isSome = true := by rfl
+def resultCertificate : Certificate frozenContext
+    (fun valuation entry (runtime : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) world =>
+      ∀ old actual, symbols.Realizes valuation old actual → ∀ value,
+      wahr? (eval old (resultProgram.ensures ()) world (ergEnv (some u32) value actual)) = true →
+      resultTarget value entry runtime world) :=
+  resultCandidate.toOption.get result_present_zeuge
+
+/-- A genuine identity contract over all u32 answers is discharged with one
+    quantified result. This witnesses the result rule, not the pending gate switch. -/
+theorem result_decides_zeuge :
+    decideB (VC.close (VC.lower resultCertificate.formula)) (VC.close_closed _) = true := by
+  apply (VC.close_decide_true_iff _).mpr
+  intro values
+  apply (VC.lower_denote _ values).mpr
+  change ∀ value : Int, ((0 ≤ value ∧ value ≤ 2 ^ 32 - 1) ∧ value = values (.inr 0)) →
+    value = values (.inr 0)
+  exact fun _ guarded => guarded.2
+
+theorem result_correspondence_zeuge
+    (runtime : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) :
+    resultTarget seven actual runtime world :=
+  resultCertificate.sound valuation actual realizes_zeuge runtime world
+    ((VC.lower_denote resultCertificate.formula (values valuation world)).mp
+      (VC.close_sound (VC.lower resultCertificate.formula) result_decides_zeuge (values valuation world)))
+    world actual realizes_zeuge seven rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SymbolicWitness
