@@ -160,9 +160,10 @@ private theorem sonde_return_orte_empty {Γ : Ctx}
 
 attribute [local cbv_eval] sonde_return_orte_empty
 
+attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
+  Vertraege.Pruefer.checkFunction
+
 private theorem sonde_common : CheckWitness sondeUnitMade.val 0 := by
-  attribute [local cbv_opaque] Invarianten.Pruefer.invariantVCB
-    Vertraege.Pruefer.checkFunction
   constructor <;> cbv
   simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   constructor
