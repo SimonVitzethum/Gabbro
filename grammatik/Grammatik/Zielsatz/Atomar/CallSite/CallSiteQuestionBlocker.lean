@@ -10,6 +10,9 @@ public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteConditionalBite
 
 namespace Gabbro.Grammatik.Zielsatz.CallSiteQuestionBlocker
 
+attribute [local reducible] CallSiteConditionalBite.decl
+  Gabbro.Grammatik.CallSiteZeuge.decl Gabbro.Grammatik.CallSiteZeuge.sig
+
 abbrev decl := CallSiteConditionalBite.decl
 
 def contract : CallContract decl (decl.asignatur ()) where
@@ -88,6 +91,7 @@ theorem binding : ForeignVertrag unit oracle := by
     cases he
     rfl
   · intro a hsw σ ρ
+    cases a
     change some (Sum.inl true) ≠ none
     intro h
     cases h
