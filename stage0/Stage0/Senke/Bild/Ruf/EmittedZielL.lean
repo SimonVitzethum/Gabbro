@@ -90,13 +90,13 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
     unfold OldSource.accepts at accepted
     split at accepted
     · cases accepted
-    · cases guests : Gabbro.Grammatik.Parser.UebersetzeAllg.sourceGuests output.compiled.unit with
+    · cases guests : Gabbro.Grammatik.Parser.UebersetzeAllg2.sourceGuests output.compiled.unit with
       | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
       | ok descriptors =>
         simp only [guests, bind, Except.bind] at accepted
         have checked := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
         rw [akzeptiertX_guest_eq] at checked
-        have structural := Bool.and_eq_true_iff.mp checked |>.1
+        have structural := (Bool.and_eq_true_iff.mp checked).1
         have core := akzeptiertSpecX_of output.fsA.2 output.lsA.2 output.csA.2 [] structural
         have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
             (output.einheit Q).ws := by

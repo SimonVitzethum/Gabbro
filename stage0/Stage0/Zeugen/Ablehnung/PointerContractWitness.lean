@@ -35,6 +35,8 @@ import all Init.Data.String.ToSlice
 @[expose] public section
 
 namespace Gabbro.Stage0.PointerContractWitness
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
@@ -42,12 +44,30 @@ set_option maxHeartbeats 400000
 def text : String :=
   "module pointer_probe { impl fn identity(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a { return a; } impl fn main() -> u64 in 0 .. 9 { let p : fn(a : u64 in 0 .. 9) -> u64 in 0 .. 9 requires a > 0 ensures result == a effects { } costs <= 8 ops = &identity; let value = p(3); return value; } }"
 
-/-- A written function-pointer type with a contract and a cost passes the export gate; its cost is
-    checked. Here the function behind it declares no cost, so the unit is refused. -/
+/-- Full compilation now refuses the pointer observation before the later cost gate. -/
 theorem candidate_refused :
     emit text 64 = .error
-      "declared costs do not hold: a pointer type declares a cost and admits a function without a declared cost within it" := by
+      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
   kernel_rfl
 
+/-- Run the original cost checker independently on the actual scoped, lowered
+    and restored source; its negative cost coverage must not disappear. -/
+def pointerCostVerdict : Except String (Bool × Option String) := do
+  let parsed ← Frontend.source text {}
+  let declarations := pre108 parsed.prepared.elaborierbar
+  let unit ← (Frontend.elabWithScopes declarations
+    parsed.scopes.values parsed.scopes.types parsed.scopes.functions
+    (Frontend.tableWithEmpty parsed.scopes.values parsed.scopes.types)
+    (widths := parsed.scopes.widths)).bind (Profil.selectUnit {})
+  let (raw, _) ← lowerAllg unit
+  let program ← OldSource.restore declarations unit raw
+  let costs := CostBinding.declared (uMembers declarations)
+  return (CostBinding.holds costs unit program irDurchlaeufe,
+    CostBinding.failing costs unit program irDurchlaeufe)
+
+/-- The original written pointer budget still refuses an admitted function with no cost. -/
+theorem pointer_cost_refused_zeuge : pointerCostVerdict = .ok
+    (false, some "a pointer type declares a cost and admits a function without a declared cost within it") := by
+  kernel_rfl
 
 end Gabbro.Stage0.PointerContractWitness

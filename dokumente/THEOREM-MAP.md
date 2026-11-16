@@ -6955,6 +6955,20 @@ typed entry with `G = 1`: requires holds, but its returned 1 violates the inheri
 post demanding `old(G) + 1 = 2`; the actual call reports `nachbedingung`. This is a concrete semantic counterexample as
 well as a fragment refusal.
 
+`Stage0/Senke/Tore/AreaProbes.lean` keeps full admission and nonempty complete
+images for wide normal and fallible answers. Like the Boolean binder fixture,
+its sole reason returns 9 directly; high-limb and failure-path witnesses remain.
+`Stage0/Senke/Bild/Ruf/EmittedZielL.lean` retains its image-theorem statements:
+structural acceptance is derived directly from the actual compiler Bool,
+including the invariant/contract certificates, while the existing semantic
+user/start duties remain separate premises.
+
+`Stage0/Zeugen/Ablehnung/PointerContractWitness.lean`: `candidate_refused`
+records the earlier pointer-observation fragment refusal. The new
+`pointer_cost_refused_zeuge` independently preserves the original negative
+cost coverage on the actual scoped, lowered and restored source, including
+the original missing-cost diagnostic.
+
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
 
 On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.
