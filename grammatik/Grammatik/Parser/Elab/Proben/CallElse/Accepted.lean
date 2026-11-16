@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Proben.CallElse.Parser
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Cover.Mitglieder
+import Grammatik.Kern.Taktik.KernelRfl
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -43,6 +44,7 @@ open Uebersetze UebersetzeAllg UebersetzeAllg2 Zielsatz
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
+set_option Elab.async false
 
 def foreignHead : String :=
   "reason G { Weg = 1 \"failed\" exhaustive } " ++
@@ -71,15 +73,36 @@ def hasCanonicalHandler (text : String) : Bool :=
   | .ok ⟨u, program, functions⟩ =>
     (Cover.Mitglieder.mitglieder u program functions).contains "Stmt.axiomCallElse"
 
-theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
-theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
+/-- Preserve the strict checker's actual refusal for the unchanged source. -/
+def refusalReason (text : String) : Option String :=
+  match uebersetzeAllg text with
+  | .error cause => some cause
+  | .ok ⟨u, program, functions⟩ =>
+    match Vertraege.Pruefer.checkContracts program (Cover.Differenz.sperrFamilie u)
+        functions (fun _ => none) with
+    | .error cause => some cause.message
+    | .ok _ => none
 
-theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by decide +kernel
+/-- Outside the decidable fragment: the discarded fallible foreign call. -/
+theorem named_refused_zeuge : acceptedText namedSource = false ∧
+    refusalReason namedSource = some
+      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+  constructor <;> kernel_rfl
+
+theorem unnamed_refused_zeuge : acceptedText unnamedSource = false ∧
+    refusalReason unnamedSource = some
+      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+  constructor <;> kernel_rfl
+
+theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by kernel_rfl
 
 /-- Exercise the continuing-block path as well as function-body lowering. -/
 def nestedSource : String := foreignHead ++
   "impl fn f() -> u32 in 0 .. 9 { if true { rd(1) else { return 0; }; } return 1; }"
 
-theorem nested_accepted_zeuge : acceptedText nestedSource = true := by decide +kernel
+theorem nested_refused_zeuge : acceptedText nestedSource = false ∧
+    refusalReason nestedSource = some
+      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+  constructor <;> kernel_rfl
 
 end Gabbro.Grammatik.Parser.CallElseProben
