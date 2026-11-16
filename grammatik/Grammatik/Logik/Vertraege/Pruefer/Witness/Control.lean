@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Fremd
 
 @[expose] public section
 
@@ -105,3 +106,5 @@ theorem return_local_without_enumeration_zeuge :
   constructor <;> rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
+
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
