@@ -5250,10 +5250,9 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`libraryFn_bound`**: For arbitrary `sig : FnSig`, `body : SAnw`, `c : clausesMetadataWithoutLoad sig.klauseln = false`, `b : bodyMetadata 10000 body = false`, `p : sig.params.any (fun p => typeMetadata p.2) = false`, `r : sig.res.any typeMetadata = false`, assuming `h : sig.art = "library"`, the conclusion is `itemMetadata (.fnT sig body) = false`.
 * **`transT_bound`**: For arbitrary `target : String`, `translator : FnSig`, `body : SAnw`, `c : clausesMetadata translator.klauseln = false`, `p : translator.params.any (fun p => typeMetadata p.2) = false`, `r : translator.res.any typeMetadata = false`, the conclusion is `itemMetadata (.transT target translator body) = false`.
 * **`library_zeuge`**: the conclusion is `let lib : FnSig`.
-`stage0/Stage0/Zeugen/StateWitness.lean`:
+`stage0/Stage0/Zeugen/Annahme/StateWitness.lean`:
 
-* **`candidate_present`**: the conclusion is `candidate.toOption.isSome = true`.
-* **`accepted_image`**: the conclusion is `emit text 64 = .ok output`.
+* **`candidate_refused`**: the unchanged state source has `candidate = .error "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment"`. No emitted image is claimed for this source.
 
 Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
@@ -5748,6 +5747,13 @@ reason count and a typed reason handler; the binding additionally carries the
 successful continuation. `indSonst` and `indSonstE` in the canonical semantics
 evaluate the pointer and arguments and dispatch the call's result or reason to
 the corresponding continuation.
+
+The unchanged source probes in `Parser/Elab/Proben/IndirectElse/Accepted.lean`
+retain `canonical_handler_zeuge`: lowering really emits `Stmt.callIndElse`.
+Their strict checker verdicts are refusals, with the exact function-pointer
+observation limitation: `named_refused_zeuge`, `unnamed_refused_zeuge`,
+`nested_refused_zeuge` and `reference_refused_zeuge` each prove full rejection
+and the actual reason, "local observation needs a bounded integer or Boolean type".
 
 `grammatik/Grammatik/Kern/Syntax/Satz/T4/Teil1.lean`:
 
