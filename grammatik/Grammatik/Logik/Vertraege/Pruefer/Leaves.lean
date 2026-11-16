@@ -42,10 +42,14 @@ def returnCondition (budget : Nat) {Γ : Ctx} {Λ : List (Res D)} {result : Opti
   match result, expression, returned with
   | none, .empty, returned => requireCondition (returned ())
   | some _, .val (.var name), returned => requireCondition (returned (locals.get name))
+  | some _, .val (.widen low high body), returned =>
+      returnCondition budget (.val body) locals (fun value => returned (Zahl.weiter low high value))
   | some _, .val expression, returned =>
       localSelect budget expression locals
         (fun value _ world => denotes (returned value) world)
         (fun value => requireCondition (returned value))
+termination_by sizeOf expression
+decreasing_by all_goals simp_wf
 
 /-- Scalar updates reuse P20's substitution; the post is stronger at logic
     stops and value returns. Unsupported leaves have no accepting fallback. -/

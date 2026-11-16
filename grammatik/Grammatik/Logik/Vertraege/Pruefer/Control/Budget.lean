@@ -22,12 +22,16 @@ def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1
   | some type => specializationCount limit type
 
-/-- A bound variable is already a decoded value; returning it creates one
-    continuation, independently of the size of its declared result type. -/
-def returnSpecializations (limit : Nat) {Γ Λ kind} (expression : ErgExpr D Γ Λ kind) : Nat :=
-  match kind, expression with
-  | none, .empty | some _, .val (.var _) => 1
-  | some type, .val _ => specializationCount limit type
+/-- Interval widening does not create a new observation or split a decoded
+    value. Follow the same return rule as the semantic compiler. -/
+def expressionReturnSpecializations (limit : Nat) {Γ Λ type} : Expr D Γ Λ type → Nat
+  | .var _ => 1
+  | .widen _ _ body => expressionReturnSpecializations limit body
+  | _ => specializationCount limit type
+
+def returnSpecializations (limit : Nat) {Γ Λ kind} : ErgExpr D Γ Λ kind → Nat
+  | .empty => 1
+  | .val expression => expressionReturnSpecializations limit expression
 
 mutual
 
