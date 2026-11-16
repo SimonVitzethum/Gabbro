@@ -208,7 +208,6 @@ def constantValue (expression : Expr D Γ Λ τ) (locals : Env D Γ) :
       return ⟨prodSetW field value.val next.val, fun world => by
         simp only [eval, value.property world, next.property world] <;> rfl⟩
   | _ => none
-termination_by sizeOf expression
 
 def constantFields (fields : Args D Γ Λ types) (locals : Env D Γ) :
     Option { values : ProdVal D.Fn D.passt types //
@@ -219,7 +218,6 @@ def constantFields (fields : Args D Γ Λ types) (locals : Env D Γ) :
       let a ← constantValue head locals
       let b ← constantFields tail locals
       return ⟨(a.val, b.val), fun world => by simp only [evalProd, a.property world, b.property world] <;> rfl⟩
-termination_by sizeOf fields
 
 def constantPayload (payload : NutzlastExpr D Γ Λ type) (locals : Env D Γ) :
     Option { value : Nutzlast D.Fn D.passt type //
@@ -229,7 +227,6 @@ def constantPayload (payload : NutzlastExpr D Γ Λ type) (locals : Env D Γ) :
   | .val expression => do
       let value ← constantValue expression locals
       return ⟨value.val, fun world => by simp only [evalNutz, value.property world] <;> rfl⟩
-termination_by sizeOf payload
 
 end
 
