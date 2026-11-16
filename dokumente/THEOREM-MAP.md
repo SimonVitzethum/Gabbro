@@ -6952,7 +6952,7 @@ lowering/runtime witnesses. `old_post_fragment_refused_zeuge` pins the old-memor
 post refusal and `raw_model_refused_zeuge` replaces its stale admission claim.
 `contract_counterexample_zeuge` independently runs that actual program from a
 typed entry with `G = 1`: requires holds, but its returned 1 violates the inherited
-post demanding `old(G) + 1 = 2`. This is a concrete semantic counterexample as
+post demanding `old(G) + 1 = 2`; the actual call reports `nachbedingung`. This is a concrete semantic counterexample as
 well as a fragment refusal.
 
 ## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)

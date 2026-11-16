@@ -93,17 +93,21 @@ def counterexampleWorld : World D :=
 /-- The actual return violates the inherited increment post: 1 differs from old(G)+1=2. -/
 theorem contract_counterexample_zeuge :
     ReqAmEintritt program function counterexampleWorld OldFunctionProbe.params ∧
-    (match rufAt program OldFunctionProbe.oracle 1 1 function
-        counterexampleWorld OldFunctionProbe.params with
-      | .ok final value => value.n = 1 ∧
+    (match execEnd OldFunctionProbe.oracle 1 (rufAt program OldFunctionProbe.oracle 1 0)
+        body counterexampleWorld OldFunctionProbe.params with
+      | .zurueck final value => value.n = 1 ∧
           wahr? (eval counterexampleWorld (program.ensures function) final
             (ergEnv (D.erg function) value OldFunctionProbe.params)) = false
-      | _ => False) := by
+      | _ => False) ∧
+    rufAt program OldFunctionProbe.oracle 1 1 function
+      counterexampleWorld OldFunctionProbe.params = .logik (.nachbedingung function) := by
   constructor
   · unfold ReqAmEintritt
     kernel_rfl
-  · kernel_change ((1 : Int) = 1 ∧ false = false)
-    exact ⟨rfl, rfl⟩
+  · constructor
+    · kernel_change ((1 : Int) = 1 ∧ false = false)
+      exact ⟨rfl, rfl⟩
+    · kernel_rfl
 
 /-- The connected function compiler accepts old in raw-model requires and body expressions.
     G returns the just-written 1, not the entry field 0, and the original ensures is preserved. -/
