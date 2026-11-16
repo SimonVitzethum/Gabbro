@@ -11,8 +11,8 @@ public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 namespace Gabbro.Grammatik.Zielsatz.CallSiteAccepted
 
 open Gabbro.Grammatik Speichermodell
-open CallSiteZeuge (decl)
-open CallSiteBlocker (traceOracle)
+open Gabbro.Grammatik.CallSiteZeuge (decl)
+open Gabbro.Grammatik.CallSiteBlocker (traceOracle)
 open CallSiteReplayBlocker (goodUnit good_checker good_user good_call_sites)
 
 abbrev sp0R : Speicher decl.mitRuhe := speicherR goodUnit.sp0
