@@ -122,4 +122,27 @@ def Certificate.read {program : Programm D} {checked : D.Fn → List D.Inv} {S :
     rw [values_read]
     exact valid)
 
+/-- Conjunction is reserved for genuinely finite choices, such as Boolean
+    values and reason constructors. Unknown integer ranges use binders. -/
+def allCertificates {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
+    (context : Context A next) (items : List I)
+    (target : I → Assignment Nat → A → Runtime program checked S → World D → Prop)
+    (compile : ∀ candidate, Except Refusal (Certificate context (target candidate))) :
+    Except Refusal (Certificate context (fun valuation entry runtime world =>
+      ∀ candidate ∈ items, target candidate valuation entry runtime world)) :=
+  match items with
+  | [] => .ok {
+      formula := .tru
+      sound := fun _ _ _ _ _ _ _ impossible => False.elim (List.not_mem_nil impossible) }
+  | candidate :: rest => do
+      let head ← compile candidate
+      let tail ← allCertificates context rest target compile
+      return {
+        formula := .and head.formula tail.formula
+        sound := fun valuation entry present runtime world valid value member => by
+          rcases List.mem_cons.mp member with same | inside
+          · subst value
+            exact head.sound valuation entry present runtime world valid.1
+          · exact tail.sound valuation entry present runtime world valid.2 value inside }
+
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic
