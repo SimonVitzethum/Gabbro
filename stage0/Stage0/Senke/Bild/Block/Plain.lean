@@ -92,8 +92,8 @@ theorem randDannL_call_ein_aus {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O]
   obtain ⟨n, mN, sN, _, hN⟩ := BodyFrame.randBIR_schritt hB h.1 hex
   obtain ⟨fpc, rpc, Kc, Ksc, ensc, pcI, mI, sI, hOk, hI⟩ :=
     BlockCallSite.eintritt hB hc hdv hcap hj hp (BodyFrame.randBIR_call_site h.1) (rufAt_ok_req hR)
-  obtain ⟨M1, σm, hl1, hG, hout⟩ := randDannGL_ruf_ein_aus (hO.toP B.P) h.2 hR hg hkC
-  have hRuf := rufOk_gleich_tiefAlle (P := B.P) (passes := B.passes) (hO.toP B.P) thr Agl j
+  obtain ⟨M1, σm, hl1, hG, hout⟩ := randDannGL_ruf_ein_aus h.2 hR hg hkC
+  have hRuf := rufOk_gleich_tiefAlle (P := B.P) (passes := B.passes) thr Agl j
   obtain ⟨Me, hlP, hGe⟩ := randGL_zerlegung hO hRuf hkC hG
   obtain ⟨M2, hl2, hG2⟩ := hout hGe
   refine ⟨fpc, rpc, Kc, Ksc, ensc, pcI, _, mI, mN, M1, M2, σm,

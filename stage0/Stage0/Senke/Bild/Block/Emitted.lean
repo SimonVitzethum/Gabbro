@@ -106,7 +106,7 @@ theorem Emitted.bild_ziel_aufruf_im_if [Kern] (output : Emitted src K options)
       (output.compiled.program.rumpf output.compiled.main) (output.sp0.welt []) output.args
       (.cons (.ite cnd (.bindCall g args he hp hrg restB) other) restE) σ ρ := zerlegung_rahmen hk
   have hRuf := rufOk_gleich_tiefAlle (P := output.compiled.program) (passes := output.image.passes)
-    (leseblindP_alle output.compiled.program O) thr Agl (output.image.depth - 1)
+    thr Agl (output.image.depth - 1)
   obtain ⟨pce, me, Me, st, hl, hRe⟩ := randL_zerlegung hOk hRuf hk' hSt
   obtain ⟨n1, n2, pc, mc, Mc, stB, hlB, hB⟩ := randL_ite_eintritt hOk hRe hcond
   have hreach := rufErreichbar_lauf (hl.trans hlB) RufErreichbarG.start
