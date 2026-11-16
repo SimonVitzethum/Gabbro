@@ -13,7 +13,9 @@ namespace Gabbro.Grammatik.Zielsatz.CallSiteReplayBlocker.Positive
 /-- Retain the unused software item, with a genuinely two-valued function result. -/
 def decl : Deklaration :=
   { Gabbro.Grammatik.CallSiteZeuge.decl with
-    sigNr := fun _ => { Gabbro.Grammatik.CallSiteZeuge.sig with erg := some .bool } }
+    sigNr := fun _ => { Gabbro.Grammatik.CallSiteZeuge.sig with erg := some .bool }
+    passt := fun _ _ => false
+    passt_ok := fun _ _ impossible => by cases impossible }
 
 instance : DecidableEq decl.Fn := inferInstanceAs (DecidableEq Unit)
 instance : DecidableEq decl.Ax := inferInstanceAs (DecidableEq Unit)

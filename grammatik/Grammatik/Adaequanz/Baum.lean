@@ -23,7 +23,6 @@ public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Sigma
 public import Mathlib.Data.Fintype.Option
 public import Mathlib.Data.Fintype.Prod
-public import Mathlib.Algebra.BigOperators.Fin
 @[expose] public section
 
 
