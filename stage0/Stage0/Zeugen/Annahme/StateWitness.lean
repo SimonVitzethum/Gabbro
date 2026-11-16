@@ -45,9 +45,11 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-#eval match candidate with
-  | .error cause => cause
-  | .ok _ => "accepted"
+#eval (do
+  let result := match candidate with
+    | .error cause => cause
+    | .ok _ => "accepted"
+  throw (IO.userError ("StateWitness diagnostic: " ++ result)) : IO Unit)
 
 /-- The caller does not establish the transition's source state. -/
 theorem candidate_refused : candidate = .error
