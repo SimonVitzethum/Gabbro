@@ -40,84 +40,53 @@ def returnSpecializations (limit : Nat) {Γ Λ kind} : ErgExpr D Γ Λ kind → 
 
 mutual
 
-/-- This scan only refines the resource estimate. Actual admission still
-    comes from the unchanged semantic condition, including every early exit. -/
-def statementMayContinue {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Bool
-  | .ret .. | .retWhy .. | .retScoped .. | .retWhyScoped .. | .leave .. | .next .. => false
-  | .ite _ yes no => blockMayContinue yes || blockMayContinue no
-  | .breaking _ body | .locks _ _ body => blockMayContinue body
-  | .onWhy _ arms => reasonsMayContinue arms
-  | _ => true
-
-def blockMayContinue {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Bool
-  | .cons first rest => statementMayContinue first && blockMayContinue rest
-  | .bind _ rest | .bindCall _ _ _ _ _ rest | .bindCallElse _ _ _ _ _ _ rest
-    | .narrow _ _ _ _ rest | .narrowRequired _ _ _ rest | .check _ _ rest => blockMayContinue rest
-  | _ => true
-
-def reasonsMayContinue {l Γ Λ Λ' count} : GrundArms D V l Γ Λ Λ' count → Bool
-  | .nil => false
-  | .cons head tail => blockMayContinue head || reasonsMayContinue tail
-
-end
-
-mutual
-
-/-- Estimate complete selection work before compiling. Decoded values do not
-    split. A discarded call result shares its already compiled continuation;
-    result-dependent binders multiply it. Refusal supplies no semantic fact. -/
-def statementSpecializations (limit : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
-  | .assignVar _ expression => selectionSpecializations limit expression
+/-- Charge a continuation only on paths that reach it. Early returns carry
+    their own cost; a discarded call shares its already compiled tail. This
+    mirrors the WP compiler rather than multiplying unrelated exit families. -/
+def statementSpecializations (limit continuation : Nat) {l Γ Λ Λ'} : Stmt D V l Γ Λ Λ' → Nat
+  | .assignVar _ expression => min (limit + 1)
+      (selectionSpecializations limit expression * continuation)
   | .ret expression _ | .retScoped expression _ => returnSpecializations limit expression
+  | .retWhy .. | .retWhyScoped .. | .leave .. | .next .. => 1
   | .call f args _ _ => min (limit + 1)
-      (argumentSelectionSpecializations limit args * resultSpecializations limit (D.erg f))
+      (argumentSelectionSpecializations limit args * resultSpecializations limit (D.erg f) + continuation)
   | .ite _ yes no => min (limit + 1)
-      (blockSpecializations limit yes + blockSpecializations limit no)
-  | .breaking _ body | .locks _ _ body => blockSpecializations limit body
-  | .onWhy _ arms => reasonSpecializations limit arms
-  | .retry 0 _ _ overflow => min (limit + 1) (1 + blockSpecializations limit overflow)
+      (blockSpecializations limit continuation yes + blockSpecializations limit continuation no)
+  | .breaking _ body | .locks _ _ body => blockSpecializations limit continuation body
+  | .onWhy _ arms => reasonSpecializations limit continuation arms
+  | .retry 0 _ _ overflow => min (limit + 1)
+      (continuation + blockSpecializations limit continuation overflow)
   | .retry count _ body overflow => min (limit + 1)
-      ((count + 1) * blockSpecializations limit body + blockSpecializations limit overflow)
+      ((count + 1) * blockSpecializations limit continuation body +
+        blockSpecializations limit continuation overflow)
   | .traverse table _ body => min (limit + 1)
-      ((D.count table).toNat * blockSpecializations limit body + 1)
-  | _ => 1
+      ((D.count table).toNat * blockSpecializations limit continuation body + continuation)
+  | _ => continuation
 
-def blockSpecializations (limit : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
-  | .nil => 1
-  | .cons (.call f args _ _) tail => min (limit + 1)
-      (argumentSelectionSpecializations limit args * resultSpecializations limit (D.erg f) +
-        blockSpecializations limit tail)
-  | .cons head tail =>
-      if statementMayContinue head then min (limit + 1)
-        (statementSpecializations limit head * blockSpecializations limit tail)
-      else statementSpecializations limit head
+def blockSpecializations (limit continuation : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
+  | .nil => continuation
+  | .cons head tail => statementSpecializations limit (blockSpecializations limit continuation tail) head
   | .bind expression tail => min (limit + 1)
-      (selectionSpecializations limit expression * blockSpecializations limit tail)
+      (selectionSpecializations limit expression * blockSpecializations limit continuation tail)
   | .bindCall f args _ _ _ tail => min (limit + 1)
       (argumentSelectionSpecializations limit args * resultSpecializations limit (D.erg f) *
-        blockSpecializations limit tail)
+        blockSpecializations limit continuation tail)
   | .bindCallElse f args _ _ _ failure tail => min (limit + 1)
       (argumentSelectionSpecializations limit args *
-        (resultSpecializations limit (D.erg f) * blockSpecializations limit tail +
+        (resultSpecializations limit (D.erg f) * blockSpecializations limit continuation tail +
           D.gruende f * endSpecializations limit failure))
   | .check _ failure tail => min (limit + 1)
-      (endSpecializations limit failure + blockSpecializations limit tail)
+      (endSpecializations limit failure + blockSpecializations limit continuation tail)
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
-        (endSpecializations limit failure + blockSpecializations limit tail))
+        (endSpecializations limit failure + blockSpecializations limit continuation tail))
   | .narrowRequired (lo := lo) (hi := hi) _ _ _ tail => min (limit + 1)
-      (specializationCount limit (.int lo hi) * blockSpecializations limit tail)
-  | _ => 1
+      (specializationCount limit (.int lo hi) * blockSpecializations limit continuation tail)
+  | _ => continuation
 
 def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
   | .ret expression _ | .retScoped expression _ => returnSpecializations limit expression
-  | .cons (.call f args _ _) tail => min (limit + 1)
-      (argumentSelectionSpecializations limit args * resultSpecializations limit (D.erg f) +
-        endSpecializations limit tail)
-  | .cons head tail =>
-      if statementMayContinue head then min (limit + 1)
-        (statementSpecializations limit head * endSpecializations limit tail)
-      else statementSpecializations limit head
+  | .cons head tail => statementSpecializations limit (endSpecializations limit tail) head
   | .bind expression tail => min (limit + 1)
       (selectionSpecializations limit expression * endSpecializations limit tail)
   | .bindCall f args _ _ _ tail => min (limit + 1)
@@ -136,11 +105,11 @@ def endSpecializations (limit : Nat) {l Γ Λ} : Endblock D V l Γ Λ → Nat
       (specializationCount limit (.int lo hi) * endSpecializations limit tail)
   | _ => 1
 
-def reasonSpecializations (limit : Nat) {l Γ Λ Λ' count} :
+def reasonSpecializations (limit continuation : Nat) {l Γ Λ Λ' count} :
     GrundArms D V l Γ Λ Λ' count → Nat
   | .nil => 0
   | .cons head tail => min (limit + 1)
-      (blockSpecializations limit head + reasonSpecializations limit tail)
+      (blockSpecializations limit continuation head + reasonSpecializations limit continuation tail)
 
 end
 

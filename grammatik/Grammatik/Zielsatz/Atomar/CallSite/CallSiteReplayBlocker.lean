@@ -124,7 +124,9 @@ set_option maxRecDepth 4096 in
 theorem checker :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
     Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =
-      .error "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
+      .error ("unsupported invariant constructor: " ++
+        ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
+          "; parameters = " ++ reprStr ([] : List Int))) := by
   constructor
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
