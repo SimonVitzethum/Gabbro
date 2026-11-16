@@ -110,7 +110,7 @@ theorem nested_refused_zeuge : acceptedText nestedSource = false ∧
     still needs the checked control-fragment extension. -/
 theorem reference_refused_zeuge : acceptedText referenceSource = false ∧
     refusalReason referenceSource = some
-      "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+      "unsupported invariant constructor: contract indirect call needs a checked finite target dispatch" := by
   constructor <;> kernel_rfl
 
 theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by kernel_rfl
