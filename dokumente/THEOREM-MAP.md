@@ -5250,6 +5250,21 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`libraryFn_bound`**: For arbitrary `sig : FnSig`, `body : SAnw`, `c : clausesMetadataWithoutLoad sig.klauseln = false`, `b : bodyMetadata 10000 body = false`, `p : sig.params.any (fun p => typeMetadata p.2) = false`, `r : sig.res.any typeMetadata = false`, assuming `h : sig.art = "library"`, the conclusion is `itemMetadata (.fnT sig body) = false`.
 * **`transT_bound`**: For arbitrary `target : String`, `translator : FnSig`, `body : SAnw`, `c : clausesMetadata translator.klauseln = false`, `p : translator.params.any (fun p => typeMetadata p.2) = false`, `r : translator.res.any typeMetadata = false`, the conclusion is `itemMetadata (.transT target translator body) = false`.
 * **`library_zeuge`**: the conclusion is `let lib : FnSig`.
+`stage0/Stage0/Zeugen/Annahme/Contracts/CapacityRequiredWitness.lean`:
+
+* **`candidate_refused`, `last_image_refused_zeuge`**: required allocation's end block is outside the checked control fragment.
+* **`block_image_refused_zeuge`, `block_last_image_refused_zeuge`**: the corresponding ordinary block is outside the checked control fragment.
+* **`stop_code_zeuge`, `narrowing_images_zeuge`**: the generic capacity-stop code and admitted model-level narrowing images remain unchanged.
+
+`stage0/Stage0/Zeugen/Annahme/Contracts/TransitionContractWitness.lean`:
+
+* **`candidate_refused`**: the unchanged simple transition source has no admitted image.
+* **`sourceModel_unit`, `sourceModel_unit_zeuge`**: successful actual scoped elaboration, lowering and postcondition restoration retain the frontend unit; the two-function source jointly satisfies these premises.
+* **`counterexample_zeuge`**: the actual restored caller admits the typed world with `s = 1`, while its transition callee requires `s = 0`.
+* **`Ordered.counterexample_zeuge`**: the typed table state `[0, 1]` satisfies the actual caller's precondition and violates the generated cycle callee's precondition.
+* **`Ordered.function_fragment_refusal`, `Ordered.contracts_refused`, `Ordered.checker_refused`**: the actual generated callee's parameter product exceeds the VC expansion budget; its refusal propagates through the unchanged contract collector and production admission. No image is claimed.
+* **`model_present`, `data_present`, `data_unit`, `model_unit`**, also in `Ordered`: producer success and exact source-unit transport; **`field_types`, `globals_empty`, `main_params`, `transition_params`** pin the actual finite types used by the concrete counterexamples.
+
 `stage0/Stage0/Zeugen/Annahme/StateWitness.lean`:
 
 * **`candidate_refused`**: the unchanged state source has `candidate = .error "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment"`. No emitted image is claimed for this source.
@@ -5747,6 +5762,13 @@ reason count and a typed reason handler; the binding additionally carries the
 successful continuation. `indSonst` and `indSonstE` in the canonical semantics
 evaluate the pointer and arguments and dispatch the call's result or reason to
 the corresponding continuation.
+
+The unchanged discarded-result foreign-call probes in
+`Parser/Elab/Proben/CallElse/Accepted.lean` retain `canonical_handler_zeuge`
+for the actual `Stmt.axiomCallElse` lowering. `named_refused_zeuge`,
+`unnamed_refused_zeuge` and `nested_refused_zeuge` pair full rejection with
+its actual reason: the contract statement is outside the checked scalar/control
+fragment. This is distinct from supported bound-result foreign-call certificates.
 
 The unchanged source probes in `Parser/Elab/Proben/IndirectElse/Accepted.lean`
 retain `canonical_handler_zeuge`: lowering really emits `Stmt.callIndElse`.
@@ -6633,12 +6655,13 @@ Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
   `terminalReasonRetire_ok` (reason return), `ordinaryRetire_ok` (C16 ordinary consumption),
   `terminalMoveDropped_refused`, `borrowedRetire_refused`, `unheldRetire_refused`,
   `repeatedRetire_refused`, `handbackRetire_refused`.
-* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_present` / `accepted_image`,
-  `image_shape` (actual terminal signatures, retained source retire and nonempty image),
-  `return_inventory`, `canonical_source` and `image_correct` reference the production
-  `compile_source_program` / `irBild_correct` path. `retires_ghost` states the existing generic
-  `lowS` arm emits no instructions or extra scratch words; its existing `lowS_ok` case remains
-  the simulation. `dropped_image_refused` and `borrowed_image_refused` exercise the same emitter.
+* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_refused` records the actual
+  strict refusal: the retire statement is outside the checked scalar/control fragment.
+  `unit_present`, `unit_shape` and `return_inventory` retain the actual frontend unit,
+  terminal signatures, explicit retire and exact empty residual inventories.
+  `retires_ghost` still states that generic `lowS` emits no instructions or extra scratch
+  words for retire. `dropped_image_refused` and `borrowed_image_refused` retain the
+  genuine lowering refusals. No emitted image is claimed for the unsupported source.
 * `ExportMetadata` admits only the plain nominal declaration `linear type Mark;` through the
   checked mark registry. It retains refusal of mint effects and ghost value types while the
   C08 software-call/root-once bridge is open (`mint_effect_metadata_refused`,
@@ -6887,6 +6910,12 @@ Continuation from `a3792f69c` (implementation only; **no Lean/lake/build was run
 * **`Satz/PruefungArtefakt.lean`**: `SondenNachweis` adds the unique `SondenBindung` and exact selected-image equality to the existing result metadata `Gemessen`. `sondenNachweisB_sound` proves the executable evidence gate sound for a selected member of the derived checks. `sondenNachweis_stale`/`sondenNachweis_unbound` refuse stale-image and unbound evidence. `Gemessen` alone compares name/mode, not image: measured acceptance uses the stronger gate. These remain evidence metadata, not proof that external hardware ran or a universal prose claim holds.
 * **`Pruefung/Gegenprobe.lean`**: source declares the real Boolean counterprobe function; its private adapter lowers with the unit. `sonde_nachweisB`/`sonde_nachweis` connect executable evidence admission to the generic soundness theorem. Refusals cover absent binding, removed adapter, duplicate ownership, unrun result, stale name and same-name/same-mode stale image.
 * **`Pruefung/Torhuelle.lean`**, **`Fremdtor.lean`**: a fallible C08 foreign gate uses ordinary `bindAxElse`; `torFehler` exhaustively rethrows the exact closed reason case and the wrapper retains that reason channel. No range-bottom or false normal answer is synthesized on error. `fremdTor_fehler_pending` and `torAbschluss_fehler` refuse successful evidence on an error return; `fremdTor_erfolg` witnesses normal completion. The unclosed-handler lowering refusal remains. Parameters have no argument list in `gates`; ordinary reason-channel gates retain their named refusal until an explicit policy is supplied. The current strict contract checker refuses both unchanged foreign units: the void foreign statement is outside its scalar/control fragment, and the fallible `u64` result exceeds the local-observation expansion budget (`fremd_abgelehnt`, `fremdFallible_abgelehnt`). Their exact source/unit and function-producer equations, positive Duty admission, and report-discharge proofs remain checked; no complete acceptance claim remains for these units.
+The positive C16 floor and counterprobe fixtures retain full admission and all
+Duty/report witnesses. Their local `x = 3` uses the inferred singleton range,
+including the reporter parameter, instead of a full-width observation outside
+the finite VC budget. Source/token/unit equality certificates retain that same
+actual fixture at every layer.
+
 * **`Export.uCheckIdx`**, **`Stage0/Frontend/CheckExport.lean`**: index resolution now names the same Duty wrappers as descriptor derivation, including foreign gates. `stage0_c16_formen_urteile` records the three admitted floor/counterprobe units and the two strict foreign-wrapper refusals; `stage0_c16_sondenachweis` retains the stronger artifact gate. Generated work uses the existing ordinary-function compiler and its generic certificate; no second emitter or source interpreter was added. All witness modules are registered in `Alle/Teil1`.
 
 Continuation from `717635600` (implementation attempts only; **no Lean/lake/build was run by this sub-agent**):
@@ -7259,7 +7288,7 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 
 | Statement | File | Meaning |
 |---|---|---|
-| `NumberWildcardWitness.candidate_present`, `accepted_image` | `NumberWildcardWitness.lean` | Numeric arms `0`, `1` and `_` produce an actual `Emitted` image through `emit`. |
+| `NumberWildcardWitness.candidate_present`, `accepted_image` | `NumberWildcardWitness.lean` | Numeric arms `0`, `1` and `_` on `n : u8 in 0 .. 2`, with result `u8 in 0 .. 17`, produce an actual `Emitted` image through `emit`. |
 | `NumberWildcardWitness.canonical_source`, `image_correct` | same | The same compiled source is canonical and instantiates the generic image correctness theorem, with its existing hardware/runtime premises. |
 | `NumberWildcardWitness.missing_fallback_refused_zeuge`, `duplicate_pattern_refused_zeuge` | same | Whole-source emission refuses a missing fallback and duplicate numeric patterns. |
 | `FieldNarrowingWitness.candidate_present`, `accepted_image` | `FieldNarrowingWitness.lean` | A u64 record field narrowed to `0 .. 63`, with a sibling-field failure return, reaches an actual image. |
@@ -7268,8 +7297,8 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 | `FieldNarrowingWitness.first_write_emitted_zeuge` | same | Narrowing a u64 field permits its first compound increment, with later reads at the record's declared type. |
 | `FieldNarrowingWitness.indexed_store_emitted_zeuge`, `stale_store_refused_zeuge` | same | A narrowed field indexes an actual table write; mutation of the record before that write invalidates the index fact and is refused. |
 | `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
-| `U64DifferenceWitness.candidate_present`, `accepted_image` | `U64DifferenceWitness.lean` | Full-width unsigned operands, including values above bit 63, compile through `emit`. |
-| `U64DifferenceWitness.canonical_source`, `image_correct` | same | The same source instantiates the canonical-program and generic image theorems. |
+| `U64DifferenceWitness.candidate_refused` | `U64DifferenceWitness.lean` | The unchanged full-width source is refused because its local observation range exceeds the VC budget. |
+| `U64DifferenceWitness.unit_present` | same | The actual scoped frontend still elaborates the unchanged source before admission. No emitted image is claimed. |
 | `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
 | `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
 | `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `first_write_value_zeuge`, `indexed_store_snapshot_zeuge`, `assignment_root_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, the first write value, store-index reads versus mutation roots, lexical barriers, unchanged historical reads and nonlocal refusal. |

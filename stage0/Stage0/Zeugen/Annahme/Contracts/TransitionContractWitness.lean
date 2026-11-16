@@ -80,6 +80,25 @@ theorem sourceModel_unit (source : String) (input : List SItemTief × UProg)
       simp only [restored, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at emitted
       exact (congrArg Sigma.fst emitted).symm
 
+/-- A refused actual contract gate blocks unchanged production admission. -/
+private theorem checker_refused_of_contracts (unit : UProg) (program : Programm (declOf unit))
+    (mainIndex : (declOf unit).Fn)
+    (contracts : Vertraege.Pruefer.KontrakteGeprueftB program
+      (Cover.Differenz.sperrFamilie unit) (List.finRange unit.fns.length)
+      (Cover.Differenz.sperrQuellen unit) = false) :
+    OldSource.accepts unit program mainIndex ≠ .ok true := by
+  intro accepted
+  unfold OldSource.accepts at accepted
+  split at accepted
+  · cases accepted
+  · cases guests : sourceGuests unit with
+    | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
+    | ok items =>
+      simp only [guests, bind, Except.bind] at accepted
+      have gate := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
+      simp only [Zielsatz.AkzeptiertX, Invarianten.Pruefer.invariantVCB,
+        contracts, Bool.and_false, Bool.false_eq_true] at gate
+
 namespace Data
 
 def transition (ordered : Bool) : UTransition where
@@ -283,6 +302,8 @@ theorem function_fragment_refusal :
       .error (.unsupported "writer parameter product exceeds the VC expansion budget") := by
   kernel_rfl
 
+attribute [local irreducible] program Vertraege.Pruefer.checkFunction Invarianten.Pruefer.collect
+
 /-- One refused real member blocks the actual unchanged contract collector. -/
 theorem contracts_refused : Vertraege.Pruefer.KontrakteGeprueftB program
     (Cover.Differenz.sperrFamilie unit) (List.finRange unit.fns.length)
@@ -313,18 +334,8 @@ theorem contracts_refused : Vertraege.Pruefer.KontrakteGeprueftB program
       cases each
 
 /-- The exact restored source program cannot pass production admission. -/
-theorem checker_refused : OldSource.accepts unit program mainIndex ≠ .ok true := by
-  intro accepted
-  unfold OldSource.accepts at accepted
-  split at accepted
-  · cases accepted
-  · cases guests : sourceGuests unit with
-    | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
-    | ok items =>
-      simp only [guests, bind, Except.bind] at accepted
-      have gate := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
-      simp only [Zielsatz.AkzeptiertX, Invarianten.Pruefer.invariantVCB,
-        contracts_refused, Bool.and_false, Bool.false_eq_true] at gate
+theorem checker_refused : OldSource.accepts unit program mainIndex ≠ .ok true :=
+  checker_refused_of_contracts unit program mainIndex contracts_refused
 
 /-- The typed state [0,1] satisfies main's precondition and violates cycle's. -/
 theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArguments ∧
@@ -339,6 +350,15 @@ theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld mainArg
     rw [blocked] at accepted
     cases accepted
 
+/-- The admission rule has an actual refused two-function source as its witness. -/
+private theorem checker_refused_of_contracts_zeuge :
+    unit.fns.length = 2 ∧
+    Vertraege.Pruefer.KontrakteGeprueftB program (Cover.Differenz.sperrFamilie unit)
+      (List.finRange unit.fns.length) (Cover.Differenz.sperrQuellen unit) = false ∧
+    OldSource.accepts unit program mainIndex ≠ .ok true :=
+  ⟨by kernel_rfl, contracts_refused, checker_refused⟩
+
 end Ordered
+
 
 end Gabbro.Stage0.TransitionContractWitness
