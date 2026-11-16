@@ -65,46 +65,46 @@ theorem ort_rahmen (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → 
     ∀ (s : Stmt D V l Γ Λ Λ'), OrtPrem C s → ∀ {σ σ1 : World D} {ρ ρ1 : Env D Γ},
       execStmt O passes R s σ ρ = .ok σ1 ρ1 → ∀ c, ¬ C c → TraegerGleich σ1.speicher σ.speicher c
   | .assignSlot t _ _ _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C (show _ ∧ _ from hC).1 hc))
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .assignThru _ t _ _ _ _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C (show _ ∧ _ from hC).1 hc))
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .assignThruOwn _ t _ _ _ _ _ _ _ _ _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C (show _ ∧ _ from hC).1 hc))
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .assignSlotRef _ t _ _ _ _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C (show _ ∧ _ from hC).1 hc))
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .assignGlob g _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibGlob _ g Λ _ (ne_von_C (show _ ∧ _ from hC).1 hc))
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .putBytes t f hf _ _ _ _ _ _ _, hC => by
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       cases hex
       exact traegerGleich_trans (traeger_schreibBytes t f hf Λ (ne_von_C (show _ ∧ _ from hC).1 hc) _ _ _)
-        (traeger_lese σ Λ _ c)
+        (traeger_lese _ Λ _ c)
   | .assignVar _ _, _ => by
-      intro σ σ1 ρ ρ1 hex c _
+      intro hex c _
       cases hex
-      exact traeger_lese σ Λ _ c
+      exact traeger_lese _ Λ _ c
   | .shift t _ _ i _ _ _ _ _ _, hC => by
       have hCt : C (.inl t) := (show ∀ o ∈ (.inl t :: i.orte : List (D.Tab ⊕ D.Glob)), C o from hC) _ (by simp)
-      intro σ σ1 ρ ρ1 hex c hc
+      intro hex c hc
       simp only [execStmt] at hex
       split at hex
       · cases hex
-        exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C hCt hc)) (traeger_lese σ Λ _ c)
+        exact traegerGleich_trans (traeger_schreibSlot _ t Λ _ _ _ (ne_von_C hCt hc)) (traeger_lese _ Λ _ c)
       · cases hex
   | .ite .., h => False.elim h
   | .onOption .., h => False.elim h
