@@ -43,7 +43,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.why g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannRetGrund (M : RufMaschineG D) (f : Faden)
       {lk : Bool} {Γk : Ctx} {Λk Λk'' : List (Res D)}
       (r : Fin (vertragVon D (M.faeden f).kopf.f).gruende)
@@ -66,7 +66,8 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (rho : Env D (D.params g)) (hrho : (M.faeden f).kopf.rho = hfg ▸ rho)
       (s0 : World D) (hs0 : (M.faeden f).kopf.s0 = s0)
       (rg : Fin (D.gruende g)) (hrg : rg = hfg ▸ r)
-      (hn : D.gruende g = n) :
+      (hn : D.gruende g = n)
+      (hniedrig : kk.keinNiedrig) :
       RufSchrittG5 P O passes M f
         ⟨M.speicher,
          rufUpdateG M.faeden f
@@ -76,7 +77,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             (M.faeden f).spur,
             (RufEreignisF.why g rho rg s0 (M.weltVon f)) :: (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
 
   | dannRegLies (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
@@ -98,7 +99,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, D.rtyp r :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             Ereignis.fremd (.inr (.inl r)) :: (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f [Ereignis.fremd (.inr (.inl r))], M.start⟩
+         M.lauf ++ rufEigenG f [Ereignis.fremd (.inr (.inl r))], M.start, M.kontexte⟩
   | dannRegLiesElseWahr (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -123,7 +124,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, D.rtyp r :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannRegLiesElseFalsch (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -147,7 +148,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannAwaits (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
@@ -169,7 +170,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, D.gtyp g :: Γ, Λ, .cons (σ₁.globs g) ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannExchange (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (g : D.Glob) (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
@@ -193,7 +194,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, D.gtyp g :: Γ, Λ, .cons (σ₁.globs g) ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannGleit (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (l₁ h₁ l₂ h₂ : Int × Int)
@@ -218,7 +219,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannGleitLit (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (q lo hi : Int × Int)
@@ -237,7 +238,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+         M.lauf, M.start, M.kontexte⟩
   | dannGleitVon (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (l₁ h₁ : Int)
@@ -260,7 +261,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannGleitNarrowOk (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (l₁ h₁ : Int × Int)
@@ -284,7 +285,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, .fl lo hi :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannGleitNarrowElse (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (l₁ h₁ : Int × Int)
@@ -306,7 +307,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, .dann sonst.alsBlock.2 (.abbruch k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannBindAxiom (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty)
       (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
@@ -332,7 +333,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ,
               .dann rest (.schrumpf k)⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
 
   /-- A fallible foreign call (C-free lane, 2026-09-30) answers a value: the rest runs with it. -/
   | dannBindAxiomElseOk
@@ -362,7 +363,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- It answers a reason: the `else` block runs with it bound, in block position (as `rueckGrund` for a call). -/
   | dannBindAxiomElseGrund
       (M : RufMaschineG D) (f : Faden)
@@ -391,7 +392,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, .why (D.agruende a) :: Γ, Λ, (Env.cons (τ := .why (D.agruende a)) r ρ), .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- A generalized nonfallible foreign call in `Block` position («C08»): the optional
       result continues over `ErgCtx` -- void adds no local, a value binds. -/
   | dannBindAxiomOpt (M : RufMaschineG D) (f : Faden)
@@ -419,7 +420,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
               .dann rest (GRest.weiterOpt e k)⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- A generalized fallible foreign call in `Block` position answers a value («C08»):
       the optional result continues over `ErgCtx`. -/
   | dannBindAxiomOptElseOk
@@ -451,7 +452,7 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
               .dann rest (GRest.weiterOpt e k)⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- It answers a reason: the `else` block runs with it bound, in block position («C08»). -/
   | dannBindAxiomOptElseGrund
       (M : RufMaschineG D) (f : Faden)
@@ -483,6 +484,6 @@ inductive RufSchrittG5 (P : Programm D) (O : Orakel D) (passes : Nat) :
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

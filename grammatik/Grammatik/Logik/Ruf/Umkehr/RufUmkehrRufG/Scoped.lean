@@ -200,7 +200,7 @@ def umkehrScopedM : RufMaschineG adD :=
   ⟨adSp0, fun _ => ⟨[adCaller],
     ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], _, Env.nil,
       .aufraeumen ⟨.inl umkehrScopedWert, umkehrScopedVor⟩ [()]⟩⟩,
-    umkehrScopedVor.spur, []⟩, [], adSp0.welt []⟩
+    umkehrScopedVor.spur, []⟩, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 def umkehrScopedNach : RufFadenG adD :=
   ⟨[], adCaller, (umkehrScopedVor.gibt ()).spur,
@@ -208,7 +208,7 @@ def umkehrScopedNach : RufFadenG adD :=
 
 def umkehrScopedM' : RufMaschineG adD :=
   ⟨adSp0, rufUpdateG umkehrScopedM.faeden 0 umkehrScopedNach,
-    [⟨0, .gibt ()⟩], adSp0.welt []⟩
+    [⟨0, .gibt ()⟩], adSp0.welt [], umkehrScopedM.kontexte⟩
 
 /-- The last release really pops a callee and retains its saved value,
     satisfying the step theorem's coverage and head premises jointly. -/

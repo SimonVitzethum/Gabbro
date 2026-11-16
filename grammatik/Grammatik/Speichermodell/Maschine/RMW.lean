@@ -142,7 +142,7 @@ theorem exchange_liest_schreibt {M M' : RufMaschineG D} {u : Faden} {g : D.Glob}
         simp only [rufUpdateG_self]
         rw [hs₂, hs₁]
         rfl
-      have hE := ereignisse_eq (M := M) (M' := ⟨σ₂.speicher, _, M.lauf ++ rufEigenG u neu, M.start⟩)
+      have hE := ereignisse_eq (M := M) (M' := ⟨σ₂.speicher, _, M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩)
         (f := u) hX
       refine ⟨?_, Or.inl ?_⟩
       · show (Sum.inr g, false) ∈ zugriffe M _ u

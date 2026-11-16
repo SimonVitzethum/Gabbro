@@ -98,14 +98,14 @@ def bM1 : RufMaschineG bD :=
   ⟨bM0.speicher, rufUpdateG bM0.faeden 0
     ⟨(bM0.faeden 0).stapel, ⟨(), .nil, (bM0.faeden 0).kopf.s0,
       ⟨false, [], [], .nil, .dann (.cons (.forever () Expr.tru .nil) .nil) (.ende (.ret .empty (List.Perm.refl _)))⟩⟩,
-     (bM0.faeden 0).spur, (bM0.faeden 0).log⟩, bM0.lauf, bM0.start⟩
+     (bM0.faeden 0).spur, (bM0.faeden 0).log⟩, bM0.lauf, bM0.start, bM0.kontexte⟩
 
 /-- After `dannForever` at budget `p`: the loop with `p` passes. -/
 def bM2 (p : Nat) : RufMaschineG bD :=
   ⟨bM1.speicher, rufUpdateG bM1.faeden 0
     ⟨(bM1.faeden 0).stapel, ⟨(), .nil, (bM1.faeden 0).kopf.s0,
       ⟨false, [], [], .nil, .ewig () p Expr.tru .nil (.dann .nil (.ende (.ret .empty (List.Perm.refl _))))⟩⟩,
-     (bM1.faeden 0).spur, (bM1.faeden 0).log⟩, bM1.lauf, bM1.start⟩
+     (bM1.faeden 0).spur, (bM1.faeden 0).log⟩, bM1.lauf, bM1.start, bM1.kontexte⟩
 
 theorem bz_schritt1 (p : Nat) : RufSchrittG bP bO p bM0 0 bM1 :=
   RufSchrittG.endeEntf bM0 0 false [] [] [] (.forever () Expr.tru .nil) (.ret .empty (List.Perm.refl _)) .nil

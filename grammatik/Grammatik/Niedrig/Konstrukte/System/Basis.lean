@@ -20,7 +20,6 @@ structure SystemAssumptions (D : Deklaration) where
   FirmwareEntry : D.Annahme
   distinct : Mmu ≠ IrqDelivery ∧ Mmu ≠ FirmwareEntry ∧ IrqDelivery ≠ FirmwareEntry
 
-abbrev SystemContext (D : Deklaration) := Context D Arch.ArchState Maske.PrioMaske
 
 /-- The context owns the whole grant, has no outstanding views and performs
     the existing checked linear source move. Hardware identity is exact. -/

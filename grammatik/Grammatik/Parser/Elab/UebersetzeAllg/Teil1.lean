@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Kern.Syntax.Zucker
-public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.Generic.Signatures
 public import Grammatik.Parser.Elab.UebersetzeAllg.Beleg
 

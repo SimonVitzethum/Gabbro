@@ -54,7 +54,7 @@ theorem akteurSA_g7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) 
         (M.weltVon u).gibt L := Speicher.welt_speicher ((M.weltVon u).gibt L)
     rw [hw]
     exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
-  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort _hniedrig =>
     rename_i l Γ Λ
     subst σ₁
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -65,7 +65,7 @@ theorem akteurSA_g7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ P) 
         ((M.weltVon u).lese Λ e.orte) ρ), (M.weltVon u).lese Λ e.orte⟩
       (by rw [hempty]) ?_
     exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
-  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
+  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort _hniedrig =>
     rename_i l Γ Λ
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenSA_scopedGrund hFS hF ρ r grund R hhead hret (M.faeden u).spur

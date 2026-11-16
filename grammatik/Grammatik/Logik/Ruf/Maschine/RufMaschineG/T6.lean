@@ -226,7 +226,7 @@ def H1H : RufMaschineG rufDF :=
         Signatur.anfang rufDF (rufDF.signatur rufCallerF), rhoCallerF,
         .dann (.cons retryStmtH .nil) (.ende driverRet)⟩⟩,
       (M0H.faeden 0).spur, (M0H.faeden 0).log⟩,
-   M0H.lauf, M0H.start⟩
+   M0H.lauf, M0H.start, M0H.kontexte⟩
 
 /-- Step 1 fires `endeEntf`: the loop head moves into `dann`. -/
 theorem schritt1H : RufSchrittG hP rufOF 0 M0H 0 H1H :=

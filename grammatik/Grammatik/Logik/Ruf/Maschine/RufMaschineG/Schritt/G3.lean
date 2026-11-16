@@ -42,7 +42,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | rufCallInd (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (p : Expr D Γ Λ (.fnptr n))
@@ -73,7 +73,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | dannBindCall (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty)
       (g : D.Fn) (args : Args D Γ Λ (D.params g)) (he : D.erg g = some τ)
@@ -101,7 +101,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | dannBindCallInd (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty)
       (n : Nat) (p : Expr D Γ Λ (.fnptr n))
@@ -132,7 +132,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | dannBindCallElse (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty)
       (g : D.Fn) (args : Args D Γ Λ (D.params g)) (he : D.erg g = some τ)
@@ -162,7 +162,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | rueckBind (M : RufMaschineG D) (f : Faden)
       (caller : RufRahmenG D) (rest : List (RufRahmenG D))
       (hpop : (M.faeden f).stapel = caller :: rest)
@@ -197,7 +197,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             s1.spur,
             (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   | dannLeaveTrav (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -226,7 +226,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ, k⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f (neu ++ neu₁), M.start⟩
+         M.lauf ++ rufEigenG f (neu ++ neu₁), M.start, M.kontexte⟩
   | dannNextTrav (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -251,7 +251,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ'.tail, .trav t inv body is k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannLeaveWieder (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -276,7 +276,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ', k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannNextWieder (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -301,7 +301,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ', .wieder n bis body ueber k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannLeaveEwig (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
@@ -325,7 +325,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, Λ, ρ', k⟩⟩,
             σ'.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- A fallible foreign call as a statement («C08»): checked sugar over
       `bindAxiomOptElse` with an empty success tail. The success value is
       discarded (`rest` runs in `Γ`); the reason branch and both return paths
@@ -355,7 +355,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, Γ, nachSig D (D.asignatur a) Λ, ρ, .dann rest k⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   | dannAxiomCallElseGrund (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (e : Option Ty)
       (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = e)
@@ -383,7 +383,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
-         M.lauf ++ rufEigenG f neu, M.start⟩
+         M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩
   /-- A fallible indirect call in `Block` position («C07»): the shape of
       `dannBindCallElse` over the pointer type. The pointer is evaluated once,
       the actual conforming function is called with transported arguments, and
@@ -423,7 +423,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
   /-- A fallible indirect call as a statement («C07»): checked sugar over
       `bindCallIndElse` with an empty success tail, fused into one push. The pointer is
       evaluated once, the actual conforming function is called with transported arguments,
@@ -465,6 +465,6 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
               rho, .ende (P.rumpf g)⟩⟩,
             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu,
-         M.start⟩
+         M.start, M.kontexte⟩
 
 end Gabbro.Grammatik

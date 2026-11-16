@@ -60,15 +60,34 @@ theorem w_dannRetGrundP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.retWhy r hperm) rest) k⟩)
-    (hΛ : HeldIn Λ (offen z.spur)) :
+    (hΛ : HeldIn Λ (offen z.spur)) (hniedrig : k.keinNiedrig) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       GepopptGrundG M' f (zielG r) rst z.kopf.f z.kopf.rho z.kopf.s0 z.log r (M.weltVon f) := by
   subst hz
   cases hart with
   | sonst err restb k' ρc hc =>
     exact ⟨_, RufSchrittG.dannRetGrund M f r hperm rest k ρ hhead caller rst hpop _ _ _ _ _ _
-      err restb k' ρc hc hΛ _ rfl (M.faeden f).kopf.rho rfl _ rfl r rfl rfl,
+      err restb k' ρc hc hΛ _ rfl (M.faeden f).kopf.rho rfl _ rfl r rfl rfl hniedrig,
       gepopptGrundG_neu rfl rfl⟩
+
+/-- Return simulation follows a nonempty run, including the scope exits
+    that precede delivery. The one-step helper requires its explicit guard. -/
+theorem lauf_dannRetGrundP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+    (hpop : z.stapel = caller :: rst)
+    {zielG : Fin (D.gruende z.kopf.f) → RufRahmenG D} (hart : PopGrund z.kopf.f caller zielG)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (r : Fin (vertragVon D z.kopf.f).gruende)
+    (hperm : Λ.Perm (vertragVon D z.kopf.f).ende)
+    (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.retWhy r hperm) rest) k⟩)
+    (hΛ : HeldIn Λ (offen z.spur)) :
+    ∃ M', RufLaufG.Pos P O passes f M M' ∧
+      GepopptGrundG M' f (zielG r) rst z.kopf.f z.kopf.rho z.kopf.s0 z.log r (M.weltVon f) := by
+  obtain ⟨M', hs, hg⟩ := w_dannRetGrundP (P := P) (O := O) (passes := passes) hz
+    caller rst hpop hart r hperm rest k ρ hhead hΛ (GRest.keinNiedrig_alt _)
+  exact ⟨M', RufLaufG.Pos.einzeln hs, hg⟩
 
 end SchritteGrund
 /-! ## 4. What a call must deliver: the callee's frame runs to its pop -/

@@ -40,7 +40,7 @@ def RufSchrittGX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕ 
     (∀ c, ¬ Tg c → TraegerGleich σ M.speicher c) ∧
     (∀ c, SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M''.speicher c) ∧
     (∀ c, ¬ SchreibG (mitSpeicher M σ) M'' u c → TraegerGleich M'.speicher M.speicher c) ∧
-    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start
+    M'.faeden = M''.faeden ∧ M'.lauf = M''.lauf ∧ M'.start = M''.start ∧ M'.kontexte = M''.kontexte
 
 /-- The machines GX reaches from `M0`. -/
 inductive RufErreichbarGX (P : Programm D) (O : Orakel D) (passes : Nat)
@@ -70,7 +70,7 @@ theorem gx_ga_lauf (hTA : ∀ c, Tg c → AtomarAusgenommen c) {M0 M : RufMaschi
 theorem gx_aus_g {M M' : RufMaschineG D} {u : Faden} (hs : RufSchrittG P O passes M u M') :
     RufSchrittGX P O passes Tg M u M' := by
   refine ⟨M.speicher, M', by rw [mitSpeicher_selbst]; exact hs, fun c _ => traegerGleich_refl _ c,
-    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl⟩
+    fun c _ => traegerGleich_refl _ c, fun c hw => ?_, rfl, rfl, rfl, rfl⟩
   have h := traegerGleich_of_nicht_schreib hw
   rw [mitSpeicher_selbst] at h
   exact h

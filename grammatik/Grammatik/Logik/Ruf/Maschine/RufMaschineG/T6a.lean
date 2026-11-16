@@ -16,7 +16,7 @@ def H2H : RufMaschineG rufDF :=
         Signatur.anfang rufDF (rufDF.signatur rufCallerF), rhoCallerF,
         .wieder 1 bisH bodyH .nil (.dann .nil (.ende driverRet))⟩⟩,
       (H1H.faeden 0).spur, (H1H.faeden 0).log⟩,
-   H1H.lauf, H1H.start⟩
+   H1H.lauf, H1H.start, H1H.kontexte⟩
 
 /-- Step 2 fires `dannRetry`. -/
 theorem schritt2H : RufSchrittG hP rufOF 0 H1H 0 H2H :=
@@ -53,7 +53,7 @@ def H3H : RufMaschineG rufDF :=
             (.dann .nil (.ende driverRet)))⟩⟩,
       (H2H.weltVon 0).spur, (H2H.faeden 0).log⟩,
    H2H.lauf ++ rufEigenG 0 [],
-   H2H.start⟩
+   H2H.start, H2H.kontexte⟩
 
 /-- Step 3 fires `wiederSchritt`: the condition is literal `false`. -/
 theorem schritt3H : RufSchrittG hP rufOF 0 H2H 0 H3H := by
@@ -108,7 +108,7 @@ def H4H : RufMaschineG rufDF :=
       (RufEreignisF.eintritt rufIncF rufRhoF (H3H.weltVon 0)) ::
         (H3H.faeden 0).log⟩,
    H3H.lauf ++ rufEigenG 0 [],
-   H3H.start⟩
+   H3H.start, H3H.kontexte⟩
 
 /-- Step 4 fires `dannBindCall`: the writer frame is pushed, the caller
     waits with `wartet`. Every premise feeds the constructor. -/
@@ -166,7 +166,7 @@ def H5H : RufMaschineG rufDF :=
         .ende restF⟩⟩,
       outWF.spur, (H4H.faeden 0).log⟩,
    H4H.lauf ++ rufEigenG 0 outWF.spur,
-   H4H.start⟩
+   H4H.start, H4H.kontexte⟩
 
 /-- Step 5 fires `blatt` on the writing leaf -- the memory move. -/
 theorem schritt5H : RufSchrittG hP rufOF 0 H4H 0 H5H := by
@@ -239,7 +239,7 @@ def H6H : RufMaschineG rufDF :=
       (RufEreignisF.rueck rufIncF rufRhoF vF (H3H.weltVon 0) s1H) ::
         (H5H.faeden 0).log⟩,
    H5H.lauf ++ rufEigenG 0 [],
-   H5H.start⟩
+   H5H.start, H5H.kontexte⟩
 
 
 end Gabbro.Grammatik

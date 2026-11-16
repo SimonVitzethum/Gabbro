@@ -105,7 +105,7 @@ theorem w_dannRetP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ret e hperm) rest) k⟩)
-    (hΛ : HeldIn Λ (offen z.spur)) :
+    (hΛ : HeldIn Λ (offen z.spur)) (hniedrig : k.keinNiedrig) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       GepopptG M' f (ziel (evalErg ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ))
         rst z.kopf.f z.kopf.rho z.kopf.s0 z.log
@@ -115,15 +115,37 @@ theorem w_dannRetP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   cases hart with
   | wie hnw =>
     exact ⟨_, RufSchrittG.dannRet M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ
-      _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw, gepopptG_neu rfl rfl⟩
+      _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl _ rfl hnw hniedrig, gepopptG_neu rfl rfl⟩
   | bind restb k' ρc hc he =>
     exact ⟨_, RufSchrittG.dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop
       _ _ _ _ _ restb k' ρc (Or.inl hc) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl _ rfl he
-      _ rfl, gepopptG_neu rfl rfl⟩
+      _ rfl hniedrig, gepopptG_neu rfl rfl⟩
   | bindSonst n err restb k' ρc hc he =>
     exact ⟨_, RufSchrittG.dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop
       _ _ _ _ _ restb k' ρc (Or.inr ⟨n, err, hc⟩) hΛ _ rfl _ rfl (M.faeden f).kopf.rho rfl _ rfl
-      _ rfl he _ rfl, gepopptG_neu rfl rfl⟩
+      _ rfl he _ rfl hniedrig, gepopptG_neu rfl rfl⟩
+
+/-- Return simulation follows a nonempty run, including the scope exits
+    that precede delivery. The one-step helper requires its explicit guard. -/
+theorem lauf_dannRetP {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) (caller : RufRahmenG D) (rst : List (RufRahmenG D))
+    (hpop : z.stapel = caller :: rst)
+    {ziel : ErgVal D (D.erg z.kopf.f) → RufRahmenG D} (hart : PopArt z.kopf.f caller ziel)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (e : ErgExpr D Γ Λ (vertragVon D z.kopf.f).erg)
+    (hperm : Λ.Perm (vertragVon D z.kopf.f).ende)
+    (rest : Block D (vertragVon D z.kopf.f) l Γ Λ Λ'')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.ret e hperm) rest) k⟩)
+    (hΛ : HeldIn Λ (offen z.spur)) :
+    ∃ M', RufLaufG.Pos P O passes f M M' ∧
+      GepopptG M' f (ziel (evalErg ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ))
+        rst z.kopf.f z.kopf.rho z.kopf.s0 z.log
+        (evalErg ((M.weltVon f).lese Λ e.orte) e ((M.weltVon f).lese Λ e.orte) ρ)
+        ((M.weltVon f).lese Λ e.orte) := by
+  obtain ⟨M', hs, hg⟩ := w_dannRetP (P := P) (O := O) (passes := passes) hz
+    caller rst hpop hart e hperm rest k ρ hhead hΛ (GRest.keinNiedrig_alt _)
+  exact ⟨M', RufLaufG.Pos.einzeln hs, hg⟩
 
 /-- `rufDann`: the caller advances to `dann rest k` and waits below the
     callee frame, which starts at the read world with the evaluated

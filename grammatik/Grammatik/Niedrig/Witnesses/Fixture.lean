@@ -1,7 +1,6 @@
 module
 
-public import Grammatik.Niedrig.Authority.Layout
-public import Grammatik.Niedrig.Boot.Preservation
+public import Grammatik.Niedrig.Authority.Preservation
 public import Grammatik.Kern.Syntax.Marken.Owner.Fixture
 
 @[expose] public section

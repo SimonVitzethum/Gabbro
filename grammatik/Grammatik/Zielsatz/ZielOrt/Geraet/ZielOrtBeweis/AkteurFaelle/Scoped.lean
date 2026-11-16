@@ -16,7 +16,7 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
     (hL : LogOk P (M.faeden u).log) :
     FadenOk P O passes (M'.faeden u) (M'.weltVon u) ∧ LogOk P (M'.faeden u).log := by
   cases hs with
-  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty hniedrig =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self]
       refine ⟨fadenOk_lokal hF hhead ρ
@@ -48,7 +48,7 @@ theorem akteur_gruppe7 (hK : ∀ f, KoerperGut P O passes f) (e0 : Ereignis D)
           cases answer <;> exact ZErg.gleich_refl _)
       refine fadenOk_antwort hK e0 _ hdone hL rfl ?_
       exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans ha
-  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha hniedrig =>
       rename_i l Γ Λ
       simp only [RufMaschineG.weltVon, rufUpdateG_self, rufAntwortG_spur ha]
       have hdone := fadenOk_lokal hF hhead (M.faeden u).kopf.rho

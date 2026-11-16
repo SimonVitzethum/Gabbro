@@ -131,7 +131,7 @@ def blattM (M : RufMaschineG nD) (f : Faden)
       ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
        ⟨false, [], [], .nil, .ende rest⟩⟩,
       σ'.spur, (M.faeden f).log⟩,
-   M.lauf ++ rufEigenG f σ'.spur, M.start⟩
+   M.lauf ++ rufEigenG f σ'.spur, M.start, M.kontexte⟩
 
 theorem blattM_schritt (M : RufMaschineG nD) (f : Faden)
     (s : Stmt nD (vertragVon nD (M.faeden f).kopf.f) false [] [] [])
@@ -260,7 +260,7 @@ def lkM1 (sp : Speicher nD) : RufMaschineG nD :=
       ⟨((lkM0 sp).faeden 0).kopf.f, ((lkM0 sp).faeden 0).kopf.rho, ((lkM0 sp).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann (.cons lkS .nil) (.ende lkRet)⟩⟩,
       ((lkM0 sp).faeden 0).spur, ((lkM0 sp).faeden 0).log⟩,
-   (lkM0 sp).lauf, (lkM0 sp).start⟩
+   (lkM0 sp).lauf, (lkM0 sp).start, (lkM0 sp).kontexte⟩
 
 end NIZeuge
 end Gabbro.Grammatik
