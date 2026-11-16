@@ -289,7 +289,7 @@ private def fremdCanonical : Programm (declOf uFremd) :=
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Outside the decidable fragment: contract statement is outside the checked scalar/control fragment. -/
-theorem fremd_fragment_refusal :
+private theorem fremd_fragment_refusal :
     (Vertraege.Pruefer.checkFunction fremdCanonical (Cover.Differenz.sperrFamilie uFremd)
       (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
       .error (.unsupported "contract statement is outside the checked scalar/control fragment") := by
@@ -319,7 +319,7 @@ private def fremdFallibleCanonical : Programm (declOf uFremdFallible) :=
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Outside the decidable fragment: local observation type range exceeds the VC budget. -/
-theorem fremdFallible_fragment_refusal :
+private theorem fremdFallible_fragment_refusal :
     (Vertraege.Pruefer.checkFunction fremdFallibleCanonical (Cover.Differenz.sperrFamilie uFremdFallible)
       (fun _ => none) {} none ⟨3, by decide⟩).map (fun _ => ()) =
       .error (.unsupported "local observation type range exceeds the VC budget") := by
