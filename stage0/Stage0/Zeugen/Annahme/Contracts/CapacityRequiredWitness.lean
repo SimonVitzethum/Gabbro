@@ -55,12 +55,10 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-theorem candidate_present : candidate.toOption.isSome = true := by kernel_rfl
-
-def output : Emitted text 256 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 256 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
+/-- Outside the decidable fragment: required allocation's end-block form. -/
+theorem candidate_refused : candidate = .error
+    "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
+  kernel_rfl
 
 /-- A required allocation inside an ordinary block, using its bound index. -/
 def blockText : String :=
@@ -74,16 +72,17 @@ def lastText : String :=
 def blockLastText : String :=
   "module capacity_block_last { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10); let j = alloc A (20); return j; } return 23; } }"
 
-theorem block_image_zeuge : (emit blockText 256).isOk = true := by kernel_rfl
+theorem block_image_refused_zeuge : emit blockText 256 = .error
+    "unsupported invariant constructor: contract block is outside the checked control fragment" := by
+  kernel_rfl
 
-theorem last_image_zeuge : (emit lastText 256).isOk = true := by kernel_rfl
+theorem last_image_refused_zeuge : emit lastText 256 = .error
+    "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
+  kernel_rfl
 
-theorem block_last_image_zeuge : (emit blockLastText 256).isOk = true := by kernel_rfl
-
-/-- Instantiating the source-image theorem keeps the required stop and the
-    successful store-and-bump path under the actual compiler's correctness proof. -/
-theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct :=
-  output.correct
+theorem block_last_image_refused_zeuge : emit blockLastText 256 = .error
+    "unsupported invariant constructor: contract block is outside the checked control fragment" := by
+  kernel_rfl
 
 /-- The capacity outcome uses the same runtime stop at either nesting level. -/
 theorem stop_code_zeuge :
