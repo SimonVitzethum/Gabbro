@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Witnesses.Boot
+public import Grammatik.Niedrig.Authority.Address
 
 public section
 

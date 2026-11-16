@@ -290,7 +290,7 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragOP (PreQ
       dsimp only at hv hhead
       cases hv
       exact popSA_last_inv hO hRL hQ hS hsp hK hI hFS hTV hF ρ v vor L hhead
-    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha _hniedrig =>
       rename_i l Γ Λ
       simp only [rufUpdateG_self]
       apply antwort_invLogA ha

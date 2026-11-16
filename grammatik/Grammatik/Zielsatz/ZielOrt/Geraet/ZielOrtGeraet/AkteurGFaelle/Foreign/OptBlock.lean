@@ -36,7 +36,7 @@ theorem akteurG_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
               .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenG P O passes (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -105,7 +105,7 @@ theorem akteurG_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
               .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenG P O passes (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -177,7 +177,7 @@ theorem akteurG_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
-         M.lauf ++ rufEigenG u neu, M.start⟩
+         M.lauf ++ rufEigenG u neu, M.start, M.kontexte⟩
     FadenG P O passes (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
   dsimp only
   simp only [RufMaschineG.weltVon, rufUpdateG_self]

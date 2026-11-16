@@ -131,7 +131,7 @@ def M1G : RufMaschineG rufDF :=
       (RufEreignisF.eintritt rufIncF rufRhoF (M0G.weltVon 0)) ::
         (M0G.faeden 0).log⟩,
    M0G.lauf ++ rufEigenG 0 [],
-   M0G.start⟩
+   M0G.start, M0G.kontexte⟩
 
 /-- Step 1 fires the `ruf` rule on the caller frame. Every premise feeds
     the constructor: `hhead`/`hΛ` fix the frame, `hs0`/`hrho`/`hneu` the
@@ -187,7 +187,7 @@ def M2G : RufMaschineG rufDF :=
         Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
         .dann (.cons iteG .nil) (.ende restF)⟩⟩,
       (M1G.faeden 0).spur, (M1G.faeden 0).log⟩,
-   M1G.lauf, M1G.start⟩
+   M1G.lauf, M1G.start, M1G.kontexte⟩
 
 /-- Step 2 fires `endeEntf`: the compound head moves into `dann`. -/
 theorem schritt2G : RufSchrittG gP rufOF 0 M1G 0 M2G :=
@@ -225,7 +225,7 @@ def M3G : RufMaschineG rufDF :=
         .dann (.cons leafSF .nil) (.dann .nil (.ende restF))⟩⟩,
       (M2G.weltVon 0).spur, (M2G.faeden 0).log⟩,
    M2G.lauf ++ rufEigenG 0 [],
-   M2G.start⟩
+   M2G.start, M2G.kontexte⟩
 
 /-- Held-exactly for `rufDF`: the declaration has no lock. -/
 theorem heldGenau_rufDF (Λ : List (Res rufDF)) (spur : List (Ereignis rufDF)) :

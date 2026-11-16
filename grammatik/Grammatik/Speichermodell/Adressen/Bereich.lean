@@ -15,6 +15,7 @@
   * `rufErreichbarGX_aussen` -- every reached machine agrees with its start outside the extents.
 -/
 module
+public import Grammatik.Kern.Syntax.Typen.AdressLayout
 public import Grammatik.Speichermodell.Maschine.GXMaschine
 @[expose] public section
 
@@ -24,9 +25,6 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-! ## 1. The extents -/
-
-/-- Index `k` lies in the declared extent of table `t`: below its count, or anywhere above `0` in an open region. -/
-def ImBereich (D : Deklaration) (t : D.Tab) (k : Int) : Prop := 0 ≤ k ∧ (D.offen t = true ∨ k < D.count t)
 
 /-- Two memories agree on every cell outside the declared extents. -/
 def AussenGleich (s s' : Speicher D) : Prop :=

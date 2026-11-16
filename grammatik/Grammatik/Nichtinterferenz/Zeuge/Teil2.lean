@@ -22,7 +22,7 @@ def lkM2w (sp : Speicher nD) : RufMaschineG nD :=
       ⟨((lkM1 sp).faeden 0).kopf.f, ((lkM1 sp).faeden 0).kopf.rho, ((lkM1 sp).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann (.cons lkW .nil) (.dann .nil (.ende lkRet))⟩⟩,
       (lkσ₁ sp).spur, ((lkM1 sp).faeden 0).log⟩,
-   (lkM1 sp).lauf ++ rufEigenG 0 (lkσ₁ sp).spur, (lkM1 sp).start⟩
+   (lkM1 sp).lauf ++ rufEigenG 0 (lkσ₁ sp).spur, (lkM1 sp).start, (lkM1 sp).kontexte⟩
 
 theorem lk_s2w : RufSchrittG nP nO 0 (lkM1 sp0) 0 (lkM2w sp0) :=
   RufSchrittG.dannIteWahr (lkM1 sp0) 0 false [] [] [] [] lkC (.cons lkW .nil) .nil .nil
@@ -39,7 +39,7 @@ def lkM3w : RufMaschineG nD :=
        ((lkM2w sp0).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann .nil (.dann .nil (.ende lkRet))⟩⟩,
       lkσ'.spur, ((lkM2w sp0).faeden 0).log⟩,
-   (lkM2w sp0).lauf ++ rufEigenG 0 [Ereignis.zugriff NTab.tabB true [] []], (lkM2w sp0).start⟩
+   (lkM2w sp0).lauf ++ rufEigenG 0 [Ereignis.zugriff NTab.tabB true [] []], (lkM2w sp0).start, (lkM2w sp0).kontexte⟩
 
 theorem lk_s3w : RufSchrittG nP nO 0 (lkM2w sp0) 0 lkM3w :=
   RufSchrittG.dannBlatt (lkM2w sp0) 0 false [] [] [] [] lkW .nil (.dann .nil (.ende lkRet)) .nil
@@ -54,7 +54,7 @@ def lkM2f (sp : Speicher nD) : RufMaschineG nD :=
       ⟨((lkM1 sp).faeden 0).kopf.f, ((lkM1 sp).faeden 0).kopf.rho, ((lkM1 sp).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann .nil (.dann .nil (.ende lkRet))⟩⟩,
       (lkσ₁ sp).spur, ((lkM1 sp).faeden 0).log⟩,
-   (lkM1 sp).lauf ++ rufEigenG 0 (lkσ₁ sp).spur, (lkM1 sp).start⟩
+   (lkM1 sp).lauf ++ rufEigenG 0 (lkσ₁ sp).spur, (lkM1 sp).start, (lkM1 sp).kontexte⟩
 
 theorem lk_s2f : RufSchrittG nP nO 0 (lkM1 sp1) 0 (lkM2f sp1) :=
   RufSchrittG.dannIteFalsch (lkM1 sp1) 0 false [] [] [] [] lkC (.cons lkW .nil) .nil .nil
@@ -68,7 +68,7 @@ def lkM3f : RufMaschineG nD :=
        ((lkM2f sp1).faeden 0).kopf.s0,
        ⟨false, [], [], .nil, .dann .nil (.ende lkRet)⟩⟩,
       ((lkM2f sp1).faeden 0).spur, ((lkM2f sp1).faeden 0).log⟩,
-   (lkM2f sp1).lauf, (lkM2f sp1).start⟩
+   (lkM2f sp1).lauf, (lkM2f sp1).start, (lkM2f sp1).kontexte⟩
 
 theorem lk_s3f : RufSchrittG nP nO 0 (lkM2f sp1) 0 lkM3f :=
   RufSchrittG.dannLeer (lkM2f sp1) 0 false [] [] (.dann .nil (.ende lkRet)) .nil rfl

@@ -33,6 +33,28 @@ theorem RufLaufG.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Fad
     RufLaufG P O passes f M M' :=
   RufLaufG.schritt h (RufLaufG.refl M')
 
+/-- A nonempty run exposes its first step for progress, while return
+    simulation can include any number of mandatory scope exits. -/
+def RufLaufG.Pos (P : Programm D) (O : Orakel D) (passes : Nat) (f : Faden)
+    (M M' : RufMaschineG D) : Prop :=
+  ∃ M1, RufSchrittG P O passes M f M1 ∧ RufLaufG P O passes f M1 M'
+
+theorem RufLaufG.Pos.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') :
+    RufLaufG.Pos P O passes f M M' := ⟨M', h, .refl M'⟩
+
+theorem RufLaufG.Pos.lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufLaufG.Pos P O passes f M M') :
+    RufLaufG P O passes f M M' := by
+  obtain ⟨M1, hs, hl⟩ := h
+  exact .schritt hs hl
+
+theorem RufLaufG.Pos.erster {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
+    {M M' : RufMaschineG D} (h : RufLaufG.Pos P O passes f M M') :
+    ∃ M1, RufSchrittG P O passes M f M1 := by
+  obtain ⟨M1, hs, _⟩ := h
+  exact ⟨M1, hs⟩
+
 /-- A step of thread `f` leaves every other thread untouched. -/
 theorem rufSchrittG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
     {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') (g : Faden) (hg : g ≠ f) :
@@ -99,24 +121,24 @@ theorem ZustandG.spur {M : RufMaschineG D} {f : Faden} {stapel : List (RufRahmen
 
 /-- Building the state after a step: the updated thread is the target shape. -/
 theorem zustandG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
-    {z : RufFadenG D} {lauf : Lauf D} {st : World D}
+    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {ctx : LowLevel.ContextLedger D}
     {stapel : List (RufRahmenG D)} {fn : D.Fn} {rho : Env D (D.params fn)}
     {s0 : World D} {log : List (RufEreignisF D)} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D fn) l Γ Λ}
     {σ : World D}
     (hz : z = ⟨stapel, ⟨fn, rho, s0, ⟨l, Γ, Λ, ρ, r⟩⟩, σ.spur, log⟩)
     (hsp : sp = σ.speicher) :
-    ZustandG ⟨sp, rufUpdateG M.faeden f z, lauf, st⟩ f stapel fn rho s0 log ρ r σ :=
+    ZustandG ⟨sp, rufUpdateG M.faeden f z, lauf, st, ctx⟩ f stapel fn rho s0 log ρ r σ :=
   ⟨by rw [← hz]; exact rufUpdateG_self M.faeden f z, hsp⟩
 
 theorem gepopptG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
-    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {caller : RufRahmenG D}
+    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {ctx : LowLevel.ContextLedger D} {caller : RufRahmenG D}
     {rst : List (RufRahmenG D)} {fn : D.Fn} {rho : Env D (D.params fn)}
     {s0 : World D} {log : List (RufEreignisF D)} {v : ErgVal D (D.erg fn)}
     {σ' : World D}
     (hz : z = ⟨rst, caller, σ'.spur, RufEreignisF.rueck fn rho v s0 σ' :: log⟩)
     (hsp : sp = σ'.speicher) :
-    GepopptG ⟨sp, rufUpdateG M.faeden f z, lauf, st⟩ f caller rst fn rho s0 log v σ' :=
+    GepopptG ⟨sp, rufUpdateG M.faeden f z, lauf, st, ctx⟩ f caller rst fn rho s0 log v σ' :=
   ⟨by rw [← hz]; exact rufUpdateG_self M.faeden f z, hsp⟩
 
 /-! ## 3. Leaves extend the trace by access events only -/

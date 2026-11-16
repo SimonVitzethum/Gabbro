@@ -124,7 +124,7 @@ theorem rufSchrittG_haeltInv_dannNarrowRequired {D : Deklaration}
           ⟨l, .int lo' hi' :: Γ, Λ,
             .cons ⟨(eval σ₁ e σ₁ ρ).n, hn.1, hn.2⟩ ρ, .dann rest (.schrumpf k)⟩⟩,
         σ₁.spur, (M.faeden f).log⟩,
-      M.lauf ++ rufEigenG f neu, M.start⟩ : RufMaschineG D).faeden f) := by
+      M.lauf ++ rufEigenG f neu, M.start, M.kontexte⟩ : RufMaschineG D).faeden f) := by
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0

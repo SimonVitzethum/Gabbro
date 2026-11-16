@@ -31,7 +31,7 @@ def scopedZFaden : RufFadenG adD :=
     umkehrScopedVor.spur, []⟩
 
 def scopedZM : RufMaschineG adD :=
-  ⟨adSp0, fun _ => scopedZFaden, [], adSp0.welt []⟩
+  ⟨adSp0, fun _ => scopedZFaden, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 def scopedZDone : RufFadenG adD :=
   ⟨[], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], _, Env.nil,
@@ -40,7 +40,7 @@ def scopedZDone : RufFadenG adD :=
 
 def scopedZM' : RufMaschineG adD :=
   ⟨adSp0, rufUpdateG scopedZM.faeden 0 scopedZDone,
-    [⟨0, .gibt ()⟩], adSp0.welt []⟩
+    [⟨0, .gibt ()⟩], adSp0.welt [], scopedZM.kontexte⟩
 
 private theorem scopedZ_replay :
     FadenOk scopedZP adO 0 (scopedZM.faeden 0) (scopedZM.weltVon 0) ∧

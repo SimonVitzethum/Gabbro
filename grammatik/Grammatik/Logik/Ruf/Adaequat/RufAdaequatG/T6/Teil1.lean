@@ -168,7 +168,7 @@ def adFaden : RufFadenG adD :=
   ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende adRumpf⟩⟩,
     [], []⟩
 
-def adM : RufMaschineG adD := ⟨adSp0, fun _ => adFaden, [], adSp0.welt []⟩
+def adM : RufMaschineG adD := ⟨adSp0, fun _ => adFaden, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 /-- The body is in the covered fragment, with the one lock admitted. -/
 theorem adRumpf_G : EndG (fun L : adD.Lock => L = ()) adRumpf :=

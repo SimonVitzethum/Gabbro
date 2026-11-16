@@ -82,8 +82,9 @@ abbrev Answer := ErgVal D V.erg ⊕ Fin V.gruende
 
 def arguments : Env D Params := .cons ⟨23, by decide, by decide⟩ (.cons true .nil)
 
-def initial : Speicher D :=
-  ⟨fun t => nomatch t, fun _ => ⟨7, by decide, by decide⟩⟩
+def initial : Speicher D where
+  slots := fun t => nomatch t
+  globs := fun _ => ⟨7, by decide, by decide⟩
 
 def entry : World D := initial.welt []
 def holdings : List (Res D) := [.held true, .held false]
@@ -110,7 +111,9 @@ def innerBody (why : Bool) : Block D V false Params holdings holdings :=
 def outerBody (why : Bool) : Block D V false Params [.held false] [.held false] :=
   .cons (.locks true (by
     intro L h
-    cases L <;> simp_all [D]) (innerBody why)) .nil
+    cases L
+    · decide
+    · cases List.mem_singleton.mp h) (innerBody why)) .nil
 
 def body (why : Bool) : Endblock D V false Params [] :=
   .cons (.locks false (fun _ h => absurd h List.not_mem_nil) (outerBody why))
@@ -144,11 +147,19 @@ def thread {Λ : List (Res D)} (r : GRest D V false Params Λ) (σ : World D)
   ⟨stack, ⟨(), arguments, entry, ⟨false, Params, Λ, arguments, r⟩⟩, σ.spur, []⟩
 
 def source (why : Bool) : RufMaschineG D :=
-  ⟨beforeReturn.speicher, fun _ => thread (sourceRest why) beforeReturn, [], entry⟩
+  ⟨beforeReturn.speicher, fun _ => thread (sourceRest why) beforeReturn, [], entry, LowLevel.ContextLedger.empty⟩
+
+private theorem source_held_zeuge (why : Bool) :
+    HeldIn holdings (offen ((source why).faeden 0).spur) := by
+  intro L _
+  change _root_.List.Mem L ([true, false] : List Bool)
+  cases L with
+  | false => exact _root_.List.mem_cons_of_mem _ (_root_.List.mem_cons_self ..)
+  | true => exact _root_.List.mem_cons_self ..
 
 /-- Expected successor records use the same update operation as the G rules. -/
 def successor (M : RufMaschineG D) (z : RufFadenG D) (events : Lauf D) : RufMaschineG D :=
-  ⟨M.speicher, rufUpdateG M.faeden 0 z, M.lauf ++ events, M.start⟩
+  ⟨M.speicher, rufUpdateG M.faeden 0 z, M.lauf ++ events, M.start, M.kontexte⟩
 
 def captured (why : Bool) : RufMaschineG D :=
   successor (source why)
@@ -175,12 +186,12 @@ theorem lexical_scope_zeuge (why : Bool) : ScopesOkProg (program why) := by
   cases f
   cases why <;> rfl
 
-/-- The already existing canonical frame semantics computes both expected
+/-- The existing canonical statement semantics computes both expected
     source-head outcomes; no fixture-specific evaluator supplies them. -/
 theorem source_head_semantics_zeuge :
-    semK oracle 0 keinRuf (sourceRest false) beforeReturn arguments =
+    execStmt oracle 0 keinRuf (returnStmt false) beforeReturn arguments =
       .zurueck ((beforeReturn.gibt true).gibt false) value ∧
-    semK oracle 0 keinRuf (sourceRest true) beforeReturn arguments =
+    execStmt oracle 0 keinRuf (returnStmt true) beforeReturn arguments =
       .why ((beforeReturn.gibt true).gibt false) reason := ⟨rfl, rfl⟩
 
 /-- Both channels evaluate/save at the actual source head, before either release. -/
@@ -189,10 +200,12 @@ theorem capture_zeuge (why : Bool) :
   cases why with
   | false =>
     exact .rueckScopedWert (source false) 0 arguments (sourceRest false) resultExpr cleanup
-      rfl rfl (by decide) (by decide) beforeReturn rfl [] rfl (by decide)
+      rfl rfl (by decide) (source_held_zeuge false)
+      beforeReturn rfl [] rfl (by decide) (by trivial)
   | true =>
     exact .rueckScopedGrund (source true) 0 arguments (sourceRest true) reason cleanup
-      rfl rfl (by decide) (by decide) (by decide)
+      rfl rfl (by decide) (source_held_zeuge true)
+      (by decide) (by trivial)
 
 /-- The two real G7 releases have the required chronological order. -/
 theorem release_zeuge (why : Bool) :
@@ -253,7 +266,7 @@ theorem canonical_reason_bypass_zeuge :
 def singleCleanup : RueckRessourcen D V [.held false] := ⟨[false], .refl _⟩
 def singleWorld : World D := entry.nimmt false
 def singleSource : RufMaschineG D :=
-  ⟨initial, fun _ => thread (.ende (.retWhyScoped reason singleCleanup)) singleWorld, [], entry⟩
+  ⟨initial, fun _ => thread (.ende (.retWhyScoped reason singleCleanup)) singleWorld, [], entry, LowLevel.ContextLedger.empty⟩
 def singleCaptured : RufMaschineG D :=
   successor singleSource (thread (.aufraeumen ⟨.inr reason, singleWorld⟩ [false]) singleWorld) []
 def singleFinishedThread : RufFadenG D :=
@@ -269,7 +282,13 @@ theorem single_reason_zeuge :
     offen (singleFinished.faeden 0).spur = [] := by
   refine ⟨?_, ?_, rfl, rfl⟩
   · exact .rueckScopedGrund singleSource 0 arguments _ reason singleCleanup
-      rfl rfl (by decide) (by decide) (by decide)
+      rfl rfl (by decide) (by
+        intro L member
+        change _root_.List.Mem L ([false] : List Bool)
+        cases L with
+        | false => exact _root_.List.mem_cons_self ..
+        | true => cases _root_.List.mem_singleton.mp member)
+      (by decide) (by trivial)
   · exact .rueckFreigabeLetzte singleCaptured 0 arguments
       ⟨.inr reason, singleWorld⟩ false rfl singleFinishedThread rfl
 
@@ -278,7 +297,7 @@ def directRest (why : Bool) : GRest D V false Params [] :=
   .ende (if why then .retWhyScoped reason emptyCleanup
     else .retScoped (.val (.var .here)) emptyCleanup)
 def directSource (why : Bool) : RufMaschineG D :=
-  ⟨initial, fun _ => thread (directRest why) entry, [], entry⟩
+  ⟨initial, fun _ => thread (directRest why) entry, [], entry, LowLevel.ContextLedger.empty⟩
 def directFinishedThread (why : Bool) : RufFadenG D :=
   thread (.zurueckgekehrt ⟨answer why, entry⟩) entry
 def directFinished (why : Bool) : RufMaschineG D :=
@@ -294,11 +313,12 @@ theorem empty_delivery_zeuge (why : Bool) :
   cases why with
   | false =>
     exact .rueckScopedWertDirekt (directSource false) 0 arguments (directRest false)
-      (.val (.var .here)) emptyCleanup rfl rfl (by decide) (by decide)
-      entry rfl [] rfl rfl (directFinishedThread false) rfl
+      (.val (.var .here)) emptyCleanup rfl rfl (by decide) (by intro L h; cases h)
+      entry rfl [] rfl rfl (directFinishedThread false) rfl (by trivial)
   | true =>
     exact .rueckScopedGrundDirekt (directSource true) 0 arguments (directRest true)
-      reason emptyCleanup rfl rfl (by decide) (by decide) rfl (directFinishedThread true) rfl
+      reason emptyCleanup rfl rfl (by decide) (by intro L h; cases h)
+      rfl (directFinishedThread true) rfl (by trivial)
 
 def handler : Endblock D V false (.why 2 :: Params) [] :=
   .ret (.val (.widen (by decide) (by decide) (.lit 0))) (.refl [])

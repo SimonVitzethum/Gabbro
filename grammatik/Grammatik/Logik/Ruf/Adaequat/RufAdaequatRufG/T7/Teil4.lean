@@ -101,10 +101,10 @@ theorem alsRetR_ret
   simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.ende?,
     Option.some.injEq] at hex
   subst hex
-  obtain ⟨M1, hs1, hG⟩ := w_dannRetP (P := P) (O := O) (passes := passes) hZ.1
+  obtain ⟨M1, hs1, hG⟩ := lauf_dannRetP (P := P) (O := O) (passes := passes) hZ.1
     caller rst rfl hpe e hperm .nil k ρ rfl hΛ.heldIn
   rw [hW] at hG
-  exact ⟨M1, [], RufLaufG.einzeln hs1, hG, (Erw.lese _ _ _).offen⟩
+  exact ⟨M1, [], hs1.lauf, hG, (Erw.lese _ _ _).offen⟩
 
 set_option linter.unusedSectionVars false in
 theorem alsRetR_retWhy
@@ -121,10 +121,10 @@ theorem alsRetR_retWhy
   simp only [Endblock.alsBlock, execBlock, execStmt, Ausgang.ende?,
     Option.some.injEq] at hex
   subst hex
-  obtain ⟨M1, hs1, hG⟩ := w_dannRetGrundP (P := P) (O := O) (passes := passes) hZ.1
+  obtain ⟨M1, hs1, hG⟩ := lauf_dannRetGrundP (P := P) (O := O) (passes := passes) hZ.1
     caller rst rfl hpe r hperm .nil k ρ rfl hΛ.heldIn
   rw [hW] at hG
-  exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
+  exact ⟨M1, [], hs1.lauf, hG, rfl⟩
 
 set_option linter.unusedSectionVars false in
 theorem alsRetR_cons

@@ -49,13 +49,13 @@ def GepopptGrundG (M' : RufMaschineG D) (f : Faden) (caller : RufRahmenG D)
     M'.speicher = σ'.speicher
 
 theorem gepopptGrundG_neu {M : RufMaschineG D} {f : Faden} {sp : Speicher D}
-    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {caller : RufRahmenG D}
+    {z : RufFadenG D} {lauf : Lauf D} {st : World D} {ctx : LowLevel.ContextLedger D} {caller : RufRahmenG D}
     {rst : List (RufRahmenG D)} {fn : D.Fn} {rho : Env D (D.params fn)}
     {s0 : World D} {log : List (RufEreignisF D)} {r : Fin (D.gruende fn)}
     {σ' : World D}
     (hz : z = ⟨rst, caller, σ'.spur, RufEreignisF.why fn rho r s0 σ' :: log⟩)
     (hsp : sp = σ'.speicher) :
-    GepopptGrundG ⟨sp, rufUpdateG M.faeden f z, lauf, st⟩ f caller rst fn rho s0 log r σ' :=
+    GepopptGrundG ⟨sp, rufUpdateG M.faeden f z, lauf, st, ctx⟩ f caller rst fn rho s0 log r σ' :=
   ⟨by rw [← hz]; exact rufUpdateG_self M.faeden f z, hsp⟩
 
 /-- How a caller resumes when the callee `fn` answers a reason: only a

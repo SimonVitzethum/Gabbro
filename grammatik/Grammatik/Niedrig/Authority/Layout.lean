@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Authority.Preservation
+public import Grammatik.Speichermodell.Adressen.Layout
 
 @[expose] public section
 

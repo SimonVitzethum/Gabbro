@@ -86,21 +86,21 @@ def saved : (ErgVal D V.erg ⊕ Fin V.gruende) × World D := ⟨.inl true, acqui
 def sourceThread : RufFadenG D :=
   ⟨[], ⟨fn, Env.nil, entry, ⟨false, [], bodyResources, Env.nil, pending⟩⟩, acquired.spur, []⟩
 
-def sourceMachine : RufMaschineG D := ⟨memory, fun _ => sourceThread, [], entry⟩
+def sourceMachine : RufMaschineG D := ⟨memory, fun _ => sourceThread, [], entry, LowLevel.ContextLedger.empty⟩
 
 def cleanupThread : RufFadenG D :=
   ⟨[], ⟨fn, Env.nil, entry, ⟨false, [], _, Env.nil, .aufraeumen saved [inner, outer]⟩⟩,
     acquired.spur, []⟩
 
 def cleanupMachine : RufMaschineG D :=
-  ⟨memory, rufUpdateG sourceMachine.faeden 0 cleanupThread, [], entry⟩
+  ⟨memory, rufUpdateG sourceMachine.faeden 0 cleanupThread, [], entry, sourceMachine.kontexte⟩
 
 def lastThread : RufFadenG D :=
   ⟨[], ⟨fn, Env.nil, entry, ⟨false, [], _, Env.nil, .aufraeumen saved [outer]⟩⟩,
     (acquired.gibt inner).spur, []⟩
 
 def lastMachine : RufMaschineG D :=
-  ⟨memory, rufUpdateG cleanupMachine.faeden 0 lastThread, [⟨0, .gibt inner⟩], entry⟩
+  ⟨memory, rufUpdateG cleanupMachine.faeden 0 lastThread, [⟨0, .gibt inner⟩], entry, cleanupMachine.kontexte⟩
 
 def finishedThread : RufFadenG D :=
   ⟨[], ⟨fn, Env.nil, entry, ⟨false, [], V.ende, Env.nil, .zurueckgekehrt saved⟩⟩,
@@ -108,7 +108,7 @@ def finishedThread : RufFadenG D :=
 
 def finishedMachine : RufMaschineG D :=
   ⟨memory, rufUpdateG lastMachine.faeden 0 finishedThread,
-    [⟨0, .gibt inner⟩, ⟨0, .gibt outer⟩], entry⟩
+    [⟨0, .gibt inner⟩, ⟨0, .gibt outer⟩], entry, lastMachine.kontexte⟩
 
 /-- Both channels return the exact same twice-released world, preserve the saved value
     or reason, and leave the inherited lock held. The trace lists EVERY event. -/
@@ -140,7 +140,7 @@ theorem execStmt_locks_g7_zeuge (passes : Nat) :
         intro L member
         change L ∈ [inner, outer, inherited]
         simpa only [List.mem_cons, List.not_mem_nil, or_false, Res.held.injEq] using member)
-      acquired rfl [] rfl (by decide)
+      acquired rfl [] rfl (by decide) (by trivial)
   have first : RufSchrittG7 program oracle passes cleanupMachine 0 lastMachine :=
     .rueckFreigabe cleanupMachine 0 Env.nil saved inner [outer] rfl (by decide)
   have last : RufSchrittG7 program oracle passes lastMachine 0 finishedMachine :=

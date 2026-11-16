@@ -61,7 +61,7 @@ def svFaden : RufFadenG adD :=
   ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [], ⟨false, [], [], Env.nil, .ende svRumpf⟩⟩,
     [], []⟩
 
-def svM : RufMaschineG adD := ⟨adSp0, fun _ => svFaden, [], adSp0.welt []⟩
+def svM : RufMaschineG adD := ⟨adSp0, fun _ => svFaden, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 /-- The sequential semantics leaves the loop by the `else` branch's
     `leave` and returns `7`. -/
@@ -105,7 +105,7 @@ theorem ende_leave_steht {P : Programm D} {O : Orakel D} {passes : Nat}
 /-- The pre-repair state: the frame reduced to the bare `leave`. -/
 def svAltM : RufMaschineG adD :=
   ⟨adSp0, fun _ => ⟨[adCaller], ⟨adFn, Env.nil, adSp0.welt [],
-    ⟨true, [], [], Env.nil, .ende (.leave rfl)⟩⟩, [], []⟩, [], adSp0.welt []⟩
+    ⟨true, [], [], Env.nil, .ende (.leave rfl)⟩⟩, [], []⟩, [], adSp0.welt [], LowLevel.ContextLedger.empty⟩
 
 /-- **Witness for `ende_leave_steht`**: the premise holds on the state the
     old `else` step reached on this fixture, and thread 0 has no step

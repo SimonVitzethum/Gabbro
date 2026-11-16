@@ -278,7 +278,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       intro L hL
       rw [hcaller]; exact hL
     | dannRetGrund =>
-      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hhead hpop hΛ hfg hrho hs0 hrg
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hhead hpop hΛ hfg hrho hs0 hrg hniedrig
       simp only [rufUpdateG_self]
       have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
         h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
