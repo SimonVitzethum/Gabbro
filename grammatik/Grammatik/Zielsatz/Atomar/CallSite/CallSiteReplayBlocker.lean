@@ -127,12 +127,12 @@ theorem checker :
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false
     rw [refused, Bool.and_false]
-  · unfold Vertraege.Pruefer.contractVerdict
-    have diagnostic :
+  · have diagnostic :
         (match Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
         | .error reason => some reason
         | .ok _ => none) =
           some "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
+      simp only [Vertraege.Pruefer.contractVerdict, Bool.false_eq_true, ↓reduceIte]
       decide +kernel
     cases result : Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false with
     | error reason =>
