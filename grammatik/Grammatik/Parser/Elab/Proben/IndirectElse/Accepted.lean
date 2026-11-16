@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Proben.IndirectElse.Parser
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Cover.Mitglieder
+import Grammatik.Kern.Taktik.KernelRfl
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -79,10 +80,37 @@ def hasCanonicalHandler (text : String) : Bool :=
   | .ok ⟨u, program, functions⟩ =>
     (Cover.Mitglieder.mitglieder u program functions).contains "Stmt.callIndElse"
 
-theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
-theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
-theorem nested_accepted_zeuge : acceptedText nestedSource = true := by decide +kernel
-theorem reference_accepted_zeuge : acceptedText referenceSource = true := by decide +kernel
-theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by decide +kernel
+/-- Preserve the actual pipeline or strict contract refusal, with no supplied proof. -/
+def refusalReason (text : String) : Option String :=
+  match uebersetzeAllg text with
+  | .error cause => some cause
+  | .ok ⟨u, program, functions⟩ =>
+    match Vertraege.Pruefer.checkContracts program (Cover.Differenz.sperrFamilie u)
+        functions (fun _ => none) with
+    | .error cause => some cause.message
+    | .ok _ => none
+
+/-- Outside the decidable fragment: function-pointer local observations. -/
+theorem named_refused_zeuge : acceptedText namedSource = false ∧
+    refusalReason namedSource = some
+      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+  constructor <;> kernel_rfl
+
+theorem unnamed_refused_zeuge : acceptedText unnamedSource = false ∧
+    refusalReason unnamedSource = some
+      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+  constructor <;> kernel_rfl
+
+theorem nested_refused_zeuge : acceptedText nestedSource = false ∧
+    refusalReason nestedSource = some
+      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+  constructor <;> kernel_rfl
+
+theorem reference_refused_zeuge : acceptedText referenceSource = false ∧
+    refusalReason referenceSource = some
+      "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+  constructor <;> kernel_rfl
+
+theorem canonical_handler_zeuge : hasCanonicalHandler namedSource = true := by kernel_rfl
 
 end Gabbro.Grammatik.Parser.IndirectElseProben

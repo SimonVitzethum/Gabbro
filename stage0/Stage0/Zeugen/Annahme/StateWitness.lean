@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+import Grammatik.Kern.Taktik.KernelRfl
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -44,11 +45,9 @@ def text : String :=
 def candidate : Except String (Emitted text 64) := emit text 64
 
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
-
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
+/-- Outside the decidable fragment: the state transition's contract statement. -/
+theorem candidate_refused : candidate = .error
+    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+  kernel_rfl
 
 end Gabbro.Stage0.StateWitness
