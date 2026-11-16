@@ -89,7 +89,7 @@ counterprobe_cut sondeBodyHead as "can_fail { "
   lexemes [.wort "can_fail", .zeichen "{"] fuelUsed 4
 counterprobe_cut sondeBinding as "let x = 3; "
   lexemes [.wort "let", .wort "x", .zeichen "=",
-    .num 3, .zeichen ";"] fuelUsed 12
+    .num 3, .zeichen ";"] fuelUsed 9
 counterprobe_cut sondeFalse as "return false; } "
   lexemes [.wort "return", .wort "false", .zeichen ";", .zeichen "}"] fuelUsed 7
 counterprobe_cut sondeComparison as "return x < 0; } "
