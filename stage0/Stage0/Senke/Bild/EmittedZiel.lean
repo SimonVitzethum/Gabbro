@@ -136,7 +136,7 @@ theorem Emitted.bild_ziel [Kern] (output : Emitted src K options)
             (RufStartG output.compiled.program output.sp0 (bildInit thr output.compiled.main output.args r ρr)) Me ∧
           ∃ k, StarM k ⟨pce, slot (BitVec.ofNat 64 output.image.fp0) (BitVec.ofNat 64 FB)⟩ me t m') := by
   have hN : NutzerPflichtA (output.einheit Q) :=
-    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true.mp hStart).2
+    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true_iff.mp hStart).2
 
   -- (a′): the compiler's acceptance, the checker's soundness, no shared atomic
   have hA0 := output.akzeptiertSpec Q hZ hr hg hAt hH.2.2.2 hStart

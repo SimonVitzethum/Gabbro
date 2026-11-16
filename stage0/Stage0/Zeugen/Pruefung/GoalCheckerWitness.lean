@@ -91,7 +91,7 @@ theorem start_checked (Q : AxEns (declOf result.unit)) (sp : Speicher (declOf re
     Zielsatz.unitStartGeprueftB
       (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true := by
-  decide
+  kernel_rfl
 
 /-- All bridge premises hold jointly on a compiled recursive program, for
     every foreign-answer family and initial memory, without a checker premise. -/
