@@ -45,9 +45,9 @@ def text : String :=
 def candidate : Except String (Emitted text 64) := emit text 64
 
 
-/-- Outside the decidable fragment: the state transition's contract statement. -/
+/-- The caller does not establish the transition's source state. -/
 theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+    "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
   kernel_rfl
 
 end Gabbro.Stage0.StateWitness

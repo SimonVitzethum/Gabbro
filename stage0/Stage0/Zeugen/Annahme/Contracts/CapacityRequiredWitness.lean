@@ -55,9 +55,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- Outside the decidable fragment: required allocation's end-block form. -/
+/-- Arbitrary entry worlds include a full arena; required allocation can fail. -/
 theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
+    "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
   kernel_rfl
 
 /-- A required allocation inside an ordinary block, using its bound index. -/
@@ -73,15 +73,15 @@ def blockLastText : String :=
   "module capacity_block_last { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10); let j = alloc A (20); return j; } return 23; } }"
 
 theorem block_image_refused_zeuge : emit blockText 256 = .error
-    "unsupported invariant constructor: contract block is outside the checked control fragment" := by
+    "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
   kernel_rfl
 
 theorem last_image_refused_zeuge : emit lastText 256 = .error
-    "unsupported invariant constructor: contract end block is outside the checked control fragment" := by
+    "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
   kernel_rfl
 
 theorem block_last_image_refused_zeuge : emit blockLastText 256 = .error
-    "unsupported invariant constructor: contract block is outside the checked control fragment" := by
+    "unsupported invariant constructor: outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation; parameters = []" := by
   kernel_rfl
 
 /-- The capacity outcome uses the same runtime stop at either nesting level. -/

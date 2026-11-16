@@ -52,9 +52,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- Outside the decidable fragment: the terminal retire statement. -/
+/-- Retire is checked; the full 256-value result still exceeds the local VC budget. -/
 theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment" := by
+    "unsupported invariant constructor: local observation type range exceeds the VC budget" := by
   kernel_rfl
 
 /-- The unchanged source still elaborates with its real linear inventory. -/
