@@ -39,6 +39,7 @@ namespace Gabbro.Stage0.TransitionContractWitness
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
+set_option Elab.async false
 set_option maxRecDepth 100000
 set_option maxHeartbeats 400000
 
@@ -59,8 +60,12 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before refusal"
+
 theorem candidate_refused : candidate.toOption.isSome = false := by
   kernel_rfl
+
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before model"
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
@@ -68,6 +73,8 @@ abbrev unit := model.1
 def program : Programm (declOf unit) := model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
 def transitionIndex : Fin unit.fns.length := ⟨1, by decide +kernel⟩
+
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before world"
 
 def busyWorld : World (declOf unit) where
   slots := fun ⟨table, ht⟩ ⟨column, hc⟩ _ => by
@@ -79,10 +86,14 @@ def busyWorld : World (declOf unit) where
   globs := fun g => Fin.elim0 (show Fin 0 from g)
   spur := []
 
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before arguments"
+
 def transitionArguments : Env (declOf unit) ((declOf unit).params transitionIndex) :=
   .cons (τ := .int 0 1) ⟨0, by decide, by decide⟩ .nil
 
 /-- The caller admits Busy=1, while its real transition callee requires Idle=0. -/
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A before counterexample"
+
 theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld .nil ∧
     ¬ ReqAmEintritt program transitionIndex busyWorld transitionArguments := by
   constructor
@@ -94,6 +105,8 @@ theorem counterexample_zeuge : ReqAmEintritt program mainIndex busyWorld .nil �
     unfold ReqAmEintritt at accepted
     rw [blocked] at accepted
     cases accepted
+
+#eval IO.FS.writeFile "../.scratch-agent/transition-progress" "A complete"
 
 namespace Ordered
 

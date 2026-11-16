@@ -38,7 +38,8 @@ import all Init.Data.String.ToSlice
 
 
 namespace Gabbro.Stage0.Pipeline.U64DifferenceWitness
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
