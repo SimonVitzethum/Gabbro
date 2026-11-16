@@ -153,6 +153,8 @@ theorem execution_success (program : Programm D) (S : SperrInv D) (policy : Call
     (hinvariants : invariantFormula program (D.invs.filter (schuldet f)) = .ok invariants)
     (domain : Invarianten.Pruefer.Environments D (D.params f))
     (hdomain : Invarianten.Pruefer.environments (D := D) budget.expansion (D.params f) = .ok domain)
+    (withinBudget : argumentSpecializations budget.specializations (D.params f) *
+      endSpecializations budget.specializations (program.rumpf f) ≤ budget.specializations)
     (ready : ∀ locals, (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true) :
     (checkExecution program S policy sources budget hint f).toOption.isSome = true := by
   obtain ⟨checked, hchecked⟩ := collect_success domain.values
@@ -162,6 +164,7 @@ theorem execution_success (program : Programm D) (S : SperrInv D) (policy : Call
   unfold checkExecution
   rw [hinvariants, hdomain]
   dsimp only [bind, Except.bind]
+  simp only [Nat.not_lt.mpr withinBudget, ↓reduceIte, pure, Except.pure, bind, Except.bind]
   delta CheckedEnvironment at hchecked
   rw [hchecked]
   rfl

@@ -292,10 +292,13 @@ theorem reader_checked_for (bodies : Bodies) (same : bodies zLies = body)
   · exact replay
   · apply execution_success (withBodies bodies) zS (requiresPolicy (withBodies bodies)) sources {}
       none zLies (invariantsFor bodies) (by rfl) inputDomain inputDomain_result
-    intro locals
-    have equal : locals = arguments := by cases locals; rfl
-    subst locals
-    exact environment_checked_for bodies same sources
+    · change argumentSpecializations 16384 context * endSpecializations 16384 (bodies zLies) ≤ 16384
+      rw [same]
+      decide +kernel
+    · intro locals
+      have equal : locals = arguments := by cases locals; rfl
+      subst locals
+      exact environment_checked_for bodies same sources
 
 /-- The original reader function, including its 101-value binder, is accepted. -/
 theorem reader_checked (sources : LockSources zS) :

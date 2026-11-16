@@ -15,7 +15,7 @@ variable {D : Deklaration} {V : Vertrag D} {S : SperrInv D}
 structure VCBudget where
   depth : Nat := 128
   expansion : Nat := 128
-  specializations : Nat := 4096
+  specializations : Nat := 16384
 
 abbrev EndCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
