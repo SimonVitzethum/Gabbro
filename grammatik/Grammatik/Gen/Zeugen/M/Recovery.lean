@@ -112,8 +112,8 @@ private theorem record_checked : ∀ p ∈ records, p.1.gueltig = true ∧
     change x ∈ M49_50.e.zellen ↔ x ∈ M49_50.zellen
     rw [← M49_50.zellen_exact, List.mem_eraseDups]
 
-  · exact ⟨GateAudit.m99_824_checked, deduplicated_cells _⟩
-  · exact ⟨GateAudit.m99_825_checked, deduplicated_cells _⟩
+  · exact ⟨GateAudit.m99_824_checked, deduplicated_cells Gap.M99_824.e⟩
+  · exact ⟨GateAudit.m99_825_checked, deduplicated_cells Gap.M99_825.e⟩
 
 theorem checked : ∀ e ∈ fixtures, e.gueltig = true := by
   intro e member
