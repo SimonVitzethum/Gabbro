@@ -67,56 +67,56 @@ theorem ort_stmt (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → En
       AusOrt C (execStmt O passes R s σ ρ) (execStmt O passes R s σ' ρ)
   | .assignSlot _ _ i e _ _, hC => by
       have hC' : ∀ o ∈ i.orte ++ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (i.orte ++ e.orte)
       simp only [execStmt]
       rw [h'.wert i (fun o ho => hC' o (by simp [ho])) ρ, h'.wert e (fun o ho => hC' o (by simp [ho])) ρ]
       exact .ok (h'.schreibSlot _ _ _ _ _)
   | .assignThru p _ _ _ i e _ _, hC => by
       have hC' : ∀ o ∈ p.orte ++ i.orte ++ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt]
       rw [h'.wert i (fun o ho => hC' o (by simp [ho])) ρ, h'.wert e (fun o ho => hC' o (by simp [ho])) ρ]
       exact .ok (h'.schreibSlot _ _ _ _ _)
   | .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _, hC => by
       have hC' : ∀ o ∈ p.orte ++ i.orte ++ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt]
       rw [h'.wert i (fun o ho => hC' o (by simp [ho])) ρ, h'.wert e (fun o ho => hC' o (by simp [ho])) ρ]
       exact .ok (h'.schreibSlot _ _ _ _ _)
   | .assignSlotRef r _ _ _ _ e _ _, hC => by
       have hC' : ∀ o ∈ r.orte ++ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (r.orte ++ e.orte)
       simp only [execStmt]
       rw [h'.wert r (fun o ho => hC' o (by simp [ho])) ρ, h'.wert e (fun o ho => hC' o (by simp [ho])) ρ]
       exact .ok (h'.schreibSlot _ _ _ _ _)
   | .assignGlob _ e _ _, hC => by
       have hC' : ∀ o ∈ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execStmt]
       rw [h'.wert e hC' ρ]
       exact .ok (h'.schreibGlob _ _ _)
   | .putBytes t f hf _ i _ _ e _ _, hC => by
       have hC' : ∀ o ∈ i.orte ++ e.orte, C o := (show _ ∧ _ from hC).2
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (i.orte ++ e.orte)
       simp only [execStmt]
       rw [h'.wert i (fun o ho => hC' o (by simp [ho])) ρ, h'.wert e (fun o ho => hC' o (by simp [ho])) ρ]
       exact .ok (OrtGleich.schreibBytes t f hf Λ _ _ h')
   | .assignVar _ e, hC => by
       have hC' : ∀ o ∈ e.orte, C o := hC
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ e.orte
       simp only [execStmt]
       rw [h'.wert e hC' ρ]
       exact .ok h'
   | .shift t _ _ i _ _ _ _ _ _, hC => by
       have hC' : ∀ o ∈ (.inl t :: i.orte : List (D.Tab ⊕ D.Glob)), C o := hC
-      intro σ σ' ρ hσ
+      intro ρ hσ
       have h' := hσ.lese Λ (.inl t :: i.orte)
       simp only [execStmt]
       rw [h'.wert i (fun o ho => hC' o (by simp [ho])) ρ, h'.slots t (hC' _ (by simp))]
