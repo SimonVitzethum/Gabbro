@@ -111,6 +111,7 @@ theorem Emitted.bild_ziel_ruf [Kern] (output : Emitted src K options)
             (output.einheit Q).ws := by
           change OldSource.judgedRoots output.compiled.unit output.compiled.main = [output.compiled.main]
           simp only [OldSource.judgedRoots, hr, hg, List.append_nil, List.filterMap_nil]
+          rfl
         rw [roots] at core
         exact akzeptiertSpec_of_X core (keinGeteiltV hAt)
   -- (b): the logic without the rely, and the start duty of `main`
