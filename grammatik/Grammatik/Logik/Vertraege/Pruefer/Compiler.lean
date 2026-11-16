@@ -187,7 +187,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           · simp only [dif_pos fits] at ready
             exact (goals.holds_shrink _ allowed _).mp (ready allowed safe)
           · simp only [dif_neg fits] at ready
-            exact False.elim ready)
+            )
     | .bindCallElse f args he hp hr failure rest => do
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callOutcomesCondition policy budget.expansion f actual _ _
@@ -347,7 +347,7 @@ def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           · simp only [dif_pos fits] at ready
             exact (goals.endHolds_shrink _ allowed _).mp (ready allowed safe)
           · simp only [dif_neg fits] at ready
-            exact False.elim ready)
+            )
     | _ => .error (.unsupported "contract end block is outside the checked control fragment")
 termination_by fuel
 
@@ -363,21 +363,23 @@ def reasonCases (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {coun
     | .nil => .ok
         { formula := .tru
           sound := fun _ _ _ _ _ reason => reason.elim0 }
-    | .cons first rest => do
+    | .cons (n := remaining) first rest => do
         let head ← block fuel first locals goals
         let tail ← reasonCases fuel rest locals goals
         return {
             formula := conj head.formula tail.formula
-            sound := fun runtime world valid allowed safe reason => by
+            sound := fun runtime world valid allowed safe (reason : Fin (remaining + 1)) => by
               have parts := (Invarianten.Elim.Korrekt.conj_denote _ _ _).mp valid
               rcases reason with ⟨ordinal, inside⟩
               cases ordinal with
               | zero => exact head.sound runtime world parts.1 allowed safe
               | succ ordinal => exact tail.sound runtime world parts.2 allowed safe
-                  ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩ }
+                  (show Fin remaining from ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩) }
 termination_by fuel
 
 end
+
+#check @endingCore
 
 /-- Bound specialization before constructing any path conditions. The core
     certificate still has precisely the original semantic soundness meaning. -/
@@ -386,7 +388,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     Except Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
   if endSpecializations budget.specializations code > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
-  else endingCore fuel code locals goals
+  else endingCore (policy := policy) (facts := facts) (budget := budget) (hint := hint) fuel code locals goals
 
 end Compiler
 
