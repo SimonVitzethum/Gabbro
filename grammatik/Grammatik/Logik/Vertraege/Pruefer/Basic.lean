@@ -90,6 +90,36 @@ theorem traverse_safe {τ : Ty}
       | logik error => simpa only [result, StatementResult] using valid
       | _ => trivial
 
+/-- Retry has no annotation failure: total body and overflow certificates
+    establish totality for every bound without expanding the loop. -/
+theorem retry_safe
+    (step : World D → Env D Γ → Ausgang V true Γ)
+    (test : World D → Env D Γ → World D × Bool)
+    (overflow : World D → Env D Γ → Ausgang V l Γ)
+    (safe : ∀ world locals, StatementResult (step world locals))
+    (safeOverflow : ∀ world locals, StatementResult (overflow world locals)) :
+    ∀ count world locals,
+      StatementResult (retryLauf step test overflow count world locals) := by
+  intro count
+  induction count with
+  | zero =>
+      intro world locals
+      simp only [retryLauf]
+      split
+      · trivial
+      · exact safeOverflow _ _
+  | succ count ih =>
+      intro world locals
+      simp only [retryLauf]
+      split
+      · trivial
+      · have valid := safe (test world locals).1 locals
+        cases result : step (test world locals).1 locals with
+        | ok next env => exact ih next env
+        | next _ next env => exact ih next env
+        | logik error => simpa only [result, StatementResult] using valid
+        | _ => trivial
+
 abbrev StatementSafe (S : SperrInv D) {Λ Λ' : List (Res D)} (code : Stmt D V l Γ Λ Λ') :=
   ∀ O U A passes R world locals,
     StatementResult (execStmtHA S O U A passes R code world locals)
@@ -116,6 +146,17 @@ def trivialLock {S : SperrInv D} (sources : LockSources S) (lock : D.Lock) :
         exact meaning.symm⟩
   | _ => none
 
+/-- Every scope in a lexical cleanup is checked, including empty payload locks. -/
+def trivialScopes {S : SperrInv D} (sources : LockSources S) :
+    (locks : List D.Lock) → Option (PLift (∀ world, scopesInvH S locks world = true))
+  | [] => some ⟨fun _ => rfl⟩
+  | lock :: locks => do
+      let head ← trivialLock sources lock
+      let tail ← trivialScopes sources locks
+      return ⟨fun world => by
+        simp only [scopesInvH, List.all_cons, head.down, Bool.true_and]
+        exact tail.down world⟩
+
 mutual
 
 /-- A syntax certificate for total typed primitives. It reasons about the actual
@@ -126,9 +167,19 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
     (fuel : Nat) → (code : Stmt D V l Γ Λ Λ') → Option (PLift (StatementSafe S code))
   | 0, _ => none
   | fuel + 1, code => match code with
-    | .assignSlot .. | .assignThru .. | .assignSlotRef .. | .assignGlob .. | .assignVar ..
+    | .assignSlot .. | .assignThru .. | .assignThruOwn .. | .assignSlotRef ..
+      | .assignGlob .. | .assignVar .. | .putBytes .. | .publish ..
+      | .regWrite .. | .transition .. | .advances .. | .retires ..
       | .ret .. | .retWhy .. | .leave .. | .next .. =>
         some ⟨fun _ _ _ _ _ _ _ => trivial⟩
+    | .retScoped expression cleanup => do
+        let truth ← trivialScopes sources cleanup.scopes
+        return ⟨fun _ _ _ _ _ _ _ => by
+          simp only [execStmtHA, truth.down, ↓reduceIte, StatementResult]⟩
+    | .retWhyScoped reason cleanup => do
+        let truth ← trivialScopes sources cleanup.scopes
+        return ⟨fun _ _ _ _ _ _ _ => by
+          simp only [execStmtHA, truth.down, ↓reduceIte, StatementResult]⟩
     | .breaking _ body => do
         let checked ← block S sources fuel body
         return ⟨fun O U A passes R world locals =>
@@ -151,6 +202,12 @@ def statement (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {
         return ⟨fun O U A passes R world locals =>
           traverse_safe _ _ (checked.down O U A passes R)
             (fun _ _ => rfl) (alleIndizes (D.count table)) world locals⟩
+    | .retry count test body overflow => do
+        let checked ← block S sources fuel body
+        let exceeded ← block S sources fuel overflow
+        return ⟨fun O U A passes R world locals =>
+          retry_safe _ _ _ (checked.down O U A passes R)
+            (exceeded.down O U A passes R) count world locals⟩
     | .locks lock _ body => do
         let truth ← trivialLock sources lock
         let checked ← block S sources fuel body
@@ -181,6 +238,26 @@ def block (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ �
         let checked ← block S sources fuel tail
         return ⟨fun O U A passes R world locals =>
           statement_shrink _ (checked.down O U A passes R _ _)⟩
+    | .exchange _ _ _ _ tail => do
+        let checked ← block S sources fuel tail
+        return ⟨fun O U A passes R _ _ =>
+          statement_shrink _ (checked.down O U A passes R _ _)⟩
+    | .awaits _ _ _ _ _ tail => do
+        let checked ← block S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          split
+          · exact statement_shrink _ (checked.down O U A passes R _ _)
+          · trivial⟩
+    | .regRead _ _ tail => do
+        let checked ← block S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execBlockHA]
+          split
+          · split
+            · exact statement_shrink _ (checked.down O U A passes R _ _)
+            · trivial
+          · trivial⟩
     | .bindAxiom item arguments same _ _ _ _ tail => do
         let checked ← block S sources fuel tail
         return ⟨fun O U A passes R world locals => by
@@ -240,6 +317,14 @@ def ending (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ 
   | fuel + 1, code => match code with
     | .ret .. | .retWhy .. | .leave .. | .next .. =>
         some ⟨fun _ _ _ _ _ _ _ => trivial⟩
+    | .retScoped expression cleanup => do
+        let truth ← trivialScopes sources cleanup.scopes
+        return ⟨fun _ _ _ _ _ _ _ => by
+          simp only [execEndHA, truth.down, ↓reduceIte, EndResult]⟩
+    | .retWhyScoped reason cleanup => do
+        let truth ← trivialScopes sources cleanup.scopes
+        return ⟨fun _ _ _ _ _ _ _ => by
+          simp only [execEndHA, truth.down, ↓reduceIte, EndResult]⟩
     | .cons head tail => do
         let headChecked ← statement S sources fuel head
         let tailChecked ← ending S sources fuel tail
@@ -254,6 +339,26 @@ def ending (S : SperrInv D) (sources : LockSources S) {l : Bool} {Γ : Ctx} {Λ 
         let checked ← ending S sources fuel tail
         return ⟨fun O U A passes R world locals =>
           end_shrink _ (checked.down O U A passes R _ _)⟩
+    | .exchange _ _ _ _ tail => do
+        let checked ← ending S sources fuel tail
+        return ⟨fun O U A passes R _ _ =>
+          end_shrink _ (checked.down O U A passes R _ _)⟩
+    | .awaits _ _ _ _ _ tail => do
+        let checked ← ending S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execEndHA]
+          split
+          · exact end_shrink _ (checked.down O U A passes R _ _)
+          · trivial⟩
+    | .regRead _ _ tail => do
+        let checked ← ending S sources fuel tail
+        return ⟨fun O U A passes R world locals => by
+          dsimp only [execEndHA]
+          split
+          · split
+            · exact end_shrink _ (checked.down O U A passes R _ _)
+            · trivial
+          · trivial⟩
     | .bindAxiom item arguments same _ _ _ _ tail => do
         let checked ← ending S sources fuel tail
         return ⟨fun O U A passes R world locals => by

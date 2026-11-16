@@ -121,7 +121,10 @@ def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolic
       have ready := (quoteQF_denote _ _).mp (implication ⟨(requires.bool_iff world).mp entry, trivial⟩)
       have outcome := compiled.sound runtime world ready allowed safe
       exact contractGoals_sound program f locals invariants world allowed _ outcome⟩
-  else .error (.invalid (invalidMessage "function contract" requires.payload compiled.formula ++
+  -- A sufficient WP can contain call havoc and other overapproximations.
+  -- Falsity of that WP is not evidence of a source execution violating its
+  -- contract. Only the direct implication checker reports counterexamples.
+  else .error (.unsupported ("contract VC abstraction cannot establish the postcondition or a call obligation" ++
     "; parameters = " ++ reprStr (environmentValues locals)))
 
 /-- Check every decoded parameter environment in a complete budgeted domain. -/

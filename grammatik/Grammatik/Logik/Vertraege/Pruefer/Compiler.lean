@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Locks
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
 
 @[expose] public section
 
@@ -139,7 +140,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (fun _ => trivial))
     | .check test failure rest => do
         let positive ← block fuel rest locals goals
-        let negative ← ending fuel failure locals goals
+        let negative ← endingCore fuel failure locals goals
         let pre ← branchCondition test locals positive negative
         return pre.map (fun runtime world ready allowed safe => by
           cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
@@ -151,7 +152,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     | .narrow expression low high failure rest => do
         let pre ← narrowingCondition budget.expansion expression low high locals _ _
           (fun value => block fuel rest (.cons value locals) (goals.shrink _))
-          (ending fuel failure locals goals)
+          (endingCore fuel failure locals goals)
         return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
           unfold Runtime.wpB
           simp only [execBlockH]
@@ -167,7 +168,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callOutcomesCondition policy budget.expansion f actual _ _
             (fun value => block fuel rest (.cons (ergWert he value) locals) (goals.shrink _))
-            (fun reason => ending fuel failure (.cons reason locals) (goals.shrink _)))
+            (fun reason => endingCore fuel failure (.cons reason locals) (goals.shrink _)))
         return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpB
@@ -189,7 +190,7 @@ def block (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     | _ => .error (.unsupported "contract block is outside the checked control fragment")
 termination_by fuel
 
-def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+def endingCore (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (code : Endblock D V l Γ Λ) (locals : Env D Γ) (goals : Goals D V Γ) :
     Except Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
   match fuel with
@@ -227,7 +228,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.again locals)
         return pre.map (fun _ _ ready _ _ => ready)
     | .cons first rest => do
-        let tails := fun env => ending fuel rest env goals
+        let tails := fun env => endingCore fuel rest env goals
         let headGoals : Goals D V Γ := { goals with normal := fun env => generatedFormula (tails env) }
         let head ← statement fuel first locals headGoals
         return head.map (fun runtime world ready allowed safe => by
@@ -246,8 +247,8 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | logik error => simpa only [result, Goals.holds, Goals.endHolds] using ready
           | hardware error => trivial)
     | .ite test yes no => do
-        let positive ← ending fuel yes locals goals
-        let negative ← ending fuel no locals goals
+        let positive ← endingCore fuel yes locals goals
+        let negative ← endingCore fuel no locals goals
         let pre ← branchCondition test locals positive negative
         return pre.map (fun runtime world ready allowed safe => by
           cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) locals <;>
@@ -257,7 +258,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
               Bool.false_eq_true, ↓reduceIte] using ready)
     | .bind expression rest => do
         let pre ← localSelect budget.expansion expression locals _
-          (fun value => ending fuel rest (.cons value locals) (goals.shrink _))
+          (fun value => endingCore fuel rest (.cons value locals) (goals.shrink _))
         return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpE at ready ⊢
@@ -266,7 +267,7 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     | .bindCall f args he hp hr rest => do
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callCondition policy budget.expansion f actual hr _
-            (fun value => ending fuel rest (.cons (ergWert he value) locals) (goals.shrink _)))
+            (fun value => endingCore fuel rest (.cons (ergWert he value) locals) (goals.shrink _)))
         return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpE
@@ -282,8 +283,8 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     | .bindCallElse f args he hp hr failure rest => do
         let pre ← arguments budget.expansion args locals _ (fun actual =>
           callOutcomesCondition policy budget.expansion f actual _ _
-            (fun value => ending fuel rest (.cons (ergWert he value) locals) (goals.shrink _))
-            (fun reason => ending fuel failure (.cons reason locals) (goals.shrink _)))
+            (fun value => endingCore fuel rest (.cons (ergWert he value) locals) (goals.shrink _))
+            (fun reason => endingCore fuel failure (.cons reason locals) (goals.shrink _)))
         return (pre.read Λ args.orte).map (fun runtime world ready allowed safe => by
           have ready := ready allowed safe
           unfold Runtime.wpE
@@ -300,8 +301,8 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           | hardware error => trivial)
     | .narrow expression low high failure rest => do
         let pre ← narrowingCondition budget.expansion expression low high locals _ _
-          (fun value => ending fuel rest (.cons value locals) (goals.shrink _))
-          (ending fuel failure locals goals)
+          (fun value => endingCore fuel rest (.cons value locals) (goals.shrink _))
+          (endingCore fuel failure locals goals)
         return (pre.read Λ expression.orte).map (fun runtime world ready allowed safe => by
           unfold Runtime.wpE
           simp only [execEndH]
@@ -314,6 +315,15 @@ def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 termination_by fuel
 
 end
+
+/-- Bound specialization before constructing any path conditions. The core
+    certificate still has precisely the original semantic soundness meaning. -/
+def ending (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (code : Endblock D V l Γ Λ) (locals : Env D Γ) (goals : Goals D V Γ) :
+    Except Frag.Refusal (EndCondition (S := S) policy code locals goals) :=
+  if endSpecializations budget.specializations code > budget.specializations then
+    .error (.unsupported "contract VC specialization product exceeds the work budget")
+  else endingCore policy facts budget hint fuel code locals goals
 
 end Compiler
 

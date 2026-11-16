@@ -47,7 +47,7 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (code : Stmt D V l Γ Λ Λ') (locals : Env D Γ) (goals : Goals D V Γ) :
     Except Invarianten.Frag.Refusal (StatementCondition (S := S) policy code locals goals) :=
   match code with
-  | .assignGlob name expression _ _ => do
+  | .assignGlob name expression _ _ | .publish name expression _ _ _ _ => do
       match h : goals.normal locals with
       | .error cause => .error cause
       | .ok normal => do
@@ -55,20 +55,6 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           return {
               formula := pre.formula
               sound := fun runtime world valid allowed safe => by
-                unfold Runtime.wpS
-                simp only [execStmtH, Goals.holds, h, denotes]
-                rw [assignment_schreibGlob]
-                apply pre.sound
-                rw [assignment_lese]
-                exact valid }
-  | .publish name expression _ _ _ _ => do
-      match h : goals.normal locals with
-      | .error cause => .error cause
-      | .ok normal => do
-          let pre ← scalarWP expression locals (.glob name) normal
-          return {
-              formula := pre.formula
-              sound := fun runtime world valid _ _ => by
                 unfold Runtime.wpS
                 simp only [execStmtH, Goals.holds, h, denotes]
                 rw [assignment_schreibGlob]
@@ -96,6 +82,35 @@ def leafCondition (budget : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         (fun value _ world => denotes (goals.normal (locals.set name value)) world)
         (fun value => requireCondition (goals.normal (locals.set name value)))
       return (pre.read Λ expression.orte).map (fun _ _ valid _ _ => valid)
+  | .shift table field kind index source destination bounded _ _ access => do
+      match h : goals.normal locals with
+      | .error cause => .error cause
+      | .ok normal => do
+          let encodedIndex ← translate index locals
+          let offset ← encodedIndex.constantIndex
+          let observed ← translateScalar (.slot table field index access) locals
+          let post := normal.subst (.slot table field offset.val) (.konst destination)
+          return {
+              formula := lower (.and (.eq observed.term (.konst source)) (quoteQF post))
+              sound := fun runtime world valid allowed _ => by
+                have transport {a b : Ty} (same : a = b) (value : Wert D a) :
+                    scalarValue b (same ▸ value) = scalarValue a value := by
+                  cases same
+                  rfl
+                let read := world.lese Λ (.inl table :: index.orte)
+                have parts := (lower_denote _ (assignment read)).mp (by
+                  rw [assignment_lese]
+                  exact valid)
+                have taken : (kind ▸ read.slots table (eval read index read locals).n field).n = source := by
+                  have observedValue := parts.1
+                  change observed.term.denote (assignment read) = source at observedValue
+                  rw [observed.correct read] at observedValue
+                  change scalarValue _ (read.slots table (eval read index read locals).n field) = source at observedValue
+                  exact (transport kind _).trans observedValue
+                unfold Runtime.wpS
+                simp only [execStmtH, taken, ↓reduceIte, Goals.holds, h, denotes]
+                rw [assignment_schreibSlot, offset.property, transport]
+                exact (subst_denote _ _ normal (assignment read)).mp ((quoteQF_denote _ _).mp parts.2) }
   | .advances .. | .retires .. | .transition .. => do
       let pre ← requireCondition (program := program) (checked := fun _ => []) (S := S) (goals.normal locals)
       return pre.map (fun _ _ ready _ _ => ready)
