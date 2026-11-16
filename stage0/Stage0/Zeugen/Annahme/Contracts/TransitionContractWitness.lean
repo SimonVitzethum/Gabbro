@@ -111,8 +111,7 @@ def sourceUnit (ordered : Bool) : UProg where
          (if ordered then [.val (.lit 0), .val (.lit 0), .val (.lit 1), .val (.lit 1),
            .val (.lit 0), .val (.tab "T" "s" (.lit 0))] else [.val (.lit 0)])],
        ret := .val (.lit 23) }, transitionFunction ordered]
-  zustaende := [{ name := "S", stufen := if ordered then [] else ["Idle", "Busy"],
-    paare := if ordered then [] else [(0, 1)], transitions := [transition ordered] }]
+  zustaende := [{ name := "S", stufen := (if ordered then [] else ["Idle", "Busy"]), paare := (if ordered then [] else [(0, 1)]), transitions := [transition ordered] }]
   regiert := [("T", "s", "S")]
 
 end Data
@@ -131,7 +130,7 @@ theorem candidate_refused : candidate.toOption.isSome = false := by
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := Data.sourceUnit false
+def unit : UProg := { Data.sourceUnit false with merk := model.1.merk }
 
 #eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality false"
 
@@ -197,12 +196,12 @@ def text : String :=
 
 theorem model_present : (sourceModel text).toOption.isSome = true := by kernel_rfl
 def model : Σ u : UProg, Programm (declOf u) := (sourceModel text).toOption.get model_present
-def unit : UProg := Data.sourceUnit true
+def unit : UProg := { Data.sourceUnit true with merk := model.1.merk }
 
 #eval IO.FS.writeFile "../.scratch-agent/transition-progress" "before unit equality true"
 
--- Cache representatives need only their existing quotient equality.
-theorem model_unit : model.1 = unit := by decide +kernel
+-- Retain the source's original cache together with the exact data fields.
+theorem model_unit : model.1 = unit := by kernel_rfl
 
 def program : Programm (declOf unit) := model_unit ▸ model.2
 def mainIndex : Fin unit.fns.length := ⟨0, by decide +kernel⟩
