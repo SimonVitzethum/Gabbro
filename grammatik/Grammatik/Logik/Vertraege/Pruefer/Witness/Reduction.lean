@@ -49,8 +49,14 @@ theorem prepared_sound_zeuge (values : Assignment Nat) : original.denote values 
     have shape : (Snapshot.prepared original).val = .tru := rfl
     rw [shape]; trivial) values
 
-theorem metered_sound_zeuge : (LProp.eq (.konst 7) (.konst 7) : LProp Nat).denote (fun _ => 0) :=
-  Snapshot.metered_sound _ 128 (by rfl)
+theorem metered_sound_zeuge : (LProp.all 0 (.le (.var 0) (.var 0)) : LProp Nat).denote (fun _ => 0) :=
+  Snapshot.metered_sound _ 1000000 (by rfl)
+
+theorem conjunct_zeuge (values : Assignment Nat) :
+    ∃ proof, conjunct (.and (.le (.konst 0) (.var 0)) (.le (.var 0) (.konst (2 ^ 32 - 1))))
+      (.le (.var 0) (.konst (2 ^ 32 - 1))) = some proof ∧
+      ((0 ≤ values 0 ∧ values 0 ≤ 2 ^ 32 - 1) → values 0 ≤ 2 ^ 32 - 1) := by
+  exact ⟨_, rfl, fun valid => valid.2⟩
 
 /-- Truth at one sampled value cannot certify a universal claim, and falsehood
     at one sampled value cannot refute an existential claim. Both remain unknown for the real decision. -/

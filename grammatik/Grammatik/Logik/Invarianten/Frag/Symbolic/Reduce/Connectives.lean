@@ -34,6 +34,22 @@ def negation [DecidableEq α] (body : LProp α) : Equivalent (.not body) :=
        fun valid => Classical.byContradiction (fun rejected => valid rejected)⟩⟩
   | body => ⟨.not body, fun _ => Iff.rfl⟩
 
+/-- A guarded obligation that is already an unconditional conjunct needs no
+    arithmetic elimination. This also preserves inconsistent guards exactly. -/
+def conjunct [DecidableEq α] (guard goal : LProp α) :
+    Option (PLift (∀ values, guard.denote values → goal.denote values)) :=
+  if same : guard = goal then some ⟨fun _ valid => same ▸ valid⟩
+  else
+    match guard with
+    | .and left right =>
+        match conjunct left goal with
+        | some found => some ⟨fun values valid => found.down values valid.1⟩
+        | none => do
+            let found ← conjunct right goal
+            return ⟨fun values valid => found.down values valid.2⟩
+    | _ => none
+termination_by guard
+
 def implication [DecidableEq α] (left right : LProp α) : Equivalent (.imp left right) :=
   match left, right with
   | .tru, right => ⟨right, fun _ => by simp only [LProp.denote, true_implies]⟩
@@ -43,10 +59,9 @@ def implication [DecidableEq α] (left right : LProp α) : Equivalent (.imp left
       change ((_ ∧ _) → _) ↔ (_ → _ → _)
       exact ⟨fun valid a b => valid ⟨a, b⟩, fun valid both => valid both.1 both.2⟩⟩
   | left, right =>
-      if same : left = right then ⟨.tru, fun _ => by
-        rw [same]
-        exact ⟨fun _ value => value, fun _ => trivial⟩⟩
-      else ⟨.imp left right, fun _ => Iff.rfl⟩
+      match conjunct left right with
+      | some found => ⟨.tru, fun values => ⟨fun _ => found.down values, fun _ => trivial⟩⟩
+      | none => ⟨.imp left right, fun _ => Iff.rfl⟩
 
 def truth [DecidableEq α] (value : Bool) : LProp α := if value then .tru else .fls
 
