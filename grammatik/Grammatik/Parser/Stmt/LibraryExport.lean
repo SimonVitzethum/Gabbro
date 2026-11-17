@@ -285,7 +285,7 @@ private theorem callerCompiled_shape
   dsimp only [fullProgram, progOfFn, fullPieces, produced2, callerIndex, Fin.cases]
   rw (config := { transparency := .all }) [ending.eq_6]
   rw (config := { transparency := .all })
-    [Vertraege.Pruefer.statement.eq_11]
+    [Vertraege.Pruefer.statement.eq_def]
   with_unfolding_all rfl
 
 private theorem callerCompiled_valid
