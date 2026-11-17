@@ -8,17 +8,24 @@ namespace Gabbro.Grammatik.Vertraege.Pruefer
 
 variable {D : Deklaration} {V : Vertrag D}
 
+mutual
+
 /-- Saturation makes the preflight independent of the magnitude of a type's
     interval. It never constructs decoded values or generates a continuation. -/
 def specializationCount (limit : Nat) : Ty → Nat
   | .int _ _ => 1
   | .bool => 2
-  | .prod _ fields => fields.foldr (fun kind rest => min (limit + 1) (specializationCount limit kind * rest)) 1
+  | .prod _ fields => argumentSpecializations limit fields
   | .why count => min (limit + 1) count
   | _ => 1
+termination_by structural kind => kind
 
-def argumentSpecializations (limit : Nat) (types : Ctx) : Nat :=
-  types.foldr (fun type rest => min (limit + 1) (specializationCount limit type * rest)) 1
+def argumentSpecializations (limit : Nat) : Ctx → Nat
+  | [] => 1
+  | kind :: rest => min (limit + 1) (specializationCount limit kind * argumentSpecializations limit rest)
+termination_by structural kinds => kinds
+
+end
 
 def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1

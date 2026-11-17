@@ -125,7 +125,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     Re-reviewed for quantified oracle answers/arbitrary typed poststates and
     quantified true-annotation traversals through the original runtime WPs.
     Their work estimate changes the VC implementation closure; the numbered
-    component formulas, reset-cell atom and `komp` remain unchanged. -/
+    component formulas, reset-cell atom and `komp` remain unchanged.
+    Re-reviewed for typed product component observations and their quantified
+    parameter/result coverage. Runtime-WP soundness and all numbered cell
+    formulas, reset-cell atoms and `komp` remain unchanged. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -139,7 +142,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 13892163655227119826)]
+   ("AkzeptiertX", 13182641054520370190)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

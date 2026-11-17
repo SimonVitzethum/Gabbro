@@ -89,3 +89,95 @@ theorem production_parameter_acceptance_zeuge :
       requirement (by rfl) certificate compiled_result original_valid_zeuge
 
 end Gabbro.Grammatik.Vertraege.Pruefer.ProductProductionWitness
+
+namespace Gabbro.Grammatik.Vertraege.Pruefer.ProductCallWitness
+
+open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
+open Invarianten.Frag.Symbolic Pruefer.Symbolic SelectionWitness
+
+attribute [local implicit_reducible] Witness.u32Declaration
+
+abbrev u32 : Ty := .int 0 (2 ^ 32 - 1)
+abbrev pair : Ty := .prod 0 [u32, u32]
+abbrev declaration : Deklaration :=
+  { Witness.u32Declaration with
+    Fn := Bool
+    sig := fun branch => if branch then 1 else 0
+    sigNr := fun number =>
+      { params := [], erg := some (if number = 0 then pair else u32), gruende := 0
+        haelt := [], schreibt := fun _ => false, gschreibt := fun _ => false
+        konsumiert := [], produziert := [] }
+    passt := fun _ _ => false
+    passt_ok := fun _ _ impossible => by cases impossible
+    rzusage := fun item => nomatch item }
+
+def fits : RufPasst declaration (vertragVon declaration true) (declaration.signatur false) [] where
+  hw := fun _ impossible => by cases impossible
+  hg := fun _ impossible => by cases impossible
+  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun _ impossible => nomatch impossible
+
+/-- The second returned field is deliberately unconstrained by the callee's
+    postcondition; the caller must cover all its 2^32 admitted values. -/
+def program : Programm declaration where
+  invariante := fun item => nomatch item
+  requires := fun _ => .tru
+  ensures := fun branch => match branch with
+    | false => .eq (.prodGet (.var .here) .head) (.lit 7)
+    | true => .eq (.var .here) (.lit 7)
+  rumpf := fun branch => match branch with
+    | false => .ret (.val (.prod 0 (.cons (.widen (by decide) (by decide) (.lit 7))
+        (.cons (.widen (by decide) (by decide) (.lit 9)) .nil)))) (List.Perm.refl _)
+    | true => .bindCall false .nil rfl fits rfl
+        (.ret (.val (.prodGet (.var .here) .head)) (List.Perm.refl _))
+
+abbrev budget : VCBudget := { expansion := 0, depth := 16 }
+abbrev symbols : SymEnv declaration Nat [] := .nil
+
+def invariants : InvariantFormula program [] := (invariantFormula program []).toOption.get (by rfl)
+
+def compiled := ending (requiresPolicy program (entryContext symbols (next := 0) trivial))
+  (S := SperrInv.leer declaration) (Invarianten.Pruefer.lockFormula (SperrInv.leer declaration) (fun _ => none))
+  budget none budget.depth (program.rumpf true) symbols trivial
+  (contractGoals program true symbols trivial invariants)
+
+theorem compiled_present_zeuge : compiled.toOption.isSome = true := by with_unfolding_all rfl
+
+def certificate := compiled.toOption.get compiled_present_zeuge
+
+theorem compiled_result : compiled = .ok certificate := by
+  have present := compiled_present_zeuge
+  cases result : compiled with
+  | error reason => rw [result] at present; cases present
+  | ok value => simp only [certificate, result, Except.toOption, Option.get_some]
+
+theorem normalized_zeuge : (Reduce.normalize 8 certificate.formula).val = .tru := by
+  with_unfolding_all rfl
+
+theorem original_valid_zeuge (values : Assignment (Key declaration Nat)) :
+    (entryVC symbols .tru certificate.formula).denote values := by
+  intro _ _ _
+  apply ((Reduce.normalize 8 certificate.formula).property values).mp
+  rw [normalized_zeuge]
+  trivial
+
+attribute [local irreducible] entryVC certificate
+
+/-- The actual call-result gate accepts the value-dependent continuation at
+    zero integer enumeration budget, using the callee's field relation. -/
+theorem production_call_acceptance_zeuge :
+    (checkExecution program (SperrInv.leer declaration) (fun _ => none) budget none true).toOption.isSome = true := by
+  apply execution_success program (SperrInv.leer declaration) (fun _ => none) budget none true
+    (by rfl) invariants (by rfl)
+    ((parameters (D := declaration) 0 0 []).toOption.get (by rfl)) (by rfl)
+  · change 1 ≤ 16384
+    decide
+  · intro entry
+    rcases entry with ⟨selected, member⟩
+    cases selected
+    let requirement := (Invarianten.Frag.Symbolic.translate (program.requires true) symbols).toOption.get (by rfl)
+    exact environment_success_of_valid program (SperrInv.leer declaration) symbols trivial
+      (requiresPolicy program _) (fun _ => none) budget none invariants (by with_unfolding_all rfl)
+      requirement (by rfl) certificate compiled_result original_valid_zeuge
+
+end Gabbro.Grammatik.Vertraege.Pruefer.ProductCallWitness
