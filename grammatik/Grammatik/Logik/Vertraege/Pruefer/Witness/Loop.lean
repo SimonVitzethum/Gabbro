@@ -179,21 +179,22 @@ attribute [local irreducible] entryVC certificate
 theorem function_checked (enabled : Bool) :
     (checkFunction (selectedProgram enabled) (SperrInv.leer declaration) (fun _ => none)
       loopBudget (selectedHint enabled) ()).toOption.isSome = true := by
-  apply function_success
-  · rfl
-  · cases enabled <;> with_unfolding_all rfl
-  · apply execution_success (selectedProgram enabled) (SperrInv.leer declaration) (fun _ => none)
-      loopBudget (selectedHint enabled) () (by rfl) (obligations enabled) (by rfl)
-      ((parameters (D := declaration) 4 0 []).toOption.get (by rfl)) (by rfl)
-    · cases enabled
-      · change 4 ≤ 16384; decide
-      · change 102 ≤ 16384; decide
-    · rintro ⟨locals, member⟩
-      cases locals
-      exact environment_success_of_valid (D := declaration) (f := ()) (next := 0)
-        (selectedProgram enabled) (SperrInv.leer declaration) symbols symbols_bounded (requiresPolicy (selectedProgram enabled) _)
-        (fun _ => none) loopBudget (selectedHint enabled) (obligations enabled) (by rfl)
-        (requirement enabled) (by rfl) (certificate enabled) (compiled_result enabled) (compiled_valid enabled)
+  with_unfolding_all
+    apply function_success
+    · rfl
+    · cases enabled <;> with_unfolding_all rfl
+    · apply execution_success (selectedProgram enabled) (SperrInv.leer declaration) (fun _ => none)
+        loopBudget (selectedHint enabled) () (by rfl) (obligations enabled) (by rfl)
+        ((parameters (D := declaration) 4 0 []).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · cases enabled
+        · change 4 ≤ 16384; decide
+        · change 102 ≤ 16384; decide
+      · rintro ⟨locals, member⟩
+        cases locals
+        exact environment_success_of_valid (D := declaration) (f := ()) (next := 0)
+          (selectedProgram enabled) (SperrInv.leer declaration) symbols symbols_bounded (requiresPolicy (selectedProgram enabled) _)
+          (fun _ => none) loopBudget (selectedHint enabled) (obligations enabled) (by rfl)
+          (requirement enabled) (by rfl) (certificate enabled) (compiled_result enabled) (compiled_valid enabled)
 
 theorem contracts_checked (enabled : Bool) :
     KontrakteGeprueftB (selectedProgram enabled) (SperrInv.leer declaration) [()]

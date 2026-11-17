@@ -231,26 +231,27 @@ private theorem identCaller_checked
     (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
     (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) :
     (checkFunction (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) (fun _ => none) {} none identCallerIndex).toOption.isSome = true := by
-  apply Vertraege.Pruefer.SelectionWitness.function_success
-  · with_unfolding_all rfl
-  · with_unfolding_all rfl
-  · apply Vertraege.Pruefer.SelectionWitness.execution_success (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) (fun _ => none) {}
-      none identCallerIndex (by with_unfolding_all rfl) (identCallerInvariants (identProgram invariants pointers foreigns)) (by rfl)
-      ((parameters (D := identDeclaration) 128 0 []).toOption.get (by rfl)) (by rfl)
-    · with_unfolding_all
-        change 2 ≤ 16384
-        decide
-    · rintro ⟨symbols, member⟩
-      cases symbols
-      let requirement := (Invarianten.Frag.Symbolic.translate ((identProgram invariants pointers foreigns).requires identCallerIndex) identCallerSymbols).toOption.get (by with_unfolding_all rfl)
-      exact Vertraege.Pruefer.SelectionWitness.environment_success_of_valid (D := identDeclaration) (f := identCallerIndex) (next := 0)
-        (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) identCallerSymbols identCallerBounded (requiresPolicy (identProgram invariants pointers foreigns) _) (fun _ => none) {} none
-        (identCallerInvariants (identProgram invariants pointers foreigns)) (by with_unfolding_all rfl) requirement (by rfl)
-        (identCallerCertificate invariants pointers foreigns) (identCallerCompiled_result invariants pointers foreigns) (by
-          intro values
-          unfold entryVC
-          intro _ _ _
-          exact identCallerCompiled_valid invariants pointers foreigns values)
+  with_unfolding_all
+    apply Vertraege.Pruefer.SelectionWitness.function_success
+    · with_unfolding_all rfl
+    · with_unfolding_all rfl
+    · apply Vertraege.Pruefer.SelectionWitness.execution_success (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) (fun _ => none) {}
+        none identCallerIndex (by with_unfolding_all rfl) (identCallerInvariants (identProgram invariants pointers foreigns)) (by rfl)
+        ((parameters (D := identDeclaration) 128 0 []).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · with_unfolding_all
+          change 2 ≤ 16384
+          decide
+      · rintro ⟨symbols, member⟩
+        cases symbols
+        let requirement := (Invarianten.Frag.Symbolic.translate ((identProgram invariants pointers foreigns).requires identCallerIndex) identCallerSymbols).toOption.get (by with_unfolding_all rfl)
+        exact Vertraege.Pruefer.SelectionWitness.environment_success_of_valid (D := identDeclaration) (f := identCallerIndex) (next := 0)
+          (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) identCallerSymbols identCallerBounded (requiresPolicy (identProgram invariants pointers foreigns) _) (fun _ => none) {} none
+          (identCallerInvariants (identProgram invariants pointers foreigns)) (by with_unfolding_all rfl) requirement (by rfl)
+          (identCallerCertificate invariants pointers foreigns) (identCallerCompiled_result invariants pointers foreigns) (by
+            intro values
+            unfold entryVC
+            intro _ _ _
+            exact identCallerCompiled_valid invariants pointers foreigns values)
 
 -- Retain the canonical producer equations before assembling the actual image,
 -- as for the qualified source in LibraryExport.

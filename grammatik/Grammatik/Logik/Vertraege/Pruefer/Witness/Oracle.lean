@@ -158,19 +158,20 @@ attribute [local irreducible] entryVC certificate
 theorem production_oracle_acceptance_zeuge (mode : Fin 8) :
     (checkExecution (program mode.val) (SperrInv.leer declaration) (fun _ => none)
       budget none ()).toOption.isSome = true := by
-  apply execution_success (program mode.val) (SperrInv.leer declaration) (fun _ => none) budget none ()
-    (by rfl) (invariants mode.val) (by rfl)
-    ((parameters (D := declaration) 2 0 [u32]).toOption.get (by rfl)) (by rfl)
-  · exact of_decide_eq_true (List.all_eq_true.mp specialization_cost_zeuge mode (List.mem_finRange mode))
-  · intro entry
-    rcases entry with ⟨selected, member⟩
-    change selected ∈ [symbols] at member
-    have same := List.mem_singleton.mp member
-    subst selected
-    let requirement := (Invarianten.Frag.Symbolic.translate ((program mode.val).requires ()) symbols).toOption.get (by rfl)
-    exact environment_success_of_valid (program mode.val) (SperrInv.leer declaration) symbols bounded_zeuge
-      (requiresPolicy (program mode.val) _) (fun _ => none) budget none (invariants mode.val) (by rfl)
-      requirement (by rfl) (certificate mode) (compiled_result mode) (oracle_vc_valid mode)
+  with_unfolding_all
+    apply execution_success (program mode.val) (SperrInv.leer declaration) (fun _ => none) budget none ()
+      (by rfl) (invariants mode.val) (by rfl)
+      ((parameters (D := declaration) 2 0 [u32]).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+    · exact of_decide_eq_true (List.all_eq_true.mp specialization_cost_zeuge mode (List.mem_finRange mode))
+    · intro entry
+      rcases entry with ⟨selected, member⟩
+      change selected ∈ [symbols] at member
+      have same := List.mem_singleton.mp member
+      subst selected
+      let requirement := (Invarianten.Frag.Symbolic.translate ((program mode.val).requires ()) symbols).toOption.get (by rfl)
+      exact environment_success_of_valid (program mode.val) (SperrInv.leer declaration) symbols bounded_zeuge
+        (requiresPolicy (program mode.val) _) (fun _ => none) budget none (invariants mode.val) (by rfl)
+        requirement (by rfl) (certificate mode) (compiled_result mode) (oracle_vc_valid mode)
 
 /-- Both present and absent oracle bindings commute with statement outcomes. -/
 theorem goals_shrinkResult_zeuge

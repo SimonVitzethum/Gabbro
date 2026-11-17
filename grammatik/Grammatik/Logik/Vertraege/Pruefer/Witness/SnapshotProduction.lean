@@ -185,17 +185,18 @@ theorem environment_checked :
 
 theorem function_checked :
     (checkFunction (program true) (SperrInv.leer declaration) (fun _ => none) budget none ()).toOption.isSome = true := by
-  apply function_success
-  · rfl
-  · with_unfolding_all rfl
-  · apply execution_success (program true) (SperrInv.leer declaration) (fun _ => none) budget none ()
-      (by rfl) (invariants true) (by rfl)
-      ((parameters (D := declaration) 0 0 [u32]).toOption.get (by rfl)) (by rfl)
-    · change 1 ≤ 16384; decide
-    · rintro ⟨selected, member⟩
-      have same : selected = symbols := List.mem_singleton.mp member
-      subst selected
-      exact environment_checked
+  with_unfolding_all
+    apply function_success
+    · rfl
+    · with_unfolding_all rfl
+    · apply execution_success (program true) (SperrInv.leer declaration) (fun _ => none) budget none ()
+        (by rfl) (invariants true) (by rfl)
+        ((parameters (D := declaration) 0 0 [u32]).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · change 1 ≤ 16384; decide
+      · rintro ⟨selected, member⟩
+        have same : selected = symbols := List.mem_singleton.mp member
+        subst selected
+        exact environment_checked
 
 /-- Production accepts every u32 argument, with a genuine old/new global post. -/
 theorem old_global_accepted_zeuge :

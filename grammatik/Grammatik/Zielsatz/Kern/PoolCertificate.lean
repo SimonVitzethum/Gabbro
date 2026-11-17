@@ -70,39 +70,40 @@ theorem reader_checked_for (bodies : Bodies) (same : bodies zLies = body)
     (sources : LockSources zS)
     (replay : (Invarianten.Pruefer.atomicReplay? (withBodies bodies) zLies).isSome = true) :
     (checkFunction (withBodies bodies) zS sources {} none zLies).toOption.isSome = true := by
-  apply function_success (withBodies bodies) zS sources {} none zLies
-  · rfl
-  · exact replay
-  · apply execution_success (withBodies bodies) zS sources {} none zLies (by rfl)
-      (invariantsFor bodies) (by rfl)
-      ((parameters (D := zD) 128 0 context).toOption.get (by rfl)) (by rfl)
-    · change argumentSpecializations 16384 context *
-        endSpecializations (withBodies bodies) false 128 16384 (bodies zLies) ≤ 16384
-      rw [same]
-      change 1 ≤ 16384
-      decide
-    · intro entry
-      rcases entry with ⟨selected, member⟩
-      cases selected
-      have entryBounded : symbols.Bounded 0 := trivial
-      let requirement := (Invarianten.Frag.Symbolic.translate ((withBodies bodies).requires zLies) symbols).toOption.get (by rfl)
-      have ready : ∃ pre : Symbolic.EndCondition (S := zS)
-          (requiresPolicy (withBodies bodies) (entryContext symbols symbols_bounded)).semantic
-          (bodies zLies) symbols (contractGoals (withBodies bodies) zLies symbols symbols_bounded (invariantsFor bodies)),
-          ending (requiresPolicy (withBodies bodies) _) (lockFormula zS sources) {} none 128
-            (bodies zLies) symbols symbols_bounded
-            (contractGoals (withBodies bodies) zLies symbols symbols_bounded (invariantsFor bodies)) = .ok pre ∧
-            ∀ values, pre.formula.denote values := by
+  with_unfolding_all
+    apply function_success (withBodies bodies) zS sources {} none zLies
+    · rfl
+    · exact replay
+    · apply execution_success (withBodies bodies) zS sources {} none zLies (by rfl)
+        (invariantsFor bodies) (by rfl)
+        ((parameters (D := zD) 128 0 context).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · change argumentSpecializations 16384 context *
+          endSpecializations (withBodies bodies) false 128 16384 (bodies zLies) ≤ 16384
         rw [same]
-        exact ⟨certificate bodies sources, compiled_result bodies sources, compiled_valid bodies sources⟩
-      obtain ⟨pre, hbody, valid⟩ := ready
-      apply environment_success (withBodies bodies) zS symbols symbols_bounded (requiresPolicy (withBodies bodies) _)
-        sources {} none (invariantsFor bodies) (by rfl) requirement (by rfl) pre hbody
-      apply (close_decide_true_iff _).mpr
-      intro values
-      apply (lower_denote _ values).mpr
-      intro _ _ _
-      exact valid values
+        change 1 ≤ 16384
+        decide
+      · intro entry
+        rcases entry with ⟨selected, member⟩
+        cases selected
+        have entryBounded : symbols.Bounded 0 := trivial
+        let requirement := (Invarianten.Frag.Symbolic.translate ((withBodies bodies).requires zLies) symbols).toOption.get (by rfl)
+        have ready : ∃ pre : Symbolic.EndCondition (S := zS)
+            (requiresPolicy (withBodies bodies) (entryContext symbols symbols_bounded)).semantic
+            (bodies zLies) symbols (contractGoals (withBodies bodies) zLies symbols symbols_bounded (invariantsFor bodies)),
+            ending (requiresPolicy (withBodies bodies) _) (lockFormula zS sources) {} none 128
+              (bodies zLies) symbols symbols_bounded
+              (contractGoals (withBodies bodies) zLies symbols symbols_bounded (invariantsFor bodies)) = .ok pre ∧
+              ∀ values, pre.formula.denote values := by
+          rw [same]
+          exact ⟨certificate bodies sources, compiled_result bodies sources, compiled_valid bodies sources⟩
+        obtain ⟨pre, hbody, valid⟩ := ready
+        apply environment_success (withBodies bodies) zS symbols symbols_bounded (requiresPolicy (withBodies bodies) _)
+          sources {} none (invariantsFor bodies) (by rfl) requirement (by rfl) pre hbody
+        apply (close_decide_true_iff _).mpr
+        intro values
+        apply (lower_denote _ values).mpr
+        intro _ _ _
+        exact valid values
 
 theorem reader_checked (sources : LockSources zS) :
     (checkFunction zPB zS sources {} none zLies).toOption.isSome = true :=

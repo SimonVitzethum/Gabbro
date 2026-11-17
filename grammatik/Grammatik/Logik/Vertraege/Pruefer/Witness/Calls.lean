@@ -121,25 +121,26 @@ theorem environment_success_of_valid_zeuge :
 theorem uniform_wide_program_zeuge :
     KontrakteGeprueftB sharedProgram (SperrInv.leer sharedDeclaration) [false, true]
       (fun _ => none) sharedBudget = true := by
-  apply contracts_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget [false, true]
-  intro f
-  cases f with
-  | false => rfl
-  | true =>
-    apply function_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget none true
-    · rfl
-    · rfl
-    · apply execution_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget none true
-        (by rfl) sharedInvariants (by rfl)
-        ((parameters (D := sharedDeclaration) 0 0 []).toOption.get (by rfl)) (by rfl)
-      · change 2 ≤ 4
-        decide
-      · intro entry
-        rcases entry with ⟨selected, member⟩
-        cases selected
-        let requirement := (Invarianten.Frag.Symbolic.translate (sharedProgram.requires true) sharedSymbols).toOption.get (by rfl)
-        exact environment_success (D := sharedDeclaration) (f := true) (next := 0) sharedProgram (SperrInv.leer sharedDeclaration) sharedSymbols sharedBounded
-          (requiresPolicy sharedProgram _) (fun _ => none) sharedBudget none sharedInvariants (by rfl)
-          requirement (by rfl) sharedCertificate sharedCompiled_result shared_decided
+  with_unfolding_all
+    apply contracts_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget [false, true]
+    intro f
+    cases f with
+    | false => rfl
+    | true =>
+      apply function_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget none true
+      · rfl
+      · rfl
+      · apply execution_success sharedProgram (SperrInv.leer sharedDeclaration) (fun _ => none) sharedBudget none true
+          (by rfl) sharedInvariants (by rfl)
+          ((parameters (D := sharedDeclaration) 0 0 []).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+        · change 2 ≤ 4
+          decide
+        · intro entry
+          rcases entry with ⟨selected, member⟩
+          cases selected
+          let requirement := (Invarianten.Frag.Symbolic.translate (sharedProgram.requires true) sharedSymbols).toOption.get (by rfl)
+          exact environment_success (D := sharedDeclaration) (f := true) (next := 0) sharedProgram (SperrInv.leer sharedDeclaration) sharedSymbols sharedBounded
+            (requiresPolicy sharedProgram _) (fun _ => none) sharedBudget none sharedInvariants (by rfl)
+            requirement (by rfl) sharedCertificate sharedCompiled_result shared_decided
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness

@@ -175,20 +175,21 @@ theorem production_decided :
 theorem production_u32_acceptance_zeuge :
     (checkExecution program (SperrInv.leer declaration) (fun _ => none)
       { expansion := 0 } none ()).toOption.isSome = true := by
-  apply execution_success program (SperrInv.leer declaration) (fun _ => none) { expansion := 0 } none ()
-    (by rfl) productionInvariants (by rfl)
-    ((parameters (D := declaration) 0 0 [u32]).toOption.get (by rfl)) (by rfl)
-  · change 1 ≤ 16384
-    decide
-  · intro entry
-    rcases entry with ⟨selected, member⟩
-    change selected ∈ [symbols] at member
-    have same := List.mem_singleton.mp member
-    subst selected
-    let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
-    exact environment_success (D := declaration) (f := ()) (next := 1) program (SperrInv.leer declaration) symbols SymbolicWitness.bounded_zeuge
-      (requiresPolicy program _) (fun _ => none) { expansion := 0 } none productionInvariants (by rfl)
-      requirement (by rfl) productionCertificate productionCompiled_result production_decided
+  with_unfolding_all
+    apply execution_success program (SperrInv.leer declaration) (fun _ => none) { expansion := 0 } none ()
+      (by rfl) productionInvariants (by rfl)
+      ((parameters (D := declaration) 0 0 [u32]).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+    · change 1 ≤ 16384
+      decide
+    · intro entry
+      rcases entry with ⟨selected, member⟩
+      change selected ∈ [symbols] at member
+      have same := List.mem_singleton.mp member
+      subst selected
+      let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
+      exact environment_success (D := declaration) (f := ()) (next := 1) program (SperrInv.leer declaration) symbols SymbolicWitness.bounded_zeuge
+        (requiresPolicy program _) (fun _ => none) { expansion := 0 } none productionInvariants (by rfl)
+        requirement (by rfl) productionCertificate productionCompiled_result production_decided
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 

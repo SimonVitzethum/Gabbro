@@ -52,19 +52,20 @@ attribute [local irreducible] entryVC certificate
     uses the quantified traversal certificate, including the actual changed local. -/
 theorem production_traversal_acceptance_zeuge :
     (checkExecution program (SperrInv.leer declaration) (fun _ => none) budget none ()).toOption.isSome = true := by
-  apply execution_success program (SperrInv.leer declaration) (fun _ => none) budget none ()
-    (by rfl) invariants (by rfl)
-    ((parameters (D := declaration) 2 0 [u32]).toOption.get (by rfl)) (by rfl)
-  · change 2 ≤ 16384
-    decide
-  · intro entry
-    rcases entry with ⟨selected, member⟩
-    change selected ∈ [symbols] at member
-    have same := List.mem_singleton.mp member
-    subst selected
-    let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
-    exact environment_success_of_valid program (SperrInv.leer declaration) symbols bounded_zeuge
-      (requiresPolicy program _) (fun _ => none) budget none invariants (by rfl)
-      requirement (by rfl) certificate compiled_result original_vc_zeuge
+  with_unfolding_all
+    apply execution_success program (SperrInv.leer declaration) (fun _ => none) budget none ()
+      (by rfl) invariants (by rfl)
+      ((parameters (D := declaration) 2 0 [u32]).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+    · change 2 ≤ 16384
+      decide
+    · intro entry
+      rcases entry with ⟨selected, member⟩
+      change selected ∈ [symbols] at member
+      have same := List.mem_singleton.mp member
+      subst selected
+      let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
+      exact environment_success_of_valid program (SperrInv.leer declaration) symbols bounded_zeuge
+        (requiresPolicy program _) (fun _ => none) budget none invariants (by rfl)
+        requirement (by rfl) certificate compiled_result original_vc_zeuge
 
 end Gabbro.Grammatik.Vertraege.Pruefer.TraversalWitness

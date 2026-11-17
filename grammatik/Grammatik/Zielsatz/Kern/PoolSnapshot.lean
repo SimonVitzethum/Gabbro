@@ -60,15 +60,16 @@ theorem environment_checked :
   exact Snapshot.decide_of_prepared_true _ _ _ prepared_true
 
 theorem writer_checked : (checkFunction zPC zS zPoolSources {} none zEin).toOption.isSome = true := by
-  apply function_success
-  · rfl
-  · decide
-  · apply execution_success zPC zS zPoolSources {} none zEin (by rfl) invariants (by rfl)
-      ((parameters (D := zD) 128 0 (zD.params zEin)).toOption.get (by rfl)) (by rfl)
-    · change 1 ≤ 16384; decide
-    · rintro ⟨selected, member⟩
-      cases selected
-      exact environment_checked
+  with_unfolding_all
+    apply function_success
+    · rfl
+    · decide
+    · apply execution_success zPC zS zPoolSources {} none zEin (by rfl) invariants (by rfl)
+        ((parameters (D := zD) 128 0 (zD.params zEin)).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · change 1 ≤ 16384; decide
+      · rintro ⟨selected, member⟩
+        cases selected
+        exact environment_checked
 
 abbrev readerSymbols : SymEnv zD Nat (zD.params zLies) := .nil
 def readerBounded : readerSymbols.Bounded 0 := trivial
@@ -82,25 +83,26 @@ def readerCertificate := readerCompiled.toOption.get readerCompiled_present
 theorem readerCompiled_result : readerCompiled = .ok readerCertificate := by with_unfolding_all rfl
 
 theorem reader_checked : (checkFunction zPC zS zPoolSources {} none zLies).toOption.isSome = true := by
-  apply function_success
-  · rfl
-  · decide
-  · apply execution_success zPC zS zPoolSources {} none zLies (by rfl) readerInvariants (by rfl)
-      ((parameters (D := zD) 128 0 (zD.params zLies)).toOption.get (by rfl)) (by rfl)
-    · change 1 ≤ 16384; decide
-    · rintro ⟨selected, member⟩
-      cases selected
-      apply environment_success_of_valid zPC zS readerSymbols readerBounded (requiresPolicy zPC _)
-        zPoolSources {} none readerInvariants (by rfl)
-        ((Invarianten.Frag.Symbolic.translate (zPC.requires zLies) readerSymbols).toOption.get (by rfl))
-        (by rfl) readerCertificate readerCompiled_result
-      intro values
-      with_unfolding_all
-        change ((0 ≤ values (.inl (.slot () () 0)) ∧ values (.inl (.slot () () 0)) ≤ 100) ∧ True) →
-          True → True → ∀ value : Int,
-          ((0 ≤ value ∧ value ≤ 100) ∧ value = values (.inl (.slot () () 0))) →
-          (value = values (.inl (.slot () () 0)) ∧ True)
-      exact fun _ _ _ _ guarded => ⟨guarded.2, trivial⟩
+  with_unfolding_all
+    apply function_success
+    · rfl
+    · decide
+    · apply execution_success zPC zS zPoolSources {} none zLies (by rfl) readerInvariants (by rfl)
+        ((parameters (D := zD) 128 0 (zD.params zLies)).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · change 1 ≤ 16384; decide
+      · rintro ⟨selected, member⟩
+        cases selected
+        apply environment_success_of_valid zPC zS readerSymbols readerBounded (requiresPolicy zPC _)
+          zPoolSources {} none readerInvariants (by rfl)
+          ((Invarianten.Frag.Symbolic.translate (zPC.requires zLies) readerSymbols).toOption.get (by rfl))
+          (by rfl) readerCertificate readerCompiled_result
+        intro values
+        with_unfolding_all
+          change ((0 ≤ values (.inl (.slot () () 0)) ∧ values (.inl (.slot () () 0)) ≤ 100) ∧ True) →
+            True → True → ∀ value : Int,
+            ((0 ≤ value ∧ value ≤ 100) ∧ value = values (.inl (.slot () () 0))) →
+            (value = values (.inl (.slot () () 0)) ∧ True)
+        exact fun _ _ _ _ guarded => ⟨guarded.2, trivial⟩
 
 abbrev wrapSymbols : SymEnv zD Nat (zD.params zWrap) := .nil
 def wrapBounded : wrapSymbols.Bounded 0 := trivial
@@ -117,20 +119,21 @@ theorem wrapPrepared : (Snapshot.prepared (entryVC wrapSymbols .tru wrapCertific
   with_unfolding_all rfl
 
 theorem wrap_checked : (checkFunction zPC zS zPoolSources {} none zWrap).toOption.isSome = true := by
-  apply function_success
-  · rfl
-  · decide
-  · apply execution_success zPC zS zPoolSources {} none zWrap (by rfl) wrapInvariants (by rfl)
-      ((parameters (D := zD) 128 0 (zD.params zWrap)).toOption.get (by rfl)) (by rfl)
-    · with_unfolding_all decide
-    · rintro ⟨selected, member⟩
-      cases selected
-      apply environment_success_of_valid zPC zS wrapSymbols wrapBounded (requiresPolicy zPC _)
-        zPoolSources {} none wrapInvariants (by rfl)
-        ((Invarianten.Frag.Symbolic.translate (zPC.requires zWrap) wrapSymbols).toOption.get (by rfl))
-        (by rfl) wrapCertificate wrapCompiled_result
-      change ∀ values, (entryVC wrapSymbols .tru wrapCertificate.formula).denote values
-      exact Snapshot.prepared_sound _ (by rw [wrapPrepared]; trivial)
+  with_unfolding_all
+    apply function_success
+    · rfl
+    · decide
+    · apply execution_success zPC zS zPoolSources {} none zWrap (by rfl) wrapInvariants (by rfl)
+        ((parameters (D := zD) 128 0 (zD.params zWrap)).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · with_unfolding_all decide
+      · rintro ⟨selected, member⟩
+        cases selected
+        apply environment_success_of_valid zPC zS wrapSymbols wrapBounded (requiresPolicy zPC _)
+          zPoolSources {} none wrapInvariants (by rfl)
+          ((Invarianten.Frag.Symbolic.translate (zPC.requires zWrap) wrapSymbols).toOption.get (by rfl))
+          (by rfl) wrapCertificate wrapCompiled_result
+        change ∀ values, (entryVC wrapSymbols .tru wrapCertificate.formula).denote values
+        exact Snapshot.prepared_sound _ (by rw [wrapPrepared]; trivial)
 
 /-- The original probe keeps every old-slot contract and its guarded read/write. -/
 theorem contracts_checked : KontrakteGeprueftB zPC zS zFs zPoolSources = true := by

@@ -81,10 +81,10 @@ theorem selection_decides_zeuge :
   exact fun _ guarded => guarded.2
 
 def parameterDomain : Parameters declaration 0 [u32] :=
-  (parameters 0 0 [u32]).toOption.get (by rfl)
+  (parameters 0 0 [u32]).toOption.get (by with_unfolding_all rfl)
 
 theorem parameter_u32_no_enumeration_zeuge :
-    parameterDomain.next = 1 ∧ parameterDomain.templates.length = 1 := by constructor <;> rfl
+    parameterDomain.next = 1 ∧ parameterDomain.templates.length = 1 := by constructor <;> with_unfolding_all rfl
 
 theorem parameter_coverage_zeuge (actual : Env declaration [u32]) (incoming : Frag.Assignment Nat) :
     ∃ symbols ∈ parameterDomain.templates, ∃ valuation,
@@ -237,10 +237,10 @@ theorem frozen_context_extension_zeuge :
   rfl
 
 def mixedDomain : Parameters declaration 2 [u32, .bool, u32] :=
-  (parameters 2 2 [u32, .bool, u32]).toOption.get (by rfl)
+  (parameters 2 2 [u32, .bool, u32]).toOption.get (by with_unfolding_all rfl)
 
 theorem mixed_parameter_cases_zeuge : mixedDomain.next = 5 ∧ mixedDomain.templates.length = 2 := by
-  constructor <;> rfl
+  constructor <;> with_unfolding_all rfl
 
 theorem mixed_parameter_coverage_zeuge :
     ∃ symbols ∈ mixedDomain.templates, ∃ valuation,

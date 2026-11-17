@@ -262,21 +262,22 @@ attribute [local irreducible] entryVC certificate
     continuation, including the source's linear Duty cleanup. -/
 private theorem wrapper_accepted_zeuge :
     (checkFunction program family (fun _ => none) budget none index).toOption.isSome = true := by
-  apply function_success
-  · with_unfolding_all rfl
-  · with_unfolding_all rfl
-  · apply execution_success program family (fun _ => none) budget none index
-      (by with_unfolding_all rfl) invariants (by rfl)
-      ((parameters (D := declaration) 128 0 []).toOption.get (by rfl)) (by rfl)
-    · with_unfolding_all decide
-    · intro entry
-      rcases entry with ⟨selected, member⟩
-      cases selected
-      let requirement := (Invarianten.Frag.Symbolic.translate (program.requires index) symbols).toOption.get
-        (by with_unfolding_all rfl)
-      exact environment_success_of_valid program family symbols bounded (requiresPolicy program _)
-        (fun _ => none) budget none invariants (by with_unfolding_all rfl) requirement (by rfl)
-        certificate compiled_result original_valid
+  with_unfolding_all
+    apply function_success
+    · with_unfolding_all rfl
+    · with_unfolding_all rfl
+    · apply execution_success program family (fun _ => none) budget none index
+        (by with_unfolding_all rfl) invariants (by rfl)
+        ((parameters (D := declaration) 128 0 []).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
+      · with_unfolding_all decide
+      · intro entry
+        rcases entry with ⟨selected, member⟩
+        cases selected
+        let requirement := (Invarianten.Frag.Symbolic.translate (program.requires index) symbols).toOption.get
+          (by with_unfolding_all rfl)
+        exact environment_success_of_valid program family symbols bounded (requiresPolicy program _)
+          (fun _ => none) budget none invariants (by with_unfolding_all rfl) requirement (by rfl)
+          certificate compiled_result original_valid
 
 private theorem contracts_checked :
     KontrakteGeprueftB program family (List.finRange unit.fns.length) = true := by
