@@ -91,21 +91,4 @@ def Encoding.constantIndex {symbols : SymEnv D Nat Γ} {value : World D → Env 
       (encoded.correct valuation world actual realized).symm.trans
         (LTerm.constant?_sound found (values valuation world))⟩
 
-def allEncoding (symbols : SymEnv D Nat Γ) (items : List α)
-    (predicate : α → World D → Env D Γ → Bool)
-    (compile : ∀ item, Except Refusal (Encoding symbols .bool (predicate item))) :
-    Except Refusal (Encoding symbols .bool (fun world actual =>
-      items.all (fun item => predicate item world actual))) :=
-  match items with
-  | [] => .ok { payload := .tru, correct := fun _ _ _ _ => ⟨fun _ => trivial, fun _ => rfl⟩ }
-  | head :: tail => do
-      let first ← compile head
-      let rest ← allEncoding symbols tail predicate compile
-      return {
-        payload := .and first.payload rest.payload
-        correct := fun valuation world actual realized =>
-          Bool.and_eq_true_iff.trans (and_congr
-            (first.bool_iff valuation world actual realized)
-            (rest.bool_iff valuation world actual realized)) }
-
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic
