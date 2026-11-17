@@ -8060,3 +8060,8 @@ actual certificate, normal form and original universally valid VC.
 The numbered component formulas, reset cell and `komp` were re-read unchanged;
 the actual `AkzeptiertX` implementation-closure pin is `13892163655227119826`.
 The goal theorem and its meaning are unchanged, on the standard three axioms.
+
+The unchanged pipeline fixtures
+`Stage0.Zeugen.Annahme.Optional.OptionalForeignBinderWitness` and
+`Stage0.Zeugen.Pipeline.AdapterReasonWitness` build again through production
+acceptance. Their image-existence and correctness statements were not rewritten.
