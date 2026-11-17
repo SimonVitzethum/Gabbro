@@ -7737,8 +7737,13 @@ uncertified execution counterexample.
 | `Pruefer.Symbolic.resultSymbol_realizes` | Extracting a typed symbolic call answer realizes the actual answer used by the source binder. |
 | `Pruefer.Symbolic.resultSymbol_bounded` | The extracted call-answer symbol retains its allocated key bound. |
 | `Pruefer.Symbolic.lexFormula_denote` | The symbolic lexicographic formula agrees with the model's natural-number tuple order. |
+| `Pruefer.Symbolic.integerTerm_bounded` | Extracting an integer's arithmetic term preserves its immutable-key scope bound. |
+| `Pruefer.Symbolic.integerTerm_realizes` | The extracted integer term denotes the actual number of every realizing typed value. |
 | `Pruefer.releasing_sound` | Symbolic release goals imply the original `freiH` post at the actual released world. |
 | `Pruefer.contractGoals_sound` | Realizing return/reason goals imply the unchanged `EndPost` for frozen actual entry data. |
+| `Pruefer.checkedEnvironment_atomic`, `checkedExecution_atomic` | The unchanged semantic call obligation and atomic replay transport the checked runtime WP to the atomic rely semantics. |
+| `Pruefer.contractDuties_of_execution` | Strict execution under `requiresObligation` and atomic replay imply the original function contract duties. |
+| `Pruefer.massPflicht_of_execution` | The semantic decrease obligation and atomic replay imply the original recursive-call measure duty. |
 
 Here `Pruefer` abbreviates `Gabbro.Grammatik.Vertraege.Pruefer` and
 `Frag.Symbolic` abbreviates `Gabbro.Grammatik.Invarianten.Frag.Symbolic`.
@@ -7790,3 +7795,16 @@ rather than 101 saturated concrete cases. `productionCompiled_present` and
 connect its formula and decision to production entry acceptance. These proofs
 use named formulas and generic decision equivalences, without kernel reduction
 of the Cooper computation.
+
+The pool witness's `body_eq` identifies the actual reader body and
+`symbols_bounded` certifies its empty entry scope. `compiled_present` and
+`compiled_result` certify its actual symbolic compilation before `compiled_valid`
+establishes its formula. The public pool admission statements are unchanged.
+
+The qualified-library parser witness retains its original source fixture and
+public image/admission claims. Its private `callerBounded` certifies the empty
+entry scope; `callerCompiled_present` and `callerCompiled_result` identify the
+actual symbolic compilation; `callerCompiled_shape` identifies its formula by
+the compiler equations; `callerCompiled_valid` proves that formula for every
+valuation; `caller_checked` composes these with the production function gate.
+These proof-only certificates do not add an executable checker path.

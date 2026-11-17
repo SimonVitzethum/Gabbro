@@ -65,8 +65,6 @@ open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
-set_option profiler true
-set_option profiler.threshold 5000
 
 /-! ## Connected export witness: a qualified library call through the pipeline.
 
@@ -311,12 +309,14 @@ private theorem caller_checked
     (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) :
     (checkFunction (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) (fun _ => none) {} none callerIndex).toOption.isSome = true := by
   apply Vertraege.Pruefer.SelectionWitness.function_success
-  · cbv
-  · cbv
+  · with_unfolding_all rfl
+  · with_unfolding_all rfl
   · apply Vertraege.Pruefer.SelectionWitness.execution_success (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) (fun _ => none) {}
-      none callerIndex (by cbv) (callerInvariants (fullProgram invariants pointers foreigns)) (by rfl)
+      none callerIndex (by with_unfolding_all rfl) (callerInvariants (fullProgram invariants pointers foreigns)) (by rfl)
       ((parameters (D := fullDeclaration) 128 0 []).toOption.get (by rfl)) (by rfl)
-    · cbv
+    · with_unfolding_all
+        change 2 ≤ 16384
+        decide
     · rintro ⟨symbols, member⟩
       cases symbols
       let requirement := (Invarianten.Frag.Symbolic.translate ((fullProgram invariants pointers foreigns).requires callerIndex) callerSymbols).toOption.get (by with_unfolding_all rfl)
@@ -332,7 +332,7 @@ private theorem caller_checked
         exact callerCompiled_valid invariants pointers foreigns values
       exact Vertraege.Pruefer.SelectionWitness.environment_success (D := fullDeclaration) (f := callerIndex) (next := 0)
         (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) callerSymbols callerBounded (requiresPolicy (fullProgram invariants pointers foreigns) _) (fun _ => none) {} none
-        (callerInvariants (fullProgram invariants pointers foreigns)) (by cbv) requirement (by rfl)
+        (callerInvariants (fullProgram invariants pointers foreigns)) (by with_unfolding_all rfl) requirement (by rfl)
         (callerCertificate invariants pointers foreigns) (callerCompiled_result invariants pointers foreigns) decided
 
 private theorem full_phases :
