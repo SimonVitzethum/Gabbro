@@ -64,7 +64,8 @@ theorem sharedCompiled_shape : sharedCompiled.map Certificate.formula = .ok shar
   unfold sharedCompiled
   simp only [sharedProgram]
   rw [ending.eq_6]
-  simp only [statement.eq_11, ending.eq_2]
+  rw [statement.eq_def]
+  simp only [ending.eq_2]
   rfl
 
 theorem sharedCompiled_present : sharedCompiled.toOption.isSome = true := by

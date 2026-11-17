@@ -208,7 +208,7 @@ private theorem identCallerCompiled_shape
   dsimp only [identProgram, progOfFn, identPieces, identProduced1, identCallerIndex, Fin.cases]
   rw (config := { transparency := .all }) [ending.eq_6]
   rw (config := { transparency := .all })
-    [Vertraege.Pruefer.statement.eq_11]
+    [Vertraege.Pruefer.statement.eq_def]
   with_unfolding_all rfl
 
 private theorem identCallerCompiled_valid
