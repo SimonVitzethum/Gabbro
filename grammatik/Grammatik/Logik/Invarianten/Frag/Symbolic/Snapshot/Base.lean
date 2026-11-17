@@ -73,6 +73,17 @@ theorem realizes_congr (names : List (Observation D)) (start : Nat)
       exact and_congr Iff.rfl (ih (start + 1) (fun key lower upper =>
         agree key (by omega) (by simp only [List.length_cons]; omega)))
 
+theorem region_realizes_congr (region : Option (Region D bound))
+    (valuation other : Assignment Nat) (world : World D)
+    (agree : ∀ key, key < bound → valuation key = other key) :
+    Realizes (regionStart region) (regionNames region) valuation world ↔
+      Realizes (regionStart region) (regionNames region) other world := by
+  cases region with
+  | none => rfl
+  | some region =>
+      exact realizes_congr region.names region.start valuation other world
+        (fun key _ upper => agree key (Nat.lt_of_lt_of_le upper region.within))
+
 theorem lookup_sound (names : List (Observation D)) (start : Nat)
     (key : Observation D) (index : Nat) (found : lookup start names key = some index)
     (valuation : Assignment Nat) (world : World D) (realized : Realizes start names valuation world) :

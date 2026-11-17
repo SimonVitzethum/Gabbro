@@ -29,29 +29,29 @@ def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded
     (budget : Nat) (result : Option Ty) (postcondition : Expr D (ErgCtx Γ result) Λ .bool)
     (target : Env D Θ → ErgVal D result → A → VC.Runtime program (fun _ => []) S → World D → Prop)
     (compile : ResultCompiler context caller result target)
-    (shared : Option (SharedResult context caller result target) := none) :
+    (shared : Option (SharedResult context caller result target) := none)
+    (snapshot : Option (Snapshot.Region D next) := none) :
     Except Frag.Refusal (Certificate context (fun valuation item runtime world => ∀ old actual,
-      args.Realizes valuation old actual → ∀ locals, caller.Realizes valuation world locals → ∀ value,
+      args.Realizes valuation old actual →
+      Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) valuation old →
+      ∀ locals, caller.Realizes valuation world locals → ∀ value,
       wahr? (eval old postcondition world (ergEnv result value actual)) = true → target locals value item runtime world)) :=
   match postcondition, shared with
   | .tru, some pre => .ok {
       formula := pre.formula
-      sound := fun valuation item present runtime world valid _ _ _ locals realized value _ =>
+      sound := fun valuation item present runtime world valid _ _ _ _ locals realized value _ =>
         pre.sound valuation item present runtime world valid locals realized value }
   | postcondition, _ => match result, postcondition, target, compile with
     | none, postcondition, target, compile => do
-        let independent ← currentOnly postcondition
-        let post ← Invarianten.Frag.Symbolic.translate postcondition args
+        let post ← translateSnapshot (Snapshot.regionNames snapshot) (Snapshot.regionStart snapshot) postcondition args
         let tail ← compile next (Nat.le_refl next) .nil trivial
         return {
           formula := .imp post.payload tail.formula
-          sound := fun valuation item present runtime world valid old actual realized locals localRealized value promised => by
-            rw [independent.down old world (ergEnv none value actual)] at promised
+          sound := fun valuation item present runtime world valid old actual realized frozen locals localRealized value promised => by
             have current := (args.realizes_world actual valuation old world).mp realized
-            have encoded := (post.bool_iff valuation world actual current).mp promised
+            have encoded := (post.bool_iff valuation old world actual frozen current).mp promised
             exact tail.sound valuation item present runtime world (valid encoded) locals localRealized value trivial }
     | some (.int lo hi), postcondition, target, compile => do
-        let independent ← currentOnly postcondition
         let resultSymbols : SymEnv D Nat (ErgCtx [] (some (.int lo hi))) :=
           .cons (.integer (.var next)) .nil
         let resultBounded : resultSymbols.Bounded (next + 1) :=
@@ -59,25 +59,26 @@ def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded
             have same := List.mem_singleton.mp member
             subst key
             exact Nat.lt_succ_self next, trivial⟩
-        let post ← Invarianten.Frag.Symbolic.translate postcondition (.cons (.integer (.var next)) args)
+        let post ← translateSnapshot (Snapshot.regionNames snapshot) (Snapshot.regionStart snapshot)
+          postcondition (.cons (.integer (.var next)) args)
         let tail ← compile (next + 1) (Nat.le_succ next) resultSymbols resultBounded
         let bounds : Frag.LProp (Key D Nat) := .and
           (.le (.konst lo) (.var (.inr next))) (.le (.var (.inr next)) (.konst hi))
         return {
           formula := .all (.inr next) (.imp (.and bounds post.payload) tail.formula)
-          sound := fun valuation item present runtime world valid old actual realized locals localRealized value promised => by
+          sound := fun valuation item present runtime world valid old actual realized frozen locals localRealized value promised => by
             let extended := valuation.bind next value.n
             have agree : ∀ key, key < next → valuation key = extended key := by
               intro key before
               have different : key ≠ next := Nat.ne_of_lt before
               simp only [extended, Frag.Assignment.bind, different, ↓reduceIte]
             have present' := (context.stable valuation extended item agree).mp present
+            have frozen' := (Snapshot.region_realizes_congr snapshot valuation extended old agree).mp frozen
             have current := (args.realizes_congr next bounded valuation extended agree old world actual).mp realized
             have localCurrent := (caller.realizes_congr next callerBounded valuation extended agree world world locals).mp localRealized
             have valueRealized : (SymValue.integer (.var next) : SymValue D Nat (.int lo hi)).Realizes
                 extended world value := bind_same valuation next value.n
-            rw [independent.down old world (ergEnv (some (.int lo hi)) value actual)] at promised
-            have encoded := (post.bool_iff extended world (.cons value actual) ⟨valueRealized, current⟩).mp promised
+            have encoded := (post.bool_iff extended old world (.cons value actual) frozen' ⟨valueRealized, current⟩).mp promised
             have range : bounds.denote (values extended world) := by
               change lo ≤ extended next ∧ extended next ≤ hi
               dsimp only [extended]
@@ -88,24 +89,24 @@ def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded
             exact tail.sound extended item present' runtime world (ready ⟨range, encoded⟩)
               locals localCurrent value ⟨valueRealized, trivial⟩ }
     | some kind, postcondition, target, compile => do
-        let independent ← currentOnly postcondition
         let domain ← VC.localDomain (D := D) budget kind
         let branches ← allCertificates context domain.values
           (fun value valuation item runtime world => ∀ old actual, args.Realizes valuation old actual →
+            Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) valuation old →
             ∀ locals, caller.Realizes valuation world locals →
             wahr? (eval old postcondition world (.cons value actual)) = true → target locals value item runtime world)
           (fun value => do
-            let post ← Invarianten.Frag.Symbolic.translate postcondition (.cons (.known value) args)
+            let post ← translateSnapshot (Snapshot.regionNames snapshot) (Snapshot.regionStart snapshot)
+              postcondition (.cons (.known value) args)
             let tail ← compile next (Nat.le_refl next) (.cons (.known value) .nil) ⟨trivial, trivial⟩
             return {
               formula := .imp post.payload tail.formula
-              sound := fun valuation item present runtime world valid old actual realized locals localRealized promised => by
+              sound := fun valuation item present runtime world valid old actual realized frozen locals localRealized promised => by
                 have current := (args.realizes_world actual valuation old world).mp realized
-                rw [independent.down old world (.cons value actual)] at promised
-                have encoded := (post.bool_iff valuation world (.cons value actual) ⟨rfl, current⟩).mp promised
+                have encoded := (post.bool_iff valuation old world (.cons value actual) frozen ⟨rfl, current⟩).mp promised
                 exact tail.sound valuation item present runtime world (valid encoded) locals localRealized value ⟨rfl, trivial⟩ })
-        return branches.map (fun _ _ _ _ ready old actual realized locals localRealized value promised =>
-          ready value (domain.complete value) old actual realized locals localRealized promised)
+        return branches.map (fun _ _ _ _ ready old actual realized frozen locals localRealized value promised =>
+          ready value (domain.complete value) old actual realized frozen locals localRealized promised)
 
   def resultSymbol {result : Option Ty} {τ : Ty} (same : result = some τ)
       (symbols : SymEnv D Nat (ErgCtx [] result)) : SymValue D Nat τ := by

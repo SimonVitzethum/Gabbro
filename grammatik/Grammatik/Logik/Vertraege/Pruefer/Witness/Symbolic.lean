@@ -280,7 +280,7 @@ def resultCandidate := resultCondition symbols bounded_zeuge symbols bounded_zeu
 theorem result_present_zeuge : resultCandidate.toOption.isSome = true := by rfl
 def resultCertificate : Certificate frozenContext
     (fun valuation entry (runtime : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) world =>
-      ∀ old actual, symbols.Realizes valuation old actual → ∀ locals, symbols.Realizes valuation world locals → ∀ value,
+      ∀ old actual, symbols.Realizes valuation old actual → True → ∀ locals, symbols.Realizes valuation world locals → ∀ value,
       wahr? (eval old (resultProgram.ensures ()) world (ergEnv (some u32) value actual)) = true →
       resultTarget value entry runtime world) :=
   resultCandidate.toOption.get result_present_zeuge
@@ -302,6 +302,6 @@ theorem result_correspondence_zeuge
   resultCertificate.sound valuation actual realizes_zeuge runtime world
     ((VC.lower_denote resultCertificate.formula (values valuation world)).mp
       (VC.close_sound (VC.lower resultCertificate.formula) result_decides_zeuge (values valuation world)))
-    world actual realizes_zeuge actual realizes_zeuge seven rfl
+    world actual realizes_zeuge trivial actual realizes_zeuge seven rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SymbolicWitness
