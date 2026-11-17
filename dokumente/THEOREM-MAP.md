@@ -8089,3 +8089,78 @@ four functions, one oracle, one Duty check, successful lowering and acceptance.
 `Stage0.stage0_c16_formen_urteile` changes only its last verdict to `true` and
 uses that actual accepted fallible source image. Its other four verdicts remain
 unchanged; generic emitted-image correctness and the goal are unchanged.
+
+## 200. Symbolic product components in the production contract checker
+
+`Frag/Symbolic/Environment.lean` appends `SymValue.product`: each typed field
+has its own symbolic value and `Realizes` relates every projection to the actual
+runtime product. `SymValue.realizes_field` certifies projection;
+`realizes_world` proves independence of immutable values from memory worlds.
+The existing `realizes_lift`, `realizes_congr` and `bounded_mono` statements
+retain their meaning and now cover products recursively. `bounded_field`
+transfers the original fresh-key bound to each selected component.
+`SymEnv.realizes_world` keeps its original statement through this value law.
+
+`Product.flattenProduct_get` states that embedding a field position in the
+flattened context yields exactly `prodGetW` of the original typed value.
+`SymEnv.bounded_dropPrefix` and `realizes_dropPrefix` preserve scope bounds and
+actual-environment correspondence when removing the flattened prefix.
+`bounded_packProduct` and `realizes_packProduct` reconstruct the nominal
+product with those same component keys and the unchanged tail environment.
+`context_size_append` proves the list-size inequality used for termination of
+complete parameter coverage. `Parameters.cover` and its scope guarantees keep
+their statements: all actual values, with the incoming valuation preserved on
+old keys. Product fields now use this same factory recursively; unknown integer
+fields allocate keys and never enumerate their ranges.
+
+`ValueView` certifies both bounded keys and exact evaluation for an immutable
+expression view. `valueView?` handles variables and recursively nested typed
+product projections. Translation, local selection and call-argument selection
+use the same view, preserving component correlations across continuations.
+The existing `encodeValue`, `translateSnapshot`, `selectValue`, `exactArgument`
+and `scalarTerm` certificate statements retain their meanings. Scalar
+observation of a whole product still has the model's non-scalar projection zero;
+a scalar expression encoding requires an explicit typed field projection.
+No product-memory field encoding or constructor abstraction is assumed.
+
+`fieldConjunction_denote` equates the finite declared-field conjunction with
+all its typed component predicates. `valueBounds_sound` keeps its statement,
+now establishing every nested component's type bounds from actual realization.
+`componentResultCondition.sound` certifies the original call-result target for
+every typed compound answer satisfying the callee's actual postcondition,
+every realizing caller environment, frozen entry snapshot and admitted runtime.
+Fresh keys are universally quantified under component bounds and the translated
+postcondition. Coverage extends the valuation only in the newly allocated
+interval; substitution/closure transfer preserves the old prefix and frozen
+entry observations. `resultCondition` uses this certificate for product results
+through the existing call and oracle continuation interface. Its soundness
+statement is unchanged. Type/field work estimates recurse structurally over
+finite constructor choices; integer fields each cost one continuation.
+
+`ProductWitness.parameter_components_zeuge` gives one template and two fresh
+keys for independent full-width u32 fields, at zero integer enumeration budget.
+`actual_coverage_zeuge` realizes the typed pair (7,9) in every world.
+`components_bounded_zeuge`, `flatten_get_zeuge`, `pack_realizes_zeuge`,
+`pack_bounded_zeuge`, `drop_bounded_zeuge` and `drop_realizes_zeuge` jointly
+inhabit the component transport and scope laws. `view_zeuge` certifies the actual
+field expression's evaluation and bounds; `product_lift_zeuge`,
+`product_world_zeuge`, `product_congr_zeuge`, `product_bounded_mono_zeuge` and
+`product_projection_zeuge` inhabit the extended value laws on that same
+non-degenerate fixture. `context_size_zeuge` inhabits the termination inequality.
+
+`ProductProductionWitness.production_parameter_acceptance_zeuge` proves actual
+strict production entry-gate success for every one of the 2^64 product inputs,
+with the nonliteral postcondition `result == input.first` and zero integer
+enumeration budget. `ProductCallWitness.production_call_acceptance_zeuge`
+proves the actual production call-result gate succeeds using only the callee's
+postcondition `result.first == 7`; its second full-width field is unconstrained.
+In both namespaces, `compiled_present_zeuge`, `compiled_result`,
+`normalized_zeuge` and `original_valid_zeuge` state successful actual compilation,
+the certificate equation, its equivalent true normal form and universal validity
+of the original VC. `ProductProductionWitness.components_bounded` and `bounded`
+state the two-key flattened and reconstructed input scope bounds. Cooper success
+is composed mathematically, without kernel evaluation of elimination.
+
+The numbered component formulas, their atoms, reset cell and `komp` were
+re-read unchanged. Only the `AkzeptiertX` implementation-closure pin moves.
+No goal statement, named assumption, source probe or expected exit code changes.
