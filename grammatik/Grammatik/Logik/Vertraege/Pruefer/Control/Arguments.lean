@@ -39,9 +39,7 @@ def exactArguments (code : Args D Γ Λ params) (symbols : SymEnv D Nat Γ) (bou
 def argumentRelation (expression : Expr D Γ Λ τ) (symbols : SymEnv D Nat Γ)
     (argument : SymValue D Nat τ) : LProp (Key D Nat) :=
   match τ with
-  | .int _ _ => match (Invarianten.Frag.Symbolic.translate expression symbols).toOption with
-      | some encoded => .eq (scalarTerm argument).val encoded.payload
-      | none => .tru
+  | .int _ _ => (evaluationRelation expression symbols (scalarTerm argument).val).val
   | .bool => match (encodeValue argument).toOption, (Invarianten.Frag.Symbolic.translate expression symbols).toOption with
       | some encoded, some source => .and (.imp encoded.val source.payload) (.imp source.payload encoded.val)
       | _, _ => .tru
@@ -54,12 +52,8 @@ theorem argumentRelation_sound (expression : Expr D Γ Λ τ) (symbols : SymEnv 
     (argumentRelation expression symbols argument).denote (values valuation world) := by
   cases τ with
   | int lo hi =>
-      dsimp only [argumentRelation]
-      cases encoded : (Invarianten.Frag.Symbolic.translate expression symbols).toOption with
-      | none => trivial
-      | some source =>
-          exact ((scalarTerm argument).property valuation world _ selected).trans
-            (source.correct valuation world actual realized).symm
+      exact (evaluationRelation expression symbols (scalarTerm argument).val).property valuation world actual realized
+        ((scalarTerm argument).property valuation world _ selected)
   | bool =>
       dsimp only [argumentRelation]
       cases encoded : (encodeValue argument).toOption with

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Frag.Symbolic.Environment
+public import Grammatik.Logik.Invarianten.Frag.Symbolic.Relation
 public import Grammatik.Logik.Invarianten.Frag.Witness
 
 @[expose] public section
@@ -86,5 +87,21 @@ theorem extend_integer_zeuge :
     (SymEnv.cons (.integer (.var none)) symbols.lift).Realizes
       (extend valuation seven.n) world (.cons seven actual) :=
   symbols.extend_integer actual valuation world seven realizes_zeuge
+
+def narrowingInitializer : Expr declaration [u32] [] (.int 0 10) :=
+  .eng (.add (.glob false (Frag.Witness.globalAccess false)) (.lit 1)) 0 10
+    (.glob false (Frag.Witness.globalAccess false))
+
+theorem evaluationRelation_zeuge :
+    (evaluationRelation narrowingInitializer symbols (.konst 4)).val.denote (values valuation world) :=
+  (evaluationRelation narrowingInitializer symbols (.konst 4)).property valuation world actual
+    realizes_zeuge (by rfl)
+
+def fallbackWorld : World declaration := world.schreibGlob false [] ⟨10, by decide, by decide⟩
+
+theorem evaluationRelation_fallback_zeuge :
+    (evaluationRelation narrowingInitializer symbols (.konst 10)).val.denote (values valuation fallbackWorld) :=
+  (evaluationRelation narrowingInitializer symbols (.konst 10)).property valuation fallbackWorld actual
+    ((symbols.realizes_world actual valuation world fallbackWorld).mp realizes_zeuge) (by rfl)
 
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic.Witness

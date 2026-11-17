@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Symbolic
+public import Grammatik.Logik.Invarianten.Frag.Symbolic.Relation
 
 @[expose] public section
 
@@ -24,14 +25,11 @@ def integerSelection {context : Context A next} (symbols : SymEnv D Nat Γ)
       symbols.Realizes valuation world actual →
       target actual (eval world expression world actual) item runtime world)) := do
   let tail ← compile
-  let encoded := (Invarianten.Frag.Symbolic.translate expression symbols).toOption
   let bounds : Frag.LProp (Key D Nat) := .and
     (.le (.konst lo) (.var (.inr next))) (.le (.var (.inr next)) (.konst hi))
-  let relation : Frag.LProp (Key D Nat) := match encoded with
-    | none => .tru
-    | some term => .eq (.var (.inr next)) term.payload
+  let relation := evaluationRelation expression symbols (.var (.inr next))
   return {
-    formula := .all (.inr next) (.imp (.and bounds relation) tail.formula)
+    formula := .all (.inr next) (.imp (.and bounds relation.val) tail.formula)
     sound := fun valuation item present runtime world valid actual realized => by
       let value := eval world expression world actual
       let extended := valuation.bind next value.n
@@ -46,13 +44,8 @@ def integerSelection {context : Context A next} (symbols : SymEnv D Nat Γ)
         change lo ≤ values extended world (.inr next) ∧ values extended world (.inr next) ≤ hi
         rw [fresh]
         exact ⟨value.lo_le, value.le_hi⟩
-      have defined : relation.denote (values extended world) := by
-        dsimp only [relation]
-        cases encoded with
-        | none => trivial
-        | some term =>
-            change values extended world (.inr next) = term.payload.denote (values extended world)
-            exact fresh.trans (term.correct extended world actual realized').symm
+      have defined : relation.val.denote (values extended world) :=
+        relation.property extended world actual realized' fresh
       have ready := valid value.n
       rw [← values_bind] at ready
       exact tail.sound extended item present' runtime world (ready ⟨withinBounds, defined⟩)
