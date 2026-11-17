@@ -148,10 +148,21 @@ theorem rejectCounterexample_of_valid_zeuge :
     Snapshot.rejectCounterexample true (matrix true) = .ok () :=
   Snapshot.rejectCounterexample_of_valid true _ (original_valid _)
 
+section NumericGate
+
+attribute [local irreducible] entryVC certificate environmentDecision lower close decideB
+
+theorem numeric_decided_zeuge :
+    decideB (close (lower (matrix true))) (close_closed _) = true := by
+  apply (close_decide_true_iff (lower (matrix true))).mpr
+  intro values
+  exact (lower_denote (matrix true) values).mpr (original_valid values)
+
 theorem environmentDecision_of_decided_zeuge (reason : String) :
     (environmentDecision false (matrix true) reason).toOption.isSome = true :=
-  environmentDecision_of_decided _ _ ((close_decide_true_iff _).mpr
-    (fun values => (lower_denote _ values).mpr (original_valid values)))
+  environmentDecision_of_decided (matrix true) reason numeric_decided_zeuge
+
+end NumericGate
 
 attribute [local irreducible] entryVC certificate checkEnvironmentAt
 attribute [local implicit_reducible] entryContext
