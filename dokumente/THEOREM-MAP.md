@@ -7865,3 +7865,84 @@ that the actual function gate returns `Refusal.crossEntry`: symbolic transition
 indices need selected-slot observations. The former parameter-product refusal
 is removed. Its `contracts_refused`, `checker_refused` and the two actual typed
 precondition counterexample statements are unchanged.
+
+### Entry-world observations and certified VC simplification
+
+The contract compiler now freezes `old(G)` and constant-index `old(T.slots[i].f)`
+into fresh immutable observation intervals. Both function entry and each nested
+or recursive call allocate their own interval before poststate havoc. The same
+symbolic compiler, runtime WP, call obligations and strict measure checks remain
+in use. Dynamic old indices and unsupported aggregate observations still refuse.
+
+`Frag.Symbolic.Snapshot.Region` records the interval bound; `Realizes` relates its
+valuation to the actual entry world. `Snapshot.Encoding.correct` relates one
+translated expression to its separate entry and current worlds under both
+snapshot and local-environment realizations. `translateSnapshot` is the shared
+expression translator; current-world `translate` is its empty-snapshot instance.
+No unknown integer range is enumerated.
+
+| Statement | Meaning and nondegenerate witness |
+|---|---|
+| `Snapshot.extend_preserves` | Allocating an entry interval preserves every key outside it; `SnapshotWitness.extend_preserves_zeuge`. |
+| `Snapshot.extend_realizes` | Capturing actual entry memory realizes all allocated observations; `SnapshotWitness.extend_realizes_zeuge`. |
+| `Snapshot.realizes_congr`, `region_realizes_congr` | Agreement on the allocated interval preserves its realization, including optional regions; `SnapshotWitness.realizes_congr_zeuge`, `region_realizes_congr_zeuge`. |
+| `Snapshot.lookup_sound` | A successful lookup denotes that entry-world observation; `SnapshotWitness.lookup_sound_zeuge`. |
+| `Snapshot.equations_denote` | The capture equations hold exactly when the interval realizes the entry world; `SnapshotWitness.equations_denote_zeuge`. |
+| `Snapshot.Encoding.bool_iff` | A Boolean translation is equivalent to evaluation with the frozen entry world and actual current world; `SnapshotWitness.bool_iff_zeuge`. |
+| `snapshotPlan_of_current` | A certified current-only post allocates no entry observations; `SnapshotWitness.snapshotPlan_of_current_zeuge`. |
+| `snapshotFormula_sound` | The quantified capture guard covers extension by the actual entry observations; `SnapshotWitness.snapshotFormula_sound_zeuge`. |
+| `entryContext_locals`, `entryContext_memory` | A scoped entry context supplies the original parameter realization and the frozen entry-world realization; `SnapshotWitness.entryContext_locals_zeuge`, `entryContext_memory_zeuge`. |
+| `contractGoals_sound` (changed) | Exit goals with an optional snapshot still imply the original `EndPost`, with ensures evaluated against the true entry world; `SnapshotProductionWitness.old_global_accepted_zeuge`. |
+| `Reduce.termKeys_eq_variables` | The VC and source term support computations coincide. |
+| `Reduce.term_bind_absent` | Updating an absent key leaves a term's value unchanged; `ReductionWitness.term_bind_absent_zeuge`. |
+| `Reduce.bind_commute` | Distinct assignments commute; `ReductionWitness.bind_commute_zeuge`. |
+| `Reduce.truth_denote` | A folded truth formula denotes exactly its Boolean value. |
+| `Reduce.evaluate_true` | A syntactically true formula evaluates with a positive proof; used by `SnapshotProductionWitness.prepared_true_zeuge`. |
+| `Snapshot.zeroCounterexample_sound` | A reported zero valuation refutes the original quantified VC; `SnapshotProductionWitness.zeroCounterexample_sound_zeuge`. |
+| `Snapshot.rejectCounterexample_of_valid` | A VC true at that valuation cannot receive the countermodel diagnostic. |
+| `Snapshot.rejectCounterexample_sound` | The exact displayed countermodel diagnostic entails the original negated VC at the displayed complete valuation; `SnapshotProductionWitness.rejectCounterexample_sound_zeuge`. |
+| `Snapshot.metered_sound` | Successful finite-budget Cooper evaluation certifies its original input formula; `ReductionWitness.metered_sound_zeuge`. |
+| `Snapshot.closure_of_valid` | Universal closure preserves a formula valid at every assignment. |
+| `Snapshot.prepared_of_valid` | Certified normalization preserves validity of the universally closed original VC. |
+| `Snapshot.prepared_sound` | A proof of the prepared closed VC implies the original open VC at every assignment; `ReductionWitness.prepared_sound_zeuge`. |
+| `Snapshot.decide_of_prepared_true` | A prepared true formula succeeds through the actual snapshot gate without Cooper kernel reduction; `SnapshotProductionWitness.environment_at_success_zeuge`. |
+| `environmentDecision_of_decided` | The existing numeric validity proof composes through certified simplification and the production numeric gate; existing u32 and call production witnesses. |
+| `SelectionWitness.map_success` | Successful certificates remain successful after a proof-preserving map. |
+| `SelectionWitness.environment_at_success` | A successful scoped translation, compiler result and actual VC decision compose through the production entry gate; `SnapshotProductionWitness.environment_at_success_zeuge`. |
+| `SelectionWitness.environment_snapshot_success` | A successful extended entry gate composes through actual snapshot planning/allocation; `SnapshotProductionWitness.environment_checked`. |
+
+`Reduce.substitute` returns a formula equivalent to evaluation under the supplied
+assignment, or refuses the optimization when a binder could capture a free key.
+`Definition.sound` extracts only unconditional equality conjuncts.
+`eliminateDefinition` preserves the complete guarded universal formula, including
+contradictory guards. `Equivalent`, the connective constructors, `universal`,
+`existential`, `normalizeOnce` and `normalize` all retain equivalence at every
+assignment in their return types. The reduction witnesses cover two successive
+source-state aliases, an explicit capture conflict and an unsatisfiable call
+postcondition. No call postcondition is assumed inhabited.
+
+`Reduce.Verdict` carries a proof of either polarity or reports unknown. Sampling
+universal binders only refutes them; sampling existential binders only establishes
+them. `ReductionWitness.evaluate_universal_unknown_zeuge` and
+`evaluate_existential_unknown_zeuge` pin the inconclusive directions. The closed
+snapshot gate uses one finite metered Cooper run after this simplification; budget
+exhaustion and uncertified false results are fragment refusals, never purported
+models. The only exact countermodel diagnostic certifies the original negated VC.
+
+`SnapshotProductionWitness` uses a full-width u32 argument and a mutable global.
+The actual valid function writes its observed entry value back and ensures
+`G == old(G)`; the invalid variant writes nine under the same contract.
+`compiled_present`, `compiled_result`, `valid_shape` and `invalid_shape` identify
+the actual compiler outputs through its equations. `original_valid` and
+`original_negated_vc_zeuge` establish the two original entry VCs mathematically.
+`zeroCounterexample_present_zeuge` and `prepared_true_zeuge` identify only the
+small normalization results. `environment_checked`, `function_checked` and
+`old_global_accepted_zeuge` compose these with the actual production gates.
+No witness reduces Cooper elimination in the kernel.
+
+The changed `SelectionWitness.execution_success` composes successful snapshot
+planning rather than requiring a current-only post. The changed
+`RefusalWitness.execution_refused`, `function_refused` and `contracts_refused`
+propagate a failed snapshot plan. `Einheit104` keeps its original dynamic-index
+old-slot refusal statement. No source fixture or orphan image-existence claim
+is weakened.
