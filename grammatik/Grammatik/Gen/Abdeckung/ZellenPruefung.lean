@@ -113,7 +113,11 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     Re-pinned after reviewing certified uniform return and discarded-call
     continuations and exact constant selection before finite specialization.
     These extend the proved contract VC path; all numbered component pins,
-    their atoms and the reset cell remain unchanged. -/
+    their atoms and the reset cell remain unchanged.
+    Re-pinned 2026-11-17 after reviewing symbolic parameter/local/result environments,
+    actual-world continuations, call havoc, shared discarded answers and symbolic
+    measure tuples. Their certified WPs retain the all-runtime/all-world duties.
+    The numbered component formulas, reset cell and `komp` remain unchanged. -/
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -126,7 +130,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 18370461643663687996)]
+   ("AkzeptiertX", 11297134220186111686)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

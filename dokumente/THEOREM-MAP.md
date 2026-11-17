@@ -7776,3 +7776,17 @@ symbolic compilation/coverage certificates; `RefusalWitness.execution_refused`,
 `function_refused` and `contracts_refused` propagate the current-world syntax
 refusal through the same gates. Concrete post-result support helpers and their
 obsolete enumeration-specific witness statements are removed.
+
+`Witness.Calls` retains the wide discarded-call fixture and proves its actual
+compiler result with `sharedCompiled_shape`, `sharedCompiled_present` and
+`sharedCompiled_result`. `sharedCompiled_valid` proves its shared continuation
+formula for every assignment; `shared_decided` is the verified Cooper verdict.
+`uniform_wide_program_zeuge` retains acceptance of both actual functions with
+expansion budget zero and work budget four. `Witness.specialization_product_zeuge`
+now states that two nondegenerate integer parameters use one symbolic template,
+rather than 101 saturated concrete cases. `productionCompiled_present` and
+`productionCompiled_result` certify the actual u32 binder compilation, and
+`production_vc_valid`, `production_decided`, `production_u32_acceptance_zeuge`
+connect its formula and decision to production entry acceptance. These proofs
+use named formulas and generic decision equivalences, without kernel reduction
+of the Cooper computation.
