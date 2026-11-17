@@ -87,6 +87,14 @@ def bounded : symbols.Bounded 4 :=
 
 def region : Snapshot.Region declaration 4 := ⟨1, observations, by decide⟩
 
+theorem region_realizes_congr_zeuge :
+    Snapshot.Realizes (Snapshot.regionStart (some region)) (Snapshot.regionNames (some region))
+      (frozen.bind 4 19) initial := by
+  apply (Snapshot.region_realizes_congr (some region) frozen (frozen.bind 4 19) initial ?_).mp extend_realizes_zeuge
+  intro key before
+  have different : key ≠ 4 := by omega
+  simp only [Assignment.bind, different, ↓reduceIte]
+
 theorem entryContext_locals_zeuge : symbols.Realizes frozen initial actual :=
   entryContext_locals symbols bounded (some region) frozen (initial, actual)
     ⟨⟨extend_preserves_zeuge.1, trivial⟩, extend_realizes_zeuge⟩

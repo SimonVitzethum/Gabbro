@@ -52,8 +52,8 @@ theorem prepared_sound_zeuge (values : Assignment Nat) : original.denote values 
 theorem metered_sound_zeuge : (LProp.eq (.konst 7) (.konst 7) : LProp Nat).denote (fun _ => 0) :=
   Snapshot.metered_sound _ 128 (by rfl)
 
-/-- Sampling cannot certify the true universal range claim, and cannot refute
-    the false existential claim. Both remain unknown for the real decision. -/
+/-- Truth at one sampled value cannot certify a universal claim, and falsehood
+    at one sampled value cannot refute an existential claim. Both remain unknown for the real decision. -/
 theorem evaluate_universal_unknown_zeuge :
     evaluate (.all 0 (.eq (.var 0) (.konst 0)) : LProp Nat) (fun _ => 0) = .unknown := rfl
 
