@@ -13,6 +13,7 @@ variable {D : Deklaration} {V : Vertrag D}
 def specializationCount (limit : Nat) : Ty → Nat
   | .int _ _ => 1
   | .bool => 2
+  | .prod _ fields => fields.foldr (fun kind rest => min (limit + 1) (specializationCount limit kind * rest)) 1
   | .why count => min (limit + 1) count
   | _ => 1
 

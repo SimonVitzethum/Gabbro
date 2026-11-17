@@ -1,11 +1,12 @@
 module
 
-public import Grammatik.Logik.Vertraege.Pruefer.Control.Selection
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Arguments
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer.Symbolic
 
+open Invarianten.Modell
 open Invarianten Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.Frag.Symbolic
 
 variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
@@ -23,6 +24,77 @@ abbrev SharedResult (context : Context A next) (caller : SymEnv D Nat Θ) (resul
     (target : Env D Θ → ErgVal D result → A → VC.Runtime program (fun _ => []) S → World D → Prop) :=
   Certificate context (fun valuation item runtime world => ∀ actual,
     caller.Realizes valuation world actual → ∀ value, target actual value item runtime world)
+
+/-- Compound answers use the same complete typed environment coverage as
+    parameters. Only finite constructor choices produce separate branches. -/
+def componentResultCondition {context : Context A next}
+    (args : SymEnv D Nat Γ) (bounded : args.Bounded next)
+    (caller : SymEnv D Nat Θ) (callerBounded : caller.Bounded next)
+    (budget : Nat) (kind : Ty) (postcondition : Expr D (kind :: Γ) Λ .bool)
+    (target : Env D Θ → Wert D kind → A → VC.Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ResultCompiler context caller (some kind) target)
+    (snapshot : Option (Snapshot.Region D next)) :
+    Except Frag.Refusal (Certificate context (fun valuation item runtime world => ∀ old actual,
+      args.Realizes valuation old actual →
+      Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) valuation old →
+      ∀ locals, caller.Realizes valuation world locals → ∀ value,
+      wahr? (eval old postcondition world (.cons value actual)) = true → target locals value item runtime world)) := do
+  let domain ← parameters (D := D) budget next [kind]
+  let branches ← allCertificates context domain.templates.attach
+    (fun entry valuation item runtime world => ∀ extended,
+      (∀ key, key < next ∨ domain.next ≤ key → extended key = valuation key) →
+      ∀ old actual, args.Realizes extended old actual →
+      Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) extended old →
+      ∀ locals, caller.Realizes extended world locals → ∀ value,
+      entry.val.Realizes extended world (.cons value .nil) →
+      wahr? (eval old postcondition world (.cons value actual)) = true → target locals value item runtime world)
+    (fun entry => do
+      let returned := entry.val
+      let post ← translateSnapshot (Snapshot.regionNames snapshot) (Snapshot.regionStart snapshot)
+        postcondition (.cons (returned.get .here) args)
+      let tail ← compile domain.next domain.ordered returned (domain.bounded returned entry.property)
+      return {
+        formula := universalClosure (argumentKeys next domain.next)
+          (.imp (.and (environmentBounds returned) post.payload) tail.formula)
+        sound := fun valuation item present runtime world valid extended agrees old actual realized frozen
+            locals localRealized value selected promised => by
+          have ready := closure_transfer (argumentKeys next domain.next)
+            (.imp (.and (environmentBounds returned) post.payload) tail.formula)
+            (values valuation world) (values extended world) valid (by
+              intro key _ absent
+              cases key with
+              | inl memory => rfl
+              | inr key => exact (agrees key (outside_argumentKeys next domain.next key absent)).symm)
+          have current := (args.realizes_world actual extended old world).mp realized
+          have head := returned.realizes_get (.cons value .nil) extended world .here selected
+          have encoded := (post.bool_iff extended old world (.cons value actual) frozen ⟨head, current⟩).mp promised
+          have present' := (context.stable valuation extended item
+            (fun key before => (agrees key (Or.inl before)).symm)).mp present
+          exact tail.sound extended item present' runtime world
+            (ready ⟨environmentBounds_sound returned extended world _ selected, encoded⟩)
+            locals localRealized value selected })
+  return {
+    formula := branches.formula
+    sound := fun valuation item present runtime world valid old actual realized frozen locals localRealized value promised => by
+      obtain ⟨returned, member, chosen, selected, preserved⟩ := domain.cover world (.cons value .nil) valuation
+      let extended : Frag.Assignment Nat := fun key => if key < domain.next then chosen key else valuation key
+      have selected' : returned.Realizes extended world (.cons value .nil) :=
+        (returned.realizes_congr domain.next (domain.bounded returned member) chosen extended
+          (fun key before => by simp only [extended, before, ↓reduceIte]) world world _).mp selected
+      have agrees : ∀ key, key < next ∨ domain.next ≤ key → extended key = valuation key := by
+        intro key outside
+        rcases outside with before | after
+        · have within : key < domain.next := Nat.lt_of_lt_of_le before domain.ordered
+          simpa only [extended, within, ↓reduceIte] using preserved key before
+        · have outside : ¬ key < domain.next := Nat.not_lt.mpr after
+          simp only [extended, outside, ↓reduceIte]
+      have preservedPrefix : ∀ key, key < next → valuation key = extended key :=
+        fun key before => (agrees key (Or.inl before)).symm
+      have oldArgs := (args.realizes_congr next bounded valuation extended preservedPrefix old old actual).mp realized
+      have oldSnapshot := (Snapshot.region_realizes_congr snapshot valuation extended old preservedPrefix).mp frozen
+      have current := (caller.realizes_congr next callerBounded valuation extended preservedPrefix world world locals).mp localRealized
+      exact branches.sound valuation item present runtime world valid ⟨returned, member⟩ (List.mem_attach _ _)
+        extended agrees old actual oldArgs oldSnapshot locals current value selected' promised }
 
 def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded : args.Bounded next)
     (caller : SymEnv D Nat Θ) (callerBounded : caller.Bounded next)
@@ -88,6 +160,9 @@ def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded
             rw [← values_bind] at ready
             exact tail.sound extended item present' runtime world (ready ⟨range, encoded⟩)
               locals localCurrent value ⟨valueRealized, trivial⟩ }
+    | some (.prod name fields), postcondition, target, compile =>
+        componentResultCondition args bounded caller callerBounded budget (.prod name fields)
+          postcondition target compile snapshot
     | some kind, postcondition, target, compile => do
         let domain ← VC.localDomain (D := D) budget kind
         let branches ← allCertificates context domain.values

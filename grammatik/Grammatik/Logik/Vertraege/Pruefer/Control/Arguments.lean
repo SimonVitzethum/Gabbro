@@ -16,13 +16,14 @@ variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 def exactArgument (expression : Expr D Γ Λ τ) (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next) :
     Option { symbol : SymValue D Nat τ // symbol.Bounded next ∧ ∀ valuation world actual,
       symbols.Realizes valuation world actual → symbol.Realizes valuation world (eval world expression world actual) } :=
-  match expression with
-  | .var name => some ⟨symbols.get name, symbols.bounded_get next bounded name,
-      fun valuation world actual realized => symbols.realizes_get actual valuation world name realized⟩
-  | expression => do
+  match valueView? expression symbols with
+  | some view => some ⟨view.symbol, view.bounded next bounded,
+      fun valuation world actual realized => view.realizes valuation world world actual realized⟩
+  | none => do
       let known ← knownValue? expression symbols
       return ⟨.known known.val, trivial, fun valuation world actual realized =>
         (known.property valuation world actual realized).symm⟩
+
 
 def exactArguments (code : Args D Γ Λ params) (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next) :
     Option { args : SymEnv D Nat params // args.Bounded next ∧ ∀ valuation world actual,
