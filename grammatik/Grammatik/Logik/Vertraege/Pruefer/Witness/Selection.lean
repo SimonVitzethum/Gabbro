@@ -64,6 +64,27 @@ theorem environment_success (program : Programm D) (S : SperrInv D)
   · rename_i refused
     exact False.elim (refused decided)
 
+/-- Compose a mathematically valid open VC with the actual Cooper gate.
+    Witnesses need not normalize the decision procedure on their fixture. -/
+theorem environment_success_of_valid (program : Programm D) (S : SperrInv D)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (policy : CallPolicy program (entryContext symbols bounded))
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (supported : (currentOnly (program.ensures f)).toOption.isSome = true)
+    (entry : Encoding symbols .bool (fun world actual => eval world (program.requires f) world actual))
+    (hentry : Invarianten.Frag.Symbolic.translate (program.requires f) symbols = .ok entry)
+    (compiled : Symbolic.EndCondition (S := S) policy.semantic (program.rumpf f) symbols
+      (contractGoals program f symbols bounded invariants))
+    (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
+      (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants) = .ok compiled)
+    (valid : ∀ values, (entryVC symbols entry.payload compiled.formula).denote values) :
+    (Vertraege.Pruefer.checkEnvironment program S symbols bounded policy sources budget hint invariants).toOption.isSome = true := by
+  have decided : decideB (close (lower (entryVC symbols entry.payload compiled.formula))) (close_closed _) = true :=
+    (close_decide_true_iff _).mpr (fun values => (lower_denote _ values).mpr (valid values))
+  exact environment_success program S symbols bounded policy sources budget hint invariants
+    supported entry hentry compiled hcompiled decided
+
 theorem execution_success (program : Programm D) (S : SperrInv D)
     (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
     (hint : Option (QF (Observation D))) (f : D.Fn)

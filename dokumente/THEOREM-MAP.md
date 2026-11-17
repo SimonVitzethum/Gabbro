@@ -7808,3 +7808,16 @@ actual symbolic compilation; `callerCompiled_shape` identifies its formula by
 the compiler equations; `callerCompiled_valid` proves that formula for every
 valuation; `caller_checked` composes these with the production function gate.
 These proof-only certificates do not add an executable checker path.
+
+`SelectionWitness.environment_success_of_valid` composes an actual symbolic
+translation/compiler success and a VC valid for every assignment with the
+verified Cooper decision and production environment gate. The nondegenerate
+discarded-call fixture supplies `Witness.environment_success_of_valid_zeuge`.
+Both library source witnesses use this common proof composition.
+
+The unqualified library fixture has corresponding private certificates
+`identCallerBounded`, `identCallerCompiled_present`, `identCallerCompiled_result`,
+`identCallerCompiled_shape`, `identCallerCompiled_valid`, and `identCaller_checked`:
+respectively empty entry scope, actual compiler success/result/formula, truth for
+every valuation, and production function acceptance. Its public source/image
+statements are unchanged.

@@ -136,6 +136,122 @@ private def identProduced1 : { value : EnsTy identUnit ⟨1, by decide⟩ ×
   refine ⟨?value, ?computed⟩
   case computed => cbv <;> exact Eq.refl _
 
+private def identPieces : (f : Fin identUnit.fns.length) →
+    EnsTy identUnit f × RumpTy identUnit f × ReqTy identUnit f :=
+  Fin.cases identProduced0.val (Fin.cases identProduced1.val (fun f : Fin 0 => Fin.elim0 f))
+
+private abbrev identDeclaration := declOf identUnit
+private abbrev identCallerIndex : Fin identUnit.fns.length := ⟨1, by decide⟩
+private abbrev identCallerSymbols : Invarianten.Frag.Symbolic.SymEnv identDeclaration Nat
+    (identDeclaration.params identCallerIndex) := .nil
+private theorem identCallerBounded : identCallerSymbols.Bounded 0 := trivial
+
+private def identProgram
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) : Programm identDeclaration :=
+  progOfFn identUnit (fun f => (identPieces f).1) (fun f => (identPieces f).2.1)
+    (fun f => (identPieces f).2.2) invariants pointers foreigns
+
+private noncomputable def identCallerInvariants (program : Programm identDeclaration) :
+    Invarianten.VC.InvariantFormula program (identDeclaration.invs.filter (schuldet identCallerIndex)) :=
+  (Invarianten.VC.invariantFormula program []).toOption.get (by rfl)
+
+open Invarianten Invarianten.Frag.Symbolic Invarianten.VC Vertraege.Pruefer
+
+private noncomputable def identCallerCompiled
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) : Except Invarianten.Frag.Refusal
+    (Vertraege.Pruefer.Symbolic.EndCondition (S := SperrInv.leer identDeclaration)
+      (requiresPolicy (identProgram invariants pointers foreigns) (Vertraege.Pruefer.Symbolic.entryContext identCallerSymbols identCallerBounded)).semantic
+      (((identProgram invariants pointers foreigns)).rumpf identCallerIndex) identCallerSymbols
+      (contractGoals (identProgram invariants pointers foreigns) identCallerIndex identCallerSymbols identCallerBounded (identCallerInvariants (identProgram invariants pointers foreigns)))) :=
+  Vertraege.Pruefer.ending (requiresPolicy (identProgram invariants pointers foreigns) (Vertraege.Pruefer.Symbolic.entryContext identCallerSymbols identCallerBounded))
+  (S := SperrInv.leer identDeclaration) (Invarianten.Pruefer.lockFormula _ (fun _ => none)) {} none 128
+  (((identProgram invariants pointers foreigns)).rumpf identCallerIndex) identCallerSymbols identCallerBounded (contractGoals (identProgram invariants pointers foreigns) identCallerIndex identCallerSymbols identCallerBounded
+    (identCallerInvariants (identProgram invariants pointers foreigns)))
+
+set_option maxHeartbeats 400000 in
+private theorem identCallerCompiled_present
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) : (identCallerCompiled invariants pointers foreigns).toOption.isSome = true := by
+  with_unfolding_all rfl
+
+private noncomputable def identCallerCertificate
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) := (identCallerCompiled invariants pointers foreigns).toOption.get
+  (identCallerCompiled_present invariants pointers foreigns)
+
+private theorem identCallerCompiled_result
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) : identCallerCompiled invariants pointers foreigns =
+    .ok (identCallerCertificate invariants pointers foreigns) := by
+  have present := identCallerCompiled_present invariants pointers foreigns
+  cases result : identCallerCompiled invariants pointers foreigns with
+  | error cause => rw [result] at present; cases present
+  | ok value => simp only [identCallerCertificate, result, Except.toOption, Option.get_some]
+
+private def identCallerFormula : Invarianten.Frag.LProp (Key identDeclaration Nat) :=
+  .and .tru (.and (.imp .tru (.and .tru .tru)) .tru)
+
+set_option maxHeartbeats 400000 in
+private theorem identCallerCompiled_shape
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) :
+    (identCallerCompiled invariants pointers foreigns).map Certificate.formula = .ok identCallerFormula := by
+  unfold identCallerCompiled
+  dsimp only [identProgram, progOfFn, identPieces, identProduced1, identCallerIndex, Fin.cases]
+  rw (config := { transparency := .all }) [ending.eq_6]
+  rw (config := { transparency := .all })
+    [Vertraege.Pruefer.statement.eq_11]
+  with_unfolding_all rfl
+
+private theorem identCallerCompiled_valid
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) (values : Invarianten.Frag.Assignment (Key identDeclaration Nat)) :
+    (identCallerCertificate invariants pointers foreigns).formula.denote values := by
+  have shape := identCallerCompiled_shape invariants pointers foreigns
+  rw [identCallerCompiled_result invariants pointers foreigns] at shape
+  have same := Except.ok.inj shape
+  change (identCallerCertificate invariants pointers foreigns).formula = identCallerFormula at same
+  rw [same]
+  exact ⟨trivial, ⟨fun _ => ⟨trivial, trivial⟩, trivial⟩⟩
+
+attribute [local irreducible] entryVC identCallerCertificate
+
+set_option maxHeartbeats 400000 in
+private theorem identCaller_checked
+    (invariants : ∀ i : Fin identUnit.invs.length, InvTy identUnit i)
+    (pointers : ∀ n, CallContract identDeclaration (identDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract identDeclaration (identDeclaration.asignatur a)) :
+    (checkFunction (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) (fun _ => none) {} none identCallerIndex).toOption.isSome = true := by
+  apply Vertraege.Pruefer.SelectionWitness.function_success
+  · with_unfolding_all rfl
+  · with_unfolding_all rfl
+  · apply Vertraege.Pruefer.SelectionWitness.execution_success (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) (fun _ => none) {}
+      none identCallerIndex (by with_unfolding_all rfl) (identCallerInvariants (identProgram invariants pointers foreigns)) (by rfl)
+      ((parameters (D := identDeclaration) 128 0 []).toOption.get (by rfl)) (by rfl)
+    · with_unfolding_all
+        change 2 ≤ 16384
+        decide
+    · rintro ⟨symbols, member⟩
+      cases symbols
+      let requirement := (Invarianten.Frag.Symbolic.translate ((identProgram invariants pointers foreigns).requires identCallerIndex) identCallerSymbols).toOption.get (by with_unfolding_all rfl)
+      exact Vertraege.Pruefer.SelectionWitness.environment_success_of_valid (D := identDeclaration) (f := identCallerIndex) (next := 0)
+        (identProgram invariants pointers foreigns) (SperrInv.leer identDeclaration) identCallerSymbols identCallerBounded (requiresPolicy (identProgram invariants pointers foreigns) _) (fun _ => none) {} none
+        (identCallerInvariants (identProgram invariants pointers foreigns)) (by with_unfolding_all rfl) requirement (by rfl)
+        (identCallerCertificate invariants pointers foreigns) (identCallerCompiled_result invariants pointers foreigns) (by
+          intro values
+          unfold entryVC
+          intro _ _ _
+          exact identCallerCompiled_valid invariants pointers foreigns values)
+
 -- Retain the canonical producer equations before assembling the actual image,
 -- as for the qualified source in LibraryExport.
 private theorem ident_phases :
@@ -159,7 +275,7 @@ private theorem ident_phases :
       refine ⟨?pieces, ?equations, ?safe⟩
       case pieces =>
         change (f : Fin 2) → EnsTy identUnit f × RumpTy identUnit f × ReqTy identUnit f
-        exact Fin.cases identProduced0.val (Fin.cases identProduced1.val (fun f : Fin 0 => Fin.elim0 f))
+        exact identPieces
       case equations =>
         rintro ⟨index, bound⟩
         have small : index < 2 := bound
@@ -170,12 +286,21 @@ private theorem ident_phases :
       case safe =>
         intro invariants pointers foreigns
         unfold checkedImage
-        cbv
-        simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+        delta Akzeptiert
+        apply Bool.and_eq_true_iff.mpr
         constructor
         · cbv
-        · apply Vertraege.Pruefer.SelectionWitness.contracts_success
-          ident_functions
+        · simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+          constructor
+          · cbv
+          · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+            rintro ⟨index, bound⟩
+            have small : index < 2 := bound
+            rcases (by omega : index = 0 ∨ index = 1) with first | second
+            · subst index
+              cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+            · subst index
+              exact identCaller_checked invariants pointers foreigns
 
 /-- The identity caller unit through the export: the source text with an
     unqualified library call elaborates to an ordinary unit. -/

@@ -102,6 +102,19 @@ theorem shared_decided :
   intro _ _ _
   exact sharedCompiled_valid values
 
+theorem environment_success_of_valid_zeuge :
+    (checkEnvironment sharedProgram (SperrInv.leer sharedDeclaration) sharedSymbols sharedBounded
+      (requiresPolicy sharedProgram _) (fun _ => none) sharedBudget none sharedInvariants).toOption.isSome = true := by
+  let requirement := (Invarianten.Frag.Symbolic.translate (sharedProgram.requires true) sharedSymbols).toOption.get (by rfl)
+  exact environment_success_of_valid (D := sharedDeclaration) (f := true) (next := 0)
+    sharedProgram (SperrInv.leer sharedDeclaration) sharedSymbols sharedBounded (requiresPolicy sharedProgram _)
+    (fun _ => none) sharedBudget none sharedInvariants (by rfl) requirement (by rfl)
+    sharedCertificate sharedCompiled_result (by
+      intro values
+      unfold entryVC
+      intro _ _ _
+      exact sharedCompiled_valid values)
+
 /-- The actual program contract gate accepts both functions at zero domain
     expansion and a four-case work budget, including the strict caller. -/
 theorem uniform_wide_program_zeuge :
