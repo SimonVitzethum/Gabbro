@@ -174,7 +174,7 @@ private theorem sonde_common : CheckWitness sondeUnitMade.val 0 := by
     have small : index < 6 := bound
     have choices : index = 0 ∨ index = 1 ∨ index = 2 ∨ index = 3 ∨ index = 4 ∨ index = 5 := by omega
     rcases choices with h | h | h | h | h | h <;> subst index <;>
-      cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+      (set_option smartUnfolding false in with_unfolding_all rfl)
 
 -- All declaration-indexed observations are packaged before the public getter
 -- is substituted. The final transport changes the entire proposition at once.
