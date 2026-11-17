@@ -75,8 +75,8 @@ theorem stage0_anspruch_erfuellt :
   ⟨by kernel_rfl, checkU_checkB⟩
 
 /-- Exact strict-checker verdicts for the floor, counterprobe and unchanged
-    foreign wrappers. The void foreign body is checked; the wide fallible
-    result remains outside the fragment. All use the same lowering. -/
+    foreign wrappers. Both void and wide fallible foreign bodies are checked
+    through the same lowering. -/
 theorem stage0_c16_formen_urteile :
     AkzeptiertX checkPBodenWahr (Cover.Differenz.sperrFamilie uBodenWahr)
       (List.finRange uBodenWahr.fns.length) [] [] [] [] checkChecksBodenWahr = true ∧
@@ -87,9 +87,9 @@ theorem stage0_c16_formen_urteile :
     AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true ∧
     AkzeptiertX checkPFremdFallible (Cover.Differenz.sperrFamilie uFremdFallible)
-      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = false :=
+      (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true :=
   ⟨bodenWahr_akzeptiert, bodenFalsch_akzeptiert, sonde_akzeptiert,
-    fremd_accepted, fremdFallible_abgelehnt⟩
+    fremd_accepted, fremdFallible_accepted⟩
 
 /-- Measured counterprobe evidence additionally passes the executable binding
     and exact-image gate; structural admission alone claims no external run. -/
