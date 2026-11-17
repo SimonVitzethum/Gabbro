@@ -284,4 +284,17 @@ theorem foreign_checked_image_zeuge :
       (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true :=
   ⟨rfl, rfl, by kernel_rfl, fremd_checkB, fremd_accepted⟩
 
+/-- The fallible assembler premises hold together on four real functions,
+    a nonempty oracle/reason range, a real Duty check and the actual image. -/
+theorem foreign_fallible_checked_image_zeuge :
+    uFremdFallible.fns.length = 4 ∧ uFremdFallible.axs.length = 1 ∧
+    checkChecksFremdFallible.length = 1 ∧ ∃ image,
+      lowerAllg uFremdFallible = .ok image ∧
+      AkzeptiertX image.1 (Cover.Differenz.sperrFamilie uFremdFallible)
+        (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
+  refine ⟨rfl, rfl, by kernel_rfl, (lowerAllg uFremdFallible).toOption.get uFremdFallible_lowered,
+    except_ok_get uFremdFallible_lowered, ?_⟩
+  exact ForeignGateAcceptance.fallible_image_accepted uFremdFallible_checks_ok
+    (except_ok_get uFremdFallible_lowered)
+
 end Gabbro.Grammatik.Parser.Uebersetze

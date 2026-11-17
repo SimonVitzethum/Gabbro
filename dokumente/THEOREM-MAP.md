@@ -6911,7 +6911,7 @@ Continuation from `a3792f69c` (implementation only; **no Lean/lake/build was run
 * **`Pruefung/SondeCode.lean`**, **`Einheit/Elaboration.lean`**: `uSondenFns` generates `c#sonde#external` as an ordinary Boolean adapter calling the resolved ordinary function or C08 foreign binding. Missing bindings, non-Boolean/parameterized/fallible adapters, mark transfer and duplicate external ownership refuse by name. `uSondenPruef` rechecks the executable call shape when deriving descriptors. The parser's `(text, expects-name)` pair is normalized once to the kernel's `(name, text)` order; the previous counterprobe witnesses had these reversed.
 * **`Satz/PruefungArtefakt.lean`**: `SondenNachweis` adds the unique `SondenBindung` and exact selected-image equality to the existing result metadata `Gemessen`. `sondenNachweisB_sound` proves the executable evidence gate sound for a selected member of the derived checks. `sondenNachweis_stale`/`sondenNachweis_unbound` refuse stale-image and unbound evidence. `Gemessen` alone compares name/mode, not image: measured acceptance uses the stronger gate. These remain evidence metadata, not proof that external hardware ran or a universal prose claim holds.
 * **`Pruefung/Gegenprobe.lean`**: source declares the real Boolean counterprobe function; its private adapter lowers with the unit. `sonde_nachweisB`/`sonde_nachweis` connect executable evidence admission to the generic soundness theorem. Refusals cover absent binding, removed adapter, duplicate ownership, unrun result, stale name and same-name/same-mode stale image.
-* **`Pruefung/Torhuelle.lean`**, **`Fremdtor.lean`**: a fallible C08 foreign gate uses ordinary `bindAxElse`; `torFehler` exhaustively rethrows the exact closed reason case and the wrapper retains that reason channel. No range-bottom or false normal answer is synthesized on error. `fremdTor_fehler_pending` and `torAbschluss_fehler` refuse successful evidence on an error return; `fremdTor_erfolg` witnesses normal completion. The unclosed-handler lowering refusal remains. Parameters have no argument list in `gates`; ordinary reason-channel gates retain their named refusal until an explicit policy is supplied. The strict contract checker accepts the unchanged void foreign statement through its generic totality certificate (`fremd_accepted`); the fallible `u64` result still exceeds the local-observation expansion budget (`fremdFallible_abgelehnt`). Their exact source/unit and function-producer equations, positive Duty admission, and report-discharge proofs remain checked. This acceptance concerns the elaborated model unit; the legacy axiom spelling retains its independent source-export refusal.
+* **`Pruefung/Torhuelle.lean`**, **`Fremdtor.lean`**: a fallible C08 foreign gate uses ordinary `bindAxElse`; `torFehler` exhaustively rethrows the exact closed reason case and the wrapper retains that reason channel. No range-bottom or false normal answer is synthesized on error. `fremdTor_fehler_pending` and `torAbschluss_fehler` refuse successful evidence on an error return; `fremdTor_erfolg` witnesses normal completion. The unclosed-handler lowering refusal remains. Parameters have no argument list in `gates`; ordinary reason-channel gates retain their named refusal until an explicit policy is supplied. The strict contract checker accepts the unchanged void foreign statement through its generic totality certificate (`fremd_accepted`); the unchanged fallible `u64` wrapper is accepted by quantified answers and poststates (`fremdFallible_accepted`, section 199). Their exact source/unit and function-producer equations, positive Duty admission, and report-discharge proofs remain checked. This acceptance concerns the elaborated model unit; the legacy axiom spelling retains its independent source-export refusal.
 The positive C16 floor and counterprobe fixtures retain full admission and all
 Duty/report witnesses. Their local `x = 3` uses the inferred singleton range,
 including the reporter parameter, instead of a full-width observation outside
@@ -7571,10 +7571,9 @@ refusal-composition conclusions retain their meaning. Acceptance still implies
 the same runtime WP and `ContractDuties`, including exclusion of local logic
 stops. No source execution counterexample is inferred from an abstract WP.
 
-`Fremdtor.Source.fremdFallible_fragment_refusal` now names the quantified
-foreign end-continuation gap reached after uniform post support, rather than
-the removed return-range precheck. Its source and refusal-composition claims
-are unchanged.
+`ForeignGateAcceptance.fallible_image_accepted` (section 199) closes the
+quantified foreign end-continuation gap. The actual source/unit and its
+Duty-preserving lowering remain unchanged.
 
 Importer verification also exposed two existing memory-heavy `cbv` witnesses.
 `GvParserFragment.w108_elab` and its data move unchanged into
@@ -8065,3 +8064,28 @@ The unchanged pipeline fixtures
 `Stage0.Zeugen.Annahme.Optional.OptionalForeignBinderWitness` and
 `Stage0.Zeugen.Pipeline.AdapterReasonWitness` build again through production
 acceptance. Their image-existence and correctness statements were not rewritten.
+
+The connected C16 source witness now accepts its unchanged fallible u64 oracle
+wrapper. The old fragment-refusal witness and its unused refusal collector are
+deleted. `ForeignGateAcceptance.checked_image` moves the original assembler
+transport statement from `Fremdtor/Source.lean` to `Functions.lean`: a verdict
+proved for every actual producer/invariant/interface choice transfers to the
+actual successful lowering result. Its meaning is unchanged and its existing
+void fixture remains its witness.
+
+The same module's private statements `foreign_contracts`, `bounded`,
+`compiled_present`, `compiled_result`, `normalized`, `original_valid`,
+`wrapper_accepted_zeuge`, `contracts_checked`, `checks_present` and
+`canonical_accepted` respectively certify the original foreign contracts,
+scope bound, actual compilation, returned certificate equation, true equivalent
+normal form, original universally valid VC, strict wide-wrapper gate, all four
+function gates, real derived Duty checks and the complete canonical acceptance.
+They compose mathematical Cooper completeness; no wide elimination is reduced
+in the kernel. `ForeignGateAcceptance.fallible_image_accepted` transfers that
+acceptance to every actual emitted model image of this source unit.
+`fremdFallible_accepted` replaces the removed refusal statement for its exact
+source/lowering image. `foreign_fallible_checked_image_zeuge` jointly witnesses
+four functions, one oracle, one Duty check, successful lowering and acceptance.
+`Stage0.stage0_c16_formen_urteile` changes only its last verdict to `true` and
+uses that actual accepted fallible source image. Its other four verdicts remain
+unchanged; generic emitted-image correctness and the goal are unchanged.
