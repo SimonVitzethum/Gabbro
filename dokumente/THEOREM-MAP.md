@@ -8052,8 +8052,8 @@ mathematically, without reducing the elimination procedure. The four
 actual u32 environments and nonliteral continuations.
 
 `TraversalWitness.production_traversal_acceptance_zeuge` gives strict production
-acceptance beyond the expansion limit, with mutable locals, `next`, an actual
-last-iteration return, memory writes and the same nonliteral postcondition.
+acceptance beyond the expansion limit, with mutable locals, memory writes and
+the same nonliteral postcondition.
 `compiled_present_zeuge`, `normalized_zeuge` and `original_vc_zeuge` give its
 actual certificate, normal form and original universally valid VC.
 
