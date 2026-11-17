@@ -40,6 +40,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.PoolSnapshot
 public import Grammatik.Zielsatz.Faeden.RuheZeuge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 public import Grammatik.Zielsatz.Kern.Beweis
@@ -310,10 +311,9 @@ theorem zS_lokal : SperrInvLokal zS := fun _ _ _ _ => rfl
 theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources := zPoolSources) = true := by
   exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, PoolCertificate.vc_checked⟩
 
-/-- Capability gap: outside the decidable fragment: old-memory posts on the
-    original probe's imported functions. Its replacement keeps the actual read/write. -/
-theorem zPC_abgelehnt : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt]
-    (sources := zPoolSources) = false := by decide +kernel
+/-- Entry snapshots admit the original probe, including its old-slot contracts. -/
+theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt]
+    (sources := zPoolSources) = true := PoolSnapshot.accepted
 
 theorem zPCFragment_akzeptiert : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
     (sources := zPoolSources) = true := PoolCertificate.c_accepted
