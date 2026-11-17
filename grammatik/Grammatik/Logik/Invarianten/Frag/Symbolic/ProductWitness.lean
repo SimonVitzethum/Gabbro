@@ -96,4 +96,3 @@ theorem context_size_zeuge : sizeOf ([u32, u32] ++ [pair]) ≤ sizeOf [u32, u32]
   context_size_append [u32, u32] [pair]
 
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic.ProductWitness
-

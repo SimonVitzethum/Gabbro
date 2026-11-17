@@ -88,7 +88,21 @@ theorem production_parameter_acceptance_zeuge :
       (requiresPolicy program _) (fun _ => none) budget none invariants (by with_unfolding_all rfl)
       requirement (by rfl) certificate compiled_result original_valid_zeuge
 
+theorem component_bounds_zeuge (world : World declaration)
+    (actual : Env declaration [pair]) (valuation : Assignment Nat)
+    (realized : symbols.Realizes valuation world actual) :
+    (valueBounds (symbols.get .here)).denote (values valuation world) :=
+  valueBounds_sound (symbols.get .here) valuation world (actual.get .here) realized.1
+
+theorem field_conjunction_zeuge (world : World declaration) (valuation : Assignment Nat) :
+    (fieldConjunction [u32, u32]
+      (fun field => valueBounds (components.get (fieldVariable (tail := []) field)))).denote
+        (values valuation world) ↔ ∀ {kind} (field : FieldAt [u32, u32] kind),
+      (valueBounds (components.get (fieldVariable (tail := []) field))).denote (values valuation world) :=
+  fieldConjunction_denote _ _ _
+
 end Gabbro.Grammatik.Vertraege.Pruefer.ProductProductionWitness
+
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer.ProductCallWitness
 
