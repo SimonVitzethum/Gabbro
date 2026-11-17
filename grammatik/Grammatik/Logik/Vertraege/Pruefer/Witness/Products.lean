@@ -80,7 +80,7 @@ theorem production_parameter_acceptance_zeuge :
     decide
   · intro entry
     rcases entry with ⟨selected, member⟩
-    change selected ∈ [symbols] at member
+    with_unfolding_all change selected ∈ [symbols] at member
     have same := List.mem_singleton.mp member
     subst selected
     let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
@@ -92,7 +92,7 @@ theorem component_bounds_zeuge (world : World declaration)
     (actual : Env declaration [pair]) (valuation : Assignment Nat)
     (realized : symbols.Realizes valuation world actual) :
     (valueBounds (symbols.get .here)).denote (values valuation world) :=
-  valueBounds_sound (symbols.get .here) valuation world (actual.get .here) realized.1
+  valueBounds_sound (symbols.get .here) valuation world (actual.get .here) (symbols.realizes_get actual valuation world .here realized)
 
 theorem field_conjunction_zeuge (world : World declaration) (valuation : Assignment Nat) :
     (fieldConjunction [u32, u32]
@@ -146,14 +146,16 @@ def program : Programm declaration where
         (.ret (.val (.prodGet (.var .here) .head)) (List.Perm.refl _))
 
 abbrev budget : VCBudget := { expansion := 0, depth := 16 }
-abbrev symbols : SymEnv declaration Nat [] := .nil
+abbrev symbols : SymEnv declaration Nat (declaration.params true) := .nil
+
+theorem bounded : symbols.Bounded 0 := trivial
 
 def invariants : InvariantFormula program [] := (invariantFormula program []).toOption.get (by rfl)
 
-def compiled := ending (requiresPolicy program (entryContext symbols (next := 0) trivial))
+def compiled := ending (requiresPolicy program (entryContext symbols bounded))
   (S := SperrInv.leer declaration) (Invarianten.Pruefer.lockFormula (SperrInv.leer declaration) (fun _ => none))
-  budget none budget.depth (program.rumpf true) symbols trivial
-  (contractGoals program true symbols trivial invariants)
+  budget none budget.depth (program.rumpf true) symbols bounded
+  (contractGoals program true symbols bounded invariants)
 
 theorem compiled_present_zeuge : compiled.toOption.isSome = true := by with_unfolding_all rfl
 
@@ -165,15 +167,30 @@ theorem compiled_result : compiled = .ok certificate := by
   | error reason => rw [result] at present; cases present
   | ok value => simp only [certificate, result, Except.toOption, Option.get_some]
 
-theorem normalized_zeuge : (Reduce.normalize 8 certificate.formula).val = .tru := by
-  with_unfolding_all rfl
+def bounds (key : Nat) : LProp (Key declaration Nat) :=
+  .and (.le (.konst 0) (.var (.inr key))) (.le (.var (.inr key)) (.konst (2 ^ 32 - 1)))
+
+def fieldPost : LProp (Key declaration Nat) := .eq (.var (.inr 0)) (.konst 7)
+
+def rawFormula : LProp (Key declaration Nat) :=
+  .and .tru (.and (.imp .tru (.and
+    (.all (.inr 0) (.all (.inr 1) (.imp
+      (.and (.and (.and (bounds 0) (.and (bounds 1) .tru)) .tru) fieldPost)
+      (.and fieldPost .tru)))) .tru)) .tru)
+
+/-- Unfold only the small compiler fixture once; validity below is structural
+    and does not reduce normalization or integer elimination. -/
+theorem compiled_shape_zeuge : certificate.formula = rawFormula := by with_unfolding_all rfl
 
 theorem original_valid_zeuge (values : Assignment (Key declaration Nat)) :
     (entryVC symbols .tru certificate.formula).denote values := by
   intro _ _ _
-  apply ((Reduce.normalize 8 certificate.formula).property values).mp
-  rw [normalized_zeuge]
-  trivial
+  rw [compiled_shape_zeuge]
+  refine ⟨trivial, ?_, trivial⟩
+  intro _
+  refine ⟨?_, trivial⟩
+  intro first second assumptions
+  exact ⟨assumptions.2, trivial⟩
 
 attribute [local irreducible] entryVC certificate
 
@@ -183,15 +200,16 @@ theorem production_call_acceptance_zeuge :
     (checkExecution program (SperrInv.leer declaration) (fun _ => none) budget none true).toOption.isSome = true := by
   apply execution_success program (SperrInv.leer declaration) (fun _ => none) budget none true
     (by rfl) invariants (by rfl)
-    ((parameters (D := declaration) 0 0 []).toOption.get (by rfl)) (by rfl)
+    ((parameters (D := declaration) 0 0 []).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
   · change 1 ≤ 16384
     decide
   · intro entry
     rcases entry with ⟨selected, member⟩
     cases selected
     let requirement := (Invarianten.Frag.Symbolic.translate (program.requires true) symbols).toOption.get (by rfl)
-    exact environment_success_of_valid program (SperrInv.leer declaration) symbols trivial
-      (requiresPolicy program _) (fun _ => none) budget none invariants (by with_unfolding_all rfl)
-      requirement (by rfl) certificate compiled_result original_valid_zeuge
+    with_unfolding_all
+      exact environment_success_of_valid program (SperrInv.leer declaration) symbols bounded
+        (requiresPolicy program _) (fun _ => none) budget none invariants (by with_unfolding_all rfl)
+        requirement (by rfl) certificate compiled_result original_valid_zeuge
 
 end Gabbro.Grammatik.Vertraege.Pruefer.ProductCallWitness

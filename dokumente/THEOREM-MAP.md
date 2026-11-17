@@ -8154,11 +8154,16 @@ with the nonliteral postcondition `result == input.first` and zero integer
 enumeration budget. `ProductCallWitness.production_call_acceptance_zeuge`
 proves the actual production call-result gate succeeds using only the callee's
 postcondition `result.first == 7`; its second full-width field is unconstrained.
-In both namespaces, `compiled_present_zeuge`, `compiled_result`,
-`normalized_zeuge` and `original_valid_zeuge` state successful actual compilation,
-the certificate equation, its equivalent true normal form and universal validity
-of the original VC. `ProductProductionWitness.components_bounded` and `bounded`
-state the two-key flattened and reconstructed input scope bounds. Cooper success
+In both namespaces, `compiled_present_zeuge`, `compiled_result` and
+`original_valid_zeuge` state successful actual compilation, the certificate
+equation and universal validity of the original VC. The parameter fixture's
+`normalized_zeuge` gives its equivalent true normal form; the call fixture's
+`compiled_shape_zeuge` gives its short original quantified formula, whose
+validity follows directly from its callee-postcondition premise. `ProductProductionWitness.components_bounded` and `bounded`
+state the two-key flattened and reconstructed input scope bounds.
+`component_bounds_zeuge` and `field_conjunction_zeuge` inhabit actual component
+bounds and the typed field-conjunction equivalence. `ProductCallWitness.bounded`
+states the caller's empty zero-key environment bound. Cooper success
 is composed mathematically, without kernel evaluation of elimination.
 
 The numbered component formulas, their atoms, reset cell and `komp` were
