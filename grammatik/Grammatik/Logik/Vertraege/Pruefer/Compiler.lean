@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Locks
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
+public import Grammatik.Logik.Vertraege.Pruefer.Control.CallBinding
 
 @[expose] public section
 
@@ -128,35 +129,10 @@ def block {context : Context A next} (policy : CallPolicy program context)
         bindBlockCondition (V := V) policy.semantic symbols bounded expression rest goals
           (fun more larger symbol valueBounded => block (policy.weaken larger) facts budget hint fuel rest
             (.cons symbol symbols) ⟨valueBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCall f args he hp hr rest => do
-        let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpB rest ((goals.shrink _).holds item runtime allowed) world (.cons (ergWert he value) actual)
-        let pre ← Symbolic.arguments budget.expansion args symbols bounded
-          (fun actual supplied item runtime world => ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            match runtime.calls f world supplied with
-            | .ok after value => result actual value item runtime after
-            | .why after reason => False
-            | .logik error => allowed error
-            | .hardware _ => True)
-          (fun more larger supplied suppliedBounded => callCondition (policy.weaken larger) budget.expansion f
-            supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) hr result
-            (fun last beyond result resultBounded => do
-              let tail ← block (policy.weaken (Nat.le_trans larger beyond)) facts budget hint fuel rest
-                (.cons (resultSymbol he result) symbols)
-                ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded (Nat.le_trans larger beyond)⟩
-                ((goals.weaken (Nat.le_trans larger beyond)).shrink _)
-              return tail.map (fun valuation _ _ world ready actual realized value selected =>
-                ready (.cons (ergWert he value) actual) ⟨resultSymbol_realizes he result valuation world value selected, realized⟩)))
-        return (pre.read Λ args.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
-          have ready := ready actual ((symbols.realizes_world actual valuation world (world.lese Λ args.orte)).mp realized) allowed safe
-          unfold Runtime.wpB
-          dsimp only [execBlockH]
-          cases reply : runtime.calls f (world.lese Λ args.orte) (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) with
-          | ok after value => rw [reply] at ready; exact (goals.holds_shrink _ item runtime allowed _).mp (ready allowed safe)
-          | why after reason => exact (Fin.cast hr reason).elim0
-          | logik error => simpa only [reply, Symbolic.Goals.holds] using ready
-          | hardware error => trivial)
+    | .bindCall f args he hp hr rest => bindCallBlockCondition policy budget.expansion f args he hp hr rest symbols bounded goals
+        (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .bindCallElse f args he hp hr failure rest => do
         let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
           ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
@@ -325,35 +301,10 @@ def ending {context : Context A next} (policy : CallPolicy program context)
     | .bind expression rest => bindEndCondition (V := V) (l := l) policy.semantic symbols bounded expression rest goals
         (fun more larger symbol valueBounded => ending (policy.weaken larger) facts budget hint fuel rest
           (.cons symbol symbols) ⟨valueBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCall f args he hp hr rest => do
-        let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpE rest ((goals.shrink _).endHolds item runtime allowed) world (.cons (ergWert he value) actual)
-        let pre ← Symbolic.arguments budget.expansion args symbols bounded
-          (fun actual supplied item runtime world => ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            match runtime.calls f world supplied with
-            | .ok after value => result actual value item runtime after
-            | .why after reason => False
-            | .logik error => allowed error
-            | .hardware _ => True)
-          (fun more larger supplied suppliedBounded => callCondition (policy.weaken larger) budget.expansion f
-            supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) hr result
-            (fun last beyond result resultBounded => do
-              let tail ← ending (policy.weaken (Nat.le_trans larger beyond)) facts budget hint fuel rest
-                (.cons (resultSymbol he result) symbols)
-                ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded (Nat.le_trans larger beyond)⟩
-                ((goals.weaken (Nat.le_trans larger beyond)).shrink _)
-              return tail.map (fun valuation _ _ world ready actual realized value selected =>
-                ready (.cons (ergWert he value) actual) ⟨resultSymbol_realizes he result valuation world value selected, realized⟩)))
-        return (pre.read Λ args.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
-          have ready := ready actual ((symbols.realizes_world actual valuation world (world.lese Λ args.orte)).mp realized) allowed safe
-          unfold Runtime.wpE
-          dsimp only [execEndH]
-          cases reply : runtime.calls f (world.lese Λ args.orte) (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) with
-          | ok after value => rw [reply] at ready; exact (goals.endHolds_shrink _ item runtime allowed _).mp (ready allowed safe)
-          | why after reason => exact (Fin.cast hr reason).elim0
-          | logik error => simpa only [reply, Symbolic.Goals.endHolds] using ready
-          | hardware error => trivial)
+    | .bindCall f args he hp hr rest => bindCallEndCondition policy budget.expansion f args he hp hr rest symbols bounded goals
+        (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .bindCallElse f args he hp hr failure rest => do
         let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
           ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
