@@ -48,7 +48,7 @@ def conjunct [DecidableEq α] (guard goal : LProp α) :
             let found ← conjunct right goal
             return ⟨fun values valid => found.down values valid.2⟩
     | _ => none
-termination_by guard
+termination_by structural guard
 
 def implication [DecidableEq α] (left right : LProp α) : Equivalent (.imp left right) :=
   match left, right with
