@@ -7852,3 +7852,11 @@ source-state observation`, the symbolic compiler's named fragment boundary.
 their unchanged required-allocation sources. Their shared `allocationRefusal`
 now names the existing `cross-entry relation; use one local predicate per slot`
 boundary reached by these fixtures. They do not certify a capacity countermodel.
+
+`Stage0.Pipeline.U64DifferenceWitness.candidate_present` replaces the obsolete
+specialization-budget refusal with successful emission of the unchanged
+full-width subtraction/call fixture. `accepted_image` identifies the actual
+emitted image, `canonical_source` retains its original canonical source program,
+and `image_correct` instantiates the generic image-correctness theorem under the
+existing runner/hardware and clone-answer premises. The reversed and unguarded
+subtraction refusal statements remain unchanged.

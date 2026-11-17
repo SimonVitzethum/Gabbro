@@ -52,10 +52,19 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- Full-width call-result specialization exceeds the checked work budget. -/
-theorem candidate_refused : candidate = .error
-    "unsupported invariant constructor: contract VC specialization product exceeds the work budget" := by
+/-- Full-width parameters and call answers remain symbolic through production acceptance. -/
+theorem candidate_present : candidate.toOption.isSome = true := by
   kernel_rfl
+
+def output : Emitted text 256 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 256 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
+
+theorem canonical_source : CanonicalSourceProgram output.compiled :=
+  compile_source_program text output.compiled
+
+theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- Source elaboration still retains the exact relational narrowing. -/
 def elaborated : Except String UProg := do
