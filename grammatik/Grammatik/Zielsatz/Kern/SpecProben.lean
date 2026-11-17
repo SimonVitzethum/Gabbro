@@ -198,7 +198,7 @@ def zEB : Einheit zD where
 
 /-- Probe C as ONE declaration. -/
 def zEC : Einheit zD where
-  P := zPCFragment
+  P := zPC
   S := zS
   lockFormulas := zPoolSources
   Q := axWahr zD

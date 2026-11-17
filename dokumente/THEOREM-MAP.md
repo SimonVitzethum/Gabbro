@@ -7946,3 +7946,29 @@ planning rather than requiring a current-only post. The changed
 propagate a failed snapshot plan. `Einheit104` keeps its original dynamic-index
 old-slot refusal statement. No source fixture or orphan image-existence claim
 is weakened.
+
+Guard normalization also has `Reduce.conjunct`: a successful result certifies
+that its goal is an unconditional conjunct of the guard. The implication fold
+uses that certificate; it does not assume an arithmetic hypothesis absent from
+the original formula. `ReductionWitness.conjunct_zeuge` uses the full u32 bounds.
+`metered_sound_zeuge` checks a genuine universally quantified integer formula.
+
+The original `zPC` pool program now passes with its declared `old(slot)` contract.
+The stale `zPC_abgelehnt` is replaced by **`zPC_akzeptiert`** (actual original
+program accepted). The replacement fixture `zPCFragment` and its three separate
+`PoolCertificate.c_*` admission lemmas are deleted. `zEC`, `zPC_logik` and
+`probeC_erfuellbar_gilt` now use the original program and all its old-memory
+contracts; the goal statement and its assumptions are unchanged.
+
+`PoolSnapshot.compiled_present`, `compiled_result` and `formula_shape` identify
+the actual old-slot writer compiler result. `prepared_true` proves its normalized
+closed VC is true; `environment_checked` and `writer_checked` compose that with
+actual entry capture and function admission. `readerCompiled_present` and
+`readerCompiled_result` identify the original reader compiler result;
+`reader_checked` establishes its value-dependent post for every observed slot.
+`wrapCompiled_present` and `wrapCompiled_result` identify the original caller
+result; `wrapPrepared` proves its prepared VC, and `wrap_checked` composes actual
+call/snapshot havoc with function admission. `contracts_checked`, `vc_checked`
+and `accepted` conjoin every original function, invariant VC and structural
+acceptance gate, respectively. None changes the source program or computes a
+whole compiler/Cooper run in the kernel.

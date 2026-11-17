@@ -315,11 +315,8 @@ theorem zPB_akzeptiert : Akzeptiert zPB zS zFs [()] [.inl ()] [zHaupt] (sources 
 theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt]
     (sources := zPoolSources) = true := PoolSnapshot.accepted
 
-theorem zPCFragment_akzeptiert : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
-    (sources := zPoolSources) = true := PoolCertificate.c_accepted
-
-theorem zPCFragment_logik : LogikPflicht zPCFragment zS (axWahr zD) := by
-  have duties := Vertraege.Pruefer.KontrakteGeprueftB_sound zFs_voll PoolCertificate.c_contracts_checked
+theorem zPC_logik : LogikPflicht zPC zS (axWahr zD) := by
+  have duties := Vertraege.Pruefer.KontrakteGeprueftB_sound zFs_voll PoolSnapshot.contracts_checked
   refine ⟨fun passes f => ?_, zS_lokal, axEnsLokal_wahr,
     ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
   have checked := duties f passes (axWahr zD) (fun _ => False) (fun _ h => False.elim h)
@@ -343,8 +340,8 @@ theorem probeB_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEB ⟨z
     initRuhe_laeuft zEB rfl⟩
 
 theorem probeC_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
-  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPCFragment_akzeptiert,
-    ⟨zPCFragment_logik, zStartPflicht zEC rfl rfl rfl rfl⟩,
+  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPC_akzeptiert,
+    ⟨zPC_logik, zStartPflicht zEC rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩, _, _, laufzeit_initRuhe zEC,
     initRuhe_laeuft zEC rfl⟩
 

@@ -13,10 +13,6 @@ namespace Gabbro.Grammatik.Zielsatz
 def zPoolSources : Invarianten.Pruefer.LockSources zS := fun _ => some
   { resources := [], expression := .tru, correct := fun _ => rfl }
 
-/-- The footprint witness keeps the guarded read/write and every body. Its
-    unrelated imported posts use truth rather than unsupported old-memory logic. -/
-def zPCFragment : Programm zD := { zPC with ensures := fun _ => .tru }
-
 namespace PoolCertificate
 
 local instance : DecidableEq zD.Ax := inferInstanceAs (DecidableEq Empty)
@@ -131,18 +127,6 @@ theorem vc_checked : Invarianten.Pruefer.invariantVCB zPB zS zFs zPoolSources {}
   exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, contracts_checked⟩
 
 #print axioms vc_checked
-
-/-- The guarded read/write fixture remains a non-degenerate positive witness. -/
-theorem c_contracts_checked : KontrakteGeprueftB zPCFragment zS zFs zPoolSources = true := by
-  decide +kernel
-
-theorem c_vc_checked : Invarianten.Pruefer.invariantVCB zPCFragment zS zFs zPoolSources {}
-    (fun _ => none) [()] = true := by
-  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, c_contracts_checked⟩
-
-theorem c_accepted : Akzeptiert zPCFragment zS zFs [()] [.inl ()] [zHaupt]
-    (sources := zPoolSources) = true := by
-  exact Bool.and_eq_true_iff.mpr ⟨by decide +kernel, c_vc_checked⟩
 
 end PoolCertificate
 
