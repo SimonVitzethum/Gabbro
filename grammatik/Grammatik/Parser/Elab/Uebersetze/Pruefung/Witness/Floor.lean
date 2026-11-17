@@ -276,12 +276,20 @@ attribute [local cbv_eval] floorPassing_program floorPassing_checks
 
 -- These are computed only on the certified unit/program/check results above.
 private theorem floorPassing_facts : CheckWitness floorPassingUnitMade.val 1 := by
-  constructor <;> cbv
-  simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   constructor
-  · cbv
-  · apply Vertraege.Pruefer.SelectionWitness.contracts_success
-    floor_contract_functions
+  case lowered => cbv
+  case derived => cbv
+  case accepted =>
+    delta Zielsatz.AkzeptiertX
+    apply Bool.and_eq_true_iff.mpr
+    constructor
+    · cbv
+    · simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+      constructor
+      · cbv
+      · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+        floor_contract_functions
+  all_goals cbv
 
 end floorPassingAssembly
 
@@ -445,12 +453,20 @@ attribute [local cbv_eval] floorFailing_program floorFailing_checks
 
 -- These are computed only on the certified unit/program/check results above.
 private theorem floorFailing_facts : CheckWitness floorFailingUnitMade.val 1 := by
-  constructor <;> cbv
-  simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
   constructor
-  · cbv
-  · apply Vertraege.Pruefer.SelectionWitness.contracts_success
-    floor_contract_functions
+  case lowered => cbv
+  case derived => cbv
+  case accepted =>
+    delta Zielsatz.AkzeptiertX
+    apply Bool.and_eq_true_iff.mpr
+    constructor
+    · cbv
+    · simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+      constructor
+      · cbv
+      · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+        floor_contract_functions
+  all_goals cbv
 
 end floorFailingAssembly
 
