@@ -7972,3 +7972,32 @@ call/snapshot havoc with function admission. `contracts_checked`, `vc_checked`
 and `accepted` conjoin every original function, invariant VC and structural
 acceptance gate, respectively. None changes the source program or computes a
 whole compiler/Cooper run in the kernel.
+
+The explicit generic-law fixtures are also named
+`ReductionWitness.termKeys_eq_variables_zeuge` (two distinct term keys),
+`truth_denote_zeuge` (folded truth), `evaluate_true_zeuge` (the normalized alias VC),
+`closure_of_valid_zeuge` (the same formula under a further universal binder),
+and `prepared_of_valid_zeuge` (normalized closed validity).
+`SnapshotProductionWitness.rejectCounterexample_of_valid_zeuge` proves the valid
+original u32/global VC receives no false diagnostic;
+`environmentDecision_of_decided_zeuge` composes that original universally valid
+VC through the numeric production decision.
+
+The remaining reduction fixtures state the following: `normalize_zeuge` gives
+both the true normal form and its original-formula equivalence;
+`substitute_zeuge` gives successful capture-free substitution and its assignment
+correspondence; `substitution_capture_refused_zeuge` pins the capture conflict;
+`contradictory_guard_zeuge` gives the true normal form and actual validity of the
+inconsistent guarded post. Snapshot fixtures `observations_zeuge` and
+`old_entry_correspondence_zeuge` respectively identify the complete distinct
+observation list and establish joint source evaluation/formula truth with
+changed current memory. `constantIndex_zeuge` refuses a frozen-memory value as a
+state-independent slot index. The three snapshot production assembly statements
+`environment_at_success_zeuge`, `environment_checked` and `function_checked`
+assert success of precisely those actual checker layers.
+
+The numbered cell formulas, reset atom and `komp` were re-reviewed unchanged.
+Only the `AkzeptiertX` implementation-closure pin moves, to
+`5787348549142553083`, for the certified entry/call snapshots and VC normalization.
+This pin records the actual checker closure, without claiming new numbered-cell
+coverage for the arithmetic VC gates.

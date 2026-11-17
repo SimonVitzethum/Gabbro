@@ -66,4 +66,23 @@ theorem evaluate_universal_unknown_zeuge :
 theorem evaluate_existential_unknown_zeuge :
     evaluate (.ex 0 (.eq (.var 0) (.konst 1)) : LProp Nat) (fun _ => 0) = .unknown := rfl
 
+theorem termKeys_eq_variables_zeuge :
+    VC.termKeys (LTerm.add (.var (0 : Nat)) (.scale 7 (.var 1))) =
+      (LTerm.add (.var (0 : Nat)) (.scale 7 (.var 1))).variables := termKeys_eq_variables _
+
+theorem truth_denote_zeuge (values : Assignment Nat) :
+    (Reduce.truth true : LProp Nat).denote values ↔ true = true := Reduce.truth_denote true values
+
+theorem evaluate_true_zeuge (values : Assignment Nat) :
+    ∃ proof, evaluate (normalize 8 original).val values = .yes proof :=
+  evaluate_true _ _ (normalize_zeuge values).1
+
+theorem closure_of_valid_zeuge (values : Assignment Nat) :
+    (Modell.universalClosure [0] original).denote values :=
+  Snapshot.closure_of_valid [0] original prepared_sound_zeuge values
+
+theorem prepared_of_valid_zeuge (values : Assignment Nat) :
+    (Snapshot.prepared original).val.denote values :=
+  Snapshot.prepared_of_valid original prepared_sound_zeuge values
+
 end Gabbro.Grammatik.Vertraege.Pruefer.ReductionWitness

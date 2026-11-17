@@ -144,6 +144,15 @@ theorem prepared_true_zeuge : (Snapshot.prepared (matrix true)).val = .tru := by
   rw [valid_shape]
   rfl
 
+theorem rejectCounterexample_of_valid_zeuge :
+    Snapshot.rejectCounterexample true (matrix true) = .ok () :=
+  Snapshot.rejectCounterexample_of_valid true _ (original_valid _)
+
+theorem environmentDecision_of_decided_zeuge (reason : String) :
+    (environmentDecision false (matrix true) reason).toOption.isSome = true :=
+  environmentDecision_of_decided _ _ ((close_decide_true_iff _).mpr
+    (fun values => (lower_denote _ values).mpr (original_valid values)))
+
 attribute [local irreducible] entryVC certificate checkEnvironmentAt
 attribute [local implicit_reducible] entryContext
 
