@@ -7528,8 +7528,9 @@ is reported as an abstraction refusal, not as a source execution counterexample.
 
 The totality path requires literal-true source pre/postconditions and no owed function
 invariants. Its primitive and loop certificates quantify over every atomic observation;
-this does not admit atomic observations into a nontrivial contract WP. Entry snapshots,
-symbolic continuations, general atomic WPs and float/oracle bindings remain separate work.
+this does not admit atomic observations into a nontrivial contract WP. Entry snapshots
+and symbolic continuations are certified in sections 197–198; general atomic WPs and
+float/oracle bindings remain separate work.
 
 The unchanged `Gap.F03_reg` ending-register fixture is also checked by the
 literal-true totality path. Its `e_cause` is `none`, `e_gueltig` is true, and
@@ -7595,7 +7596,7 @@ binding, store and return composition; the witnesses pass their completed VCs
 to the verified Cooper procedure once.
 
 The scalar foundations below are used by the production migration in section 197.
-Entry-memory snapshots and aggregate components remain open. The existing
+Entry-memory snapshots are certified in section 198; aggregate components remain open. The existing
 acceptance soundness and `gabbro_ziel` statements are unchanged.
 
 The following names are in `Gabbro.Grammatik.Invarianten.Frag.Symbolic`, except
@@ -7866,7 +7867,7 @@ indices need selected-slot observations. The former parameter-product refusal
 is removed. Its `contracts_refused`, `checker_refused` and the two actual typed
 precondition counterexample statements are unchanged.
 
-### Entry-world observations and certified VC simplification
+## 198. Entry-world observations and certified VC simplification (2026-11-17)
 
 The contract compiler now freezes `old(G)` and constant-index `old(T.slots[i].f)`
 into fresh immutable observation intervals. Both function entry and each nested
@@ -8001,3 +8002,8 @@ Only the `AkzeptiertX` implementation-closure pin moves, to
 `5787348549142553083`, for the certified entry/call snapshots and VC normalization.
 This pin records the actual checker closure, without claiming new numbered-cell
 coverage for the arithmetic VC gates.
+
+`SnapshotProductionWitness.numeric_decided_zeuge` proves the mathematical Cooper
+verdict for the original u32/global entry matrix and supplies it by name to
+`environmentDecision_of_decided_zeuge`. Their local opacity boundary prevents
+accidental kernel evaluation of the concrete decision procedure.
