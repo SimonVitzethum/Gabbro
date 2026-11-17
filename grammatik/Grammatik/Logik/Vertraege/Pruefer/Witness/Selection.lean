@@ -52,9 +52,11 @@ theorem environment_success (program : Programm D) (S : SperrInv D)
       (close_closed _) = true) :
     (Vertraege.Pruefer.checkEnvironment program S symbols bounded policy sources budget hint invariants).toOption.isSome = true := by
   obtain ⟨support, hsupport⟩ := success_of_isSome _ supported
+  have planned := snapshotPlan_of_current (program.ensures f) support hsupport
   unfold Vertraege.Pruefer.checkEnvironment
-  rw [hsupport]
+  rw [planned]
   dsimp only [bind, Except.bind]
+  unfold checkEnvironmentAt
   rw [hentry]
   dsimp only [bind, Except.bind]
   rw [hcompiled]
@@ -101,12 +103,13 @@ theorem execution_success (program : Programm D) (S : SperrInv D)
         (requiresPolicy program _) sources budget hint invariants).toOption.isSome = true) :
     (checkExecution program S sources budget hint f).toOption.isSome = true := by
   obtain ⟨support, hsupport⟩ := success_of_isSome _ supported
+  have planned := snapshotPlan_of_current (program.ensures f) support hsupport
   obtain ⟨checked, hchecked⟩ := collect_success domain.templates.attach _
     (fun entry => Vertraege.Pruefer.checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
       (requiresPolicy program _) sources budget hint invariants)
     (fun entry => success_of_isSome _ (ready entry))
   unfold checkExecution
-  rw [hsupport]
+  rw [planned]
   dsimp only [bind, Except.bind]
   rw [hinvariants]
   dsimp only [bind, Except.bind]

@@ -308,10 +308,13 @@ theorem contracts_refused4_zeuge : Vertraege.Pruefer.KontrakteGeprueftB P4
     rfl
   have basic := Vertraege.Pruefer.RefusalWitness.basic_none_of_current_refused
     P4 (SperrInv.leer D4) sources4 {} ein4 current
+  have unsupported : (Vertraege.Pruefer.Symbolic.snapshotPlan (P4.ensures ein4)).toOption.isSome = false := by
+    rw [ens_ein4]
+    rfl
   exact Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
-    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic current
+    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic unsupported
 
-/-- Capability gap: outside the decidable fragment: old-memory postconditions.
+/-- Capability gap: outside the decidable fragment: dynamically indexed old slots.
     The actual post refusal prevents acceptance; the parsed body and contract stay. -/
 theorem abgelehnt4 : akzeptiert_pruefer.akzeptiert E4 fsA.1 lsA.1 csA.1 = false := by
   rw [akzeptiert_pruefer_eq]

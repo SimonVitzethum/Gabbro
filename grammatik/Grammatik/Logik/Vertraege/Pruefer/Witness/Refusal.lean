@@ -54,13 +54,13 @@ theorem basic_none_of_current_refused (program : Programm D) (S : SperrInv D)
     cases rejected
   · rfl
 
-/-- A source outside the current-world fragment is refused before compiling
+/-- A source without a supported entry-observation plan is refused before compiling
     any parameter template; unreachable return paths cannot hide that syntax. -/
 theorem execution_refused (program : Programm D) (S : SperrInv D)
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
-    (f : D.Fn) (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
+    (f : D.Fn) (rejected : (Symbolic.snapshotPlan (program.ensures f)).toOption.isSome = false) :
     (checkExecution program S sources budget hint f).toOption.isSome = false := by
-  cases checked : currentOnly (program.ensures f) with
+  cases checked : Symbolic.snapshotPlan (program.ensures f) with
   | error cause => unfold checkExecution; rw [checked]; rfl
   | ok proof => rw [checked] at rejected; cases rejected
 
@@ -69,7 +69,7 @@ theorem execution_refused (program : Programm D) (S : SperrInv D)
 theorem function_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn)
     (basic : checkBasicFunction program S sources budget f = none)
-    (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
+    (rejected : (Symbolic.snapshotPlan (program.ensures f)).toOption.isSome = false) :
     (checkFunction program S sources budget hint f).toOption.isSome = false := by
   unfold checkFunction
   rw [basic]
@@ -86,7 +86,7 @@ theorem function_refused (program : Programm D) (S : SperrInv D) (sources : Lock
 theorem contracts_refused (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (functions : List D.Fn) (f : D.Fn) (member : f ∈ functions)
     (basic : checkBasicFunction program S sources budget f = none)
-    (rejected : (currentOnly (program.ensures f)).toOption.isSome = false) :
+    (rejected : (Symbolic.snapshotPlan (program.ensures f)).toOption.isSome = false) :
     KontrakteGeprueftB program S functions sources budget = false := by
   change (collect functions (ContractDuties program S)
     (fun g => checkFunction program S sources budget none g)).toOption.isSome = false
