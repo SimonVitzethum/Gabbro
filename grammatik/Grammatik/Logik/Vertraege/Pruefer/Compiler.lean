@@ -60,7 +60,11 @@ def statement {context : Context A next} (policy : CallPolicy program context)
           traverseCondition policy.semantic table annotation body
             (fun more larger env envBounded target => block (policy.weaken larger) facts budget hint fuel body env envBounded target)
             (alleIndizes (D.count table)) symbols bounded goals
-        else .error (.unsupported "traverse static count exceeds the contract VC budget")
+        else match annotation with
+          | .tru => quantifiedTraverseCondition policy.semantic budget.expansion table body
+              (fun more larger env envBounded target => block (policy.weaken larger) facts budget hint fuel body env envBounded target)
+              symbols goals
+          | _ => .error (.unsupported "large traverse needs a checked symbolic invariant")
     | .locks lock rank body => do
         let fact ← facts lock
         let pre ← block policy facts budget hint fuel body symbols bounded (goals.releasing lock fact.formula)

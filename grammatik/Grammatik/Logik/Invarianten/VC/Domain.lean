@@ -51,7 +51,12 @@ def localDomain (budget : Nat) (τ : Ty) : Except Frag.Refusal (LocalDomain D τ
               show ∀ value : Bool, value ∈ ([false, true] : List Bool)
               decide }
       else .error (.unsupported "Boolean local observation exceeds the VC budget")
+  | .why count =>
+      if count ≤ budget then
+        .ok { values := List.finRange count, complete := List.mem_finRange }
+      else .error (.outsideFragment "finite oracle reason choices exceed the VC budget")
   | .ptr capability =>
+
       -- G carries pointer authority in the type; its decoded value is Unit.
       if 1 ≤ budget then
         .ok

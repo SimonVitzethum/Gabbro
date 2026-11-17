@@ -288,4 +288,67 @@ def traverseCondition {context : Context A next} (policy : A → CallObligation 
 termination_by indices.length
 decreasing_by all_goals simp_wf <;> omega
 
+/-- A large traversal with a true annotation is checked once for every typed
+    index, local environment and memory world. The terminal goals are retained;
+    normal progress is justified by induction on the actual runtime index list. -/
+def quantifiedTraverseCondition {context : Context A next} (policy : A → CallObligation program)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (budget : Nat)
+    (table : D.Tab) (body : Block D V true (.index (D.count table) :: Γ) Λ Λ)
+    (compileBody : LoopCompiler (S := S) policy context body)
+    (symbols : SymEnv D Nat Γ)
+    (goals : Symbolic.Goals (program := program) (S := S) context V Γ) :
+    Except Frag.Refusal (Symbolic.StatementCondition policy (Stmt.traverse (l := l) table .tru body) symbols goals) := do
+  let progress : Symbolic.Goals (program := program) (S := S) context V Γ := {
+    normal := Continuation.truth context, escape := Continuation.truth context,
+    again := Continuation.truth context, returned := goals.returned, reason := goals.reason }
+  let done ← allEnvironments budget Γ
+    (fun actual item runtime world => goals.normal.holds item runtime world actual)
+    (fun more larger locals bounded => goals.normal.encode more larger locals bounded)
+  let step ← allEnvironments budget (.index (D.count table) :: Γ)
+    (fun actual item runtime world => ∀ allowed, HandlerSafe (policy item) runtime allowed →
+      runtime.wpB body ((progress.shrink (.index (D.count table))).holds item runtime allowed) world actual)
+    (fun more larger locals bounded =>
+      compileBody more larger locals bounded ((progress.shrink (.index (D.count table))).weaken larger))
+  return {
+    formula := .and (havocFormula (fun _ => true) done.formula) (havocFormula (fun _ => true) step.formula)
+    sound := fun valuation item present runtime world valid actual _ allowed safe => by
+      have finished : ∀ after env, goals.normal.holds item runtime after env := fun after env =>
+        done.sound valuation item present runtime after
+          (havocFormula_sound (fun _ => true) done.formula valuation world after valid.1
+            (fun _ impossible => Bool.noConfusion impossible)) env
+      have advanced : ∀ after env, runtime.wpB body
+          ((progress.shrink (.index (D.count table))).holds item runtime allowed) after env := fun after env =>
+        step.sound valuation item present runtime after
+          (havocFormula_sound (fun _ => true) step.formula valuation world after valid.2
+            (fun _ impossible => Bool.noConfusion impossible)) env allowed safe
+      have walk : ∀ indices after env, goals.holds (l := l) item runtime allowed
+          (traverseLauf (V := V) (l := l)
+            (execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body)
+            (fun world env => let read := world.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte
+              (read, wahr? (eval read (Expr.tru (Λ := Λ)) read env))) indices after env) := by
+        intro indices
+        induction indices with
+        | nil =>
+            intro after env
+            simpa only [traverseLauf, eval, wahr?, ↓reduceIte, Symbolic.Goals.holds]
+              using finished (after.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte) env
+        | cons index indices ih =>
+            intro after env
+            have ready := advanced (after.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte) (.cons index env)
+            unfold Runtime.wpB at ready
+            simp only [traverseLauf, eval, wahr?, Bool.true_eq_false, ↓reduceIte]
+            cases result : execBlockH S runtime.oracle runtime.environment runtime.passes runtime.calls body
+                (after.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte) (.cons index env) with
+            | ok next locals => exact ih next locals.tail
+            | next _ next locals => exact ih next locals.tail
+            | leave _ next locals =>
+                exact finished (next.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte) locals.tail
+            | zurueck next value =>
+                simpa only [result, Symbolic.Goals.holds, progress, Symbolic.Goals.shrink] using ready
+            | why next reason =>
+                simpa only [result, Symbolic.Goals.holds, progress, Symbolic.Goals.shrink] using ready
+            | logik error => simpa only [result, Symbolic.Goals.holds] using ready
+            | hardware error => trivial
+      exact walk (alleIndizes (D.count table)) world actual }
+
 end Gabbro.Grammatik.Vertraege.Pruefer

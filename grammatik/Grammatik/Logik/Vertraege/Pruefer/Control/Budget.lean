@@ -70,7 +70,7 @@ def statementSpecializations (program : Programm D) (uniformReturn : Bool) (expa
       ((count + 1) * blockSpecializations program uniformReturn expansion limit continuation body +
         blockSpecializations program uniformReturn expansion limit continuation overflow)
   | .traverse table _ body => min (limit + 1)
-      ((D.count table).toNat * blockSpecializations program uniformReturn expansion limit continuation body + continuation)
+      ((if (D.count table).toNat ≤ expansion then (D.count table).toNat else 1) * blockSpecializations program uniformReturn expansion limit continuation body + continuation)
   | _ => continuation
 
 def blockSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit continuation : Nat) {l Γ Λ Λ'} : Block D V l Γ Λ Λ' → Nat
@@ -78,6 +78,11 @@ def blockSpecializations (program : Programm D) (uniformReturn : Bool) (expansio
   | .cons head tail => statementSpecializations program uniformReturn expansion limit (blockSpecializations program uniformReturn expansion limit continuation tail) head
   | .bind expression tail => min (limit + 1)
       (selectionSpecializations expansion limit expression * blockSpecializations program uniformReturn expansion limit continuation tail)
+  | .bindAxiom a _ _ _ _ _ _ tail | .bindAxiomOpt _ a _ _ _ _ _ tail => min (limit + 1)
+      (resultSpecializations limit (D.aerg a) * blockSpecializations program uniformReturn expansion limit continuation tail)
+  | .bindAxiomElse a _ _ _ _ _ _ _ failure tail | .bindAxiomOptElse _ a _ _ _ _ _ _ failure tail => min (limit + 1)
+      (resultSpecializations limit (D.aerg a) * blockSpecializations program uniformReturn expansion limit continuation tail +
+        D.agruende a * endSpecializations program uniformReturn expansion limit failure)
   | .bindCall f args _ _ _ tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args * resultSpecializations limit (D.erg f) *
         blockSpecializations program uniformReturn expansion limit continuation tail)
@@ -100,6 +105,11 @@ def endSpecializations (program : Programm D) (uniformReturn : Bool) (expansion 
   | .cons head tail => statementSpecializations program uniformReturn expansion limit (endSpecializations program uniformReturn expansion limit tail) head
   | .bind expression tail => min (limit + 1)
       (selectionSpecializations expansion limit expression * endSpecializations program uniformReturn expansion limit tail)
+  | .bindAxiom a _ _ _ _ _ _ tail | .bindAxiomOpt _ a _ _ _ _ _ tail => min (limit + 1)
+      (resultSpecializations limit (D.aerg a) * endSpecializations program uniformReturn expansion limit tail)
+  | .bindAxiomElse a _ _ _ _ _ _ _ failure tail | .bindAxiomOptElse _ a _ _ _ _ _ _ failure tail => min (limit + 1)
+      (resultSpecializations limit (D.aerg a) * endSpecializations program uniformReturn expansion limit tail +
+        D.agruende a * endSpecializations program uniformReturn expansion limit failure)
   | .bindCall f args _ _ _ tail => min (limit + 1)
       (argumentSelectionSpecializations expansion limit args * resultSpecializations limit (D.erg f) *
         endSpecializations program uniformReturn expansion limit tail)
