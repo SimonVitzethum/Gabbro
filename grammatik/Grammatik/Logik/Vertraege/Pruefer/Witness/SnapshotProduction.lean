@@ -10,9 +10,15 @@ namespace Gabbro.Grammatik.Vertraege.Pruefer.SnapshotProductionWitness
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
 open Invarianten.Frag.Symbolic Pruefer.Symbolic SelectionWitness
 
+attribute [local implicit_reducible] Witness.u32Declaration
+
 abbrev u32 : Ty := .int 0 (2 ^ 32 - 1)
 abbrev declaration : Deklaration :=
   { Witness.u32Declaration with
+    Fn := Unit
+    Glob := Bool
+    sig := fun _ => 0
+    passt := fun _ _ => false
     sigNr := fun _ =>
       { params := [u32], erg := some u32, gruende := 0
         haelt := [], schreibt := fun _ => false, gschreibt := fun name => !name
@@ -49,8 +55,8 @@ def basePolicy (valid : Bool) := requiresPolicy (program valid) (entryContext sy
 def policy (valid : Bool) := (basePolicy valid).refine (by decide : 1 ≤ 2)
   (entryContext symbols futureBounded (some region)) (fun _ _ present => present.1)
 
-def invariants (valid : Bool) : InvariantFormula (program valid) [] :=
-  (invariantFormula (program valid) []).toOption.get (by rfl)
+def invariants (valid : Bool) : InvariantFormula (program valid) (declaration.invs.filter (schuldet ())) :=
+  (invariantFormula (program valid) (declaration.invs.filter (schuldet ()))).toOption.get (by rfl)
 
 def compiled (valid : Bool) := ending (policy valid)
   (Invarianten.Pruefer.lockFormula (SperrInv.leer declaration) (fun _ => none)) budget none 128
@@ -142,6 +148,9 @@ theorem refusal_counterexample_sound_zeuge :
     | some proof => rfl
   exact ⟨diagnostic, Snapshot.refusal_counterexample_sound _ _ (lower_denote _) _ diagnostic⟩
 
+attribute [local irreducible] entryVC certificate checkEnvironmentAt
+attribute [local implicit_reducible] entryContext
+
 theorem environment_at_success_zeuge :
     (checkEnvironmentAt (program true) (SperrInv.leer declaration) symbols futureBounded (some region)
       (policy true) (fun _ => none) budget none (invariants true)).toOption.isSome = true := by
@@ -154,11 +163,12 @@ theorem environment_checked :
     (checkEnvironment (program true) (SperrInv.leer declaration) symbols bounded (basePolicy true)
       (fun _ => none) budget none (invariants true)).toOption.isSome = true := by
   obtain ⟨checked, success⟩ := success_of_isSome _ environment_at_success_zeuge
+  dsimp only [policy, futureBounded, region] at success
   unfold checkEnvironment
   have planned : snapshotPlan ((program true).ensures ()) = .ok (some [.glob false]) := rfl
   rw [planned]
   dsimp only [bind, Except.bind]
-  rw [success]
+  with_unfolding_all rw [success]
   rfl
 
 theorem function_checked :
