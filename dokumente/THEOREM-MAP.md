@@ -7841,3 +7841,8 @@ that accepts every typed invariant state; `unrolled_valid` iterates this rule.
 production gates. `unrolling_accepted_zeuge` and `checked_hint_accepted_zeuge`
 still assert admission of the actual two-pass and hundred-pass programs, with
 their nonempty owed invariant. Their proofs do not reduce Cooper in the kernel.
+
+`Stage0.StateWitness.candidate_refused` retains refusal of the same source fixture
+whose caller does not establish the transition's source state. Its exact error
+is now `unsupported invariant constructor: contract shift requires an exact
+source-state observation`, the symbolic compiler's named fragment boundary.

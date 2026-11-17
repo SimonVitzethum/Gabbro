@@ -46,9 +46,7 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- The caller does not establish the transition's source state. -/
 theorem candidate_refused : candidate = .error
-    ("unsupported invariant constructor: " ++
-      ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-        "; parameters = " ++ reprStr ([] : List Int))) := by
+    "unsupported invariant constructor: contract shift requires an exact source-state observation" := by
   kernel_rfl
 
 end Gabbro.Stage0.StateWitness
