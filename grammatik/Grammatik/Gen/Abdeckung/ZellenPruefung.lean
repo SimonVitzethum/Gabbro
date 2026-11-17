@@ -121,7 +121,12 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     Re-reviewed for entry-world observation intervals, call-entry capture before
     havoc and equivalence-preserving VC substitution/normalization. Acceptance
     still conjoins both strict VC gates with all-world/runtime-WP certificates.
-    No numbered component, reset-cell atom or constructor number changed. -/
+    No numbered component, reset-cell atom or constructor number changed.
+    Re-reviewed for quantified oracle answers/arbitrary typed poststates and
+    quantified true-annotation traversals through the original runtime WPs.
+    Their work estimate changes the VC implementation closure; the numbered
+    component formulas, reset-cell atom and `komp` remain unchanged. -/
+
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
    ("1 closedness", 13800082909054645524),
@@ -134,7 +139,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 5787348549142553083)]
+   ("AkzeptiertX", 13892163655227119826)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

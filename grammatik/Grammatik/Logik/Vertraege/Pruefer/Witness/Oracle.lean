@@ -131,38 +131,46 @@ theorem compiled_result (mode : Fin 8) : compiled mode.val = .ok (certificate mo
   | ok value => simp only [certificate, result, Except.toOption, Option.get_some]
 
 /-- Only equivalence-preserving alias simplification is reduced. Cooper's
-    correctness theorem below proves the universal decision mathematically. -/
-theorem normalized_scalar_zeuge : (Reduce.normalize 8 (certificate 0).formula).val = .tru := by
+    correctness theorem below proves the universal decisions mathematically. -/
+theorem normalized_forms_zeuge : (List.finRange 8).all (fun mode =>
+    decide ((Reduce.normalize 8 (certificate mode).formula).val = .tru)) = true := by
   with_unfolding_all rfl
 
-theorem scalar_vc_valid (values : Assignment (Key declaration Nat)) :
-    (entryVC symbols .tru (certificate 0).formula).denote values := by
+theorem normalized_zeuge (mode : Fin 8) : (Reduce.normalize 8 (certificate mode).formula).val = .tru :=
+  of_decide_eq_true (List.all_eq_true.mp normalized_forms_zeuge mode (List.mem_finRange mode))
+
+theorem oracle_vc_valid (mode : Fin 8) (values : Assignment (Key declaration Nat)) :
+    (entryVC symbols .tru (certificate mode).formula).denote values := by
   intro _ _ _
-  apply ((Reduce.normalize 8 (certificate 0).formula).property values).mp
-  rw [normalized_scalar_zeuge]
+  apply ((Reduce.normalize 8 (certificate mode).formula).property values).mp
+  rw [normalized_zeuge]
   trivial
+
+theorem specialization_cost_zeuge : (List.finRange 8).all (fun mode => decide (
+    argumentSpecializations budget.specializations (declaration.params ()) *
+      endSpecializations (program mode.val) (uniformPost (program mode.val) ()) budget.expansion budget.specializations
+        ((program mode.val).rumpf ()) ≤ budget.specializations)) = true := by rfl
 
 attribute [local irreducible] entryVC certificate
 
-/-- The strict production gate accepts all u32 oracle answers and poststates,
-    with a nonliteral result/memory relation and an enumeration budget of two. -/
-theorem production_oracle_acceptance_zeuge :
-    (checkExecution (program 0) (SperrInv.leer declaration) (fun _ => none)
+/-- The strict production gate accepts all eight forms for all typed u32
+    answers and poststates, with a nonliteral result/memory relation. -/
+theorem production_oracle_acceptance_zeuge (mode : Fin 8) :
+    (checkExecution (program mode.val) (SperrInv.leer declaration) (fun _ => none)
       budget none ()).toOption.isSome = true := by
-  apply execution_success (program 0) (SperrInv.leer declaration) (fun _ => none) budget none ()
-    (by rfl) (invariants 0) (by rfl)
+  apply execution_success (program mode.val) (SperrInv.leer declaration) (fun _ => none) budget none ()
+    (by rfl) (invariants mode.val) (by rfl)
     ((parameters (D := declaration) 2 0 [u32]).toOption.get (by rfl)) (by rfl)
-  · change 1 ≤ 16384
-    decide
+  · exact of_decide_eq_true (List.all_eq_true.mp specialization_cost_zeuge mode (List.mem_finRange mode))
   · intro entry
     rcases entry with ⟨selected, member⟩
     change selected ∈ [symbols] at member
     have same := List.mem_singleton.mp member
     subst selected
-    let requirement := (Invarianten.Frag.Symbolic.translate ((program 0).requires ()) symbols).toOption.get (by rfl)
-    exact environment_success_of_valid (program 0) (SperrInv.leer declaration) symbols bounded_zeuge
-      (requiresPolicy (program 0) _) (fun _ => none) budget none (invariants 0) (by rfl)
-      requirement (by rfl) (certificate 0) (compiled_result 0) scalar_vc_valid
+    let requirement := (Invarianten.Frag.Symbolic.translate ((program mode.val).requires ()) symbols).toOption.get (by rfl)
+    exact environment_success_of_valid (program mode.val) (SperrInv.leer declaration) symbols bounded_zeuge
+      (requiresPolicy (program mode.val) _) (fun _ => none) budget none (invariants mode.val) (by rfl)
+      requirement (by rfl) (certificate mode) (compiled_result mode) (oracle_vc_valid mode)
 
 /-- Both present and absent oracle bindings commute with statement outcomes. -/
 theorem goals_shrinkResult_zeuge
@@ -198,4 +206,3 @@ theorem goals_end_statement_zeuge
   SymbolicWitness.goals.endHolds_to_statement () runtime (fun _ => False) _
 
 end Gabbro.Grammatik.Vertraege.Pruefer.OracleWitness
-

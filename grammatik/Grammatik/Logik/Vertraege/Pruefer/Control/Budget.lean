@@ -13,6 +13,7 @@ variable {D : Deklaration} {V : Vertrag D}
 def specializationCount (limit : Nat) : Ty → Nat
   | .int _ _ => 1
   | .bool => 2
+  | .why count => min (limit + 1) count
   | _ => 1
 
 def argumentSpecializations (limit : Nat) (types : Ctx) : Nat :=

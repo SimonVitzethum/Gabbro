@@ -8007,3 +8007,56 @@ coverage for the arithmetic VC gates.
 verdict for the original u32/global entry matrix and supplies it by name to
 `environmentDecision_of_decided_zeuge`. Their local opacity boundary prevents
 accidental kernel evaluation of the concrete decision procedure.
+
+## 199. Quantified oracle bindings and traversal continuations
+
+`Vertraege/Pruefer/Control/Oracle/Result.lean` composes the existing symbolic
+result compiler with poststate quantification. `oracleResultCondition` covers
+every typed answer and every actual postworld while retaining the immutable
+caller's realizing environment. `oracleContinuation` compiles the actual tail
+once on its fresh integer key. No oracle frame or postcondition is assumed:
+`VC.Runtime` supplies neither, so every observed current-memory key is havocked
+under its proved type bounds. Booleans, capabilities and declared reasons keep
+complete finite cases; full-width integers are universally quantified.
+
+`Goals.holds_shrinkResult` and `Goals.endHolds_shrinkResult` identify optional
+result scope removal with `Ausgang.weiterOpt` and `EndAusgang.weiterOpt`.
+`Goals.endHolds_to_statement` identifies end outcomes with their statement
+embedding. `oracleBlockTail` and `oracleEndTail` certify the actual continuation
+WP after every answer/poststate. The four `bindAxiom*BlockCondition` and four
+`bindAxiom*EndCondition` constructors preserve the original runtime WPs for
+scalar/optional and normal/fallible bindings, including hardware outcomes and
+the actual reason continuation. Production `block` and `ending` use precisely
+these certificates; the replaced oracle-binder refusals are deleted.
+`bindCallBlockCondition` and `bindCallEndCondition` are pure moves of the existing
+ordinary-call composition to keep the production compiler below the layout cap.
+
+`Pruefer.quantifiedTraverseCondition` checks a true-annotation traversal once
+for every typed index/local environment and memory world, using the same
+`allEnvironments` and production block compiler. Its certificate retains return,
+reason and logical-error goals; induction over the actual runtime index list
+justifies normal/next progress, leave and final exit. It replaces expansion of
+large traversals with a strong sufficient quantified WP. Nonliteral large
+annotations still require a supported invariant; no annotation is discarded.
+The work estimate follows oracle continuations and charges the quantified
+traversal once. `VC.localDomain` adds complete finite declared-reason coverage.
+
+`OracleWitness.production_forms_zeuge` inhabits all eight actual production
+compiler interfaces. `production_oracle_acceptance_zeuge` proves strict entry
+gate success for all eight forms with a full-width u32 oracle answer, mutable memory, and the
+nonliteral postcondition `result == global`, with enumeration budget two.
+`normalized_forms_zeuge`, `normalized_zeuge` and `oracle_vc_valid` give an equivalence-preserving
+normal form and original universal VC validity; Cooper success is composed
+mathematically, without reducing the elimination procedure. The four
+`goals_*_zeuge` fixtures instantiate the optional-scope and outcome laws on
+actual u32 environments and nonliteral continuations.
+
+`TraversalWitness.production_traversal_acceptance_zeuge` gives strict production
+acceptance beyond the expansion limit, with mutable locals, `next`, an actual
+last-iteration return, memory writes and the same nonliteral postcondition.
+`compiled_present_zeuge`, `normalized_zeuge` and `original_vc_zeuge` give its
+actual certificate, normal form and original universally valid VC.
+
+The numbered component formulas, reset cell and `komp` were re-read unchanged;
+the actual `AkzeptiertX` implementation-closure pin is `13892163655227119826`.
+The goal theorem and its meaning are unchanged, on the standard three axioms.
