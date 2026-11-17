@@ -27,7 +27,11 @@ theorem falseEnsures_counterexample_zeuge :
     decide +kernel
 
 theorem unit_logic_accepted_zeuge : nutzerPflichtGeprueftB unit [()] [] = true := by
-  decide +kernel
+  obtain ⟨certificate, computed⟩ := (KontrakteGeprueftB_iff unit.P unit.S [()]
+    unit.lockFormulas {} unit.loopHints).mp increment_accepted_zeuge
+  unfold nutzerPflichtGeprueftB checkUnitLogic
+  rw [computed]
+  with_unfolding_all rfl
 
 theorem invariant_gate_zeuge : invariantenGeprueftB unit [()] [] = true := by
   decide +kernel
@@ -38,7 +42,7 @@ theorem checker_accepted_zeuge :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [.inl (), .inr false, .inr true] = true := by
   have invariants := invariantenGeprueftB_program invariant_gate_zeuge
   have contracts : KontrakteGeprueftB unit.P unit.S [()] unit.lockFormulas {} unit.loopHints = true := by
-    decide +kernel
+    exact increment_accepted_zeuge
   have core : AkzeptiertX unit.P unit.S [()] [] [.inl (), .inr false, .inr true]
       unit.ws unit.akku unit.pruefungen [] [] unit.lockFormulas unit.loopHints = true := by
     unfold AkzeptiertX invariantVCB
@@ -57,7 +61,13 @@ theorem nutzerPflicht_of_akzeptiert_zeuge : NutzerPflichtA unit :=
 /-- The strengthened concrete checker refuses a wrong postcondition. -/
 theorem checker_falseEnsures_refused_zeuge :
     akzeptiertX_pruefer.akzeptiert falseUnit [()] [] [.inl (), .inr false, .inr true] = false := by
-  have refused : nutzerPflichtGeprueftB falseUnit [()] [] = false := by decide +kernel
+  have refused : nutzerPflichtGeprueftB falseUnit [()] [] = false := by
+    have contracts : (checkContracts falseUnit.P falseUnit.S [()] falseUnit.lockFormulas {} falseUnit.loopHints).toOption.isSome = false :=
+      falseEnsures_refused_zeuge
+    unfold nutzerPflichtGeprueftB checkUnitLogic
+    cases computed : checkContracts falseUnit.P falseUnit.S [()] falseUnit.lockFormulas {} falseUnit.loopHints with
+    | error cause => simp only [computed, bind, Except.bind, Except.toOption, Option.isSome_none]
+    | ok certificate => rw [computed] at contracts; cases contracts
   change (_ && nutzerPflichtGeprueftB falseUnit [()] []) = false
   rw [refused, Bool.and_false]
 

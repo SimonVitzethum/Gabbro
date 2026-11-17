@@ -7752,6 +7752,13 @@ The certificate-producing definitions additionally establish:
 
 * `arguments` and `allEnvironments`: every actual evaluated/typed Env is covered
   by a valuation extension preserving all preexisting observations.
+* `Frag.Symbolic.evaluationRelation`: every selected actual scalar satisfies
+  the generated defining relation. Narrowing retains its successful range arm
+  and explicit fallback; conditional values retain both guarded arms. Only
+  unsupported leaves fall back to truth. Scalar bindings and arguments share
+  this relation. `Frag.Symbolic.Witness.evaluationRelation_zeuge` and
+  `evaluationRelation_fallback_zeuge` exercise both narrowing arms on an
+  inhabited u32 environment and distinct real memory states.
 * Discarded calls share one certified caller continuation. `SharedResult` covers
   every typed answer; a literal true ensures needs no result observation.
 * `resultCondition` and `callOutcomesCondition`: every actual typed normal answer
