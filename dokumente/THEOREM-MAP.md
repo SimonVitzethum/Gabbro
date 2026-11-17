@@ -7846,3 +7846,9 @@ their nonempty owed invariant. Their proofs do not reduce Cooper in the kernel.
 whose caller does not establish the transition's source state. Its exact error
 is now `unsupported invariant constructor: contract shift requires an exact
 source-state observation`, the symbolic compiler's named fragment boundary.
+
+`Stage0.CapacityRequiredWitness.candidate_refused`, `block_image_refused_zeuge`,
+`last_image_refused_zeuge` and `block_last_image_refused_zeuge` retain refusal of
+their unchanged required-allocation sources. Their shared `allocationRefusal`
+now names the existing `cross-entry relation; use one local predicate per slot`
+boundary reached by these fixtures. They do not certify a capacity countermodel.

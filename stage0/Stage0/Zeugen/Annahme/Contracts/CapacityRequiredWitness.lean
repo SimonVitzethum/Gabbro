@@ -55,11 +55,9 @@ def text : String :=
 
 def candidate : Except String (Emitted text 256) := emit text 256
 
-/-- The actual checker diagnostic, retaining its executable parameter formatter. -/
+/-- These fixtures now reach the existing cross-entry invariant boundary. -/
 def allocationRefusal : String :=
-  "unsupported invariant constructor: " ++
-    ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-      "; parameters = " ++ reprStr ([] : List Int))
+  "cross-entry relation; use one local predicate per slot"
 
 /-- Arbitrary entry worlds include a full arena; required allocation can fail. -/
 theorem candidate_refused : candidate = .error
