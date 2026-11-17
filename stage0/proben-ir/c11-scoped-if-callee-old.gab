@@ -4,9 +4,10 @@ module ir_c11_scoped_if_callee_old {
 static mut g : u32 in 0 .. 100 = 0;
 lock Outer protects { } rank 0;
 lock Inner protects { } rank 1;
-impl fn write() effects { writes g } { g = 19; }
+impl fn write() effects { writes g } ensures g == 19 { g = 19; }
 impl fn choose(x : u32 in 0 .. 100, flag : bool) -> u32 in 0 .. 100
     effects { reads g, writes g, locks Outer, locks Inner }
+    requires g == 7
     ensures result == x && g == old(g) + 12
 {
     locks Outer {

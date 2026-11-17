@@ -1,4 +1,4 @@
-// Entry snapshot must survive a nested call that changes the global.
+// The false old-memory contract is rejected before lowering.
 module ir_probe {
 static mut g : u32 in 0 .. 100 = 0;
 impl fn write() effects { writes g } { g = 19; }

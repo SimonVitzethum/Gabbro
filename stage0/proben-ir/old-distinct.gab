@@ -3,6 +3,7 @@ module ir_probe {
 static mut g : u32 in 0 .. 100 = 0;
 static mut h : u32 in 0 .. 100 = 0;
 impl fn change() effects { reads g, reads h, writes g }
+    requires g == 7
     ensures g == old(g) + 12 && h == old(h)
 { g = 19; }
 impl fn main() -> u32 in 0 .. 100 effects { reads g, reads h, writes g } {

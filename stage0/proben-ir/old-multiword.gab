@@ -5,6 +5,7 @@ static mut h : u64 in 0 .. 340282366920938463463374607431768211455 = 0;
 impl fn touch() effects { writes g } { g = 18446744073709551635; }
 impl fn change(x : u64 in 0 .. 340282366920938463463374607431768211455, flag : bool) -> u64 in 0 .. 340282366920938463463374607431768211455
     effects { reads g, reads h, writes g }
+    requires x == g && !(g == h)
     ensures result == x && result == old(g) && h == old(h) && !(old(g) == old(h))
 {
     touch();

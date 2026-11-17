@@ -2,6 +2,7 @@
 module ir_probe {
 table t count 2 { slot { a : u32 in 0 .. 100, } }
 impl fn change() effects { reads t.slots, writes t.slots }
+    requires t.slots[1].a == 3
     ensures t.slots[1].a == old(t.slots[1].a) + 6 && !(t.slots[1].a == old(t.slots[1].a))
 { t.slots[1].a = 9; }
 impl fn main() -> u32 in 0 .. 100 effects { reads t.slots, writes t.slots } {
