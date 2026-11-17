@@ -5252,8 +5252,8 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`library_zeuge`**: the conclusion is `let lib : FnSig`.
 `stage0/Stage0/Zeugen/Annahme/Contracts/CapacityRequiredWitness.lean`:
 
-* **`candidate_refused`, `last_image_refused_zeuge`**: required allocation's end block is outside the checked control fragment.
-* **`block_image_refused_zeuge`, `block_last_image_refused_zeuge`**: the corresponding ordinary block is outside the checked control fragment.
+* **`candidate_refused`, `last_image_refused_zeuge`**: the unchanged required-allocation end blocks are refused at the cross-entry invariant boundary.
+* **`block_image_refused_zeuge`, `block_last_image_refused_zeuge`**: the corresponding ordinary blocks reach the same cross-entry boundary.
 * **`stop_code_zeuge`, `narrowing_images_zeuge`**: the generic capacity-stop code and admitted model-level narrowing images remain unchanged.
 
 `stage0/Stage0/Zeugen/Annahme/Contracts/TransitionContractWitness.lean`:
@@ -5264,12 +5264,12 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`Ordered.counterexample_zeuge`**: the typed table state `[0, 1]` satisfies the actual caller's precondition and violates the generated cycle callee's precondition.
 * **`checker_refused_of_contracts`**, witnessed by **`Ordered.checker_refused_of_contracts_zeuge`**: a refused actual source contract gate blocks production admission, jointly instantiated on the real two-function transition source.
 
-* **`Ordered.function_fragment_refusal`, `Ordered.contracts_refused`, `Ordered.checker_refused`**: the actual generated callee's parameter product exceeds the VC expansion budget; its refusal propagates through the unchanged contract collector and production admission. No image is claimed.
+* **`Ordered.function_fragment_refusal`, `Ordered.contracts_refused`, `Ordered.checker_refused`**: symbolic transition indices reach `Refusal.crossEntry`; refusal propagates through the unchanged contract collector and production admission. No image is claimed.
 * **`model_present`, `data_present`, `data_unit`, `model_unit`**, also in `Ordered`: producer success and exact source-unit transport; **`field_types`, `globals_empty`, `main_params`, `transition_params`** pin the actual finite types used by the concrete counterexamples.
 
 `stage0/Stage0/Zeugen/Annahme/StateWitness.lean`:
 
-* **`candidate_refused`**: the unchanged state source has `candidate = .error "unsupported invariant constructor: contract statement is outside the checked scalar/control fragment"`. No emitted image is claimed for this source.
+* **`candidate_refused`**: the unchanged state source has `candidate = .error "unsupported invariant constructor: contract shift requires an exact source-state observation"`. No emitted image is claimed for this source.
 
 Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
@@ -7353,8 +7353,9 @@ All paths below are relative to `stage0/Stage0/Zeugen/Pipeline/`, except the las
 | `FieldNarrowingWitness.first_write_emitted_zeuge` | same | Narrowing a u64 field permits its first compound increment, with later reads at the record's declared type. |
 | `FieldNarrowingWitness.indexed_store_emitted_zeuge`, `stale_store_refused_zeuge` | same | A narrowed field indexes an actual table write; mutation of the record before that write invalidates the index fact and is refused. |
 | `FieldNarrowingWitness.changed_field_refused_zeuge`, `shadowed_record_refused_zeuge`, `boolean_field_refused_zeuge` | same | Whole-source emission refuses reuse after mutation or shadowing and integer narrowing of a Boolean field. |
-| `U64DifferenceWitness.candidate_refused` | `U64DifferenceWitness.lean` | The unchanged full-width source is refused by the specialization work budget for its full-width call results. |
-| `U64DifferenceWitness.unit_present` | same | The actual scoped frontend still elaborates the unchanged source before admission. No emitted image is claimed. |
+| `U64DifferenceWitness.candidate_present`, `accepted_image` | `U64DifferenceWitness.lean` | The unchanged full-width source passes production emission with symbolic parameters and call answers. |
+| `U64DifferenceWitness.canonical_source`, `image_correct` | same | The emitted image retains its canonical source and the generic image-correctness theorem's existing premises. |
+| `U64DifferenceWitness.unit_present` | same | The actual scoped frontend elaborates the unchanged source before admission. |
 | `U64DifferenceWitness.total_eng_zeuge` | same | The actual frontend emits exact `a - b` inside total `eng` over `0 .. 2^64 - 1`. |
 | `U64DifferenceWitness.reversed_difference_refused_zeuge`, `unguarded_difference_refused_zeuge` | same | The unsigned result is refused for a reversed or unguarded difference. |
 | `FieldNarrowing.explicit_else_snapshot_zeuge`, `required_snapshot_zeuge`, `mutation_barrier_zeuge`, `first_write_value_zeuge`, `indexed_store_snapshot_zeuge`, `assignment_root_zeuge`, `shadow_barrier_zeuge`, `historical_read_zeuge`, `unknown_barrier_zeuge`, `global_field_unchanged_zeuge` | `grammatik/Grammatik/Parser/Elab/Uebersetze/Records/NarrowingWitness.lean` | Joint structural fixtures pin the existing narrow forms, final-return substitution, the first write value, store-index reads versus mutation roots, lexical barriers, unchanged historical reads and nonlocal refusal. |
@@ -7549,25 +7550,23 @@ atomic WP.
 
 ## 195. Certified uniform return and call continuations (2026-11-16)
 
-`UniformContinuation` certifies that one formula represents a return goal for
-all decoded values. Ordinary and scoped returns retain that certificate,
-including invariant conjunction on release. A literal-true callee post permits
-a shared discarded-result continuation that quantifies over all answers. The
-remaining value-dependent environments still use the existing complete domain
-checker; this step does not provide entry snapshots or symbolic parameter gates.
+`Symbolic.Continuation` certifies the actual return goal under a realizing
+symbolic environment, including invariant conjunction on release.
+`Symbolic.SharedResult` covers all typed answers with one discarded-result
+continuation when the callee post is literal truth. Value-dependent parameters,
+bindings and returns use the quantified production interface in sections
+196–197. Entry-memory observations remain open.
 
 | Name | File | Statement and boundary |
 |---|---|---|
-| `postFormula_true_map` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Current.lean` | If the declared ensures is literal truth, projecting its dependent post certificate yields the same successful formula for every decoded result. The u32 support witness instantiates the premise. |
-| `Witness.uniform_u32_environment_zeuge` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/Control.lean` | The actual environment VC accepts a memory-dependent, explicitly narrowed u32 return for every u32 argument at expansion budget zero. The outer parameter-domain gate is not claimed. |
-| `Witness.uniform_post_support_zeuge` | same | Postcondition support covers every decoded u32 result with expansion budget zero. |
-| `Witness.shared_call_results_zeuge` | same | A call with an inhabited full-width result and a real u32 argument accepts a shared continuation at budget zero, even when every specialization callback refuses. |
+| `SymbolicBindingWitness.production_u32_acceptance_zeuge` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/SymbolicBinding.lean` | The production gate accepts a memory-dependent u32 binding and value-dependent return for every u32 argument at expansion budget zero. |
+| `Witness.sharedCompiled_valid`, `shared_decided` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/Calls.lean` | The actual shared call formula holds under every arithmetic assignment and has a true verified Cooper verdict. |
 | `Witness.uniform_wide_program_zeuge` | same | The actual contract gate accepts an acyclic two-function program with a real memory read and discarded u32 result at zero domain expansion and a four-case work budget. |
 | `RetireWitness.candidate_present`, `accepted_image_zeuge` | `stage0/Stage0/Zeugen/Pipeline/RetireWitness.lean` | The unchanged terminal-retire program passes the production compiler and has an emitted image. The old range-budget refusal is removed. |
 | `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Its work-budget premise now counts uniform returns and shared discarded-result calls once. Its successful execution-check conclusion is unchanged; the pool reader remains its joint witness. |
 
-`checkPostFormulas` returns support for every decoded result, so the existing
-refusal-composition statements retain their meaning. Acceptance still implies
+Symbolic result certificates cover every typed answer; the existing
+refusal-composition conclusions retain their meaning. Acceptance still implies
 the same runtime WP and `ContractDuties`, including exclusion of local logic
 stops. No source execution counterexample is inferred from an abstract WP.
 
