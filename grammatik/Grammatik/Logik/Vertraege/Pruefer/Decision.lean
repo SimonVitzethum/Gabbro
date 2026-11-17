@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Compiler
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Entry
+public import Grammatik.Logik.Invarianten.Frag.Symbolic.Snapshot.Counterexample
 
 @[expose] public section
 
@@ -101,16 +102,15 @@ def checkEnvironmentAt (program : Programm D) (S : SperrInv D)
   let requires ← Invarianten.Frag.Symbolic.translate (program.requires f) symbols
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
     (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants snapshot)
-  let guarded := match snapshot with
-    | none => compiled.formula
-    | some region => .imp (Snapshot.equations region.start region.names) compiled.formula
+  let guarded := snapshotGuard snapshot compiled.formula
   let body : LProp (Key D Nat) := .imp (environmentBounds symbols) (.imp requires.payload guarded)
   let matrix := entryVC symbols requires.payload guarded
-  if accepted : decideB (close (lower matrix)) (close_closed (lower matrix)) = true then
+  let reduced := lower matrix
+  if accepted : decideB (close reduced) (close_closed reduced) = true then
     return ⟨fun valuation item present runtime allowed safe entry => by
       have realized := entryContext_locals symbols bounded snapshot valuation item present
       have valid := (lower_denote matrix (values valuation item.1)).mp
-        (close_sound (lower matrix) accepted (values valuation item.1))
+        (close_sound reduced accepted (values valuation item.1))
       have facts := memoryFacts_sound body valuation item.1
       have ready := valid facts (environmentBounds_sound symbols valuation item.1 item.2 realized)
         ((requires.bool_iff valuation item.1 item.2 realized).mp entry)
@@ -120,8 +120,12 @@ def checkEnvironmentAt (program : Programm D) (S : SperrInv D)
         | some region => exact ready ((Snapshot.equations_denote region.names region.start valuation item.1).mpr present.2)
       exact contractGoals_sound program f symbols bounded invariants snapshot item runtime allowed _
         (compiled.sound valuation item present runtime item.1 compiledReady item.2 realized allowed safe)⟩
-  else .error (.unsupported ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-    match D.params f with | [] => "; parameters = []" | _ => ""))
+  else
+    let reason := "outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
+      match D.params f with | [] => "; parameters = []" | _ => ""
+    match snapshot with
+    | none => .error (.unsupported reason)
+    | some _ => .error (Snapshot.refusal matrix reduced (lower_denote matrix) reason)
 
 /-- Allocate entry keys once, before compiling the actual body. The no-snapshot
     case is the empty instance of the same production compiler and VC gate. -/

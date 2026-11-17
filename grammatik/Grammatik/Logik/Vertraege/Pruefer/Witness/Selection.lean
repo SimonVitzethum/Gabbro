@@ -34,6 +34,32 @@ theorem success_of_isSome {α ε : Type} (result : Except ε α)
 
 open Invarianten.Frag.Symbolic Symbolic
 
+/-- Compose the actual entry gate with its scoped snapshot equations. -/
+theorem environment_at_success (program : Programm D) (S : SperrInv D)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (snapshot : Option (Snapshot.Region D next))
+    (policy : CallPolicy program (entryContext symbols bounded snapshot))
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (entry : Encoding symbols .bool (fun world actual => eval world (program.requires f) world actual))
+    (hentry : Invarianten.Frag.Symbolic.translate (program.requires f) symbols = .ok entry)
+    (compiled : Symbolic.EndCondition (S := S) policy.semantic (program.rumpf f) symbols
+      (contractGoals program f symbols bounded invariants snapshot))
+    (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
+      (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants snapshot) = .ok compiled)
+    (decided : decideB (close (lower (entryVC symbols entry.payload (snapshotGuard snapshot compiled.formula))))
+      (close_closed _) = true) :
+    (checkEnvironmentAt program S symbols bounded snapshot policy sources budget hint invariants).toOption.isSome = true := by
+  unfold checkEnvironmentAt
+  rw [hentry]
+  dsimp only [bind, Except.bind]
+  rw [hcompiled]
+  dsimp only [bind, Except.bind]
+  split
+  · rfl
+  · rename_i refused
+    exact False.elim (refused decided)
+
 /-- Off-path proof rule for the actual symbolic decision gate. The executable
     checker still computes the source translation, compiler and Cooper result. -/
 theorem environment_success (program : Programm D) (S : SperrInv D)
@@ -56,15 +82,8 @@ theorem environment_success (program : Programm D) (S : SperrInv D)
   unfold Vertraege.Pruefer.checkEnvironment
   rw [planned]
   dsimp only [bind, Except.bind]
-  unfold checkEnvironmentAt
-  rw [hentry]
-  dsimp only [bind, Except.bind]
-  rw [hcompiled]
-  dsimp only [bind, Except.bind]
-  split
-  · rfl
-  · rename_i refused
-    exact False.elim (refused decided)
+  exact environment_at_success program S symbols bounded none policy sources budget hint invariants
+    entry hentry compiled hcompiled decided
 
 /-- Compose a mathematically valid open VC with the actual Cooper gate.
     Witnesses need not normalize the decision procedure on their fixture. -/

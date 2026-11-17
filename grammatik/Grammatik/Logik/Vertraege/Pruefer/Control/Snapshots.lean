@@ -24,6 +24,12 @@ theorem snapshotPlan_of_current (expression : Expr D Γ Λ τ)
   unfold snapshotPlan
   rw [checked]
 
+def snapshotGuard (snapshot : Option (Snapshot.Region D bound)) (body : LProp (Key D Nat)) :
+    LProp (Key D Nat) :=
+  match snapshot with
+  | none => body
+  | some region => .imp (Snapshot.equations region.start region.names) body
+
 def snapshotFormula (start : Nat) (names : List (Observation D)) (body : LProp (Key D Nat)) :
     LProp (Key D Nat) :=
   universalClosure (argumentKeys start (start + names.length)) (.imp (Snapshot.equations start names) body)
