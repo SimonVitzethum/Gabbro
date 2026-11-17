@@ -295,11 +295,11 @@ def transitionArguments : Env (declOf unit) ((declOf unit).params transitionInde
           (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩
             (.cons (τ := .int 0 2) ⟨0, by decide, by decide⟩ .nil)))))
 
-/-- Outside the decidable fragment: the complete transition parameter product. -/
+/-- Symbolic transition indices need observations for the selected slot. -/
 theorem function_fragment_refusal :
     (Vertraege.Pruefer.checkFunction program (Cover.Differenz.sperrFamilie unit)
       (Cover.Differenz.sperrQuellen unit) {} none transitionIndex).map (fun _ => ()) =
-      .error (.unsupported "writer parameter product exceeds the VC expansion budget") := by
+      .error .crossEntry := by
   kernel_rfl
 
 attribute [local irreducible] program Vertraege.Pruefer.checkFunction Invarianten.Pruefer.collect

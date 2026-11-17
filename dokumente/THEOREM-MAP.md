@@ -7860,3 +7860,9 @@ emitted image, `canonical_source` retains its original canonical source program,
 and `image_correct` instantiates the generic image-correctness theorem under the
 existing runner/hardware and clone-answer premises. The reversed and unguarded
 subtraction refusal statements remain unchanged.
+
+`Stage0.TransitionContractWitness.Ordered.function_fragment_refusal` now states
+that the actual function gate returns `Refusal.crossEntry`: symbolic transition
+indices need selected-slot observations. The former parameter-product refusal
+is removed. Its `contracts_refused`, `checker_refused` and the two actual typed
+precondition counterexample statements are unchanged.
