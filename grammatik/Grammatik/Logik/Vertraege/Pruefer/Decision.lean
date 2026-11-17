@@ -109,7 +109,8 @@ def checkEnvironment (program : Programm D) (S : SperrInv D)
         ((requires.bool_iff valuation item.1 item.2 realized).mp entry)
       exact contractGoals_sound program f symbols bounded invariants item runtime allowed _
         (compiled.sound valuation item realized runtime item.1 ready item.2 realized allowed safe)⟩
-  else .error (.unsupported "outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation")
+  else .error (.unsupported ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
+    match D.params f with | [] => "; parameters = []" | _ => ""))
 
 /-- Finite Boolean/capability templates cover every actual typed parameter
     environment; integer parameters each occupy one immutable observation. -/

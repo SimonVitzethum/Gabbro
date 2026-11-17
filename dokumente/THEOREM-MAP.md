@@ -7747,6 +7747,8 @@ The certificate-producing definitions additionally establish:
 
 * `arguments` and `allEnvironments`: every actual evaluated/typed Env is covered
   by a valuation extension preserving all preexisting observations.
+* Discarded calls share one certified caller continuation. `SharedResult` covers
+  every typed answer; a literal true ensures needs no result observation.
 * `resultCondition` and `callOutcomesCondition`: every actual typed normal answer
   and framed postworld satisfying the declared ensures reaches the continuation;
   reason worlds are universally havoced, without assuming a normal ensures.
