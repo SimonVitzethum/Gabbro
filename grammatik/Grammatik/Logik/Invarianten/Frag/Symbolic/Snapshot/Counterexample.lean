@@ -37,6 +37,28 @@ theorem zeroCounterexample_complete [DecidableEq α] (original : LProp α) (redu
 def counterexampleMessage : String :=
   "false VC; certified counterexample: free observations = 0"
 
+/-- A certified countermodel rejects before closing the remaining free names.
+    Large numeric bounds therefore cannot make a known invalid VC expensive. -/
+def rejectCounterexample [DecidableEq α] (enabled : Bool) (original : LProp α) (reduced : QF α)
+    (correct : ∀ values, reduced.denote values ↔ original.denote values) : Except Frag.Refusal Unit :=
+  if enabled then
+    match zeroCounterexample original reduced correct with
+    | some _ => .error (.invalid counterexampleMessage)
+    | none => .ok ()
+  else .ok ()
+
+theorem rejectCounterexample_of_valid [DecidableEq α] (enabled : Bool) (original : LProp α) (reduced : QF α)
+    (correct : ∀ values, reduced.denote values ↔ original.denote values)
+    (valid : original.denote (fun _ => 0)) :
+    rejectCounterexample enabled original reduced correct = .ok () := by
+  cases enabled with
+  | false => rfl
+  | true =>
+      unfold rejectCounterexample
+      cases found : zeroCounterexample original reduced correct with
+      | none => rfl
+      | some certificate => exact False.elim (certificate.down valid)
+
 def refusal [DecidableEq α] (original : LProp α) (reduced : QF α)
     (correct : ∀ values, reduced.denote values ↔ original.denote values) (fallback : String) : Frag.Refusal :=
   match zeroCounterexample original reduced correct with

@@ -106,6 +106,7 @@ def checkEnvironmentAt (program : Programm D) (S : SperrInv D)
   let body : LProp (Key D Nat) := .imp (environmentBounds symbols) (.imp requires.payload guarded)
   let matrix := entryVC symbols requires.payload guarded
   let reduced := lower matrix
+  let _ ← Snapshot.rejectCounterexample snapshot.isSome matrix reduced (lower_denote matrix)
   if accepted : decideB (close reduced) (close_closed reduced) = true then
     return ⟨fun valuation item present runtime allowed safe entry => by
       have realized := entryContext_locals symbols bounded snapshot valuation item present

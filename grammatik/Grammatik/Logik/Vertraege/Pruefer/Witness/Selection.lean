@@ -55,6 +55,9 @@ theorem environment_at_success (program : Programm D) (S : SperrInv D)
   dsimp only [bind, Except.bind]
   rw [hcompiled]
   dsimp only [bind, Except.bind]
+  rw [Snapshot.rejectCounterexample_of_valid snapshot.isSome _ _ (lower_denote _)
+    ((lower_denote _ _).mp (close_sound _ decided (fun _ => 0)))]
+  dsimp only [bind, Except.bind]
   split
   · rfl
   · rename_i refused
@@ -109,7 +112,7 @@ theorem environment_success_of_valid (program : Programm D) (S : SperrInv D)
 theorem execution_success (program : Programm D) (S : SperrInv D)
     (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
     (hint : Option (QF (Observation D))) (f : D.Fn)
-    (supported : (currentOnly (program.ensures f)).toOption.isSome = true)
+    (supported : (snapshotPlan (program.ensures f)).toOption.isSome = true)
     (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
     (hinvariants : invariantFormula program (D.invs.filter (schuldet f)) = .ok invariants)
     (domain : Parameters D 0 (D.params f))
@@ -122,13 +125,12 @@ theorem execution_success (program : Programm D) (S : SperrInv D)
         (requiresPolicy program _) sources budget hint invariants).toOption.isSome = true) :
     (checkExecution program S sources budget hint f).toOption.isSome = true := by
   obtain ⟨support, hsupport⟩ := success_of_isSome _ supported
-  have planned := snapshotPlan_of_current (program.ensures f) support hsupport
   obtain ⟨checked, hchecked⟩ := collect_success domain.templates.attach _
     (fun entry => Vertraege.Pruefer.checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
       (requiresPolicy program _) sources budget hint invariants)
     (fun entry => success_of_isSome _ (ready entry))
   unfold checkExecution
-  rw [planned]
+  rw [hsupport]
   dsimp only [bind, Except.bind]
   rw [hinvariants]
   dsimp only [bind, Except.bind]
