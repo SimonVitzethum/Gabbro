@@ -10,6 +10,20 @@ namespace Gabbro.Grammatik.Vertraege.Pruefer.Symbolic
 
 open Invarianten Invarianten.Frag Invarianten.Frag.Symbolic Invarianten.Elim Invarianten.Modell
 
+def snapshotPlan (expression : Expr D Γ Λ τ) : Except Frag.Refusal (Option (List (Observation D))) :=
+  match currentOnly expression with
+  | .ok _ => .ok none
+  | .error cause =>
+      let names := Snapshot.names expression
+      if names.isEmpty then .error cause else .ok (some names)
+
+theorem snapshotPlan_of_current (expression : Expr D Γ Λ τ)
+    (certificate : PLift (∀ old world locals,
+      eval old expression world locals = eval world expression world locals))
+    (checked : currentOnly expression = .ok certificate) : snapshotPlan expression = .ok none := by
+  unfold snapshotPlan
+  rw [checked]
+
 def snapshotFormula (start : Nat) (names : List (Observation D)) (body : LProp (Key D Nat)) :
     LProp (Key D Nat) :=
   universalClosure (argumentKeys start (start + names.length)) (.imp (Snapshot.equations start names) body)

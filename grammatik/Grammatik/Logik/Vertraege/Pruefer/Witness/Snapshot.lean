@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Snapshots
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Entry
 public import Grammatik.Logik.Invarianten.Frag.Witness
 
 @[expose] public section
@@ -75,5 +76,23 @@ theorem snapshotFormula_sound_zeuge :
   apply snapshotFormula_sound 1 observations _ incoming initial
   change ∀ a b c : Int, (a = 3 ∧ (b = 8 ∧ (c = 4 ∧ True))) → a = 3
   exact fun _ _ _ selected => selected.1
+
+def currentPost : Expr declaration [u32] [] .bool := .le (.glob false (globalAccess false)) (.lit 10)
+
+theorem snapshotPlan_of_current_zeuge : snapshotPlan currentPost = .ok none :=
+  snapshotPlan_of_current currentPost ((currentOnly currentPost).toOption.get (by rfl)) (by rfl)
+
+def bounded : symbols.Bounded 4 :=
+  ⟨fun key member => by have same := List.mem_singleton.mp member; subst key; decide, trivial⟩
+
+def region : Snapshot.Region declaration 4 := ⟨1, observations, by decide⟩
+
+theorem entryContext_locals_zeuge : symbols.Realizes frozen initial actual :=
+  entryContext_locals symbols bounded (some region) frozen (initial, actual)
+    ⟨⟨extend_preserves_zeuge.1, trivial⟩, extend_realizes_zeuge⟩
+
+theorem entryContext_memory_zeuge : Snapshot.Realizes 1 observations frozen initial :=
+  entryContext_memory symbols bounded (some region) frozen (initial, actual)
+    ⟨entryContext_locals_zeuge, extend_realizes_zeuge⟩
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SnapshotWitness

@@ -6,6 +6,17 @@ public import Grammatik.Logik.Invarianten.Frag.Symbolic.Scope
 
 namespace Gabbro.Grammatik.Invarianten.Frag.Symbolic.Snapshot
 
+structure Region (D : Deklaration) (bound : Nat) where
+  start : Nat
+  names : List (Observation D)
+  within : start + names.length ≤ bound
+
+def regionNames (region : Option (Region D bound)) : List (Observation D) :=
+  match region with | none => [] | some value => value.names
+
+def regionStart (region : Option (Region D bound)) : Nat :=
+  match region with | none => 0 | some value => value.start
+
 /-- Entry observations occupy a fresh immutable interval. Repeated reads use
     the first matching key; separate entries can never alias by allocation. -/
 def lookup (start : Nat) : List (Observation D) → Observation D → Option Nat

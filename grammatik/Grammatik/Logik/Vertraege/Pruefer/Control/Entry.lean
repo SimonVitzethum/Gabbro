@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Results
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Havoc
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Snapshots
 
 @[expose] public section
 
@@ -13,9 +14,32 @@ variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 
 abbrev Entry (D : Deklaration) (Γ : Ctx) := World D × Env D Γ
 
-def entryContext (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next) : Context (Entry D Γ) next where
-  holds := fun valuation item => symbols.Realizes valuation item.1 item.2
-  stable := fun valuation other item agree => symbols.realizes_congr next bounded valuation other agree item.1 item.1 item.2
+def entryContext (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
+    (snapshot : Option (Snapshot.Region D next) := none) : Context (Entry D Γ) next :=
+  match snapshot with
+  | none => {
+      holds := fun valuation item => symbols.Realizes valuation item.1 item.2
+      stable := fun valuation other item agree =>
+        symbols.realizes_congr next bounded valuation other agree item.1 item.1 item.2 }
+  | some region => {
+      holds := fun valuation item => symbols.Realizes valuation item.1 item.2 ∧
+        Snapshot.Realizes region.start region.names valuation item.1
+      stable := fun valuation other item agree => and_congr
+        (symbols.realizes_congr next bounded valuation other agree item.1 item.1 item.2)
+        (Snapshot.realizes_congr region.names region.start valuation other item.1
+          (fun key _ upper => agree key (Nat.lt_of_lt_of_le upper region.within))) }
+
+theorem entryContext_locals (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
+    (snapshot : Option (Snapshot.Region D next)) (valuation : Frag.Assignment Nat) (item : Entry D Γ)
+    (present : (entryContext symbols bounded snapshot).holds valuation item) :
+    symbols.Realizes valuation item.1 item.2 := by
+  cases snapshot with | none => exact present | some region => exact present.1
+
+theorem entryContext_memory (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
+    (snapshot : Option (Snapshot.Region D next)) (valuation : Frag.Assignment Nat) (item : Entry D Γ)
+    (present : (entryContext symbols bounded snapshot).holds valuation item) :
+    Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) valuation item.1 := by
+  cases snapshot with | none => trivial | some region => exact present.2
 
 def envResult : (result : Option Ty) → Env D (ErgCtx [] result) → ErgVal D result
   | none, .nil => ()

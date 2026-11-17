@@ -41,6 +41,18 @@ def CallPolicy.weaken {context : Context A next} (policy : CallPolicy program co
   semantic := policy.semantic
   encode := fun last beyond f symbols bounded => policy.encode last (Nat.le_trans larger beyond) f symbols bounded
 
+/-- Entry snapshots strengthen proof data while retaining the actual call and
+    decrease obligations of the caller's policy. -/
+def CallPolicy.refine {context : Context A next} (policy : CallPolicy program context)
+    (larger : next ≤ more) (refined : Context A more)
+    (implies : ∀ valuation item, refined.holds valuation item → context.holds valuation item) :
+    CallPolicy program refined where
+  semantic := policy.semantic
+  encode := fun last beyond f symbols bounded => do
+    let encoded ← policy.encode last (Nat.le_trans larger beyond) f symbols bounded
+    return ⟨encoded.val, fun valuation item present world actual realized =>
+      encoded.property valuation item (implies valuation item present) world actual realized⟩
+
 def requiresPolicy (program : Programm D) (context : Context A next) : CallPolicy program context where
   semantic := fun _ => requiresObligation program
   encode := fun _ _ f symbols _ => do
