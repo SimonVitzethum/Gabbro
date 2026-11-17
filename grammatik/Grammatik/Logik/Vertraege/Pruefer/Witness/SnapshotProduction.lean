@@ -162,14 +162,9 @@ theorem environment_at_success_zeuge :
 theorem environment_checked :
     (checkEnvironment (program true) (SperrInv.leer declaration) symbols bounded (basePolicy true)
       (fun _ => none) budget none (invariants true)).toOption.isSome = true := by
-  obtain ⟨checked, success⟩ := success_of_isSome _ environment_at_success_zeuge
-  dsimp only [policy, futureBounded, region] at success
-  unfold checkEnvironment
-  have planned : snapshotPlan ((program true).ensures ()) = .ok (some [.glob false]) := rfl
-  rw [planned]
-  dsimp only [bind, Except.bind]
-  with_unfolding_all rw [success]
-  rfl
+  apply environment_snapshot_success (program true) (SperrInv.leer declaration) symbols bounded (basePolicy true)
+    (fun _ => none) budget none (invariants true) [.glob false] (by rfl)
+  exact environment_at_success_zeuge
 
 theorem function_checked :
     (checkFunction (program true) (SperrInv.leer declaration) (fun _ => none) budget none ()).toOption.isSome = true := by

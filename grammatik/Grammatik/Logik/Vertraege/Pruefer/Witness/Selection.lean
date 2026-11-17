@@ -109,6 +109,30 @@ theorem environment_success_of_valid (program : Programm D) (S : SperrInv D)
   exact environment_success program S symbols bounded policy sources budget hint invariants
     supported entry hentry compiled hcompiled decided
 
+/-- Compose successful compilation in the freshly extended entry context without
+    normalizing either the body or its Cooper decision in a witness proof. -/
+theorem environment_snapshot_success (program : Programm D) (S : SperrInv D)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (policy : CallPolicy program (entryContext symbols bounded))
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (names : List (Observation D)) (planned : snapshotPlan (program.ensures f) = .ok (some names))
+    (ready :
+      let more := next + names.length
+      let larger : next ≤ more := Nat.le_add_right _ _
+      let region : Snapshot.Region D more := ⟨next, names, Nat.le_refl _⟩
+      let futureBounded := symbols.bounded_mono bounded larger
+      let futureContext := entryContext symbols futureBounded (some region)
+      let futurePolicy := policy.refine larger futureContext (fun _ _ present => present.1)
+      (checkEnvironmentAt program S symbols futureBounded (some region) futurePolicy sources budget hint invariants).toOption.isSome = true) :
+    (checkEnvironment program S symbols bounded policy sources budget hint invariants).toOption.isSome = true := by
+  obtain ⟨checked, success⟩ := success_of_isSome _ ready
+  unfold checkEnvironment
+  rw [planned]
+  dsimp only [bind, Except.bind]
+  rw [success]
+  rfl
+
 theorem execution_success (program : Programm D) (S : SperrInv D)
     (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
     (hint : Option (QF (Observation D))) (f : D.Fn)
