@@ -49,9 +49,9 @@ theorem checker_accepted_zeuge :
     rw [invariants, contracts]
     simp only [Bool.and_true]
     decide +kernel
-  exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
-    ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨core, rfl⟩, Kernzelle.akkuStartB_leer unit⟩,
-      invariant_gate_zeuge⟩, unit_logic_accepted_zeuge⟩
+  rw [akzeptiertX_pruefer_eq, core, invariant_gate_zeuge, unit_logic_accepted_zeuge]
+  simp only [Bool.true_and, Bool.and_true]
+  exact Bool.and_eq_true_iff.mpr ⟨besitzB_leer rfl, Kernzelle.akkuStartB_leer unit⟩
 
 /-- Non-degenerate witness of the entire derived former user obligation. -/
 theorem nutzerPflicht_of_akzeptiert_zeuge : NutzerPflichtA unit :=
@@ -68,8 +68,7 @@ theorem checker_falseEnsures_refused_zeuge :
     cases computed : checkContracts falseUnit.P falseUnit.S [()] falseUnit.lockFormulas {} falseUnit.loopHints with
     | error cause => simp only [computed, bind, Except.bind, Except.toOption, Option.isSome_none]
     | ok certificate => rw [computed] at contracts; cases contracts
-  change (_ && nutzerPflichtGeprueftB falseUnit [()] []) = false
-  rw [refused, Bool.and_false]
+  rw [akzeptiertX_pruefer_eq, refused, Bool.and_false]
 
 /-- An actually conforming pointer target, with a nontrivial interface pre
     and result-dependent post. This exercises both refinement directions. -/
