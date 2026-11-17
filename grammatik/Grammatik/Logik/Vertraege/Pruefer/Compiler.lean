@@ -3,6 +3,8 @@ module
 public import Grammatik.Logik.Vertraege.Pruefer.Locks
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
 public import Grammatik.Logik.Vertraege.Pruefer.Control.CallBinding
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.Block
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.End
 
 @[expose] public section
 
@@ -243,7 +245,18 @@ def block {context : Context A next} (policy : CallPolicy program context)
                 (by rw [symbolic_values_equal valuation after world same]; exact valid)
                 actual ((symbols.realizes_world actual valuation world after).mp realized)) (fun _ => trivial) }
     | .bindCallInd .. | .bindCallIndElse .. => .error (.unsupported "contract indirect binding needs a checked finite target dispatch")
-    | .bindAxiom .. | .bindAxiomElse .. | .bindAxiomOpt .. | .bindAxiomOptElse .. => .error (.unsupported "contract oracle binding needs quantified answer and poststate observations")
+    | .bindAxiom a args he hw hg hd hgd rest => bindAxiomBlockCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
+        (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
+    | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseBlockCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
+        (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel failure env envBounded
+          ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
+    | .bindAxiomOpt result a args he hp hd hgd rest => bindAxiomOptBlockCondition policy.semantic budget.expansion result a args he hp hd hgd rest symbols bounded goals
+        (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult result))
+    | .bindAxiomOptElse result a args he hp hd hgd hr failure rest => bindAxiomOptElseBlockCondition policy.semantic budget.expansion result a args he hp hd hgd hr failure rest symbols bounded goals
+        (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult result))
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel failure env envBounded
+          ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
     | .regRead .. | .regReadElse .. => .error (.unsupported "contract register binding needs a typed fresh result observation")
     | .awaits .. | .exchange .. => .error (.unsupported "contract atomic binding needs rely-aware fresh observations")
     | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
@@ -397,7 +410,18 @@ def ending {context : Context A next} (policy : CallPolicy program context)
           split <;> rename_i cleanupReady <;>
             simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Symbolic.Goals.holds, Symbolic.Goals.endHolds] using ready)
     | .bindCallInd .. | .bindCallIndElse .. => .error (.unsupported "contract indirect end binding needs a checked finite target dispatch")
-    | .bindAxiom .. | .bindAxiomElse .. | .bindAxiomOpt .. | .bindAxiomOptElse .. => .error (.unsupported "contract oracle end binding needs quantified answer and poststate observations")
+    | .bindAxiom a args he hw hg hd hgd rest => bindAxiomEndCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
+    | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseEndCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel failure env envBounded
+          ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
+    | .bindAxiomOpt result a args he hp hd hgd rest => bindAxiomOptEndCondition policy.semantic budget.expansion result a args he hp hd hgd rest symbols bounded goals
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult result))
+    | .bindAxiomOptElse result a args he hp hd hgd hr failure rest => bindAxiomOptElseEndCondition policy.semantic budget.expansion result a args he hp hd hgd hr failure rest symbols bounded goals
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult result))
+        (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel failure env envBounded
+          ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
     | .regRead .. | .regReadElse .. => .error (.unsupported "contract register end binding needs a typed fresh result observation")
     | .awaits .. | .exchange .. => .error (.unsupported "contract atomic end binding needs rely-aware fresh observations")
     | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. => .error (.unsupported "contract floating end binding needs an exact typed range-check certificate")
