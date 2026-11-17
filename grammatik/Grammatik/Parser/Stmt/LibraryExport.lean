@@ -65,6 +65,8 @@ open LibraryFixtureProofs
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
+set_option profiler true
+set_option profiler.threshold 5000
 
 /-! ## Connected export witness: a qualified library call through the pipeline.
 
@@ -212,6 +214,127 @@ private def produced2 : { value : EnsTy fullUnit ⟨2, by decide⟩ ×
   refine ⟨?value, ?computed⟩
   case computed => cbv <;> exact Eq.refl _
 
+private def fullPieces : (f : Fin fullUnit.fns.length) →
+    EnsTy fullUnit f × RumpTy fullUnit f × ReqTy fullUnit f :=
+  Fin.cases produced0.val
+    (Fin.cases produced1.val (Fin.cases produced2.val (fun f : Fin 0 => Fin.elim0 f)))
+
+private abbrev fullDeclaration := declOf fullUnit
+private abbrev callerIndex : Fin fullUnit.fns.length := ⟨2, by decide⟩
+private abbrev callerSymbols : Invarianten.Frag.Symbolic.SymEnv fullDeclaration Nat
+    (fullDeclaration.params callerIndex) := .nil
+private theorem callerBounded : callerSymbols.Bounded 0 := trivial
+
+private def fullProgram
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) : Programm fullDeclaration :=
+  progOfFn fullUnit (fun f => (fullPieces f).1) (fun f => (fullPieces f).2.1)
+    (fun f => (fullPieces f).2.2) invariants pointers foreigns
+
+private noncomputable def callerInvariants (program : Programm fullDeclaration) :
+    Invarianten.VC.InvariantFormula program (fullDeclaration.invs.filter (schuldet callerIndex)) :=
+  (Invarianten.VC.invariantFormula program []).toOption.get (by rfl)
+
+open Invarianten Invarianten.Frag.Symbolic Invarianten.VC Vertraege.Pruefer
+
+private noncomputable def callerCompiled
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) : Except Invarianten.Frag.Refusal
+    (Vertraege.Pruefer.Symbolic.EndCondition (S := SperrInv.leer fullDeclaration)
+      (requiresPolicy (fullProgram invariants pointers foreigns) (Vertraege.Pruefer.Symbolic.entryContext callerSymbols callerBounded)).semantic
+      (((fullProgram invariants pointers foreigns)).rumpf callerIndex) callerSymbols
+      (contractGoals (fullProgram invariants pointers foreigns) callerIndex callerSymbols callerBounded (callerInvariants (fullProgram invariants pointers foreigns)))) :=
+  Vertraege.Pruefer.ending (requiresPolicy (fullProgram invariants pointers foreigns) (Vertraege.Pruefer.Symbolic.entryContext callerSymbols callerBounded))
+  (S := SperrInv.leer fullDeclaration) (Invarianten.Pruefer.lockFormula _ (fun _ => none)) {} none 128
+  (((fullProgram invariants pointers foreigns)).rumpf callerIndex) callerSymbols callerBounded (contractGoals (fullProgram invariants pointers foreigns) callerIndex callerSymbols callerBounded
+    (callerInvariants (fullProgram invariants pointers foreigns)))
+
+set_option maxHeartbeats 400000 in
+private theorem callerCompiled_present
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) : (callerCompiled invariants pointers foreigns).toOption.isSome = true := by
+  with_unfolding_all rfl
+
+private noncomputable def callerCertificate
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) := (callerCompiled invariants pointers foreigns).toOption.get
+  (callerCompiled_present invariants pointers foreigns)
+
+private theorem callerCompiled_result
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) : callerCompiled invariants pointers foreigns =
+    .ok (callerCertificate invariants pointers foreigns) := by
+  have present := callerCompiled_present invariants pointers foreigns
+  cases result : callerCompiled invariants pointers foreigns with
+  | error cause => rw [result] at present; cases present
+  | ok value => simp only [callerCertificate, result, Except.toOption, Option.get_some]
+
+private def callerFormula : Invarianten.Frag.LProp (Key fullDeclaration Nat) :=
+  .and .tru (.and (.imp .tru (.and .tru .tru)) .tru)
+
+set_option maxHeartbeats 400000 in
+private theorem callerCompiled_shape
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) :
+    (callerCompiled invariants pointers foreigns).map Certificate.formula = .ok callerFormula := by
+  unfold callerCompiled
+  dsimp only [fullProgram, progOfFn, fullPieces, produced2, callerIndex, Fin.cases]
+  rw (config := { transparency := .all }) [ending.eq_6]
+  rw (config := { transparency := .all })
+    [Vertraege.Pruefer.statement.eq_11]
+  with_unfolding_all rfl
+
+private theorem callerCompiled_valid
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) (values : Invarianten.Frag.Assignment (Key fullDeclaration Nat)) :
+    (callerCertificate invariants pointers foreigns).formula.denote values := by
+  have shape := callerCompiled_shape invariants pointers foreigns
+  rw [callerCompiled_result invariants pointers foreigns] at shape
+  have same := Except.ok.inj shape
+  change (callerCertificate invariants pointers foreigns).formula = callerFormula at same
+  rw [same]
+  exact ⟨trivial, ⟨fun _ => ⟨trivial, trivial⟩, trivial⟩⟩
+
+attribute [local irreducible] entryVC callerCertificate
+
+set_option maxHeartbeats 400000 in
+private theorem caller_checked
+    (invariants : ∀ i : Fin fullUnit.invs.length, InvTy fullUnit i)
+    (pointers : ∀ n, CallContract fullDeclaration (fullDeclaration.sigNr n))
+    (foreigns : ∀ a, CallContract fullDeclaration (fullDeclaration.asignatur a)) :
+    (checkFunction (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) (fun _ => none) {} none callerIndex).toOption.isSome = true := by
+  apply Vertraege.Pruefer.SelectionWitness.function_success
+  · cbv
+  · cbv
+  · apply Vertraege.Pruefer.SelectionWitness.execution_success (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) (fun _ => none) {}
+      none callerIndex (by cbv) (callerInvariants (fullProgram invariants pointers foreigns)) (by rfl)
+      ((parameters (D := fullDeclaration) 128 0 []).toOption.get (by rfl)) (by rfl)
+    · cbv
+    · rintro ⟨symbols, member⟩
+      cases symbols
+      let requirement := (Invarianten.Frag.Symbolic.translate ((fullProgram invariants pointers foreigns).requires callerIndex) callerSymbols).toOption.get (by with_unfolding_all rfl)
+      have decided : Invarianten.Elim.decideB (close (lower (entryVC callerSymbols requirement.payload
+          (callerCertificate invariants pointers foreigns).formula))) (close_closed _) = true := by
+        apply (close_decide_true_iff (lower (entryVC callerSymbols requirement.payload
+          (callerCertificate invariants pointers foreigns).formula))).mpr
+        intro values
+        apply (lower_denote (entryVC callerSymbols requirement.payload
+          (callerCertificate invariants pointers foreigns).formula) values).mpr
+        unfold entryVC
+        intro _ _ _
+        exact callerCompiled_valid invariants pointers foreigns values
+      exact Vertraege.Pruefer.SelectionWitness.environment_success (D := fullDeclaration) (f := callerIndex) (next := 0)
+        (fullProgram invariants pointers foreigns) (SperrInv.leer fullDeclaration) callerSymbols callerBounded (requiresPolicy (fullProgram invariants pointers foreigns) _) (fun _ => none) {} none
+        (callerInvariants (fullProgram invariants pointers foreigns)) (by cbv) requirement (by rfl)
+        (callerCertificate invariants pointers foreigns) (callerCompiled_result invariants pointers foreigns) decided
+
 private theorem full_phases :
     ∃ items, parseTopTief fullTokens = .ok items ∧
       (∃ expanded, exportLibraryUnit (uMembers (pre108 items)) = .ok expanded ∧
@@ -237,8 +360,7 @@ private theorem full_phases :
       refine ⟨?pieces, ?equations, ?safe⟩
       case pieces =>
         change (f : Fin 3) → EnsTy fullUnit f × RumpTy fullUnit f × ReqTy fullUnit f
-        exact Fin.cases produced0.val
-          (Fin.cases produced1.val (Fin.cases produced2.val (fun f : Fin 0 => Fin.elim0 f)))
+        exact fullPieces
       case equations =>
         rintro ⟨index, bound⟩
         have small : index < 3 := bound
@@ -250,12 +372,21 @@ private theorem full_phases :
       case safe =>
         intro invariants pointers foreigns
         unfold checkedImage
-        cbv
-        simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+        delta Akzeptiert
+        apply Bool.and_eq_true_iff.mpr
         constructor
         · cbv
-        · apply Vertraege.Pruefer.SelectionWitness.contracts_success
-          export_functions
+        · simp only [Invarianten.Pruefer.invariantVCB, Bool.and_eq_true]
+          constructor
+          · cbv
+          · apply Vertraege.Pruefer.SelectionWitness.contracts_success
+            rintro ⟨index, bound⟩
+            have small : index < 3 := bound
+            have choices : index = 0 ∨ index = 1 ∨ index = 2 := by omega
+            rcases choices with first | second | third
+            · subst index; cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+            · subst index; cbv <;> (set_option smartUnfolding false in with_unfolding_all rfl)
+            · subst index; exact caller_checked invariants pointers foreigns
 
 private theorem selected_phases :
     (∃ expanded, exportLibraryUnit (uMembers (pre108 translationQualItems)) = .ok expanded ∧
