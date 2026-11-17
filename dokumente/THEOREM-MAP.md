@@ -7828,3 +7828,16 @@ The unqualified library fixture has corresponding private certificates
 respectively empty entry scope, actual compiler success/result/formula, truth for
 every valuation, and production function acceptance. Its public source/image
 statements are unchanged.
+
+The loop fixture keeps both original positive admission statements. Its
+`LoopWitness.symbols_bounded` certifies the empty entry scope;
+`selectedHint_result`, `compiled_present` and `compiled_result` identify the actual
+hint and compiler results. `unrolled_shape` and `hinted_shape` expose the generated
+quantified formulas through the compiler equations. `step_valid` proves the
+guarded typed increment preserves the arithmetic invariant for any continuation
+that accepts every typed invariant state; `unrolled_valid` iterates this rule.
+`compiled_valid` proves both actual entry VCs for every arithmetic assignment.
+`function_checked` and `contracts_checked` compose those certificates with the
+production gates. `unrolling_accepted_zeuge` and `checked_hint_accepted_zeuge`
+still assert admission of the actual two-pass and hundred-pass programs, with
+their nonempty owed invariant. Their proofs do not reduce Cooper in the kernel.
