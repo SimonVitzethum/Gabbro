@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Witness.Fixtures
+public import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Fremd
 
 @[expose] public section
@@ -66,10 +67,9 @@ theorem retry_safe_zeuge :
   Basic.retry_safe retryStep retryTest retryOverflow
     (fun _ _ => trivial) (fun _ _ => trivial) 7 world arguments
 
-/-- Two successive 11-way bindings exceed a 100-specialization budget.
-    Saturation stops at 101, without constructing either continuation family. -/
+/-- Integer parameters occupy one symbolic template each, without a product. -/
 theorem specialization_product_zeuge :
-    argumentSpecializations 100 [.int 0 10, .int 0 10] = 101 := by decide
+    argumentSpecializations 100 [.int 0 10, .int 0 10] = 1 := by decide
 
 /-- One branch returns its input; only the other reaches the twenty-case
     continuation. The early return is not multiplied by that continuation. -/
@@ -93,38 +93,6 @@ def storedSeven : Stmt declaration writerContract false [.int 0 10] [] [] :=
     (.widen (by decide) (by decide) (.lit 7)) rfl
     (fun _ member => (List.not_mem_nil member).elim)
 
-def storeGoals : Goals declaration writerContract [.int 0 10] where
-  normal := fun _ => .ok (lower (.eq (.var (.slot () () 0)) (.konst 7)))
-  escape := fun _ => .ok .tru
-  again := fun _ => .ok .tru
-  returned := fun _ => .ok .tru
-  reason := .tru
-
-def storeCondition :=
-  (leafCondition (S := SperrInv.leer declaration) (requiresPolicy increment)
-    128 storedSeven arguments storeGoals).toOption.get (by decide +kernel)
-
-/-- The actual store WP proves the subsequent cell-equals-seven obligation
-    for every entry assignment, including entries where that cell was not 7. -/
-theorem stored_seven_zeuge :
-    decideB (close (writerMatrix .tru .tru storeCondition.formula))
-      (close_closed (writerMatrix .tru .tru storeCondition.formula)) = true := by
-  decide +kernel
-
-def wideArguments : Env declaration [.int 0 (2 ^ 64 - 1)] :=
-  .cons ⟨7, by decide, by decide⟩ .nil
-
-/-- Returning a decoded 64-bit local compiles with a one-case budget; its
-    declared interval is never materialized or split into result branches. -/
-theorem return_local_without_enumeration_zeuge :
-    (returnCondition (program := increment) (S := SperrInv.leer declaration) (Λ := [])
-      1 (.val (.var .here)) wideArguments (fun _ => .ok .tru)).toOption.isSome = true ∧
-    (returnCondition (program := increment) (S := SperrInv.leer declaration) (Λ := [])
-      1 (.val (.widen (by decide) (by decide) (.var .here)) :
-        ErgExpr declaration [.int 0 (2 ^ 64 - 1)] [] (some (.int 0 (2 ^ 65 - 1))))
-      wideArguments (fun _ => .ok .tru)).toOption.isSome = true := by
-  constructor <;> rfl
-
 /-- A full-width parameter and a memory-dependent initializer. The explicit
     narrowing fallback remains part of the model's actual return value. -/
 def u32Declaration : Deklaration :=
@@ -145,74 +113,6 @@ def u32Program : Programm u32Declaration where
 
 def u32Invariants : InvariantFormula u32Program (u32Declaration.invs.filter (schuldet ())) :=
   (invariantFormula u32Program []).toOption.get (by rfl)
-
-/-- The actual environment VC accepts at expansion budget zero for every
-    u32 argument. Neither the argument's inhabitants nor the return range are
-    enumerated here; the outer parameter-domain gate is a separate obligation. -/
-theorem uniform_u32_environment_zeuge (locals : Env u32Declaration (u32Declaration.params ())) :
-    (checkEnvironment u32Program (SperrInv.leer u32Declaration) (requiresPolicy u32Program)
-      (fun _ => none) { expansion := 0 } none () u32Invariants locals).toOption.isSome = true := by
-  with_unfolding_all rfl
-
-/-- Uniform support covers all 2^32 decoded results with a zero-case budget. -/
-theorem uniform_post_support_zeuge (locals : Env u32Declaration (u32Declaration.params ())) :
-    (checkPostFormulas u32Program 0 () locals).toOption.isSome = true := by
-  rfl
-
-theorem postFormula_true_map_zeuge :
-    (postFormula u32Program () (.cons ⟨7, by decide, by decide⟩ .nil)
-      ⟨9, by decide, by decide⟩).map Subtype.val = .ok (lower .tru) :=
-  postFormula_true_map u32Program () _ _ rfl
-
-/-- An inhabited full-width result type and a real u32 argument jointly
-    exercise the shared call rule. The specialization callback refuses every
-    value, so acceptance also witnesses that it is never consulted. -/
-theorem shared_call_results_zeuge :
-    (callCondition (S := SperrInv.leer u32Declaration) (requiresPolicy u32Program) 0 ()
-      (.cons ⟨7, by decide, by decide⟩ .nil) rfl
-      (fun _ _ _ => True)
-      (fun _ => .error (.unsupported "result specialization must not run"))
-      (some { formula := .tru, sound := fun _ _ _ _ => trivial })).toOption.isSome = true := by
-  rfl
-
-/-- Two distinct functions retain a real memory read and a discarded u32
-    result. The caller must use the strict control compiler, since Basic
-    intentionally quantifies over arbitrary, potentially failing handlers. -/
-def sharedDeclaration : Deklaration :=
-  { u32Declaration with
-    Fn := Bool
-    sig := fun _ => 0
-    sigNr := fun _ =>
-      { params := [], erg := some (.int 0 (2 ^ 32 - 1)), gruende := 0
-        haelt := [], schreibt := fun _ => false, gschreibt := fun _ => false
-        konsumiert := [], produziert := [] }
-    passt := fun _ _ => false
-    passt_ok := fun _ _ impossible => by cases impossible
-    rzusage := fun item => nomatch item }
-
-def sharedFits : RufPasst sharedDeclaration (vertragVon sharedDeclaration true)
-    (sharedDeclaration.signatur false) [] where
-  hw := fun _ impossible => by cases impossible
-  hg := fun _ impossible => by cases impossible
-  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
-  hh := fun _ impossible => nomatch impossible
-
-def sharedProgram : Programm sharedDeclaration where
-  invariante := fun item => nomatch item
-  requires := fun _ => .tru
-  ensures := fun _ => .tru
-  rumpf := fun branch => match branch with
-    | false => .ret (.val (.widen (by decide) (by decide)
-        (.glob false (fun _ member => (List.not_mem_nil member).elim)))) (List.Perm.refl _)
-    | true => .cons (.call false .nil sharedFits rfl)
-        (.ret (.val (.widen (by decide) (by decide) (.lit 7))) (List.Perm.refl _))
-
-/-- The actual program contract gate accepts both functions at zero domain
-    expansion and a four-case work budget, including the strict caller. -/
-theorem uniform_wide_program_zeuge :
-    KontrakteGeprueftB sharedProgram (SperrInv.leer sharedDeclaration) [false, true]
-      (fun _ => none) { depth := 8, expansion := 0, specializations := 4 } = true := by
-  with_unfolding_all rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Witness
 

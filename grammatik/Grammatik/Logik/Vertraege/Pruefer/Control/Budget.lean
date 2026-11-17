@@ -11,7 +11,7 @@ variable {D : Deklaration} {V : Vertrag D}
 /-- Saturation makes the preflight independent of the magnitude of a type's
     interval. It never constructs decoded values or generates a continuation. -/
 def specializationCount (limit : Nat) : Ty → Nat
-  | .int lo hi => min (limit + 1) (hi - lo + 1).toNat
+  | .int _ _ => 1
   | .bool => 2
   | _ => 1
 

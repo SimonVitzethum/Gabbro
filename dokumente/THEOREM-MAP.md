@@ -7595,11 +7595,9 @@ observations, not finite integer domains. Formulas remain `LProp` through
 binding, store and return composition; the witnesses pass their completed VCs
 to the verified Cooper procedure once.
 
-Boundary: these interfaces and their canonical-WP composition are checked,
-but the production recursive compiler and `Decision` parameter/result gates
-still use the concrete environment interface at this checkpoint. No additional
-production acceptance, entry-memory snapshot support or aggregate support is
-claimed here. The existing acceptance and `gabbro_ziel` statements are unchanged.
+The scalar foundations below are used by the production migration in section 197.
+Entry-memory snapshots and aggregate components remain open. The existing
+acceptance soundness and `gabbro_ziel` statements are unchanged.
 
 The following names are in `Gabbro.Grammatik.Invarianten.Frag.Symbolic`, except
 where the contract-checker namespace is given explicitly.
@@ -7695,3 +7693,84 @@ the typed parameter bound `0 <= x`.
 * `runtime_binding_wp_zeuge`: every typed u32 argument, actual world and admitted
   runtime satisfies the original runtime WP for this body. This is a model/WP
   witness; it does not claim production program-gate acceptance.
+
+## 197. Production symbolic environments and runtime WPs
+
+The contract compiler's `statement`, `block`, `ending`, reason dispatch,
+call policy, result havoc and decrease policy now consume realizing symbolic
+environments. `Decision.checkExecution` covers actual parameters through
+`Parameters.cover`; every integer parameter/result has one observation rather
+than a list of decoded inhabitants. Only finite Boolean/capability templates
+remain specialized. Integer type cardinalities no longer contribute to the
+specialization product. Quantified `LProp` is retained until the closed Cooper
+stage. Interface refinement uses the same symbolic parameter coverage.
+
+`CallObligation` separates the original semantic handler obligation from its
+scoped `CallPolicy` encoder. `CheckedEnvironment`, `CheckedExecution`, atomic
+replay, contract duties and measure duties retain their all-runtime/all-world
+meaning. Generated continuations carry the actual runtime WP. World-changing
+reads, cleanup and releases reapply their certificates at the actual world;
+observation equality alone is never used to transport an arbitrary continuation.
+
+Entry data currently freeze the actual entry parameters and world as semantic
+proof data. They do not yet encode distinct entry-memory observations for `old`.
+Aggregate component observations and oracle answer/poststate observations remain
+outside this delivery. A failed sufficient VC reports a fragment refusal, not an
+uncertified execution counterexample.
+
+| Theorem | Statement |
+|---|---|
+| `Frag.Symbolic.SymEnv.bounded_set` | Updating a local with a bounded symbolic value preserves the environment's key bound. |
+| `Pruefer.symbolic_values_equal` | Equal memory observations induce equal combined valuations, with immutable keys unchanged. |
+| `Pruefer.Symbolic.prop_congr` | Agreement on a quantified formula's free support preserves its truth. |
+| `Pruefer.Symbolic.closure_transfer` | A universally closed formula transfers to every assignment agreeing outside its bound keys. |
+| `Pruefer.Symbolic.memoryFacts_sound` | Every actual typed world satisfies the generated memory type facts. |
+| `Pruefer.Symbolic.havocFormula_sound` | Quantifying written observations covers every actual framed postworld. |
+| `Pruefer.Symbolic.valueBounds_sound` | A realizing typed scalar satisfies its symbolic type bounds. |
+| `Pruefer.Symbolic.environmentBounds_sound` | A realizing actual Env satisfies all symbolic input bounds. |
+| `Pruefer.Symbolic.argumentRelation_sound` | Actual argument evaluation satisfies the encoded defining relation or its sound interval abstraction. |
+| `Pruefer.Symbolic.argumentRelations_sound` | All evaluated arguments jointly satisfy their generated relations. |
+| `Pruefer.Symbolic.outside_argumentKeys` | Every key outside an allocated argument interval is before its start or after its end. |
+| `Pruefer.Symbolic.envResult_ergEnv` | Reading an actual optional result environment returns that same result. |
+| `Pruefer.Symbolic.withResult_bounded` | Combining symbolic results and parameters preserves their common scope bound. |
+| `Pruefer.Symbolic.withResult_realizes` | Combining realizing result/parameter environments realizes the actual contract Env. |
+| `Pruefer.Symbolic.resultSymbol_realizes` | Extracting a typed symbolic call answer realizes the actual answer used by the source binder. |
+| `Pruefer.Symbolic.resultSymbol_bounded` | The extracted call-answer symbol retains its allocated key bound. |
+| `Pruefer.Symbolic.lexFormula_denote` | The symbolic lexicographic formula agrees with the model's natural-number tuple order. |
+| `Pruefer.releasing_sound` | Symbolic release goals imply the original `freiH` post at the actual released world. |
+| `Pruefer.contractGoals_sound` | Realizing return/reason goals imply the unchanged `EndPost` for frozen actual entry data. |
+
+Here `Pruefer` abbreviates `Gabbro.Grammatik.Vertraege.Pruefer` and
+`Frag.Symbolic` abbreviates `Gabbro.Grammatik.Invarianten.Frag.Symbolic`.
+
+The certificate-producing definitions additionally establish:
+
+* `arguments` and `allEnvironments`: every actual evaluated/typed Env is covered
+  by a valuation extension preserving all preexisting observations.
+* `resultCondition` and `callOutcomesCondition`: every actual typed normal answer
+  and framed postworld satisfying the declared ensures reaches the continuation;
+  reason worlds are universally havoced, without assuming a normal ensures.
+* `statement`, `block`, `ending`, `retryCondition`, `retryInvariantCondition`,
+  `traverseCondition`, store and cleanup rules: acceptance of their generated
+  formulas implies the original runtime WP, including inherited logic errors.
+* `measureTerms` and `measureEncoding`: encoded tuple components equal the actual
+  nonnegative measures; recursive calls must satisfy the original strict order.
+* `checkFormulaForEnvironments` and `checkContractRefinement`: symbolic universal
+  input/result checks imply the original contravariant pre/covariant post duties.
+
+`SymbolicBindingWitness.production_u32_acceptance_zeuge` exercises the production
+entry gate on an inhabited u32 parameter, a genuine memory-dependent binder and
+the nonliteral post `result <= x + G`, with expansion budget zero. Its generated
+VC is proved through `production_vc_valid` and `production_decided`, then through
+the actual `environment_success`/`execution_success` decision gates. The existing
+`runtime_binding_wp_zeuge` retains the original all-runtime-WP consequence.
+
+`PoolCertificate.compiled_valid` proves the actual pool reader's quantified
+snapshot/return formula for every assignment. `reader_checked_for` preserves
+admission for arbitrary unrelated bodies and the actual replay certificate.
+The old 101-case branch enumeration and its post-support witnesses are removed.
+`SelectionWitness.environment_success` and `execution_success` now compose
+symbolic compilation/coverage certificates; `RefusalWitness.execution_refused`,
+`function_refused` and `contracts_refused` propagate the current-world syntax
+refusal through the same gates. Concrete post-result support helpers and their
+obsolete enumeration-specific witness statements are removed.

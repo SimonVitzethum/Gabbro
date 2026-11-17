@@ -308,9 +308,8 @@ theorem contracts_refused4_zeuge : Vertraege.Pruefer.KontrakteGeprueftB P4
     rfl
   have basic := Vertraege.Pruefer.RefusalWitness.basic_none_of_current_refused
     P4 (SperrInv.leer D4) sources4 {} ein4 current
-  have rejected := Vertraege.Pruefer.RefusalWitness.post_refused P4 ein4 rho7 () current
   exact Vertraege.Pruefer.RefusalWitness.contracts_refused P4 (SperrInv.leer D4)
-    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic rho7 () rejected
+    sources4 {} [ein4, lies4] ein4 List.mem_cons_self basic current
 
 /-- Capability gap: outside the decidable fragment: old-memory postconditions.
     The actual post refusal prevents acceptance; the parsed body and contract stay. -/

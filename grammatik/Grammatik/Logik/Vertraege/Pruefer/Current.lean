@@ -149,37 +149,4 @@ def currentProduct (fields : Args D Γ Λ types) :
 
 end
 
-/-- Keep the source expression explicit while constructing its dependent
-    certificate. Source equalities can then be transported before unfolding
-    the translation or its semantic proof. -/
-def postEncoding (expression : Expr D Γ Λ .bool) (locals : Env D Γ) :
-    Except Invarianten.Frag.Refusal { formula : QF (Observation D) // ∀ old world,
-      formula.denote (assignment world) ↔ wahr? (eval old expression world locals) = true } := do
-  let independent ← currentOnly expression
-  let encoded ← translate expression locals
-  let formula : LProp (Observation D) := encoded.payload
-  return ⟨lower formula, fun old world => by
-    apply (lower_denote formula (assignment world)).trans
-    apply (encoded.bool_iff world).symm.trans
-    rw [independent.down old world]⟩
-
-/-- Translate a return contract once for each typed result. The certificate
-    relates the formula to the actual entry world, not a substituted one. -/
-def postFormula (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
-    (value : ErgVal D (D.erg f)) :
-    Except Invarianten.Frag.Refusal { formula : QF (Observation D) // ∀ old world,
-      formula.denote (assignment world) ↔ EnsAmRueck program f old world locals value } :=
-  postEncoding (program.ensures f) (ergEnv (D.erg f) value locals)
-
-/-- Literal truth has the same successful arithmetic encoding for every
-    result. The statement projects away the dependent semantic certificate. -/
-theorem postFormula_true_map (program : Programm D) (f : D.Fn)
-    (locals : Env D (D.params f)) (value : ErgVal D (D.erg f))
-    (source : program.ensures f = .tru) :
-    (postFormula program f locals value).map Subtype.val = .ok (lower .tru) := by
-  change (postEncoding (program.ensures f) (ergEnv (D.erg f) value locals)).map
-    Subtype.val = .ok (lower .tru)
-  rw [source]
-  rfl
-
 end Gabbro.Grammatik.Vertraege.Pruefer

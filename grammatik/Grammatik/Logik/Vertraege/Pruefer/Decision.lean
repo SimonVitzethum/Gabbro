@@ -1,13 +1,14 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Compiler
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Entry
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Vertraege.Pruefer
 
 open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.VC
-open Invarianten.Pruefer
+open Invarianten.Pruefer Invarianten.Frag.Symbolic Symbolic
 
 variable {D : Deklaration} {S : SperrInv D} {program : Programm D}
 
@@ -21,157 +22,114 @@ def EndPost (program : Programm D) (f : D.Fn) (old : World D)
   | .logik error => allowed error
   | .hardware _ => True
 
-/-- One concrete parameter environment, shared by contract and measure checks. -/
-def CheckedEnvironment (policy : CallPolicy program) (f : D.Fn)
+def CheckedEnvironment (policy : CallObligation program) (f : D.Fn)
     (locals : Env D (D.params f)) : Prop :=
   ∀ (runtime : Runtime program (fun _ => []) S) world allowed,
     HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
       runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals
 
-/-- This semantic certificate is OUTPUT of VC checking, never a checker input. -/
+def CheckedExecution (policy : CallObligation program) (f : D.Fn) : Prop :=
+  ∀ locals, CheckedEnvironment (S := S) policy f locals
 
-def CheckedExecution (policy : CallPolicy program) (f : D.Fn) : Prop :=
-  ∀ (locals : Env D (D.params f)) (runtime : Runtime program (fun _ => []) S)
-    world allowed, HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
-      runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals
-
-/-- A refusal includes the values of the failed arithmetic VC in free-key
-    order. The typed-world reconstruction API remains available in P20. -/
-def invalidMessage (label : String) (formula : LProp (Observation D))
-    (pre : QF (Observation D)) : String :=
-  let matrix := writerMatrix formula .tru pre
-  let names := (qfKeys matrix).eraseDups
-  match Modell.counterexample names (quoteQF matrix) with
-  | none => label ++ ": false VC (no counterexample extracted)"
-  | some values => label ++ ": false VC; counterexample in observation order = " ++
-      reprStr (names.map values)
-
-/-- Diagnostics retain the concrete decoded arguments selected by the VC
-    generator, including when the arithmetic counterexample has no memory keys. -/
-def environmentValues : {context : Ctx} → Env D context → List Int
-  | [], .nil => []
-  | .int _ _ :: _, .cons value rest => value.n :: environmentValues rest
-  | .bool :: _, .cons value rest => (if wahr? value = true then 1 else 0) :: environmentValues rest
-  | τ :: _, .cons value rest => scalarValue τ value :: environmentValues rest
-
-/-- The return formula conjoins checked ensures with all owed invariants. -/
-def contractGoals (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
+/-- Return expressions use symbolic results and the frozen entry parameters. -/
+def contractGoals (program : Programm D) (f : D.Fn)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
     (invariants : InvariantFormula program (D.invs.filter (schuldet f))) :
-    Goals D (vertragVon D f) (D.params f) where
-  normal := fun _ => .ok .tru
-  escape := fun _ => .ok .tru
-  again := fun _ => .ok .tru
-  returned := fun value => (postFormula program f locals value).map (fun post => conj post.val invariants.formula)
-  reason := invariants.formula
-  uniformReturn :=
-    match source : program.ensures f with
-    | .tru => some
-        { formula := conj (lower .tru) invariants.formula
-          realizes := fun value => by
-            have uniform := postFormula_true_map program f locals value source
-            cases result : postFormula program f locals value with
-            | error cause => rw [result] at uniform; cases uniform
-            | ok post =>
-                have same : post.val = lower .tru := Except.ok.inj (by
-                  simpa only [result, Except.map] using uniform)
-                simp only [result, Except.map, same] }
-    | _ => none
+    Symbolic.Goals (program := program) (S := S) (entryContext symbols bounded) (vertragVon D f) (D.params f) where
+  normal := .truth _
+  escape := .truth _
+  again := .truth _
+  returned := {
+    holds := fun item _ world result =>
+      EnsAmRueck program f item.1 world item.2 (envResult (D.erg f) result) ∧ InvAmRueck program f world
+    encode := fun more larger returned rb => do
+      let independent ← currentOnly (program.ensures f)
+      let post ← Invarianten.Frag.Symbolic.translate (program.ensures f) (withResult (D.erg f) returned symbols)
+      return {
+        formula := .and post.payload (renameProp Sum.inl (quoteQF invariants.formula))
+        sound := fun valuation item present _ world valid actual realized => by
+          have entry := (symbols.realizes_world item.2 valuation item.1 world).mp present
+          have combined := withResult_realizes (D.erg f) returned symbols valuation world actual item.2 realized entry
+          have ensures := (post.bool_iff valuation world _ combined).mpr valid.1
+          constructor
+          · unfold EnsAmRueck
+            rw [independent.down item.1 world]
+            exact ensures
+          · have inv := (quoteQF_denote invariants.formula (assignment world)).mp
+              ((renameProp_denote Sum.inl (fun _ _ same => Sum.inl.inj same) _ _).mp valid.2)
+            exact fun name member owed => (invariants.correct world).mp inv name (List.mem_filter.mpr ⟨member, owed⟩) } }
+  reason := .ofFormula _ invariants.formula
 
-theorem contractGoals_sound (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
-    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
-    (old : World D) (allowed : Logik D → Prop) (outcome : EndAusgang (vertragVon D f) false (D.params f))
-    (valid : (contractGoals program f locals invariants).endHolds allowed outcome) :
-    EndPost program f old locals allowed outcome := by
+theorem contractGoals_sound (program : Programm D) (f : D.Fn)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f))) (item : Entry D (D.params f))
+    (runtime : Runtime program (fun _ => []) S) (allowed : Logik D → Prop)
+    (outcome : EndAusgang (vertragVon D f) false (D.params f))
+    (valid : (contractGoals program f symbols bounded invariants).endHolds item runtime allowed outcome) :
+    EndPost program f item.1 item.2 allowed outcome := by
   cases outcome with
-  | zurueck next value =>
-      cases result : postFormula program f locals value with
-      | error cause => simp only [Goals.endHolds, contractGoals, result, Except.map, denotes] at valid
-      | ok post =>
-          have parts : post.val.denote (assignment next) ∧ invariants.formula.denote (assignment next) := by
-            simpa only [Goals.endHolds, contractGoals, result, Except.map, denotes, conj_denote] using valid
-          exact ⟨(post.property old next).mp parts.1, fun item member owed =>
-            (invariants.correct next).mp parts.2 item (List.mem_filter.mpr ⟨member, owed⟩)⟩
-  | why next reason =>
-      exact fun item member owed =>
-        (invariants.correct next).mp valid item (List.mem_filter.mpr ⟨member, owed⟩)
+  | zurueck world value =>
+      change EnsAmRueck program f item.1 world item.2
+        (envResult (D.erg f) (ergEnv (D.erg f) value .nil)) ∧ InvAmRueck program f world at valid
+      exact ⟨(congrArg (EnsAmRueck program f item.1 world item.2)
+        (envResult_ergEnv (D.erg f) value)).mp valid.1, valid.2⟩
+  | why world reason =>
+      exact fun name member owed => (invariants.correct world).mp valid name (List.mem_filter.mpr ⟨member, owed⟩)
   | leave h _ _ => cases h
   | next h _ _ => cases h
-  | logik error => exact valid
-  | hardware error => trivial
+  | logik _ => exact valid
+  | hardware _ => trivial
 
-/-- Name the dependent post-translation match once so proof certificates and
-    the executable gate share the same matcher constant. This checks syntax
-    only; postcondition truth is still decided by the unchanged closed VC. -/
-def checkPostFormula (program : Programm D) (f : D.Fn) (locals : Env D (D.params f))
-    (value : ErgVal D (D.erg f)) :
-    Except Frag.Refusal (PLift (∃ post, postFormula program f locals value = .ok post)) :=
-  match postFormula program f locals value with
-  | .error cause => .error cause
-  | .ok post => .ok ⟨⟨post, rfl⟩⟩
+def entryVC (symbols : SymEnv D Nat Γ) (precondition : LProp (Key D Nat)) (postcondition : LProp (Key D Nat)) : LProp (Key D Nat) :=
+  let body := .imp (environmentBounds symbols) (.imp precondition postcondition)
+  .imp (memoryFacts body) body
 
-/-- Certify support for every decoded result. Literal truth has one uniform
-    certificate, independent of the result's range; other posts retain their
-    complete support check until their symbolic representation is available. -/
-def checkPostFormulas (program : Programm D) (budget : Nat) (f : D.Fn)
-    (locals : Env D (D.params f)) :
-    Except Frag.Refusal (PLift (∀ value, ∃ post, postFormula program f locals value = .ok post)) :=
-  match source : program.ensures f with
-  | .tru => .ok ⟨fun value => by
-      have uniform := postFormula_true_map program f locals value source
-      cases result : postFormula program f locals value with
-      | error cause => rw [result] at uniform; cases uniform
-      | ok post => exact ⟨post, by first | exact result | rfl⟩⟩
-  | _ => do
-      let domain ← results (D := D) budget (D.erg f)
-      let posts ← collect domain.values
-        (fun value => ∃ post, postFormula program f locals value = .ok post)
-        (checkPostFormula program f locals)
-      return ⟨fun value => posts.down value (domain.complete value)⟩
-
-/-- Type facts, the caller requires and its accumulated WP form the closed
-    arithmetic VC. No semantic truth proof is submitted to this procedure. -/
-def checkEnvironment (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
+/-- One open symbolic VC; no integer input or result is decoded into cases. -/
+def checkEnvironment (program : Programm D) (S : SperrInv D)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (policy : CallPolicy program (entryContext symbols bounded))
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
-    (f : D.Fn) (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
-    (locals : Env D (D.params f)) :
-    Except Frag.Refusal (PLift (∀ (runtime : Runtime program (fun _ => []) S) world allowed,
-      HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
-      runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals)) := do
-  let requires ← translate (program.requires f) locals
-  let _ ← checkPostFormulas program budget.expansion f locals
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f))) :
+    Except Frag.Refusal (PLift (∀ valuation item, symbols.Realizes valuation item.1 item.2 →
+      ∀ (runtime : Runtime program (fun _ => []) S) allowed,
+      HandlerSafe (policy.semantic item) runtime allowed → ReqAmEintritt program f item.1 item.2 →
+      runtime.wpE (program.rumpf f) (EndPost program f item.1 item.2 allowed) item.1 item.2)) := do
+  let _ ← currentOnly (program.ensures f)
+  let requires ← Invarianten.Frag.Symbolic.translate (program.requires f) symbols
   let compiled ← ending policy (lockFormula S sources) budget hint budget.depth
-    (program.rumpf f) locals (contractGoals program f locals invariants)
-  if accepted : decideB (close (writerMatrix requires.payload .tru compiled.formula)) (close_closed (writerMatrix requires.payload .tru compiled.formula)) = true then
-    return ⟨fun runtime world allowed safe entry => by
-      have closed := (lower_denote _ (assignment world)).mp
-        (close_sound _ accepted (assignment world))
-      have implication := (lower_denote _ (assignment world)).mp
-        ((quoteQF_denote _ _).mp (closed (typeFacts_sound _ world)))
-      have ready := (quoteQF_denote _ _).mp (implication ⟨(requires.bool_iff world).mp entry, trivial⟩)
-      have outcome := compiled.sound runtime world ready allowed safe
-      exact contractGoals_sound program f locals invariants world allowed _ outcome⟩
-  -- A sufficient WP can contain call havoc and other overapproximations.
-  -- Falsity of that WP is not evidence of a source execution violating its
-  -- contract. Only the direct implication checker reports counterexamples.
-  else .error (.unsupported ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-    "; parameters = " ++ reprStr (environmentValues locals)))
+    (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants)
+  let body : LProp (Key D Nat) := .imp (environmentBounds symbols) (.imp requires.payload compiled.formula)
+  let matrix := entryVC symbols requires.payload compiled.formula
+  if accepted : decideB (close (lower matrix)) (close_closed (lower matrix)) = true then
+    return ⟨fun valuation item realized runtime allowed safe entry => by
+      have valid := (lower_denote matrix (values valuation item.1)).mp
+        (close_sound (lower matrix) accepted (values valuation item.1))
+      have facts := memoryFacts_sound body valuation item.1
+      have ready := valid facts (environmentBounds_sound symbols valuation item.1 item.2 realized)
+        ((requires.bool_iff valuation item.1 item.2 realized).mp entry)
+      exact contractGoals_sound program f symbols bounded invariants item runtime allowed _
+        (compiled.sound valuation item realized runtime item.1 ready item.2 realized allowed safe)⟩
+  else .error (.unsupported "outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation")
 
-/-- Check every decoded parameter environment in a complete budgeted domain. -/
-def checkExecution (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
+/-- Finite Boolean/capability templates cover every actual typed parameter
+    environment; integer parameters each occupy one immutable observation. -/
+def checkExecution (program : Programm D) (S : SperrInv D)
     (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
-    Except Frag.Refusal (PLift (CheckedExecution (S := S) policy f)) := do
+    Except Frag.Refusal (PLift (CheckedExecution (S := S) (requiresObligation program) f)) := do
+  let _ ← currentOnly (program.ensures f)
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
-  let domain ← environments (D := D) budget.expansion (D.params f)
+  let domain ← parameters (D := D) budget.expansion 0 (D.params f)
   if argumentSpecializations budget.specializations (D.params f) *
       endSpecializations program (uniformPost program f) budget.expansion budget.specializations
         (program.rumpf f) > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
   else pure ()
-  let checked ← collect domain.values
-    (fun locals => ∀ (runtime : Runtime program (fun _ => []) S) world allowed,
-      HandlerSafe policy runtime allowed → ReqAmEintritt program f world locals →
-      runtime.wpE (program.rumpf f) (EndPost program f world locals allowed) world locals)
-    (checkEnvironment program S policy sources budget hint f invariants)
-  return ⟨fun locals => checked.down locals (domain.complete locals)⟩
+  let checked ← collect domain.templates.attach _ (fun entry =>
+    checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
+      (requiresPolicy program _) sources budget hint invariants)
+  return ⟨fun locals runtime world allowed safe required => by
+    obtain ⟨symbols, member, valuation, realized, _⟩ := domain.cover world locals (fun _ => 0)
+    exact (checked.down ⟨symbols, member⟩ (List.mem_attach _ _)) valuation (world, locals) realized
+      runtime allowed safe required⟩
 
 end Gabbro.Grammatik.Vertraege.Pruefer

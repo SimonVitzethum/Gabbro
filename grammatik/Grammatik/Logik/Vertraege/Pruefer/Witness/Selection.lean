@@ -10,85 +10,6 @@ open Invarianten Invarianten.Frag Invarianten.Elim Invarianten.Elim.Korrekt Inva
 
 variable {D : Deklaration}
 
-/-- Prove the actual generated branch VC symbolically, without replaying
-    integer elimination in the kernel. This lemma changes no decision gate. -/
-theorem freshImplication_valid (type : Ty) (value : Wert D type)
-    (guard : LProp (Observation D)) (post : QF (Observation D))
-    (values : Assignment (Observation D))
-    (valid : guard.denote values → post.denote values) :
-    (freshImplication type value guard post).denote values := by
-  apply (dropLocalQF_denote _ values).mpr
-  apply (lower_denote _ _).mpr
-  intro code _ selected
-  have projection :
-      (fun key => (Assignment.bind (dropBase values) none code) (some key)) = values := by
-    funext key
-    simp only [Assignment.bind, reduceCtorEq, ↓reduceIte, dropBase]
-  have present := (lower_denote _ _).mp
-    ((liftLocalQF_denote _ _).mp ((quoteQF_denote _ _).mp selected))
-  rw [projection] at present
-  apply (quoteQF_denote _ _).mpr
-  apply (liftLocalQF_denote _ _).mpr
-  rw [projection]
-  exact valid present
-
-variable {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
-  {Γ : Ctx} {Λ : List (Res D)} {type : Ty}
-
-/-- Balanced proof composition over the actual branch generator. Its inputs
-    certify successful translation and validity of each generated implication. -/
-theorem localBranches_valid (items : List (Wert D type))
-    (expression : Expr D Γ Λ type) (locals : Env D Γ)
-    (target : Wert D type → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Frag.Refusal (Condition (target value)))
-    (premise : Assignment (Observation D) → Prop)
-    (valid : ∀ value, ∃ relation head,
-      localEquality expression locals value = .ok relation ∧ compile value = .ok head ∧
-      ∀ values, premise values → relation.val.denote values → head.formula.denote values) :
-    ∃ result, localBranches items expression locals target compile = .ok result ∧
-      ∀ values, premise values → result.formula.denote values := by
-  induction items with
-  | nil => exact ⟨_, rfl, fun _ _ => trivial⟩
-  | cons value items ih =>
-      obtain ⟨relation, head, hrelation, hhead, hvalid⟩ := valid value
-      obtain ⟨tail, htail, hvalidTail⟩ := ih
-      cases result : localBranches (value :: items) expression locals target compile with
-      | error cause =>
-          simp only [localBranches, hrelation, hhead, htail, bind, Except.bind, pure, Except.pure, reduceCtorEq] at result
-      | ok out =>
-          refine ⟨out, rfl, ?_⟩
-          have shape : out.formula = conj (freshImplication type value relation.val head.formula) tail.formula := by
-            simp only [localBranches, hrelation, hhead, htail, bind, Except.bind, pure, Except.pure] at result
-            exact (congrArg Condition.formula (Except.ok.inj result)).symm
-          intro values ready
-          rw [shape, conj_denote]
-          exact ⟨freshImplication_valid type value relation.val head.formula values
-            (hvalid values ready), hvalidTail values ready⟩
-
-/-- Lift the branch certificate through the actual complete typed domain. -/
-theorem localSelect_valid (budget : Nat)
-    (expression : Expr D Γ Λ type) (locals : Env D Γ)
-    (target : Wert D type → Runtime program checked S → World D → Prop)
-    (compile : ∀ value, Except Frag.Refusal (Condition (target value)))
-    (domain : LocalDomain D type) (hdomain : localDomain budget type = .ok domain)
-    (premise : Assignment (Observation D) → Prop)
-    (valid : ∀ value, ∃ relation head,
-      localEquality expression locals value = .ok relation ∧ compile value = .ok head ∧
-      ∀ values, premise values → relation.val.denote values → head.formula.denote values) :
-    ∃ result, localSelect budget expression locals target compile = .ok result ∧
-      ∀ values, premise values → result.formula.denote values := by
-  obtain ⟨pre, hpre, hvalid⟩ := localBranches_valid domain.values expression locals target compile premise valid
-  cases result : localSelect budget expression locals target compile with
-  | error cause =>
-      simp only [localSelect, hdomain, hpre, bind, Except.bind, pure, Except.pure, reduceCtorEq] at result
-  | ok out =>
-      refine ⟨out, rfl, ?_⟩
-      have shape : out.formula = pre.formula := by
-        simp only [localSelect, hdomain, hpre, bind, Except.bind, pure, Except.pure] at result
-        exact (congrArg Condition.formula (Except.ok.inj result)).symm
-      rw [shape]
-      exact hvalid
-
 /-- Compose successful proof-producing checks without normalizing their proofs. -/
 theorem collect_success {α : Type} (items : List α) (property : α → Prop)
     (check : ∀ item, Except Frag.Refusal (PLift (property item)))
@@ -105,79 +26,72 @@ theorem collect_success {α : Type} (items : List α) (property : α → Prop)
             pure, Except.pure, reduceCtorEq] at result
       | ok out => exact ⟨out, rfl⟩
 
-/-- Replay successful syntax/compilation results and a proved actual VC decision.
-    The checker still computes all of these results; this is an off-path proof
-    rule for its Bool, with no semantic proof supplied to the executable gate. -/
-theorem environment_success (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
-    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
-    (hint : Option (QF (Observation D))) (f : D.Fn)
-    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
-    (locals : Env D (D.params f))
-    (entry : Encoded D .bool (fun world => eval world (program.requires f) world locals))
-    (hentry : translate (program.requires f) locals = .ok entry)
-    (domain : Results D (D.erg f)) (hdomain : results (D := D) budget.expansion (D.erg f) = .ok domain)
-    (posts : PLift (∀ value ∈ domain.values, ∃ post, postFormula program f locals value = .ok post))
-    (hposts : Invarianten.Pruefer.collect domain.values
-      (fun value => ∃ post, postFormula program f locals value = .ok post)
-      (checkPostFormula program f locals) = .ok posts)
-    (compiled : Vertraege.Pruefer.EndCondition (S := S) policy (program.rumpf f) locals
-      (contractGoals program f locals invariants))
-    (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
-      (program.rumpf f) locals (contractGoals program f locals invariants) = .ok compiled)
-    (decided : decideB (close (writerMatrix entry.payload .tru compiled.formula))
-      (close_closed (writerMatrix entry.payload .tru compiled.formula)) = true) :
-    (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true := by
-  have supported : (checkPostFormulas program budget.expansion f locals).toOption.isSome = true := by
-    unfold checkPostFormulas
-    split
-    · rfl
-    · rw [hdomain]
-      dsimp only [bind, Except.bind]
-      rw [hposts]
-      rfl
-  cases postResult : checkPostFormulas program budget.expansion f locals with
-  | error cause => rw [postResult] at supported; cases supported
-  | ok _ =>
-    unfold Vertraege.Pruefer.checkEnvironment
-    rw [hentry]
-    dsimp only [bind, Except.bind]
-    rw [postResult]
-    dsimp only [bind, Except.bind]
-    rw [hcompiled]
-    dsimp only [bind, Except.bind]
-    split
-    · rfl
-    · rename_i refused
-      exact False.elim (refused decided)
-
 theorem success_of_isSome {α ε : Type} (result : Except ε α)
     (ready : result.toOption.isSome = true) : ∃ value, result = .ok value := by
   cases result with
   | error cause => cases ready
   | ok value => exact ⟨value, rfl⟩
 
-/-- The complete parameter traversal uses the same checked environment results. -/
-theorem execution_success (program : Programm D) (S : SperrInv D) (policy : CallPolicy program)
+open Invarianten.Frag.Symbolic Symbolic
+
+/-- Off-path proof rule for the actual symbolic decision gate. The executable
+    checker still computes the source translation, compiler and Cooper result. -/
+theorem environment_success (program : Programm D) (S : SperrInv D)
+    (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
+    (policy : CallPolicy program (entryContext symbols bounded))
+    (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D)))
+    (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
+    (supported : (currentOnly (program.ensures f)).toOption.isSome = true)
+    (entry : Encoding symbols .bool (fun world actual => eval world (program.requires f) world actual))
+    (hentry : Invarianten.Frag.Symbolic.translate (program.requires f) symbols = .ok entry)
+    (compiled : Symbolic.EndCondition (S := S) policy.semantic (program.rumpf f) symbols
+      (contractGoals program f symbols bounded invariants))
+    (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
+      (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants) = .ok compiled)
+    (decided : decideB (close (lower (entryVC symbols entry.payload compiled.formula)))
+      (close_closed _) = true) :
+    (Vertraege.Pruefer.checkEnvironment program S symbols bounded policy sources budget hint invariants).toOption.isSome = true := by
+  obtain ⟨support, hsupport⟩ := success_of_isSome _ supported
+  unfold Vertraege.Pruefer.checkEnvironment
+  rw [hsupport]
+  dsimp only [bind, Except.bind]
+  rw [hentry]
+  dsimp only [bind, Except.bind]
+  rw [hcompiled]
+  dsimp only [bind, Except.bind]
+  split
+  · rfl
+  · rename_i refused
+    exact False.elim (refused decided)
+
+theorem execution_success (program : Programm D) (S : SperrInv D)
     (sources : Invarianten.Pruefer.LockSources S) (budget : VCBudget)
     (hint : Option (QF (Observation D))) (f : D.Fn)
+    (supported : (currentOnly (program.ensures f)).toOption.isSome = true)
     (invariants : InvariantFormula program (D.invs.filter (schuldet f)))
     (hinvariants : invariantFormula program (D.invs.filter (schuldet f)) = .ok invariants)
-    (domain : Invarianten.Pruefer.Environments D (D.params f))
-    (hdomain : Invarianten.Pruefer.environments (D := D) budget.expansion (D.params f) = .ok domain)
+    (domain : Parameters D 0 (D.params f))
+    (hdomain : parameters (D := D) budget.expansion 0 (D.params f) = .ok domain)
     (withinBudget : argumentSpecializations budget.specializations (D.params f) *
       endSpecializations program (uniformPost program f) budget.expansion budget.specializations
         (program.rumpf f) ≤ budget.specializations)
-    (ready : ∀ locals, (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants locals).toOption.isSome = true) :
-    (checkExecution program S policy sources budget hint f).toOption.isSome = true := by
-  obtain ⟨checked, hchecked⟩ := collect_success domain.values
-    (fun locals => CheckedEnvironment (S := S) policy f locals)
-    (Vertraege.Pruefer.checkEnvironment program S policy sources budget hint f invariants)
-    (fun locals => success_of_isSome _ (ready locals))
+    (ready : ∀ entry : { symbols // symbols ∈ domain.templates },
+      (Vertraege.Pruefer.checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
+        (requiresPolicy program _) sources budget hint invariants).toOption.isSome = true) :
+    (checkExecution program S sources budget hint f).toOption.isSome = true := by
+  obtain ⟨support, hsupport⟩ := success_of_isSome _ supported
+  obtain ⟨checked, hchecked⟩ := collect_success domain.templates.attach _
+    (fun entry => Vertraege.Pruefer.checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
+      (requiresPolicy program _) sources budget hint invariants)
+    (fun entry => success_of_isSome _ (ready entry))
   unfold checkExecution
-  rw [hinvariants, hdomain]
+  rw [hsupport]
+  dsimp only [bind, Except.bind]
+  rw [hinvariants]
+  dsimp only [bind, Except.bind]
+  rw [hdomain]
   dsimp only [bind, Except.bind]
   simp only [Nat.not_lt.mpr withinBudget, ↓reduceIte, pure, Except.pure, bind, Except.bind]
-  delta CheckedEnvironment at hchecked
   rw [hchecked]
   rfl
 
@@ -188,7 +102,7 @@ theorem function_success (program : Programm D) (S : SperrInv D)
     (hint : Option (QF (Observation D))) (f : D.Fn)
     (basic : checkBasicFunction program S sources budget f = none)
     (replay : (Invarianten.Pruefer.atomicReplay? program f).isSome = true)
-    (execution : (checkExecution program S (requiresPolicy program) sources budget hint f).toOption.isSome = true) :
+    (execution : (checkExecution program S sources budget hint f).toOption.isSome = true) :
     (checkFunction program S sources budget hint f).toOption.isSome = true := by
   obtain ⟨checked, hchecked⟩ := success_of_isSome _ execution
   cases h : Invarianten.Pruefer.atomicReplay? program f with

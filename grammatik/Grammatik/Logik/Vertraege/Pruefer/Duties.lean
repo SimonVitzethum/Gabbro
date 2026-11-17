@@ -34,7 +34,7 @@ theorem respectsGate
 
 /-- P20's atomic-freedom gate transports the stronger WP to the rely
     semantics. No atomic read is silently treated as a sequential read. -/
-theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
+theorem checkedEnvironment_atomic (policy : CallObligation program) (f : D.Fn)
     (locals : Env D (D.params f)) (checked : CheckedEnvironment (S := S) policy f locals) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
     (O : Orakel D) (locality : RegLokal O) (passes : Nat)
@@ -54,7 +54,7 @@ theorem checkedEnvironment_atomic (policy : CallPolicy program) (f : D.Fn)
   rw [replay S O locality U A passes calls shared atomic subset]
   exact valid
 
-theorem checkedExecution_atomic (policy : CallPolicy program) (f : D.Fn)
+theorem checkedExecution_atomic (policy : CallObligation program) (f : D.Fn)
     (checked : CheckedExecution (S := S) policy f) (replay : AtomicReplay program f)
     (shared : D.Tab ⊕ D.Glob → Prop) (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
     (O : Orakel D) (locality : RegLokal O) (passes : Nat)
@@ -78,10 +78,10 @@ def ContractDuties (program : Programm D) (S : SperrInv D) (f : D.Fn) : Prop :=
       InvGutSA program passes Q S shared f ∧ InvGutGrundA program passes Q S shared f
 
 theorem contractDuties_of_execution (f : D.Fn)
-    (checked : CheckedExecution (S := S) (requiresPolicy program) f)
+    (checked : CheckedExecution (S := S) (requiresObligation program) f)
     (replay : AtomicReplay program f) : ContractDuties program S f := by
   intro passes Q shared subset
-  have run := checkedExecution_atomic (requiresPolicy program) f checked replay shared subset
+  have run := checkedExecution_atomic (requiresObligation program) f checked replay shared subset
   refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
   · intro O frame locality hardware U havoc A atomic R respects noPre world locals requires
     constructor
@@ -162,7 +162,7 @@ def checkFunction (program : Programm D) (S : SperrInv D) (sources : LockSources
   | some checked => .ok checked
   | none => do
     if let some replay := atomicReplay? program f then
-      let execution ← checkExecution program S (requiresPolicy program) sources budget hint f
+      let execution ← checkExecution program S sources budget hint f
       return ⟨contractDuties_of_execution f execution.down replay.down⟩
     else .error (.unsupported "contract body reads atomic memory outside the checked VC fragment")
 

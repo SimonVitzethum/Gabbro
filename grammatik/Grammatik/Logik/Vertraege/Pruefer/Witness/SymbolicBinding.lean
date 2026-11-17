@@ -64,17 +64,17 @@ def goals : Pruefer.Symbolic.Goals (program := program) (S := SperrInv.leer decl
   returned := post
   reason := Continuation.truth context
 
-def candidate : Except Frag.Refusal (Pruefer.Symbolic.EndCondition (requiresPolicy program) body symbols goals) :=
+def candidate : Except Frag.Refusal (Pruefer.Symbolic.EndCondition (fun _ => requiresObligation program) body symbols goals) :=
   bindEndCondition (V := vertragVon declaration ()) (l := false)
-  (requiresPolicy program) symbols SymbolicWitness.bounded_zeuge initializer tailCode goals
+  (fun _ => requiresObligation program) symbols SymbolicWitness.bounded_zeuge initializer tailCode goals
   (fun _more larger symbol bounded =>
     retEndCondition (V := vertragVon declaration ()) (l := false)
-      (requiresPolicy program) (.cons symbol symbols)
+      (fun _ => requiresObligation program) (.cons symbol symbols)
       ⟨bounded, symbols.bounded_mono SymbolicWitness.bounded_zeuge larger⟩
       returned (List.Perm.refl _) ((goals.weaken larger).shrink (.int 0 10)))
 
 theorem candidate_present_zeuge : candidate.toOption.isSome = true := by rfl
-def certificate : Pruefer.Symbolic.EndCondition (requiresPolicy program) body symbols goals :=
+def certificate : Pruefer.Symbolic.EndCondition (fun _ => requiresObligation program) body symbols goals :=
   candidate.toOption.get candidate_present_zeuge
 
 def inputBounds : Frag.LProp (Key declaration Nat) :=
@@ -119,7 +119,7 @@ theorem post_correspondence_zeuge (entry : Env declaration [u32])
     typed u32 parameter, memory world and admitted runtime. No Env is enumerated. -/
 theorem runtime_binding_wp_zeuge (runtime : VC.Runtime program (fun _ => []) (SperrInv.leer declaration))
     (world : World declaration) (actual : Env declaration [u32]) (allowed : Logik declaration → Prop)
-    (safe : HandlerSafe (requiresPolicy program) runtime allowed) :
+    (safe : HandlerSafe (requiresObligation program) runtime allowed) :
     runtime.wpE body (EndPost program () world actual allowed) world actual := by
   let valuation : Frag.Assignment Nat := fun _ => (actual.get .here).n
   have realized : symbols.Realizes valuation world actual := by
@@ -134,6 +134,61 @@ theorem runtime_binding_wp_zeuge (runtime : VC.Runtime program (fun _ => []) (Sp
       quantified_binding_vc_zeuge (values valuation world))
   have ready := certificate.sound valuation actual frozen runtime world (closed bounds) actual realized allowed safe
   exact post_correspondence_zeuge actual runtime world allowed _ ready
+
+open SelectionWitness Invarianten.VC
+
+def productionInvariants : InvariantFormula program (declaration.invs.filter (schuldet ())) :=
+  (invariantFormula program []).toOption.get (by rfl)
+
+def productionCompiled := ending (requiresPolicy program (entryContext symbols SymbolicWitness.bounded_zeuge))
+  (S := SperrInv.leer declaration) (Invarianten.Pruefer.lockFormula (SperrInv.leer declaration) (fun _ => none)) { expansion := 0 } none 128 body
+  symbols SymbolicWitness.bounded_zeuge (contractGoals program () symbols SymbolicWitness.bounded_zeuge productionInvariants)
+
+theorem productionCompiled_present : productionCompiled.toOption.isSome = true := by with_unfolding_all rfl
+
+def productionCertificate := productionCompiled.toOption.get productionCompiled_present
+
+theorem productionCompiled_result : productionCompiled = .ok productionCertificate := by with_unfolding_all rfl
+
+theorem production_vc_valid (values : Frag.Assignment (Key declaration Nat)) :
+    (entryVC symbols .tru productionCertificate.formula).denote values := by
+  intro _ input _
+  change (0 ≤ values (.inr 0) ∧ values (.inr 0) ≤ 2 ^ 32 - 1) ∧ True at input
+  with_unfolding_all
+    change ∀ value : Int, ((0 ≤ value ∧ value ≤ 10) ∧ value = values (.inl (.glob false))) →
+      ∀ returned : Int, ((0 ≤ returned ∧ returned ≤ 2 ^ 32 - 1) ∧ returned = value) →
+        (returned ≤ values (.inr 0) + values (.inl (.glob false)) ∧ True)
+    intro value guarded returned selected
+    exact ⟨by omega, trivial⟩
+
+attribute [local irreducible] entryVC productionCertificate
+
+theorem production_decided :
+    decideB (VC.close (VC.lower (entryVC symbols .tru productionCertificate.formula)))
+      (VC.close_closed _) = true := by
+  apply (VC.close_decide_true_iff (VC.lower (entryVC symbols .tru productionCertificate.formula))).mpr
+  intro values
+  exact (VC.lower_denote (entryVC symbols .tru productionCertificate.formula) values).mpr (production_vc_valid values)
+
+/-- The production entry gate accepts the real binder/return program with a
+    nonliteral, parameter-dependent post and zero enumeration budget. -/
+theorem production_u32_acceptance_zeuge :
+    (checkExecution program (SperrInv.leer declaration) (fun _ => none)
+      { expansion := 0 } none ()).toOption.isSome = true := by
+  apply execution_success program (SperrInv.leer declaration) (fun _ => none) { expansion := 0 } none ()
+    (by rfl) productionInvariants (by rfl)
+    ((parameters (D := declaration) 0 0 [u32]).toOption.get (by rfl)) (by rfl)
+  · change 1 ≤ 16384
+    decide
+  · intro entry
+    rcases entry with ⟨selected, member⟩
+    change selected ∈ [symbols] at member
+    have same := List.mem_singleton.mp member
+    subst selected
+    let requirement := (Invarianten.Frag.Symbolic.translate (program.requires ()) symbols).toOption.get (by rfl)
+    exact environment_success (D := declaration) (f := ()) (next := 1) program (SperrInv.leer declaration) symbols SymbolicWitness.bounded_zeuge
+      (requiresPolicy program _) (fun _ => none) { expansion := 0 } none productionInvariants (by rfl)
+      requirement (by rfl) productionCertificate productionCompiled_result production_decided
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 

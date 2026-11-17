@@ -260,12 +260,12 @@ def resultTarget (value : ErgVal declaration (some u32)) (entry : Env declaratio
     (_ : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) (_ : World declaration) : Prop :=
   value.n = (entry.get .here).n
 
-def resultCompiler : ResultCompiler frozenContext (some u32) resultTarget :=
+def resultCompiler : ResultCompiler frozenContext symbols (some u32) (fun _ => resultTarget) :=
   fun _ _ resultSymbols _ => do
     let encoded ← encodeValue (resultSymbols.get .here)
     return {
       formula := .eq encoded.val (.var (.inr 0))
-      sound := fun valuation entry present _ world valid value realized => by
+      sound := fun valuation entry present _ world valid _ _ value realized => by
         change symbols.Realizes valuation _ entry at present
         have input : valuation 0 = (entry.get .here).n := by cases entry; exact present.1
         have selected := resultSymbols.realizes_get (ergEnv (some u32) value .nil) valuation world .here realized
@@ -274,13 +274,13 @@ def resultCompiler : ResultCompiler frozenContext (some u32) resultTarget :=
         change encoded.val.denote (values valuation world) = valuation 0 at valid
         exact number.symm.trans (valid.trans input) }
 
-def resultCandidate := resultCondition symbols bounded_zeuge 0 (some u32)
-  (resultProgram.ensures ()) resultTarget resultCompiler
+def resultCandidate := resultCondition symbols bounded_zeuge symbols bounded_zeuge 0 (some u32)
+  (resultProgram.ensures ()) (fun _ => resultTarget) resultCompiler
 
 theorem result_present_zeuge : resultCandidate.toOption.isSome = true := by rfl
 def resultCertificate : Certificate frozenContext
     (fun valuation entry (runtime : VC.Runtime resultProgram (fun _ => []) (SperrInv.leer declaration)) world =>
-      ∀ old actual, symbols.Realizes valuation old actual → ∀ value,
+      ∀ old actual, symbols.Realizes valuation old actual → ∀ locals, symbols.Realizes valuation world locals → ∀ value,
       wahr? (eval old (resultProgram.ensures ()) world (ergEnv (some u32) value actual)) = true →
       resultTarget value entry runtime world) :=
   resultCandidate.toOption.get result_present_zeuge
@@ -302,6 +302,6 @@ theorem result_correspondence_zeuge
   resultCertificate.sound valuation actual realizes_zeuge runtime world
     ((VC.lower_denote resultCertificate.formula (values valuation world)).mp
       (VC.close_sound (VC.lower resultCertificate.formula) result_decides_zeuge (values valuation world)))
-    world actual realizes_zeuge seven rfl
+    world actual realizes_zeuge actual realizes_zeuge seven rfl
 
 end Gabbro.Grammatik.Vertraege.Pruefer.SymbolicWitness

@@ -25,6 +25,13 @@ theorem SymEnv.bounded_get (symbols : SymEnv D Nat Γ) (next : Nat)
   | here => cases symbols; exact bounded.1
   | there name ih => cases symbols; exact ih _ bounded.2
 
+theorem SymEnv.bounded_set (symbols : SymEnv D Nat Γ) (next : Nat) (bounded : symbols.Bounded next)
+    (name : Var Γ τ) (value : SymValue D Nat τ) (selected : value.Bounded next) :
+    (symbols.set name value).Bounded next := by
+  induction name with
+  | here => cases symbols; exact ⟨selected, bounded.2⟩
+  | there name ih => cases symbols; exact ⟨bounded.1, ih _ bounded.2 _ selected⟩
+
 theorem values_bind (valuation : Assignment Nat) (world : World D) (key : Nat) (value : Int) :
     values (valuation.bind key value) world = (values valuation world).bind (.inr key) value := by
   funext name
@@ -82,7 +89,7 @@ structure Context (A : Type) (next : Nat) where
     (∀ key, key < next → valuation key = other key) →
     (holds valuation item ↔ holds other item)
 
-def Context.weaken (context : Context A next) (larger : next ≤ more) : Context A more where
+abbrev Context.weaken (context : Context A next) (larger : next ≤ more) : Context A more where
   holds := context.holds
   stable := fun valuation other item agree => context.stable valuation other item
     (fun key inside => agree key (Nat.lt_of_lt_of_le inside larger))
@@ -110,6 +117,13 @@ def Certificate.map {program : Programm D} {checked : D.Fn → List D.Inv} {S : 
   formula := pre.formula
   sound := fun valuation item present runtime world valid =>
     implies valuation item runtime world (pre.sound valuation item present runtime world valid)
+
+def Certificate.weaken {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
+    {context : Context A next}
+    {target : Assignment Nat → A → Runtime program checked S → World D → Prop}
+    (pre : Certificate context target) (larger : next ≤ more) : Certificate (context.weaken larger) target where
+  formula := pre.formula
+  sound := pre.sound
 
 def Certificate.read {program : Programm D} {checked : D.Fn → List D.Inv} {S : SperrInv D}
     {context : Context A next}

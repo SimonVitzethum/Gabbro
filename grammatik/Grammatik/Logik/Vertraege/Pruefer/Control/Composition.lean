@@ -27,7 +27,7 @@ def returnCondition {context : Context A next} (symbols : SymEnv D Nat Γ)
           let pre ← post.encode more larger (.cons symbol .nil) ⟨valueBounded, trivial⟩
           return pre.map (fun _ _ _ _ ready _ _ value selected => ready (.cons value .nil) ⟨selected, trivial⟩))
 
-def retEndCondition (policy : CallPolicy program) {context : Context A next}
+def retEndCondition (policy : A → CallObligation program) {context : Context A next}
     {l : Bool} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
     (expression : ErgExpr D Γ Λ V.erg) (inventory : Λ.Perm V.ende)
     (goals : Goals (program := program) (S := S) context V Γ) :
@@ -41,7 +41,7 @@ def retEndCondition (policy : CallPolicy program) {context : Context A next}
 
 /-- The same certified scalar selection composes with the actual block WP.
     Scope shrinkage is proved against execBlockH, including early exits. -/
-def bindBlockCondition (policy : CallPolicy program) {context : Context A next}
+def bindBlockCondition (policy : A → CallObligation program) {context : Context A next}
     {l : Bool} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
     (expression : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
     (goals : Goals (program := program) (S := S) context V Γ)
@@ -49,7 +49,7 @@ def bindBlockCondition (policy : CallPolicy program) {context : Context A next}
       Except Frag.Refusal (BlockCondition policy rest (.cons symbol symbols) ((goals.weaken larger).shrink τ))) :
     Except Frag.Refusal (BlockCondition policy (.bind expression rest) symbols goals) := do
   let pre ← selectValue symbols bounded expression
-    (fun actual value item runtime world => ∀ allowed, HandlerSafe policy runtime allowed →
+    (fun actual value item runtime world => ∀ allowed, HandlerSafe (policy item) runtime allowed →
       runtime.wpB rest ((goals.shrink τ).holds item runtime allowed) world (.cons value actual))
     (fun more larger symbol valueBounded => do
       let pre ← compile more larger symbol valueBounded
@@ -64,7 +64,7 @@ def bindBlockCondition (policy : CallPolicy program) {context : Context A next}
 
 /-- End blocks use the identical symbolic selection and the model's own
     end-output shrink operation. No second syntax walker is introduced. -/
-def bindEndCondition (policy : CallPolicy program) {context : Context A next}
+def bindEndCondition (policy : A → CallObligation program) {context : Context A next}
     {l : Bool} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
     (expression : Expr D Γ Λ τ) (rest : Endblock D V l (τ :: Γ) Λ)
     (goals : Goals (program := program) (S := S) context V Γ)
@@ -72,7 +72,7 @@ def bindEndCondition (policy : CallPolicy program) {context : Context A next}
       Except Frag.Refusal (EndCondition policy rest (.cons symbol symbols) ((goals.weaken larger).shrink τ))) :
     Except Frag.Refusal (EndCondition policy (.bind expression rest) symbols goals) := do
   let pre ← selectValue symbols bounded expression
-    (fun actual value item runtime world => ∀ allowed, HandlerSafe policy runtime allowed →
+    (fun actual value item runtime world => ∀ allowed, HandlerSafe (policy item) runtime allowed →
       runtime.wpE rest ((goals.shrink τ).endHolds item runtime allowed) world (.cons value actual))
     (fun more larger symbol valueBounded => do
       let pre ← compile more larger symbol valueBounded
