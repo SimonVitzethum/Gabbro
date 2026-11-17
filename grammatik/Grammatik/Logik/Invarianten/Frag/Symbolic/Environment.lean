@@ -42,27 +42,64 @@ theorem values_extend (valuation : Assignment α) (world : World D) (value : Int
 inductive SymValue (D : Deklaration) (α : Type) : Ty → Type where
   | known (value : Wert D τ) : SymValue D α τ
   | integer (term : LTerm α) : SymValue D α (.int lo hi)
+  | product {name : Nat} {fields : List Ty}
+      (components : ∀ {kind}, FieldAt fields kind → SymValue D α kind) :
+      SymValue D α (.prod name fields)
 
 def SymValue.Realizes (valuation : Assignment α) (world : World D) :
     SymValue D α τ → Wert D τ → Prop
   | .known expected, actual => expected = actual
   | .integer term, actual => term.denote valuation = actual.n
+  | .product components, actual => ∀ {kind} (field : FieldAt _ kind),
+      (components field).Realizes valuation world (prodGetW field actual)
 
 def SymValue.lift : SymValue D α τ → SymValue D (Option α) τ
   | .known value => .known value
   | .integer term => .integer (renameTerm some term)
+  | .product components => .product (fun field => (components field).lift)
 
 theorem SymValue.realizes_lift (symbol : SymValue D α τ) (valuation : Assignment α)
     (world : World D) (fresh : Int) (actual : Wert D τ) :
     symbol.lift.Realizes (extend valuation fresh) world actual ↔
       symbol.Realizes valuation world actual := by
-  cases symbol with
+  induction symbol with
   | known value => rfl
   | integer term =>
       simp only [SymValue.lift, SymValue.Realizes, renameTerm_denote]
       rfl
+  | product components ih =>
+      constructor <;> intro ready kind field
+      · exact (ih field _).mp (ready field)
+      · exact (ih field _).mpr (ready field)
 
-/-- An environment contains expressions, never an enumeration of a scalar
+/-- A component retains its own observation keys and actual typed value. -/
+def SymValue.field (symbol : SymValue D α (.prod name fields)) (position : FieldAt fields kind) :
+    SymValue D α kind :=
+  match symbol with
+  | .known value => .known (prodGetW position value)
+  | .product components => components position
+
+theorem SymValue.realizes_field (symbol : SymValue D α (.prod name fields))
+    (position : FieldAt fields kind) (valuation : Assignment α) (world : World D)
+    (actual : Wert D (.prod name fields)) (realized : symbol.Realizes valuation world actual) :
+    (symbol.field position).Realizes valuation world (prodGetW position actual) := by
+  cases symbol with
+  | known value => change value = actual at realized; rw [← realized]; rfl
+  | product components => exact realized position
+
+theorem SymValue.realizes_world (symbol : SymValue D α kind) (valuation : Assignment α)
+    (world after : World D) (actual : Wert D kind) :
+    symbol.Realizes valuation world actual ↔ symbol.Realizes valuation after actual := by
+  induction symbol with
+  | known value => rfl
+  | integer term => rfl
+  | product components ih =>
+      constructor <;> intro ready kind field
+      · exact (ih field _).mp (ready field)
+      · exact (ih field _).mpr (ready field)
+
+/-- An environment
+ contains expressions, never an enumeration of a scalar
     range. Its relation is deliberately about the actual typed runtime Env. -/
 inductive SymEnv (D : Deklaration) (α : Type) : Ctx → Type where
   | nil : SymEnv D α []
@@ -98,7 +135,7 @@ theorem SymEnv.realizes_world (symbols : SymEnv D α Γ) (actual : Env D Γ)
   | nil => cases actual; rfl
   | cons value rest ih =>
       cases actual
-      cases value <;> exact and_congr Iff.rfl (ih _)
+      exact and_congr (value.realizes_world valuation world after _) (ih _)
 
 theorem SymEnv.realizes_ofEnv (actual : Env D Γ) (valuation : Assignment α) (world : World D) :
     (SymEnv.ofEnv actual).Realizes valuation world actual := by
@@ -153,7 +190,7 @@ def SymEnv.concrete? : (symbols : SymEnv D α Γ) → Option
     { actual : Env D Γ // ∀ valuation world runtime,
       symbols.Realizes valuation world runtime → runtime = actual }
   | .nil => some ⟨.nil, fun _ _ runtime _ => by cases runtime; rfl⟩
-  | .cons (.integer _) _ => none
+  | .cons (.integer _) _ | .cons (.product _) _ => none
   | .cons (.known value) rest => do
       let tail ← rest.concrete?
       return ⟨.cons value tail.val, fun valuation world runtime realized => by

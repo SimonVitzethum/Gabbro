@@ -97,12 +97,13 @@ def selectValue {context : Context A next} (symbols : SymEnv D Nat Γ)
     (target : Env D Γ → Wert D τ → A → VC.Runtime program (fun _ => []) S → World D → Prop)
     (compile : SelectCompiler context symbols τ target) :
     Except Frag.Refusal (SelectionCondition context symbols expression target) :=
-  match expression, target, compile with
-  | .var name, target, compile => do
-      let pre ← compile next (Nat.le_refl next) (symbols.get name) (symbols.bounded_get next bounded name)
+  match valueView? expression symbols with
+  | some view => do
+      let pre ← compile next (Nat.le_refl next) view.symbol (view.bounded next bounded)
       return pre.map (fun valuation _ _ world ready actual realized =>
-        ready actual realized (actual.get name) (symbols.realizes_get actual valuation world name realized))
-  | expression, target, compile =>
+        ready actual realized (eval world expression world actual)
+          (view.realizes valuation world world actual realized))
+  | none =>
     match knownValue? expression symbols with
     | some known => do
         let pre ← compile next (Nat.le_refl next) (.known known.val) trivial

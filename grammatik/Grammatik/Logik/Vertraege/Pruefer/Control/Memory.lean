@@ -21,6 +21,7 @@ def scalarTerm (symbol : SymValue D Nat τ) :
   | .integer term => ⟨renameTerm Sum.inr term, fun valuation world actual realized => by
       rw [renameTerm_denote]
       exact realized⟩
+  | .product _ => ⟨.konst 0, fun _ _ _ _ => rfl⟩
 
 theorem values_store_swap (valuation : Frag.Assignment Nat) (world after : World D)
     (next : Nat) (key : Frag.Observation D) (value : Int)

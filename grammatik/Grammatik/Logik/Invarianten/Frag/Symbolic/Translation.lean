@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Invarianten.Frag.Symbolic.Snapshot.Encoding
+public import Grammatik.Logik.Invarianten.Frag.Symbolic.Projection
 
 @[expose] public section
 
@@ -24,6 +25,7 @@ def encodeValue (symbol : SymValue D Nat τ) : Except Refusal
         change (renameTerm Sum.inr term).denote _ = _
         rw [renameTerm_denote]
         exact realized⟩
+  | .product _ => .error (.outsideFragment "product value needs a scalar component projection")
 
 def encodeVariable (symbols : SymEnv D Nat Γ) (name : Var Γ τ) :
     Except Refusal (Encoding symbols τ (fun _ actual => actual.get name)) := do
@@ -198,7 +200,16 @@ def translateSnapshot (names : List (Observation D)) (start : Nat) (expression :
             payload := encoded.payload
             correct := fun valuation old world actual frozen realized =>
               encoded.correct valuation old world (.cons index actual) frozen ⟨rfl, realized⟩ })
-  | other => Snapshot.concreteEncoding names start other symbols
+  | other =>
+      match valueView? other symbols with
+      | none => Snapshot.concreteEncoding names start other symbols
+      | some view => do
+          let encoded ← encodeValue view.symbol
+          return {
+            payload := encoded.val
+            correct := fun valuation old world actual _ realized =>
+              encoded.property valuation world (eval old other world actual)
+                (view.realizes valuation old world actual realized) }
 
 /-- Current-world clients use the same translator with an empty entry map. -/
 def translate (expression : Expr D Γ Λ τ) (symbols : SymEnv D Nat Γ) :

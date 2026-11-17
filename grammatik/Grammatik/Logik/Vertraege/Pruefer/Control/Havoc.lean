@@ -61,16 +61,44 @@ theorem havocFormula_sound (written : Observation D → Bool) (body : LProp (Key
           | true => exact False.elim (absent (List.mem_filter.mpr ⟨member, answer⟩))
         exact frame memory unchanged
 
+/-- Only the declared field list is traversed, never a field's value range. -/
+def fieldConjunction (fields : List Ty)
+    (formula : ∀ {kind}, FieldAt fields kind → LProp α) : LProp α :=
+  match fields with
+  | [] => .tru
+  | _ :: rest => .and (formula .head) (fieldConjunction rest (fun field => formula (.tail field)))
+
+theorem fieldConjunction_denote [DecidableEq α] (fields : List Ty)
+    (formula : ∀ {kind}, FieldAt fields kind → LProp α) (values : Assignment α) :
+    (fieldConjunction fields formula).denote values ↔ ∀ {kind} (field : FieldAt fields kind),
+      (formula field).denote values := by
+  induction fields with
+  | nil =>
+      constructor
+      · intro _ kind field; cases field
+      · intro _; trivial
+  | cons kind fields ih =>
+      change ((formula .head).denote values ∧ _) ↔ _
+      rw [ih]
+      constructor
+      · intro ready selected field
+        cases field with
+        | head => exact ready.1
+        | tail field => exact ready.2 field
+      · intro ready
+        exact ⟨ready .head, fun field => ready (.tail field)⟩
+
 def valueBounds (symbol : SymValue D Nat τ) : LProp (Key D Nat) :=
   match symbol with
   | .known _ => .tru
   | .integer (lo := lo) (hi := hi) term => .and
       (.le (.konst lo) (renameTerm Sum.inr term)) (.le (renameTerm Sum.inr term) (.konst hi))
+  | .product components => fieldConjunction _ (fun field => valueBounds (components field))
 
 theorem valueBounds_sound (symbol : SymValue D Nat τ) (valuation : Assignment Nat)
     (world : World D) (actual : Wert D τ) (realized : symbol.Realizes valuation world actual) :
     (valueBounds symbol).denote (values valuation world) := by
-  cases symbol with
+  induction symbol with
   | known value => trivial
   | integer term =>
       change _ ≤ (renameTerm Sum.inr term).denote _ ∧ (renameTerm Sum.inr term).denote _ ≤ _
@@ -78,6 +106,10 @@ theorem valueBounds_sound (symbol : SymValue D Nat τ) (valuation : Assignment N
       change _ ≤ term.denote valuation ∧ term.denote valuation ≤ _
       rw [realized]
       exact ⟨actual.lo_le, actual.le_hi⟩
+  | product components ih =>
+      apply (fieldConjunction_denote _ _ _).mpr
+      intro kind field
+      exact ih field _ (realized field)
 
 def environmentBounds : SymEnv D Nat Γ → LProp (Key D Nat)
   | .nil => .tru
