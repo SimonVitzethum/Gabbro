@@ -34,6 +34,13 @@ theorem success_of_isSome {α ε : Type} (result : Except ε α)
 
 open Invarianten.Frag.Symbolic Symbolic
 
+theorem map_success {α β ε : Type} (result : Except ε α) (convert : α → β)
+    (ready : result.toOption.isSome = true) : (result.map convert).toOption.isSome = true := by
+  cases result with
+  | error cause => cases ready
+  | ok value => rfl
+
+
 /-- Compose the actual entry gate with its scoped snapshot equations. -/
 theorem environment_at_success (program : Programm D) (S : SperrInv D)
     (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
@@ -47,21 +54,17 @@ theorem environment_at_success (program : Programm D) (S : SperrInv D)
       (contractGoals program f symbols bounded invariants snapshot))
     (hcompiled : ending policy (Invarianten.Pruefer.lockFormula S sources) budget hint budget.depth
       (program.rumpf f) symbols bounded (contractGoals program f symbols bounded invariants snapshot) = .ok compiled)
-    (decided : decideB (close (lower (entryVC symbols entry.payload (snapshotGuard snapshot compiled.formula))))
-      (close_closed _) = true) :
+    (decided : (environmentDecision snapshot.isSome
+      (entryVC symbols entry.payload (snapshotGuard snapshot compiled.formula))
+      ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
+        match D.params f with | [] => "; parameters = []" | _ => "")).toOption.isSome = true) :
     (checkEnvironmentAt program S symbols bounded snapshot policy sources budget hint invariants).toOption.isSome = true := by
   unfold checkEnvironmentAt
   rw [hentry]
   dsimp only [bind, Except.bind]
   rw [hcompiled]
   dsimp only [bind, Except.bind]
-  rw [Snapshot.rejectCounterexample_of_valid snapshot.isSome _ _ (lower_denote _)
-    ((lower_denote _ _).mp (close_sound _ decided (fun _ => 0)))]
-  dsimp only [bind, Except.bind]
-  split
-  · rfl
-  · rename_i refused
-    exact False.elim (refused decided)
+  exact map_success _ _ decided
 
 /-- Off-path proof rule for the actual symbolic decision gate. The executable
     checker still computes the source translation, compiler and Cooper result. -/
@@ -86,7 +89,7 @@ theorem environment_success (program : Programm D) (S : SperrInv D)
   rw [planned]
   dsimp only [bind, Except.bind]
   exact environment_at_success program S symbols bounded none policy sources budget hint invariants
-    entry hentry compiled hcompiled decided
+    entry hentry compiled hcompiled (environmentDecision_of_decided _ _ decided)
 
 /-- Compose a mathematically valid open VC with the actual Cooper gate.
     Witnesses need not normalize the decision procedure on their fixture. -/

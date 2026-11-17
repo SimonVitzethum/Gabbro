@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Compiler
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Entry
-public import Grammatik.Logik.Invarianten.Frag.Symbolic.Snapshot.Counterexample
+public import Grammatik.Logik.Invarianten.Frag.Symbolic.Snapshot.Decision
 
 @[expose] public section
 
@@ -88,6 +88,28 @@ def entryVC (symbols : SymEnv D Nat Γ) (precondition : LProp (Key D Nat)) (post
   let body := .imp (environmentBounds symbols) (.imp precondition postcondition)
   .imp (memoryFacts body) body
 
+/-- Preserve the numeric gate for snapshot-free contracts. Snapshot VCs close
+    their original support and use one explicitly metered Cooper execution. -/
+def environmentDecision [DecidableEq α] (snapshot : Bool) (matrix : LProp α) (reason : String) :
+    Except Frag.Refusal (PLift (∀ values, matrix.denote values)) :=
+  if snapshot then Snapshot.decide matrix 1000000 reason
+  else
+    let simplified := Snapshot.prepared matrix
+    let reduced := lower simplified.val
+    if accepted : decideB (close reduced) (close_closed reduced) = true then
+      .ok ⟨Snapshot.prepared_sound matrix ((lower_denote _ _).mp (close_sound reduced accepted (fun _ => 0)))⟩
+    else .error (.unsupported reason)
+
+theorem environmentDecision_of_decided [DecidableEq α] (matrix : LProp α) (reason : String)
+    (accepted : decideB (close (lower matrix)) (close_closed _) = true) :
+    (environmentDecision false matrix reason).toOption.isSome = true := by
+  have valid : ∀ values, matrix.denote values := fun values =>
+    (lower_denote _ _).mp (close_sound _ accepted values)
+  have normalized : decideB (close (lower (Snapshot.prepared matrix).val)) (close_closed _) = true :=
+    (close_decide_true_iff _).mpr (fun values => (lower_denote _ _).mpr (Snapshot.prepared_of_valid matrix valid values))
+  simp only [environmentDecision, Bool.false_eq_true, ↓reduceIte, normalized, ↓reduceDIte,
+    Except.toOption, Option.isSome_some]
+
 /-- One open symbolic VC; no integer input or result is decoded into cases. -/
 def checkEnvironmentAt (program : Programm D) (S : SperrInv D)
     (symbols : SymEnv D Nat (D.params f)) (bounded : symbols.Bounded next)
@@ -105,28 +127,20 @@ def checkEnvironmentAt (program : Programm D) (S : SperrInv D)
   let guarded := snapshotGuard snapshot compiled.formula
   let body : LProp (Key D Nat) := .imp (environmentBounds symbols) (.imp requires.payload guarded)
   let matrix := entryVC symbols requires.payload guarded
-  let reduced := lower matrix
-  let _ ← Snapshot.rejectCounterexample snapshot.isSome matrix reduced (lower_denote matrix)
-  if accepted : decideB (close reduced) (close_closed reduced) = true then
-    return ⟨fun valuation item present runtime allowed safe entry => by
-      have realized := entryContext_locals symbols bounded snapshot valuation item present
-      have valid := (lower_denote matrix (values valuation item.1)).mp
-        (close_sound reduced accepted (values valuation item.1))
-      have facts := memoryFacts_sound body valuation item.1
-      have ready := valid facts (environmentBounds_sound symbols valuation item.1 item.2 realized)
-        ((requires.bool_iff valuation item.1 item.2 realized).mp entry)
-      have compiledReady : compiled.formula.denote (values valuation item.1) := by
-        cases snapshot with
-        | none => exact ready
-        | some region => exact ready ((Snapshot.equations_denote region.names region.start valuation item.1).mpr present.2)
-      exact contractGoals_sound program f symbols bounded invariants snapshot item runtime allowed _
-        (compiled.sound valuation item present runtime item.1 compiledReady item.2 realized allowed safe)⟩
-  else
-    let reason := "outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-      match D.params f with | [] => "; parameters = []" | _ => ""
-    match snapshot with
-    | none => .error (.unsupported reason)
-    | some _ => .error (Snapshot.refusal matrix reduced (lower_denote matrix) reason)
+  let reason := "outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
+    match D.params f with | [] => "; parameters = []" | _ => ""
+  (environmentDecision snapshot.isSome matrix reason).map (fun checked => ⟨fun valuation item present runtime allowed safe entry => by
+    have realized := entryContext_locals symbols bounded snapshot valuation item present
+    have valid := checked.down (values valuation item.1)
+    have facts := memoryFacts_sound body valuation item.1
+    have ready := valid facts (environmentBounds_sound symbols valuation item.1 item.2 realized)
+      ((requires.bool_iff valuation item.1 item.2 realized).mp entry)
+    have compiledReady : compiled.formula.denote (values valuation item.1) := by
+      cases snapshot with
+      | none => exact ready
+      | some region => exact ready ((Snapshot.equations_denote region.names region.start valuation item.1).mpr present.2)
+    exact contractGoals_sound program f symbols bounded invariants snapshot item runtime allowed _
+      (compiled.sound valuation item present runtime item.1 compiledReady item.2 realized allowed safe)⟩)
 
 /-- Allocate entry keys once, before compiling the actual body. The no-snapshot
     case is the empty instance of the same production compiler and VC gate. -/

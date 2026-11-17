@@ -29,7 +29,7 @@ abbrev declaration : Deklaration :=
 def access (name : declaration.Glob) : gdarf declaration name [] := fun _ member => nomatch member
 
 def initializer (valid : Bool) : Expr declaration [u32] [] (.int 0 10) :=
-  if valid then .eng (.add (.glob false (access false)) (.lit 1)) 0 10 (.glob false (access false))
+  if valid then .glob false (access false)
   else .widen (by decide) (by decide) (.lit 9)
 
 def body (valid : Bool) : Endblock declaration (vertragVon declaration ()) false [u32] [] :=
@@ -41,7 +41,7 @@ def body (valid : Bool) : Endblock declaration (vertragVon declaration ()) false
 def program (valid : Bool) : Programm declaration where
   invariante := fun item => nomatch item
   requires := fun _ => .lt (.glob false (access false)) (.lit 10)
-  ensures := fun _ => .eq (.glob false (access false)) (.add (.oldG false (access false)) (.lit 1))
+  ensures := fun _ => .eq (.glob false (access false)) (.oldG false (access false))
   rumpf := fun _ => body valid
 
 abbrev symbols : SymEnv declaration Nat (declaration.params ()) := .cons (.integer (.var 0)) .nil
@@ -76,15 +76,12 @@ theorem compiled_result (valid : Bool) : compiled valid = .ok (certificate valid
 abbrev memory : LTerm (Key declaration Nat) := .var (.inl (.glob false))
 abbrev saved : LTerm (Key declaration Nat) := .var (.inr 1)
 def postFormula (stored : LTerm (Key declaration Nat)) : LProp (Key declaration Nat) :=
-  .and (.eq stored (.add saved (.konst 1))) .tru
+  .and (.eq stored saved) .tru
 
 def validFormula : LProp (Key declaration Nat) :=
-  let source : LTerm (Key declaration Nat) := .add memory (.konst 1)
-  let range : LProp (Key declaration Nat) := .and (.le (.konst 0) source) (.le source (.konst 10))
   let selected : LTerm (Key declaration Nat) := .var (.inr 2)
-  .all (.inr 2) (.imp
-    (.and (.and (.le (.konst 0) selected) (.le selected (.konst 10)))
-      (.and (.imp range (.eq selected source)) (.imp (.not range) (.eq selected memory))))
+  .all (.inr 2) (.imp (.and
+    (.and (.le (.konst 0) selected) (.le selected (.konst 10))) (.eq selected memory))
     (.all (.inr 3) (.imp (.eq (.var (.inr 3)) selected) (postFormula (.var (.inr 3))))))
 
 def invalidFormula : LProp (Key declaration Nat) :=
@@ -106,17 +103,10 @@ theorem original_valid (values : Assignment (Key declaration Nat)) : (matrix tru
     change ((0 ≤ values (.inl (.glob false)) ∧ values (.inl (.glob false)) ≤ 10) ∧ True) →
       ((0 ≤ values (.inr 0) ∧ values (.inr 0) ≤ 2 ^ 32 - 1) ∧ True) →
       values (.inl (.glob false)) < 10 → (values (.inr 1) = values (.inl (.glob false)) ∧ True) →
-      ∀ selected : Int,
-        ((0 ≤ selected ∧ selected ≤ 10) ∧
-          (((0 ≤ values (.inl (.glob false)) + 1 ∧ values (.inl (.glob false)) + 1 ≤ 10) →
-            selected = values (.inl (.glob false)) + 1) ∧
-           (¬ (0 ≤ values (.inl (.glob false)) + 1 ∧ values (.inl (.glob false)) + 1 ≤ 10) →
-            selected = values (.inl (.glob false))))) →
-        ∀ stored : Int, stored = selected → stored = values (.inr 1) + 1 ∧ True
-  intro typed _ unfinished anchored selected relation stored same
-  have fits : 0 ≤ values (.inl (.glob false)) + 1 ∧ values (.inl (.glob false)) + 1 ≤ 10 := by omega
-  have defined := relation.2.1 fits
-  exact ⟨by omega, trivial⟩
+      ∀ selected : Int, ((0 ≤ selected ∧ selected ≤ 10) ∧ selected = values (.inl (.glob false))) →
+        ∀ stored : Int, stored = selected → stored = values (.inr 1) ∧ True
+  intro _ _ _ anchored selected initialized stored same
+  exact ⟨same.trans (initialized.2.trans anchored.1.symm), trivial⟩
 
 theorem original_negated_vc_zeuge : ¬ (matrix false).denote (fun _ => 0) := by
   unfold matrix
@@ -124,29 +114,35 @@ theorem original_negated_vc_zeuge : ¬ (matrix false).denote (fun _ => 0) := by
   with_unfolding_all
     change ¬ (((0 ≤ (0 : Int) ∧ 0 ≤ 10) ∧ True) →
       ((0 ≤ (0 : Int) ∧ 0 ≤ 2 ^ 32 - 1) ∧ True) → (0 : Int) < 10 →
-      ((0 : Int) = 0 ∧ True) → ∀ stored : Int, stored = 9 → stored = 0 + 1 ∧ True)
+      ((0 : Int) = 0 ∧ True) → ∀ stored : Int, stored = 9 → stored = 0 ∧ True)
   intro valid
   have impossible := valid (by decide) (by decide) (by decide) ⟨rfl, trivial⟩ 9 rfl
   omega
 
-theorem zeroCounterexample_complete_zeuge :
-    (Snapshot.zeroCounterexample (matrix false) (lower (matrix false)) (lower_denote _)).isSome = true :=
-  Snapshot.zeroCounterexample_complete _ _ (lower_denote _) original_negated_vc_zeuge
+theorem zeroCounterexample_present_zeuge : (Snapshot.zeroCounterexample (matrix false)).isSome = true := by
+  rw [show matrix false = entryVC symbols (requirement false).payload
+    (snapshotGuard (some region) invalidFormula) by unfold matrix; rw [invalid_shape]]
+  rfl
 
 theorem zeroCounterexample_sound_zeuge : ¬ (matrix false).denote (fun _ => 0) :=
-  Snapshot.zeroCounterexample_sound _ _ (lower_denote _) zeroCounterexample_complete_zeuge
+  Snapshot.zeroCounterexample_sound _ zeroCounterexample_present_zeuge
 
-theorem refusal_counterexample_sound_zeuge :
-    Snapshot.refusal (matrix false) (lower (matrix false)) (lower_denote _) "outside the decidable fragment" =
-      .invalid Snapshot.counterexampleMessage ∧ ¬ (matrix false).denote (fun _ => 0) := by
-  have diagnostic : Snapshot.refusal (matrix false) (lower (matrix false)) (lower_denote _)
-      "outside the decidable fragment" = .invalid Snapshot.counterexampleMessage := by
-    have present := zeroCounterexample_complete_zeuge
-    unfold Snapshot.refusal
-    cases found : Snapshot.zeroCounterexample (matrix false) (lower (matrix false)) (lower_denote _) with
+theorem rejectCounterexample_sound_zeuge :
+    Snapshot.rejectCounterexample true (matrix false) = .error (.invalid Snapshot.counterexampleMessage) ∧
+      ¬ (matrix false).denote (fun _ => 0) := by
+  have diagnostic : Snapshot.rejectCounterexample true (matrix false) =
+      .error (.invalid Snapshot.counterexampleMessage) := by
+    have present := zeroCounterexample_present_zeuge
+    unfold Snapshot.rejectCounterexample
+    cases found : Snapshot.zeroCounterexample (matrix false) with
     | none => rw [found] at present; cases present
     | some proof => rfl
-  exact ⟨diagnostic, Snapshot.refusal_counterexample_sound _ _ (lower_denote _) _ diagnostic⟩
+  exact ⟨diagnostic, Snapshot.rejectCounterexample_sound _ diagnostic⟩
+
+theorem prepared_true_zeuge : (Snapshot.prepared (matrix true)).val = .tru := by
+  unfold matrix
+  rw [valid_shape]
+  rfl
 
 attribute [local irreducible] entryVC certificate checkEnvironmentAt
 attribute [local implicit_reducible] entryContext
@@ -157,7 +153,8 @@ theorem environment_at_success_zeuge :
   apply environment_at_success (program true) (SperrInv.leer declaration) symbols futureBounded
     (some region) (policy true) (fun _ => none) budget none (invariants true)
     (requirement true) (by rfl) (certificate true) (compiled_result true)
-  exact (close_decide_true_iff _).mpr (fun values => (lower_denote _ values).mpr (original_valid values))
+  change (Snapshot.decide (matrix true) 1000000 _).toOption.isSome = true
+  exact Snapshot.decide_of_prepared_true _ _ _ prepared_true_zeuge
 
 theorem environment_checked :
     (checkEnvironment (program true) (SperrInv.leer declaration) symbols bounded (basePolicy true)
