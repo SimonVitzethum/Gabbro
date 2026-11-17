@@ -57,10 +57,8 @@ def sharedCompiled := ending (requiresPolicy sharedProgram (entryContext sharedS
   (S := SperrInv.leer sharedDeclaration) (Invarianten.Pruefer.lockFormula (SperrInv.leer sharedDeclaration) (fun _ => none)) sharedBudget none 8
   (sharedProgram.rumpf true) sharedSymbols sharedBounded (contractGoals sharedProgram true sharedSymbols sharedBounded sharedInvariants)
 
-def sharedFormula : Frag.LProp (Key sharedDeclaration Nat) := .and .tru (.and
-  (.imp .tru (.all (.inr 0) (.imp (.and
-    (.and (.le (.konst 0) (.var (.inr 0))) (.le (.var (.inr 0)) (.konst (2 ^ 32 - 1)))) .tru)
-    (.and .tru .tru)))) .tru)
+def sharedFormula : Frag.LProp (Key sharedDeclaration Nat) :=
+  .and .tru (.and (.imp .tru (.and .tru .tru)) .tru)
 
 theorem sharedCompiled_shape : sharedCompiled.map Certificate.formula = .ok sharedFormula := by
   unfold sharedCompiled
@@ -90,7 +88,7 @@ theorem sharedCompiled_valid (values : Assignment (Key sharedDeclaration Nat)) :
   have same := Except.ok.inj shape
   change sharedCertificate.formula = sharedFormula at same
   rw [same]
-  exact ⟨trivial, ⟨fun _ _ _ => ⟨trivial, trivial⟩, trivial⟩⟩
+  exact ⟨trivial, ⟨fun _ => ⟨trivial, trivial⟩, trivial⟩⟩
 
 attribute [local irreducible] entryVC sharedCertificate
 

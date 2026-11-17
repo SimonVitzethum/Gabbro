@@ -74,13 +74,14 @@ def statement {context : Context A next} (policy : CallPolicy program context)
             | .why _ _ => False
             | .logik error => allowed error
             | .hardware _ => True)
-          (fun more larger supplied suppliedBounded => callCondition (policy.weaken larger) budget.expansion f
-            supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) hr
-            (fun actual _ item runtime world => goals.normal.holds item runtime world actual)
-            (fun last beyond _ _ => do
-              let normal ← goals.normal.encode last (Nat.le_trans larger beyond) symbols
-                (symbols.bounded_mono bounded (Nat.le_trans larger beyond))
-              return normal.map (fun _ _ _ _ ready actual realized _ _ => ready actual realized)))
+          (fun more larger supplied suppliedBounded => do
+            let normal ← goals.normal.encode more larger symbols (symbols.bounded_mono bounded larger)
+            callCondition (policy.weaken larger) budget.expansion f
+              supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) hr
+              (fun actual _ item runtime world => goals.normal.holds item runtime world actual)
+              (fun _ beyond _ _ => .ok ((normal.weaken beyond).map
+                (fun _ _ _ _ ready actual realized _ _ => ready actual realized)))
+              (some (normal.map (fun _ _ _ _ ready actual realized _ => ready actual realized))))
         return (pre.read Λ args.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
           have ready := ready actual ((symbols.realizes_world actual valuation world (world.lese Λ args.orte)).mp realized) allowed safe
           unfold Runtime.wpS

@@ -21,7 +21,8 @@ def callOutcomesCondition {context : Context A next} (policy : CallPolicy progra
     (failure : Env D Γ → Fin (D.gruende f) → A → Runtime program (fun _ => []) S → World D → Prop)
     (compile : ResultCompiler context caller (D.erg f) target)
     (compileFailure : ∀ reason, Except Frag.Refusal (Certificate context (fun valuation item runtime world =>
-      ∀ actual, caller.Realizes valuation world actual → failure actual reason item runtime world))) :
+      ∀ actual, caller.Realizes valuation world actual → failure actual reason item runtime world)))
+    (shared : Option (SharedResult context caller (D.erg f) target) := none) :
     Except Frag.Refusal (Certificate context (fun valuation item runtime world => ∀ actual,
       caller.Realizes valuation world actual → ∀ supplied, args.Realizes valuation world supplied →
       ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
@@ -32,7 +33,7 @@ def callOutcomesCondition {context : Context A next} (policy : CallPolicy progra
       | .hardware _ => True)) := do
   let pre ← policy.encode next (Nat.le_refl next) f args argsBounded
   let normal ← resultCondition args argsBounded caller callerBounded budget (D.erg f)
-    (program.ensures f) target compile
+    (program.ensures f) target compile shared
   let failures ← allCertificates context (List.finRange (D.gruende f))
     (fun reason valuation item runtime world => ∀ actual, caller.Realizes valuation world actual →
       ∀ after, failure actual reason item runtime after)
@@ -67,8 +68,9 @@ def callCondition {context : Context A next} (policy : CallPolicy program contex
     (budget : Nat) (f : D.Fn) (args : SymEnv D Nat (D.params f)) (argsBounded : args.Bounded next)
     (caller : SymEnv D Nat Γ) (callerBounded : caller.Bounded next) (noReasons : D.gruende f = 0)
     (target : Env D Γ → ErgVal D (D.erg f) → A → Runtime program (fun _ => []) S → World D → Prop)
-    (compile : ResultCompiler context caller (D.erg f) target) :=
+    (compile : ResultCompiler context caller (D.erg f) target)
+    (shared : Option (SharedResult context caller (D.erg f) target) := none) :=
   callOutcomesCondition policy budget f args argsBounded caller callerBounded target
-    (fun _ _ _ _ _ => False) compile (fun reason => (Fin.cast noReasons reason).elim0)
+    (fun _ _ _ _ _ => False) compile (fun reason => (Fin.cast noReasons reason).elim0) shared
 
 end Gabbro.Grammatik.Vertraege.Pruefer

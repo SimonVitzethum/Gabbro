@@ -22,15 +22,15 @@ def resultSpecializations (limit : Nat) : Option Ty → Nat
   | none => 1
   | some type => specializationCount limit type
 
-/-- This is the source case carrying a certified uniform return family and
-    permitting shared, result-independent call continuations. -/
+/-- Literal truth permits a certified shared call continuation without
+    observing the answer. This flag estimates its finite compilation work. -/
 def uniformPost (program : Programm D) (f : D.Fn) : Bool :=
   match program.ensures f with
   | .tru => true
   | _ => false
 
-/-- Wide domains fail before enumeration and the constant fallback creates
-    one continuation. Interval widening shares the decoded input selection. -/
+/-- Integer selections have one symbolic continuation, independently of their
+    range. Finite Boolean alternatives retain their actual case count. -/
 def selectionSpecializations (expansion limit : Nat) {Γ Λ type} : Expr D Γ Λ type → Nat
   | .var _ => 1
   | .widen _ _ body => selectionSpecializations expansion limit body
