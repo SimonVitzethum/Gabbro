@@ -49,11 +49,21 @@ def checkAxiomLocal (Q : AxEns D) (sources : AxiomSources Q) (a : D.Ax) :
 /-- Interface refinement quantifies typed scalar arguments and returns. -/
 def checkPointerTarget (program : Programm D) (budget : VCBudget) (f : D.Fn) (n : Nat) :
     Except Frag.Refusal (PLift (∀ target : D.passt f n = true, PtrZielVerfeinert program f n target)) :=
-  if target : D.passt f n = true then do
-    let checked ← Symbolic.checkContractRefinement budget.expansion (D.passt_sig target).params (D.passt_sig target).erg
-      (program.ptrVertrag n).pre (program.requires f) (program.ensures f) (program.ptrVertrag n).post
-    return ⟨fun _ => ⟨checked.down.1, fun old world actual value _ valid =>
-      checked.down.2 old world actual value valid⟩⟩
+  if target : D.passt f n = true then
+    match required : program.requires f, program.ensures f,
+        (program.ptrVertrag n).pre, returned : (program.ptrVertrag n).post with
+    | .tru, .tru, .tru, .tru =>
+        .ok ⟨fun _ => by
+          constructor
+          · intro old locals _
+            simp only [ReqAmEintritt, required, eval, wahr?]
+          · intro old next locals value _ _
+            simp only [CallContract.postHolds, returned, eval, wahr?]⟩
+    | _, _, _, _ => do
+        let checked ← Symbolic.checkContractRefinement budget.specializations (D.passt_sig target).params (D.passt_sig target).erg
+          (program.ptrVertrag n).pre (program.requires f) (program.ensures f) (program.ptrVertrag n).post
+        return ⟨fun _ => ⟨checked.down.1, fun old world actual value _ valid =>
+          checked.down.2 old world actual value valid⟩⟩
   else .ok ⟨fun impossible => False.elim (target impossible)⟩
 
 /-- The finite interface table, not a finite observed run, covers all possible
