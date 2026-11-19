@@ -31,7 +31,7 @@ Three targets from the start: x86-64, AArch64 and RISC-V 64 are reached by addin
 never by changing sources, IR, passes or proofs. Performance target: at least the faster of `gcc -O3`/`clang -O3` on
 equivalent C, per workload class and ISA; claims only where measured.
 
-**What may be said:** "The goal theorem is proved over the model, with a witness and non-degeneracy." **What may NOT
+**What may be said:** "The goal theorem is proved over the model, with its non-degeneracy proved." **What may NOT
 be said:** "Gabbro is verified" — until the checker and the compiler in the statement are the deployed ones and the
 bridge to the bytes is built.
 
@@ -55,7 +55,7 @@ Consequences:
   `SYNTAX.md`/`LANGUAGE.md`. A form the checker accepts and the model lacks is a checker bug. Where the model has no
   rule yet, refuse.
 - **Guarantees come from generic theorems only.** Nothing in the compiler, checker or printers exists for
-  particular programs; per-program Lean files are witnesses, off the trust path.
+  particular programs. There are no per-program Lean files and no witnesses (owner, 2026-11-19).
 - **A decidable declared property is a capability of the language**, not user logic; once the checker decides it,
   the user no longer owes it.
 - **Hardware enters only as named per-row or per-envelope assumptions** (a target-table row, a speculation
@@ -86,8 +86,9 @@ Consequences:
 - **Extensions stand beside the goal, not inside it,** when they are a different kind of statement (linking,
   liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
-  `sorry`, and every new theorem of the model with a ∀-over-syntax premise has a witness on a non-degenerate fixture
-  that satisfies all premises jointly. Witnesses are small terms checked in seconds, never a run of the compiler on a
+  `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
+  evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
+  satisfiability is a proved lemma from the definitions, checked in seconds, never a run of the compiler on a
   source text.
 
 ## 4. Rules for the code
@@ -167,7 +168,7 @@ Consequences:
 - **Model choice by measured record**, not by fixed role: keep a record per finished task of how well each model
   proves and how often it errs, and assign by it.
 - **Reviews read statements, not proofs:** does it say what its name and comment claim, can its premises hold
-  together (witness), is it vacuous. Reviews are tasks too; the lead checks every finding before acting on it.
+  together (proved, not by a fixture), is it vacuous. Reviews are tasks too; the lead checks every finding before acting on it.
 - **Every worker gets its own worktree** and scratch directory, never the lead's checkout; before starting in an
   area, check that nobody else already works there.
 - **Agents build what they changed before they report**, in an isolated build slot where the site offers one
