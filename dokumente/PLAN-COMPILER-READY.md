@@ -251,16 +251,16 @@ equations or quantifiers need no lemma. Bundles, by the premise predicates they 
 |---|---|---|---|
 | E1 | goal premises (`GutO`, `StartGut`, `StartExklusiv`, `RegLokal`, `AxEnsLokal`, `AxVertragO`) | ~31 | DONE: `gabbro_ziel_erfuellbar` (`Zielsatz/Kern/Erfuellbarkeit.lean`) |
 | E2 | atomic goal (GX rely, `NutzerPflichtA`) | ~10 | DONE: `gabbro_ziel_atomar_erfuellbar`, `gabbro_ziel_atomar_schwach_erfuellbar` (`Zielsatz/Atomar/Erfuellbarkeit.lean`) |
-| E3 | ownership (`Owner*`, `Frame`) | ~22 | open |
+| E3 | ownership (`Owner*`, `Frame`) | ~22 | DONE: `owner_erfuellbar`, `owner_aufruf_erfuellbar` (`Marken/Owner/Erfuellbarkeit.lean`) |
 | E4 | Stage-0 lowering (`FunSpec`, `W`, `Fn`, `Lay`, `WeltAt`, …) | ~40 | DONE: `senke_aufruf_erfuellbar` (`stage0/Stage0/Senke/Erfuellbarkeit/`) |
-| E5 | code model (`FnOk`, `LayoutOk`, `LvOk`, `WfL`, …) | ~10 | open |
-| E6 | reachability (`Erreicht`, `RufErreichbarG`, `RufSchrittG`, `Wohlgeformt`) | ~16 | open |
-| E7 | addresses and layout (`AdressLayout`, `Space`, `DataRights`) | ~10 | open |
-| E8 | arenas and accumulators (`AccumulatorDecl`, `akkuZulaessig`, `DynArena`, `LinkFeld`) | ~12 | open |
-| E9 | calls and contracts (`RufPasst`, `PtrVerfeinert`, `HTripel`, `Zielsemantik`) | ~15 | open |
+| E5 | code model (`FnOk`, `LayoutOk`, `LvOk`, `WfL`, …) | ~10 | DONE: `stmt_gx_erfuellbar` (`Code/Conc/Erfuellbarkeit.lean`) |
+| E6 | reachability (`Erreicht`, `RufErreichbarG`, `RufSchrittG`, `Wohlgeformt`) | ~16 | DONE: `ruf_erreichbar_erfuellbar` (`Logik/Ruf/Maschine/Erfuellbarkeit.lean`) |
+| E7 | addresses and layout (`AdressLayout`, `Space`, `DataRights`) | ~10 | DONE: `authority_erfuellbar` (`Niedrig/Erfuellbarkeit/`) |
+| E8 | arenas and accumulators (`AccumulatorDecl`, `akkuZulaessig`, `DynArena`, `LinkFeld`) | ~12 | DONE for accumulators: `akku_erfuellbar` (`Kernzelle/Erfuellbarkeit.lean`); `LinkFeld` (Brainfuck/GStack) open |
+| E9 | calls and contracts (`RufPasst`, `PtrVerfeinert`, `HTripel`, `Zielsemantik`) | ~15 | DONE for `PtrVerfeinert`: `ptr_verfeinert_erfuellbar` (`Korpus/Programme/Einheit104.lean`); `RufPasst` by E3; `HTripel` open |
 | E10 | elaborator (`UEns`, `UIdx`, `USide`, `STyp`, `Shape`) | ~12 | open |
-| E11 | locks and concurrency (`SperrInvOk`, `Nebeneinander`, events) | ~8 | open |
-| E12 | termination and async (`WellFounded`, measures) | ~6 | open |
+| E11 | locks and concurrency (`SperrInvOk`, `Nebeneinander`, events) | ~17 | the `ziel_ort_*` family by E1/E2; `Nebeneinander`/`GemeinsamerLauf` and the syscall pairing open |
+| E12 | termination and async (`WellFounded`, measures) | ~7 | DONE for tables: `table_induktion_erfuellbar` (no axioms) |
 
 Estimate: 300–1 500 lines per bundle, 5 000–15 000 in all; critical path E4 and E3 (their fixtures were deleted with
 the witnesses). Removal of the remaining witness modules (58 ordinary modules still use witness fixtures; ~900
