@@ -11,6 +11,8 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      stripped) and no `axiom` outside `teile/kein-sorry-allowlist.txt`.
   4. Layout: no folder holds more than 20 entries (`teile/lean-layout.py --check`).
   4b. Module: every tracked Lean file except `lakefile.lean` starts with `module` (owner rule 2026-11-01).
+  4c. Roots: every tracked Lean file of grammatik/, stage0/, runner/, nativefloat/ is imported, directly or not, by a
+     package root, an executable root or a `Nachpruefung` file; tool entry points with a `main` are counted apart.
   7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
      compiler to IR, then through the assembly runner on `NAME.ein` (written after `NAME.warte` seconds when
@@ -114,6 +116,43 @@ def stufe_module():
     print(f"  4b module: {'ok' if files and not schlecht else 'ROT'} ({len(files) - len(schlecht)} of {len(files)} Lean files are modules)")
     for n in schlecht[:10]: print("     not a module:", n)
     return bool(files) and not schlecht
+
+
+WURZELN = ["Grammatik", "Grammatik.Gen.Abdeckung.Lauf", "Nachpruefung", "NachpruefungZiel",
+           "Stage0", "Stage0.Haupt", "Nachpruefung.Teil1", "Nachpruefung.Teil2",
+           "Runner", "Runner.Haupt", "NativeFloat"]
+PAKETE = ["grammatik", "stage0", "runner", "nativefloat"]
+IMPORT = re.compile(r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?(.+)$", re.M)
+
+
+def stufe_wurzeln():
+    """Every tracked Lean file of the four packages is reached from a root that the package build or this guardian
+    compiles (finding 2026-11-15: unreached modules are never built). A tool entry point with a `main` is listed,
+    not failed: it is run, not imported."""
+    def datei(m, paket=None):
+        for p in ([paket] if paket else PAKETE):
+            f = W / p / (m.replace(".", "/") + ".lean")
+            if f.is_file(): return f
+        return None
+    # `Nachpruefung` exists in grammatik/, stage0/ and runner/: each package's copy is a root of its own
+    start = [f for m in WURZELN for p in PAKETE if (f := datei(m, p))]
+    gesehen, offen = set(start), list(start)
+    while offen:
+        f = offen.pop()
+        for zeile in IMPORT.findall(ohne_kommentare(f.read_text(encoding="utf-8"))):
+            for m in zeile.split():
+                g = datei(m)
+                if g and g not in gesehen: gesehen.add(g); offen.append(g)
+    names = subprocess.run(["git", "ls-files", *[f"{p}/*.lean" for p in PAKETE]], cwd=W,
+                           capture_output=True, text=True).stdout.split()
+    files = [W / n for n in names if pathlib.Path(n).name != "lakefile.lean"]
+    rest = [f for f in files if f not in gesehen]
+    werkzeug = [f for f in rest if re.search(r"^def main\b", f.read_text(encoding="utf-8"), re.M)]
+    waisen = [f for f in rest if f not in werkzeug]
+    print(f"  4c roots:  {'ok' if files and not waisen else 'ROT'} ({len(files) - len(rest)} of {len(files)} Lean files "
+          f"reached from a root, {len(werkzeug)} tool entry points, {len(waisen)} unreached)")
+    for f in waisen[:10]: print("     unreached:", f.relative_to(W))
+    return bool(files) and not waisen
 
 
 def stufe_layout():
@@ -258,7 +297,7 @@ def stufe_runner():
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_abdeckung, stufe_stage0, stufe_runner]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_module, stufe_wurzeln, stufe_abdeckung, stufe_stage0, stufe_runner]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1
