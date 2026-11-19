@@ -87,17 +87,23 @@ theorem binding : ForeignVertrag unit oracle := by
     have he : some true = some v := hv
     cases he
     rfl
-  · intro a hsw σ ρ
-    change some (Sum.inl true) ≠ none
-    intro h
-    cases h
+  · intro a hsw σ ρ h
+    cases a
+    have required : (Boundary.Check.trivial : Boundary.Check decl
+        (ErgCtx (decl.aparams ()) (decl.aerg ())) []).requiredB = false := rfl
+    have reasons : decl.agruende () = 0 := rfl
+    have result : decl.aerg () = some .bool := rfl
+    by_cases empty : (σ.fragt (Sum.inl ())).ohneLese.spur = [] <;>
+      simp [axiomAntwortSonst, Orakel.wirkt, oracle, sonstPasst, required, reasons, result, empty,
+        einpassenErg, einpassen] at h <;>
+      exact nomatch h
 
 theorem post_cover : PostDeckt unit := by
   intro a hsw σ0 ρ σ1 v hp
   exact hp
 
 theorem hardware [RootNativeFloat.Hardware] : HardwareAnnahmenHw oracle unit.Q :=
-  ⟨oracle_gut, ⟨fun r => nomatch r, fun g => nomatch g⟩,
+  ⟨oracle_gut, ⟨fun r => (nomatch r), fun g => (nomatch g)⟩,
     (fun a hsw => absurd rfl hsw), inferInstance⟩
 
 /-- A real call with argument one establishes the caller's true-result post.
@@ -107,9 +113,8 @@ theorem on_pre_body (passes : Nat) : KoerperGutA program passes summary () := by
   intro O hr hQ R hR hOV σ ρ hreq
   have hρ : ρ = .nil := by cases ρ; rfl
   subst hρ
-  have hpre : PreQ program () (σ.fragt (.inl ())) (rho true) = true := by
-    rw [preQ_sw program rfl]
-    rfl
+  have hpre : PreQ program () (σ.fragt (.inl ())) (rho true) = true :=
+    (preQ_sw program rfl _ _).trans rfl
   have hs := hQ () σ (rho true)
     (decide ((O.wirkt () (σ.fragt (.inl ())) (rho true)).2 ≠ 0)) hpre rfl
   refine ⟨?_, ?_⟩
@@ -130,7 +135,7 @@ theorem on_pre_body (passes : Nat) : KoerperGutA program passes summary () := by
 /-- The on-pre call actually returns true under the lawful binding. -/
 theorem on_pre_execution :
     execEnd oracle 0 (rufAusV []) body world .nil =
-      EndAusgang.zurueck (world.fragt (.inl ())) true := by
+      (EndAusgang.zurueck (world.fragt (.inl ())) true : EndAusgang (vertragVon decl ()) false []) := by
   rfl
 
 /-- **The old every-world class was too strong.** It asks about the empty trace too,
@@ -138,9 +143,8 @@ theorem on_pre_execution :
     returns false. So the actual, trace-faithful binding was not in it. -/
 theorem old_class_too_strong : ¬ AxVertragOPAlle (PreQ unit.P) unit.Q oracle := by
   intro h
-  have hp : PreQ unit.P () world (rho true) = true := by
-    rw [preQ_sw unit.P rfl]
-    rfl
+  have hp : PreQ unit.P () world (rho true) = true :=
+    (preQ_sw unit.P rfl _ _).trans rfl
   exact Bool.false_ne_true (h () world (rho true) false hp rfl)
 
 /-- The question-world class holds directly: every question world carries its
