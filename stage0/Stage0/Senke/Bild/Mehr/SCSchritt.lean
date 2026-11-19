@@ -111,7 +111,7 @@ theorem sc_mSchritt {L : Lay} {i : Nat} {c c' : Cfg (SC L) (Res T)} (hs : SCSchr
 /-! ## Read-blind threads stay read-blind -/
 
 /-- Every live thread is read-blind. -/
-def AlleBlind (ths : List (Option (Res T))) : Prop := ∀ j r, ths[j]? = some (some r) → Blind r
+def AlleBlind (ths : List (Option (Res T))) : Prop := ∀ (j : Nat) (r : Res T), ths[j]? = some (some r) → Blind r
 
 /-- Replacing a live thread's state by a read-blind one keeps every thread read-blind. -/
 theorem alleBlind_set {ths : List (Option (Res T))} (h : AlleBlind ths) {i : Nat} {r0 r : Res T}

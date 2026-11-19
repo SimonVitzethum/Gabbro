@@ -68,9 +68,9 @@ theorem canonical_source : CanonicalSourceProgram output.compiled :=
 theorem image_correct [Runner.IR.Kern] [Senke.CloneAnswers] : output.Correct := output.correct
 
 /-- The stored gate certificate for this unit. -/
-theorem gate_checked := output.compiled.gateChecked
+example := output.compiled.gateChecked
 
 /-- Gate acceptance ties the source to the expanded unit lowering compiles. -/
-theorem gate_ties := output.compiled.expansion_gate
+example := output.compiled.expansion_gate
 
 end Gabbro.Stage0.Pipeline.ParametricModuleWitness

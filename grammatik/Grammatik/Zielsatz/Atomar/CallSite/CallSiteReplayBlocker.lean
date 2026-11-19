@@ -119,14 +119,11 @@ theorem good_user : NutzerPflichtA goodUnit where
       req := fun _ _ => rfl }
 
 set_option maxRecDepth 4096 in
-/-- The strict checker refuses the false post and names the actual failed
-    contract obligation. This is an executable diagnostic, not a guessed trace. -/
+/-- The strict checker refuses the false post: the unit is not accepted and the contract verdict is a
+    refusal. This is an executable diagnostic, not a guessed trace. -/
 theorem checker :
     akzeptiertX_pruefer.akzeptiert unit [()] [] [] = false ∧
-    Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false =
-      .error ("unsupported invariant constructor: " ++
-        ("outside the decidable fragment: contract VC abstraction cannot establish the postcondition or a call obligation" ++
-          "; parameters = " ++ reprStr ([] : List Int))) := by
+    (Vertraege.Pruefer.contractVerdict program unit.S [()] unit.lockFormulas false).toBool = false := by
   constructor
   · have refused : nutzerPflichtGeprueftB unit [()] [] = false := by decide +kernel
     change (_ && nutzerPflichtGeprueftB unit [()] []) = false

@@ -23,7 +23,7 @@ def sourceArguments (text : String) : Except String (List (List SExpr)) := do
 def argumentSource : String :=
   "module m { impl fn worker(i : u32 in 0 .. 9, b : bool) { } concurrent { worker(7, true), worker(2, false) }; }"
 
-#eval do
+#eval show IO Unit from do
   match sourceArguments argumentSource with
   | .error e => throw (IO.userError e)
   | .ok starts =>

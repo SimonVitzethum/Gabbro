@@ -36,7 +36,6 @@ public import Grammatik.Parser.Elab.Export.ExportWitnesses2
 public import Grammatik.Parser.Elab.Export.ExportWitnesses
 public import Grammatik.Parser.Elab.UebersetzeAllg.WidthSourceAliasesZeuge
 public import Grammatik.Parser.Elab.UebersetzeAllg.WidthSourcesZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Records.EmbeddingProben
 public import Grammatik.Parser.Namen.AufloesungTableProben
 public import Grammatik.Parser.SourceFolds.HoistProofs
 public import Grammatik.Parser.SourceFolds.HoistShape

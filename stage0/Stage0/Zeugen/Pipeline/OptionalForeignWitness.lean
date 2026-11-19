@@ -80,9 +80,9 @@ def statementText : String :=
 theorem statement_parser_refused :
     ((Gabbro.Grammatik.Parser.lex statementText).mapError (fun _ => "lex")).bind
       Gabbro.Grammatik.Parser.parseTopTief = .error "wanted ;" := by
-  decide +kernel
+  kernel_rfl
 
 theorem statement_image_refused : emit statementText 256 = .error "wanted ;" := by
-  decide +kernel
+  kernel_rfl
 
 end Gabbro.Stage0.Pipeline.OptionalForeignWitness
