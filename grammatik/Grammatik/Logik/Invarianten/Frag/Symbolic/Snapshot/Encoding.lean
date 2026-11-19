@@ -91,4 +91,21 @@ def allEncoding (names : List (Observation D)) (start : Nat) (symbols : SymEnv D
           (first.bool_iff valuation old world actual frozen realized)
           (rest.bool_iff valuation old world actual frozen realized)) }
 
+/-- `exists` over a finite index list: the disjunction of the per-item encodings. -/
+def anyEncoding (names : List (Observation D)) (start : Nat) (symbols : SymEnv D Nat Γ)
+    (items : List α) (predicate : α → World D → World D → Env D Γ → Bool)
+    (compile : ∀ item, Except Refusal (Encoding names start symbols .bool (predicate item))) :
+    Except Refusal (Encoding names start symbols .bool (fun old world actual =>
+      items.any (fun item => predicate item old world actual))) :=
+  match items with
+  | [] => .ok { payload := .fls, correct := fun _ _ _ _ _ _ => ⟨fun h => Bool.false_ne_true h, fun h => h.elim⟩ }
+  | head :: tail => do
+      let first ← compile head
+      let rest ← anyEncoding names start symbols tail predicate compile
+      .ok {
+        payload := .or first.payload rest.payload
+        correct := fun valuation old world actual frozen realized => Bool.or_eq_true_iff.trans (or_congr
+          (first.bool_iff valuation old world actual frozen realized)
+          (rest.bool_iff valuation old world actual frozen realized)) }
+
 end Gabbro.Grammatik.Invarianten.Frag.Symbolic.Snapshot

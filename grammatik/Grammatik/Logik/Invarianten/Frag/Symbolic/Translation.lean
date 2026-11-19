@@ -200,6 +200,15 @@ def translateSnapshot (names : List (Observation D)) (start : Nat) (expression :
             payload := encoded.payload
             correct := fun valuation old world actual frozen realized =>
               encoded.correct valuation old world (.cons index actual) frozen ⟨rfl, realized⟩ })
+  | .existsSlots table body _ =>
+      Snapshot.anyEncoding names start symbols (alleIndizes (D.count table))
+        (fun index old world actual => eval old body world (.cons index actual))
+        (fun index => do
+          let encoded ← translateSnapshot names start body (.cons (.known index) symbols)
+          return {
+            payload := encoded.payload
+            correct := fun valuation old world actual frozen realized =>
+              encoded.correct valuation old world (.cons index actual) frozen ⟨rfl, realized⟩ })
   | other =>
       match valueView? other symbols with
       | none => Snapshot.concreteEncoding names start other symbols

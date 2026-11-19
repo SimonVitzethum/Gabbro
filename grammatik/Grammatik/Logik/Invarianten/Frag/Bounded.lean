@@ -36,4 +36,28 @@ def encodeAll (items : List α) (predicate : α → World D → Bool)
             simpa only [PayloadSupported, payloadObservations, LProp.freeVariables,
               List.forall_mem_append] using And.intro head.supported tail.supported }
 
+def encodeAny (items : List α) (predicate : α → World D → Bool)
+    (compile : ∀ item, Except Refusal (Encoded D .bool (predicate item))) :
+    Except Refusal (Encoded D .bool (fun world => items.any (fun item => predicate item world))) :=
+  match items with
+  | [] => .ok
+      { payload := .fls
+        correct := fun _ => ⟨fun h => Bool.false_ne_true h, fun h => h.elim⟩
+        supported := by simp [PayloadSupported, payloadObservations, LProp.freeVariables] }
+  | item :: rest => do
+      let head ← located "slot" (compile item)
+      let tail ← encodeAny rest predicate compile
+      return {
+          payload := .or head.payload tail.payload
+          correct := fun world => by
+            change (wahr? (D := D) (predicate item world) ||
+                wahr? (D := D) (rest.any (fun entry => predicate entry world))) = true ↔
+              LProp.denote (assignment world) head.payload ∨
+                LProp.denote (assignment world) tail.payload
+            exact Bool.or_eq_true_iff.trans
+              (or_congr (head.bool_iff world) (tail.bool_iff world))
+          supported := by
+            simpa only [PayloadSupported, payloadObservations, LProp.freeVariables,
+              List.forall_mem_append] using And.intro head.supported tail.supported }
+
 end Gabbro.Grammatik.Invarianten.Frag

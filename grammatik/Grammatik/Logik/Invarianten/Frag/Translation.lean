@@ -213,6 +213,10 @@ def translate (e : Expr D Γ Λ τ) (locals : Env D Γ) :
       encodeAll (alleIndizes (D.count table))
         (fun index world => eval world body world (.cons index locals))
         (fun index => translate body (.cons index locals))
+  | .existsSlots table body _ =>
+      encodeAny (alleIndizes (D.count table))
+        (fun index world => eval world body world (.cons index locals))
+        (fun index => translate body (.cons index locals))
   | expression => do
       let some known := constantValue expression locals
         | .error (.unsupported "expression outside the linear fragment")
