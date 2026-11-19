@@ -341,8 +341,8 @@
   still apply); the quiescent collapse to the completed fold and the neutral-start RMW chain are proved at the ghost level with the staged added conjunct `AkkuZielErweitert`
   beside `ZielX`/`ZielFX`; the admission and neutral initialization cross separately compiled units through the link check (`SchnittstelleSpec.akku`, `BindeSpec.akku` with
   `akkuStart`, decided by the link Bools); the elaborator expands admitted declarations (`max`/`min`/`add`/`or` over integer ranges with a positive constant `per cpu` count) to
-  guarded storage while updates, reads and the core query stay refused (they need the C08 core-query contract); a full-program admission is witnessed on a non-degenerate two-cell
-  fixture (`akkuProgramm_zeuge`). What is NOT claimed yet: the run-level existence of such
+  guarded storage while updates, reads and the core query stay refused (they need the C08 core-query contract); a full-program admission is proved satisfiable on a non-degenerate two-cell
+  fixture (`akku_erfuellbar`). What is NOT claimed yet: the run-level existence of such
   a history for every reachable machine (needs the GX replay of the update stores), so the goal has no accumulator leg yet; any race exemption or universal quiescence (existing race/time qualifications are retained).
 
   NOT CLAIMED:
