@@ -1,4 +1,4 @@
-// Negated old-table contracts retain the entry value across a direct call.
+// A negated old-table postcondition that fails for some entry value is refused by the checker.
 module ir_probe {
 table t count 2 { slot { a : u32 in 0 .. 100, } }
 impl fn change() effects { reads t.slots, writes t.slots }

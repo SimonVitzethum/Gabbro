@@ -1,4 +1,4 @@
-// Entry snapshot must survive a nested call that changes the global.
+// A postcondition over the entry snapshot that fails for some entry value is refused by the checker.
 module ir_probe {
 static mut g : u32 in 0 .. 100 = 0;
 impl fn write() effects { writes g } { g = 19; }

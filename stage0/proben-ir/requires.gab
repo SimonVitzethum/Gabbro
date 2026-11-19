@@ -1,4 +1,4 @@
-// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 101
+// stage-0 IR refusal probe (instrumente/pruefe-lean.py stage 7): the call violates the contract, so the checker refuses the unit
 module ir_probe {
 impl fn twice(x : u32 in 0 .. 100) -> u32 in 0 .. 200
     effects { pure }

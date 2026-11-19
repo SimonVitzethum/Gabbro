@@ -1,5 +1,4 @@
-// Unexecuted regression: expected exit 48; narrowing's ending else returns a reason.
-// The caller reacquires both locks and sees the pre-return global store.
+// `ensures false` on a reachable normal return is refused by the checker.
 module ir_c11_scoped_end_reason {
 reason Fault { Failed = 19 "failed" exhaustive }
 static mut g : u32 in 0 .. 100 = 0;
