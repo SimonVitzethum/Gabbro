@@ -22,6 +22,7 @@ public import Grammatik.Kern.Syntax.Marken.Owner.Erfuellbarkeit
 public import Grammatik.Logik.Ruf.Maschine.Erfuellbarkeit
 public import Grammatik.Bausteine.Kernzelle.Erfuellbarkeit
 public import Grammatik.Korpus.Programme.Einheit104
+public import Grammatik.Niedrig.Erfuellbarkeit.Satz
 @[expose] public section
 
 
@@ -67,3 +68,4 @@ bodies. (The C correspondence chain of these units was deleted with the C emitte
 #print axioms Gabbro.Grammatik.ruf_erreichbar_erfuellbar
 #print axioms Gabbro.Grammatik.Kernzelle.akku_erfuellbar
 #print axioms Gabbro.Grammatik.Einheit104.ptr_verfeinert_erfuellbar
+#print axioms Gabbro.Grammatik.LowLevel.Witness.authority_erfuellbar
