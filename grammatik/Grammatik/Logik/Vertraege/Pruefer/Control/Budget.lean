@@ -17,8 +17,16 @@ def specializationCount (limit : Nat) : Ty → Nat
   | .bool => 2
   | .prod _ fields => argumentSpecializations limit fields
   | .why count => min (limit + 1) count
+  | .opt count => min (limit + 1) (count.toNat + 1)
+  | .sum cases => caseSpecializations limit cases
   | _ => 1
 termination_by structural kind => kind
+
+def caseSpecializations (limit : Nat) : List (Option Ty) → Nat
+  | [] => 0
+  | none :: rest => min (limit + 1) (1 + caseSpecializations limit rest)
+  | some kind :: rest => min (limit + 1) (specializationCount limit kind + caseSpecializations limit rest)
+termination_by structural cases => cases
 
 def argumentSpecializations (limit : Nat) : Ctx → Nat
   | [] => 1
@@ -73,6 +81,10 @@ def statementSpecializations (program : Programm D) (uniformReturn : Bool) (expa
       (blockSpecializations program uniformReturn expansion limit continuation yes + blockSpecializations program uniformReturn expansion limit continuation no)
   | .breaking _ body | .locks _ _ body => blockSpecializations program uniformReturn expansion limit continuation body
   | .onWhy _ arms => reasonSpecializations program uniformReturn expansion limit continuation arms
+  | .onOption (n := count) _ present absent => min (limit + 1)
+      (count.toNat * blockSpecializations program uniformReturn expansion limit continuation present +
+        blockSpecializations program uniformReturn expansion limit continuation absent)
+  | .onTag _ arms => tagSpecializations program uniformReturn expansion limit continuation arms
   | .retry 0 _ _ overflow => min (limit + 1)
       (continuation + blockSpecializations program uniformReturn expansion limit continuation overflow)
   | .retry count _ body overflow => min (limit + 1)
@@ -140,6 +152,16 @@ def reasonSpecializations (program : Programm D) (uniformReturn : Bool) (expansi
   | .nil => 0
   | .cons head tail => min (limit + 1)
       (blockSpecializations program uniformReturn expansion limit continuation head + reasonSpecializations program uniformReturn expansion limit continuation tail)
+
+def tagSpecializations (program : Programm D) (uniformReturn : Bool) (expansion limit continuation : Nat) {l Γ Λ Λ' cases} :
+    Arms D V l Γ Λ Λ' cases → Nat
+  | .nil => 0
+  | .cons (c := none) head tail => min (limit + 1)
+      (blockSpecializations program uniformReturn expansion limit continuation head +
+        tagSpecializations program uniformReturn expansion limit continuation tail)
+  | .cons (c := some kind) head tail => min (limit + 1)
+      (specializationCount limit kind * blockSpecializations program uniformReturn expansion limit continuation head +
+        tagSpecializations program uniformReturn expansion limit continuation tail)
 
 end
 

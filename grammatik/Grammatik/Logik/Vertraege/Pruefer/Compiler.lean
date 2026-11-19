@@ -35,10 +35,9 @@ def statement {context : Context A next} (policy : CallPolicy program context)
             simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
             have ready := ready allowed safe <;>
             simpa only [Runtime.wpS, Runtime.wpB, execStmtH, wahr?, tested, Bool.false_eq_true, ↓reduceIte] using ready)
-    | .onOption (n := count) expression present absent => do
-        let domain ← VC.finiteDomain (D := D) budget.expansion (Ty.index count)
-        let absentCase ← block policy facts budget hint fuel absent symbols bounded goals
-        Symbolic.optionCondition policy.semantic symbols expression present absent goals domain absentCase
+    | .onOption (n := count) expression present absent =>
+        Symbolic.optionDispatch policy.semantic budget.expansion symbols expression present absent goals
+          (fun _ => block policy facts budget hint fuel absent symbols bounded goals)
           (fun index => block policy facts budget hint fuel present (.cons (.known index) symbols) ⟨trivial, bounded⟩
             (goals.shrink (Ty.index count)))
     | .breaking _ body => do

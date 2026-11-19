@@ -154,6 +154,58 @@ def optionCondition (policy : A → CallObligation program) {context : Context A
         unfold VC.Runtime.wpB at case
         exact case)
 
+/-- `match` on an option whose value the environment already determines: only the selected block is certified. -/
+def knownOptionCondition (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int}
+    (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
+    (present : Block D V l (Ty.index count :: Γ) Λ Λ') (absent : Block D V l Γ Λ Λ')
+    (goals : Goals (program := program) (S := S) context V Γ)
+    (known : { value : Wert D (.opt count) // ∀ valuation world actual, symbols.Realizes valuation world actual →
+      eval world expression world actual = value })
+    (absentCase : Unit → Except Frag.Refusal (BlockCondition policy absent symbols goals))
+    (presentCase : ∀ index, Except Frag.Refusal
+      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count)))) :
+    Except Frag.Refusal (StatementCondition policy (.onOption expression present absent) symbols goals) :=
+  match selected : known.val with
+  | some index => do
+      let pre ← presentCase index
+      return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
+        have current := (symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized
+        have case := ready (.cons index actual) ⟨rfl, current⟩ allowed safe
+        unfold VC.Runtime.wpS
+        simp only [execStmtH]
+        rw [known.property valuation _ actual current, selected]
+        unfold VC.Runtime.wpB at case
+        exact (goals.holds_shrink (Ty.index count) item runtime allowed _).mp case)
+  | none => do
+      let pre ← absentCase ()
+      return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
+        have current := (symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized
+        have case := ready actual current allowed safe
+        unfold VC.Runtime.wpS
+        simp only [execStmtH]
+        rw [known.property valuation _ actual current, selected]
+        unfold VC.Runtime.wpB at case
+        exact case)
+
+/-- `match` on an option: the selected block when the value is known, otherwise every index of the complete domain
+    and the absent block. -/
+def optionDispatch (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int} (expansion : Nat)
+    (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
+    (present : Block D V l (Ty.index count :: Γ) Λ Λ') (absent : Block D V l Γ Λ Λ')
+    (goals : Goals (program := program) (S := S) context V Γ)
+    (absentCase : Unit → Except Frag.Refusal (BlockCondition policy absent symbols goals))
+    (presentCase : ∀ index, Except Frag.Refusal
+      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count)))) :
+    Except Frag.Refusal (StatementCondition policy (.onOption expression present absent) symbols goals) :=
+  match knownValue? expression symbols with
+  | some known => knownOptionCondition policy symbols expression present absent goals known absentCase presentCase
+  | none => do
+      let domain ← Invarianten.VC.finiteDomain (D := D) expansion (Ty.index count)
+      let missing ← absentCase ()
+      optionCondition policy symbols expression present absent goals domain missing presentCase
+
 /-- What the arms of a tagged dispatch must certify: for every value of the tagged type, the arm it selects. -/
 abbrev TagTarget (policy : A → CallObligation program) {context : Context A next} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
