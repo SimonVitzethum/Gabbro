@@ -86,8 +86,9 @@ Consequences:
 - **Extensions stand beside the goal, not inside it,** when they are a different kind of statement (linking,
   liveness, waiting, information flow, probability, …): a separate statement that reuses the safety legs.
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
-  `sorry`, and every new theorem with a ∀-over-syntax premise has a witness on a non-degenerate fixture that
-  satisfies all premises jointly.
+  `sorry`, and every new theorem of the model with a ∀-over-syntax premise has a witness on a non-degenerate fixture
+  that satisfies all premises jointly. Witnesses are small terms checked in seconds, never a run of the compiler on a
+  source text.
 
 ## 4. Rules for the code
 
@@ -183,13 +184,16 @@ Consequences:
   tracked work list: open work and findings live in plans or in a gitignored scratch file.
 - **Commits:** Conventional Commits (`type(scope): summary`), message from a file (`git commit -F`), the model's
   `Co-Authored-By` line and no other trailers. Commit every building step. In a shared checkout commit by path.
-- **Push gate: the two guardians** (`./instrumente/abnahme.py`): `instrumente/pruefe-lean.py` (Lean model and
-  Stage 0: builds, `gabbro_ziel` on the standard axioms, no forbidden tokens, layout) and
+- **Branches:** the integration branch is pushed to `dev` without a build gate — `dev` may be red. `master` only
+  advances to a `dev` commit whose full builds of every package and both guardians are green (owner, 2026-11-19).
+- **Master gate: the two guardians** (`./instrumente/abnahme.py`): `instrumente/pruefe-lean.py` (Lean model and
+  Stage 0: builds, `gabbro_ziel` on the standard axioms, no forbidden tokens, layout, every Lean file reached from a
+  package root) and
   `instrumente/pruefe-gabbrov.py` (GabbroV and the bridge). Exit `0` is green, `1` red, `2` not everything measured
   — not a green. A new check becomes a Lean theorem or a stage of one of the two, never a third guardian.
-- **Push after checked merges** without asking: grep the outgoing diff for keys, addresses and other site data;
-  never push red; never force-push or rewrite pushed history; if the remote moved, merge and check again. No new
-  branches on the upstream remote. Tag milestones at the push that reaches them.
+- **Push** without asking: grep the outgoing diff for keys, addresses and other site data; never push red to
+  `master`; never force-push or rewrite pushed history; if the remote moved, merge and check again. No new branches on
+  the upstream remote. Tag milestones at the push to `master` that reaches them.
 - **Security:** never write keys or passwords into the repository, memory or logs; credentials are site
   configuration. When a permission check blocks something, do not work around it; ask.
 - **Number ranges** (poison probes, examples): the next free number is one above the highest in use — measure it
@@ -209,6 +213,8 @@ Consequences:
 - A build without `LEAN_NUM_THREADS` thrashes instead of failing.
 - Overwriting a script that a running shell executes corrupts the running job.
 - A "green" package build may have built only part of the package: compare the job count with a full build.
+- A module that no package root imports is never compiled, by the build or by a guardian; it rots unseen
+  (measured 2026-11-19: 103 such modules, several broken, one false claim). Register every new module in a root.
 - A theorem stated over a dependent `match` written inline twice creates two different matcher constants; name the
   function instead.
 
