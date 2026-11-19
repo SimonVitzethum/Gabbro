@@ -52,6 +52,7 @@ public import Grammatik.Kern.Syntax.Marken.Owner.Escrow
 public import Grammatik.Kern.Syntax.Marken.Owner.EscrowFixture
 public import Grammatik.Kern.Syntax.Marken.Owner.EscrowRun
 public import Grammatik.Kern.Syntax.Marken.Owner.Erfuellbarkeit
+public import Grammatik.Logik.Ruf.Maschine.Erfuellbarkeit
 public import Grammatik.Kern.Syntax.Marken.Owner.Admission
 public import Grammatik.Logik.Ruf.FremdRuf
 public import Grammatik.Zielsatz.Faeden.PoolSym

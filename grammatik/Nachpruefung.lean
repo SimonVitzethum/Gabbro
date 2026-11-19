@@ -19,6 +19,7 @@
 module
 public import Grammatik
 public import Grammatik.Kern.Syntax.Marken.Owner.Erfuellbarkeit
+public import Grammatik.Logik.Ruf.Maschine.Erfuellbarkeit
 @[expose] public section
 
 
@@ -61,3 +62,4 @@ bodies. (The C correspondence chain of these units was deleted with the C emitte
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
 #print axioms Gabbro.Grammatik.EscrowWitness.owner_erfuellbar
 #print axioms Gabbro.Grammatik.EscrowWitness.owner_aufruf_erfuellbar
+#print axioms Gabbro.Grammatik.ruf_erreichbar_erfuellbar
