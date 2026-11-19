@@ -5250,26 +5250,8 @@ Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Sta
 * **`libraryFn_bound`**: For arbitrary `sig : FnSig`, `body : SAnw`, `c : clausesMetadataWithoutLoad sig.klauseln = false`, `b : bodyMetadata 10000 body = false`, `p : sig.params.any (fun p => typeMetadata p.2) = false`, `r : sig.res.any typeMetadata = false`, assuming `h : sig.art = "library"`, the conclusion is `itemMetadata (.fnT sig body) = false`.
 * **`transT_bound`**: For arbitrary `target : String`, `translator : FnSig`, `body : SAnw`, `c : clausesMetadata translator.klauseln = false`, `p : translator.params.any (fun p => typeMetadata p.2) = false`, `r : translator.res.any typeMetadata = false`, the conclusion is `itemMetadata (.transT target translator body) = false`.
 * **`library_zeuge`**: the conclusion is `let lib : FnSig`.
-`stage0/Stage0/Zeugen/Annahme/Contracts/CapacityRequiredWitness.lean`:
-
-* **`candidate_refused`, `last_image_refused_zeuge`**: the unchanged required-allocation end blocks are refused at the cross-entry invariant boundary.
-* **`block_image_refused_zeuge`, `block_last_image_refused_zeuge`**: the corresponding ordinary blocks reach the same cross-entry boundary.
-* **`stop_code_zeuge`, `narrowing_images_zeuge`**: the generic capacity-stop code and admitted model-level narrowing images remain unchanged.
-
-`stage0/Stage0/Zeugen/Annahme/Contracts/TransitionContractWitness.lean`:
-
-* **`candidate_refused`**: the unchanged simple transition source has no admitted image.
-* **`sourceModel_unit`, `sourceModel_unit_zeuge`**: successful actual scoped elaboration, lowering and postcondition restoration retain the frontend unit; the two-function source jointly satisfies these premises.
-* **`counterexample_zeuge`**: the actual restored caller admits the typed world with `s = 1`, while its transition callee requires `s = 0`.
-* **`Ordered.counterexample_zeuge`**: the typed table state `[0, 1]` satisfies the actual caller's precondition and violates the generated cycle callee's precondition.
-* **`checker_refused_of_contracts`**, witnessed by **`Ordered.checker_refused_of_contracts_zeuge`**: a refused actual source contract gate blocks production admission, jointly instantiated on the real two-function transition source.
-
 * **`Ordered.function_fragment_refusal`, `Ordered.contracts_refused`, `Ordered.checker_refused`**: symbolic transition indices reach `Refusal.crossEntry`; refusal propagates through the unchanged contract collector and production admission. No image is claimed.
 * **`model_present`, `data_present`, `data_unit`, `model_unit`**, also in `Ordered`: producer success and exact source-unit transport; **`field_types`, `globals_empty`, `main_params`, `transition_params`** pin the actual finite types used by the concrete counterexamples.
-
-`stage0/Stage0/Zeugen/Annahme/StateWitness.lean`:
-
-* **`candidate_refused`**: the unchanged state source has `candidate = .error "unsupported invariant constructor: contract shift requires an exact source-state observation"`. No emitted image is claimed for this source.
 
 Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
 `grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
@@ -6239,18 +6221,6 @@ witness files (same standing as the existing unwired `TaggedDispatchWitness`): e
 emission, the canonical source program and the image correctness, plus the stored gate certificate
 (`gate_checked`, `gate_ties`). No build was run; the lead builds and reports errors back.
 
-`stage0/Stage0/Zeugen/Pipeline/GenericWitness.lean`:
-
-* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one generic
-  function used at two instantiations (`identity::[u8]`, `identity::[u16]`) reaches a Stage-0 image.
-* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
-
-`stage0/Stage0/Zeugen/Pipeline/ParametricModuleWitness.lean`:
-
-* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one parametric
-  module instantiated twice (`consts::[u8, 400]`, `consts::[u16, 300]`) reaches a Stage-0 image.
-* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
-
 Open: the lead build of the branch (single-module checks of both witness files); unsupported abstract
 operations and unbound generic library translators still refuse.
 
@@ -6258,19 +6228,6 @@ operations and unbound generic library translators still refuse.
 
 On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Same standing and
 proof shape as §139. No build was run; the lead builds and reports errors back.
-
-`stage0/Stage0/Zeugen/Pipeline/TaggedGateWitness.lean`:
-
-* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a
-  `tagged … by S` dispatch over two cases reaches a Stage-0 image.
-* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
-
-`stage0/Stage0/Zeugen/Pipeline/DynWitness.lean`:
-
-* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a `dyn S`
-  call with two linked implementations (indices gathered by traversals, dispatched calls on both
-  scene slots) reaches a Stage-0 image.
-* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
 
 Open: the lead build of the branch (single-module checks of both witness files); `Ty.dyn` stays a
 closed-sum implementation, payloads stay scalar and at most eight bytes, downcast/equality tests
@@ -6338,15 +6295,6 @@ errors back.
   refuses, with the new message.
 * **`total_range_truncated_zeuge`**: a short upper bound (literal 2 over length 3) expands to the exact
   traverse with the upper-bound filter test; the symbolic-`N` fixture still expands byte-identically.
-
-`stage0/Stage0/Zeugen/Pipeline/RangeFoldsWitness.lean` (standalone, same standing as §139):
-
-* **`bounds_present`**, **`bounds_accepted`**, **`bounds_canonical`**, **`bounds_correct`**: nonzero
-  lower bound with a filter reaches an image.
-* **`min_present`**, **`min_accepted`**, **`min_canonical`**, **`min_correct`**: `min` with else reaches
-  an image.
-* **`nested_present`**, **`nested_accepted`**, **`nested_canonical`**, **`nested_correct`**: nested adds
-  over the same array reach an image.
 
 Open: the lead build of the branch (single-module checks of the new and touched modules and their
 importers, then the guardians); nested folds over row projections, symbolic short upper bounds,
@@ -6456,14 +6404,6 @@ and argument; and joint instantiations of the normalization, argument, quotation
 replacement and actual substitution theorems. Negative witnesses cover wrong result/payload
 types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
 reason owner, and parameter/local/pattern/quantifier shadowing.
-
-`stage0/Stage0/Frontend/Witnesses/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
-source/initializer compilation, generic-contract bypass and argument-type refusals.
-`ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
-string and original/qualified captured-global compilation declarations, with canonical-admission and conditional
-production-image witnesses. `Stage0.lean` includes both. These witness declarations are
-**unbuilt**; the image theorem still has an explicit successful-emission premise and no
-emitted or executed image is claimed.
 
 This is the expression-result slice with integer parameters. Still refused: noninteger
 parameters, block/control bodies, calls inside bodies/contracts needing parameter binding,
@@ -6657,13 +6597,6 @@ Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
   `terminalReasonRetire_ok` (reason return), `ordinaryRetire_ok` (C16 ordinary consumption),
   `terminalMoveDropped_refused`, `borrowedRetire_refused`, `unheldRetire_refused`,
   `repeatedRetire_refused`, `handbackRetire_refused`.
-* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_present` and
-  `accepted_image_zeuge` certify emission of the unchanged terminal-retire source.
-  `unit_present`, `unit_shape` and `return_inventory` retain the actual frontend unit,
-  terminal signatures, explicit retire and exact empty residual inventories.
-  `retires_ghost` still states that generic `lowS` emits no instructions or extra scratch
-  words for retire. `dropped_image_refused` and `borrowed_image_refused` retain the
-  genuine lowering refusals.
 * `ExportMetadata` admits only the plain nominal declaration `linear type Mark;` through the
   checked mark registry. It retains refusal of mint effects and ghost value types while the
   C08 software-call/root-once bridge is open (`mint_effect_metadata_refused`,
@@ -6930,16 +6863,8 @@ Continuation from `717635600` (implementation attempts only; **no Lean/lake/buil
 * **`Pruefung/Lauf/Treue.lean`**: `consumeCheckEntry_form`, `checkGhostStep_form` and `checkGhostHistory_form` transport producer/consumer conservation through arbitrary actual event logs. `checkGhostHistory_treu`/`checkGhostGX_treu` connect the completed, physically retired history to the unchanged `CheckTreueG` goal leg. `Stage0/Frontend/CheckExport.emitted_check_history_correct` pairs it with the exact emitted source program's existing generic IR execution certificate; completion is a checked ghost condition, not an assumption about measured values or truth of claim text.
 * **`Stage0/Profil.lean`**, **`Stage0/Compiler.lean`**: `--check CHECK GATE` selects one driver entry after the original C14 profile/build selection. A removed test-only declaration cannot be selected. `Compiled.elaborated`, its selected entry and `CanonicalSourceProgram` retain this exact selection before ordinary full lowering and `AkzeptiertX`; declarations alone still execute nothing.
 * **`Pruefung/Lauf/ZeugenPhases.lean`**, **`ZeugenFacts.lean`**, **`Zeugen.lean`**: `retiringU_accepted` certifies full admission of the actual selected physical consumer. `consumer_checked` certifies its real checker success, jointly with whole-unit acceptance in `accepted_unit_zeuge` on six actual source functions. `lowered` and `derived` retain successful ordinary lowering and check derivation. Physical cycle conservation, actual sample/floor replay and its retained consumed report remain model facts. Negative twins still omit the consumer, call it twice, repeat ghost consumption or fabricate a sample. The generic `CheckWitness` and all language gates are unchanged.
-* **`Stage0/Zeugen/Pruefung/CheckConsumerWitness.lean`**: `selected_compiles_zeuge` certifies actual compilation of the unchanged selected-consumer source, including its measured constant u64 local and retiring consumer. `selected_entry_requested_zeuge` retains the exact explicitly requested driver name; `constant_local_compiles_zeuge` separately witnesses a constant wide binding with a small result.
 
 Validation boundary: the implementation and proof attempts above are uncompiled. C16 is not measured complete until the lead compiles the changed modules/importers, checks the generic source/return/history attachment attempts and the standard axioms of `gabbro_ziel`, then runs the guardians. A static finding already present at the task base is `Zielsatz/Kern/Spec/Teil4.lean:33`: it refers to `berich` whereas `CheckEvidenz` declares `bericht`; no file under `Spec` was edited. The pre-existing `Stage0/Zeugen/Annahme` folder has 24 entries; the new witness lives in a separate cohesive folder. No final emitted-image execution or external measurement was performed.
-
-`Stage0/Zeugen/Pruefung/FrontendDefectsZeuge.lean` retains the unchanged nested
-tagged/option source: `option_payload_elaborates_zeuge` and
-`option_payload_lowers_zeuge` prove actual frontend and typed-lowering success.
-`option_payload_refused_zeuge` replaces its stale full-compilation claim with
-the exact bounded-integer/Boolean observation-fragment refusal. The name-clash
-and statement-line diagnostics remain unchanged.
 
 `Stage0/Senke/Tore/Answers.lean` keeps `boolean_binder_admission_zeuge`
 positive on both binder APIs and both success/error continuations. Its sole
@@ -6947,27 +6872,10 @@ reason now returns 9 directly, within the checked fragment; the separate
 `AxiomElseProbes` still cover explicit reason dispatch. Image and live
 false/true/error outcome witnesses remain.
 
-`Stage0/Senke/Ausdruck/Old/CurrentProbe.lean` keeps the original raw program and
-lowering/runtime witnesses. `old_post_fragment_refused_zeuge` pins the old-memory
-post refusal and `raw_model_refused_zeuge` replaces its stale admission claim.
-`contract_counterexample_zeuge` independently runs that actual program from a
-typed entry with `G = 1`: requires holds, but its returned 1 violates the inherited
-post demanding `old(G) + 1 = 2`; the actual call reports `nachbedingung`. This is a concrete semantic counterexample as
-well as a fragment refusal.
-
-`Stage0/Senke/Tore/AreaProbes.lean` keeps full admission and nonempty complete
-images for wide normal and fallible answers. Like the Boolean binder fixture,
-its sole reason returns 9 directly; high-limb and failure-path witnesses remain.
 `Stage0/Senke/Bild/Ruf/EmittedZielL.lean` retains its image-theorem statements:
 structural acceptance is derived directly from the actual compiler Bool,
 including the invariant/contract certificates, while the existing semantic
 user/start duties remain separate premises.
-
-`Stage0/Zeugen/Ablehnung/PointerContractWitness.lean`: `candidate_refused`
-records the earlier pointer-observation fragment refusal. The new
-`pointer_cost_refused_zeuge` independently preserves the original negative
-cost coverage on the actual scoped, lowered and restored source, including
-the original missing-cost diagnostic.
 
 `Stage0/Senke/Bild/EmittedZiel.lean`: `Emitted.akzeptiertSpec` is strengthened
 by removing the unnecessary checked-start Bool premise. Its structural facts
@@ -7563,7 +7471,6 @@ bindings and returns use the quantified production interface in sections
 | `SymbolicBindingWitness.production_u32_acceptance_zeuge` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/SymbolicBinding.lean` | The production gate accepts a memory-dependent u32 binding and value-dependent return for every u32 argument at expansion budget zero. |
 | `Witness.sharedCompiled_valid`, `shared_decided` | `grammatik/Grammatik/Logik/Vertraege/Pruefer/Witness/Calls.lean` | The actual shared call formula holds under every arithmetic assignment and has a true verified Cooper verdict. |
 | `Witness.uniform_wide_program_zeuge` | same | The actual contract gate accepts an acyclic two-function program with a real memory read and discarded u32 result at zero domain expansion and a four-case work budget. |
-| `RetireWitness.candidate_present`, `accepted_image_zeuge` | `stage0/Stage0/Zeugen/Pipeline/RetireWitness.lean` | The unchanged terminal-retire program passes the production compiler and has an emitted image. The old range-budget refusal is removed. |
 | `SelectionWitness.execution_success` | `.../Vertraege/Pruefer/Witness/Selection.lean` | Its work-budget premise now counts uniform returns and shared discarded-result calls once. Its successful execution-check conclusion is unchanged; the pool reader remains its joint witness. |
 
 Symbolic result certificates cover every typed answer; the existing
@@ -8059,11 +7966,6 @@ actual certificate, normal form and original universally valid VC.
 The numbered component formulas, reset cell and `komp` were re-read unchanged;
 the actual `AkzeptiertX` implementation-closure pin is `13892163655227119826`.
 The goal theorem and its meaning are unchanged, on the standard three axioms.
-
-The unchanged pipeline fixtures
-`Stage0.Zeugen.Annahme.Optional.OptionalForeignBinderWitness` and
-`Stage0.Zeugen.Pipeline.AdapterReasonWitness` build again through production
-acceptance. Their image-existence and correctness statements were not rewritten.
 
 The connected C16 source witness now accepts its unchanged fallible u64 oracle
 wrapper. The old fragment-refusal witness and its unused refusal collector are

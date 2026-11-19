@@ -47,9 +47,9 @@ VERBOTEN = re.compile(r"\b(sorry|admit|native_decide|bv_decide|ofReduceBool|sorr
 AXIOM = re.compile(r"^\s*axiom\s+([A-Za-z0-9_.']+)", re.M)
 
 
-def lauf(cmd, cwd, frist, extra=None):
+def lauf(cmd, cwd, frist):
     try:
-        p = subprocess.run(cmd, cwd=cwd, env={**ENV, **(extra or {})}, capture_output=True, text=True, timeout=frist)
+        p = subprocess.run(cmd, cwd=cwd, env=ENV, capture_output=True, text=True, timeout=frist)
         return p.returncode, p.stdout + p.stderr
     except subprocess.TimeoutExpired:
         return 124, f"Frist {frist} s ueberschritten"
@@ -120,13 +120,7 @@ def stufe_module():
 
 WURZELN = ["Grammatik", "Grammatik.Gen.Abdeckung.Lauf", "Nachpruefung", "NachpruefungZiel",
            "Stage0", "Stage0.Haupt", "Nachpruefung.Teil1", "Nachpruefung.Teil2",
-           "Runner", "Runner.Haupt", "NativeFloat",
-           # the roots of the library `Stage0Heavy` (stage0/lakefile.lean), built by stage 7
-           "Stage0.Zeugen.Pipeline.AdapterReasonWitness", "Stage0.Zeugen.Pipeline.DynWitness",
-           "Stage0.Zeugen.Pipeline.FallibleIndirectWitness", "Stage0.Zeugen.Pipeline.OptionalForeignWitness",
-           "Stage0.Zeugen.Pipeline.ParametricModuleWitness", "Stage0.Zeugen.Pipeline.RangeFoldsWitness",
-           "Stage0.Zeugen.Pipeline.TaggedGateWitness", "Stage0.StartImageProben",
-           "Stage0.Senke.Images.InitialWitness"]
+           "Runner", "Runner.Haupt", "NativeFloat"]
 PAKETE = ["grammatik", "stage0", "runner", "nativefloat"]
 IMPORT = re.compile(r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?(.+)$", re.M)
 
@@ -190,12 +184,8 @@ def stufe_stage0():
         return False
     rc, out = lauf(["lake", "build"], S0, 3600)
     jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
-    # the whole-compiler witnesses of `Stage0Heavy` need more memory each: one module at a time
-    rh, oh = lauf(["lake", "build", "Stage0Heavy"], S0, 7200, {"LEAN_NUM_THREADS": "1"})
-    schwer = re.findall(r"Build completed successfully \((\d+) jobs\)", oh)
-    ok = rc == 0 and bool(jobs) and rh == 0 and bool(schwer)
-    print(f"  7 stage0:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]}; "
-          f"Stage0Heavy {schwer[-1] + ' Jobs' if schwer else oh.strip().splitlines()[-1:]})")
+    ok = rc == 0 and bool(jobs)
+    print(f"  7 stage0:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]})")
     if not ok:
         return False
     exe = S0 / ".lake/build/bin/stage0"

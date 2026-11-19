@@ -122,8 +122,9 @@ Consequences:
 - **Forbidden:** `sorry`, `admit`, `native_decide`, `axiom` (outside the allow-list), `unsafe`.
 - **Fast proofs only:** a module checks in well under two minutes, no declaration takes more than a few seconds. No
   kernel evaluation (`decide +kernel`, kernel `rfl`) over strings, whole programs or images on the compiler path;
-  prove from general theorems with small explicit premises. Heavy evaluation belongs in a witness module of its
-  own. A slow module is a finding and is fixed.
+  prove from general theorems with small explicit premises. A module checks in at most 2 GiB, and every build, check
+  and probe runs under a `timeout`. Stage 0 carries no per-program witnesses that run the compiler on a source text:
+  that its output satisfies the goal is the image theorem's job (B6). A slow module is a finding and is fixed.
 - **Proof tactics that hold up:** `split` (not `split_ifs`); `simp only [...]` with named lemmas where possible;
   destructure `Except`/`Option` results with `cases h : … with` instead of splitting `do` blocks; after
   `cases h : x`, prove leftovers with `first | exact h | rfl | simp_all`; use `match`/`termination_by` instead of

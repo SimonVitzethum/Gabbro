@@ -49,7 +49,7 @@ with their worktrees, dirty changes and scratch preserved. Last checked and push
 Root integrated IR-01 through `77f74c248`: dependent original scalar/alias scopes, fixed-count
 fieldless tables and canonical typing/collector retention for every original array declaration,
 including unused declarations. The selected-ABI guard and two-check global limit are preserved.
-`Stage0.ArrayWitness` is imported by Stage0 and five generic/joint array statements are audited.
+The five generic array statements are in Stage0; the per-program array witness was removed with the other Stage-0 witnesses (owner, 2026-11-19).
 
 Measured on the merged sources: 13 affected modules through Stage0 and Nachpruefung, all five new
 array audits on standard axioms, layout over 1414 Lean files, and 11 textual source-to-IR/ASM or
