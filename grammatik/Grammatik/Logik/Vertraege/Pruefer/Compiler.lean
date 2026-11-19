@@ -39,7 +39,10 @@ def statement {context : Context A next} (policy : CallPolicy program context)
         Symbolic.optionDispatch policy.semantic budget.expansion symbols expression present absent goals
           (fun _ => block policy facts budget hint fuel absent symbols bounded goals)
           (fun index => block policy facts budget hint fuel present (.cons (.known index) symbols) ⟨trivial, bounded⟩
-            (goals.shrink (Ty.index count)))
+            (goals.shrink (Ty.index count))) bounded
+          (fun _ => block (policy.weaken (Nat.le_succ next)) facts budget hint fuel present (.cons (.integer (.var next))
+            symbols) ⟨Symbolic.freshKeyBounded next, symbols.bounded_mono bounded (Nat.le_succ next)⟩
+            ((goals.weaken (Nat.le_succ next)).shrink (Ty.index count)))
     | .breaking _ body => do
         let pre ← block policy facts budget hint fuel body symbols bounded goals
         return pre.map (fun _ _ _ _ ready actual realized allowed safe => ready actual realized allowed safe)
@@ -484,13 +487,9 @@ def tagCases {context : Context A next} (policy : CallPolicy program context)
         return Symbolic.tagNone policy.semantic symbols goals head tail
     | some τ :: _, .cons first rest => do
         let tail ← tagCases policy facts budget hint fuel rest symbols bounded goals
-        match VC.finiteDomain (D := D) budget.expansion τ with
-        | .ok domain =>
-            Symbolic.tagSomeCases policy.semantic symbols goals domain tail (fun payload =>
-              block policy facts budget hint fuel first (.cons (.known payload) symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
-        | .error _ => do
-            let head ← block policy facts budget hint fuel first (.cons .unobserved symbols) ⟨trivial, bounded⟩ (goals.shrink τ)
-            return Symbolic.tagSomeUnobserved policy.semantic symbols goals head tail
+        Symbolic.tagSomeDispatch policy.semantic symbols goals budget.expansion tail
+          (fun payload => block policy facts budget hint fuel first (.cons (.known payload) symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
+          (fun _ => block policy facts budget hint fuel first (.cons .unobserved symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
 termination_by structural fuel
 
 end

@@ -81,8 +81,8 @@ def statementSpecializations (program : Programm D) (uniformReturn : Bool) (expa
       (blockSpecializations program uniformReturn expansion limit continuation yes + blockSpecializations program uniformReturn expansion limit continuation no)
   | .breaking _ body | .locks _ _ body => blockSpecializations program uniformReturn expansion limit continuation body
   | .onWhy _ arms => reasonSpecializations program uniformReturn expansion limit continuation arms
-  | .onOption (n := count) _ present absent => min (limit + 1)
-      (count.toNat * blockSpecializations program uniformReturn expansion limit continuation present +
+  | .onOption _ present absent => min (limit + 1)
+      (blockSpecializations program uniformReturn expansion limit continuation present +
         blockSpecializations program uniformReturn expansion limit continuation absent)
   | .onTag _ arms => tagSpecializations program uniformReturn expansion limit continuation arms
   | .retry 0 _ _ overflow => min (limit + 1)

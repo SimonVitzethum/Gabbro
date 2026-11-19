@@ -109,44 +109,59 @@ def everyValue {context : Context A next} {α : Type}
             exact head.sound valuation item present runtime world parts.1
           · exact tail.sound valuation item present runtime world parts.2 current member }
 
-/-- `match` on an option: the `Some` block is certified for every index of the complete domain, the `None` block
-    once; whichever the actual value is, its block's certificate applies. -/
-def optionCondition (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+theorem freshKeyBounded (next : Nat) :
+    (SymValue.integer (.var next) : SymValue D Nat (.int lo hi)).Bounded (next + 1) := fun key member => by
+  have same := List.mem_singleton.mp member
+  subst key
+  exact Nat.lt_succ_self next
+
+/-- `match` on an option of unknown value: the `Some` block is certified ONCE for a fresh index observation bounded
+    by the option's range (no enumeration of the indices), the `None` block once; whichever the actual value is, its
+    block's certificate applies. -/
+def symbolicOptionCondition (policy : A → CallObligation program) {context : Context A next} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int}
-    (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
+    (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next) (expression : Expr D Γ Λ (.opt count))
     (present : Block D V l (Ty.index count :: Γ) Λ Λ') (absent : Block D V l Γ Λ Λ')
     (goals : Goals (program := program) (S := S) context V Γ)
-    (domain : Invarianten.VC.LocalDomain D (Ty.index count))
     (absentCase : BlockCondition policy absent symbols goals)
-    (presentCase : ∀ index, Except Frag.Refusal
-      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count)))) :
-    Except Frag.Refusal (StatementCondition policy (.onOption expression present absent) symbols goals) := do
-  let some ← everyValue
-    (fun index valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
-      ∀ actual, symbols.Realizes valuation world actual → ∀ allowed, HandlerSafe (policy item) runtime allowed →
-        runtime.wpB present ((goals.shrink (Ty.index count)).holds item runtime allowed) world (.cons index actual))
-    (fun index => do
-      let pre ← presentCase index
-      return pre.map (fun _ _ _ _ ready actual realized allowed safe =>
-        ready (.cons index actual) ⟨rfl, realized⟩ allowed safe))
-    domain.values
+    (presentCase : BlockCondition (context := context.weaken (Nat.le_succ next)) policy present
+      (.cons (.integer (.var next)) symbols) ((goals.weaken (Nat.le_succ next)).shrink (Ty.index count))) :
+    StatementCondition policy (.onOption expression present absent) symbols goals :=
+  let bounds : Frag.LProp (Key D Nat) := .and
+    (.le (.konst 0) (.var (.inr next))) (.le (.var (.inr next)) (.konst (count - 1)))
   let both : Certificate context (fun valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
-      (∀ index ∈ domain.values, ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
+      (∀ index : Wert D (Ty.index count), ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
         HandlerSafe (policy item) runtime allowed →
         runtime.wpB present ((goals.shrink (Ty.index count)).holds item runtime allowed) world (.cons index actual)) ∧
       (∀ actual, symbols.Realizes valuation world actual → ∀ allowed, HandlerSafe (policy item) runtime allowed →
         runtime.wpB absent (goals.holds item runtime allowed) world actual)) :=
-    { formula := .and some.formula absentCase.formula
+    { formula := .and (.all (.inr next) (.imp bounds presentCase.formula)) absentCase.formula
       sound := fun valuation item ready runtime world valid =>
-        ⟨some.sound valuation item ready runtime world valid.1,
+        ⟨fun index actual realized allowed safe => by
+          let extended := valuation.bind next index.n
+          have agree : ∀ key, key < next → valuation key = extended key := by
+            intro key inside
+            have different : key ≠ next := Nat.ne_of_lt inside
+            simp only [extended, Frag.Assignment.bind, different, ↓reduceIte]
+          have ready' := (context.stable valuation extended item agree).mp ready
+          have realized' := (symbols.realizes_congr next bounded valuation extended agree world world actual).mp realized
+          have fresh : values extended world (.inr next) = index.n := bind_same valuation next index.n
+          have withinBounds : bounds.denote (values extended world) := by
+            change 0 ≤ values extended world (.inr next) ∧ values extended world (.inr next) ≤ count - 1
+            rw [fresh]
+            exact ⟨index.lo_le, index.le_hi⟩
+          have body := valid.1 index.n
+          rw [← values_bind] at body
+          exact presentCase.sound extended item ready' runtime world (body withinBounds) (.cons index actual)
+            ⟨bind_same valuation next index.n, realized'⟩ allowed safe,
          absentCase.sound valuation item ready runtime world valid.2⟩ }
-  return (both.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
+  (both.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
     have current := (symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized
     unfold VC.Runtime.wpS
     simp only [execStmtH]
     cases selected : eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual with
     | some index =>
-        have case := ready.1 index (domain.complete index) actual current allowed safe
+        have case := ready.1 index actual current allowed safe
         unfold VC.Runtime.wpB at case
         exact (goals.holds_shrink (Ty.index count) item runtime allowed _).mp case
     | none =>
@@ -188,8 +203,8 @@ def knownOptionCondition (policy : A → CallObligation program) {context : Cont
         unfold VC.Runtime.wpB at case
         exact case)
 
-/-- `match` on an option: the selected block when the value is known, otherwise every index of the complete domain
-    and the absent block. -/
+/-- `match` on an option: the selected block when the value is known, otherwise the `Some` block once over a fresh
+    bounded index and the absent block. -/
 def optionDispatch (policy : A → CallObligation program) {context : Context A next} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int} (expansion : Nat)
     (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
@@ -197,14 +212,18 @@ def optionDispatch (policy : A → CallObligation program) {context : Context A 
     (goals : Goals (program := program) (S := S) context V Γ)
     (absentCase : Unit → Except Frag.Refusal (BlockCondition policy absent symbols goals))
     (presentCase : ∀ index, Except Frag.Refusal
-      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count)))) :
+      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count))))
+    (bounded : symbols.Bounded next)
+    (presentSymbolic : Unit → Except Frag.Refusal
+      (BlockCondition (context := context.weaken (Nat.le_succ next)) policy present
+        (.cons (.integer (.var next)) symbols) ((goals.weaken (Nat.le_succ next)).shrink (Ty.index count)))) :
     Except Frag.Refusal (StatementCondition policy (.onOption expression present absent) symbols goals) :=
   match knownValue? expression symbols with
   | some known => knownOptionCondition policy symbols expression present absent goals known absentCase presentCase
   | none => do
-      let domain ← Invarianten.VC.finiteDomain (D := D) expansion (Ty.index count)
       let missing ← absentCase ()
-      optionCondition policy symbols expression present absent goals domain missing presentCase
+      let some ← presentSymbolic ()
+      return symbolicOptionCondition policy symbols bounded expression present absent goals missing some
 
 /-- What the arms of a tagged dispatch must certify: for every value of the tagged type, the arm it selects. -/
 abbrev TagTarget (policy : A → CallObligation program) {context : Context A next} {l : Bool}
@@ -313,5 +332,25 @@ def tagSomeCases (policy : A → CallObligation program) {context : Context A ne
         ready (.cons payload actual) ⟨rfl, realized⟩ allowed safe))
     domain.values
   return tagSome policy symbols goals domain head tail
+
+/-- An arm with a payload: every payload of the complete domain when it fits the budget, otherwise once for an
+    unobserved payload. -/
+def tagSomeDispatch (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {τ : Ty}
+    {first : Block D V l (ArmCtx Γ (some τ)) Λ Λ'} {rest : Arms D V l Γ Λ Λ' cs}
+    (symbols : SymEnv D Nat Γ) (goals : Goals (program := program) (S := S) context V Γ) (expansion : Nat)
+    (tail : Certificate context (TagTarget policy rest symbols goals))
+    (compileKnown : ∀ payload, Except Frag.Refusal
+      (BlockCondition policy (show Block D V l (τ :: Γ) Λ Λ' from first) (.cons (.known payload) symbols)
+        (goals.shrink τ)))
+    (compileUnobserved : Unit → Except Frag.Refusal
+      (BlockCondition policy (show Block D V l (τ :: Γ) Λ Λ' from first) (.cons .unobserved symbols)
+        (goals.shrink τ))) :
+    Except Frag.Refusal (Certificate context (TagTarget policy (Arms.cons first rest) symbols goals)) :=
+  match Invarianten.VC.finiteDomain (D := D) expansion τ with
+  | .ok domain => tagSomeCases policy symbols goals domain tail compileKnown
+  | .error _ => do
+      let head ← compileUnobserved ()
+      return tagSomeUnobserved policy symbols goals head tail
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic
