@@ -13,7 +13,8 @@ def decl : Deklaration :=
   { CallSiteZeuge.decl with
     sigNr := fun _ => { CallSiteZeuge.sig with erg := some .bool }
     aerg := fun _ => some .bool
-    passt_ok := fun _ _ _ => SigPasst.refl _ _ }
+    passt_ok := fun _ _ _ => SigPasst.refl _ _
+    anbieter_passt := fun t => nomatch t }
 
 def contract : CallContract decl (decl.asignatur ()) where
   pre := .fls

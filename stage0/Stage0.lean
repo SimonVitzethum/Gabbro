@@ -283,24 +283,14 @@ public import Stage0.Senke.Bild.Mehr.SCSchritt
 public import Stage0.Senke.Bild.Mehr.Solo
 public import Stage0.Senke.Bild.Mehr.Start
 public import Stage0.Senke.Bild.Mehr.Zeuge
-public import Stage0.Senke.Images.InitialWitness
-public import Stage0.Senke.Images.StartupProbes
 public import Stage0.Senke.Tore.Scalar
 public import Stage0.Senke.Welt.Spans.SpanProbe
 public import Stage0.Senke.Welt.Spans.WorldProbe
 public import Stage0.StartArgumentProben
-public import Stage0.StartImageProben
 public import Stage0.Zeugen.Annahme.Contracts.ScopedOutcomeWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalBinderWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalForeignBinderWitness
-public import Stage0.Zeugen.Pipeline.AdapterReasonWitness
-public import Stage0.Zeugen.Pipeline.DynWitness
-public import Stage0.Zeugen.Pipeline.FallibleIndirectWitness
 public import Stage0.Zeugen.Pipeline.GenericWitness
-public import Stage0.Zeugen.Pipeline.OptionalForeignWitness
-public import Stage0.Zeugen.Pipeline.ParametricModuleWitness
-public import Stage0.Zeugen.Pipeline.RangeFoldsWitness
-public import Stage0.Zeugen.Pipeline.TaggedGateWitness
 
 @[expose] public section
