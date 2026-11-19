@@ -137,7 +137,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     numbered cell formula, reset-cell atom and `komp` remain unchanged.
     Re-reviewed for option and tagged dispatch in the contract checker
     (`optionCondition`, `tagCases`): only the certified statement forms grow; every
-    numbered cell formula, reset-cell atom and `komp` remain unchanged. -/
+    numbered cell formula, reset-cell atom and `komp` remain unchanged.
+    Re-reviewed for `exists` over finite tables, known-option dispatch and the
+    dispatch work estimate: only translation and preflight grow; every numbered
+    cell formula, reset-cell atom and `komp` remain unchanged. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -151,7 +154,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 410484797585467835)]
+   ("AkzeptiertX", 2413557897516737573)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
