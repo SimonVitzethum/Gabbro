@@ -255,6 +255,13 @@ theorem ptrVerfeinert4 : PtrVerfeinert P4 := by
     rw [ptrPost4]
     exact hv
 
+/-- **Satisfiability of the pointer-refinement premise** (stream E9): `PtrVerfeinert` holds on a program whose
+    pointer interfaces carry their targets' actual postconditions (`ptrPost4`), and a target conforms to its
+    interface, so the premise is not met vacuously. -/
+theorem ptr_verfeinert_erfuellbar : ∃ (D : Deklaration) (P : Programm D), PtrVerfeinert P ∧
+    ∃ (f : D.Fn) (n : Nat), D.passt f n = true :=
+  ⟨D4, P4, ptrVerfeinert4, ein4, ein4.val, by decide⟩
+
 /-! ## 3. The enumerations of the declaration's members -/
 
 def fsA : Aufzaehlung D4.Fn := ⟨[ein4, lies4], fun f => by
