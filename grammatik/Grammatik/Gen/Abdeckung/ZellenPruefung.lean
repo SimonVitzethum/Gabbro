@@ -134,6 +134,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     numbered cell formula, reset-cell atom and `komp` remain unchanged.
     Re-reviewed for finite-domain selection in the contract checker
     (`finiteSelection`): only the selection of finite-type locals grows; every
+    numbered cell formula, reset-cell atom and `komp` remain unchanged.
+    Re-reviewed for option and tagged dispatch in the contract checker
+    (`optionCondition`, `tagCases`): only the certified statement forms grow; every
     numbered cell formula, reset-cell atom and `komp` remain unchanged. -/
 
 def erwartet : List (String × UInt64) :=
@@ -148,7 +151,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 4051672707304959110)]
+   ("AkzeptiertX", 410484797585467835)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
