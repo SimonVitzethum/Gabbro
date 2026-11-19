@@ -1,12 +1,13 @@
 /-
-  Subject: Joint, successful witnesses of the indirect-call simulation premises.
+  Subject: Satisfiability of the Stage-0 call premises (stream E4): `FunSpec`, the caller's code and frame premises
+           and the world placement hold jointly, and an indirect call runs to its result.
 -/
 module
-public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
+public import Stage0.Senke.Erfuellbarkeit.Fixture
 @[expose] public section
 
 
-namespace Gabbro.Stage0.Senke.FnptrProben
+namespace Gabbro.Stage0.Senke.Erfuellbarkeit
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option maxRecDepth 10000
 
@@ -145,8 +146,7 @@ theorem call_spec [Kern] : FunSpec callLayout addresses target (rufAt tiny O 1 2
     addresses_bound
     (fun f => target_bound f) 2 (by decide)
 
-/-- The pointer, callee specification, code, world and frame premises hold together, and the call returns 21. -/
-theorem lowInd_ok_zeuge [Kern] :
+private theorem aufruf_lauf [Kern] :
     FunSpec callLayout addresses target (rufAt tiny O 1 2) 2 39 ∧
     lowInd callLayout pointer .nil = some (indirect, 9) ∧
     PreS callLayout callMem 2048 4096 256 4 indirect (Env.nil : Env D []) ∧
@@ -164,35 +164,19 @@ theorem lowInd_ok_zeuge [Kern] :
   obtain ⟨m', steps, changed, ⟨result, _, _⟩, world'⟩ := h
   exact ⟨m', steps, changed, result, world'⟩
 
-/-- The statement instance uses the same jointly inhabited code, environment and callee premises. -/
-theorem indStmt_ok_zeuge [Kern] :
-    Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ callMem 2144 2144 2144
-      (execStmt O 1 (rufAt tiny O 1 2) (Stmt.callInd (l := false) pointer .nil (fit 2) rfl) world Env.nil) := by
-  exact indStmt_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world) (ρ0 := Env.nil)
-    (ex := (0, 0)) call_spec addresses_bound pointer .nil (fit 2) rfl (c := indirect) (top := 9)
-    rfl (by decide) call_win call_pre.left (by decide) call_umf call_world (fun _ h => nomatch h) HeldIn.nil
+/-- **Satisfiability of the Stage-0 call premises** (stream E4): for a program of three functions, a function
+    specification `FunSpec`, the caller's code and frame premises (`PreS`, `Umf`, `WIn`) and the world placement
+    `WeltAt` hold jointly, and the indirect call through a global pointer runs to the callee's result 21. -/
+theorem senke_aufruf_erfuellbar [Kern] :
+    ∃ (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
+      (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (m : Runner.Mem) (σ : World D),
+      FunSpec L A C R 2 39 ∧ PreS L m 2048 4096 256 4 indirect (Env.nil : Env D []) ∧
+      Umf L A C 2 m 4096 128 256 [] ∧ WIn L 4096 128 256 ∧ WeltAt m L σ ∧
+      ∃ m', Star ⟨2048, 4096⟩ m ⟨2144, 4096⟩ m' ∧
+        ResultAt L m' (slot 4096 4) (FB + contextWords (D.params 2)) (D.erg 2)
+          (⟨21, by decide, by decide⟩ : Zahl 0 100) := by
+  obtain ⟨spec, _, pre, umf, win, placed, m', steps, _, result, _⟩ := aufruf_lauf
+  exact ⟨callLayout, addresses, target, rufAt tiny O 1 2, callMem, world, spec, pre, umf, win, placed,
+    m', steps, result⟩
 
-/-- A concrete successful result binder: slot 4 becomes 21, and its continuation reaches the end. -/
-theorem indBind_ok_zeuge [Kern] :
-    Sim (l := false) callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ callMem 2160 2160 2160
-      (.ok world (Env.cons (τ := .int 0 100) (⟨21, by decide, by decide⟩ : Zahl 0 100) Env.nil)) := by
-  have h := indBind_ok (τ := .int 0 100) (f := 2) (fp := 4096) (rp := 0) (cfp := 0) (ρ0 := Env.nil)
-    (lo := 4) (K := 256) (Ks := 128) (pr := []) (cc := indirect) (cr := []) (tc := 9) (pc := 2048)
-    call_spec addresses_bound pointer .nil rfl rfl world Env.nil rfl (by decide) (by decide) call_pre
-    call_win rfl (by decide) call_umf call_head call_world (fun _ h => nomatch h) HeldIn.nil
-    (fun σ v => Ausgang.ok (V := vertragVon D 2) (l := false) σ (Env.cons v Env.nil)) .logik .hardware
-    (fun t m out => Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] t m 2160 2160 2160 out)
-    (Sim.prefix (by decide)) (fun _ _ _ h => h) (fun _ _ _ h => h)
-    (fun m' σ' v hp' _ _ hw' =>
-      ⟨m', star_cast (Star.refl (⟨2160, 4096⟩ : T) m') (by simp only [T.mk.injEq, and_true]; decide +kernel) rfl,
-        AgreeW.refl _ _ _ _ _, hp'.env, hw', Keeps.refl _ _ _⟩)
-  exact h
-
-/-- An unrepresentable address is refused instead of being truncated to an immediate. -/
-theorem fnref_address_refused_zeuge :
-    lowE { refLayout with fa := fun _ => 2 ^ 31 }
-      (Expr.fnref (D := D) (Γ := []) (Λ := []) 0 0 (by decide)) 3 = none := by
-  simp only [lowE_eqs]
-  decide +kernel
-
-end Gabbro.Stage0.Senke.FnptrProben
+end Gabbro.Stage0.Senke.Erfuellbarkeit

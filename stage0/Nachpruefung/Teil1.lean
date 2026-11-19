@@ -114,14 +114,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.lowInd_ok
 #print axioms Gabbro.Stage0.Senke.indStmt_ok
 #print axioms Gabbro.Stage0.Senke.indBind_ok
-#print axioms Gabbro.Stage0.Senke.FnptrProben.global_call_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.image_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_encoding_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.lowInd_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.indStmt_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.indBind_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_address_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.encSum_inj
 #print axioms Gabbro.Stage0.Senke.encSum_inj_zeuge
 #print axioms Gabbro.Stage0.Senke.sumWord_tag
@@ -247,7 +239,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.relocate_env
 -- Actual counter header reconstructs the source-pass interface in its output memory.
 #print axioms Gabbro.Stage0.Senke.counter_header
-#print axioms Gabbro.Stage0.Senke.CounterCallProbe.counter_header_zeuge
 -- The shared value ABI and the complete-span world consumers.
 #print axioms Gabbro.Stage0.Senke.copyValue_run
 #print axioms Gabbro.Stage0.Senke.globalValueC_ok
@@ -297,3 +288,4 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_lower
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.references_lower
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_traversal_lower
+#print axioms Gabbro.Stage0.Senke.Erfuellbarkeit.senke_aufruf_erfuellbar

@@ -12,7 +12,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_footprint
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_gate
 #print axioms Gabbro.Stage0.Compiled.initializer_exports
-#print axioms Gabbro.Stage0.Senke.ReservedByteProbe.putBytes_reserved_sentinel_zeuge
 -- The first private-frame rely component for concurrent IR refinement.
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_word
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_frame

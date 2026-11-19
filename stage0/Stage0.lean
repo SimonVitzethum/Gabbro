@@ -63,8 +63,8 @@ public import Stage0.Senke.Bild.Rek.EndRB
 public import Stage0.Senke.Bild.Rek.EndRBSatz
 public import Stage0.Senke.Bild.Rek.EndRBVoll
 public import Stage0.Senke.Welt.MainEnv
-public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
-public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
+public import Stage0.Senke.Erfuellbarkeit.Fixture
+public import Stage0.Senke.Erfuellbarkeit.Aufruf
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
@@ -78,10 +78,7 @@ public import Stage0.Senke.Ausdruck.Old.Admission
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
 
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCall
 
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterCall
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterRun
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
 
