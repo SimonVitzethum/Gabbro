@@ -250,9 +250,9 @@ equations or quantifiers need no lemma. Bundles, by the premise predicates they 
 | ID | Bundle | Theorems | State |
 |---|---|---|---|
 | E1 | goal premises (`GutO`, `StartGut`, `StartExklusiv`, `RegLokal`, `AxEnsLokal`, `AxVertragO`) | ~31 | DONE: `gabbro_ziel_erfuellbar` (`Zielsatz/Kern/Erfuellbarkeit.lean`) |
-| E2 | atomic goal (GX rely, `NutzerPflichtA`) | ~10 | open |
+| E2 | atomic goal (GX rely, `NutzerPflichtA`) | ~10 | DONE: `gabbro_ziel_atomar_erfuellbar`, `gabbro_ziel_atomar_schwach_erfuellbar` (`Zielsatz/Atomar/Erfuellbarkeit.lean`) |
 | E3 | ownership (`Owner*`, `Frame`) | ~22 | open |
-| E4 | Stage-0 lowering (`FunSpec`, `W`, `Fn`, `Lay`, `WeltAt`, …) | ~40 | open |
+| E4 | Stage-0 lowering (`FunSpec`, `W`, `Fn`, `Lay`, `WeltAt`, …) | ~40 | DONE: `senke_aufruf_erfuellbar` (`stage0/Stage0/Senke/Erfuellbarkeit/`) |
 | E5 | code model (`FnOk`, `LayoutOk`, `LvOk`, `WfL`, …) | ~10 | open |
 | E6 | reachability (`Erreicht`, `RufErreichbarG`, `RufSchrittG`, `Wohlgeformt`) | ~16 | open |
 | E7 | addresses and layout (`AdressLayout`, `Space`, `DataRights`) | ~10 | open |
