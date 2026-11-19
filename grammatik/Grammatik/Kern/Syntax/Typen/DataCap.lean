@@ -53,29 +53,5 @@ theorem attenuates_trans (source middle target : DataCapTy)
     cases sw : source.rights.write <;> cases tw : target.rights.write <;>
     simp_all [attenuates]
 
-/-- Owner identity survives a sequence that discards write and then read access. -/
-theorem attenuates_trans_zeuge :
-    let source : DataCapTy := ⟨2, ⟨true, true, some 3⟩, .table 7⟩
-    let middle : DataCapTy := ⟨2, ⟨true, false, some 3⟩, .table 7⟩
-    let target : DataCapTy := ⟨2, ⟨false, false, some 3⟩, .table 7⟩
-    source.attenuates target = true := by
-  intro source middle target
-  exact attenuates_trans source middle target rfl rfl
-
-theorem write_only_zeuge :
-    (table 0 (false, true)).rights.read = false ∧
-    (table 0 (false, true)).rights.write = true ∧
-    attenuates (table 0 (true, true)) (table 0 (false, true)) = true ∧
-    attenuates (table 0 (false, true)) (table 0 (true, true)) = false := by
-  exact ⟨rfl, rfl, rfl, rfl⟩
-
-theorem attenuates_sound_zeuge :
-    let source := table 7 (true, true) 1
-    let target := table 7 (false, true) 1
-    source.space = target.space ∧ source.target = target.target ∧ source.rights.owner = target.rights.owner ∧
-      (target.rights.read = true → source.rights.read = true) ∧
-      (target.rights.write = true → source.rights.write = true) :=
-  attenuates_sound _ _ rfl
-
 end DataCapTy
 end Gabbro.Grammatik

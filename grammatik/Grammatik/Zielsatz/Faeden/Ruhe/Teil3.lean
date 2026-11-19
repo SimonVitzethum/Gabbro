@@ -171,11 +171,6 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernz
     obtain ⟨checks, hChecks⟩ := hA.pruef
     exact ⟨checks.map CheckDecl.mitRuhe, CheckAdmission.mitRuhe P hvoll hA.abg hChecks⟩
 
-/-- The fixture expansion survives the idle root. -/
-theorem pruef_expansion_mitRuhe_zeuge :
-    CheckExpansion pruefP.mitRuhe (CheckDecl.mitRuhe pruefC) :=
-  CheckExpansion.mitRuhe pruefP pruef_expansion
-
 end Transfer
 
 end Gabbro.Grammatik

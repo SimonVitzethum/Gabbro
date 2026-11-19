@@ -124,51 +124,6 @@ theorem paarung_gibt_gutO (D : Deklaration) (O : Orakel D)
     refine ⟨tabs, globs, Λe, hct, hcg, hdt, hdg, hmf, hhi, ?_⟩
     rw [hfst]; exact hspur
 
-/-- ZEUGE: all eight `paarung_gibt_gutO` premises hold jointly on the toy
-    `write` declaration `swD`, whose only axiom is that syscall (number 1,
-    `schreibAbi`, `schreibFehler`); the program is non-degenerate: function
-    `()` writes table `()`, and a `storeSlot` step moves memory
-    (`0 -> 1` at slot `0`). -/
-theorem paarung_gibt_gutO_zeuge :
-    GutO swO ∧ swD.schreibt () () = true ∧
-    ∃ (σ σ' : World swD), σ'.slots () 0 () ≠ σ.slots () 0 () := by
-  refine ⟨paarung_gibt_gutO swD swO (fun _ => swK) (fun _ => swU)
-    (fun _ => swKbeh) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_, rfl, ?_⟩
-  · intro a
-    cases a
-    exact swNum
-  · intro a
-    cases a
-    exact swAbi
-  · intro a
-    cases a
-    exact swSub
-  · intro a
-    cases a
-    exact swSubG
-  · intro a
-    cases a
-    exact swEu
-  · intro a
-    cases a
-    exact swEuG
-  · intro a
-    cases a
-    exact swEff
-  · intro a
-    cases a
-    exact swO_trifft
-  · refine ⟨swWelt0, swWelt0.storeSlot () 0 ()
-      (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192)), ?_⟩
-    have hn1 : ((swWelt0.storeSlot () 0 ()
-        (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192))).slots () 0 ()).n
-        = 1 := rfl
-    have hn0 : (swWelt0.slots () 0 ()).n = 0 := rfl
-    intro hcon
-    have hn := congrArg Zahl.n hcon
-    rw [hn1, hn0] at hn
-    omega
-
 /- CUTS: what is not proved.
    - The kernel implementation `K` is a hypothesis (`hKeff`/`hKcon`),
      not a verification: discharging it for a real Gabbro kernel means
@@ -189,12 +144,10 @@ theorem paarung_gibt_gutO_zeuge :
 -/
 
 #print axioms Gabbro.Grammatik.syscall_paarung
-#print axioms Gabbro.Grammatik.syscall_paarung_zeuge
 #print axioms Gabbro.Grammatik.syscall_paarung_abgelehnt
 #print axioms Gabbro.Grammatik.PaarGut
 #print axioms Gabbro.Grammatik.swEns
 #print axioms Gabbro.Grammatik.swO_trifft
 #print axioms Gabbro.Grammatik.paarung_gibt_gutO
-#print axioms Gabbro.Grammatik.paarung_gibt_gutO_zeuge
 
 end Gabbro.Grammatik

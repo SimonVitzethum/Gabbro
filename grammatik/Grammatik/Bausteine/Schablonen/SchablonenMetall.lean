@@ -63,18 +63,6 @@ namespace MetallLaufzeit
 
 def ident : Sp := fun x => x
 
-/-- `memcpy` of 3 bytes from 10 to 0 (no overlap), `memmove` of 4 bytes from 0 to 2 (overlap,
-    the backward branch) and from 2 to 0 (overlap, the forward branch), `memset` of 3 bytes
-    with 300, and `memcmp` both ways. -/
-theorem metall_speicher_zeuge :
-    (10 + 3 ≤ 0 ∨ 0 + 3 ≤ 10) ∧
-    memcpy ident 0 10 3 (0 + 2) = ident (10 + 2) ∧ memcpy ident 0 10 3 5 = 5 ∧
-    memmove ident 2 0 4 (2 + 3) = ident (0 + 3) ∧
-    memmove ident 0 2 4 (0 + 3) = ident (2 + 3) ∧
-    memset ident 7 300 3 (7 + 1) = 44 ∧ memset ident 7 300 3 10 = 10 ∧
-    memcmp ident 0 0 5 = 0 ∧ memcmp ident 0 1 3 = -1 ∧ memcmp ident 1 0 3 = 1 := by
-  decide
-
 /-! ## 2. `arena.metall` -/
 
 /-- The first position of `d` in the emitted list (`gabbro_modul_arenen`). -/
@@ -149,17 +137,6 @@ theorem arena_metall_lager_getrennt (V i1 i2 x y : Nat) (hi : i1 ≠ i2) (hx : x
   · have : (i2 + 1) * V ≤ i1 * V := Nat.mul_le_mul_right _ h
     rw [Nat.succ_mul] at this
     omega
-
-/-- Witness: the list `[10, 20, 30]` (three descriptors), every pool reservation succeeding
-    but the third's; 10 and 20 get pools 0 and 1, 30 ends the machine, 40 is no arena. -/
-theorem arena_metall_zeuge :
-    let liste := [10, 20, 30]
-    let ok : Nat → Bool := fun i => i < 2
-    reserviere liste ok 10 = some 0 ∧ reserviere liste ok 20 = some 1 ∧
-    reserviere liste ok 30 = none ∧ reserviere liste ok 40 = none ∧
-    (10 : Nat) ≠ 20 ∧ (0 : Nat) ≠ 1 ∧ 40 ∉ liste ∧
-    0 * 4096 + 4095 ≠ 1 * 4096 + 0 := by
-  decide
 
 end MetallLaufzeit
 

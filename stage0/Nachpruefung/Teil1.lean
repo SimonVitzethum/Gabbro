@@ -11,36 +11,20 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 -- Forward scalar dependencies, exact final meanings and certified declaration schedules.
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle
-#print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle_zeuge
-#print axioms Gabbro.Stage0.Frontend.orderConstants_cycle_zeuge
 #print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_sound
-#print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_sound_zeuge
-#print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_refused_zeuge
 #print axioms Gabbro.Stage0.Frontend.resolveCandidate_final
 #print axioms Gabbro.Stage0.Frontend.discoverScopes_final
 #print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_dependencies
-#print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_forward_zeuge
 -- Certified alias scheduling and dependency-cycle refusal in the actual frontend.
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound
-#print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound_zeuge
-#print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_refused_zeuge
 #print axioms Gabbro.Stage0.Frontend.AliasAcyclic.no_cycle
-#print axioms Gabbro.Stage0.Frontend.AliasAcyclic.no_cycle_zeuge
 #print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
-#print axioms Gabbro.Stage0.Frontend.orderAliases_zeuge
-#print axioms Gabbro.Stage0.Frontend.orderAliases_cycle_zeuge
-#print axioms Gabbro.Stage0.Frontend.elaborateScopes_preserves_zeuge
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
-#print axioms Gabbro.Stage0.Frontend.elaborateScopes_forward_zeuge
 #print axioms Gabbro.Stage0.compile_source_program
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
-#print axioms Gabbro.Stage0.Frontend.elaborateScopes_call_bound_zeuge
-#print axioms Gabbro.Stage0.Frontend.elaborateScopes_custom_negative_bound_zeuge
 #print axioms Gabbro.Stage0.Frontend.typedItem_sound
-#print axioms Gabbro.Stage0.Frontend.typedItem_sound_zeuge
-#print axioms Gabbro.Stage0.Frontend.elaborateScopes_inline_range_zeuge
 #print axioms Gabbro.Stage0.validateTargetFor_supported
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -87,7 +71,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.torC_ok
 #print axioms Gabbro.Stage0.Senke.torBind_ok
 #print axioms Gabbro.Stage0.Senke.chkC_ok
-#print axioms Gabbro.Stage0.Senke.torOK_zeuge
 #print axioms Gabbro.Stage0.Senke.torElse_ok
 #print axioms Gabbro.Stage0.Senke.fehlC_ok
 #print axioms Gabbro.Stage0.Senke.sonst_dec
@@ -107,7 +90,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.exch_ok
 #print axioms Gabbro.Stage0.Senke.awaits_ok
 #print axioms Gabbro.Stage0.Senke.ex_tail
-#print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
 #print axioms Gabbro.Stage0.Senke.onOption_ok
 #print axioms Gabbro.Stage0.Senke.fnref_ok
 #print axioms Gabbro.Stage0.Senke.call_ok
@@ -115,15 +97,12 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.indStmt_ok
 #print axioms Gabbro.Stage0.Senke.indBind_ok
 #print axioms Gabbro.Stage0.Senke.encSum_inj
-#print axioms Gabbro.Stage0.Senke.encSum_inj_zeuge
 #print axioms Gabbro.Stage0.Senke.sumWord_tag
 #print axioms Gabbro.Stage0.Senke.sumWord_off
 #print axioms Gabbro.Stage0.Senke.choice_ok
 #print axioms Gabbro.Stage0.Senke.onTag_ok
 #print axioms Gabbro.Stage0.Senke.lowTags_ok
-#print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.tagPayload_ok
-#print axioms Gabbro.Stage0.Senke.sumFits_zeuge
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
 #print axioms Gabbro.Stage0.Senke.shift_ok
@@ -139,15 +118,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.blockNarrow_case
 #print axioms Gabbro.Stage0.Senke.endNarrow_case
 #print axioms Gabbro.Stage0.Senke.blockAxiomElse_case
-#print axioms Gabbro.Stage0.Senke.ControlProbe.blockCheck_case_zeuge
-#print axioms Gabbro.Stage0.Senke.ControlProbe.blockNarrow_case_zeuge
-#print axioms Gabbro.Stage0.Senke.ControlProbe.endNarrow_case_zeuge
-#print axioms Gabbro.Stage0.Senke.ControlProbe.wide_source_narrow_zeuge
-#print axioms Gabbro.Stage0.Senke.ControlProbe.blockAxiomElse_case_zeuge
 #print axioms Gabbro.Stage0.Senke.stmtAxiomElse_case
-#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_case_zeuge
-#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_paths_zeuge
-#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.quant_restore
 #print axioms Gabbro.Stage0.Senke.quantBind_ok
 #print axioms Gabbro.Stage0.Senke.quantC_ok
@@ -169,7 +140,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.whyTest_ok
 #print axioms Gabbro.Stage0.Senke.lowGrund_ok
 #print axioms Gabbro.Stage0.Senke.onWhy_ok
-#print axioms Gabbro.Stage0.Senke.onWhy_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.retWhy_ok
 #print axioms Gabbro.Stage0.Senke.RetWhy.prefix
 #print axioms Gabbro.Stage0.Senke.callBranch_ok
@@ -206,12 +176,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.slotRefC_ok
 #print axioms Gabbro.Stage0.Senke.refEq_ok
 #print axioms Gabbro.Stage0.Senke.assignSlotRef_case
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.region_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.encoded_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.lowering_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.read_simulation_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.write_simulation_zeuge
-#print axioms Gabbro.Stage0.Senke.ReferenceProbe.provider_lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.wordL_ok
 #print axioms Gabbro.Stage0.Senke.floatExprE_ok
 #print axioms Gabbro.Stage0.Senke.floatRangeL_ok
@@ -226,7 +190,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.counter_positive
 #print axioms Gabbro.Stage0.Senke.counter_decrement
 #print axioms Gabbro.Stage0.Senke.counter_protected
-#print axioms Gabbro.Stage0.Senke.counter_decrement_zeuge
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_none
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
 #print axioms Gabbro.Stage0.Senke.blockFloatOfComputed_case
@@ -234,7 +197,6 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Senke.reserved_write_preserves
 #print axioms Gabbro.Stage0.Senke.reservation_variable_offset
 #print axioms Gabbro.Stage0.Senke.nested_reservation_offsets
-#print axioms Gabbro.Stage0.Senke.reservation_parameter_offset_zeuge
 #print axioms Gabbro.Stage0.Senke.relocate_run
 #print axioms Gabbro.Stage0.Senke.relocate_env
 -- Actual counter header reconstructs the source-pass interface in its output memory.

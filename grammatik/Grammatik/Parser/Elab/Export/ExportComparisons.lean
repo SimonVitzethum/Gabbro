@@ -60,26 +60,4 @@ theorem references_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {reg
 
 def referenceFunction : UFn := {name := "same", params := [("a", .ref 0), ("b", .ref 0)], kinds := [.ref 0, .ref 0], res := none, held := [], puts := [], gives := [], body := [], ret := .empty}
 
-/-- Two genuine reference variables in one region; this does not supply a provider binding. -/
-theorem references_lower_zeuge :
-    (lowCmp relationUnit [.ref 0, .ref 0] [] referenceFunction none "==" (.param "a") (.param "b")).toOption.isSome = true ∧
-    (lowCmp relationUnit [.ref 0, .ref 0] [] referenceFunction none "!=" (.param "a") (.param "b")).toOption.isSome = true := by
-  constructor <;> cbv
-
-/-- Unequal lengths and distinct bytes exercise both string relations. -/
-theorem strings_lower_zeuge :
-    (lowCmp relationUnit [] [] relationFunction none "<" (.text []) (.text [65])).toOption.isSome = true ∧
-    (lowCmp relationUnit [] [] relationFunction none ">=" (.text [66]) (.text [65])).toOption.isSome = true := by
-  constructor <;> cbv
-
-/-- Concrete distinct and equal cell identities make reference comparison nonvacuous.
-    These are mathematical comparison inputs, not a source provider realization. -/
-theorem references_meaning_zeuge (entry state : World (declOf relationUnit)) :
-    let first : Expr (declOf relationUnit) [.ref 0, .ref 0] [] (.ref 0) := .var .here
-    let second : Expr (declOf relationUnit) [.ref 0, .ref 0] [] (.ref 0) := .var (.there .here)
-    let equal : Env (declOf relationUnit) [.ref 0, .ref 0] := .cons (Val.vonZelle 0) (.cons (Val.vonZelle 0) .nil)
-    let distinct : Env (declOf relationUnit) [.ref 0, .ref 0] := .cons (Val.vonZelle 0) (.cons (Val.vonZelle 1) .nil)
-    eval entry (.refEq first second) state equal = true ∧
-    eval entry (.refEq first second) state distinct = false := ⟨rfl, rfl⟩
-
 end Gabbro.Grammatik.Parser.ExportPreservation

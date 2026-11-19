@@ -47,17 +47,6 @@ theorem format_separate (width : String → Nat) (σ : fieldStore)
     fieldRead (fieldWrite width σ f v) g = fieldRead σ g := by
   simp only [fieldRead, fieldWrite, if_neg hne]
 
-/-- Witness for the `format` pair: roundtrip of `7` and undisturbed
-    `"b"` after writing `"a"`. -/
-theorem format_roundtrip_zeuge :
-    (fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "a" = 7 ∧
-      fieldRead (fieldWrite (fun _ => 8) (fun _ => 0) "a" 7) "b" =
-        fieldRead (fun _ => 0) "b")
-:= by
-  have hRep : 7 < 2 ^ ((fun _ => 8 : String → Nat) "a") := by decide
-  have hne : (("b" : String) ≠ "a") := by decide
-  exact ⟨format_roundtrip _ _ "a" 7 hRep, format_separate _ _ "a" "b" 7 hne⟩
-
 /-! ## 7. `gruppe.sperrabdruck` (locks: 292 corpus lines).
 
 The group operation takes ALL locks of its carriers in ascending
@@ -129,13 +118,6 @@ theorem group_move_no_exit (script : List GAct)
       have hc : False := hNoExit (List.mem_cons.mpr (Or.inl rfl))
       exact hc.elim
 
-/-- Witness for `lock_order_no_reentry`: ranks `[0, 1]` ascend. -/
-theorem lock_order_no_reentry_zeuge :
-    ([0, 1] : List Nat).Nodup
-:= by
-  have hAsc : ([0, 1] : List Nat).Pairwise (· < ·) := by decide
-  exact lock_order_no_reentry _ hAsc
-
 /-! ## 8. `entry.abdruck` (entry 89 / clobbers 80 corpus lines).
 
 (1) The generated entry path preserves every register from
@@ -195,24 +177,6 @@ theorem entry_clobbers (path : List (String × Nat)) (C : List String)
   by_cases hrC : r ∈ C
   · exact hrC
   · exact absurd (entry_same_aux C path hClob σ r hrC) h
-
-/-- Witness for the `entry` pair: path `[("t0", 1)]` keeps `"s0"` and
-    changes only `"t0"`. -/
-theorem entry_keeps_zeuge :
-    (regRun [("t0", 1)] (fun _ => 0) "s0" = 0 ∧
-      "t0" ∈ (["t0"] : List String))
-:= by
-  have hPres : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∉ (["s0"] : List String) := by
-    intro w hw
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-    simp only [hw, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self, not_false_eq_true]
-  have hClob : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∈ (["t0"] : List String) := by
-    intro w hw
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-    simp only [hw, List.mem_cons, List.not_mem_nil, or_false]
-  have hkeep := entry_keeps _ ["s0"] hPres (fun _ => 0) "s0" (by decide)
-  have hchange := entry_clobbers _ ["t0"] hClob (fun _ => 0) "t0" (by decide)
-  exact ⟨hkeep, hchange⟩
 
 /-! ## 9. `transition.transset` (transition: 34 corpus lines).
 

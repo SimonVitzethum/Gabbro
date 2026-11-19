@@ -175,19 +175,6 @@ theorem min_ist_monoid_mit_top (T a : Nat) (h : a ≤ T) : min T a = a := by
 
 /-! ## Witness: the fold on a concrete instance -/
 
-/-- Witness: folding `[1, 2, 3]` with `add` gives `6`, and the swapped list
-    gives the same -- the order-independence on a concrete instance. No lemma
-    above quantifies over syntax, so the inhabitation obligation is vacuous;
-    this is a data-level witness for the main theorem. -/
-theorem faltet_zeuge :
-    faltet addMonoid [1, 2, 3] = 6 ∧
-    faltet addMonoid [1, 2, 3] = faltet addMonoid [3, 1, 2] := by
-  constructor
-  · rfl
-  · have h : IsPerm [1, 2, 3] [3, 1, 2] :=
-      .trans (.cons 1 (.swap 2 3 [])) (.swap 1 3 [2])
-    exact faltung_ist_reihenfolgeunabhaengig addMonoid h
-
 /-! ## Bridge
 
   The Lean semantics ties `accumulates` to a global plus a generated store
@@ -208,6 +195,5 @@ theorem min_mit_null_start_zieht_auf_null (T : Nat) : min T 0 = 0 := by
 #print axioms Gabbro.Grammatik.Isabelle.AccumulatesMonoid.rmw_kette_zieht_heraus
 #print axioms Gabbro.Grammatik.Isabelle.AccumulatesMonoid.am_ruhepunkt_gleich_dem_atomaren_rmw
 #print axioms Gabbro.Grammatik.Isabelle.AccumulatesMonoid.min_ist_monoid_mit_top
-#print axioms Gabbro.Grammatik.Isabelle.AccumulatesMonoid.faltet_zeuge
 
 end Gabbro.Grammatik.Isabelle.AccumulatesMonoid

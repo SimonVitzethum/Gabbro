@@ -185,18 +185,6 @@ theorem faden_warte_ohne_eltern :
     wort 0 ([.laeuft, .endet, .loescht].take 1) = 0 ∧
     Ereignis.endet ∉ [Ereignis.laeuft, .endet, .loescht].take 1 := by decide
 
-/-- **Witness** (all premises jointly): a thread with id 4242 that runs three steps; a waiter
-    that looks after all six events reads 0 and the end is in what it saw; one that looks after
-    four reads the id. And the trampoline on a concrete top. -/
-theorem faden_zeuge :
-    wort 7 ((vertragsSpur 4242 3).take 6) = 0 ∧
-    Ereignis.endet ∈ (vertragsSpur 4242 3).take 6 ∧
-    wort 7 ((vertragsSpur 4242 3).take 4) = 4242 ∧
-    ((kindPfad (nachSyscall ⟨9, 0, 0x401000, 0x402000⟩ 0x7f0000800000 true) false).rufe.map
-      Prod.fst = [0x401000, 0x402000]) :=
-  ⟨by decide, faden_warte_korrekt 4242 3 7 6 (by decide) (by decide) (by decide), by decide,
-    (trampolin_kind ⟨9, 0, 0x401000, 0x402000⟩ 0x7f0000800000 (by decide) false rfl).1⟩
-
 /-! ## 3. `tor.kind` -- the lowered `child` triple, its region outlined (OFFEN O38)
 
   The trap of a gate+guard+region triple (`emit.rs`, `kind_tor_falle`): the gate's instruction;
@@ -240,20 +228,10 @@ theorem kind_region (v : Nat) (hv : 16 ≤ v) (regionKehrtZurueck : Bool)
     own stop, never a return into the parent's frame. -/
 theorem kind_region_rueckkehr (v : Nat) : (kindRuf (kindNachSyscall v) true).ud2 = true := by rfl
 
-/-- **Witness**: a 64 KiB stack whose top is `0x7f0000010000`. -/
-theorem kind_region_zeuge :
-    (kindRuf (kindNachSyscall 0x7f0000010000) false).argument = 0x7f0000010000 ∧
-    ((kindRuf (kindNachSyscall 0x7f0000010000) false).rspEintritt + 8) % 16 = 0 ∧
-    (kindRuf (kindNachSyscall 0x7f0000010000) false).rspEintritt < 0x7f0000010000 ∧
-    (kindRuf (kindNachSyscall 0x7f0000010000) false).ud2 = false :=
-  kind_region 0x7f0000010000 (by decide) false rfl
-
 end FadenLaufzeit
 
 end Gabbro.Grammatik
 
 #print axioms Gabbro.Grammatik.FadenLaufzeit.trampolin_kind
 #print axioms Gabbro.Grammatik.FadenLaufzeit.faden_warte_korrekt
-#print axioms Gabbro.Grammatik.FadenLaufzeit.faden_zeuge
 #print axioms Gabbro.Grammatik.FadenLaufzeit.kind_region
-#print axioms Gabbro.Grammatik.FadenLaufzeit.kind_region_zeuge

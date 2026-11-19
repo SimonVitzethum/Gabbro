@@ -52,21 +52,6 @@ private theorem scopedZ_replay :
   · intro ev h
     exact (List.not_mem_nil h).elim
 
-/-- Nonempty cleanup jointly satisfies the actor's replay and log premises,
-    releases the actual lock, and completes the root with the saved value. -/
-theorem akteur_gruppe7_zeuge :
-    RufSchrittG7 scopedZP adO 0 scopedZM 0 scopedZM' ∧
-    FadenOk scopedZP adO 0 (scopedZM.faeden 0) (scopedZM.weltVon 0) ∧
-    LogOk scopedZP (scopedZM.faeden 0).log ∧
-    FadenOk scopedZP adO 0 (scopedZM'.faeden 0) (scopedZM'.weltVon 0) ∧
-    LogOk scopedZP (scopedZM'.faeden 0).log := by
-  have hs : RufSchrittG7 scopedZP adO 0 scopedZM 0 scopedZM' :=
-    .rueckFreigabeLetzte scopedZM 0 Env.nil
-      ⟨.inl umkehrScopedWert, umkehrScopedVor⟩ () rfl scopedZDone rfl
-  exact ⟨hs, scopedZ_replay.1, scopedZ_replay.2,
-    akteur_gruppe7 scopedZ_koerper (.gibt ()) hs scopedZ_replay.1 scopedZ_replay.2⟩
-
 #print axioms Gabbro.Grammatik.akteur_gruppe7
-#print axioms Gabbro.Grammatik.akteur_gruppe7_zeuge
 
 end Gabbro.Grammatik

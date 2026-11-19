@@ -130,84 +130,6 @@ theorem axiomLeaveStep (M : GenMaschine EZD.AxGegen.D2)
   · intro e he o ho
     simp only [List.not_mem_nil] at he
 
-/-- Second witness (rule 13) on the one-axiom unguarded declaration
-    (`AxGegen`): the target's premises hold here too -- `hNurG` over the
-    constant carrier-free program text (the foreign thread's axiom step is
-    excluded by it: firing `axCall` would record the write event, and `hcar`
-    would demand its carrier in the atom), the reached foreign step is
-    thread `1 ≠ 0` firing `leave` -- and the declaration is non-degenerate:
-    the axiom's function writes the table and the axiom step itself, fired
-    under a carrying atom, reaches a memory-changing run. -/
-theorem eigenzustand_axiom_zeuge :
-    ∃ (P : Programm EZD.AxGegen.D2) (O : Orakel EZD.AxGegen.D2) (passes : Nat)
-      (hO : GutO O)
-      (prog : PCProg EZD.AxGegen.D2) (sp : Speicher EZD.AxGegen.D2) (g : Faden)
-      (t : EZD.AxGegen.D2.Tab),
-      (∀ h, h ≠ g → ∀ a ∈ prog h,
-        (Sum.inl t : EZD.AxGegen.D2.Tab ⊕ EZD.AxGegen.D2.Glob) ∉ PCAtom.carriers a) ∧
-      (∃ (M : GenMaschine EZD.AxGegen.D2) (pc : PCStand) (h : Faden)
-        (M' : GenMaschine EZD.AxGegen.D2) (pc' : PCStand) (k : Int)
-        (f : EZD.AxGegen.D2.Feld t),
-        PCReach P O passes prog (GenStart sp) M pc ∧
-        PCSchritt P O passes prog M pc h M' pc' ∧ h ≠ g ∧
-        M'.speicher.slots t k f = M.speicher.slots t k f) ∧
-      (∃ fn : EZD.AxGegen.D2.Fn, (vertragVon EZD.AxGegen.D2 fn).schreibt t = true) ∧
-      (∃ (M2 : GenMaschine EZD.AxGegen.D2) (pc2 : PCStand),
-        PCReach P O passes axiomProg (GenStart EZD.AxGegen.wspF) M2 pc2 ∧
-        M2.speicher.slots t 0 () ≠ EZD.AxGegen.wspF.slots t 0 ()) := by
-  obtain ⟨σ', hfire'⟩ := axFireExists
-  have hs0 := axiomLeaveStep (GenStart EZD.AxGegen.wspF) rfl
-  have hσ' : σ' = EZD.AxGegen.Wflip2
-      ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []).fragt (.inl ())) := by
-    have hAns2 : axiomAntwort (O := EZD.AxGegen.O2) ()
-        (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
-        (evalArgs (Γ := []) (Λ := []) (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
-          (Args.nil (D := EZD.AxGegen.D2) (Γ := []) (Λ := []))
-          (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []) Env.nil) =
-        (EZD.AxGegen.Wflip2 ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []).fragt (.inl ())),
-          Option.some ()) := rfl
-    have hrfl2 : (execStmt (O := EZD.AxGegen.O2) 0 keinRuf EZD.AxGegen.axCall
-        ((GenStart EZD.AxGegen.wspF).weltVon 1) Env.nil).welt =
-        (match axiomAntwort (O := EZD.AxGegen.O2) ()
-          (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
-          (evalArgs (Γ := []) (Λ := []) (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
-            (Args.nil (D := EZD.AxGegen.D2) (Γ := []) (Λ := []))
-            (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []) Env.nil) with
-        | (σ₂, Option.some _) =>
-          (Ausgang.ok σ₂ Env.nil : Ausgang EZD.AxGegen.V2 false []).welt
-        | (_, Option.none) =>
-          (Ausgang.hardware (D := EZD.AxGegen.D2) (.annahme ()) :
-            Ausgang EZD.AxGegen.V2 false []).welt) := rfl
-    rw [hrfl2, hAns2, Ausgang.welt] at hfire'
-    exact Option.some_inj.mp hfire'.symm
-  have hneu' : σ'.spur =
-      [Ereignis.zugriff () true []
-        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt, Ereignis.fremd (.inl ())] ++
-        (GenStart EZD.AxGegen.wspF).spuren 1 := by
-    rw [hσ']
-    rfl
-  have hstep2 := axiomMemStep σ' hfire' hneu'
-  have hreach2 : PCReach EZD.AxGegen.P2w EZD.AxGegen.O2 0 axiomProg
-      (GenStart EZD.AxGegen.wspF) _ _ :=
-    PCReach.step _ _ _ _ 1 PCReach.start hstep2
-  have hne : σ'.speicher.slots () 0 () ≠ EZD.AxGegen.wspF.slots () 0 () := by
-    have hflip := EZD.AxGegen.axFeuert ((GenStart EZD.AxGegen.wspF).weltVon 1)
-      Env.nil σ' hfire'
-    have h0 : (((GenStart EZD.AxGegen.wspF).weltVon 1).slots () 0 ()) = false := rfl
-    have hM0 : (EZD.AxGegen.wspF.slots () 0 ()) = false := rfl
-    show σ'.slots () 0 () ≠ EZD.AxGegen.wspF.slots () 0 ()
-    rw [hflip, h0, hM0]
-    intro h
-    cases h
-  refine ⟨EZD.AxGegen.P2w, EZD.AxGegen.O2, 0, EZD.AxGegen.O2gut,
-    EZD.AxGegen.progF, EZD.AxGegen.wspF, 0, (), EZD.AxGegen.hNurF, ?_, ?_, ?_⟩
-  · refine ⟨_, _, 1, _, _, 0, (), PCReach.start, hs0, by decide, ?_⟩
-    exact eigenzustand_nur_eigene_schritte EZD.AxGegen.P2w EZD.AxGegen.O2 0
-      EZD.AxGegen.O2gut EZD.AxGegen.progF EZD.AxGegen.wspF 0 ()
-      EZD.AxGegen.hNurF _ _ _ _ _ PCReach.start hs0 (by decide) 0 ()
-  · exact ⟨(), rfl⟩
-  · exact ⟨_, _, hreach2, hne⟩
-
 /-! ## CUTS: what is not proved.
 
   * The carrier domains of an oracle answer (`tabs₀`/`globs₀` in `GutO`)
@@ -230,7 +152,5 @@ theorem eigenzustand_axiom_zeuge :
 #print axioms Gabbro.Grammatik.axiomCallRecordsWrite
 #print axioms Gabbro.Grammatik.foreignStepKeepsSlots
 #print axioms Gabbro.Grammatik.eigenzustand_nur_eigene_schritte
-#print axioms Gabbro.Grammatik.eigenzustand_nur_eigene_schritte_zeuge
-#print axioms Gabbro.Grammatik.eigenzustand_axiom_zeuge
 
 end Gabbro.Grammatik

@@ -125,23 +125,6 @@ theorem jedes_feld_hat_einen_wert (fs : List Feld) (zs : List (Feld × Nat))
 
 /-! ## Witness: a concrete struct -/
 
-/-- Witness: the two-field struct `["x", "y"]` covered by `[("x", 1),
-    ("y", 2)]` reads back exactly -- and every field has a value. No lemma
-    above quantifies over syntax, so the inhabitation obligation is vacuous;
-    this is a data-level witness. -/
-theorem verbund_zeuge :
-    liest [("x", 1), ("y", 2)] "x" = some 1 ∧
-    liest [("x", 1), ("y", 2)] "y" = some 2 ∧
-    (∃ v, liest [("x", 1), ("y", 2)] "y" = some v) := by
-  have hwf : wohlgeformt ["x", "y"] := by
-    simp only [wohlgeformt, List.nodup_cons, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self,
-  not_false_eq_true, List.nodup_nil, and_self]
-  have hdk : deckt ["x", "y"] [("x", 1), ("y", 2)] := rfl
-  refine ⟨?_, ?_, ⟨2, ?_⟩⟩
-  · exact ablesung_ist_eindeutig _ _ hwf hdk _ _ (by decide)
-  · exact ablesung_ist_eindeutig _ _ hwf hdk _ _ (by decide)
-  · exact ablesung_ist_eindeutig _ _ hwf hdk _ _ (by decide)
-
 /-! ## Bridge
 
   The Lean syntax ties a `format` (and a struct) to a `Tab` with `count 1`
@@ -156,6 +139,5 @@ theorem verbund_zeuge :
 #print axioms Gabbro.Grammatik.Isabelle.VerbundKonstruktor.deckt_laesst_keins_aus
 #print axioms Gabbro.Grammatik.Isabelle.VerbundKonstruktor.ablesung_ist_eindeutig
 #print axioms Gabbro.Grammatik.Isabelle.VerbundKonstruktor.jedes_feld_hat_einen_wert
-#print axioms Gabbro.Grammatik.Isabelle.VerbundKonstruktor.verbund_zeuge
 
 end Gabbro.Grammatik.Isabelle.VerbundKonstruktor

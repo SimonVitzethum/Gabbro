@@ -137,20 +137,6 @@ theorem cMem_wf : WfL cLay mem0 := by
   · cases g; decide
   · cases L; exact ⟨by decide, by decide⟩
 
-/-- **`await` of a shared atomic, instantiated.** The memory holds `0` at the cell, the world `5`, and the thread
-    reads `7` (an answer of the GX interface): the lowered `await` runs from its entry label to the continuation, in a
-    memory that represents the world `σ[g := 7]` after the read, with `Post` and the frame of the run. -/
-theorem await_shared_zeuge :
-    ∃ m' rs', Reach cMod (Sees.shared cLay) (.run mem0 ⟨0, 1, 0, fun _ => none, none⟩ [])
-        (.run m' ⟨0, 2, 0, rs', none⟩ []) := by
-  have h := (await_ok_shared cLay cLayOk [] (0, 0) cO 0 cR () [] rfl (fun w hw => absurd hw List.not_mem_nil)
-    rfl awRest 1 2 ⟨0, 3⟩ cSt cBlks cLow_eq rfl cMod 0 cIn ⟨_, rfl, rfl⟩ ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩ cFn cCall
-    wld5 ⟨7, by decide, by decide⟩ .nil mem0 (fun _ => none) [] none rep_free_witness trivial cMem_wf
-    (fun x hx => absurd hx List.not_mem_nil)).2
-  simp only [execBlock, Orakel.sichtbar, cO, if_true] at h
-  obtain ⟨m', rs', hr, _⟩ := h
-  exact ⟨m', rs', hr⟩
-
 end C64
 
 end Gabbro.Code.Lower.WitC

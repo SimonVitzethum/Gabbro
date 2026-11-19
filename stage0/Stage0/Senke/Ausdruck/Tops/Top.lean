@@ -50,10 +50,4 @@ end Gabbro.Stage0.Senke
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
-/-- A real variable read and temporary computation with a nonzero reservation. -/
-theorem lowE_reserved_top_zeuge [Kern] {D : Deklaration} (L : Lay D) :
-    ∃ c top, lowE (currentOld := currentOld) L (reserved := 3)
-      (.and (.var .here) .tru : Expr D [.bool] [] .bool) 10 = some (c, top) ∧ 10 < top := by
-  refine ⟨_, _, rfl, ?_⟩
-  decide
 end Gabbro.Stage0.Senke

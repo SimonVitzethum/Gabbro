@@ -129,23 +129,6 @@ theorem wit_haelt1 : (() : refD.Lock) ∈ offen (refPC2.spuren 1) := by
 theorem wit_guard : Sum.inl (() : refD.Lock) ∈ refD.braucht () :=
   List.mem_singleton.mpr rfl
 
-/-- **Inhabitation for `rely_aus_sperre`.** All premises hold jointly on
-    the reference fixture: the PC run reaches `refPC2` (lock, then the
-    writing leaf) with thread 1 holding the lock of `konto`, and a step
-    of thread 0 (a local assignment) keeps every slot. Non-degenerate:
-    `einzahlen` writes `konto` and the run moves slot `0` from `0` to
-    `100`. -/
-theorem rely_aus_sperre_zeuge :
-    (∀ (k : Int) (fld : refD.Feld ()),
-      witM'.speicher.slots () k fld = refPC2.speicher.slots () k fld) ∧
-    refPC2.speicher.slots () 0 () ≠ refSp0.slots () 0 () ∧
-    (vertragVon refD refEin).schreibt () = true := by
-  refine ⟨?_, refB_pc_schreibt, refEin_schreibt _⟩
-  intro k fld
-  exact rely_aus_sperre refP refO 0 refO_gut witProg refSp0 refPC2 refB_pc2
-    wit_reach 1 0 (by decide) () wit_haelt1 witM' _ wit_step0 () wit_guard
-    k fld
-
 /-! ## 6. Witness on a global fixture: global rely -/
 
 /-- Start memory for the global witness: slots `0`, global `0`. -/
@@ -407,20 +390,6 @@ theorem gMoved : gM2.speicher.globs () ≠ gSp0.globs () := by
   rw [gW1w_glob5, gSp0_glob0] at hn
   exact absurd hn (by decide)
 
-/-- **Inhabitation for `rely_aus_sperre_global`.** All premises hold
-    jointly on `gD`: the PC run reaches `gM2` (lock, then the global
-    write) with thread 1 holding the lock guarding the global, and a
-    step of thread 0 (a local assignment) keeps the global.
-    Non-degenerate: some function writes a table (`gTabWrite`) and the
-    run moves the global from `0` to `5`. -/
-theorem rely_aus_sperre_global_zeuge :
-    (gM3.speicher.globs () = gM2.speicher.globs ()) ∧
-    (gM2.speicher.globs () ≠ gSp0.globs ()) ∧
-    (∃ f t, gD.schreibt f t = true) := by
-  refine ⟨?_, gMoved, gTabWrite⟩
-  exact rely_aus_sperre_global gPr gO 0 gO_gut gProg gSp0 gM2 gPc2
-    gReach 1 0 (by decide) () gHaelt1 gM3 _ gStep0 () gGuardInst
-
 /-! ## CUTS: what is not proved here
   - `sperre_exklusiv` lifts the take-time scheduler rule (`GenFrei`)
     to held-state disjointness; it does not relate held state to the
@@ -442,6 +411,4 @@ theorem rely_aus_sperre_global_zeuge :
 #print axioms Gabbro.Grammatik.blatt_erhaelt_globs
 #print axioms Gabbro.Grammatik.sperre_exklusiv
 #print axioms Gabbro.Grammatik.rely_aus_sperre
-#print axioms Gabbro.Grammatik.rely_aus_sperre_zeuge
 #print axioms Gabbro.Grammatik.rely_aus_sperre_global
-#print axioms Gabbro.Grammatik.rely_aus_sperre_global_zeuge

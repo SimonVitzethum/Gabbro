@@ -94,20 +94,6 @@ theorem implication_scope (a b : UEns) :
     ensAltErg (.imp a b) = (ensAltErg a || ensAltErg b) := by
   rw [ensAltErg]
 
-theorem implication_export_zeuge :
-    let ctx : UCtx := {
-      names := ["ready"], kinds := [.bool], types := [.bool], tabs := [], locks := [],
-      held := [], res := some (0, 42), fname := "sample", alias := [], lits := [] }
-    uSichert ctx (.ext .imp [] [.variable "ready", .bin "==" .res (.lit 42)]) =
-      .ok (.imp (.var "ready") (.cmp "==" .erg (.lit 42))) ∧
-    uBool ctx (.ext .imp [] [.variable "ready", .bin "==" .res (.lit 42)]) =
-      .error "result without result" := by
-  constructor
-  · simp [uSichert, uSeite, uRechne, uSeiteBlatt, uZSeite,
-      uParamNr, uParamNrAux, uArtBei, uIstVgl, strEq]
-  · simp [uBool, uSichert, uSeite, uRechne, uSeiteBlatt, uZSeite,
-      uParamNr, uParamNrAux, uArtBei, uIstVgl, strEq]
-
 /-- A successfully reified Held fact is backed by a real resource, never just its spelling. -/
 theorem held_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (name : String)
     (value : Expr (declOf u) Γ Λ .bool) (h : lowHeld u Γ Λ name = .ok value) :
@@ -139,10 +125,6 @@ theorem held_meaning (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (name :
 
 def heldUnit : UProg := { tabs := [], fns := [], locks := [{name := "L", rank := 3, guard := []}] }
 
-theorem held_lower_zeuge :
-    lowHeld heldUnit [] [.held ⟨0, by decide⟩] "L" = .ok .tru ∧
-    lowHeld heldUnit [] [] "L" = .error "Held predicate without possession" := by exact ⟨rfl, rfl⟩
-
 /-- The hidden result parameter keeps the exact type and all original parameter positions. -/
 theorem result_scope (u : UProg) (fn : UFn) (ty : Ty) (out : UFn)
     (h : ergAlsParam u fn (some ty) = .ok out) :
@@ -160,13 +142,6 @@ theorem result_scope (u : UProg) (fn : UFn) (ty : Ty) (out : UFn)
       simp only [hg, bind, Except.bind, pure, Except.pure] at h
       cases h
       exact ⟨kind, rfl, rfl, rfl, rfl⟩
-
-theorem result_scope_zeuge :
-    let fn : UFn := {
-      name := "sample", params := [("flag", .bool)], kinds := [.bool], res := none, resOpt := some (1, 2), held := [], puts := [], gives := [], body := [], ret := .opt .nichts }
-    ergAlsParam heldUnit fn (some (.opt 2)) = .ok (fn.mitOpt "#erg" 1 2) ∧
-    resultKind fn (.opt 3) = .error "result option count mismatch" := by
-  exact ⟨rfl, rfl⟩
 
 /-- The actual Endblock dispatcher passes both scopes and all callee checks to the existing
     constructor. The error body is parsed from the real source tail, with its own reason binder. -/

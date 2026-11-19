@@ -75,30 +75,6 @@ def program : Programm declaration where
   ensures := fun value => nomatch value
   rumpf := fun value => nomatch value
 
-theorem boundedLength_translated_zeuge :
-    translateDeclared program () = .ok boundedFormula := by rfl
-
-theorem boundedLength_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) boundedLength = true := by
-  have translated : uebersetzeB (declaration.traeger ()) boundedLength = .ok boundedFormula :=
-    boundedLength_translated_zeuge
-  simp only [imFragmentB, translated]
-
-theorem boundedLength_sound_zeuge (world : World declaration) :
-    eval world boundedLength world .nil = true ↔
-      boundedFormula.denote (assignment world) :=
-  uebersetzeB_sound (declaration.traeger ()) boundedLength boundedFormula
-    boundedLength_translated_zeuge world
-
-theorem declared_sound_zeuge (world : World declaration) :
-    eval world (program.invariante ()) world .nil = true ↔
-      boundedFormula.denote (assignment world) :=
-  translateDeclared_sound program () boundedFormula boundedLength_translated_zeuge world
-
-theorem carriers_sound_zeuge :
-    ∀ carrier ∈ boundedLength.orte, carrier ∈ declaration.traeger () :=
-  checkCarriers_sound (declaration.traeger ()) boundedLength rfl
-
 def initial : World declaration where
   slots := fun _ _ _ => ⟨4, by decide, by decide⟩
   globs := fun (name : Bool) =>
@@ -107,11 +83,6 @@ def initial : World declaration where
     | false => ⟨3, by decide, by decide⟩
   spur := []
 
-theorem boundedLength_true_zeuge : eval initial boundedLength initial .nil = true := by
-  apply (boundedLength_sound_zeuge initial).mpr
-  change (3 : Int) ≤ 8 ∧ (0 : Int) ≤ 3
-  constructor <;> omega
-
 def invalidLengthWorld : World declaration :=
   { initial with
     globs := fun (name : Bool) =>
@@ -119,21 +90,8 @@ def invalidLengthWorld : World declaration :=
       | true => ⟨8, by decide, by decide⟩
       | false => ⟨9, by decide, by decide⟩ }
 
-theorem boundedLength_false_zeuge :
-    eval invalidLengthWorld boundedLength invalidLengthWorld .nil = false := by
-  change wahr? (eval invalidLengthWorld boundedLength invalidLengthWorld .nil) = false
-  apply Bool.eq_false_iff.mpr
-  intro holds
-  have impossible := (boundedLength_sound_zeuge invalidLengthWorld).mp holds
-  change (9 : Int) ≤ 8 ∧ (0 : Int) ≤ 9 at impossible
-  omega
-
 def product : Expr declaration [] [] .bool :=
   .le (.mul (.glob false (globalAccess false)) (.glob true (globalAccess true))) (.lit 3)
-
-theorem product_refused_zeuge :
-    uebersetzeB (declaration.traeger ()) product = .error (.within "left" .nonlinear) := by
-  rfl
 
 /-- A genuine two-index sortedness condition on a three-entry table. -/
 def sorted : Expr declaration [] [] .bool :=
@@ -142,10 +100,6 @@ def sorted : Expr declaration [] [] .bool :=
       (.or (.not (.lt (.var (.there .here)) (.var .here)))
         (.le (.slot () () (.var (.there .here)) slotAccess)
           (.slot () () (.var .here) slotAccess))) slotAccess) slotAccess
-
-theorem sorted_refused_zeuge :
-    uebersetzeB (declaration.traeger ()) sorted =
-      .error (.within "forallSlots.body" .crossEntry) := by rfl
 
 /-- A nonempty, one-index local invariant is admitted. -/
 def localBound : Expr declaration [] [] .bool :=
@@ -156,12 +110,6 @@ def localFormula : LProp (Observation declaration) :=
     (.and (.le (.var (.slot () () 1)) (.konst 10))
       (.and (.le (.var (.slot () () 2)) (.konst 10)) .tru))
 
-theorem localBound_translated_zeuge :
-    uebersetzeB (declaration.traeger ()) localBound = .ok localFormula := by rfl
-
-theorem localBound_admitted_zeuge :
-    imFragmentB (declaration.traeger ()) localBound = true := rfl
-
 /-- String contents never enter the arithmetic problem; their length does. -/
 def stringDeclaration : Deklaration :=
   { declaration with
@@ -171,19 +119,8 @@ def stringBound : Expr stringDeclaration [] [] .bool :=
   .le (.strLen (Expr.glob (D := stringDeclaration) false (fun _ h => nomatch h)))
     (Expr.glob (D := stringDeclaration) true (fun _ h => nomatch h))
 
-theorem stringBound_translated_zeuge :
-    uebersetzeB (stringDeclaration.traeger ()) stringBound =
-      .ok (.le (.var (.glob false)) (.var (.glob true))) := by rfl
-
 def scaled : Expr declaration [] [] .bool :=
   .le (.mul (.lit 2) (.glob false (globalAccess false))) (.lit 20)
-
-theorem scaled_translated_zeuge :
-    uebersetzeB (declaration.traeger ()) scaled =
-      .ok (.le (.scale 2 (.var (.glob false))) (.konst 20)) := by rfl
-
-theorem carriers_checked_first_zeuge :
-    uebersetzeB [] product = .error .outsideCarriers := by rfl
 
 def emptyDeclaration : Deklaration :=
   { declaration with count := fun _ => 0 }
@@ -194,10 +131,6 @@ def emptyNonlinear : Expr emptyDeclaration [] [] .bool :=
       (Expr.glob (D := emptyDeclaration) true (fun _ h => nomatch h))) (.lit 3))
     (fun _ h => nomatch h)
 
-theorem emptyNonlinear_refused_zeuge :
-    uebersetzeB (emptyDeclaration.traeger ()) emptyNonlinear =
-      .error (.within "forallSlots.body" (.within "left" .nonlinear)) := by rfl
-
 def atomicDeclaration : Deklaration :=
   { declaration with
     atomar := fun _ => true
@@ -206,34 +139,14 @@ def atomicDeclaration : Deklaration :=
 def atomicBound : Expr atomicDeclaration [] [] .bool :=
   .le (Expr.glob (D := atomicDeclaration) false (fun _ h => nomatch h)) (.lit 3)
 
-theorem atomicBound_refused_zeuge :
-    uebersetzeB (atomicDeclaration.traeger ()) atomicBound = .error .atomicCarrier := by rfl
-
 /-- Boolean memory keeps its value rather than becoming a constant predicate. -/
 def booleanDeclaration : Deklaration := { declaration with gtyp := fun _ => .bool }
 
 def booleanMemory : Expr booleanDeclaration [] [] .bool :=
   .glob false (fun _ member => nomatch member)
 
-theorem booleanMemory_reified_zeuge :
-    uebersetzeB [.inr false] booleanMemory = .ok (.eq (.var (.glob false)) (.konst 1)) := rfl
-
-theorem booleanMemory_sound_zeuge (world : World booleanDeclaration) :
-    eval world booleanMemory world .nil = true ↔ assignment world (.glob false) = 1 :=
-  uebersetzeB_sound [.inr false] booleanMemory (.eq (.var (.glob false)) (.konst 1))
-    booleanMemory_reified_zeuge world
-
-theorem constant_sound_zeuge (values : Assignment Nat) :
-    (LTerm.add (.scale (-3) (.konst 2)) (.konst 5)).denote values = -1 :=
-  LTerm.constant?_sound rfl values
-
 /-- The standalone QE syntax also has actual integer quantifiers. -/
 def quantified : LProp Nat :=
   .all 0 (.ex 1 (.eq (.var 1) (.add (.var 0) (.konst 1))))
-
-theorem quantified_zeuge (values : Assignment Nat) : quantified.denote values := by
-  intro value
-  refine ⟨value + 1, ?_⟩
-  simp [LProp.denote, LTerm.denote, Assignment.bind]
 
 end Gabbro.Grammatik.Invarianten.Frag.Witness

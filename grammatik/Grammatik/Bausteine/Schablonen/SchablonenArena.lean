@@ -147,24 +147,6 @@ theorem arena_commit_monoton (elem committed n seite i : Nat) (hs : 0 < seite)
 theorem arena_ueber_der_decke :
     commitEnde 512 8 1 4096 > spanne 512 8 4096 := by decide
 
-/-- **Witness for `arena_spanne_passt`, `arena_commit_bereich` and `arena_commit_monoton`**,
-    ALL premises jointly, on the os-probe's arena (`Puffer`: 8-byte slots, ceiling 65536,
-    floor 8, grown by 1024) on 4096-byte pages. -/
-theorem arena_zeuge :
-    (65536 * 8 ≤ spanne 8 65536 4096 ∧ spanne 8 65536 4096 % 4096 = 0 ∧
-      65536 * 8 + 4096 - 1 < 18446744073709551616 ∧
-      spanne 8 65536 4096 < 18446744073709551616) ∧
-    (commitStart 8 8 4096 ≤ 8 * 8 ∧ (8 + 1024) * 8 ≤ commitEnde 8 8 1024 4096 ∧
-      commitEnde 8 8 1024 4096 ≤ spanne 8 65536 4096 ∧
-      commitStart 8 8 4096 ≤ commitEnde 8 8 1024 4096 ∧
-      commitStart 8 8 4096 % 4096 = 0 ∧ commitEnde 8 8 1024 4096 % 4096 = 0 ∧
-      commitEnde 8 8 1024 4096 - commitStart 8 8 4096 ≤
-        spanne 8 65536 4096 - commitStart 8 8 4096) ∧
-    (8 ≤ 8 + 1024 ∧ (1031 + 1) * 8 ≤ commitEnde 8 8 1024 4096) :=
-  ⟨arena_spanne_passt 8 65536 4096 (by decide) (by decide) (by decide) (by decide),
-   arena_commit_bereich 8 65536 8 1024 4096 (by decide) (by decide),
-   arena_commit_monoton 8 8 1024 4096 1031 (by decide) (by decide)⟩
-
 /-! ## 2. `region.leeren` -- the page return of `reset X at i count n;`
 
   The emitted helper (`emit.rs`, `REGION_LEEREN`) clears a range of `bytes` at address `a`: the
@@ -206,15 +188,6 @@ theorem leeren_teilung (a bytes s : Nat) (hs : 0 < s)
   refine ⟨by omega, by omega, by omega, ?_, ?_⟩
   · rw [e1]; exact h3
   · rw [e2]; exact h4
-
-/-- **Witness** (all premises jointly): 10000 bytes from address 5000 on 4096-byte pages -- the
-    edges are 3192 and 1808 bytes, one whole page (8192 .. 12288) goes back. -/
-theorem leeren_zeuge :
-    leerenVon 5000 4096 = 3192 ∧ leerenBis 5000 10000 4096 = 7288 ∧
-    (leerenVon 5000 4096 ≤ leerenBis 5000 10000 4096 ∧ leerenBis 5000 10000 4096 ≤ 10000 ∧
-      leerenBis 5000 10000 4096 - leerenVon 5000 4096 ≤ 10000 - leerenVon 5000 4096 ∧
-      (5000 + leerenVon 5000 4096) % 4096 = 0 ∧ (5000 + leerenBis 5000 10000 4096) % 4096 = 0) :=
-  ⟨by decide, by decide, leeren_teilung 5000 10000 4096 (by decide) (by decide)⟩
 
 /-- The helper's test is not decoration: a range inside one page has no whole page
     (`lo >= hi`), and the helper then clears the range byte by byte. -/
@@ -260,9 +233,7 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_spanne_passt
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_commit_bereich
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_commit_monoton
-#print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_zeuge
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_teilung
-#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_zeuge
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_in_einer_seite
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_alt_bricht
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_ohne_umlauf

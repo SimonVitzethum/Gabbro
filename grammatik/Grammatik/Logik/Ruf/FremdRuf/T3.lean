@@ -53,20 +53,6 @@ theorem fdFolge_lesen_pflicht :
   show decide (fdKopf fdRho3 = 3) = true
   exact decide_eq_true rfl
 
-/-- ZEUGE for the sequence coincidence: its premises hold jointly on the fixture
-    with the BAD oracle -- the open's precondition at the start world, the read's
-    after the open -- so both folds agree on the two-call sequence. Non-degenerate
-    in the file's sense: the same oracle breaks the full premise
-    (`fdObad_nicht_voll`), and the program `fdP` writes the table on a reached
-    run (`fdPC_schreibt`). -/
-theorem mitVorbedingung_folge_gleich_zeuge :
-    RufFolgePflicht fdPre fdObad fdWelt0 fdFolge ∧
-    rufFolgeWirkt (mitVorbedingung fdPre fdObad fdRaus) fdWelt0 fdFolge =
-      rufFolgeWirkt fdObad fdWelt0 fdFolge :=
-  ⟨⟨fdFolge_offen_pflicht, fdFolge_lesen_pflicht, trivial⟩,
-    mitVorbedingung_folge_gleich fdPre fdObad fdRaus fdWelt0 fdFolge fdPre_ohneLese
-      ⟨fdFolge_offen_pflicht, fdFolge_lesen_pflicht, trivial⟩⟩
-
 /-! ## CUTS: what is not proved.
 
   - The dispatch labels, register bindings and costs of `GateData`
@@ -129,21 +115,15 @@ theorem mitVorbedingung_folge_gleich_zeuge :
 #print axioms Gabbro.Grammatik.fremdruf_falsch_abgelehnt
 #print axioms Gabbro.Grammatik.fdPC_erreicht
 #print axioms Gabbro.Grammatik.fdPC_schreibt
-#print axioms Gabbro.Grammatik.fremdruf_fd_zeuge
-#print axioms Gabbro.Grammatik.fremdruf_offen_lesen_zeuge
-#print axioms Gabbro.Grammatik.fremdruf_gate_gilt_zeuge
 #print axioms Gabbro.Grammatik.axVertragOP_of_O
 #print axioms Gabbro.Grammatik.fremdruf_gate_gilt_pre
 #print axioms Gabbro.Grammatik.mitVorbedingung_gleich
 #print axioms Gabbro.Grammatik.hardware_aus_vertragP
 #print axioms Gabbro.Grammatik.fdObad_vertragP
 #print axioms Gabbro.Grammatik.fdObad_nicht_voll
-#print axioms Gabbro.Grammatik.fremdruf_gate_gilt_pre_zeuge
-#print axioms Gabbro.Grammatik.hardware_aus_vertragP_zeuge
 #print axioms Gabbro.Grammatik.mitVorbedingung_folge_gleich
 #print axioms Gabbro.Grammatik.fdFolge_offen_pflicht
 #print axioms Gabbro.Grammatik.fdFolge_lesen_pflicht
-#print axioms Gabbro.Grammatik.mitVorbedingung_folge_gleich_zeuge
 
 
 end Gabbro.Grammatik

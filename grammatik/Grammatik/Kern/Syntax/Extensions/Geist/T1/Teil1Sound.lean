@@ -10,7 +10,6 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}
 
-set_option linter.unusedSectionVars false in
 /-! ## Soundness: an accepted body reads no ghost.
 
     The bridge between the `Bool` decision and the `Prop` footprint claim.

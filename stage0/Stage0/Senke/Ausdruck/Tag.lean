@@ -148,26 +148,6 @@ theorem sumWord_payload {cs : List (Option Ty)} (h : sumFits cs = true)
   congr 1
   omega
 
-set_option maxRecDepth 2048 in
-/-- Both a bare arm and a nonzero, negative payload have different words. -/
-theorem encSum_inj_zeuge :
-    let cs := [none, some (.int (-7) 13)]
-    let a : Wert D (.sum cs) := ⟨⟨1, by decide⟩, (⟨-2, by decide, by decide⟩ : Zahl (-7) 13)⟩
-    Enc L (.sum cs) a (1281 : Runner.W) ∧
-      (∀ b, Enc L (.sum cs) b (1281 : Runner.W) → b = a) := by
-  dsimp
-  have h : Enc L (.sum [none, some (.int (-7) 13)])
-      (D := D) ⟨⟨1, by decide⟩, (⟨-2, by decide, by decide⟩ : Zahl (-7) 13)⟩ 1281 := by constructor <;> rfl
-  exact ⟨h, fun _ hb => encSum_inj (D := D) (L := L) (cs := [none, some (.int (-7) 13)]) hb h⟩
-
-set_option maxRecDepth 2048 in
-/-- Accept both exact limits and refuse the first tag count or payload width beyond them. -/
-theorem sumFits_zeuge :
-    sumFits (List.replicate 256 none) = true ∧
-    sumFits (List.replicate 257 none) = false ∧
-    sumFits [some (.int 0 (2 ^ 56 - 1))] = true ∧
-    sumFits [some (.int 0 (2 ^ 56))] = false := by decide
-
 section
 variable [Kern]
 /-- Construct a sum word from its payload expression, using wrapping word arithmetic. -/

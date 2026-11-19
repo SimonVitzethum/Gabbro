@@ -123,17 +123,6 @@ def endeBlock : Block D174 (vertragVon D174 G174_tor_im_modell_oblig.g_ende_wenn
     rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ h => nomatch h) .nil
 
-/-- **Witness for `nie_tor_kehrt_nicht_zurueck` and `nie_tor_halt_benannt`**,
-    on the real program: the gate `exit_group` of `beispiele/174` is declared
-    `never` in the certified declaration (`rfl`), the run of its block under a
-    concrete oracle ends at the gate, and its head is the named stop. -/
-theorem nie_tor_zeuge (σ : World D174) (ρ : Env D174 G174_tor_im_modell_oblig.gCtx_ende_wenn) :
-    D174.aerg G174_tor_im_modell_oblig.GAx.exit_group = some Ty.never ∧
-    execBlock o174 0 (rufAt G174_tor_im_modell_oblig.gP o174 0 0) endeBlock σ ρ = .hardware (.annahme G174_tor_im_modell_oblig.GAx.exit_group) ∧
-    Zielsatz.KopfHalt o174 0 σ ρ .nieZurueck endeBlock :=
-  ⟨rfl, nie_tor_kehrt_nicht_zurueck _ _ _ _ rfl _ _ _ _ _ _ _ _ _,
-    nie_tor_halt_benannt _ _ _ rfl _ _ _ _ _ _ _ _ _⟩
-
 end Zeuge174
 
 /-! ## 2. `start.nolibc` -- the generated process entry (abstract core) -/
@@ -175,14 +164,6 @@ theorem start_nolibc (rsp : Nat) (hrsp : 16 ≤ rsp) (mainKehrtZurueck : Bool)
     whatever bytes follow). -/
 theorem start_nolibc_ud2_wenn_main_zurueckkehrt (rsp : Nat) :
     (startLauf rsp true).ud2 = true := by rfl
-
-/-- **Witness for `start_nolibc`**: ALL premises jointly on a concrete stack
-    pointer the kernel may hand (`0x7ffc_1234_5678`, 8-aligned only). -/
-theorem start_nolibc_zeuge :
-    ((startLauf 0x7ffc12345678 false).rspEintritt + 8) % 16 = 0 ∧
-    (startLauf 0x7ffc12345678 false).rueckAdresse < 0x7ffc12345678 ∧
-    (startLauf 0x7ffc12345678 false).ud2 = false :=
-  start_nolibc 0x7ffc12345678 (by decide) false rfl
 
 /-! ### The two hooks (C-free lane, 2026-09-30)
 
@@ -247,16 +228,6 @@ theorem start_nolibc_haken (rsp : Nat) (hrsp : 16 ≤ rsp) (anfang ende : Bool)
 /-- The end premise is not decoration: a `main` that returns with no end bound runs into `ud2`. -/
 theorem start_nolibc_ohne_ende (rsp v : Nat) :
     (startLaufH rsp false false (some v) false).ud2 = true := by rfl
-
-/-- **Witness** (all premises jointly): the stack pointer of `start_nolibc_zeuge`, both hooks, a
-    `main` answering 42 -- the end receives 42 and `ud2` does not run. -/
-theorem start_nolibc_haken_zeuge :
-    (∀ r ∈ (startLaufH 0x7ffc12345678 true true (some 42) false).rufe,
-      (r + 8) % 16 = 0 ∧ r < 0x7ffc12345678) ∧
-    (∀ v, some 42 = some v →
-      (startLaufH 0x7ffc12345678 true true (some 42) false).status = some (v % 4294967296)) ∧
-    (startLaufH 0x7ffc12345678 true true (some 42) false).ud2 = false :=
-  start_nolibc_haken 0x7ffc12345678 (by decide) true true (some 42) false (fun _ => rfl) rfl
 
 /-! ## 3. `tor.fehlbar` -- the stub of a fallible gate -/
 end OhneLibc

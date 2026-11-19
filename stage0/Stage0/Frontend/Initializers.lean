@@ -24,12 +24,4 @@ theorem checkInitializers_sound (items : List SItemTief) (unit : UProg)
   unfold checkInitializers at accepted
   cases h : uninitializedExport items unit <;> simp_all
 
-/-- A genuine nonzero expanded initializer is refused; an exactly zero one is admitted. -/
-theorem checkInitializers_zeuge :
-    checkInitializers [.globT false "VALUE" (.atom "u8") (.one (.bin "+" (.lit 20) (.lit 22))) none none false]
-      {tabs := [], locks := [], fns := [], globs := [{name := "VALUE", ty := .int 0 255, init := 42}]} =
-      .error "source export: nonzero scalar initializer requires initialized image memory" ∧
-    checkInitializers [.globT false "VALUE" (.atom "u8") (.one (.bin "-" (.lit 42) (.lit 42))) none none false]
-      {tabs := [], locks := [], fns := [], globs := [{name := "VALUE", ty := .int 0 255, init := 0}]} = .ok () := ⟨rfl, rfl⟩
-
 end Gabbro.Stage0.Frontend

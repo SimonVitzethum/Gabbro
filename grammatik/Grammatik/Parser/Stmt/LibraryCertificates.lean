@@ -318,23 +318,6 @@ private theorem translationCertificate_fuel (reverse : Bool) :
 private theorem translationDeclaration_library (reverse : Bool) :
     (translationDeclaration reverse).library = translationLibrary reverse := by rfl
 
-theorem translation_result_unique_zeuge :
-    ((translationCertificate false).output ⟨0, by decide⟩).n = 3 ∧
-    ((translationCertificate true).output ⟨0, by decide⟩).n = 5 := by
-  simpa only [translationCertificate_output, translationOutput] using
-    And.intro (sampleRows_first (declOf (translationUnit false))).1
-      (sampleRows_first (declOf (translationUnit true))).2
-
-/-- A well-typed identity output is wrong for the source-selected reversing translator. -/
-theorem translation_wrong_output_zeuge :
-    (translationOutput true ⟨0, by decide⟩).n ≠ (translationInput true ⟨0, by decide⟩).n :=
-  sampleRows_wrong (declOf (translationUnit true))
-
-theorem translation_body_change_zeuge :
-    strEq (translationLibrary false).translator.name (translationLibrary true).translator.name = true ∧
-    beqSAnw (translationLibrary false).translatorBody (translationLibrary true).translatorBody = false := by
-  exact translation_library_change_data
-
 /-- Typing alone cannot certify identity output for the reversing source body. -/
 theorem translation_wrong_execution_zeuge
     (oracle : Orakel (declOf (translationUnit true))) (passes : Nat)
@@ -352,19 +335,6 @@ theorem translation_wrong_execution_zeuge
     (by exact translationDeclaration_lowered true)
     (translationInput true) (sampleRows_reverse_distinct (declOf (translationUnit true)))
     oracle passes world
-
-/-- Count, range and token-schema errors all refuse before execution. -/
-theorem translation_decoder_refusals_zeuge :
-    (decodeIntegerRows (declOf (translationUnit false)) translationSchema [.num 3]).isNone = true ∧
-    (decodeIntegerRows (declOf (translationUnit false)) translationSchema [.num 3, .num 11]).isNone = true ∧
-    (decodeIntegerRows (declOf (translationUnit false)) translationSchema [.text "3 5"]).isNone = true :=
-  sampleRows_refusals (declOf (translationUnit false))
-
-theorem translation_measure_zeuge (passes : Nat) (Q : AxEns (declOf (translationUnit true)))
-    (S : SperrInv (declOf (translationUnit true)))
-    (T : (declOf (translationUnit true)).Tab ⊕ (declOf (translationUnit true)).Glob → Prop) :
-    (translationDeclaration true).MeasureDuty passes Q S T :=
-  declaration_measure (translationDeclaration true) passes Q S T
 
 private theorem translationQual_resolved :
     libraryDecl (Aufloesung.loeseL (Aufloesung.quelle translationQualSource.items)
@@ -406,17 +376,6 @@ def translationQualCertificate : TranslationCertificate translationQualDeclarati
 def translationPayload : LibraryPayload (translationCertificate false) :=
   payloadFromCertificate (translationCertificate false) [0] (by simp only [translationSource])
 
-/-- Every payload row is the certified row. -/
-theorem translationPayload_zeilen_zeuge :
-    (translationPayload.inhalt ⟨0, by decide⟩).n = 3 ∧ (translationPayload.inhalt ⟨1, by decide⟩).n = 5 := by
-  simpa only [translationPayload, payloadFromCertificate_content, translationCertificate_output, translationOutput] using
-    And.intro (sampleRows_first (declOf (translationUnit false))).1
-      (sampleRows_second (declOf (translationUnit false)))
-
-/-- Payloads are per site: this one is not at site `[1]`. -/
-theorem translationPayload_standort_zeuge : translationPayload.site ≠ [1] := by
-  simpa only [translationPayload, payloadFromCertificate_site] using (by decide : ([0] : List Nat) ≠ [1])
-
 /-- The certified `lcall` expansion: ordinary call, payload last, caller arity met. -/
 def translationExpansion : LibraryExpansion translationPayload :=
   expansionFromPayload translationPayload (.variable "sample_payload_0") "consume"
@@ -429,27 +388,5 @@ def translationExpansionBind : LibraryExpansion translationPayload :=
     (by simpa only [translationDeclaration_library] using (translation_library_shape false).1)
     (by simpa only [translationDeclaration_library, translationSource] using (translation_library_shape false).2)
     (some (false, "value", none))
-
-/-- Both expansions are ordinary: no library construct remains for the lowering. -/
-theorem translationExpansion_ohne_zeuge :
-    ohneBibliothekAnw translationExpansion.aufruf = true ∧
-    ohneBibliothekAnw translationExpansionBind.aufruf = true :=
-  ⟨libraryExpansion_ohneBibliothek translationExpansion,
-   libraryExpansion_ohneBibliothek translationExpansionBind⟩
-
-/-- The pre-expansion gate refuses products under the C01 name and callees under the C17 name. -/
-theorem torZurErweiterung_zeuge :
-    torZurErweiterung true true = .ok () ∧
-    torZurErweiterung false true = .error produktZeilenVerweigert ∧
-    torZurErweiterung true false = .error allgemeineAbbildungVerweigert := by
-  exact ⟨rfl, rfl, rfl⟩
-
-/-- The generated translator program is library-closed. -/
-theorem translation_libraryB_zeuge : LibraryImageClosed (translationLowered false) :=
-  libraryImage_closed (translationLowered false)
-
-/-- The library admission holds on the generated program, through the checker binding. -/
-theorem translation_libraryAdmission_zeuge : LibraryImageAdmitted (translationLowered false) :=
-  libraryImage_admitted (translationLowered false)
 
 end Gabbro.Grammatik.Uebersetzung

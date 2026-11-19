@@ -89,14 +89,6 @@ theorem klon_ist_nicht_linuxAbi : gateKlon ≠ linuxAbi nrClone 4 := by decide
 theorem klon_kind_in_x4 : (xr 4, 3) ∈ gateKlon.ein ∧ xr 3 ∉ gateKlon.ein.map Prod.fst := by
   decide
 
-/-- Witness: the clone gate's registers loaded for a concrete call
-    (`flaggen = 0x350f00`, `spitze = 0x7f0000010000`, `eltern = 0x1000`, `kind = 0x2000`). -/
-theorem klon_aufruf_zeuge :
-    let s := ladeAufruf gateKlon beispielVorher (fun i => [0x350f00, 0x7f0000010000, 0x1000, 0x2000].getD i 0)
-    s.reg (xr 8) = 220 ∧ s.reg (xr 0) = 0x350f00 ∧ s.reg (xr 1) = 0x7f0000010000 ∧
-    s.reg (xr 2) = 0x1000 ∧ s.reg (xr 4) = 0x2000 ∧ s.reg (xr 3) = 1003 := by
-  decide
-
 end Arm
 
 /- CUTS: what is NOT claimed.
@@ -115,4 +107,3 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.Arm.klon_stapelreg_gut
 #print axioms Gabbro.Grammatik.Arm.klon_ist_nicht_linuxAbi
 #print axioms Gabbro.Grammatik.Arm.klon_kind_in_x4
-#print axioms Gabbro.Grammatik.Arm.klon_aufruf_zeuge

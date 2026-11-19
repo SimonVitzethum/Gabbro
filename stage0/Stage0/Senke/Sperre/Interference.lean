@@ -62,27 +62,4 @@ theorem AgreeK.foreign_frame {m m' : Mem} {writer fp : W} {s a K reserved : Nat}
     rw [interference.foreign_word frame.room index scratch lock]
     exact words i hi
 
-/-- A three-word local array survives writes to another thread's scratch and
-    a shared lock word. Both writes really change memory; all frame and ABI
-    premises are supplied jointly. -/
-theorem foreign_frame_zeuge [Kern] {D : Deklaration} (L : Lay D) :
-    let m := ValueProbe.memory
-    let m' := write (write m (slot 6144 4) 8 99) 8192 8 2
-    AgreeK 6144 4 8192 m m' ∧
-    m.rd64 (slot 6144 4) = some 0 ∧ m.rd64 8192 = some 0 ∧
-    m'.rd64 (slot 6144 4) = some 99 ∧ m'.rd64 8192 = some 2 ∧
-    FrameOK m' 4096 7 ∧ EnvAt L m' 4096 ValueProbe.env ∧
-    encodeWords L ValueProbe.shape (ValueProbe.value (D := D)) = [1, 2, 3] := by
-  intro m m'
-  have interference : AgreeK 6144 4 8192 m m' :=
-    (agreeK_slot (fp := 6144) (s := 4) (a := 8192) (d := 0)
-      (by decide) (by decide) 99).trans
-      (agreeK_lk (y := 8192) (Nat.le_refl _) (by decide) (by decide) 2)
-  have observer : FrameOK m 4096 7 :=
-    ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
-  have kept := interference.foreign_frame observer (ValueProbe.env_at L)
-    (by decide) (Or.inl (by decide)) (Or.inl (by decide))
-  exact ⟨interference, by decide +kernel, by decide +kernel,
-    by decide +kernel, by decide +kernel, kept.1, kept.2, rfl⟩
-
 end Gabbro.Stage0.Senke

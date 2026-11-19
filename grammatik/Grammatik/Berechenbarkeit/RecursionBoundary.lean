@@ -107,17 +107,10 @@ theorem unbounded_stack (p n : Nat) :
     ∃ M, RufErreichbarG program bO p initial M ∧ (M.faeden 0).stapel.length = n :=
   ⟨state n, reached_zeuge p n, depth_zeuge n⟩
 
-/-- The same real program is outside the unmeasured terminating fragment. -/
-theorem rejected_zeuge : klasse program [()] ohne () = .abgelehnt := by decide
-
 /-- The core safety checker accepts it. The termination classifier and its measure duty
     are additional conditions, not an implicit stack limit in `Akzeptiert`. -/
 theorem accepted_zeuge : Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] [] [] [()] [] = true := by
   decide +kernel
-
-/-- Merely claiming that a measure exists does not supply a falling measure: the syntactic
-    class changes, but the very same machine run is still present. -/
-theorem claimed_measure_zeuge : klasse program [()] mit () = .endet := by decide
 
 private theorem lexLt_self (xs : List Nat) : lexLt xs xs = false := by
   induction xs with

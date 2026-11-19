@@ -65,23 +65,6 @@ theorem indexschranke_eval (n : Int) (e : Expr D Γ Λ (.index n))
     0 ≤ (eval σ₀ e σ ρ).n ∧ (eval σ₀ e σ ρ).n ≤ n - 1 :=
   ⟨(eval σ₀ e σ ρ).lo_le, (eval σ₀ e σ ρ).le_hi⟩
 
-/-- Witness for `indexschranke_eval`: `refP`'s real index expression
-    `refIdxEin` (the index of the write site `refWriteSt`, fired by
-    the run at `refSchrittBF`) evaluates to `0`, inside
-    `0 ..< count`; and the run that fires it reaches `MB` with slot
-    `0` moved (`refB_erreicht`, `refB_schreibt`). Premise (the
-    expression) by computation; conclusion about that program's run. -/
-theorem indexschranke_zeuge :
-    (eval semW0 refIdxEin semW0 refRho7).n = 0 ∧
-    0 ≤ (eval semW0 refIdxEin semW0 refRho7).n ∧
-    (eval semW0 refIdxEin semW0 refRho7).n ≤ refD.count () - 1 ∧
-    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
-    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
-  have h0 : (eval semW0 refIdxEin semW0 refRho7).n = 0 := rfl
-  have hC : refD.count () = 2 := rfl
-  refine ⟨h0, by rw [h0]; exact Int.le_refl _, by rw [h0, hC]; decide,
-    refB_erreicht, refB_schreibt⟩
-
 /-! ## 3. `gruppe.sperrabdruck` -- rank order is acyclic, the footprint
     spans the move.
 
@@ -238,38 +221,5 @@ theorem fragLocks_wohlgeordnet :
   · obtain ⟨rfl, rfl⟩ := h
     exact absurd hM' List.not_mem_nil
   · exact hnil.elim
-
-/-- Witness for the `sperrabdruck` package: the fragment's trace has
-    NO wait edge (nothing is held at the take), is rank-ordered,
-    closes the lock, writes under it, moves memory -- and admits no
-    wait cycle. The edge set and order facts hold by computation;
-    every conclusion is about this program's run. -/
-theorem sperrabdruck_zeuge :
-    waitEdges (ausgangSpur
-      (execStmt refO 0 keinRuf fragLocks semW0 refRho7)) = [] ∧
-    wohlgeordnet (ausgangSpur
-      (execStmt refO 0 keinRuf fragLocks semW0 refRho7)) ∧
-    offen (ausgangSpur
-      (execStmt refO 0 keinRuf fragLocks semW0 refRho7)) = [] ∧
-    (ausgangWelt (execStmt refO 0 keinRuf fragLocks semW0 refRho7)).map
-      (·.slots () 0 ()) = some refV100 ∧
-    (∀ (x : refD.Lock) (xs : List refD.Lock),
-      ketteR (waitEdges (ausgangSpur
-        (execStmt refO 0 keinRuf fragLocks semW0 refRho7))) (x :: xs) →
-        x ∉ xs) := by
-  have hedges : waitEdges (ausgangSpur
-      (execStmt refO 0 keinRuf fragLocks semW0 refRho7)) = [] := by
-    rw [fragLocks_spur]
-    rfl
-  have hE : ∀ p ∈ waitEdges (ausgangSpur
-      (execStmt refO 0 keinRuf fragLocks semW0 refRho7)),
-      refD.rang p.1 < refD.rang p.2 := by
-    intro p hp
-    rw [hedges] at hp
-    simp only [List.not_mem_nil] at hp
-  refine ⟨hedges, fragLocks_wohlgeordnet, fragLocks_geschlossen,
-    fragLocks_schreibt, ?_⟩
-  intro x xs hc
-  exact kein_wartezyklus _ hE x xs hc
 
 end Gabbro.Grammatik

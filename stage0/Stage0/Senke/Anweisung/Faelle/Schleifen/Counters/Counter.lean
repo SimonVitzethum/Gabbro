@@ -59,15 +59,6 @@ theorem counter_protected {m : Mem} {fp : W} {counter : Nat}
       (Mem.write m (slot fp (BitVec.ofNat 64 counter)) 8 v) :=
   agree_write room (by omega) (by omega) v
 
-theorem counter_decrement_zeuge : (3 : W) - 1 = 2 ∧ (3 : W) ≠ 0 ∧
-    (foreverCounter 12 13 64).length = 2 := by decide
-
-/-- A nonempty reservation above the ABI and ordinary variable slots. -/
-theorem counter_protected_zeuge (m : Mem) :
-    Agree 0 12 13 m (Mem.write m (slot 0 (BitVec.ofNat 64 12)) 8 2) ∧
-    (3 : W) - 1 = 2 ∧ (foreverCounter 12 13 64).length = 2 := by
-  exact ⟨counter_protected (by decide) 2, by decide, by decide⟩
-
 /-- The actual expression layout writes at the first free slot, so this slot
     cannot simultaneously hold a loop counter without changing allocation. -/
 theorem counter_expression_collision [Kern] {D : Gabbro.Grammatik.Deklaration}
@@ -128,14 +119,5 @@ theorem nested_reservation_offsets {fp : W} {K depth outer : Nat}
   · rw [slot_toNat room (by omega)]; omega
   · intro inner before within
     omega
-
-/-- A parameter in a nonempty context moves past both nested counter pairs.
-Its old ABI slot is occupied by the outer counter, demonstrating why an entry
-relocation is required before a function-wide reservation can be enabled. -/
-theorem reservation_parameter_offset_zeuge :
-    vslot (Gabbro.Grammatik.Var.here : Gabbro.Grammatik.Var [.bool] .bool) 4 = 8 ∧
-    vslot (Gabbro.Grammatik.Var.here : Gabbro.Grammatik.Var [.bool] .bool) 0 = FB ∧
-    (slot (4096 : W) (BitVec.ofNat 64 (FB + 2))).toNat = 4144 ∧
-    (slot (4096 : W) (BitVec.ofNat 64 (FB + 3))).toNat = 4152 := by decide
 
 end Gabbro.Stage0.Senke

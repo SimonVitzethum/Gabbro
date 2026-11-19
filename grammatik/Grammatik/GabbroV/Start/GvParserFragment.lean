@@ -74,12 +74,6 @@ def erstAblehnung : Except String UProg → ErstAblehnung
 /-- **The classifier accepts the 104 elaboration.** -/
 theorem erstAblehnung_104 : erstAblehnung (.ok uExp104) = .ok := by rfl
 
-/-- **Joint witness for `erstAblehnung_104`**: 104 elaborates and has
-    two functions -- a non-degenerate fixture, not vacuity. -/
-theorem erstAblehnung_104_zeuge :
-    erstAblehnung (.ok uExp104) = .ok ∧ uExp104.fns.length = 2 :=
-  ⟨rfl, rfl⟩
-
 /-
   CUTS: PROVED here: the first-rejection classifier (`ErstAblehnung`, `erstAblehnung`, 104-acceptance, no
   extra axioms); the refusal of off-fragment items (`uRestFehler_kopf`, `kopf_gut`, `schritt`, `faellt`,
@@ -91,7 +85,6 @@ theorem erstAblehnung_104_zeuge :
 -/
 
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.erstAblehnung_104
-#print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.erstAblehnung_104_zeuge
 
 /-! ## What is still refused -/
 
@@ -202,19 +195,11 @@ theorem elabU_verweigert_noch (items msE : List SItemTief)
   rcases uRestFehler_faellt _ h with ⟨e, hR⟩
   exact ⟨e, elabU_bei_RestFehler _ _ e requirements hE hR⟩
 
-/-- **Witness for `elabU_verweigert_noch`**: a lone `use` item is
-    still refused -- minimal synthetic fixture; corpus-scale refusal is
-    measured by probe #2 (81 `Gegenstand` files). -/
-theorem elabU_verweigert_noch_zeuge :
-    ∃ e, elabU [.useT ["x"]] = .error e :=
-  ⟨_, by cbv⟩
-
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_kopf
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_kopf_gut
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_schritt
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.uRestFehler_faellt
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.elabU_bei_RestFehler
 #print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.elabU_verweigert_noch
-#print axioms Gabbro.Grammatik.GabbroV.GvParserFragment.elabU_verweigert_noch_zeuge
 
 end Gabbro.Grammatik.GabbroV.GvParserFragment

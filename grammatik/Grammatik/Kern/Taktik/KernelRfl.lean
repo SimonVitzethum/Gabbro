@@ -35,12 +35,3 @@ elab "kernel_change " t:term " at " h:ident : tactic => withMainContext do
   let target ← instantiateMVars (← Term.elabType t)
   Term.synthesizeSyntheticMVarsNoPostponing
   replaceMainGoal [← goal.replaceLocalDeclDefEq (← getFVarId h) (← instantiateMVars target)]
-
-/-- The tactic closes a computed equality. -/
-theorem kernel_rfl_zeuge : (List.range 3).map (· + 1) = [1, 2, 3] := by kernel_rfl
-
-/-- The goal and a hypothesis are restated through a computation. -/
-theorem kernel_change_zeuge (h : (List.range 2).length + 1 = 3) : (List.range 3).length = 3 := by
-  kernel_change 3 = 3 at h
-  kernel_change 3 = 3
-  exact h

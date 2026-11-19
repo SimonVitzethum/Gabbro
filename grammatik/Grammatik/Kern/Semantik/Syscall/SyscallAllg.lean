@@ -237,30 +237,6 @@ theorem swO_trifftArm : ∀ σ ρ, ∃ σ' roh,
   · show axiomSpur [()] [] () [] σ.ohneLese.haelt ++ σ.spur = axiomSpur [()] [] () [] σ.haelt ++ σ.spur
     rw [World.ohneLese_haelt]
 
-/-- **ZEUGE (AArch64):** the pairing holds for the toy `write` through the AArch64 record, the
-    record is well-formed under the generic notion, and the program is non-degenerate (a
-    `storeSlot` step moves memory). Next to `syscall_paarung_zeuge` (x86): ONE theorem
-    (`syscall_paarung_arch`), two architectures. -/
-theorem syscall_paarung_arch_zeuge :
-    (PaarGut swD () swO swUArm ∧ ArchAbi.gut swUArm.abi) ∧ swD.schreibt () () = true ∧
-    ∃ (σ σ' : World swD), σ'.slots () 0 () ≠ σ.slots () 0 () := by
-  refine ⟨syscall_paarung_arch swD () swO swKArm swUArm swKbehArm
-      Arm.schreibAbiArm_gut rfl rfl (fun _ _ h => h) swEns swSub swSubG swEu swEuG
-      swEffArm (fun _ _ _ _ h _ => h.2.2.1) swO_trifftArm, rfl, swWelt0,
-    swWelt0.storeSlot () 0 () (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192)), ?_⟩
-  have hn1 : ((swWelt0.storeSlot () 0 ()
-      (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192))).slots () 0 ()).n = 1 := rfl
-  have hn0 : (swWelt0.slots () 0 ()).n = 0 := rfl
-  intro hcon
-  have hn := congrArg Zahl.n hcon
-  rw [hn1, hn0] at hn
-  omega
-
-/-- ... and BOTH architectures' toy `write` pairings hold in one statement. -/
-theorem syscall_paarung_beide_zeuge :
-    PaarGut swD () swO swU ∧ PaarGut swD () swO swUArm :=
-  ⟨syscall_paarung_zeuge.1, syscall_paarung_arch_zeuge.1.1⟩
-
 end Gabbro.Grammatik
 
 /- CUTS: what is NOT claimed.
@@ -282,5 +258,3 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.klonTorArm_good
 #print axioms Gabbro.Grammatik.klonTorArm_schlecht
 #print axioms Gabbro.Grammatik.syscall_paarung_arch
-#print axioms Gabbro.Grammatik.syscall_paarung_arch_zeuge
-#print axioms Gabbro.Grammatik.syscall_paarung_beide_zeuge

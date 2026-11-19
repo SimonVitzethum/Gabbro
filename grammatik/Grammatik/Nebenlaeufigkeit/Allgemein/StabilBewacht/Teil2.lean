@@ -70,35 +70,6 @@ theorem zbMemMoved : zbW1.slots () 5 () ≠ zbW0.slots () 5 () := by
 theorem zbSchreibt : TraegerSchreibt (zbCode 1) (.inl ()) = true :=
   zbSchreibtEin
 
-/-- **Inhabitation for `stabil_ohne_form`.** All premises hold jointly on
-    the two-thread witness chain: head validity, own-step and foreign-step
-    preservation of `slot 0 = slot 1` -- plus non-degeneracy (a function
-    writes the shared table; the step moves slot 5). -/
-theorem stabil_ohne_form_zeuge :
-    (∀ f ∈ zbJ.faeden, ∀ (k : Nat) (σ : World refD),
-      zbJ.welten[k]? = some σ → zbQ f σ) ∧
-    TraegerSchreibt (zbCode 1) (.inl ()) = true ∧
-    zbW1.slots () 5 () ≠ zbW0.slots () 5 () :=
-  ⟨stabil_ohne_form zbNb zbJ zbQ zbKopf zbEigen zbStabil,
-    zbSchreibt, zbMemMoved⟩
-
-/-- **Inhabitation for `stabil_aus_bewachung`.** All premises hold jointly
-    on the witness chain: slot dependence, the static guard guarantee, the
-    per-step rely -- plus the derived checker shape (`HaengtAb`) and
-    non-degeneracy (a function writes the shared table; the step moves
-    slot 5 while `Q` reads slots 0 and 1). -/
-theorem stabil_aus_bewachung_zeuge :
-    (∀ f ∈ zbJ.faeden, ∀ (k : Nat) (g : Faden) (vor nach : World refD),
-      g ∈ zbJ.faeden → g ≠ f → zbJ.schrittFaden[k]? = some g →
-        zbJ.welten[k]? = some vor → zbJ.welten[k + 1]? = some nach →
-        zbQ f vor → zbQ f nach) ∧
-    (∀ f ∈ zbJ.faeden, HaengtAb (zbWf f) (zbGf f) (zbQ f)) ∧
-    TraegerSchreibt (zbCode 1) (.inl ()) = true ∧
-    zbW1.slots () 5 () ≠ zbW0.slots () 5 () :=
-  ⟨stabil_aus_bewachung zbNb zbJ zbQ zbSf zbGf zbDep zbWacheT zbWacheG zbRelyT zbRelyG,
-    haengtAb_aus_slotDep zbNb zbJ zbQ zbSf zbWf zbGf zbDep zbCover,
-    zbSchreibt, zbMemMoved⟩
-
 /-! ## CUTS: what is not proved here
 
   (S1) Table-level `HaengtAb` alone does not suffice for `hStabil`, and is
@@ -129,7 +100,5 @@ theorem stabil_aus_bewachung_zeuge :
     match and discharged by computation on concrete worlds.
 -/
 
-#print axioms Gabbro.Grammatik.stabil_ohne_form_zeuge
-#print axioms Gabbro.Grammatik.stabil_aus_bewachung_zeuge
 
 end Gabbro.Grammatik

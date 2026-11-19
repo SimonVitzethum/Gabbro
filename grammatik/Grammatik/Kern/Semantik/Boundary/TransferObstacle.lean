@@ -47,9 +47,6 @@ theorem probe_at_bound_encoding (z : Int → Option probeD.Fn) (word : Int)
     · cases h
     · cases h
 
-theorem probe_at_bound_encoding_zeuge : (8192 : Int) = 8192 :=
-  probe_at_bound_encoding (probeOracle 8192).zeiger 8192 rfl
-
 /-- The old class is inhabited too: the transfer failure does not depend on an
     inconsistent full contract or an empty class of permitted environments. -/
 theorem probe_old_class_inhabited : AxVertragO probeBound (probeOracle 0) := by
@@ -87,21 +84,6 @@ theorem probe_old_duty_excludes_bound (O : Orakel probeD) (hQ : AxVertragO probe
       some (.inl probeAtBound) :=
   probe_conditional_duty_excludes_bound O (axVertragOP_of_O _ hQ)
 
-theorem probe_old_duty_excludes_bound_zeuge :
-    AxVertragO probeBound (probeOracle 0) ∧
-      (axiomAntwortSonst (probeOracle 0) () probeWorld .nil
-        probeCheck (some probeFailure)).2 ≠ some (.inl probeAtBound) :=
-  ⟨probe_old_class_inhabited,
-    probe_old_duty_excludes_bound (probeOracle 0) probe_old_class_inhabited⟩
-
-/-- The active conditional class has a concrete inhabitant as well. -/
-theorem probe_conditional_duty_excludes_bound_zeuge :
-    AxVertragOP (fun _ _ _ => true) probeBound (probeOracle 0) ∧
-      (axiomAntwortSonst (probeOracle 0) () probeWorld .nil
-        probeCheck (some probeFailure)).2 ≠ some (.inl probeAtBound) := by
-  have hQ := axVertragOP_of_O (fun _ _ _ => true) probe_old_class_inhabited
-  exact ⟨hQ, probe_conditional_duty_excludes_bound (probeOracle 0) hQ⟩
-
 /-- The remainder-only class contains the concrete oracle that the gate accepts
     at 4096. Its remainder is empty; no environment promise about the bound is
     used. Thus this fixture is non-vacuous on both sides of entry validation. -/
@@ -111,42 +93,5 @@ theorem probe_rest_admits_bound :
         probeCheck (some probeFailure)).2 = some (.inl probeAtBound) :=
   ⟨axVertragO_rest_empty _ _ _ (fun _ => rfl), answer_4096_success_zeuge⟩
 
-/-- Counterexample for the retained full-summary oracle interface. The old
-    observation holds for every full-summary oracle, but the remainder-only
-    class has a checked normal execution contradicting that very duty.
-    Re-closing the goal requires a new duty over all remainder-meeting raw
-    oracles, including their declared failure continuations; that is a stronger
-    premise, not a corollary of the current duty. -/
-theorem probe_duty_transfer_counterexample_zeuge :
-    ¬ ((∀ O : Orakel probeD, AxVertragO probeBound O →
-        (axiomAntwortSonst O () probeWorld .nil probeCheck (some probeFailure)).2 ≠
-          some (.inl probeAtBound)) →
-      ∀ O : Orakel probeD,
-        AxVertragO_rest probeEntryParts (fun _ _ _ _ _ => true) O →
-        (axiomAntwortSonst O () probeWorld .nil probeCheck (some probeFailure)).2 ≠
-          some (.inl probeAtBound)) := by
-  intro transfer
-  exact (transfer probe_old_duty_excludes_bound (probeOracle 8192)
-    probe_rest_admits_bound.1) probe_rest_admits_bound.2
-
-/-- C08's restriction to question worlds does not fix the ABI mismatch. The
-    same non-vacuous counterexample refutes observation transfer from its
-    conditional class to the remainder-only class. It does not assert that
-    no stronger, separately proved body duty could support entry validation. -/
-theorem probe_conditional_duty_transfer_counterexample_zeuge :
-    ¬ ((∀ O : Orakel probeD,
-        AxVertragOP (fun _ _ _ => true) probeBound O →
-        (axiomAntwortSonst O () probeWorld .nil probeCheck (some probeFailure)).2 ≠
-          some (.inl probeAtBound)) →
-      ∀ O : Orakel probeD,
-        AxVertragO_rest probeEntryParts (fun _ _ _ _ _ => true) O →
-        (axiomAntwortSonst O () probeWorld .nil probeCheck (some probeFailure)).2 ≠
-          some (.inl probeAtBound)) := by
-  intro transfer
-  exact (transfer probe_conditional_duty_excludes_bound (probeOracle 8192)
-    probe_rest_admits_bound.1) probe_rest_admits_bound.2
-
-#print axioms Gabbro.Grammatik.Boundary.probe_duty_transfer_counterexample_zeuge
-#print axioms Gabbro.Grammatik.Boundary.probe_conditional_duty_transfer_counterexample_zeuge
 
 end Gabbro.Grammatik.Boundary

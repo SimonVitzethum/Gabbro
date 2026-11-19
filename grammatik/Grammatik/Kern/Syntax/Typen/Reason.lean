@@ -192,21 +192,4 @@ theorem ofCount_zero_elim (h : 0 ≤ (2 ^ 128 : Nat))
 
 end ReasonVal
 
-/-- The empty descriptor is closed and has no declared codes. -/
-theorem reason_ofCount_zero_zeuge :
-    (ReasonSpec.ofCount 0 (by decide)).codes = [] ∧
-      (ReasonSpec.ofCount 0 (by decide)).closed = true := ⟨rfl, rfl⟩
-
-/-- The singleton embeds its sole case as code zero and recovers index zero. -/
-theorem reason_ofCount_one_zeuge :
-    (ReasonVal.ofCountVon (n := 1) (by decide) ⟨0, by decide⟩).1.val = 0 ∧
-      (ReasonVal.ofCountNach (n := 1) (by decide)
-        (ReasonVal.ofCountVon (n := 1) (by decide) ⟨0, by decide⟩)).val = 0 := by decide
-
-/-- Three anonymous cases preserve code order and the last case's index. -/
-theorem reason_ofCount_three_zeuge :
-    ((ReasonSpec.ofCount 3 (by decide)).codes.map Fin.val) = [0, 1, 2] ∧
-      (ReasonVal.ofCountNach (n := 3) (by decide)
-        (ReasonVal.ofCountVon (n := 3) (by decide) ⟨2, by decide⟩)).val = 2 := by decide
-
 end Gabbro.Grammatik

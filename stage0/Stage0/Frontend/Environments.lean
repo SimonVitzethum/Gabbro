@@ -42,18 +42,6 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 attribute [local cbv_eval] strEq_apply_eq_decide
 
-/-- A dependent exclusive range is checked with the previous binding, without widening it. -/
-theorem typedItem_sound_zeuge :
-    ∃ lo hi value,
-      uTyp [("LIMIT", (42, 42))] [] [] []
-        (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true) =
-          .ok (.int lo hi) ∧
-      uKonstWert lo hi [] [("LIMIT", 42)] 64 (.variable "LIMIT") = some value ∧
-      [("LIMIT", 42), ("ANSWER", 42)] = [("LIMIT", 42)] ++ [("ANSWER", value)] :=
-  typedItem_sound [] [] [("LIMIT", 42)] [("LIMIT", 42), ("ANSWER", 42)] "ANSWER"
-    (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true)
-    (.variable "LIMIT") (by cbv) (by cbv)
-
 /-- Full ordered canonical environments must agree with the typed source declaration fold.
     Also require stability of alias ranges when newly folded constants become visible. -/
 def EnvironmentCompatible (source target : List SItemTief) : Prop :=
@@ -124,40 +112,5 @@ theorem deriveScopes_of_compatible (items : List SItemTief)
       simp only [hs, ↓reduceDIte]
   refine ⟨_, he, ?_⟩
   rfl
-
-/-- A custom range with no exact builtin retains its negative intermediate and dependent value. -/
-theorem deriveScopes_custom_negative_zeuge :
-    let items := [SItemTief.typeT [] "Small" [] []
-        (some (.range (.atom "i8") (bound (-10)) (.lit 100) false)),
-      .constT "NEGATIVE" (.atom "Small") (.one (.bin "-" (.lit 0) (.lit 1))),
-      .constT "ANSWER" (.atom "Small") (.one (.bin "+" (.variable "NEGATIVE") (.lit 43)))]
-    ∃ result, deriveScopes items = .ok result ∧
-      result.scope.values = [("NEGATIVE", -1), ("ANSWER", 42)] ∧
-      result.scope.declared = [("Small", (-10, 100))] ∧
-      ¬ EnvironmentCompatible items (normalizeAliases items) := by
-  dsimp only
-  refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_⟩
-  · exact Gabbro.Grammatik.except_ok_get _
-  all_goals decide +kernel
-
-/-- The generic prefix/lookup chain on actual original declarations, with a negative binding
-    read by a later checked expression. No fabricated candidate values enter the certificate. -/
-theorem Scopes.prefix_lookup_zeuge :
-    let leading : List SItemTief := [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
-    let suffix : List SItemTief := [.constT "ANSWER" (.atom "i8")
-      (.one (.bin "+" (.variable "BASE") (.lit 43)))]
-    ∃ scope : Scopes (leading ++ suffix),
-      scope.values.find? (fun entry => strEq entry.1 "BASE") = some ("BASE", -1) := by
-  dsimp only
-  let scope := evaluatedScopes
-    [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1))),
-     .constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
-    [("BASE", -1), ("ANSWER", 42)] (by cbv)
-  refine ⟨scope, Scopes.prefix_lookup scope
-    [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
-    [.constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
-    [("BASE", -1)] "BASE" ("BASE", -1) rfl ?_ ?_⟩
-  · cbv
-  · cbv
 
 end Gabbro.Stage0.Frontend

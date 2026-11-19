@@ -89,15 +89,6 @@ theorem expression_negative (u : UProg) (lo hi : Int) (n : Nat)
     (eval before (expression u (.int lo hi) (.un "-" (.lit n)) accepted) world .nil).n = -(n : Int) := by
   rfl
 
-/-- A bounded negative start argument jointly witnesses acceptance and exact canonical value. -/
-theorem expression_negative_zeuge (u : UProg) (world : World (declOf u)) :
-    (eval world (expression u (.int (-9) 12) (.un "-" (.lit 7)) (by simp [uStartArg])) world .nil).n = -7 :=
-  expression_negative u (-9) 12 7 (by simp [uStartArg]) world world
-
-theorem expression_literal_zeuge (u : UProg) (world : World (declOf u)) :
-    (eval world (expression u (.int 0 12) (.lit 7) (by simp [uStartArg])) world .nil).n = 7 :=
-  expression_literal u 0 12 7 (by simp [uStartArg]) world world
-
 /-- Canonical accepted start arguments are closed values: choosing a world cannot
     change the environment eventually encoded into a relocated root frame. -/
 theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)

@@ -58,21 +58,4 @@ theorem aligned_abs (b off N : Nat) (hN : 0 < N)
   exact ⟨Nat.dvd_trans (Nat.dvd_lcm_right 8 N) total,
     Nat.dvd_trans (Nat.dvd_lcm_left 8 N) total⟩
 
-/-- Concrete word and non-word alignment cases. -/
-theorem aligned_abs_zeuge :
-    (8 ∣ 24 + alignUp 9 (wordAlign 8)) ∧
-    (16 ∣ 48 + alignUp 9 (wordAlign 16)) ∧
-    (24 ∣ 48 + alignUp 9 (wordAlign 24)) := by
-  decide
-
-/-- Relative offsets retain the grid even when the loader base is four. -/
-theorem relative_grid_zeuge :
-    (0 + alignUp 9 (wordAlign 8)) % 8 = 0 % 8 ∧
-    (0 + alignUp 9 (wordAlign 16)) % 8 = 0 % 8 ∧
-    (0 + alignUp 9 (wordAlign 24)) % 8 = 0 % 8 ∧
-    (4 + alignUp 9 (wordAlign 8)) % 8 = 4 % 8 ∧
-    (4 + alignUp 9 (wordAlign 16)) % 8 = 4 % 8 ∧
-    (4 + alignUp 9 (wordAlign 24)) % 8 = 4 % 8 := by
-  decide
-
 end Gabbro.Stage0.Senke

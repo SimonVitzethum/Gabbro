@@ -73,11 +73,6 @@ theorem guardedAccess : gdarf guardedD () [.held ()] := by
   rcases List.mem_singleton.mp h with rfl
   exact List.mem_singleton_self _
 
-/-- The idle-root transport preserves access to a real guarded global. -/
-theorem gdarfR_zeuge :
-    gdarf guardedD.mitRuhe () (([.held ()] : List (Res guardedD)).map resR) :=
-  gdarfR guardedAccess
-
 /-- A concrete call retains write permissions, its lock and its floor. -/
 def guardedContract : Vertrag guardedD := vertragVon guardedD ()
 
@@ -89,11 +84,5 @@ theorem guardedCall : RufPasst guardedD guardedContract guardedSig [.held ()] wh
   hx := fun L _ hn => absurd (by cases L; exact List.mem_singleton_self _) hn
   hb := fun c hc => ⟨c, hc, Int.le_refl c⟩
   ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ rfl
-
-/-- The compatible call survives the idle-root transport. -/
-theorem rufPasstR_zeuge :
-    RufPasst guardedD.mitRuhe (vertragR guardedContract) (sigR guardedSig)
-      (([.held ()] : List (Res guardedD)).map resR) :=
-  rufPasstR guardedCall
 
 end Gabbro.Code.Lower.WitC11

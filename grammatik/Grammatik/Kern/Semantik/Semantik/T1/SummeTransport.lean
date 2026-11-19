@@ -94,18 +94,6 @@ theorem summePasst_relocate (cs : List (Option Ty)) (n : Int) :
     rw [if_neg hs', if_neg hs]
     rfl
 
-/-- A nonzero selected tag and nonzero integer payload exercise the scalar law. -/
-theorem summePasst_relocate_zeuge :
-    summePasst (D := D') (Ty.mapCases sn tn [none, some (.int 2 9)]) 15 =
-      some (Val.relocate sn tn pointer (.sum [none, some (.int 2 9)])
-        ⟨⟨1, by decide⟩, ⟨7, by decide, by decide⟩⟩) := by
-  rw [summePasst_relocate sn tn pointer]
-  rfl
-
-/-- Even selecting an empty case cannot bypass a typed schema's ABI refusal. -/
-theorem summePasst_typed_refused_zeuge (n : Int) :
-    summePasst (D := D') (Ty.mapCases sn tn [none, some (.fnptr 3)]) n = none := rfl
-
 end Relocation
 
 end Gabbro.Grammatik

@@ -59,49 +59,6 @@ set_option maxHeartbeats 4000000
     Fixtures live in `LibraryFixtures.lean`, certificates in `LibraryCertificates.lean`, and the
     connected export witness in `LibraryExport.lean`. -/
 
-/-- Reordering ordinary arguments or changing a region preserves its token kinds and changes the
-    source call's identity. Both call forms share that identity; nested regions survive printing. -/
-theorem library_lossless_zeuge :
-    let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7, .variable "n"],
-      [.zeichen "{", .num 3, .zeichen "}", .text "5"]⟩
-    beqTopStmt (parseTopStmt (druckAnw (.lcall call) ++ [.ende])) (.ok (.lcall call)) = true ∧
-    beqTopStmt (parseTopStmt (druckAnw (.bindLib false "x" none call) ++ [.ende]))
-      (.ok (.bindLib false "x" none call)) = true ∧
-    beqSLibraryCall call { call with args := [.variable "n", .lit 7] } = false ∧
-    beqSLibraryCall call { call with region := [.num 3, .num 5] } = false := by
-  decide +kernel
-
-/-- The generic round-trip theorems apply jointly to a call with an actual argument and region. -/
-theorem library_round_zeuge :
-    let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7], [.num 3]⟩
-    LibraryCallGut call ∧ AnwBein (.lcall call) ∧ AnwBein (.bindLib false "value" none call) := by
-  let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7], [.num 3]⟩
-  have good : LibraryCallGut call := by
-    refine ⟨by decide, by decide, ?_, ?_⟩
-    · intro value member
-      simp only [call, List.mem_cons, List.not_mem_nil, or_false] at member
-      subst value
-      exact ⟨legs_tok _ rfl, rfl⟩
-    · intro rest
-      rfl
-  exact ⟨good, anw_lcall call good, anw_bindLib false "value" (by decide) rfl none call trivial good⟩
-
-/-- Two source occurrences keep distinct regions; selecting one cannot reuse the other's input. -/
-theorem library_site_identity_zeuge :
-    let first : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 3, .num 5]⟩
-    let second : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 2, .num 7]⟩
-    let body := SAnw.block [.lcall first, .lcall second] none
-    (libraryCallAt [0] body).map (fun call => beqSLibraryCall call first) = some true ∧
-    (libraryCallAt [1] body).map (fun call => beqSLibraryCall call second) = some true ∧
-    (libraryCallAt [1] body).map (fun call => beqSLibraryCall call first) = some false := by
-  decide +kernel
-
-/-- A qualified library call prints and parses back with its paths intact. -/
-theorem library_qualifiziert_rund_zeuge :
-    let call : SLibraryCall := ⟨["m", "lib"], ["f"], [.lit 7], [.num 3]⟩
-    beqTopStmt (parseTopStmt (druckAnw (.lcall call) ++ [.ende])) (.ok (.lcall call)) = true := by
-  decide +kernel
-
 -- Reuse the actual scanner and phase certificates. Only their normalized
 -- parser/member values are inspected by the selection witnesses below.
 attribute [local cbv_eval] String.intercalate_singleton
@@ -172,34 +129,6 @@ private theorem duplicate_selected :
 private theorem translator_absent :
     libraryDecl ohneTranslatorMembers ⟨["m"], ["solo"], [], []⟩ =
       .error "C02: library function has no translator" := by cbv
-
-/-- The same members select module `b` under its qualifier. -/
-theorem translation_qual_b_zeuge :
-    (libraryDecl translationQualMembers ⟨["b"], ["b::consume"], [], [.num 3, .num 5]⟩).toOption.isSome = true := by
-  rw [qualified_members_selected, qualified_b_selected.property]
-  rfl
-
-/-- An unknown qualifier refuses: no declaration matches. -/
-theorem translation_qual_unbekannt_zeuge :
-    (libraryDecl translationQualMembers ⟨["x"], ["consume"], [], [.num 3, .num 5]⟩).toOption.isNone = true := by
-  rw [qualified_members_selected, qualified_unknown]
-  rfl
-
-/-- An empty path refuses by name: the reader never produces one. -/
-theorem translation_leer_verweigert_zeuge :
-    (libraryDecl translationQualMembers ⟨[], ["a::consume"], [], []⟩).toOption.isNone = true := by
-  rw [library_empty_path]
-  rfl
-
-theorem translation_doppelt_verweigert_zeuge :
-    (libraryDecl doppeltMembers ⟨["m"], ["consume"], [], []⟩).toOption.isNone = true := by
-  rw [duplicate_selected]
-  rfl
-
-theorem translation_ohne_translator_zeuge :
-    (libraryDecl ohneTranslatorMembers ⟨["m"], ["solo"], [], []⟩).toOption.isNone = true := by
-  rw [translator_absent]
-  rfl
 
 -- The recursive fixture already certifies every source phase and lowering.
 -- Select its parser output equation rather than re-entering its public lexer
@@ -299,12 +228,5 @@ private theorem recursive_program_calls :
 
 private theorem recursive_public_positive : 0 < translationRekUnit.fns.length :=
   recursive_program_calls.elim (fun positive _ => positive)
-
-/-- The recursive body calls, so `TranslationDecl.noCalls` is unprovable: the general-map path
-    is refused under `allgemeineAbbildungVerweigert`. -/
-theorem translation_rek_verweigert_zeuge :
-    ((befund translationRekLowered.1 ⟨0, by exact recursive_public_positive⟩).rufe == []) = false := by
-  obtain ⟨positive, calls⟩ := recursive_program_calls
-  exact calls
 
 end Gabbro.Grammatik.Uebersetzung

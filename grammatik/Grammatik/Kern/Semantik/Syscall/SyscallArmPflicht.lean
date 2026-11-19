@@ -133,19 +133,6 @@ theorem stub_erfuellt (abi : SysAbiArm) (hn : abi.nummer < 18446744073709551616)
     rw [haus] at h1
     simp only [nachSvc, h1, if_false, setzeReg, h2]
 
-/-- Witness: the duty is not vacuous -- it holds for the `write` gate and `clone` gate of the
-    AArch64 binding, and a block that forgets the number is REFUSED. -/
-theorem stub_zeuge :
-    PflichtSvc schreibAbiArm (stubBlock schreibAbiArm) ∧ PflichtSvc gateKlon (stubBlock gateKlon) ∧
-    ¬ PflichtSvc schreibAbiArm [.svc] := by
-  refine ⟨stub_erfuellt _ (by decide) rfl, stub_erfuellt _ (by decide) rfl, ?_⟩
-  intro h
-  have h1 := (h beispielVorher (fun i => 1000 + i) 0 (by decide)).2.1 beispielVorher.reg
-    (by simp only [lauf, List.foldl, schritt, List.nil_append, List.mem_cons, List.not_mem_nil, or_false])
-  have h2 := h1 (xr 8)
-  revert h2
-  decide
-
 /-! ## 3. Duty 2: the process entry (`_start`) -/
 
 /-- **`PflichtEintritt bs`.** From any entry state with `sp0 >= 16`: exactly one call, taken with
@@ -175,20 +162,6 @@ theorem eintritt_erfuellt (haupt : Nat) : PflichtEintritt (eintrittBlock haupt) 
     for the weaker case the `nolibc` entry is written for). -/
 def eintrittVorher : ArmZustand :=
   { beispielVorher with reg := fun r => if r = .sp then 0x7ffc12345678 else beispielVorher.reg r }
-
-/-- Witness: the canonical entry aligns an 8-mod-16 stack pointer, and a block that forgets the
-    alignment is REFUSED. -/
-theorem eintritt_zeuge :
-    PflichtEintritt (eintrittBlock 0x401000) ∧
-    ¬ PflichtEintritt [.movImm (xr 29) 0, .bl 0x401000, .brk] := by
-  refine ⟨eintritt_erfuellt _, ?_⟩
-  intro h
-  have := (h eintrittVorher (by decide) (by decide)).2.1
-  have h2 := this (0x401000, eintrittVorher.reg .sp, eintrittVorher.reg ergebnisReg)
-    (by simp only [lauf, List.foldl, schritt, setzeReg, Nat.zero_mod, reduceCtorEq, ↓reduceIte, List.nil_append,
-  List.mem_cons, Prod.mk.injEq, right_eq_ite_iff, true_and, List.not_mem_nil, or_false]; intro h; exact absurd h (by decide))
-  revert h2
-  decide
 
 /-! ## 4. Duty 3: the cloned child on the handed stack -/
 
@@ -245,25 +218,6 @@ theorem trampolin_erfuellt (ra rb : ArmReg) : PflichtTrampolin ra rb (trampolinB
   and_self, and_true, true_and]
   refine ⟨?_, ?_, ?_⟩ <;> omega
 
-/-- Witness for the kind and trampoline duties: concrete handed stack tops, plus a REFUSED block
-    (the child path that skips the alignment). -/
-theorem kind_zeuge :
-    PflichtKind (xr 1) (kindBlock (xr 1) 0x401000) ∧
-    ¬ PflichtKind (xr 1) [.movReg ergebnisReg (xr 1), .movImm (xr 29) 0, .bl 0x401000, .brk] := by
-  refine ⟨kind_erfuellt _ _, ?_⟩
-  intro h
-  let z0 : ArmZustand :=
-    { beispielVorher with reg := fun r =>
-        if r = .sp then 0x7f0000010008 else if r = xr 1 then 0x7f0000010008 else beispielVorher.reg r }
-  have := (h z0 0x7f0000010008 (by decide) (by decide) (by simp only [↓reduceIte, z0]) (by simp only [reduceCtorEq, ↓reduceIte, z0])
-    (by decide) (by decide)).2.1
-  have h2 := this (0x401000, 0x7f0000010008, 0x7f0000010008)
-    (by simp only [lauf, List.foldl, schritt, setzeReg, Nat.zero_mod, ergebnisReg, reduceCtorEq, ↓reduceIte,
-  Nat.reduceMod, ArmReg.x.injEq, Fin.zero_eta, Fin.isValue, Fin.reduceFinMk, Fin.reduceEq, List.nil_append,
-  List.mem_cons, List.not_mem_nil, or_false, z0])
-  revert h2
-  decide
-
 end Arm
 
 /- CUTS: what is NOT claimed.
@@ -282,9 +236,6 @@ end Arm
 end Gabbro.Grammatik
 
 #print axioms Gabbro.Grammatik.Arm.stub_erfuellt
-#print axioms Gabbro.Grammatik.Arm.stub_zeuge
 #print axioms Gabbro.Grammatik.Arm.eintritt_erfuellt
-#print axioms Gabbro.Grammatik.Arm.eintritt_zeuge
 #print axioms Gabbro.Grammatik.Arm.kind_erfuellt
-#print axioms Gabbro.Grammatik.Arm.kind_zeuge
 #print axioms Gabbro.Grammatik.Arm.trampolin_erfuellt

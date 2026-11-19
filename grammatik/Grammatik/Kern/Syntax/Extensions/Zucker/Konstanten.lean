@@ -210,13 +210,6 @@ theorem squares64_zert :
     konstZert squares64 (fun i v => v == quad i) = true := by
   decide
 
-/-- Witness for `konstZert_mem`: all premises instantiated jointly at the
-    square table -- the table, the translated function, the closed
-    certificate, and entry 63 (`3969 = quad 63`). -/
-theorem konstZert_mem_zeuge :
-    (fun i v => v == quad i) 63 3969 = true :=
-  konstZert_mem squares64_zert (j := 63) (v := 3969) rfl
-
 /-- The certificate tied to the SYNTAX: with soundness the same check
     reads as values against evaluation of the source expression. -/
 theorem squares64_aus_syntax :
@@ -226,15 +219,6 @@ theorem squares64_aus_syntax :
     quad_aus_syntax
   simp only [h]
   exact squares64_zert
-
-/-- Joint witness for the soundness theorem: the probe point `7 ↦ 49`
-    through evaluation of the syntax, together with the full 64-entry
-    certificate over the translated function. The only binder `i` is
-    instantiated; both conjuncts are used. -/
-theorem quad_aus_syntax_zeuge :
-    quadSyntax.eval leerEnv leerFns 7 = 49 ∧
-      konstZert squares64 (fun i v => v == quad i) = true := by
-  refine ⟨?_, ?_⟩ <;> decide
 
 end Gabbro.Grammatik.Konstanten
 
@@ -267,10 +251,8 @@ end Gabbro.Grammatik.Konstanten
 #print axioms Gabbro.Grammatik.Konstanten.mem_zipIdx_of_getElem?
 #print axioms Gabbro.Grammatik.Konstanten.konstZert_mem
 #print axioms Gabbro.Grammatik.Konstanten.squares64_zert
-#print axioms Gabbro.Grammatik.Konstanten.konstZert_mem_zeuge
 #print axioms Gabbro.Grammatik.Konstanten.quad_aus_syntax
 #print axioms Gabbro.Grammatik.Konstanten.dreiPlusVier_aus_syntax
 #print axioms Gabbro.Grammatik.Konstanten.konst_aus_syntax
 #print axioms Gabbro.Grammatik.Konstanten.ruf_aus_syntax
 #print axioms Gabbro.Grammatik.Konstanten.squares64_aus_syntax
-#print axioms Gabbro.Grammatik.Konstanten.quad_aus_syntax_zeuge

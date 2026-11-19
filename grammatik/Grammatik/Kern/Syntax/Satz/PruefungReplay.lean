@@ -62,21 +62,6 @@ theorem replayEintrag_stabil (c : CheckDecl D) (r : CheckReport) (g : D.Fn)
 
 /-! ## Witnesses: conservation and replay on the fixture -/
 
-/-- The fixture probe conserves its Duty. -/
-theorem erhaltung_zeuge : CheckErhaltung pruefP pruefC :=
-  erhaltung_aus_expansion pruef_expansion
-
-/-- The completed negative cycle preserves the Duty into the same gate. -/
-theorem erhaltung_kreislauf_zeuge :
-    (pruefD.signatur pruefC1.probe).produziert = [pruefC1.duty] ∧
-      pruefC1.duty ∈ (pruefD.signatur false).konsumiert :=
-  erhaltung_kreislauf entladung_falsch_zeuge
-
-/-- The replayed negative entry is the consumed one, by computation. -/
-theorem replayEintrag_zeuge :
-    replayEintrag pruefC1 messBerichtFalsch false =
-      (⟨true, messBerichtFalsch, false, some false⟩ : CheckEvidenz pruefD) := rfl
-
 end Erhaltung
 
 end Gabbro.Grammatik

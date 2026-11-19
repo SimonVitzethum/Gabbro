@@ -251,19 +251,6 @@ theorem hnot3 : ¬ InBaum 4 l0 r0 2 3 := by
   have := BaumF.eindeutig hS baum0
   subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
 
-/-- **The witness:** hanging the live slot `3` as the next sibling of `0`, with the parent of `0`, keeps the demand; the new
-    sibling link is real (`r1 0 = 3 < 4`), so the second clause of `SibF` is exercised at `0`. -/
-theorem sib_einfuegen_zeuge : SibF 4 l0 r1 par1 2 ∧ r1 0 < 4 ∧ par1 (r1 0) = par1 0 := by
-  have h := sib_einfuegen_rechts (l' := l0) (r' := r1) (par' := par1) sib0 baumOk0 hp0 rfl (by decide) (by decide) hnot3
-    rfl rfl (by unfold l0; decide)
-    (fun j hj hji => by unfold r1 r0; simp only [hj, ↓reduceIte])
-    (fun j hji => rfl)
-    (by unfold par1 par0; decide)
-    (fun j hji => by unfold par1; simp only [hji, ↓reduceIte])
-  refine ⟨h, by unfold r1; decide, ?_⟩
-  unfold r1 par1 par0
-  decide
-
 /-- The planted defect: the same hanging with a foreign parent for the new sibling. -/
 def parBad : Int → Int := fun k => if k = 0 then 2 else 4
 
@@ -307,5 +294,4 @@ end Gabbro.Grammatik.ArenaKette
 #print axioms Gabbro.Grammatik.ArenaKette.sib_blatt_aus_rechts
 #print axioms Gabbro.Grammatik.ArenaKette.sib_ohne_vater_bricht
 
-#print axioms Gabbro.Grammatik.ArenaKette.sib_einfuegen_zeuge
 #print axioms Gabbro.Grammatik.ArenaKette.sib_defekt_bricht

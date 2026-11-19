@@ -79,17 +79,6 @@ theorem good_user : NutzerPflichtA unit :=
 def wrongUnit : Einheit decl :=
   { unit with P := { program with rumpf := fun _ => .ret (.val .fls) List.Perm.nil } }
 
-/-- Both Boolean answers inhabit the declared result type. The other answer
-    fails the same nonliteral post in the real executable checker. -/
-theorem good_checker_zeuge :
-    akzeptiertX_pruefer.akzeptiert unit [()] [] [] = true ∧
-    akzeptiertX_pruefer.akzeptiert wrongUnit [()] [] [] = false ∧
-    ¬ EnsAmRueck wrongUnit.P () world world .nil false := by
-  refine ⟨good_checker, ?_, Bool.false_ne_true⟩
-  have refused : nutzerPflichtGeprueftB wrongUnit [()] [] = false := by decide +kernel
-  change (_ && nutzerPflichtGeprueftB wrongUnit [()] []) = false
-  rw [refused, Bool.and_false]
-
 theorem post_cover : PostDeckt unit := by
   intro a hsw old locals next value impossible
   exact False.elim (Bool.false_ne_true impossible)

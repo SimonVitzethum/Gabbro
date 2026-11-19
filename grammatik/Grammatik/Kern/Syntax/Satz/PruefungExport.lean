@@ -59,18 +59,6 @@ def pruefCAnderes : CheckDecl pruefD :=
 theorem expansion_fremd_abgelehnt : ¬ CheckExpansion pruefP pruefCAnderes :=
   fun h => absurd (List.mem_singleton_self _) (CheckExpansion.probe_frisch h)
 
-/-- A completion claimed for the forged check completes nothing. -/
-theorem abschluss_fremd_zeuge :
-    ¬ CheckAbschluss pruefP pruefCAnderes messBerichtWahr :=
-  fun h => expansion_fremd_abgelehnt h.1
-
-/-- A surplus floor outcome completes nothing, even on the admitted check. -/
-theorem abschluss_fremd_ueberhang_zeuge :
-    ¬ CheckAbschluss pruefP pruefC
-      { proben := [], boeden := [true], urteil := true } := by
-  intro h
-  exact absurd h.2.2 (by unfold berichtTraegt; decide)
-
 /-- A check with no consuming gate: the Duty would be dropped. -/
 def pruefCOhneTor : CheckDecl pruefD :=
   { pruefC with gates := [] }

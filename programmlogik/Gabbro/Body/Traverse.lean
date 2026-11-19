@@ -55,16 +55,4 @@ theorem forEach_frame (ρ : Env) (x : String) (body : List Stmt) (p : Place)
       exact hb ⟨s.world, bindLocal s.local' x (.int i)⟩ t (by simp only [he, finalState])
     | stuck => simp only [step, traverseRun, he, finalState, reduceCtorEq] at h
 
-/-- Nonempty traversal executes its body and retains the actual visited index. -/
-theorem forEach_index_zeuge (ρ : Env) :
-    finalValue (exec ρ [.forEach "i" [2, 5, 8] [.ret (some (.name "i"))]]
-      ⟨fun _ => .absent, fun _ => .absent⟩) = some (.int 2) := by
-  let s : State := ⟨fun _ => .absent, fun _ => .absent⟩
-  let entry : State := ⟨s.world, bindLocal s.local' "i" (.int 2)⟩
-  have hbody : exec ρ [.ret (some (.name "i"))] entry = .returned entry (some (.int 2)) := by
-    simp only [exec, step, eval, entry, bindLocal_here]
-  rw [exec_singleton, forEach_cons_returned ρ "i" 2 [5, 8]
-    [.ret (some (.name "i"))] s entry (some (.int 2)) hbody]
-  rfl
-
 end Gabbro.Body

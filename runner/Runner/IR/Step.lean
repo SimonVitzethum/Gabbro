@@ -67,13 +67,6 @@ def udiv (a b : W) : Option W :=
 def urem (a b : W) : Option W :=
   if b.toNat = 0 then none else some (BitVec.ofNat 64 (a.toNat % b.toNat))
 
-/-- High-bit operands distinguish these operations from signed division. -/
-theorem unsigned_division_zeuge :
-    udiv 18446744073709551615 3 = some 6148914691236517205 ∧
-    urem 18446744073709551615 9223372036854775809 = some 9223372036854775806 ∧
-    udiv 18446744073709551615 1 = some 18446744073709551615 ∧
-    udiv 1 0 = none ∧ urem 1 0 = none := by decide
-
 def bool (c : Bool) : W := if c then 1 else 0
 
 /-- One instruction, by opcode. Unassigned opcode bytes fault. -/

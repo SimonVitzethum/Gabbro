@@ -292,45 +292,4 @@ theorem belegung_ist_nicht_mitgezaehlt :
 
 `f` names object `0` everywhere; slot `0` is rewritten to `1`. -/
 
-theorem zaehle_kongruent_zeuge :
-    zaehle (fun _ => (true : Bool)) 2 = zaehle (fun _ => (true : Bool)) 2 :=
-  zaehle_kongruent (fun _ _ => rfl)
-
-theorem zaehlung_faellt_um_eins_zeuge (h : 0 < 2) :
-    zaehle (fun s => decide ((fun _ => 0) s = 0)) 2
-      = zaehle (fun s => decide (upd (fun _ => 0) 0 1 s = 0)) 2 + 1 :=
-  zaehlung_faellt_um_eins rfl (by decide) h
-
-theorem zaehlung_steigt_um_eins_zeuge (h : 0 < 2) :
-    zaehle (fun s => decide (upd (fun _ => 0) 0 1 s = 1)) 2
-      = zaehle (fun s => decide ((fun _ => 0) s = 1)) 2 + 1 :=
-  zaehlung_steigt_um_eins rfl (by decide) h
-
-theorem zaehlung_bleibt_sonst_zeuge :
-    zaehle (fun s => decide (upd (fun _ => 0) 0 1 s = 7)) 2
-      = zaehle (fun s => decide ((fun _ => 0) s = 7)) 2 :=
-  zaehlung_bleibt_sonst rfl (by decide) (by decide)
-
-theorem buchfuehrung_erhaelt_zeuge (h : 0 < 2) :
-    upd (upd (fun ob => if ob = 0 then 2 else 0) 0
-        ((fun ob => if ob = 0 then 2 else 0) 0 - 1)) 1
-      (((fun ob => if ob = 0 then 2 else 0)) 1 + 1) 0
-      = zaehle (fun s => decide (upd (fun _ => 0) 0 1 s = 0)) 2 := by
-  have vorher : ∀ ob, (fun ob => if ob = 0 then 2 else 0) ob
-      = zaehle (fun s => decide ((fun _ => (0 : Nat)) s = ob)) 2 := by
-    intro ob
-    by_cases hob : ob = 0
-    · subst hob
-      decide
-    · have hz : zaehle (fun s => decide ((fun _ => (0 : Nat)) s = ob)) 2 = 0 := by
-        have c := zaehle_kongruent (P := (fun s => decide ((fun _ => (0 : Nat)) s = ob)))
-          (Q := fun _ => false) (n := 2)
-          (fun s _ => decide_eq_false (fun hcon => hob hcon.symm))
-        rw [c]
-        decide
-      show (if ob = 0 then 2 else 0) = _
-      rw [if_neg hob, hz]
-  exact buchfuehrung_erhaelt (z := (fun ob => if ob = 0 then 2 else 0))
-    (f := fun _ => 0) vorher h rfl (by decide) 0
-
 end Gabbro.Grammatik.TableZaehlung

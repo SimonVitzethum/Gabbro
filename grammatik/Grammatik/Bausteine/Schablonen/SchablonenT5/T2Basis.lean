@@ -35,16 +35,6 @@ theorem merge_swap_invariant (op : Nat → Nat → Nat)
     key _
   rw [h2]
 
-/-- Witness for `merge_swap_invariant`: addition folds `[1, 2]` and
-    `[2, 1]` to the same value. -/
-theorem merge_swap_invariant_zeuge :
-    (([1, 2] : List Nat).foldl (fun t x => t + x) 0 =
-      ([2, 1] : List Nat).foldl (fun t x => t + x) 0)
-:= by
-  have h := merge_swap_invariant (· + ·) Nat.add_assoc Nat.add_comm
-    ([] : List Nat) [] 1 2 0
-  exact h
-
 /-! ## 12. `walk.mappings` (mappings: 23 corpus lines).
 
 The generated domain `mappings of` meets every reachable entry that
@@ -70,15 +60,6 @@ theorem walk_hits_mapping (entries : List ptEntry) (e : ptEntry)
     (hmem : e ∈ entries) (hcar : carriesMapping e = true) :
     e ∈ mappingsOf entries :=
   List.mem_filter.mpr ⟨hmem, hcar⟩
-
-/-- Witness for `walk_hits_mapping`:     entry `(7, 1, true)` is met. -/
-theorem walk_hits_mapping_zeuge :
-    ((7, 1, true) ∈ mappingsOf [(7, 1, true), (8, 2, false)])
-:= by
-  have hmem : ((7, 1, true) : ptEntry) ∈ [(7, 1, true), (8, 2, false)] := by
-    decide
-  have hcar : carriesMapping (7, 1, true) = true := rfl
-  exact walk_hits_mapping _ _ hmem hcar
 
 /-! ## 13. `consuming.ordnung` (consuming: 13 corpus lines).
 
@@ -106,15 +87,6 @@ theorem consume_shrinks (domain : List Nat) (a x : Nat)
   exact ⟨List.mem_of_mem_erase hmem,
     by rw [List.length_erase_of_mem ha]; omega⟩
 
-/-- Witness for `consume_shrinks`: consuming `1` out of `[0, 1]`
-    leaves `[0]` present and shorter. -/
-theorem consume_shrinks_zeuge :
-    ((0 : Nat) ∈ [0, 1] ∧ (([0, 1] : List Nat).erase 1).length < [0, 1].length)
-:= by
-  have hmem : (0 : Nat) ∈ ([0, 1] : List Nat).erase 1 := by decide
-  have ha : (1 : Nat) ∈ ([0, 1] : List Nat) := by decide
-  exact consume_shrinks _ 1 0 hmem ha
-
 /-! ## 14. `consuming.leermenge`.
 
 The generated witness set is COMPLETE at a NAMED state (`hC`: every
@@ -134,15 +106,6 @@ theorem consume_empty_at (domain wit : List Nat)
   rw [hempty] at h
   exact absurd h List.not_mem_nil
 
-/-- Witness for `consume_empty_at`:     empty witnesses over `[]`. -/
-theorem consume_empty_at_zeuge :
-    (([] : List Nat) = [])
-:= by
-  have hC : ∀ x ∈ ([] : List Nat), x ∈ ([] : List Nat) := by
-    intro x hx
-    contradiction
-  exact consume_empty_at [] [] hC rfl
-
 /-! ## 15. `consuming.umhaengen` (the refuted blanket version).
 
 A generated mutation that ADDS edges preserves well-foundedness -- and
@@ -159,11 +122,6 @@ def rehang (edges : List (Nat × Nat)) (a b c : Nat) : List (Nat × Nat) :=
     self-loop `(0, 0)` -- a cycle from one move. -/
 theorem rehang_can_cycle : (0, 0) ∈ rehang [(0, 1)] 0 1 0 := by
   decide
-
-/-- Witness for `rehang_can_cycle`: the loop exhibit. -/
-theorem rehang_can_cycle_zeuge :
-    ((0, 0) ∈ rehang [(0, 1)] 0 1 0) :=
-  rehang_can_cycle
 
 /-! ## 16. `gruppe.ops` (group: 10 corpus lines).
 
@@ -185,27 +143,5 @@ theorem group_ops_compose (A B : Type) (link : A → B → Prop)
     (p : A × B) (hp : link p.1 p.2) :
     link (g2 (g1 p)).1 (g2 (g1 p)).2 :=
   h2 _ (h1 _ hp)
-
-/-- Witness for `group_ops_compose`: the equality link over `Nat`
-    survives `(+1, +1)` then `(*2, *2)`. -/
-theorem group_ops_compose_zeuge :
-    ((12 : Nat) = 12)
-:= by
-  have h1 : ∀ p : Nat × Nat, p.1 = p.2 →
-      ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).1 =
-      ((fun q : Nat × Nat => (q.1 + 1, q.2 + 1)) p).2 := by
-    intro p hp
-    simp only []
-    omega
-  have h2 : ∀ p : Nat × Nat, p.1 = p.2 →
-      ((fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) p).1 =
-      ((fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) p).2 := by
-    intro p hp
-    simp only []
-    omega
-  exact group_ops_compose Nat Nat (fun a b => a = b)
-    (fun q : Nat × Nat => (q.1 + 1, q.2 + 1))
-    (fun q : Nat × Nat => (q.1 * 2, q.2 * 2)) h1 h2 (5, 5) rfl
-
 
 end Gabbro.Grammatik

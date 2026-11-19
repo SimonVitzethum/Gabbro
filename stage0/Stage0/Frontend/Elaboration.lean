@@ -95,18 +95,4 @@ theorem elabWithScopes_collector_redundant (original runtime : List SItemTief)
   subst result
   rw [hs]
 
-/-- The canonical array evaluator accepts the source-derived alias signature; the old builtin-only
-    extractor cannot evaluate this same leaf. No array semantics is duplicated by the adapter. -/
-theorem canonical_array_functions_zeuge :
-    let items := [SItemTief.fnT
-        ⟨"const", "identity", [("x", .atom "Small")], some (.atom "Small"), none, [], []⟩
-        (.block [] (some (.ret (some (.variable "x"))))),
-      .constT "VALUES" (.array (.atom "Small") (.lit 1)) (.rows [.one (.call "identity" [.lit 42])])]
-    uKonstArrays [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) [] items []
-      (uRecordConstant [] [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) []) true =
-      [("VALUES", .typed (.arr (.int 0 100) 1) (.arrCons (.lit 42) .arrNil))] ∧
-    uKonstArrays [("Small", (0, 100))] (uKonstFns items) [] items []
-      (uRecordConstant [] [("Small", (0, 100))] (uKonstFns items) []) true = [] := by
-  decide +kernel
-
 end Gabbro.Stage0.Frontend

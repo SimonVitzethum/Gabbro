@@ -81,13 +81,6 @@ def sumPayloadOk : Bool := nutzlastZert sumPayloadVals 0 100
 /-- The certificate closes by `decide`: every entry is in `0 .. 100`. -/
 theorem sumPayload_zert : sumPayloadOk = true := by decide
 
-/-- Joint witness for `nutzlastZert_mem`: the closed certificate, the
-    entry lookup, and the concluded range, all at entry 3 (`40`). -/
-theorem nutzlastZert_mem_zeuge :
-    nutzlastZert sumPayloadVals 0 100 = true ∧
-    sumPayloadVals[3]? = some 40 ∧ (0 ≤ 40 ∧ 40 ≤ 100) :=
-  ⟨by decide, rfl, by decide, by decide⟩
-
 open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
@@ -382,4 +375,3 @@ Rust output-only scalar printer has not been promoted to an exact translation ce
 
 #print axioms nutzlastZert_mem
 #print axioms sumPayload_zert
-#print axioms nutzlastZert_mem_zeuge

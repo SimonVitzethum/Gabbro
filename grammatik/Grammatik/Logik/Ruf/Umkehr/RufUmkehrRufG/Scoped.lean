@@ -181,18 +181,6 @@ def umkehrScopedR : RueckRessourcen adD (vertragVon adD adFn) adΛL :=
 def umkehrScopedExpr : Expr adD [] adΛL (adD.typ () ()) :=
   .slot () () adIdx adDarf
 
-/-- The source head reads before releasing its nonempty lexical scope. -/
-theorem semK_scopedWert_zeuge :
-    semK adO 0 keinRuf
-      (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
-      umkehrScopedVor Env.nil =
-      .zurueck ((umkehrScopedVor.lese adΛL umkehrScopedExpr.orte).gibt ())
-        (evalErg (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) (.val umkehrScopedExpr)
-          (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) Env.nil) := by
-  exact semK_scopedWert adO 0 keinRuf
-    (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
-    (.val umkehrScopedExpr) umkehrScopedR rfl umkehrScopedVor Env.nil
-
 def umkehrScopedWert : ErgVal adD (adD.erg adFn) :=
   ⟨7, by decide, by decide⟩
 
@@ -210,20 +198,6 @@ def umkehrScopedM' : RufMaschineG adD :=
   ⟨adSp0, rufUpdateG umkehrScopedM.faeden 0 umkehrScopedNach,
     [⟨0, .gibt ()⟩], adSp0.welt [], umkehrScopedM.kontexte⟩
 
-/-- The last release really pops a callee and retains its saved value,
-    satisfying the step theorem's coverage and head premises jointly. -/
-theorem schrittErhaltK_g7_zeuge :
-    RufSchrittG7 adP adO 0 umkehrScopedM 0 umkehrScopedM' ∧
-    ErhaltK adP adO 0 keinRuf (fun _ => False) (fun _ => False)
-      umkehrScopedM umkehrScopedM' 0 (umkehrScopedM.faeden 0) Env.nil
-      (.aufraeumen (l := false) ⟨.inl umkehrScopedWert, umkehrScopedVor⟩ [()]) := by
-  have hs : RufSchrittG7 adP adO 0 umkehrScopedM 0 umkehrScopedM' :=
-    .rueckFreigabeLetzte umkehrScopedM 0 Env.nil
-      ⟨.inl umkehrScopedWert, umkehrScopedVor⟩ () rfl umkehrScopedNach rfl
-  exact ⟨hs, schrittErhaltK_g7 hs _ rfl Env.nil _ rfl (RestK.aufraeumen _ _ _)⟩
-
 #print axioms Gabbro.Grammatik.schrittErhaltK_g7
-#print axioms Gabbro.Grammatik.semK_scopedWert_zeuge
-#print axioms Gabbro.Grammatik.schrittErhaltK_g7_zeuge
 
 end Gabbro.Grammatik

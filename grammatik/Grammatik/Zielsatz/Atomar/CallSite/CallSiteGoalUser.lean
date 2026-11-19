@@ -145,12 +145,4 @@ theorem summary_used (T : wD.Tab ⊕ wD.Glob → Prop) :
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil summaryProgram).1) world .nil rfl
   exact absurd (hk.1 _ _ rfl) (by unfold EnsAmRueck; decide)
 
-/-- Body identity, summary-sensitive correctness and its concrete refutation coexist. -/
-theorem summary_used_zeuge : summaryProgram.rumpf () = wP.rumpf () ∧
-    PreQ summaryProgram = PreQ wP ∧
-    KoerperGutSA summaryProgram 0 wQ (SperrInv.leer wD) (fun _ => False) () ∧
-    ¬ KoerperGutSA summaryProgram 0 (fun _ _ _ => true)
-      (SperrInv.leer wD) (fun _ => False) () :=
-  ⟨rfl, rfl, summary_koerper 0 _, summary_used _⟩
-
 end Gabbro.Grammatik.Zielsatz.CallSiteGoal

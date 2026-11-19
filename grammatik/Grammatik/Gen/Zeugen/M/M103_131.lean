@@ -136,9 +136,6 @@ theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   rw [← zellen_exact] at member
   exact List.mem_eraseDups.1 member
 
-theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
-  ⟨e_gueltig, e_hat _ (by decide)⟩
-
 /-- Missing requested cells are findings, never an altered checker verdict. -/
 def missing : List Zelle := requested.filter (fun x => !zellen.contains x)
 

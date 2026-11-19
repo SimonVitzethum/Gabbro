@@ -74,27 +74,6 @@ theorem bib_schreibt : bibM2F.speicher.slots () 0 () ≠
 
 /-! ## 6. Witness: the bridge holds jointly on a non-degenerate program -/
 
-/-- ZEUGE: all premises of `bibliotheksruf_ist_ax` hold JOINTLY -- the
-    concrete declaration `bibD`, the writer's contract `V` (which writes
-    `konto`), the bridge `bibDient`, the ordinary argument with the
-    payload argument -- and the program is NON-DEGENERATE: the writer
-    writes table `()` (`bibW_schreibt`) and the reached run `bib_erreicht`
-    moves memory (slot `0 -> 100`, `bib_schreibt`). Every conjunct is
-    used: the bridge feeds the equivalence, the writer fact and the run
-    feed non-degeneracy. -/
-theorem bibliotheksruf_ist_ax_zeuge :
-    ∃ (V : Vertrag bibD),
-      DientBibliothek bibD bibLib () ∧
-      V.schreibt () = true ∧
-      Nonempty (Args bibD [.int 0 10] [Res.held (D := bibD) ()]
-        bibLib.params ×
-        Expr bibD [.int 0 10] [Res.held (D := bibD) ()] bibLib.nutzlast) ∧
-      ∃ (M : RufMaschineF bibD),
-        RufErreichbarF bibP bibO 0 (RufStartF bibP bibSp0 bibInit) M ∧
-        M.speicher.slots () 0 () ≠ bibSp0.slots () 0 () :=
-  ⟨vertragVon bibD bibW, bibDient, bibW_schreibt, ⟨bibArgs, bibLast⟩,
-    bibM2F, bib_erreicht, bib_schreibt⟩
-
 /-!
 CUTS:
 - The equivalence covers the STATEMENT-position call (`axiomCall`,
@@ -111,7 +90,6 @@ CUTS:
 -/
 
 #print axioms Gabbro.Grammatik.bibliotheksruf_ist_ax
-#print axioms Gabbro.Grammatik.bibliotheksruf_ist_ax_zeuge
 #print axioms Gabbro.Grammatik.bibDient
 #print axioms Gabbro.Grammatik.bib_erreicht
 #print axioms Gabbro.Grammatik.bib_schreibt

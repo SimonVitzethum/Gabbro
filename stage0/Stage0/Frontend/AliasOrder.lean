@@ -38,31 +38,4 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
-/-- A nondegenerate forward chain has a complete original-declaration permutation and no cycle. -/
-theorem orderAliases_zeuge :
-    let items := [SItemTief.typeT [] "Result" [] [] (some (.atom "Count")),
-      .typeT [] "Count" [] [] (some (.atom "Byte")),
-      .typeT [] "Byte" [] [] (some (.atom "u8"))]
-    ∃ order : AliasOrder items, orderAliases items = .ok order ∧
-      order.ordered.filterMap (fun | .typeT _ name _ _ _ => some name | _ => none) =
-        ["Byte", "Count", "Result"] ∧ AliasAcyclic items := by
-  dsimp only
-  refine ⟨(orderAliases _).toOption.get (by decide +kernel), ?_, ?_, ?_⟩
-  · exact Gabbro.Grammatik.except_ok_get _
-  · decide +kernel
-  · exact orderAliases_acyclic _ ((orderAliases _).toOption.get (by decide +kernel))
-
-/-- Cycles are refused before even unused aliases can disappear from canonical collection. -/
-theorem orderAliases_cycle_zeuge :
-    orderAliases [SItemTief.typeT [] "A" [] [] (some (.atom "B")),
-      .typeT [] "B" [] [] (some (.atom "A"))] =
-      .error "compile-time alias dependency cycle at A" := by rfl
-
-/-- The generic no-cycle theorem is inhabited by a nonempty, two-edge alias chain. -/
-theorem AliasAcyclic.no_cycle_zeuge :
-    ¬ Relation.TransGen (fun a b => (a, b) ∈ aliasEdges
-      [SItemTief.typeT [] "A" [] [] (some (.atom "B")),
-       .typeT [] "B" [] [] (some (.atom "u8"))]) "A" "A" :=
-  (orderAliases_acyclic _ ((orderAliases _).toOption.get (by decide +kernel))).no_cycle "A"
-
 end Gabbro.Stage0.Frontend

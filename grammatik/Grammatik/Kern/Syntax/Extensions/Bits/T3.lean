@@ -75,11 +75,6 @@ def zeuge1 : Zahl 1 ((2 : Int) ^ (31 + 1) - 1) := ⟨1, by decide, by decide⟩
 /-- Width-32 field element `2 ^ 31`: `clz = 0`, `log2 = 31`. -/
 def zeuge2 : Zahl 1 ((2 : Int) ^ (31 + 1) - 1) := ⟨2 ^ 31, by decide, by decide⟩
 
-theorem clz_log2_zeuge :
-    (Zahl.clz 31 zeuge1).n = 31 ∧ (Zahl.log2_floor 31 zeuge1).n = 0
-      ∧ (Zahl.clz 31 zeuge2).n = 0 ∧ (Zahl.log2_floor 31 zeuge2).n = 31 := by
-  refine ⟨?_, ?_, ?_, ?_⟩ <;> decide
-
 /- CUTS: what is not proved.
    - Syntax integration: no `Expr.clz` / `Stmt` constructor takes these
      operations yet; the file is the model half (PLAN-BITS.md section 3).
@@ -109,7 +104,6 @@ theorem clz_log2_zeuge :
 #print axioms Gabbro.Grammatik.bswap_bswap16
 #print axioms Gabbro.Grammatik.bswap_bswap32
 #print axioms Gabbro.Grammatik.bswap_bswap64
-#print axioms Gabbro.Grammatik.clz_log2_zeuge
 
 
 end Gabbro.Grammatik

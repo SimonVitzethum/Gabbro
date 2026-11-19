@@ -114,45 +114,4 @@ theorem pre [Kern] : PreS layout memory 0 1024 32 8 code environment := by
   have : k = 0 ∨ k = 1 := by change k < 2 at hk; omega
   rcases this with rfl | rfl <;> constructor <;> decide +kernel +revert
 
-/-- The initial request pointer word is 99, while the canonical environment marker is zero.
-    Scalar values are still copied and checked in the same concrete memory. -/
-theorem lowR_ok_zeuge [Kern] :
-    lowR layout arguments 8 = some (code, 11) ∧
-    EnvAt layout memory 1024 environment ∧
-    memory.rd64 (slot 1024 (BitVec.ofNat 64 8)) = some 99 ∧
-    ¬ Enc layout (.ptr (.table 0 (true, false))) () 99 ∧
-    ∃ m', Star ⟨0, 1024⟩ memory ⟨32, 1024⟩ m' ∧
-      Agree 1024 8 32 memory m' ∧
-      ArgsW layout (fun j => rdW m' 1024 (8 + j)) (evalArgs world arguments world environment) := by
-  have emitted : lowR layout arguments 8 = some (code, 11) := by decide +kernel
-  have lay : LayIn layout := by
-    refine ⟨?_, (fun g => nomatch g), by decide⟩
-    intro t f k hk
-    obtain ⟨t, ht⟩ := t
-    have : t = 0 := by change t < 1 at ht; omega
-    subst t
-    obtain ⟨f, hf⟩ := f
-    have : f = 0 := by change f < 1 at hf; omega
-    subst f
-    change (k : Int) < 4 at hk
-    change 2048 ≤ 2048 + 8 * k ∧ 2048 + 8 * k + 8 ≤ 2080
-    omega
-  obtain ⟨m', steps, changed, values⟩ := lowR_ok (same := rfl) world world (fun _ h => h) lay
-    arguments 8 code 11 emitted (by decide) (by decide) memory 0 environment
-    (PreS.welt pre (Nat.le_refl _) world_at lay (by decide))
-  refine ⟨emitted, environment_at, by decide +kernel, (by change ¬ (99 : Runner.W) = 0; decide +kernel), m', ?_, changed, values⟩
-  rw [show (0 : Runner.W) + BitVec.ofNat 64 (16 * code.length) = (32 : Runner.W) by decide +kernel] at steps
-  exact steps
-
-theorem wide_foreign_values_refused_zeuge :
-    wortTy (.int 0 (2 ^ 64)) = false ∧
-    chkC (some (.int 0 (2 ^ 64))) 8 = none ∧
-    lowR layout (.cons (.lit (2 ^ 64)) .nil : Args D [] [] [.int (2 ^ 64) (2 ^ 64)]) 8 = none := by
-  decide +kernel
-
-theorem scalar_register_domain_zeuge :
-    wortTy (.int 0 (2 ^ 64 - 1)) = true ∧
-    (chkC (some (.int (-2 ^ 63) (2 ^ 63 - 1))) 8).isSome = true ∧
-    (chkC (some .bool) 8).isSome = true := by decide +kernel
-
 end Gabbro.Stage0.Senke.ForeignScalarProbe

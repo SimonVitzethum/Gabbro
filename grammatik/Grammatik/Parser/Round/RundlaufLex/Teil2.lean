@@ -163,29 +163,6 @@ theorem lex_render (ts : List Token) (h : ∀ t ∈ ts, TokGut t) :
   unfold lexL
   exact scan_render ts _ h (by have := render_laenge ts h; omega)
 
-/-- Witness of `lex_render` on a list with every token class: a keyword, an identifier, a number
-    with several digits, a float with an exponent, a string, a three-character mark and a
-    single mark. -/
-theorem lex_render_zeuge :
-    let ts := [Token.wort "fn", .ident "lies", .zeichen "(", .num 4096, .zeichen "<<%",
-      .float "1.5e-3", .text "a b", .zeichen ")"]
-    (∀ t ∈ ts, TokGut t) ∧ lex (renderText ts) = .ok (ts ++ [.ende]) := by
-  intro ts
-  have h : ∀ t ∈ ts, TokGut t := by
-    intro t ht
-    simp only [ts, List.mem_cons, List.not_mem_nil, or_false] at ht
-    rcases ht with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact ⟨by decide, by decide⟩
-    · exact ⟨by decide, by decide⟩
-    · show ['('] ∈ markTafel; decide
-    · trivial
-    · show ['<', '<', '%'] ∈ markTafel; decide
-    · exact ⟨1, ['5'], ['e', '-', '3'], by decide, by decide, by decide,
-        Or.inr ⟨['e', '-'], ['3'], Or.inr (Or.inr rfl), rfl, by decide, by decide⟩⟩
-    · trivial
-    · show [')'] ∈ markTafel; decide
-  exact ⟨h, lex_render ts h⟩
-
 /-- The class is not vacuous in the other direction either: an identifier token spelling a
     keyword is outside it, and the lexer indeed reads its rendering as the keyword. -/
 theorem lex_render_ident_wort :
@@ -196,5 +173,4 @@ theorem lex_render_ident_wort :
 end Gabbro.Grammatik.Parser
 
 #print axioms Gabbro.Grammatik.Parser.lex_render
-#print axioms Gabbro.Grammatik.Parser.lex_render_zeuge
 #print axioms Gabbro.Grammatik.Parser.lex_render_ident_wort

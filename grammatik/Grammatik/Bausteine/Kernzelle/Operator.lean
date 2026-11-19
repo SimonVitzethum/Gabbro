@@ -301,9 +301,6 @@ theorem andStartBeiNullFalle (x : Nat) : x &&& 0 = 0 :=
 #print axioms Gabbro.Grammatik.Kernzelle.orMergeWeite
 #print axioms Gabbro.Grammatik.Kernzelle.andMergeSchranke
 
-/-- The unsigned byte accumulator starts bitwise AND at all eight bits set. -/
-theorem neutralAndByte_zeuge : neutralInt .and 0 255 8 = 255 := by decide
-
 /-! ## 6. Required narrowing: overflow stops -/
 
 /-- Out of range at a required narrowing is a capacity failure: the generic

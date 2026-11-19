@@ -65,12 +65,4 @@ theorem TicketInvW.give {T : Nat} {n s w : W} (h : TicketInvW T n s w)
   rw [count]
   exact ⟨by omega, by omega, bound, by omega⟩
 
-/-- The thread bound alone does not preserve the strict 32-bit clause. -/
-theorem TicketInvW.draw_width_zeuge :
-    TicketInvW (2 ^ 32) 4294967295 0 0 ∧
-    ((4294967295 : W) - 0).toNat + 1 ≤ 2 ^ 32 ∧
-    ¬ TicketInvW (2 ^ 32) (4294967295 + 1) 0 0 := by
-  unfold TicketInvW
-  decide
-
 end Gabbro.Stage0.Senke

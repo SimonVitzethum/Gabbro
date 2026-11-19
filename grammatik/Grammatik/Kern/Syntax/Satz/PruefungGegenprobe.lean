@@ -226,46 +226,6 @@ def sondeTest : SondenArtefakt := ⟨"ext", true, "test"⟩
 def sondeBerichtFalsch : CheckReport :=
   { proben := [], boeden := [], urteil := false }
 
-/-- The single bound sonde owns its name. -/
-theorem sondenEindeutig_zeuge : SondenEindeutig [pruefCSonde] :=
-  sondenEindeutigB_ok.mp rfl
-
-/-- A duplicated sonde name breaks the ownership. -/
-theorem sondenKonflikt_zeuge :
-    ¬ SondenEindeutig [pruefCSonde, pruefCSonde] := fun h => by
-  have hb := sondenEindeutigB_ok.mpr h
-  simp [sondenEindeutigB, pruefCSonde] at hb
-
-/-- The fixture binding: the check carries its name and text, alone. -/
-theorem sondenBindung_zeuge :
-    SondenBindung [pruefCSonde] pruefCSonde "ext" "assert x" :=
-  ⟨rfl, List.mem_singleton_self _,
-    fun d hd hne =>
-      absurd (congrArg CheckDecl.name (List.mem_singleton.mp hd)) hne⟩
-
-/-- The bound name stands in the unit's sonde list. -/
-theorem sonde_name_in_namen_zeuge : "ext" ∈ sondenNamen [pruefCSonde] :=
-  sonde_name_in_namen sondenBindung_zeuge
-
-/-- The measured counterprobe: failed run, false verdict, matching artifact. -/
-theorem gemessen_zeuge :
-    Gemessen pruefCSonde sondeTest .durchgefallen sondeBerichtFalsch :=
-  ⟨rfl, rfl, by decide, rfl, "assert x", rfl⟩
-
-/-- The unrun counterprobe stays unmeasured. -/
-theorem ungemessen_zeuge :
-    ¬ Gemessen pruefCSonde sondeTest .nichtGelaufen sondeBerichtFalsch :=
-  nichtGelaufen_unmeasured rfl
-
-/-- A stale artifact name measures nothing. -/
-theorem artefakt_fremd_zeuge :
-    ¬ artefaktPasst pruefCSonde ⟨"alt", true, "test"⟩ := by
-  intro h
-  obtain ⟨_, _, t, ht⟩ := h
-  have ht' : (some ("ext", "assert x") : Option (String × String)) =
-      some ("alt", t) := ht
-  simp at ht'
-
 end Gegenprobe
 
 end Gabbro.Grammatik

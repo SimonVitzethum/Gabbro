@@ -55,7 +55,4 @@ theorem structural_candidates_verdicts : ∀ e ∈ structuralWitnesses,
   · exact ⟨fun _ => by simp [restored], fun _ => m99_825_checked⟩
   · exact ⟨fun _ => by simp [restored], fun _ => Reset.Good.e_gueltig⟩
 
-theorem restored_checked_zeuge : M169_350.e ∈ restored ∧ M169_350.e.gueltig = true :=
-  ⟨by simp [restored], M169_350.e_gueltig⟩
-
 end Gabbro.Grammatik.Gen.Zeugen.GateAudit

@@ -133,26 +133,6 @@ theorem zσ_im_bereich (N : Nat) : im_bereich N zσ := by
   have hs' : (none : Option Slot) = some sl := hs
   cases hs'
 
-theorem table_induktion_zeuge : True :=
-  table_induktion (P := fun _ => True) (s := 0) zσ_wf (fun _ _ => trivial)
-
-theorem blatt_ohne_eigene_klausel_zeuge : True :=
-  blatt_ohne_eigene_klausel (P := fun _ => True) (s := 0) zσ_wf
-    (fun _ _ => trivial) (zσ_kante_leer · 0)
-
-theorem table_induktion_zwei_kanten_zeuge : True :=
-  table_induktion_zwei_kanten (P := fun _ => True) (s := 0) zσ_wf
-    (fun s sl hs => by
-      have hs' : (none : Option Slot) = some sl := hs
-      cases hs')
-    (fun _ _ => trivial)
-
-theorem kante_bleibt_im_bereich_zeuge (hks : kante zσ 7 0) : 7 < 3 :=
-  kante_bleibt_im_bereich (zσ_im_bereich 3) hks
-
-theorem traeger_endlich_zeuge : Endlich (fun d => ∃ s, kante zσ d s) :=
-  traeger_endlich (zσ_im_bereich 3)
-
 /-! ## Satisfiability of the well-foundedness premise (stream E12) -/
 
 /-- Two occupied slots: slot 0 has slot 1 as its first child, slot 1 is a leaf. -/

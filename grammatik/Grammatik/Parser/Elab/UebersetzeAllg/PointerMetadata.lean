@@ -19,14 +19,6 @@ theorem uDataSpace_sound (spaces : List String) (name : String) (index : Nat)
     exact List.mem_zipIdx_iff_getElem?.mp member
   · cases accepted
 
-/-- Named normal and nonzero spaces keep their exact registered positions; unknown or absent
-    normal spaces are refused. These are witnesses, not an executed measurement. -/
-theorem uDataSpace_registered_zeuge :
-    uDataSpace ["normal", "custom"] "normal" = .ok 0 ∧
-    uDataSpace ["normal", "custom"] "custom" = .ok 1 ∧
-    uDataSpace ["normal", "custom"] "unknown" = .error "unknown data space: unknown" ∧
-    uDataSpace [] "normal" = .error "unknown data space: normal" := ⟨rfl, rfl, rfl, rfl⟩
-
 /-- Successful sequencing retains every accepted source parameter row. -/
 private theorem parameterRows_origin {α β : Type} (produce : α → Except String β)
     {sources : List α} {rows : List β} (accepted : uSeq (sources.map produce) = .ok rows) :

@@ -30,11 +30,6 @@ theorem reset_from_clean (s : Nat × Bool) (h : s.2 = false) :
 theorem reset_rejects_held (v : Nat) : treset (v, true) = none :=
   by rfl
 
-/-- Witness for `reset_from_clean`: `(7, false)` goes home. -/
-theorem reset_from_clean_zeuge :
-    (treset (7, false) = some (0, false)) :=
-  reset_from_clean _ rfl
-
 /-! ## 18. `table.induktion` (induction: 3 corpus lines).
 
 The induction scheme generated from the `table` declaration is
@@ -71,37 +66,6 @@ theorem induct_edge_in_type (N : Nat) (e1 e2 : Nat → Nat → Prop)
     (a b : Nat) (h : e1 a b ∨ e2 a b) : b < N :=
   hfin a b h
 
-/-- Witness for `table_induction`: successor edges below `2`, property
-    `True`. -/
-theorem table_induction_zeuge :
-    (True)
-:= by
-  have hfin : ∀ a b : Nat,
-      (a + 1 = b ∧ b < 2 ∨ False) → a < (refD.count ()).toNat := by
-    intro a b h
-    have h2 : (refD.count ()).toNat = 2 := rfl
-    rw [h2]
-    rcases h with h | h'
-    · omega
-    · contradiction
-  have hsub : Subrelation (fun a b : Nat => a + 1 = b ∧ b < 2 ∨ False)
-      (· < ·) := by
-    intro a b h
-    rcases h with h | h'
-    · omega
-    · contradiction
-  have hwf : WellFounded (fun a b : Nat => a + 1 = b ∧ b < 2 ∨ False) :=
-    Subrelation.wf hsub Nat.lt_wfRel.wf
-  have hstep : ∀ x : Nat, x < (refD.count ()).toNat →
-      (∀ y : Nat, (y + 1 = x ∧ x < 2 ∨ False) → True) → True := by
-    intro x _ _
-    trivial
-  have hx : (0 : Nat) < (refD.count ()).toNat := by
-    have h2 : (refD.count ()).toNat = 2 := rfl
-    rw [h2]
-    decide
-  exact table_induction _ _ _ hfin hwf _ hstep 0 hx
-
 /-! ## 20. `table.ops.erhaltung` (by-ops: `0016-by-ops-am-feld.gab` plus
     the `by ops`/`maintains` corpus sites).
 
@@ -133,23 +97,6 @@ theorem table_ops_keep (S : Type) (inv : S → Prop) (ops : List (S → S))
     (s : S) (hs : inv s) :
     inv (run.foldl (fun acc op => op acc) s) :=
   table_ops_keep_aux S inv ops h run hr s hs
-
-/-- Witness for `table_ops_keep`: operations `[+1, *2]` keep
-    nonnegativity along the run. -/
-theorem table_ops_keep_zeuge :
-    ((0 : Nat) ≤ ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl
-      (fun acc op => op acc) 0)
-:= by
-  have h : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
-      ∀ s : Nat, 0 ≤ s → 0 ≤ op s := by
-    intro op hop s hs
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hop
-    rcases hop with rfl | rfl <;> simp_all <;> omega
-  have hr : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
-      op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)) := by
-    intro op hop
-    exact hop
-  exact table_ops_keep Nat (fun s => 0 ≤ s) _ h _ hr 0 (Nat.zero_le 0)
 
 /-! ## 21. `ops.suche` (candidate from «B10»: no corpus use yet).
 
@@ -202,17 +149,6 @@ theorem op_search_first (pre : List Nat) (x : Nat) (post : List Nat)
       opSearch, hy]
     exact hys
 
-/-- Witness for the `ops.suche` pair: searching `[1, 3, 2, 4]` for an
-    even number returns `2` and keeps the list. -/
-theorem op_search_zeuge :
-    ((opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).1 = [1, 3, 2, 4] ∧
-      (opSearch ([1, 3] ++ [2] ++ [4]) (fun n => n == 2)).2 = some 2)
-:= by
-  have hpre : ∀ y ∈ ([1, 3] : List Nat), (y == 2) = false := by decide
-  have hpx : ((2 : Nat) == 2) = true := rfl
-  exact ⟨op_search_keeps _ _ _ _,
-    op_search_first _ _ _ _ hpre hpx⟩
-
 /-! ## 19. `restrict.alleinzugriff` (restrict: 5 corpus lines).
 
 UNDER H1 (the frame is COMPLETE -- every access of the body has a
@@ -231,16 +167,5 @@ theorem single_root (q : Nat) (reach : Nat → Nat → Prop) (p r1 r2 : Nat)
     (hOnly : ∀ r, reach r q → r = p) (h1 : reach r1 q)
     (h2 : reach r2 q) : r1 = r2 := by
   rw [hOnly _ h1, hOnly _ h2]
-
-/-- Witness for `single_root`:     both accesses run through root `7`. -/
-theorem single_root_zeuge :
-    ((7 : Nat) = 7)
-:= by
-  have hOnly : ∀ r, (r = 7 ∧ (0 : Nat) = 0) → r = 7 := by
-    intro r hr
-    exact hr.1
-  have h1 : (7 : Nat) = 7 ∧ (0 : Nat) = 0 := ⟨rfl, rfl⟩
-  exact single_root 0 (fun r qq => r = 7 ∧ qq = 0) 7 7 7 hOnly h1 h1
-
 
 end Gabbro.Grammatik

@@ -143,13 +143,6 @@ private theorem baseline_cells_iff (x : Zelle) :
     rw [← baseline_exact] at present
     exact List.mem_flatMap.1 (List.mem_eraseDups.1 present)
 
-/-- Baseline membership, acceptance and a real reset cell hold jointly. -/
-theorem baseline_zeuge : Reset.Good.e ∈ baseline ∧ Reset.Good.e.gueltig = true ∧
-    Reset.Good.e.Hat ⟨10, 0, true, [true]⟩ ∧ ⟨10, 0, true, [true]⟩ ∈ baselineCells := by
-  have member : Reset.Good.e ∈ baseline := by simp [baseline]
-  exact ⟨member, Reset.Good.e_gueltig, Reset.Good.e_hat,
-    (baseline_cells_iff _).mp ⟨_, member, Reset.Good.e_hat⟩⟩
-
 /-- The full accepted M retains both baseline programs. -/
 def allFixtures : List Einsatz := fixtures ++ baseline
 
@@ -195,15 +188,6 @@ theorem counts : baselineCells.length = 12 ∧ cells.length = 82 ∧
     firm.length = 69 ∧ (firm.filter allCells.contains).length = 64 ∧
     (provisional.filter allCells.contains).length = 2 ∧ missing.length = 5 := by decide +kernel
 
-/-- Wave E's accepted atomic reader closes design cells 24 and 51. -/
-theorem atomic_reader_recovered_zeuge :
-    M49_50.e ∈ allFixtures ∧ M49_50.e.gueltig = true ∧
-    M49_50.e.Hat ⟨2, 0, true, [false, false, false, true]⟩ ∧
-    M49_50.e.Hat ⟨2, 3, false, [true, true, true]⟩ :=
-  ⟨List.mem_append_left _ (List.mem_map.2
-    ⟨(M49_50.e, M49_50.zellen), by simp [records], rfl⟩),
-    GateAudit.m49_50_checked, M49_50.e_hat _ (by decide), M49_50.e_hat _ (by decide)⟩
-
 /-- The five remaining firm design cells are 20, 26, 46, 47 and 49. -/
 theorem missing_exact : missing = [
     ⟨2, 0, true, [false, false, true, false]⟩,
@@ -217,21 +201,6 @@ theorem missing_not_covered : ∀ x ∈ missing, ¬ (∃ e ∈ allFixtures, e.Ha
   intro x member covered
   have absent : x ∉ allCells := of_decide_eq_true (List.mem_filter.1 member).2
   exact absent ((all_cells_iff x).mp covered)
-
-theorem coverage_zeuge : F00_call.e ∈ fixtures ∧ F00_call.e ∈ allFixtures ∧
-    F00_call.e.gueltig = true ∧ ⟨0, 0, true, [true, false, false]⟩ ∈ cells ∧
-    ⟨0, 0, true, [true, false, false]⟩ ∈ allCells ∧
-    F00_call.e.Hat ⟨0, 0, true, [true, false, false]⟩ := by
-  have recordMember : F00_call.e ∈ fixtures :=
-    List.mem_map.2 ⟨(F00_call.e, F00_call.zellen), List.mem_cons_self, rfl⟩
-  have member : F00_call.e ∈ allFixtures := List.mem_append_left _ recordMember
-  have present := F00_call.e_hat ⟨0, 0, true, [true, false, false]⟩ (by decide)
-  exact ⟨recordMember, member, F00_call.e_gueltig,
-    (cells_iff _).mp ⟨_, recordMember, present⟩,
-    (all_cells_iff _).mp ⟨_, member, present⟩, present⟩
-
-theorem missing_zeuge : ⟨2, 0, true, [false, false, true, false]⟩ ∈ missing ∧ ¬ (∃ e ∈ allFixtures, e.Hat ⟨2, 0, true, [false, false, true, false]⟩) :=
-  ⟨by decide +kernel, missing_not_covered _ (by decide +kernel)⟩
 
 #print axioms all_checked
 #print axioms all_cells_iff

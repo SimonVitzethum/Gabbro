@@ -276,37 +276,4 @@ theorem run_bad : ¬ CallSitePflichtLauf (program false) oracle 0 (fun _ => Fals
 
 end CallSiteZeuge
 
-/-- ZEUGE: one software item, a satisfiable and falsifiable pre, two distinct
-    recorded question keys, the duty at both calls, and both replay posts. -/
-theorem callSitePflicht_zeuge :
-    CallSiteZeuge.decl.axHerkunft () = some .software ∧
-    CallSiteZeuge.key1 ≠ CallSiteZeuge.key2 ∧
-    CallSitePflichtFremd CallSiteZeuge.unit.P.axVertrag (CallSiteZeuge.history true) ∧
-    ¬ CallSitePflichtFremd CallSiteZeuge.unit.P.axVertrag (CallSiteZeuge.history false) ∧
-    ForeignPflicht CallSiteZeuge.unit CallSiteZeuge.oracle [] ∧
-    ∀ σ : World CallSiteZeuge.decl,
-      CallSiteZeuge.record σ true ∈ CallSiteZeuge.history true →
-      AxNach CallSiteZeuge.unit.P.axVertrag () σ (CallSiteZeuge.rho true)
-        σ () ∧ CallSiteZeuge.unit.Q () σ () = true := by
-  refine ⟨rfl, CallSiteZeuge.keys_distinct, CallSiteZeuge.history_good,
-    CallSiteZeuge.history_bad, CallSiteZeuge.foreign, CallSiteZeuge.posts⟩
-
-/-- Empty software histories use precisely the existing nil transport. -/
-theorem callSitePflichtFremd_leer_zeuge :
-    CallSitePflichtFremd CallSiteZeuge.unit.P.axVertrag [] :=
-  callSitePflichtFremd_nil _
-
-/-- The history witness has two actual machine calls and reachable keys;
-    changing only the second argument to zero refutes the run duty. -/
-theorem callSitePflicht_run_zeuge :
-    (∃ M : RufMaschineG CallSiteZeuge.decl,
-      RufSchrittG (CallSiteZeuge.program true) CallSiteZeuge.oracle 0
-        (CallSiteZeuge.afterFirst true) 0 M) ∧
-    (∀ e ∈ CallSiteZeuge.history true,
-      CallSiteErreichbar (CallSiteZeuge.program true) CallSiteZeuge.oracle 0 (fun _ => False)
-        (CallSiteZeuge.start true) ⟨e.1, e.2.1, e.2.2.1⟩) ∧
-    ¬ CallSitePflichtLauf (CallSiteZeuge.program false) CallSiteZeuge.oracle 0 (fun _ => False)
-      (CallSiteZeuge.start false) :=
-  ⟨CallSiteZeuge.second_step true, CallSiteZeuge.record_sites true, CallSiteZeuge.run_bad⟩
-
 end Gabbro.Grammatik

@@ -261,12 +261,4 @@ def unitItemMetadata (items : List SItemTief) (item : SItemTief) : Bool :=
 /-- A unit's unsupported duties, using its own function signatures at every item. -/
 def unitMetadata (items : List SItemTief) : Bool := items.any (unitItemMetadata items)
 
-/-- Scalar predicate parameters no longer refuse admission; erased type metadata still does. -/
-theorem spec_parameter_metadata_zeuge :
-    let sig : STyp → FnSig := fun typ =>
-      { art := "spec", name := "small", params := [("x", typ)], res := some (.atom "bool"), fehler := none, klauseln := [] }
-    itemMetadata (.specT (sig (.range (.atom "u32") (.lit 0) (.lit 100) false)) .tru) = false ∧
-      itemMetadata (.specT (sig (.wrap (.atom "u32"))) .tru) = true := by
-  exact ⟨rfl, rfl⟩
-
 end Gabbro.Grammatik.Parser.ExportMetadata

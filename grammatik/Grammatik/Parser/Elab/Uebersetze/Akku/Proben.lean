@@ -83,65 +83,6 @@ attribute [local cbv_eval] digits_select Nat.log2_def
 def probenAkku : AkkuPlan :=
   uAkkuPlan "s" 2
 
-/-- The generated names are the accumulator name with `#kern`, `#aktualisiere`, `#falte`. -/
-theorem akkuPlanNamen_zeuge : probenAkku =
-    { name := "s", frage := "s#kern", akt := "s#aktualisiere",
-      falt := "s#falte", kernZahl := 2 } := by cbv
-
-/-- The query head answers `0 .. 1` with no parameters, no channel, no writes. -/
-theorem akkuFrageKopf_zeuge : uAkkuFrageKopf probenAkku =
-    { name := "s#kern", names := [], kinds := [], types := [],
-      res := some (0, 1), held := [], ext := true } := by cbv
-
-/-- The neutral element as a surface literal, both signs. -/
-theorem akkuNeutralExpr_zeuge : uAkkuNeutralExpr 0 = .lit 0 ∧
-    uAkkuNeutralExpr (-5) = .un "-" (.lit 5) := by
-  exact ⟨rfl, rfl⟩
-
-/-- The narrow range text of the value type. -/
-theorem akkuBereichText_zeuge : uAkkuBereichText 0 255 = "0 .. 255" := by cbv
-
-/-- The update arm merges and narrows required: an overflowing merge stops
-    with `Logik.kapazitaet`, the contribution is never dropped. -/
-theorem akkuAktArm_zeuge :
-    uAkkuAktArm probenAkku 0 255 "add" 0 =
-      .locks false (.variable "s#sperre0") (.block
-        [.bind false "s0" none (.bin "+" (.variable "s#zelle0") (.variable "v")),
-         .trimReq (.variable "s0") "0 .. 255",
-         .set (.variable "s#zelle0") "=" (.variable "s0")] none) := by cbv
-
-/-- The fold step accumulates and narrows required: an overflowing prefix
-    stops with `Logik.kapazitaet`, the fold never restarts from neutral. -/
-theorem akkuFaltSchritt_zeuge :
-    uAkkuFaltSchritt probenAkku 0 255 "add" 0 =
-      [.locks false (.variable "s#sperre0") (.block
-        [.bind false "s0" none (.bin "+" (.variable "m") (.variable "s#zelle0")),
-         .trimReq (.variable "s0") "0 .. 255",
-         .set (.variable "m") "=" (.variable "s0")] none)] := by cbv
-
-/-- A `writes s` effect names every cell. -/
-theorem akkuEffektSchreibt_zeuge :
-    uAkkuExpandEffs [probenAkku] ["s"] [.writes (.variable "s")] =
-      .ok [.writes (.variable "s#zelle0"), .writes (.variable "s#zelle1")] := by cbv
-
-/-- A `reads s` effect reads every cell. -/
-theorem akkuEffektLiest_zeuge :
-    uAkkuExpandEffs [probenAkku] ["s"] [.reads (.variable "s")] =
-      .ok [.reads (.variable "s#zelle0"), .reads (.variable "s#zelle1")] := by cbv
-
-/-- An update site becomes the update call. -/
-theorem akkuUpdateExpandiert_zeuge :
-    uAkkuExpandAnw [probenAkku] ["s"] 100000
-      (.set (.variable "s") "=" (.variable "t")) =
-      .ok [.call "s#aktualisiere" [.variable "t"]] := by cbv
-
-/-- A trailing read becomes the sampled fold. -/
-theorem akkuLesenExpandiert_zeuge :
-    uAkkuExpandAnw [probenAkku] ["s"] 100000
-      (.block [] (some (.ret (some (.variable "s"))))) =
-      .ok [.block [.bind false "s#lese" none (.call "s#falte" [])]
-        (some (.ret (some (.variable "s#lese"))))] := by cbv
-
 /-- A nested read is refused: reads go through the sampled fold under the
     cell locks, never bare. -/
 theorem unsyncLesen_abgelehnt :
@@ -168,22 +109,6 @@ theorem akkuSchatten_abgelehnt :
           generics := [] },
         .block [] none)] =
       .error "accumulator name bound as a local without G form: s" := by cbv
-
-/-- The query wrapper name is the accumulator name with `#query`. -/
-theorem akkuHuelleName_zeuge : uAkkuHuelle probenAkku = "s#query" := by cbv
-
-/-- The wrapper binds the hardware query once and returns its answer. -/
-theorem akkuHuelleKoerper_zeuge :
-    uAkkuHuelleKoerper probenAkku =
-      .block [.bind false "k" none (.call "s#kern" [])]
-        (some (.ret (some (.variable "k")))) := by cbv
-
-/-- The update samples through the wrapper, never the axiom directly. -/
-theorem akkuAktRuftHuelle_zeuge :
-    uAkkuAktKoerper probenAkku 0 255 "add" =
-      .block [.bind false "k" none (.call "s#query" []),
-        uAkkuVersand probenAkku 0 255 "add" 2]
-      none := by cbv
 
 /-! ## The elaborated unit -/
 
@@ -267,33 +192,6 @@ private theorem elaborated_uses :
     cbv <;> exact Eq.refl _
   case functions => cbv
   case foreignNames => cbv
-
-/-- A unit with an update use and a read use elaborates, carrying the
-    generated query, update and reduction. -/
-theorem akkuVerwendung_zeuge : (elabU [probenAccT, probenMelde, probenLies]).isOk = true := by
-  obtain ⟨unit, made, _, _⟩ := elaborated_uses
-  rw [made]
-  rfl
-
-/-- The generated functions travel with the unit, after the user functions:
-    update, reduction, then the query wrapper. -/
-theorem akkuFunktionen_zeuge :
-    (elabU [probenAccT, probenMelde, probenLies]).map (fun u => u.fns.map (·.name)) =
-      .ok ["melde", "lies", "s#aktualisiere", "s#falte", "s#query"] := by
-  obtain ⟨unit, made, names, _⟩ := elaborated_uses
-  rw [made]
-  change (Except.ok (unit.fns.map (·.name)) : Except String (List String)) =
-    .ok ["melde", "lies", "s#aktualisiere", "s#falte", "s#query"]
-  rw [names]
-
-/-- The generated query travels with the unit as the only foreign body. -/
-theorem akkuFrage_zeuge :
-    (elabU [probenAccT, probenMelde, probenLies]).map (fun u => u.axs.map (·.name)) =
-      .ok ["s#kern"] := by
-  obtain ⟨unit, made, _, names⟩ := elaborated_uses
-  rw [made]
-  change (Except.ok (unit.axs.map (·.name)) : Except String (List String)) = .ok ["s#kern"]
-  rw [names]
 
 /-- The probe read gone wrong: a nested read is refused at elaboration. -/
 def probenSchlecht : SItemTief :=

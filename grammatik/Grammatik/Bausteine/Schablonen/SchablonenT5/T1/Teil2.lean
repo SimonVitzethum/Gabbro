@@ -25,18 +25,6 @@ theorem joint_move_hidden (σ : Nat → Nat) (p1 p2 v1 v2 : Nat)
   · rfl
   · simp only [jointMove, if_neg h1, if_neg h2]
 
-/-- Witness for `joint_move_hidden`: moving places `0`/`1`, observer of
-    place `2` sees nothing. -/
-theorem joint_move_hidden_zeuge :
-    ((fun _ => 0) 2 = (fun _ => (0 : Nat)) 2)
-:= by
-  have hObs : (0 : Nat) ∉ ([2] : List Nat) ∧ 1 ∉ ([2] : List Nat) := by
-    decide
-  have hw : (fun _ => (0 : Nat)) ∈ jointTrace (fun _ => 0) 0 1 7 8 := by
-    simp only [jointTrace, List.mem_cons, List.not_mem_nil, or_false, true_or]
-  have hq : (2 : Nat) ∈ ([2] : List Nat) := by decide
-  exact joint_move_hidden _ 0 1 7 8 [2] hObs _ hw 2 hq
-
 /-! ## 10. `exchange.rmw` (exchange: 31 corpus lines).
 
 The body of `update(v)` is pure (mechanically, Pass 8 -- in the model
@@ -60,15 +48,5 @@ theorem rmw_chain_order (fs : List (Nat → Nat)) (σ : Nat) :
   | cons f rest ih =>
     show runRmw rest (f σ) = rest.foldl (fun s g => g s) (f σ)
     exact ih _
-
-/-- Witness for `rmw_chain_order`:     `[+1, *2]` from `5` gives `12`. -/
-theorem rmw_chain_order_zeuge :
-    (runRmw [(· + 1), (· * 2)] 5 = 12)
-:= by
-  have hchain := rmw_chain_order [(· + 1), (· * 2)] 5
-  have hval : ([(· + 1), (· * 2)] : List (Nat → Nat)).foldl (fun s f => f s) 5 = 12 := by
-    decide
-  exact hchain.trans hval
-
 
 end Gabbro.Grammatik

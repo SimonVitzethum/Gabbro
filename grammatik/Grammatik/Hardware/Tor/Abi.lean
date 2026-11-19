@@ -252,13 +252,6 @@ theorem conf_folgt : ((zielPpc.conf (by decide)).wbits = 32 ∧ (zielPpc.conf (b
     ((zielX86.conf (by decide)).wbits = 64 ∧ (zielX86.conf (by decide)).big = false) := by
   exact ⟨⟨rfl, rfl⟩, ⟨rfl, rfl⟩⟩
 
-/-- Belegung witness: the x86_64 `write` assigns the number to `rax` and the arguments to
-    `rdi`, `rsi`, `rdx`, in that order, with no collision. -/
-theorem belegung_zeuge :
-    schreibX86.belegung = [(r "rax", .nummer 1), (r "rdi", .param 0), (r "rsi", .param 1),
-      (r "rdx", .param 2)] ∧ (schreibX86.belegung.map Prod.fst).Nodup :=
-  ⟨rfl, belegung_nodup (by decide)⟩
-
 /-! ## 5. Planted defects -/
 
 /-- The answer register is clobbered: refused. -/

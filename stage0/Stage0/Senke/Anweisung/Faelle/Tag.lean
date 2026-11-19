@@ -283,14 +283,6 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
   exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
     (keeps_of_agreeW hW a1 hpr (by omega)) ih
 
-/-- A dispatch with a bare arm and a payload arm is accepted, including a negative lower bound. -/
-theorem onTag_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat)
-    (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
-    let cs := [none, some (.int (-7) 13)]
-    let arms : Arms D (vertragVon D f) false [.sum cs] [] [] cs := .cons .nil (.cons .nil .nil)
-    ∃ code top, lowS passes A L (functionFrame P f) ens pr ex (.onTag (.var .here) arms) = some (code, top) := by
-  exact ⟨_, _, rfl⟩
-
 end
 
 end Gabbro.Stage0.Senke

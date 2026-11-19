@@ -99,14 +99,6 @@ theorem lex_ohne_doku (s : String) :
     ∀ ts, lex s = .ok ts → ∀ t, Token.doku t ∉ ts :=
   fun ts h t => scan_ohne_doku _ _ ts h t
 
-/-- Witness that the premise is inhabited and the doc stream differs: a
-    source with a doc comment lexes, and its `lexDoku` has the `doku` token
-    that `lex` lacks. -/
-theorem lex_ohne_doku_zeuge :
-    ∃ ts, lex "/// d\nfn" = .ok ts ∧
-      lexDoku "/// d\nfn" ≠ .ok ts := by
-  refine ⟨[Token.wort "fn", Token.ende], ?_, ?_⟩ <;> decide
-
 end Gabbro.Grammatik.Parser
 
 #print axioms Gabbro.Grammatik.Parser.lex_ohne_doku

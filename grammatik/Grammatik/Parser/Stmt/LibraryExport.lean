@@ -398,31 +398,15 @@ private theorem selected_phases :
 def exportQualEinheit : UProg :=
   (elabU (pre108 translationQualItems)).toOption.getD { tabs := [], locks := [], fns := [] }
 
-theorem export_qual_elab_zeuge :
-    (elabU (pre108 translationQualItems)).toOption.isSome = true := by
-  obtain ⟨unit, made, _⟩ := selected_phases.2
-  rw [made]
-  rfl
-
 private theorem export_facts : ExportFacts exportQualEinheit := by
   obtain ⟨unit, made, facts⟩ := selected_phases.2
   unfold exportQualEinheit
   rw [made]
   exact facts
 
-/-- The export leaves no ignored source duty behind on the fixture. -/
-theorem export_qual_tor_zeuge : exportQualEinheit.exportGate = .ok () := export_facts.gate
-
 /-- The expanded source: the pre-pass output on the fixture members. -/
 def exportQualErweitert : List SItemTief :=
   (exportLibraryUnit (uMembers (pre108 translationQualItems))).toOption.getD []
-
-/-- The pre-pass ran: every expanded body is ordinary. -/
-theorem export_qual_ohne_zeuge : alleOhneBibliothek exportQualErweitert = true := by
-  obtain ⟨expanded, produced, ordinary⟩ := selected_phases.1
-  unfold exportQualErweitert
-  rw [produced]
-  exact ordinary
 
 theorem export_qual_lower_ok :
     (lowerAllg exportQualEinheit).toOption.isSome = true := export_lowered export_facts
@@ -436,14 +420,5 @@ def exportQualGesenkert :
 private theorem export_emitted : lowerAllg exportQualEinheit = .ok exportQualGesenkert := by
   unfold exportQualGesenkert
   exact except_ok_get (x := lowerAllg exportQualEinheit) export_qual_lower_ok
-
-/-- The connected verdict on the full caller unit, with the original complete
-    function, lock and carrier enumerations and unchanged checker defaults. -/
-theorem export_qual_akzeptiert_zeuge :
-    Gabbro.Grammatik.Akzeptiert exportQualGesenkert.1 (Gabbro.Grammatik.SperrInv.leer _)
-      exportQualGesenkert.2 (List.finRange exportQualEinheit.locks.length)
-      ((List.finRange exportQualEinheit.tabs.length).map Sum.inl ++
-        (List.finRange exportQualEinheit.globs.length).map Sum.inr) [] = true := by
-  simpa only [checkedImage] using export_checked export_facts export_emitted
 
 end Gabbro.Grammatik.Uebersetzung

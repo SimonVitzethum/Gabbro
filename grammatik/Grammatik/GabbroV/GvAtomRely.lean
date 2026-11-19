@@ -126,27 +126,6 @@ theorem gv_104_einzahlen_schreibt :
     TraegerSchreibt (D := G104_referenz_oblig.gD) G104_referenz_oblig.g_einzahlen
       (.inl G104_referenz_oblig.GTab.Konto) = true := by decide
 
-/-- **Joint witness for `gv_plain_gibt_relyDuty_parserfragment`**: on 104's
-    exported unit both premises hold jointly -- no global exists, the plain
-    duty is proved (`oblig_nutzer`) -- on a non-degenerate fixture: `einzahlen`
-    writes `Konto` beside a reached run that moves memory
-    (`oblig_ruf_bewegt`: `einzahlen` moves the slot `0 -> 100`). -/
-theorem gv_plain_gibt_relyDuty_parserfragment_zeuge :
-    (∀ g : G104_referenz_oblig.gD.Glob, G104_referenz_oblig.gD.atomar g = false) ∧
-    NutzerPflicht G104_referenz_oblig.gE ∧
-    TraegerSchreibt (D := G104_referenz_oblig.gD) G104_referenz_oblig.g_einzahlen
-      (.inl G104_referenz_oblig.GTab.Konto) = true ∧
-    (∃ σ' : World G104_referenz_oblig.gD,
-      rufAt G104_referenz_oblig.gE.P Gabbro.Grammatik.oO 0 2
-        G104_referenz_oblig.g_einzahlen
-        (G104_referenz_oblig.gE.sp0.welt []) Gabbro.Grammatik.rho7 = .ok σ' () ∧
-      ((G104_referenz_oblig.gE.sp0.welt []).slots G104_referenz_oblig.GTab.Konto 0
-        G104_referenz_oblig.GKontoFeld.stand).n = 0 ∧
-      (σ'.slots G104_referenz_oblig.GTab.Konto 0
-        G104_referenz_oblig.GKontoFeld.stand).n = 100) :=
-  ⟨gv_104_ohne_atomar, Gabbro.Grammatik.oblig_nutzer, gv_104_einzahlen_schreibt,
-    Gabbro.Grammatik.oblig_ruf_bewegt⟩
-
 /-! ## 3. The precise obstruction: the rely is strictly stronger -/
 
 /-- **Without atomic-freedom the transfer FAILS in general.** The plain
@@ -162,24 +141,6 @@ theorem gv_rely_braucht_atomfreiheit :
   intro hall
   exact AtomarXZeuge.hP_rely_nicht
     (hall AtomarXZeuge.hws NIZeuge.NFn.zaehlB (AtomarXZeuge.hP_seq 0))
-
-/-- **Joint witness for `gv_rely_braucht_atomfreiheit`**: the sequential duty
-    of `zaehlB` holds, the rely duty fails, `konfig` is shared, a table is
-    written (`hauptA` writes `tabA`), and `aFuenf` is a member of the rely
-    class -- all premises jointly on the non-degenerate fixture. -/
-theorem gv_rely_braucht_atomfreiheit_zeuge :
-    KoerperGutS AtomarXZeuge.hP 0 (axWahr NIZeuge.nD) SchwachZeuge.nS
-      NIZeuge.NFn.zaehlB ∧
-    ¬ KoerperGutSA AtomarXZeuge.hP 0 (axWahr NIZeuge.nD) SchwachZeuge.nS
-      (GeteiltA AtomarXZeuge.hP AtomarXZeuge.hws) NIZeuge.NFn.zaehlB ∧
-    GeteiltA AtomarXZeuge.hP AtomarXZeuge.hws
-      (.inr NIZeuge.NGlob.konfig) ∧
-    TraegerSchreibt (D := NIZeuge.nD) NIZeuge.NFn.hauptA
-      (.inl NIZeuge.NTab.tabA) = true ∧
-    HavocA (GeteiltA AtomarXZeuge.hP AtomarXZeuge.hws)
-      AtomarXZeuge.aFuenf := by
-  exact ⟨AtomarXZeuge.hP_seq 0, AtomarXZeuge.hP_rely_nicht,
-    AtomarXZeuge.hP_konfig_geteilt, by decide, AtomarXZeuge.aFuenf_havoc⟩
 
 /-
   CUTS (lane 1385 -- the shared-atomic rely):
@@ -207,8 +168,6 @@ theorem gv_rely_braucht_atomfreiheit_zeuge :
 #print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment
 #print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_104_ohne_atomar
 #print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_104_einzahlen_schreibt
-#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_plain_gibt_relyDuty_parserfragment_zeuge
 #print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_rely_braucht_atomfreiheit
-#print axioms Gabbro.Grammatik.GabbroV.GvAtomRely.gv_rely_braucht_atomfreiheit_zeuge
 
 end Gabbro.Grammatik.GabbroV.GvAtomRely

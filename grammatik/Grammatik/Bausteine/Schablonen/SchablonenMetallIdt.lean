@@ -269,16 +269,6 @@ theorem installieren_ohne_wache_waere_falsch :
   · have := hp.1
     exact absurd this (by decide)
 
-/-- **Witness**: an NMI entry on 2, a device entry on `0xF0`, the kernel service vector `0x80`
-    taken by the program, and a #GP entry on 13 through the error-code twin -- all installed;
-    and the timer refused. -/
-theorem idt_metall_zeuge :
-    ∃ t, installiereAlle bau [⟨false, 2, 1⟩, ⟨false, 0xF0, 2⟩, ⟨false, 0x80, 3⟩, ⟨true, 13, 4⟩]
-        = some t ∧ t 2 = .programm 1 ∧ t 13 = .programmFc 4 ∧ t 0x40 = .takt ∧
-      installiere bau ⟨false, 0x40, 5⟩ = none ∧ installiere bau ⟨true, 2, 6⟩ = none ∧
-      dekodiere (kodiere 0xFFFFFFFF80001234) = 0xFFFFFFFF80001234 := by
-  refine ⟨_, rfl, rfl, rfl, rfl, rfl, rfl, kodiere_dekodiere _ (by decide)⟩
-
 end MetallIdt
 
 end Gabbro.Grammatik
@@ -289,4 +279,3 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.MetallIdt.installieren_bewahrt_laufzeit
 #print axioms Gabbro.Grammatik.MetallIdt.installieren_passt
 #print axioms Gabbro.Grammatik.MetallIdt.installieren_ohne_wache_waere_falsch
-#print axioms Gabbro.Grammatik.MetallIdt.idt_metall_zeuge

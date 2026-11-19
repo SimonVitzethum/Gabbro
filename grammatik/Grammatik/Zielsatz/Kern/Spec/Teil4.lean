@@ -48,27 +48,4 @@ def treueBerichtFalsch : CheckReport := { proben := [], boeden := [], urteil := 
 def treueLebt : CheckEvidenz pruefD := { erzeuger := true, bericht := treueBerichtWahr, lebt := true, tor := none }
 def treueVerbraucht : CheckEvidenz pruefD := { erzeuger := true, bericht := treueBerichtFalsch, lebt := false, tor := some false }
 
-/-- Non-degenerate fidelity: a live and a consumed entry of the fixture probe,
-    with different verdicts, satisfy the leg jointly -- the same report of one
-    probe never manufactures a second Duty. -/
-theorem checkTreue_zeuge : CheckTreueG (D := pruefD) pruefP [pruefC] [treueLebt, treueVerbraucht] := by
-  have hm : ∀ e ∈ [treueLebt, treueVerbraucht], e = treueLebt ∨ e = treueVerbraucht := by
-    intro e he
-    simpa using he
-  have hc : ∀ c ∈ [pruefC], c = pruefC := fun c h => List.mem_singleton.mp h
-  refine ⟨?_, ?_, ?_⟩
-  · intro e he
-    rcases hm e he with rfl | rfl <;> exact ⟨pruefC, List.mem_singleton_self _, rfl⟩
-  · intro e he c hcm hp
-    rw [hc c hcm]
-    rcases hm e he with rfl | rfl
-    · exact Or.inl ⟨rfl, rfl⟩
-    · exact Or.inr ⟨rfl, false, List.mem_singleton_self _, rfl⟩
-  · intro c _ e₁ he₁ e₂ he₂ _ _ hu _
-    rcases hm e₁ he₁ with rfl | rfl <;> rcases hm e₂ he₂ with rfl | rfl
-    · exact ⟨rfl, rfl⟩
-    · exact absurd hu (by decide)
-    · exact absurd hu (by decide)
-    · exact ⟨rfl, rfl⟩
-
 end Gabbro.Grammatik.Zielsatz

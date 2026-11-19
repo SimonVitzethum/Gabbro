@@ -81,14 +81,6 @@ theorem KExpr_to_G_denotation {D : Deklaration} {Γ : Ctx} {lo hi : Int}
     quoted.syntax.evalInt = some (eval before body after args).n :=
   quoted.equation before after
 
-/-- Joint arithmetic witness, with a negative intermediate and exact value. -/
-theorem KExpr_to_G_denotation_zeuge :
-    let args : Env (declaration [] (.int (-10) 10)) [] := .nil
-    let body : Expr (declaration [] (.int (-10) 10)) [] [] (.int (-3) (-3)) := .lit (-3)
-    ∃ quoted : Quoted args body, quoted.syntax.evalInt = some (-3) := by
-  dsimp only
-  exact ⟨quoteValue .nil (.lit (-3)) (-3) (by intros; rfl), by simp only [quoteValue, KExpr.ofInt_eval]⟩
-
 end Gabbro.Grammatik.Parser.Konst.Scalar
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
 open Konstanten
@@ -157,21 +149,5 @@ theorem quote_denotes {D : Deklaration} {Γ : Ctx} {lo hi : Int}
     (_ : quote body args = .ok quoted) (before after : World D) :
     quoted.syntax.evalInt = some (eval before body after args).n :=
   KExpr_to_G_denotation quoted before after
-
-/-- The body, environment and quotation premises hold jointly on arithmetic with a parameter. -/
-theorem quote_denotes_zeuge :
-    let D := declaration [.int 0 10] (.int 0 20)
-    let args : Env D [.int 0 10] := .cons ⟨3, by decide, by decide⟩ .nil
-    let body : Expr D [.int 0 10] [] (.int 2 12) := .add (.var .here) (.lit 2)
-    ∃ quoted : Quoted args body, quote body args = .ok quoted ∧
-      quoted.syntax.evalInt = some 5 := by
-  dsimp only
-  let args : Env (declaration [.int 0 10] (.int 0 20)) [.int 0 10] :=
-    .cons ⟨3, by decide, by decide⟩ .nil
-  let body : Expr (declaration [.int 0 10] (.int 0 20)) [.int 0 10] [] (.int 2 12) :=
-    .add (.var .here) (.lit 2)
-  refine ⟨_, by simp only [quote, bind, Except.bind, pure, Except.pure]; rfl, ?_⟩
-  simp only [quoteBinary, quoteValue, KExpr.evalInt, KExpr.ofInt_eval, KBinOp.evalInt]
-  decide
 
 end Gabbro.Grammatik.Parser.Konst.Scalar

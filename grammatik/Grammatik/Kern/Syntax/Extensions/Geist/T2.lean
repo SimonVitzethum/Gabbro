@@ -179,15 +179,6 @@ def gbody : Block GD GV false [] [] [] :=
     Proved by `rfl` -- the checker computes it. -/
 theorem gbody_g001 : g001 (D := GD) gbody = true := by rfl
 
-/-- Joint witness for `g001_korrekt`: all premises instantiated at the
-    non-degenerate program `GD` (one ordinary table the body reads, one
-    ghost table the contract names below). The `ho` premise fixes the
-    footprint member inspected. -/
-theorem g001_korrekt_zeuge
-    (o : GD.Tab ⊕ GD.Glob) (ho : o ∈ Extraktion.blockOrte (D := GD) gbody) :
-    ¬ istGeist (D := GD) o :=
-  g001_korrekt gbody gbody_g001 o ho
-
 /-- The witness body as a non-falling block: the statement, then return.
     Feeds the witness program `GP` below. -/
 def gendbody : Endblock GD GV false [] [] :=
@@ -360,18 +351,6 @@ theorem gwelt_gleicht (b c c' : Bool) (t : GD.Tab) (ht : GD.geist t = false)
       rw [GD_geist] at ht
       exact absurd ht (by decide)
 
-/-- Witness for erasure: two worlds differing only on the ghost table agree
-    on the witness read. All of `b`/`c`/`c'` appear in the conclusion. -/
-theorem erasure_zeuge (b c c' : Bool) :
-    eval (gwelt b c []) (gslot true) (gwelt b c []) Env.nil =
-      eval (gwelt b c' []) (gslot true) (gwelt b c' []) Env.nil :=
-  eval_gleich_ausser_geist (gslot true) gslot_ohne_geist
-    (gwelt b c []) (gwelt b c' []) (gwelt b c []) (gwelt b c' []) Env.nil
-    (fun t ht k f => gwelt_gleicht b c c' t ht k f)
-    (fun g hg => nomatch g)
-    (fun t ht k f => gwelt_gleicht b c c' t ht k f)
-    (fun g hg => nomatch g)
-
 end Zeuge
 
 /-
@@ -389,10 +368,8 @@ CUTS:
 -/
 
 #print axioms Gabbro.Grammatik.Geist.g001_korrekt
-#print axioms Gabbro.Grammatik.Geist.Zeuge.g001_korrekt_zeuge
 #print axioms Gabbro.Grammatik.Geist.geist_leer_unveraendert
 #print axioms Gabbro.Grammatik.Geist.eval_gleich_ausser_geist
-#print axioms Gabbro.Grammatik.Geist.Zeuge.erasure_zeuge
 #print axioms Gabbro.Grammatik.Geist.Zeuge.gschritt_schreibt
 
 

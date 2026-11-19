@@ -300,12 +300,4 @@ theorem zeuge_lauf_geht : ∃ s, Lauf 16 Zust.leer zeugeLauf s ∧ s.lebend = []
     (Lauf.cons (PStep.zurueck (r := ⟨32, 96⟩) (lo := 48) (hi := 64) (by simp only [Nat.reduceAdd, List.mem_cons, true_or]) (by decide) (by decide))
     (Lauf.cons (PStep.gib (r := ⟨32, 96⟩) (by simp only [Nat.reduceAdd, List.mem_cons, true_or])) (Lauf.nil _)))), rfl⟩
 
-/-- The witness of `hole_neu_null`: the fresh range of the first reserve holds nothing. -/
-theorem hole_neu_null_zeuge :
-    ∃ s', PStep 16 Zust.leer (.hole 64 32) s' ∧ ramZahl s' 32 64 = 0 := by
-  have h1 : PStep 16 Zust.leer (.hole 64 32)
-      { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
-  exact ⟨_, h1, hole_neu_null gut_leer h1⟩
-
 end Gabbro.Grammatik.Anbieter

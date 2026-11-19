@@ -33,14 +33,4 @@ abbrev futexKernel [hardware : RootNativeFloat.Hardware] : Kern where
   toHardware := hardware
   ans q m ans m' := m' = m ∧ ∃ a v, (q = futexReq a 128 v ∨ q = futexReq a 129 v) ∧ ans = some (0, 0)
 
-theorem futexOK_zeuge [RootNativeFloat.Hardware] :
-    @FutexOK (fun _ _ _ _ => True) futexKernel := by
-  letI : Kern := futexKernel
-  refine ⟨?_, ?_⟩
-  · intro a v m r x m' _; exact Or.inr trivial
-  · intro a n m r x m' h _
-    obtain ⟨_, _, _, _, he⟩ := h
-    cases he
-    exact Nat.zero_le _
-
 end Runner.IR

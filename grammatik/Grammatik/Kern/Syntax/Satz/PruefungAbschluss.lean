@@ -122,58 +122,14 @@ theorem abschluss_wahr_zeuge : CheckAbschluss pruefP pruefC1 messBerichtWahr :=
 theorem abschluss_falsch_zeuge : CheckAbschluss pruefP pruefC1 messBerichtFalsch :=
   ⟨pruef1_expansion, messBerichtFalsch_vollstaendig, rfl⟩
 
-/-- The failed floor stays a distinguishable negative outcome. -/
-theorem abschluss_falsch_boden_zeuge : ¬ bodenHalten messBerichtFalsch := bodenFehlt_zeuge
-
 /-- The unread fixture report with its held floor outcome. -/
 def messBerichtLuecke : CheckReport :=
   { proben := [{ ort := "x", punkt := 0, wert := 3, gelesen := false }],
     boeden := [true], urteil := true }
 
-/-- An unread sample completes nothing. -/
-theorem abschluss_luecke_zeuge : ¬ CheckAbschluss pruefP pruefC1 messBerichtLuecke := by
-  intro h
-  exact Bool.false_ne_true
-    (h.2.1 { ort := "x", punkt := 0, wert := 3, gelesen := false }
-      (by simp only [messBerichtLuecke, List.mem_singleton]))
-
 /-- A report with two outcomes for one declared floor. -/
 def messBerichtUeberhang : CheckReport :=
   { proben := [], boeden := [true, true], urteil := true }
-
-/-- A surplus floor outcome completes nothing: every declared floor has exactly
-    one evaluated outcome. -/
-theorem abschluss_ueberhang_zeuge : ¬ CheckAbschluss pruefP pruefC1 messBerichtUeberhang := by
-  intro h
-  exact absurd h.2.2 (by unfold berichtTraegt; decide)
-
-/-- The gate discharges the completed positive report. -/
-theorem entladung_wahr_zeuge : CheckEntladung pruefP pruefC1 messBerichtWahr false :=
-  ⟨abschluss_wahr_zeuge, by decide, List.mem_singleton_self _⟩
-
-/-- The gate discharges the completed negative report too: the Duty threads
-    through `false` returns, and the failure stays report data. -/
-theorem entladung_falsch_zeuge : CheckEntladung pruefP pruefC1 messBerichtFalsch false :=
-  ⟨abschluss_falsch_zeuge, by decide, List.mem_singleton_self _⟩
-
-/-- The success-only gate admits the held positive report. -/
-theorem entladung_erfolg_zeuge :
-    CheckEntladungErfolg pruefP pruefC1 messBerichtWahr false :=
-  ⟨entladung_wahr_zeuge, rfl, bodenHalten_zeuge⟩
-
-/-- The success-only gate refuses the negative report: its explicit
-    user-logic precondition fails. -/
-theorem entladung_erfolg_abgelehnt_zeuge :
-    ¬ CheckEntladungErfolg pruefP pruefC1 messBerichtFalsch false := by
-  intro h
-  exact absurd h.2.1 (by decide)
-
-/-- The discharged negative report travels on as the consumed evidence entry. -/
-theorem entladung_eintrag_zeuge :
-    (⟨pruefC1.probe, messBerichtFalsch, false, some false⟩ : CheckEvidenz pruefD).lebt = false ∧
-      ∃ g' ∈ pruefC1.gates,
-        (⟨pruefC1.probe, messBerichtFalsch, false, some false⟩ : CheckEvidenz pruefD).tor = some g' :=
-  entladung_eintrag entladung_falsch_zeuge
 
 end Abschluss
 

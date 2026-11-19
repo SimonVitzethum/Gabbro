@@ -72,33 +72,6 @@ theorem M7G_moves : M7G.speicher.slots () 0 () ≠
       Wert rufDF (rufDF.typ () ())).n) := congrArg Zahl.n hcon
   simp only [Int.reduceEq] at hn
 
-/-- **Witness for `rufG_treu`.** The premises of `rufG_treu` are
-    instantiated JOINTLY with concrete values: the program `gP` (callee
-    with an `if` whose taken branch writes), the oracle `rufOF`, zero
-    passes, start memory `spF`, every thread at the caller entry with
-    `initF`, the reached machine `M7G` (reached FROM THE START STATE by
-    `reach7G_start`: `ruf` pushes the callee, `endeEntf` unfolds the
-    `if`, `dannIteWahr` takes the writing branch, `dannBlatt` runs the
-    writing leaf -- slot 0 moves 0 -> 2 by `M7G_moves`, a step that
-    changes memory -- two `dannLeer` steps drain the scaffolding,
-    `rueck` pops it), and thread `0`. The log contains the `rueck`
-    event, and the matching `eintritt` sits below it in the same log.
-    The fourth conjunct is the non-degeneracy: the run moves memory.
-    Every premise is used: `h` is the reachability, `hmem` the log
-    membership, the move the memory change. -/
-theorem rufG_treu_zeuge :
-    ∃ (M : RufMaschineG rufDF) (f : Faden)
-      (g : rufDF.Fn) (rho : Env rufDF (rufDF.params g))
-      (v : ErgVal rufDF (rufDF.erg g)) (s0 s1 : World rufDF),
-      RufErreichbarG gP rufOF 0 (RufStartG gP spF initF) M ∧
-        RufEreignisF.rueck g rho v s0 s1 ∈ (M.faeden f).log ∧
-        RufEreignisF.eintritt g rho s0 ∈ (M.faeden f).log ∧
-        M.speicher.slots () 0 () ≠ spF.slots () 0 () := by
-  exact ⟨M7G, 0, rufIncF, rufRhoF, vF, M0G.weltVon 0, s1G,
-    reach7G_start, by rw [M7G_log]; exact List.mem_cons_self,
-    by rw [M7G_log]; exact List.mem_cons_of_mem _ (List.mem_cons_self),
-    M7G_moves⟩
-
 /-! ## 9. Second witness: a loop that exits with `leave`, plus a bind-call
 
     Roles reuse the F declaration `rufDF`: `true` is the writer (its body

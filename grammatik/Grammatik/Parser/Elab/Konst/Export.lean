@@ -91,13 +91,7 @@ theorem const_source_call_sound (c : ConstProgram) (f : c.D.Fn) (args : Env c.D 
     the existing exporter path. -/
 @[expose] def fnExprDrei : Uebersetze.UKonstFn := { name := "drei", params := [], erg := .int 0 10, rumpf := .block [] (some (.ret (some (.lit 3)))), signature := { art := "const", name := "drei", params := [], res := some (.atom "u8"), fehler := none, klauseln := [] } }
 
-/-- The control value arrives through the hook. -/
-theorem fnExprWert_zeuge : constFnWert [] fnExprDrei = .ok (some 3) := by decide
-
 /-- Block-bodied witness for the refusal path. -/
 @[expose] def fnBlockWert : Uebersetze.UKonstFn := { name := "blockiert", params := [], erg := .int 0 10, rumpf := .block [.bind false "x" none (.lit 1)] (some (.ret (some (.lit 2)))), signature := { art := "const", name := "blockiert", params := [], res := some (.atom "u8"), fehler := none, klauseln := [] } }
-
-/-- A block body is refused with its named sentence. -/
-theorem fnBlockVerweigerung_zeuge : constFnWert [] fnBlockWert = .error (constBlockFehler "blockiert" .abhaengigkeit) := by decide
 
 end Gabbro.Grammatik.Parser

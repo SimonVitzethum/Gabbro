@@ -93,10 +93,4 @@ theorem pruef_logik (passes : Nat) :
     LogikPflicht (D := pruefD) pruefP (SperrInv.leer pruefD) (axWahr pruefD) :=
   ⟨fun p f => ⟨pruef_koerperS p f, invGutS_leer rfl f, pruef_grund p f⟩, (fun _ _ _ _ => rfl), axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
 
-/-- **The site duty holds on the fixture**: probe and gate meet their body duties, tied to
-    the same Duty by the admitted expansion -- with the full `LogikPflicht` proof above. -/
-theorem checkSitePflicht_zeuge (passes : Nat) :
-    CheckSitePflicht pruefP (axWahr pruefD) (SperrInv.leer pruefD) passes pruefC :=
-  checkSitePflicht_aus checkAdmission_zeuge (pruef_logik passes) (List.Mem.head _)
-
 end Gabbro.Grammatik

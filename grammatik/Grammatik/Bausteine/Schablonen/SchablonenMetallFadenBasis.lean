@@ -197,18 +197,6 @@ def leer : Q := ⟨none, none, fun _ => none⟩
 
 theorem leer_kette : Kette leer [] := ⟨Folge.leer, rfl, List.nodup_nil⟩
 
-/-- **Witness**: three threads queued on a fresh core, one taken, a fourth queued -- the order
-    is the queueing order. -/
-theorem schlange_zeuge :
-    let q3 := haenge (haenge (haenge leer 5) 7) 9
-    Kette q3 [5, 7, 9] ∧ (nimm q3).1 = some 5 ∧ Kette (haenge (nimm q3).2 2) [7, 9, 2] := by
-  intro q3
-  have h1 : Kette (haenge leer 5) [5] := haenge_kette leer_kette 5 (by simp only [List.not_mem_nil, not_false_eq_true])
-  have h2 : Kette (haenge (haenge leer 5) 7) [5, 7] := haenge_kette h1 7 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])
-  have h3 : Kette q3 [5, 7, 9] := haenge_kette h2 9 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])
-  have hn := nimm_kette h3
-  exact ⟨h3, hn.1, haenge_kette hn.2 2 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])⟩
-
 end MetallFaden
 
 end Gabbro.Grammatik

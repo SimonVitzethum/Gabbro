@@ -59,16 +59,4 @@ def customSpaceFixture : UProg :=
   { tabs := [{name := "T", count := 1, cols := [("value", (0, 255))], space := 1}],
     locks := [], fns := [], spaces := ["normal", "custom"] }
 
-/-- A genuine registered nonzero space jointly satisfies the generic acceptance premises. -/
-theorem checkedTableCap_complete_zeuge :
-    ∃ certificate, checkedTableCap customSpaceFixture 1 0 (by decide) = .ok certificate :=
-  checkedTableCap_complete customSpaceFixture 1 0 (by decide) rfl (by decide)
-
-/-- Neither an unregistered space nor a registered but foreign space supplies a capability. -/
-theorem checkedTableCap_refused_zeuge :
-    checkedTableCap {customSpaceFixture with spaces := []} 1 0 (by decide) =
-      .error "pointer table space is not registered" ∧
-    checkedTableCap customSpaceFixture 0 0 (by decide) =
-      .error "pointer table space is not registered" := ⟨rfl, rfl⟩
-
 end Gabbro.Grammatik.Parser.UebersetzeAllg

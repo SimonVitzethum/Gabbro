@@ -116,34 +116,4 @@ abbrev cLo : Int → Int :=
 abbrev cHi : Int → Int :=
   aussenHi id id
 
-theorem huelle_haelt_zeuge (z : Int) : cLo z ≤ z ∧ z ≤ cHi z :=
-  huelle_haelt (le := (· ≤ ·)) (fl := id) (nd := id) (nu := id)
-    (h_le_refl := fun _ => Int.le_refl _)
-    (h_nachbarn := fun _ => ⟨Int.le_refl _, Int.le_refl _⟩) z
-
-theorem monoton_unten_zeuge {a x c y : Int} (h1 : a ≤ x) (h2 : c ≤ y) :
-    a + c ≤ x + y :=
-  monoton_unten (le := (· ≤ ·)) (add := (· + ·))
-    (h_add_mono := fun _ _ _ _ g1 g2 => Int.add_le_add g1 g2) h1 h2
-
-theorem monoton_oben_zeuge {x b y d : Int} (h1 : x ≤ b) (h2 : y ≤ d) :
-    x + y ≤ b + d :=
-  monoton_oben (le := (· ≤ ·)) (add := (· + ·))
-    (h_add_mono := fun _ _ _ _ g1 g2 => Int.add_le_add g1 g2) h1 h2
-
-theorem summe_liegt_in_der_gerechneten_schranke_zeuge
-    {a x b c y d : Int} (h1 : a ≤ x) (h2 : x ≤ b) (h3 : c ≤ y)
-    (h4 : y ≤ d) :
-    cLo (a + c) ≤ x + y ∧ x + y ≤ cHi (b + d) :=
-  summe_liegt_in_der_gerechneten_schranke (le := (· ≤ ·)) (add := (· + ·))
-    (fl := id) (nd := id) (nu := id)
-    (h_add_mono := fun _ _ _ _ g1 g2 => Int.add_le_add g1 g2)
-    (h_le_trans := fun _ _ _ g1 g2 => Int.le_trans g1 g2)
-    (h_le_refl := fun _ => Int.le_refl _)
-    (h_nachbarn := fun _ => ⟨Int.le_refl _, Int.le_refl _⟩) h1 h2 h3 h4
-
-theorem exakt_wandert_nicht_zeuge (z : Int) : cLo z = z ∧ cHi z = z :=
-  exakt_wandert_nicht (fl := (id : Int → Int)) (nd := id) (nu := id)
-    (h := rfl)
-
 end Gabbro.Grammatik.IntervallAussen

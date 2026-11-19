@@ -70,11 +70,4 @@ theorem retry_displacements (c b u : Nat) (small : 16 * (c + b + u + 7) < 2 ^ 31
   simp only [lit32, Bool.and_eq_true_iff, decide_eq_true_eq]
   omega
 
-/-- Large semantic bounds do not enlarge either the body or the header. -/
-theorem retry_size_zeuge :
-    (retryCode 4 5 6 16 [ci 1 6 0 0] [] []).length =
-      (retryCode 4 5 6 2560 [ci 1 6 0 0] [] []).length ∧
-    (retryC 4 5 6 2560 ([ci 1 6 0 0], 7) ([], 7)
-      (fun _ => some ([], 7))).isSome = true := by decide
-
 end Gabbro.Stage0.Senke

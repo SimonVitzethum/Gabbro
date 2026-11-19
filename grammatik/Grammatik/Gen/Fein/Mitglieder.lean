@@ -156,8 +156,4 @@ def feinMitglieder : List Spez :=
 
 theorem kombiListen_laenge : kombiListen.length = 15 := by decide
 
-/-- The concrete coverage family contains all fifteen combinations. -/
-theorem kombiListen_laenge_zeuge : kombiListen.length = 15 :=
-  kombiListen_laenge
-
 end Gabbro.Grammatik.Gen.Fein

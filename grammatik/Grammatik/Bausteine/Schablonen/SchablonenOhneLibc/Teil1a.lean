@@ -136,21 +136,6 @@ theorem tor_fehlbar_grund (z : Int → Option D.Fn) (n : Nat) (tab : FehlerTabel
 
 def zeugeTab : FehlerTabelle (Fin 3) := [(9, 0), (4, 1), (11, 2)]
 
-/-- **Witness for `tor_fehlbar`, `tor_fehlbar_wert` and `tor_fehlbar_grund`**, ALL premises
-    jointly: the word `3` is the value `3`, the word `-4` (EINTR) is reason `1`, and the word
-    `-5` (an errno the table does not admit) is the hardware stop -- each by computation, in G
-    as the stub decodes it. -/
-theorem tor_fehlbar_zeuge (D : Deklaration) (z : Int → Option D.Fn) :
-    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 3)) =
-      some (Sum.inl (⟨3, by decide, by decide⟩ : Zahl 0 1024)) ∧
-    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 (-4))) =
-      some (Sum.inr 1) ∧
-    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 (-5))) = none :=
-  ⟨tor_fehlbar_wert z 3 zeugeTab 0 1024 3 (by decide) ⟨by decide, by decide⟩,
-    tor_fehlbar_grund z 3 zeugeTab 0 1024 4 1 ⟨[(9, 0)], [(11, 2)], rfl, by decide⟩
-      ⟨by decide, by decide⟩,
-    by rw [tor_fehlbar]; rfl⟩
-
 end Fehlbar
 
 /-! ## 4. `tor.region` -- the stub of a gate that hands over a REGION

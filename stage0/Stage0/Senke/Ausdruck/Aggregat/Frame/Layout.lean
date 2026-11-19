@@ -73,12 +73,5 @@ theorem without_snapshots (layout : FrameLayout) (empty : layout.snapshotWords =
   simp [ensReserved, ensParams, internalResult, internalStatus, canonicalResult,
     canonicalStatus, bodyReserved, empty]
 
-/-- Distinct original parameters, snapshots, multiword result and nested counters coexist. -/
-theorem layout_zeuge :
-    let layout : FrameLayout := ⟨[.arr (.int 0 255) 3], some (.arr (.int 0 255) 2), 3, 5, 2⟩
-    layout.ensParams = 9 ∧ layout.internalResult = 12 ∧ layout.internalStatus = 14 ∧
-      layout.canonicalResult = 7 ∧ layout.canonicalStatus = 9 ∧ layout.bodyParams = 19 := by
-  decide +kernel
-
 end FrameLayout
 end Gabbro.Stage0.Senke

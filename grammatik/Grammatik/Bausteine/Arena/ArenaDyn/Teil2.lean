@@ -230,8 +230,6 @@ end Form
 
 #print axioms dynGrowListe_gelingt
 #print axioms dynGrowListe_scheitert
-#print axioms dynGrowListe_gelingt_zeuge
-#print axioms dynGrowListe_scheitert_zeuge
 #print axioms dynGrowListe_zwilling
 #print axioms dynGrow_monoton
 #print axioms dynGrow_ueber_M

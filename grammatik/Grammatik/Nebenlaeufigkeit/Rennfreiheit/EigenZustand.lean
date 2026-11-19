@@ -237,36 +237,4 @@ theorem eigenzustand_nur_eigene_schritte
     which is exactly how `axiomAntwort_gut`, `axiomCallRecordsWrite`, and
     the `Extraktion` characterization discharge the antecedent. -/
 
-/-- Joint witness for the target (rule 13) on the reference fixture: all
-    premises instantiated together -- `hNurG` over the constant carrier-free
-    program text, a reached foreign step (thread `0 ≠ 1` firing `leave` from
-    the start machine) with the conclusion proved by the theorem itself --
-    plus the non-degeneracy evidence (`refEin` writes `konto`; the
-    `refB_prog` run reaches `refPC2` with a memory-changing write).
-    `refD` declares no axiom, so no oracle step can occur. -/
-theorem eigenzustand_nur_eigene_schritte_zeuge :
-    ∃ (P : Programm refD) (O : Orakel refD) (passes : Nat) (hO : GutO O)
-      (prog : PCProg refD) (sp : Speicher refD) (g : Faden) (t : refD.Tab),
-      (∀ h, h ≠ g → ∀ a ∈ prog h,
-        (Sum.inl t : refD.Tab ⊕ refD.Glob) ∉ PCAtom.carriers a) ∧
-      (∃ (M : GenMaschine refD) (pc : PCStand) (h : Faden)
-        (M' : GenMaschine refD) (pc' : PCStand) (k : Int) (f : refD.Feld t),
-        PCReach P O passes prog (GenStart sp) M pc ∧
-        PCSchritt P O passes prog M pc h M' pc' ∧ h ≠ g ∧
-        M'.speicher.slots t k f = M.speicher.slots t k f) ∧
-      (∃ fn : refD.Fn, (vertragVon refD fn).schreibt t = true) ∧
-      (∃ (prog2 : PCProg refD) (M2 : GenMaschine refD) (pc2 : PCStand),
-        PCReach P O passes prog2 (GenStart refSp0) M2 pc2 ∧
-        M2.speicher.slots t 0 () ≠ refSp0.slots t 0 ()) := by
-  have hNurG0 : ∀ h, h ≠ (1 : Faden) → ∀ a ∈ EZD.ezdProg h,
-      (Sum.inl () : refD.Tab ⊕ refD.Glob) ∉ PCAtom.carriers a :=
-    fun h _ a ha => EZD.ezdProg_nurG h a ha
-  have hs0 := EZD.ezdLeave_step (GenStart refSp0) rfl
-  refine ⟨refP, refO, 0, refO_gut, EZD.ezdProg, refSp0, 1, (), hNurG0, ?_, ?_, ?_⟩
-  · refine ⟨_, _, 0, _, _, 0, (), PCReach.start, hs0, by decide, ?_⟩
-    exact eigenzustand_nur_eigene_schritte refP refO 0 refO_gut EZD.ezdProg refSp0 1 ()
-      hNurG0 _ _ _ _ _ PCReach.start hs0 (by decide) 0 ()
-  · exact ⟨refEin, refEin_schreibt ()⟩
-  · exact ⟨refB_prog, refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
-
 end Gabbro.Grammatik

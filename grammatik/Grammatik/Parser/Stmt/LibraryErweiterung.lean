@@ -63,53 +63,6 @@ attribute [local cbv_eval] translation_items
     payload parameter and a caller-supplied payload both refuse at
     resolution, so payload mutation has no interface. -/
 
-/-- The actual pre-pass expands the fixture caller to the export shape:
-    ordinary call, payload last, inside the retained caller block and end. -/
-theorem translation_erweitert_form_zeuge :
-    (exportLibraryStmt (translationMembers false) translationCallerBody).toOption.map
-      (fun s => beqSAnw s
-        (.block [exportLibraryCall (translationLibrary false) translationCall]
-          (some (.ret none)))) =
-      some true := by
-  rw [(translation_library_selected false).1, (translation_library_selected false).2]
-  cbv
-
-/-- The export shape is the certified shape with the export's payload
-    place (`libraryPayloadArg`). -/
-theorem translation_erweitert_zertifikat_form_zeuge :
-    exportLibraryCall (translationLibrary false) translationCall =
-      expandLibraryCall (translationLibrary false)
-        (libraryPayloadArg (translationLibrary false)) translationCall :=
-  exportLibraryCall_form _ _
-
-/-- The actual pre-pass expands the `let`-bound fixture caller the same
-    way: the ordinary call value bound inside the retained block and end. -/
-theorem translation_erweitert_bind_zeuge :
-    (exportLibraryStmt (translationMembers false)
-      (.block [.bindLib false "value" none translationCall]
-        (some (.ret none)))).toOption.map
-      (fun s => beqSAnw s
-        (.block [exportLibraryBind false "value" none (translationLibrary false)
-          translationCall] (some (.ret none)))) =
-      some true := by
-  rw [(translation_library_selected false).1, (translation_library_selected false).2]
-  cbv
-
-/-- The `let`-bound export shape is the certified `let`-bound shape. -/
-theorem translation_erweitert_bind_zertifikat_form_zeuge :
-    exportLibraryBind false "value" none (translationLibrary false) translationCall =
-      expandBindLibraryCall false "value" none (translationLibrary false)
-        (libraryPayloadArg (translationLibrary false)) translationCall :=
-  exportLibraryBind_form _ _ _ _ _
-
-/-- Both fixture translators declare pure effects: no reads, writes,
-    locks or loops at the source-effect level. -/
-theorem translation_translator_rein_zeuge :
-    effekteRein (translationLibrary false).translator.klauseln = true ∧
-    effekteRein (translationLibrary true).translator.klauseln = true := by
-  rw [(translation_library_selected false).2, (translation_library_selected true).2]
-  constructor <;> cbv
-
 /-- A writable payload parameter refuses: the payload channel is a
     read-only table capability, so payload mutation has no interface. -/
 def translationSchreibText : String :=
@@ -127,18 +80,6 @@ def translationSchreibItems : List SItemTief :=
 def translationSchreibMembers : List SItemTief :=
   Aufloesung.loeseL (Aufloesung.quelle translationSchreibItems) [] translationSchreibItems
 
-theorem translation_schreib_nutzlast_verweigert_zeuge :
-    (libraryDecl translationSchreibMembers translationCall).toOption.isNone = true := by
-  decide +kernel
-
-/-- A caller-supplied payload refuses: the caller omits exactly the final
-    payload parameter, which the export fills once per site. -/
-theorem translation_nutzlast_stelligkeit_verweigert_zeuge :
-    (libraryDecl (translationMembers false)
-      { translationCall with args := [.lit 7] }).toOption.isNone = true := by
-  rw [(translation_library_selected false).1]
-  cbv
-
 /-- An ambiguous library function refuses through the actual pre-pass:
     resolution never picks the first match. -/
 def mehrdeutigRufer : SItemTief :=
@@ -150,9 +91,5 @@ def mehrdeutigRufer : SItemTief :=
       fehler := none
       klauseln := [] }
     (.block [.lcall ⟨["m"], ["consume"], [], []⟩] (some (.ret none)))
-
-theorem export_mehrdeutig_verweigert_zeuge :
-    (exportLibraryUnit (doppeltMembers ++ [mehrdeutigRufer])).toOption.isNone = true := by
-  decide +kernel
 
 end Gabbro.Grammatik.Uebersetzung

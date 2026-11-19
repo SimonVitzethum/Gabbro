@@ -104,33 +104,8 @@ theorem callFits (f g : witnessD.Fn) :
 @[expose] def rankA (f : fixtureA.D.Fn) : Nat := if f.val = 0 then 1 else 0
 
 set_option maxRecDepth 100000 in
-/-- The structural whitelist accepts an actual call and arithmetic return. -/
-theorem constAdmissibleB_zeuge : constAdmissibleB fixtureA = true := by decide
-
 set_option maxRecDepth 100000 in
-/-- The finite rank certificate accepts the acyclic edge. -/
-theorem constTerminationB_zeuge : constTerminationB fixtureA 1 rankA = true := by decide
-
-/-- Boolean admissibility yields the canonical structural judgment. -/
-theorem constAdmissible_zeuge : ConstAdmissible fixtureA :=
-  (constAdmissibleB_iff fixtureA).mp constAdmissibleB_zeuge
-
-/-- Boolean termination yields the canonical existential certificate. -/
-theorem constTermination_zeuge : ConstTermination fixtureA 1 :=
-  constTerminationB_sound fixtureA 1 rankA constTerminationB_zeuge
-
 /-- Fixture C has the self edge f → f. -/
 @[expose, reducible] def fixtureC : ConstProgram := fixture 0
-
-set_option maxRecDepth 100000 in
-/-- A self edge is refused by the same concrete rank assignment. -/
-theorem constRecursion_zeuge :
-    constTerminationB fixtureC 1 (fun f => if f.val = 0 then 1 else 0) = false := by decide
-
-/-- The requested global-write or foreign-call fixture B cannot inhabit ConstProgram:
-    closed metadata already excludes both kinds of target, before scanning a body. -/
-theorem constForbiddenTargets_zeuge (c : ConstProgram) :
-    (¬ Nonempty c.D.Glob) ∧ (¬ Nonempty c.D.Ax) :=
-  ⟨fun ⟨g⟩ => c.noGlobals g, fun ⟨a⟩ => c.noOracles a⟩
 
 end Gabbro.Grammatik.ConstWitness

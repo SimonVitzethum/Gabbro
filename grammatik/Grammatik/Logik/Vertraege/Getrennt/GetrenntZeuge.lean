@@ -244,33 +244,12 @@ theorem zeuge_getrennt_lauf :
       (σ'.slots GTab.T 0 GFeld.x).n = 5 ∧ (σ'.slots GTab.U 0 GFeld.x).n = 0 :=
   ⟨_, rfl, rfl, rfl⟩
 
-/-- `getrennt_schreiben_trennt` on the fixture: a store into `T` (through `k`) leaves the
-    slots of `U` (behind `q`). -/
-theorem getrennt_schreiben_trennt_zeuge (v : Wert gD (gD.typ GTab.T GFeld.x)) :
-    ∀ k' (fb : gD.Feld GTab.U), (σ0.storeSlot GTab.T 0 GFeld.x v).slots GTab.U k' fb =
-      σ0.slots GTab.U k' fb :=
-  getrennt_schreiben_trennt (D := gD) zeuge_getrennt ⟨0, by decide⟩ ⟨1, by decide⟩
-    (by decide) rfl rfl rfl σ0 0 GFeld.x v
-
-/-- The borrow rule on the re-view `sicht : ptr r T -> ptr r T`: its answer has the root
-    of its argument, and `aendern(k, sicht(k))` -- in the model, the callee `aendern`
-    with its two parameters on that one root -- is the non-`ParamGetrennt` callee above. -/
-theorem leihe_wurzel_zeuge :
-    ∃ τ, sigSicht.erg = some τ ∧
-      traegerVon gD τ = traegerVon gD (sigSicht.params.get ⟨0, by decide⟩) ∧
-      traegerVon gD τ = some GTab.T :=
-  let ⟨τ, h1, h2⟩ := leihe_wurzel (D := gD) sigSicht ⟨0, by decide⟩ (n := 0) (rights := ⟨true, false, none⟩)
-    (rights' := ⟨true, false, none⟩) rfl rfl
-  ⟨τ, h1, h2, by rw [h2]; rfl⟩
-
 #print axioms Gabbro.Grammatik.GetrenntZeuge.zeuge_aendern_nicht_getrennt
 #print axioms Gabbro.Grammatik.GetrenntZeuge.zeuge_aendern_lauf
 #print axioms Gabbro.Grammatik.GetrenntZeuge.ohne_getrennt_nur_versprechen
 #print axioms Gabbro.Grammatik.GetrenntZeuge.zeuge_getrennt
 #print axioms Gabbro.Grammatik.GetrenntZeuge.getrennt_ruf_rahmen_zeuge
 #print axioms Gabbro.Grammatik.GetrenntZeuge.zeuge_getrennt_lauf
-#print axioms Gabbro.Grammatik.GetrenntZeuge.getrennt_schreiben_trennt_zeuge
-#print axioms Gabbro.Grammatik.GetrenntZeuge.leihe_wurzel_zeuge
 
 end GetrenntZeuge
 

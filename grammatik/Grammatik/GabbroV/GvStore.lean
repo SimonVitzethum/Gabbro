@@ -208,46 +208,12 @@ def kettenWelt : World kettenD :=
 /-- The edge field's type equation, by computation. -/
 theorem hfKante : kettenD.typ () .Kante = .opt (kettenD.count ()) := by rfl
 
-/-- Witness (non-degenerate): writing the counter at slot 1 leaves the
-    edge map at slot 0 untouched -- the generic commutation at work. -/
-theorem ketten_rahmen_zeuge :
-    kantenBild kettenD
-      (kettenWelt.storeSlot () 1 .Zaehler ⟨7, by decide, by decide⟩)
-      () .Kante hfKante 0
-      = kantenBild kettenD kettenWelt () .Kante hfKante 0 :=
-  kantenBild_slotfeld_anders kettenWelt () .Kante hfKante 0 1 .Zaehler _
-    (Or.inl (by decide))
-
-/-- The write takes effect: clearing the edge at slot 0 empties it. -/
-theorem ketten_schreibt_zeuge :
-    ((kantenBild kettenD (kettenWelt.storeSlot () 0 .Kante none)
-      () .Kante hfKante 0).map Zahl.n)
-      = none := by
-  decide
-
 /-- Planted failure: a projection that ignores the edge-clearing write
     is refuted -- stale `some 1` against fresh `none`. -/
 theorem ketten_starr_widerlegt :
     ((kantenBild kettenD kettenWelt () .Kante hfKante 0).map Zahl.n)
       ≠ ((kantenBild kettenD (kettenWelt.storeSlot () 0 .Kante none)
         () .Kante hfKante 0).map Zahl.n) := by
-  decide
-
-/-- Witness (non-degenerate, part (a) capstone): 64 ticks from counter
-    0 keep the counter below 16 -- the `RufKette` instance at
-    `S := Zahl 0 255`, one lemma application. -/
-theorem ketten_tick_zeuge :
-    zahlInv (rufLauf (⟨64, zahlVor, zahlNach⟩ : RufKette (Zahl 0 255)) 64 0
-      ⟨0, by decide, by decide⟩)
-      = true :=
-  rufKette_invariant (S := Zahl 0 255) ⟨64, zahlVor, zahlNach⟩ zahlInv
-    zahl_tick_vertrag 64 0 _ (by decide) (by decide)
-
-/-- Witness (per-call contract on a real world): ticking the counter
-    cell of `kettenWelt` keeps it below 16. -/
-theorem ketten_tick_schritt_zeuge :
-    decide (((kettenWelt.storeSlot () 0 .Zaehler ⟨1, by decide, by decide⟩).slots
-      () 0 .Zaehler).n < 16) = true := by
   decide
 
 /-
@@ -275,6 +241,5 @@ theorem ketten_tick_schritt_zeuge :
 #print axioms kantenBild_tabelle_anders
 #print axioms kantenBild_slotfeld_anders
 #print axioms zahl_tick_vertrag
-#print axioms ketten_tick_zeuge
 
 end Gabbro.Grammatik.GabbroV

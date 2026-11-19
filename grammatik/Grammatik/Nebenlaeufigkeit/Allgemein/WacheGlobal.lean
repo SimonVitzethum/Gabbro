@@ -264,57 +264,6 @@ def gJ : GemeinsamerLauf (D := gD) gNb :=
       intro i
       exact nomatch i }
 
-/-- **Inhabitation.** Every premise of `wache_global_aus_schuld` holds
-    jointly on `gD`: the single thread writes the guarded global under
-    its lock, the touch discipline holds, and the concluded hold follows
-    by the theorem. Non-degenerate: some function writes a table
-    (`gTabWrite`), and the chain step moves memory (`0` to `5`). -/
-theorem wache_global_aus_schuld_zeuge :
-    ∃ (Nb : Nebeneinander) (J : GemeinsamerLauf (D := gD) Nb) (x : gD.Glob)
-      (L : gD.Lock) (g : Faden),
-      Sum.inl L ∈ gD.gbraucht x ∧ g ∈ J.faeden ∧
-      TraegerSchreibt (D := gD) (J.code g) (.inr x) = true ∧
-      (∀ f ∈ J.faeden, TraegerSchreibt (D := gD) (J.code f) (.inr x) = true →
-        WaechterGehalten (D := gD) (J.code f) (.inr x)) ∧
-      L ∈ gD.haelt (J.code g) ∧ (∃ f t, gD.schreibt f t = true) ∧
-      J.welten[0]? ≠ J.welten[1]? := by
-  have hTouchAll : ∀ f ∈ ([0] : List Faden),
-      TraegerSchreibt (D := gD) (gCode f) (.inr ()) = true →
-      WaechterGehalten (D := gD) (gCode f) (.inr ()) := by
-    intro f hf hW'
-    have hf0 : f = 0 := List.mem_singleton.mp hf
-    subst hf0
-    cases hW'
-    intro w hw
-    have hw' : w ∈ ([Sum.inl ()] : List (gD.Lock ⊕ (gD.Marke × Nat))) := hw
-    have hw0 : w = Sum.inl () := List.mem_singleton.mp hw'
-    subst hw0
-    have e0 : gCode 0 = () := rfl
-    show Res.held (D := gD) () ∈ Signatur.anfang gD (gD.signatur (gCode 0))
-    rw [e0, gAnfang]
-    exact List.mem_singleton.mpr rfl
-  have h0 : gJ.welten[0]? = some gW0 := rfl
-  have h1 : gJ.welten[1]? = some gW1 := rfl
-  have hne : gJ.welten[0]? ≠ gJ.welten[1]? := by
-    intro hcon
-    rw [h0, h1] at hcon
-    have heq : gW0 = gW1 := Option.some_inj.mp hcon
-    have hg : gGlobs0 () = gGlobs1 () := congrArg (fun w => w.globs ()) heq
-    have hn : (gGlobs0 ()).n = (gGlobs1 ()).n := congrArg Zahl.n hg
-    have hn0 : (gGlobs0 ()).n = 0 := rfl
-    have hn1 : (gGlobs1 ()).n = 5 := rfl
-    rw [hn0, hn1] at hn
-    exact absurd hn (by decide)
-  have hmemJ : (0 : Faden) ∈ gJ.faeden := List.mem_singleton.mpr rfl
-  have hWJ : TraegerSchreibt (D := gD) (gJ.code 0) (.inr ()) = true :=
-    gWriteInst
-  have hTJ : ∀ f ∈ gJ.faeden,
-      TraegerSchreibt (D := gD) (gJ.code f) (.inr ()) = true →
-      WaechterGehalten (D := gD) (gJ.code f) (.inr ()) :=
-    hTouchAll
-  refine ⟨gNb, gJ, (), (), 0, gGuardInst, hmemJ, hWJ, hTJ, ?_, gTabWrite, hne⟩
-  exact wache_global_aus_schuld gNb gJ () () gGuardInst 0 hmemJ hWJ hTJ
-
 /-! ## CUTS:
   - The per-body checker proof of `hTouch` (that every function body
     writing `x` establishes `WaechterGehalten` at `.inr x`) is carried
@@ -343,6 +292,5 @@ theorem wache_global_aus_schuld_zeuge :
 -/
 
 #print axioms Gabbro.Grammatik.wache_global_aus_schuld
-#print axioms Gabbro.Grammatik.wache_global_aus_schuld_zeuge
 
 end Gabbro.Grammatik

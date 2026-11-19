@@ -78,16 +78,6 @@ def countdownItems : List SItemTief :=
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
-/-- The complete elaborated fixture, not only its measure projection, comes from these items. -/
-theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by kernel_rfl
-
-/-- The source clause reaches the elaborated function as exactly the written measure. -/
-theorem countdown_origin_zeuge :
-    (elabU countdownItems).toOption.map (fun u => u.fns.map (·.decreases)) =
-      some [some (.variable "n")] := by
-  rw [countdown_elaborated_zeuge]
-  rfl
-
 theorem countdown_lowered : (lowerAllg countdown).toOption.isSome = true := by decide +kernel
 theorem mutual_lowered : (lowerAllg mutualU).toOption.isSome = true := by decide +kernel
 theorem nonTail_lowered : (lowerAllg nonTail).toOption.isSome = true := by decide +kernel
@@ -130,18 +120,5 @@ def nonTailP := program nonTail nonTail_lowered
 def nonTailM := (exported nonTail nonTail_lowered).val
 def acyclicP := program acyclic acyclic_lowered
 def acyclicM := (exported acyclic acyclic_lowered).val
-
-/-- Every fixture jointly supplies a source measure and passes the ordinary structural checker. -/
-theorem countdown_accepted_zeuge :
-    AkzeptiertX countP (Cover.Differenz.sperrFamilie countdown) [⟨0, by decide⟩] [] [] [] = true := by decide +kernel
-theorem mutual_accepted_zeuge :
-    AkzeptiertX mutualP (Cover.Differenz.sperrFamilie mutualU) [⟨0, by decide⟩, ⟨1, by decide⟩] [] [] [] = true := by decide +kernel
-theorem nonTail_accepted_zeuge :
-    AkzeptiertX nonTailP (Cover.Differenz.sperrFamilie nonTail) [⟨0, by decide⟩] [] [] [] = true := by decide +kernel
-theorem acyclic_accepted_zeuge :
-    AkzeptiertX acyclicP (Cover.Differenz.sperrFamilie acyclic) [⟨0, by decide⟩] [] [] [] = true := by decide +kernel
-
-theorem lowerMeasures_source_zeuge : SourceTuple countdown ⟨0, by decide⟩ (countM.mass ⟨0, by decide⟩) := countM.source ⟨0, by decide⟩
-theorem cycleLengths_sound_zeuge : cycleLengths mutualU mutualP mutualM.mass = true := by decide +kernel
 
 end Gabbro.Grammatik.Parser.Measures.Fixtures

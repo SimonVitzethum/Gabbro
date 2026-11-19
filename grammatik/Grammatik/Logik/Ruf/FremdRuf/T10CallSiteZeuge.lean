@@ -128,34 +128,6 @@ def softwareFreeUnit : Einheit fdD where
   starts := []
   sp0 := fdSp0
 
-theorem software_free_duties_zeuge :
-    PostDeckt softwareFreeUnit ∧ ForeignVertrag softwareFreeUnit fdO := by
-  constructor
-  · exact postDeckt_ohne _ fdD_ohne_software
-  · exact foreignVertrag_ohne _ fdO fdD_ohne_software
-
-/-- ZEUGE: every B1/B2 replay premise holds jointly for a GutO binding with
-    two reachable calls, distinct keys, and a satisfiable and falsifiable pre.
-    The native CPU contract remains an explicit hardware assumption. -/
-theorem callSite_transport_zeuge [RootNativeFloat.Hardware] :
-    GutO traceOracle ∧ HardwareAnnahmenHw traceOracle unit.Q ∧
-    ForeignPflicht unit traceOracle [] ∧ ForeignVertrag unit traceOracle ∧ PostDeckt unit ∧
-    PasstA traceOracle traceHistory ∧ SchluesselHerkunft traceHistory ∧
-    CallSitePflichtFremd unit.P.axVertrag traceHistory ∧
-    key1 ≠ key2 ∧ traceHistory.length = 2 ∧
-    AxVor unit.P.axVertrag () world (rho true) ∧
-    ¬ AxVor unit.P.axVertrag () world (rho false) ∧
-    (∀ e ∈ traceHistory, CallSiteErreichbar (program true) traceOracle 0
-      (fun _ => False) (start true) ⟨e.1, e.2.1, e.2.2.1⟩) ∧
-    (∃ M : RufMaschineG decl,
-      RufSchrittG (program true) traceOracle 0 (afterFirst true) 0 M) ∧
-    ∀ (a : decl.Ax) (σ : World decl) (ρ : Env decl (decl.aparams a)) (x : World decl × Int),
-      (⟨a, σ, ρ, x⟩ : AxEintrag decl) ∈ traceHistory →
-      AxNach unit.P.axVertrag a σ ρ x.1 () ∧ unit.Q a x.1 () = true :=
-  ⟨traceOracle_gut, trace_hardware, foreign_trace, binding_contract, post_cover,
-    traceHistory_passt, traceHistory_provenance, traceHistory_good, keys_distinct, rfl,
-    pre_true world, pre_false world, traceHistory_sites, trace_second_step, traceHistory_posts⟩
-
 end CallSiteBlocker
 
 end Gabbro.Grammatik

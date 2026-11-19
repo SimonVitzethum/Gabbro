@@ -150,41 +150,6 @@ def Mw : World rufD → Env rufD [] → Prop := fun _ _ => True
 def weltFalschD : World rufD :=
   ⟨fun _ _ _ => false, fun g => Empty.elim g, []⟩
 
-/-- **Joint witness for `disj_kontinuation_einmal`.** All three premises
-    hold jointly on `rufD` with the silent block: the continuation from
-    `Mw` (`hoare_skip`), both implications (into `True`), both disjuncts
-    inhabited on opposite sides, each side refuting the other, and the
-    block actually running to a normal outcome. -/
-theorem disj_kontinuation_einmal_zeuge :
-    HTripel (V := vertragVon rufD rufIncD) (l := false) (Γ := []) (Λ := []) (Λ' := [])
-      rufOD 0 Rwit70 Block.nil Mw Mw ∧
-    (∀ σ ρ, Q1w σ ρ → Mw σ ρ) ∧ (∀ σ ρ, Q2w σ ρ → Mw σ ρ) ∧
-    (∃ σ ρ, Q1w σ ρ) ∧ (∃ σ ρ, Q2w σ ρ) ∧
-    (∃ σ ρ, Q1w σ ρ ∧ ¬ Q2w σ ρ) ∧ (∃ σ ρ, Q2w σ ρ ∧ ¬ Q1w σ ρ) ∧
-    (∃ σ ρ σ' ρ', execBlock (V := vertragVon rufD rufIncD) rufOD 0 Rwit70
-      (Block.nil : Block rufD (vertragVon rufD rufIncD) false [] [] [])
-      σ ρ = Ausgang.ok σ' ρ') := by
-  refine ⟨hoare_skip _ _ _ _, (fun _ _ _ => trivial), (fun _ _ _ => trivial),
-    ⟨rufWeltD, Env.nil, rfl⟩, ⟨weltFalschD, Env.nil, rfl⟩,
-    ⟨rufWeltD, Env.nil, rfl, by simp only [Q2w, rufWeltD, reduceCtorEq, not_false_eq_true]⟩,
-    ⟨weltFalschD, Env.nil, rfl, by simp only [Q1w, weltFalschD, reduceCtorEq, not_false_eq_true]⟩,
-    ⟨rufWeltD, Env.nil, rufWeltD, Env.nil, rfl⟩⟩
-
-/-- **Joint witness for `disj_monoton_staerker`.** `Q1w` implies the weak
-    `Mw`, `Q1w` is inhabited (the `true` side) while `Mw` also holds where
-    `Q1w` fails (the `false` side: strictly weaker), and the block runs. -/
-theorem disj_monoton_staerker_zeuge :
-    HTripel (V := vertragVon rufD rufIncD) (l := false) (Γ := []) (Λ := []) (Λ' := [])
-      rufOD 0 Rwit70 Block.nil Mw Mw ∧
-    (∀ σ ρ, Q1w σ ρ → Mw σ ρ) ∧
-    (∃ σ ρ, Q1w σ ρ) ∧ (∃ σ ρ, Mw σ ρ ∧ ¬ Q1w σ ρ) ∧
-    (∃ σ ρ σ' ρ', execBlock (V := vertragVon rufD rufIncD) rufOD 0 Rwit70
-      (Block.nil : Block rufD (vertragVon rufD rufIncD) false [] [] [])
-      σ ρ = Ausgang.ok σ' ρ') := by
-  refine ⟨hoare_skip _ _ _ _, (fun _ _ _ => trivial),
-    ⟨rufWeltD, Env.nil, rfl⟩, ⟨weltFalschD, Env.nil, trivial, by simp only [Q1w, weltFalschD, reduceCtorEq, not_false_eq_true]⟩,
-    ⟨rufWeltD, Env.nil, rufWeltD, Env.nil, rfl⟩⟩
-
 /-- **One witness link**: append a single trace event, touching nothing
     else. The trace grows, the slots do not. -/
 def Relw : World rufD → Env rufD [] → World rufD → Env rufD [] → Prop :=
@@ -274,8 +239,6 @@ theorem kette_block_invariant_zeuge :
 #print axioms Gabbro.Grammatik.GvSplits.disj_monoton_staerker
 #print axioms Gabbro.Grammatik.GvSplits.kette_invariant
 #print axioms Gabbro.Grammatik.GvSplits.kette_block_invariant
-#print axioms Gabbro.Grammatik.GvSplits.disj_kontinuation_einmal_zeuge
-#print axioms Gabbro.Grammatik.GvSplits.disj_monoton_staerker_zeuge
 #print axioms Gabbro.Grammatik.GvSplits.hSchrittw
 #print axioms Gabbro.Grammatik.GvSplits.invw_start
 #print axioms Gabbro.Grammatik.GvSplits.invw_falsch

@@ -91,15 +91,6 @@ theorem unvollstaendiger_rahmen_traegt_nichts (B : Rumpf) (W : Wurzel → Prop)
 
 /-! ## Witness: justification on a concrete body -/
 
-/-- Witness: the body accessing only `p` at place `7`, with frame `{p}`,
-    satisfies the `restrict` condition -- and adding an aliased `q` breaks
-    it. No lemma above quantifies over syntax, so the inhabitation obligation
-    is vacuous; this is a data-level witness. -/
-theorem restrict_zeuge :
-    restrictBedingung ⟨fun w => w = "p", fun _ => 7⟩ "p" := by
-  intro w hzug _
-  exact hzug
-
 /-- The converse witness, cleanly: with `q` accessing place `7` alongside
     `p`, the condition fails. -/
 theorem restrict_gegenzeuge :
@@ -123,7 +114,6 @@ theorem restrict_gegenzeuge :
 #print axioms Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff.restrict_gerechtfertigt
 #print axioms Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff.ohne_trennung_kein_restrict
 #print axioms Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff.unvollstaendiger_rahmen_traegt_nichts
-#print axioms Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff.restrict_zeuge
 #print axioms Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff.restrict_gegenzeuge
 
 end Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff

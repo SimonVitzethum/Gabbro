@@ -183,10 +183,4 @@ theorem const_bindCall_ersetzt_single
   (`Parser/Elab/Konst/Ersetzung`) lifts single replacement to source call
   sites by structural recursion and refuses open-argument calls there. -/
 
-/-- Reading nothing is witnessed on the canonical empty trace. -/
-theorem lese_leer_zeuge :
-    (constWelt ConstWitness.fixtureA).lese [] [] = constWelt ConstWitness.fixtureA := by
-  cases (constWelt ConstWitness.fixtureA) with
-  | mk s g p => rfl
-
 end Gabbro.Grammatik

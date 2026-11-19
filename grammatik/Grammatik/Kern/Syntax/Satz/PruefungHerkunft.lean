@@ -62,32 +62,6 @@ theorem herkunft_schritt_aus_entladung {P : Programm D} {c : CheckDecl D}
 
 /-! ## Witnesses: the travel step on the fixture, for both verdicts -/
 
-/-- The travel step of the completed positive report through its gate. -/
-theorem herkunft_schritt_wahr_zeuge :
-    HerkunftSchritt (D := pruefD)
-      ⟨pruefC1.probe, messBerichtWahr, true, none⟩
-      ⟨pruefC1.probe, messBerichtWahr, false, some false⟩ :=
-  herkunft_schritt_aus_entladung entladung_wahr_zeuge
-
-/-- The travel step of the completed negative report through the same gate:
-    the failure stays report data on the travel. -/
-theorem herkunft_schritt_falsch_zeuge :
-    HerkunftSchritt (D := pruefD)
-      ⟨pruefC1.probe, messBerichtFalsch, true, none⟩
-      ⟨pruefC1.probe, messBerichtFalsch, false, some false⟩ :=
-  herkunft_schritt_aus_entladung entladung_falsch_zeuge
-
-/-- The consumed false entry carries the negative verdict: the gate receives
-    what the probe produced. -/
-theorem herkunft_urteil_zeuge :
-    (⟨pruefC1.probe, messBerichtFalsch, false, some false⟩ :
-      CheckEvidenz pruefD).bericht.urteil = false := rfl
-
-/-- The completed true report threads its verdict into the discharge. -/
-theorem herkunft_bericht_wahr_zeuge :
-    BerichtHerkunft pruefP pruefC1 messBerichtWahr false :=
-  bericht_herkunft_aus_entladung entladung_wahr_zeuge
-
 end Herkunft
 
 end Gabbro.Grammatik

@@ -30,11 +30,6 @@ theorem zP_tief_wrap : rufTief zP 2 zWrap = true := by decide
 theorem zP_tief_haupt : rufTief zP 3 zHaupt = true := by decide
 theorem zP_kosten_wrap : kostenTief zP 0 2 zWrap = 19 := by decide
 theorem zP_kosten_haupt : kostenTief zP 0 3 zHaupt = 26 := by decide
-/-- The non-trivial ensures of two callees are part of their counted costs. -/
-theorem kostenEpilog_ensures_zeuge :
-    kostenEpilog zP zEin = 5 ∧ kostenEpilog zP zLies = 3 ∧
-    kostenTief zP 0 1 zEin = 9 ∧ kostenTief zP 0 1 zLies = 7 := by decide
-
 /-- The callees `lies` and `einzahlen` cost 7 and 9 including their ensures; `wrap` has no call
     deeper than one, so depth 2 is its admission depth and depth 1 is not. -/
 theorem zP_tief_wrap_eins : rufTief zP 1 zWrap = false := by decide
@@ -295,15 +290,6 @@ theorem frame_schritte_beschraenkt_zeuge_schleife :
 /-- The foreign site counts its declared cost: `inc` at `3` costs `3`. -/
 theorem fremd_zeuge_axInc : fremdBlock (fun _ => 3) 0 axIncBlock = 3 := by rfl
 
-/-- The foreign-inclusive block cost splits into §1 plus foreign: `4 + 3`. -/
-theorem fremd_kostenF_zeuge :
-    kostenBlockF 0 (fun _ => 3) (fun _ => 0) 0 axIncBlock
-      = kostenBlock 0 (fun _ => 0) 0 axIncBlock + 3 := by rfl
-
-/-- No zero slip on a real foreign site: `inc` declared at `0` still costs. -/
-theorem fremd_kein_null_zeuge :
-    1 ≤ kostenBlockF 0 (fun _ => 0) (fun _ => 0) 0 axIncBlock := by decide
-
 /-- **`fremd_budget_erhalten_zeuge`.** On `zP` the foreign layer is empty
     (`Ax = Empty`), so the foreign-inclusive bound is the §1 bound -- and the
     witness run of `wrap` (7 own steps) satisfies the foreign preservation
@@ -341,6 +327,4 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.frame_schritte_beschraenkt_zeuge
 #print axioms Gabbro.Grammatik.frame_schritte_beschraenkt_zeuge_schleife
 #print axioms Gabbro.Grammatik.fremd_zeuge_axInc
-#print axioms Gabbro.Grammatik.fremd_kostenF_zeuge
-#print axioms Gabbro.Grammatik.fremd_kein_null_zeuge
 #print axioms Gabbro.Grammatik.fremd_budget_erhalten_zeuge

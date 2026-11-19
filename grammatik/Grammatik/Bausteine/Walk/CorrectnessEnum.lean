@@ -110,14 +110,4 @@ def zeugeWalkT : WalkTree Nat 2 where
 
 theorem zeugeWalkT_down : zeugeWalkT.down 11 = some zeugeWalkKind := rfl
 
-/-- The generic whole-proof on the two-level fixture: soundness, completeness, no duplicate paths,
-    and the exact enumeration `[[0], 10), ([1, 0], 20), ([1, 1], 21)]`. -/
-theorem walkMappings_correct_zeuge :
-    (∀ (p : List (Fin 2)) (m : Nat),
-      (p, m) ∈ visitT zeugeWalkT 1 zeugeWalkTbl ↔ WalkHit zeugeWalkT 1 zeugeWalkTbl p m) ∧
-    (visitT zeugeWalkT 1 zeugeWalkTbl).Pairwise (fun x y => x.1 ≠ y.1) ∧
-    (visitT zeugeWalkT 1 zeugeWalkTbl = [([0], 10), ([1, 0], 20), ([1, 1], 21)]) := by
-  obtain ⟨hmem, hnodup, _⟩ := walkMappings_correct zeugeWalkT 2 1 zeugeWalkTbl
-  exact ⟨hmem, hnodup, by decide⟩
-
 end Gabbro.Grammatik

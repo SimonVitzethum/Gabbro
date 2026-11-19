@@ -214,9 +214,6 @@ theorem packBytes_cells (n b c : Nat) (h : b ≤ 8 * c) :
   simp only [Grammatik.Speichermodell.Darstellung.zellenBytes] at hle
   exact hle
 
-/-- A written 2-bit cell reads back. -/
-theorem cells_zeuge : getCell (setCell 0 2 5 3) 2 5 = 3 := by decide
-
 /-- A neighbouring write keeps the cell. -/
 theorem cells_zeuge_ne :
     getCell (setCell (setCell 0 2 5 3) 2 6 1) 2 5 = 3 := by decide
@@ -259,5 +256,4 @@ CUTS: what is not proved or not covered.
 #print axioms Grammatik.Speichermodell.DarstellungTy.packBytes_cells
 #print axioms Grammatik.Speichermodell.DarstellungTy.encN_lt_int59
 #print axioms Grammatik.Speichermodell.DarstellungTy.encN_lt_opt3
-#print axioms Grammatik.Speichermodell.DarstellungTy.cells_zeuge
 #print axioms Grammatik.Speichermodell.DarstellungTy.cells_zeuge_ne

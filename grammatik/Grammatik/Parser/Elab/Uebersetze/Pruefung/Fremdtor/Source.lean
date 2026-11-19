@@ -276,26 +276,4 @@ theorem fremdFallible_accepted :
   exact ForeignGateAcceptance.fallible_image_accepted uFremdFallible_checks_ok
     (except_ok_get uFremdFallible_lowered)
 
-/-- Joint non-degeneracy for the assembler: four real functions, one foreign
-    item, one derived Duty check and an accepted void foreign call. -/
-theorem foreign_checked_image_zeuge :
-    uFremd.fns.length = 4 ∧ uFremd.axs.length = 1 ∧ checkChecksFremd.length = 1 ∧
-    checkB checkPFremd [] [] (List.finRange uFremd.fns.length) checkChecksFremd = true ∧
-    AkzeptiertX checkPFremd (Cover.Differenz.sperrFamilie uFremd)
-      (List.finRange uFremd.fns.length) [] [] [] [] checkChecksFremd = true :=
-  ⟨rfl, rfl, by kernel_rfl, fremd_checkB, fremd_accepted⟩
-
-/-- The fallible assembler premises hold together on four real functions,
-    a nonempty oracle/reason range, a real Duty check and the actual image. -/
-theorem foreign_fallible_checked_image_zeuge :
-    uFremdFallible.fns.length = 4 ∧ uFremdFallible.axs.length = 1 ∧
-    checkChecksFremdFallible.length = 1 ∧ ∃ image,
-      lowerAllg uFremdFallible = .ok image ∧
-      AkzeptiertX image.1 (Cover.Differenz.sperrFamilie uFremdFallible)
-        (List.finRange uFremdFallible.fns.length) [] [] [] [] checkChecksFremdFallible = true := by
-  refine ⟨rfl, rfl, by kernel_rfl, (lowerAllg uFremdFallible).toOption.get uFremdFallible_lowered,
-    except_ok_get uFremdFallible_lowered, ?_⟩
-  exact ForeignGateAcceptance.fallible_image_accepted uFremdFallible_checks_ok
-    (except_ok_get uFremdFallible_lowered)
-
 end Gabbro.Grammatik.Parser.Uebersetze

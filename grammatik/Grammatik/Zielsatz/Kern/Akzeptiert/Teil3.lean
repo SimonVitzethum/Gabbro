@@ -58,15 +58,6 @@ structure PageAdmission (g : D.Glob) where
   state : BackingState
   startResident : state = .resident
 
-/-- The admission is inhabited wherever a declaration types a global as
-    a zero-initialized static array: the fixture the generic lowering
-    proof will instantiate. A closed fixture needs a concrete
-    array-static declaration, which the lowering proof owns. -/
-theorem resetAdmission_zeuge {g : D.Glob}
-    (harr : D.gtyp g = .arr (.int 0 255) 4) :
-    ResetAdmission g :=
-  ⟨4, .int 0 255, harr, .intZero (by omega) (by omega)⟩
-
 #print axioms resetAdmissionB_iff
 
 end ResetAdmission

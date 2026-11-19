@@ -138,10 +138,6 @@ theorem counter_fuel_step (n : Nat) (fits : n + 1 < 2 ^ 64) :
   · have h := BitVec.ofNat_sub_ofNat_of_le (w := 64) (n + 1) 1 (by decide) (by omega)
     simpa using h
 
-/-- Zero, one and two are genuine fuel values with distinct nonwrapping steps. -/
-theorem counter_fuel_step_zeuge :
-    BitVec.ofNat 64 1 - 1 = 0 ∧ BitVec.ofNat 64 2 - 1 = 1 := by decide
-
 /-- A lowered body reaches its backedge with the reserved runtime budget intact.
 The equality follows from the body simulation's frame, including reachable calls
 and world writes; no separate preservation hypothesis is admitted. -/

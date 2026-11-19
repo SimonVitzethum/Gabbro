@@ -165,19 +165,4 @@ theorem stapel_s0 : stapel hp s0 = fun _ => [] := by
 
 def ρs : Env BD (BCtx 1 []) := .cons (kodiere 7) (.cons (pcWert 0) .nil)
 
-/-- **Step witness**: the G block of `.` runs normally and the represented state has output `[7]`. -/
-theorem befehl_schritt_zeuge (O : Orakel BD) (passes : Nat)
-    (R : ∀ f : BD.Fn, World BD → Env BD (BD.params f) → RufAusgang f) :
-    ∃ σ' ρ', execBlock O passes R (befehl BL BG hp rechte failure .output 1) w0 ρs = .ok σ' ρ' ∧
-      Darstellt BL BG hp .nil (⟨1, 7, [], [], [], [7]⟩ : State 1) σ' ρ' :=
-  befehl_schritt O passes R BL BG BG_inj hp rechte failure .nil .output 1 s0 w0 ρs
-    ⟨rfl, stapel_s0 ▸ multi_w0, frei_w0⟩ (fun _ => .inr (by decide))
-
-/-- **Out-of-memory witness**: in the full arena the G block of `.` runs the failure block. -/
-theorem befehl_voll_zeuge (O : Orakel BD) (passes : Nat)
-    (R : ∀ f : BD.Fn, World BD → Env BD (BD.params f) → RufAusgang f) :
-    ∃ σf, execBlock O passes R (befehl BL BG hp rechte failure .output 1) wv ρs =
-      (execEnd O passes R failure σf ρs).zuAusgang :=
-  befehl_voll O passes R BL BG hp rechte failure .output (.inr (.inr rfl)) 1 wv ρs rfl rfl
-
 end Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses

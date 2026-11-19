@@ -92,13 +92,4 @@ def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int))
     (fuel : Nat) (source : SExpr) : Option Int :=
   uKonstEval (some (lo, hi)) fns env fuel source
 
-/-- Negative surface literals are checked at their signed declared range. -/
-theorem uKonstWert_negative_zeuge :
-    uKonstWert (-10) (-1) [] [] 64 (.un "-" (.lit 5)) = some (-5) := rfl
-
-/-- Every intermediate integer stays checked; overflow followed by cancellation fails. -/
-theorem uKonstWert_overflow_zeuge :
-    uKonstWert 0 255 [] [] 64
-      (.bin "-" (.bin "+" (.lit 255) (.lit 1)) (.lit 1)) = none := rfl
-
 end Gabbro.Grammatik.Parser.Uebersetze

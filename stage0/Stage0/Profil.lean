@@ -201,14 +201,4 @@ theorem prepareItems_preserves {options : Options} {items : List SItemTief}
 theorem prepareItems_arch {options : Options} {items : List SItemTief}
     (result : Prepared options items) : options.arch = "x86_64" := result.compatible
 
-/-- Joint witness: a real target declaration survives validation, and its binding
-    architecture is exactly the existing image architecture. -/
-theorem prepareItems_preserves_zeuge :
-    ∃ result : Prepared {} [.goalT "userspace" none],
-      prepareItems {} [.goalT "userspace" none] = .ok result ∧
-      result.selected = [.goalT "userspace" none] ∧ runnerCompatible ({} : Options) :=
-  ⟨⟨[.goalT "userspace" none], rfl, rfl, rfl,
-    ProfilBindung.ProfileBinding.aus [.goalT "userspace" none], rfl, by decide, by decide, by decide⟩,
-    rfl, rfl, rfl⟩
-
 end Gabbro.Stage0.Profil

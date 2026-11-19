@@ -74,32 +74,6 @@ theorem position_root {lo hi : Int} (input : Expr D Γ Λ (.int lo hi))
   have log := (Nat.log2_lt (by omega : n ≠ 0)).mpr bound
   exact position_value input σ₀ σ ρ n 0 fuel value positive (by omega) (by omega)
 
-/-- Nonzero values at and around each pivot jointly inhabit the recursive
-    search's value premises. The checked source exporter is not involved. -/
-theorem position_value_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
-    ∀ (n : Nat), n ∈ [1, 2 ^ 55, 2 ^ 64 - 1, 2 ^ 64, 2 ^ 80 + 1] →
-      0 < n ∧ n < 2 ^ 81 ∧
-      (eval σ₀ (position (Expr.lit (Λ := Λ) (n : Int)) 0 80) σ ρ).n = (n.log2 : Int) := by
-  intro n member
-  have bound : 0 < n ∧ n < 2 ^ 81 := by
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl <;> decide
-  exact ⟨bound.1, bound.2, position_root _ σ₀ σ ρ n 80 rfl bound.1 bound.2⟩
-
 #print axioms position_value
-#print axioms position_value_zeuge
 
-/-- Zero is excluded only from the mathematical logarithm theorem. The
-    total emitted search itself returns zero, so small-value dispatch never
-    needs an invalid positive-integer input or a special source assumption. -/
-theorem position_zero_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
-    (eval σ₀ (position (Expr.lit (Λ := Λ) 0) 0 3) σ ρ).n = 0 ∧
-    (eval σ₀ (position (Expr.lit (Λ := Λ) 1) 0 3) σ ρ).n = 0 := by
-  constructor
-  · simp [position.eq_def, eval, wahr?, Zahl.weiter]
-  · have logOne : (1 : Nat).log2 = 0 := by decide
-    simpa only [logOne, Int.natCast_zero] using
-      (position_root (Expr.lit (Λ := Λ) 1) σ₀ σ ρ 1 3 rfl (by decide) (by decide))
-
-#print axioms position_zero_zeuge
 end Gabbro.Stage0.Senke.WideFloat

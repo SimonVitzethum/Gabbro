@@ -39,29 +39,6 @@ theorem lowE_unsigned64 (n : Int) (_ : inU n n = true) :
     ∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit n) d = some (c, top) :=
   lowE_literal L d n
 
-theorem lowE_unsigned64_zeuge :
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ)
-      (.lit 18446744073709551615) d = some (c, top)) ∧
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ)
-      (.lit 9223372036854775808) d = some (c, top)) :=
-  ⟨lowE_unsigned64 L d _ (by decide), lowE_unsigned64 L d _ (by decide)⟩
-
-/-- Joint boundary witnesses use the same compiler equation as the generic soundness theorem. -/
-theorem lowE_signed64_zeuge :
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-9223372036854775808)) d = some (c, top)) ∧
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit 9223372036854775807) d = some (c, top)) ∧
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-4294967297)) d = some (c, top)) :=
-  ⟨lowE_signed64 L d _ (by decide), lowE_signed64 L d _ (by decide), lowE_signed64 L d _ (by decide)⟩
-
-/-- The immediate guard is crossed at the signed32 boundary, and literals beyond the 64-bit scalar
-    ranges are no longer refused: they materialize as multiword values. -/
-theorem lowE_literal_boundaries_zeuge :
-    lit32 (-9223372036854775808) = false ∧ lit32 9223372036854775807 = false ∧
-    lit32 (-4294967297) = false ∧
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit 18446744073709551616) d = some (c, top)) ∧
-    (∃ c top, lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-9223372036854775809)) d = some (c, top)) :=
-  ⟨by decide, by decide, by decide, lowE_literal L d _, lowE_literal L d _⟩
-
 @[lowE_eqs] theorem lowE_tru :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.tru) d =
     (some ([ci 1 d 1 0], d + 1)) := by rfl

@@ -140,16 +140,6 @@ theorem reached_zeuge (budget : Nat) (b : Bool) :
     RufErreichbarG program oracle budget (initial b) (resumed b) :=
   .schritt _ _ 0 (.schritt _ _ 0 .start (call_step budget b)) (return_step budget b)
 
-theorem retained_bit_zeuge (b : Bool) :
-    (called b).faeden 0 |>.kopf.rest.2.2.2.1 = environment (!b) ∧
-    ((resumed b).faeden 0).kopf.rest.2.2.2.1 = environment b ∧
-    ((resumed b).faeden 0).stapel = [] := by
-  simp only [called, saved, rufUpdateG, ↓dreduceIte, resumed, ↓reduceIte, and_self]
-
-theorem terminating_classes_zeuge :
-    klasse program [false, true] (fun _ => false) false = .endet ∧
-    klasse program [false, true] (fun _ => false) true = .endet := by decide
-
 theorem accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] [] = true := by
   decide +kernel

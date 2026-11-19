@@ -64,13 +64,4 @@ theorem bild_auto_depth {D : Deklaration} {passes : Nat} {P : Programm D}
         repeat' split
         all_goals intro emitted; cases emitted
 
-/-- Small frames retain 4 MiB; wide frames get 65 complete levels; an explicit
-    capacity is never silently enlarged. -/
-theorem stackReserve_zeuge :
-    stackReserve 0 170 32 = stackReserveFloor ∧
-    stackReserve 0 40970 32 = 2663054 ∧
-    depthOf (stackReserve 0 40970 32) 40970 = 64 ∧
-    stackReserve 1024 40970 32 = 1024 := by
-  decide +kernel
-
 end Gabbro.Stage0.Senke

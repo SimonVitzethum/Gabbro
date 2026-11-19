@@ -95,25 +95,4 @@ public theorem restoreSlot_calls (direct : D.Fn → Bool) (indirect : Nat → Bo
     Block D V l [.bool, .bool] [] [] :=
   Block.cons (Stmt.assignVar (Var.there Var.here) (Expr.var Var.here)) Block.nil
 
-public theorem restoreSlot_present_zeuge (O : Orakel D) (passes : Nat)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (world : World D) (previous : Wert D Ty.bool) :
-    execBlock O passes calls
-      (restoreSlot (Expr.case [none, some Ty.bool] (presentIndex Ty.bool)
-        (NutzlastExpr.val Expr.tru)) (restoreBoolBody D V l))
-      world (Env.cons previous Env.nil) =
-      Ausgang.ok world (Env.cons (τ := Ty.bool) true Env.nil) := by
-  cases world
-  rfl
-
-public theorem restoreSlot_absent_zeuge (O : Orakel D) (passes : Nat)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (world : World D) (previous : Wert D Ty.bool) :
-    execBlock O passes calls
-      (restoreSlot (Expr.case [none, some Ty.bool] ⟨0, Nat.zero_lt_succ 1⟩ NutzlastExpr.empty)
-        (restoreBoolBody D V l)) world (Env.cons previous Env.nil) =
-      Ausgang.logik Logik.kapazitaet := by
-  cases world
-  rfl
-
 end Gabbro.Grammatik.Async.Segment

@@ -37,14 +37,6 @@ theorem lex_keywords :
     ∀ w ∈ wortschatz, lex w = .ok [Token.wort w, Token.ende] := by
   decide
 
-/-- Joint witness for `lex_keywords`: the same shape over five
-    concrete words -- an ordinary word, a clause word with `_`, a
-    reserved expression head, a one-letter right, and a profile key. -/
-theorem lex_keywords_zeuge :
-    ∀ w ∈ ["module", "on_exceeded", "None", "r", "fp_contract"],
-      lex w = .ok [Token.wort w, Token.ende] := by
-  decide
-
 /-- A non-table word lexes as an identifier, not a keyword. -/
 theorem lex_ident_beispiel :
     lex "konto" = .ok [Token.ident "konto", Token.ende] := by

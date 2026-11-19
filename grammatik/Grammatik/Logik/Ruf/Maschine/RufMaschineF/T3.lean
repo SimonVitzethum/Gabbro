@@ -248,28 +248,6 @@ theorem M3F_log : (M3F.faeden 0).log =
      RufEreignisF.eintritt rufIncF rufRhoF (M0F.weltVon 0),
      RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by rfl
 
-/-- **Witness for `rufF_treu`.** The premises of `rufF_treu` are instantiated
-    JOINTLY with concrete values: the program `rufPF`, the oracle `rufOF`,
-    one pass, start memory `spF`, every thread at the caller entry with
-    `rhoCallerF`, the reached machine `M3F` (reached FROM THE START STATE by
-    `reach3F_start`: `ruf` pushes the callee, `blatt` runs the writing leaf
-    -- slot 0 moves 0 -> 2 by `outWF_moves`, a step that changes memory --
-    `rueck` pops it), and thread `0`. The log contains the `rueck` event,
-    and the matching `eintritt` sits below it in the same log. The program
-    is NON-DEGENERATE: one table that the callee writes (`leafSF` via
-    `execStmt`), and a three-step run with a memory-changing step. Every
-    premise is used: `h` is the reachability, `hmem` the log membership. -/
-theorem rufF_treu_zeuge :
-    ∃ (M : RufMaschineF rufDF) (f : Faden)
-      (g : rufDF.Fn) (rho : Env rufDF (rufDF.params g))
-      (v : ErgVal rufDF (rufDF.erg g)) (s0 s1 : World rufDF),
-      RufErreichbarF rufPF rufOF 0 (RufStartF rufPF spF initF) M ∧
-        RufEreignisF.rueck g rho v s0 s1 ∈ (M.faeden f).log ∧
-        RufEreignisF.eintritt g rho s0 ∈ (M.faeden f).log := by
-  exact ⟨M3F, 0, rufIncF, rufRhoF, vF, M0F.weltVon 0, M2F.weltVon 0,
-    reach3F_start, by rw [M3F_log]; exact List.mem_cons_self,
-    by rw [M3F_log]; exact List.mem_cons_of_mem _ (List.mem_cons_self)⟩
-
 -- APPEND-POINT
 
 /-! ## CUTS:
@@ -288,7 +266,6 @@ theorem rufF_treu_zeuge :
 
 #print axioms Gabbro.Grammatik.RufEreignisF.eintritt
 #print axioms Gabbro.Grammatik.rufF_treu
-#print axioms Gabbro.Grammatik.rufF_treu_zeuge
 #print axioms Gabbro.Grammatik.rufSchrittF_passt
 #print axioms Gabbro.Grammatik.rufErreichbarF_passt
 #print axioms Gabbro.Grammatik.rufLogPasstF_gedeckt

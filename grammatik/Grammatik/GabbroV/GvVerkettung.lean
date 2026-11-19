@@ -184,42 +184,6 @@ theorem randOk_gibt_hrand (nxt : Nat → Option Nat) (n : Nat)
   rw [hjm] at hmem
   exact of_decide_eq_true hmem
 
-/-- Witness (`kette_schranke` at work): on the three-chain every premise
-    discharges -- `0 < 3` by `decide`, `hrand` by the bridge from the
-    checked `kette3_innen` -- and the stop disjunct fires. -/
-theorem kette_schranke_zeuge :
-    (∃ k, k ≤ 3 ∧ geh kette3 k 0 = none) ∨
-      (∃ i j, i < j ∧ j ≤ 3 ∧
-        wert kette3 3 0 i = wert kette3 3 0 j ∧ wert kette3 3 0 i < 3) :=
-  kette_schranke kette3 3 0 (by decide)
-    (randOk_gibt_hrand kette3 3 kette3_innen)
-
-/-- Witness (`kettePop_erhaelt_azyklisch` at work): popping the head of
-    the three-chain keeps it acyclic, from the checked `kette3_azyklisch`. -/
-theorem kettePop_erhaelt_azyklisch_zeuge :
-    ketteAzyklisch (kettePop kette3 0) 3 = true :=
-  kettePop_erhaelt_azyklisch kette3 3 0 kette3_azyklisch
-
-/-- Witness (`schubladenSatz` at work): three values below two repeat. -/
-theorem schubladenSatz_zeuge :
-    ∃ i j, i < j ∧ j < 2 + 1 ∧
-      (fun k => if k = 2 then 0 else k) i =
-      (fun k => if k = 2 then 0 else k) j :=
-  schubladenSatz _ 2 (by
-    intro k hk
-    have h3 : k = 0 ∨ k = 1 ∨ k = 2 := by omega
-    cases h3 with
-    | inl h => simp only [h, reduceCtorEq, ↓reduceIte, Nat.zero_lt_succ]
-    | inr h =>
-        cases h with
-        | inl h => simp only [h, Nat.reduceEqDiff, ↓reduceIte, Nat.lt_add_one]
-        | inr h => simp only [h, ↓reduceIte, Nat.zero_lt_succ])
-
-/-- Witness (`geh_bereich` at work): two steps from 0 stay below 3. -/
-theorem geh_bereich_zeuge : 2 < 3 :=
-  geh_bereich kette3 3 0 (by decide)
-    (randOk_gibt_hrand kette3 3 kette3_innen) 2 2 (by decide)
-
 /-
    CUTS: what is not proved.
    - Proved here: the drawer principle (`schubladenSatz`); the walk bound
@@ -253,8 +217,5 @@ theorem geh_bereich_zeuge : 2 < 3 :=
 #print axioms kettePop_simuliert
 #print axioms kettePop_erhaelt_azyklisch
 #print axioms randOk_gibt_hrand
-#print axioms kette_schranke_zeuge
-#print axioms kettePop_erhaelt_azyklisch_zeuge
-#print axioms schubladenSatz_zeuge
 
 end Gabbro.Grammatik.GabbroV

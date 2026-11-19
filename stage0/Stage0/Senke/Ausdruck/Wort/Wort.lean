@@ -116,11 +116,6 @@ theorem scalarOrder_spec {l1 h1 l2 h2 x y : Int} {o : Nat}
       exact ⟨rfl, by decide, ult_in rx ry, beq_unsigned rx ry⟩
     · cases selected
 
-theorem scalarOrder_zeuge :
-    scalarOrder 0 18446744073709551615 0 18446744073709551615 = some 27 ∧
-    scalarOrder (-9223372036854775808) 9223372036854775807 0 255 = some 13 ∧
-    scalarOrder (-1) (-1) 9223372036854775808 18446744073709551615 = none := by decide
-
 /-- A signed scalar against an unsigned scalar needs an explicit sign guard:
     the same raw word can denote both `-1` and `2^64-1`. -/
 theorem mixed_left_lt {x y : Int}

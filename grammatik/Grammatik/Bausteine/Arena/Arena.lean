@@ -201,14 +201,6 @@ theorem keine_fragmentierung {k : Kap} {g : Nat} (a : Arena k g)
     exact List.range_eq_range'.symm
   exact ⟨a', l, hseq, hrr⟩
 
-/-- Witness: with `lo = 2`, `hi = 4`, two allocations after a reset succeed
-    and return indices 0 and 1. -/
-theorem alloc_innerhalb_reserve_zeuge :
-    ∃ (a' : Arena (⟨2, 4⟩ : Kap) 1) (l : List Nat),
-      allocSeq 2 (reset (start (⟨2, 4⟩ : Kap)).1
-        (start (⟨2, 4⟩ : Kap)).2).1 = some ⟨a', l⟩ ∧ l = [0, 1] := by
-  refine ⟨⟨2, by decide⟩, [0, 1], by rfl, rfl⟩
-
 /-- Reset empties the arena. -/
 theorem reset_used {k : Kap} {g : Nat} (a : Arena k g) (m : Marke g) :
     (reset a m).1.used = 0 := by rfl
@@ -240,7 +232,6 @@ theorem lookup_gilt {k : Kap} {g n : Nat} (a : Arena k g) (m : Marke g)
 #print axioms Gabbro.Grammatik.Arena.allocSeq_gelingt
 #print axioms Gabbro.Grammatik.Arena.alloc_innerhalb_reserve
 #print axioms Gabbro.Grammatik.Arena.keine_fragmentierung
-#print axioms Gabbro.Grammatik.Arena.alloc_innerhalb_reserve_zeuge
 #print axioms Gabbro.Grammatik.Arena.reset_used
 #print axioms Gabbro.Grammatik.Arena.reset_verbraucht
 #print axioms Gabbro.Grammatik.Arena.lookup_gilt

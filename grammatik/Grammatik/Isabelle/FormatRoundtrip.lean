@@ -167,19 +167,6 @@ theorem eintrittspruefung_deckt_jeden_zugriff (fs : List Feld) (n : Nat)
 
 /-! ## Witness: roundtrip on a concrete buffer -/
 
-/-- Witness: writing `[7, 8]` at offset `4` and reading it back, on the zero
-    buffer -- plus the entry check covering offset `5`. No lemma above
-    quantifies over syntax, so the inhabitation obligation is vacuous; this is
-    a data-level witness for the roundtrip. -/
-theorem roundtrip_zeuge :
-    liest (schreibt (fun _ => 0) ⟨4, 2⟩ [7, 8]) ⟨4, 2⟩ = [7, 8] ∧
-    (∀ n, passt [⟨4, 2⟩] n → 4 + 2 ≤ n → 5 < n) := by
-  constructor
-  · exact roundtrip _ _ _ rfl
-  · intro n hpass _
-    exact eintrittspruefung_deckt_jeden_zugriff [⟨4, 2⟩] n ⟨4, 2⟩ 5
-      hpass (by simp only [List.mem_cons, List.not_mem_nil, or_false]) ⟨by decide, by decide⟩
-
 /-! ## Bridge
 
   The Lean semantics already ties `format` fields to the model: a `format` is
@@ -196,6 +183,5 @@ theorem roundtrip_zeuge :
 #print axioms Gabbro.Grammatik.Isabelle.FormatRoundtrip.roundtrip
 #print axioms Gabbro.Grammatik.Isabelle.FormatRoundtrip.schreiben_stoert_getrennte_felder_nicht
 #print axioms Gabbro.Grammatik.Isabelle.FormatRoundtrip.eintrittspruefung_deckt_jeden_zugriff
-#print axioms Gabbro.Grammatik.Isabelle.FormatRoundtrip.roundtrip_zeuge
 
 end Gabbro.Grammatik.Isabelle.FormatRoundtrip

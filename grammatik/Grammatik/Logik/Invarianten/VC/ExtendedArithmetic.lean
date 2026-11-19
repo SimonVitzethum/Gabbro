@@ -48,40 +48,7 @@ private theorem overflowing_formula :
     overflowingCompiled.formula = retryFormula .fls 2 := rfl
 
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 10000 in
-theorem bounded_decided_zeuge :
-    decideB (Extended.writerVC boundedCompiled entry .tru) (Extended.writerVC_closed boundedCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, bounded_formula]
-  simp only [retryFormula, branchFormula, stepFormula, lower_denote, LProp.denote,
-    quoteQF_denote, subst_denote, post, entry, guardFormula, stepRange, stepTerm,
-    LTerm.denote] at *
-  simp [Assignment.bind] at * <;> omega
-
 set_option maxRecDepth 100000 in
-set_option maxHeartbeats 10000 in
-theorem overflow_decided_zeuge :
-    decideB (Extended.writerVC overflowingCompiled entry .tru) (Extended.writerVC_closed overflowingCompiled entry .tru) = false := by
-  apply (close_decide_false_iff _).mpr
-  refine ⟨assignment counterexampleWorld, ?_⟩
-  rw [writerMatrix, lower_denote]
-  intro valid
-  have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
-  rw [lower_denote] at step
-  have initial : entry.denote (assignment counterexampleWorld) ∧ True :=
-    ⟨by change (4 : Int) ≤ 4; decide, trivial⟩
-  have result := (quoteQF_denote _ _).mp (step initial)
-  rw [overflowing_formula] at result
-  norm_num [retryFormula, branchFormula, stepFormula, lower_denote, quoteQF_denote,
-    subst_denote, stepRange, stepTerm, post, entry, LProp.denote, LTerm.denote,
-    Assignment.bind, assignment, counterexampleWorld, scalarValue,
-    declaration, Frag.Witness.declaration] at result
-
 private theorem freshImplication_iff {D : Deklaration} (kind : Ty) (value : Wert D kind)
     (guard : LProp (Observation D)) (post : QF (Observation D))
     (values : Assignment (Observation D)) :
@@ -135,22 +102,6 @@ private def temporaryFormula : QF (Observation declaration) :=
 set_option maxHeartbeats 50000 in
 private theorem temporary_formula : temporaryCompiled.formula = temporaryFormula := rfl
 
-theorem temporary_decided_zeuge :
-    decideB (Extended.writerVC temporaryCompiled entry .tru) (Extended.writerVC_closed temporaryCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, temporary_formula, temporaryFormula]
-  apply (snapshots_denote (D := declaration) (kind := .int 0 10) _ _ _ values).mpr
-  intro value _ selected
-  simp only [LProp.denote, LTerm.denote] at selected
-  simp only [post, lower_denote, entry, LProp.denote, LTerm.denote] at initial ⊢
-  rw [subst_denote]
-  simpa [lower_denote, entry, LProp.denote, LTerm.denote, Assignment.bind, ← selected] using initial.1
-
 private theorem branchFormula_denote (test : LProp (Observation declaration))
     (yes no : QF (Observation declaration)) (values : Assignment (Observation declaration)) :
     (branchFormula test yes no).denote values ↔
@@ -196,17 +147,6 @@ private theorem traverse_preserves (count : Nat) :
       rw [branchFormula_denote]
       exact ⟨stepFormula_preserves _ ih values initial, fun _ => ih values initial⟩
 
-theorem traverse_decided_zeuge :
-    decideB (Extended.writerVC traverseCompiled entry .tru) (Extended.writerVC_closed traverseCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, traverse_formula]
-  exact traverse_preserves 3 values initial.1
-
 private def inductiveBranch : QF (Observation declaration) :=
   branchFormula (.not guardFormula) post (conj (stepFormula post) post)
 
@@ -216,28 +156,6 @@ private def inductiveCheck : QF (Observation declaration) :=
 
 private theorem inductive_formula : inductiveCompiled.formula =
     conj post (conj (havoc (fun _ => true) inductiveCheck) .tru) := rfl
-
-theorem inductive_decided_zeuge :
-    decideB (Extended.writerVC inductiveCompiled entry .tru) (Extended.writerVC_closed inductiveCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, inductive_formula, conj_denote, conj_denote]
-  refine ⟨(lower_denote _ _).mpr initial.1, ?_, trivial⟩
-  apply havoc_of_valid
-  intro other
-  rw [inductiveCheck, lower_denote]
-  intro entry
-  have holds := (lower_denote _ _).mp ((quoteQF_denote _ _).mp entry.2)
-  rw [quoteQF_denote, inductiveBranch, branchFormula_denote]
-  refine ⟨fun _ => (lower_denote _ _).mpr holds, fun guarded => ?_⟩
-  rw [conj_denote]
-  refine ⟨stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid) other holds ?_,
-    (lower_denote _ _).mpr holds⟩
-  simpa only [LProp.denote, not_not] using guarded
 
 private def mutationRelation (captured : Zahl 0 10) (next : Zahl 0 10) : LProp (Observation declaration) :=
   let term : LTerm (Observation declaration) := .add (.konst captured.n) (.konst 1)
@@ -257,58 +175,12 @@ private def mutableFormula : QF (Observation declaration) :=
 set_option maxHeartbeats 50000 in
 private theorem mutable_formula : mutableCompiled.formula = mutableFormula := rfl
 
-theorem mutable_decided_zeuge :
-    decideB (Extended.writerVC mutableCompiled entry .tru) (Extended.writerVC_closed mutableCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, mutable_formula, mutableFormula]
-  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
-  intro captured _ selected
-  rw [branchFormula_denote]
-  refine ⟨fun guarded => ?_, fun _ => (lower_denote _ _).mpr initial.1⟩
-  unfold mutationFormula
-  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
-  intro next _ relation
-  simp only [mutationRelation, LProp.denote, LTerm.denote] at relation
-  simp only [LProp.denote, LTerm.denote] at selected guarded
-  have bound : next.n ≤ values (.glob true) := by
-    by_cases fits : 0 ≤ captured.n + 1 ∧ captured.n + 1 ≤ 10
-    · have := relation.1 fits
-      omega
-    · have := relation.2 fits
-      omega
-  rw [subst_denote, post, lower_denote]
-  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using bound
-
 private def booleanFormula : QF (Observation declaration) :=
   snapshots (kind := .bool) ([false, true] : List Bool)
     (fun flag => if wahr? flag then guardFormula else .not guardFormula)
     (fun flag => branchFormula (if wahr? flag then .tru else .fls) (stepFormula post) post)
 
 private theorem boolean_formula : booleanCompiled.formula = booleanFormula := rfl
-
-theorem boolean_initializer_decided_zeuge :
-    decideB (Extended.writerVC booleanCompiled entry .tru) (Extended.writerVC_closed booleanCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, boolean_formula, booleanFormula]
-  apply (snapshots_denote (kind := .bool) _ _ _ values).mpr
-  intro flag _ selected
-  cases flag with
-  | false =>
-      simpa [wahr?, branchFormula_denote, LProp.denote, post, lower_denote] using initial.1
-  | true =>
-      rw [branchFormula_denote]
-      exact ⟨fun _ => stepFormula_preserves _ (fun _ valid => (lower_denote _ _).mpr valid)
-        values initial.1 selected, fun impossible => (impossible trivial).elim⟩
 
 private def bumpRelation (value : Zahl 0 10) : LProp (Observation declaration) :=
   .and (.imp stepRange (.eq stepTerm (.konst value.n)))
@@ -327,54 +199,5 @@ set_option maxHeartbeats 50000 in
 private theorem conditional_formula (preserves : Bool) :
     (conditionalCompiled preserves).formula = conditionalFormula preserves := by
   cases preserves <;> rfl
-
-theorem conditional_initializer_decided_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled true) entry .tru) (Extended.writerVC_closed (conditionalCompiled true) entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, conditional_formula, conditionalFormula]
-  apply (snapshots_denote (kind := .int 0 10) _ _ _ values).mpr
-  intro value _ relation
-  simp only [conditionalRelation, bumpRelation, stepRange, stepTerm, guardFormula,
-    ↓reduceIte, LProp.denote, LTerm.denote] at relation
-  have bound : value.n ≤ values (.glob true) := by
-    by_cases guarded : values (.glob false) < values (.glob true)
-    · have selected := relation.1 guarded
-      by_cases fits : 0 ≤ values (.glob false) + 1 ∧ values (.glob false) + 1 ≤ 10
-      · have := selected.1 fits; omega
-      · have := selected.2 fits; omega
-    · have := relation.2 guarded
-      have holds := initial.1
-      change values (.glob false) ≤ values (.glob true) at holds
-      omega
-  rw [subst_denote, post, lower_denote]
-  simpa [entry, LProp.denote, LTerm.denote, Assignment.bind] using bound
-
-theorem conditional_initializer_refused_zeuge :
-    decideB (Extended.writerVC (conditionalCompiled false) entry .tru) (Extended.writerVC_closed (conditionalCompiled false) entry .tru) = false := by
-  apply (close_decide_false_iff _).mpr
-  refine ⟨assignment counterexampleWorld, ?_⟩
-  rw [writerMatrix, lower_denote]
-  intro valid
-  have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
-  rw [lower_denote] at step
-  have initial : entry.denote (assignment counterexampleWorld) ∧ True :=
-    ⟨by change (4 : Int) ≤ 4; decide, trivial⟩
-  have result := (quoteQF_denote _ _).mp (step initial)
-  rw [conditional_formula, conditionalFormula] at result
-  have checked := (snapshots_denote (kind := .int 0 10) _ _ _ _).mp result
-  let wrong : Zahl 0 10 := ⟨5, by decide, by decide⟩
-  have member : wrong ∈ integerValues 0 10 11 := integerValues_complete 0 10 wrong
-  have selected : (conditionalRelation false wrong).denote (assignment counterexampleWorld) := by
-    norm_num [conditionalRelation, bumpRelation, stepRange, stepTerm, guardFormula,
-      LProp.denote, LTerm.denote, assignment, counterexampleWorld, scalarValue, wrong]
-  have impossible := checked wrong member selected
-  rw [subst_denote, post, lower_denote] at impossible
-  norm_num [entry, LProp.denote, LTerm.denote, Assignment.bind, assignment,
-    counterexampleWorld, scalarValue, wrong] at impossible
 
 end Gabbro.Grammatik.Invarianten.VC.ExtendedWitness

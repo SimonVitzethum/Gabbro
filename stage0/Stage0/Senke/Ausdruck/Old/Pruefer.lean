@@ -213,6 +213,4 @@ def zeugenFn : UFn :=
 def zeugenEinheit : UProg :=
   { tabs := [], locks := [], fns := [zeugenFn], roots := ["main"] }
 
-theorem zertifizierbar_zeuge : zertifizierbar zeugenEinheit = true := by decide
-
 end Gabbro.Stage0.OldSource

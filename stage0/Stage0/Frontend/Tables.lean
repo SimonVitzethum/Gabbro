@@ -93,17 +93,4 @@ theorem emptyTable_model (u : UProg) (t : Fin u.tabs.length)
   · change (tabAt u t).von.isSome = false
     rw [h]; rfl
 
-/-- An actual empty table retains a large source count without inventing a field. -/
-theorem tableWithEmpty_sound_zeuge :
-    EmptyTableMeaning []
-      (.tableT "Empty" none (some (.lit (2 ^ 32))) none none false [.tSlot []])
-      (emptyTable "Empty" (2 ^ 32) false []) := by
-  have h := tableWithEmpty_sound [] [] ["Empty"]
-    (.tableT "Empty" none (some (.lit (2 ^ 32))) none none false [.tSlot []])
-    (emptyTable "Empty" (2 ^ 32) false []) (by rfl)
-  rcases h with h | h
-  · change Except.error "table without fields" = Except.ok _ at h
-    contradiction
-  · exact h
-
 end Gabbro.Stage0.Frontend

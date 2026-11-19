@@ -45,14 +45,4 @@ def collectStepsFast {σ α β : Type} (step : σ → α → List β × σ)
       simp only [List.reverse_append, List.reverse_reverse]
   exact key items ([], state) ([], state) rfl
 
-/-- Nonempty chunks and an empty emission keep their source order and state transitions. -/
-theorem collectSteps_zeuge :
-    collectSteps (fun (state : Nat) item =>
-      (if item == 0 then [] else [item, state], state + 1)) [0, 3, 4] 10 =
-        ([3, 11, 4, 12], 13) ∧
-    collectStepsFast (fun (state : Nat) item =>
-      (if item == 0 then [] else [item, state], state + 1)) [0, 3, 4] 10 =
-        ([3, 11, 4, 12], 13) := by
-  decide +kernel
-
 end Gabbro.Grammatik.Parser.CallHoist

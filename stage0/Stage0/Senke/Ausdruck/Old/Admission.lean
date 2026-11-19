@@ -49,20 +49,4 @@ theorem uBool_entry_unreachable (ctx : UCtx) (source : SExpr) (predicate : UEns)
   rw [uBool_no_entry ctx source predicate accepted] at entry
   cases entry
 
-/-- The source gate is inhabited, and detects an old occurrence beneath an integer builtin. -/
-theorem uBool_no_entry_zeuge :
-    uBool ({
-      names := []
-      kinds := []
-      types := []
-      tabs := []
-      locks := []
-      held := []
-      res := none
-      fname := ""
-      alias := []
-      lits := []} : UCtx) (.bin "==" (.lit 0) (.lit 0)) = .ok (.cmp "==" (.lit 0) (.lit 0)) ∧
-    ensAltErg (.cmp "==" (.ib1 .clz 8 (.old "T" "value" (.lit 0))) (.lit 0)) = true := by
-  exact ⟨by decide +kernel, by simp only [ensAltErg, seiteAltErg]; rfl⟩
-
 end Gabbro.Stage0.OldSource

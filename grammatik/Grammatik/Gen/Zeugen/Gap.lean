@@ -33,11 +33,6 @@ theorem m47_549_cause_link : CallIndGapInput M47_549.e →
     GateAudit.contractCause M47_549.e = some (.unsupported
       "contract indirect call needs a checked finite target dispatch") := fun _ => GateAudit.m47_549_cause
 
-theorem m47_549_cause_link_zeuge : CallIndGapInput M47_549.e ∧
-    GateAudit.contractCause M47_549.e = some (.unsupported
-      "contract indirect call needs a checked finite target dispatch") :=
-  ⟨m47_549_input, m47_549_cause_link m47_549_input⟩
-
 theorem checked_gap : ∀ g ∈ fragmentGaps, g.gueltig = false := by
   intro g member
   have same : g = M47_549.e := List.mem_singleton.mp member
@@ -56,11 +51,6 @@ theorem gap_grund : ∀ g ∈ fragmentGaps, ∃ grund : GapGrund, GapBelegt g gr
   have same : g = M47_549.e := List.mem_singleton.mp member
   subst g
   exact ⟨.rufInd, m47_549_input⟩
-
-theorem gap_grund_zeuge : M47_549.e ∈ fragmentGaps ∧
-    GapBelegt M47_549.e .rufInd ∧
-    Adaequanz.akzeptiert Einsatz.Hat gutTafel M47_549.e ∧ M47_549.e.gueltig = false :=
-  ⟨List.mem_cons_self, m47_549_input, M47_549.e_strukturell, GateAudit.m47_549_refused⟩
 
 theorem gap_annex : GapAnnex fragmentGaps := ⟨checked_gap⟩
 

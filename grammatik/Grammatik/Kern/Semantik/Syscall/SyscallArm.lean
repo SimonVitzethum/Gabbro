@@ -198,27 +198,6 @@ def beispielVorher : ArmZustand :=
 /-- The arguments of the witness call `write(1, 0x4000, 5)`. -/
 def beispielArgs : Nat → Nat := fun i => [1, 0x4000, 5].getD i 0
 
-/-- **Witness (non-degenerate):** `write(1, 0x4000, 5)` as a concrete register assignment: the
-    number 64 in `x8`, `fd = 1` in `x0`, `buf = 0x4000` in `x1`, `len = 5` in `x2`, and an
-    unrelated callee-saved register (`x19`) and the stack pointer untouched. -/
-theorem schreibAufruf_zeuge :
-    let s := ladeAufruf schreibAbiArm beispielVorher beispielArgs
-    s.reg nummerRegLinux = 64 ∧ s.reg (xr 0) = 1 ∧ s.reg (xr 1) = 0x4000 ∧
-    s.reg (xr 2) = 5 ∧ s.reg (xr 19) = 1019 ∧ s.reg .sp = 0x7ffc1000 := by
-  decide
-
-/-- The kernel keeps every register but `x0`: after `svc #0` answering `5`, `x0 = 5`, `x8` is
-    still 64 and `x19` is untouched. -/
-theorem svc_zeuge :
-    let s := ladeAufruf schreibAbiArm beispielVorher beispielArgs
-    let t := nachSvc s 5
-    t.reg ergebnisReg = 5 ∧ t.reg nummerRegLinux = 64 ∧ t.reg (xr 19) = 1019 := by
-  decide
-
-/-- A negative errno (`-9`, EBADF) lands in `x0` as its two's complement, 2^64 - 9. -/
-theorem svc_errno_zeuge :
-    (nachSvc beispielVorher (-9)).reg ergebnisReg = 18446744073709551607 := by decide
-
 /-- The frame law, for every state and answer: `svc` changes `x0` and nothing else. -/
 theorem nachSvc_rahmen (vorher : ArmZustand) (antwort : Int) (r : ArmReg)
     (h : r ≠ ergebnisReg) : (nachSvc vorher antwort).reg r = vorher.reg r := by
@@ -262,14 +241,6 @@ theorem start_nolibc_arm (sp : Nat) (hsp : 16 ≤ sp) (mainKehrtZurueck : Bool)
 
 theorem start_nolibc_arm_ud2 (sp : Nat) : (startLaufArm sp true).ud2 = true := by rfl
 
-/-- Witness: the same 8-aligned-only pointer as `start_nolibc_zeuge` (`0x7ffc12345678`). -/
-theorem start_nolibc_arm_zeuge :
-    (startLaufArm 0x7ffc12345678 false).spEintritt % 16 = 0 ∧
-    (startLaufArm 0x7ffc12345678 false).spEintritt ≤ 0x7ffc12345678 ∧
-    0x7ffc12345678 < (startLaufArm 0x7ffc12345678 false).spEintritt + 16 ∧
-    (startLaufArm 0x7ffc12345678 false).ud2 = false :=
-  start_nolibc_arm 0x7ffc12345678 (by decide) false rfl
-
 /-- The child of a clone with a handed stack: `sp` is the handed top and the stack register
     still holds it (as in `FadenLaufzeit.KindRegs`; on AArch64 the stack register is an
     ordinary `x_n`, bound in `regs in`, neither the answer nor `x8`). -/
@@ -304,15 +275,6 @@ theorem kind_region_arm (v : Nat) (hv : 16 ≤ v) (regionKehrtZurueck : Bool)
 
 theorem kind_region_arm_rueckkehr (v : Nat) : (kindRufArm (kindNachSvc v) true).ud2 = true := by rfl
 
-/-- Witness: the 64 KiB stack of `kind_region_zeuge`, plus an 8-aligned-only top. -/
-theorem kind_region_arm_zeuge :
-    (kindRufArm (kindNachSvc 0x7f0000010000) false).argument = 0x7f0000010000 ∧
-    (kindRufArm (kindNachSvc 0x7f0000010000) false).spEintritt % 16 = 0 ∧
-    (kindRufArm (kindNachSvc 0x7f0000010008) false).spEintritt % 16 = 0 ∧
-    (kindRufArm (kindNachSvc 0x7f0000010008) false).spEintritt ≤ 0x7f0000010008 ∧
-    (kindRufArm (kindNachSvc 0x7f0000010000) false).ud2 = false := by
-  refine ⟨rfl, ?_, ?_, ?_, rfl⟩ <;> decide
-
 /-- The two-call child path of `tor.trampolin` (root, then the end), AArch64: each callee is
     entered with the same aligned `sp` (`bl` pushes nothing, so the second call sees the same
     `sp` once the first returned). The registers holding the two targets survive the gate only
@@ -334,13 +296,6 @@ theorem trampolin_kind_arm (spitze kind ende : Nat) (hsp : 16 ≤ spitze)
   intro z hz
   simp only [kindPfadArm, ausrichtenArm, List.mem_cons, List.not_mem_nil, or_false] at hz
   rcases hz with h | h <;> subst h <;> simp only <;> omega
-
-theorem trampolin_kind_arm_zeuge :
-    (kindPfadArm 0x7f0000010008 0x401000 0x402000 false).1.map Prod.fst = [0x401000, 0x402000] ∧
-    (∀ z ∈ (kindPfadArm 0x7f0000010008 0x401000 0x402000 false).1,
-      z.2 % 16 = 0 ∧ z.2 ≤ 0x7f0000010008 ∧ 0x7f0000010008 < z.2 + 16) ∧
-    (kindPfadArm 0x7f0000010008 0x401000 0x402000 false).2 = false :=
-  trampolin_kind_arm _ _ _ (by decide) false rfl
 
 end Arm
 
@@ -371,14 +326,8 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.Arm.linuxAbi_gut
 #print axioms Gabbro.Grammatik.Arm.schreibAbiArm_wert
 #print axioms Gabbro.Grammatik.Arm.schreibAbiArm_gut
-#print axioms Gabbro.Grammatik.Arm.schreibAufruf_zeuge
-#print axioms Gabbro.Grammatik.Arm.svc_zeuge
-#print axioms Gabbro.Grammatik.Arm.svc_errno_zeuge
 #print axioms Gabbro.Grammatik.Arm.nachSvc_rahmen
 #print axioms Gabbro.Grammatik.Arm.nachSvc_ergebnis
 #print axioms Gabbro.Grammatik.Arm.start_nolibc_arm
-#print axioms Gabbro.Grammatik.Arm.start_nolibc_arm_zeuge
 #print axioms Gabbro.Grammatik.Arm.kind_region_arm
-#print axioms Gabbro.Grammatik.Arm.kind_region_arm_zeuge
 #print axioms Gabbro.Grammatik.Arm.trampolin_kind_arm
-#print axioms Gabbro.Grammatik.Arm.trampolin_kind_arm_zeuge

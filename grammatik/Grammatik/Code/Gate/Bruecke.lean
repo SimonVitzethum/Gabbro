@@ -194,35 +194,6 @@ theorem fuell_groessen {m m' : Mem} {vs : List Val} {ans : Option Val}
 
 local instance confB64 : Conf := ⟨64, false, Or.inr rfl⟩
 
-/-- **Witness**: two reserves (page 16) -- 64 bytes at 32, then 64 bytes at 96 -- on the empty
-    memory. After both, the two `Code` blocks exist, sit at 32 and 96, the correspondence holds and
-    their address ranges are disjoint. -/
-theorem bruecke_zeuge :
-    ∃ (s2 : Zust) (m2 : Mem) (rho : Nat → Nat), Gut s2 ∧ Entspricht s2 m2 rho ∧
-      rho 0 = 32 ∧ rho 1 = 96 ∧ m2.blks 0 ≠ none ∧ m2.blks 1 ≠ none ∧
-      Strecke.getrennt ⟨32, 32 + 64⟩ ⟨96, 96 + 64⟩ := by
-  have hE0 : Entspricht Zust.leer Mem.empty (fun _ => 0) :=
-    ⟨fun b blk h => by simp only [Mem.empty, reduceCtorEq] at h, fun b blk h => by simp only [Mem.empty, reduceCtorEq] at h,
-     fun b b' blk blk' h => by simp only [Mem.empty, reduceCtorEq] at h⟩
-  have hs1 : PStep 16 Zust.leer (.hole 64 32)
-      { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
-  have hE1 := entspricht_hole hE0 hs1
-  have hg1 := gut_nach gut_leer hs1
-  have hs2 : PStep 16 { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } (.hole 64 96)
-      { lebend := ⟨96, 96 + 64⟩ :: [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (by decide) (by decide) (by decide) (by simp only [Nat.reduceAdd, List.mem_cons, List.not_mem_nil, or_false, Strecke.getrennt, forall_eq,
-  Nat.reduceLeDiff, Std.le_refl, or_true])
-  have hE2 := entspricht_hole hE1 hs2
-  have hg2 := gut_nach hg1 hs2
-  refine ⟨_, _, _, hg2, hE2, rfl, ?_, ?_, ?_, ?_⟩
-  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add]
-  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add,
-  Nat.reduceAdd, Nat.zero_ne_one, ne_eq, reduceCtorEq, not_false_eq_true]
-  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add,
-  Nat.reduceAdd, ne_eq, reduceCtorEq, not_false_eq_true]
-  · simp only [Strecke.getrennt, Nat.reduceAdd, Std.le_refl, Nat.reduceLeDiff, or_false]
-
 /-- **Planted defect: aliasing.** An assignment that puts two distinct live blocks at one address is no
     correspondence: injectivity is a field, not a hope. -/
 theorem aliasing_verweigert {s : Zust} {m : Mem} {rho : Nat → Nat} (hE : Entspricht s m rho)

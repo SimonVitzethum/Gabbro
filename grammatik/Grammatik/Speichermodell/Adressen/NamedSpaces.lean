@@ -94,14 +94,4 @@ theorem layout_ok : LayoutOk layout where
   globale := fun _ _ _ h => absurd rfl h
   globalerRaum := fun _ => ⟨by change 1 < 2; decide, rfl⟩
 
-/-- Nonempty, unbounded regions may share a declared space without sharing a byte. -/
-theorem named_spaces_zeuge :
-    declaration.tableSpace false = declaration.tableSpace true ∧
-    layout.raum false ≠ layout.raum true ∧ LayoutOk layout ∧
-    layout.inZelle false 100 () (1, 100) ∧ layout.inZelle true 100 () (2, 100) ∧
-    layout.inGlobal () (3, 0) := by
-  exact ⟨rfl, by decide, layout_ok,
-    ⟨rfl, by decide, by decide⟩, ⟨rfl, by decide, by decide⟩,
-    ⟨rfl, by decide, by decide⟩⟩
-
 end Gabbro.Grammatik.NamedSpaces

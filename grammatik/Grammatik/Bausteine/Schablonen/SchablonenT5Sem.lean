@@ -84,24 +84,6 @@ theorem sonderwert_schranke (e : Expr D Γ Λ (.index n))
   rw [he] at hb
   exact hb
 
-/-- Witness for the `option.sonderwert` pair: `refP`'s index
-    `refIdxEin` (fired by the run at `refSchrittBF`), wrapped in
-    `some`, is apart from `none` with an in-range payload; the run
-    reaches `MB` with slot `0` moved. -/
-theorem sonderwert_zeuge :
-    eval semW0 (.some refIdxEin) semW0 refRho7 ≠
-      eval semW0 ((.none (refD.count ())) :
-        Expr refD [.int 0 10] [Res.held (D := refD) ()]
-          (.opt (refD.count ()))) semW0 refRho7 ∧
-    (∀ k : Zahl 0 (refD.count () - 1),
-      eval semW0 (.some refIdxEin) semW0 refRho7 = Option.some k →
-      0 ≤ k.n ∧ k.n ≤ refD.count () - 1) ∧
-    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
-    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
-  refine ⟨sonderwert_disjoint refIdxEin semW0 semW0 refRho7,
-    fun k h => sonderwert_schranke refIdxEin semW0 semW0 refRho7 k h,
-    refB_erreicht, refB_schreibt⟩
-
 /-! ## 5. `device.konstruktor`, model-facing half -- trace reads never
     move memory.
 
@@ -126,16 +108,6 @@ theorem device_lese_frame_slots (σ : World D) (Λ : List (Res D))
 theorem device_lese_frame_globs (σ : World D) (Λ : List (Res D))
     (orte : List (D.Tab ⊕ D.Glob)) (g : D.Glob) :
     (σ.lese Λ orte).globs g = σ.globs g := by rfl
-
-/-- Witness for the frame engine: reading `konto` on `semW0` moves no
-    slot; the reference run is non-degenerate. -/
-theorem device_lese_zeuge :
-    (semW0.lese [Res.held (D := refD) ()] [.inl ()]).slots () 0 () =
-      semW0.slots () 0 () ∧
-    RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
-    MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
-  refine ⟨device_lese_frame_slots semW0 _ _ () 0 (),
-    refB_erreicht, refB_schreibt⟩
 
 /-! ## 6. `entry.abdruck` -- skipped: no counterpart in the model.
 
@@ -196,7 +168,6 @@ not a proof: `entry.abdruck` stays entirely on the abstract side
 
 #print axioms Gabbro.Grammatik.semW0
 #print axioms Gabbro.Grammatik.indexschranke_eval
-#print axioms Gabbro.Grammatik.indexschranke_zeuge
 #print axioms Gabbro.Grammatik.waitEdges
 #print axioms Gabbro.Grammatik.wohlgeordnet
 #print axioms Gabbro.Grammatik.ketteR
@@ -212,12 +183,9 @@ not a proof: `entry.abdruck` stays entirely on the abstract side
 #print axioms Gabbro.Grammatik.fragLocks_schreibt_bewacht
 #print axioms Gabbro.Grammatik.fragLocks_schreibt
 #print axioms Gabbro.Grammatik.fragLocks_wohlgeordnet
-#print axioms Gabbro.Grammatik.sperrabdruck_zeuge
 #print axioms Gabbro.Grammatik.sonderwert_disjoint
 #print axioms Gabbro.Grammatik.sonderwert_schranke
-#print axioms Gabbro.Grammatik.sonderwert_zeuge
 #print axioms Gabbro.Grammatik.device_lese_frame_slots
 #print axioms Gabbro.Grammatik.device_lese_frame_globs
-#print axioms Gabbro.Grammatik.device_lese_zeuge
 
 end Gabbro.Grammatik

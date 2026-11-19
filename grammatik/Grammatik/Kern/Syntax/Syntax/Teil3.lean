@@ -93,10 +93,6 @@ theorem waehleMinimal_vollstaendig {ks : List Nat} {p : Nat → Bool} :
     waehleMinimal ks p = none ↔ ∀ v ∈ ks, p v = false :=
   ⟨waehleMinimal_keinMitglied, waehleMinimal_alleFalsch⟩
 
-/-- Witness: two eligible indices select the first in list order. -/
-theorem waehleMinimal_zeuge : waehleMinimal [1, 0] (fun _ => true) = some 1 := by
-  rfl
-
 /-! ## Edge-minimal selection (`verbrauchWahl`)
 
     The candidate order is list order; eligibility is membership plus
@@ -363,7 +359,6 @@ theorem map_all_beibehalt {α β : Type} (f : α → β) (l : List α)
 #print axioms waehleMinimal_keinMitglied
 #print axioms waehleMinimal_alleFalsch
 #print axioms waehleMinimal_vollstaendig
-#print axioms waehleMinimal_zeuge
 #print axioms verbrauchWahlAux_minimal
 #print axioms verbrauchWahlAux_istMitglied
 #print axioms verbrauchWahl_istMitglied

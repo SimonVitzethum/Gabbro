@@ -114,16 +114,6 @@ theorem addS_exakt_wenn_passt {lo hi : Int}
   rw [Zahl.addS_n a b hle]
   omega
 
-/-- Companion witness: `addS_exakt_wenn_passt` fires jointly on the
-    concrete range `0 .. 5` with fitting addends `2 + 3`. -/
-theorem addS_exakt_wenn_passt_zeuge :
-    ∃ (a b : Zahl 0 5), (0 : Int) ≤ a.n + b.n ∧ a.n + b.n ≤ 5 ∧
-      (Zahl.addS a b).n = a.n + b.n := by
-  refine ⟨⟨2, by decide, by decide⟩, ⟨3, by decide, by decide⟩, ?_, ?_, ?_⟩
-  · show (0 : Int) ≤ 2 + 3; decide
-  · show (2 : Int) + 3 ≤ 5; decide
-  · exact addS_exakt_wenn_passt _ _ (by decide) (by decide)
-
 /-! ## `addW` equals C unsigned addition -/
 
 /-- `addW` equals C unsigned addition on the storage type: C computes
@@ -395,7 +385,6 @@ theorem wrapping_nur_exakt :
 #print axioms Gabbro.Grammatik.Zahl.addS_n
 #print axioms Gabbro.Grammatik.addS_monoton
 #print axioms Gabbro.Grammatik.addS_exakt_wenn_passt
-#print axioms Gabbro.Grammatik.addS_exakt_wenn_passt_zeuge
 #print axioms Gabbro.Grammatik.addW_c_gleich
 #print axioms Gabbro.Grammatik.subW_c_gleich
 #print axioms Gabbro.Grammatik.mulW_c_gleich

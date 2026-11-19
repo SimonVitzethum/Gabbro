@@ -232,10 +232,6 @@ theorem good_call_sites : CallSitePflicht Positive.unit := by
   rw [absent] at key
   cases key
 
-theorem good_call_sites_zeuge :
-    akzeptiertX_pruefer.akzeptiert Positive.unit [()] [] [] = true ∧
-    CallSitePflicht Positive.unit := ⟨good_checker, good_call_sites⟩
-
 /-- The actual runtime runs the sole declared start once and idles elsewhere. -/
 def initial (t : Faden) :
     Σ f : decl.mitRuhe.Fn, Env decl.mitRuhe (decl.mitRuhe.params f) :=

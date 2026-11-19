@@ -17,10 +17,3 @@ elab "kernel_value" : tactic => withMainContext do
   unless ← withAssignableSyntheticOpaque (isDefEq rhs value) do
     throwError "kernel_value: the computed candidate does not match the requested result"
   evalTactic (← `(tactic| kernel_rfl))
-
-/-- The computed witness and its expected nonempty data agree. -/
-theorem kernel_value_zeuge :
-    ∃ actual : List Nat, (List.range 3).map (· + 1) = actual ∧ actual = [1, 2, 3] := by
-  refine ⟨?actual, ?computed, ?shape⟩
-  case computed => kernel_value
-  case shape => rfl

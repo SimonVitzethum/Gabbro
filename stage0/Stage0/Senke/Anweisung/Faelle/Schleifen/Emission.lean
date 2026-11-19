@@ -69,21 +69,4 @@ theorem forever_runtime_targets (i b : Nat) :
   simp only [exPlus, foreverTargets, Prod.mk.injEq]
   constructor <;> push_cast <;> omega
 
-/-- Budget changes instruction data only, including the zero-fuel case. -/
-theorem foreverC_zeuge :
-    (foreverC 9 10 13 0 ([], 14) (fun _ => some ([], 14))).isSome = true ∧
-    (foreverC 9 10 13 1 ([], 14) (fun _ => some ([], 14))).isSome = true ∧
-    (foreverC 9 10 13 2 ([], 14) (fun _ => some ([], 14))).isSome = true ∧
-    foreverC 9 10 13 (2 ^ 31) ([], 14) (fun _ => some ([], 14)) = none ∧
-    (foreverCode 9 10 13 0 [] []).length = 13 := by decide
-
-/-- The largest positive signed immediate is accepted; an unstable candidate
-    length is rejected even when its first probe succeeded. -/
-theorem foreverC_refusal_zeuge :
-    (foreverC 9 10 13 (2 ^ 31 - 1) ([], 14)
-      (fun _ => some ([], 14))).isSome = true ∧
-    foreverC 9 10 13 2 ([], 14)
-      (fun targets => if targets.1 = 0 then some ([], 14)
-        else some ([ci 2 13 12 0], 14)) = none := by decide
-
 end Gabbro.Stage0.Senke

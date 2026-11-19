@@ -157,14 +157,6 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
   exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
     (keeps_of_agreeW hW a1 hpr (by omega)) ih
 
-/-- Several distinct reasons are accepted in one dispatch, without payload slots. -/
-theorem onWhy_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat)
-    (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
-    let arms : GrundArms D (vertragVon D f) false [.why 3] [] [] 3 :=
-      .cons .nil (.cons .nil (.cons .nil .nil))
-    ∃ code top, lowS passes A L layout ens pr ex (.onWhy (.var .here) arms) = some (code, top) := by
-  exact ⟨_, _, rfl⟩
-
 end
 
 theorem retWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

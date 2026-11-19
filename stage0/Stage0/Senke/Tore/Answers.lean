@@ -9,49 +9,6 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [RootNativeFloat.Hardware] {D : Deklaration}
 
-/-- **Witness** (the assumption is not empty): a kernel that may give any answer, and an oracle that leaves the
-    world and answers 0, meet it for every layout. -/
-theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0))
-    (href : ∀ a n, D.aerg a = some (.ref n) → L.tor a ≠ none →
-      ValueValid L (.ref n) (Val.vonZelle 0))
-    (harea : @AreaContract D ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) L O) :
-    @TorOK ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) D L O := by
-  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
-  refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
-    fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩, ?_, harea⟩
-  · rw [hO]; exact hW
-  · rw [hO]; simp [rohW]
-  · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
-  · intro k hk
-    rw [hO]
-    obtain ⟨w, hw, he⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
-    have hwk : wAt m (L.elem t f k) = w := wAt_of hw
-    cases rw
-    · simp only [Bool.false_eq_true, ↓reduceIte, hwk]; exact he
-    · simp only [↓reduceIte]
-      let ws : Nat → Runner.W := fun k => if k < (D.count t).toNat then wAt m (L.elem t f k) else 0
-      have hws : ∀ k, (ws k).toNat < 256 := fun k => by
-        simp only [ws]; split
-        · next hk' =>
-          obtain ⟨w', hw', he'⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
-          rw [wAt_of hw']; exact enc_byte hτ he'
-        · decide
-      have hb := hB (k / 8) (by simp only [pufW]; omega)
-      rw [packV_congr (ws' := ws) (fun k hk => by simp only [ws, hk, ↓reduceIte])] at hb
-      simp only [byteOf, hb, Option.getD_some]
-      rw [byte_packV ws _ _ _ (by omega) hws, if_pos (by omega)]
-      simp only [ws, show 8 * (k / 8) + k % 8 = k by omega, hk, ↓reduceIte, hwk]
-      exact he
-  · rw [hO]; simp [rohW]
-
-  · intro a n he hb σ ρ raw relation nonnegative
-    have zero : raw = 0 := by
-      rcases relation with ⟨_, direct⟩ | ⟨_, fallible⟩
-      · simpa only [hO] using direct
-      · simpa only [hO, Int.zero_ediv] using fallible
-    subst raw
-    exact href a n he hb
-
 end Gabbro.Stage0.Senke
 
 namespace Gabbro.Stage0.Senke.ForeignAnswers
@@ -128,20 +85,6 @@ def image (optional nested : Bool) : Except String (List Runner.B) := do
     [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure emitted.bytes
 
-/-- Both binder APIs, in both contexts, reach complete images. -/
-theorem boolean_binder_images_zeuge :
-    (image false false).isOk = true ∧ (image false true).isOk = true ∧
-    (image true false).isOk = true ∧ (image true true).isOk = true := by
-  decide_cbv
-
-/-- Error handling and both Boolean payloads retain canonical admission. -/
-theorem boolean_binder_admission_zeuge :
-    Akzeptiert (program false false) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
-      [entry] [] [] [entry] = true ∧
-    Akzeptiert (program true true) ⟨fun l => Fin.elim0 l, fun l => Fin.elim0 l⟩
-      [entry] [] [] [entry] = true := by
-  constructor <;> kernel_rfl
-
 def oracle (raw : Runner.W) : Orakel D where
   wirktL _ σ _ := ({ σ with spur := [] }, rohW AxiomElseProbe.binding 1 raw)
   regLiesL r := Fin.elim0 r
@@ -153,54 +96,6 @@ def observed (optional nested : Bool) (raw : Runner.W) : Int :=
       (body optional nested) (AxiomElseProbe.initial result) .nil with
   | .zurueck _ value => value.n
   | _ => -1
-
-/-- False, true and the nominal error all stay live and distinguishable. -/
-theorem boolean_binder_paths_zeuge :
-    observed false false 0 = 19 ∧ observed false false 7 = 17 ∧
-    observed false false (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed false true 0 = 19 ∧ observed false true 7 = 17 ∧
-    observed false true (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed true false 0 = 19 ∧ observed true false 7 = 17 ∧
-    observed true false (BitVec.ofInt 64 (-9)) = 9 ∧
-    observed true true 0 = 19 ∧ observed true true 7 = 17 ∧
-    observed true true (BitVec.ofInt 64 (-9)) = 9 := by
-  decide_cbv
-
-/-- The canonical accepted provider fixture now lowers as a whole function,
-    including the write through its returned reference into a supplied region. -/
-theorem reference_function_zeuge :
-    Akzeptiert GRegion.prog ⟨fun l => l.elim, fun l => l.elim⟩ [()] [] [.inl ()] [()] = true ∧
-    (lowFun 1 GRegion.prog (fun _ => 0) ReferenceProbe.layout ()).isSome = true ∧
-    ReferenceProbe.layout.count () = 2 := by
-  exact ⟨GRegion.prog_akzeptiert, by decide_cbv, rfl⟩
-
-/-- The new provider premise is jointly satisfiable on a real represented
-    region; it is not hidden in an impossible reference layout. -/
-theorem reference_contract_zeuge :
-    @TorOK ({ toHardware := inferInstance, ans := fun _ _ _ _ => True } : Kern) GRegion.rD ReferenceProbe.layout (GRegion.oK 0) := by
-  letI : Kern := { toHardware := inferInstance, ans := fun _ _ _ _ => True }
-  refine torOK_zeuge _ _ (by intro a σ ρ; rfl) ?_ ?_
-  · intro a n type bound
-    have same : n = 0 := by
-      have eq : some (Ty.ref 0) = some (Ty.ref n) := type
-      cases eq
-      rfl
-    subst n
-    exact ⟨by decide, (), rfl, rfl, by decide⟩
-  · apply areaContract_register_only
-    intro a binding bound
-    have same : some ⟨39, regsIn 0, [], none⟩ = some binding := bound
-    cases same
-    rfl
-
-/-- Region capabilities keep nominal table identity and the canonical zero
-    marker; no physical address is reconstructed from the provider's number. -/
-theorem capability_decoders_zeuge :
-    (chkC (some (.ptr (.table 0 (false, true)))) 8).isSome = true ∧
-    (chkC (some (.ref 0)) 8).isSome = true ∧
-    einpassenErg (D := GRegion.rD) (fun _ => none)
-      (some (.ref 0)) (-1) = none := by
-  exact ⟨by decide_cbv, by decide_cbv, rfl⟩
 
 namespace Region
 open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
@@ -234,10 +129,6 @@ def image : Except String (List Runner.B) := do
   let emitted ← bild 1 program (layU unit (fun _ => some ⟨39, regsIn 0, [], none⟩))
     [entry] Fin.val (fun _ => "main") entry .nil [] 1024 0
   pure emitted.bytes
-
-/-- Region-capability results reach a complete image on a nonempty table layout. -/
-theorem region_image_zeuge : image.isOk = true ∧ unit.tabs.length = 1 := by
-  decide_cbv
 
 end Region
 

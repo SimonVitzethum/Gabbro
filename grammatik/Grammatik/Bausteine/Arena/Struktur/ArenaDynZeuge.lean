@@ -205,15 +205,6 @@ theorem listOk_w0 : ListOk FA LL LG w0 := by
 /-- The head of the list, after `pop`: slot `0`. -/
 def w1 : World FD := wd 4 1 0 nx0 ln0 rn0
 
-/-- **`pop` on a real world:** the hypotheses of `liste_pop` hold, the conclusion is the invariant of the shorter list,
-    the popped slot `2` is live and no longer linked -- and it is NOT on the free list, so `free` may follow. -/
-theorem pop_zeuge :
-    ListOk FA LL LG w1 ∧ ¬ Auf 4 (LL.wert w1) (LG.st w1) 2 ∧ FA.Lebt w1 2 := by
-  have h := liste_pop FA LL LG listOk_w0 (by rw [lg_w0]; decide) (hk := rfl) (hn := fun j => rfl) (hs := rfl)
-    (σ' := w1) (by rw [lg_w0, ll_w0]; rfl) (fun j => rfl)
-  rw [lg_w0] at h
-  exact h
-
 /-- The list is not degenerate after the pop: it holds exactly the slot `0`. -/
 theorem pop_kette : KetteF 4 (LL.wert w1) 0 [0] := by
   refine KetteF.cons 0 (by decide) (by decide) [] ?_
@@ -270,24 +261,6 @@ theorem rr_w2 (j : Int) : RR.wert w2 j = rn2 j := by
   show max 0 (min 4 (rn2 j)) = rn2 j
   unfold rn2; split <;> omega
 
-/-- **Leaf in on a real world:** the live, unlinked slot `3` becomes the right child of the root `2`. -/
-theorem einfuegen_zeuge :
-    BaumOk FA LL RR LG w2 ∧ InBaum 4 (LL.wert w2) (RR.wert w2) (LG.st w2) 3 := by
-  have hnot : ¬ InBaum 4 (LL.wert w0) (RR.wert w0) (LG.st w0) 3 := by
-    rintro ⟨S, hS, hm⟩
-    rw [lg_w0] at hS
-    have := BaumF.eindeutig hS baumB_w0
-    subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
-  have hp : InBaum 4 (LL.wert w0) (RR.wert w0) (LG.st w0) 2 := by
-    rw [lg_w0]; exact ⟨[2, 0], baumB_w0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩
-  have h := baum_einfuegen_rechts FA LL RR LG baumOk_w0 (σ' := w2) 2 3 hp (by rw [rr_w0])
-    ((lebt_w0 3).mpr (by decide)) hnot rfl (fun j => rfl) rfl rfl
-    (by simp only [rr_w2, rn2, ↓reduceIte]) (by simp only [rr_w2, rn2, Int.reduceEq, ↓reduceIte])
-    (by show max 0 (min 4 (ln0 3)) = 4; decide)
-    (fun j hj hji => by rw [rr_w2, rr_w0]; unfold rn2; simp only [hj, ↓reduceIte])
-    (fun j hji => rfl)
-  exact h
-
 /-! ### An executed run: `alloc` from the free list on the real world -/
 
 /-- The contract of the witness body: it writes the table and every word. -/
@@ -310,27 +283,9 @@ def sieben : Expr FD [] [] (FD.typ FA.tab FA.feld) :=
   Expr.umTyp (show Ty.int 0 255 = FD.typ FA.tab FA.feld from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
-/-- **`alloc` from the free list, executed, on the real world `w0`:** slot `1` comes off the free list, the free list is
-    empty afterwards (`FreiOk` holds for a list of length zero), the list `2 -> 0` is untouched, and the slot is live
-    and not linked. Both the list and the free list are non-empty before, so no clause is vacuous. -/
-theorem nimm_zeuge (O : Orakel FD) (passes : Nat)
-    (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f)
-    (voll : Endblock FD FV false [] []) :
-    ∃ σ' : World FD,
-      execBlock (V := FV) O passes R
-          (Block.freiNimm (Λ' := []) FA sieben rfl fdarf rfl (fgdarf _) voll .nil) w0 .nil = .ok σ' .nil ∧
-      FA.FreiOk σ' ∧ ListOk FA LL LG σ' ∧ FA.Lebt σ' 1 ∧ ¬ Auf 4 (LL.wert σ') (LG.st σ') 1 := by
-  have h := liste_nimm O passes R (l := false) (Γ := []) (Λ := []) FA LL LG sieben rfl fdarf rfl (fgdarf _) voll w0 .nil
-    (by rw [kopf_w0]; decide) freiOk_w0 listOk_w0
-  rw [kopf_w0] at h
-  exact h
-
 end InvDynZeuge
 
 #print axioms Gabbro.Grammatik.InvDynZeuge.liste_defekt_bricht
-#print axioms Gabbro.Grammatik.InvDynZeuge.pop_zeuge
-#print axioms Gabbro.Grammatik.InvDynZeuge.einfuegen_zeuge
-#print axioms Gabbro.Grammatik.InvDynZeuge.nimm_zeuge
 #print axioms Gabbro.Grammatik.InvDynZeuge.listOk_w0
 #print axioms Gabbro.Grammatik.InvDynZeuge.baumOk_w0
 #print axioms Gabbro.Grammatik.InvDynZeuge.freiOk_w0

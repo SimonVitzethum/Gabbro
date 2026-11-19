@@ -162,11 +162,5 @@ theorem intervalTestL_success (d : Nat) (lo hi lo' hi' : Int)
       · simp only [scalarOrder, signed, unsigned, Bool.and_self, ↓reduceIte]
         exact ⟨_, _, rfl⟩
 
-theorem intervalTestL_zeuge :
-    (∃ code top, intervalTestL 4 0 18446744073709551615 (-3) 5 = some (code, top)) ∧
-    (∃ code top, intervalTestL 4 (-100) (-1) 0 18446744073709551615 = some (code, top)) :=
-  ⟨intervalTestL_success _ _ _ _ _ (by decide) (by decide),
-   intervalTestL_success _ _ _ _ _ (by decide) (by decide)⟩
-
 end Gabbro.Stage0.Senke
 

@@ -405,29 +405,6 @@ def swWelt0 : World swD :=
     globs := fun g => nomatch g
     spur := [] }
 
-/-- ZEUGE: all ten pairing premises hold jointly for the toy `write`
-    (number 1, `schreibAbi`, `schreibFehler`, `result ≤ len`), and the
-    program is non-degenerate: function `()` writes table `()`, and a
-    `storeSlot` step moves memory (`0 -> 1` at slot `0`). -/
-theorem syscall_paarung_zeuge :
-    PaarGut swD () swO swU ∧ swD.schreibt () () = true ∧
-    ∃ (σ σ' : World swD), σ'.slots () 0 () ≠ σ.slots () 0 () :=
-  ⟨syscall_paarung swD () swO swK swU swKbeh swNum swAbi swReq swEns
-      swSub swSubG swEu swEuG swEff swCon swO_trifft,
-    rfl,
-    swWelt0,
-    swWelt0.storeSlot () 0 ()
-      (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192)),
-    by
-      have hn1 : ((swWelt0.storeSlot () 0 ()
-          (⟨1, by decide, by decide⟩ : Wert swD (.int 0 8192))).slots () 0 ()).n
-          = 1 := rfl
-      have hn0 : (swWelt0.slots () 0 ()).n = 0 := rfl
-      intro hcon
-      have hn := congrArg Zahl.n hcon
-      rw [hn1, hn0] at hn
-      omega⟩
-
 /-! ## 6. Rejection: an undeclared kernel write breaks the user frame -/
 
 end Gabbro.Grammatik

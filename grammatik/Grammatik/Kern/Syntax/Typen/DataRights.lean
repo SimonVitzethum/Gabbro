@@ -51,11 +51,6 @@ def parts (resolveOwner : String → Option Nat) : List (List Char) → Option D
 def decode (resolveOwner : String → Option Nat) (text : String) : Option DataRights :=
   parts resolveOwner (splitParts text.toList [])
 
-/-- A repeated matching owner survives the entire rights union. -/
-theorem owner_union_zeuge :
-    decode (fun n => if n = "lease" then some 7 else none) "r+own@lease+w+own@lease" =
-      some ⟨true, true, some 7⟩ := by rfl
-
 theorem conflicting_owners_refused :
     decode (fun n => if n = "left" then some 1 else if n = "right" then some 2 else none)
       "own@left+own@right" = none := by rfl

@@ -349,52 +349,7 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
     exact absurd h (by simp only [Mehrfach, List.sublist_nil, reduceCtorEq, not_false_eq_true])
   · exact fun _ h => False.elim (List.not_mem_nil h)
 
-/-- **The witness of `gabbro_ziel_verbund_n`**: every unit the checker of the specification accepts,
-    cut at any boundary into two units checked ALONE -- the first the unit, the second its other
-    functions without roots -- passes the link check, and every leg of the goal holds for the
-    linked program. -/
-theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
-    (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku) (hBS : BesitzStart E)
-    (hAS : Kernzelle.AkkuStart E E.akku)
-    (hChecks : CheckAdmission E.P fs.1 E.pruefungen)
-    (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩)
-    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
-    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
-    (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
-    (hK : FadenErreichbarX (komponiere E (schnitt E eigen)).P.mitRuhe O.mitRuhe passes
-      (GeteiltV (D := D) (komponiere E (schnitt E eigen)).P (komponiere E (schnitt E eigen)).ws)
-      (FadenStart (komponiere E (schnitt E eigen)).P.mitRuhe sp init lebt0) K) :
-    ZielFX (komponiere E (schnitt E eigen)).P.mitRuhe (komponiere E (schnitt E eigen)).S.mitRuhe
-      O.mitRuhe passes
-      (GeteiltV (D := D) (komponiere E (schnitt E eigen)).P (komponiere E (schnitt E eigen)).ws)
-      (RufStartG (komponiere E (schnitt E eigen)).P.mitRuhe sp init)
-      ((komponiere E (schnitt E eigen)).arenen.map (·.mitRuhe)) K := by
-  have hkomp := schnitt_komponiere E eigen
-  have hC : ∀ p ∈ schnitt E eigen, specPruefer.akzeptiert p.E fs.1 ls.1 cs.1 = true := by
-    intro p hp
-    simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
-    rcases hp with rfl | rfl
-    · exact @decide_eq_true _ (Classical.propDecidable _) ⟨hA, hBS, hAS⟩
-    · exact ohne_wurzeln_akzeptiert hA
-  have hL' : BindeSpec fs.1 E (schnitt E eigen) := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
-    · exact hA.abg
-    · exact hA.fuss
-    · exact hA.einzeln
-    · exact hA.renn
-    · exact hA.masken
-    · exact fun a ha f _ => (checked_iff _ _ _).mp (hA.besitz a ha) f
-    · exact hBS
-    · exact hA.akku
-    · exact hAS
-    · exact hChecks
-  exact gabbro_ziel_verbund_n specPruefer D E (schnitt E eigen) fs ls cs hC (schnitt_passend E eigen)
-    (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
-    (by rw [hkomp]; exact hH) passes sp init (by rw [hkomp]; exact hL) lebt0 K hK
-
 #print axioms gabbro_ziel_verbund_n
-#print axioms verbund_zeuge
 #print axioms nutzerTeilO_wachs
 
 end Gabbro.Grammatik.Zielsatz

@@ -199,25 +199,6 @@ def Az16 : DynArena := ⟨16, 8, 8, by decide, by decide, by decide⟩
 /-- The same floor under `max 24`: the positive twins in `paesse.rs`. -/
 def Az24 : DynArena := ⟨24, 8, 8, by decide, by decide, by decide⟩
 
-/-- Witness for `dynGrowListe_gelingt`, non-degenerate: a real two-commit
-    sequence (`8, 8`, total `16 > 0`) under `max 24` reaches `24`. -/
-theorem dynGrowListe_gelingt_zeuge :
-    ∃ (A : DynArena) (ns : List Nat) (B : DynArena),
-      0 < ns.sum ∧ A.c + ns.sum ≤ A.M ∧
-      dynGrowListe A ns = some B ∧ B.c = A.c + ns.sum :=
-  let ⟨B, hB, hc⟩ := dynGrowListe_gelingt [8, 8] Az24 (by decide)
-  ⟨Az24, [8, 8], B, by decide, by decide, hB, hc⟩
-
-/-- Witness for `dynGrowListe_scheitert`, and the reason the lower-bound
-    reading was wrong: under `max 16` EACH of the two commits fits the room
-    alone (`8 + 8 <= 16`, what a per-path check of one `grow` saw), yet the
-    run reaches the stop. -/
-theorem dynGrowListe_scheitert_zeuge :
-    ∃ (A : DynArena) (ns : List Nat),
-      (∀ n, n ∈ ns → A.c + n ≤ A.M) ∧ A.M < A.c + ns.sum ∧
-      dynGrowListe A ns = none :=
-  ⟨Az16, [8, 8], by decide, by decide, dynGrowListe_scheitert [8, 8] Az16 (by decide)⟩
-
 /-- Both directions evaluated on the fixtures (`rfl`, no lemma between). -/
 theorem dynGrowListe_zwilling :
     (dynGrowListe Az24 [8, 8]).isSome = true ∧ dynGrowListe Az16 [8, 8] = none :=

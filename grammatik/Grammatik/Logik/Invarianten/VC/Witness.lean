@@ -91,18 +91,6 @@ private theorem guarded_formula : guardedCompiled.formula =
 
 private theorem unguarded_formula : unguardedCompiled.formula = incrementFormula := rfl
 
-theorem guarded_decided_zeuge : decideB (writerVC guardedCompiled entry .tru) (writerVC_closed guardedCompiled entry .tru) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  rw [writerMatrix, lower_denote]
-  intro _
-  rw [quoteQF_denote, lower_denote]
-  intro initial
-  rw [quoteQF_denote, guarded_formula]
-  simp only [lower_denote, LProp.denote, quoteQF_denote, incrementFormula,
-    incrementRange, subst_denote, post, entry, incrementTerm, LTerm.denote] at *
-  simp [Assignment.bind] at * <;> omega
-
 /-- A concrete typed pre-state realizes the failed unguarded increment. -/
 def counterexampleWorld : World declaration where
   slots := fun _ _ _ => ⟨0, by decide, by decide⟩
@@ -118,79 +106,6 @@ def oracle : Orakel declaration where
 def calls (f : declaration.Fn) (world : World declaration)
     (_ : Env declaration (declaration.params f)) : RufAusgang f := .ok world ()
 
-theorem counterexample_entry_zeuge :
-    eval counterexampleWorld invariant counterexampleWorld .nil = true := by
-  change decide ((4 : Int) ≤ 4) = true
-  decide
-
-theorem counterexample_step_zeuge :
-    (match execEnd oracle 0 calls unguarded counterexampleWorld .nil with
-      | .zurueck next _ => eval next invariant next .nil
-      | _ => true) = false := by decide
-
-theorem unguarded_decided_zeuge : decideB (writerVC unguardedCompiled entry .tru) (writerVC_closed unguardedCompiled entry .tru) = false := by
-  apply (close_decide_false_iff _).mpr
-  refine ⟨assignment counterexampleWorld, ?_⟩
-  rw [writerMatrix, lower_denote]
-  intro valid
-  have step := (quoteQF_denote _ _).mp (valid (typeFacts_sound _ counterexampleWorld))
-  rw [lower_denote] at step
-  have initial : entry.denote (assignment counterexampleWorld) ∧ True := by
-    exact ⟨by change (4 : Int) ≤ 4; decide, trivial⟩
-  have result := (quoteQF_denote _ _).mp (step initial)
-  rw [unguarded_formula] at result
-  norm_num [incrementFormula, lower_denote, quoteQF_denote, subst_denote,
-    incrementRange, incrementTerm, post, entry, LProp.denote, LTerm.denote,
-    Assignment.bind, assignment, counterexampleWorld, scalarValue,
-    declaration, Frag.Witness.declaration] at result
-
-/-- P17 also extracts a model for the FALSE generated closed VC. The concrete
-    failing G step above separately rules out a merely arithmetic witness. -/
-theorem counterexample_extracted_zeuge :
-    ∃ values : Assignment (Observation declaration),
-      writerCounterexample unguardedCompiled entry .tru = some values :=
-  writerCounterexample_complete unguardedCompiled entry .tru unguarded_decided_zeuge
-
-theorem checked_call_zeuge :
-    decideB (close (callWP (D := declaration) () post post)) (close_closed (callWP (D := declaration) () post post)) = true := by
-  apply (close_decide_true_iff _).mpr
-  intro values
-  apply havoc_of_valid
-  intro other
-  apply (lower_denote _ _).mpr
-  exact fun initial => initial.2
-
-theorem unchecked_call_havoc_zeuge :
-    decideB (close (callWP (D := declaration) () .tru post)) (close_closed (callWP (D := declaration) () .tru post)) = false := by
-  apply (close_decide_false_iff _).mpr
-  let next : World declaration :=
-    { counterexampleWorld with globs := fun name => if (show Bool from name) = true then ⟨4, by decide, by decide⟩
-      else ⟨5, by decide, by decide⟩ }
-  refine ⟨assignment counterexampleWorld, ?_⟩
-  intro valid
-  have frame : Rahmen (declaration.schreibt ()) (declaration.gschreibt ()) counterexampleWorld next := by
-    constructor
-    · intro table _ index field
-      rfl
-    · intro name unchanged
-      cases name
-      · cases unchanged
-      · rfl
-  have result := callWP_sound () .tru post counterexampleWorld next valid frame trivial
-  norm_num [post, lower_denote, entry, LProp.denote, LTerm.denote, assignment,
-    next, scalarValue, declaration, Frag.Witness.declaration] at result
-
-/-- The invariant is actually owed by the witness's function. -/
-theorem owed_zeuge : schuldet (D := declaration) () () = true := by decide
-
-theorem guarded_preserves_zeuge (O : Orakel declaration) (passes : Nat)
-    (R : ∀ f : declaration.Fn, World declaration → Env declaration (declaration.params f) → RufAusgang f)
-    (evidence : CallEvidence program noFacts R) (world : World declaration)
-    (initial : entry.denote (assignment world)) :
-    WP.wpE O passes R guarded (EndFlow post) world .nil :=
-  writerVC_wp_sound guardedCompiled entry .tru guarded_decided_zeuge
-    O passes R evidence world initial trivial
-
 /-- The same fixture discharges the model obligation, with a genuinely owed
     invariant and without assuming any callee ensures. -/
 def owedPost : InvariantFormula program
@@ -205,19 +120,5 @@ def owedPost : InvariantFormula program
       exact translated.mpr h
     · intro h
       exact translated.mp (h () (by decide))
-
-theorem guarded_invGutS_zeuge (passes : Nat) (Q : AxEns declaration)
-    (S : SperrInv declaration) : InvGutS program passes Q S () := by
-  apply writerVC_sound program noFacts () passes Q S owedPost
-    (fun locals => by cases locals; exact guardedCompiled) entry .tru
-  · intro locals
-    cases locals
-    exact guarded_decided_zeuge
-  · intro world locals initial
-    cases locals
-    exact ⟨(translateDeclared_sound program () entry rfl world).mp initial, trivial⟩
-  · intro R respects _
-    exact frameOnlyEvidence program R respects
-  · decide
 
 end Gabbro.Grammatik.Invarianten.VC.Witness

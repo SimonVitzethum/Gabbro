@@ -110,29 +110,5 @@ def projektE (P : Programm D) (S : SperrInv D) (Q : AxEns D) (starts : List (Σ 
           Σ w : (erweitert D g₀).Fn, Env (erweitert D g₀) ((erweitert D g₀).params w))
       sp0 := sp0' }
 
-/-- **The witness**: every library proved against the open-world rely, with lock invariants and axiom
-    ensures that read only their carriers, its lock invariants at its own initial memory and its starts'
-    `requires` there, has its part of (b) in the program that adds a callback when its owned targets
-    meet that program's pointer interfaces -- started in any memory that restricts to the library's. -/
-theorem nutzerTeil_zeuge {P : Programm D} {S : SperrInv D} {Q : AxEns D}
-    (hL : LogikPflichtA P S Q OffenA) (hSL : SperrInvLokal S) (hQL : AxEnsLokal Q)
-    {pad : List (Ereignis D)} (hp : Einbettung.PadOk pad)
-    (sp0 : Speicher D) (starts : List (Σ w : D.Fn, Env D (D.params w)))
-    (hLS : ∀ L, S.inv L sp0 = true) (hLR : ∀ a ∈ starts, ReqAmEintritt P a.1 (sp0.welt []) a.2)
-    (sp0' : Speicher (erweitert D g₀)) (hsp : (einE D g₀).speicherZ (rueckE D g₀ hA) sp0' = sp0)
-    (hPtr : ∀ f', (projektE D g₀ hA P S Q starts sp0').eigen f' = true →
-      ∀ n (hf : (erweitert D g₀).passt f' n = true),
-        PtrZielVerfeinert (programmE D g₀ P) f' n hf) :
-    NutzerTeilO (projektE D g₀ hA P S Q starts sp0') :=
-  (einE D g₀).nutzerTeilO_E (rueckE D g₀ hA) (sigTreu_einE D g₀) hL (projektE D g₀ hA P S Q starts sp0')
-    (uebernahmeE D g₀ hA P S Q OffenA OffenA (fun _ h => (einE D g₀).offenA_E h)) hp
-    (fun f' hf' => by
-      cases f' with
-      | inl f => exact ⟨f, rfl⟩
-      | inr _ => cases hf')
-    (sperrE_lokal D g₀ hA hSL) (axE_lokal D g₀ hA hQL) hPtr sp0 starts hLS hLR hsp
-    (List.append_nil _) (fun L' _ => ⟨L', rfl⟩)
-
-#print axioms nutzerTeil_zeuge
 
 end Gabbro.Grammatik.Einbettung

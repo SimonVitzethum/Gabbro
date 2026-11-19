@@ -45,15 +45,8 @@ namespace Gabbro.Grammatik.Gen.Zeugen.Gap.GeneratorWitness
 /-- Metadata stems are independent of the source module's directory. -/
 def finding : Summe := ({} : Summe).zeile "LGAP\tfinding\t\tok"
 
-theorem gap_class_zeuge : finding.leanG = [] ∧ finding.leanB = [] ∧
-    finding.leanGap = [("finding", [], true)] := by cbv
-
 /-- All three nonempty classes coexist without promoting a fragment finding. -/
 def mixed : Summe :=
   (finding.zeile "LG\taccepted\t\tok").zeile "LB\twrong\t\t\tok"
-
-theorem mixed_classes_zeuge : mixed.leanG = [("accepted", [], true)] ∧
-    mixed.leanB = [("wrong", [], [], true)] ∧
-    mixed.leanGap = [("finding", [], true)] := by cbv
 
 end Gabbro.Grammatik.Gen.Zeugen.Gap.GeneratorWitness

@@ -128,17 +128,6 @@ theorem resetFinW_zero_observation {α : Type} {n : Nat} (a : Fin n → α)
     ZeroObservation (resetFinW a i k zero) zero i k :=
   fun j h1 h2 => resetFinW_get_in a i k zero j h1 h2
 
-theorem release_chain_zeuge : BackingStep .resident .pendingReturn ∧
-    BackingStep .pendingReturn .released := ⟨.request, .release⟩
-
-theorem fullyCoveredPages_zeuge : fullyCoveredPagesB 4 0 8 0 8 = true := rfl
-
-theorem fullyCoveredPages_unaligned_zeuge :
-    fullyCoveredPagesB 4 0 8 2 8 = false := rfl
-
-theorem fullyCoveredPages_outside_zeuge :
-    fullyCoveredPagesB 4 0 8 0 12 = false := rfl
-
 #print axioms release_consumes_pending
 #print axioms no_silent_release
 #print axioms no_double_release

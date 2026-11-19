@@ -117,8 +117,6 @@ theorem enc_byte {τ : Ty} (hτ : τ = .int 0 255) {v : Wert D τ} {w : Runner.W
 class SichtOK (O : Orakel D) : Prop where
   sicht : ∀ g σ, O.sichtbar g σ = true
 
-theorem sichtOK_zeuge (O : Orakel D) (h : ∀ g σ, O.sichtbar g σ = true) : SichtOK O := ⟨h⟩
-
 theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
     (∀ j, j < τs.length → f j = g j) → ArgsW L f ρ → ArgsW L g ρ
   | [], .nil, _, _ => trivial

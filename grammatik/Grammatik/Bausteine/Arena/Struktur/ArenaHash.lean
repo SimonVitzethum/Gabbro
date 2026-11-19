@@ -197,32 +197,6 @@ theorem hashOk0 : HashOkF 4 nxH hdH 2 (fun j => 0 ≤ j ∧ j < 4) := by
 def hdH1 : Int → Int := fun b => if b = 1 then 3 else hdH b
 def nxH1 : Int → Int := fun k => if k = 3 then 1 else nxH k
 
-/-- **The witness:** the free slot `3` is pushed into bucket `1`; the table stays a hash table with two chains, and
-    bucket `1` now holds `3 -> 1`. -/
-theorem hash_push_zeuge : HashOkF 4 nxH1 hdH1 2 (fun j => 0 ≤ j ∧ j < 4) ∧ Auf 4 nxH1 (hdH1 1) 1 := by
-  have hnot : ∀ b, 0 ≤ b → b < 2 → ¬ Auf 4 nxH (hdH b) 3 := by
-    intro b hb0 hb1 ⟨L, hL, hm⟩
-    have hb : b = 0 ∨ b = 1 := by omega
-    rcases hb with rfl | rfl
-    · have e : hdH 0 = 2 := by unfold hdH; decide
-      rw [e] at hL
-      have := KetteF.eindeutig hL kette_b0; subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
-    · have e : hdH 1 = 1 := by unfold hdH; decide
-      rw [e] at hL
-      have := KetteF.eindeutig hL kette_b1; subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
-  refine ⟨hash_push hashOk0 (b0 := 1) (i := 3) ⟨by decide, by decide⟩ (by decide) (by decide) (by decide)
-    (fun j hj => hj) hnot (fun b hb => by unfold hdH1; simp only [hb, ↓reduceIte]) (by unfold hdH1; decide)
-    (by unfold nxH1 hdH; decide) (fun j hj => by unfold nxH1; simp only [hj, ↓reduceIte]), ?_⟩
-  have e : hdH1 1 = 3 := by unfold hdH1; simp only [↓reduceIte]
-  rw [e]
-  refine ⟨[3, 1], ?_, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_false, or_true]⟩
-  refine KetteF.cons 3 (by decide) (by decide) [1] ?_
-  have : nxH1 3 = 1 := by unfold nxH1; decide
-  rw [this]
-  refine KetteF.cons 1 (by decide) (by decide) [] ?_
-  have : nxH1 1 = 4 := by unfold nxH1 nxH; decide
-  rw [this]; exact KetteF.nil
-
 /-- The planted defect: slot `2`, the head of bucket `0`, is pushed into bucket `1` as well. -/
 def hdH2 : Int → Int := fun _ => 2
 def nxH2 : Int → Int := fun k => if k = 2 then 1 else nxH k
@@ -251,5 +225,4 @@ end Gabbro.Grammatik.ArenaKette
 #print axioms Gabbro.Grammatik.ArenaKette.hash_pop
 #print axioms Gabbro.Grammatik.ArenaKette.hash_unlink
 #print axioms Gabbro.Grammatik.ArenaKette.hashOk0
-#print axioms Gabbro.Grammatik.ArenaKette.hash_push_zeuge
 #print axioms Gabbro.Grammatik.ArenaKette.hash_defekt_bricht

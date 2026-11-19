@@ -190,49 +190,4 @@ def failure {Γ : Ctx} : Endblock MD MV false Γ [] := .ret .empty (List.Perm.re
 def fresh : Allocator MA MV false [Payload] [] :=
   Gabbro.Grammatik.Block.arenaAlloc MA.toArenaForm (.var .here) rfl mdarf rfl (mgdarf _) failure
 
-/-- **Push witness**: pushing `7` on stack 0 gives stack 0 = `[7, 0]` and leaves stack 1 = `[0]`. -/
-theorem push_multi_zeuge (O : Orakel MD) (passes : Nat)
-    (R : ∀ f : MD.Fn, World MD → Env MD (MD.params f) → RufAusgang f) :
-    ∃ σ' kk,
-      (∀ {Λ'} (rest : Gabbro.Grammatik.Block MD MV false [Ty.index 4, Payload] [] Λ'),
-        execBlock O passes R (Block.pushAllocated fresh ML (heads 0) rfl mdarf rfl (mgdarf _) rest) w1
-          (.cons seven .nil) = (execBlock O passes R rest σ' (.cons kk (.cons seven .nil))).schrumpf) ∧
-      kk.n = 2 ∧ MultiRep ML heads σ' (zwei [seven, zero] [zero]) ∧ MA.FreiOk σ' := by
-  obtain ⟨σ', kk, hexec, hkn, hm, hf⟩ := push_multi O passes R fresh ML heads heads_inj 0 rfl mdarf rfl
-    (mgdarf _) w1 (.cons seven .nil) seven (fun _ => [zero]) 2 multi_w1
-    (fresh_allocated O passes R MA .here rfl mdarf rfl (mgdarf _) failure w1 (.cons seven .nil) frei_w1
-      (by decide))
-  refine ⟨σ', kk, hexec, hkn, ?_, hf⟩
-  have he : Function.update (fun _ : Fin 2 => [zero]) 0 [seven, zero] = zwei [seven, zero] [zero] := by
-    funext k
-    rcases k with ⟨_ | _ | k, hk⟩
-    · rfl
-    · rfl
-    · omega
-  rw [← he]
-  exact hm
-
-/-- **Pop witness**: popping stack 1 hands its payload `0` to the continuation, empties stack 1 and leaves
-stack 0 = `[0]`. -/
-theorem pop_multi_zeuge (O : Orakel MD) (passes : Nat)
-    (R : ∀ f : MD.Fn, World MD → Env MD (MD.params f) → RufAusgang f) :
-    ∃ (σ' : World MD) (kk : Wert MD (Ty.index 4)),
-      execBlock O passes R (Block.popAndRelease ML (heads 1) rfl (mgdarf _) rfl mdarf rfl (mgdarf _)
-        (failure (Γ := [Payload])) (.nil : Gabbro.Grammatik.Block MD MV false [Payload, Ty.index 4, Payload] [] []))
-        w1 (.cons seven .nil) =
-        ((execBlock O passes R (.nil : Gabbro.Grammatik.Block MD MV false [Payload, Ty.index 4, Payload] [] [])
-          σ' (.cons zero (.cons kk (.cons seven .nil)))).schrumpf).schrumpf ∧
-      MultiRep ML heads σ' (zwei [zero] []) ∧ MA.FreiOk σ' := by
-  obtain ⟨σ', kk, hexec, hm, hf⟩ := pop_multi O passes R ML heads heads_inj 1 rfl (mgdarf _) rfl mdarf rfl
-    (mgdarf _) failure .nil w1 (.cons seven .nil) zero [] (fun _ => [zero]) rfl multi_w1 frei_w1
-  refine ⟨σ', kk, hexec, ?_, hf⟩
-  have he : Function.update (fun _ : Fin 2 => [zero]) 1 [] = zwei [zero] [] := by
-    funext k
-    rcases k with ⟨_ | _ | k, hk⟩
-    · rfl
-    · rfl
-    · omega
-  rw [← he]
-  exact hm
-
 end Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses

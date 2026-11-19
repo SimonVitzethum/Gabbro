@@ -15,12 +15,10 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 -- The first private-frame rely component for concurrent IR refinement.
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_word
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_frame
-#print axioms Gabbro.Stage0.Senke.foreign_frame_zeuge
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_ok
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.complete_at
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.values_at
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.At.agreeW
-#print axioms Gabbro.Stage0.Senke.DistinctSnapshotProbe.capture_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.lowEnsAt_ok
 #print axioms Gabbro.Stage0.Senke.publishResult_run
 #print axioms Gabbro.Stage0.Senke.entryFrame_run

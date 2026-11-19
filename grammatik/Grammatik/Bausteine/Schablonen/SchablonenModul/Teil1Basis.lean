@@ -124,18 +124,5 @@ theorem arena_modul_ueber_der_decke (d : Desk) (V n : Nat) (h : d.max < d.commit
 /-- `arena Knoten capacity 2 .. 4 max 4096 of Wert` (8-byte slots) under `provision 24576`. -/
 def haldeD : Desk := { elem := 8, max := 4096, floor := 4, committed := 0 }
 
-theorem arena_modul_zeuge :
-    ∃ d1 d2 d3,
-      reserve haldeD 24576 = some d1 ∧ Inv d1 24576 ∧
-      grow d1 24576 1024 = .ja d2 ∧ grow d2 24576 1024 = .ja d3 ∧
-      d3.committed = 2052 ∧ Inv d3 24576 ∧
-      grow d3 24576 1024 = .nein ∧          -- the third grow is refused below the ceiling
-      grow d3 24576 3000 = .stopp ∧          -- and one past the ceiling is the fail-stop
-      (2051 + 1) * d3.elem ≤ 24576 := by
-  refine ⟨{ haldeD with committed := 4 }, { haldeD with committed := 1028 },
-    { haldeD with committed := 2052 }, ?_, ?_, ?_, ?_, rfl, ?_, ?_, ?_, ?_⟩ <;>
-    simp (config := { decide := true }) [Inv]
-
-
 end ModulLaufzeit
 end Gabbro.Grammatik

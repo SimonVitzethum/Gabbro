@@ -64,11 +64,6 @@ def requested : List Zelle := [
 /-- The block rule checks a discarded register result in the current fragment. -/
 theorem e_gueltig : e.gueltig = true := by decide +kernel
 
-/-- The original ending and block forms both pass, with distinct fine cells. -/
-theorem register_variants_zeuge : Gap.F03_reg.e.gueltig = true ∧ e.gueltig = true ∧
-    e.HatF ⟨0, 5, 8, false, []⟩ ∧ ¬ e.HatF ⟨0, 6, 10, false, []⟩ :=
-  ⟨Gap.F03_reg.e_gueltig, e_gueltig, by decide, by decide⟩
-
 /-- Exact cell set, including every companion cell of this fixture. -/
 def zellen : List Zelle := [
   ⟨0, 0, true, [true, false, false]⟩,
@@ -110,9 +105,6 @@ theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member
   rw [← zellen_exact] at member
   exact List.mem_eraseDups.1 member
-
-theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
-  ⟨e_gueltig, e_hat _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)⟩
 
 /-- Missing requested cells are findings, never an altered checker verdict. -/
 def missing : List Zelle := requested.filter (fun x => !zellen.contains x)

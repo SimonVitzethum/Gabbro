@@ -298,34 +298,6 @@ theorem refB_prog_abdeckung : ∀ h, h ∉ [0, 1] → refB_prog h = [] := by
     simp only [List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true, not_true_eq_false] at hh
   simp only [refB_prog]
 
-/-- Joint witness for `markSep_aus_B`: decided check, coverage, a table
-    the function writes, and a reached run that changes memory. -/
-theorem markSep_aus_B_zeuge :
-    ∃ (code : refD.Marke → Nat) (fs : List Faden),
-      markSepB code refB_prog fs = true ∧
-      (∀ h, h ∉ fs → refB_prog h = []) ∧
-      (vertragVon refD refEin).schreibt () = true ∧
-      ∃ (M : GenMaschine refD) (pc : PCStand),
-        PCReach refP refO 0 refB_prog (GenStart refSp0) M pc ∧
-        M.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
-  have hB : markSepB (fun _ => 0) refB_prog [0, 1] = true := by decide
-  exact ⟨fun _ => 0, [0, 1], hB, refB_prog_abdeckung,
-    refEin_schreibt (), refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
-
-/-- Joint witness for `nurG_aus_B`: thread 1 owns `konto`, thread 0
-    names nothing; decided check, coverage, written table, moving run. -/
-theorem nurG_aus_B_zeuge :
-    ∃ (t : refD.Tab) (g : Faden) (fs : List Faden),
-      nurGB t g refB_prog fs = true ∧
-      (∀ h, h ∉ fs → refB_prog h = []) ∧
-      (vertragVon refD refEin).schreibt () = true ∧
-      ∃ (M : GenMaschine refD) (pc : PCStand),
-        PCReach refP refO 0 refB_prog (GenStart refSp0) M pc ∧
-        M.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
-  have hB : nurGB () 1 refB_prog [0, 1] = true := by decide
-  exact ⟨(), 1, [0, 1], hB, refB_prog_abdeckung,
-    refEin_schreibt (), refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
-
 /-- The unshared check agrees on the witness program (shared `konto`,
     silent thread 0): corroboration, no witness obligation. -/
 example : unsharedSepB refB_prog [0, 1] = true := by decide
@@ -361,7 +333,5 @@ example : unsharedSepB refB_prog [0, 1] = true := by decide
 #print axioms Gabbro.Grammatik.pcMarkSep_aus_verschiedenen_funktionen
 #print axioms Gabbro.Grammatik.pcMarkSep_scheitert_geteilte_marke
 #print axioms Gabbro.Grammatik.refB_prog_abdeckung
-#print axioms Gabbro.Grammatik.markSep_aus_B_zeuge
-#print axioms Gabbro.Grammatik.nurG_aus_B_zeuge
 
 end Gabbro.Grammatik

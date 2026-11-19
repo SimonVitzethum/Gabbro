@@ -17,13 +17,6 @@ def writeOnly : Stmt GetrenntZeuge.gD (vertragVon GetrenntZeuge.gD gAendern) fal
 
 def writeEnv : Env GetrenntZeuge.gD [writeType] := .cons () .nil
 
-theorem write_only_store_zeuge :
-    ((execStmt GetrenntZeuge.gO 0 keinRuf writeOnly GetrenntZeuge.σ0 writeEnv).welt.map
-      (fun world => (world.slots GTab.T 0 GFeld.x).n)) = some 5 ∧
-    (DataCapTy.table 0 (false, true)).rights.read = false ∧
-    zaehltFuerTrennung writeType = true := by
-  exact ⟨rfl, rfl, rfl⟩
-
 /-- Read permission cannot be recovered by unifying a write-only parameter with a readable view. -/
 theorem write_only_read_refused :
     ∀ space n : Nat, ∀ write : Bool, writeType ≠ .ptr (.table n (true, write) space) := by
@@ -40,13 +33,5 @@ def namedPointer : Expr NamedSpaces.declaration [] [] (.ptr (.table 0 (true, tru
   .ptrOf false 0 rfl (true, true)
 
 def namedWorld : World NamedSpaces.declaration := { slots := fun _ _ _ => ⟨0, by decide, by decide⟩, globs := fun _ => false, spur := [] }
-
-/-- A declared named space resolves its table; a cross-space use and an unknown space fail closed. -/
-theorem named_table_zeuge :
-    NamedSpaces.declaration.capTab 1 0 = some false ∧
-    NamedSpaces.declaration.capTab 0 0 = none ∧
-    NamedSpaces.declaration.capTab 2 0 = none ∧
-    eval namedWorld namedPointer namedWorld .nil = () := by
-  exact ⟨rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.CapabilityWitness

@@ -143,31 +143,4 @@ theorem inputs : EntrySnapshots.Inputs layout world memory cells := by
       subst i
       decide +kernel +revert
 
-/-- Every capture premise holds jointly. Source storage is read-only; all three
-    payload limbs, the distinct counter and preserved original parameter survive. -/
-theorem capture_ok_zeuge [Kern] :
-    EntrySnapshots.capture layout cells 4 = some code ∧
-    EntrySnapshots.words cells = 4 ∧ memory.wr 8192 = false ∧ memory.wr 8224 = false ∧
-    ∃ m', Star ⟨0, 4096⟩ memory ⟨128, 4096⟩ m' ∧
-      EntrySnapshots.At layout world m' 4096 cells 4 ∧
-      m'.rd64 4160 = some 33 ∧ m'.rd64 4096 = some 64 ∧
-      EntrySnapshots.Inputs layout world m' cells := by
-  have emitted : EntrySnapshots.capture layout cells 4 = some code := by decide +kernel
-  obtain ⟨m', run, changed, saved⟩ := EntrySnapshots.capture_ok cells 4 emitted memory 0
-    frame (by decide) (by decide) (by intro cell hc; simp only [cells, List.mem_cons, List.not_mem_nil, or_false] at hc; rcases hc with rfl | rfl <;> decide +kernel)
-    code_at (by unfold CodeFar; decide +kernel) inputs
-  refine ⟨emitted, rfl, rfl, rfl, m', ?_, saved, ?_, ?_, ?_⟩
-  · rw [show (0 : Runner.W) + BitVec.ofNat 64 (16 * code.length) = (128 : Runner.W) by decide +kernel] at run
-    exact run
-  · have unchanged := rd64_agree_out (a := 4160) changed (by decide) (Or.inr (by decide))
-    rw [show BitVec.ofNat 64 4160 = (4160 : Runner.W) by decide +kernel] at unchanged
-    rw [unchanged]
-    decide +kernel
-  · have first := agree_rd_low (i := 0) changed (by decide) (by decide) (by decide)
-    simpa only [slot, BitVec.zero_mul, BitVec.add_zero] using
-      first.trans (show memory.rd64 4096 = some 64 by decide +kernel)
-  · exact EntrySnapshots.Inputs.agree inputs changed
-      (by intro cell hc; simp only [cells, List.mem_cons, List.not_mem_nil, or_false] at hc; rcases hc with rfl | rfl <;> decide +kernel)
-      (fun cell hc => (EntrySnapshots.capture_bounds cells 4 emitted cell hc).2)
-
 end Gabbro.Stage0.Senke.DistinctSnapshotProbe

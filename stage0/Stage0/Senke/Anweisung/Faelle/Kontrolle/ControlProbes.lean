@@ -107,56 +107,15 @@ def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String
 def blockImageOf (body : Block D (vertragVon D entry) false [] [] []) : Except String (List Runner.B) :=
   imageOf (.cons (.ite .tru body .nil) (retN 99 (by decide) (by decide)))
 
-/-- The true and false fixtures each lower as complete nonempty programs. -/
-theorem blockCheck_case_zeuge :
-    (imageOf (checkBody true)).isOk = true ∧ (imageOf (checkBody false)).isOk = true := by
-  decide +kernel
-
-/-- All four range directions instantiate the end-block lowering. -/
-theorem endNarrow_case_zeuge :
-    [2, 3, 7, 8].all (fun n => (imageOf (narrowEnd n)).isOk) = true := by
-  decide +kernel
-
-/-- The same four directions instantiate the ordinary block lowering. -/
-theorem blockNarrow_case_zeuge :
-    [2, 3, 7, 8].all (fun n => (blockImageOf (narrowBlock n)).isOk) = true := by
-  decide +kernel
-
-/-- Both hardware branches have ordinary complete image witnesses. -/
-theorem blockAxiomElse_case_zeuge :
-    (blockImageOf (gateBlock 1 (by decide) (by decide))).isOk = true ∧
-    (blockImageOf (gateBlock 99 (by decide) (by decide))).isOk = true := by
-  decide +kernel
-
 /-- Both terminating and ordinary blocks accept signed-word boundaries that
     cannot be encoded in one instruction immediate. The continuation is nonempty. -/
 def wideNarrowEnd : Endblock D (vertragVon D entry) false [] [] :=
   .narrow (.lit 7) (-2^63) (2^63-1) (retN 41 (by decide) (by decide))
     (retN 7 (by decide) (by decide))
 
-theorem wideNarrow_case_zeuge :
-    (imageOf wideNarrowEnd).isOk = true ∧
-    (blockImageOf (.narrow (.lit 7) (-4294967296) 4294967296
-      (retN 41 (by decide) (by decide)) .nil)).isOk = true := by
-  decide +kernel
-
-/-- A source value beyond the signed word takes the ordinary error branch;
-    its representable multiword encoding no longer refuses compilation. -/
-theorem wide_source_narrow_zeuge :
-    (imageOf (narrowEnd (2^63))).isOk = true ∧
-    (blockImageOf (narrowBlock (-(2^80)))).isOk = true := by
-  decide +kernel
-
 end Gabbro.Stage0.Senke.ControlProbe
 
 namespace Gabbro.Stage0.Senke
-
-/-- Both materialization branches occur on jointly representable word counts. -/
-theorem travCountC_zeuge :
-    travCountSize 10 = 1 ∧ travCountSize 4294967296 = 17 ∧
-    (travCountC 6 10).length = 1 ∧
-    (travCountC 6 4294967296).length = 17 := by
-  decide +kernel
 
 end Gabbro.Stage0.Senke
 
@@ -185,28 +144,8 @@ def program : Programm D where
     subst f
     exact body
 
-/-- Zero storage does not replace the declared traversal count with zero. -/
-theorem fieldless_table_layout_zeuge :
-    D.count table = 4294967296 ∧ tabSz u table = 0 ∧ IsEmpty (D.Feld table) := by
-  exact ⟨rfl, (fieldless_table_layout u table rfl).2⟩
-
 local instance : DecidableEq D.Fn :=
   inferInstanceAs (DecidableEq (Fin u.fns.length))
-
-/-- The canonical checker accepts this exact large-count, fieldless program.
-    Source export can preserve it without introducing a replacement source rule. -/
-theorem traverse_wide_checker_zeuge :
-    Gabbro.Grammatik.Zielsatz.AkzeptiertX program
-      (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie u)
-      [entry] [] [Sum.inl table] [] = true := by
-  decide +kernel
-
-/-- A real image witness for the generic wide traversal case. This does not
-    claim the missing empty-table source exporter has been implemented. -/
-theorem traverse_wide_image_zeuge :
-    (bild 1 program (layU u (fun _ => none)) [entry] Fin.val
-      (fun _ => "main") entry .nil [] 1024 0).isOk = true := by
-  decide +kernel
 
 end Gabbro.Stage0.Senke.WideTraverseProbe
 
@@ -221,11 +160,5 @@ def sourceCount : Option Int := do
   let compiled ← (Gabbro.Stage0.compile source).toOption
   let table ← compiled.unit.tabs[0]?
   pure table.count
-
-/-- Canonical source, exact original count and actual IR image are jointly inhabited. -/
-theorem traverse_wide_source_zeuge :
-    sourceCount = some 4294967296 ∧
-    (Gabbro.Stage0.irBild source 1024).isOk = true := by
-  decide +kernel
 
 end Gabbro.Stage0.Senke.WideTraverseProbe

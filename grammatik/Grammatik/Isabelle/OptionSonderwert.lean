@@ -126,17 +126,6 @@ theorem kodiere_wort_injektiv (w N : Nat) (x y : Option Idx)
 
 /-! ## Witness: the encoding on a concrete instance -/
 
-/-- Witness: at `N = 3, w = 2`, `None` encodes to `3` apart from every valid
-    `Some`, while at `N = 4 = 2^2` it collapses onto `Some 0`. Both halves of
-    M-1 on a concrete instance. No lemma above quantifies over syntax, so the
-    inhabitation obligation is vacuous. -/
-theorem kodiere_zeuge :
-    kodiere 3 none = 3 ∧ kodiere 3 (some 2) = 2 ∧
-    kodiere 3 none ≠ kodiere 3 (some 2) ∧
-    kodiereWort 2 4 none = kodiereWort 2 4 (some 0) := by
-  refine ⟨rfl, rfl, by decide, ?_⟩
-  exact sonderwert_kollidiert_bei_vollem_wort 2 4 rfl (by decide)
-
 /-! ## Bridge
 
   `SchablonenT5Sem.lean` §4 ties `option.sonderwert` to the Lean model:
@@ -156,6 +145,5 @@ theorem kodiere_zeuge :
 #print axioms Gabbro.Grammatik.Isabelle.OptionSonderwert.kodiere_injektiv
 #print axioms Gabbro.Grammatik.Isabelle.OptionSonderwert.sonderwert_kollidiert_bei_vollem_wort
 #print axioms Gabbro.Grammatik.Isabelle.OptionSonderwert.kodiere_wort_injektiv
-#print axioms Gabbro.Grammatik.Isabelle.OptionSonderwert.kodiere_zeuge
 
 end Gabbro.Grammatik.Isabelle.OptionSonderwert

@@ -63,32 +63,6 @@ attribute [local cbv_eval] translation_items
     reuse a certificate (`translation_result_unique`,
     `translation_wrong_execution_zeuge` in `LibraryCertificates.lean`). -/
 
-/-- The certificate input is recomputed from the exact retained source
-    region: the decoder derivation stored in the certificate. -/
-theorem zertifikat_eingabe_nachgerechnet_zeuge (reverse : Bool) :
-    decodeIntegerRows (declOf (translationUnit reverse)) translationSchema
-      (translationSource reverse).call.region =
-      some (translationCertificate reverse).input := by
-  have decoded := (translationCertificate reverse).decoded
-  exact decoded
-
-/-- The certificate resolves the exact source call: the declaration's
-    library is the resolution of the retained call against the retained
-    items. -/
-theorem zertifikat_aufgeloest_zeuge (reverse : Bool) :
-    libraryDecl (translationMembers reverse) translationCall =
-      .ok (translationDeclaration reverse).library := by
-  have resolved := (translationDeclaration reverse).resolved
-  dsimp only [translationSource] at resolved
-  simpa only [translationMembers] using resolved
-
-/-- The resolved translator carries the source-selected key: both fixtures
-    select the translator named `build`, never a same-named foreign body. -/
-theorem zertifikat_uebersetzer_name_zeuge (reverse : Bool) :
-    (translationLibrary reverse).translator.name = "build" := by
-  rw [(translation_library_selected reverse).2]
-  cases reverse <;> cbv
-
 /-- Payload content is unique per certificate: two payloads of one
     certificate agree, so no second content can ride the same site. -/
 theorem nutzlast_inhalt_eindeutig {source : LibrarySource} {u : UProg}
@@ -97,22 +71,5 @@ theorem nutzlast_inhalt_eindeutig {source : LibrarySource} {u : UProg}
     (first second : LibraryPayload certificate) :
     first.inhalt = second.inhalt := by
   rw [first.vollstaendig, second.vollstaendig]
-
-/-- The payload of the identity translation sits at the exact source call
-    site `[0]`. -/
-theorem zertifikat_standort_gebunden_zeuge :
-    translationPayload.site = (translationSource false).path := by
-  have located := translationPayload.amStandort
-  exact located
-
-/-- The Rust printer's claimed payload (`sumPayloadVals`, `sumPayloadOk`)
-    is re-derived by the Lean decoder from raw tokens: output typing is
-    recomputed, never trusted from Rust. The values coincide with the
-    four entries `10 20 30 40`. -/
-theorem rust_ausgabe_nachgerechnet_zeuge {D : Deklaration} :
-    ∃ v, decodeIntegerRows D ⟨0, 100, 4⟩ [.num 10, .num 20, .num 30, .num 40] = some v ∧
-      (v ⟨0, by decide⟩).n = 10 ∧ (v ⟨1, by decide⟩).n = 20 ∧
-      (v ⟨2, by decide⟩).n = 30 ∧ (v ⟨3, by decide⟩).n = 40 := by
-  refine ⟨_, rfl, rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Uebersetzung

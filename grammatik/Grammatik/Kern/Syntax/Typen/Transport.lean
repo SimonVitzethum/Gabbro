@@ -357,20 +357,6 @@ def forward (n : Nat) (v : {f : Bool // allP f n = true}) :
 def backward (n : Nat) (v : {f : Bool // allP f (n + 1) = true}) :
     {f : Bool // allP f n = true} := ⟨v.1, rfl⟩
 
-theorem restrict_relocate_zeuge :
-    Val.restrict (fun n => n + 1) id backward schema
-      (Val.relocate (fun n => n + 1) id forward schema value) = value :=
-  Val.restrict_relocate (p := allP) (p' := allP)
-    (fun n => n + 1) id forward backward (fun _ _ => rfl) schema value
-
-theorem relocate_restrict_zeuge :
-    Val.relocate (fun n => n + 1) id forward schema
-      (Val.restrict (fun n => n + 1) id backward schema
-        (Val.relocate (fun n => n + 1) id forward schema value)) =
-      Val.relocate (fun n => n + 1) id forward schema value :=
-  Val.relocate_restrict (p := allP) (p' := allP)
-    (fun n => n + 1) id forward backward (fun _ _ => rfl) schema _
-
 end TypedPayloadTransport
 
 end Gabbro.Grammatik

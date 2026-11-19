@@ -222,7 +222,6 @@ theorem ruf_fortsetzung :
 
 #print axioms Gabbro.Grammatik.rufG_adaequat
 #print axioms Gabbro.Grammatik.rufG_adaequat_R
-#print axioms Gabbro.Grammatik.rufG_adaequat_R_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_zeuge
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr
 #print axioms Gabbro.Grammatik.rufG_adaequat_umkehr_zeuge

@@ -76,39 +76,6 @@ def oz : Orakel ArenaZeuge.ZD where
 def voll0 : Endblock ArenaZeuge.ZD ArenaZeuge.ZV false [] [] :=
   .ret .empty (by rfl)
 
-/-- **Joint witness on the four-slot fixture.** Every premise of
-    `reset_alloc_laueft_rumpf` is instantiated JOINTLY: the arena `Log`
-    (table of four byte slots beside the `0 .. 4` counter), the stored value
-    `sieben`, the concrete continuations `voll0`/`Block.nil`, the FULL world
-    (`welt 4` -- the wholesale case: reset from full, then reissue), the
-    empty environment, the witness oracle and `keinRuf`. NON-DEGENERATE: the
-    fixture's one table is written by the reissued body, and both the reset
-    (global store `4 -> 0`) and the body (slot store plus bump) change
-    memory. -/
-theorem reset_alloc_rumpf_zeuge :
-    ∃ (σ₁ : World ArenaZeuge.ZD)
-      (k : Wert ArenaZeuge.ZD
-        (Ty.index (ArenaZeuge.ZD.count ArenaZeuge.Log.tab))),
-      k.n = 0 ∧
-      execStmt (V := ArenaZeuge.ZV) (l := false) (Γ := []) (Λ := []) oz 0 keinRuf
-        (Stmt.arenaReset ArenaZeuge.Log rfl ArenaZeuge.zeuge_gdarf)
-        (ArenaZeuge.welt 4 (by decide) (by decide)) .nil = .ok σ₁ .nil ∧
-      ArenaZeuge.Log.stand σ₁ = 0 ∧
-      execBlock (V := ArenaZeuge.ZV) (l := false) (Γ := []) (Λ := []) oz 0 keinRuf
-        (Block.arenaAlloc ArenaZeuge.Log ArenaZeuge.sieben rfl
-          ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf voll0 Block.nil)
-        σ₁ .nil
-      = (execBlock (l := false) oz 0 keinRuf
-          (Block.arenaRumpf ArenaZeuge.Log ArenaZeuge.sieben rfl
-            ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf Block.nil)
-          (σ₁.lese [] [Sum.inr ArenaZeuge.Log.zaehl])
-          (.cons k .nil)).schrumpf := by
-  obtain ⟨σ₁, k, hkn, h1, h2, h3⟩ :=
-    reset_alloc_laueft_rumpf oz 0 keinRuf ArenaZeuge.Log ArenaZeuge.sieben
-      rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf voll0 Block.nil
-      _ .nil
-  exact ⟨σ₁, k, hkn, h1, h2, h3⟩
-
 /-- **The negative direction.** Without a reset, `alloc` on the FULL arena
     takes its `else` -- the wholesale is what makes the reissue safe, and
     this is the check that the positive theorem above is not vacuous. -/
@@ -123,7 +90,6 @@ theorem alloc_voll_ohne_reset_nimmt_else :
   ArenaZeuge.zeuge_alloc_voll oz 0 keinRuf voll0 Block.nil
 
 #print axioms reset_alloc_laueft_rumpf
-#print axioms reset_alloc_rumpf_zeuge
 #print axioms alloc_voll_ohne_reset_nimmt_else
 
 end Zeuge

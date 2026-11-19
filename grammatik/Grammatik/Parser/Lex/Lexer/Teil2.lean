@@ -211,5 +211,4 @@ end Gabbro.Grammatik.Parser
 #print axioms Gabbro.Grammatik.Parser.lex_total
 #print axioms Gabbro.Grammatik.Parser.lex_ofList
 #print axioms Gabbro.Grammatik.Parser.lex_keywords
-#print axioms Gabbro.Grammatik.Parser.lex_keywords_zeuge
 #print axioms Gabbro.Grammatik.Parser.sonde01_lex

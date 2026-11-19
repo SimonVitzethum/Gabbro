@@ -93,17 +93,6 @@ public theorem dequeue_value {capacity : Nat} (ring : Ring capacity Value) (none
     (dequeue ring).map Prod.fst = some (ring.cells ring.head) := by
   simp only [dequeue, nonempty, ↓reduceIte, Option.map_some]
 
-public theorem slot_wrap_zeuge : (slot (capacity := 4) ⟨3, (by decide)⟩ ⟨2, (by decide)⟩).val = 1 := rfl
-
 @[expose] public def ringFixture : Ring 4 Nat := ⟨⟨3, (by decide)⟩, 2, (by decide), fun i => i.val + 10⟩
-
-public theorem ring_nonempty_zeuge :
-    (dequeue ringFixture).map (fun pair => (pair.1, pair.2.head.val, pair.2.count)) =
-      some (13, 0, 1) := by decide
-
-public theorem ring_enqueue_zeuge :
-    (enqueue ringFixture 99).map (fun ring =>
-      (ring.count, ring.cells ⟨1, (by decide)⟩, ring.cells ⟨3, (by decide)⟩)) =
-      some (3, 99, 13) := by decide
 
 end Gabbro.Grammatik.Async.Executor

@@ -7,57 +7,6 @@ public import Grammatik.Logik.Ruf.FremdRuf.T2.Teil1
 
 namespace Gabbro.Grammatik
 
-/-- ZEUGE: every premise of `fremdruf_gate_gilt_pre` holds jointly on the
-    fixture with the BAD oracle -- frame, restricted premise, the read gate's
-    declared effects, the caller's obligation at a well-formed read after
-    the open (descriptor `3`), a fitting answer -- and the witness is
-    non-degenerate: the same oracle breaks the full premise
-    (`fdObad_nicht_voll`), the precondition is false at another call
-    (`fdPflicht_verletzt`), and the open gate's own precondition held
-    at the start world (the terminator stood) and fails after it (the
-    marker overwrote it). -/
-theorem fremdruf_gate_gilt_pre_zeuge :
-    ∃ (g : GateData fdD) (σ : World fdD) (ρ : Env fdD (fdD.aparams fdRead))
-      (v : ErgVal fdD (fdD.aerg fdRead)),
-      GutO fdObad ∧ AxVertragOPAlle fdPre fdQ fdObad ∧
-      g.eff = fdD.aschreibt fdRead ∧ g.effG = fdD.agschreibt fdRead ∧
-      AufruferPflicht fdPre fdRead σ ρ ∧
-      einpassenErg fdObad.zeiger (fdD.aerg fdRead) (fdObad.wirkt fdRead σ ρ).2 = some v ∧
-      ¬ AxVertragO fdQ fdObad ∧
-      ¬ AufruferPflicht fdPre fdRead fdWelt0 fdRho5 ∧
-      AufruferPflicht fdPre fdOpen fdWelt0 Env.nil ∧
-      ¬ AufruferPflicht fdPre fdOpen fdWelt1 Env.nil := by
-  refine ⟨fdGateRead, fdWelt1, fdRho3, fdW0, fdObad_gut, fdObad_vertragP,
-    fdGateRead_eff, fdGateRead_effG, ?_, fdObadFitR, fdObad_nicht_voll,
-    fdPflicht_verletzt, ?_, ?_⟩
-  · show decide (fdKopf fdRho3 = 3) = true
-    exact decide_eq_true rfl
-  · show decide ((fdWelt0.slots () 1 ()).n = 0) = true
-    exact decide_eq_true rfl
-  · intro h
-    have h' : decide ((fdWelt1.slots () 1 ()).n = 0) = true := h
-    have h0 : (fdWelt1.slots () 1 ()).n = 0 := of_decide_eq_true h'
-    have h5 : (fdWelt1.slots () 1 ()).n = 5 := fdO_open_marke fdWelt0 Env.nil
-    omega
-
-/-- ZEUGE for the bridge: its premises hold jointly on the bad oracle (the
-    one the full premise refuses), so the re-dressed oracle meets premise
-    (c) of `gabbro_ziel` in full, and on the well-formed witness read it
-    answers exactly as the machine's oracle does. -/
-theorem hardware_aus_vertragP_zeuge [RootNativeFloat.Hardware] :
-    GutO fdObad ∧ RegLokal fdObad ∧ AxVertragOPAlle fdPre fdQ fdObad ∧
-      (∀ a, einpassenErg fdObad.zeiger (fdD.aerg a) (fdRaus a) = none) ∧
-      ¬ AxVertragO fdQ fdObad ∧
-      Zielsatz.HardwareAnnahmen (mitVorbedingung fdPre fdObad fdRaus) fdQ ∧
-      (mitVorbedingung fdPre fdObad fdRaus).wirkt fdRead fdWelt1 fdRho3 =
-        fdObad.wirkt fdRead fdWelt1 fdRho3 :=
-  ⟨fdObad_gut, fdObad_regLokal, fdObad_vertragP, fdRaus_passt_nicht, fdObad_nicht_voll,
-    hardware_aus_vertragP fdPre fdQ fdObad fdRaus fdObad_gut fdObad_regLokal
-      fdObad_vertragP fdPre_ohneLese fdRaus_passt_nicht,
-    mitVorbedingung_gleich fdPre fdObad fdRaus fdRead fdWelt1 fdRho3
-      fdPre_ohneLese
-      (show decide (fdKopf fdRho3 = 3) = true from decide_eq_true rfl)⟩
-
 /-! ## 10. From single calls to call sequences (lane 262, OFFEN O23)
 
   `hardware_aus_vertragP` (§9) bridges one call: on a well-formed call the

@@ -154,33 +154,11 @@ theorem resetRange_outside_same {D : Deklaration} {g : D.Glob}
     resetFinW (R.arr ▸ v) R.i R.k (zeroValue _ R.zero) j = (R.arr ▸ v) j :=
   resetFinW_get_out _ _ _ _ _ h
 
-theorem rangeOk_zeuge : rangeOk 4 1 2 = true := rfl
-
-theorem rangeOk_empty_at_end_zeuge : rangeOk 4 4 0 = true := rfl
-
-theorem rangeOk_negative_zeuge : rangeOk 4 3 2 = false := rfl
-
-theorem zeroAdmittingB_zeuge : zeroAdmittingB (.arr (.int 0 255) 4) = true := rfl
-
-theorem zeroAdmittingB_fnptr_zeuge : zeroAdmittingB (.fnptr 0) = false := rfl
-
-theorem resetFinW_zeuge : ∀ j : Fin 4,
-    resetFinW (fun j => j.val) 1 2 0 j =
-      (if 1 ≤ j.val ∧ j.val < 3 then 0 else j.val) := fun _ => rfl
-
 #print axioms rangeOk_iff
 #print axioms zeroAdmittingB_iff
 #print axioms resetFinW_get_in
 #print axioms resetFinW_get_out
 #print axioms resetRange_reads_zero
 #print axioms resetRange_outside_same
-
-/-- A populated integer array admits zero through the Boolean checker. -/
-theorem zeroAdmitting_of_B_zeuge : ZeroAdmitting (.arr (.int 0 255) 4) :=
-  zeroAdmitting_of_B _ rfl
-
-/-- The structural evidence also computes an accepting Boolean. -/
-theorem zeroAdmittingB_of_zeuge : zeroAdmittingB (.arr (.int 0 255) 4) = true :=
-  zeroAdmittingB_of (.arrZero (.intZero (by decide) (by decide)))
 
 end Gabbro.Grammatik

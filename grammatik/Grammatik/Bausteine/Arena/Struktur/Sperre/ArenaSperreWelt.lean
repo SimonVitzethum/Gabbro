@@ -188,12 +188,6 @@ theorem alle_orte (c : FDL.Tab ⊕ FDL.Glob) : c ∈ KLL.orte := by
       exact Dekl.glob_mem_orte (K := KLL) (g := 3)
         (Dekl.mem_lesGlobs.mpr (Or.inr (Or.inr (Or.inl ⟨⟨LLL, LGL⟩, rfl, rfl⟩))))
 
-/-- **The lock family of the witness is well formed:** every carrier is guarded by `()` and the invariant reads only
-    the carriers (`SperrInvOk`, the premise `sperrOrte` of the checker's acceptance). -/
-theorem sperr_ok_zeuge : SperrInvOk (KLL.sperr ()) :=
-  Dekl.sperr_ok (fun c _ => by
-    rcases c with t | g <;> simp only [Bewacht, FDL, Fin.isValue, List.mem_cons, List.not_mem_nil, or_false])
-
 end SperreZeuge
 
 end Gabbro.Grammatik

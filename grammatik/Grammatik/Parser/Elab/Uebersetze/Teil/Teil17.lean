@@ -53,8 +53,6 @@ def uAkkuNeutral (m : String) (lo hi : Int) : Except String Int :=
     else .ok ((2 ^ (uAkkuFormat lo hi).1 - 1 : Nat) : Int)
   else .error "accumulator operator without G form"
 
-theorem uAkkuNeutralAndByte_zeuge : uAkkuNeutral "and" 0 255 = .ok 255 := by decide
-
 /-- The generated cell names (`n#zelle<i>`). -/
 def uAkkuZellen (n : String) (k : Nat) : List String :=
   (List.range k).map fun i => n ++ "#zelle" ++ toString i

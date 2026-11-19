@@ -123,13 +123,6 @@ theorem nachlauf_nicht_ende_gut (lauf : List S) (c : Int) (s : S) :
   Nat.zero_add, Nat.reduceAdd, Nat.lt_add_one, getElem?_pos, Nat.le_add_right, List.getElem_append_right,
   Nat.add_sub_cancel_left, List.getElem_cons_succ, List.getElem_cons_zero, reduceCtorEq] at h2
 
-/-- Witness: a three-step `main` returning 7. -/
-theorem start_zeuge :
-    startSpur [1, 2, 3] (some 7) = [.schritt 1, .schritt 2, .schritt 3, .ende 7] ∧
-    EndeGut (startSpur [1, 2, 3] (some 7)) ∧
-    (startSpur [1, 2, 3] (some 7)).getLast? = some (Ev.ende 7) :=
-  ⟨rfl, start_ende_gut _ _, start_code _ _⟩
-
 /-! ## 2. Thread end, join, stack release (L4) -/
 
 /-- The events of one spawned thread and its parent, in the one global order. -/
@@ -168,36 +161,5 @@ theorem join_defekt : ¬ JoinGut ([.kind 0, .wartet, .gib, .loescht, .endet] : L
   subst hj
   simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
   List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at he
-
-/-- Witness: the proper order of a child that takes two steps. -/
-theorem join_zeuge : JoinGut ([.kind 0, .kind 1, .endet, .loescht, .wartet, .gib] : List (TEr Nat)) := by
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · intro i hi
-    have hl := lt_of_get hi
-    simp only [List.length_cons, List.length_nil] at hl
-    rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
-      rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ] at hi; done) | exact ⟨4, by decide, rfl⟩
-  · intro i hi
-    have hl := lt_of_get hi
-    simp only [List.length_cons, List.length_nil] at hl
-    rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
-      rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, Nat.lt_add_one] at hi; done) | exact ⟨3, by decide, rfl⟩
-  · intro i hi
-    have hl := lt_of_get hi
-    simp only [List.length_cons, List.length_nil] at hl
-    rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
-      rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, Nat.lt_add_one] at hi; done) | exact ⟨2, by decide, rfl⟩
-  · intro j hj i hji s hi
-    have hl := lt_of_get hj
-    have hl2 := lt_of_get hi
-    simp only [List.length_cons, List.length_nil] at hl hl2
-    rcases (by omega : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5) with
-      rfl | rfl | rfl | rfl | rfl | rfl <;>
-    rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
-      rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, TEr.kind.injEq, Nat.not_lt_zero, Nat.lt_one_iff, Nat.lt_add_one] at hj hi hji
 
 end Gabbro.Grammatik.Tor

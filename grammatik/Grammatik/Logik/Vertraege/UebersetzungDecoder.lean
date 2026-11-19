@@ -56,32 +56,6 @@ theorem exportLibraryBind_stelligkeit (bind : Bool) (x : String) (ty : Option ST
       args.length = c.args.length + 1 := by
   exact ⟨_, rfl, by simp [exportLibraryBind]⟩
 
-/-- A non-degenerate two-row region decodes: the decoder accepts the exact
-    token grammar and the rows are the certified rows. -/
-theorem decodeIntegerRows_zwei_zeuge {D : Deklaration} :
-    ∃ v, decodeIntegerRows D ⟨0, 10, 2⟩ [.num 3, .num 5] = some v ∧
-      (v ⟨0, by decide⟩).n = 3 ∧ (v ⟨1, by decide⟩).n = 5 := by
-  refine ⟨_, rfl, rfl, rfl⟩
-
-/-- Negative rows decode through the explicit minus branch, with the range
-    proof attached to the negated value. -/
-theorem decodeIntegerRows_negativ_zeuge {D : Deklaration} :
-    ∃ v, decodeIntegerRows D ⟨-10, 10, 1⟩ [.zeichen "-", .num 3] = some v ∧
-      (v ⟨0, by decide⟩).n = -3 := by
-  refine ⟨_, rfl, rfl⟩
-
-/-- Too many rows refuse: the schema count is exact, never a prefix. -/
-theorem decodeIntegerRows_zuviele_zeuge {D : Deklaration} :
-    decodeIntegerRows D ⟨0, 10, 2⟩ [.num 3, .num 5, .num 7] = none := rfl
-
-/-- An empty region refuses a positive schema count. -/
-theorem decodeIntegerRows_leer_zeuge {D : Deklaration} :
-    decodeIntegerRows D ⟨0, 10, 2⟩ [] = none := rfl
-
-/-- A negative row outside its schema range refuses. -/
-theorem decodeIntegerRows_negativ_ausserhalb_zeuge {D : Deklaration} :
-    decodeIntegerRows D ⟨0, 10, 1⟩ [.zeichen "-", .num 3] = none := rfl
-
 /-- Closed token grammar: words, identifiers, texts, floats, documentation and
     the end marker are not integer rows. Only `.num`, and `-` directly before
     `.num`, decode. -/

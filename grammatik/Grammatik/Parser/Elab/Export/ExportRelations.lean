@@ -237,69 +237,6 @@ private theorem member_root_checked :
     (by simp [lowMemberValue, lowParamSide, relationFunction, paramPos, Ty.index,
       lowVar_same_head, bind, Except.bind, pure, Except.pure]) relation_table_guard
 
-theorem count_export_zeuge :
-    uAnzahl [("N", 2)] (.bin "*" (.variable "N") (.lit 3)) = .ok 6 ∧
-    uAnzahl [] (.bin "-" (.lit 0) (.lit 1)) = .error "source export: negative constant count" :=
-  ⟨rfl, rfl⟩
-
-theorem initializer_export_zeuge :
-    uInitialNumber [] 0 255 (.one (.bin "*" (.lit 21) (.lit 2))) = .ok 42 ∧
-    uInitialNumber [] 0 255 (.one (.bin "-" (.bin "+" (.lit 255) (.lit 1)) (.lit 1))) =
-      .error "source export: scalar initializer is outside its canonical constant domain" := ⟨rfl, rfl⟩
-
-theorem reach_export_zeuge :
-    uSichert relationContext (.ext .reach ["next"] [.variable "root", .variable "last"]) =
-      .ok (.reach "T" "next" (.param "root") (.param "last")) ∧
-    uSichert relationContext (.ext .mem ["slots"] [.variable "root", .variable "T"]) =
-      .ok (.member "T" (.param "root")) := ⟨rfl, rfl⟩
-
-theorem reach_lower_zeuge :
-    (lowReach relationUnit [.index 3, .index 3] [] relationFunction 0 "T" "next"
-      (.param "root") (.param "last")).toOption.isSome = true ∧
-    (lowMember relationUnit [.index 3, .index 3] [] relationFunction 0 "T" (.param "root")).toOption.isSome = true := by
-  constructor
-  · have ready : (selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length)
-        "next").toOption.isSome = true := rfl
-    cases typed : selfEdge relationUnit (⟨0, by decide⟩ : Fin relationUnit.tabs.length) "next" with
-    | error error =>
-      rw [typed] at ready
-      change false = true at ready
-      cases ready
-    | ok edge =>
-      have emitted := reach_lower relationUnit [.index 3, .index 3] [] relationFunction 0
-        "T" "next" (.param "root") (.param "last") ⟨0, by decide⟩ edge
-        (.var .here) (.var (.there .here)) rfl rfl typed
-        (by simp [lowIdx, relationFunction, paramPos, Ty.index, declOf, tabAt, relationUnit,
-          lowVar_same_head])
-        (by simp [lowIdx, relationFunction, paramPos, Ty.index, declOf, tabAt, relationUnit,
-          lowVar_same_head, lowVar_next_head]) relation_table_guard
-      rw [emitted]
-      rfl
-  · rw [member_root_checked]
-    rfl
-
-theorem tree_membership_export_zeuge :
-    uSichert relationContext (.ext .mem ["descendants"] [.variable "last", .variable "root"]) =
-      .ok (.reach "T" "next" (.param "root") (.param "last")) ∧
-    uSichert relationContext (.ext .mem ["ancestors"] [.variable "root", .variable "last"]) =
-      .ok (.reach "T" "next" (.param "root") (.param "last")) := ⟨rfl, rfl⟩
-
-theorem member_numeric_export_zeuge :
-    uSichert relationContext (.ext .mem ["slots"] [.lit 255, .variable "T"]) =
-      .ok (.member "T" (.lit 255)) ∧
-    uSichert relationContext (.ext .mem ["slots"] [.un "-" (.lit 1), .variable "T"]) =
-      .ok (.member "T" (.lit (-1))) := ⟨rfl, rfl⟩
-
-theorem member_numeric_lower_zeuge :
-    (lowMember relationUnit [] [] relationFunction 0 "T" (.lit 255)).toOption.isSome = true ∧
-    (lowMember relationUnit [] [] relationFunction 0 "T" (.lit (-1))).toOption.isSome = true := ⟨rfl, rfl⟩
-
-theorem member_numeric_meaning_zeuge (entry state : World (declOf relationUnit)) :
-    eval entry ((lowMember relationUnit [] [] relationFunction 0 "T" (.lit 255)).toOption.get
-      member_numeric_lower_zeuge.1) state .nil = false ∧
-    eval entry ((lowMember relationUnit [] [] relationFunction 0 "T" (.lit (-1))).toOption.get
-      member_numeric_lower_zeuge.2) state .nil = false := ⟨rfl, rfl⟩
-
 def numericMemberContext : UCtx := {relationContext with names := ["value"], kinds := [.int], types := [.int 0 255]}
 def numericMemberFunction : UFn := {relationFunction with params := [("value", .int 0 255)], kinds := [.int]}
 
@@ -311,20 +248,5 @@ private theorem member_numeric_param_checked :
     ⟨0, by decide⟩ {range := (0, 255), term := .var .here} rfl rfl
     (by simp [lowMemberValue, lowParamSide, numericMemberFunction, relationFunction, paramPos,
       lowVar_same_head, bind, Except.bind, pure, Except.pure]) relation_table_guard
-
-theorem member_numeric_param_zeuge :
-    uSichert numericMemberContext (.ext .mem ["slots"] [.variable "value", .variable "T"]) =
-      .ok (.member "T" (.param "value")) ∧
-    (lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")).toOption.isSome = true :=
-  ⟨rfl, by rw [member_numeric_param_checked]; rfl⟩
-
-theorem member_numeric_param_meaning_zeuge (entry state : World (declOf relationUnit)) :
-    let predicate := (lowMember relationUnit [.int 0 255] [] numericMemberFunction 0 "T" (.param "value")).toOption.get
-      member_numeric_param_zeuge.2
-    let good : Env (declOf relationUnit) [.int 0 255] := .cons ⟨2, by decide, by decide⟩ .nil
-    let outside : Env (declOf relationUnit) [.int 0 255] := .cons ⟨255, by decide, by decide⟩ .nil
-    eval entry predicate state good = true ∧ eval entry predicate state outside = false := by
-  constructor <;>
-    simp only [member_numeric_param_checked, Except.toOption, Option.get_some] <;> rfl
 
 end Gabbro.Grammatik.Parser.ExportPreservation

@@ -191,37 +191,6 @@ theorem leermenge_ist_zustandsabhaengig :
 
 /-! ## Witness: removal on a concrete table -/
 
-/-- Witness: on the two-place table, consuming place `0` removes the only
-    edge -- the order half and the emptiness half on a concrete instance. No
-    lemma above quantifies over syntax, so the inhabitation obligation is
-    vacuous. -/
-theorem verbrauche_zeuge :
-    (∃ d, zeugen zeugenTabelle 0 d) ∧
-    WellFounded (kante (verbrauche zeugenTabelle 0)) := by
-  constructor
-  · exact ⟨1, ⟨⟨some 1, none⟩, by simp only [zeugenTabelle, ↓reduceIte], Or.inl rfl⟩⟩
-  · apply wf_of_leer
-    intro d s hs
-    obtain ⟨sl, hσ, hfd⟩ := hs
-    have hσ' : verbrauche zeugenTabelle 0 s = some sl := hσ
-    simp only [verbrauche] at hσ'
-    rcases Decidable.em (s = 0) with hseq | hseq
-    · rw [if_pos hseq] at hσ'
-      cases hσ'
-    · rw [if_neg hseq] at hσ'
-      have hσ'' : zeugenTabelle s = some sl := hσ'
-      rcases Decidable.em (s = 1) with hs1 | hs1
-      · subst hs1
-        have h1 : (some ⟨none, none⟩ : Option Slot) = some sl := hσ''
-        have hsl : sl = ⟨none, none⟩ := (Option.some_inj.mp h1).symm
-        rcases hfd with hfc | hns
-        · rw [hsl] at hfc; simp only [reduceCtorEq] at hfc
-        · rw [hsl] at hns; simp only [reduceCtorEq] at hns
-      · have hσ''' : (if s = 0 then (some ⟨some 1, none⟩ : Option Slot)
-            else if s = 1 then some ⟨none, none⟩ else none) = some sl := hσ''
-        rw [if_neg hseq, if_neg hs1] at hσ'''
-        cases hσ'''
-
 /-! ## Bridge
 
   The `Table_Induktion.thy` model (`slot`, `tabelle`, `kante`) is restated
@@ -236,6 +205,5 @@ theorem verbrauche_zeuge :
 #print axioms Gabbro.Grammatik.Isabelle.Consuming.blattheit_braucht_minimale_auswahl
 #print axioms Gabbro.Grammatik.Isabelle.Consuming.leermenge
 #print axioms Gabbro.Grammatik.Isabelle.Consuming.leermenge_ist_zustandsabhaengig
-#print axioms Gabbro.Grammatik.Isabelle.Consuming.verbrauche_zeuge
 
 end Gabbro.Grammatik.Isabelle.Consuming

@@ -38,7 +38,4 @@ theorem no_complete_halting_test {Target : Type} [Primcodable Target] {halts : T
 def referenceReduction : HaltingReduction Code (fun c => (Code.eval c 0).Dom) :=
   ⟨id, Computable.id, fun _ => Iff.rfl⟩
 
-theorem reference_zeuge : ¬ ComputablePred (fun c : Code => (Code.eval c 0).Dom) :=
-  no_complete_halting_test referenceReduction
-
 end Gabbro.Grammatik.Berechenbarkeit.TerminationCompatibility

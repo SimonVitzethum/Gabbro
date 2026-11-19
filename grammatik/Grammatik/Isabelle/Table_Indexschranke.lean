@@ -137,20 +137,4 @@ theorem zfeld_schreibstellen : schreibstellen_im_typ 5 zσ zfeld := by
   show (2 : Nat) < 5
   decide
 
-theorem belegt_liegt_im_indextyp_zeuge : indextyp 5 0 :=
-  belegt_liegt_im_indextyp zσ_wohlgeformt zσ_belegt
-
-theorem indextyp_deckt_nicht_nur_belegte_zeuge :
-    ∃ σ : Nat → Option Unit, ∃ i,
-      wohlgeformt 1 σ ∧ indextyp 1 i ∧ ¬ belegt σ i :=
-  indextyp_deckt_nicht_nur_belegte (by decide)
-
-theorem kette_bleibt_im_typ_zeuge : 2 < 5 :=
-  kette_bleibt_im_typ zfeld_schreibstellen zσ_belegt rfl
-
-theorem im_bereich_folgt_aus_indexschranke_zeuge :
-    (∀ d, zfeld 0 = some d → d < 5) ∧ (∀ d, zfeld 0 = some d → d < 5) :=
-  im_bereich_folgt_aus_indexschranke zfeld_schreibstellen
-    zfeld_schreibstellen zσ_belegt
-
 end Gabbro.Grammatik.TableIndexschranke

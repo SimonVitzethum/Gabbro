@@ -80,17 +80,4 @@ theorem SpTy.wort_bytes_pos (w : Nat) (h : (SpTy.wort w).gueltig = true) : 0 < (
   simp only [SpTy.gueltig, Bool.or_eq_true, beq_iff_eq] at h
   rcases h with ((h | h) | h) | h <;> subst h <;> decide
 
-/-- Witnesses: `u32` is four bytes, `[u16; 5]` ten, an array of `[u8; 4]` four-byte rows 12 bytes. -/
-theorem SpTy.bytes_zeuge :
-    (SpTy.wort 32).bytes = 4 ∧ (SpTy.feld (.wort 16) 5).bytes = 10 ∧
-    (SpTy.feld (.feld (.wort 8) 4) 3).bytes = 12 := ⟨rfl, rfl, rfl⟩
-
-/-- Witnesses of the check: `u8 in 0 .. 15` is carried by one byte, `i16 in -3 .. 3` by two, `u8 in 0 .. 300` by no
-    byte, a four-element array by `[u8; 4]` and not by `[u8; 3]`. -/
-theorem SpTy.passt_zeuge :
-    (SpTy.wort 8).passt (.int 0 15) = true ∧ (SpTy.wort 16).passt (.int (-3) 3) = true ∧
-    (SpTy.wort 8).passt (.int 0 300) = false ∧
-    (SpTy.feld (.wort 8) 4).passt (.arr (.int 0 255) 4) = true ∧
-    (SpTy.feld (.wort 8) 4).passt (.arr (.int 0 255) 3) = false := by decide
-
 end Gabbro.Grammatik

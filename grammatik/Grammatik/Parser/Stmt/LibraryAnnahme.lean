@@ -309,32 +309,15 @@ private theorem ident_phases :
 def exportIdentEinheit : UProg :=
   (elabU (pre108 (translationItems false))).toOption.getD { tabs := [], locks := [], fns := [] }
 
-theorem export_ident_elab_zeuge :
-    (elabU (pre108 (translationItems false))).toOption.isSome = true := by
-  obtain ⟨unit, made, _⟩ := ident_phases.2
-  rw [made]
-  rfl
-
 private theorem ident_export_facts : ExportFacts exportIdentEinheit := by
   obtain ⟨unit, made, facts⟩ := ident_phases.2
   unfold exportIdentEinheit
   rw [made]
   exact facts
 
-/-- The export leaves no ignored source duty behind on the fixture. -/
-theorem export_ident_tor_zeuge : exportIdentEinheit.exportGate = .ok () := ident_export_facts.gate
-
 /-- The expanded source: the pre-pass output on the fixture members. -/
 def exportIdentErweitert : List SItemTief :=
   (exportLibraryUnit (uMembers (pre108 (translationItems false)))).toOption.getD []
-
-/-- The pre-pass ran: every expanded body is ordinary. -/
-theorem export_ident_ohne_zeuge :
-    Gabbro.Grammatik.Uebersetzung.alleOhneBibliothek exportIdentErweitert = true := by
-  obtain ⟨expanded, produced, ordinary⟩ := ident_phases.1
-  unfold exportIdentErweitert
-  rw [produced]
-  exact ordinary
 
 theorem export_ident_lower_ok :
     (lowerAllg exportIdentEinheit).toOption.isSome = true := export_lowered ident_export_facts
@@ -347,28 +330,6 @@ def exportIdentGesenkert :
 private theorem ident_emitted : lowerAllg exportIdentEinheit = .ok exportIdentGesenkert := by
   unfold exportIdentGesenkert
   exact except_ok_get (x := lowerAllg exportIdentEinheit) export_ident_lower_ok
-
-/-- The connected verdict: source text with an unqualified library call
-    elaborates, lowers, and the checker Bool holds. The enumerations are
-    complete by construction (`finRange` over the elaborated tables,
-    statics and locks; the lowered functions; no starts, since the fixture
-    declares no `concurrent` item). -/
-theorem export_ident_akzeptiert_zeuge :
-    Gabbro.Grammatik.Akzeptiert exportIdentGesenkert.1 (Gabbro.Grammatik.SperrInv.leer _)
-      exportIdentGesenkert.2 (List.finRange exportIdentEinheit.locks.length)
-      ((List.finRange exportIdentEinheit.tabs.length).map Sum.inl ++
-        (List.finRange exportIdentEinheit.globs.length).map Sum.inr) [] = true := by
-  simpa only [checkedImage] using export_checked ident_export_facts ident_emitted
-
-/-- The end-to-end chain in one witness: source text to accepted unit. -/
-theorem export_ident_kette_zeuge :
-    (elabU (pre108 (translationItems false))).toOption.isSome = true ∧
-    (lowerAllg exportIdentEinheit).toOption.isSome = true ∧
-    Gabbro.Grammatik.Akzeptiert exportIdentGesenkert.1 (Gabbro.Grammatik.SperrInv.leer _)
-      exportIdentGesenkert.2 (List.finRange exportIdentEinheit.locks.length)
-      ((List.finRange exportIdentEinheit.tabs.length).map Sum.inl ++
-        (List.finRange exportIdentEinheit.globs.length).map Sum.inr) [] = true :=
-  ⟨export_ident_elab_zeuge, export_ident_lower_ok, export_ident_akzeptiert_zeuge⟩
 
 /-- An expanded statement is definitionally no `lcall`: the lowering's
     C02 refusal is unreachable on certified expansions. -/

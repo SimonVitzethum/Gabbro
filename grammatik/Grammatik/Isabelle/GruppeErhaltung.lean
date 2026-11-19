@@ -177,20 +177,6 @@ theorem halber_abdruck_ist_kein_zug :
 
 /-! ## Witness: rank chains on a concrete instance -/
 
-/-- Witness: the concrete two-edge relation `{(0,1),(1,0)}` reaches `(0,0)`
-    (the cycle), while the singleton `{(0,1)}` is acyclic by rank order. No
-    lemma above quantifies over syntax, so the inhabitation obligation is
-    vacuous; these are data-level witnesses. -/
-theorem rangordnung_zeuge :
-    TrCl (fun a b => (a = 0 ∧ b = 1) ∨ (a = 1 ∧ b = 0)) 0 0 ∧
-    azyklisch (fun a b => a = 0 ∧ b = 1) := by
-  constructor
-  · exact .step (Or.inl ⟨rfl, rfl⟩) (.base (Or.inr ⟨rfl, rfl⟩))
-  · apply rangordnung_azyklisch
-    intro a b h
-    obtain ⟨rfl, rfl⟩ := h
-    decide
-
 /-! ## Bridge
 
   `SchablonenT5Sem.lean` ties `gruppe.sperrabdruck` to the Lean model: wait
@@ -211,6 +197,5 @@ theorem rangordnung_zeuge :
 #print axioms Gabbro.Grammatik.Isabelle.GruppeErhaltung.zwischenaustritt_bricht
 #print axioms Gabbro.Grammatik.Isabelle.GruppeErhaltung.abgebrochener_ist_kein_zug
 #print axioms Gabbro.Grammatik.Isabelle.GruppeErhaltung.halber_abdruck_ist_kein_zug
-#print axioms Gabbro.Grammatik.Isabelle.GruppeErhaltung.rangordnung_zeuge
 
 end Gabbro.Grammatik.Isabelle.GruppeErhaltung

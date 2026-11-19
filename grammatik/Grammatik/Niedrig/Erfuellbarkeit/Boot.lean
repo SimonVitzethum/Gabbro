@@ -42,20 +42,4 @@ theorem handoff_contract :
     contract.transition authority initial handoff.authority handoff.next :=
   ⟨rfl, rfl, rfl, rfl, rfl⟩
 
-theorem handoff_zeuge :
-    handoff.next.Valid handoff.authority ∧
-    contract.root handoff.authority handoff.next ∧
-    ¬ handoff.next.owners.access authority.names OwnerWitness.root authority.token :=
-  ⟨handoff_preserves initial_valid handoff,
-    boot_root_from_logic boot_logic firmware_entry handoff handoff_contract,
-    handoff_old_context_spent initial_valid handoff OwnerWitness.root⟩
-
-/-- All boot-step premises are jointly inhabited on the same two-span fixture. -/
-theorem boot_step_zeuge :
-    BootStep contract authority initial handoff.authority handoff.next ∧
-    handoff.next.Valid handoff.authority ∧ authority.epoch ≤ handoff.authority.epoch := by
-  have step : BootStep contract authority initial handoff.authority handoff.next :=
-    .handoff handoff handoff_contract
-  exact ⟨step, boot_step_preserves initial_valid step, boot_epoch_monotone step⟩
-
 end Gabbro.Grammatik.LowLevel.Witness

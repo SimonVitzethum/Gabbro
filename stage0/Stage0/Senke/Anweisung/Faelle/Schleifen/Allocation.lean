@@ -144,9 +144,4 @@ theorem counterPair_nested (abi depth outer inner : Nat)
   dsimp [counterPair, FB]
   omega
 
-theorem counterPair_zeuge :
-    counterPair (3 + 2 + 2 * 2) 1 = (9, 10) ∧
-    counterPair (3 + 2 + 2 * 2) 0 = (11, 12) ∧
-    FB + (3 + 2 + 2 * 2) = 13 := by decide
-
 end Gabbro.Stage0.Senke

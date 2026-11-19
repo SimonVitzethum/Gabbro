@@ -403,33 +403,6 @@ theorem dekodiere_ok_bereich {Grund : Type} [DecidableEq Grund]
     dekodiere tab lo hi roh = .ok ⟨roh, hok⟩ :=
   (dekodiere_ok tab lo hi roh _).mpr ⟨hge, hok.1, hok.2, rfl⟩
 
-/-- ZEUGE: EBADF (9) decodes through the `write` table to `badFd`. Every
-    premise of `dekodiere_tabelle` is supplied jointly: the first-entry
-    split (empty prefix, so freshness is vacuous) and `9 ∈ 1 .. 4095`,
-    both by computation. -/
-theorem dekodiere_tabelle_zeuge :
-    dekodiere schreibFehler 0 8192 (-(9 : Int)) = .why IoFehler.badFd :=
-  dekodiere_tabelle schreibFehler 0 8192 9 IoFehler.badFd
-    ⟨[], [(4, .interrupted), (11, .wouldBlock)], rfl, by decide⟩
-    (by decide)
-
-/-- Totality witness, ok leg: 5 in range 0..10 decodes to `ok 5`. -/
-theorem dekodiere_total_ok_zeuge :
-    dekodiere schreibFehler 0 10 5 =
-      .ok (⟨5, by decide⟩ : { x : Int // (0 : Int) ≤ x ∧ x ≤ 10 }) := by
-  decide
-
-/-- Totality witness, reason leg: -4 decodes to `interrupted`. -/
-theorem dekodiere_total_grund_zeuge :
-    dekodiere schreibFehler 0 10 (-4) = .why IoFehler.interrupted := by
-  decide
-
-/-- Totality witness, unexpected leg: -22 (unlisted errno) decodes to
-    `unerwartet (-22)`. -/
-theorem dekodiere_total_unerwartet_zeuge :
-    dekodiere schreibFehler 0 10 (-22) = .unerwartet (-22) := by
-  decide
-
 /- CUTS: what is not proved.
    - `schreibFehler` exhibits only the errno table, not a full syscall
      declaration: pairing `SysAbi` with the table (the `Ax` extension)
@@ -448,9 +421,5 @@ theorem dekodiere_total_unerwartet_zeuge :
 #print axioms Gabbro.Grammatik.dekodiere_total
 #print axioms Gabbro.Grammatik.dekodiere_tabelle
 #print axioms Gabbro.Grammatik.dekodiere_ok_bereich
-#print axioms Gabbro.Grammatik.dekodiere_tabelle_zeuge
-#print axioms Gabbro.Grammatik.dekodiere_total_ok_zeuge
-#print axioms Gabbro.Grammatik.dekodiere_total_grund_zeuge
-#print axioms Gabbro.Grammatik.dekodiere_total_unerwartet_zeuge
 
 end Gabbro.Grammatik

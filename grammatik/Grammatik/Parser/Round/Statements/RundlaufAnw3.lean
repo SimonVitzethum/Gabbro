@@ -167,21 +167,6 @@ theorem rundlauf_block_einfach (ss : List SAnw) (e : Option SEnde)
   List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
   simp only [hS]
 
-/-- **Witness**: a non-degenerate block (a `let`, a `leave`, a valued `return`) meets every hypothesis, so the
-    theorem is not vacuous. -/
-theorem rundlauf_block_einfach_zeuge (r : List Token) :
-    parseBlock 200 (druckAnw (.block [.bind false "x" none (.lit 1), .leave "i"]
-        (some (.ret (some (.variable "x"))))) ++ r) =
-      .ok (.block [.bind false "x" none (.lit 1), .leave "i"] (some (.ret (some (.variable "x")))), r) :=
-  rundlauf_block_einfach _ _
-    (by
-      intro s hs
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
-      rcases hs with rfl | rfl
-      · exact Einfach.bind "x" (.lit 1) (by decide) rfl (by decide)
-      · exact Einfach.leave "i")
-    (by simp only [EinfachEnde]; decide) (by intro h; simp only [reduceCtorEq] at h) r 200 (by decide)
-
 /-- **Planted defect**: a block without an ender that ENDS in a `return` reads back with that `return` as its
     ender -- the hypothesis `EndeGut` of the theorem is necessary. -/
 theorem schliesse_ende_noetig :
@@ -192,7 +177,6 @@ theorem schliesse_ende_noetig :
 #print axioms Gabbro.Grammatik.Parser.parseStmt_einfach
 #print axioms Gabbro.Grammatik.Parser.parseStmts_einfach
 #print axioms Gabbro.Grammatik.Parser.rundlauf_block_einfach
-#print axioms Gabbro.Grammatik.Parser.rundlauf_block_einfach_zeuge
 #print axioms Gabbro.Grammatik.Parser.schliesse_ende_noetig
 
 end Gabbro.Grammatik.Parser

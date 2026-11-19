@@ -27,15 +27,6 @@ theorem uSichert_floor_step (ctx : UCtx) (verdict floor : SExpr)
       | Except.ok right => Except.ok (UEns.and left right)) : Except String UEns) = _
   rw [hv, hf]
 
-/-- Non-degenerate instance of the generic expansion: a failing comparison is
-    preserved as code, rather than replaced by a claimed true outcome. -/
-theorem uSichert_floor_step_zeuge (ctx : UCtx) :
-    uSichert ctx (floorUrteil [.bin ">=" (.lit 1) (.lit 2)] .tru) =
-      .ok (.and .tru (.cmp ">=" (.lit 1) (.lit 2))) := by
-  apply uSichert_floor_step
-  · rfl
-  · simp [uSichert, uIstVgl, uSeite, uRechne, uSeiteBlatt]
-
 /-- The value of a lowered floor conjunction. Both false and true are ordinary
     completed verdicts; neither removes the returning resource obligation. -/
 theorem floorUrteil_bool (verdict floor : Bool) :

@@ -74,10 +74,6 @@ theorem e_gueltig : e.gueltig = true := by decide +kernel
 /-- The intended footprint vectors exist and the checked register body is accepted. -/
 theorem requested_present : ∀ x ∈ requested, e.Hat x := by decide
 
-theorem requested_checked_zeuge : ⟨2, 0, true, [true, false, true, false]⟩ ∈ requested ∧
-    e.Hat ⟨2, 0, true, [true, false, true, false]⟩ ∧ e.gueltig = true :=
-  ⟨by decide, requested_present _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl), e_gueltig⟩
-
 /-- Input-side evidence, independent of the diagnostic evaluator. -/
 def RegInput : Prop :=
   (⟨0, by decide⟩ : z.deklaration.Reg) ∈ (P.rumpf ⟨0, by decide⟩).regs ∧
@@ -90,9 +86,6 @@ theorem e_input : RegInput := by
   · decide
 
 theorem e_cause_link : RegInput → cause = none := fun _ => e_cause
-
-theorem e_cause_link_zeuge : RegInput ∧ cause = none ∧ e.gueltig = true :=
-  ⟨e_input, e_cause_link e_input, e_gueltig⟩
 
 /-- Exact cell set, including every companion cell of this fixture. -/
 def zellen : List Zelle := [
@@ -135,9 +128,6 @@ theorem e_hat : ∀ x ∈ zellen, e.Hat x := by
   intro x member
   rw [← zellen_exact] at member
   exact List.mem_eraseDups.1 member
-
-theorem e_zeuge : e.gueltig = true ∧ e.Hat ⟨0, 0, true, [true, false, false]⟩ :=
-  ⟨e_gueltig, e_hat _ (by first | rfl | decide +revert | exact @of_decide_eq_true _ (decGdarf _ _ _) rfl | exact @of_decide_eq_true _ (decDarf _ _ _) rfl | exact @of_decide_eq_true _ (decRufPasst _ _ _) rfl)⟩
 
 /-- Missing requested cells are findings, never an altered checker verdict. -/
 def missing : List Zelle := requested.filter (fun x => !zellen.contains x)

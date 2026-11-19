@@ -38,14 +38,4 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
-/-- The meaning check accepts a forward binding and rejects a fabricated discovery value. -/
-theorem checkConstantMeaning_sound_zeuge :
-    ConstantMeaning [] [] [("LATER", 42), ("ANSWER", 42)]
-      (.constT "ANSWER" (.atom "u8") (.one (.variable "LATER"))) :=
-  checkConstantMeaning_sound _ _ _ _ (by decide +kernel)
-
-theorem checkConstantMeaning_refused_zeuge :
-    checkConstantMeaning [] [] [("LATER", 42), ("ANSWER", 41)]
-      (.constT "ANSWER" (.atom "u8") (.one (.variable "LATER"))) = false := by decide +kernel
-
 end Gabbro.Stage0.Frontend

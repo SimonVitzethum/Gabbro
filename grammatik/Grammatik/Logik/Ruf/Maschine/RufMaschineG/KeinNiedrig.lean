@@ -39,9 +39,4 @@ theorem GRest.keinNiedrig_alt {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (k : GRest D V l Γ Λ) : k.keinNiedrig := by
   induction k <;> first | assumption | trivial
 
-/-- The empty continuation witnesses the guard at every syntax index. -/
-theorem GRest.keinNiedrig_zeuge (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ : List (Res D)) : ∃ k : GRest D V l Γ Λ, k.keinNiedrig :=
-  ⟨.leer, True.intro⟩
-
 end Gabbro.Grammatik

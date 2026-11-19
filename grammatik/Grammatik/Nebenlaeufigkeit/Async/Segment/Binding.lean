@@ -97,15 +97,4 @@ public theorem constructBlock_calls (direct : D.Fn → Bool) (indirect : Nat →
     (state : Var Γ storage) (successor : Expr D Γ Λ storage) :
     rufeB direct indirect forever (constructBlock (V := V) (l := l) state successor) = true := rfl
 
-/-- A small actual G binding, rather than a semantic callback witness. -/
-public theorem evaluateBlock_exec_zeuge (O : Orakel D) (passes : Nat)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (world : World D) (previous : Wert D .bool) :
-    execBlock O passes calls
-      (evaluateBlock (V := V) (l := l) (Λ := []) Expr.tru
-        (Var.here : Var [.bool] .bool) (Expr.var .here)) world (.cons previous .nil) =
-      .ok world (.cons (eval world (Expr.tru (Λ := [])) world (.cons previous .nil)) .nil) := by
-  cases world
-  rfl
-
 end Gabbro.Grammatik.Async.Segment

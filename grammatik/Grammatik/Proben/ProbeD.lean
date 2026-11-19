@@ -383,43 +383,6 @@ theorem ewP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG zD),
     (ewP_koerper _) ewP_start (fun _ => rfl) lInit_exklusiv (fun _ => invGutS_leer rfl)
     (fun t => by by_cases ht : t = 0 <;> simp only [lInit, ht, ↓reduceIte] <;> rfl)
 
-/-- **WITNESS: the loop check is reached at budget `1`, and it passes BY
-    THE THEOREM.** Two steps of thread 0 (`endeEntf`, `dannForever`) reach
-    a machine of budget `1` whose head stands at the `forever` head with one
-    pass left; the flagship gives the invariant at the machine world there,
-    and that is exactly the premise with which G takes the pass. -/
-theorem ziel_ort_ewig_zeuge :
-    ∃ M2 : RufMaschineG zD, RufErreichbarG ewP zO 1 (RufStartG ewP zSp lInit) M2 ∧
-      (∃ (spur : List (Ereignis zD)) (log : List (RufEreignisF zD)),
-        M2.faeden 0 = ⟨[], ⟨zWrap, .nil, zSp.welt [], ⟨false, [], zL, .nil,
-          .ewig () 1 lInv (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty (by rfl))))⟩⟩,
-          spur, log⟩) ∧
-      wahr? (eval ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) lInv
-        ((M2.weltVon 0).lese zL (lInv (Γ := [])).orte) .nil) = true ∧
-      ∃ M3 : RufMaschineG zD, RufSchrittG ewP zO 1 M2 0 M3 := by
-  have h00 : (RufStartG ewP zSp lInit).faeden 0 = ⟨[], ⟨zWrap, .nil, zSp.welt [],
-      ⟨false, [], zL, .nil, .ende ewRumpfWrap⟩⟩, startSpur zWrap,
-      [RufEreignisF.eintritt zWrap .nil (zSp.welt [])]⟩ := rfl
-  obtain ⟨M1, s1, hZ1⟩ := w_endeEntf (P := ewP) (O := zO) (passes := 1) h00 ewSchleife
-    (.ret .empty (by rfl)) .nil rfl rfl
-  obtain ⟨M2, s2, hZ2⟩ := w_dannForever (P := ewP) (O := zO) (passes := 1) hZ1.1 () lInv
-    (.cons (.leave rfl) .nil) .nil (.ende (.ret .empty (by rfl))) .nil rfl
-  have hr2 : RufErreichbarG ewP zO 1 (RufStartG ewP zSp lInit) M2 :=
-    .schritt _ _ _ (.schritt _ _ _ .start s1) s2
-  have h0 := (ewP_zertifiziert 1 M2 hr2).1.1.2.2.1 0
-  unfold PrueftG at h0
-  rw [hZ2.1] at h0
-  have hw := h0.2.1 _ _ _ _ _ _ _ _ _ rfl
-  have hoff : offen (M2.faeden 0).spur = [()] := by
-    rw [hZ2.spur, offen_weltVon, hZ1.spur]
-    rfl
-  obtain ⟨M3, s3, _⟩ := w_ewigWeiter (P := ewP) (O := zO) (passes := 1) hZ2.1 () 0 lInv
-    (.cons (.leave rfl) .nil) (.dann .nil (.ende (.ret .empty (by rfl)))) .nil rfl
-    (by rw [hZ2.welt] at hw ⊢; exact hw) (hgL (by rw [← hZ2.spur]; exact hoff)).heldIn
-  refine ⟨M2, hr2, ⟨_, _, hZ2.1⟩, ?_, M3, s3⟩
-  rw [hZ2.welt]
-  exact lInv_wahr _ _ _
-
 #print axioms Gabbro.Grammatik.fvP_koerper0
 #print axioms Gabbro.Grammatik.probeD_bei0_zertifiziert
 #print axioms Gabbro.Grammatik.probeD_nicht
@@ -429,6 +392,5 @@ theorem ziel_ort_ewig_zeuge :
 #print axioms Gabbro.Grammatik.fwP_ende_verletzt
 #print axioms Gabbro.Grammatik.ewP_koerper
 #print axioms Gabbro.Grammatik.ewP_zertifiziert
-#print axioms Gabbro.Grammatik.ziel_ort_ewig_zeuge
 
 end Gabbro.Grammatik

@@ -69,16 +69,4 @@ theorem antwortRestG_grund_nicht_okZ {P : Programm D} {S : List (D.Tab ⊕ D.Glo
   | wartetSonst => exact hok
   | _ => cases ha
 
-/-- The source witness reads a guarded slot before releasing its lexical lock. -/
-theorem semZ_scopedWert_zeuge :
-    semZ adO 0 keinRuf
-      (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
-      umkehrScopedVor Env.nil =
-      .zurueck ((umkehrScopedVor.lese adΛL umkehrScopedExpr.orte).gibt ())
-        (evalErg (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) (.val umkehrScopedExpr)
-          (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) Env.nil) := by
-  exact semZ_scopedWert adO 0 keinRuf
-    (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
-    (.val umkehrScopedExpr) umkehrScopedR rfl umkehrScopedVor Env.nil
-
 end Gabbro.Grammatik

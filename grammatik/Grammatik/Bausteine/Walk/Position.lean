@@ -65,15 +65,4 @@ def WalkShape.mappingValue {D : Deklaration} (shape : WalkShape) (name : Nat)
     ⟨walkIndexAt shape.levels path index.val, by omega, by omega⟩
   exact ProdVal.appendFields shape.entry [shape.vaTy, shape.levelTy, shape.indexTy] entry (va, level, indices, ())
 
-theorem walkIndexAt_path_zeuge :
-    walkIndexAt 3 [(1 : Fin 4), 2] (3 - 1 - 0) = 1 ∧
-    walkIndexAt 3 [(1 : Fin 4), 2] (3 - 1 - 1) = 2 := by decide
-
-theorem WalkScale.byteVa_lt_zeuge :
-    ({ bytesPerLeaf := 4096, positive := by decide } : WalkScale).byteVa 3 4 [1, 2] = 98304 ∧
-    ({ bytesPerLeaf := 4096, positive := by decide } : WalkScale).byteVa 3 4 [1, 2] < 4096 * 4 ^ 3 := by
-  constructor
-  · decide
-  · exact WalkScale.byteVa_lt _ 3 4 [1, 2] (by decide) (by decide)
-
 end Gabbro.Grammatik

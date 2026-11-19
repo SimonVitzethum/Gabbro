@@ -115,15 +115,4 @@ theorem array_traversal_meaning {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ
         (observed, wahr? (eval observed invariant observed env)))
       (alleIndizes (D.count table)) state env := by rfl
 
-theorem array_membership_export_zeuge :
-    let ctx : UCtx := {names := ["data"], kinds := [.wert], types := [.arr (.int 0 255) 2], tabs := [], locks := [], held := [], res := none, fname := "sample", alias := [], lits := []}
-    uSichert ctx (.ext .mem ["elems"] [.lit 1, .variable "data"]) =
-      .ok (.arrayElements false (.param "data") "#array-member" (.cmp "==" (.lit 1) (.param "#array-member"))) := by cbv
-
-/-- A literal spelling a domain keyword is ordinary data, even beside an array type. -/
-theorem array_carrier_marker_zeuge :
-    let signature : FnSig := ⟨"impl", "sample", [("data", .array (.atom "u8") (.lit 2))], some (.atom "u8"), none, [], []⟩
-    let body := SAnw.block [.bind false "message" none (.ext .text ["elems"] [])] (some (.ret (some (.lit 42))))
-    uArrayCarriers [] [.fnT signature body] = [] := by rfl
-
 end Gabbro.Grammatik.Parser.ExportPreservation

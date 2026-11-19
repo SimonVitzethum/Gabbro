@@ -47,8 +47,4 @@ def recordSlotItems : List SItemTief :=
                 pos := none, bezug := none, wo := none,
                 reserviert := false, byOps := false }]]]
 
-/-- The census retains a record-typed table instead of reporting an unknown tagged type. -/
-theorem record_slot_census_zeuge : befundeElab recordSlotItems = [] := by
-  cbv
-
 end Gabbro.Grammatik.GabbroV.GvZensus

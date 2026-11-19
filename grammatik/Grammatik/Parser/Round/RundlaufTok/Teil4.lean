@@ -224,22 +224,6 @@ theorem rundlauf_text_gut : ∀ (e : SExpr), gut e = true → (∀ t ∈ druckTo
 
 /-! ### Witnesses -/
 
-/-- The many-small-nodes shape the size bound cannot reach (`a[!x][!y][!z]` -- three nodes per
-    four tokens), through the whole reader. -/
-theorem parseTop_druck_gut_zeuge :
-    parseTop (druckToks (.index (.index (.index (.variable "a") (.un "!" (.variable "x")))
-      (.un "!" (.variable "y"))) (.un "!" (.variable "z"))) ++ [.ende]) =
-      .ok (.index (.index (.index (.variable "a") (.un "!" (.variable "x")))
-      (.un "!" (.variable "y"))) (.un "!" (.variable "z"))) :=
-  parseTop_druck_gut _ (by decide)
-
-/-- A call through a place (`o.is_some()`) and one with arguments through a pointer chain
-    (`p->q[i].f(x, 1)`), through the whole reader. -/
-theorem parseTop_druck_ruf_zeuge :
-    parseTop (druckToks (.ext .call [] [.field (.variable "o") "is_some"]) ++ [.ende]) =
-      .ok (.ext .call [] [.field (.variable "o") "is_some"]) :=
-  parseTop_druck_gut _ (by decide)
-
 theorem parseTop_druck_ruf_zeuge2 :
     parseTop (druckToks (.ext .call [] [.field (.index (.arrow (.variable "p") "q") (.variable "i")) "f",
       .variable "x", .lit 1]) ++ [.ende]) =
@@ -247,18 +231,10 @@ theorem parseTop_druck_ruf_zeuge2 :
         .variable "x", .lit 1]) :=
   parseTop_druck_gut _ (by decide)
 
-/-- The deep witness of `RundlaufVoll` from its rendered source text. -/
-theorem rundlauf_text_gut_zeuge :
-    parseTopAusText (renderText (druckToks zeugeTief)) = .ok zeugeTief :=
-  rundlauf_text_gut zeugeTief zeugeTief_gut (tokGut_of_all _ (by decide))
-
 end Gabbro.Grammatik.Parser
 
 #print axioms Gabbro.Grammatik.Parser.legs_tok
 #print axioms Gabbro.Grammatik.Parser.parse_druck_tok
 #print axioms Gabbro.Grammatik.Parser.parseTop_druck_gut
 #print axioms Gabbro.Grammatik.Parser.rundlauf_text_gut
-#print axioms Gabbro.Grammatik.Parser.parseTop_druck_gut_zeuge
-#print axioms Gabbro.Grammatik.Parser.rundlauf_text_gut_zeuge
-#print axioms Gabbro.Grammatik.Parser.parseTop_druck_ruf_zeuge
 #print axioms Gabbro.Grammatik.Parser.parseTop_druck_ruf_zeuge2

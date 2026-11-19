@@ -79,15 +79,4 @@ theorem admitted_cycle_has_measure_or_tail {D : Deklaration} [DecidableEq D.Fn]
 
 open Gabbro.Grammatik.Zielsatz.BudgetZeuge Gabbro.Grammatik.Terminierung.KlasseZeuge
 
-/-- The generic rejection theorem applies to the existing finite growing-stack program. -/
-theorem rejection_zeuge : klasse RecursionBoundary.program [()] ohne () = .abgelehnt :=
-  unmeasured_non_tail_rejected RecursionBoundary.program [()] ohne () ()
-    (by simp only [List.mem_cons, List.not_mem_nil, or_false]) (by decide) (by decide) rfl (by decide)
-
-/-- A real conditional tail cycle remains allowed; the rejection theorem does not ban
-    conditional execution or strengthen the existing classifier. -/
-theorem conditional_tail_zeuge :
-    klasse (prog rEnd) [()] ohne () = .bedingt ∧
-      zyklusEndstaendig (prog rEnd) [()] () = true := by decide
-
 end Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary

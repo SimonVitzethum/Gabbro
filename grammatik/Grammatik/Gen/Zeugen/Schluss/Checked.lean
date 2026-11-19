@@ -45,48 +45,6 @@ theorem checked_n : ∀ n ∈ Nw, n.gueltig = false := by
   · exact Reset.Bad.e_gueltig
   · exact Vertraege.Pruefer.AtomicReadAudit.false_contract_refused_zeuge
 
-/-- A wrong reset program jointly witnesses N membership and refusal. -/
-theorem checked_n_zeuge : Reset.Bad.e ∈ Nw ∧ Reset.Bad.e.gueltig = false :=
-  ⟨by simp [Nw, structuralRefusals], Reset.Bad.e_gueltig⟩
-
-/-- The scalar-read fine cell survives with full checker acceptance. -/
-theorem checked_read_zeuge : ScalarRead.e ∈ Mw ∧ ScalarRead.e.gueltig = true ∧
-    ScalarRead.e.HatF ⟨0, 0, 4, false, []⟩ :=
-  ⟨List.mem_append_right _ List.mem_cons_self, ScalarRead.e_gueltig, ScalarRead.e_hatF⟩
-
-/-- The restored reader belongs to M and cannot remain a refused fragment. -/
-theorem m49_restored_zeuge : M49_50.e ∈ Mw ∧ M49_50.e ∉ Gap.fragmentGaps ∧
-    M49_50.e.gueltig = true := by
-  refine ⟨Recovery.atomic_reader_recovered_zeuge.1, ?_, GateAudit.m49_50_checked⟩
-  intro member
-  have refused := Gap.checked_gap _ member
-  rw [GateAudit.m49_50_checked] at refused
-  exact Bool.noConfusion refused
-
-/-- N's atomic-reader twin has an actual false return contract. -/
-theorem false_twin_zeuge : Vertraege.Pruefer.AtomicReadAudit.negative ∈ Nw ∧
-    Vertraege.Pruefer.AtomicReadAudit.negative.gueltig = false ∧
-    ReqAmEintritt Vertraege.Pruefer.AtomicReadAudit.negative.P
-      Vertraege.Pruefer.AtomicReadAudit.returnedFunction
-      Vertraege.Pruefer.AtomicReadAudit.world .nil ∧
-    ¬ EnsAmRueck Vertraege.Pruefer.AtomicReadAudit.negative.P
-      Vertraege.Pruefer.AtomicReadAudit.returnedFunction
-      Vertraege.Pruefer.AtomicReadAudit.world Vertraege.Pruefer.AtomicReadAudit.world .nil () :=
-  ⟨List.mem_append_right _ List.mem_cons_self,
-    Vertraege.Pruefer.AtomicReadAudit.false_contract_refused_zeuge,
-    Vertraege.Pruefer.AtomicReadAudit.false_contract_counterexample_zeuge⟩
-
-/-- Source preservation restores the unchanged lock fixture to accepted M. -/
-theorem m16_restored_zeuge : M16_13.e ∈ Mw ∧ M16_13.e ∉ Gap.fragmentGaps ∧
-    M16_13.e.gueltig = true ∧ M16_13.e.Hat ⟨3, 0, true, [true, true]⟩ := by
-  refine ⟨?_, ?_, M16_13.e_gueltig, M16_13.e_hat _ (by decide)⟩
-  · exact List.mem_append_left _ (List.mem_map.2
-      ⟨(M16_13.e, M16_13.zellen), by simp [Recovery.records], rfl⟩)
-  · intro member
-    have refused := Gap.checked_gap M16_13.e member
-    rw [M16_13.e_gueltig] at refused
-    exact Bool.noConfusion refused
-
 /-- Full acceptance excludes every restored candidate from the gap list. -/
 theorem restored_disjoint : ∀ e ∈ GateAudit.restored, e ∉ Gap.fragmentGaps := by
   intro e member gap
@@ -94,13 +52,6 @@ theorem restored_disjoint : ∀ e ∈ GateAudit.restored, e ∉ Gap.fragmentGaps
   have refused := Gap.checked_gap e gap
   rw [accepted] at refused
   exact Bool.noConfusion refused
-
-theorem restored_disjoint_zeuge : M169_350.e ∈ GateAudit.restored ∧ M169_350.e ∈ Mw ∧
-    M169_350.e ∉ Gap.fragmentGaps ∧ M169_350.e.gueltig = true := by
-  have restored : M169_350.e ∈ GateAudit.restored := by simp [GateAudit.restored]
-  have member : M169_350.e ∈ Mw := List.mem_append_left _ (List.mem_map.2
-    ⟨(M169_350.e, M169_350.zellen), by simp [Recovery.records], rfl⟩)
-  exact ⟨restored, member, restored_disjoint _ restored, M169_350.e_gueltig⟩
 
 /-- A concrete remaining hole, not a claim that the cell is impossible for
     every accepted source program. W1/W2 still need coverage evidence. -/
@@ -113,6 +64,5 @@ theorem checked_m_missing_indirect_cell :
 
 #print axioms checked_m
 #print axioms checked_n
-#print axioms GateAudit.m16_source_checked_zeuge
 
 end Gabbro.Grammatik.Gen.Zeugen

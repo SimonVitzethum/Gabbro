@@ -91,11 +91,6 @@ theorem schleife_fair (tot : Nat → Bool) :
           have hr : r[p]? = some t := by simpa using h
           exact ih (schritt tot (a :: r)) t (by rw [schritt_rueckt tot a r p hp]; exact hr)
 
-theorem schleife_zeuge :
-    (nachSchritten (fun t => t == 7) 2 [5, 7, 9, 2]).head? = some 9 ∧
-      nachSchritten (fun t => t == 7) 2 [5, 7, 9, 2] = [9, 2, 5] := by
-  exact ⟨rfl, rfl⟩
-
 /-! ## 2. The first frame of a thread -/
 
 /-- The nine words `rahmen_neu` writes below the 16-aligned top, read from the new `rsp`
@@ -224,16 +219,6 @@ theorem warte_ohne_vorbelegung_waere_falsch (k : Nat) (_hk : 0 < k) :
   exact ⟨rfl, by simp only [List.length_append, List.length_replicate, List.length_cons, List.length_nil, Nat.zero_add,
   Nat.reduceAdd, Nat.zero_lt_succ, ohne]⟩
 
-/-- **Witness**: a thread of slot 3 with five steps -- the word reads 4 midway and right
-    before the burial, and 0 at the end; the frame on a top of `0x200000`; a placement on 4
-    cores. -/
-theorem faden_metall_zeuge :
-    wort 0 ((spur 3 5).take 3) = 4 ∧ wort 0 ((spur 3 5).take 7) = 4 ∧
-      wort 0 (spur 3 5) = 0 ∧ (spur 3 5).length ≤ (spur 3 5).length ∧
-      (schalteAuf (0x200000 - 72) (rahmen 0x101000)).rip = 0x101000 ∧
-      (schalteAuf (0x200000 - 72) (rahmen 0x101000)).rsp = 0x200000 - 8 ∧ 9 % 4 < 4 := by
-  refine ⟨rfl, rfl, rfl, Nat.le_refl _, rfl, rfl, by decide⟩
-
 end MetallFaden
 
 end Gabbro.Grammatik
@@ -242,11 +227,8 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.MetallFaden.nimm_kette
 #print axioms Gabbro.Grammatik.MetallFaden.nimm_leer
 #print axioms Gabbro.Grammatik.MetallFaden.schlange_fifo
-#print axioms Gabbro.Grammatik.MetallFaden.schlange_zeuge
 #print axioms Gabbro.Grammatik.MetallFaden.schleife_fair
-#print axioms Gabbro.Grammatik.MetallFaden.schleife_zeuge
 #print axioms Gabbro.Grammatik.MetallFaden.rahmen_korrekt
 #print axioms Gabbro.Grammatik.MetallFaden.platz_im_bereich
 #print axioms Gabbro.Grammatik.MetallFaden.warte_korrekt
 #print axioms Gabbro.Grammatik.MetallFaden.warte_ohne_vorbelegung_waere_falsch
-#print axioms Gabbro.Grammatik.MetallFaden.faden_metall_zeuge

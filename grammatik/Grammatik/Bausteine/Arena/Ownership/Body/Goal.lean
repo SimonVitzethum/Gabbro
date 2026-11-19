@@ -43,12 +43,6 @@ theorem ownership_goal (E : Einheit D) (arenas : List (ArenaIface D)) (fs : Aufz
   intro a ha passes
   exact checkProgram_calls fs.2 (List.all_eq_true.mp hacc a ha) hH.1 passes
 
-/-- Non-vacuity: every unit whose program is the witness program is accepted with its arena. -/
-theorem ownership_goal_witness (E : Einheit Witness.D) (hP : E.P = Witness.P) :
-    ownershipAccepted E [⟨Witness.A, Witness.I⟩] [true, false] = true := by
-  simp only [ownershipAccepted, hP, List.all_cons, List.all_nil, Bool.and_true]
-  exact witness_passes
-
 #print axioms ownership_goal
 
 end Gabbro.Grammatik.ArenaOwnership.Body

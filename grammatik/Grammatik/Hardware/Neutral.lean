@@ -142,15 +142,4 @@ theorem anbieter_verletzt : ¬ AnbieterAnnahme 16 [.hole 64 32, .hole 64 64] := 
                   simp only at this
                   omega
 
-/-- The legal case of the same shape: reserving past the first range is fine. -/
-theorem anbieter_zeuge : AnbieterAnnahme 16 [.hole 64 32, .hole 64 96] := by
-  have hs1 : PStep 16 Zust.leer (.hole 64 32)
-      { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
-  have hs2 : PStep 16 { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } (.hole 64 96)
-      { lebend := ⟨96, 96 + 64⟩ :: [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (by decide) (by decide) (by decide) (by simp only [Nat.reduceAdd, List.mem_cons, List.not_mem_nil, or_false, Strecke.getrennt, forall_eq,
-  Nat.reduceLeDiff, Std.le_refl, or_true])
-  exact ⟨_, Lauf.cons hs1 (Lauf.cons hs2 (Lauf.nil _))⟩
-
 end Gabbro.Grammatik.Anbieter
