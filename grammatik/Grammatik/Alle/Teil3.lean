@@ -47,4 +47,3 @@ public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteQuestionBlocker
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteReplayBlocker
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.RequiredRangeWitness
-public import Messung.Zertifikat
