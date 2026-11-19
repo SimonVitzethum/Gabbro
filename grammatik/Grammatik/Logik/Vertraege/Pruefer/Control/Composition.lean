@@ -85,4 +85,73 @@ def bindEndCondition (policy : A → CallObligation program) {context : Context 
     simp only [execEndH]
     exact (goals.endHolds_shrink τ item runtime allowed _).mp tail)
 
+/-- One certificate per value of a complete finite list, conjoined: every case is required, so the actual value is
+    covered whichever it is. Used for dispatch over finite payloads (`onOption`). -/
+def everyValue {context : Context A next} {α : Type}
+    (target : α → Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop)
+    (compile : ∀ value, Except Frag.Refusal (Certificate context (target value))) :
+    (values : List α) →
+    Except Frag.Refusal (Certificate context (fun valuation item runtime world =>
+      ∀ value ∈ values, target value valuation item runtime world))
+  | [] => .ok
+      { formula := .tru
+        sound := fun _ _ _ _ _ _ _ member => absurd member List.not_mem_nil }
+  | value :: rest => do
+      let head ← compile value
+      let tail ← everyValue target compile rest
+      return {
+        formula := .and head.formula tail.formula
+        sound := fun valuation item present runtime world valid current member => by
+          have parts : head.formula.denote (values valuation world) ∧
+              tail.formula.denote (values valuation world) := valid
+          rcases List.mem_cons.mp member with same | member
+          · rw [same]
+            exact head.sound valuation item present runtime world parts.1
+          · exact tail.sound valuation item present runtime world parts.2 current member }
+
+/-- `match` on an option: the `Some` block is certified for every index of the complete domain, the `None` block
+    once; whichever the actual value is, its block's certificate applies. -/
+def optionCondition (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int}
+    (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
+    (present : Block D V l (Ty.index count :: Γ) Λ Λ') (absent : Block D V l Γ Λ Λ')
+    (goals : Goals (program := program) (S := S) context V Γ)
+    (domain : Invarianten.VC.LocalDomain D (Ty.index count))
+    (absentCase : BlockCondition policy absent symbols goals)
+    (presentCase : ∀ index, Except Frag.Refusal
+      (BlockCondition policy present (.cons (.known index) symbols) (goals.shrink (Ty.index count)))) :
+    Except Frag.Refusal (StatementCondition policy (.onOption expression present absent) symbols goals) := do
+  let some ← everyValue
+    (fun index valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
+      ∀ actual, symbols.Realizes valuation world actual → ∀ allowed, HandlerSafe (policy item) runtime allowed →
+        runtime.wpB present ((goals.shrink (Ty.index count)).holds item runtime allowed) world (.cons index actual))
+    (fun index => do
+      let pre ← presentCase index
+      return pre.map (fun _ _ _ _ ready actual realized allowed safe =>
+        ready (.cons index actual) ⟨rfl, realized⟩ allowed safe))
+    domain.values
+  let both : Certificate context (fun valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
+      (∀ index ∈ domain.values, ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
+        HandlerSafe (policy item) runtime allowed →
+        runtime.wpB present ((goals.shrink (Ty.index count)).holds item runtime allowed) world (.cons index actual)) ∧
+      (∀ actual, symbols.Realizes valuation world actual → ∀ allowed, HandlerSafe (policy item) runtime allowed →
+        runtime.wpB absent (goals.holds item runtime allowed) world actual)) :=
+    { formula := .and some.formula absentCase.formula
+      sound := fun valuation item ready runtime world valid =>
+        ⟨some.sound valuation item ready runtime world valid.1,
+         absentCase.sound valuation item ready runtime world valid.2⟩ }
+  return (both.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
+    have current := (symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized
+    unfold VC.Runtime.wpS
+    simp only [execStmtH]
+    cases selected : eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual with
+    | some index =>
+        have case := ready.1 index (domain.complete index) actual current allowed safe
+        unfold VC.Runtime.wpB at case
+        exact (goals.holds_shrink (Ty.index count) item runtime allowed _).mp case
+    | none =>
+        have case := ready.2 actual current allowed safe
+        unfold VC.Runtime.wpB at case
+        exact case)
+
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic
