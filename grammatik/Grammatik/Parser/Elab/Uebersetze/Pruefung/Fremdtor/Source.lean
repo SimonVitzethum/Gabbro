@@ -5,6 +5,7 @@
    retains the front end's source-export refusal. -/
 module
 
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Units
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor.Functions
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
@@ -19,7 +20,6 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
-import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import all Grammatik.Logik.Vertraege.Pruefer.Program
 import all Grammatik.Logik.Vertraege.Pruefer.Duties
 import all Grammatik.Logik.Vertraege.Pruefer.Basic
@@ -58,6 +58,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 
 @[expose] public section
 

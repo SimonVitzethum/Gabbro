@@ -13,6 +13,8 @@
 -/
 module
 
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante.Teil1a
 
 public import Grammatik.Kern.Semantik.Maschine

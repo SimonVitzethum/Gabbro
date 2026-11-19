@@ -21,6 +21,7 @@
   could make the flagship certify it.
 -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 @[expose] public section

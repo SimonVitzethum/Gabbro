@@ -1,6 +1,12 @@
 module
 
-public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.Sources
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Kern.Semantik.Syscall.Syscall
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -35,6 +41,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1
+public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 @[expose] public section
 
 

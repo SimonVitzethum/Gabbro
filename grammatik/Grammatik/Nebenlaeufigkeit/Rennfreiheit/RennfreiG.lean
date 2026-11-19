@@ -8,6 +8,7 @@
   one-step rely `schritt_traeger` makes provable without a 70-case analysis.
 -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
 @[expose] public section
 

@@ -1,7 +1,8 @@
 module
-public import Grammatik.Parser.Stmt.LibraryFixtureProofs
+public import Grammatik.Logik.Vertraege.Uebersetzung
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
+public import Grammatik.Parser.Stmt.LibraryFixtureProofs
 public section
 
 /-! # Lowering a unit whose functions all declare a measure

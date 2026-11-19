@@ -14,10 +14,11 @@
   The numbers in `dokumente/PLAN-TRANSLATION-VALIDATION.md` section 9a come from this run.
 -/
 module
-public import Grammatik.GabbroV.GvZensus
+public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Parser.Print.Stmt
 public import Grammatik.Parser.Print.Item
+public import Grammatik.GabbroV.GvZensus
 @[expose] public section
 
 

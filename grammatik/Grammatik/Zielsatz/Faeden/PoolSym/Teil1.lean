@@ -1,4 +1,6 @@
 module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Zielsatz.Faeden.PoolSym.Teil1Basis
 import all Grammatik.Zielsatz.Faeden.PoolSym.Teil1Basis
 

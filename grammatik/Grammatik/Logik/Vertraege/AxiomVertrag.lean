@@ -31,6 +31,7 @@
   (`AxEnsLokal`), the class the replay can transfer.
 -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Logik.Vertraege.AxiomVertraga
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge

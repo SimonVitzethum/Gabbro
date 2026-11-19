@@ -1,6 +1,10 @@
 module
 
-public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
@@ -10,6 +14,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Kontext.LocalLookup
 public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze.Teil4Index
+public import Grammatik.Korpus.Programme.Export104
 
 @[expose] public section
 

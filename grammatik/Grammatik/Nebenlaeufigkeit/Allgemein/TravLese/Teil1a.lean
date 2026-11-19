@@ -13,6 +13,9 @@
 -/
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
 

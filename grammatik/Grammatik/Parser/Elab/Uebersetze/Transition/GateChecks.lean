@@ -1,5 +1,10 @@
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -30,12 +35,12 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+public import Grammatik.Korpus.Programme.Export104
 
 /-! The binding half of a `syscall` gate: answer register, handed stack, errno map and byte buffers
     (`N064`, `N447`, `N067`, `N464`, `N068`), split from `Teil12` (file-size rule). -/

@@ -1,5 +1,10 @@
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -30,7 +35,6 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
@@ -40,6 +44,7 @@ import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 import all Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 import all Grammatik.Parser.Elab.Generic.StaticConformance
+public import Grammatik.Korpus.Programme.Export104
 
 @[expose] public section
 

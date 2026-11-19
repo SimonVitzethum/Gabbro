@@ -1,10 +1,13 @@
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Parser.Elab.UebersetzeAllg
-public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
 public import Grammatik.Parser.Elab.UebersetzeAllg2.CallArguments
 public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Programme.Export108
 
 @[expose] public section
 

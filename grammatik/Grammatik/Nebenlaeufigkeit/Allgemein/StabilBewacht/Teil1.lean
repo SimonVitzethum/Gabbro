@@ -27,6 +27,8 @@
   slot 5, a different slot of the same shared table.
 -/
 module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Nebenlaeufigkeit.Allgemein.StabilBewacht.Teil1a
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein

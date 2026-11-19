@@ -8,7 +8,10 @@
   not yet an unbounded command-serving stack worker or a universality theorem.
 -/
 module
-public import Grammatik.Logik.Terminierung.KlasseZeuge
+public import Grammatik.Logik.Terminierung.Entscheidung
+public import Grammatik.Logik.Terminierung.Ausgang
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Kern.Syntax.Satz
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -40,6 +43,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Logik.Terminierung.KlasseZeuge
 @[expose] public section
 
 

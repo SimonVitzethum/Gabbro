@@ -18,7 +18,7 @@
   exporter and the checker from source, and the coverage of the generated space it decides is measured.
 -/
 module
-public import Grammatik.GabbroV.GvZensus
+public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Export
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
@@ -53,6 +53,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.GabbroV.GvZensus
 @[expose] public section
 
 

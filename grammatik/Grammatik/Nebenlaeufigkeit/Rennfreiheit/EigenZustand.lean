@@ -12,10 +12,11 @@
   (`refD`, no axioms) and on the one-axiom unguarded declaration (`AxGegen`).
 -/
 module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD
-public import Grammatik.Korpus.Referenz.ReferenzB
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,6 +48,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Korpus.Referenz.ReferenzB
 @[expose] public section
 
 

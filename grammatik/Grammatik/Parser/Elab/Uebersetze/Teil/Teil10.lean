@@ -1,5 +1,9 @@
 module
-public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
@@ -10,6 +14,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Branches
 public import Grammatik.Parser.Elab.Uebersetze.Breaking
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 public import Grammatik.Parser.Elab.Uebersetze.Loops.Bounded
+public import Grammatik.Korpus.Programme.Export104
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 mutual

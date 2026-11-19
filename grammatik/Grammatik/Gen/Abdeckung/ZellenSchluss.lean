@@ -3,7 +3,8 @@
   Semantic gate refusals are not characterized by structural cells.
 -/
 module
-public import Grammatik.Gen.Druck.LeanZeuge
+public import Grammatik.Gen.Druck.LeanTerm
+public import Grammatik.Gen.Abdeckung.Waehlen
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -35,6 +36,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Druck.LeanZeuge
 @[expose] public section
 
 

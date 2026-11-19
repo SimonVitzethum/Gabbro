@@ -1,9 +1,9 @@
 module
+public import Grammatik.Logik.Vertraege.Uebersetzung
 public import Bruecke.Kette.Quelle
 public import Bruecke.Kette.Mass.CycleFixture
 public import Bruecke.Pruefung
 public import Grammatik.Parser.Elab.UebersetzePipeline
-import Grammatik.Parser.Stmt.LibraryFixtureProofs
 import all Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 import all Grammatik.Parser.Elab.UebersetzeAllg3.Body
@@ -38,6 +38,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+import Grammatik.Parser.Stmt.LibraryFixtureProofs
 @[expose] public section
 
 

@@ -29,6 +29,8 @@
 -/
 
 module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Bausteine.Schablonen.SchablonenT5SemBasis
 import all Grammatik.Bausteine.Schablonen.SchablonenT5SemBasis
 public import Grammatik.Korpus.Referenz.ReferenzB

@@ -1,11 +1,10 @@
 module
 
+public import Grammatik.Logik.Vertraege.Pruefer.Program
 public import Grammatik.Logik.Vertraege.Uebersetzung
-public import Grammatik.Parser.Stmt.LibraryFixtures
 public import Grammatik.Parser.Stmt.LibraryCertificates
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 import Grammatik.Parser.Stmt.LibraryFixtureScanning
 import all Grammatik.Parser.Stmt.LibraryQualifiedFixtures
 import Grammatik.Parser.Stmt.LibraryFixtureProofs
@@ -52,6 +51,8 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Parser.Stmt.LibraryFixtures
+import Grammatik.Logik.Vertraege.Pruefer.Witness.Selection
 
 @[expose] public section
 

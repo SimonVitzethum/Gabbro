@@ -7,8 +7,10 @@
 -/
 module
 
-public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Logik.Vertraege.EinpassenVoll
+public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 @[expose] public section
 
 

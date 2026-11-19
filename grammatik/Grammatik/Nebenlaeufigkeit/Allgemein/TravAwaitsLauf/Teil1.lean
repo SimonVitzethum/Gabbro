@@ -6,8 +6,12 @@
              `locks`, call, `if`, `awaits`, return).
 -/
 module
-
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge.Teil2
+
 
 @[expose] public section
 

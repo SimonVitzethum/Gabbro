@@ -1,7 +1,9 @@
 module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Program
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
-public import Grammatik.Bausteine.Arena.Ownership.Body.Witness
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Bausteine.Arena.Ownership.Body.Witness
 @[expose] public section
 
 

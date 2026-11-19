@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Stmt.LibraryFixtures
+public import Grammatik.Logik.Vertraege.Uebersetzung
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.Stmt.LibraryWitnesses
 import all Grammatik.Parser.Stmt.LibraryTranslationFixtures
@@ -39,6 +39,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Parser.Stmt.LibraryFixtures
 
 @[expose] public section
 

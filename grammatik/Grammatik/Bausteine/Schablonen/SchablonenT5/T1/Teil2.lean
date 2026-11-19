@@ -1,7 +1,9 @@
 module
 
-public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Bausteine.Schablonen.SchablonenT5.T1.Teil1
+public import Grammatik.Korpus.Referenz.ReferenzB
 
 @[expose] public section
 

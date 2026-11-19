@@ -10,10 +10,18 @@
     replacement also witnesses strict acceptance after adding the idle root.
 -/
 module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 public import Grammatik.Zielsatz.Faeden.Ruhe
 public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 @[expose] public section
 
 

@@ -3,7 +3,15 @@
   coverage. Cell-only checker equivalence is not asserted.
 -/
 module
-public import Grammatik.Gen.Zeugen.Schluss
+public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
+public import Grammatik.Gen.Fein.Zellen
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Gen.Abdeckung.Mitglieder
+public import Grammatik.Gen.Abdeckung.Satz.Neutral
+public import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
 public import Grammatik.Gen.Text.Zeugen.M103_131
 public import Grammatik.Gen.Text.Zeugen.M103_803
 public import Grammatik.Gen.Text.Zeugen.M16_13
@@ -56,6 +64,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Zeugen.Schluss
 @[expose] public section
 
 

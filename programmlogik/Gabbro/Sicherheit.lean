@@ -91,6 +91,8 @@
   es sind die Grenzen der Semantik, ueber der er steht -- `PLAN-SICHERHEIT.md` fuehrt sie.
 -/
 module
+public import Gabbro.Sicherheit.Anweisung.Teil1
+public import Gabbro.Coverage.Teil3
 public import Gabbro.Sicherheit.Ausdruck
 public import Gabbro.Sicherheit.Anweisung
 public import Gabbro.Sicherheit.RecordZeuge

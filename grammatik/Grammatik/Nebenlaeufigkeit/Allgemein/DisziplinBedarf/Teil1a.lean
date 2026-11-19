@@ -15,6 +15,8 @@
 -/
 module
 
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Korpus.Referenz.ReferenzB

@@ -1,8 +1,17 @@
 module
 
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Logik.Vertraege.Pruefer.Goal
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 
 @[expose] public section
 

@@ -10,6 +10,10 @@
   world of the new one by re-packing its three fields (`uebertr`), and every number of `w0` carries over by `rfl`.
 -/
 module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerBeweis
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreInv
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
 @[expose] public section

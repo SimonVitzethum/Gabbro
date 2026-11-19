@@ -1,8 +1,16 @@
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 public import Grammatik.Proben.InvZeuge.Teil1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 
 @[expose] public section
 

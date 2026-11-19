@@ -1,7 +1,14 @@
 module
 
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Vertraege.AxiomVertrag
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -33,6 +40,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 
 @[expose] public section
 

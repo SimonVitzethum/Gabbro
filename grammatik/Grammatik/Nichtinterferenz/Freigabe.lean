@@ -31,6 +31,7 @@
   `dokumente/NICHTINTERFERENZ.md`, §8.
 -/
 module
+public import Grammatik.Nichtinterferenz.Fluss
 public import Grammatik.Nichtinterferenz.Zeuge
 @[expose] public section
 
