@@ -18,6 +18,7 @@
 -/
 module
 public import Grammatik
+public import Grammatik.Kern.Syntax.Marken.Owner.Erfuellbarkeit
 @[expose] public section
 
 
@@ -58,3 +59,5 @@ bodies. (The C correspondence chain of these units was deleted with the C emitte
 `archiv/c-emitter-2026-10-17`.) -/
 
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
+#print axioms Gabbro.Grammatik.EscrowWitness.owner_erfuellbar
+#print axioms Gabbro.Grammatik.EscrowWitness.owner_aufruf_erfuellbar
