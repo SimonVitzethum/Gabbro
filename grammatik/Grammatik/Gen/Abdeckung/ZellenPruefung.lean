@@ -128,7 +128,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     component formulas, reset-cell atom and `komp` remain unchanged.
     Re-reviewed for typed product component observations and their quantified
     parameter/result coverage. Runtime-WP soundness and all numbered cell
-    formulas, reset-cell atoms and `komp` remain unchanged. -/
+    formulas, reset-cell atoms and `komp` remain unchanged.
+    Re-reviewed for complete finite domains of option, tagged, product and
+    empty locals (`VC/Finite.lean`): only the local elimination grows; every
+    numbered cell formula, reset-cell atom and `komp` remain unchanged. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -142,7 +145,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 10872350298449321798)]
+   ("AkzeptiertX", 9923783221660105700)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

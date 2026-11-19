@@ -12,7 +12,8 @@ namespace Gabbro.Grammatik.Zielsatz.CallSiteConditionalBite
 def decl : Deklaration :=
   { CallSiteZeuge.decl with
     sigNr := fun _ => { CallSiteZeuge.sig with erg := some .bool }
-    aerg := fun _ => some .bool }
+    aerg := fun _ => some .bool
+    passt_ok := fun _ _ _ => SigPasst.refl _ _ }
 
 def contract : CallContract decl (decl.asignatur ()) where
   pre := .fls
