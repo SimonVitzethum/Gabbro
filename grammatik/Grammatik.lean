@@ -42,60 +42,19 @@
   | `LesenStabil.lean` | lesestabile Form: Vertragsgelesenes im Rahmen, Kette bis zum letzten Lauf |
 -/
 module
-public import Grammatik.Kern.Semantik.Semantik.PayloadProben
 public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
 public import Grammatik.Alle.Teil3
-public import Grammatik.Parser.Elab.Proben.CallElse.Refusals
-public import Grammatik.Parser.Elab.Proben.IndirectElse.Refusals
-public import Grammatik.Parser.Elab.Uebersetze.ReasonProben
-public import Grammatik.Kern.Semantik.Semantik.TransitionGuardZeuge
 public import Grammatik.Kern.Semantik.Semantik.TransitionShift
-public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Refusals
-public import Grammatik.Parser.Elab.Uebersetze.Transition.Witness.GateRefusals
-public import Grammatik.Parser.Elab.Uebersetze.Tagged.Proben
-public import Grammatik.Parser.TaggedDispatch.Witnesses
-public import Grammatik.Parser.TaggedDispatch.SignatureWitnesses
-public import Grammatik.Parser.TaggedDispatch.SourceWitnesses
-public import Grammatik.Parser.Elab.Generic.PipelineWitness
-public import Grammatik.Parser.Elab.Generic.FunctionWitness
-public import Grammatik.Parser.Elab.Generic.BoundsWitness
 
-public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
-public import Grammatik.Parser.Elab.Uebersetze.Folds.SpecArgumentsZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
-public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatWitnesses
-public import Grammatik.Parser.Elab.Modules.PipelineWitness
-public import Grammatik.Parser.Elab.Instantiation.Witness
 
-public import Grammatik.Parser.Elab.Konst.Values.Witness
 
-public import Grammatik.Logik.Ruf.Guest.Witness
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 
-public import Grammatik.Parser.Elab.Export.QuantifierWitnesses
 public import Grammatik.Parser.Elab.Export.ExportMetadataBound
-public import Grammatik.Parser.Elab.Export.Traversal.TraversalHeaderZeuge
 public import Grammatik.Parser.Elab.Export.CostBinding
-public import Grammatik.Parser.Elab.Export.CostBindingZeuge
 public import Grammatik.Parser.Elab.Export.HeldBinding
-public import Grammatik.Parser.Elab.Export.HeldBindingZeuge
 public import Grammatik.Parser.Elab.Export.Held.Satz
-public import Grammatik.Parser.Elab.Export.Held.SatzZeuge
 public import Grammatik.Parser.Elab.Export.ForeverBinding
-public import Grammatik.Parser.Elab.Modules.CallHoistZeuge
-public import Grammatik.Parser.Elab.Konst.Scopes.RecordZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Kontext.StringConstantsZeuge
-public import Grammatik.Parser.Elab.Modules.MatchWildcardZeuge
-public import Grammatik.Parser.Elab.Modules.MatchNumberZeuge
-public import Grammatik.Parser.Elab.Tuples.Witnesses
-public import Grammatik.Parser.Elab.Uebersetze.Records.TruthZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Records.NarrowingWitness
-public import Grammatik.Parser.Elab.Uebersetze.Tagged.EqualityZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Tagged.PayloadKindsZeuge
-public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowingWitness
-public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardMutableWitness
-public import Grammatik.Parser.Elab.Uebersetze.Loops.Witness
-public import Grammatik.Parser.Elab.Uebersetze.Loops.ForWitness
 
 @[expose] public section

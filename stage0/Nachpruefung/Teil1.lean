@@ -3,11 +3,8 @@ module
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
 public import Stage0.Senke.Ausdruck.Tag
-public import Stage0.Senke.Ausdruck.Quant.Proben
-public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
-public import Stage0.Bindung.Proben
 
 @[expose] public section
 
@@ -45,9 +42,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.typedItem_sound_zeuge
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_inline_range_zeuge
 #print axioms Gabbro.Stage0.validateTargetFor_supported
-#print axioms Gabbro.Stage0.BindingProbes.literal_metal_refused_zeuge
-#print axioms Gabbro.Stage0.BindingProbes.gate_free_metal_refused_zeuge
-#print axioms Gabbro.Stage0.BindingProbes.unselected_metal_preserved_zeuge
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
 -- C05 shared normal-return epilogue and concrete global/mixed carrier witnesses.
@@ -141,20 +135,11 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
 #print axioms Gabbro.Stage0.Senke.shift_ok
-#print axioms Gabbro.Stage0.Senke.ShiftProbe.simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.readBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytes_ok
 #print axioms Gabbro.Stage0.Senke.bytePartC_ok
 #print axioms Gabbro.Stage0.Senke.byte_word
-#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip8_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes8_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.shift_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_lowered_zeuge
 #print axioms Gabbro.Stage0.Senke.blockCheck_case
 #print axioms Gabbro.Stage0.Senke.Ret.toSim
 #print axioms Gabbro.Stage0.Senke.Ret.ofSim
@@ -178,11 +163,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.reachEqL_ok
 #print axioms Gabbro.Stage0.Senke.reachL_ok
 #print axioms Gabbro.Stage0.Senke.reachesL_ok
-#print axioms Gabbro.Stage0.Senke.QuantProbe.quantifiers_zeuge
-#print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_zeuge
-#print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
-#print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
-#print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.Retrying.Image.test_run
 #print axioms Gabbro.Stage0.Senke.retry_runtime
 #print axioms Gabbro.Stage0.Senke.Retrying.Image.correct

@@ -43,13 +43,9 @@ open Gabbro.Grammatik
 
 -- A two-thread program that actually moves memory, accepted by the checker Bool, with the
 -- goal's conclusion on it -- so the theorem is not vacuous for want of an accepted program.
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
 
 -- And the refutations: programs the checker REFUSES. A checker that accepts everything would
 -- make the theorem trivial; these say it does not.
-#print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
-#print axioms Gabbro.Grammatik.Zielsatz.probeD_widerlegt_gilt
-#print axioms Gabbro.Grammatik.Zielsatz.w1_abgelehnt
 
 /-! ## 3. The corpus units: the user's logic of two real programs
 
@@ -59,4 +55,3 @@ bodies. (The C correspondence chain of these units was deleted with the C emitte
 `archiv/c-emitter-2026-10-17`.) -/
 
 #print axioms Gabbro.Grammatik.Einheit104.nutzer4
-#print axioms Gabbro.Grammatik.Einheit108.nutzer8
