@@ -145,7 +145,7 @@ def symbolicOptionCondition (policy : A → CallObligation program) {context : C
             simp only [extended, Frag.Assignment.bind, different, ↓reduceIte]
           have ready' := (context.stable valuation extended item agree).mp ready
           have realized' := (symbols.realizes_congr next bounded valuation extended agree world world actual).mp realized
-          have fresh : values extended world (.inr next) = index.n := bind_same valuation next index.n
+          have fresh : values extended world (.inr next) = index.n := Invarianten.Elim.Korrekt.bind_same valuation next index.n
           have withinBounds : bounds.denote (values extended world) := by
             change 0 ≤ values extended world (.inr next) ∧ values extended world (.inr next) ≤ count - 1
             rw [fresh]
@@ -153,7 +153,7 @@ def symbolicOptionCondition (policy : A → CallObligation program) {context : C
           have body := valid.1 index.n
           rw [← values_bind] at body
           exact presentCase.sound extended item ready' runtime world (body withinBounds) (.cons index actual)
-            ⟨bind_same valuation next index.n, realized'⟩ allowed safe,
+            ⟨Invarianten.Elim.Korrekt.bind_same valuation next index.n, realized'⟩ allowed safe,
          absentCase.sound valuation item ready runtime world valid.2⟩ }
   (both.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
     have current := (symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized
@@ -206,7 +206,7 @@ def knownOptionCondition (policy : A → CallObligation program) {context : Cont
 /-- `match` on an option: the selected block when the value is known, otherwise the `Some` block once over a fresh
     bounded index and the absent block. -/
 def optionDispatch (policy : A → CallObligation program) {context : Context A next} {l : Bool}
-    {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int} (expansion : Nat)
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {count : Int}
     (symbols : SymEnv D Nat Γ) (expression : Expr D Γ Λ (.opt count))
     (present : Block D V l (Ty.index count :: Γ) Λ Λ') (absent : Block D V l Γ Λ Λ')
     (goals : Goals (program := program) (S := S) context V Γ)
