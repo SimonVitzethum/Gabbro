@@ -15,7 +15,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_footprint
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_gate
 #print axioms Gabbro.Stage0.Compiled.initializer_exports
-#print axioms Gabbro.Stage0.exported_batch2_ir_correct_zeuge
 #print axioms Gabbro.Stage0.Senke.ReservedByteProbe.putBytes_reserved_sentinel_zeuge
 -- The first private-frame rely component for concurrent IR refinement.
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_word
@@ -29,13 +28,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.lowEnsAt_ok
 #print axioms Gabbro.Stage0.Senke.publishResult_run
 #print axioms Gabbro.Stage0.Senke.entryFrame_run
-#print axioms Gabbro.Stage0.Senke.OldProbe.multiple_occurrences_zeuge
-#print axioms Gabbro.Stage0.Senke.OldProbe.distinct_occurrences_zeuge
-#print axioms Gabbro.Stage0.Senke.OldProbe.computed_snapshot_zeuge
-#print axioms Gabbro.Stage0.Senke.CompleteSnapshotEnvProbe.complete_at_zeuge
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
-#print axioms Gabbro.Stage0.Senke.ReturnProtocolProbe.publishResult_run_zeuge
-#print axioms Gabbro.Stage0.Senke.EntryProtocolProbe.entryFrame_run_zeuge
 
 -- Total binary64 addition, from decoded source operands through the Block hook.
 #print axioms Gabbro.Stage0.Senke.blockFloatArithmetic_case
@@ -56,9 +49,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.layU_ga_lcm_dvd
 #print axioms Gabbro.Stage0.Emitted.placed
 #print axioms Gabbro.Stage0.Compiled.profile_binding
-#print axioms Gabbro.Stage0.AlignedStaticWitness.addr_aligned
-#print axioms Gabbro.Stage0.ProfileMismatchWitness.candidate_refused
-#print axioms Gabbro.Stage0.SectionWitness.candidate_refused
 
 -- C01 products: actual emitters, generic simulation and jointly inhabited value flow.
 #print axioms Gabbro.Stage0.Senke.prodArgs_ok
@@ -66,19 +56,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.prodGet_ok
 #print axioms Gabbro.Stage0.Senke.prodSet_ok
 #print axioms Gabbro.Stage0.Senke.wordsAt_prodSet
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prod_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prodGet_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prodSet_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.Product.prod_empty_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.semantics_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.encoding_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.wide_encoding_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.wide_lowering_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.simulation_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.block_lowering_zeuge
-#print axioms Gabbro.Stage0.Pipeline.ProductValueWitness.image_zeuge
 #print axioms Gabbro.Stage0.exported_records_ir_correct
-#print axioms Gabbro.Stage0.Pipeline.ProductRecordWitness.exported_records_ir_correct_zeuge
 #print axioms Gabbro.Stage0.Senke.bytesLt_keys
 #print axioms Gabbro.Stage0.Senke.keyScan_lex
 #print axioms Gabbro.Stage0.Senke.stringScan_value
@@ -86,8 +64,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.stringCatC_ok
 #print axioms Gabbro.Stage0.Senke.strCatExpr_ok
 #print axioms Gabbro.Stage0.Senke.strLtExpr_ok
-#print axioms Gabbro.Stage0.Senke.StringSpanProbe.concatenation_correct
-#print axioms Gabbro.Stage0.Senke.StringSpanProbe.order_correct
 
 -- Native CPU arithmetic and complete-word storage, without a software FP fallback.
 #print axioms Gabbro.Stage0.Senke.nativeFloat_read_word

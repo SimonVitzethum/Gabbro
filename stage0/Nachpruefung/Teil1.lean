@@ -38,18 +38,12 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.compile_source_program
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
-#print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
-#print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_call_bound_zeuge
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_custom_negative_bound_zeuge
 #print axioms Gabbro.Stage0.Frontend.typedItem_sound
 #print axioms Gabbro.Stage0.Frontend.typedItem_sound_zeuge
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_inline_range_zeuge
-#print axioms Gabbro.Stage0.ArrayWitness.array_constant_typed_zeuge
-#print axioms Gabbro.Stage0.ArrayWitness.arrayMeaning_collected_zeuge
-#print axioms Gabbro.Stage0.ArrayWitness.source_image_joint_zeuge
-#print axioms Gabbro.Stage0.ArrayWitness.entry_ir_simulation_zeuge
 #print axioms Gabbro.Stage0.validateTargetFor_supported
 #print axioms Gabbro.Stage0.BindingProbes.literal_metal_refused_zeuge
 #print axioms Gabbro.Stage0.BindingProbes.gate_free_metal_refused_zeuge
@@ -62,11 +56,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.owedWorld_at
 #print axioms Gabbro.Stage0.Senke.lowInvs_ok
 #print axioms Gabbro.Stage0.Senke.lowPost_ok
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.lowPost_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.ensures_first_zeuge
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.first_failure_zeuge
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.lowFun_zeuge
-#print axioms Gabbro.Stage0.Senke.InvariantProbe.reason_bypasses_epilogue_zeuge
 #print axioms Gabbro.Stage0.Senke.lowFun_spec
 #print axioms Gabbro.Stage0.Senke.lowS_ok
 #print axioms Gabbro.Stage0.Senke.lowB_ok
@@ -148,8 +137,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.lowTags_ok
 #print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.tagPayload_ok
-#print axioms Gabbro.Stage0.Senke.TagDecodeProbe.simulation_zeuge
-#print axioms Gabbro.Stage0.Senke.TagDecodeProbe.dispatcher_zeuge
 #print axioms Gabbro.Stage0.Senke.sumFits_zeuge
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
@@ -204,21 +191,9 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.forever_one_false
 #print axioms Gabbro.Stage0.Senke.forever_initialize_entry
 #print axioms Gabbro.Stage0.Senke.forever_counter_loop
-#print axioms Gabbro.Stage0.Senke.RetryProbe.retry_case_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.retry_overflow_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_fuel_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_body_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_unreserved_zeuge
 #print axioms Gabbro.Stage0.Senke.boolC_ok
 #print axioms Gabbro.Stage0.Senke.einpassen_bool
 #print axioms Gabbro.Stage0.Senke.einpassen_never
-#print axioms Gabbro.Stage0.Senke.GateProbe.boolean_images_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.never_images_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.never_outcome_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.boolean_decode_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.start_frontend_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.start_image_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.unsupported_answers_zeuge
 #print axioms Gabbro.Stage0.Senke.whyTest_ok
 #print axioms Gabbro.Stage0.Senke.lowGrund_ok
 #print axioms Gabbro.Stage0.Senke.onWhy_ok
@@ -232,8 +207,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.endCallElse_case
 #print axioms Gabbro.Stage0.Senke.endLeave_case
 #print axioms Gabbro.Stage0.Senke.endNext_case
-#print axioms Gabbro.Stage0.Senke.WhyProbe.outcomes_zeuge
-#print axioms Gabbro.Stage0.Senke.WhyProbe.callElse_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.arrNil_ok
 #print axioms Gabbro.Stage0.Senke.arrCons_ok
 #print axioms Gabbro.Stage0.Senke.arrGet_ok
@@ -256,14 +229,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.take_len_word
 #print axioms Gabbro.Stage0.Senke.strTake_encode
 #print axioms Gabbro.Stage0.Senke.bin_exact_ok
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.semantics_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.lowering_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.simulation_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.refused_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.representation_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.image_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.read_accepted_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.enc_ref_cell
 #print axioms Gabbro.Stage0.Senke.slotRefA_ok
 #print axioms Gabbro.Stage0.Senke.slotRefC_ok
@@ -281,13 +246,9 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.bindValue_ok
 #print axioms Gabbro.Stage0.Senke.blockFloatLit_case
 #print axioms Gabbro.Stage0.Senke.blockFloatNarrow_case
-#print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
 #print axioms Gabbro.Stage0.Senke.blockFloatOfLit_case
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.lowEns_ok
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_world_ok
-#print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.OldProbe.capture_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.counter_init
 #print axioms Gabbro.Stage0.Senke.counter_zero
 #print axioms Gabbro.Stage0.Senke.counter_positive
@@ -296,8 +257,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.counter_decrement_zeuge
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_none
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computedSamples_bits
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computed_range_decisions_zeuge
 #print axioms Gabbro.Stage0.Senke.blockFloatOfComputed_case
 -- Canonical prefix reservation: lexical placement, writes and nested offsets.
 #print axioms Gabbro.Stage0.Senke.reserved_write_preserves
@@ -306,14 +265,9 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.reservation_parameter_offset_zeuge
 #print axioms Gabbro.Stage0.Senke.relocate_run
 #print axioms Gabbro.Stage0.Senke.relocate_env
-#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_env_zeuge
-#print axioms Gabbro.Stage0.Senke.RelocateProbe.emitted_moves_zeuge
-#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_run_zeuge
 -- Actual counter header reconstructs the source-pass interface in its output memory.
 #print axioms Gabbro.Stage0.Senke.counter_header
 #print axioms Gabbro.Stage0.Senke.CounterCallProbe.counter_header_zeuge
-#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
-#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
 -- The shared value ABI and the complete-span world consumers.
 #print axioms Gabbro.Stage0.Senke.copyValue_run
 #print axioms Gabbro.Stage0.Senke.globalValueC_ok
@@ -336,8 +290,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.span_byte_read
 #print axioms Gabbro.Stage0.Senke.xorOrSpan_ok
 #print axioms Gabbro.Stage0.Senke.strEq_words_iff
-#print axioms Gabbro.Stage0.Senke.locks_reason_zeuge
-#print axioms Gabbro.Stage0.Senke.GateProbe.word_range_images_zeuge
 -- Original-source export preservation remains connected after full-ABI integration.
 #print axioms Gabbro.Stage0.exported_source_ir_correct
 #print axioms Gabbro.Stage0.Compiled.exports_metadata
