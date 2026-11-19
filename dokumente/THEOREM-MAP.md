@@ -2274,7 +2274,7 @@ t).1 = w`), and `probeB_erfuellbar`/`probeC_erfuellbar` fix `ws = [haupt]`:
 the empty start list, or any list with the root on every thread, no longer
 satisfies them. Re-proved (`zHaupt_laeuft`: thread 0 of `initRuhe [haupt]`);
 `zweiFaeden_erfuellbar_gilt` re-proved with threads 0 and 1;
-`gabbro_ziel_zeuge` now applies `gabbro_ziel`.
+`gabbro_ziel_erfuellbar` now applies `gabbro_ziel`.
 
 *Axioms (full `lake build`, 221 jobs, green, `ki-pc-fisch-101`).*
 `gabbro_ziel`, `ziel_aus`, `begruendet_eindeutig`, `funkV_appendB`,
@@ -2515,7 +2515,7 @@ neither `starts` nor `sp0` nor the source `requires` today.
 
 `gabbro_ziel`, `ziel_aus`, `startZulaessig_aus`, `laufzeit_initRuhe`, `laufzeit_voll`,
 `laufzeit_nur_erklaert`, `laufzeit_ohne_starts`, `laufzeit_ruhe`, every theorem of
-`Proben.lean` (`gabbro_ziel_zeuge`, `probeA_widerlegt_gilt`, `probeA_falsch_inv_nicht`,
+`Proben.lean` (`gabbro_ziel_erfuellbar`, `probeA_widerlegt_gilt`, `probeA_falsch_inv_nicht`,
 `unerfuellbar_widerlegt`, `havocOk_bewohnt`, `start_req_widerlegt`, `probeD_widerlegt_gilt`,
 `probeD_wahr_widerlegt_gilt`, `tabelle_widerlegt_gilt`, `ungeschuetzt_abgelehnt_gilt`,
 `zwei_schreiber_abgelehnt_gilt`, `akD_kein_zweiter_schreiber`, `akP3_ohne_starts`,
@@ -2637,7 +2637,7 @@ Full `lake build` from the changed `Syntax.lean` up, 226 jobs, green, 19 min 44 
 `gabbro_ziel`, `ziel_aus`, `kein_warteZyklusG`, `probeF1_widerlegt_gilt`, `f1_lauf`,
 `fadenS_bereich`, `bereichG_erreichbarL`, `bereichG_mehrfaden`, `fortschrittG_aus`,
 `fortschrittG_sperre`, `fortschrittG_mehrfaden`, `restHalt_kann`, `fortschritt_zeuge`,
-`wartezeit_schranke`, `wartezeit_zeuge`, `lZeuge`, `gabbro_ziel_zeuge`, `klemmen_corr`,
+`wartezeit_schranke`, `wartezeit_zeuge`, `lZeuge`, `gabbro_ziel_erfuellbar`, `klemmen_corr`,
 `gsem_gleit`, `lauf01_ueber03`, `laufDurchNull`, `logikFrei_keineLogik`: `propext`,
 `Classical.choice`, `Quot.sound`. `f1_akzeptiert`, `f1_lit_ausser`, `p1_akzeptiert`:
 `propext`. No `sorry`, no new `axiom`, no `native_decide`.
@@ -2797,7 +2797,7 @@ for any such `O'`. `Fortschritt.lean` (`FortFaden` seven-way, `fort_nie`),
 
 CLEAN `lake build` (the build directory set aside first), 228 jobs, green, 19 min 51 s on
 `ki-pc-fisch-101` (`~/gabbro-muse/opus-g1/`); no `sorryAx` anywhere in the log.
-`gabbro_ziel`, `gabbro_ziel_zeuge`, `probeF1_widerlegt_gilt`, `fortschrittG_aus`,
+`gabbro_ziel`, `gabbro_ziel_erfuellbar`, `probeF1_widerlegt_gilt`, `fortschrittG_aus`,
 `koerperGutS_mitRuhe`, `orakelRu_zurueck`, `g1PA_widerlegt`, `g1PR_widerlegt`: `propext`,
 `Classical.choice`, `Quot.sound`. `einpassen_voll`, `antwortLeer_iff`, `summePasst_voll`,
 `gleitWortPasst_voll`, `g1_holen_antwortet`, `g1_temp_antwortet`, `g1_nicht_leer`: `propext`,

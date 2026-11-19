@@ -253,7 +253,7 @@ public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 public import Grammatik.Zielsatz.Faeden.Ruhe
 public import Grammatik.Zielsatz.Faeden.RuheZeuge
 public import Grammatik.Zielsatz.Kern.Spec
-public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.ErfuellbarkeitSpec
 public import Grammatik.Zielsatz.Faeden.RuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.FadenMaschine
@@ -261,7 +261,7 @@ public import Grammatik.Zielsatz.Faeden.Faeden
 public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Zielsatz.Eigenschaften.Invarianten
 public import Grammatik.Zielsatz.Faeden.FaedenVor
-public import Grammatik.Zielsatz.Kern.Proben
+public import Grammatik.Zielsatz.Kern.Erfuellbarkeit
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg2

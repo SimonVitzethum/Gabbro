@@ -223,7 +223,7 @@ def probeB_erfuellbar : Prop := ∃ fs : Aufzaehlung zD.Fn, Erfuellbar zEB fs
 /-- Probe C satisfies every premise group with `haupt` running on some thread. -/
 def probeC_erfuellbar : Prop := ∃ fs : Aufzaehlung zD.Fn, Erfuellbar zEC fs
 
-/-- **Non-degeneracy of the positive witness** (PLAN §4 `gabbro_ziel_zeuge`, stated): on some
+/-- **Non-degeneracy of the positive witness** (PLAN §4 `gabbro_ziel_erfuellbar`, stated): on some
     runtime start of `mE` a reached machine has CHANGED memory, so the conclusion is not only
     about the start machine. -/
 def zweiFaeden_bewegt : Prop :=

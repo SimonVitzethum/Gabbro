@@ -88,8 +88,10 @@ Consequences:
 - **Acceptance of a model change:** the full Lean build is green, `gabbro_ziel` is on the standard axioms, no
   `sorry`. **No witnesses anywhere (owner, 2026-11-19):** no `_zeuge` theorems, no witness modules, no fixtures
   evaluated to show a statement; prefer proofs. Where a ∀-over-syntax premise could be contradictory, its
-  satisfiability is a proved lemma from the definitions, checked in seconds, never a run of the compiler on a
-  source text.
+  satisfiability is a proved lemma (`NAME_erfuellbar`: the premises hold jointly), one per premise bundle shared
+  by all theorems over that bundle, checked in seconds, never a run of the compiler on a source text. **Every new
+  language form gets such a lemma** (owner, 2026-11-19): an instance in which the form occurs and the premises of
+  the theorems that cover it hold jointly.
 
 ## 4. Rules for the code
 

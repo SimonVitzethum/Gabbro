@@ -34,12 +34,12 @@
   (`zEB`, `zEC`, `haupt` on thread 0). The runtime's exact start is `initRuhe E.starts`
   (`laufzeit_initRuhe`, Zielsatz/Ruhe.lean).
 
-  Applied (`gabbro_ziel_zeuge`): the proved `gabbro_ziel` (Zielsatz/Beweis.lean) on `mE`,
+  Applied (`gabbro_ziel_erfuellbar`): the proved `gabbro_ziel` (Zielsatz/Beweis.lean) on `mE`,
   with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine of
   `mP.mitRuhe` with changed memory.
 -/
 module
-public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.ErfuellbarkeitSpec
 public import Grammatik.Zielsatz.Kern.PoolSnapshot
 public import Grammatik.Zielsatz.Faeden.RuheZeuge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
@@ -354,7 +354,7 @@ theorem probeC_erfuellbar_gilt [RootNativeFloat.Hardware] : probeC_erfuellbar :=
 /-- **`gabbro_ziel` applied to the two-thread program**: on the runtime's start with both
     declared starts, at a machine reached in one step with CHANGED memory, every leg of
     `Ziel` holds -- by the theorem, not by hand. -/
-theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mitRuhe)
+theorem gabbro_ziel_erfuellbar [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mitRuhe)
     (init : Faden → Σ f : mD.mitRuhe.Fn, Env mD.mitRuhe (mD.mitRuhe.params f))
     (M : RufMaschineG mD.mitRuhe),
     Laufzeit mE sp init ∧
@@ -379,7 +379,7 @@ theorem gabbro_ziel_zeuge [RootNativeFloat.Hardware] : ∃ (sp : Speicher mD.mit
       mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO, inferInstance⟩ 0 _ _ hL M1
       (.schritt _ _ _ .start s1)
 
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_erfuellbar
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_falsch_inv_nicht
 #print axioms Gabbro.Grammatik.Zielsatz.p1_abgelehnt

@@ -43,7 +43,7 @@ open Gabbro.Grammatik
 
 -- A two-thread program that actually moves memory, accepted by the checker Bool, with the
 -- goal's conclusion on it -- so the theorem is not vacuous for want of an accepted program.
-#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_zeuge
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_erfuellbar
 
 -- And the refutations: programs the checker REFUSES. A checker that accepts everything would
 -- make the theorem trivial; these say it does not.
