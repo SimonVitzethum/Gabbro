@@ -154,4 +154,89 @@ def optionCondition (policy : A → CallObligation program) {context : Context A
         unfold VC.Runtime.wpB at case
         exact case)
 
+/-- What the arms of a tagged dispatch must certify: for every value of the tagged type, the arm it selects. -/
+abbrev TagTarget (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (arms : Arms D V l Γ Λ Λ' cs) (symbols : SymEnv D Nat Γ)
+    (goals : Goals (program := program) (S := S) context V Γ) :
+    Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop :=
+  fun valuation item runtime world => ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
+    HandlerSafe (policy item) runtime allowed → ∀ value : Wert D (.sum cs),
+      goals.holds item runtime allowed
+        (execArmsH S runtime.oracle runtime.environment runtime.passes runtime.calls arms value world actual)
+
+def tagNil (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} (symbols : SymEnv D Nat Γ)
+    (goals : Goals (program := program) (S := S) context V Γ) :
+    Certificate context (TagTarget policy (.nil : Arms D V l Γ Λ Λ []) symbols goals) where
+  formula := .tru
+  sound := fun _ _ _ _ _ _ _ _ _ _ value => value.1.elim0
+
+/-- An arm without payload: its block is certified once. -/
+def tagNone (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    {first : Block D V l (ArmCtx Γ none) Λ Λ'} {rest : Arms D V l Γ Λ Λ' cs}
+    (symbols : SymEnv D Nat Γ) (goals : Goals (program := program) (S := S) context V Γ)
+    (head : BlockCondition policy (show Block D V l Γ Λ Λ' from first) symbols goals)
+    (tail : Certificate context (TagTarget policy rest symbols goals)) :
+    Certificate context (TagTarget policy (Arms.cons first rest) symbols goals) where
+  formula := .and head.formula tail.formula
+  sound := fun valuation item present runtime world valid actual realized allowed safe value => by
+    have parts : head.formula.denote (values valuation world) ∧ tail.formula.denote (values valuation world) := valid
+    match value with
+    | ⟨⟨0, _⟩, _⟩ =>
+        exact head.sound valuation item present runtime world parts.1 actual realized allowed safe
+    | ⟨⟨i + 1, bound⟩, payload⟩ =>
+        exact tail.sound valuation item present runtime world parts.2 actual realized allowed safe
+          ⟨⟨i, Nat.lt_of_succ_lt_succ bound⟩, payload⟩
+
+/-- An arm with a payload of type `τ`: its block is certified for every payload of the complete domain. -/
+def tagSome (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {τ : Ty}
+    {first : Block D V l (ArmCtx Γ (some τ)) Λ Λ'} {rest : Arms D V l Γ Λ Λ' cs}
+    (symbols : SymEnv D Nat Γ) (goals : Goals (program := program) (S := S) context V Γ)
+    (domain : Invarianten.VC.LocalDomain D τ)
+    (head : Certificate context (fun valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
+      ∀ payload ∈ domain.values, ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
+        HandlerSafe (policy item) runtime allowed →
+        runtime.wpB (show Block D V l (τ :: Γ) Λ Λ' from first) ((goals.shrink τ).holds item runtime allowed) world
+          (.cons payload actual)))
+    (tail : Certificate context (TagTarget policy rest symbols goals)) :
+    Certificate context (TagTarget policy (Arms.cons first rest) symbols goals) where
+  formula := .and head.formula tail.formula
+  sound := fun valuation item present runtime world valid actual realized allowed safe value => by
+    have parts : head.formula.denote (values valuation world) ∧ tail.formula.denote (values valuation world) := valid
+    match value with
+    | ⟨⟨0, _⟩, payload⟩ =>
+        have case := head.sound valuation item present runtime world parts.1 payload (domain.complete payload)
+          actual realized allowed safe
+        unfold VC.Runtime.wpB at case
+        exact (goals.holds_shrink τ item runtime allowed _).mp case
+    | ⟨⟨i + 1, bound⟩, payload⟩ =>
+        exact tail.sound valuation item present runtime world parts.2 actual realized allowed safe
+          ⟨⟨i, Nat.lt_of_succ_lt_succ bound⟩, payload⟩
+
+/-- The arm with a payload, from one block certificate per payload of the complete domain. -/
+def tagSomeCases (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {τ : Ty}
+    {first : Block D V l (ArmCtx Γ (some τ)) Λ Λ'} {rest : Arms D V l Γ Λ Λ' cs}
+    (symbols : SymEnv D Nat Γ) (goals : Goals (program := program) (S := S) context V Γ)
+    (domain : Invarianten.VC.LocalDomain D τ)
+    (tail : Certificate context (TagTarget policy rest symbols goals))
+    (compile : ∀ payload, Except Frag.Refusal
+      (BlockCondition policy (show Block D V l (τ :: Γ) Λ Λ' from first) (.cons (.known payload) symbols)
+        (goals.shrink τ))) :
+    Except Frag.Refusal (Certificate context (TagTarget policy (Arms.cons first rest) symbols goals)) := do
+  let head ← everyValue
+    (fun payload valuation item (runtime : VC.Runtime program (fun _ => []) S) world =>
+      ∀ actual, symbols.Realizes valuation world actual → ∀ allowed, HandlerSafe (policy item) runtime allowed →
+        runtime.wpB (show Block D V l (τ :: Γ) Λ Λ' from first) ((goals.shrink τ).holds item runtime allowed) world
+          (.cons payload actual))
+    (fun payload => do
+      let pre ← compile payload
+      return pre.map (fun _ _ _ _ ready actual realized allowed safe =>
+        ready (.cons payload actual) ⟨rfl, realized⟩ allowed safe))
+    domain.values
+  return tagSome policy symbols goals domain head tail
+
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic

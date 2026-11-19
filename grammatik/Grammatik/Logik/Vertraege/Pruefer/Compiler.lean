@@ -49,6 +49,11 @@ def statement {context : Context A next} (policy : CallPolicy program context)
         return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
           ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
             allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual))
+    | .onTag expression arms => do
+        let pre ← tagCases policy facts budget hint fuel arms symbols bounded goals
+        return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
+          ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
+            allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual))
     | .retry count test body overflow =>
         if count ≤ budget.expansion then
           retryCondition policy.semantic test body overflow
@@ -462,6 +467,27 @@ def reasonCases {context : Context A next} (policy : CallPolicy program context)
               | succ ordinal =>
                   exact tail.sound valuation item present runtime world valid.2 actual realized allowed safe
                     (show Fin remaining from ⟨ordinal, Nat.lt_of_succ_lt_succ inside⟩) }
+termination_by structural fuel
+
+def tagCases {context : Context A next} (policy : CallPolicy program context)
+    (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock)) (budget : VCBudget) (hint : Option (QF (Observation D)))
+    (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (arms : Arms D V l Γ Λ Λ' cs) (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
+    (goals : Symbolic.Goals (program := program) (S := S) context V Γ) :
+    Except Frag.Refusal (Certificate context (Symbolic.TagTarget policy.semantic arms symbols goals)) :=
+  match fuel with
+  | 0 => .error (.unsupported "contract tagged dispatch syntax-depth budget exceeded")
+  | fuel + 1 => match cs, arms with
+    | [], .nil => .ok (Symbolic.tagNil policy.semantic symbols goals)
+    | none :: _, .cons first rest => do
+        let head ← block policy facts budget hint fuel first symbols bounded goals
+        let tail ← tagCases policy facts budget hint fuel rest symbols bounded goals
+        return Symbolic.tagNone policy.semantic symbols goals head tail
+    | some τ :: _, .cons first rest => do
+        let domain ← VC.finiteDomain (D := D) budget.expansion τ
+        let tail ← tagCases policy facts budget hint fuel rest symbols bounded goals
+        Symbolic.tagSomeCases policy.semantic symbols goals domain tail (fun payload =>
+          block policy facts budget hint fuel first (.cons (.known payload) symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
 termination_by structural fuel
 
 end
