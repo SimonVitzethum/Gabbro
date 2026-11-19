@@ -8,6 +8,7 @@ public import Grammatik.Zielsatz.Kern.Erfuellbarkeit
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Zielsatz.Atomar.BeweisTerminierung
 public import Grammatik.Zielsatz.Atomar.BeweisWarten
+public import Grammatik.Zielsatz.Atomar.Erfuellbarkeit
 @[expose] public section
 
 
@@ -28,3 +29,5 @@ open Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel_erfuellbar
 #print axioms Gabbro.Grammatik.Zielsatz.probeA_widerlegt_gilt
 #print axioms Gabbro.Grammatik.Zielsatz.probeD_widerlegt_gilt
+#print axioms Gabbro.Grammatik.AtomarErfuellbarkeit.gabbro_ziel_atomar_erfuellbar
+#print axioms Gabbro.Grammatik.AtomarErfuellbarkeit.gabbro_ziel_atomar_schwach_erfuellbar

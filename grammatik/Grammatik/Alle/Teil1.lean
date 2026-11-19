@@ -317,3 +317,4 @@ public import Grammatik.Proben.BlattGegenbeispiel
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 public import Grammatik.Kern.Syntax.Konst.Zeuge
+public import Grammatik.Zielsatz.Atomar.Erfuellbarkeit
