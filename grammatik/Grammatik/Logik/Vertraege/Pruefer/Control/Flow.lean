@@ -35,7 +35,13 @@ def branchCondition {context : Context A next} (symbols : SymEnv D Nat Γ)
         | false => exact .ok ((negative.weaken larger).map (fun _ _ _ _ ready actual realized value selected => by
             change false = value at selected
             rw [← selected]
-            exact ready actual realized)))
+            exact ready actual realized))
+      | unobserved => exact .ok {
+          formula := .and (positive.weaken larger).formula (negative.weaken larger).formula
+          sound := fun valuation item present runtime world valid actual realized value _ => by
+            cases value with
+            | true => exact (positive.weaken larger).sound valuation item present runtime world valid.1 actual realized
+            | false => exact (negative.weaken larger).sound valuation item present runtime world valid.2 actual realized })
   return (pre.read Λ test.orte).map (fun valuation _ _ world ready actual realized =>
     ready actual ((symbols.realizes_world actual valuation world (world.lese Λ test.orte)).mp realized))
 

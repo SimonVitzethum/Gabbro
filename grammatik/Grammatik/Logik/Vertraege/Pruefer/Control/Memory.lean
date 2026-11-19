@@ -10,18 +10,36 @@ open Invarianten Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.Frag.Symb
 
 variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 
-def scalarTerm (symbol : SymValue D Nat τ) :
+/-- The scalar observation of a symbolic value, when it has one; an unobserved value has none. -/
+def scalarTerm? (symbol : SymValue D Nat τ) : Option
     { term : Frag.LTerm (Key D Nat) // ∀ valuation world actual,
       symbol.Realizes valuation world actual → term.denote (values valuation world) = Frag.scalarValue τ actual } :=
   match symbol with
-  | .known value => ⟨.konst (Frag.scalarValue τ value), fun _ _ _ same => by
+  | .known value => some ⟨.konst (Frag.scalarValue τ value), fun _ _ _ same => by
       change value = _ at same
       rw [← same]
       rfl⟩
-  | .integer term => ⟨renameTerm Sum.inr term, fun valuation world actual realized => by
+  | .integer term => some ⟨renameTerm Sum.inr term, fun valuation world actual realized => by
       rw [renameTerm_denote]
       exact realized⟩
-  | .product _ => ⟨.konst 0, fun _ _ _ _ => rfl⟩
+  | .product _ => some ⟨.konst 0, fun _ _ _ _ => rfl⟩
+  | .unobserved => none
+
+/-- `slot` equals the scalar observation of `symbol`; no constraint when the value is unobserved. -/
+def scalarGuard (symbol : SymValue D Nat τ) (slot : Frag.LTerm (Key D Nat)) : Frag.LProp (Key D Nat) :=
+  match scalarTerm? symbol with
+  | some term => .eq slot term.val
+  | none => .tru
+
+theorem scalarGuard_sound (symbol : SymValue D Nat τ) (slot : Frag.LTerm (Key D Nat))
+    (valuation : Frag.Assignment Nat) (world : World D) (actual : Wert D τ)
+    (realized : symbol.Realizes valuation world actual)
+    (same : slot.denote (values valuation world) = Frag.scalarValue τ actual) :
+    (scalarGuard symbol slot).denote (values valuation world) := by
+  unfold scalarGuard
+  cases scalarTerm? symbol with
+  | none => trivial
+  | some term => exact same.trans (term.property valuation world actual realized).symm
 
 theorem values_store_swap (valuation : Frag.Assignment Nat) (world after : World D)
     (next : Nat) (key : Frag.Observation D) (value : Int)
@@ -50,7 +68,7 @@ def storeCondition {context : Context A next} (symbols : SymEnv D Nat Γ)
     Certificate context (fun valuation item runtime world => ∀ actual,
       symbols.Realizes valuation world actual → ∀ value,
       symbol.Realizes valuation world value → target item runtime (store world value) actual) where
-  formula := .all (.inr next) (.imp (.eq (.var (.inr next)) (scalarTerm symbol).val)
+  formula := .all (.inr next) (.imp (scalarGuard symbol (.var (.inr next)))
     (renameProp (swapKey (.inl key) (.inr next)) post.formula))
   sound := fun valuation item present runtime world valid actual realized value selected => by
     let code := Frag.scalarValue τ value
@@ -65,8 +83,8 @@ def storeCondition {context : Context A next} (symbols : SymEnv D Nat Γ)
       have different : key ≠ next := Nat.ne_of_lt before
       simp only [future, Frag.Assignment.bind, different, ↓reduceIte]
     have selected' := (symbol.realizes_congr next valueBounded valuation extended extendAgrees world world value).mp selected
-    have defined : values extended world (.inr next) = (scalarTerm symbol).val.denote (values extended world) :=
-      (bind_same valuation next code).trans ((scalarTerm symbol).property extended world value selected').symm
+    have defined : (scalarGuard symbol (.var (.inr next))).denote (values extended world) :=
+      scalarGuard_sound symbol (.var (.inr next)) extended world value selected' (bind_same valuation next code)
     have body := valid code
     rw [← values_bind] at body
     have renamed := (renameProp_denote _ (swapKey_injective _ _) post.formula (values extended world)).mp (body defined)

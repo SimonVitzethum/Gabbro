@@ -76,27 +76,45 @@ def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters 
               exact ⟨symbols.packProduct name fields, List.mem_map.mpr ⟨symbols, member, rfl⟩,
                 valuation, symbols.realizes_packProduct name fields value tail valuation world realized, agrees⟩ }
   | kind :: Γ => do
-      let head ← localDomain (D := D) budget kind
       let rest ← parameters budget (start + 1) Γ
-      if head.values.length * rest.templates.length ≤ budget then
-        return {
+      -- Without a complete domain within the budget the parameter is unobserved: one template that every
+      -- value realizes.
+      let unobserved : Parameters D start (kind :: Γ) := {
           next := rest.next
           ordered := Nat.le_trans (Nat.le_succ start) rest.ordered
-          templates := head.values.flatMap (fun value => rest.templates.map (fun symbols => .cons (.known value) symbols))
+          templates := rest.templates.map (fun symbols => .cons .unobserved symbols)
           bounded := fun symbols member => by
-            obtain ⟨value, _, inside⟩ := List.mem_flatMap.mp member
-            obtain ⟨tail, inRest, same⟩ := List.mem_map.mp inside
+            obtain ⟨tail, inside, same⟩ := List.mem_map.mp member
             subst symbols
-            exact ⟨trivial, rest.bounded tail inRest⟩
+            exact ⟨trivial, rest.bounded tail inside⟩
           cover := fun world actual incoming => by
             cases actual with
             | cons value actual =>
                 obtain ⟨tail, inside, valuation, realized, agrees⟩ := rest.cover world actual incoming
-                exact ⟨.cons (.known value) tail,
-                  List.mem_flatMap.mpr ⟨value, head.complete value, List.mem_map.mpr ⟨tail, inside, rfl⟩⟩,
-                  valuation, ⟨rfl, realized⟩,
-                  fun key before => agrees key (Nat.lt_trans before (Nat.lt_succ_self start))⟩ }
-      else .error (.outsideFragment "finite non-integer parameter choices exceed the VC budget")
+                exact ⟨.cons .unobserved tail, List.mem_map.mpr ⟨tail, inside, rfl⟩, valuation,
+                  ⟨trivial, realized⟩, fun key before => agrees key (Nat.lt_trans before (Nat.lt_succ_self start))⟩ }
+      match localDomain (D := D) budget kind with
+      | .error _ => return unobserved
+      | .ok head =>
+        if head.values.length * rest.templates.length ≤ budget then
+          return {
+            next := rest.next
+            ordered := Nat.le_trans (Nat.le_succ start) rest.ordered
+            templates := head.values.flatMap (fun value => rest.templates.map (fun symbols => .cons (.known value) symbols))
+            bounded := fun symbols member => by
+              obtain ⟨value, _, inside⟩ := List.mem_flatMap.mp member
+              obtain ⟨tail, inRest, same⟩ := List.mem_map.mp inside
+              subst symbols
+              exact ⟨trivial, rest.bounded tail inRest⟩
+            cover := fun world actual incoming => by
+              cases actual with
+              | cons value actual =>
+                  obtain ⟨tail, inside, valuation, realized, agrees⟩ := rest.cover world actual incoming
+                  exact ⟨.cons (.known value) tail,
+                    List.mem_flatMap.mpr ⟨value, head.complete value, List.mem_map.mpr ⟨tail, inside, rfl⟩⟩,
+                    valuation, ⟨rfl, realized⟩,
+                    fun key before => agrees key (Nat.lt_trans before (Nat.lt_succ_self start))⟩ }
+        else return unobserved
 
 termination_by Γ => sizeOf Γ
 decreasing_by

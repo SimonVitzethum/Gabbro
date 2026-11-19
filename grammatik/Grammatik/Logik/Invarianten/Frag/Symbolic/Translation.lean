@@ -26,6 +26,7 @@ def encodeValue (symbol : SymValue D Nat τ) : Except Refusal
         rw [renameTerm_denote]
         exact realized⟩
   | .product _ => .error (.outsideFragment "product value needs a scalar component projection")
+  | .unobserved => .error (.outsideFragment "an unobserved value needs a symbolic encoding")
 
 def encodeVariable (symbols : SymEnv D Nat Γ) (name : Var Γ τ) :
     Except Refusal (Encoding symbols τ (fun _ actual => actual.get name)) := do

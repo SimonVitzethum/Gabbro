@@ -15,6 +15,7 @@ def SymValue.Bounded (next : Nat) : SymValue D Nat τ → Prop
   | .known _ => True
   | .integer term => ∀ key ∈ termKeys term, key < next
   | .product components => ∀ {kind} (field : FieldAt _ kind), (components field).Bounded next
+  | .unobserved => True
 
 def SymEnv.Bounded (next : Nat) : SymEnv D Nat Γ → Prop
   | .nil => True
@@ -61,6 +62,7 @@ theorem SymValue.realizes_congr (symbol : SymValue D Nat τ) (next : Nat)
       constructor <;> intro ready kind field
       · exact (ih field (bounded field) _).mp (ready field)
       · exact (ih field (bounded field) _).mpr (ready field)
+  | unobserved => rfl
 
 theorem SymValue.bounded_field (symbol : SymValue D Nat (.prod name fields))
     (next : Nat) (bounded : symbol.Bounded next) (position : FieldAt fields kind) :
@@ -68,6 +70,7 @@ theorem SymValue.bounded_field (symbol : SymValue D Nat (.prod name fields))
   cases symbol with
   | known value => trivial
   | product components => exact bounded position
+  | unobserved => trivial
 
 theorem SymEnv.realizes_congr (symbols : SymEnv D Nat Γ) (next : Nat)
     (bounded : symbols.Bounded next) (valuation other : Assignment Nat)
@@ -87,6 +90,7 @@ theorem SymValue.bounded_mono (symbol : SymValue D Nat τ) {next more : Nat}
   | known value => trivial
   | integer term => exact fun key member => Nat.lt_of_lt_of_le (bounded key member) larger
   | product components ih => exact fun field => ih field (bounded field)
+  | unobserved => trivial
 
 theorem SymEnv.bounded_mono (symbols : SymEnv D Nat Γ) {next more : Nat}
     (bounded : symbols.Bounded next) (larger : next ≤ more) : symbols.Bounded more := by

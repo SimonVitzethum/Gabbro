@@ -45,6 +45,9 @@ inductive SymValue (D : Deklaration) (α : Type) : Ty → Type where
   | product {name : Nat} {fields : List Ty}
       (components : ∀ {kind}, FieldAt fields kind → SymValue D α kind) :
       SymValue D α (.prod name fields)
+  /-- A value about which nothing is observed: it is realized by every value of its type, so a certificate
+      built over it holds for every value. Reading it where an encoding is needed is refused. -/
+  | unobserved : SymValue D α τ
 
 def SymValue.Realizes (valuation : Assignment α) (world : World D) :
     SymValue D α τ → Wert D τ → Prop
@@ -52,11 +55,13 @@ def SymValue.Realizes (valuation : Assignment α) (world : World D) :
   | .integer term, actual => term.denote valuation = actual.n
   | .product components, actual => ∀ {kind} (field : FieldAt _ kind),
       (components field).Realizes valuation world (prodGetW field actual)
+  | .unobserved, _ => True
 
 def SymValue.lift : SymValue D α τ → SymValue D (Option α) τ
   | .known value => .known value
   | .integer term => .integer (renameTerm some term)
   | .product components => .product (fun field => (components field).lift)
+  | .unobserved => .unobserved
 
 theorem SymValue.realizes_lift (symbol : SymValue D α τ) (valuation : Assignment α)
     (world : World D) (fresh : Int) (actual : Wert D τ) :
@@ -71,6 +76,7 @@ theorem SymValue.realizes_lift (symbol : SymValue D α τ) (valuation : Assignme
       constructor <;> intro ready kind field
       · exact (ih field _).mp (ready field)
       · exact (ih field _).mpr (ready field)
+  | unobserved => rfl
 
 /-- A component retains its own observation keys and actual typed value. -/
 def SymValue.field (symbol : SymValue D α (.prod name fields)) (position : FieldAt fields kind) :
@@ -78,6 +84,7 @@ def SymValue.field (symbol : SymValue D α (.prod name fields)) (position : Fiel
   match symbol with
   | .known value => .known (prodGetW position value)
   | .product components => components position
+  | .unobserved => .unobserved
 
 theorem SymValue.realizes_field (symbol : SymValue D α (.prod name fields))
     (position : FieldAt fields kind) (valuation : Assignment α) (world : World D)
@@ -86,6 +93,7 @@ theorem SymValue.realizes_field (symbol : SymValue D α (.prod name fields))
   cases symbol with
   | known value => change value = actual at realized; rw [← realized]; rfl
   | product components => exact realized position
+  | unobserved => trivial
 
 theorem SymValue.realizes_world (symbol : SymValue D α kind) (valuation : Assignment α)
     (world after : World D) (actual : Wert D kind) :
@@ -97,6 +105,7 @@ theorem SymValue.realizes_world (symbol : SymValue D α kind) (valuation : Assig
       constructor <;> intro ready kind field
       · exact (ih field _).mp (ready field)
       · exact (ih field _).mpr (ready field)
+  | unobserved => rfl
 
 /-- An environment
  contains expressions, never an enumeration of a scalar
@@ -190,7 +199,7 @@ def SymEnv.concrete? : (symbols : SymEnv D α Γ) → Option
     { actual : Env D Γ // ∀ valuation world runtime,
       symbols.Realizes valuation world runtime → runtime = actual }
   | .nil => some ⟨.nil, fun _ _ runtime _ => by cases runtime; rfl⟩
-  | .cons (.integer _) _ | .cons (.product _) _ => none
+  | .cons (.integer _) _ | .cons (.product _) _ | .cons .unobserved _ => none
   | .cons (.known value) rest => do
       let tail ← rest.concrete?
       return ⟨.cons value tail.val, fun valuation world runtime realized => by

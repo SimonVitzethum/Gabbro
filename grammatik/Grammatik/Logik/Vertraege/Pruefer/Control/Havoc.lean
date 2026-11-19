@@ -94,6 +94,7 @@ def valueBounds (symbol : SymValue D Nat τ) : LProp (Key D Nat) :=
   | .integer (lo := lo) (hi := hi) term => .and
       (.le (.konst lo) (renameTerm Sum.inr term)) (.le (renameTerm Sum.inr term) (.konst hi))
   | .product components => fieldConjunction _ (fun field => valueBounds (components field))
+  | .unobserved => .tru
 
 theorem valueBounds_sound (symbol : SymValue D Nat τ) (valuation : Assignment Nat)
     (world : World D) (actual : Wert D τ) (realized : symbol.Realizes valuation world actual) :
@@ -110,6 +111,7 @@ theorem valueBounds_sound (symbol : SymValue D Nat τ) (valuation : Assignment N
       apply (fieldConjunction_denote _ _ _).mpr
       intro kind field
       exact ih field _ (realized field)
+  | unobserved => trivial
 
 def environmentBounds : SymEnv D Nat Γ → LProp (Key D Nat)
   | .nil => .tru

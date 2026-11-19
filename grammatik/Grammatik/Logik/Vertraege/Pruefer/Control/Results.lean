@@ -163,8 +163,17 @@ def resultCondition {context : Context A next} (args : SymEnv D Nat Γ) (bounded
     | some (.prod name fields), postcondition, target, compile =>
         componentResultCondition args bounded caller callerBounded budget (.prod name fields)
           postcondition target compile snapshot
-    | some kind, postcondition, target, compile => do
-        let domain ← VC.localDomain (D := D) budget kind
+    | some kind, postcondition, target, compile =>
+      match VC.localDomain (D := D) budget kind with
+      | .error _ => do
+        -- No complete domain within the budget: the continuation is certified for an unobserved result,
+        -- without using the postcondition, so it holds for every result.
+        let tail ← compile next (Nat.le_refl next) (.cons .unobserved .nil) ⟨trivial, trivial⟩
+        return {
+          formula := tail.formula
+          sound := fun valuation item present runtime world valid _ _ _ _ locals localRealized value _ =>
+            tail.sound valuation item present runtime world valid locals localRealized value ⟨trivial, trivial⟩ }
+      | .ok domain => do
         let branches ← allCertificates context domain.values
           (fun value valuation item runtime world => ∀ old actual, args.Realizes valuation old actual →
             Snapshot.Realizes (Snapshot.regionStart snapshot) (Snapshot.regionNames snapshot) valuation old →

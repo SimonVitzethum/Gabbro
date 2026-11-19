@@ -10,22 +10,25 @@ open Invarianten Invarianten.Frag Invarianten.Frag.Symbolic
 
 variable {D : Deklaration} {program : Programm D} {S : SperrInv D}
 
-def integerTerm : SymValue D Nat (.int lo hi) → LTerm Nat
-  | .known value => .konst value.n
-  | .integer term => term
+def integerTerm? : SymValue D Nat (.int lo hi) → Option (LTerm Nat)
+  | .known value => some (.konst value.n)
+  | .integer term => some term
+  | .unobserved => none
 
-theorem integerTerm_bounded (symbol : SymValue D Nat (.int lo hi)) (bounded : symbol.Bounded next) :
-    ∀ key ∈ VC.termKeys (integerTerm symbol), key < next := by
+theorem integerTerm?_bounded (symbol : SymValue D Nat (.int lo hi)) (bounded : symbol.Bounded next)
+    (found : integerTerm? symbol = some term) : ∀ key ∈ VC.termKeys term, key < next := by
   cases symbol with
-  | known value => intro key impossible; cases impossible
-  | integer term => exact bounded
+  | known value => cases found; intro key impossible; cases impossible
+  | integer term => cases found; exact bounded
+  | unobserved => cases found
 
-theorem integerTerm_realizes (symbol : SymValue D Nat (.int lo hi)) (valuation : Assignment Nat)
-    (world : World D) (actual : Zahl lo hi) (realized : symbol.Realizes valuation world actual) :
-    (integerTerm symbol).denote valuation = actual.n := by
+theorem integerTerm?_realizes (symbol : SymValue D Nat (.int lo hi)) (valuation : Assignment Nat)
+    (world : World D) (actual : Zahl lo hi) (realized : symbol.Realizes valuation world actual)
+    (found : integerTerm? symbol = some term) : term.denote valuation = actual.n := by
   cases symbol with
-  | known value => change value = actual at realized; rw [← realized]; rfl
-  | integer term => exact realized
+  | known value => cases found; change value = actual at realized; rw [← realized]; rfl
+  | integer term => cases found; exact realized
+  | unobserved => cases found
 
 def narrowingCondition {context : Context A next} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
     (expression : Expr D Γ Λ (.int lo hi)) (low high : Int)
@@ -44,27 +47,30 @@ def narrowingCondition {context : Context A next} (symbols : SymEnv D Nat Γ) (b
     (fun actual value item runtime world =>
       if fits : low ≤ value.n ∧ value.n ≤ high then success actual ⟨value.n, fits.1, fits.2⟩ item runtime world
       else failure actual item runtime world)
-    (fun more larger symbol valueBounded => do
-      let narrowed : SymValue D Nat (.int low high) := .integer (integerTerm symbol)
-      let yes ← compile more larger narrowed (integerTerm_bounded symbol valueBounded)
-      let no := failed.weaken larger
-      let term := renameTerm Sum.inr (integerTerm symbol)
-      let guard : LProp (Key D Nat) := .and (.le (.konst low) term) (.le term (.konst high))
-      return {
-        formula := .and (.imp guard yes.formula) (.imp (.not guard) no.formula)
-        sound := fun valuation item present runtime world valid actual realized value selected => by
-          have number := integerTerm_realizes symbol valuation world value selected
-          have termValue : term.denote (values valuation world) = value.n := by
-            rw [renameTerm_denote]
-            exact number
-          have condition : guard.denote (values valuation world) ↔ low ≤ value.n ∧ value.n ≤ high := by
-            change (low ≤ term.denote _ ∧ term.denote _ ≤ high) ↔ _
-            rw [termValue]
-          by_cases fits : low ≤ value.n ∧ value.n ≤ high
-          · simp only [dif_pos fits]
-            exact yes.sound valuation item present runtime world (valid.1 (condition.mpr fits)) actual realized
-              ⟨value.n, fits.1, fits.2⟩ number
-          · simp only [dif_neg fits]
-            exact no.sound valuation item present runtime world (valid.2 (fun present => fits (condition.mp present))) actual realized })
+    (fun more larger symbol valueBounded =>
+      match found : integerTerm? symbol with
+      | none => .error (.unsupported "narrowing needs an observed integer value")
+      | some integral => do
+        let narrowed : SymValue D Nat (.int low high) := .integer integral
+        let yes ← compile more larger narrowed (integerTerm?_bounded symbol valueBounded found)
+        let no := failed.weaken larger
+        let term := renameTerm Sum.inr integral
+        let guard : LProp (Key D Nat) := .and (.le (.konst low) term) (.le term (.konst high))
+        return {
+          formula := .and (.imp guard yes.formula) (.imp (.not guard) no.formula)
+          sound := fun valuation item present runtime world valid actual realized value selected => by
+            have number := integerTerm?_realizes symbol valuation world value selected found
+            have termValue : term.denote (values valuation world) = value.n := by
+              rw [renameTerm_denote]
+              exact number
+            have condition : guard.denote (values valuation world) ↔ low ≤ value.n ∧ value.n ≤ high := by
+              change (low ≤ term.denote _ ∧ term.denote _ ≤ high) ↔ _
+              rw [termValue]
+            by_cases fits : low ≤ value.n ∧ value.n ≤ high
+            · simp only [dif_pos fits]
+              exact yes.sound valuation item present runtime world (valid.1 (condition.mpr fits)) actual realized
+                ⟨value.n, fits.1, fits.2⟩ number
+            · simp only [dif_neg fits]
+              exact no.sound valuation item present runtime world (valid.2 (fun present => fits (condition.mp present))) actual realized })
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic

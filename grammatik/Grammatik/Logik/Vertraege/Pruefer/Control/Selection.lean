@@ -158,10 +158,17 @@ def selectValue {context : Context A next} (symbols : SymEnv D Nat Γ)
             apply ready actual realized (eval _ expression _ actual)
             cases eval _ expression _ actual
             rfl)
-      | kind, expression, target, compile => do
-          let domain ← VC.finiteDomain (D := D) ({} : VC.VCBudget).expansion kind
-          let all ← finiteSelection symbols target compile domain.values
-          return all.map (fun _ _ _ world ready actual realized =>
-            ready actual realized (eval world expression world actual) (domain.complete _))
+      | kind, expression, target, compile =>
+          match VC.finiteDomain (D := D) ({} : VC.VCBudget).expansion kind with
+          | .ok domain => do
+              let all ← finiteSelection symbols target compile domain.values
+              return all.map (fun _ _ _ world ready actual realized =>
+                ready actual realized (eval world expression world actual) (domain.complete _))
+          | .error _ => do
+              -- No complete domain within the budget: the continuation is certified once for an
+              -- unobserved value, so it holds for every value of the type.
+              let pre ← compile next (Nat.le_refl next) .unobserved trivial
+              return pre.map (fun _ _ _ world ready actual realized =>
+                ready actual realized (eval world expression world actual) trivial)
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic

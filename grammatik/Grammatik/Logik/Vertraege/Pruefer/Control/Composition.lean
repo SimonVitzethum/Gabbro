@@ -268,6 +268,29 @@ def tagSome (policy : A → CallObligation program) {context : Context A next} {
         exact tail.sound valuation item present runtime world parts.2 actual realized allowed safe
           ⟨⟨i, Nat.lt_of_succ_lt_succ bound⟩, payload⟩
 
+/-- An arm with a payload of type `τ` whose domain is not enumerated: its block is certified once for an
+    unobserved payload, so it holds for every payload. -/
+def tagSomeUnobserved (policy : A → CallObligation program) {context : Context A next} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {τ : Ty}
+    {first : Block D V l (ArmCtx Γ (some τ)) Λ Λ'} {rest : Arms D V l Γ Λ Λ' cs}
+    (symbols : SymEnv D Nat Γ) (goals : Goals (program := program) (S := S) context V Γ)
+    (head : BlockCondition policy (show Block D V l (τ :: Γ) Λ Λ' from first) (.cons .unobserved symbols)
+      (goals.shrink τ))
+    (tail : Certificate context (TagTarget policy rest symbols goals)) :
+    Certificate context (TagTarget policy (Arms.cons first rest) symbols goals) where
+  formula := .and head.formula tail.formula
+  sound := fun valuation item present runtime world valid actual realized allowed safe value => by
+    have parts : head.formula.denote (values valuation world) ∧ tail.formula.denote (values valuation world) := valid
+    match value with
+    | ⟨⟨0, _⟩, payload⟩ =>
+        have case := head.sound valuation item present runtime world parts.1 (.cons payload actual)
+          ⟨trivial, realized⟩ allowed safe
+        unfold VC.Runtime.wpB at case
+        exact (goals.holds_shrink τ item runtime allowed _).mp case
+    | ⟨⟨i + 1, bound⟩, payload⟩ =>
+        exact tail.sound valuation item present runtime world parts.2 actual realized allowed safe
+          ⟨⟨i, Nat.lt_of_succ_lt_succ bound⟩, payload⟩
+
 /-- The arm with a payload, from one block certificate per payload of the complete domain. -/
 def tagSomeCases (policy : A → CallObligation program) {context : Context A next} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {τ : Ty}

@@ -483,10 +483,14 @@ def tagCases {context : Context A next} (policy : CallPolicy program context)
         let tail ← tagCases policy facts budget hint fuel rest symbols bounded goals
         return Symbolic.tagNone policy.semantic symbols goals head tail
     | some τ :: _, .cons first rest => do
-        let domain ← VC.finiteDomain (D := D) budget.expansion τ
         let tail ← tagCases policy facts budget hint fuel rest symbols bounded goals
-        Symbolic.tagSomeCases policy.semantic symbols goals domain tail (fun payload =>
-          block policy facts budget hint fuel first (.cons (.known payload) symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
+        match VC.finiteDomain (D := D) budget.expansion τ with
+        | .ok domain =>
+            Symbolic.tagSomeCases policy.semantic symbols goals domain tail (fun payload =>
+              block policy facts budget hint fuel first (.cons (.known payload) symbols) ⟨trivial, bounded⟩ (goals.shrink τ))
+        | .error _ => do
+            let head ← block policy facts budget hint fuel first (.cons .unobserved symbols) ⟨trivial, bounded⟩ (goals.shrink τ)
+            return Symbolic.tagSomeUnobserved policy.semantic symbols goals head tail
 termination_by structural fuel
 
 end
