@@ -90,6 +90,31 @@ def freshIntegerSelection {context : Context A next} (symbols : SymEnv D Nat Γ)
     return pre.map (fun _ _ _ _ ready actual realized value selected =>
       ready actual realized value selected))
 
+/-- A finite decoded type without a symbolic encoding (an option, a tagged value, a record, ...): every value of its
+    complete domain is compiled as a known value and every branch is required. The actual value lies in the domain,
+    so it is covered without sampling; correlation with other observations is not retained. -/
+def finiteSelection {context : Context A next} (symbols : SymEnv D Nat Γ)
+    (target : Env D Γ → Wert D τ → A → VC.Runtime program (fun _ => []) S → World D → Prop)
+    (compile : SelectCompiler context symbols τ target) :
+    (values : List (Wert D τ)) →
+    Except Frag.Refusal (Certificate context (fun valuation item runtime world => ∀ actual,
+      symbols.Realizes valuation world actual → ∀ value ∈ values, target actual value item runtime world))
+  | [] => .ok
+      { formula := .tru
+        sound := fun _ _ _ _ _ _ _ _ _ member => absurd member List.not_mem_nil }
+  | value :: rest => do
+      let head ← compile next (Nat.le_refl next) (.known value) trivial
+      let tail ← finiteSelection symbols target compile rest
+      return {
+        formula := .and head.formula tail.formula
+        sound := fun valuation item present runtime world valid actual realized current member => by
+          have parts : head.formula.denote (values valuation world) ∧
+              tail.formula.denote (values valuation world) := valid
+          rcases List.mem_cons.mp member with same | member
+          · rw [same]
+            exact head.sound valuation item present runtime world parts.1 actual realized value rfl
+          · exact tail.sound valuation item present runtime world parts.2 actual realized current member }
+
 /-- A scalar continuation is compiled once on its symbolic input. Integer
     intervals never reach the finite domain API. -/
 def selectValue {context : Context A next} (symbols : SymEnv D Nat Γ)
@@ -133,6 +158,10 @@ def selectValue {context : Context A next} (symbols : SymEnv D Nat Γ)
             apply ready actual realized (eval _ expression _ actual)
             cases eval _ expression _ actual
             rfl)
-      | _, _, _, _ => .error (.unsupported "local observation needs a finite decoded type")
+      | kind, expression, target, compile => do
+          let domain ← VC.finiteDomain (D := D) ({} : VC.VCBudget).expansion kind
+          let all ← finiteSelection symbols target compile domain.values
+          return all.map (fun _ _ _ world ready actual realized =>
+            ready actual realized (eval world expression world actual) (domain.complete _))
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic
