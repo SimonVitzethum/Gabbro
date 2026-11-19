@@ -240,6 +240,32 @@ is user code. The designs behind the items are in §4.
 | K6 | a second binding (AArch64, the target direction of AGENTS.md) running the SAME kernel sources: the measure of how little is architecture-specific | 4 000–12 000 Gabbro; 4 000–12 000 Lean |
 | K7 | the compiler compiles itself natively; the runner and its proofs leave the trust path and the tree (history in git) | after C7 |
 
+### E — satisfiability lemmas instead of witnesses (owner, 2026-11-19)
+
+No witnesses anywhere; one proved satisfiability lemma `NAME_erfuellbar` per premise bundle, reused by every theorem
+over it, and one for every new language form (AGENTS.md §3). Measured 2026-11-19: 444 theorems with Prop premises had
+a witness (median 7 lines, but 89 % of the 118 900 witness-module lines were fixtures); theorems whose premises are only
+equations or quantifiers need no lemma. Bundles, by the premise predicates they share:
+
+| ID | Bundle | Theorems | State |
+|---|---|---|---|
+| E1 | goal premises (`GutO`, `StartGut`, `StartExklusiv`, `RegLokal`, `AxEnsLokal`, `AxVertragO`) | ~31 | DONE: `gabbro_ziel_erfuellbar` (`Zielsatz/Kern/Erfuellbarkeit.lean`) |
+| E2 | atomic goal (GX rely, `NutzerPflichtA`) | ~10 | open |
+| E3 | ownership (`Owner*`, `Frame`) | ~22 | open |
+| E4 | Stage-0 lowering (`FunSpec`, `W`, `Fn`, `Lay`, `WeltAt`, …) | ~40 | open |
+| E5 | code model (`FnOk`, `LayoutOk`, `LvOk`, `WfL`, …) | ~10 | open |
+| E6 | reachability (`Erreicht`, `RufErreichbarG`, `RufSchrittG`, `Wohlgeformt`) | ~16 | open |
+| E7 | addresses and layout (`AdressLayout`, `Space`, `DataRights`) | ~10 | open |
+| E8 | arenas and accumulators (`AccumulatorDecl`, `akkuZulaessig`, `DynArena`, `LinkFeld`) | ~12 | open |
+| E9 | calls and contracts (`RufPasst`, `PtrVerfeinert`, `HTripel`, `Zielsemantik`) | ~15 | open |
+| E10 | elaborator (`UEns`, `UIdx`, `USide`, `STyp`, `Shape`) | ~12 | open |
+| E11 | locks and concurrency (`SperrInvOk`, `Nebeneinander`, events) | ~8 | open |
+| E12 | termination and async (`WellFounded`, measures) | ~6 | open |
+
+Estimate: 300–1 500 lines per bundle, 5 000–15 000 in all; critical path E4 and E3 (their fixtures were deleted with
+the witnesses). Removal of the remaining witness modules (58 ordinary modules still use witness fixtures; ~900
+`_zeuge` theorems) runs alongside.
+
 ### X — later, not on the critical path
 
 | ID | Item | Note |
