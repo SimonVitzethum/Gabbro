@@ -133,6 +133,6 @@ def selectValue {context : Context A next} (symbols : SymEnv D Nat Γ)
             apply ready actual realized (eval _ expression _ actual)
             cases eval _ expression _ actual
             rfl)
-      | _, _, _, _ => .error (.unsupported "local observation needs a bounded integer or Boolean type")
+      | _, _, _, _ => .error (.unsupported "local observation needs a finite decoded type")
 
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic

@@ -80,7 +80,7 @@ theorem option_payload_lowers_zeuge : (lowerAllg optionUnit).toOption.isSome = t
 
 /-- Outside the decidable fragment: a tagged/option parameter observation. -/
 theorem option_payload_refused_zeuge : compile optionText = .error
-    "unsupported invariant constructor: local observation needs a bounded integer or Boolean type" := by
+    "unsupported invariant constructor: local observation needs a finite decoded type" := by
   kernel_rfl
 
 def diagnosticText : String :=

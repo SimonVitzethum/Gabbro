@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Invarianten.VC.Fresh
+public import Grammatik.Logik.Invarianten.VC.Finite
 public import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -11,59 +11,9 @@ open Frag Elim Elim.Korrekt Modell
 
 variable {D : Deklaration} {S : SperrInv D}
 
-/-- Finite elimination of a fresh local observation. The range is the actual
-    decoded type, including both endpoints, never an author-supplied sample. -/
-structure LocalDomain (D : Deklaration) (τ : Ty) where
-  values : List (Wert D τ)
-  complete : ∀ value : Wert D τ, value ∈ values
-
-def integerValues (lo hi : Int) (remaining : Nat) : List (Zahl lo hi) :=
-  (List.range remaining).filterMap fun (offset : Nat) =>
-    if h : lo ≤ lo + (offset : Int) ∧ lo + (offset : Int) ≤ hi then
-      some ⟨lo + (offset : Int), h.1, h.2⟩
-    else none
-
-theorem integerValues_complete (lo hi : Int) (value : Zahl lo hi) :
-    value ∈ integerValues lo hi (hi - lo + 1).toNat := by
-  have lower := value.lo_le
-  have upper := value.le_hi
-  have nonnegative : 0 ≤ value.n - lo := by omega
-  have offset : ((value.n - lo).toNat : Int) = value.n - lo := Int.toNat_of_nonneg nonnegative
-  have inside : (value.n - lo).toNat < (hi - lo + 1).toNat := by omega
-  apply List.mem_filterMap.mpr
-  refine ⟨(value.n - lo).toNat, List.mem_range.mpr inside, ?_⟩
-  have same : lo + ((value.n - lo).toNat : Int) = value.n := by omega
-  simpa only [same, lower, upper, and_self, ↓reduceDIte]
-
+/-- The complete finite domain of a local observation (`VC/Finite.lean`). -/
 def localDomain (budget : Nat) (τ : Ty) : Except Frag.Refusal (LocalDomain D τ) :=
-  match τ with
-  | .int lo hi =>
-      if (hi - lo + 1).toNat ≤ budget then
-        .ok
-          { values := integerValues lo hi (hi - lo + 1).toNat
-            complete := integerValues_complete lo hi }
-      else .error (.unsupported "local observation type range exceeds the VC budget")
-  | .bool =>
-      if 2 ≤ budget then
-        .ok
-          { values := (([false, true] : List Bool) : List (Wert D .bool))
-            complete := by
-              show ∀ value : Bool, value ∈ ([false, true] : List Bool)
-              decide }
-      else .error (.unsupported "Boolean local observation exceeds the VC budget")
-  | .why count =>
-      if count ≤ budget then
-        .ok { values := List.finRange count, complete := List.mem_finRange }
-      else .error (.outsideFragment "finite oracle reason choices exceed the VC budget")
-  | .ptr capability =>
-
-      -- G carries pointer authority in the type; its decoded value is Unit.
-      if 1 ≤ budget then
-        .ok
-          { values := [show Wert D (.ptr capability) from ()]
-            complete := fun value => by cases value; exact List.mem_cons_self }
-      else .error (.unsupported "pointer capability exceeds the VC budget")
-  | _ => .error (.unsupported "local observation needs a bounded integer or Boolean type")
+  finiteDomain budget τ
 
 /-- Piecewise scalar initialization, including the model's narrowing fallback.
     The equality is exact in both arms, so local snapshots retain correlations. -/

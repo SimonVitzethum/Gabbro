@@ -5777,7 +5777,7 @@ retain `canonical_handler_zeuge`: lowering really emits `Stmt.callIndElse`.
 Their strict checker verdicts are refusals, with the exact function-pointer
 observation limitation: `named_refused_zeuge`, `unnamed_refused_zeuge`,
 `nested_refused_zeuge` and `reference_refused_zeuge` each prove full rejection
-and the actual reason, "local observation needs a bounded integer or Boolean type".
+and the actual reason, "local observation needs a finite decoded type".
 
 `grammatik/Grammatik/Kern/Syntax/Satz/T4/Teil1.lean`:
 
