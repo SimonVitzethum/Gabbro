@@ -54,19 +54,29 @@ it is deleted when the compiler compiles itself (K7).
 
 ---
 
-## 1. Where the tree stands (2026-11-12)
+## 1. Where the tree stands (2026-11-19)
 
 | Fact | State |
 |---|---|
-| `master` = `origin/master` | `d9019873f` |
-| on `dev`, not pushed | `e7bafb9c0`, `65cc01677` (AGENTS: build rules), `0675bb884` (tagged static read), this plan; `1fafd3622` (Spec header names Stage 0) is pushed |
-| branch `float-entkopplung` (`../gabbro-float-entkopplung`) | contracts over `Ops`, `hardware_satisfiable` and `GleitHw` decoupling: full grammatik build green (3943 jobs, **measured**), `gabbro_ziel` and the float-free witness `n1E_gabbro` on the standard axioms; stage0 and bridge builds pending |
-| lock stage 1 (`AgreeW` keeps lock classes) | working change in the main tree, being built; first builds failed at two overlooked sites, both repaired |
-| builds on `d9019873f` (**measured**) | grammatik 3940 jobs, stage0 5629, bridge 1614; `gabbro_ziel` on the standard axioms; GabbroV guardian green; Lean guardian green except `7 ir` |
-| IR corpus (**measured**, `0675bb884`) | 325 of 333; the eight red probes are `c11-scoped-*` (`return` inside `locks`) |
-| Stage-0 speed (**measured**) | 16 000 functions / 96k lines in 12.7 s; tempo work closed by the owner |
-| full grammatik build (**measured**) | about 30 min with `LEAN_NUM_THREADS=3`, 13G scope; stalls without the variable |
-| low-level forms in the tree | syntax only: `SItemTief.asmT` (a signature and a string), `bootT`, `trustT`, `entry` declarations, `reg`/`bank`/`transition`, `walk`; no instruction semantics, no authority model, no privilege model |
+| `origin/dev` | `4f671ff2a` |
+| `origin/master` | `4355d5b0b` (2026-11-13); advances only on a green full gate (AGENTS.md §8) |
+| full gate on `4f671ff2a` (**measured**, build server, 12 threads) | grammatik 4438 jobs, stage0 6075, runner 86, programmlogik 1023, bridge 2624, all green; `gabbro_ziel` on the standard axioms; GabbroV guardian green; Lean guardian red ONLY at `7 ir` |
+| IR corpus (**measured**, `4f671ff2a`) | **492 of 539**; all 47 red probes are refusals of the contract checker (§1.1) |
+| full grammatik build | about 30 min at 3 threads locally, much less at 12 threads on the build server |
+| low-level forms | state per item in stream L (§3) |
+
+### 1.1 How progress is measured
+
+Progress is counted in finished, connected cases, never in lines, commits or helper lemmas. The measures, each
+read from a guardian run or by a named reading, and recorded here when they move:
+
+| Measure | Source | 2026-11-19 |
+|---|---|---|
+| R1: IR corpus compiled and run by the runner | Lean guardian stage `7 ir` | 492 / 539 |
+| R1: refusal causes among the red probes | the same stage, grouped by message | finite observation of arrays, strings and function pointers 12; VC budget of records, tagged values, options and ranges 11; contract abstraction loses the postcondition (quantifiers, results) 11; `shift` 4; indirect call dispatch 2; floating end binding 3; wide and consuming traversals 3; symbolic scalar encoding 2; cross-entry relation 1 |
+| R2: statement forms the bridge readers carry | reading of `stmtBody` (`bruecke/Bruecke/Pflichten.lean`) and `schrittB` (`Anweisung/Lokal/Benannt.lean`) against `UStmt` | 13 of about 31 source statement forms (stores to tables, statics and through pointers, with option and `bool` values; value calls; local bindings, `bool`/option/call bindings, mutable locals and assignment), plus value returns; the readers under `Kette/Formen` (dispatch, reasons, loops) are not yet counted as connected. Was 4 of 34 on 2026-11-12 |
+| R3: forms the image theorem `bild_ok_u` admits | Lean guardian stage `7 senke` (1552 theorems checked) | calls, recursion and returns admitted since `4355d5b0b`; a per-form count is still to be printed by the stage |
+| goal theorem | Lean guardian stage `2 axiome` | `gabbro_ziel` on `propext`, `Classical.choice`, `Quot.sound` |
 
 **The goal theorem today** (`Spec.lean`): over the model G/GX, for every accepted unit, under user logic (b), named
 hardware and foreign code (c) and runtime (d), every reachable thread machine satisfies `ZielFX`. The only

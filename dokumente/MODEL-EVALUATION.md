@@ -7,8 +7,9 @@ is marked as one.*
 
 ## 1. How a task is scored
 
-Agents never build. The lead merges a whole wave and builds once; what is counted is what that build and the
-lead's reading find.
+Since 2026-11-14 agents check the modules they changed on a build-server slot before they report; the lead merges
+each finished delivery on its own (since 2026-11-15) and its integration build stays the acceptance. What is
+counted is what that build and the lead's reading find. (Waves 1–2, before 2026-11-14: agents did not build.)
 
 **Implementation and proof tasks**
 
@@ -39,10 +40,10 @@ without repair; rule breaks per task; for reviews precision (confirmed / finding
 
 | Model | Access | At most at once |
 |---|---|---|
-| Claude Fable 5.2 | `claude-fable-5-2` | one agent of the three Claude models in all |
+| Claude Fable 5.2 | `claude-fable-5-2` | lead session only; no new Claude agents since 2026-11-15 |
 | Claude Opus 5.5 | `claude-opus-5-5` | (same slot) |
 | Claude Sonnet 5.5 | `claude-sonnet-5-5` | (same slot) |
-| GPT 6.1 Sol | codex `gpt-6.1-sol`, `reasoningEffort: high` | three |
+| GPT 6.1 Sol | codex `gpt-6.1-sol`, `reasoningEffort: high` | five (2026-11-14); about six agents in all (2026-11-15) |
 | Muse Spark 1.3 Contributor | `opencode-go/muse-spark-1.3-contributor` | five |
 
 The lead itself is Claude Fable 5.2; its own work is listed for comparison and is not an agent slot.

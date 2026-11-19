@@ -117,7 +117,10 @@ Consequences:
   unfold; a non-module file is a layout finding. Do not put `private` helpers under `@[expose] public section` when
   exposed definitions use them.
 - **Small files:** every Lean file below 500 lines, aim for 200–300; split into cohesive modules by pure moves. At
-  most 20 entries per folder; the layout tool places new modules.
+  most 20 entries per folder; the layout tool places new modules. Reason: Lean elaborates one file on one thread
+  and Lake parallelises over files, so a large file is a serial bottleneck (files of ~15 000 lines checked very
+  slowly) and holds its whole environment in memory. A split cuts along topics (one definition family with its
+  lemmas per module), not at a line count: a file near the limit is split where its theory divides.
 - **Toolchain truth, not training memory:** the pinned Lean and Mathlib decide; every lemma name is grepped from
   the tree or the toolchain before use.
 - **Forbidden:** `sorry`, `admit`, `native_decide`, `axiom` (outside the allow-list), `unsafe`.
