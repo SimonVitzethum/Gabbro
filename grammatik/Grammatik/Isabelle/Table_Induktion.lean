@@ -153,4 +153,43 @@ theorem kante_bleibt_im_bereich_zeuge (hks : kante zσ 7 0) : 7 < 3 :=
 theorem traeger_endlich_zeuge : Endlich (fun d => ∃ s, kante zσ d s) :=
   traeger_endlich (zσ_im_bereich 3)
 
+/-! ## Satisfiability of the well-foundedness premise (stream E12) -/
+
+/-- Two occupied slots: slot 0 has slot 1 as its first child, slot 1 is a leaf. -/
+def zweiKnoten : Tabelle := fun i =>
+  if i = 0 then some ⟨some 1, none⟩ else if i = 1 then some ⟨none, none⟩ else none
+
+theorem kante_zweiKnoten {d s : Nat} (h : kante zweiKnoten d s) : s = 0 ∧ d = 1 := by
+  rcases h with ⟨sl, hs, hd⟩ | ⟨sl, hs, hd⟩
+  · unfold zweiKnoten at hs
+    split at hs
+    · cases hs
+      cases hd
+      exact ⟨by assumption, rfl⟩
+    · split at hs
+      · cases hs
+        cases hd
+      · cases hs
+  · unfold zweiKnoten at hs
+    split at hs
+    · cases hs
+      cases hd
+    · split at hs
+      · cases hs
+        cases hd
+      · cases hs
+
+/-- **Satisfiability of the well-foundedness premise**: the edge relation of a table with a real parent-child edge
+    is well founded, so `table_induktion` and its relatives are not instantiated vacuously. -/
+theorem table_induktion_erfuellbar : ∃ σ : Tabelle, WellFounded (kante σ) ∧ ∃ d s, kante σ d s := by
+  refine ⟨zweiKnoten, ?_, 1, 0, Or.inl ⟨_, rfl, rfl⟩⟩
+  have smaller : ∀ d s, kante zweiKnoten d s →
+      (fun n : Nat => if n = 0 then 1 else 0) d < (fun n : Nat => if n = 0 then 1 else 0) s := by
+    intro d s h
+    obtain ⟨hs, hd⟩ := kante_zweiKnoten h
+    subst hs
+    subst hd
+    decide
+  exact Subrelation.wf (fun {d s} h => smaller d s h) (InvImage.wf _ Nat.lt_wfRel.wf)
+
 end Gabbro.Grammatik.TableInduktion

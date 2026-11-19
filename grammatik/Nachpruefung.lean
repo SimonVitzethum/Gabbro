@@ -24,6 +24,7 @@ public import Grammatik.Bausteine.Kernzelle.Erfuellbarkeit
 public import Grammatik.Korpus.Programme.Einheit104
 public import Grammatik.Niedrig.Erfuellbarkeit.Satz
 public import Grammatik.Code.Conc.Erfuellbarkeit
+public import Grammatik.Isabelle.Table_Induktion
 @[expose] public section
 
 
@@ -71,3 +72,4 @@ bodies. (The C correspondence chain of these units was deleted with the C emitte
 #print axioms Gabbro.Grammatik.Einheit104.ptr_verfeinert_erfuellbar
 #print axioms Gabbro.Grammatik.LowLevel.Witness.authority_erfuellbar
 #print axioms Gabbro.Code.Lower.WitC.stmt_gx_erfuellbar
+#print axioms Gabbro.Grammatik.TableInduktion.table_induktion_erfuellbar
