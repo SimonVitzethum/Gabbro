@@ -88,7 +88,7 @@ def bindEndCondition (policy : A → CallObligation program) {context : Context 
 /-- One certificate per value of a complete finite list, conjoined: every case is required, so the actual value is
     covered whichever it is. Used for dispatch over finite payloads (`onOption`). -/
 def everyValue {context : Context A next} {α : Type}
-    (target : α → Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop)
+    (target : α → Frag.Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop)
     (compile : ∀ value, Except Frag.Refusal (Certificate context (target value))) :
     (values : List α) →
     Except Frag.Refusal (Certificate context (fun valuation item runtime world =>
@@ -159,7 +159,7 @@ abbrev TagTarget (policy : A → CallObligation program) {context : Context A ne
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (symbols : SymEnv D Nat Γ)
     (goals : Goals (program := program) (S := S) context V Γ) :
-    Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop :=
+    Frag.Assignment Nat → A → VC.Runtime program (fun _ => []) S → World D → Prop :=
   fun valuation item runtime world => ∀ actual, symbols.Realizes valuation world actual → ∀ allowed,
     HandlerSafe (policy item) runtime allowed → ∀ value : Wert D (.sum cs),
       goals.holds item runtime allowed
