@@ -45,6 +45,7 @@ module
 public import Grammatik.Kern.Semantik.Semantik.PayloadProben
 public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
+public import Grammatik.Alle.Teil3
 public import Grammatik.Parser.Elab.Proben.CallElse.Refusals
 public import Grammatik.Parser.Elab.Proben.IndirectElse.Refusals
 public import Grammatik.Parser.Elab.Uebersetze.ReasonProben
