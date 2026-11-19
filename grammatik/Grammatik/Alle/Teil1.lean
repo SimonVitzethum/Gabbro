@@ -195,6 +195,7 @@ public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Proben.HelferZeuge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+public import Grammatik.Proben.InvZeuge
 public import Grammatik.Isabelle.Table_Induktion
 public import Grammatik.Isabelle.Table_Indexschranke
 public import Grammatik.Isabelle.Table_Absenkung
@@ -245,6 +246,7 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 public import Grammatik.Korpus.Programme.GenOblig104
 public import Grammatik.Korpus.Referenz.Pflicht104
+public import Grammatik.Proben.ProbeD
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtGrund
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe
@@ -252,8 +254,11 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 public import Grammatik.Zielsatz.Faeden.Ruhe
+public import Grammatik.Zielsatz.Faeden.RuheZeuge
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.Kern.SpecProben
 public import Grammatik.Zielsatz.Faeden.RuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.FadenMaschine
@@ -261,6 +266,7 @@ public import Grammatik.Zielsatz.Faeden.Faeden
 public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Zielsatz.Eigenschaften.Invarianten
 public import Grammatik.Zielsatz.Faeden.FaedenVor
+public import Grammatik.Zielsatz.Kern.Proben
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg2
