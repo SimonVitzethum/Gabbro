@@ -125,7 +125,7 @@ WURZELN = ["Grammatik", "Grammatik.Gen.Abdeckung.Lauf", "Nachpruefung", "Nachpru
            "Stage0.Zeugen.Pipeline.AdapterReasonWitness", "Stage0.Zeugen.Pipeline.DynWitness",
            "Stage0.Zeugen.Pipeline.FallibleIndirectWitness", "Stage0.Zeugen.Pipeline.OptionalForeignWitness",
            "Stage0.Zeugen.Pipeline.ParametricModuleWitness", "Stage0.Zeugen.Pipeline.RangeFoldsWitness",
-           "Stage0.Zeugen.Pipeline.TaggedGateWitness", "Stage0.Senke.Images.StartupProbes", "Stage0.StartImageProben",
+           "Stage0.Zeugen.Pipeline.TaggedGateWitness", "Stage0.StartImageProben",
            "Stage0.Senke.Images.InitialWitness"]
 PAKETE = ["grammatik", "stage0", "runner", "nativefloat"]
 IMPORT = re.compile(r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?(.+)$", re.M)

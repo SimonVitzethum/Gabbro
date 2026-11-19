@@ -19,7 +19,7 @@ lean_lib Stage0Heavy where
   roots := #[`Stage0.Zeugen.Pipeline.AdapterReasonWitness, `Stage0.Zeugen.Pipeline.DynWitness,
     `Stage0.Zeugen.Pipeline.FallibleIndirectWitness, `Stage0.Zeugen.Pipeline.OptionalForeignWitness,
     `Stage0.Zeugen.Pipeline.ParametricModuleWitness, `Stage0.Zeugen.Pipeline.RangeFoldsWitness,
-    `Stage0.Zeugen.Pipeline.TaggedGateWitness, `Stage0.Senke.Images.StartupProbes, `Stage0.StartImageProben,
+    `Stage0.Zeugen.Pipeline.TaggedGateWitness, `Stage0.StartImageProben,
     `Stage0.Senke.Images.InitialWitness]
   moreLeanArgs := #["-M45056"]
 

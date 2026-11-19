@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Exercise the canonical parser/elaborator with repeated functions and distinct
-    source arguments, independently of the image fixtures in Images/StartupProbes. -/
+    source arguments. -/
 def sourceArguments (text : String) : Except String (List (List SExpr)) := do
   let tokens ← (lex text).mapError (fun _ => "lex")
   let parsed ← parseTopTief tokens
