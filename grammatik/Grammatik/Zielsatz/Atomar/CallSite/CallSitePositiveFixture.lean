@@ -58,7 +58,7 @@ def unit : Einheit decl where
       resources := fun _ => []
       expression := fun _ => .fls
       correct := fun _ _ _ => rfl }
-  pointerSignatures := some { count := 0, outside := fun _ _ _ => rfl }
+  pointerSignatures := some (.empty fun _ _ => rfl)
 
 theorem functions_complete : ∀ f : decl.Fn, f ∈ [()] := fun f => by
   cases f

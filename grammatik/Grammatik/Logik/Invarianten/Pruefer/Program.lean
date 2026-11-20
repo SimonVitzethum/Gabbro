@@ -91,19 +91,21 @@ theorem invariantDuties_congr {left right : Programm D} {S S' : SperrInv D} (f :
     an invariant at entry that the existing semantic duties do not assume. -/
 def checkInvariantVC (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S) (budget : VCBudget := {})
-    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) (locks : List D.Lock := []) :
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) (locks : List D.Lock := [])
+    (refined : Option (PLift (PtrVerfeinert program)) := none) :
     Except Frag.Refusal (PLift (∀ f ∈ functions, Vertraege.Pruefer.ContractDuties program S f)) :=
   match checkProgram program S functions sources budget locks with
   | .error cause => .error cause
-  | .ok _ => Vertraege.Pruefer.checkContracts program S functions sources budget hints
+  | .ok _ => Vertraege.Pruefer.checkContracts program S functions sources budget hints refined
 
 /-- Both algorithms remain checks: declaration/writer VCs and the strict
     contract/release VCs. The conjunction is shared by SC and atomic checkers. -/
 def invariantVCB (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S := fun _ => none) (budget : VCBudget := {})
-    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) (locks : List D.Lock := []) : Bool :=
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) (locks : List D.Lock := [])
+    (refined : Option (PLift (PtrVerfeinert program)) := none) : Bool :=
   programInvariantsB program S functions sources budget locks &&
-    Vertraege.Pruefer.KontrakteGeprueftB program S functions sources budget hints
+    Vertraege.Pruefer.KontrakteGeprueftB program S functions sources budget hints refined
 
 /-- Factoring the concrete checker does not remove either pre-existing gate. -/
 theorem invariantVCB_eq (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
@@ -127,8 +129,8 @@ theorem invariantVCB_certificate (program : Programm D) (S : SperrInv D)
 
 theorem invariantVCB_sound {program : Programm D} {S : SperrInv D}
     {functions : List D.Fn} {sources : LockSources S} {budget : VCBudget} {hints : Vertraege.Pruefer.LoopHints D} {locks : List D.Lock}
-    (complete : ∀ f, f ∈ functions)
-    (accepted : invariantVCB program S functions sources budget hints locks = true) :
+    {refined : Option (PLift (PtrVerfeinert program))} (complete : ∀ f, f ∈ functions)
+    (accepted : invariantVCB program S functions sources budget hints locks refined = true) :
     ∀ f, Vertraege.Pruefer.ContractDuties program S f :=
   Vertraege.Pruefer.KontrakteGeprueftB_sound complete (Bool.and_eq_true_iff.mp accepted).2
 

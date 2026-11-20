@@ -29,7 +29,7 @@ def gutZ : ZelleF → Bool
 theorem akzeptiert_Z (e : Einsatz) : e.gueltig = true ↔
     akzeptiert HatZ gutZ e ∧
       @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs e.lockSources {} e.ls = true ∧
-      @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) = true := by
+      @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) none = true := by
   rw [einsatz_akzeptiert e]
   have structural : akzeptiert HatZ gutZ e ↔ akzeptiert Einsatz.Hat gutTafel e := by
     constructor

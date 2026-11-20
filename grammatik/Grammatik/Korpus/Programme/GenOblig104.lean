@@ -249,7 +249,9 @@ def gE : Zielsatz.Einheit gD where
         · change decide (0 = n) = false
           exact decide_eq_false (by omega)
         · change decide (1 = n) = false
-          exact decide_eq_false (by omega) }
+          exact decide_eq_false (by omega)
+      targets := fun _ => gFs
+      covers := fun f _ _ => by cases f <;> decide }
 
 -- THE USER'S OBLIGATION (stated, not discharged).
 --

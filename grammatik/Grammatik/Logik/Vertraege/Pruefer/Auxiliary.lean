@@ -66,19 +66,40 @@ def checkPointerTarget (program : Programm D) (budget : VCBudget) (f : D.Fn) (n 
           checked.down.2 old world actual value valid⟩⟩
   else .ok ⟨fun impossible => False.elim (target impossible)⟩
 
+/-- No conforming target of any interface lies in `cycle`: a call through a pointer
+    then never needs a descent. Decided over the table's complete target lists. -/
+def acyclicTargets (layout : PointerSignatures D) (cycle : D.Fn → Bool) :
+    Option (PLift (∀ g n, D.passt g n = true → cycle g = false)) :=
+  if checked : (List.range layout.count).all (fun n => (layout.targets n).all (fun g => !cycle g)) = true then
+    some ⟨fun g n target => by
+      by_cases inside : n < layout.count
+      · have row := List.all_eq_true.mp checked n (List.mem_range.mpr inside)
+        have entry := List.all_eq_true.mp row g (layout.covers g n target)
+        revert entry
+        cases cycle g <;> decide
+      · have absent := layout.outside g n (Nat.le_of_not_gt inside)
+        rw [absent] at target
+        cases target⟩
+  else none
+
 /-- The finite interface table, not a finite observed run, covers all possible
-    function-pointer targets, including targets never called by this image. -/
-def checkPointers (program : Programm D) (functions : List D.Fn)
-    (layout : PointerSignatures D) (budget : VCBudget := {}) :
-    Except Frag.Refusal (PLift (∀ f ∈ functions, ∀ n (target : D.passt f n = true),
-      PtrZielVerfeinert program f n target)) := do
-  let checked ← collect functions _ (fun f =>
-    collect (List.range layout.count) _ (checkPointerTarget program budget f))
-  return ⟨fun f member n target => by
+    function-pointer targets, including targets never called by this image:
+    every conforming target of every interface refines it (`PtrVerfeinert`). -/
+def checkPointers (program : Programm D) (layout : PointerSignatures D) (budget : VCBudget := {}) :
+    Except Frag.Refusal (PLift (PtrVerfeinert program)) := do
+  let checked ← collect (List.range layout.count) _ (fun n =>
+    collect (layout.targets n) _ (fun f => checkPointerTarget program budget f n))
+  return ⟨fun f n target => by
     by_cases inside : n < layout.count
-    · exact checked.down f member n (List.mem_range.mpr inside) target
+    · exact checked.down n (List.mem_range.mpr inside) f (layout.covers f n target) target
     · have absent := layout.outside f n (Nat.le_of_not_gt inside)
       rw [absent] at target
       cases target⟩
+
+/-- The refinement decided over an optional table; `none` when the table is missing or a
+    target does not refine its interface. -/
+def refinementOf (program : Programm D) (table : Option (PointerSignatures D)) :
+    Option (PLift (PtrVerfeinert program)) :=
+  table.bind (fun layout => (checkPointers program layout).toOption)
 
 end Gabbro.Grammatik.Vertraege.Pruefer

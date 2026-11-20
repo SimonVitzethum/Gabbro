@@ -31,7 +31,7 @@ theorem m47_549_input : CallIndGapInput M47_549.e := by unfold CallIndGapInput; 
 
 theorem m47_549_cause_link : CallIndGapInput M47_549.e →
     GateAudit.contractCause M47_549.e = some (.unsupported
-      "contract indirect call needs a checked finite target dispatch") := fun _ => GateAudit.m47_549_cause
+      "contract indirect call needs checked interface refinement") := fun _ => GateAudit.m47_549_cause
 
 theorem checked_gap : ∀ g ∈ fragmentGaps, g.gueltig = false := by
   intro g member

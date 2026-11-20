@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Locks
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
-public import Grammatik.Logik.Vertraege.Pruefer.Control.CallBinding
+public import Grammatik.Logik.Vertraege.Pruefer.Indirect
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.Block
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.End
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Join
@@ -110,6 +110,7 @@ def statement {context : Context A next} (policy : CallPolicy program context)
           cases reply : runtime.calls f (world.lese Λ args.orte)
             (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) <;>
             simpa only [reply, Symbolic.Goals.holds] using ready)
+    | .callInd p args hp hr => callIndCondition policy budget.expansion p args hp hr symbols bounded goals
     | other => leafCondition policy.semantic other symbols bounded goals
 termination_by structural fuel
 

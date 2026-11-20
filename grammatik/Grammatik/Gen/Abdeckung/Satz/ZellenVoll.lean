@@ -147,7 +147,7 @@ instance (e : Einsatz) (z : Zelle) : Decidable (e.Hat z) := inferInstanceAs (Dec
 
 /-- The Lean model's Bool on a program. -/
 def Einsatz.gueltig (e : Einsatz) : Bool :=
-  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] [] e.lockSources (fun _ => none)
+  @AkzeptiertX e.D e.aufz.decFn e.aufz.decAx e.P e.S e.fs e.ls e.cs e.ws [] [] [] [] e.lockSources (fun _ => none) none
 
 /-- The model's table: a cell is admitted when it is not bad. -/
 def gutTafel (z : Zelle) : Bool := !z.schlecht
@@ -157,7 +157,7 @@ def gutTafel (z : Zelle) : Bool := !z.schlecht
 theorem einsatz_akzeptiert (e : Einsatz) : e.gueltig = true ↔
     akzeptiert Einsatz.Hat gutTafel e ∧
       @Invarianten.Pruefer.programInvariantsB e.D e.P e.S e.fs e.lockSources {} e.ls = true ∧
-      @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) = true := by
+      @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs e.lockSources {} (fun _ => none) none = true := by
   letI := e.aufz
   letI := e.zahlen
   rw [Einsatz.gueltig, akzeptiertX_zellen e.P e.S e.fs e.ls e.cs e.ws [] e.hvoll e.hls e.hcs e.lockSources]

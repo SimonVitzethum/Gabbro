@@ -22,7 +22,9 @@ def measurePolicy (program : Programm D) (measure : Mass D) (cycle : D.Fn → Bo
 
 def measureEncoding (program : Programm D) (measure : Mass D) (cycle : D.Fn → Bool)
     (anchor : World D) (f : D.Fn) (symbols : SymEnv D Nat (D.params f))
-    (bounded : symbols.Bounded next) : CallPolicy program (entryContext symbols bounded) where
+    (bounded : symbols.Bounded next) (refined : Option (PLift (PtrVerfeinert program)) := none)
+    (acyclic : Option (PLift (∀ g n, D.passt g n = true → cycle g = false)) := none) :
+    CallPolicy program (entryContext symbols bounded) where
   semantic := fun item => measurePolicy program measure cycle anchor (measure.wert f anchor item.2)
   encode := fun _ _ g args _ => do
     let requires ← Invarianten.Frag.Symbolic.translate (program.requires g) args
@@ -47,6 +49,11 @@ def measureEncoding (program : Programm D) (measure : Mass D) (cycle : D.Fn → 
         | true =>
             simp only [selected, ↓reduceIte, true_implies]
             exact lexFormula_denote outgoing.val incoming.val (values valuation world) _ _ a' b'⟩
+  -- A pointer target outside the cycle owes no descent: its requires is the whole obligation.
+  indirect := match refined, acyclic with
+    | some checked, some outside => some ⟨⟨checked.down, fun _ g n target _ _ required =>
+        ⟨required, fun inCycle => by rw [outside.down g n target] at inCycle; cases inCycle⟩⟩⟩
+    | _, _ => none
 
 /-- The same checked WP proves MassPflicht when instantiated with massTor.
     The source cycle and all recursive call sites are the canonical ones. -/
@@ -107,7 +114,9 @@ theorem massPflicht_of_basic (f : D.Fn) (checked : Basic.EndSafe S (program.rump
     retain the finite family of decideB-backed path VCs. -/
 def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources S)
     (budget : VCBudget) (hint : Option (QF (Observation D)))
-    (measure : Mass D) (cycle : D.Fn → D.Fn → Bool) (anchor : World D) (f : D.Fn) :
+    (measure : Mass D) (cycle : D.Fn → D.Fn → Bool) (anchor : World D) (f : D.Fn)
+    (refined : Option (PLift (PtrVerfeinert program)) := none)
+    (acyclic : Option (PLift (∀ g n, D.passt g n = true → cycle f g = false)) := none) :
     Except Frag.Refusal (PLift (∀ passes Q shared,
       (∀ carrier, shared carrier → AtomarAusgenommen carrier) →
       MassPflicht program passes Q S shared measure cycle f)) :=
@@ -120,7 +129,8 @@ def checkMeasure (program : Programm D) (S : SperrInv D) (sources : LockSources 
         let invariants ← invariantFormula program (D.invs.filter (schuldet f))
         let executions ← collect domain.templates.attach _ (fun entry =>
           checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
-            (measureEncoding program measure (cycle f) anchor f entry.val (domain.bounded entry.val entry.property))
+            (measureEncoding program measure (cycle f) anchor f entry.val (domain.bounded entry.val entry.property)
+              refined acyclic)
             sources budget hint invariants)
         return ⟨massPflicht_of_execution measure cycle anchor f
           (fun locals runtime world allowed safe required => by

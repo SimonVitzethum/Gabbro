@@ -182,7 +182,9 @@ def accepts (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) : Excep
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
   let guests ← sourceGuests u
   Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u))
+    (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u)
+      (fun _ => none) (some (zeigerSignaturen u)))
+    (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 
 /-- `accepts` with the checker Bool that leaves out the closedness check, which is constant on the
     complete list of functions (`akzeptiertX_voll`). Compiled code runs this form. -/
@@ -198,7 +200,9 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
   let guests ← sourceGuests u
   Vertraege.Pruefer.contractVerdict P (sperrFamilie u) (List.finRange u.fns.length) (sperrQuellen u)
-    (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u))
+    (AkzeptiertXVoll P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests (sperrQuellen u)
+      (fun _ => none) (some (zeigerSignaturen u)))
+    (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 
 /-- **The fast form answers exactly as the full checker.** -/
 @[csimp] theorem accepts_eq_schnell : @accepts = @acceptsSchnell := by
@@ -209,11 +213,13 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
   · cases sourceGuests u with
     | error e => rfl
     | ok guests =>
-      exact congrArg (Vertraege.Pruefer.contractVerdict P (sperrFamilie u)
-        (List.finRange u.fns.length) (sperrQuellen u))
+      exact congrArg (fun accepted => Vertraege.Pruefer.contractVerdict P (sperrFamilie u)
+        (List.finRange u.fns.length) (sperrQuellen u) accepted
+        (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u))))
         (@akzeptiertX_voll (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
           (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u) _
-          (fun g => List.mem_finRange g) _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none))
+          (fun g => List.mem_finRange g) _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+          (some (zeigerSignaturen u)))
 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertSpec
+public import Grammatik.Logik.Vertraege.Pruefer.Auxiliary
 
 @[expose] public section
 
@@ -61,11 +62,13 @@ def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
     (aqs : List D.Ax := []) (guests : List (GuestBoundary D) := [])
     (sources : Invarianten.Pruefer.LockSources S := fun _ => none)
-    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) : Bool :=
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none)
+    (pointers : Option (Vertraege.Pruefer.PointerSignatures D) := none) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
     antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs && GuestBoundary.admissionB guests &&
     Invarianten.Pruefer.invariantVCB P S fs sources {} hints ls
+      (Vertraege.Pruefer.refinementOf P pointers)
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -101,8 +104,8 @@ theorem akzeptiertSpecX_of [RootNativeFloat.Hardware]
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D))
     {checks : List (CheckDecl D)} {sources : Invarianten.Pruefer.LockSources S}
-    {hints : Vertraege.Pruefer.LoopHints D}
-    (h : AkzeptiertX P S fs ls cs ws aks checks [] [] sources hints = true) :
+    {hints : Vertraege.Pruefer.LoopHints D} {pointers : Option (Vertraege.Pruefer.PointerSignatures D)}
+    (h : AkzeptiertX P S fs ls cs ws aks checks [] [] sources hints pointers = true) :
     AkzeptiertSpecX P S fs ws [] aks := by
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, ← Bool.and_assoc] at h
   have contractParts := Bool.and_eq_true_iff.mp h

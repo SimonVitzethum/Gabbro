@@ -24,53 +24,59 @@ def loopHint (hints : LoopHints D) (f : D.Fn) : Except Frag.Refusal (Option (QF 
 /-- Certificate-producing program gate. Every function in the supplied list
     is checked; soundness uses the same complete enumeration as AkzeptiertX. -/
 def checkContracts (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
-    (sources : LockSources S) (budget : VCBudget := {}) (hints : LoopHints D := fun _ => none) :
+    (sources : LockSources S) (budget : VCBudget := {}) (hints : LoopHints D := fun _ => none)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) :
     Except Frag.Refusal (PLift (∀ f ∈ functions, ContractDuties program S f)) :=
   collect functions (ContractDuties program S) (fun f => do
     let hint ← loopHint hints f
-    checkFunction program S sources budget hint f)
+    checkFunction program S sources budget hint f refined)
 
 def KontrakteGeprueftB (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
     (sources : LockSources S := fun _ => none) (budget : VCBudget := {})
-    (hints : LoopHints D := fun _ => none) : Bool :=
-  (checkContracts program S functions sources budget hints).toOption.isSome
+    (hints : LoopHints D := fun _ => none) (refined : Option (PLift (PtrVerfeinert program)) := none) : Bool :=
+  (checkContracts program S functions sources budget hints refined).toOption.isSome
 
 def KontrakteGeprueft (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
-    (sources : LockSources S) (budget : VCBudget) (hints : LoopHints D) : Prop :=
-  ∃ certificate, checkContracts program S functions sources budget hints = .ok certificate
+    (sources : LockSources S) (budget : VCBudget) (hints : LoopHints D)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) : Prop :=
+  ∃ certificate, checkContracts program S functions sources budget hints refined = .ok certificate
 
 theorem KontrakteGeprueftB_iff (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
-    (sources : LockSources S) (budget : VCBudget) (hints : LoopHints D) :
-    KontrakteGeprueftB program S functions sources budget hints = true ↔
-      KontrakteGeprueft program S functions sources budget hints := by
+    (sources : LockSources S) (budget : VCBudget) (hints : LoopHints D)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) :
+    KontrakteGeprueftB program S functions sources budget hints refined = true ↔
+      KontrakteGeprueft program S functions sources budget hints refined := by
   unfold KontrakteGeprueftB KontrakteGeprueft
-  cases checkContracts program S functions sources budget hints <;> simp [Except.toOption]
+  cases checkContracts program S functions sources budget hints refined <;> simp [Except.toOption]
 
 theorem KontrakteGeprueftB_sound {program : Programm D} {S : SperrInv D} {functions : List D.Fn}
     {sources : LockSources S} {budget : VCBudget} {hints : LoopHints D}
+    {refined : Option (PLift (PtrVerfeinert program))}
     (complete : ∀ f, f ∈ functions)
-    (accepted : KontrakteGeprueftB program S functions sources budget hints = true) :
+    (accepted : KontrakteGeprueftB program S functions sources budget hints refined = true) :
     ∀ f, ContractDuties program S f := by
-  obtain ⟨certificate, computed⟩ := (KontrakteGeprueftB_iff program S functions sources budget hints).mp accepted
+  obtain ⟨certificate, computed⟩ :=
+    (KontrakteGeprueftB_iff program S functions sources budget hints refined).mp accepted
   exact fun f => certificate.down f (complete f)
 
 /-- On rejection expose the actual contract counterexample or fragment reason.
     Successful compilation does not rerun the contract checker for diagnostics. -/
 def contractVerdict (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
-    (sources : LockSources S) (accepted : Bool) : Except String Bool :=
+    (sources : LockSources S) (accepted : Bool)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) : Except String Bool :=
   if accepted then .ok true else
-    match checkContracts program S functions sources with
+    match checkContracts program S functions sources (refined := refined) with
     | .error cause => .error cause.message
     | .ok _ => .ok false
 
 theorem contractVerdict_true_iff (program : Programm D) (S : SperrInv D) (functions : List D.Fn)
-    (sources : LockSources S) (accepted : Bool) :
-    contractVerdict program S functions sources accepted = .ok true ↔ accepted = true := by
+    (sources : LockSources S) (accepted : Bool) {refined : Option (PLift (PtrVerfeinert program))} :
+    contractVerdict program S functions sources accepted refined = .ok true ↔ accepted = true := by
   cases accepted with
   | true => simp only [contractVerdict, ↓reduceIte]
   | false =>
       simp only [contractVerdict, Bool.false_eq_true, ↓reduceIte]
-      cases checkContracts program S functions sources <;> simp
+      cases checkContracts program S functions sources (refined := refined) <;> simp
 
 /-- Changing unrelated bodies never invalidates a checked function. Used by
     linking; no checker is rerun and no new semantic assumption is inserted. -/

@@ -65,7 +65,8 @@ theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (decl
         (inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length)))
         output.compiled.program (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit)
         _ _ _ _ _ _ _ _ (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
-        (fun _ => none)).symm.trans checked
+        (fun _ => none) (some (Gabbro.Grammatik.Parser.Cover.Differenz.zeigerSignaturen output.compiled.unit))).symm.trans
+        checked
       have structural := (Bool.and_eq_true_iff.mp split).1
       letI : DecidableEq (declOf output.compiled.unit).Fn :=
         inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length))

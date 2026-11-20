@@ -142,9 +142,10 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
     (ws : List D.Fn) (aks : List (Kernzelle.AccumulatorDecl D))
     (checks : List (CheckDecl D)) (aqs : List D.Ax) (guests : List (GuestBoundary D))
     (sources : Invarianten.Pruefer.LockSources S := fun _ => none)
-    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) :
-    @AkzeptiertX D fnEq₁ axEq₁ P S fs ls cs ws aks checks aqs guests sources hints =
-      @AkzeptiertX D fnEq₂ axEq₂ P S fs ls cs ws aks checks aqs guests sources hints := by
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none)
+    (pointers : Option (Vertraege.Pruefer.PointerSignatures D) := none) :
+    @AkzeptiertX D fnEq₁ axEq₁ P S fs ls cs ws aks checks aqs guests sources hints pointers =
+      @AkzeptiertX D fnEq₂ axEq₂ P S fs ls cs ws aks checks aqs guests sources hints pointers := by
   cases Subsingleton.elim fnEq₁ fnEq₂
   cases Subsingleton.elim axEq₁ axEq₂
   rfl
@@ -183,17 +184,20 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
       have hsplit := (@akzeptiertX_guest_eq (declOf u)
         (inferInstanceAs (DecidableEq (Fin u.fns.length)))
         (inferInstanceAs (DecidableEq (Fin u.axs.length)))
-        P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)).symm.trans h
+        P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+        (some (zeigerSignaturen u))).symm.trans h
       have hpre := ((Bool.and_eq_true _ _).mp hsplit).1
       -- The goal checker decides with the caller's `hFn` and a classical procedure
       -- for `Ax` (`akzeptiertX_pruefer`); `akzeptiertX_inst` changes both.
       have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
           (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
           ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none) = true := by
+          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none)
+          (some (zeigerSignaturen u)) = true := by
         rw [einheitVon_ws, hws]
         exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
-          P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)).symm.trans hpre
+          P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+          (some (zeigerSignaturen u))).symm.trans hpre
       have hB : besitzB (einheitVon u P Q sp starts gestartet)
           (List.finRange u.fns.length) = true :=
         besitzB_leer (einheitVon_arenen u P Q sp starts gestartet)

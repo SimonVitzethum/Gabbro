@@ -21,7 +21,7 @@ structure CheckedUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List
     E.S.inv lock s = E.S.inv lock s'
   lockInitial : ∀ lock ∈ locks, E.S.inv lock E.sp0 = true
   axiomLocal : AxEnsLokal E.Q
-  pointers : ∀ f ∈ functions, ∀ n (target : D.passt f n = true), PtrZielVerfeinert E.P f n target
+  pointers : PtrVerfeinert E.P
   starts : ∀ start ∈ E.starts ++ E.gestartet, ReqAmEintritt E.P start.1 (E.sp0.welt []) start.2
   decreases : ∀ f ∈ functions, ∀ passes Q shared,
     (∀ carrier, shared carrier → AtomarAusgenommen carrier) →
@@ -47,18 +47,19 @@ def checkStartRequires (E : Einheit D) (start : Σ f : D.Fn, Env D (D.params f))
     representations and unsupported fragments are explicit refusals. -/
 def checkUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
     (budget : VCBudget := {}) : Except Frag.Refusal (CheckedUnitLogic E functions locks) := do
-  let contracts ← checkContracts E.P E.S functions E.lockFormulas budget E.loopHints
+  let some pointerSignatures := E.pointerSignatures
+    | .error (.unsupported "function-pointer interfaces are missing their finite source table")
+  let pointers ← checkPointers E.P pointerSignatures budget
+  let contracts ← checkContracts E.P E.S functions E.lockFormulas budget E.loopHints (some pointers)
   let lockChecks ← collect locks _ (checkUnitLock E)
   let some axiomSources := E.axiomSources
     | .error (.unsupported "oracle predicates are missing their elaborated source expressions")
   let axioms ← collect axiomSources.items _ (checkAxiomLocal E.Q axiomSources)
-  let some pointerSignatures := E.pointerSignatures
-    | .error (.unsupported "function-pointer interfaces are missing their finite source table")
-  let pointers ← checkPointers E.P functions pointerSignatures budget
   let starts ← collect (E.starts ++ E.gestartet) _ (checkStartRequires E)
   let decreases ← collect functions _ (fun f => do
     let hint ← loopHint E.loopHints f
-    checkMeasure E.P E.S E.lockFormulas budget hint E.measure (zykS E.P functions) (E.sp0.welt []) f)
+    checkMeasure E.P E.S E.lockFormulas budget hint E.measure (zykS E.P functions) (E.sp0.welt []) f
+      (some pointers) (acyclicTargets pointerSignatures (zykS E.P functions f)))
   return {
       contracts := contracts.down
       lockLocal := fun lock member => (lockChecks.down lock member).1

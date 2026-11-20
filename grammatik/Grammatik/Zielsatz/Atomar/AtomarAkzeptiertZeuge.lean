@@ -371,7 +371,9 @@ def n1E : Einheit nD where
     { count := 7
       outside := fun f n outside => by
         change decide (nSigOf f = n) = false
-        cases f <;> simp only [nSigOf] <;> exact decide_eq_false (by omega) }
+        cases f <;> simp only [nSigOf] <;> exact decide_eq_false (by omega)
+      targets := fun _ => nFs
+      covers := fun f _ _ => nFs_voll f }
 
 /-- The flag unit is accepted with its complete source descriptors. -/
 theorem n1E_akzeptiert : akzeptiertX_pruefer.akzeptiert n1E nFs [] nCs = true := by

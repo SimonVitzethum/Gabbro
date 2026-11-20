@@ -125,6 +125,8 @@ def zeigerSignaturen (u : UProg) : Vertraege.Pruefer.PointerSignatures (declOf u
     cases tested : (declOf u).passt f n with
     | false => rfl
     | true => exact False.elim ((Nat.not_lt_of_ge beyond) (passtAt_lt u f n tested))
+  targets := fun n => (List.finRange u.fns.length).filter (fun f => (declOf u).passt f n)
+  covers := fun f n conforming => List.mem_filter.mpr ⟨List.mem_finRange f, conforming⟩
 
 /-- With no oracle declarations the source/model correspondence is computed
     for any (necessarily empty) oracle family. Other families need their
@@ -166,7 +168,9 @@ def akzeptiertU (u : UProg) : Except String Bool :=
     match sourceGuests u with
     | .error error => .error error
     | .ok guests => Vertraege.Pruefer.contractVerdict P (sperrFamilie u) fs (sperrQuellen u)
-        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u))
+        (AkzeptiertX P (sperrFamilie u) fs ls cs ws [] [] [] guests (sperrQuellen u) (fun _ => none)
+          (some (zeigerSignaturen u)))
+        (Vertraege.Pruefer.refinementOf P (some (zeigerSignaturen u)))
 
 /-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
     in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,

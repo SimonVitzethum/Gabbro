@@ -31,17 +31,17 @@ open Invarianten.Frag
 /-- Read only the diagnostic; proof-valued successful results are not compared. -/
 def contractCause (e : Einsatz) : Option Refusal :=
   match @Vertraege.Pruefer.checkContracts e.D e.P e.S e.fs
-      e.lockSources {} (fun _ => none) with
+      e.lockSources {} (fun _ => none) none with
   | .error cause => some cause
   | .ok _ => none
 
 theorem refused_of_cause (e : Einsatz) (cause : Refusal)
     (reason : contractCause e = some cause) : e.gueltig = false := by
   have gate : @Vertraege.Pruefer.KontrakteGeprueftB e.D e.P e.S e.fs
-      e.lockSources {} (fun _ => none) = false := by
+      e.lockSources {} (fun _ => none) none = false := by
     unfold Vertraege.Pruefer.KontrakteGeprueftB
     cases result : @Vertraege.Pruefer.checkContracts e.D e.P e.S e.fs
-        e.lockSources {} (fun _ => none) with
+        e.lockSources {} (fun _ => none) none with
     | error _ => rfl
     | ok _ => simp [contractCause, result] at reason
   cases verdict : e.gueltig with
@@ -60,9 +60,9 @@ theorem m99_825_cause : contractCause M99_825.e = none := by decide +kernel
     Its totality certificate covers every value the atomic environment returns. -/
 theorem m49_50_contract_checked : contractCause M49_50.e = none := by decide +kernel
 
-/-- The indirect call still has no contract-WP rule. -/
+/-- Without the decided interface refinement the indirect call is refused. -/
 theorem m47_549_cause : contractCause M47_549.e = some
-    (.unsupported "contract indirect call needs a checked finite target dispatch") := by decide +kernel
+    (.unsupported "contract indirect call needs checked interface refinement") := by decide +kernel
 
 theorem m99_824_checked : M99_824.e.gueltig = true := by decide +kernel
 
@@ -80,6 +80,6 @@ theorem m47_549_refused : M47_549.e.gueltig = false :=
     fallback has been introduced for an opaque semantic lock predicate. -/
 theorem m16_missing_sources_refused :
     (@Vertraege.Pruefer.checkContracts M16_13.e.D M16_13.e.P M16_13.e.S
-      M16_13.e.fs (fun _ => none) {} (fun _ => none)).toOption.isSome = false := by decide +kernel
+      M16_13.e.fs (fun _ => none) {} (fun _ => none) none).toOption.isSome = false := by decide +kernel
 
 end Gabbro.Grammatik.Gen.Zeugen.GateAudit

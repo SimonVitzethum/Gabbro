@@ -95,7 +95,7 @@ def Spez.wurzelnVon (z : Spez) (P : Programm z.deklaration) (ws : List z.deklara
 
 /-- The Lean model's Bool `AkzeptiertX` on a program of a member, with the instances named once. -/
 def Spez.gutB (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn) : Bool :=
-  @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx P z.sperreMax z.fnListe z.lockListe z.traegerListe ws [] [] [] [] z.lockSources (fun _ => none)
+  @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx P z.sperreMax z.fnListe z.lockListe z.traegerListe ws [] [] [] [] z.lockSources (fun _ => none) none
 
 /-- `nurAnB`: component `c` refuses the program and the other nine accept it. -/
 def Spez.nurB (z : Spez) (c : Fin 10) (P : Programm z.deklaration) (S : SperrInv z.deklaration)
@@ -126,7 +126,7 @@ structure Abgelehntes (z : Spez) where
 /-- The proof of a `Gutes` is the statement of the goal theorem's checker: the Lean model accepts the program. -/
 theorem Gutes.akzeptiert {z : Spez} (g : Gutes z) :
     @AkzeptiertX z.deklaration z.aufz.decFn z.aufz.decAx g.prog z.sperreMax z.fnListe z.lockListe z.traegerListe
-      (z.wurzelnVon g.prog g.ws) [] [] [] [] z.lockSources (fun _ => none) = true :=
+      (z.wurzelnVon g.prog g.ws) [] [] [] [] z.lockSources (fun _ => none) none = true :=
   g.gueltig
 
 /-- What the generator emits: a valid program or a refused one, each with its proof. -/

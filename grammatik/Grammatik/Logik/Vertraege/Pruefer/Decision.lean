@@ -176,7 +176,8 @@ def checkEnvironment (program : Programm D) (S : SperrInv D)
 /-- Finite Boolean/capability templates cover every actual typed parameter
     environment; integer parameters each occupy one immutable observation. -/
 def checkExecution (program : Programm D) (S : SperrInv D)
-    (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
+    (sources : LockSources S) (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) :
     Except Frag.Refusal (PLift (CheckedExecution (S := S) (requiresObligation program) f)) := do
   let _ ← snapshotPlan (program.ensures f)
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
@@ -191,7 +192,7 @@ def checkExecution (program : Programm D) (S : SperrInv D)
   let budget : VCBudget := if overflow then { budget with join := true } else budget
   let checked ← collect domain.templates.attach _ (fun entry =>
     checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
-      (requiresPolicy program _) sources budget hint invariants)
+      (requiresPolicy program _ refined) sources budget hint invariants)
   return ⟨fun locals runtime world allowed safe required => by
     obtain ⟨symbols, member, valuation, realized, _⟩ := domain.cover world locals (fun _ => 0)
     exact (checked.down ⟨symbols, member⟩ (List.mem_attach _ _)) valuation (world, locals) realized

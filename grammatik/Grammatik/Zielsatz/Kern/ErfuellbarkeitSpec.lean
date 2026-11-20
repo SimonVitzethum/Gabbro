@@ -193,8 +193,7 @@ def mE : Einheit mD where
       resources := fun item => nomatch item
       expression := fun item => nomatch item
       correct := fun item => nomatch item }
-  pointerSignatures := some
-    { count := 0, outside := fun _ _ _ => rfl }
+  pointerSignatures := some (.empty fun _ _ => rfl)
 
 /-- Probe B as ONE declaration: declared start `haupt`, initial memory `zSp`. -/
 def zEB : Einheit zD where

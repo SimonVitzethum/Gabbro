@@ -156,13 +156,14 @@ def checkBasicFunction (program : Programm D) (S : SperrInv D) (sources : LockSo
 
 /-- The Bool-facing function check constructs every proof internally. -/
 def checkFunction (program : Programm D) (S : SperrInv D) (sources : LockSources S)
-    (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn) :
+    (budget : VCBudget) (hint : Option (QF (Observation D))) (f : D.Fn)
+    (refined : Option (PLift (PtrVerfeinert program)) := none) :
     Except Frag.Refusal (PLift (ContractDuties program S f)) :=
   match checkBasicFunction program S sources budget f with
   | some checked => .ok checked
   | none => do
     if let some replay := atomicReplay? program f then
-      let execution ← checkExecution program S sources budget hint f
+      let execution ← checkExecution program S sources budget hint f refined
       return ⟨contractDuties_of_execution f execution.down replay.down⟩
     else .error (.unsupported "contract body reads atomic memory outside the checked VC fragment")
 

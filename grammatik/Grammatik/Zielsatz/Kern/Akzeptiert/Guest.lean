@@ -46,9 +46,11 @@ theorem akzeptiertX_guest_eq (P : Programm D) (S : SperrInv D)
     (ws : List D.Fn) (aks : List (Kernzelle.AccumulatorDecl D))
     (checks : List (CheckDecl D)) (qs : List D.Ax) (guests : List (GuestBoundary D))
     (sources : Invarianten.Pruefer.LockSources S := fun _ => none)
-    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none) :
-    AkzeptiertX P S fs ls cs ws aks checks qs guests sources hints =
-      (AkzeptiertX P S fs ls cs ws aks checks qs [] sources hints && GuestBoundary.admissionB guests) := by
+    (hints : Vertraege.Pruefer.LoopHints D := fun _ => none)
+    (pointers : Option (Vertraege.Pruefer.PointerSignatures D) := none) :
+    AkzeptiertX P S fs ls cs ws aks checks qs guests sources hints pointers =
+      (AkzeptiertX P S fs ls cs ws aks checks qs [] sources hints pointers &&
+        GuestBoundary.admissionB guests) := by
   simp only [AkzeptiertX, GuestBoundary.admissionB_nil, Bool.and_true, Bool.true_and, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 end Bool

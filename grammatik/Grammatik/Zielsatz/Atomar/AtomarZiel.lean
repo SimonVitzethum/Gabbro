@@ -241,7 +241,8 @@ end Besitz
 noncomputable def akzeptiertX_pruefer : PrueferX where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints && besitzB E fs &&
+    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints
+      E.pointerSignatures && besitzB E fs &&
       Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
       nutzerPflichtGeprueftB E fs ls
   korrekt := fun {D} _ E fs ls cs hardware h => by
@@ -262,10 +263,12 @@ noncomputable def akzeptiertX_pruefer : PrueferX where
 theorem akzeptiertX_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq : DecidableEq D.Ax]
     (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
     akzeptiertX_pruefer.akzeptiert E fs ls cs =
-      (AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+      (AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints
+      E.pointerSignatures &&
         besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls && nutzerPflichtGeprueftB E fs ls) := by
   exact congrArg (fun inst : DecidableEq D.Ax =>
-    @AkzeptiertX D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints &&
+    @AkzeptiertX D fnEq inst E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints
+      E.pointerSignatures &&
       besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
         nutzerPflichtGeprueftB E fs ls)
     (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)

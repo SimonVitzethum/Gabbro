@@ -175,7 +175,9 @@ def wE : Einheit wD where
     { count := 1
       outside := fun _ n outside => by
         change decide (0 = n) = false
-        exact decide_eq_false (by omega) }
+        exact decide_eq_false (by omega)
+      targets := fun _ => [()]
+      covers := fun f _ _ => by cases f; exact List.mem_singleton.mpr rfl }
 
 /-- The answer of an argument list: its one number. -/
 def kopfN : Env wD [.int 0 1] → Int
