@@ -5,6 +5,7 @@ public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
 public import Grammatik.Logik.Vertraege.Pruefer.Control.CallBinding
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.Block
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.End
+public import Grammatik.Logik.Vertraege.Pruefer.Control.Join
 
 @[expose] public section
 
@@ -26,36 +27,37 @@ def statement {context : Context A next} (policy : CallPolicy program context)
   | 0 => .error (.unsupported "contract VC syntax-depth budget exceeded")
   | fuel + 1 => match code with
     | .ite test yes no => do
-        let positive ← block policy facts budget hint fuel yes symbols bounded goals
-        let negative ← block policy facts budget hint fuel no symbols bounded goals
+        let positive ← block policy facts budget hint fuel yes symbols bounded (goals.joinIf budget.join)
+        let negative ← block policy facts budget hint fuel no symbols bounded (goals.joinIf budget.join)
         let pre ← Symbolic.branchCondition symbols test positive negative
         return pre.map (fun valuation item runtime world ready actual realized allowed safe => by
           have ready := ready actual realized
           cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) actual <;>
             simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
             have ready := ready allowed safe <;>
-            simpa only [Runtime.wpS, Runtime.wpB, execStmtH, wahr?, tested, Bool.false_eq_true, ↓reduceIte] using ready)
+            simpa only [Runtime.wpS, Runtime.wpB, execStmtH, wahr?, tested, Bool.false_eq_true, ↓reduceIte,
+              Symbolic.Goals.joinIf_holds] using ready)
     | .onOption (n := count) expression present absent =>
-        Symbolic.optionDispatch policy.semantic symbols expression present absent goals
-          (fun _ => block policy facts budget hint fuel absent symbols bounded goals)
+        Symbolic.ofJoin <$> Symbolic.optionDispatch policy.semantic symbols expression present absent (goals.joinIf budget.join)
+          (fun _ => block policy facts budget hint fuel absent symbols bounded (goals.joinIf budget.join))
           (fun index => block policy facts budget hint fuel present (.cons (.known index) symbols) ⟨trivial, bounded⟩
-            (goals.shrink (Ty.index count))) bounded
+            ((goals.joinIf budget.join).shrink (Ty.index count))) bounded
           (fun _ => block (policy.weaken (Nat.le_succ next)) facts budget hint fuel present (.cons (.integer (.var next))
             symbols) ⟨Symbolic.freshKeyBounded next, symbols.bounded_mono bounded (Nat.le_succ next)⟩
-            ((goals.weaken (Nat.le_succ next)).shrink (Ty.index count)))
+            (((goals.joinIf budget.join).weaken (Nat.le_succ next)).shrink (Ty.index count)))
     | .breaking _ body => do
         let pre ← block policy facts budget hint fuel body symbols bounded goals
         return pre.map (fun _ _ _ _ ready actual realized allowed safe => ready actual realized allowed safe)
     | .onWhy expression arms => do
-        let pre ← reasonCases policy facts budget hint fuel arms symbols bounded goals
-        return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
+        let pre ← reasonCases policy facts budget hint fuel arms symbols bounded (goals.joinIf budget.join)
+        return Symbolic.ofJoin ((pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
           ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
-            allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual))
+            allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual)))
     | .onTag expression arms => do
-        let pre ← tagCases policy facts budget hint fuel arms symbols bounded goals
-        return (pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
+        let pre ← tagCases policy facts budget hint fuel arms symbols bounded (goals.joinIf budget.join)
+        return Symbolic.ofJoin ((pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
           ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
-            allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual))
+            allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual)))
     | .retry count test body overflow =>
         if count ≤ budget.expansion then
           retryCondition policy.semantic test body overflow

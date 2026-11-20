@@ -17,6 +17,9 @@ structure VCBudget where
   expansion : Nat := 128
   /-- Refuse a large product before generating parameter and control cases. -/
   specializations : Nat := 16384
+  /-- Join mode: branches share one continuation (`Continuation.joined`); set by the contract checker only when
+      the per-branch work estimate exceeds `specializations`. -/
+  join : Bool := false
 
 abbrev EndCondition (program : Programm D) (checked : D.Fn → List D.Inv) (S : SperrInv D)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

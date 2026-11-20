@@ -181,11 +181,14 @@ def checkExecution (program : Programm D) (S : SperrInv D)
   let _ ← snapshotPlan (program.ensures f)
   let invariants ← invariantFormula program (D.invs.filter (schuldet f))
   let domain ← parameters (D := D) budget.expansion 0 (D.params f)
-  if argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations program (uniformPost program f) budget.expansion budget.specializations
-        (program.rumpf f) > budget.specializations then
+  let estimate := fun join => argumentSpecializations budget.specializations (D.params f) *
+    endSpecializations program (uniformPost program f) join budget.expansion budget.specializations (program.rumpf f)
+  -- Join mode only where the per-branch estimate exceeds the budget; it must then fit with joined branches.
+  let overflow := estimate false > budget.specializations
+  if overflow ∧ estimate true > budget.specializations then
     .error (.unsupported "contract VC specialization product exceeds the work budget")
   else pure ()
+  let budget : VCBudget := if overflow then { budget with join := true } else budget
   let checked ← collect domain.templates.attach _ (fun entry =>
     checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
       (requiresPolicy program _) sources budget hint invariants)

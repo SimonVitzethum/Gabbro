@@ -143,7 +143,9 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     cell formula, reset-cell atom and `komp` remain unchanged.
     Re-reviewed for unobserved values (`SymValue.unobserved`) and option dispatch over a
     fresh bounded index: only the contract checker's certified forms grow; every
-    numbered cell formula, reset-cell atom and `komp` remain unchanged. -/
+    numbered cell formula, reset-cell atom and `komp` remain unchanged.
+    Re-reviewed for the join mode of branches (`Continuation.joined`, `VCBudget.join`):
+    only the contract checker grows; cells and `komp` unchanged. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -157,7 +159,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 3972451434258513919)]
+   ("AkzeptiertX", 3649264299147393420)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

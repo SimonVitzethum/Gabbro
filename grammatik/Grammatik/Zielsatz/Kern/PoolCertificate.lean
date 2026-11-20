@@ -86,7 +86,7 @@ theorem reader_checked_for (bodies : Bodies) (same : bodies zLies = body)
         (invariantsFor bodies) (by rfl)
         ((parameters (D := zD) 128 0 context).toOption.get (by with_unfolding_all rfl)) (by with_unfolding_all rfl)
       · change argumentSpecializations 16384 context *
-          endSpecializations (withBodies bodies) false 128 16384 (bodies zLies) ≤ 16384
+          endSpecializations (withBodies bodies) false false 128 16384 (bodies zLies) ≤ 16384
         rw [same]
         change 1 ≤ 16384
         decide

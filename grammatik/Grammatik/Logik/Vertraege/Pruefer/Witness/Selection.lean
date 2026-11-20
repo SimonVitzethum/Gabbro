@@ -145,7 +145,7 @@ theorem execution_success (program : Programm D) (S : SperrInv D)
     (domain : Parameters D 0 (D.params f))
     (hdomain : parameters (D := D) budget.expansion 0 (D.params f) = .ok domain)
     (withinBudget : argumentSpecializations budget.specializations (D.params f) *
-      endSpecializations program (uniformPost program f) budget.expansion budget.specializations
+      endSpecializations program (uniformPost program f) false budget.expansion budget.specializations
         (program.rumpf f) ≤ budget.specializations)
     (ready : ∀ entry : { symbols // symbols ∈ domain.templates },
       (Vertraege.Pruefer.checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
@@ -163,7 +163,7 @@ theorem execution_success (program : Programm D) (S : SperrInv D)
   dsimp only [bind, Except.bind]
   rw [hdomain]
   dsimp only [bind, Except.bind]
-  simp only [Nat.not_lt.mpr withinBudget, ↓reduceIte, pure, Except.pure, bind, Except.bind]
+  simp only [Nat.not_lt.mpr withinBudget, false_and, ↓reduceIte, pure, Except.pure, bind, Except.bind]
   rw [hchecked]
   rfl
 
