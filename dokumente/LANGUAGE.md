@@ -7,19 +7,18 @@ kernels, drivers and ordinary programs.
 | For | Read |
 |---|---|
 | the notation (EBNF, closed vocabulary, one Lean constructor per production) | [`SYNTAX.md`](SYNTAX.md) — machine-read by guardians; **this file does not repeat it** |
-| what is proved, and the goal theorem | [`PROOF.md`](PROOF.md) |
-| the checker: every pass, rule and diagnostic code | [`CHECKER.md`](CHECKER.md) |
-| why the design is the way it is | [`DESIGN.md`](DESIGN.md) |
-| code generation | [`LLVM-BACKEND.md`](LLVM-BACKEND.md) (current), [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md) (the C backend, removed 2026-10-17) |
-| floats, heap, hardware | [`FLOATING-POINT.md`](FLOATING-POINT.md), [`PLAN-DYNAMIC.md`](PLAN-DYNAMIC.md), [`PLAN-HARDWARE.md`](PLAN-HARDWARE.md) |
+| what is proved, and the goal theorem | [`THEOREM-MAP.md`](THEOREM-MAP.md) and the header of [`Spec.lean`](../grammatik/Grammatik/Zielsatz/Kern/Spec.lean) |
+| how Stage 0 compiles each form | [`IR-COMPILATION-LANES.md`](IR-COMPILATION-LANES.md) |
+| code generation in the Gabbro compiler (planned) | [`MACHINE-IR-PLAN.md`](MACHINE-IR-PLAN.md) |
+| kernels, drivers and hardware access | [`LOW-LEVEL-SYNTAX-PLAN.md`](LOW-LEVEL-SYNTAX-PLAN.md) |
 
 **Standing words.** *Checked* means a pass of the Lean checker (`Akzeptiert`,
 `grammatik/Grammatik/Zielsatz/Kern/Akzeptiert.lean`) refuses the opposite, by a
 diagnostic code. *Modelled* means the construct has semantics in the Lean model. *Not built* is
 said where a construct is only decided. A code cited without qualification names a Lean checker
 rule; codes of the deleted Rust checker (removed 2026-11-10, in git history only) are marked
-historical. What is proved, over which statement, is
-[`PROOF.md`](PROOF.md)'s subject.
+historical. What is proved, over which statement, is the subject of
+[`THEOREM-MAP.md`](THEOREM-MAP.md).
 
 ---
 
@@ -40,7 +39,7 @@ does and does not carry.
 
 **What may be said:** the goal theorem is proved over the Lean model, with a witness. **What may
 not:** "Gabbro is verified" — the checker inside the statement is the Lean checker, and the
-bridge to the deployed checker and the emitted binary is open ([`PROOF.md`](PROOF.md)).
+bridge to the deployed checker and the emitted binary is open ([`THEOREM-MAP.md`](THEOREM-MAP.md)).
 
 ---
 
@@ -1319,18 +1318,16 @@ and their return checks apply in both builds.
 
 ## 14. Code generation
 
-**Syntax-directed, not optimising.** Every construct has exactly one lowering; the untrusted
-compiler checks first, and what the checker refused never reaches the emitter. An unlowered form
-is refused **by name**, not guessed (`Y101`–`Y106` for LLVM; the removed C emitter's `C001` is gone).
+**Two compilers, one of them for bootstrapping.** What the checker refused never reaches an emitter, and an unlowered
+form is refused **by name**, not guessed.
 
-* **LLVM backend — current.** `gabbro llvm [--target=x86_64|aarch64]` lowers checked Gabbro
-  directly to LLVM IR; `opt`, `llc`, `ld.lld` produce a static binary with **no C, no libc, no
-  linked runtime** — locks, threads and arenas are generated IR over raw kernel gates.
-  [`LLVM-BACKEND.md`](LLVM-BACKEND.md).
-* **C11 emitter — removed 2026-10-17** (tag `archiv/c-emitter-2026-10-17`).
-  [`C-MEMORY-MODEL.md`](C-MEMORY-MODEL.md).
-* **Native machine code with translation validation** is the long-term path and needs a Lean
-  model of the CPU first ([`PLAN-TRANSLATION-VALIDATION.md`](PLAN-TRANSLATION-VALIDATION.md)).
+* **Stage 0 — bootstrap only** (`stage0/`, written in Lean). It lowers checked Gabbro to the IR S0IR, which the
+  proved x86-64 runner executes; it exists to build the Gabbro compiler and is retired once that compiler compiles
+  itself. Its generic lowering theorem and the forms it covers: [`IR-COMPILATION-LANES.md`](IR-COMPILATION-LANES.md).
+* **The Gabbro compiler — planned.** Written in Gabbro, lowering to the machine IR GIR and emitting native code through
+  target tables for x86-64, AArch64 and RISC-V 64, every pass proved with GabbroV, no translation validation:
+  [`MACHINE-IR-PLAN.md`](MACHINE-IR-PLAN.md). The earlier LLVM and C11 backends were deleted (C11 on 2026-10-17, the
+  rest with the Rust tools on 2026-11-10; history in git).
 
 **What is proved is not checked at run time.** Ranges, indices, leafness, phases, tokens —
 all M1/M2 material is **absent** from the output, not switched off. Runtime checks exist at
@@ -1567,8 +1564,8 @@ not at all. The pass table names each pass with the sentence it owes.
 Every pass has a speech test in both directions (poison falls, clean passes) **plus a mutation
 probe on its emission**. Three of the twelve are fully built, nine *carried* — what a pass can say
 it says, and where the rest lies stands beside it with an address (axiom layer, template, or
-decision). Where each pass stops is [`CHECKER.md`](CHECKER.md)'s subject. The checker never
-verifies itself; the goal theorem names what it does and does not say ([`PROOF.md`](PROOF.md)).
+decision). Where each pass stops is listed in `Spec.lean` and [`THEOREM-MAP.md`](THEOREM-MAP.md). The checker never
+verifies itself; the goal theorem names what it does and does not say (the header of `Spec.lean`).
 
 ---
 

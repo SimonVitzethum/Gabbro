@@ -48,7 +48,7 @@ is still built on GIR from the start. R5 needs all gates.
 **What "no assembly anywhere" means in this plan** (details in §4.1): no instruction text in any source, binding
 or library; no assembly file in a kernel, a runtime or a compiled binary. Machine instructions exist in exactly
 one place, as rows of a target table (data: a cell and its encoding template), checked by `TargetOk` and measured
-by M. One handwritten assembly file exists in the repository today, the Stage-0 runner (`stage0/runner/runner.s`); it is
+by M. One assembly listing exists in the repository today, the Stage-0 runner (`stage0/runner/runner.s`), written by Lean from its proved bytes, not by hand; it is
 a bootstrap tool, verified against an x86-TSO model (`runner_tso`), it is in no kernel and no compiled binary, and
 it is deleted when the compiler compiles itself (K7).
 
