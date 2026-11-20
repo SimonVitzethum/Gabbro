@@ -154,47 +154,13 @@ def block {context : Context A next} (policy : CallPolicy program context)
         (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
           (.cons (resultSymbol he result) symbols)
           ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCallElse f args he hp hr failure rest => do
-        let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpB rest ((goals.shrink _).holds item runtime allowed) world (.cons (ergWert he value) actual)
-        let failedResult := fun (actual : Env D Γ) (reason : Fin (D.gruende f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpE failure ((goals.shrink _).endHolds item runtime allowed) world (.cons reason actual)
-        let pre ← Symbolic.arguments budget.expansion args symbols bounded
-          (fun actual supplied item runtime world => ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            match runtime.calls f world supplied with
-            | .ok after value => result actual value item runtime after
-            | .why after reason => failedResult actual reason item runtime after
-            | .logik error => allowed error
-            | .hardware _ => True)
-          (fun more larger supplied suppliedBounded => callOutcomesCondition (policy.weaken larger) budget.expansion f
-            supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) result failedResult
-            (fun last beyond result resultBounded => do
-              let tail ← block (policy.weaken (Nat.le_trans larger beyond)) facts budget hint fuel rest
-                (.cons (resultSymbol he result) symbols)
-                ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded (Nat.le_trans larger beyond)⟩
-                ((goals.weaken (Nat.le_trans larger beyond)).shrink _)
-              return tail.map (fun valuation _ _ world ready actual realized value selected =>
-                ready (.cons (ergWert he value) actual) ⟨resultSymbol_realizes he result valuation world value selected, realized⟩))
-            (fun reason => do
-              let failed ← ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
-                ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _)
-              return failed.map (fun _ _ _ _ ready actual realized => ready (.cons reason actual) ⟨rfl, realized⟩)))
-        return (pre.read Λ args.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
-          have ready := ready actual ((symbols.realizes_world actual valuation world (world.lese Λ args.orte)).mp realized) allowed safe
-          unfold Runtime.wpB
-          dsimp only [execBlockH]
-          cases reply : runtime.calls f (world.lese Λ args.orte) (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) with
-          | ok after value => rw [reply] at ready; exact (goals.holds_shrink _ item runtime allowed _).mp (ready allowed safe)
-          | why after reason =>
-              rw [reply] at ready
-              have failed := ready allowed safe
-              cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure after (.cons reason actual) <;>
-                simpa only [Runtime.wpE, outcome, Symbolic.Goals.holds, Symbolic.Goals.endHolds,
-                  EndAusgang.schrumpf, EndAusgang.zuAusgang, Symbolic.Goals.shrink, Continuation.shrink] using failed
-          | logik error => simpa only [reply, Symbolic.Goals.holds] using ready
-          | hardware error => trivial)
+    | .bindCallElse f args he hp hr failure rest =>
+      bindCallElseBlockCondition policy budget.expansion f args he hp hr failure rest symbols bounded goals
+        (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+        (fun more larger reason => ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
+          ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .check test failure rest => do
         let positive ← block policy facts budget hint fuel rest symbols bounded goals
         let negative ← ending policy facts budget hint fuel failure symbols bounded goals
@@ -263,7 +229,11 @@ def block {context : Context A next} (policy : CallPolicy program context)
               (fun after same => pre.sound valuation item present runtime after
                 (by rw [symbolic_values_equal valuation after world same]; exact valid)
                 actual ((symbols.realizes_world actual valuation world after).mp realized)) (fun _ => trivial) }
-    | .bindCallInd .. | .bindCallIndElse .. => .error (.unsupported "contract indirect binding needs a checked finite target dispatch")
+    | .bindCallInd p args he hp hr rest => bindCallIndBlockCondition policy budget.expansion p args he hp hr rest symbols bounded goals
+        (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+    | .bindCallIndElse .. => .error (.unsupported "contract fallible indirect binding needs a reason dispatch")
     | .bindAxiom a args he hw hg hd hgd rest => bindAxiomBlockCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
         (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
     | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseBlockCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
@@ -337,42 +307,13 @@ def ending {context : Context A next} (policy : CallPolicy program context)
         (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
           (.cons (resultSymbol he result) symbols)
           ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCallElse f args he hp hr failure rest => do
-        let result := fun (actual : Env D Γ) (value : ErgVal D (D.erg f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpE rest ((goals.shrink _).endHolds item runtime allowed) world (.cons (ergWert he value) actual)
-        let failedResult := fun (actual : Env D Γ) (reason : Fin (D.gruende f)) item (runtime : Runtime program (fun _ => []) S) world =>
-          ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            runtime.wpE failure ((goals.shrink _).endHolds item runtime allowed) world (.cons reason actual)
-        let pre ← Symbolic.arguments budget.expansion args symbols bounded
-          (fun actual supplied item runtime world => ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
-            match runtime.calls f world supplied with
-            | .ok after value => result actual value item runtime after
-            | .why after reason => failedResult actual reason item runtime after
-            | .logik error => allowed error
-            | .hardware _ => True)
-          (fun more larger supplied suppliedBounded => callOutcomesCondition (policy.weaken larger) budget.expansion f
-            supplied suppliedBounded symbols (symbols.bounded_mono bounded larger) result failedResult
-            (fun last beyond result resultBounded => do
-              let tail ← ending (policy.weaken (Nat.le_trans larger beyond)) facts budget hint fuel rest
-                (.cons (resultSymbol he result) symbols)
-                ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded (Nat.le_trans larger beyond)⟩
-                ((goals.weaken (Nat.le_trans larger beyond)).shrink _)
-              return tail.map (fun valuation _ _ world ready actual realized value selected =>
-                ready (.cons (ergWert he value) actual) ⟨resultSymbol_realizes he result valuation world value selected, realized⟩))
-            (fun reason => do
-              let failed ← ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
-                ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _)
-              return failed.map (fun _ _ _ _ ready actual realized => ready (.cons reason actual) ⟨rfl, realized⟩)))
-        return (pre.read Λ args.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
-          have ready := ready actual ((symbols.realizes_world actual valuation world (world.lese Λ args.orte)).mp realized) allowed safe
-          unfold Runtime.wpE
-          dsimp only [execEndH]
-          cases reply : runtime.calls f (world.lese Λ args.orte) (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) with
-          | ok after value => rw [reply] at ready; exact (goals.endHolds_shrink _ item runtime allowed _).mp (ready allowed safe)
-          | why after reason => rw [reply] at ready; exact (goals.endHolds_shrink _ item runtime allowed _).mp (ready allowed safe)
-          | logik error => simpa only [reply, Symbolic.Goals.endHolds] using ready
-          | hardware error => trivial)
+    | .bindCallElse f args he hp hr failure rest =>
+      bindCallElseEndCondition policy budget.expansion f args he hp hr failure rest symbols bounded goals
+        (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+        (fun more larger reason => ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
+          ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .narrow expression low high failure rest => do
         let pre ← Symbolic.narrowingCondition symbols bounded expression low high
           (fun actual value item runtime world => ∀ allowed, HandlerSafe (policy.semantic item) runtime allowed →
@@ -428,7 +369,11 @@ def ending {context : Context A next} (policy : CallPolicy program context)
           simp only [execStmtH, execEndH] at ready ⊢
           split <;> rename_i cleanupReady <;>
             simpa only [cleanupReady, Bool.false_eq_true, ↓reduceIte, Symbolic.Goals.holds, Symbolic.Goals.endHolds] using ready)
-    | .bindCallInd .. | .bindCallIndElse .. => .error (.unsupported "contract indirect end binding needs a checked finite target dispatch")
+    | .bindCallInd p args he hp hr rest => bindCallIndEndCondition policy budget.expansion p args he hp hr rest symbols bounded goals
+        (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+    | .bindCallIndElse .. => .error (.unsupported "contract fallible indirect end binding needs a reason dispatch")
     | .bindAxiom a args he hw hg hd hgd rest => bindAxiomEndCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
         (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
     | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseEndCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
