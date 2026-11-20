@@ -41,7 +41,6 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.GabbroV.Start.GvParserWitness
 
 -- Concrete witnesses execute the actual empty check/static gates.
 import all Grammatik.Parser.Elab.Uebersetze.Teil.Teil12

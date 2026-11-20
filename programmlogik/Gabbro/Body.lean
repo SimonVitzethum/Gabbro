@@ -112,4 +112,3 @@ public import Gabbro.Body.Teil7
 public import Gabbro.Body.Teil8
 public import Gabbro.Body.Teil9Rec
 public import Gabbro.Body.Teil10RecRegeln
-public import Gabbro.Body.Teil11RecZeuge

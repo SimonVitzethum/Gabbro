@@ -70,9 +70,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Tore.Answers
 
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.ValueProbe
 
-public import Stage0.Senke.Ausdruck.Referenz.Proben
 
 public import Stage0.Senke.Ausdruck.Old.Admission
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
@@ -172,6 +170,5 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareRun
 public import Stage0.Senke.Ausdruck.Old.Distinct
 public import Stage0.Senke.Sperre.Interference
-public import Stage0.Senke.Sperre.Warten.Fixture
 
 @[expose] public section

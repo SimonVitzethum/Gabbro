@@ -1,5 +1,5 @@
 module
-public import Grammatik.Zielsatz.Projekte.Zeuge
+public import Grammatik.Zielsatz.Projekte.Ziel
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarGleich
 import all Init.Data.Repr

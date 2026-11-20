@@ -8,7 +8,6 @@ public import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
 public import Grammatik.Bausteine.Arena.Struktur.ArenaFremd
 public import Grammatik.Bausteine.Arena.Struktur.ArenaListe
 public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
-public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
@@ -280,11 +279,9 @@ public import Grammatik.Gen.Fein.Suche
 public import Grammatik.Gen.Fein.Druck
 public import Grammatik.Berechenbarkeit.Storage.BrainfuckBounds
 public import Grammatik.Berechenbarkeit.Storage.GStack.Multi
-public import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
 public import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
 public import Grammatik.Zielsatz.Projekte.Ziel
 public import Grammatik.Zielsatz.Projekte.Ohne
-public import Grammatik.Zielsatz.Projekte.Zeuge
 public import Grammatik.Zielsatz.Projekte.Annahmen
 public import Grammatik.Zielsatz.Projekte.Verbund
 public import Grammatik.Zielsatz.Einbettung.Projekt
@@ -342,12 +339,12 @@ public import Grammatik.Nebenlaeufigkeit.Async.Segment.Binding
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Waiting
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
-public import Grammatik.Kern.Semantik.Boundary.Proben
 public import Grammatik.Kern.Semantik.Boundary.TransferObstacle
-public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaFormZeuge
-public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
 public import Grammatik.Gen.Erzeuger.Probe
 public import Grammatik.Gen.Zeugen.Gap
 public import Grammatik.Gen.Zeugen.Gap.GeneratorWitness
 public import Grammatik.Gen.Zeugen.M.Recovery
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaFormZeuge
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
 

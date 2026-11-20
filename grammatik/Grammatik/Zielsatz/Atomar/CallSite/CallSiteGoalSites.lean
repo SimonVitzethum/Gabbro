@@ -11,7 +11,8 @@
    G step on a presented memory with the same threads. -/
 module
 
-public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalFixture
+public import Grammatik.Zielsatz.Kern.Spec.Fremd
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 
 @[expose] public section

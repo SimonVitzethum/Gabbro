@@ -4,7 +4,9 @@
    The guarantee is an explicit footprint premise, not a scheduler assumption. -/
 module
 public import Stage0.Senke.Sperre.Lauf
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.ValueProbe
+public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
+public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Runner.Prog.IRAsm
 @[expose] public section
 
 

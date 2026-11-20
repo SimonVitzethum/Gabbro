@@ -1,5 +1,8 @@
 module
-public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
+public import Grammatik.Berechenbarkeit.BrainfuckG.Programm
+public import Grammatik.Berechenbarkeit.BrainfuckG.Schritt
+public import Grammatik.Berechenbarkeit.Storage.GStack.Multi
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 import all Batteries.Data.Except
 @[expose] public section

@@ -41,7 +41,6 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1
-public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 @[expose] public section
 
 

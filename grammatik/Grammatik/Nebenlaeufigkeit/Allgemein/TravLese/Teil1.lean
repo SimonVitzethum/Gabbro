@@ -19,7 +19,8 @@ public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravLese.Teil1a
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
 
 @[expose] public section
 

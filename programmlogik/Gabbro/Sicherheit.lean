@@ -95,7 +95,6 @@ public import Gabbro.Sicherheit.Anweisung.Teil1
 public import Gabbro.Coverage.Teil3
 public import Gabbro.Sicherheit.Ausdruck
 public import Gabbro.Sicherheit.Anweisung
-public import Gabbro.Sicherheit.RecordZeuge
 @[expose] public section
 
 

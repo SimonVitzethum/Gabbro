@@ -7,9 +7,6 @@ public import Stage0.Senke.Sperre.Warten.Invariant
 public import Stage0.Senke.Sperre.Warten.Retry
 public import Stage0.Senke.Sperre.Warten.Wait
 public import Stage0.Senke.Sperre.Warten.Wake
-public import Stage0.Senke.Sperre.Warten.RetryProbe
-public import Stage0.Senke.Sperre.Warten.WaitProbe
-public import Stage0.Senke.Sperre.Warten.WakeProbe
 
 /-! Sequential ticket-lock waiting obligations supplied here:
 * `FutexArgs`, `futex_prepare`, `futex_entry`, `futex_return` describe the actual

@@ -1,7 +1,8 @@
 /- Joint Boolean and provider capability witnesses for actual foreign lowering. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
-public import Stage0.Senke.Ausdruck.Referenz.Proben
+public import Stage0.Senke.Images.BildLese
+public import Grammatik.Bausteine.Arena.Unbounded.GRegion
 import Grammatik.Kern.Taktik.KernelRfl
 @[expose] public section
 
