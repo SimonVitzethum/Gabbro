@@ -1322,8 +1322,8 @@ and their return checks apply in both builds.
 form is refused **by name**, not guessed.
 
 * **Stage 0 — bootstrap only** (`stage0/`, written in Lean). It lowers checked Gabbro to the IR S0IR, which the
-  proved x86-64 runner executes; it exists to build the Gabbro compiler and is retired once that compiler compiles
-  itself. Its generic lowering theorem and the forms it covers: [`IR-COMPILATION-LANES.md`](IR-COMPILATION-LANES.md).
+  proved x86-64 runner executes; it builds the Gabbro compiler and stays its permanent bootstrap, so that an error in one
+  compiler generation cannot carry over into the next. Its generic lowering theorem and the forms it covers: [`IR-COMPILATION-LANES.md`](IR-COMPILATION-LANES.md).
 * **The Gabbro compiler — planned.** Written in Gabbro, lowering to the machine IR GIR and emitting native code through
   target tables for x86-64, AArch64 and RISC-V 64, every pass proved with GabbroV, no translation validation:
   [`MACHINE-IR-PLAN.md`](MACHINE-IR-PLAN.md). The earlier LLVM and C11 backends were deleted (C11 on 2026-10-17, the
