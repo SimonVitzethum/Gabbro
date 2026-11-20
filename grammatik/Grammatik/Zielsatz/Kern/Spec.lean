@@ -100,9 +100,7 @@
       callee answer meeting the callee's contract and frame, every oracle answer of class (c), every lock move
       keeping the invariant (`HavocOk`), and every value a read of an admitted shared atomic may return (the rely):
       its `ensures` and owed invariants at value and reason exits, every callee's `requires`, no `logik` outcome
-      (`LogikPflichtA`); the interface refinement `PtrVerfeinert` for every admitted pointer target (C06:
-      contravariant requires, covariant normal ensures, part of (b), never discharged by structural acceptance);
-      and the start (`StartPflicht`: the lock invariants at `E.sp0`, every root's `requires`
+      (`LogikPflichtA`); and the start (`StartPflicht`: the lock invariants at `E.sp0`, every root's `requires`
       there). For units the Lean parser elaborates, (b) is derived from GabbroV's duty files
       (`bruecke_nutzer`, `bruecke_nutzerA`) under per-unit decided name and rank conditions. (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code (THE ONE LIST, below).
   (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (THE ONE LIST).
@@ -346,10 +344,10 @@
   a history for every reachable machine (needs the GX replay of the update stores), so the goal has no accumulator leg yet; any race exemption or universal quiescence (existing race/time qualifications are retained).
 
   NOT CLAIMED:
-  * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
-    with local transfer to the selected target's concrete contract is now part of (b) (`LogikPflicht(A)`),
-    with whole-body interface caller duty and prefix replay through havoc/atomic rely. `Programm.ptrVertrag`
-    alone still proves nothing; pointer contract clauses remain refused by the source exporter
+  * source-accepted pointer interface contracts: `CallContract` states the interface; its refinement
+    `PtrVerfeinert` (O43) is no user duty since 2026-11-20 (owner, variant B): it is not part of (b), and the
+    checker decides it (`checkPointers`) where a body certificate needs it at an indirect call.
+    `Programm.ptrVertrag` alone still proves nothing; pointer contract clauses remain refused by the source exporter
     (`uZeigerVertrag`, `ptrVertragGebunden`) until the full pipeline (export lowering, checker admission,
     Stage-0/IR and GabbroV duties) is connected. Existing concrete target contracts are still claimed;
   * a waiting bound without the four premises of WAITING (in particular the hold time derived from the program), a

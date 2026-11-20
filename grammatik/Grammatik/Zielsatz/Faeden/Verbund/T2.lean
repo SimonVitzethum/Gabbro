@@ -40,13 +40,6 @@ theorem teilP_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) :
   · exact p2_eq hV
   · rfl
 
-/-- Target refinement reads the shared contracts; replacing bodies preserves it. -/
-theorem ptrZielVerfeinert_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) (n : Nat)
-    (hf : D.passt f n = true) (h : PtrZielVerfeinert (teilP e E₁ E₂ f) f n hf) :
-    PtrZielVerfeinert (verbindeP e E₁ E₂) f n hf := by
-  rw [teilP_teil hV f] at h
-  exact h
-
 theorem fussOrteG_teil (hV : Verbindbar E₁ E₂) (f : D.Fn) :
     fussOrteG (verbindeP e E₁ E₂) f = fussOrteG (teilP e E₁ E₂ f) f := by
   conv => rhs; rw [teilP_teil hV f]
@@ -248,7 +241,7 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
     (hN₁ : NutzerTeil e E₁) (hN₂ : NutzerTeil (fun f => !e f) E₂) :
     NutzerPflicht (verbinde e E₁ E₂) := by
   have hS : E₂.S = E₁.S := hV.sperren.symm
-  refine ⟨⟨fun passes f => ?_, hN₁.logik.2.1, hN₁.logik.2.2.1, ?_⟩,
+  refine ⟨⟨fun passes f => ?_, hN₁.logik.2.1, hN₁.logik.2.2⟩,
     ⟨hN₁.start.sperren, ?_⟩⟩
   · show KoerperGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
@@ -267,12 +260,6 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
       exact ⟨(koerper_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr g⟩
-  · intro f n hf
-    apply ptrZielVerfeinert_teil hV f n hf
-    unfold teilP
-    cases he : e f
-    · exact hN₂.logik.2.2.2 f (by simp only [he, Bool.not_false]) n hf
-    · exact hN₁.logik.2.2.2 f he n hf
   · intro a ha
     show ReqAmEintritt E₁.P a.1 (E₁.sp0.welt []) a.2
     simp only [verbinde, List.mem_append] at ha

@@ -53,13 +53,12 @@ def SperrInvLokal (S : SperrInv D) : Prop :=
     with caller duty and no `logik` outcome, owed invariants at value AND reason exits; the
     lock invariants and declared axiom ensures the user wrote read only their carriers.
     (Until 2026-09-14 this was all of `NutzerPflicht`.)
-    Since C06 the interface refinement `PtrVerfeinert` is an explicit conjunct:
-    every admitted target refines its pointer interface, contravariant
-    requires and covariant normal ensures over arbitrary entry/current worlds. -/
+    The interface refinement `PtrVerfeinert` is no user duty (owner, 2026-11-20): the checker decides it
+    (`checkPointers`) where a body certificate needs it at an indirect call. -/
 def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
   (∀ (passes : Nat) (f : D.Fn),
     KoerperGutS P passes Q S f ∧ InvGutS P passes Q S f ∧ InvGutGrund P passes Q S f) ∧
-  SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert P
+  SperrInvLokal S ∧ AxEnsLokal Q
 /-- **The start obligation** (NEW 2026-09-15, verdict P1): at the program's DECLARED initial
     memory every lock invariant holds, and every declared start's `requires` holds with its
     declared arguments. Before, these two were conditions on the quantified start

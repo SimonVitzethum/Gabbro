@@ -19,7 +19,6 @@ structure NutzerLogikA (E : Einheit D) : Prop where
   bodies : ∀ passes f, KoerperGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f
   lockLocal : SperrInvLokal E.S
   axiomLocal : AxEnsLokal E.Q
-  pointers : PtrVerfeinert E.P
   startRequires : ∀ a ∈ E.starts ++ E.gestartet, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
   opaqueLockInitial : ∀ lock, E.lockFormulas lock = none → E.S.inv lock E.sp0 = true
 
@@ -32,7 +31,7 @@ theorem nutzerPflichtA_of_geprueft {E : Einheit D} {functions : List D.Fn} {lock
     NutzerPflichtA E := by
   refine ⟨⟨fun passes f => ⟨logic.bodies passes f,
     invGut_of_geprueft complete checked passes f⟩,
-    logic.lockLocal, logic.axiomLocal, logic.pointers⟩, ⟨?_, logic.startRequires⟩⟩
+    logic.lockLocal, logic.axiomLocal⟩, ⟨?_, logic.startRequires⟩⟩
   obtain ⟨certificate, result⟩ := checked
   intro lock
   cases source : E.lockFormulas lock with
@@ -67,11 +66,11 @@ theorem invariantVCB_invGut (complete : ∀ f, f ∈ functions)
   exact ⟨invGutS_of_A facts.1, invGutGrund_of_A facts.2⟩
 
 /-- Reconstruct the existing SC duty from the checker certificate. Only the
-    locality and pointer premises remain inputs; Spec itself is unchanged. -/
+    locality premises remain inputs; Spec itself is unchanged. -/
 theorem logikPflicht_of_invariantVCB (complete : ∀ f, f ∈ functions)
     (accepted : invariantVCB program S functions sources budget hints locks = true)
     (Q : AxEns D)
-    (locality : SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert program) :
+    (locality : SperrInvLokal S ∧ AxEnsLokal Q) :
     LogikPflicht program S Q :=
   ⟨fun passes f => ⟨koerperGutS_of_A
       ((invariantVCB_sound complete accepted f passes Q (fun _ => False)
@@ -85,7 +84,7 @@ theorem logikPflichtA_of_invariantVCB (complete : ∀ f, f ∈ functions)
     (accepted : invariantVCB program S functions sources budget hints locks = true)
     (Q : AxEns D) (shared : D.Tab ⊕ D.Glob → Prop)
     (subset : ∀ carrier, shared carrier → AtomarAusgenommen carrier)
-    (locality : SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert program) :
+    (locality : SperrInvLokal S ∧ AxEnsLokal Q) :
     LogikPflichtA program S Q shared :=
   ⟨fun passes f => ⟨(invariantVCB_sound complete accepted f passes Q shared subset).1,
     invariantVCB_invGutA complete accepted passes Q shared subset f⟩, locality⟩

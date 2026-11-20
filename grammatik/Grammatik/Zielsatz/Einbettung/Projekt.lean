@@ -71,10 +71,7 @@ theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : P
     {S : SperrInv D} {Q : AxEns D} (hL : LogikPflichtA P S Q OffenA) (p : Projekt D')
     (hU : E.Uebernahme hZ hS P S Q OffenA p.E.P p.E.S p.E.Q OffenA) {pad : List (Ereignis D)}
     (hp : PadOk pad) (heigen : ∀ f', p.eigen f' = true → ∃ f, E.fn f = f')
-    (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q)
-    (hPtr : ∀ f', p.eigen f' = true → ∀ n (hf : D'.passt f' n = true),
-      PtrZielVerfeinert p.E.P f' n hf)
-    (sp0 : Speicher D) (starts : List (Σ w : D.Fn, Env D (D.params w)))
+    (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q)    (sp0 : Speicher D) (starts : List (Σ w : D.Fn, Env D (D.params w)))
     (hLS : ∀ L, S.inv L sp0 = true) (hLR : ∀ a ∈ starts, ReqAmEintritt P a.1 (sp0.welt []) a.2)
     (hsp : E.speicherZ hZ p.E.sp0 = sp0)
     (hst : p.E.starts ++ p.E.gestartet =
@@ -83,7 +80,7 @@ theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : P
     NutzerTeilO p :=
   ⟨⟨fun passes f' hf' => by
       obtain ⟨f, rfl⟩ := heigen f' hf'
-      exact E.logikPflicht_E hZ hS hU hp hL passes f, hSL, hQL, hPtr⟩,
+      exact E.logikPflicht_E hZ hS hU hp hL passes f, hSL, hQL⟩,
     E.startTeil_E hZ hS p hU sp0 starts hLS hLR hsp hst hsperr⟩
 
 end Einbettung

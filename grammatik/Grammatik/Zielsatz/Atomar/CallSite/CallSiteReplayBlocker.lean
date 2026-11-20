@@ -98,7 +98,7 @@ def goodUnit : Einheit decl :=
 
 theorem good_user : NutzerPflichtA goodUnit where
   logik := by
-    refine ⟨?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · intro passes f
       refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
       · intro O hr hl hQ U hU A hA R hR hOV σ ρ hreq
@@ -113,7 +113,6 @@ theorem good_user : NutzerPflichtA goodUnit where
       exact nomatch L
     · intro a σ σ' v ht hg
       rfl
-    · exact ptrVerfeinert_trivial (fun _ _ _ => rfl) (fun _ => rfl)
   start :=
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }

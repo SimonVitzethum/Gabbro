@@ -298,25 +298,23 @@ structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Ei
 
 /-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
     bodies it OWNS at every budget, its lock and axiom families read only their carriers, and
-    its start obligation. Each conforming target it owns also refines its pointer
-    interface (C06). A placeholder owes nothing -- its owner supplies both proofs. -/
+    its start obligation. Pointer-interface refinement is no user duty (owner, 2026-11-20).
+    A placeholder owes nothing -- its owner supplies both proofs. -/
 structure NutzerTeil (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
       KoerperGutS E.P passes E.Q E.S f ∧ InvGutS E.P passes E.Q E.S f ∧
         InvGutGrund E.P passes E.Q E.S f) ∧
-    SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
-      ∀ f, eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert E.P f n hf
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q
   start : StartPflicht E
 
 /-- **The user's logic of ONE unit, with the atomic rely** (the rely over the unit's own shared
-    atomics), including C06 target refinement only for its own functions. -/
+    atomics). -/
 structure NutzerTeilA [DecidableEq D.Fn] (eigen : D.Fn → Bool) (E : Einheit D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), eigen f = true →
       KoerperGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
         InvGutSA E.P passes E.Q E.S (GeteiltA E.P E.ws) f ∧
         InvGutGrundA E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧
-    SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
-      ∀ f, eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert E.P f n hf
+    SperrInvLokal E.S ∧ AxEnsLokal E.Q
   start : StartPflicht E
 
 end Verbund

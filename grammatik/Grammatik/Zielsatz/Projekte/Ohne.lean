@@ -83,12 +83,12 @@ private theorem bodyLogic_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g 
         rw [hinv] at hi
         cases hi⟩
 
-/-- The full collection consumes the canonical C06 refinement rather than deriving it from bodies. -/
+/-- Without contracts, invariants or atomics the whole logic duty is decided. -/
 theorem logikPflicht_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hreq : ∀ g, P.requires g = .tru) (hens : ∀ g, P.ensures g = .tru) (hinv : D.invs = [])
-    (hfrei : programmLogikFrei P fs = true) (hPtr : PtrVerfeinert P) :
+    (hfrei : programmLogikFrei P fs = true) :
     LogikPflicht P (SperrInv.leer D) (axWahr D) :=
-  ⟨bodyLogic_ohne hvoll hreq hens hinv hfrei, fun _ _ _ _ => rfl, axEnsLokal_wahr, hPtr⟩
+  ⟨bodyLogic_ohne hvoll hreq hens hinv hfrei, fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
 
 /-- Without an atomic global the body logic carries to the open-world rely;
     the project supplies refinement only for the targets it owns. -/
@@ -96,17 +96,14 @@ theorem nutzerTeilO_ohne [DecidableEq D.Fn] {p : Projekt D} {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hat : ∀ g : D.Glob, D.atomar g = false)
     (hP : p.E.S = SperrInv.leer D) (hQ : p.E.Q = axWahr D)
     (hreq : ∀ g, p.E.P.requires g = .tru) (hens : ∀ g, p.E.P.ensures g = .tru) (hinv : D.invs = [])
-    (hfrei : programmLogikFrei p.E.P fs = true)
-    (hPtr : ∀ f, p.eigen f = true → ∀ n (hf : D.passt f n = true),
-      PtrZielVerfeinert p.E.P f n hf)
-    (hstart : ∀ a ∈ p.E.starts ++ p.E.gestartet, ReqAmEintritt p.E.P a.1 (p.E.sp0.welt []) a.2) :
+    (hfrei : programmLogikFrei p.E.P fs = true)    (hstart : ∀ a ∈ p.E.starts ++ p.E.gestartet, ReqAmEintritt p.E.P a.1 (p.E.sp0.welt []) a.2) :
     NutzerTeilO p := by
   have free : ∀ f, LiestNicht p.E.P OffenA f := by
     intro f c _ hc
     obtain ⟨g, _, hg⟩ := hc.1
     rw [hat g] at hg
     cases hg
-  refine ⟨⟨fun passes f _ => ?_, ?_, ?_, hPtr⟩, ⟨fun L _ => ?_, hstart⟩⟩
+  refine ⟨⟨fun passes f _ => ?_, ?_, ?_⟩, ⟨fun L _ => ?_, hstart⟩⟩
   · obtain ⟨k, i, g⟩ := bodyLogic_ohne hvoll hreq hens hinv hfrei passes f
     rw [← hP, ← hQ] at k i g
     exact ⟨koerperGutSA_of_frei (free f) k, invGutSA_of_frei (free f) i,

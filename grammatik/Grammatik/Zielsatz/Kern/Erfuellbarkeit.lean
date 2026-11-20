@@ -263,7 +263,7 @@ theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []
 theorem mE_nutzerPflicht : NutzerPflicht mE :=
   ⟨⟨fun passes f => ⟨CheckedMehrfaden.bodies passes f, CheckedMehrfaden.invariants passes f,
       CheckedMehrfaden.reason_invariants passes f⟩, CheckedMehrfaden.family_local,
-      axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
+      axEnsLokal_wahr⟩,
     ⟨fun _ => rfl, fun a ha => by
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
@@ -317,8 +317,7 @@ theorem zPC_akzeptiert : Akzeptiert zPC zS zFs [()] [.inl ()] [zHaupt]
 
 theorem zPC_logik : LogikPflicht zPC zS (axWahr zD) := by
   have duties := Vertraege.Pruefer.KontrakteGeprueftB_sound zFs_voll PoolSnapshot.contracts_checked
-  refine ⟨fun passes f => ?_, zS_lokal, axEnsLokal_wahr,
-    ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
+  refine ⟨fun passes f => ?_, zS_lokal, axEnsLokal_wahr⟩
   have checked := duties f passes (axWahr zD) (fun _ => False) (fun _ h => False.elim h)
   exact ⟨koerperGutS_of_A checked.1, invGutS_of_A checked.2.1, invGutGrund_of_A checked.2.2⟩
 
@@ -335,7 +334,7 @@ theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHa
 theorem probeB_erfuellbar_haupt [RootNativeFloat.Hardware] : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO, inferInstance⟩, _, _, laufzeit_initRuhe zEB,
     initRuhe_laeuft zEB rfl⟩
 

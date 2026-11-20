@@ -252,15 +252,15 @@ theorem zielX_rely (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
   have hex := startExklusiv_ohne_haelt init hLeer
   have hGA := gx_ga_lauf hTA hX
   have hV := ziel_ort_atomar_voll P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hInv := invarianten_atomar P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) M hX
   have hZI := zielInvSA_erreichbarGX P O passes Q S (kVon P fs init) (GeteiltV P ws) (lokW P fs ws)
-    sp init hO hRL hQ hN.2.2.1 hS hvoll (fun t => hA.abg _)
+    sp init hO hRL hQ hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK (fun f => massPflicht_aus P passes Q S (GeteiltV P ws) Mass.leer f) hZ.req hZ.sperren hex M hX
   exact

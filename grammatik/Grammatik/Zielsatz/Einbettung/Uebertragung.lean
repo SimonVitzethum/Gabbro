@@ -360,9 +360,9 @@ theorem logikPflicht_E {P : Programm D} {S : SperrInv D} {Q : AxEns D} {T : D.Ta
       InvGutSA P' passes Q' S' T' (E.fn f) ∧ InvGutGrundA P' passes Q' S' T' (E.fn f) := by
   intro passes f
   obtain ⟨h1, h2, h3⟩ := hL.1 passes f
-  exact ⟨E.koerperGutSA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h1,
-    E.invGutSA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h2,
-    E.invGutGrundA_E hZ hS hU hp hL.2.1 hL.2.2.1 passes f h3⟩
+  exact ⟨E.koerperGutSA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h1,
+    E.invGutSA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h2,
+    E.invGutGrundA_E hZ hS hU hp hL.2.1 hL.2.2 passes f h3⟩
 
 end Einbettung
 

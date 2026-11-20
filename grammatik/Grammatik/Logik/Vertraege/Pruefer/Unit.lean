@@ -91,8 +91,7 @@ theorem nutzerPflicht_of_geprueft {E : Einheit D} {functions : List D.Fn} {locks
   exact
     { logik := ⟨fun passes f => certificate.contracts f (functionComplete f) passes E.Q
         (GeteiltA E.P E.ws) (fun _ shared => shared.1),
-        fun lock => certificate.lockLocal lock (lockComplete lock), certificate.axiomLocal,
-        fun f => certificate.pointers f (functionComplete f)⟩
+        fun lock => certificate.lockLocal lock (lockComplete lock), certificate.axiomLocal⟩
       start := ⟨fun lock => certificate.lockInitial lock (lockComplete lock), certificate.starts⟩ }
 
 theorem massPflicht_of_geprueft {E : Einheit D} {functions : List D.Fn} {locks : List D.Lock}

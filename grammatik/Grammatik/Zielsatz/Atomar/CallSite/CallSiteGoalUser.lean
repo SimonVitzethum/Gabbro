@@ -96,14 +96,13 @@ theorem invGrund (passes : Nat) (T : wD.Tab ⊕ wD.Glob → Prop) :
 /-- **(b), the user's logic with the rely**, and the start duty. -/
 theorem user : NutzerPflichtA wE where
   logik := by
-    refine ⟨?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · intro passes f
       cases f
       exact ⟨koerper passes _, invRueck passes _, invGrund passes _⟩
     · intro L
       exact nomatch L
     · exact fun _ _ _ _ _ _ => rfl
-    · exact ptrVerfeinert_trivial (P := wP) (fun _ _ _ => rfl) (fun _ => rfl)
   start :=
     { sperren := fun L => nomatch L
       req := fun _ _ => rfl }

@@ -304,15 +304,13 @@ structure PrueferX where
     akzeptiert E fs.1 ls.1 cs.1 = true →
       AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku ∧ BesitzStart E ∧ Kernzelle.AkkuStart E E.akku
 
-/-- **The logic of the bodies with the atomic rely over `T`.** Since C06 the
-    interface refinement `PtrVerfeinert` is an explicit conjunct, as in
-    `LogikPflicht`: the refinement duty is user proof, never discharged by
-    structural acceptance of a candidate pair. -/
+/-- **The logic of the bodies with the atomic rely over `T`.** As in `LogikPflicht`, the interface
+    refinement `PtrVerfeinert` is no user duty (owner, 2026-11-20): the checker decides it. -/
 def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
     Prop :=
   (∀ (passes : Nat) (f : D.Fn),
     KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f) ∧
-  SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert P
+  SperrInvLokal S ∧ AxEnsLokal Q
 
 /-- **The user's own logic with the atomic rely**: the rely over the unit's shared atomics. -/
 structure NutzerPflichtA [DecidableEq D.Fn] (E : Einheit D) : Prop where

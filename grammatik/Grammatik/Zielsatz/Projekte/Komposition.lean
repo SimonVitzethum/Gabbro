@@ -148,15 +148,15 @@ theorem geteiltA_offen [DecidableEq D.Fn] {P : Programm D} {ws : List D.Fn} {c :
   ⟨h.1, h.2.1⟩
 
 /-- **One project's user obligation** (the part of (b) a project owes, reusable in every
-    program that links it): its own bodies against the open-world rely and the canonical
-    pointer-interface refinement of its own targets, including targets absent from a run. -/
+    program that links it): its own bodies against the open-world rely, its lock and axiom
+    families' locality, and its start. Pointer-interface refinement is no user duty (owner,
+    2026-11-20): the checker decides it. -/
 structure NutzerTeilO (p : Projekt D) : Prop where
   logik : (∀ (passes : Nat) (f : D.Fn), p.eigen f = true →
       KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
         InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
         InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f) ∧
-    SperrInvLokal p.E.S ∧ AxEnsLokal p.E.Q ∧
-      ∀ f, p.eigen f = true → ∀ n (hf : D.passt f n = true), PtrZielVerfeinert p.E.P f n hf
+    SperrInvLokal p.E.S ∧ AxEnsLokal p.E.Q
   start : StartTeil p
 
 /-! ## 3. Monotonicity: stronger ensures, one body -/
@@ -255,7 +255,7 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠
     (hD : Deckend ps) (hDS : DeckendS ps) (hN : ∀ p ∈ ps, NutzerTeilO p) :
     NutzerPflichtA (komponiere B ps) := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
-  refine ⟨⟨fun passes f => ?_, ?_, ?_, ?_⟩, ⟨?_, ?_⟩⟩
+  refine ⟨⟨fun passes f => ?_, ?_, ?_⟩, ⟨?_, ?_⟩⟩
   · obtain ⟨p, hp, he, hk⟩ := koerperVon_besitzer (B := B.P) hD f
     obtain ⟨k, i, g⟩ := (hN p hp).logik.1 passes f he
     have hP : p.E.P = mitRumpf B.P p.E.P.rumpf := passend_P (hV p hp)
@@ -274,12 +274,7 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠
   · show SperrInvLokal B.S
     rw [(hV p0 hp0).sperrInv]
     exact (hN p0 hp0).logik.2.1
-  · exact axEnsLokal_qAlle fun p hp => (hN p hp).logik.2.2.1
-  · intro f n hf
-    obtain ⟨p, hp, he⟩ := hD f
-    have refined := (hN p hp).logik.2.2.2 f he n hf
-    rw [passend_P (hV p hp)] at refined
-    exact refined
+  · exact axEnsLokal_qAlle fun p hp => (hN p hp).logik.2.2
   · intro L
     show B.S.inv L B.sp0 = true
     obtain ⟨p, hp, hL⟩ := hDS L

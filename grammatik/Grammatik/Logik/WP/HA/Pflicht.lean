@@ -71,16 +71,15 @@ theorem pflichten_aus_wp {P : Programm D} {passes : Nat} {Q : AxEns D} {S : Sper
 
 /-- **The user's logic of the goal theorem, from weakest preconditions.** -/
 theorem logikPflichtA_aus {P : Programm D} {Q : AxEns D} {S : SperrInv D} {T : D.Tab ⊕ D.Glob → Prop}
-    (h : ∀ passes f, PflichtWP P passes Q S T f) (hS : SperrInvLokal S) (hQ : AxEnsLokal Q)
-    (hPtr : PtrVerfeinert P) :
+    (h : ∀ passes f, PflichtWP P passes Q S T f) (hS : SperrInvLokal S) (hQ : AxEnsLokal Q) :
     LogikPflichtA P S Q T :=
-  ⟨fun passes f => pflichten_aus_wp (h passes f), hS, hQ, hPtr⟩
+  ⟨fun passes f => pflichten_aus_wp (h passes f), hS, hQ⟩
 
 /-- **Premise (b) of the goal theorem, from weakest preconditions and the start obligation.** -/
 theorem nutzerPflichtA_aus [DecidableEq D.Fn] (E : Zielsatz.Einheit D)
     (h : ∀ passes f, PflichtWP E.P passes E.Q E.S (GeteiltA E.P E.ws) f) (hS : SperrInvLokal E.S)
-    (hQ : AxEnsLokal E.Q) (hPtr : PtrVerfeinert E.P) (hStart : StartPflicht E) : Zielsatz.NutzerPflichtA E :=
-  ⟨logikPflichtA_aus h hS hQ hPtr, hStart⟩
+    (hQ : AxEnsLokal E.Q) (hStart : StartPflicht E) : Zielsatz.NutzerPflichtA E :=
+  ⟨logikPflichtA_aus h hS hQ, hStart⟩
 
 /-- **Conversely**: the three body obligations give `PflichtWP` -- the calculus loses nothing. -/
 theorem wp_aus_pflichten {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D} {T : D.Tab ⊕ D.Glob → Prop}
@@ -96,17 +95,15 @@ theorem wp_aus_pflichten {P : Programm D} {passes : Nat} {Q : AxEns D} {S : Sper
   · exact (hk1 O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq).2
 
 /-- **Completeness at the level of the goal theorem**: premise (b) holds EXACTLY when the body obligations hold as
-    weakest preconditions, the lock invariants and axiom ensures are local, every pointer target refines its interface,
-    and the start obligation holds. Every true user logic of a certificate is provable in the calculus. -/
+    weakest preconditions, the lock invariants and axiom ensures are local, and the start obligation holds. Every true user logic of a certificate is provable in the calculus. -/
 theorem nutzerPflichtA_iff [DecidableEq D.Fn] (E : Zielsatz.Einheit D) :
     Zielsatz.NutzerPflichtA E ↔
       (∀ passes f, PflichtWP E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧ SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
-        PtrVerfeinert E.P ∧ StartPflicht E := by
+        StartPflicht E := by
   constructor
   · intro h
-    exact ⟨fun passes f => wp_aus_pflichten (h.logik.1 passes f), h.logik.2.1, h.logik.2.2.1,
-      h.logik.2.2.2, h.start⟩
-  · intro ⟨h, hS, hQ, hPtr, hStart⟩
-    exact nutzerPflichtA_aus E h hS hQ hPtr hStart
+    exact ⟨fun passes f => wp_aus_pflichten (h.logik.1 passes f), h.logik.2.1, h.logik.2.2, h.start⟩
+  · intro ⟨h, hS, hQ, hStart⟩
+    exact nutzerPflichtA_aus E h hS hQ hStart
 
 end Gabbro.Grammatik.WP

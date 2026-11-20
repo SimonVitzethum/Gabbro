@@ -90,7 +90,7 @@ theorem logik_aus_teilpflichten {u : UProg} {C : Fin u.fns.length → Prop}
     Zielsatz.LogikPflicht P (SperrInv.leer (declOf u)) (axWahr (declOf u)) := by
   classical
   refine ⟨fun passes c => ⟨?_, invPflichten_teil S P passes c⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr, schnittstellen_aus_teil hC hO P fs hlow⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
   by_cases hc : C c
   · exact hK passes c hc
   · exact (hO c hc P fs hlow).1 passes

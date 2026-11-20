@@ -225,7 +225,7 @@ theorem oblig_ptr_verfeinert : PtrVerfeinert G104_referenz_oblig.gP :=
 theorem oblig_logik : Zielsatz.LogikPflicht G104_referenz_oblig.gE.P
     G104_referenz_oblig.gE.S G104_referenz_oblig.gE.Q :=
   ⟨fun passes f => ⟨oblig_koerper passes f, oblig_inv passes f, oblig_invGrund passes f⟩,
-    oblig_S_lokal, oblig_ax_lokal, oblig_ptr_verfeinert⟩
+    oblig_S_lokal, oblig_ax_lokal⟩
 
 /-! ## 3. The start obligation, and the whole duty -/
 
