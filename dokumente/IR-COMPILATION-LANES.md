@@ -870,7 +870,7 @@ Measured: all 227 modules of the `Stage0` closure (root without the two modules 
 `stage0/Nachpruefung/Teil*.lean` reports 307+ theorems on only `propext`/`Classical.choice`/`Quot.sound`
 (including the new span, store, selection and exit theorems); layout check passes; 116 textual
 source -> IR -> assembly programs of `stage0/proben-ir` (compile and execution results or refusal
-text) match, run with a runner regenerated from `runner/` sources (the old root build lacks `udiv`).
+text) match, run with a runner regenerated from `stage0/runner/` sources (the old root build lacks `udiv`).
 New textual programs `arr-triple`, `arr-runtime-index`, `arr-nested` (3-element and 2 x 3 arrays,
 constant and runtime indices) and `str-long` (capacity-3 string, copy, `lenof`) execute correctly.
 
@@ -908,7 +908,7 @@ rebuilt and fresh, `Nachpruefung.lean` audits 326 theorems on `propext`/`Classic
 (including `strEq_ok`, `strEqLong_ok`, `storeFrameSpan_ok`, `storeFramePointerSpan_run`, `wordsAt_arrSet`,
 `xorOrSpan_ok`, `strEq_words_iff`), the layout check passes, and 123 textual programs of `stage0/proben-ir`
 compile to IR and execute (or are refused with the expected text) identically on the assembly runner
-regenerated from `runner/`.
+regenerated from `stage0/runner/`.
 
 Already compiling before this step and unchanged: literals, variables, `arrCons`, `arrGet` (any length and
 nesting), `strLen`, copies of every aggregate, the world read/write path of IR-06.
@@ -2176,7 +2176,7 @@ owner stage advance and final consumption; dormant root spawned once. Negative
 twins: two mint sites, mint in a loop/callback/contract expression, duplicate
 start/pool/restart, initial-plus-minted duplicate, access by suspended lender,
 loan escape/consume, wrong returned stage, owner in ordinary `allocs`, and forged
-`own` from `rw`. Use existing `beispiele/114`/`115` as source requirements, not
+`own` from `rw`. Use existing `examples/114`/`115` as source requirements, not
 proofs; the deleted Rust `kbedingung.rs` and D265–D268 of the deleted sentence register were
 the structural contract to port — none of the four rules is yet a Lean judgment. Software minter behavior belongs to
 user logic under C08, despite the historical “named assumption” documentation.
@@ -2209,7 +2209,7 @@ references in the deleted `schablonen.rs` were never a connected
 | RW proofs/Spec | Integrate `RwSchritt.rwExkl_schritt`, `RwOrdnung.rennfrei_rw/rwSicht_schritt`, `RwInv.sperrInvRw_schritt/leser_sieht_inv` and `RwRang.kein_warteZyklus_rw` with the actual G rules. `SperrInvG` gains the stronger reader-only/free case; retain its existing free-lock fact. `InvRuheG`/`InvSichtG`, `SperrWechselG`/`SperrSichtG` and GX analogues must still give unchanged carriers under another holder and invariants at every move. Extend visibility to every reader; replace “holder alone” prose by “writer alone; readers share an invariant-preserving view”. Pairwise reader reads may coexist; every pair with a write remains ordered. Prove the old exclusive specialization and all original invariant facts; do not weaken them to return-only checks. |
 | RCU declaration and resources | Give domains their own **new** declaration identity/metadata (protected carriers, publication roots, reclaim place/service), distinct from `D.Lock`. Replace `Stmt.observes` sugar with a canonical scoped observation constructor. Append **new** `Res.observing d site`, `Res.retired d site` and `Res.reclaimable d site`; static sites bind dynamic records in the frame, not runtime epochs in `Λ`. The **new** machine RCU state records nested observations per thread/frame, fresh observation tickets, publication generations, retired object/range identities and grace cutoffs. Observation permits only reads through the captured, live published generation; never grants write, ownership, writer exclusion or a rank. No observation capability escapes its lexical scope or survives reclaim. |
 | Publication/retirement/grace | Use one **new** lifecycle judgment, carried by actual ordinary publication, unlink and service calls, rather than inventing surface `retire`/`synchronize` keywords. Publication initializes a fresh, exclusively owned version, release-publishes its capability and transfers it to immutable published state; readers enter before acquiring the root. Unlink removes **all** publication paths to the old version before it becomes retired. A grace operation snapshots the outstanding observations that could have seen it; reclaim authority is issued only after each has exited, including suspended/nested sections. Later readers cannot acquire the retired version. Reclaim consumes that authority and calls the proved provider release; double reclaim and reuse before grace are impossible. A zero counter read or a user `assume` is not this proof. Domain metadata alone does not identify which write unlinks an object: export a checked lifecycle derivation from the actual source calls/contracts, or refuse that reclamation site. |
-| Race/invariant boundary | RCU protects lifetime, not arbitrary in-place mutation. `beispiele/31` reads `Konten.zaehler` without the writer lock while another function writes it: that pair cannot be admitted by merely adding `observing`. Published non-atomic carriers remain immutable until grace; updates create another version, and mutable shared payload uses an independently proved atomic interface. Existing lock guards remain obligations: observing cannot bypass `D.braucht` or invalidate `SperrSichtG`. For the first complete cut, use disjoint declared carriers for versions, separate writer metadata locks and a checked version registry. Arbitrary dynamic versions require C12/C08's live region realization and an injective version-to-carrier/extent map. W currently treats a whole table as one location (`Spec.lean` header): do not silently identify different slots with independent W locations or drop table/group invariants. Any finer location extension must retain the aggregate invariant/frame results and be reviewed explicitly; otherwise such same-table updates remain refused. Full lifecycle support is not permission to accept unsafe combinations of existing clauses. |
+| Race/invariant boundary | RCU protects lifetime, not arbitrary in-place mutation. `examples/31` reads `Konten.zaehler` without the writer lock while another function writes it: that pair cannot be admitted by merely adding `observing`. Published non-atomic carriers remain immutable until grace; updates create another version, and mutable shared payload uses an independently proved atomic interface. Existing lock guards remain obligations: observing cannot bypass `D.braucht` or invalidate `SperrSichtG`. For the first complete cut, use disjoint declared carriers for versions, separate writer metadata locks and a checked version registry. Arbitrary dynamic versions require C12/C08's live region realization and an injective version-to-carrier/extent map. W currently treats a whole table as one location (`Spec.lean` header): do not silently identify different slots with independent W locations or drop table/group invariants. Any finer location extension must retain the aggregate invariant/frame results and be reviewed explicitly; otherwise such same-table updates remain refused. Full lifecycle support is not permission to accept unsafe combinations of existing clauses. |
 | GX/weak memory | Extend `Speichermodell/Atomar/AtomarLauf.RufSchrittGX`, `Maschine/GXMaschine`, `Maschine/MaschineW`, `Maschine/Sicht` and `Maschine/DRF`: RCU ledger state is authoritative, unchanged by arbitrary presentations of shared atomic values. Derive publication visibility from the actual release/acquire reads-from chain, and grace completion from a proved synchronization protocol over that history, not the latest G value or one arbitrary GX counter answer. Retired generations cannot be reintroduced by a stale root read: bind observation validity and retirement to the protocol, with validation/retry where needed. Prove **new** `RcuInvG/RcuInvGX`: every observed capability live, every reclaimed object unreachable by outstanding readers, and published invariant stable for the captured generation. User duties cover all allowed shared-atomic answers as `KoerperGutSA` does today. New synchronization steps require a matching W-protocol refinement witness; ordinary GX shared-atomic reads remain arbitrary. A new memory-order primitive needs its W rule and lowering proof before use; never assume SC. |
 | Rank, waiting and progress | RW wait edges point only to incompatible holders and retain strict rank. A grace wait is not a lock acquire and cannot inherit a fictitious rank. Admit synchronous grace only outside observations and with **no held locks**, no outstanding joins/loans whose completion readers require; keep readers free of grace/join dependency cycles through transitive callee checks. Extend the combined wait graph and `KeinWarteZyklus` proof to grace edges, using the existing lock/start/join order plus these exclusions. Retire under a writer lock, release it, wait, then reacquire in rank order if needed; defer reclaim when source cannot do that. Extend `FortschrittG/FX` to expose an actual waiting dependency, not a new unproved “hardware” stop. No starvation/grace-time bound follows without the existing separate scheduling/termination duties; synchronous grace with an infinite reader may wait, but must not create a cyclic dependency. Check same-core handler dependencies in `Eigenschaften/KernMaske` too. |
 | Export/Stage 0 | Coordinates `Uebersetze.lean:1203/1212/2538/3590/4039`: retain shared declaration/mode, `SItemTief.rcuT`, `SAnw.watch`, reclaim expression and all exits. IR-09 owns shared acquisition/release, atomics and RCU protocol; IR-07 owns lifetime transitions; IR-08/10 share C11 cleanup; IR-06/03 supply captured capability spans; IR-12 supplies starts. `stage0/Stage0/Senke/Sperre/Ticket/{Code,Sync,Satz}` currently proves exclusive `locks_okT`, not shared or RCU. Prove mode-aware assembly protocol and observation/grace/reclaim calls against G/GX/W, including nesting, early return and actual memory effects. Connect through `lowS_ok/lowB_ok/lowEnd_ok` and the function/image chain. Sequential `AgreeW` alone does not establish concurrent synchronization. Reuse the assembly runner; do not create a second runner. |
@@ -2347,7 +2347,7 @@ ignored failure and stale resident-content assumption after return.
   stage-changing handoff. Read-sharing needs its own frozen/read-only authority,
   not duplication of `.marke`. The existing D266 `consumes`+`allocs` refusal is
   lifted only for explicit proved transfer/loan, never owner production.
-- **C10 RCU updates and grace binding:** `beispiele/31` and historical documentation
+- **C10 RCU updates and grace binding:** `examples/31` and historical documentation
   suggest plain in-place writer updates plus a named grace assumption. That
   conflicts with the standing race guarantee and OS-as-user-logic rule.
   Recommend immutable published versions (or independently atomic payload),
@@ -2447,7 +2447,7 @@ correspondence changes the current output-only translation promise and requires
 owner review; it adds no oracle assumption. Missing/ambiguous translator,
 unretained tokens, malformed schema, wrong arity/type, unproved totality/map,
 effects, mutable/linear payload and unproved payload precondition stay refused.
-Witnesses: existing `beispiele/0106-summe-uebersetzt.gab` identity, a nonidentity
+Witnesses: existing `examples/0106-summe-uebersetzt.gab` identity, a nonidentity
 bounded map, two call sites with different regions, multi-field/product payload,
 payload-reading requires and both call outcomes. Negative twins include a
 well-typed **wrong** translator output, reordered arguments, changed translator
@@ -2545,7 +2545,7 @@ all privileged entry/register/boot operations.
 
 `Parser/Item/ElementTief.accT` stores name/type/operator/optional core count;
 `Uebersetze.lean:4039` refuses it. `Isabelle/AccumulatesMonoid` proves abstract
-fold/permutation/RMW identities, not actual cells. `beispiele/0023-akkumulatoren.gab`
+fold/permutation/RMW identities, not actual cells. `examples/0023-akkumulatoren.gab`
 states assignment means merge, the core query is a foreign binding, and live
 folds are not atomic snapshots. `Zielsatz/Eigenschaften/KernMaske`'s
 `kern : Faden → Nat` is a schedule parameter, not a runtime core-query theorem.
@@ -2571,7 +2571,7 @@ fold. Negative twins: N=0/unknown, out-of-range core, min initialized to zero,
 `and` initialized to zero, wrong width/sign, missing lock/lease, read concurrent
 with a plain writer, local-add fit but total overflow, mixed-sign intermediate
 overflow, premature reduction and reset during an active update. Floats remain
-refused (F004); `beispiele/23` is a source fixture, not already accepted evidence.
+refused (F004); `examples/23` is a source fixture, not already accepted evidence.
 
 **C16 — declared-check admission beyond a linear Duty.**
 
@@ -3917,7 +3917,7 @@ trusts nor silently inserts boot logic. The named x86 binding item is the sole
 bundled boot exception; inclusion is explicit and its implementation is proved.
 No seL4 changes, executable source interpreter or adjacent hardware project.
 
-`stage0/` and `runner/` are read-only inventory subjects, excluded from every
+`stage0/` and `stage0/runner/` are read-only inventory subjects, excluded from every
 package below, including estimates. Neither their code nor their profile gates
 are changed. Runner-based validation is **deferred, not in scope**. Front-end
 admission here does not claim a new source-to-IR or executable-image case. Byte
@@ -3950,7 +3950,7 @@ have been split: implementation must use the current modules named here.
 | Register source-to-G export | `UStmt.regRead/regReadElse/regWrite/regWriteB` in `Uebersetze/Teil/Teil1.lean`; producers in `Teil7/8/10`; typed `lowRegWriteL/lowRegWriteBL` in `UebersetzeAllg2/Teil3.lean`; register binders in `UebersetzeAllg3/Seq.lean`, `Ende.lean`, `Body.lean`. | Basic reads/writes/fallible reads have producers. Device transition invocation has no such producer (`uGeraet` refuses it); table-state `Stmt.shift` and C04's generated functions are different operations. |
 | Existing architecture / body fragments | `Code/Model/Syntax.lean` defines ISA-neutral operands/instructions, atomics, fences and `imsk`, with abstract frames; `Code/Refine/*`, `Code/Conc/*`, `Code/Gate/*` provide refinement pieces. `Kern/Semantik/Adressraum/Teil1–2.lean` has `UserRegion`, `GepruefteKopie`, `GepruefterUebergang`, and checked-copy shapes. | These do not decode source ASM or connect physical authority to every G/GX interleaving. The address-boundary files explicitly record their missing integration into actual transitions. Reuse applicable definitions/lemmas, not their unconnected conclusions as a new premise. |
 | Stage-0 inventory only | `stage0/Stage0/Compiler.lean::compile/Compiled` preserves source/elaboration/checker facts; `IRBild.lean::emit/Emitted.correct` binds its actual emitted IR image conditionally. `Profil.lean::runnerCompatible` requires x86-64, `checkEntry` refuses hardware entry obligations, `checkItems` refuses boot and applies bounded guest checks. `Senke/Anweisung.lean::lowS/lowB/lowEnd` explicitly return `none` for register operations; their correctness cases are impossible-success proofs. | No new low-level coverage follows from those proofs. This lane leaves every gate and refusal there untouched. A generic certificate checked in the front end does not make this compiler emit the corresponding operation. |
-| Assembly IR runner inventory only | `runner/Runner/IR/Step.lean::step`, `Prog/IRAsm.lean::irImage`, `X86/Ins/Dec/Enc/Step.lean`, `Beweis/Satz.lean::runner_tso/runner_sc`; `runner/runner.s` is the existing implementation. | The instruction subset implements the host runner; it is not a mixed-mode boot semantics or AArch64 EL1 model. It is unchanged. No privileged target execution or new validation result is claimed. |
+| Assembly IR runner inventory only | `stage0/runner/Runner/IR/Step.lean::step`, `Prog/IRAsm.lean::irImage`, `X86/Ins/Dec/Enc/Step.lean`, `Beweis/Satz.lean::runner_tso/runner_sc`; `stage0/runner/runner.s` is the existing implementation. | The instruction subset implements the host runner; it is not a mixed-mode boot semantics or AArch64 EL1 model. It is unchanged. No privileged target execution or new validation result is claimed. |
 
 This freezes a source-inspection baseline, not the moving integration's final
 interfaces. The lead must rebase the design's coordinates and reuse completed C
@@ -4304,7 +4304,7 @@ their new replay theorem must handle that history without assuming them equal.
     into normal calls. Depends on L11/L12, C03/C06/C08/C09/C11/C12/C14/C16/C17.
     Files: `grammatik/Grammatik/Parser/Elab/*` (admission), `grammatik/Grammatik/Zielsatz/Kern/Akzeptiert*`
     (checker), `programmlogik/Gabbro/Body/*`,
-    `bruecke/Bruecke/{Pflichten,Anweisung,Simulation}*`.
+    `programmlogik/bruecke/Bruecke/{Pflichten,Anweisung,Simulation}*`.
     **12–20 days; Lean 1,400–2,400 LOC, Rust 0.**
 
 14. **L14 — named target-binding inclusion and certificate admission.** Goal:
@@ -4351,7 +4351,7 @@ their new replay theorem must handle that history without assuming them equal.
     the assumption inventory consistently; no new Markdown file. Depends on
     L01–L14 and the completed C-package regression baseline. Files: existing
     canonical parser/model witness modules, Lean checker integration tests,
-    `beispiele/` and `beispiele/gift/`, `dokumente/{SYNTAX,LANGUAGE,THEOREM-MAP}.md`,
+    `examples/` and `examples/poison/`, `dokumente/{SYNTAX,LANGUAGE,THEOREM-MAP}.md`,
     `AGENTS.md` within the Markdown cap.
     **8–14 days; Lean 900–1,600 LOC, Rust 0.**
 

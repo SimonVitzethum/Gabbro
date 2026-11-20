@@ -10,7 +10,7 @@ One row per EBNF rule of `dokumente/SYNTAX.md` (190 defined rules), four columns
             M  measured: decided witnesses with negative twins (`Print/Proben`) and the corpus census
                (`rt=` function bodies, `ri=` items); no theorem      .  none
   elab      U  `elabU`/`lowerAllg` lowers the rule into `UProg`/`declOf`/`Programm`   .  none
-  corpus    number of `beispiele/*.gab` files that use the rule's head word(s) (a text scan)
+  corpus    number of `examples/*.gab` files that use the rule's head word(s) (a text scan)
 
 The corpus lines come from the Lean census (`Grammatik/Parser/Cover/Census.lean`, run through `lake env lean
 --run`): per file `lex`, whole-file `parse` and `elab`, and the first failing items. This script only reads the
@@ -264,7 +264,7 @@ def strip(src):
 
 
 def corpus_text():
-    d = os.path.join(ROOT, "beispiele")
+    d = os.path.join(ROOT, "examples")
     res = {}
     for n in sorted(os.listdir(d)):
         if n.endswith(".gab"):
@@ -289,7 +289,7 @@ def run_census():
     env = dict(os.environ)
     env.pop("ELAN_TOOLCHAIN", None)
     with open(out, "w") as fh:
-        subprocess.run(["lake", "env", "lean", "--run", "Grammatik/Parser/Cover/Census.lean", "../beispiele"],
+        subprocess.run(["lake", "env", "lean", "--run", "Grammatik/Parser/Cover/Census.lean", "../examples"],
                        cwd=os.path.join(ROOT, "grammatik"), env=env, stdout=fh, check=True)
     return out
 

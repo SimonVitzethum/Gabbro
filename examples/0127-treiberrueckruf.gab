@@ -1,0 +1,59 @@
+// 127 -- **A driver callback through a pointer type with world effects.**
+//
+// The comparator of `examples/126` talks only about its arguments; a driver callback
+// talks about the WORLD. So the slot carries `effects { writes Puffer.slots }` and
+// `costs <= 8 ops`, and a function fits where its own signature conforms (2026-10-21,
+// `Deklaration.passt` in the Lean model): its effects `⊆` the slot's and its costs `<=`
+// the slot's are DECIDED (`M128` refuses otherwise). The caller's hull reads the SLOT's
+// effects: delete `writes Puffer.slots` from `bediene` and `E008` falls.
+//
+// The callback names the table the way `examples/09` does -- directly, not through a
+// pointer parameter -- so the record holding the pointer compiles as written: the
+// slot's signature mentions no carrier type, only the carrier's name in its effects.
+//
+// **What does not cross the pointer.** No lock does (`N036`): a function that requires
+// `Held(L)` is no pointer value (`N590`), and a pointer type carries no contract
+// (`N589`). So the buffer here is a thread's own, unguarded table; a guarded one is
+// written by a direct call under its lock.
+module beispiel::treiberrueckruf {
+
+table Puffer count 64 {
+    slot {
+        wert : u32,
+    }
+}
+
+// The driver signature, at the TYPE: a world effect and a cost bound.
+type Rueckruf = {
+    cb : fn(k : u32)
+        effects { writes Puffer.slots }
+        costs   <= 8 ops,
+};
+
+// The function behind the pointer: the same effect, its own bound check inside.
+impl fn schreibe(k : u32)
+    effects { writes Puffer.slots }
+    costs   <= 8 ops
+{
+    narrow k to 0 ..< 64 else { return; }
+    Puffer.slots[k].wert = k;
+}
+
+// The producer form: `&schreibe` fits the slot (same parameter, same effect, cost within).
+impl fn registriere() -> Rueckruf
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Rueckruf(cb: &schreibe);
+}
+
+// The call through the slot: the hull carries `writes Puffer.slots` through the pointer,
+// and the costs read the slot's `8`.
+impl fn bediene(t : ptr<normal, r> Rueckruf, k : u32)
+    effects { reads t, writes Puffer.slots }
+    costs   <= 24 ops
+{
+    t->cb(k);
+}
+
+}

@@ -20,7 +20,7 @@
   Fix lane F6 (review G12 F4/F6) adds the three facts the checker's rules
   rest on, stated over this model and nothing else:
   - `bindex_max_beweist_nichts`: a `string max 8` may be empty, so `k < max`
-    proves no index (why `gift/1125` is refused now);
+    proves no index (why `poison/1125` is refused now);
   - `bindex_geschuetzt` / `bindex_mindestlaenge`: a length fact
     `k < blaenge s` (or `n <= blaenge s` with `k < n`) proves the read
     (the guard forms `N454` accepts);
@@ -167,7 +167,7 @@ theorem bconcat_max_summe {tmax m1 m2 : Nat} (a : BString m1) (b : BString m2)
 
 /-- The max proves no index: a `string max 8` may be empty, and index 7
     (below the max) is then refused. This is why the checker demands a
-    length fact, not `k < max` (review G12 F4, `gift/1125`). -/
+    length fact, not `k < max` (review G12 F4, `poison/1125`). -/
 theorem bindex_max_beweist_nichts :
     ∃ s : BString 8, 7 < 8 ∧ bindex s 7 = none :=
   ⟨⟨[], by decide⟩, by decide, rfl⟩

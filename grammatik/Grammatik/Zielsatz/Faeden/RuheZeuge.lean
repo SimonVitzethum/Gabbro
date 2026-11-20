@@ -59,7 +59,7 @@ theorem startZulaessig_mitRuhe_P [DecidableEq D.Fn] (P : Programm D) {S : SperrI
     (fun a ha => (req_mitRuhe_iff P a.1 (sp.welt []) a.2).mpr (hreq a ha))
     (fun L => by rw [speicherZ_speicherR]; exact hS L)
 
-/-! ## 1. The export of `beispiele/104` -/
+/-! ## 1. The export of `examples/104` -/
 
 /-- A memory of the export: every balance `0`. -/
 def x104Sp : Speicher x104D :=

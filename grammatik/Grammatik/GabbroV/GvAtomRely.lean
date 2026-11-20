@@ -152,7 +152,7 @@ theorem gv_rely_braucht_atomfreiheit :
      obstruction without atomic-freedom (`gv_rely_braucht_atomfreiheit`,
      witnessed on `hP`/`zaehlB`, whose shared-atomic read steers a branch).
   2. NOT proved: constructing rely duties for atomic-bearing units from
-     `Pflichten src` (the duty-construction side stays with `bruecke/`,
+     `Pflichten src` (the duty-construction side stays with `programmlogik/bruecke/`,
      which covers atomic-free units only); the per-access x86-TSO refinement
      into W/GX; any payload hand-off correspondence.
   3. Both witnesses now carry an explicit `TraegerSchreibt ... = true`

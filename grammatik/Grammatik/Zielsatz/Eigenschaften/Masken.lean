@@ -169,7 +169,7 @@ theorem handler_sperre_maskiert {P : Programm D} {O : Orakel D} {passes : Nat}
     `KernHaltE`, Spec.lean, and moved this definition here). On a run
     from `M0` that a core schedule admits (`KernPlan`), a handler NEVER stands at a lock
     that a thread of its own core holds -- the deadlock `H102` refuses in Rust
-    (`beispiele/gift/460`: a handler takes a lock the interrupted thread holds without
+    (`examples/poison/460`: a handler takes a lock the interrupted thread holds without
     `masks irqs`).
 
     The program side is a hypothesis of the leg, not of `GabbroZiel`: `Z t` is the call graph

@@ -203,7 +203,7 @@ Consequences:
 - **Security:** never write keys or passwords into the repository, memory or logs; credentials are site
   configuration. When a permission check blocks something, do not work around it; ask.
 - **Number ranges** (poison probes, examples): the next free number is one above the highest in use — measure it
-  (`ls beispiele beispiele/gift | tail`), never keep a ledger.
+  (`ls examples examples/poison | tail`), never keep a ledger.
 - External reference material (e.g. the Caprock OS) is read-only: never commit into it.
 
 ## 9. Pitfalls that cost real time
@@ -239,8 +239,8 @@ Consequences:
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
 | The model | `grammatik/Grammatik/Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/`, `Niedrig/` |
 | Test sets M and N | `grammatik/Grammatik/Gen/` |
-| Stage 0 and the runner | `stage0/`, `runner/` |
-| GabbroV and the bridge | `programmlogik/`, `bruecke/` |
+| Stage 0 and the runner | `stage0/`, `stage0/runner/` |
+| GabbroV and the bridge | `programmlogik/`, `programmlogik/bruecke/` |
 | Plans | `dokumente/PLAN-COMPILER-READY.md` and the plans it names |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
 | Guardians | `instrumente/abnahme.py`, `instrumente/pruefe-*.py` |

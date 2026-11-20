@@ -1,4 +1,4 @@
-// C05 probe: the global twin of `beispiele/gift/1481`. The writer stores 30
+// C05 probe: the global twin of `examples/poison/1481`. The writer stores 30
 // and 71 (sum 101, in range but not the invariant) and returns. This program
 // is ACCEPTED post-C05 -- no checker rule refuses a false-at-return group
 // invariant (N511 is lock-section-only) -- and the shared return epilogue

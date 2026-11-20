@@ -9,7 +9,7 @@
   dritten, weil der Ausgangstyp keinen dritten hat. Und ueber Verschraenkungen: zwei Faeden
   beruehren einen bewachten Traeger nie im Wettlauf (`Wettlauf.lean`).
 
-  Kein `mathlib`, kein Import aus `programmlogik/` oder `passlogik/`: hier steht nur die
+  Kein `mathlib`, kein Import aus `programmlogik/` oder `programmlogik/passlogik/`: hier steht nur die
   Grammatik und was ihre Saetze bedeuten -- nichts ueber den Pruefer, nichts ueber den
   Erzeuger.
 

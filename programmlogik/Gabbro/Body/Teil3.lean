@@ -96,7 +96,7 @@ inductive Stmt where
 
       The store itself is a store. What makes the PAYLOAD visible to the reader is
       `release_stellt_sichtbarkeit_her` -- an assumption of the axiom layer since
-      `beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, and rebooked
+      `examples/06-annahmen.gab`, `unfalsifiable` with its reason written out, and rebooked
       there by `K100.2`. *In a single world the visibility is automatic; the assumption is
       what licenses reading it that way.*
 
@@ -369,7 +369,7 @@ def step (ρ : Env) : Stmt → State → Outcome
   -- **A `match` and not an `if`**: an `if` on an equation over `Option Value` asks for a
   -- `Decidable` instance, and a proof that unfolds the step then lets the kernel EVALUATE
   -- the decision -- over a `forallSlots` of four thousand slots. Measured: *deep recursion
-  -- detected*, on the first loop of `beispiele/01`.
+  -- detected*, on the first loop of `examples/01`.
   | .loop id inv _, s =>
       match eval s inv with
       | some (.bool true) => .running (ρ id s).1

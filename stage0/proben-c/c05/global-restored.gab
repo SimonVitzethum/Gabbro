@@ -1,5 +1,5 @@
 // C05 probe: the invariant is broken between two stores and restored before
-// return -- the global twin of `beispiele/1168`. The section first moves `cnt`
+// return -- the global twin of `examples/1168`. The section first moves `cnt`
 // to 40 (sum 130, invariant down inside the section, invisible outside),
 // then moves `total` to 60 (sum 100 again). The return sees the restored group.
 module c05_global_restored {

@@ -13,7 +13,7 @@
 
   Der Ordner hatte darauf zwei Antworten, und keine war ein Satz ueber LAEUFE:
 
-  * `passlogik/` -- 137 Saetze ueber die REGELN der Paesse (Bereichsverband, Wirkungshuelle,
+  * `programmlogik/passlogik/` -- 137 Saetze ueber die REGELN der Paesse (Bereichsverband, Wirkungshuelle,
     Rang, Terminierung). Jeder hat die Form *"wer durchgeht, erfuellt X"* ueber einem Modell
     der Regel, nicht ueber einem Programm.
   * `Gabbro/Coverage.lean` -- `the_sentence`: jede FORM der Grammatik ist getragen, angenommen

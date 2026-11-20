@@ -8,7 +8,7 @@ Stages:
      duty libraries build, and no theorem depends on `sorryAx`.
   2. The person's proofs (`programmlogik/Proofs/`) and the GabbroV files (`programmlogik/gabbrov/`)
      carry no `sorry`, `admit`, `native_decide` and no `axiom`.
-  3. The bridge (`bruecke/`): the tracked duty files its `Duty` library imports exist, `lake build`
+  3. The bridge (`programmlogik/bruecke/`): the tracked duty files its `Duty` library imports exist, `lake build`
      there is green, and every `#print axioms` of a bridge theorem names exactly `propext`,
      `Classical.choice`, `Quot.sound`.
 
@@ -20,7 +20,7 @@ import os, pathlib, re, subprocess, sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
 P = W / "programmlogik"
-B = W / "bruecke"
+B = P / "bruecke"
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
@@ -60,7 +60,7 @@ def stufe_sorry():
 
 def stufe_bruecke():
     if not B.is_dir():
-        print("  3 bruecke:  NICHT GEMESSEN (bruecke/ fehlt)"); return None
+        print("  3 bruecke:  NICHT GEMESSEN (programmlogik/bruecke/ fehlt)"); return None
     wurzeln = re.findall(r'"Duty\.(\w+)"', (B / "lakefile.toml").read_text(encoding="utf-8"))
     fehlend = [n for n in wurzeln if not (P / "Duty" / f"{n}.lean").is_file()]
     p = subprocess.run(["lake", "build"], cwd=B, env=ENV, capture_output=True, text=True, timeout=3600)

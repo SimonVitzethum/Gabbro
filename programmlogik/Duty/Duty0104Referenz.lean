@@ -6,7 +6,7 @@
     this unit, ASSUMED (hardware, foreign code -- named in `Assumed`), or
     REFUSED by name. The line that has to add up:
 
-        @duty 1  beispiele/0104-referenz.gab  total 3  goals 3  refused 0
+        @duty 1  examples/0104-referenz.gab  total 3  goals 3  refused 0
         @assumed 0  of the refused are ASSUMPTIONS -- hardware, foreign code -- and 0 are refused forms
 
     The meaning of a body is `Gabbro.Body`, written by hand and read by a

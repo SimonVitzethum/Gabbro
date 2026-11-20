@@ -50,7 +50,7 @@
     2. RE-VIEWS ACROSS TYPES DO NOT REACH THE MODEL. The `R014` surface is a pointer to a
        RECORD and a foreign re-view `fn (ptr A) -> ptr B`; the exporter refuses both
        (record target: `LG005` "names unknown table"; a non-`impl` function: `LG001`;
-       measured: `beispiele/1163` is `UNCERTIFIED LG001`). In the model a function
+       measured: `examples/1163` is `UNCERTIFIED LG001`). In the model a function
        answering `ptr m` names table `m` by its TYPE, whatever its argument: the borrow
        rule `root(answer) = root(argument)` is the model's reading only when the two types
        name one table (`leihe_wurzel`). Two different tables are disjoint by

@@ -59,7 +59,7 @@ open Gabbro.Grammatik
 
 /-! ## 3. The corpus units: the user's logic of two real programs
 
-`beispiele/104` and `beispiele/108` are parsed by the Lean pipeline from their real source text and
+`examples/104` and `examples/108` are parsed by the Lean pipeline from their real source text and
 lowered to machine G; `NutzerPflicht` (premise (b) of the goal theorem) is proved on the parsed
 bodies. (The C correspondence chain of these units was deleted with the C emitter: tag
 `archiv/c-emitter-2026-10-17`.) -/

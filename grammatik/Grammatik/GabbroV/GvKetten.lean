@@ -1,9 +1,9 @@
 /-
    File:      Grammatik/GabbroV/GvKetten.lean
    Subject:   Agent 04 follow-up-3: generic call chains (TODO 0f;
-              `beispiele/147`, `148` `tick_runde`: 64 unrolled calls neither
+              `examples/147`, `148` `tick_runde`: 64 unrolled calls neither
               twelve `gabbro_calls` rounds nor three passes instantiate)
-              and disjunctive callee posts (`beispiele/126`, 94 goals).
+              and disjunctive callee posts (`examples/126`, 94 goals).
 
    (a) `rufKette_invariant`: one uniform contract per call, induction over
    the chain length -- no unrolling. `tick_runde_zeuge` runs it on the

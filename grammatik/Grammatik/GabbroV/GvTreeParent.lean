@@ -1,7 +1,7 @@
 /-
    File:      Grammatik/GabbroV/GvTreeParent.lean
    Subject:   Agent 04: does `tree { parent child sibling }` imply parent
-              consistency? (TODO 0f; `beispiele/09`, `messung/caprock/kapraum`.)
+              consistency? (TODO 0f; `examples/09`, `messung/caprock/kapraum`.)
 
    Question: `blatt_loeschen(opfer)` requires `benutzt(opfer)`; `einsammeln`
    calls it for every descendant of `s`. Does the `tree` declaration alone
@@ -291,7 +291,7 @@ theorem lokal_gibt_rufSicher (s : TreeState) (wurzel : Nat)
 
 /-! ## Witnesses: the declaration does not imply consistency -/
 
-/-- Counter-state 1 (the `beispiele/09` shape): links fully agree, the
+/-- Counter-state 1 (the `examples/09` shape): links fully agree, the
     declaration holds, but the child slot is free -- a descendant the
     traverse reaches with `benutzt = false`. -/
 def gegenbeispiel1 : TreeState where

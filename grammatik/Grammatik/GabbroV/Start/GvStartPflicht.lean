@@ -198,7 +198,7 @@ theorem gv_startPflicht (u : UProg) (P : Programm (declOf u))
 
 /-! ## The joint witness -/
 
-/-- **A unit with a static** (`beispiele/187`): `static mut ANHALTEN : bool = false;`, a writer and a reader. -/
+/-- **A unit with a static** (`examples/187`): `static mut ANHALTEN : bool = false;`, a writer and a reader. -/
 def uStatik : UProg :=
   { tabs := [], locks := [],
     fns := [{ name := "halte", params := [], kinds := [], res := none, held := [], puts := [],
@@ -238,7 +238,7 @@ end Gabbro.Grammatik.GabbroV
     on `uExp104` and the static unit `uStatik`).
     NOT covered: `tagged` (`Sum`) statics (exporter `read_static`'s third arm); the `Body`-side
     `Initially` (`WF shapeOf`) transfer, which needs `programmlogik/` compiled
-    in context (the `bruecke/` project, out of this file's scope -- its S4
+    in context (the `programmlogik/bruecke/` project, out of this file's scope -- its S4
     already closes the shape half for 104/108). Full `./lean-bau`: exit 0,
     0 errors, 723 jobs, module built. -/
 #print axioms Gabbro.Grammatik.GabbroV.Sp0Ok

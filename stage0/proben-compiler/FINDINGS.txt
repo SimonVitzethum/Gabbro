@@ -265,7 +265,7 @@ N5. OPEN — the loader is modelled; an assembly-only fix is not valid.
     are open(2), lseek(8, SEEK_END), and mmap(9), not fstat or read. Negative
     lseek results, zero lengths, and mappings other than IMG also reach ud2.
 
-    Model boundary: runner/Runner/Prog/Code.lean defines ld1, ld2, ld4,
+    Model boundary: stage0/runner/Runner/Prog/Code.lean defines ld1, ld2, ld4,
     ld5 and loaderI; Prog/Elf.lean includes them in the emitted ELF bytes.
     Beweis/Lader.lean explicitly models these failures as .fault in
     loadTree/t2/t3 and proves loader_ok and runner_entry_tso/sc over them.

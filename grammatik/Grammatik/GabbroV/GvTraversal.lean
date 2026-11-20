@@ -6,7 +6,7 @@
   (programmlogik `Body.lean`) bounds the range and the count of a
   traversal's passes, not the MEMBERSHIP of the index, nor that a
   `by unvisited` traversal without `leave` covers the domain
-  (`beispiele/57`, `09`, `01`, `messung/caprock/kapraum`).
+  (`examples/57`, `09`, `01`, `messung/caprock/kapraum`).
 
   This file states both over the accepted exec model (`traverseLauf` over
   `alleIndizes`, `Kern/Semantik/Semantik.lean`; no mathlib): the schedule

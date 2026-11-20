@@ -16,7 +16,7 @@
     (`KopfHalt`, Zielsatz/Spec.lean). That is exactly what the C promises
     with `_Noreturn` and `__builtin_unreachable()`: the code behind the call
     is dead in G as in the C.
-    **Witness:** the real certified program `beispiele/174` (its gate
+    **Witness:** the real certified program `examples/174` (its gate
     `exit_group`, `Schablonen/ZeugeTorModell.lean`, a frozen export).
 
   * `start.nolibc` -- the generated process entry of a `nolibc` program

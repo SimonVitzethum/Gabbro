@@ -8,7 +8,7 @@ public import Gabbro.Body.Teil7
 
 open Lean.Parser.Tactic in
 /-- **`gabbro_auto2` -- the pipeline, and once more on what it left** (GabbroV lane,
-    2026-09-29). A call chain of five (`beispiele/147` `fnv`) is deeper than one round of
+    2026-09-29). A call chain of five (`examples/147` `fnv`) is deeper than one round of
     `gabbro_calls` instantiates; the second pass closes it (measured: `fnv` 51 s -> closed with
     the same tactic run twice). The second list is the first WITHOUT the names `simp_all` clears
     (`hall`, `hpass`) -- an unknown identifier fails a whole pass. A pass over no goals costs

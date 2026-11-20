@@ -11,7 +11,7 @@ broken-at-return | stop 103 | accepted, writer returns with the global sum at 10
 write-without-lock | refusal: `schreibe_ohne_sperre` writes 2 carriers of `group Summe` but does not hold K | both globals written with no guard held.
 half-locked | refusal: `nimm_halb` writes 2 carriers of `group Paar` but does not hold B | both globals written while holding only one of two locks (U003).
 dropped-maintains | refusal (N496): `schreibe_ohne_pflicht` writes `cnt`, a carrier of the invariant `summe_bleibt`, and does not maintain it | writer of a group carrier names no duty.
-unknown-carrier | refusal (U001): `group Summe` names `K`, which is not a carrier | group names a lock instead of a carrier (U002+U007 also fire, as in twin gift/281).
+unknown-carrier | refusal (U001): `group Summe` names `K`, which is not a carrier | group names a lock instead of a carrier (U002+U007 also fire, as in twin poison/281).
 undeclared-read | PROPOSED refusal: group invariant `summe_bleibt` reads `fremd`, which is not a declared carrier of `group Summe` | invariant reads a guarded global outside its declared carrier set.
 # VERIFIED 2026-11-01 by reading the real front end (no build/run per lead rules).
 # U001/U003 wordings are verbatim current sentences: U001 in
@@ -22,7 +22,7 @@ undeclared-read | PROPOSED refusal: group invariant `summe_bleibt` reads `fremd`
 # N496 wording is the verbatim current sentence in
 # crates/gabbro-check/src/m1.rs:8103-8110; refused today for group carriers
 # (sammle_inv_traeger collects group carriers regardless of kind; twin
-# beispiele/gift/1232). The carrier named is the first group carrier in the
+# examples/poison/1232). The carrier named is the first group carrier in the
 # declared effects hull (`cnt`: geschrieben_or_abgeleitet, m1.rs:7739-7771).
 # Invariants have the single surface `invariant name : predicate;`.
 # The writer's declared costs cover its body and return predicates. There is

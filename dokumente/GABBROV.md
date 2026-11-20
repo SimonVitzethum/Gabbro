@@ -1,7 +1,7 @@
 # GabbroV — the user's logic against a Lean model of their program
 
 *Consolidated 2026-10-17. It replaces the former `GABBROV.md`, `programmlogik/PLAN.md`,
-`dokumente/GABBROV.md`, `passlogik/README.md` and `dokumente/GABBROV.md`, and
+`dokumente/GABBROV.md`, `programmlogik/passlogik/README.md` and `dokumente/GABBROV.md`, and
 the measurement reports `messung/gabbrov/{GABBROV-ZERTIFIKAT,MANIFEST-COMPLETENESS,MANIFEST-TEXT}.md`
 and the retired `messung/GABBROV-V2.txt`. History is in git. The data file [`programmlogik/gabbrov/KORRESPONDENZ.txt`](../programmlogik/gabbrov/KORRESPONDENZ.txt)
 stays; the guardians that parsed the retired mapping table `PFLICHTEN-KORRESPONDENZ.txt` and the obligation
@@ -39,16 +39,16 @@ of the obligations reach GabbroV.
 | Component | Where | Role |
 |---|---|---|
 | the obligation manifest | historical Rust `gabbro obligations` / `pflichten`, `crates/gabbro-check/src/pflichten.rs` | Deleted on 2026-11-10; duty files are tracked inputs until the Lean generator V1 of PLAN-COMPILER-READY exists. |
-| the manifest harness | historical Rust `gabbro gabbrov pruefe --manifest M --spec S`, `gabbrov.rs` | Deleted with Rust; the current Lean bridge is in `bruecke/`, with tracked duty inputs. |
+| the manifest harness | historical Rust `gabbro gabbrov pruefe --manifest M --spec S`, `gabbrov.rs` | Deleted with Rust; the current Lean bridge is in `programmlogik/bruecke/`, with tracked duty inputs. |
 | the Lean `Body` channel | `programmlogik/` (§13); historical Rust `gabbro prove`, `lean.rs`, `beweis.rs` | The model remains; the deleted Rust driver is history, and the bridge consumes tracked duties pending Lean V1. |
 | the specification channel | `programmlogik/gabbrov/V1.lean`, `V2.lean`; historical Rust `gabbro lean a.gab b.gab` | The Lean specifications remain; source parsing and elaboration now use `grammatik/Grammatik/Parser/`. |
 | the Lean parser (T3) | `grammatik/Grammatik/Parser/` (§14) | source text → surface tree → `UProg` → G program, computed in Lean |
-| the bridge | `bruecke/Bruecke/` (§14) | GabbroV's duties give premise (b) of the goal theorem |
+| the bridge | `programmlogik/bruecke/Bruecke/` (§14) | GabbroV's duties give premise (b) of the goal theorem |
 | the proof-side census | `grammatik/Grammatik/GabbroV/` (17 files, ≈6 000 lines) | closing the person's linked-structure arguments, the shared-atomic rely, refusal census |
-| the checker's own logic | `passlogik/` (§15) | the pass register's sentences as Lean theorems over models of the rules |
+| the checker's own logic | `programmlogik/passlogik/` (§15) | the pass register's sentences as Lean theorems over models of the rules |
 
 The Rust checker, CLI and printers were deleted on 2026-11-10 (AGENTS.md §3); the current path is the Lean parser
-and elaborator in `grammatik/Grammatik/Parser/`, the bridge in `bruecke/` and tracked duty files until
+and elaborator in `grammatik/Grammatik/Parser/`, the bridge in `programmlogik/bruecke/` and tracked duty files until
 [PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) V1 computes them from elaborated units, with V0 measuring coverage
 and V2 extending the bridge to every Stage-0 form (R2).
 
@@ -360,7 +360,7 @@ The Rust `crates/gabbro-check/src/lean.rs`, `beweis.rs` and `gabbro prove` pipel
 2026-11-10); the current architecture uses the Lean parser/elaborator, bridge and tracked duty inputs pending V1:
 
 ```
-unit.gab ──► grammatik/Grammatik/Parser/ ──► UProg ──► bruecke/
+unit.gab ──► grammatik/Grammatik/Parser/ ──► UProg ──► programmlogik/bruecke/
                                                       ▲
                      tracked duty files + user proofs ──┘
                      Lean duty generator from UProg: V1 (planned)
@@ -487,7 +487,7 @@ byte-identically to `slots of T`, which a quantifier whose domain is an integer 
 The surface that would *mean* something has to say which slots are **live**, and Gabbro has no
 liveness declaration; the refusal stays, with a measured ground, and `D024` refuses the one shape
 that stated nothing (the binder as a plain number, `t < N`, true over the empty set and false over
-the naturals; gift 690). `quantified-mappings` (hardware); `record-value` and `slot-record-array`
+the naturals; poison 690). `quantified-mappings` (hardware); `record-value` and `slot-record-array`
 (refused for soundness: a record type is one object, so two slots' copies would be one place);
 `layout-buffer-length` and `sizeof(T)` stay refused, because a number there would be a layout claim
 Gabbro itself declines to make. A refusal that is **inherited** now says so: a clause refused
@@ -572,14 +572,14 @@ bodies of slot writes, direct calls, a trailing return. Everything else is an ex
 
 **Coverage of the Lean parser, measured 2026-10-17** (`Parser/Cover/Census.lean`, matrix in
 `PLAN-TRANSLATION-VALIDATION.md` section 9b): the parser now lives in `Parser/{Lex,Expr,Stmt,Item,Round,Elab,Cover}`;
-all 170 `beispiele/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
+all 170 `examples/` files parse as a whole (116 before), 9 elaborate. New readers: current `syscall`
 grammar (`via`, `costs`, numbered `errors`, `stack`), `syscall V;`, `target`, lock `invariant`, `arena max/pb/blw`,
 `static aligned` and initialiser lists, nested const arrays, `string max N`, `entry fn(..)`, typed `let`,
 `reset .. at .. count`, `grow`, `free`, `child`, `start { }`. Still missing: predicate forms, string literals and
 calls through places in `SExpr`; no printer or round trip for statements and items; elaboration only for the
 fragment above.
 
-**The bridge** (`bruecke/Bruecke/`, a Lake project over `grammatik` and the original `programmlogik`
+**The bridge** (`programmlogik/bruecke/Bruecke/`, a Lake project over `grammatik` and the original `programmlogik`
 sources, toolchain v4.35.0 with Mathlib through `grammatik` (manifest laid out as `stage0/`'s); ≈5 700 lines, 22 files with
 the instances `Instanz104/108/130/69/73`). The 2026-10-28 missing-duty build failure is historical: the five duty
 files are now tracked inputs until Lean V1 exists (MACHINE-IR-PLAN §10), and AGENTS.md §5 includes the bridge in
@@ -607,7 +607,7 @@ the GabbroV guardian; PLAN-COMPILER-READY §1 records its measured green build o
   computation and tracked duty inputs remain, with generation assigned to V1 (§1).
 
 **Coverage, honestly.** The bridge covers the parser's fragment only: instances 104, 108, 130, 69
-and 73 are built (`bruecke/lakefile.toml`), a gift program exhibits the refusal of a call cycle
+and 73 are built (`programmlogik/bruecke/lakefile.toml`), a poison program exhibits the refusal of a call cycle
 (`GiftZyklus`), and `GvZensus` (continue-on-refusal) ranks the first blockers over the corpus. Every
 unit outside that fragment still carries (b) as an assumption; a unit *with* a shared atomic is not
 bridged. **Open:** duties for atomic-bearing units from `Pflichten src`, the per-access
@@ -634,7 +634,7 @@ fell historically.
 
 Measured now: 7 files (`Passlogik/{Bereich,Wirkung,Kosten,Rang,Terminierung,Linear,Phasen}.lean`,
 3 033 lines), **137 theorems** (46 / 21 / 22 / 13 / 14 / 10 / 11), `grep '^axiom'` finds none,
-`grep sorry` finds none, no Mathlib (`passlogik/lakefile.toml` has no `require`; the project builds in
+`grep sorry` finds none, no Mathlib (`programmlogik/passlogik/lakefile.toml` has no `require`; the project builds in
 seconds), toolchain v4.33.1. `Abnahme.lean` calls `#print axioms` for every theorem — the axiom table
 is derived, not kept. The `gabbro paesse` census (0 of 216 proved) is historical Rust; the current path uses
 the Lean model and checker, with the parser/bridge and tracked duties described in §1.
@@ -663,7 +663,7 @@ the memory-model half (`A10`), IEEE, and the sharpness of interval multiplicatio
 division interval. The assumptions `A1–A3`, `B1–B3`, `K1–K4`, `R1–R3`, `T1–T3`, `L1–L3`, `P1–P3` are
 premises of theorems or choices stated in file headers; there is no global axiom list.
 
-**Build.** `cd passlogik && lake build` (the project, seconds, peak memory dominated by `lean`'s
+**Build.** `cd programmlogik/passlogik && lake build` (the project, seconds, peak memory dominated by `lean`'s
 ~500 MB base load per process); a single file: `lean Passlogik/Bereich.lean`. Two concurrent first-time
 `lean` invocations against a fresh `elan` toolchain block on its lock with 0 % CPU (not a hang).
 The first `lean` call downloads the toolchain (minutes). The proposed differential check against `gabbro pruefe`
@@ -684,13 +684,13 @@ domain theorems of `K001` §6 that would turn `kosten.domaenenschranke` from `CO
 | the Lean channel over the corpus | The deleted Rust `gabbro prove`/`cargo test` workflow is history (52 phantom errors on 2026-09-08); the Lean bridge now uses tracked duty inputs pending V1 (§1). |
 | the specification channel | The deleted Rust `gabbro prove` command is history; `instrumente/pruefe-gabbrov.py` now checks the Lean packages and bridge over tracked duties (AGENTS.md §5). |
 | the coverage register | The deleted Rust `cargo test -p gabbro-check --lib lean::deckung_tests` is history; V0 measures the current Lean bridge before V1 generation and V2 extension (§1). |
-| the bridge | `cd bruecke && lake build` |
-| `passlogik` | `cd passlogik && lake build Abnahme` |
+| the bridge | `cd programmlogik/bruecke && lake build` |
+| `passlogik` | `cd programmlogik/passlogik && lake build Abnahme` |
 | certificate ceiling | `python3 messung/gabbrov/cert-theorien.py` |
 
 **Not re-measured here** (no `lake`/`cargo` run was allowed): the corpus counts of §13.7 (192 modules,
 25 / 12 `sorry`/OWED, dated 2026-09-08 and 2026-09-29), the 31-of-55 vacuity result, the 26-of-55
-ceiling, the build state of `bruecke/` and `programmlogik/`, and every axiom set. The reports the
+ceiling, the build state of `programmlogik/bruecke/` and `programmlogik/`, and every axiom set. The reports the
 `Spec.lean` header cites for the bridge (`messung/GABBROV-BRUECKE-REPORT.md`,
 `GABBROV-SERVER-REPORT.md`, `GABBROV-V1.md`, the mandate `AUFTRAG-GABBROV.md`) are not in the tree.
 
@@ -748,12 +748,12 @@ the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propex
 
 | Certificate | What it exercises |
 |---|---|
-| `beispiele/119-sperrinvariante-bloecke` (`WP/HA/ZeugeZertifikat.lean`) | a lock with an invariant (`A[0] ≤ 100`): every environment move, the release check, the start obligation |
-| `beispiele/190-erster-treffer` (`WP/HA/ZeugeZertifikat2.lean`) | a `traverse` with a branch and an exit, through `wpSA_traverse` |
-| `beispiele/104` (`WP/HA/ZeugeZertifikat3.lean`) | two functions, a call, contracts (`old(K[i]) ≤ K[i]`, `result == K[i]`), the callee's frame from `RespektiertRahmen` |
-| `beispiele/182-fallible-gate` (`WP/HA/ZeugeZertifikat4.lean`) | a fallible foreign body (`syscall` with a reason channel): every answer of the gate -- value, reason, none |
+| `examples/119-sperrinvariante-bloecke` (`WP/HA/ZeugeZertifikat.lean`) | a lock with an invariant (`A[0] ≤ 100`): every environment move, the release check, the start obligation |
+| `examples/190-erster-treffer` (`WP/HA/ZeugeZertifikat2.lean`) | a `traverse` with a branch and an exit, through `wpSA_traverse` |
+| `examples/104` (`WP/HA/ZeugeZertifikat3.lean`) | two functions, a call, contracts (`old(K[i]) ≤ K[i]`, `result == K[i]`), the callee's frame from `RespektiertRahmen` |
+| `examples/182-fallible-gate` (`WP/HA/ZeugeZertifikat4.lean`) | a fallible foreign body (`syscall` with a reason channel): every answer of the gate -- value, reason, none |
 
-Finding: the certificate of `beispiele/1168` declares the lock invariant `P[0] + Q[0] == 100` with the initial memory
+Finding: the certificate of `examples/1168` declares the lock invariant `P[0] + Q[0] == 100` with the initial memory
 all zero; its start obligation is false and its `NutzerPflichtA` unprovable (a defect of the example or of the
 exported initial memory).
 
@@ -777,5 +777,5 @@ concurrent reasoning, and the source-text level.
 | `PLAN.md` §15 (`threads`) | §13.9 and §13.13 |
 | `PLAN.md` §12.4 (two measurement collisions) | §16 |
 | `dokumente/GABBROV.md` | §7 |
-| `passlogik/README.md`, `dokumente/GABBROV.md` | §15 |
+| `programmlogik/passlogik/README.md`, `dokumente/GABBROV.md` | §15 |
 | `messung/gabbrov/MANIFEST-*`, `dokumente/GABBROV.md`, the retired `messung/GABBROV-V2.txt` | §2, §5, §6 |

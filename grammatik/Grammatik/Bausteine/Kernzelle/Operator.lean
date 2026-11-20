@@ -15,7 +15,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid
 /-! ## 1. The closed merge vocabulary -/
 
 /-- The five closed merge operators of `accumulates` (SYNTAX.md §11.4,
-    `beispiele/0023-akkumulatoren.gab`): `max`, `min`, `add` and the bitwise
+    `examples/0023-akkumulatoren.gab`): `max`, `min`, `add` and the bitwise
     `or`/`and`. No other operator is admitted. -/
 inductive AccOperator where
   | max

@@ -13,7 +13,7 @@
   masking (`maske_schliesst_handler_aus`).
 
   SOURCE: `dokumente/SYNTAX.md` section 16.2 item 7 (split since <<SG-22>>, section 18).
-  No import from `crates/`, `programmlogik/`, `passlogik/`, or `Body.lean`: like every
+  No import from `crates/`, `programmlogik/`, `programmlogik/passlogik/`, or `Body.lean`: like every
   file here, this one holds against THIS grammar, whatever the current `.rs` code
   does or leaves. Core Lean only, no mathlib.
 

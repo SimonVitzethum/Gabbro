@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Guardian 1 of 2 -- the Lean model (`grammatik/`), the stage-0 compiler (`stage0/`) and the runner (`runner/`).
+"""Guardian 1 of 2 -- the Lean model (`grammatik/`), the stage-0 compiler (`stage0/`) and the runner (`stage0/runner/`).
 
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
 Stages (each prints what it measured; a stage that cannot run is NOT a pass):
-  1. `lake build` of `nativefloat/` and `grammatik/` -- shared adapters and every model module build.
+  1. `lake build` of `grammatik/nativefloat/` and `grammatik/` -- shared adapters and every model module build.
   2. `NachpruefungZiel.lean` -- `gabbro_ziel` (and its siblings) depend on exactly
      `propext`, `Classical.choice`, `Quot.sound`.
   3. No `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`, `sorryAx`, `unsafe` in Lean code (comments
      stripped) and no `axiom` outside `teile/kein-sorry-allowlist.txt`.
   4. Layout: no folder holds more than 20 entries (`teile/lean-layout.py --check`).
   4b. Module: every tracked Lean file except `lakefile.lean` starts with `module` (owner rule 2026-11-01).
-  4c. Roots: every tracked Lean file of grammatik/, stage0/, runner/, nativefloat/ is imported, directly or not, by a
+  4c. Roots: every tracked Lean file of grammatik/ and stage0/ (with the nested packages grammatik/nativefloat/ and stage0/runner/) is imported, directly or not, by a
      package root, an executable root or a `Nachpruefung` file; tool entry points with a `main` are counted apart.
   7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
@@ -20,7 +20,7 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      `stage0/Nachpruefung/Teil*.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
      standard axioms. Every probe `stage0/proben-ir/NAME.gab` is lowered by `stage0 --ir` to an `S0IR` image, which
      the runner binary (written by `lake exe runner`) runs; its exit code must be `NAME.code`.
-  8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
+  8. The verified x86-64 runner (`stage0/runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
      `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and `decode_enc`
      depend on exactly the three standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
      the IR semantics' output and exit code, the differential tests of the x86-64 model (every instruction form,
@@ -38,8 +38,8 @@ import os, pathlib, re, subprocess, sys
 W = pathlib.Path(__file__).resolve().parent.parent
 G = W / "grammatik"
 S0 = W / "stage0"
-RN = W / "runner"
-NF = W / "nativefloat"
+RN = S0 / "runner"
+NF = G / "nativefloat"
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
@@ -94,8 +94,8 @@ def stufe_sorry():
     erlaubt = {l.split()[1] for l in (W / "instrumente/teile/kein-sorry-allowlist.txt").read_text().splitlines()
                if l.strip() and not l.startswith("#")}
     n, befunde = 0, []
-    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean")) +
-                    list(RN.rglob("*.lean")) + list(NF.rglob("*.lean"))):
+    # RN and NF lie inside S0 and G: the set keeps each nested file once
+    for f in sorted(set(G.rglob("*.lean")) | set(S0.rglob("*.lean"))):
         if ".lake" in f.parts: continue
         code = ohne_kommentare(f.read_text(encoding="utf-8"))
         n += 1
@@ -121,7 +121,7 @@ def stufe_module():
 WURZELN = ["Grammatik", "Grammatik.Gen.Abdeckung.Lauf", "Nachpruefung", "NachpruefungZiel",
            "Stage0", "Stage0.Haupt", "Nachpruefung.Teil1", "Nachpruefung.Teil2",
            "Runner", "Runner.Haupt", "NativeFloat"]
-PAKETE = ["grammatik", "stage0", "runner", "nativefloat"]
+PAKETE = ["grammatik", "stage0", "stage0/runner", "grammatik/nativefloat"]
 IMPORT = re.compile(r"^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?(.+)$", re.M)
 
 
@@ -134,7 +134,7 @@ def stufe_wurzeln():
             f = W / p / (m.replace(".", "/") + ".lean")
             if f.is_file(): return f
         return None
-    # `Nachpruefung` exists in grammatik/, stage0/ and runner/: each package's copy is a root of its own
+    # `Nachpruefung` exists in grammatik/, stage0/ and stage0/runner/: each package's copy is a root of its own
     start = [f for m in WURZELN for p in PAKETE if (f := datei(m, p))]
     gesehen, offen = set(start), list(start)
     while offen:
@@ -143,8 +143,8 @@ def stufe_wurzeln():
             for m in zeile.split():
                 g = datei(m)
                 if g and g not in gesehen: gesehen.add(g); offen.append(g)
-    names = subprocess.run(["git", "ls-files", *[f"{p}/*.lean" for p in PAKETE]], cwd=W,
-                           capture_output=True, text=True).stdout.split()
+    names = sorted(set(subprocess.run(["git", "ls-files", *[f"{p}/*.lean" for p in PAKETE]], cwd=W,
+                                      capture_output=True, text=True).stdout.split()))
     files = [W / n for n in names if pathlib.Path(n).name != "lakefile.lean"]
     rest = [f for f in files if f not in gesehen]
     werkzeug = [f for f in rest if re.search(r"^def main\b", f.read_text(encoding="utf-8"), re.M)]
@@ -270,7 +270,7 @@ RUNNER_FAELLE = "20000"
 
 def stufe_runner():
     if not RN.is_dir():
-        print("  8 runner:  ROT (runner/ fehlt)")
+        print("  8 runner:  ROT (stage0/runner/ fehlt)")
         return False
     rc, out = lauf(["lake", "build"], RN, 3600)
     jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)

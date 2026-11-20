@@ -235,7 +235,7 @@ words of the vocabulary AND terminals the lexer knows («SS-1», `lex_keywords` 
 side carries them through `syscalldecl`, and a `syscall` item has been checked
 since lane S5 (Lean home: `N063`/`N065`/`N066` in `grammatik/Grammatik/Hardware/Tor/Abi.lean`; `N064`/`N067`/`N068`,
 `A005`/`A006` are not yet Lean judgments) and lowered by Stage 0 (`stage0/Stage0/Bindung.lean`
-binds direct gates inline; measured on `beispiele/74`). `entry syscall …` keeps parsing: the
+binds direct gates inline; measured on `examples/74`). `entry syscall …` keeps parsing: the
 entry name is an identifier, and `syscall` as a `ctx` word stays one there.
 
 **The surface of Gabbro is English** (decided 2026-08-19): keywords, refusal messages, the
@@ -794,7 +794,7 @@ primary    = int | "true" | "false" | stringlit | place | call | paren | tupleex
 stringlit  = string ;
 (* Lane 261: a bounded-string literal. The value is the UTF-8 bytes of the text
    without the quotes, and the length the checker holds is the byte count
-   (`N455` refuses an over-long literal at its slot, gift 1213). Exactly ONE
+   (`N455` refuses an over-long literal at its slot, poison 1213). Exactly ONE
    text is one value: adjacent texts are joined only for `claim` prose («B22»);
    here concatenation is `+`. *)
 countexpr  = "count" ident "in" domain ":" pred ;
@@ -1458,7 +1458,7 @@ own and are JOINED before the starter proceeds; no detached form exists. The rul
   a core.
 
 The C11 emitter lowers the statement through the generated hosted driver's thread runtime
-(`gabbro runtime threads`; measured: `beispiele/159` emits with no `C001`). The exporter's
+(`gabbro runtime threads`; measured: `examples/159` emits with no `C001`). The exporter's
 `LG004` refusal for it is **not re-measured** here; where it still stands, the statement has a
 checker rule and no G model.
 
@@ -1916,7 +1916,7 @@ forever    = "forever" [ ident ]
              block ;
 (* `progress` names WHO ends the loop -- an assumption with a falsifier. `CHECKER.md`
    row 4 measured a wait loop with no `progress` as "writable, and no latch can ever close
-   it" (`beispiele/66`:66). In the core a `forever` ends by `leave` or by the environment, and
+   it" (`examples/66`:66). In the core a `forever` ends by `leave` or by the environment, and
    the environment's contribution IS the named assumption: outcome `hardware (fortschritt a)`.
    A loop that names nobody would have a third kind of end. *)
 ```
@@ -2075,7 +2075,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` is not yet a Lean judgment; the END of the range is held against the length (`M103` in `SchablonenT5SemBasis.lean`); it is a store (`writes X`) | none: the Lean exporter refuses the statement by name (`LG005` in `Bausteine/Arena/ArenaDyn/Teil2.lean`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (Lean model of `N426` in `Bausteine/Arena/ArenaDyn/Teil2.lean`; the decidable refusal and `N213` are not yet Lean judgments) | no constructor yet: the committed prefix is checker flow, and the lowering refuses the statement by name until the dynamic arm lands |
 | `free A[i];` | give exactly one slot back: the name dies statically (`N586` in `Bausteine/Arena/ArenaDyn/Teil2.lean` refuses any later read, any second `free`, borrowed and computed shapes); no `else` (freeing a live slot cannot fail) | `FreiZustand` (`ArenaDyn.lean`): high-water plus freed slots, `freiAlloc`/`freiFree` with four proved preservation theorems; the Lean exporter refuses by name (`LG005`) until the Block form lands |
-| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
+| `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` (`Kern/Syntax/Typen/Teil2.lean`) until the producer stands**: a declared `linear` mark, exactly one foreign minter executed once, every access holding it (`D265`/`D266`/`D267`/`D268` are not yet Lean judgments); the first mark is minted once and travels by handoff (poison `poison/694`, producers `examples/114`/`115`, poisons `poison/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |
 | `invariant I : p;` | `I` is owed by every function whose `effects` writes `T` («SG-10»); evaluated at every value return, within the writer's declared `costs`. **Such a function holds the locks of every carrier of `I`** (`U003`: `invarianten_gehalten`), because it reads them all at return. Reason exits retain the invariant proof obligation. | `D.Inv`, `D.traeger`, `Programm.invariante`, `schuldet` → `logik (invariante i)` |
 | `owner m`, `shared` | a shared carrier has a guard; an unshared one belongs to one thread | `D.geteilt`, `D.geteilt_bewacht` («SG-21») |
@@ -2115,8 +2115,8 @@ export set. `gabbro abi` writes the `reason` block out verbatim, so an importer 
 it has to name in its `else` — nothing is hidden and nothing is implicit (D2). And the rule
 became STRONGER in the same change: a `reason` can now be private, so `N025` holds a `use` on a
 private one, which it could not before — before, a `reason` was unconditionally visible because
-it could not be otherwise. Corpus: `beispiele/167` (the crossing), `beispiele/gift/1365` (the
-private one reached from outside, `N025`), `beispiele/gift/1366` (the exported head naming a
+it could not be otherwise. Corpus: `examples/167` (the crossing), `examples/poison/1365` (the
+private one reached from outside, `N025`), `examples/poison/1366` (the exported head naming a
 private one, `N038`).
 
 ### 9.1 Arenas — a heap that is never unbounded («E4»)
@@ -2644,7 +2644,7 @@ they point at stands in §1 beside `entrydecl`.
   `x`'s argument by its length where it decays; a forwarded pointer must be
   the caller's own parameter under the caller's own clause. A kernel that
   finds the end of its data by a terminator (a path read up to its NUL) owes
-  that as a named caller obligation in the contract — `beispiele/149`:
+  that as a named caller obligation in the contract — `examples/149`:
   `spec fn path_nul_terminated`, required by the gate and counted `V` at
   every call; where the program builds the buffer itself the checker decides
   it (`N507`: a proved `buf[L-1] = 0` store, an untouched zeroed buffer, or
@@ -2664,8 +2664,8 @@ they point at stands in §1 beside `entrydecl`.
   assumption (d2 -- proposed on branch `opus/clone-handoff`, not a premise of
   `gabbro_ziel` on master). The spill-read rule (`N451`/`N452`, lane 249) keeps
   the path off unhanded caller slots. The C11 emitter lowers the checked shape as an inline trap and
-  refuses a `child` outside the gate+guard+region triple by name (`C185`). `beispiele/155` is the clean shape, `156` its branched
-  twin, `gift/1107`-`1113`, `1115`-`1117` and `1139`-`1147` the refusals (`1114` moved to `beispiele/1114-kind-handed-read.gab`: its only expected line was `C185`, and the legal handed read is now a positive).
+  refuses a `child` outside the gate+guard+region triple by name (`C185`). `examples/155` is the clean shape, `156` its branched
+  twin, `poison/1107`-`1113`, `1115`-`1117` and `1139`-`1147` the refusals (`1114` moved to `examples/1114-kind-handed-read.gab`: its only expected line was `C185`, and the legal handed read is now a positive).
   **The checker's reading assumes the lowering enters the child by jump at the
   region** (the statements between the gate call and the region are parent code;
   THEOREM-MAP §39) -- a lowering that changes `C185` keeps that or re-checks the gap.
@@ -3130,7 +3130,7 @@ Every item is a CUTS of the cited file; the map is `dokumente/THEOREM-MAP.md` §
 ## 17. What moves in the corpus when the third version replaces the second
 
 Measured against the 70 clean examples by reading, not by running (item 8 above);
-the fourth version adds `beispiele/71` (measured by running: checks clean,
+the fourth version adds `examples/71` (measured by running: checks clean,
 lowers, `cc` accepts at `-O0`/`-O2`):
 
 * `u32` without `in`, `f64` without `in` — everywhere — **SUGAR, nothing moves**;
@@ -3153,14 +3153,14 @@ lowers, `cc` accepts at `-O0`/`-O2`):
   `R005`/`R006` refuse these today, so the corpus has none;
 * `publishes { … }` with a set other than the declared — **refused**; `V001`–`V004` refuse
   these today.
-* `count k in slots of T : p` — **`beispiele/71`** (with a parameter capture,
-  `schwelle`); poison `gift/693` (`D025`, count over `threads`).
-* `deadline <= n ops arch X falsifier p` — **`beispiele/71`** (with `arch
-  x86_64` on the function); poison `gift/695` (`K011`, symbolic number),
-  `gift/696` (`K012`, undeclared machine), `gift/697` (`N056`, probe without a
+* `count k in slots of T : p` — **`examples/71`** (with a parameter capture,
+  `schwelle`); poison `poison/693` (`D025`, count over `threads`).
+* `deadline <= n ops arch X falsifier p` — **`examples/71`** (with `arch
+  x86_64` on the function); poison `poison/695` (`K011`, symbolic number),
+  `poison/696` (`K012`, undeclared machine), `poison/697` (`N056`, probe without a
   verdict).
 * `table T owner m` — **no site**; parses, refused as `D026` (poison
-  `gift/694`) until the producer stands.
+  `poison/694`) until the producer stands.
 * a first match, a non-index option, a runtime-length tail — **nothing moves**;
   all three were already writable («SG-25»–«SG-27» name the idiom, they add no
   production).
@@ -3253,11 +3253,11 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
   (§1.4 rows `V006`/`V007`, `K`-`deadline`, `D`-`count`): `deadline` checks
   (`K011`/`K012`, `N056` for the probe, `frist_` manifest entry) and `count`
   checks (`D025`, result `0 ..= N`, costs, effects, locks, calls) plus the
-  counter lowering in the deleted emitter — all green on 2026-09-13, `beispiele/71` lowers and `cc`
+  counter lowering in the deleted emitter — all green on 2026-09-13, `examples/71` lowers and `cc`
   accepts at `-O0`/`-O2` (historical measurement over the tools deleted 2026-11-10;
   `V006`/`V007`, `K011`/`K012`, `N056`, `D025` are not yet Lean judgments). `owner` parses and is refused as `D026`
-  (poison `gift/694`); the producer story stands since lane 151 (`D265`-`D268`,
-  producers `beispiele/114`/`115`, poisons `gift/932`-`935`), named at the
+  (poison `poison/694`); the producer story stands since lane 151 (`D265`-`D268`,
+  producers `examples/114`/`115`, poisons `poison/932`-`935`), named at the
   clause and in §9.
 - [x] **The `owner` producer** — the first mark is minted once, by a single
   foreign body returning the mark without taking it (a named assumption, like

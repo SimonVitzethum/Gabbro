@@ -1,5 +1,5 @@
 // C05 probe: two globals under TWO locks with declared rank order, taken
-// outermost-first (rank 1, then rank 2 -- the `beispiele/17` shape with globals
+// outermost-first (rank 1, then rank 2 -- the `examples/17` shape with globals
 // instead of tables). Both guards are held across both stores, the group is
 // restored at return.
 module c05_global_two_locks {

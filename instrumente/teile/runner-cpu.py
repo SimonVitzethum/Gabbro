@@ -3,10 +3,10 @@
 
     runner-cpu.py BIN DIR [CASES]
 
-BIN is the `runner` executable of the Lean package `runner/`; DIR a scratch directory. Three checks:
+BIN is the `runner` executable of the Lean package `stage0/runner/`; DIR a scratch directory. Three checks:
 
 1. The runner binary written by Lean runs every probe image with the output and exit code fixed in
-   `runner/proben/NAME.aus` and `NAME.code` (no Lean program runs the IR); `objdump` decodes the runner's code to the
+   `stage0/runner/proben/NAME.aus` and `NAME.code` (no Lean program runs the IR); `objdump` decodes the runner's code to the
    instructions of the listing `runner.s`.
 2. Differential tests of the x86-64 model: CASES random cases of all 36 instruction families run on this processor;
    registers, data area and every flag the model defines must equal the model's `exec`.
@@ -108,7 +108,7 @@ def main():
         print("runner-cpu: writing the runner failed:", r.stderr)
         return 2
     os.chmod(os.path.join(d, "runner"), 0o755)
-    proben = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "runner", "proben")
+    proben = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "stage0", "runner", "proben")
     for p in ["hello", "probe", "threads", "threads64", "io"]:
         want = open(os.path.join(proben, p + ".aus"), "rb").read()
         code = int(open(os.path.join(proben, p + ".code")).read())
@@ -121,7 +121,7 @@ def main():
     committed = os.path.join(proben, "..", "runner.s")
     if open(committed).read() != open(os.path.join(d, "runner.s")).read():
         bad += 1
-        print("runner-cpu: runner/runner.s is not the listing of the current runner (write it with lake exe runner)")
+        print("runner-cpu: stage0/runner/runner.s is not the listing of the current runner (write it with lake exe runner)")
     measured += 1
     if not listing_matches(os.path.join(d, "runner"), os.path.join(d, "runner.s")):
         bad += 1
