@@ -35,8 +35,7 @@ def statement {context : Context A next} (policy : CallPolicy program context)
           cases tested : eval (world.lese Λ test.orte) test (world.lese Λ test.orte) actual <;>
             simp only [tested, Bool.false_eq_true, ↓reduceIte] at ready <;>
             have ready := ready allowed safe <;>
-            simpa only [Runtime.wpS, Runtime.wpB, execStmtH, wahr?, tested, Bool.false_eq_true, ↓reduceIte,
-              Symbolic.Goals.joinIf_holds] using ready)
+            simpa only [Runtime.wpS, Runtime.wpB, execStmtH, wahr?, tested, Bool.false_eq_true, ↓reduceIte, Symbolic.Goals.joinIf_holds] using ready)
     | .onOption (n := count) expression present absent =>
         Symbolic.optionDispatch policy.semantic symbols expression present absent goals
           (fun _ => block policy facts budget hint fuel absent symbols bounded goals)
