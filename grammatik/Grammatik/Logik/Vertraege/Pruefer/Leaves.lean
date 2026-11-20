@@ -148,7 +148,6 @@ def leafCondition {context : Context A next} (policy : A → CallObligation prog
   | .putBytes .. => .error (.unsupported "contract byte store needs bytewise observation substitution")
   | .onOption .. => .error (.unsupported "contract option dispatch needs a typed payload observation")
   | .onTag .. => .error (.unsupported "contract tagged dispatch needs a typed payload observation")
-  | .callIndElse .. => .error (.unsupported "contract fallible indirect call needs a reason dispatch")
   | .axiomCall .. | .axiomCallElse .. => .error (.unsupported "contract oracle call needs quantified answer and poststate observations")
   | .forever .. => .error (.unsupported "contract forever loop needs a checked inductive invariant")
   | .consumeTraverse .. => .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")

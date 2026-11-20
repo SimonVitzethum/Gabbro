@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Locks
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Budget
-public import Grammatik.Logik.Vertraege.Pruefer.Indirect
+public import Grammatik.Logik.Vertraege.Pruefer.Indirect.Fallible
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.Block
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Oracle.End
 public import Grammatik.Logik.Vertraege.Pruefer.Control.Join
@@ -111,6 +111,9 @@ def statement {context : Context A next} (policy : CallPolicy program context)
             (evalArgs (world.lese Λ args.orte) args (world.lese Λ args.orte) actual) <;>
             simpa only [reply, Symbolic.Goals.holds] using ready)
     | .callInd p args hp hr => callIndCondition policy budget.expansion p args hp hr symbols bounded goals
+    | .callIndElse p args he hp hr failure => callIndElseCondition policy budget.expansion p args he hp hr failure
+        symbols bounded goals (fun more larger reason => ending (policy.weaken larger) facts budget hint fuel failure
+          (.cons (.known reason) symbols) ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | other => leafCondition policy.semantic other symbols bounded goals
 termination_by structural fuel
 
@@ -233,7 +236,13 @@ def block {context : Context A next} (policy : CallPolicy program context)
         (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
           (.cons (resultSymbol he result) symbols)
           ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCallIndElse .. => .error (.unsupported "contract fallible indirect binding needs a reason dispatch")
+    | .bindCallIndElse p args he hp hr failure rest =>
+      bindCallIndElseBlockCondition policy budget.expansion p args he hp hr failure rest symbols bounded goals
+        (fun more larger result resultBounded => block (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+        (fun more larger reason => ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
+          ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .bindAxiom a args he hw hg hd hgd rest => bindAxiomBlockCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
         (fun more larger env envBounded => block (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
     | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseBlockCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
@@ -373,7 +382,13 @@ def ending {context : Context A next} (policy : CallPolicy program context)
         (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
           (.cons (resultSymbol he result) symbols)
           ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
-    | .bindCallIndElse .. => .error (.unsupported "contract fallible indirect end binding needs a reason dispatch")
+    | .bindCallIndElse p args he hp hr failure rest =>
+      bindCallIndElseEndCondition policy budget.expansion p args he hp hr failure rest symbols bounded goals
+        (fun more larger result resultBounded => ending (policy.weaken larger) facts budget hint fuel rest
+          (.cons (resultSymbol he result) symbols)
+          ⟨resultSymbol_bounded he result resultBounded, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
+        (fun more larger reason => ending (policy.weaken larger) facts budget hint fuel failure (.cons (.known reason) symbols)
+          ⟨trivial, symbols.bounded_mono bounded larger⟩ ((goals.weaken larger).shrink _))
     | .bindAxiom a args he hw hg hd hgd rest => bindAxiomEndCondition policy.semantic budget.expansion a args he hw hg hd hgd rest symbols bounded goals
         (fun more larger env envBounded => ending (policy.weaken larger) facts budget hint fuel rest env envBounded ((goals.weaken larger).shrinkResult (some _)))
     | .bindAxiomElse a args he hr hw hg hd hgd failure rest => bindAxiomElseEndCondition policy.semantic budget.expansion a args he hr hw hg hd hgd failure rest symbols bounded goals
