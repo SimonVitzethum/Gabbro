@@ -40,12 +40,6 @@ structure Getragen (u : UProg) (C : Fin u.fns.length → Prop) : Prop where
   statics : ScalarStatics u
   ohneTransition : ∀ c, C c → transitionOfFn u c = none
 
-/-- O43 for carried targets. The complementary targets owe the very same canonical
-    `PtrZielVerfeinert`, in `OffenePflicht`. -/
-def SchnittstellenPflichtTeil (u : UProg) (C : Fin u.fns.length → Prop) : Prop :=
-  ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn), lowerAllg u = .ok (P, fs) →
-    ∀ c, C c → ∀ n (hf : (declOf u).passt c n = true), PtrZielVerfeinert P c n hf
-
 /-- Exactly the nonautomatic function components of `LogikPflicht` for open functions.
     Both invariant-return components follow from the unchanged `u.invs = []`, including reason
     returns; no assumption about the open functions' reason channels is needed for those.
@@ -53,18 +47,7 @@ def SchnittstellenPflichtTeil (u : UProg) (C : Fin u.fns.length → Prop) : Prop
 def OffenePflicht (u : UProg) (C : Fin u.fns.length → Prop) : Prop :=
   ∀ c, ¬ C c → ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn),
     lowerAllg u = .ok (P, fs) →
-      (∀ passes, KoerperGutS P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c) ∧
-      ∀ n (hf : (declOf u).passt c n = true), PtrZielVerfeinert P c n hf
-
-/-- Reassemble O43 without imposing carried-target duties on open targets. -/
-theorem schnittstellen_aus_teil {u : UProg} {C : Fin u.fns.length → Prop}
-    (hC : SchnittstellenPflichtTeil u C) (hO : OffenePflicht u C) :
-    SchnittstellenPflicht u := by
-  classical
-  intro P fs hlow c n hf
-  by_cases hc : C c
-  · exact hC P fs hlow c hc n hf
-  · exact (hO c hc P fs hlow).2 n hf
+      ∀ passes, KoerperGutS P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c
 
 /-- Empty declared invariants discharge BOTH return-invariant components for EVERY function.
     In particular, open reason channels need no extra invariant premise. -/
@@ -83,7 +66,7 @@ theorem invPflichten_teil {u : UProg} {C : Fin u.fns.length → Prop} (S : Getra
 /-- Assemble the logic part once the carried Body-to-G simulation has supplied its per-function
     body component. This lemma makes no claim to supply that missing simulation. -/
 theorem logik_aus_teilpflichten {u : UProg} {C : Fin u.fns.length → Prop}
-    (S : Getragen u C) (hC : SchnittstellenPflichtTeil u C) (hO : OffenePflicht u C)
+    (S : Getragen u C) (hO : OffenePflicht u C)
     {P : Programm (declOf u)} {fs : List (declOf u).Fn} (hlow : lowerAllg u = .ok (P, fs))
     (hK : ∀ passes c, C c →
       KoerperGutS P passes (axWahr (declOf u)) (SperrInv.leer (declOf u)) c) :
@@ -93,6 +76,6 @@ theorem logik_aus_teilpflichten {u : UProg} {C : Fin u.fns.length → Prop}
     fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
   by_cases hc : C c
   · exact hK passes c hc
-  · exact (hO c hc P fs hlow).1 passes
+  · exact hO c hc P fs hlow passes
 
 end Gabbro.Bruecke

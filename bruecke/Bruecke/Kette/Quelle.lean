@@ -49,18 +49,18 @@ theorem bruecke_koerperGutS_M {P : Programm (declOf u)} {fs : List (declOf u).Fn
 
 theorem bruecke_logik_M {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : GetragenG u C) (M : MassU) (hZ : MassPflichtU u C M)
-    (hPtr : SchnittstellenPflichtTeil u C) (hOpen : OffenePflicht u C) :
+    (hOpen : OffenePflicht u C) :
     Zielsatz.LogikPflicht P (SperrInv.leer (declOf u)) (axWahr (declOf u)) :=
-  logik_aus_teilpflichten S.toGetragen hPtr hOpen hlow (bruecke_koerperGutS_M hlow S M hZ)
+  logik_aus_teilpflichten S.toGetragen hOpen hlow (bruecke_koerperGutS_M hlow S M hZ)
 
 /-- **Unit assembly under a measure**: carried Body duties, recursive ones included, and
     explicit open duties supply premise (b). -/
 theorem bruecke_nutzer_M {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : GetragenG u C) (M : MassU) (hZ : MassPflichtU u C M)
-    (hPtr : SchnittstellenPflichtTeil u C) (hOpen : OffenePflicht u C)
+    (hOpen : OffenePflicht u C)
     (hn : nullB u = true) (hStart : OffeneStartPflicht u C P hn) :
     Zielsatz.NutzerPflicht (einheitAllg u P hn) :=
-  ⟨bruecke_logik_M hlow S M hZ hPtr hOpen, startPflicht_teil hlow S.toGetragen hStart⟩
+  ⟨bruecke_logik_M hlow S M hZ hOpen, startPflicht_teil hlow S.toGetragen hStart⟩
 
 /-! ## The rank forms -/
 
@@ -89,20 +89,18 @@ theorem bruecke_koerperGutS_G {P : Programm (declOf u)} {fs : List (declOf u).Fn
 theorem bruecke_logik_G {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : GetragenG u C) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, C c → ∃ body, zuBodyZ u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body)
-    (hPtr : SchnittstellenPflichtTeil u C) (hOpen : OffenePflicht u C) :
+      meetsU u (wfU u) (fnAt u c) body) (hOpen : OffenePflicht u C) :
     Zielsatz.LogikPflicht P (SperrInv.leer (declOf u)) (axWahr (declOf u)) :=
-  bruecke_logik_M hlow S _ (massPflichtU_of_rang hR hZ) hPtr hOpen
+  bruecke_logik_M hlow S _ (massPflichtU_of_rang hR hZ) hOpen
 
 /-- Unit assembly: carried Body duties and explicit open duties supply premise (b). -/
 theorem bruecke_nutzer_G {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : GetragenG u C) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, C c → ∃ body, zuBodyZ u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body)
-    (hPtr : SchnittstellenPflichtTeil u C) (hOpen : OffenePflicht u C)
+      meetsU u (wfU u) (fnAt u c) body) (hOpen : OffenePflicht u C)
     (hn : nullB u = true) (hStart : OffeneStartPflicht u C P hn) :
     Zielsatz.NutzerPflicht (einheitAllg u P hn) :=
-  bruecke_nutzer_M hlow S _ (massPflichtU_of_rang hR hZ) hPtr hOpen hn hStart
+  bruecke_nutzer_M hlow S _ (massPflichtU_of_rang hR hZ) hOpen hn hStart
 
 /-! ## From the source text -/
 
@@ -112,9 +110,9 @@ theorem nutzer_aus_quelleM {src : String} {P : Programm (declOf u)}
     (hStart : ∀ hn : nullB u = true, OffeneStartPflicht u C P hn)
     (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) := by
-  obtain ⟨_, hn, S, hPtr, ⟨M, hZ⟩, hOpen⟩ := hp
+  obtain ⟨_, hn, S, ⟨M, hZ⟩, hOpen⟩ := hp
   have hlow := lower_of_uebersetze h
-  exact ⟨hn, bruecke_nutzer_M hlow S M hZ hPtr hOpen hn (hStart hn)⟩
+  exact ⟨hn, bruecke_nutzer_M hlow S M hZ hOpen hn (hStart hn)⟩
 
 /-- The consolidated source bridge, with the actual initial requirement of every open start. -/
 theorem nutzer_aus_quelleG {src : String} {P : Programm (declOf u)}

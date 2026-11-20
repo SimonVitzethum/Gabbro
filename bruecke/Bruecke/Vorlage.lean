@@ -159,22 +159,20 @@ def vorlage (name src : String) : String :=
     let fall := (List.range n).foldl (fun acc i =>
       acc ++ "  | ⟨" ++ toString i ++ ", _⟩ => pflicht_" ++ toString i ++ "\n") ""
     let schluss :=
-      "/-- O43: supply refinement of the actual lowered pointer contracts separately. -/\n" ++
       (if rangB u (rangAuto u) then
-        "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlle quelle :=\n" ++
-        "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, schnittstellen, fun c => match c with\n"
+        "theorem pflichten : PflichtenAlle quelle :=\n" ++
+        "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, fun c => match c with\n"
        else
-        "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : PflichtenAlleM quelle :=\n" ++
-        "  ⟨u, verankert, null, stimmig, frisch, ordinary, schnittstellen, mass, fun c _ => match c with\n") ++ fall ++
+        "theorem pflichten : PflichtenAlleM quelle :=\n" ++
+        "  ⟨u, verankert, null, stimmig, frisch, ordinary, mass, fun c _ => match c with\n") ++ fall ++
       "  | ⟨_ + " ++ toString n ++ ", h⟩ => absurd h\n" ++
       "      (by have hl : u.fns.length = " ++ toString n ++ " := by decide\n          omega)⟩\n\n" ++
       "/-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/\n" ++
-      "theorem nutzer (schnittstellen : SchnittstellenPflicht u)\n" ++
-      "    {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
+      "theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
       "    {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :\n" ++
       "    ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=\n" ++
       "  " ++ (if rangB u (rangAuto u) then "nutzer_aus_quelleG_alle" else "nutzer_aus_quelleM_alle") ++
-      " (pflichten schnittstellen) h\n\n" ++
+      " pflichten h\n\n" ++
       "end Gabbro.Bruecke.Vorlage." ++ name ++ "\n"
     kopf ++ bools ++ pflicht ++ schluss
 

@@ -20,12 +20,6 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
-/-- O43 is a separate user duty for the actual lowered pointer contracts.
-    Structural conformance and Body duties do not establish this refinement. -/
-def SchnittstellenPflicht (u : UProg) : Prop :=
-  ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn),
-    lowerAllg u = .ok (P, fs) → PtrVerfeinert P
-
 /-! ## 2. The environment of a table -/
 
 theorem schluessel_eind {A : List Eintrag} (hA : Schluessel A) :
