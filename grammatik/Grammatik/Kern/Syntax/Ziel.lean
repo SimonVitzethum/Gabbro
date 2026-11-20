@@ -38,7 +38,7 @@
       betreten nie die Logik -- sie betreten durch `deadline` und ihre Sonde.
 
   QUELLE: `dokumente/SYNTAX.md` §18 (vierte Fassung, 2026-09-09).
-  KEIN Import aus `crates/`, `programmlogik/`, `passlogik/` oder `Body.lean`:
+  KEIN Import aus `crates/`, `programmlogik/`, `programmlogik/passlogik/` oder `Body.lean`:
   `lakefile.toml` laesst das nicht zu -- was hier steht, gilt mit DIESER Syntax,
   gleichgueltig, was der heutige `.rs`-Code tut oder laesst.
 

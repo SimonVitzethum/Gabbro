@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus/Programme/Einheit104.lean
-  Subject:   `beispiele/0104-referenz.gab` as the goal theorem's UNIT, through the generic
+  Subject:   `examples/0104-referenz.gab` as the goal theorem's UNIT, through the generic
              Lean pipeline: the real source text (`src104real`, byte-identical to the
              file) is parsed, elaborated and lowered (`uebersetzeAllg`), the program is
              an `Einheit`, and the user's logic `NutzerPflicht` is proved for the parsed

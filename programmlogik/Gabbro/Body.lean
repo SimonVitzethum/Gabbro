@@ -2,14 +2,14 @@
   File:    Gabbro/Body.lean
   Subject: What a Gabbro BODY means -- the statement descent as a state transition.
 
-  WHY THIS FILE IS NOT IN `passlogik/`
-    `passlogik/` formalises the CHECKER -- range lattices, effect hulls, rank order. Those
+  WHY THIS FILE IS NOT IN `programmlogik/passlogik/`
+    `programmlogik/passlogik/` formalises the CHECKER -- range lattices, effect hulls, rank order. Those
     are statements about PASSES. This one is a statement about PROGRAMS, and the two must not
     live in one namespace: a theorem about a pass read as a theorem about a program is a
     different claim with different consequences.
 
   WHAT IT CLOSES
-    `passlogik/README.md` books the same missing item four times (`B1`, `L1`, `P2`, `R1`):
+    `programmlogik/passlogik/README.md` books the same missing item four times (`B1`, `L1`, `P2`, `R1`):
 
         "The STATEMENT DESCENT -- what a body does statement by statement -- stands in NONE
          of the seven files."

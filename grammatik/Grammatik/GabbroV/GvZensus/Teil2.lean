@@ -55,7 +55,7 @@ theorem zensusMulti_exakt :
 
 /-! ## Population: every corpus file -/
 
-/-- Every `beispiele/*.gab` (157 files, `ls` order, 2026-10-07;
+/-- Every `examples/*.gab` (157 files, `ls` order, 2026-10-07;
     single source for every census run). -/
 def zensusDateien : List String :=
   ["01-tabelle.gab", "02-geraet.gab", "03-format.gab",

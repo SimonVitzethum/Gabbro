@@ -40,7 +40,7 @@
     dokumente/SYNTAX.md:1027   -- "`match` is exhaustive -- there is no catch-all branch"
     programmlogik/Gabbro/Body.lean, `binop`  -- "A zero denominator gets the model STUCK",
                                   "A bit mask, over the NON-NEGATIVE integers and nowhere else"
-    passlogik/Passlogik/Bereich.lean -- `add_korrekt`, `sub_korrekt`, `mul_korrekt`: die
+    programmlogik/passlogik/Passlogik/Bereich.lean -- `add_korrekt`, `sub_korrekt`, `mul_korrekt`: die
                                   Ueberdeckung, hier NEU bewiesen, weil die beiden
                                   Lake-Projekte einander nicht importieren.
 

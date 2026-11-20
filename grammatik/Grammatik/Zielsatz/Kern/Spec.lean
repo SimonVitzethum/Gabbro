@@ -222,7 +222,7 @@
     no hardware assumption or change to the existing G/GX safety, contract, call-log or time legs.
   * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is Stage 0
     (`stage0/`, written in Lean): the Lean elaborator (`Grammatik/Parser/Elab`) turns the source text into the unit,
-    Stage 0 lowers it to an IR image, and the assembly runner (`runner/runner.s`, x86-64) executes the image. The
+    Stage 0 lowers it to an IR image, and the assembly runner (`stage0/runner/runner.s`, x86-64) executes the image. The
     connected bridge is `irBild_correct` (stage0/Stage0/IRBild.lean) over `Senke.bild_ok_u`: for every image Stage 0
     returns, the runner model started on the image reaches the exit with the value of the SEQUENTIAL G call of the
     entry function (`rufAt`), stops with that call's logic or hardware code, or reaches `exit_group(120)` when

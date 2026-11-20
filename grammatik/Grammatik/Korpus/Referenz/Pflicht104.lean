@@ -242,7 +242,7 @@ theorem oblig_start_req : ∀ a ∈ G104_referenz_oblig.gE.starts,
   fun _ ha => absurd ha List.not_mem_nil
 
 /-- **THE USER'S DUTY ON 104, PROVED** -- exactly the `def nutzerPflicht`
-    that `gabbro obligations --g beispiele/0104-referenz.gab` states, with no
+    that `gabbro obligations --g examples/0104-referenz.gab` states, with no
     hypothesis of any kind. -/
 theorem oblig_nutzer : Zielsatz.NutzerPflicht G104_referenz_oblig.gE where
   logik := oblig_logik

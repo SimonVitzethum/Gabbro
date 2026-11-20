@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Referenz104Rahmen.lean
-  Subject:   `beispiele/0104-referenz.gab` CERTIFIED by the goal theorem over
+  Subject:   `examples/0104-referenz.gab` CERTIFIED by the goal theorem over
              declared frames (`ziel_ort_rahmen`): every premise holds
              jointly on the hand translation `r4P` of `Referenz104.lean`,
              and the conclusion holds on its reached run.
@@ -104,7 +104,7 @@ def r4E0 : Ereignis r4D := .nimmt () []
 
 /-! ## 3. The certificate -/
 
-/-- **`ziel_ort_rahmen_ref104` -- `beispiele/0104-referenz.gab` certified.**
+/-- **`ziel_ort_rahmen_ref104` -- `examples/0104-referenz.gab` certified.**
     On the hand translation `r4P` (with the flagged driver and idle
     function), ALL premises of `ziel_ort_rahmen` hold jointly: the hardware
     facts `GutO`/`RegLokal` of the oracle, the complete member list, the

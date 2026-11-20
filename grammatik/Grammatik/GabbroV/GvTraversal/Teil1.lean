@@ -79,8 +79,8 @@ theorem besuchtDeckt_mono (n : Int) (log₁ log₂ : List Nat)
     `tr_traverse`, `crates/gabbro-check/src/lean_g.rs`):
 
     (S-slots) `traverse i over slots of T [by unvisited]`
-    (`beispiele/57`: `traverse t over slots of Faden by unvisited`;
-    `beispiele/19`, `46`: the same domain over a pointer-typed name
+    (`examples/57`: `traverse t over slots of Faden by unvisited`;
+    `examples/19`, `46`: the same domain over a pointer-typed name
     for `T`). The mode, the `decreases` witness and `touches` are
     static annotations with no form; the invariant travels where it
     translates.
@@ -88,7 +88,7 @@ theorem besuchtDeckt_mono (n : Int) (log₁ log₂ : List Nat)
     Without a G form (exporter refusal LG006; coverage there is OPEN,
     see CUTS):
     (S-desc) `traverse opfer over descendants of … by consuming`
-    (`beispiele/01`, `09`, `messung/caprock/kapraum`): its domain is a
+    (`examples/01`, `09`, `messung/caprock/kapraum`): its domain is a
     chain from a start slot, not the full table.
 -/
 

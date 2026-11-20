@@ -41,9 +41,11 @@ PINNED = set()
 exec(open(ROOT / 'instrumente' / 'teile' / 'lean-layout-rules.py').read())
 
 # Lean projects: folders from the project root down to a folder holding Lean files are counted.
-PROJECTS = ['grammatik', 'bruecke', 'passlogik', 'programmlogik', 'stage0', 'runner', 'nativefloat']
-TEXT_TREES = ['crates', 'instrumente', 'dokumente', 'beispiele', 'bibliothek', 'laufzeit', 'bruecke',
-              'passlogik', 'programmlogik', 'beweise', 'README.md', 'DIRECT-COMPILER-DESIGN.md',
+# Nested projects (a package inside another package's folder) come first: the longest prefix decides.
+PROJECTS = ['grammatik/nativefloat', 'grammatik', 'programmlogik/bruecke', 'programmlogik/passlogik', 'programmlogik',
+            'stage0/runner', 'stage0']
+TEXT_TREES = ['crates', 'instrumente', 'dokumente', 'examples', 'bibliothek', 'laufzeit',
+              'programmlogik', 'beweise', 'README.md', 'DIRECT-COMPILER-DESIGN.md',
               'AGENTS.md', 'DONE.md', 'grammatik']
 SKIP_PREFIX = ('messung/muse/', 'lanes/', '.claude/', '.town/', 'target/', '.lake',
                'instrumente/teile/lean-layout')   # the tool's own rules and map name paths on purpose (PINNED): never rewritten
@@ -77,12 +79,21 @@ def target_of(path):
     return path
 
 
+def project_of(path):
+    """The Lean project a repo-relative path lies in (the longest matching project folder), or None."""
+    for p in PROJECTS:
+        if path.startswith(p + '/'):
+            return p
+    return None
+
+
 def module_of(path):
     """grammatik/Grammatik/X86/Foo.lean -> Grammatik.X86.Foo (project dir stripped)."""
-    parts = Path(path).with_suffix('').parts
-    if parts[0] in PROJECTS and len(parts) > 1:
-        return '.'.join(parts[1:])
-    return None
+    p = project_of(path)
+    if p is None:
+        return None
+    parts = Path(path[len(p) + 1:]).with_suffix('').parts
+    return '.'.join(parts) if parts else None
 
 
 def entries_of(files):
@@ -98,7 +109,7 @@ def lean_dirs(files):
     dirs = set()
     for f in lean_files(files):
         parts = f.split('/')
-        if parts[0] not in PROJECTS:
+        if project_of(f) is None:
             # loose measurement probes: only the folder that directly holds the file
             dirs.add('/'.join(parts[:-1]))
             continue

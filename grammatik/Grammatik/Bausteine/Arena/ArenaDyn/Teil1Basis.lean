@@ -192,7 +192,7 @@ theorem dynGrowListe_scheitert :
       exact ih B (by omega)
     · rw [dynGrow_ueber_M A n (by omega)]
 
-/-- The floor-`8` arena under `max 16`: the shape of `beispiele/gift/1133`
+/-- The floor-`8` arena under `max 16`: the shape of `examples/poison/1133`
     and `/1135`. -/
 def Az16 : DynArena := ⟨16, 8, 8, by decide, by decide, by decide⟩
 

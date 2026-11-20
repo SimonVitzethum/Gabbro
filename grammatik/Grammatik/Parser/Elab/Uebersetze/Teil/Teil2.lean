@@ -72,7 +72,7 @@ def uSuch (was : String) (xs : List (String × α)) (n : String) : Except String
   | (m, v) :: rest => if strEq m n then .ok v else uSuch was rest n
 
 /-- The built-in integer types as ranges: `uN` is `0 .. 2^N - 1`, `iN` is `-2^(N-1) .. 2^(N-1) - 1`,
-    N = 1 .. 64 (the width sugar of the surface, `beispiele/73`). A literal table and not a
+    N = 1 .. 64 (the width sugar of the surface, `examples/73`). A literal table and not a
     computation on names: the chain instances evaluate the elaborator in the kernel, and the
     kernel must never decode a `String` (`Lexer.lean`, O13). A user `type` of the same name
     comes FIRST (`uTypName`). -/

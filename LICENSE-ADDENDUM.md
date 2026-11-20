@@ -12,15 +12,15 @@ Two additions come with it. The first is an **additional permission** under AGPL
 
 > **A program written in Gabbro is NOT a derived work of Gabbro.**
 >
-> This covers the Gabbro source itself and everything the compiler makes of it: the generated
-> C, the generated annotations, the binaries.
+> This covers the Gabbro source itself and everything the compiler makes of it: generated code and
+> IR images, generated annotations, the binaries.
 >
 > You may release your program under any license you like — including non-free, proprietary,
 > closed. **The AGPL does not reach through to your program.**
 
 *Without this addition the situation would be unclear, and for a technical reason: the
-compiler places **template code** into the generated C — proof scaffolding, loop shapes, range
-checks. That code comes from Gabbro. Which is exactly why the permission is stated here
+compiler places **template code** into what it generates — proof scaffolding, loop shapes, range
+checks, start-up and entry code. That code comes from Gabbro. Which is exactly why the permission is stated here
 instead of being left to interpretation.*
 
 This is an additional permission in the sense of AGPL §7. You may remove it from your copy —
@@ -32,7 +32,7 @@ This is an additional permission in the sense of AGPL §7. You may remove it fro
 
 **Addition 1 holds as long as the following notice is preserved *in the case that matters*:**
 
-> **If you present the program, its generated C or a binary built from it as FORMALLY
+> **If you present the program, code or an image generated from it, or a binary built from it as FORMALLY
 > VERIFIED, PROVED, or SECURE — in any wording that borrows the credibility of a proof —
 > then the artefact carries the notice:**
 >
@@ -48,14 +48,15 @@ it is a property of a chain of arguments, and that chain is checkable only if th
 find it. Whoever says *"verified"* is using the word to move risk to someone else — the buyer,
 the auditor, the operator who now trusts the thing. The notice is what makes that word
 checkable: it says which checker was used, so the reader can look up what it does and does not
-claim (`README.md` §5 states exactly that, and it is shorter than most marketing pages).
+claim (the section "What is and is not claimed" of `README.md` states exactly that, and it is shorter
+than most marketing pages).
 
 *Whoever claims nothing has nothing to make checkable, and is asked for nothing.*
 
 **Concretely:**
 
-* **Generated C** — the compiler writes the notice into the header of every file it generates.
-  You may remove it. Removing it costs you nothing **unless** you make a verification or
+* **Generated files** (code, IR images) — the notice as a comment or a readable string is enough.
+  You may leave it out. Leaving it out costs you nothing **unless** you make a verification or
   security claim about the result; then it is the one act that voids Addition 1.
 * **Binaries** — a notice as a readable string, findable with `strings`, is enough.
 * **What is NOT required, even when you do claim it:** no notice in a user interface, no

@@ -173,7 +173,7 @@ theorem frame_schritte_beschraenkt_tief (P : Programm D) (O : Orakel D) (passes 
     without touching §1:
 
     * `fa : D.Ax → Nat` is the declared cost table for foreign edges (the
-      counterpart of `c : D.Fn → Nat`; cf. `beispiele/96`, where a `syscall`
+      counterpart of `c : D.Fn → Nat`; cf. `examples/96`, where a `syscall`
       carries no `costs` clause by grammar -- here the table is a Lean
       parameter, not a grammar change).
     * `fremdStmt`/`fremdBlock`/`fremdArms`/`fremdGArms`/`fremdEnd` sum the

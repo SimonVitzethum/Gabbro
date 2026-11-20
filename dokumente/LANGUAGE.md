@@ -978,7 +978,7 @@ value of the field's type. No raw-address or unchecked indexing form follows.
 
 *The free list* (reuse without fragmentation) is a **pattern**: typed compartments do not
 fragment, so a head plus a `naechst` chain gives reuse of whole slots with no size classes
-(`beispiele/27`, `58`). It gives **no** use-after-free protection — that half is the arena's
+(`examples/27`, `58`). It gives **no** use-after-free protection — that half is the arena's
 `free` (§17), whose index dies statically.
 
 #### 10.2.1 `breaking` is not a write right

@@ -636,7 +636,7 @@ For the runner:
   handler cheap, the handlers, the loader, `spawn`, `runner_tso` over x86-TSO for `MOV` and `LOCK CMPXCHG`. The least charted part is
   `ir_parallel` with `runner_tso`.
 
-**State (2026-10-28, package `runner/`).** Built and proved, with threads, on the standard axioms:
+**State (2026-10-28, package `stage0/runner/`).** Built and proved, with threads, on the standard axioms:
 * `IR/Step.lean`: `S0IR` with 24 opcodes. Deviations from §2.1.3, decided for the smallest runner: the opcode is
   byte 0; `jmp`/`brz` take a byte offset relative to the instruction; `call a k` jumps to the code ADDRESS in slot
   `a`; `cas d a e` takes the new word from slot `e+1`; `spawn d a` starts a thread at the code address in slot `a`
@@ -649,7 +649,7 @@ For the runner:
   makes the same requests. `Test/Diff.lean` with `instrumente/teile/runner-cpu.py`: random cases of every form
   against this processor, fault programs, and litmus tests of x86-TSO run by the runner on real threads.
 * `Prog/`: the runner (loader, threaded dispatch through a 256-entry table, 24 handlers; a 4288-byte ELF), its
-  listing `runner/runner.s`, probe images with fixed outputs (`runner/proben/`; no Lean program runs the IR).
+  listing `stage0/runner/runner.s`, probe images with fixed outputs (`stage0/runner/proben/`; no Lean program runs the IR).
 * `Mach/`: one machine for both sides over a memory model (`MemSys`): SC with the kernel, and x86-TSO with a
   store buffer per thread.
 * `Beweis/`: `step_ok` (every handler makes the requests of its IR instruction, all 256 opcode bytes),

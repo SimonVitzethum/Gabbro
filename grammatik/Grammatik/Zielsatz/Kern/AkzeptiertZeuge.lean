@@ -12,7 +12,7 @@
     checker certificate supplies the body duties used by the goal corollaries.
     The original cross-slot invariant/lock fixture is refused as outside the
     decidable fragment.
-  * §3 The export of `beispiele/104` is refused for old-memory postconditions.
+  * §3 The export of `examples/104` is refused for old-memory postconditions.
     Its structural root refusal and lack of an idle start remain witnessed.
   * §4 Refusals: two declared starts writing one unguarded table
     (`ak1_zwei_schreiber`), a lock-floor violation (`ak2_boden_falsch`);
@@ -176,7 +176,7 @@ theorem mTafel_doppelt_falsch :
     startB mFragment mFragmentS mFs [()] mCs [mHauptA, mHauptB]
       ⟨[⟨mHauptA, .nil⟩, ⟨mHauptA, .nil⟩], ⟨mRuhe, .nil⟩⟩ mSp = false := by decide
 
-/-! ## 3. The export of `beispiele/104` -/
+/-! ## 3. The export of `examples/104` -/
 
 section Export104
 

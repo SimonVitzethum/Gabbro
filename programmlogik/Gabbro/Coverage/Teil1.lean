@@ -47,7 +47,7 @@ inductive Reason where
     refusals of section 9.2: one untranslatable invariant on `Knoten` refuses every duty
     that writes it. *A class counted in duties is four fifths one clause.*
 
-        for f in $(git ls-files 'beispiele/*.gab' 'messung/proben/*.gab' | grep -v gift); do
+        for f in $(git ls-files 'examples/*.gab' 'messung/proben/*.gab' | grep -v gift); do
           ./target/debug/gabbro pflichten --lean "$f"; done | grep -c 'refused (quantified-threads)'
 
     **Why it does not become a goal, and why no surface closes it cheaply.** Every other

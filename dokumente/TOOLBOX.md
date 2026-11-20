@@ -14,7 +14,7 @@ The rule ids are cited from source comments and other documents and are never re
 | Guardian | Subject | Stages |
 |---|---|---|
 | `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) and stage 0 (`stage0/`) | `lake build` of both · `gabbro_ziel` and its siblings depend on exactly `propext`, `Classical.choice`, `Quot.sound` (`NachpruefungZiel.lean`) · no `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`, no `axiom` outside `teile/kein-sorry-allowlist.txt` · at most 20 entries per folder · the stage-0 probes `stage0/proben/` print what they must |
-| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · the bridge `bruecke/` builds over the tracked duty files and its theorems depend on the standard axioms only |
+| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · the bridge `programmlogik/bruecke/` builds over the tracked duty files and its theorems depend on the standard axioms only |
 
 ```bash
 ./instrumente/abnahme.py                 # both, one after the other
@@ -292,8 +292,8 @@ resolving in an empty module path; `M2` consumed on both paths reported as on no
 `pure` call killing a narrowing). Too strict is harmless to the promise and expensive for usability
 — and nobody reports it, *because the programmer rewrites the program instead of suspecting the
 checker*. The structural cause is measurable: on 2026-08-25 **275 poison files (6 937 lines)**
-against **50 examples (4 564 lines)** — 5.5 : 1; today (2026-10-17) `ls beispiele/gift/*.gab | wc
--l` gives **898** against **170** in `beispiele/` (5.3 : 1 in files). A poison probe can in
+against **50 examples (4 564 lines)** — 5.5 : 1; today (2026-10-17) `ls examples/poison/*.gab | wc
+-l` gives **898** against **170** in `examples/` (5.3 : 1 in files). A poison probe can in
 principle not find a false refusal; it checks that something falls. *Consequences, in order:*
 goal 3 gets a second axis (how often is correct code refused — ceremony in its most expensive
 form: not a line but a rebuild, leaving a language description that carries the workaround as an
@@ -303,12 +303,12 @@ program instead of questioning the rule has discarded the finding.
 
 ### W23 — A measurement whose population contains its own probes measures itself
 *Case (2026-08-28):* to evidence the need for `V009` (how often does a plain read from an
-`atomic` gate a branch?) the first run reported **26 bindings, 0 plain** over `beispiele/` **and**
-`beispiele/gift/` summed; the second split the pots, and the **only** plain atomic read in the
+`atomic` gate a branch?) the first run reported **26 bindings, 0 plain** over `examples/` **and**
+`examples/poison/` summed; the second split the pots, and the **only** plain atomic read in the
 tree was the poison probe written for `V009`. W18 in the measurement direction: a fixed point
 is noticed because the number never moves; a self-measurement delivers a plausible, non-trivial
 number nobody can trace. *Pre-run question:* **does the set I count over contain files written for
-the subject of this count?** `beispiele/gift/` belongs in hit counts (*does the rule fall?*) and
+the subject of this count?** `examples/poison/` belongs in hit counts (*does the rule fall?*) and
 nowhere else; where both pots are needed they are reported separately. And a corrected
 measurement keeps the replaced number beside the right one — *a corrected measurement without the
 replaced number is a claim about a correction.*
@@ -320,7 +320,7 @@ replaced number is a claim about a correction.*
 `Verzeichnis::insert(v, i)` has always parsed: `parse.rs::erwarte_feldname` accepts any
 vocabulary word after `::`; the EBNF did not say so), and **«B17»** (a multi-place form for
 `transition` — but `transset = placeshift { "," placeshift }` stands in `SYNTAX.md` and is *used*
-in `beispiele/0002-geraet.gab`; of seven probes exactly one fell at the parser, at one token; what
+in `examples/0002-geraet.gab`; of seven probes exactly one fell at the parser, at one token; what
 really lacked was that `breaking I { … }` never resolved its name). Through the unchanged
 checker the real answers were `E009` (callee unknown to the graph) and `K003` — not a single
 `P00x`: the missing thing was the **callee**, not the call form. *Rule, asked before the
@@ -377,7 +377,7 @@ to check the instrument): here it **cannot accept the question**. *Ask whether t
 except `module` and `use`, `extern fn` included — the construct whose purpose is the deliberate
 binding to a C name — so a Gabbro program could not print and **eight attempts at "add two
 numbers"** had an explanation that was not the language. Redeemed 2026-09-01 as a **change**,
-not an exception: `beispiele/0063-druckt.gab` prints `Hallo` (checked, emitted, compiled under
+not an exception: `examples/0063-druckt.gab` prints `Hallo` (checked, emitted, compiled under
 `-Wall -Wextra -Werror`, run), and `N046` asks the right question — *does the signature match
 the one C already knows?* The handle for that was missing too: `./instrumente/miss-c-signaturen.py`
 (not in the tree today; the measurement stood at 138 of 558 names bindable, 420 not).
@@ -392,14 +392,14 @@ long kept the denominator (W7, the counter-probe in the guardian); for **justifi
 not — and the damage is larger there: a wrong result figure turns red next run, a wrong
 justification figure *steers a lane and disappears*. The conclusion held here (221 words and a
 lowering sentence are a disproportion whatever the slope) — **luck, not merit.** *Second line,
-after the eighth instance:* two of the six W16 cases share a special reason: **`gift/` in the
+after the eighth instance:* two of the six W16 cases share a special reason: **`poison/` in the
 denominator** (the domain computation: 17 words fall → measured 3; §42: 14/31/6/102 → 3/12/3/52 in
 the ratchet corpus, eleven of fourteen `order` being poison probes). A corpus whose purpose is
 refusal inside a count of *use*. The rule: **a figure that triggers a lane carries its handle and
-its denominator; every frequency measurement runs without `gift/` unless somebody writes the
+its denominator; every frequency measurement runs without `poison/` unless somebody writes the
 opposite.** Seen live the same hour: `zaehle-formate.py` reported *"523 files, 46 format
-declarations"*; recounted **39**, 13 of them in `gift/` — a third. Of 21 tools counting over
-`.gab`, four did not name `gift/` (two of them select a subset that excludes it anyway).
+declarations"*; recounted **39**, 13 of them in `poison/` — a third. Of 21 tools counting over
+`.gab`, four did not name `poison/` (two of them select a subset that excludes it anyway).
 
 ### W29 — Before a rule over a WORD: count its uses, and their DIRECTION
 *Booked 2026-09-01 after the third instance.* A rule over a keyword hits **all** its uses, and the
@@ -460,7 +460,7 @@ constructors/fields the LLVM lowering must cover, with `dokumente/llvm-modelldec
 (queued builds of `arm/`) · `silicon-harness/` (x86 differential harness, work stopped 2026-10-07) ·
 `sonden/` (C programs that decide a named hardware assumption; a `falsifier` clause names one).
 
-**Corpora:** `beispiele/` (clean examples: each must check clean) · `beispiele/gift/` (poison probes:
+**Corpora:** `examples/` (clean examples: each must check clean) · `examples/poison/` (poison probes:
 each must fall with exactly its booked code) · `messung/proben/` (the smallest programs that decide a
 question) · `messung/fragmente/` (the ten completed fragments of `dokumente/FRAGMENTS.md`) ·
 `messung/netz/` (the network stack against published vectors) · `messung/llvm/` (LLVM end-to-end programs).

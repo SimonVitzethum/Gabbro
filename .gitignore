@@ -23,7 +23,6 @@ __pycache__/
 # A pattern that names one directory covers one directory.
 .lake/
 programmlogik/lake-manifest.json
-grammatik/lake-manifest.json
 # Agent working copies of `programmlogik/` -- scratch, never repository content.
 programmlogik-*/
 
@@ -43,8 +42,8 @@ sys,re,collections
 # measurement bench. A second register over the same thing is the class that folder is
 # written against -- so none of it is repository content.
 programmlogik/Duty/*
-# EXCEPT the duty files the bridge (`bruecke/lakefile.toml`, lib `Duty`) imports: a fresh clone must
-# build, so those are tracked; regenerate them with `gabbro pflichten --lean beispiele/<unit>.gab`.
+# EXCEPT the duty files the bridge (`programmlogik/bruecke/lakefile.toml`, lib `Duty`) imports: a fresh clone must
+# build, so those are tracked; regenerate them with `gabbro pflichten --lean examples/<unit>.gab`.
 !programmlogik/Duty/Duty0104Referenz.lean
 !programmlogik/Duty/Duty0108DisjointStartLocks.lean
 !programmlogik/Duty/Duty0130DerivedContractPure.lean

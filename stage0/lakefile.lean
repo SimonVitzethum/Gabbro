@@ -8,7 +8,7 @@ package stage0 where
   weakLeanArgs := #["-j1", "-M16384", "-DElab.async=true", "-DmaxHeartbeats=400000"]
 
 require grammatik from "../grammatik"
-require runner from "../runner"
+require runner from "runner"
 
 @[default_target]
 lean_lib Stage0

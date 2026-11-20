@@ -56,7 +56,7 @@ and is **not guarded today**.
 
 | Quantity | Command | Last value (date) |
 |---|---|---|
-| Poison probes / clean examples | `ls beispiele/gift/*.gab \| wc -l`; `ls beispiele/*.gab \| wc -l` | 898 / 170 (2026-10-17, measured while writing this) |
+| Poison probes / clean examples | `ls examples/poison/*.gab \| wc -l`; `ls examples/*.gab \| wc -l` | 898 / 170 (2026-10-17, measured while writing this) |
 | Fragments clean / lowering / pierced | retired `zaehle-fragmente` | 9 / 9 / 9 of 10; F3 is the exception (`FRAGMENTS.md` §3) (historical) |
 | Mutation anchors that bite | retired `mutiere-pruefer` | **388 of 422** (2026-10-17: 34 anchors measure nothing because the checker moved under them; the full run of 2026-09-03 caught 388 of 388 valid mutations, 375 of 376 under `cargo test` alone) (historical) |
 | Mutation run over the whole checker | retired `mutiere-pruefer` | 13 min 20 s measured on 377 mutations (historical; not re-measured for the later catalogue) |
@@ -358,7 +358,7 @@ The ownership chain "has no beginning" was a problem only because the Rust origi
 `&mut CapSpace`: kernel state is one instance behind a lock. **A `table` IS memory** (its name is
 its place, no pointer pair, no aliasing question); **the parameter list of a `device` IS its
 constructor** (the address comes from data, not out of nowhere). F1 and F2 were written out without
-one pointer through all five passes (`beispiele/0009-ohne-zeiger.gab`). What remains are DMA buffers,
+one pointer through all five passes (`examples/0009-ohne-zeiger.gab`). What remains are DMA buffers,
 allocated regions and foreign memory — `own` pointers, consumed if `effects` names them under
 `consumes`, otherwise borrowed. *A fragment that translates its original along brings that
 original's constraints with it, and those then look like requirements of the new language.*

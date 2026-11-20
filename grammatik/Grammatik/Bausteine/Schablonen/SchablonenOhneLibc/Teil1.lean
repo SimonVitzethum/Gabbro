@@ -97,7 +97,7 @@ theorem nie_tor_halt_benannt (a : D.Ax) (h : D.aerg a = some Ty.never)
 
 end Nie
 
-/-! ### The witness: the real gate of `beispiele/174` -/
+/-! ### The witness: the real gate of `examples/174` -/
 
 section Zeuge174
 

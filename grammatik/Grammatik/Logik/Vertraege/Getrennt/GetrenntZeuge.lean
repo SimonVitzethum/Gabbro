@@ -7,7 +7,7 @@
   writable, pointer parameter) and the same declared frame (`writes T` -- the table of
   the first parameter, so `RahmenUeberParams` holds for both):
 
-    * `aendern (k : ptr rw T, w : ptr r T)` -- the `gift/1444` shape at the model's
+    * `aendern (k : ptr rw T, w : ptr r T)` -- the `poison/1444` shape at the model's
       granularity: the read-only parameter names the carrier the writable one writes.
       NOT `ParamGetrennt` (`zeuge_aendern_nicht_getrennt`), and one real `rufAt` run changes
       the carrier of `w` (`zeuge_aendern_lauf`): the per-parameter frame "`w` is only

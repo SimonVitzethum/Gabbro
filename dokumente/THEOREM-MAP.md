@@ -691,7 +691,7 @@ threads are excluded by the held signature locks, `fussOrtGB`,
 - `ziel_ort_voll_lokal_aus_rahmen`, `ziel_ort_lokal_aus_rahmen`:
   `ziel_ort_voll` and `ziel_ort` on register-local oracles.
 - `ziel_ort_rahmen_ref104` (`Referenz104Rahmen.lean`): every premise holds
-  jointly on the hand translation of `beispiele/0104-referenz.gab`; the
+  jointly on the hand translation of `examples/0104-referenz.gab`; the
   conclusion holds on every reachable machine and on the reached run
   (`ensures` of `einzahlen` at its logged return, from the theorem).
 
@@ -820,7 +820,7 @@ head stands at one of these places (a leaf here: a `state` transition).
   machine reachable in two steps (`endeEntf`, `dannTrav`): the stuck state is
   now a refutation, not a certificate.
 - **Corpus 104** (`ziel_ort_ganz_ref104`): every premise jointly on the hand
-  translation of `beispiele/0104-referenz.gab` (the new clause by
+  translation of `examples/0104-referenz.gab` (the new clause by
   `programmLogikFrei`), the full conclusion on every reachable machine, and
   on the reached run memory `0 -> 100` with the `ensures` of `einzahlen` at
   its logged return. (`ziel_ort_rahmen_ref104` still builds unchanged.)
@@ -1802,7 +1802,7 @@ restated over every budget at the cost of one `decide` each.
 
 *Probe D, rebuilt and refuted* (`ProbeD.lean`, on `zD`; `fvP false` is the
 verdict's `fvP`, `fvP true` its `fwP` -- invariant `true`, the shape of
-`manifest_pruefen` in `beispiele/0004-schleifen.gab`):
+`manifest_pruefen` in `examples/0004-schleifen.gab`):
 
 - `fvP_koerper0`, `probeD_bei0_zertifiziert`: the per-budget lemma at `0`
   certifies both variants (the defect, kept as a theorem).
@@ -1899,7 +1899,7 @@ theorem schlusssatz_104 (c : Cert104) (hc : certOkG c = true)
   as the binary's behaviour, `bootInit`), and the `example` applying the
   theorem to them.
 
-Chain count unchanged: **1** (`beispiele/104`); PLAN §6 restated.
+Chain count unchanged: **1** (`examples/104`); PLAN §6 restated.
 
 ### 18.4 THE goal theorem: `ziel_ort_mehrfaden_ende` (restated)
 
@@ -2883,9 +2883,9 @@ states answer-site admission rather than full checker acceptance. No `sorry`, no
 `axiom`, no `native_decide`. `lake build` on `ki-pc-fisch-101` (`~/gabbro-muse/opus-w1/`): 230 jobs,
 green (a full rebuild, Semantik.lean docstrings changed), no `sorryAx` in the log.
 
-## 26. Stage (b): the concurrent closing theorem for `beispiele/124` (2026-09-15)  -- removed (C backend)
+## 26. Stage (b): the concurrent closing theorem for `examples/124` (2026-09-15)  -- removed (C backend)
 
-Removed on 2026-10-18 with the C backend: this section recorded the stage-(b) concurrent closing theorem for the emitted C of `beispiele/124` (`Schlusssatz124`, `CNebenlaeufig`, `Korpus124` simulation). The C line existed and lives in the tag `archiv/c-emitter-2026-10-17`; nothing here is evidence of the present tree. 
+Removed on 2026-10-18 with the C backend: this section recorded the stage-(b) concurrent closing theorem for the emitted C of `examples/124` (`Schlusssatz124`, `CNebenlaeufig`, `Korpus124` simulation). The C line existed and lives in the tag `archiv/c-emitter-2026-10-17`; nothing here is evidence of the present tree. 
 
 ## 27. The closing theorem, stage (a), generic: `schlusssatz`; chain count 2 (2026-09-15)  -- removed (C backend)
 
@@ -3002,7 +3002,7 @@ functions) and `p108_ruf_liest` (the readers answer slot 0 and slot 1 of the sha
 idle root. `oblig_ziel` is therefore true about an IDLE machine. That is faithful -- 104
 declares no thread -- but it means the concurrency legs of `Ziel` (`rennfrei`, no deadlock,
 `KeinWarteZyklus`) carry no weight on 104. They carry weight on 108, which is why both are
-here. *`beispiele/124` is not a third candidate: it does not export at all (`LG004`).*
+here. *`examples/124` is not a third candidate: it does not export at all (`LG004`).*
 
 **Axioms: the standard three** for every theorem in both files, and `#print axioms
 gabbro_ziel` is unchanged. The whole library builds: 254 jobs, exit 0. No `sorry`, no
@@ -3098,8 +3098,8 @@ gabbro_ziel` unchanged.
 
 **File:** `grammatik/Grammatik/Logik/Ruf/FremdRuf.lean` §9 (lane 233's fixture, section added by fix lane
 F5 after reviews G04 F2 and G10 F5). **Deleted Rust:** `rahmenlaenge.rs`,
-`m1.rs` (`transfer_bound_at_call`, `N463`), `syscall.rs` (`buffer_bound`, `N464`); neither rule is yet a Lean judgment. `beispiele/149`
-(`path_nul_terminated`), `beispiele/150`.
+`m1.rs` (`transfer_bound_at_call`, `N463`), `syscall.rs` (`buffer_bound`, `N464`); neither rule is yet a Lean judgment. `examples/149`
+(`path_nul_terminated`), `examples/150`.
 
 | Theorem | What it says | Tied to |
 |---|---|---|
@@ -3135,8 +3135,8 @@ theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Deleted 
 | `bconcat_max_summe` | if the MAXES sum to at most the target max, the exact concat succeeds with the summed length | `N453`'s max-sum rule is sound (it over-approximates) |
 | `bkopie_max`, `bkopie_kuerzer_scheitert` | a copy from max `m` into max `tmax >= m` succeeds and keeps the characters; a full `string max 8` does not copy into `string max 2` | `N455` (a string past its slot) |
 | `bindex_innen`, `bindex_aussen` | an index below the length reads the element; at or past it, `none` | `N454` |
-| `bindex_max_beweist_nichts` | an empty `string max 8` refuses index 7, though `7 < 8` | why `N454` demands a length fact (`gift/1125`, checker-clean before F6) |
-| `bindex_geschuetzt`, `bindex_mindestlaenge` | `k < blaenge s`, or `n <= blaenge s` with `k < n`, gives a character | the guard forms `N454` accepts (`gift/1159`) |
+| `bindex_max_beweist_nichts` | an empty `string max 8` refuses index 7, though `7 < 8` | why `N454` demands a length fact (`poison/1125`, checker-clean before F6) |
+| `bindex_geschuetzt`, `bindex_mindestlaenge` | `k < blaenge s`, or `n <= blaenge s` with `k < n`, gives a character | the guard forms `N454` accepts (`poison/1159`) |
 | `bounded_string_zeuge` | on non-empty, distinct strings: `"hi" + "!" = "hi!"` at max 8, index 2 reads `'!'` under `2 < blaenge`, the same index is refused on the empty string, `"hi!"` copies into max 8 and not into max 2 | non-degeneracy (the earlier reference-machine conjunct was decorative, review G12 F6, and is gone) |
 
 **What is NOT claimed.** No theorem says the deleted Rust pass implemented these rules: the link was
@@ -3220,8 +3220,8 @@ runtime start), `Zielsatz/Kern/Beweis.lean` (`startZulaessig_aus`), `Zielsatz/Fa
 refused `atomic` and `accumulates` items, so both sides read "every written carrier guarded");
 the footprint legs `N290`-`N293` (Lean: the `fussWB` occurrence-pairing theorems in `Zielsatz/Faeden/PoolZeuge.lean`; `N292`/`N294` are not yet Lean judgments) always paired thread indices, which is the occurrence form of
 `Getrennt`. `N315` (idle duplicate) is retired -- an idle routine is the empty pool and the goal
-covers it -- and gift 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
-lifted: `beispiele/0157-worker-pool.gab` exports with both occurrences and agrees
+covers it -- and poison 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
+lifted: `examples/0157-worker-pool.gab` exports with both occurrences and agrees
 (retired `pruefe-akzeptiert-diff`, 0 findings; its self-test runs the pool positive).
 
 **What is NOT claimed.** Per-core writes (`accumulates … per cpu`) stay unmodelled (OFFEN
@@ -3235,7 +3235,7 @@ steps; `Ziel` at every other reachable machine is `gabbro_ziel`'s, not the witne
 (the witnesses on `Korpus59.lean`). Reviews G02 F1 and G12 F1, OFFEN O19.*
 
 **The gap.** An `entry … via idt` dispatch root travels into the model as an ordinary start,
-and G interleaves freely, so the deadlock the deleted checker's `H102` (Lean: `Nebenlaeufigkeit/Allgemein/Unterbrechung.lean`) refused (`beispiele/gift/460`: a
+and G interleaves freely, so the deadlock the deleted checker's `H102` (Lean: `Nebenlaeufigkeit/Allgemein/Unterbrechung.lean`) refused (`examples/poison/460`: a
 handler takes, on the core it interrupted, a lock that core's thread holds without
 `masks irqs`) is no deadlock in G — there the holder steps on. `D.maskiert` was read by
 nothing in `Zielsatz/`.
@@ -3248,17 +3248,17 @@ nothing in `Zielsatz/`.
 | `handler_sperre_maskiert` | the program side: if every lock a thread's features admit is declared `masks irqs`, that thread stands at masked locks only, at every machine of the run (carried by `MerkInvG`, whose `Merkmal.sperre` field IS "which locks a body may take") |
 | `merkInvG_lauf`, `anSperre_gleich`, `anSperre_nicht_fertig`, `anSperre_ende_falsch`, `anSperre_start_falsch`, `sperre_merkmal`, `erster_index` | the helpers: the frame invariant along a run from any start machine; a lock head is a fact about the thread's own state; a thread at a lock head is unfinished; a start machine has no thread at a lock head |
 | `maskenDisziplinB`, `merkAbg_maskM`, `maskM` | `H102` as a Bool over the member list, and the bridge into the leg's hypothesis |
-| `masken_zeuge` | ONE core, two threads of `beispiele/59`: thread 1 takes `RING`, the handler then steps and stands at `locks TAKT` (masked) while the interrupted thread is inside its section; the leg — from `korpus59_ziel` — gives that `TAKT` is not held by that thread |
-| `masken_disziplin_59`, `masken_disziplin_460` | the discipline Bool accepts `takt_verteiler`'s graph and refuses `ruf_verteiler`'s (the `gift/460` shape); both roots pass the checker, so the refusal is the handler discipline and not (a) |
+| `masken_zeuge` | ONE core, two threads of `examples/59`: thread 1 takes `RING`, the handler then steps and stands at `locks TAKT` (masked) while the interrupted thread is inside its section; the leg — from `korpus59_ziel` — gives that `TAKT` is not held by that thread |
+| `masken_disziplin_59`, `masken_disziplin_460` | the discipline Bool accepts `takt_verteiler`'s graph and refuses `ruf_verteiler`'s (the `poison/460` shape); both roots pass the checker, so the refusal is the handler discipline and not (a) |
 
 **Deleted-Rust side.** `H102` (`kontexte.rs`) decided the same over the handler's call-graph hull:
-measured, `beispiele/gift/460` gives `[H102]` and `beispiele/59` is clean, exactly as the Lean
-Bool. No code, no gift, no example was added.
+measured, `examples/poison/460` gives `[H102]` and `examples/59` is clean, exactly as the Lean
+Bool. No code, no poison probe, no example was added.
 
 **What is NOT claimed.** Which start is a handler and which core it shares is not in `Einheit`
 and G has no cores, so those are hypotheses of the leg and not components of (a)/(d)
 (OFFEN O19, narrowed). The deleted checker's `H102` skipped locks the unit does not declare and fires only on
-`via idt` (`beispiele/57`'s IPI is silent) — both named there. The deleted emitted C realised no
+`via idt` (`examples/57`'s IPI is silent) — both named there. The deleted emitted C realised no
 masking at all (no `cli`/`sti`).
 
 ## 49. Threads created at run time: the thread machine in the goal theorem (Opus agent A, 2026-09-26)
@@ -3381,7 +3381,7 @@ silently.
 | `gP_gabbro` | its machine-G corollary (`gabbro_ziel_g`) |
 
 23 certificates, all in the build (311 jobs green): 104, 108 (`GenOblig104/108`), 109, 118, 119,
-120, 121, 124, 130, 15, 157, 16, 34, 59, 62, 69, 73, 93 and the gift clean sides 219, 414, 700,
+120, 121, 124, 130, 15, 157, 16, 34, 59, 62, 69, 73, 93 and the poison clean sides 219, 414, 700,
 701, 719. No `sorry`, `admit`, `native_decide` (the guard checks each file). The 176 UNCERTIFIED
 programs are listed with their first refusal; the Spec names them as NOT CLAIMED through the
 register. Exporter change: scalar constants travel as the checker's folded value, `const fn`
@@ -3442,7 +3442,7 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 *Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/Eigenschaften/InvariantenZeuge.lean`
 (witnesses), `Zielsatz/Kern/Spec.lean` (definitions, the invariant block of the header),
 `Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `zielF_aus`); deleted Rust `m1.rs`
-(`invarianten_buchen`), deleted `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
+(`invarianten_buchen`), deleted `tests/invarianten_buchung.rs`, `examples/poison/1231`-`1234`. Report
 `messung/OPUS-D-INVARIANTEN.md` (retired report, in the history).*
 
 **The gap.** NOT CLAIMED read "invariants at entry or while locks are held (claimed at returns
@@ -3468,7 +3468,7 @@ inside thread 0's section; no step of thread 1 accesses `konto` there, by `sperr
 and after, by `sperrWechsel`; thread 1's entry of `setze` after `hauptA` finished:
 `privA[0] == privA[1]`, by `invRuhe`, at the memory and at the frame's entry world);
 `tabelle_gebrochen` (`privA = [7, 0]` inside `hauptA`, the invariant OPEN there -- the leg claims
-nothing). Refusal side of O11: `beispiele/gift/1231`-`1234` (`N496`); the model side is
+nothing). Refusal side of O11: `examples/poison/1231`-`1234` (`N496`); the model side is
 `ivPschlecht_nicht_invGutS` (InvZeuge.lean): a writer that breaks an invariant fails (b).
 
 **What is claimed, precisely.** "At every entry" is false in general (a writer's callee may see
@@ -3570,9 +3570,9 @@ memory) answering a shared atomic read with any value -- and does the replay car
 write is refused -- the contract condition `vertragsFreiB`. Before it, such a contract passed with
 0 errors (the footprint legs never counted atomics; `messung/proben/o25b-vertrag-atomar.gab`).
 Gift 1204; snippet tests in deleted `tests/fusswache2.rs` (body-only shared read, thread-local atomic,
-single thread stay silent). Corpus diff: only the gift. With it, the deleted Rust footprint legs decided
+single thread stay silent). Corpus diff: only the poison probe. With it, the deleted Rust footprint legs decided
 `fussWXB` (atomics exempt as before, contracts over shared atomics refused), i.e. the deleted Rust checker
-was the Bool of `AkzeptiertX` on this component -- measured by gift and snippets, not by
+was the Bool of `AkzeptiertX` on this component -- measured by poison and snippets, not by
 retired `pruefe-akzeptiert-diff`, which cannot compare atomic programs (the exporter refuses them,
 `LG001`; the script lists `N484` under `fuss`, 22/22 agree, self-test ok).
 
@@ -3653,13 +3653,13 @@ graphs and `H102` were hypotheses of the leg, so the conjunct added no content
 | `akzeptiertSpec_mitRuhe`, `akzeptiertSpec_verbinde`, `schnittstelleB_iff` | the new field transfers to the idle-root program and across a link (composed hull) |
 | `akzeptiert_nodup_gleich`, `akzeptiert_vor_neu`, `pruefer_vor_neu` (PoolSym) | the old Bool is the new one without `maskenB`; an old checker is a `Pruefer` conjoined with `maskenB` |
 | `masken_zeuge`, `masken_59`, `kM0_handler` | example 59: the handler set is `{takt_verteiler}`, accepted; the handler preempts thread 1 inside `RING` and stands at `locks TAKT` — the leg of `korpus59_ziel` (from (a)) says `TAKT` is not held there |
-| `kPv_ohne_handler`, `handler_abgelehnt`, `kernHaltE_verletzt` | the `gift/460` shape (the handler takes unmasked `RING`): accepted with no handler declared, refused by `maskenB`, and the leg is FALSE on a real admitted run of it — the leg is contentful |
+| `kPv_ohne_handler`, `handler_abgelehnt`, `kernHaltE_verletzt` | the `poison/460` shape (the handler takes unmasked `RING`): accepted with no handler declared, refused by `maskenB`, and the leg is FALSE on a real admitted run of it — the leg is contentful |
 
 **Deleted-Rust side.** `H102` unchanged; the deleted exporter wrote `gP.unterbricht` for every `via idt` root
-(only `beispiele/59` among the certified programs; every other certificate changed by one header
+(only `examples/59` among the certified programs; every other certificate changed by one header
 line). the retired `pruefe-akzeptiert-diff` gained the component `masken` ↔ `H102`, pin K6 (exported
 handler set = source `via idt` roots), and a self-test pair (59 accepted; 59 without the mask =
-gift 460 refused at `masken` alone).
+poison 460 refused at `masken` alone).
 
 **What is NOT claimed.** No `cli`/`sti` in the C (translation validation has nothing to relate
 `KernPlan` to); no pinning (the leg holds for every core assignment); handler re-entry and
@@ -3701,16 +3701,16 @@ component's premise; both are recorded here because §57 reads differently now.
 |---|---|
 | **before** | `masks irqs` was a promise about the environment with nothing keeping it in the emitted C, and `Kontext::unterbricht` -- the premise of `maskenB`/`H102` -- was the literal path word `idt` |
 | **now** | the deleted RUNTIME kept the promise per flavour: bare metal `METALL_SPERRE_MASKIERT` (Opus agent J), Linux kernel module the MASKED pair the program bound (deleted `laufzeit/kmodul/sperre.h` over `bindung.h`; `raw_spin_lock_irqsave` in deleted `bibliothek/linux-kmod`, under the named assumption `kern_bindung_maskiert` -- K7, 2026-09-28). `unterbricht` was "the entry carries a `via` path", in the deleted `kontexte.rs` and `lean_g.rs` alike |
-| **why it is strictly stronger** | more dispatch roots become handlers, so `maskenB` has to hold over more programs. 0 corpus diff: nine `via` words at an `entry`, all `idt`. Witnesses `beispiele/gift/1364` (0 errors before, `H102` after) and `beispiele/166` (the same with `masks irqs`, clean and CERTIFIED as `G166_eintritt_irq_maskiert`) |
-| **measured** | retired `pruefe-akzeptiert-diff`: all ten pins on 29/29 comparable programs, `--selbsttest` green both ways (`masken` accepts 59, refuses the `gift/460` shape at `masken` alone). In QEMU, retired `pruefe-kernelmodul` probe `takt`: `ticks=26 landed=0` -- 26 hardirq arrivals, none inside a critical section on the holding core -- and the unmasked mutation does not finish |
+| **why it is strictly stronger** | more dispatch roots become handlers, so `maskenB` has to hold over more programs. 0 corpus diff: nine `via` words at an `entry`, all `idt`. Witnesses `examples/poison/1364` (0 errors before, `H102` after) and `examples/166` (the same with `masks irqs`, clean and CERTIFIED as `G166_eintritt_irq_maskiert`) |
+| **measured** | retired `pruefe-akzeptiert-diff`: all ten pins on 29/29 comparable programs, `--selbsttest` green both ways (`masken` accepts 59, refuses the `poison/460` shape at `masken` alone). In QEMU, retired `pruefe-kernelmodul` probe `takt`: `ticks=26 landed=0` -- 26 hardirq arrivals, none inside a critical section on the holding core -- and the unmasked mutation does not finish |
 | **what is still NOT claimed** | `KernPlan` is not RELATED to the C in translation validation: the deleted C was measured to keep the promise, and the chain does not prove it. The vector, the registers and the steps still have no form in `Einheit`, and handler re-entry stays outside (OFFEN O19) |
 
 ## 60. Premise (b) for EVERY source text: the duties are computed in Lean (parser lane, 2026-09-30, P6)
 
 **The principle** (Simon, 2026-09-30): nothing in the compiler or the checker is there for particular
 programs; GabbroV is proved always right by GENERIC theorems over every source text. This section is
-that statement for premise (b) of the goal theorem, in `bruecke/Bruecke/Quelle.lean` (Mathlib-free, on
-`grammatik`'s toolchain; `bruecke/Bruecke/Vorlage.lean` writes the template).
+that statement for premise (b) of the goal theorem, in `programmlogik/bruecke/Bruecke/Quelle.lean` (Mathlib-free, on
+`grammatik`'s toolchain; `programmlogik/bruecke/Bruecke/Vorlage.lean` writes the template).
 
 | Lean name | File | What it says |
 |---|---|---|
@@ -3742,7 +3742,7 @@ the model (the exporter's LG004 "`Endblock` has no such constructor").
 | `Zielsatz.RestHalt` (two arms) | Zielsatz/Spec | the SAME stops `KopfHalt` names at `Block.bindAxiom` -- `hardware`, `nieZurueck` -- at `.ende (.bindAxiom ..)`; reviewed diff in the header block "end-block gate". No stop kind, premise or conclusion moves |
 | `fort_ende` (arm) | Fortschritt | progress: such a head steps (`endeBindAxiom`), or stands at a named stop -- `nieZurueck` only for an axiom `-> never` (`antwortenB`, via `Endblock.ants`), `hardware` otherwise |
 | arms in ~40 files | RahmenTreu, Satz, SperreSem, AtomarSem, ZielOrt*, KostenG, Nichtinterferenz/*, MitRuhe*, ... | every property of an end block carried through the new constructor, each a mirror of its `Block.bindAxiom` arm |
-| `beispiele/181` | Zertifikat/G181_gate_at_top_level | WITNESS: a certified program whose value gate binds at the top level and whose unit body ENDS in a `-> never` gate (behind it the body's own implicit return, dead in G as in the C) |
+| `examples/181` | Zertifikat/G181_gate_at_top_level | WITNESS: a certified program whose value gate binds at the top level and whose unit body ENDS in a `-> never` gate (behind it the body's own implicit return, dead in G as in the C) |
 
 **Four catch-all definitions were wrong for the new constructor and now name it** (a `| _ => true`
 that would have skipped the rest): `Endblock.ueberBoden` (Satz), `Endblock.ohneLocks` (SperreSem),
@@ -3753,7 +3753,7 @@ Two step functions answered `none` for it and had to learn it (`Nichtinterferenz
 
 **What is NOT claimed:** a `-> never` call that ENDS an `else` which must not fall off, and a
 fallible gate (`or R`) anywhere -- both still refused by name (LG004, LG007). The bridge to GabbroV
-(`bruecke/`) builds unchanged; the new form is outside its fragment, as every gate is.
+(`programmlogik/bruecke/`) builds unchanged; the new form is outside its fragment, as every gate is.
 
 ## 62. The reason channel of a foreign body: `bindAxiomElse` and the template `tor.fehlbar` (C-free lane, 2026-09-30)
 
@@ -3773,7 +3773,7 @@ channel for the reason (`aerg : Option Ty`); the exporter refused every unit wit
 | `axiomAntwortSonst_rel` | Nichtinterferenz/Lokal | noninterference: related worlds decode to the same outcome |
 | **`tor_fehlbar`** (+ `_wert`, `_grund`, `_zeuge`) | SchablonenOhneLibc §3 | THE TEMPLATE: for every kernel word and every errno table, the stub's decoding (`dekodiere`, Syscall.lean), packed (`packe`), is decoded by G exactly so -- value, reason, or the hardware stop. Row `tor.fehlbar` in deleted `schablonen.rs`, every premise bound |
 | arms in ~55 files | ZielOrt*, Rennfrei*, KostenG, SperreSem, AtomarSem, MitRuhe*, Folge*, ... | every property of blocks and end blocks carried through the new constructors; the replay proofs of the `Ziel` legs (`ZielOrtVoll`, `-Ax`, `-Geraet`, `-Rahmen`, `-Sperre`, `AtomarAkteur`) gained real cases, since the fragment predicates (`vOk`, `gOk`, `rOk`) admit the form |
-| `beispiele/182` | Zertifikat/G182_fallible_gate | WITNESS: a certified program with a fallible gate called at the top level |
+| `examples/182` | Zertifikat/G182_fallible_gate | WITNESS: a certified program with a fallible gate called at the top level |
 
 **Measured after the slice:** the five corpus programs that stopped at LG007 (74, 90, 149, 163, 164)
 now stop at their next wall, LG003 (a gate `requires`). **Not claimed:** an `else` that returns or
@@ -3916,7 +3916,7 @@ driver; every kernel call below the unit is the program's binding.
 | `arena_modul_zeuge` | SchablonenModul §1 | WITNESS: the `halde` probe, two grows committed, the third refused below the ceiling |
 | `bindeAlle`, `laden`, `entladen` | SchablonenModul §2 | the two entry points' order |
 | **`laden_erfolg`**, `laden_init_erst_nach_bindung`, `laden_ruft_kein_exit`, `laden_start_nach_init`, **`laden_verweigert_wartet`**, `entladen_wartet_vor_exit` | SchablonenModul §2 | bind, lock, init, start; the init only after every arena; never the exit on load; roots only after a good init; a refused load waits for every root it started; the unload waits before the exit |
-| `lebenslauf_zeuge_*` | SchablonenModul §2 | WITNESSES: the three probes, gift 4's stop, a refused reservation |
+| `lebenslauf_zeuge_*` | SchablonenModul §2 | WITNESSES: the three probes, poison 4's stop, a refused reservation |
 
 `Zielsatz/Kern/Spec.lean`: comment only -- (M11) now names the compiler's C11 atomics instead of the
 LKMM table (review: `messung/SERVER-0E-SPEC-DIFF.md` (retired report, in the history) Part IV), and (d) `Laufzeit.reserve` names
@@ -4099,7 +4099,7 @@ carriers** -- two pointer parameters of one table type are one carrier in the mo
 roots, so `R014`'s S-1/S-2 (distinct roots) has no model statement to discharge, and an S-1-clean
 callee over one table is not `ParamGetrennt` (the counter-model has two distinct parameter names);
 **re-views across types do not reach the model** -- pointers to records and foreign re-views are
-refused by the exporter (`LG005`, `LG001`; `beispiele/1163` is `UNCERTIFIED LG001`), so the
+refused by the exporter (`LG005`, `LG001`; `examples/1163` is `UNCERTIFIED LG001`), so the
 borrow rule is the model's reading only at one pointer type; **a frame that names a table directly**
 (a static root beside a parameter) is outside `RahmenUeberParams`. `Zielsatz/Kern/Spec.lean` unchanged;
 `gabbro_ziel` untouched.
@@ -4148,9 +4148,9 @@ No new Lean theorem: this section books what the deleted checker and LLVM emitte
 
 | What | Where | Status |
 |---|---|---|
-| **The repair of the slice-2b finding.** `getrennte_wurzeln` no longer skips a pair with an untraced name: a field read, an index, an indirect call, an unresolved callee, an argument that is no bare name and a re-view of an untraced pointer are `UNBEKANNT`, a root equal to every root; a fresh root is only for an answer that comes from no pointer argument. Pairs of two read-only parameters stay free | deleted `m3.rs`, sentence `m3.zeiger_wurzel` (deleted `saetze.rs`), deleted `tests/wurzeln.rs` (10 rows, three of them new: function-pointer re-view, field pointer, read-only twin), probe `beispiele/gift/1444-alias-sicht-und-quelle.gab` | measured: 0 new `R014` over every tracked `.gab` except the probe |
+| **The repair of the slice-2b finding.** `getrennte_wurzeln` no longer skips a pair with an untraced name: a field read, an index, an indirect call, an unresolved callee, an argument that is no bare name and a re-view of an untraced pointer are `UNBEKANNT`, a root equal to every root; a fresh root is only for an answer that comes from no pointer argument. Pairs of two read-only parameters stay free | deleted `m3.rs`, sentence `m3.zeiger_wurzel` (deleted `saetze.rs`), deleted `tests/wurzeln.rs` (10 rows, three of them new: function-pointer re-view, field pointer, read-only twin), probe `examples/poison/1444-alias-sicht-und-quelle.gab` | measured: 0 new `R014` over every tracked `.gab` except the probe |
 | **`R015`**, the boundary: a function that assumes two pointer parameters distinct (one writable or `own`) and is `pub` or called by no body of its unit says so | deleted `m3.rs`, sentence `m3.zeiger_wurzel_grenze` | a HINT, not a refusal; it was the deleted checker's face of the hypothesis `ParamVerschieden` of `r014_objGetrennt` (§75; Lean: `ObjektWurzel.lean`) |
-| **`noalias`** on a writable pointer parameter of an *internal* function the checker holds the whole call of (not `pub`, has a body, called from a body of the unit, address never taken, named by no entry/boot/concurrent item, `effects` naming nothing but its own pointer parameters) | deleted `llvm.rs`, deleted `tests/noalias.rs` (one positive row, four refusing twins), `dokumente/LLVM-BACKEND.md` | measured: 10 `noalias` over `beispiele/` + `messung/*/` (was 2), IR verified with `opt`; **not a Lean judgment**: the model side is §74/§75; the decidable rule died with the deleted checker |
+| **`noalias`** on a writable pointer parameter of an *internal* function the checker holds the whole call of (not `pub`, has a body, called from a body of the unit, address never taken, named by no entry/boot/concurrent item, `effects` naming nothing but its own pointer parameters) | deleted `llvm.rs`, deleted `tests/noalias.rs` (one positive row, four refusing twins), `dokumente/LLVM-BACKEND.md` | measured: 10 `noalias` over `examples/` + `messung/*/` (was 2), IR verified with `opt`; **not a Lean judgment**: the model side is §74/§75; the decidable rule died with the deleted checker |
 
 NOT proved: the `let` walk of the checker over G syntax (the premise `HerkunftTreu`); `R004`/`R007` as
 special cases of `R014` (they stay separate rules); records over byte buffers (range objects, `LG005`/
@@ -4371,7 +4371,7 @@ NOT proved: the `Spec.lean` change (a PROPOSAL, `PLAN-DYNAMIC.md` 8a.5: the mode
 | planted defect: `ueberBlock_verschachtelt_flach` (the flat variant stops at the inner closer and differs from `ueberBlock`: the nesting witness is not vacuous), `ueberBlock_verschachtelt` | `Lexer` | none |
 | the trust gate (`codeZeichen`) skips both comment forms the way `scan` does: `quelle_kommentar_sauber`, `quelle_blockkommentar_sauber`, `quelle_bidi` (a bidi character is refused inside a comment too) | `LexerVertrauen` | none |
 
-NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the parser (the parser reads `lex`, so it holds by construction); agreement of any second lexer with `scan` beyond the probes (`gift/1471`, the deleted Rust unit tests, the corpus rewritten to `//`). A tool that attaches doc comments to items does not exist yet.
+NOT proved: that `lex_ohne_doku` is the only way a comment is invisible to the parser (the parser reads `lex`, so it holds by construction); agreement of any second lexer with `scan` beyond the probes (`poison/1471`, the deleted Rust unit tests, the corpus rewritten to `//`). A tool that attaches doc comments to items does not exist yet.
 
 ## 84. Hardware-neutral gates: region provider, trap clause, process exit, join order, targets as data, the `Code` gate (2026-10-18, `PLAN-HARDWARE.md` §16, `LLVM-BACKEND.md` §11)
 
@@ -5925,7 +5925,7 @@ storage alignment subject to the base-placement duty below.
 `Nat.lcm 8 N ∣ b` on base `b`, for each positive declared alignment `N`;
 the loader/runner must place the image base accordingly. This is a theorem
 premise, not an axiom. Relative grid preservation alone does not discharge it.
-A source search of `runner/` and `stage0/` found `aligned_abs` and its concrete
+A source search of `stage0/runner/` and `stage0/` found `aligned_abs` and its concrete
 witness, plus runner image placement in `Runner/Beweis/Bild.lean` and loader
 entry proofs in `Runner/Beweis/Lader.lean`, but no generic runner proof supplying
 this divisibility premise for the image's declared global alignments.
@@ -7136,10 +7136,10 @@ the user-logic, hardware, execution or source-to-binary conclusions of the goal 
 | `SInv.narrowOff` (field) | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Requires `ctx.narrow = false` for printed-program read-back; it does not prove read-back with Stage 0's guard-generated bindings. |
 | `reihe_cond` | `grammatik/Grammatik/Gen/Text/Invers/Anweisung/Teil1.lean` | Given condition, branch and continuation elaboration equations, no fold expansion and `ctx.narrow = false`, a plain source `if` elaborates to the corresponding `ifBeg`/`ifElse`/`blkEnd` sequence. |
 | `effekt_rund` | `grammatik/Grammatik/Parser/Round/RundlaufItem/Teil1.lean` | Printing and reparsing an `EffGut` effect returns that effect and its comma/closing-brace suffix when the stated parser fuel bound holds. |
-| `nutzer_aus_quelleB` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG_alle` through the consolidated carried chain. |
-| `nutzer_aus_quelle_teil` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
-| `nutzer_aus_quelle_teilB` (removed) | `bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
-| `lowGlobRead_sim` | `bruecke/Bruecke/Ausdruck/Glob.lean` | A successful numeric `lowGlobSide` and `GRel u σ w` make Body's `.global g` evaluation equal the encoded canonical G expression value; successful lowering already supplies the guard premise. |
+| `nutzer_aus_quelleB` (removed) | `programmlogik/bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG_alle` through the consolidated carried chain. |
+| `nutzer_aus_quelle_teil` (removed) | `programmlogik/bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
+| `nutzer_aus_quelle_teilB` (removed) | `programmlogik/bruecke/Bruecke/Kette/Quelle.lean` | Replaced by `nutzer_aus_quelleG` through the consolidated carried chain. |
+| `lowGlobRead_sim` | `programmlogik/bruecke/Bruecke/Ausdruck/Glob.lean` | A successful numeric `lowGlobSide` and `GRel u σ w` make Body's `.global g` evaluation equal the encoded canonical G expression value; successful lowering already supplies the guard premise. |
 
 The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable cross-thread
 invariant statements are listed in `stage0/Stage0/Senke/Sperre/Ticket/Offen.lean`. The sequential
@@ -7344,7 +7344,7 @@ refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-
 
 ## 191. The bridge carries recursive units by a well-founded measure (2026-11-14)
 
-*Files: `bruecke/Bruecke/Kette/Mass/{Pflicht,Realisierung,Zeuge}.lean`, `Kette/{Simulation,Quelle,Pflichten}.lean`, `Vorlage.lean`, `GiftZyklus.lean`. No change of `Spec.lean`; the rank theorems keep their statements and are derived from the measure theorems.*
+*Files: `programmlogik/bruecke/Bruecke/Kette/Mass/{Pflicht,Realisierung,Zeuge}.lean`, `Kette/{Simulation,Quelle,Pflichten}.lean`, `Vorlage.lean`, `GiftZyklus.lean`. No change of `Spec.lean`; the rank theorems keep their statements and are derived from the measure theorems.*
 
 | Theorem | File | Statement |
 |---|---|---|
@@ -7363,7 +7363,7 @@ clauses); it is not yet computed from `UFn.decreases` or fed from the checker's 
 
 ## 192. The bridge measure computed from the `decreases` clauses (2026-11-14)
 
-*Files: `bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
+*Files: `programmlogik/bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
 
 | Theorem | File | Statement |
 |---|---|---|
@@ -7391,13 +7391,13 @@ already did. Neither lowering nor the language model changes to identify the sco
 
 | Statement | File | Meaning |
 |---|---|---|
-| `lowEndL_bindOpt_ok` | `bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
+| `lowEndL_bindOpt_ok` | `programmlogik/bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
 | `lowEndL_struct_ok` | same | Its structural-prefix inversion also covers option, tag and reason dispatch; each exposes the unchanged `lowStructL` result and following end block. |
-| `statischEndSeq_G`, `laufEndSeq_G` | `bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
-| `option_unit_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
-| `lowEndL_bindOpt_ok_zeuge` | `bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
+| `statischEndSeq_G`, `laufEndSeq_G` | `programmlogik/bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
+| `option_unit_zeuge` | `programmlogik/bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
+| `lowEndL_bindOpt_ok_zeuge` | `programmlogik/bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
 | `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
-| `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
+| `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `programmlogik/bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
 | `I104.einzahlen_post_eq`, `I104.lies_post_eq`, `I104.einzahlen_meets_eq`, `I104.lies_meets_eq` | same | Those clause certificates identify the original postconditions and frame-aware duty statements with the current bridge statements; the existing user-obligation theorems are retained. |
 
 `fieldIndex_none` (`Kodierung/Slots.lean`) proves that a missing declared name has no
@@ -7764,7 +7764,7 @@ specialization-budget refusal with successful emission of the unchanged
 full-width subtraction/call fixture. `accepted_image` identifies the actual
 emitted image, `canonical_source` retains its original canonical source program,
 and `image_correct` instantiates the generic image-correctness theorem under the
-existing runner/hardware and clone-answer premises. The reversed and unguarded
+existing stage0/runner/hardware and clone-answer premises. The reversed and unguarded
 subtraction refusal statements remain unchanged.
 
 `Stage0.TransitionContractWitness.Ordered.function_fragment_refusal` now states

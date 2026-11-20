@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Referenz104.lean
-  Subject:   `beispiele/0104-referenz.gab`, TRANSLATED BY HAND into the Lean
+  Subject:   `examples/0104-referenz.gab`, TRANSLATED BY HAND into the Lean
              syntax, run on machine G, and checked against the premises of
              `ziel_ort_voll`.
 

@@ -87,9 +87,9 @@ elab "gabbro_try " n:num tac:tactic : tactic => do
 
     | module | s33 | s37 | s40 | s45 | whole pipeline |
     |---|---|---|---|---|---|
-    | `beispiele/01-tabelle`   |  7.0 s | 24.4 s |  6.5 s | 22.6 s |  86.1 s |
+    | `examples/01-tabelle`   |  7.0 s | 24.4 s |  6.5 s | 22.6 s |  86.1 s |
     | `messung/fragmente/F01`  | 43.8 s |  9.2 s |  9.0 s |  9.4 s | 122.2 s |
-    | `beispiele/09-ohne-zeiger` |  9.1 s | 10.3 s |  3.5 s |  3.1 s |  37.8 s |
+    | `examples/09-ohne-zeiger` |  9.1 s | 10.3 s |  3.5 s |  3.1 s |  37.8 s |
     | `messung/caprock/kapraum` | 13.1 s |  2.6 s |  0.3 s |  0.2 s |  58.4 s |
 
     **Between 27 % and 70 % of the pipeline is these four steps**, and no other step comes

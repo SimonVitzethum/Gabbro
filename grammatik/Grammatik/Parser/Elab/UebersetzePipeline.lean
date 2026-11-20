@@ -47,7 +47,7 @@ def uebersetzeAllg (s : String) :
     unfolding `uebersetzeAllg` at a CONCRETE source makes `simp` look at
     the discriminant `lex src`, and whnf of that runs Lean 4.33's UTF-8
     decoder over the whole text in the kernel -- measured 2026-09-15 on
-    `ki-pc-fisch-101` at **70 GB for the unit of `beispiele/104`** (the cold full build
+    `ki-pc-fisch-101` at **70 GB for the unit of `examples/104`** (the cold full build
     died with `code 137` on a 16 GB machine). Here `l` is a VARIABLE, so
     there is nothing to decode: `lex_ofList` carries the pin across by
     the core lemmas `String.toList_ofList`/`String.length_ofList`, and

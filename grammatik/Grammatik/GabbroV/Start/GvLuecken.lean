@@ -6,7 +6,7 @@
 
   Each gap is a `def ... : Prop` -- a precise statement, no proof, no `sorry`,
   no `axiom`. Review table: `REPORT-01.md` section 6. Scope: only what is
-  statable from `grammatik/` (no `bruecke/` import: it requires `grammatik`
+  statable from `grammatik/` (no `programmlogik/bruecke/` import: it requires `grammatik`
   by path, so that direction would be a dependency cycle).
 -/
 module
@@ -155,7 +155,7 @@ theorem gvLuecke_statik_ohne_form
   reduce to syntactic `rfl` through match-iota (all 32 arms); keep the
   `unfold`+`rw`+`exact` shapes where `simp` normalises past the usable form
   (`contains` to membership).
-  NOT statable from `grammatik/` (needs `bruecke/` vocabulary, dependency
+  NOT statable from `grammatik/` (needs `programmlogik/bruecke/` vocabulary, dependency
   cycle): rely duties for atomic-bearing units from `Pflichten`, the
   per-access TSO refinement into W/GX, payload hand-off.
   NOT reviewed (absent from this clone): `GvTraversal`, `GvTreeParent`,

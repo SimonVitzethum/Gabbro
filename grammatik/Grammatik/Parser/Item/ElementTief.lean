@@ -33,9 +33,9 @@ end Gabbro.Grammatik.Parser
      bodies ride `SExpr`, so `forall`/`exists`, `e in domain`,
      `reaches … via …`, `=>` and `Held(L, shared)` have no shape
      and are refused. Every corpus invariant quantifies
-     (beispiele/01 `wurzel_ohne_vorgaenger`, `baum_bleibt_baum`;
-     beispiele/17 `wartende_haben_grund`;
-     beispiele/07 `wx_getrennt`; beispiele/50 `boot_ende`
+     (examples/01 `wurzel_ohne_vorgaenger`, `baum_bleibt_baum`;
+     examples/17 `wartende_haben_grund`;
+     examples/07 `wx_getrennt`; examples/50 `boot_ende`
      ensures); the probes pin the member shapes with
      quantifier-free bodies (t30, t34). `Held(L)` rides
      `ruf "Held" [l]` (shape-compatible); a two-argument

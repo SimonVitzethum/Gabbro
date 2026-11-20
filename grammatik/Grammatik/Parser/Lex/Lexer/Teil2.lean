@@ -47,7 +47,7 @@ theorem lex_text_offen :
 
 -- Lexer half of the agreement probes with `crates/gabbro-syntax`
 -- (`parse.rs`): each `sondeNN_lex` pins the token list of one
--- `beispiele/` source line (cited at the parse half in
+-- `examples/` source line (cited at the parse half in
 -- `Parser/Ausdruck.lean`, which checks the tree shape on these
 -- token lists). Token lists live here because they are lexer
 -- output; the parser file never re-lexes them.

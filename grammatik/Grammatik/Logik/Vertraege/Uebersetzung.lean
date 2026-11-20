@@ -71,7 +71,7 @@ theorem nutzlastZert_mem {t : List Nat} {lo hi j v : Nat}
   have hdec := h v hmem
   exact of_decide_eq_true hdec
 
-/-- The example payload of `beispiele/106`: the region `{ 10 20 30 40 }`
+/-- The example payload of `examples/106`: the region `{ 10 20 30 40 }`
     as a table of four integers. -/
 def sumPayloadVals : List Nat := [10, 20, 30, 40]
 

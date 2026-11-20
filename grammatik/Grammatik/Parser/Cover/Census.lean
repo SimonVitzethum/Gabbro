@@ -2,7 +2,7 @@
   File:      Grammatik/Parser/Cover/Census.lean
   Subject:   Track P, phase 0: the measured coverage of the Lean parser over the corpus.
 
-  `main` reads every `beispiele/*.gab`, lexes it, parses it in depth (`parseTopTief`), elaborates it
+  `main` reads every `examples/*.gab`, lexes it, parses it in depth (`parseTopTief`), elaborates it
   (`elabU`) and, when the whole-file parse fails, splits the token stream into top-level items
   (module wrappers are opened) and reports the FIRST failing item of each file with its first
   tokens. One line per file:
@@ -10,7 +10,7 @@
     NAME | lex=ok/err | parse=ok/err:msg | elab=ok/err:msg | items=N bad=M | first=<tokens>
 
   Run (from `grammatik/`, after `lake build Grammatik.Parser.Cover.Census`):
-    `lake env lean --run Grammatik/Parser/Cover/Census.lean ../beispiele`
+    `lake env lean --run Grammatik/Parser/Cover/Census.lean ../examples`
   The numbers in `dokumente/PLAN-TRANSLATION-VALIDATION.md` section 9a come from this run.
 -/
 module
@@ -138,7 +138,7 @@ def line (name src : String) : String :=
     name ++ " | lex=ok | parse=" ++ okTxt whole ++ " | elab=" ++ el ++ " | lower=" ++ lo ++ " | rt=" ++ rt ++ " | ri=" ++ ri ++ " | " ++ tally (scanAll toks)
 
 def run (args : List String) : IO Unit := do
-  let dir : System.FilePath := (args.headD "../beispiele")
+  let dir : System.FilePath := (args.headD "../examples")
   let entries ← dir.readDir
   let names := (entries.map (·.fileName)).filter (·.endsWith ".gab")
   let names := names.qsort (· < ·)

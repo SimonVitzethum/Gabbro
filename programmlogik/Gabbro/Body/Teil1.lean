@@ -235,7 +235,7 @@ def wrap (bits : Nat) (signed : Bool) (n : Int) : Int :=
     unfolds in the KERNEL as far as the literal reaches -- and a `count 4096` table then
     costs four thousand nested reductions the moment `simp` looks at a `match` whose
     discriminant mentions the quantifier next to a free state: measured as *"(kernel) deep
-    recursion detected"* on the first loop of `beispiele/01`, with a structural definition
+    recursion detected"* on the first loop of `examples/01`, with a structural definition
     and with a well-founded one alike. `allBelow` is the first projection of an opaque
     package and reduces to nothing; a proof unfolds it exactly as often as it says so,
     through `allBelow_zero`/`allBelow_succ` (and `allBelow_true_iff`). -/

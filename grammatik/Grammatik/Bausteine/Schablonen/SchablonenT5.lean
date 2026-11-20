@@ -17,7 +17,7 @@
   conjoining an unrelated run fact is not inhabitation).
 
   Order: most-used corpus construct first (measured 2026-09-13 over
-  `beispiele/`: table/count 370/354, locks 292, device 130, option 90,
+  `examples/`: table/count 370/354, locks 292, device 130, option 90,
   entry 89, clobbers 80, format 58, transition 34, exchange 31,
   accumulates/mappings 23, consuming 13, group 10, reset 9, restrict 5,
   induction 3, transset 2).

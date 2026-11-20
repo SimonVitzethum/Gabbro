@@ -7,7 +7,7 @@
              (part of the review package of `Zielsatz/Spec.lean`).
 
   Why: machine G starts EVERY thread of `Faden = Nat` in some function.
-  A program without an idle function (the export of `beispiele/104`,
+  A program without an idle function (the export of `examples/104`,
   probes B/C) has no admissible start at all, and a goal statement over
   its machine says nothing. The runtime supplies the idle root; `GabbroZiel`
   runs the machine of `P.mitRuhe` (assumption A4).

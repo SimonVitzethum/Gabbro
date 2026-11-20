@@ -353,7 +353,7 @@ example : schluss leerD (fun _ => none)
 example : schluss leerD (fun _ => none)
     (.bin .shr (.lit (.int 7)) (.lit (.int 1))) = some (.intIn 3 3) := by decide
 
-/-- `Some(8)` against the payload bound `0 .. 7` (`gift/170`): refused (F10). -/
+/-- `Some(8)` against the payload bound `0 .. 7` (`poison/170`): refused (F10). -/
 example : schlussMitZiel leerD (some (0, 7)) (fun _ => none)
     (.someOf (.lit (.int 8))) = none := by decide
 

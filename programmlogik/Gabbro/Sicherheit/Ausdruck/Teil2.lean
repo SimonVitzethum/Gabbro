@@ -97,7 +97,7 @@ end
 
 /-- `Some` against the target option's payload bound (F10, `M101`): with no target any
     number passes, as before; with `(lo, hi)` only a ranged payload inside it does.
-    `gift/170` (`Some(8)` on `count 8`) is refused here instead of flowing on. The
+    `poison/170` (`Some(8)` on `count 8`) is refused here instead of flowing on. The
     bound lives at the use site, so `schluss` above does not thread it -- the carrier
     `schlussMitZiel` does, and wiring it into `pruefe` is its own step. -/
 def somePasst : Option (Int × Int) → Shape → Option Shape
