@@ -139,12 +139,4 @@ def Goals.joinIf {context : Context A next} (join : Bool)
   unfold Goals.joinIf
   split <;> rfl
 
-/-- A statement certified against the joined goals is certified against the goals themselves. -/
-def ofJoin {policy : A → CallObligation program} {context : Context A next} {join : Bool} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {code : Stmt D V l Γ Λ Λ'} {symbols : SymEnv D Nat Γ}
-    {goals : Goals (program := program) (S := S) context V Γ}
-    (pre : StatementCondition policy code symbols (goals.joinIf join)) : StatementCondition policy code symbols goals :=
-  pre.map (fun _ _ _ _ ready actual realized allowed safe => by
-    simpa only [Goals.joinIf_holds] using ready actual realized allowed safe)
-
 end Gabbro.Grammatik.Vertraege.Pruefer.Symbolic

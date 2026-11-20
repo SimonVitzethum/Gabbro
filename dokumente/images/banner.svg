@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 200" width="880" height="200" role="img" aria-label="Gabbro: proved safety for systems programs">
+  <title>Gabbro</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b2027"/>
+      <stop offset="1" stop-color="#2a313b"/>
+    </linearGradient>
+  </defs>
+  <rect width="880" height="200" rx="18" fill="url(#bg)"/>
+  <!-- a faceted stone: gabbro is a dark, coarse-grained igneous rock -->
+  <g transform="translate(70 30)">
+    <polygon points="70,0 132,34 140,104 84,140 18,122 0,52" fill="#3b4552"/>
+    <polygon points="70,0 132,34 76,60" fill="#55606e"/>
+    <polygon points="70,0 76,60 0,52" fill="#4a5563"/>
+    <polygon points="0,52 76,60 18,122" fill="#323b46"/>
+    <polygon points="76,60 132,34 140,104" fill="#46705f"/>
+    <polygon points="76,60 140,104 84,140" fill="#2f5a4a"/>
+    <polygon points="76,60 84,140 18,122" fill="#28313b"/>
+    <g fill="#d9dee5" opacity="0.85">
+      <rect x="40" y="36" width="9" height="4" transform="rotate(-20 44 38)"/>
+      <rect x="98" y="30" width="11" height="4" transform="rotate(25 103 32)"/>
+      <rect x="30" y="86" width="8" height="3" transform="rotate(35 34 87)"/>
+      <rect x="106" y="86" width="10" height="4" transform="rotate(-30 111 88)"/>
+      <rect x="66" y="112" width="9" height="3" transform="rotate(10 70 113)"/>
+    </g>
+    <polyline points="52,74 70,92 104,52" fill="none" stroke="#7ee2b0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="250" y="102" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="68" font-weight="700" fill="#f2f4f7" letter-spacing="1">Gabbro</text>
+  <text x="252" y="142" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#aeb7c2">You prove your program's logic. The language proves the rest.</text>
+</svg>

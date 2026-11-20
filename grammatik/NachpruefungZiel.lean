@@ -1,6 +1,6 @@
 /-
   The cheap check: the goal theorem alone.
-  Run:  lake build Grammatik.Zielsatz.BeweisAtomar && lake env lean NachpruefungZiel.lean
+  Run:  lake build <the six modules imported below> && lake env lean NachpruefungZiel.lean (see README.md)
 -/
 module
 public import Grammatik.Zielsatz.Kern.Beweis

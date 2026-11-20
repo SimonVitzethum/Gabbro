@@ -1,0 +1,27 @@
+// The README example: a lock-protected counter with a range-checked increment; exits 42.
+module counter {
+
+table hits count 4 { slot { n : u32 in 0 .. 100, } }
+lock L protects { hits } rank 0;
+
+impl fn bump(i : u32 in 0 ..< 4)
+    effects { reads hits.slots, writes hits.slots }
+    requires Held(L)
+{
+    let c : u32 in 0 .. 100 = hits.slots[i].n;
+    if c < 100 {
+        hits.slots[i].n = c + 1;
+    }
+}
+
+impl fn main() -> u32 in 0 .. 255
+    effects { reads hits.slots, writes hits.slots, locks L }
+{
+    locks L {
+        bump(2);
+        bump(2);
+        return hits.slots[2].n + 40;
+    }
+}
+
+}

@@ -63,7 +63,7 @@
     `gabbro_ziel_profil` (= `gabbro_ziel` on `PE.E`). Not claimed: that `PE.E` is the translation of the selected
     tree (the source-to-unit pipeline's correspondence), the layout/startup/relocation proofs that discharge
     static placement, an entry/service binding or a guest boundary (C08/C12 services, still refused).
-  What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
+  What may be said: "the goal theorem is proved over the model, with its non-degeneracy proved". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool `AkzeptiertX`, not a deployed
   checker, and the only bridge to an executable image is Stage 0's sequential one (THE READING, below), which carries none of the concurrent legs of `ZielFX`.
 
