@@ -193,19 +193,22 @@ cost bounds, ownership and the concurrent guarantees down to the bytes; a standa
 flowchart LR
     src["Gabbro source<br/>(.gab)"] --> chk{"Checker<br/>types · ownership · locks<br/>ranges · contracts · costs"}
     chk -- refuse --> err["error + reason"]
-    chk -- accept --> comp["Gabbro compiler<br/>written in Gabbro<br/>target: -O3 speed"]
-    comp --> img["native image<br/>x86-64 · AArch64 · RISC-V 64"] --> cpu(("CPU"))
-    prove["GabbroProve<br/>your program logic"] -.-> src
+    chk -- accept --> s0["Stage 0 (bootstrap)<br/>lowering to S0IR"]
+    s0 --> img["S0IR image"] --> run["x86-64 runner"] --> cpu(("CPU"))
+    s0 -- builds --> comp["Gabbro compiler<br/>in Gabbro · -O3 target"] --> bin["native image"] --> cpu
+    prove["GabbroProve<br/>program logic in Gabbro"] -.-> src
 
     subgraph lean ["Proved in Lean 4"]
       model["Language model<br/>machine G / GX"]
       goal["Goal theorem<br/>gabbro_ziel"]
-      s0["Stage 0<br/>bootstrap compiler"]
-      gv["GabbroV<br/>bootstrap program logic"]
+      low["Generic lowering theorem"]
+      rt["Runner proof<br/>x86-TSO model"]
+      gv["GabbroV (bootstrap)<br/>program logic"]
     end
     model -.-> chk
     goal -.-> model
-    s0 -.-> comp
+    low -.-> s0
+    rt -.-> run
     gv -.-> comp
 ```
 
@@ -294,7 +297,8 @@ toolchain to see what gets accepted and what gets refused.
 Because it was never meant to be one. Stage 0 is written in Lean so that its lowering can be proved, it emits an IR
 for a test runner rather than native code, and it is deliberately simple. The compiler Gabbro will ship is written in
 Gabbro, optimises to the speed of `gcc -O3`/`clang -O3`, targets three architectures, and has every pass proved. Stage 0 stays
-the starting point of every build of that compiler.
+the starting point of every build of that compiler, and it will be proved: the goal theorem is to hold on
+every image it emits.
 </details>
 
 <details>
