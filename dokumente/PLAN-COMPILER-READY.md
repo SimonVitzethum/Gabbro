@@ -61,7 +61,7 @@ it is deleted when the compiler compiles itself (K7).
 | `origin/dev` | `4f671ff2a` |
 | `origin/master` | `4355d5b0b` (2026-11-13); advances only on a green full gate (AGENTS.md §8) |
 | full gate on `4f671ff2a` (**measured**, build server, 12 threads) | grammatik 4438 jobs, stage0 6075, runner 86, programmlogik 1023, bridge 2624, all green; `gabbro_ziel` on the standard axioms; GabbroV guardian green; Lean guardian red ONLY at `7 ir` |
-| IR corpus (**measured**, `4f671ff2a`) | **492 of 539**; all 47 red probes are refusals of the contract checker (§1.1) |
+| IR corpus (**measured**, `f4c70824e`, 2026-11-20) | **506 of 542** (was 492 of 539 on `4f671ff2a`); all 36 red probes are refusals of the contract checker (§1.2) |
 | full grammatik build | about 30 min at 3 threads locally, much less at 12 threads on the build server |
 | low-level forms | state per item in stream L (§3) |
 
@@ -74,7 +74,7 @@ wrong image. The groups and what closes them:
 |---|---|---|
 | 12 (`fnptr-*`, `c06-*`, `c07-indirect-*`, `call-in-expression`) | indirect call: the checker certifies no call through a pointer | the checker DECIDES `PtrVerfeinert` (pointer pre ⇒ target requires, target ensures ⇒ pointer post) over the complete function list, and certifies an indirect call against the pointer contract; needs the completeness of the function enumeration inside `CheckedExecution` (today it is a premise of the top-level soundness only) -- a change of the checker's certificate type and of the (a)→(b) chain of the goal theorem |
 | 11 (`export-result-*`, `c04-requires-ok`, `export-legacy-spec-quantifier`) and 4 (`shift*`) | postconditions and transition preconditions that hold only on the declared initial memory of an entry root | a rule of the model for which entry roots may assume the declared initial memory (single-threaded prefix before any spawn), then the checker; owner question (it changes what a root's contract means) |
-| 4 (`option`, `tag`, `tagged-slot-read`, `call-conditional-operand`) | the WP compiler duplicates the continuation at every `if` and finite selection; the work estimate exceeds the budget | a join: compile the continuation once over a havoced symbolic state (as the shared call continuation does), so `if` costs a sum, not a product |
+| 3 (`option`, `tag`, `tagged-slot-read`) | the WP compiler duplicates the continuation at every option/tagged dispatch; the work estimate exceeds the budget | DONE for `if` (`Control/Join.lean`, join mode; call-conditional-operand compiles). Joining dispatch arms was measured and dropped: under unrolled traversals it ran past the per-probe limit; needs a joined estimate that counts unrolled traversal bodies |
 | 3 (`float-end-*`) | floating end bindings | an exact typed range certificate for native float results |
 | 3 (`traverse-wide-*`, `c11-empty-consuming`) | wide and consuming traversals | a checked symbolic loop invariant / membership-and-measure invariant |
 | 2 (`export-member-reach`, `export-tree-binder-shadow`) | expressions without a symbolic scalar encoding | encodings for the reach/tree forms |
@@ -87,7 +87,7 @@ read from a guardian run or by a named reading, and recorded here when they move
 
 | Measure | Source | 2026-11-19 |
 |---|---|---|
-| R1: IR corpus compiled and run by the runner | Lean guardian stage `7 ir` | 492 / 539 |
+| R1: IR corpus compiled and run by the runner | Lean guardian stage `7 ir` | 506 / 542 (2026-11-20) |
 | R1: refusal causes among the red probes | the same stage, grouped by message | finite observation of arrays, strings and function pointers 12; VC budget of records, tagged values, options and ranges 11; contract abstraction loses the postcondition (quantifiers, results) 11; `shift` 4; indirect call dispatch 2; floating end binding 3; wide and consuming traversals 3; symbolic scalar encoding 2; cross-entry relation 1 |
 | R2: statement forms the bridge readers carry | reading of `stmtBody` (`bruecke/Bruecke/Pflichten.lean`) and `schrittB` (`Anweisung/Lokal/Benannt.lean`) against `UStmt` | 13 of about 31 source statement forms (stores to tables, statics and through pointers, with option and `bool` values; value calls; local bindings, `bool`/option/call bindings, mutable locals and assignment), plus value returns; the readers under `Kette/Formen` (dispatch, reasons, loops) are not yet counted as connected. Was 4 of 34 on 2026-11-12 |
 | R3: forms the image theorem `bild_ok_u` admits | Lean guardian stage `7 senke` (1552 theorems checked) | calls, recursion and returns admitted since `4355d5b0b`; a per-form count is still to be printed by the stage |
