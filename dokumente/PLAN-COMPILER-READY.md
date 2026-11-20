@@ -65,6 +65,21 @@ it is deleted when the compiler compiles itself (K7).
 | full grammatik build | about 30 min at 3 threads locally, much less at 12 threads on the build server |
 | low-level forms | state per item in stream L (§3) |
 
+### 1.2 The 37 red IR probes: what each group needs (2026-11-20)
+
+Measured on `de7e93c55`/`8801ca8af` (502 of 539). Every red probe is a refusal of the contract checker; none is a
+wrong image. The groups and what closes them:
+
+| Probes | Cause | What closes it |
+|---|---|---|
+| 12 (`fnptr-*`, `c06-*`, `c07-indirect-*`, `call-in-expression`) | indirect call: the checker certifies no call through a pointer | the checker DECIDES `PtrVerfeinert` (pointer pre ⇒ target requires, target ensures ⇒ pointer post) over the complete function list, and certifies an indirect call against the pointer contract; needs the completeness of the function enumeration inside `CheckedExecution` (today it is a premise of the top-level soundness only) -- a change of the checker's certificate type and of the (a)→(b) chain of the goal theorem |
+| 11 (`export-result-*`, `c04-requires-ok`, `export-legacy-spec-quantifier`) and 4 (`shift*`) | postconditions and transition preconditions that hold only on the declared initial memory of an entry root | a rule of the model for which entry roots may assume the declared initial memory (single-threaded prefix before any spawn), then the checker; owner question (it changes what a root's contract means) |
+| 4 (`option`, `tag`, `tagged-slot-read`, `call-conditional-operand`) | the WP compiler duplicates the continuation at every `if` and finite selection; the work estimate exceeds the budget | a join: compile the continuation once over a havoced symbolic state (as the shared call continuation does), so `if` costs a sum, not a product |
+| 3 (`float-end-*`) | floating end bindings | an exact typed range certificate for native float results |
+| 3 (`traverse-wide-*`, `c11-empty-consuming`) | wide and consuming traversals | a checked symbolic loop invariant / membership-and-measure invariant |
+| 2 (`export-member-reach`, `export-tree-binder-shadow`) | expressions without a symbolic scalar encoding | encodings for the reach/tree forms |
+| 1 (`c11-alloc-required`) | cross-entry relation in an invariant | per-slot local predicates |
+
 ### 1.1 How progress is measured
 
 Progress is counted in finished, connected cases, never in lines, commits or helper lemmas. The measures, each
