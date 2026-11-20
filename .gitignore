@@ -23,7 +23,6 @@ __pycache__/
 # A pattern that names one directory covers one directory.
 .lake/
 programmlogik/lake-manifest.json
-grammatik/lake-manifest.json
 # Agent working copies of `programmlogik/` -- scratch, never repository content.
 programmlogik-*/
 
