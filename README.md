@@ -192,28 +192,38 @@ cost bounds, ownership and the concurrent guarantees down to the bytes; a standa
 ```mermaid
 %%{init: {"flowchart": {"curve": "step"}}}%%
 flowchart LR
-    src["Gabbro source<br/>(.gab)"] --> chk{"Checker<br/>types · ownership · locks<br/>ranges · contracts · costs"}
+    prove["GabbroProve<br/>program logic in Gabbro<br/>formally verified"] -.-> src["Gabbro source<br/>(.gab)"]
+    src --> chk
+    src --> chk0
+
+    subgraph gc ["Gabbro compiler · in Gabbro · formally verified"]
+      chk{"Checker<br/>types · ownership · locks<br/>ranges · contracts · costs"} -- accept --> opt["optimising lowering<br/>-O3 target"]
+    end
     chk -- refuse --> err["error + reason"]
-    chk -- accept --> s0["Stage 0 (bootstrap)<br/>lowering to S0IR"]
-    s0 --> img["S0IR image"] --> run["x86-64 runner"] --> cpu(("CPU"))
-    s0 -- builds --> comp["Gabbro compiler<br/>in Gabbro · formally verified<br/>-O3 target"] --> bin["native image"] --> cpu
-    prove["GabbroProve<br/>program logic in Gabbro<br/>formally verified"] -.-> src
+    opt --> bin["native image<br/>x86-64 · AArch64 · RISC-V 64"] --> cpu(("CPU"))
+
+    subgraph s0 ["Stage 0 (bootstrap)"]
+      chk0{"Checker"} -- accept --> low0["lowering to S0IR"]
+    end
+    chk0 -- refuse --> err0["error + reason"]
+    low0 --> img["S0IR image"] --> run["x86-64 runner"] --> cpu
+    low0 -- builds --> chk
 
     subgraph lean ["Proved in Lean 4"]
-      model["Language model<br/>machine G / GX"]
-      goal["Goal theorem<br/>gabbro_ziel"]
+      goal["Goal theorem<br/>gabbro_ziel"] -.-> model["Language model<br/>machine G / GX"]
+      gv["GabbroV (bootstrap)<br/>program logic"]
       low["Generic lowering theorem"]
       rt["Runner proof<br/>x86-TSO model"]
-      gv["GabbroV (bootstrap)<br/>program logic"]
     end
     model -.-> chk
-    goal -.-> model
-    low -.-> s0
+    model -.-> chk0
+    gv -.-> opt
+    low -.-> low0
     rt -.-> run
-    gv -.-> comp
 ```
 
-The Gabbro compiler, written in Gabbro, is what is being built. It is always bootstrapped from the Lean side: **Stage 0**
+A `.gab` file can go either way: straight into the native Gabbro compiler, or through Stage 0. Each has its own checker,
+and both checkers follow the same language model. The Gabbro compiler, written in Gabbro, is what is being built. It is always bootstrapped from the Lean side: **Stage 0**
 builds it and **GabbroV** proves its passes, and both stay in use for every build instead of being retired, so that a
 random error in one compiler generation can never carry over into the next. The compiler and **GabbroProve** are both
 formally verified. Your own program logic is proved in GabbroProve, written natively in Gabbro so that logic proofs run
