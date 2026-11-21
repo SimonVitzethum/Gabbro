@@ -91,6 +91,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.image_exit_group_boundary
 #print axioms Gabbro.Stage0.image_clone_refusal_stop
 #print axioms Gabbro.Stage0.ImageFileStable.silent_prefix
+#print axioms Gabbro.Stage0.ImageFileStable.sys
+#print axioms Gabbro.Stage0.ImageFileStable.futex
 #print axioms Gabbro.Stage0.MappedImage.runnerFileStable
 #print axioms Gabbro.Stage0.imageStackStore_projected
 #print axioms Gabbro.Stage0.image_memory_prefix_projects

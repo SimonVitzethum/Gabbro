@@ -135,6 +135,63 @@ theorem ImageFileStable.silent_prefix {θ : Type} {act : θ → Res θ}
     obtain ⟨quiet, rest⟩ := List.append_eq_nil_iff.mp silence.symm
     exact ih (stable.silent (quiet ▸ step)) rest.symm
 
+private theorem fileInv_view_iff {state : imageTSO.St} {i : Nat}
+    (outside : ∀ store, store ∈ state.1.buf i → ∀ byte, byte < 8 →
+      ∀ offset, offset < image.length →
+        BitVec.ofNat 64 (BASE + offset) ≠ store.1 + BitVec.ofNat 64 byte) :
+    FileInv (state.1.view i) ↔ FileInv state.1.m := by
+  have same (offset : Nat) (loaded : offset < image.length) :
+      (state.1.view i).b (BitVec.ofNat 64 (BASE + offset)) = state.1.m.b (BitVec.ofNat 64 (BASE + offset)) ∧
+      (state.1.view i).rd (BitVec.ofNat 64 (BASE + offset)) = state.1.m.rd (BitVec.ofNat 64 (BASE + offset)) :=
+    foldl_far (state.1.buf i) state.1.m (fun store member byte inside =>
+      outside store member byte inside offset loaded)
+  have permission : (state.1.view i).wr = state.1.m.wr := foldl_wr _ _
+  constructor
+  · intro visible offset loaded
+    obtain ⟨bytes, read⟩ := same offset loaded
+    rw [← bytes, ← read, ← permission]
+    exact visible offset loaded
+  · intro global offset loaded
+    obtain ⟨bytes, read⟩ := same offset loaded
+    rw [bytes, read, permission]
+    exact global offset loaded
+
+/-- A host contract sees the issuer's TSO view. Because the image memory
+    rule keeps all pending stores, preservation of the file in that view
+    implies preservation in global memory. Clone is memory-neutral. -/
+theorem ImageFileStable.sys {state after : imageTSO.St} {i : Nat} {request : Req} {answer : Ans}
+    (stable : ImageFileStable state) (step : imageTSO.ans state i (.sys request) answer after)
+    (preserves : request ≠ cloneReq →
+      Kern.ans request (state.1.view i) answer (after.1.view i) →
+        FileInv (state.1.view i) → FileInv (after.1.view i)) :
+    ImageFileStable after := by
+  have host := step.2
+  change (if request = cloneReq then after = state ∧ ∃ id extra, answer = some (id, extra) ∧ id ≠ 0
+    else Kern.ans request (state.1.view i) answer (after.1.view i) ∧ after.1.buf = state.1.buf) at host
+  split at host
+  · obtain ⟨rfl, _⟩ := host
+    exact stable
+  · rename_i notClone
+    have outside : ∀ j store, store ∈ after.1.buf j → ∀ byte, byte < 8 →
+        ∀ offset, offset < image.length →
+          BitVec.ofNat 64 (BASE + offset) ≠ store.1 + BitVec.ofNat 64 byte := by
+      rw [host.2]
+      exact stable.buffers
+    have visible := (fileInv_view_iff (stable.buffers i)).mpr stable.file
+    exact ⟨(fileInv_view_iff (outside i)).mp (preserves notClone host.1 visible), outside⟩
+
+/-- Both emitted futex operations preserve the actual runner file,
+    regardless of pending writes in any thread. -/
+theorem ImageFileStable.futex {state after : imageTSO.St} {i : Nat} {address value : W}
+    {mode : Nat} {answer : Ans} (stable : ImageFileStable state) (host : ImageFutexAnswers)
+    (emitted : mode = 128 ∨ mode = 129)
+    (step : imageTSO.ans state i (.sys (futexReq address mode value)) answer after) :
+    ImageFileStable after := by
+  apply stable.sys step
+  intro _ answered visible
+  rw [(host.unchanged address mode value answer _ _ emitted answered).1]
+  exact visible
+
 /-- The actual loader provides the read-only bytes. Empty initial buffers
     initialize the pending-write invariant without a host assumption. -/
 theorem MappedImage.runnerFileStable {src : String} {reserve : Nat} {options : Profil.Options}
