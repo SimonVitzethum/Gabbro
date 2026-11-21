@@ -70,7 +70,7 @@ abbrev Emitted.bootStart (output : Emitted src K options) (Q : AxEns (declOf out
 theorem Emitted.bootStart_live (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) (i : Faden) :
     (output.bootStart Q).lebt i = true ↔ i < (output.goalUnit Q).starts.length :=
-  decide_eq_true_eq
+  Iff.of_eq decide_eq_true_eq
 
 /-- Specialize the original goal theorem to the canonical program, start
     memory, arguments and pass limit of the emitted image. The compiler's
@@ -153,7 +153,10 @@ theorem Emitted.bootStart_frame (output : Emitted src K options)
   have inside := (List.getElem?_eq_some_iff.mp atPosition).1
   have live := (output.bootStart_live Q i).mpr (by rw [output.goalUnit_starts Q]; exact inside)
   refine ⟨live, rfl, ?_⟩
-  simp only [Emitted.bootStart, Emitted.goalStart, FadenStart, RufStartG,
-    output.goalStart_argument Q i start atPosition]
+  let frame (entry : Σ f : (declOf output.compiled.unit).mitRuhe.Fn,
+      Env (declOf output.compiled.unit).mitRuhe ((declOf output.compiled.unit).mitRuhe.params f)) :=
+    (RufStartG (output.goalUnit Q).P.mitRuhe (speicherR (output.goalUnit Q).sp0) (fun _ => entry)).faeden i
+  change frame (initRuhe (output.goalUnit Q).starts i) = frame ⟨some start.1, envR start.2⟩
+  exact congrArg frame (output.goalStart_argument Q i start atPosition)
 
 end Gabbro.Stage0
