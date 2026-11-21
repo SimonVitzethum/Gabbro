@@ -267,10 +267,13 @@ theorem uRelReturn_eval {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   let b := eval initial right current env
   have bounded := uRelReturn_bounds (loLeft := loLeft) (hiLeft := hiLeft)
     (loRight := loRight) (hiRight := hiRight) ⟨a.lo_le, a.le_hi⟩ ⟨b.lo_le, b.le_hi⟩ passed
+  have selected :
+      (if h : max (loLeft - hiRight) 0 ≤ a.n - b.n ∧ a.n - b.n ≤ hiLeft - loRight then
+        (⟨a.n - b.n, h.1, h.2⟩ : Zahl (max (loLeft - hiRight) 0) (hiLeft - loRight))
+      else eval initial fallback current env) =
+        ⟨a.n - b.n, bounded.1, bounded.2⟩ := dif_pos bounded
   simp only [eval, Zahl.sub]
-  split
-  · rfl
-  · next denied => exact False.elim (denied bounded)
+  exact congrArg Zahl.n selected
 
 -- Keep a partially applied large-fuel visitor as a function during closed cbv checks.
 -- Its canonical equation evaluates only the fully supplied statement.
