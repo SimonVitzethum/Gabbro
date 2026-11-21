@@ -1,9 +1,11 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ConstantBytes
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Typed value paths consist of a name and ordinary record projections.
     Their types come from the lexical declaration and its record schema. -/
@@ -12,37 +14,52 @@ def uSpecValuePath : SExpr → Bool
   | .field base _ => uSpecValuePath base
   | _ => false
 
-/-- Compare full value types, including the record identity, element type,
-    array length and string bound. Only paths have a type independently of
-    later dependent checking of constructed values. -/
+/-- A literal is typed from its decoded bytes, including when substitution
+    will erase an unused parameter. Other values use the declared path type. -/
+def uSpecValueType (ctx : UCtx) (argument : SExpr) (side : USide) : Option Ty :=
+  match argument, side with
+  | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
+  | _, _ => if uSpecValuePath argument then uValueType ctx side else none
+
+/-- Compare the full value type, including nominal record identity, array
+    shape and string bound, before substituting into the predicate. -/
 def uSpecValueArgument (ctx : UCtx) (expected : Ty) (argument : SExpr) : Except String Unit := do
-  if !uSpecValuePath argument then throw "spec value argument must be a typed place"
   let side ← uWertBody ctx argument
-  if uValueType ctx side = some expected then pure ()
+  if uSpecValueType ctx argument side = some expected then pure ()
   else throw "spec value argument does not have the declared type"
 
 theorem uSpecValueArgument_exact {ctx : UCtx} {expected : Ty} {argument : SExpr}
     (accepted : uSpecValueArgument ctx expected argument = .ok ()) :
-    uSpecValuePath argument = true ∧ ∃ side,
-      uWertBody ctx argument = .ok side ∧ uValueType ctx side = some expected := by
-  cases path : uSpecValuePath argument with
-  | false => simp [uSpecValueArgument, path, bind, Except.bind] at accepted
-  | true =>
-    cases read : uWertBody ctx argument with
-    | error err => simp [uSpecValueArgument, path, read, bind, Except.bind] at accepted
-    | ok side =>
-      by_cases typeMatches : uValueType ctx side = some expected
-      · exact ⟨rfl, side, rfl, typeMatches⟩
-      · simp [uSpecValueArgument, path, read, typeMatches, bind, Except.bind] at accepted
+    ∃ side, uWertBody ctx argument = .ok side ∧
+      uSpecValueType ctx argument side = some expected := by
+  cases read : uWertBody ctx argument with
+  | error err => simp [uSpecValueArgument, read, bind, Except.bind] at accepted
+  | ok side =>
+    by_cases typeMatches : uSpecValueType ctx argument side = some expected
+    · exact ⟨side, rfl, typeMatches⟩
+    · simp [uSpecValueArgument, read, typeMatches, bind, Except.bind] at accepted
 
 theorem specValueArgument_erfuellbar (ctx : UCtx) (name : String) (expected : Ty)
     (read : uWertBody ctx (.variable name) = .ok (.param name))
     (typeMatches : uValueType ctx (.param name) = some expected) :
     uSpecValueArgument ctx expected (.variable name) = .ok () := by
-  simp [uSpecValueArgument, uSpecValuePath, read, typeMatches, bind, Except.bind, pure, Except.pure]
+  simp [uSpecValueArgument, uSpecValueType, uSpecValuePath, read, typeMatches,
+    bind, Except.bind, pure, Except.pure]
+
+/-- The literal lane accepts exactly the type of the checked byte list. -/
+theorem specTextArgument_erfuellbar (ctx : UCtx) (text : String) :
+    uSpecValueArgument ctx (.str text.toUTF8.toList.length) (.ext .text [text] []) = .ok () := by
+  obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
+  have length := bytesZahl_laenge _ decoded valid
+  rw [List.length_map] at length
+  have parsed : uWertBody ctx (.ext .text [text] []) =
+      .ok (.text (text.toUTF8.toList.map fun b => Int.ofNat b.toNat)) := by
+    simp only [uWertBody, uRechne]
+  simp only [uSpecValueArgument, parsed, bind, Except.bind, uSpecValueType, valid,
+    Option.map_some, length, ite_true] <;> rfl
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
-    Structured and floating values use their exact declared path types. -/
+    Structured and floating values must match the declared type exactly. -/
 def uSpecArgument (ctx : UCtx) (g : String) (i : Nat) (ty : STyp) (arg : SExpr) :
     Except String Unit :=
   let checked : Except String Unit := do
