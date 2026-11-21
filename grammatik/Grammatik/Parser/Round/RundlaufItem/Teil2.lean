@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Round.RundlaufItem.Teil2a
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil5
 public import Grammatik.Parser.Round.RundlaufItem.Teil1
+public import Grammatik.Parser.Item.ElementTief.Sequence
 
 @[expose] public section
 
@@ -149,9 +150,6 @@ def ItemBein (it : SItemTief) : Prop :=
 /-- An item prints with a head word other than `when` and `pub`. -/
 def ItemKopf (it : SItemTief) : Prop :=
   ∃ w ts, druckItem it = .wort w :: ts ∧ w ≠ "when" ∧ w ≠ "pub"
-
-/-- What may follow an item list: nothing, `}` or the end marker. -/
-def ItemsEnde (R : List Token) : Prop := R = [] ∨ (∃ r, R = .zeichen "}" :: r) ∨ (∃ r, R = .ende :: r)
 
 theorem items_rund : ∀ (its : List SItemTief) (R : List Token) (F : Nat),
     (∀ it ∈ its, ItemBein it ∧ ItemKopf it) → ItemsEnde R → 8 * (druckItems its).length + 39 ≤ F →

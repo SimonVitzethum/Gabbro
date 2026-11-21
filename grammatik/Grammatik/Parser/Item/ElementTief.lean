@@ -10,6 +10,7 @@
 module
 public import Grammatik.Parser.Stmt.Anweisung
 public import Grammatik.Parser.Item.ElementTief.Defs7
+public import Grammatik.Parser.Item.ElementTief.Sequence
 
 @[expose] public section
 
