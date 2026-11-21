@@ -4,7 +4,6 @@ table T count 2 { slot { s : u32 in 0 .. 2, v : u8, } }
 state S { transition begin { s : Idle -> Busy } requires T.slots[0].v == 7 effects { writes T.slots } }
 impl fn main() -> u32 in 0 .. 2
     effects { reads T.slots, writes T.slots }
-    requires T.slots[1].s == 0
 {
     T.slots[0].v = 7;
     transition T.slots[1].s : Idle -> Busy;
