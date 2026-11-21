@@ -1,6 +1,7 @@
 module
 
 public import Runner.Beweis.Mehr
+public import Runner.IR.Seq
 public import Stage0.Senke.Bild.Mehr.StoreBuffer
 
 @[expose] public section
@@ -47,12 +48,13 @@ theorem tso_const_prefix {layout : Lay}
     by_cases writer : thread = i
     · subst thread
       change store ∈ (if i = i then pending else before.ms.1.buf i) at present
-      simp only [if_pos rfl, pending, List.mem_append, List.mem_singleton] at present
-      rcases present with old | new
+      rw [ite_eq_left rfl] at present
+      rcases List.mem_append.mp present with old | new
       · exact before.ms.2.2 i store old
-      · subst store
+      · have same := List.mem_singleton.mp new
+        subst store
         exact outsideTable
-    · exact before.ms.2.2 thread store (by simpa only [TSt.setBuf, if_neg writer] using present)⟩
+    · exact before.ms.2.2 thread store (by simpa only [TSt.setBuf, ite_eq_right writer] using present)⟩
   have answered : (TSO layout).ans before.ms i (.wr (slot parent.fp (sx dest)) (sx value))
       (some (0, 0)) after :=
     Or.inr ⟨writable, rfl, rfl⟩
