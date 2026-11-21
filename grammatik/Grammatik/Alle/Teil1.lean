@@ -52,6 +52,7 @@ public import Grammatik.Kern.Syntax.Bits
 public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt.Teil3
 public import Grammatik.Bausteine.Arena.Arena
 public import Grammatik.Bausteine.Arena.ArenaZucker
+public import Grammatik.Bausteine.Arena.BlockScope
 public import Grammatik.Logik.Ruf.Hoare.HoareRuf
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustand
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustanda
