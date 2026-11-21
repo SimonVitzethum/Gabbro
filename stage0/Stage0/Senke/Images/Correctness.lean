@@ -175,11 +175,14 @@ def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (history : List Ev) (machine : Cfg imageTSO (Res T))
     (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  ∃ footprint body snapshots positions committed,
+  ∃ footprint body,
     PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
-    MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
-    (∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
+    (((∀ i r, body[i]? ≠ some (some r)) ∧
+      WeltAt (projectSCState footprint machine.ms).1 output.image.Y.withIdle (state.m.speicher.welt [])) ∨
+      ∃ snapshots positions committed,
+        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+          ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
+        ∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
     ∀ i, body[i]? = machine.ths[i]? ∨
       ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
         ImageRootPhase output E history (machine.ms.1.view i) i r state
@@ -206,6 +209,35 @@ def ImageForeignTrace (output : Emitted src reserve options)
   List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
     event.1 = typed.1 ∧ ∃ gate, output.tor typed.2 = some gate ∧
       event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent) model
+
+/-- The actual mapped output and empty initial buffers establish the
+    initial phase, exact source memory and empty observation history. -/
+theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {machine : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+    (O : Orakel (declOf output.compiled.unit)) :
+    let ir : Cfg imageTSO (Res T) := ⟨machine.ms, [some t4]⟩
+    Rel L0 ir machine ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+      ImageForeignTrace output [] (imageSourceStart E) ∧
+      ImageRuntimeMatches output E O [] ir (imageSourceStart E) := by
+  intro ir
+  refine ⟨mapped.loader, ⟨?_, ?_⟩, .nil, ?_⟩
+  · intro i
+    cases i <;> simp [ir, imageSourceStart, FadenStart]
+  · intro i retired
+    cases i <;> simp [ir] at retired
+  · refine ⟨fun _ _ => False, [none], privateBuffers_empty mapped.emptyBuffers, rfl, Or.inl ⟨?_, ?_⟩, ?_⟩
+    · intro i r
+      cases i <;> simp
+    · change WeltAt (mergedView machine.ms.1 (fun _ _ => False)) _
+        ((speicherR E.sp0).welt [])
+      rw [mergedView_empty _ _ mapped.emptyBuffers, unit.memory]
+      exact (output.loaded_initial_world mapped.bytes).withIdle
+    · intro i
+      cases i with
+      | zero => exact Or.inr ⟨t4, rfl, rfl, Or.inl ⟨rfl, rfl, rfl, by
+          simpa only [TSt.view, mapped.emptyBuffers 0, List.foldl_nil] using mapped.bytes⟩⟩
+      | succ i => exact Or.inl rfl
 
 /-- An accepted image may return its entry result, stop at a named
     hardware condition, or report a refused host clone. The exit is
