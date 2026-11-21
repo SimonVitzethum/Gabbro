@@ -18,11 +18,15 @@ private theorem exitGroup_request {M : MemSys} {θ : Type} {act : θ → Res θ}
     {last : List Ev} {status : W} (terminal : Tr M act before last (.exit status) 1) :
     ∃ i t req k, before.ths[i]? = some (some t) ∧ act t = .ask (.sys req) k ∧
       last = [(i, req, none)] ∧ req.nr.toNat = NR_EXIT_GROUP ∧ req.a1 = status := by
-  have notExit (rest : Res θ) : rest.ende ≠ some (.exit status) := by
+  have notExit (rest : Res θ) : Runner.Mach.Res.ende rest ≠ some (.exit status) := by
     cases rest <;> intro equal <;> cases equal
   cases terminal with
-  | tau _ suffix | priv _ _ suffix | ask _ _ _ _ _ suffix | exit _ _ _ suffix |
-      cloneNo _ _ _ _ _ suffix | clone _ _ _ _ _ _ suffix => cases suffix
+  | tau _ suffix => cases suffix
+  | priv _ _ suffix => cases suffix
+  | ask _ _ _ _ _ suffix => cases suffix
+  | exit _ _ _ suffix => cases suffix
+  | cloneNo _ _ _ _ _ suffix => cases suffix
+  | clone _ _ _ _ _ _ suffix => cases suffix
   | stop _ stopped | askStop _ _ _ _ stopped | cloneNoStop _ _ _ _ stopped =>
     exact (notExit _ stopped).elim
   | exitGroup found asked number => exact ⟨_, _, _, _, found, asked, rfl, number, rfl⟩
@@ -51,13 +55,13 @@ theorem image_clone_refusal_stop {src : String} {reserve : Nat} {options : Profi
     {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {before : Cfg imageTSO Runner.X86.X} {ir : Cfg imageTSO (Res T)}
-    {prefix last : List Ev} {status : W} {id extra : W}
+    {earlier last : List Ev} {status : W} {id extra : W}
     (related : Rel L0 ir before) (terminal : Tr imageTSO (actX L0) before last (.exit status) 1)
     (bootThread : ∀ i req, (i, req, none) ∈ last → i = 0)
     (cloneStatus : status = BitVec.ofNat 64 cloneCode)
-    (history : (prefix.filter (fun event => event.1 == 0)).getLast? = some (0, cloneReq, some (id, extra)))
+    (history : (earlier.filter (fun event => event.1 == 0)).getLast? = some (0, cloneReq, some (id, extra)))
     (refused : id.toInt < 0) :
-    ImageStopMatches output O state prefix last (.exit status) := by
+    ImageStopMatches output O state earlier last (.exit status) := by
   obtain ⟨_, _, i, req, _, _, _, _, _, events, number, arg⟩ :=
     image_exit_group_boundary related terminal
   have issuing := bootThread i req (events.symm ▸ List.mem_cons_self)
