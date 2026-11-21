@@ -8225,6 +8225,13 @@ the logical boot frame when the parent reaches the clone with its two
 prepared operands and the preceding thread positions allocated.
 `Emitted.loaded_code` extracts the instruction extent of the initial
 payload separately from the writable stacks.
+`spawn_prepare_prefix` derives the two clone operands from the emitted
+immediates, with TSO store forwarding to the parent. `Emitted.first_boot_clone`
+starts at the mapped payload's loader read and reaches the child and the
+parent's next instruction on a successful, memory-preserving clone.
+`Emitted.bootActivation_step` accounts for the corresponding live position,
+rank and clock, and `Emitted.bootActivation_reached` covers every prefix of the
+declared root list in the logical thread machine.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
