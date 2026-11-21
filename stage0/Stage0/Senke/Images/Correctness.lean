@@ -2,6 +2,8 @@ module
 
 public import Stage0.Senke.Bild.Mehr.Goal
 public import Stage0.Senke.Bild.Mehr.BootClone
+public import Stage0.Senke.Images.GateAnswers
+public import Runner.IR.Futex
 
 @[expose] public section
 
@@ -24,13 +26,22 @@ def imageTSO [Kern] : MemSys where
         if call = cloneReq then
           after = before ∧ ∃ id extra, answer = some (id, extra) ∧ id ≠ 0
         else
-          Kern.ans call before.1.m answer after.1.m ∧ after.1.buf = before.1.buf
+          Kern.ans call (before.1.view thread) answer (after.1.view thread) ∧ after.1.buf = before.1.buf
       | _ => True
   tau := (TSO L0).tau
 
 theorem imageTSO_fixed [Kern] : Fixed imageTSO L0 := by
   intro memory thread row answer after valid step
   exact tso_fixed L0 memory thread row answer after valid step.1
+
+/-- The host gives futex completions their existing WAIT/WAKE meaning
+    and does not write the image while completing a futex request. -/
+structure ImageFutexAnswers [Kern] : Prop where
+  protocol : FutexOK (fun _ _ before after => after = before)
+  unchanged : ∀ base mode value answer before after,
+    (mode = 128 ∨ mode = 129) →
+    Kern.ans (futexReq base mode value) before answer after →
+    after = before ∧ answer.isSome = true
 
 /-- The external loader has mapped the exact emitted image, and the x86
     process is at the corresponding real loader read. -/
@@ -204,7 +215,8 @@ def Stage0Correct [Kern] : Prop :=
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
       ∀ (O : Orakel (declOf output.compiled.unit)),
         NutzerPflichtA E → CallSitePflicht E → PostDeckt E → ForeignVertrag E O →
-        HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → SichtOK O →
+        HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
+        ImageFutexAnswers → SichtOK O →
         ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
         Nonempty (ImageSimulation output E O start)
 
