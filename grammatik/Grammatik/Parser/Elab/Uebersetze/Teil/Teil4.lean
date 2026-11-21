@@ -162,6 +162,21 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
       else none
   | _, _, _ => none
 
+/-- A length observation on a local array slice needs only the two
+    endpoints. All values of their declared intervals satisfy the range. -/
+def uLocalArraySliceLength (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Option USide
+  | .built "#slice" [.variable array, .variable first, .variable last] => do
+    let some (.arr _ capacity) := uValueType ctx (.param array) | none
+    let some (.int firstLo firstHi) := uValueType ctx (.param first) | none
+    let some (.int lastLo lastHi) := uValueType ctx (.param last) | none
+    if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
+      if blatt (.variable array) = .ok (.param array) ∧
+          blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last) then
+        some (.sub (.param last) (.param first))
+      else none
+    else none
+  | _ => none
+
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. C13 adds the closed integer builtins
     (`+% -% *% <<% +|`, `clz ctz log2_floor popcount bswap rotl rotr`) at the declared storage width. -/
@@ -273,9 +288,11 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     | some n => .ok (.lit (Int.ofNat n))
     | none => .error "sizeof without a resolved declared size"
   | .built "lenof" [a] =>
-    match uRechne ctx blatt a with
-    | .error e => .error e
-    | .ok x => .ok (.len x)
+    if let some length := uLocalArraySliceLength ctx blatt a then .ok length
+    else
+      match uRechne ctx blatt a with
+      | .error e => .error e
+      | .ok x => .ok (.len x)
   | .ext .array [] values =>
     uArraySides ctx values (fun source smaller => uRechne ctx blatt source)
   | .ext .text [t] [] => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
@@ -350,6 +367,20 @@ theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
   simp only [arrayRead, bind, Except.bind, uFixedLocalArraySlice, sameName, Bool.not_true,
     Bool.false_eq_true, ite_false, arrayType, indexType, width, bounds, ite_true, indexRead,
     and_self, pure, Except.pure]
+
+/-- The accepted source shape exposes the actual length through subtraction. -/
+theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array first last : String) (τ : Ty) (capacity : Nat) (firstLo firstHi lastLo lastHi : Int)
+    (arrayType : uValueType ctx (.param array) = some (.arr τ capacity))
+    (firstType : uValueType ctx (.param first) = some (.int firstLo firstHi))
+    (lastType : uValueType ctx (.param last) = some (.int lastLo lastHi))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (locals : blatt (.variable array) = .ok (.param array) ∧
+      blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last)) :
+    uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
+      .ok (.sub (.param last) (.param first)) := by
+  rw [uRechne]
+  simp only [uLocalArraySliceLength, arrayType, firstType, lastType, bounds, locals, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=

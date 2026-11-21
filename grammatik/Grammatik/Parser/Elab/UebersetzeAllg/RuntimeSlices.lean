@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+public import Grammatik.Niedrig.Konstrukte.Schnitt
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -8,6 +9,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Uebersetze
+open LowLevel.Construct
 
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
@@ -87,5 +89,38 @@ theorem lowWertE_localArraySpan {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u
         idxW, dite_eq_left low, dite_eq_left high]
     simp only [uLocalArraySpan, lowWertE, head, ih (offset + 1) (by omega), consW, fitW,
       dite_true, arraySpanFrom]
+
+/-- The actual core lowering of a runtime slice length is integer
+    subtraction in the direction of the half-open range. -/
+theorem lowWertE_localArraySliceLength {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {first last : String} {firstLo firstHi lastLo lastHi : Int}
+    {begin : Expr (declOf u) Γ Λ (.int firstLo firstHi)}
+    {finish : Expr (declOf u) Γ Λ (.int lastLo lastHi)}
+    (readFirst : lowWertE u Γ Λ fn er (.param first) = .ok ⟨.int firstLo firstHi, begin⟩)
+    (readLast : lowWertE u Γ Λ fn er (.param last) = .ok ⟨.int lastLo lastHi, finish⟩) :
+    lowWertE u Γ Λ fn er (.sub (.param last) (.param first)) =
+      .ok ⟨.int (lastLo - firstHi) (lastHi - firstLo), .sub finish begin⟩ := by
+  simp only [lowWertE, readFirst, readLast, zahlVon, LowSide.minus, LowSide.wert]
+
+/-- Interval checking suffices for all runtime endpoints. The generated
+    subtraction returns the exact length of the model slice. -/
+theorem eval_localArraySliceLength {τ : Ty} {capacity : Nat} {firstLo firstHi lastLo lastHi : Int}
+    (array : Wert D (.arr τ capacity)) (begin : Expr D Γ Λ (.int firstLo firstHi))
+    (finish : Expr D Γ Λ (.int lastLo lastHi))
+    (ranges : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (initial world : World D) (env : Env D Γ) :
+    ∃ bounds : SliceOk capacity (eval initial begin world env).n.toNat (eval initial finish world env).n.toNat,
+      (eval initial (.sub finish begin) world env).n =
+        ((BoundedSlice.ofArray array (eval initial begin world env).n.toNat
+          (eval initial finish world env).n.toNat bounds).length : Int) := by
+  obtain ⟨nonnegative, ordered, within⟩ := ranges
+  have lo := (eval initial begin world env).lo_le
+  have hi := (eval initial begin world env).le_hi
+  have lo' := (eval initial finish world env).lo_le
+  have hi' := (eval initial finish world env).le_hi
+  refine ⟨⟨by omega, by omega⟩, ?_⟩
+  change (eval initial finish world env).n - (eval initial begin world env).n =
+    (((eval initial finish world env).n.toNat - (eval initial begin world env).n.toNat : Nat) : Int)
+  omega
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
