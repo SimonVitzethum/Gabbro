@@ -3611,6 +3611,8 @@ keeping the recorded ownership inventory of the running phase.
 that the semantic construction step preserves typed storage and the
 ordinary resource index. The two checks use the elaborated argument
 contexts and the finite inventories of both phases.
+`await_pending_preserves` keeps the waiting tag and resource inventory
+and encodes the successor child, including a partially completed join.
 
 **Complete table-to-G reification remains open.** The builders still require
 actual expression, child-poll and destructor blocks with their ordinary

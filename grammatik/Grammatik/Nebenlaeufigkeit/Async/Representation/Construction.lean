@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.State
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
 public import Grammatik.Nebenlaeufigkeit.Async.Verfeinerung
 import Lean.Elab.Tactic.Omega
@@ -270,20 +271,14 @@ private theorem waitingPhaseList {frame : Frame (Value D)} {task : Task (Value D
             none := by simp only [encodePhase, ite_eq_right different]
         exact ⟨_, .later _ _ _ _ rfl (.later _ _ _ _ skipped represented)⟩
 
-/-- A represented await belongs to the full generated state record at its
-    declared tag. Every earlier case fails to encode this state. The
-    saved resource inventory is the same one carried into construction. -/
-public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
+private theorem waiting_phase_inv (inventory : Inventory D) (tag : Nat)
     {name : String} {future : FutureExpr} {boundary : Boundary} {remaining : List Command}
     (found : f.body.drop tag = Command.await name future boundary :: remaining)
     {frame : Frame (Value D)} {task : Task (Value D) (Child D types)}
     (payload : ∃ value, PhaseRep D types f (.waiting tag future) (.waiting tag frame task) value)
-    (current : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
-    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag)) :
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task)) :
     ∃ record, Inv f types inventory (.waiting tag frame task) record ∧
       encode D types f (.waiting tag frame task) = some record := by
-  have marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task) := by
-    simpa only [MarksRep, State.marks, sameInventory] using current
   obtain ⟨sum, represented⟩ := waitingPhaseList (types := types) (f := f) inventory 0 tag tag f.body found
     (Nat.zero_add tag).symm payload marks
   let cases := commandPhases 0 f.body
@@ -292,6 +287,20 @@ public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
   have exactRecord : Inv f types inventory (.waiting tag frame task) (wrapped, ()) :=
     .later _ _ _ _ rfl (.later _ _ _ _ rfl represented)
   exact ⟨(wrapped, ()), exactRecord, inv_encoded f types inventory _ _ exactRecord⟩
+
+/-- A represented await belongs to the full generated state record at its
+    declared tag. The saved inventory is the one carried into construction. -/
+public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {remaining : List Command}
+    (found : f.body.drop tag = Command.await name future boundary :: remaining)
+    {frame : Frame (Value D)} {task : Task (Value D) (Child D types)}
+    (payload : ∃ value, PhaseRep D types f (.waiting tag future) (.waiting tag frame task) value)
+    (current : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag)) :
+    ∃ record, Inv f types inventory (.waiting tag frame task) record ∧
+      encode D types f (.waiting tag frame task) = some record :=
+  waiting_phase_inv inventory tag found payload
+    (by simpa only [MarksRep, State.marks, sameInventory] using current)
 
 private theorem runningPhaseFrame {inventory : Inventory D} {cases : List Phase}
     {source : State (Value D) (Child D types)} {sum}
@@ -336,5 +345,42 @@ public theorem await_construction_preserves
   have sameInventory := checkAwaitInventory_sound inventory tag future owned
   refine ⟨stepped, ?_, waiting_construction_inv inventory tag command payload marks sameInventory⟩
   rw [inventory.exact, inventory.exact, sameInventory]
+
+/-- A Pending poll retains the phase tag, frame and owned marks, and
+    re-encodes the actual successor child, including partial joins. -/
+public theorem await_pending_preserves
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (inventory : Inventory D) (tag : Nat) (name : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    (world : World D) :
+    let model := inducedModel elaboration calls prices normal
+    let answer := pollTask model task world
+    answer.1 = .pending →
+    machineStep model (asyncExpand model f) (.waiting tag frame task) world =
+      (.pending, .waiting tag frame answer.2.1, answer.2.2.1, answer.2.2.2 + 1) ∧
+    ∃ next, Inv f types inventory (.waiting tag frame answer.2.1) next ∧
+      encode D types f (.waiting tag frame answer.2.1) = some next := by
+  intro model answer pending
+  have member : Command.await name future boundary ∈ f.body :=
+    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
+  have polled : PollRep D types [tag] future answer.1 answer.2.1 :=
+    await_poll_rep elaboration calls prices normal tag name future boundary member represented world
+  obtain ⟨storage, childStored⟩ := polled.storage
+  have newMarks : MarksRep inventory (.waiting tag future) (.waiting tag frame answer.2.1) := marks
+  refine ⟨?_, waiting_phase_inv inventory tag command ⟨(saved, storage, ()), ?_⟩ newMarks⟩
+  · simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+    change (match answer.1 with
+      | .pending => (.pending, .waiting tag frame answer.2.1, answer.2.2.1, answer.2.2.2 + 1)
+      | .ready value => (.next, .running (tag + 1) (save frame name value), answer.2.2.1, answer.2.2.2 + 1)) = _
+    rw [pending]
+  · exact .waiting tag future frame answer.2.1 saved storage slots childStored
 
 end Gabbro.Grammatik.Async.Representation
