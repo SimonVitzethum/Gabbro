@@ -64,6 +64,14 @@ theorem MappedImage.runner_prefix [Kern] {output : Emitted src reserve options}
     ∃ ir steps, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish :=
   runner_process_prefix imageTSO_fixed cinv_L0 mapped.loader run
 
+/-- The verified runner rules out unknown machine instructions from the
+    mapped loader independently of source-unit and compiler refinement. -/
+theorem MappedImage.no_unknown_instruction [Kern] {output : Emitted src reserve options}
+    {start : Cfg imageTSO Runner.X86.X} (mapped : MappedImage output start)
+    {events : List Ev} {ending : Ende} {count : Nat}
+    (run : Tr imageTSO (actX L0) start events ending count) : ending ≠ .unk :=
+  (runner_mt imageTSO_fixed cinv_L0 count mapped.loader run).1
+
 /-- Every first continuing IR step at the mapped loader reads the exact
     frame word and enters the emitted code. The caller's empty buffers
     exclude a flush and the singleton thread list excludes other work. -/

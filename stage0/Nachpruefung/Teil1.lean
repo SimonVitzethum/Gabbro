@@ -71,6 +71,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.goalUnit_refuses_nonempty_axioms
 #print axioms Gabbro.Stage0.MappedImage.source_start
 #print axioms Gabbro.Stage0.MappedImage.runner_prefix
+#print axioms Gabbro.Stage0.MappedImage.no_unknown_instruction
 #print axioms Gabbro.Stage0.MappedImage.dispatch_step
 #print axioms Gabbro.Stage0.ImageSimulation.follow
 #print axioms Gabbro.Stage0.ImageSimulation.goal

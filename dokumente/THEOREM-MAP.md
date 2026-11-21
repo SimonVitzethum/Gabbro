@@ -8256,7 +8256,8 @@ source call and actual request separately from the entry's implicit exit.
 `MappedImage.of_mmap_continuation` derives the runner relation from the
 concrete post-mmap instruction address and register.
 `MappedImage.runner_prefix` proves the x86-to-IR part under the host
-answer restrictions. `MappedImage.loader_prefix_goal` relates each
+answer restrictions, and `MappedImage.no_unknown_instruction` rules out
+unknown x86 instructions on that runner path. `MappedImage.loader_prefix_goal` relates each
 prefix through loader dispatch to the initial GX state and derives the
 full goal at that state. `ImageSimulation.follow`, `ImageSimulation.goal` and
 `ImageSimulation.terminal` lift single-step and terminal correspondence
