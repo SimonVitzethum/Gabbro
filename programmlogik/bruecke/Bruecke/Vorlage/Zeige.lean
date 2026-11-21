@@ -83,6 +83,8 @@ def zeigeStmt (n : Nat) : Stmt → List String
   | .leave => [einzug n ++ "leave;"]
   | .forEach x is b => [einzug n ++ "for " ++ x ++ " in " ++ toString is.length ++ " indices {"] ++
       zeigeBlock (n + 1) b ++ [einzug n ++ "}"]
+  | .forCount x c b => [einzug n ++ "traverse " ++ x ++ " in 0 ..< " ++ toString c ++ " {"] ++
+      zeigeBlock (n + 1) b ++ [einzug n ++ "}"]
   | .retry k s b o => [einzug n ++ "retry until " ++ zeigeExpr s ++ " bounded " ++ toString k ++ " {"] ++
       zeigeBlock (n + 1) b ++ [einzug n ++ "} on_exceeded {"] ++ zeigeBlock (n + 1) o ++ [einzug n ++ "}"]
 def zeigeBlock (n : Nat) : List Stmt → List String

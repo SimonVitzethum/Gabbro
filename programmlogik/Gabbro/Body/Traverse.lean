@@ -7,6 +7,14 @@ namespace Gabbro.Body
 theorem exec_singleton (ρ : Env) (st : Stmt) (s : State) : exec ρ [st] s = step ρ st s := by
   cases h : step ρ st s <;> simp only [exec, h]
 
+/-- The indices of a counted traversal. -/
+def zaehlIndizes (n : Nat) : List Int := (List.range n).map Int.ofNat
+
+/-- **A counted traversal is the traversal of its index list.** -/
+theorem step_forCount (ρ : Env) (x : String) (n : Nat) (body : List Stmt) (s : State) :
+    step ρ (.forCount x n body) s = step ρ (.forEach x (zaehlIndizes n) body) s := by
+  simp only [step, zaehlIndizes]
+
 /-- Operational traversal of the empty list runs zero passes. -/
 theorem forEach_nil (ρ : Env) (x : String) (body : List Stmt) (s : State) :
     step ρ (.forEach x [] body) s = .running s := rfl

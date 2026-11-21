@@ -49,6 +49,9 @@ inductive Statisch (ρB : Gabbro.Body.Env) (puts : List String) : List Gabbro.Bo
   | forEach (x : String) (indices : List Int) (body xs : List Gabbro.Body.Stmt) :
       Statisch ρB puts body → Statisch ρB puts xs →
       Statisch ρB puts (.forEach x indices body :: xs)
+  | forCount (x : String) (n : Nat) (body xs : List Gabbro.Body.Stmt) :
+      Statisch ρB puts body → Statisch ρB puts xs →
+      Statisch ρB puts (.forCount x n body :: xs)
 
   /-- A selected structured step with an explicit frame proof composes with the rest. -/
   | selected (x : Gabbro.Body.Stmt) (xs : List Gabbro.Body.Stmt) :
@@ -190,6 +193,12 @@ theorem exec_statisch {ρB : Gabbro.Body.Env} {puts : List String} {bs : List Ga
       (fun t s' h p hp => Gabbro.Body.forEach_frame ρB x body p
         (fun a b he => ihb a b he p hp) indices t s'
         (by simpa only [Gabbro.Body.exec_singleton] using h)) ihx h
+  | forCount x n body xs _ _ ihb ihx =>
+    intro t s' h
+    apply rahmen_zweig (Gabbro.Body.exec_singleton ρB (.forCount x n body) t).symm
+      (fun t s' h p hp => Gabbro.Body.forEach_frame ρB x body p
+        (fun a b he => ihb a b he p hp) (Gabbro.Body.zaehlIndizes n) t s'
+        (by simpa only [Gabbro.Body.exec_singleton, Gabbro.Body.step_forCount] using h)) ihx h
 
 theorem statisch_rets {ρB : Gabbro.Body.Env} {puts : List String} :
     ∀ (eB : List Gabbro.Body.Stmt), (∀ x ∈ eB, ∃ e, x = .ret (some e)) → Statisch ρB puts eB

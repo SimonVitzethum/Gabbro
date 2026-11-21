@@ -122,6 +122,7 @@ def pruefe (P : Programm) (erg : Option Shape) : Umgebung → Stmt → Option Um
   -- This independent Body shape checker has no iteration typing rule yet.
   | _, .forEach .. => none
   | _, .retry .. => none
+  | _, .forCount .. => none
 
 def pruefeBlock (P : Programm) (erg : Option Shape) : Umgebung → List Stmt → Option Umgebung
   | Δ, [] => some Δ

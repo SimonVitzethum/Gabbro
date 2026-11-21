@@ -18,6 +18,26 @@ def controlStmtB (leave : Bool) : Gabbro.Body.Stmt :=
 def loopIndices (u : UProg) (t : Fin u.tabs.length) : List Int :=
   (alleIndizes ((declOf u).count t)).map (·.n)
 
+/-- The number of passes of a traversal of `t`: the reading stores it, never the index list. -/
+def loopZahl (u : UProg) (t : Fin u.tabs.length) : Nat := ((declOf u).count t).toNat
+
+theorem filterMap_eq_map_of_mem {α β : Type} (f : α → Option β) (g : α → β) :
+    ∀ (l : List α), (∀ x ∈ l, f x = some (g x)) → l.filterMap f = l.map g
+  | [], _ => rfl
+  | x :: xs, h => by
+    rw [List.filterMap_cons, h x List.mem_cons_self, List.map_cons,
+      filterMap_eq_map_of_mem f g xs (fun y hy => h y (List.mem_cons_of_mem _ hy))]
+
+/-- The traversal's index list is the counted one. -/
+theorem loopIndices_zahl (u : UProg) (t : Fin u.tabs.length) :
+    loopIndices u t = Gabbro.Body.zaehlIndizes (loopZahl u t) := by
+  unfold loopIndices loopZahl Gabbro.Body.zaehlIndizes alleIndizes
+  rw [List.map_filterMap]
+  refine filterMap_eq_map_of_mem _ _ _ (fun k hk => ?_)
+  have hk' := List.mem_range.mp hk
+  have hle : ((k : Nat) : Int) ≤ (declOf u).count t - 1 := by omega
+  simp [hle]
+
 theorem Sicht.index {u : UProg} {ft fn : UFn} (h : Sicht u ft fn)
     (x : String) (num : Nat) (count : Int) :
     Sicht u (ft.mitIndex x num count) (fn.mitIndex x num count) := by

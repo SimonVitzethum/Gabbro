@@ -264,7 +264,7 @@ theorem statischEndSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (�
       have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hΓ hS
         (fun st h => hmemss st (mem_of_suffix hsuf h)) hm hQ hTailZ
         (fun g gf hf ⟨args, ha⟩ => hFss g gf hf ⟨args, ha.mono (fun _ h => mem_of_suffix hsuf h)⟩)
-      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), .forEach _ _ _ _ hFrame IH.2.2⟩
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), .forCount _ _ _ _ hFrame IH.2.2⟩
     case ifBeg cnd | ifEnde cnd =>
       obtain ⟨ce, tt, te, r1, r2, ys, used1, used2, hce, hTZ, hEZ, hYZ, rfl⟩ :=
         seqZ_wenn_some (cnd := cnd) hbs (by first | exact .inl rfl | exact .inr rfl)

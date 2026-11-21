@@ -78,7 +78,7 @@ def seqZ (u : UProg) [FnSuche u] : Nat → UFn → BodyNames → List UStmt →
       let (body, .blkEnd :: tail, used) ← seqZ u k
         (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
       let p ← seqZ u k fn (ns.resume used) tail
-      pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
+      pure (.forCount (ns.fresh x) (loopZahl u t) body :: p.1, p.2.1, p.2.2)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
@@ -155,7 +155,7 @@ def stmtsBodyZ (u : UProg) [FnSuche u] : Nat → UFn → BodyNames → List UStm
       let (body, .blkEnd :: tail, used) ← seqZ u k
         (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
       let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
-      pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
+      pure (.forCount (ns.fresh x) (loopZahl u t) body :: bs)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest, r => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none

@@ -305,14 +305,9 @@ def dateien (modul src : String) : Except String (List Datei) := do
   let rang := raenge u
   let rangTafel : Std.HashMap String Nat := rang.foldl (fun m p => m.insert p.1 p.2) {}
   let rk : String → Nat := fun n => rangTafel.getD n 0
-  let gelesen := fs.map fun (i, f) => (i, f, match grosseSchleife u f with
-    | some _ => none
-    | none => zuBodyZ u f)
+  let gelesen := fs.map fun (i, f) => (i, f, zuBodyZ u f)
   let fnAbl := gelesen.filterMap fun (_, f, b) =>
-    let gruende := (match b, grosseSchleife u f with
-      | some _, _ => []
-      | none, some g => [g]
-      | none, none => [koerperAblehnung f]) ++
+    let gruende := (match b with | some _ => [] | none => [koerperAblehnung f]) ++
       fnAblehnungen u f ++ (if bindFrischB f then [] else ["a local binder is not fresh"]) ++
       (if rangFnB rk f then [] else ["recursive call (the generator states rank duties only)"])
     if gruende.isEmpty then none else some (f.name ++ ": " ++ String.intercalate "; " gruende)

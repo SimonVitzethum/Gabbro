@@ -206,8 +206,10 @@ theorem stmtZiel_loop_G {loopMode : Bool} {c : Fin u.fns.length} {O : Orakel (de
     (σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State)
     (hW : WGRel u σ s.world) (hL : PositionalLRel fn ns.active 0 ρ s.local') :
     StmtZiel_G u C c O passes R fn ns.active (.traverse (l := loopMode) t Expr.tru body) σ ρ s
-      (.forEach (ns.fresh x) (loopIndices u t) bs) := by
-  exact
-    finiteBody_sim (loopMode := loopMode) body bs hU hBody (alleIndizes ((declOf u).count t)) σ ρ s hW hL
+      (.forCount (ns.fresh x) (loopZahl u t) bs) := by
+  refine ausgangZiel_G_ersetze (fun ρB => ?_)
+    (finiteBody_sim (loopMode := loopMode) body bs hU hBody (alleIndizes ((declOf u).count t)) σ ρ s hW hL)
+  simp only [Gabbro.Body.exec_singleton, Gabbro.Body.step_forCount, ← loopIndices_zahl]
+  rfl
 
 end Gabbro.Bruecke
