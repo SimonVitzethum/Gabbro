@@ -52,46 +52,46 @@ def checkResultOnly {returnType ty : Ty} (source : Expr D (returnType :: params)
   | .widen lo hi expr => do
     let pureExpr ← checkResultOnly expr
     return ⟨.widen lo hi pureExpr.term, fun old world value args => by
-      simp only [eval, pureExpr.exactValue old world value args]⟩
+      simp only [eval, pureExpr.exactValue old world value args] <;> rfl⟩
   | .add lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.add a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .sub lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.sub a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .lt lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.lt a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .le lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.le a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .eq lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.eq a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .and lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.and a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .or lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
     return ⟨.or a.term b.term, fun old world value args => by
-      simp only [eval, a.exactValue old world value args, b.exactValue old world value args]⟩
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | .not expr => do
     let pureExpr ← checkResultOnly expr
     return ⟨.not pureExpr.term, fun old world value args => by
-      simp only [eval, pureExpr.exactValue old world value args]⟩
+      simp only [eval, pureExpr.exactValue old world value args] <;> rfl⟩
   | _ => .error "foreign post summary: unsupported operation, argument or entry-memory read"
 
 /-- A parameterless post in the current-world fragment already has the
@@ -101,7 +101,12 @@ def checkResultSummary (params : Ctx) (result : Option Ty)
     (post : Expr D (ErgCtx params result) [] .bool) :
     Except String (ResultSummary post) :=
   match params, result, post with
-  | _, _, .fls => .ok ⟨.fls, fun _ _ => by simp only [eval, Bool.false_eq_true, and_false, exists_false]⟩
+  | _, _, .fls => .ok ⟨.fls, fun _ _ => by
+    constructor
+    · intro impossible
+      cases impossible
+    · rintro ⟨_, _, impossible⟩
+      cases impossible⟩
   | [], _, expression => do
     let current ← (Vertraege.Pruefer.currentOnly expression).mapError
       (fun refusal => "foreign post summary: " ++ refusal.message)
