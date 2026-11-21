@@ -114,6 +114,56 @@ theorem MappedImage.loader_prefix_source [Kern] {output : Emitted src reserve op
       exact ⟨rfl, matched⟩
     | cons next tail => omega
 
+/-- The actual first continuing x86 step from the mapped loader either
+    performs runner bookkeeping or reads the serialized frame word. The
+    IR prefix through dispatch therefore has length at most one. -/
+theorem MappedImage.runner_loader_step [Kern] {output : Emitted src reserve options}
+    {before after : Cfg imageTSO Runner.X86.X} {events : List Ev}
+    (mapped : MappedImage output before) (step : ProcessStep imageTSO (actX L0) before events after) :
+    ∃ ir steps, ProcessPrefix imageTSO actI ⟨before.ms, [some t4]⟩ events steps ir ∧
+      steps ≤ 1 ∧ Rel L0 ir after := by
+  let initial : Cfg imageTSO (Res T) := ⟨before.ms, [some t4]⟩
+  have atLoader {i : Nat} {x : Runner.X86.X} (found : before.ths[i]? = some (some x)) :
+      initial.ths[i]? = some (some t4) ∧ Match L0 t4 x := by
+    obtain ⟨r, slot, control⟩ := rel_at mapped.loader found
+    cases i with
+    | zero =>
+      have same : r = t4 := by simpa only [List.getElem?_cons_zero, Option.some.injEq] using slot.symm
+      exact ⟨rfl, same ▸ control⟩
+    | succ i => simp [initial] at slot
+  have notNext : ∀ t, t4 ≠ .next t := by
+    intro t equal
+    cases equal
+  have notSystem {x : Runner.X86.X} {req : Req} {k : Ans → Res Runner.X86.X}
+      (matched : Match L0 t4 x) (asked : actX L0 x = .ask (.sys req) k) : False := by
+    rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨_, impossible, _⟩
+    · cases impossible
+    · cases impossible
+  cases step with
+  | tau flush =>
+    obtain ⟨i, _, _, _, pending, _⟩ := flush
+    rw [mapped.emptyBuffers i] at pending
+    cases pending
+  | priv found continued =>
+    obtain ⟨slot, matched⟩ := atLoader found
+    exact ⟨initial, 0, .nil _, by decide,
+      ⟨mapped.loader.ms, relT_setX mapped.loader.th slot (inv_next matched continued notNext)⟩⟩
+  | @ask i x x' request k answer memory found asked ordinary answered continued =>
+    obtain ⟨slot, matched⟩ := atLoader found
+    rcases inv_ask matched asked notNext with ⟨op, valid, rfl, resumes⟩ | ⟨resume, exactRequest, resumes⟩
+    · obtain ⟨rfl, word, rfl⟩ := imageTSO_fixed _ _ _ _ _ valid answered
+      exact ⟨initial, 0, .nil _, by decide,
+        ⟨mapped.loader.ms, relT_setX mapped.loader.th slot (invK_next (continued ▸ resumes word))⟩⟩
+    · have ready : actI t4 = .ask request (fun a => .next (resume a)) := by
+        rw [exactRequest]
+        rfl
+      have finished := invK_next (continued ▸ resumes answer)
+      have move := ProcessStep.ask (act := actI) slot ready ordinary answered rfl
+      exact ⟨_, 1, ProcessPrefix.ofStep move, Nat.le_refl 1,
+        ⟨rfl, relT_set mapped.loader.th (vI := some (resume answer)) (vX := some x') finished⟩⟩
+  | exit found asked _ | cloneNo found asked _ _ _ | clone found asked _ _ _ _ =>
+    exact (notSystem (atLoader found).2 asked).elim
+
 /-- Every concrete x86 prefix that has advanced at most through loader
     dispatch satisfies the complete goal at the declared source start. -/
 theorem MappedImage.loader_prefix_goal [Kern] {output : Emitted src reserve options}
