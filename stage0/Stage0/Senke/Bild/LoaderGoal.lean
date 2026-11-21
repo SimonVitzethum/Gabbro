@@ -382,11 +382,12 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
 
+set_option maxRecDepth 5000 in
 private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
     y.toNat < Runner.Prog.IMG := by
   obtain ⟨op, row, byte, width, rfl⟩ := member
-  have fit := image_fits
-  rw [image_len, Runner.Prog.fileLen] at fit
+  have fit : Runner.Prog.BASE + Runner.Prog.fileLen < Runner.Prog.IMG := image_len ▸ image_fits
+  simp only [Runner.Prog.fileLen] at fit
   have below : Runner.Prog.BASE + (Runner.Prog.tblOff + 8 * op) + byte < Runner.Prog.IMG := by
     unfold readOnlyWidth at width
     split at width <;> omega
@@ -428,9 +429,12 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   obtain ⟨allSites, frame, children, far, scratch, slots⟩ := spawn_ready placed startup
   have present := (List.getElem?_eq_some_iff.mp declared).1
   have indexed := placed.spawn_entry 0 (by rw [List.length_map]; exact present)
-  have specific := children _ (List.mem_of_getElem? indexed)
+  have specific : codeBase + 16 * (10 * output.starts.length + startLen) < 2 ^ 31 ∧
+      output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by
+    simpa only [List.length_map, Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using
+      children _ (List.mem_of_getElem? indexed)
   obtain ⟨site, live, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
-  simp only [Nat.mul_zero, Nat.add_zero, Nat.mul_one, BitVec.add_zero] at site specific
+  simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one, BitVec.add_zero] at site
   have beforeView : s.1.view 0 = s.1.m := by simp only [TSt.view, empty, List.foldl_nil]
   let entered : Cfg (TSO L0) (Res T) :=
     ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
@@ -463,10 +467,12 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       farSite (by omega) slots specific.1 specific.2 notTable
   have readFrame := output.loader_frame loaded
   have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
-    exact .ofStep (ProcessStep.ask (i := 0) rfl rfl rfl
-      (show (TSO L0).ans s 0 (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG))
-          (some (BitVec.ofNat 64 output.image.fp0, 0)) s from
-        ⟨rfl, 0, by simp only [beforeView, rdN, readFrame, Option.map_some]⟩) rfl)
+    have step : ProcessStep (TSO L0) actI ⟨s, [some t4]⟩
+        (Mach.lbl 0 (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG))
+          (some (BitVec.ofNat 64 output.image.fp0, 0))) entered :=
+      .ask (i := 0) rfl rfl rfl
+        ⟨rfl, 0, by simp only [beforeView, rdN, readFrame, Option.map_some]⟩ rfl
+    exact .ofStep step
   have sxIndex : sx (II.f (startScratch output.compiled.main)) =
       BitVec.ofNat 64 (startScratch output.compiled.main) := sx_nat (by omega)
   rw [← sxIndex] at entry stack
