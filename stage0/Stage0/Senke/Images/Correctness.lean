@@ -96,6 +96,44 @@ structure ImageModelUnit (output : Emitted src reserve options)
   summary : ∀ item world value, E.Q item world value = true ↔
     ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
 
+/-- For the part of the current emitter with no foreign or ownership
+    declarations, the checked output supplies the specified source unit
+    and its checker verdict without an extra unit-check hypothesis. -/
+theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
+    (noAxioms : output.compiled.unit.axs.length = 0)
+    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
+    (noAccumulators : imageAccumulatorItems output = []) :
+    let E := output.goalUnit (axWahr _)
+    ImageModelUnit output E ∧
+      akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true := by
+  refine ⟨{
+    program := rfl
+    locks := rfl
+    lockSources := HEq.rfl
+    memory := rfl
+    starts := rfl
+    checks := rfl
+    measure := rfl
+    pointerSignatures := rfl
+    runtimeRoots := OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots
+    runtimeParams := ?_
+    arenaTables := ?_
+    accumulators := ?_
+    summary := ?_
+  }, output.goal_checker_concurrent _ (output.goal_axiomFree _ noAxioms)⟩
+  · intro root member
+    change root ∈ ([] : List _) at member
+    cases member
+  · intro t
+    have closed := OldSource.zertifizierbar_ohne_arena _ noOwnership (output.compiled.unit.tabs.get t)
+      (List.get_mem _ _)
+    change _ ↔ ∃ arena ∈ ([] : List _), arena.A.tab = t
+    simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
+  · rw [noAccumulators]
+    exact .nil
+  · intro item _ _
+    exact False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt))
+
 /-- The source's one live entry, with every declared boot position already
     provisioned with its exact argument environment. -/
 abbrev imageSourceStart {D : Deklaration} (E : Einheit D) : FadenMaschine D.mitRuhe :=
