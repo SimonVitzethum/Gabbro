@@ -257,9 +257,30 @@ def block {context : Context A next} (policy : CallPolicy program context)
           ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
     | .regRead .. | .regReadElse .. => .error (.unsupported "contract register binding needs a typed fresh result observation")
     | .awaits .. | .exchange .. => .error (.unsupported "contract atomic binding needs rely-aware fresh observations")
-    | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
+    | .floatNarrow expression low high failure rest => do
+        let success ← block policy facts budget hint fuel rest (.cons .unobserved symbols)
+          ⟨trivial, bounded⟩ (goals.shrink (.fl low high))
+        let failed ← ending policy facts budget hint fuel failure symbols bounded goals
+        return {
+          formula := .and success.formula failed.formula
+          sound := fun valuation item present runtime world valid actual realized allowed safe => by
+            let read := world.lese Λ expression.orte
+            have locals := (symbols.realizes_world actual valuation world read).mp realized
+            have positive := (success.read Λ expression.orte).sound valuation item present runtime world valid.1
+            have negative := (failed.read Λ expression.orte).sound valuation item present runtime world valid.2
+            unfold Runtime.wpB
+            simp only [execBlockH, ← show read = world.lese Λ expression.orte from rfl]
+            cases gleitPasst low high (eval read expression read actual).x with
+            | some value =>
+              exact (goals.holds_shrink _ item runtime allowed _).mp
+                (positive (.cons value actual) ⟨trivial, locals⟩ allowed safe)
+            | none =>
+              have fails := negative actual locals allowed safe
+              unfold Runtime.wpE at fails
+              cases execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure read actual <;>
+                simpa only [Symbolic.Goals.holds, Symbolic.Goals.endHolds, EndAusgang.zuAusgang] using fails }
+    | .float .. | .floatLit .. | .floatOf .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
 termination_by structural fuel
-
 def ending {context : Context A next} (policy : CallPolicy program context)
     (facts : ∀ lock, Except Frag.Refusal (LockFormula S lock)) (budget : VCBudget) (hint : Option (QF (Observation D)))
     (fuel : Nat) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -403,7 +424,25 @@ def ending {context : Context A next} (policy : CallPolicy program context)
           ((goals.weaken larger).shrinkResult (some (.why (D.agruende a)))))
     | .regRead .. | .regReadElse .. => .error (.unsupported "contract register end binding needs a typed fresh result observation")
     | .awaits .. | .exchange .. => .error (.unsupported "contract atomic end binding needs rely-aware fresh observations")
-    | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. => .error (.unsupported "contract floating end binding needs an exact typed range-check certificate")
+    | .floatNarrow expression low high failure rest => do
+        let success ← ending policy facts budget hint fuel rest (.cons .unobserved symbols)
+          ⟨trivial, bounded⟩ (goals.shrink (.fl low high))
+        let failed ← ending policy facts budget hint fuel failure symbols bounded goals
+        return {
+          formula := .and success.formula failed.formula
+          sound := fun valuation item present runtime world valid actual realized allowed safe => by
+            let read := world.lese Λ expression.orte
+            have locals := (symbols.realizes_world actual valuation world read).mp realized
+            have positive := (success.read Λ expression.orte).sound valuation item present runtime world valid.1
+            have negative := (failed.read Λ expression.orte).sound valuation item present runtime world valid.2
+            unfold Runtime.wpE
+            simp only [execEndH, ← show read = world.lese Λ expression.orte from rfl]
+            cases gleitPasst low high (eval read expression read actual).x with
+            | some value =>
+              exact (goals.endHolds_shrink _ item runtime allowed _).mp
+                (positive (.cons value actual) ⟨trivial, locals⟩ allowed safe)
+            | none => exact negative actual locals allowed safe }
+    | .float .. | .floatLit .. | .floatOf .. => .error (.unsupported "contract floating end binding needs an exact typed range-check certificate")
 termination_by structural fuel
 
 def reasonCases {context : Context A next} (policy : CallPolicy program context)
