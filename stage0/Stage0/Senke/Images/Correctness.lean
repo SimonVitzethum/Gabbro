@@ -83,12 +83,12 @@ theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
   | priv found executed =>
     obtain ⟨_, rfl⟩ := onlyThread found
     cases executed
-  | ask found asked _ answered continued =>
+  | @ask _ _ _ _ _ response _ found asked _ answered continued =>
     obtain ⟨rfl, rfl⟩ := onlyThread found
     cases asked
     have frame := output.loader_frame mapped.bytes
     obtain ⟨same, extra, read⟩ := answered.1
-    have exactWord : _ = some (BitVec.ofNat 64 output.image.fp0, extra) := by
+    have exactWord : response = some (BitVec.ofNat 64 output.image.fp0, extra) := by
       simpa only [rdN, TSt.view, mapped.emptyBuffers 0, List.foldl_nil, frame, Option.map_some] using read
     subst_vars
     cases continued
