@@ -3609,7 +3609,8 @@ places that payload in the complete generated record at its declared tag,
 keeping the recorded ownership inventory of the running phase.
 `await_construction_preserves` takes a complete running record and shows
 that the semantic construction step preserves typed storage and the
-ordinary resource index when the two phase inventories agree.
+ordinary resource index. The two checks use the elaborated argument
+contexts and the finite inventories of both phases.
 
 **Complete table-to-G reification remains open.** The builders still require
 actual expression, child-poll and destructor blocks with their ordinary

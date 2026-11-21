@@ -12,6 +12,56 @@ open Segment
 variable {D : Deklaration} {V : Vertrag D} {Λ : List (Res D)}
   {types : TypeResolution} {f : AsyncFn}
 
+/-- Each context entry used by an await argument comes from a live slot
+    with the same ordinary type in the source declaration. -/
+@[expose] public def AwaitLocalOrigins (elaboration : Elaboration D V Λ types f)
+    (tag : Nat) (future : FutureExpr) : Prop :=
+  ∀ callee args, FutureExpr.call callee args ∈ callsIn future →
+    ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
+      ∀ localName type, (localName, type) ∈ expression.locals →
+        ∃ sourceType, (localName, sourceType) ∈ f.params ++ f.fields ∧
+          localName ∈ liveAt f (.running tag) ∧ types.ordinary sourceType = type
+
+/-- Check the actual typed argument contexts against the declared live slots. -/
+@[expose] public def checkAwaitLocalOrigins (elaboration : Elaboration D V Λ types f)
+    (tag : Nat) (future : FutureExpr) : Bool :=
+  (callsIn future).all fun leaf => match leaf with
+  | .join .. => false
+  | .call _ args => args.all fun source => match elaboration.expression source with
+    | none => false
+    | some expression => expression.locals.all fun localEntry =>
+      decide (localEntry.1 ∈ liveAt f (.running tag)) &&
+      (f.params ++ f.fields).any fun declared =>
+        declared.1 == localEntry.1 && decide (types.ordinary declared.2 = localEntry.2)
+
+public theorem checkAwaitLocalOrigins_sound (elaboration : Elaboration D V Λ types f)
+    (tag : Nat) (future : FutureExpr) (checked : checkAwaitLocalOrigins elaboration tag future = true) :
+    AwaitLocalOrigins elaboration tag future := by
+  intro callee args leaf source argument expression resolved name type localEntry
+  have arguments := List.all_eq_true.mp checked _ leaf
+  have locals := List.all_eq_true.mp arguments source argument
+  simp only [resolved] at locals
+  have valid := List.all_eq_true.mp locals (name, type) localEntry
+  obtain ⟨live, typed⟩ := Bool.and_eq_true_iff.mp valid
+  obtain ⟨⟨declaredName, sourceType⟩, declared, exactType⟩ := List.any_eq_true.mp typed
+  simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at exactType
+  obtain ⟨rfl, exactType⟩ := exactType
+  exact ⟨sourceType, declared, of_decide_eq_true live, exactType⟩
+
+/-- Match the exact sequence of ordinary owned marks and their counts
+    before and after entering the waiting phase. -/
+@[expose] public def checkAwaitInventory (inventory : Inventory D) (tag : Nat) (future : FutureExpr) : Bool :=
+  let encoded := fun phase => (inventory.owned phase).map fun entry => (inventory.number entry.1, entry.2)
+  decide (encoded (.waiting tag future) = encoded (.running tag))
+
+public theorem checkAwaitInventory_sound (inventory : Inventory D) (tag : Nat) (future : FutureExpr)
+    (checked : checkAwaitInventory inventory tag future = true) :
+    inventory.owned (.waiting tag future) = inventory.owned (.running tag) := by
+  have exactEntry (left right : D.Marke × Nat)
+      (same : (inventory.number left.1, left.2) = (inventory.number right.1, right.2)) : left = right :=
+    Prod.ext (inventory.injective _ _ (congrArg Prod.fst same)) (congrArg Prod.snd same)
+  exact (List.map_inj_right exactEntry).mp (of_decide_eq_true checked)
+
 /-- Evaluating the resolved arguments in source order gives an ordinary
     argument environment. The successor world of each expression is the
     initial world of the next expression. -/
@@ -157,11 +207,7 @@ public theorem await_construction_rep (elaboration : Elaboration D V Λ types f)
     (command : f.body.drop tag = Command.await name future boundary :: rest)
     (frame : Frame (Value D)) (frameValue : Wert D (frameType types f))
     (slots : FrameRep D types f (Phase.running tag) frame frameValue)
-    (localTypes : ∀ callee args, FutureExpr.call callee args ∈ callsIn future →
-      ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
-        ∀ localName type, (localName, type) ∈ expression.locals →
-          ∃ sourceType, (localName, sourceType) ∈ f.params ++ f.fields ∧
-            localName ∈ liveAt f (Phase.running tag) ∧ types.ordinary sourceType = type)
+    (localTypes : AwaitLocalOrigins elaboration tag future)
     (world : World D) :
     let model := inducedModel elaboration calls prices normal
     let built := makeTask model frame future world
@@ -271,12 +317,8 @@ public theorem await_construction_preserves
     (command : f.body.drop tag = Command.await name future boundary :: remaining)
     (frame : Frame (Value D)) (record : Wert D (stateType types f))
     (represented : Inv f types inventory (.running tag frame) record)
-    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag))
-    (localTypes : ∀ callee args, FutureExpr.call callee args ∈ callsIn future →
-      ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
-        ∀ localName type, (localName, type) ∈ expression.locals →
-          ∃ sourceType, (localName, sourceType) ∈ f.params ++ f.fields ∧
-            localName ∈ liveAt f (.running tag) ∧ types.ordinary sourceType = type)
+    (owned : checkAwaitInventory inventory tag future = true)
+    (localTypes : checkAwaitLocalOrigins elaboration tag future = true)
     (world : World D) :
     let model := inducedModel elaboration calls prices normal
     let built := makeTask model frame future world
@@ -289,7 +331,8 @@ public theorem await_construction_preserves
     (.running tag frame) record.1 from represented) tag frame rfl
   obtain ⟨stepped, payload⟩ :=
     await_construction_rep elaboration calls prices normal tag name future boundary remaining command
-      frame _ slots localTypes world
+      frame _ slots (checkAwaitLocalOrigins_sound elaboration tag future localTypes) world
+  have sameInventory := checkAwaitInventory_sound inventory tag future owned
   refine ⟨stepped, ?_, waiting_construction_inv inventory tag command payload marks sameInventory⟩
   rw [inventory.exact, inventory.exact, sameInventory]
 
