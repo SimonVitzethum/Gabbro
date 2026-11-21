@@ -8084,3 +8084,10 @@ expansion consumes the group declarations.
 `uRelReturn_difference` exposes a final operand difference to the ordinary
 continuation reader through one immutable binding. `uRelReturn_bounds` proves
 the range used after the exiting arm of a less-than guard.
+
+`uRelReturn_eval` relates the narrowed expression to the exact signed
+difference on the guard's fallthrough. `uSpecValueArgument_exact` proves
+that an accepted structured argument path has the full declared type.
+`uRecordReplacement_step` specifies the recursive record update.
+`uSetzeRecordSlot_named` connects a nested update to the ordinary
+aggregate table store.

@@ -25,6 +25,11 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Frontend.checkExpansionGate_noEffectGroups
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uRelReturn_difference
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uRelReturn_bounds
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uRelReturn_eval
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uSpecValueArgument_exact
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specValueArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uRecordReplacement_step
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uSetzeRecordSlot_named
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
 #print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
 #print axioms Gabbro.Stage0.irBild_start_requires

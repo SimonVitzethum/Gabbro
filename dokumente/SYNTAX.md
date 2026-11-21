@@ -1190,9 +1190,10 @@ not fall.
 
 For example, `spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;` checks each use against
 that parameter type before inlining. Integer argument intervals must be contained in the declared
-range; Boolean parameters require Boolean arguments. Arity mismatch, unresolved intervals and
-non-scalar parameter checks refuse. The caller's `0 .. 9` fits, while `0 .. 101` refuses even if
-an eventual call uses `7` (`stage0/proben-ir/spec-parameter.gab`, `spec-parameter-refused.gab`).
+range and Boolean parameters require Boolean arguments. Record, array, string and floating-point
+parameters accept named values and record field paths whose elaborated type equals the declared
+type. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
+fits the example parameter, while an argument with range `0 .. 101` exceeds its declared type.
 `Folds/SpecArguments.lean` checks in the caller's scope, including quantifier domains. An argument
 whose names overlap a binder of the predicate is refused as `spec …: argument … names a binder of
 the predicate`, including binders within the argument; `Folds/Substitution.lean` does not inline
@@ -2102,6 +2103,11 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `format F endian e { field @bitpos where p, … }` | a **view** on a byte carrier: a field `@[hi:lo]` at offset `o` is `(bytes(o, n) >> lo) & mask`, `embeds … scale s` multiplies, `endian big` reverses the byte list, `offset_into` is the offset's bound at the read; **`where p` is a check at the field's read**: the condition, or the named `else` of the enclosing `let … else` | `Expr.getBytes`, `Zucker.Expr.bitfeld/embeds`, `bytesZuZahlBig`; `Block.check c sonst rest` («SG-16») |
 | `reason R { A = 1 "…", B = 2 "…" }` | `n` grounds; the number is for the report, not the calculation (`M124`). **`pub` since 2026-09-28** — see below | `Ty.why n` |
 | `state S { transition t { f : A -> B } }` | the declared transitions of a field; `transition T.slots[i].f : A -> B;` is derivable only for a declared pair. **The stages of `S` are the numbers 0, 1, 2, … in the order the stage names are first written** in its `transition` lines; each line allows its one pair; **the field a `transition` statement is applied to is the field `S` governs** (one state per field; a pair declared by two states is ambiguous and refused); the target stage lies in the field's range (Simon, 2026-10-21) | `D.erlaubt t f von nach`; `Stmt.shift` («SG-19») |
+
+A nested assignment such as `T.slots[i].point.x = value;` reads the
+containing record and stores its updated value at the same slot. The
+ordinary slot bounds, read and write authority, and guard checks apply.
+
 
 ```gabbro
 format Elf64 endian little {

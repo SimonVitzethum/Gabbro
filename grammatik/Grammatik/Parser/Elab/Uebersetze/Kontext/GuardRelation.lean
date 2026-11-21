@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.GuardNarrowing
+public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -250,6 +251,22 @@ theorem uRelReturn_bounds {left right loLeft hiLeft loRight hiRight : Int}
     (passed : ¬ left < right) :
     max (loLeft - hiRight) 0 ≤ left - right ∧ left - right ≤ hiLeft - loRight := by
   constructor <;> omega
+
+/-- The lowered value on the fallthrough of a less-than guard is the
+    mathematical difference. Its narrowing never evaluates the fallback. -/
+theorem uRelReturn_eval {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {loLeft hiLeft loRight hiRight : Int}
+    (left : Expr D Γ Λ (.int loLeft hiLeft)) (right : Expr D Γ Λ (.int loRight hiRight))
+    (fallback : Expr D Γ Λ (.int (max (loLeft - hiRight) 0) (hiLeft - loRight)))
+    (initial current : World D) (env : Env D Γ)
+    (passed : ¬ (eval initial left current env).n < (eval initial right current env).n) :
+    (eval initial (.eng (.sub left right) (max (loLeft - hiRight) 0) (hiLeft - loRight) fallback)
+      current env).n = (eval initial left current env).n - (eval initial right current env).n := by
+  let a := eval initial left current env
+  let b := eval initial right current env
+  have bounded := uRelReturn_bounds (loLeft := loLeft) (hiLeft := hiLeft)
+    (loRight := loRight) (hiRight := hiRight) ⟨a.lo_le, a.le_hi⟩ ⟨b.lo_le, b.le_hi⟩ passed
+  simp only [eval, Zahl.sub, dif_pos bounded]
 
 -- Keep a partially applied large-fuel visitor as a function during closed cbv checks.
 -- Its canonical equation evaluates only the fully supplied statement.
