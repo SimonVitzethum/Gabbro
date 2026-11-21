@@ -294,6 +294,8 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
       after.1.m = before.ms.1.m ∧
       Agree fp (startScratch output.compiled.main) output.image.Ks (before.ms.1.view 0) (after.1.view 0) ∧
       (∀ k, k ≠ 0 → after.1.view k = before.ms.1.view k) ∧
+      BytesAt (after.1.view 0) codeBase (output.image.code.flatMap encII) ∧
+      FrameOK (after.1.view 0) fp output.image.Ks ∧
       initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ ∧
       ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
         FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
@@ -303,7 +305,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
   intro pc fp child running threads
   have inside := (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q loaded declared
-  obtain ⟨_, body, _, placed, _⟩ := bild_lage output.emission output.funktionen_voll
+  obtain ⟨_, body, _, placed, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
     (fun base => by simp only [layU]; omega)
@@ -336,7 +338,24 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
   obtain ⟨after, prefix, appended, same, own, others⟩ :=
     bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
       (by omega) childCode childFrame positive
-  exact ⟨after, prefix, position ▸ appended, same, own, others, logical,
+  have codeEnd : codeBase + (output.image.code.flatMap encII).length = output.image.fp0 := by
+    rw [flatMap_enc_len, serialized, List.length_append, placed.head, placed.hfp]
+  have codeKept : BytesAt (after.1.view 0) codeBase (output.image.code.flatMap encII) := by
+    intro byte bound
+    have decoded : (BitVec.ofNat 64 (codeBase + byte)).toNat = codeBase + byte := by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    have stackStart : fp.toNat = output.image.fp0 := by
+      change (BitVec.ofNat 64 output.image.fp0).toNat = output.image.fp0
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    have separate : ¬ inSlots fp (startScratch output.compiled.main) output.image.Ks
+        (BitVec.ofNat 64 (codeBase + byte)) := by
+      intro overlap
+      unfold inSlots at overlap
+      rw [decoded, stackStart] at overlap
+      omega
+    rw [own.rd, own.wr, own.b _ separate]
+    exact loaded byte bound
+  exact ⟨after, prefix, position ▸ appended, same, own, others, codeKept, frame.agree own, logical,
     fun O => output.bootActivation_step Q O inside⟩
 
 /-- From the actual mapped payload the loader and the first clone site
@@ -380,7 +399,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * 0)), BitVec.ofNat 64 output.image.fp0⟩)) := by
     simp only [Nat.mul_zero, BitVec.add_zero]
     rfl
-  obtain ⟨finished, launched, _, committed, _, views, logical, activated⟩ :=
+  obtain ⟨finished, launched, _, committed, _, views, _, _, logical, activated⟩ :=
     output.boot_site_prefix Q (before := entered) (extra := extra) declared code rfl
       ((beforeView 0).symm ▸ initialFrame) positive atEntry
   have readFrame := output.loader_frame loaded
