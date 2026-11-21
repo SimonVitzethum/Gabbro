@@ -3,7 +3,6 @@ module
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
 public import Stage0.Senke.Ausdruck.Tag
-public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 @[expose] public section
 

@@ -65,13 +65,6 @@ public import Stage0.Senke.Bild.Rek.EndRBVoll
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Erfuellbarkeit.Fixture
 public import Stage0.Senke.Erfuellbarkeit.Aufruf
-public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
-
-public import Stage0.Senke.Tore.Answers
-
-
-
 public import Stage0.Senke.Ausdruck.Old.Admission
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
