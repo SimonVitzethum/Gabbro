@@ -21,18 +21,40 @@ structure ResultSummary (post : Expr D (ErgCtx params result) [] .bool) where
     ∃ (old : World D) (arguments : Env D params),
       eval old post world (ergEnv result value arguments) = true
 
+mutual
+/-- Construct a typed value for projection, including an empty aggregate
+    even when its element type is uninhabited. -/
+def summaryValue : (ty : Ty) → Option (Wert D ty)
+  | .int lo hi => einpassen (D := D) (fun _ => none) (.int lo hi) lo
+  | .bool => some false
+  | .opt _ => some none
+  | .ptr _ => some ()
+  | .ref _ => some (Val.vonZelle 0)
+  | .why 0 => none
+  | .why (n + 1) => some ⟨0, Nat.zero_lt_succ n⟩
+  | .str n => some ⟨[], Nat.zero_le n⟩
+  | .arr _ 0 => some Fin.elim0
+  | .arr ty (n + 1) => (summaryValue ty).map (fun value => fun _ : Fin (n + 1) => value)
+  | .prod _ fields => summaryFields fields
+  | _ => none
+termination_by ty => sizeOf ty
+
+def summaryFields : (fields : List Ty) → Option (ProdVal D.Fn D.passt fields)
+  | [] => some ()
+  | ty :: rest => do
+    let value ← summaryValue ty
+    let tail ← summaryFields rest
+    return (value, tail)
+termination_by fields => sizeOf fields
+end
+
 /-- A true post projects to true only if the original argument context
-    has a value. Construct the typed environment for the common gate inputs. -/
+    has a value. Every constructed environment retains its declared types. -/
 def summaryArguments : (params : Ctx) → Option (Env D params)
   | [] => some .nil
-  | .int lo hi :: rest => do
-    let value ← einpassen (D := D) (fun _ => none) (.int lo hi) lo
+  | ty :: rest => do
+    let value ← summaryValue ty
     return .cons value (← summaryArguments rest)
-  | .bool :: rest => (summaryArguments rest).map (.cons false)
-  | .opt _ :: rest => (summaryArguments rest).map (.cons none)
-  | .ptr _ :: rest => (summaryArguments rest).map (.cons ())
-  | .ref _ :: rest => (summaryArguments rest).map (.cons (Val.vonZelle 0))
-  | _ :: _ => none
 
 /-- The projected expression has the result as its only local. Its
     denotation agrees for every argument environment and entry world. -/
