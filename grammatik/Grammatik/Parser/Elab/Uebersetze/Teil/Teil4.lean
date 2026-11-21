@@ -162,9 +162,10 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
       else none
   | _, _, _ => none
 
-/-- A length observation on a local array slice needs only the two
-    endpoints. All values of their declared intervals satisfy the range. -/
-def uLocalArraySliceLength (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Option USide
+/-- Observe a local array slice using its endpoints and, for an element
+    observation, the translated index in the original array. -/
+def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (index : Option SExpr) : SExpr → Option USide
   | .built "#slice" [.variable array, .variable first, .variable last] => do
     let some (.arr _ capacity) := uValueType ctx (.param array) | none
     let some (.int firstLo firstHi) := uValueType ctx (.param first) | none
@@ -172,7 +173,14 @@ def uLocalArraySliceLength (ctx : UCtx) (blatt : SExpr → Except String USide) 
     if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
       if blatt (.variable array) = .ok (.param array) ∧
           blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last) then
-        some (.sub (.param last) (.param first))
+        match index with
+        | none => some (.sub (.param last) (.param first))
+        | some (.variable name) => do
+          let some (.int lo hi) := uValueType ctx (.param name) | none
+          if 0 ≤ lo ∧ hi < lastLo - firstHi ∧ blatt (.variable name) = .ok (.param name) then
+            some (.idx (.param array) (.add (.param first) (.param name)))
+          else none
+        | some _ => none
       else none
     else none
   | _ => none
@@ -288,7 +296,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     | some n => .ok (.lit (Int.ofNat n))
     | none => .error "sizeof without a resolved declared size"
   | .built "lenof" [a] =>
-    if let some length := uLocalArraySliceLength ctx blatt a then .ok length
+    if let some length := uLocalArraySliceObservation ctx blatt none a then .ok length
     else
       match uRechne ctx blatt a with
       | .error e => .error e
@@ -297,7 +305,8 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     uArraySides ctx values (fun source smaller => uRechne ctx blatt source)
   | .ext .text [t] [] => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
   | .index a i =>
-    if uTraegerIndex ctx a then blatt (.index a i) else
+    if let some element := uLocalArraySliceObservation ctx blatt (some i) a then .ok element
+    else if uTraegerIndex ctx a then blatt (.index a i) else
     match uRechne ctx blatt a with
     | .error e => .error e
     | .ok x =>
@@ -380,7 +389,7 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
     uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
-  simp only [uLocalArraySliceLength, arrayType, firstType, lastType, bounds, locals, ite_true]
+  simp only [uLocalArraySliceObservation, arrayType, firstType, lastType, bounds, locals, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=

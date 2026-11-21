@@ -123,4 +123,69 @@ theorem eval_localArraySliceLength {τ : Ty} {capacity : Nat} {firstLo firstHi l
     (((eval initial finish world env).n.toNat - (eval initial begin world env).n.toNat : Nat) : Int)
   omega
 
+/-- The projected source index lowers to one read of the original array. -/
+theorem localArraySliceIndex_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array first last index : String) (τ : Ty) (capacity : Nat)
+    (firstLo firstHi lastLo lastHi indexLo indexHi : Int)
+    (arrayType : uValueType ctx (.param array) = some (.arr τ capacity))
+    (firstType : uValueType ctx (.param first) = some (.int firstLo firstHi))
+    (lastType : uValueType ctx (.param last) = some (.int lastLo lastHi))
+    (indexType : uValueType ctx (.param index) = some (.int indexLo indexHi))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (locals : blatt (.variable array) = .ok (.param array) ∧
+      blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last))
+    (indexBounds : 0 ≤ indexLo ∧ indexHi < lastLo - firstHi ∧
+      blatt (.variable index) = .ok (.param index)) :
+    uRechne ctx blatt (.index (.built "#slice" [.variable array, .variable first, .variable last])
+      (.variable index)) = .ok (.idx (.param array) (.add (.param first) (.param index))) := by
+  rw [uRechne]
+  simp only [uLocalArraySliceObservation, arrayType, firstType, lastType, indexType, bounds,
+    locals, indexBounds, ite_true]
+
+theorem lowWertE_localArraySliceIndex {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {array first index : String} {τ : Ty} {capacity : Nat}
+    {firstLo firstHi indexLo indexHi : Int}
+    {base : Expr (declOf u) Γ Λ (.arr τ capacity)}
+    {begin : Expr (declOf u) Γ Λ (.int firstLo firstHi)}
+    {position : Expr (declOf u) Γ Λ (.int indexLo indexHi)}
+    (readArray : lowWertE u Γ Λ fn er (.param array) = .ok ⟨.arr τ capacity, base⟩)
+    (readFirst : lowWertE u Γ Λ fn er (.param first) = .ok ⟨.int firstLo firstHi, begin⟩)
+    (readIndex : lowWertE u Γ Λ fn er (.param index) = .ok ⟨.int indexLo indexHi, position⟩)
+    (lower : 0 ≤ firstLo + indexLo) (upper : firstHi + indexHi ≤ (capacity : Int) - 1) :
+    lowWertE u Γ Λ fn er (.idx (.param array) (.add (.param first) (.param index))) =
+      .ok ⟨τ, .arrGet base (.widen lower upper (.add begin position))⟩ := by
+  simp only [lowWertE, readArray, readFirst, readIndex, LowSide.plus, LowSide.wert,
+    zahlVon, LowWert.zahl, idxW, dite_eq_left lower, dite_eq_left upper]
+
+/-- For every model run, the original-array read returns the selected
+    element of the half-open slice. The endpoint and index ranges prove
+    all translated addresses valid without any runtime storage. -/
+theorem eval_localArraySliceIndex {τ : Ty} {capacity : Nat}
+    {firstLo firstHi lastLo lastHi indexLo indexHi : Int}
+    (base : Expr D Γ Λ (.arr τ capacity)) (begin : Expr D Γ Λ (.int firstLo firstHi))
+    (finish : Expr D Γ Λ (.int lastLo lastHi)) (position : Expr D Γ Λ (.int indexLo indexHi))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (indexBounds : 0 ≤ indexLo ∧ indexHi < lastLo - firstHi)
+    (initial world : World D) (env : Env D Γ) :
+    let first := eval initial begin world env
+    let last := eval initial finish world env
+    let index := eval initial position world env
+    ∃ valid : SliceOk capacity first.n.toNat last.n.toNat,
+      ∃ inside : index.n.toNat < last.n.toNat - first.n.toNat,
+        eval initial (.arrGet base (.widen (by omega) (by omega) (.add begin position))) world env =
+          (BoundedSlice.ofArray (eval initial base world env) first.n.toNat last.n.toNat valid).get
+            ⟨index.n.toNat, inside⟩ := by
+  dsimp only
+  have firstLo := (eval initial begin world env).lo_le
+  have firstHi := (eval initial begin world env).le_hi
+  have lastLo := (eval initial finish world env).lo_le
+  have lastHi := (eval initial finish world env).le_hi
+  have indexLo := (eval initial position world env).lo_le
+  have indexHi := (eval initial position world env).le_hi
+  refine ⟨⟨by omega, by omega⟩, by omega, ?_⟩
+  apply congrArg (eval initial base world env)
+  apply Fin.ext
+  simp only [Zahl.fin, Zahl.weiter, Zahl.add]
+  omega
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
