@@ -20,8 +20,9 @@ structure Parameters (D : Deklaration) (start : Nat) (Γ : Ctx) where
     ∃ symbols ∈ templates, ∃ valuation, symbols.Realizes valuation world actual ∧
       ∀ key, key < start → valuation key = incoming key
 
-def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters D start Γ)
-  | [] => .ok {
+def parameters (budget start : Nat) : (Γ : Ctx) → (enumerateIntegers : Bool := false) →
+    Except Refusal (Parameters D start Γ)
+  | [], _ => .ok {
       next := start
       ordered := Nat.le_refl start
       templates := [.nil]
@@ -32,7 +33,7 @@ def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters 
       cover := fun _ actual incoming => by
         cases actual
         exact ⟨.nil, List.mem_cons_self, incoming, trivial, fun _ _ => rfl⟩ }
-  | .int lo hi :: Γ => do
+  | .int lo hi :: Γ, false => do
       let rest ← parameters budget (start + 1) Γ
       return {
         next := rest.next
@@ -58,8 +59,8 @@ def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters 
                 have different : key ≠ start := Nat.ne_of_lt before
                 exact (agrees key (Nat.lt_trans before (Nat.lt_succ_self start))).trans (by
                   simp only [seed, Assignment.bind, different, ↓reduceIte]) }
-  | .prod name fields :: Γ => do
-      let flat ← parameters budget start (fields ++ Γ)
+  | .prod name fields :: Γ, enumerateIntegers => do
+      let flat ← parameters budget start (fields ++ Γ) enumerateIntegers
       return {
         next := flat.next
         ordered := flat.ordered
@@ -75,8 +76,8 @@ def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters 
                 flat.cover world (flattenProduct fields value tail) incoming
               exact ⟨symbols.packProduct name fields, List.mem_map.mpr ⟨symbols, member, rfl⟩,
                 valuation, symbols.realizes_packProduct name fields value tail valuation world realized, agrees⟩ }
-  | kind :: Γ => do
-      let rest ← parameters budget (start + 1) Γ
+  | kind :: Γ, enumerateIntegers => do
+      let rest ← parameters budget (start + 1) Γ enumerateIntegers
       -- Without a complete domain within the budget the parameter is unobserved: one template that every
       -- value realizes.
       let unobserved : Parameters D start (kind :: Γ) := {
@@ -116,7 +117,7 @@ def parameters (budget start : Nat) : (Γ : Ctx) → Except Refusal (Parameters 
                     fun key before => agrees key (Nat.lt_trans before (Nat.lt_succ_self start))⟩ }
         else return unobserved
 
-termination_by Γ => sizeOf Γ
+termination_by Γ enumerateIntegers => sizeOf Γ
 decreasing_by
   all_goals first
     | (simp_wf; omega)

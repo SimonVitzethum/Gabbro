@@ -190,12 +190,24 @@ def checkExecution (program : Programm D) (S : SperrInv D)
     .error (.unsupported "contract VC specialization product exceeds the work budget")
   else pure ()
   let budget : VCBudget := if overflow then { budget with join := true } else budget
-  let checked ← collect domain.templates.attach _ (fun entry =>
-    checkEnvironment program S entry.val (domain.bounded entry.val entry.property)
-      (requiresPolicy program _ refined) sources budget hint invariants)
-  return ⟨fun locals runtime world allowed safe required => by
-    obtain ⟨symbols, member, valuation, realized, _⟩ := domain.cover world locals (fun _ => 0)
-    exact (checked.down ⟨symbols, member⟩ (List.mem_attach _ _)) valuation (world, locals) realized
-      runtime allowed safe required⟩
+  let run (observations : Parameters D 0 (D.params f)) :
+      Except Frag.Refusal (PLift (CheckedExecution (S := S) (requiresObligation program) f)) := do
+    let checked ← collect observations.templates.attach _ (fun entry =>
+      checkEnvironment program S entry.val (observations.bounded entry.val entry.property)
+        (requiresPolicy program _ refined) sources budget hint invariants)
+    return ⟨fun locals runtime world allowed safe required => by
+      obtain ⟨symbols, member, valuation, realized, _⟩ := observations.cover world locals (fun _ => 0)
+      exact (checked.down ⟨symbols, member⟩ (List.mem_attach _ _)) valuation (world, locals) realized
+        runtime allowed safe required⟩
+  match run domain with
+  | .error .crossEntry =>
+    -- Literal rows can be proved separately when a symbolic index could not
+    -- be resolved. Both the complete parameter domain and total work are bounded.
+    let finite ← parameters (D := D) budget.expansion 0 (D.params f) true
+    let work := endSpecializations program (uniformPost program f) budget.join budget.expansion
+      budget.specializations (program.rumpf f)
+    if finite.templates.length * work ≤ budget.specializations then run finite
+    else .error (.unsupported "contract VC specialization product exceeds the work budget")
+  | result => result
 
 end Gabbro.Grammatik.Vertraege.Pruefer
