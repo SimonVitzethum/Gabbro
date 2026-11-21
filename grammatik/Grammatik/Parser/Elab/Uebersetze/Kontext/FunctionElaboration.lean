@@ -98,6 +98,12 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
   | .ok (gives, needs) =>
     match (if ctx.narrow then (FieldNarrowing.expand 1000 ctx.names 0 koerper).1 else koerper) with
     | .block ss ende =>
+      if let some guarded := (if ctx.narrow then uRelReturn ss ende else none) then do
+        let (body, _) ← uAnwReihe ctx.tabs koepfe 1000000 ctx guarded
+        let some (.ret result) := body.getLast?
+          | throw "a guarded final return must end in a return"
+        pure (gives, needs, body.dropLast, result)
+      else
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
       | .error e => .error e
       | .ok (body, ctxE) =>
@@ -114,6 +120,22 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
           else .error e
         | .ok r => .ok (gives, needs, body ++ beforeEnd ++ beforeCall, r)
     | _ => .error "fn body without G form"
+
+/-- The compiler reads the selected ending inside the guarded continuation,
+    then keeps the lowered return in the function's ordinary return field. -/
+theorem elabFn_guardedReturn (ctx : UCtx) (heads : List UFnKopf) (clauses : List SKlausel)
+    (source : SAnw) (statements guarded : List SAnw) (ending : Option SEnde)
+    (gives needs : List UEns) (body : List UStmt) (after : UCtx) (result : URet)
+    (enabled : ctx.narrow = true)
+    (normalized : (FieldNarrowing.expand 1000 ctx.names 0 source).1 = .block statements ending)
+    (contracts : elabKlauseln ctx clauses = .ok (gives, needs))
+    (selected : uRelReturn statements ending = some guarded)
+    (lowered : uAnwReihe ctx.tabs heads 1000000 ctx guarded = .ok (body, after))
+    (final : body.getLast? = some (.ret result)) :
+    elabFn ctx heads clauses source = .ok (gives, needs, body.dropLast, result) := by
+  simp only [elabFn, contracts, enabled, ↓reduceIte, normalized, selected, lowered, final,
+    bind, Except.bind, pure, Except.pure]
+
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)

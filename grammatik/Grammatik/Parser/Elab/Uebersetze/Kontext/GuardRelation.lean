@@ -217,31 +217,32 @@ def uRelBlock (ctx : UCtx) (fs : List (String × String × Int)) (ss : List SAnw
     after the first arm exits. The ordinary elaborator still decides
     whether the operands actually retain their values at each later read. -/
 def uRelContinuation (left right : String) : SAnw → Bool
-  | .cond (.bin op (.variable x) (.variable y)) (.block _ ending) _ _ =>
+  | .cond (.bin op (.variable x) (.variable y)) (.block _ ending) [] none =>
     ending.isSome &&
       (uRelCmp false op x y).any fun fact =>
         (strEq fact.1 left && strEq fact.2.1 right) ||
           (strEq fact.1 right && strEq fact.2.1 left)
   | _ => false
 
-/-- Expose the final difference as a statement read. This lets the
-    continuation's existing guard rule see it before the return is read. -/
-def uRelReturn (statements : List SAnw) (ending : Option SEnde) : List SAnw × Option SEnde :=
-  match ending with
-  | some (.ret (some value@(.bin "-" (.variable left) (.variable right)))) =>
+/-- Let the ordinary statement reader see a guarded final return. Its
+    result is separated from the statement list after elaboration. -/
+def uRelReturn : List SAnw → Option SEnde → Option (List SAnw)
+  | [], _ => none
+  | statements@(_ :: _), some (.ret (some value@(.bin "-" (.variable left) (.variable right)))) =>
     if statements.any (uRelContinuation left right) then
-      (statements ++ [.bind false "#guard-return" none value], some (.ret (some (.variable "#guard-return"))))
-    else (statements, ending)
-  | _ => (statements, ending)
+      some (statements ++ [.ret (some value)])
+    else none
+  | _, _ => none
 
-/-- When a continuation guard may narrow the final difference, expansion
-    evaluates that same expression once and returns the immutable result. -/
+/-- The continuation reader receives the same return expression, with no
+    extra source binding. -/
 theorem uRelReturn_difference (statements : List SAnw) (left right : String)
     (guarded : statements.any (uRelContinuation left right) = true) :
     uRelReturn statements (some (.ret (some (.bin "-" (.variable left) (.variable right))))) =
-      (statements ++ [.bind false "#guard-return" none (.bin "-" (.variable left) (.variable right))],
-        some (.ret (some (.variable "#guard-return")))) := by
-  simp only [uRelReturn, guarded, ↓reduceIte]
+      some (statements ++ [.ret (some (.bin "-" (.variable left) (.variable right)))]) := by
+  cases statements with
+  | nil => cases guarded
+  | cons first rest => simp only [uRelReturn, guarded, ↓reduceIte]
 
 /-- The false side of the less-than guard gives the lower bound used by
     subtraction. The declared intervals still bound the signed difference. -/

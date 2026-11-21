@@ -69,7 +69,6 @@ def expand : Nat → List String → Nat → SAnw → SAnw × Nat
     match body with
     | .block ss ending =>
       let (ss, ending, nr) := expandRun fuel locals nr ss ending
-      let (ss, ending) := uRelReturn ss ending
       (.block ss ending, nr)
     | .cond c t alternatives fallback =>
       let (t, nr) := nested [] nr t
