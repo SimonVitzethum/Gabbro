@@ -8,7 +8,7 @@ public import Grammatik.Niedrig.Konstrukte.Schnitt
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 open LowLevel.Construct
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable {D : Deklaration} {L : Lay D}
 
 /-- The actual frame encoding already contains every element of the
     slice at the descriptor's translated offset, including all words
@@ -25,6 +25,8 @@ theorem ValueAt.slice_element {m : Runner.Mem} {fp : Runner.W} {base capacity : 
     omega⟩
   simpa only [position, ArraySliceView.value, ArraySliceView.read, Nat.add_mul, Nat.add_assoc]
     using input.array_element position
+
+variable [Kern]
 
 /-- A private address into existing storage, together with the complete value
     there in every memory representing the same environment and world. -/
