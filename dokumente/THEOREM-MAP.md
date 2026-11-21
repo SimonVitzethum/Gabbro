@@ -8374,3 +8374,24 @@ interface for axiom-free and foreign images. Its success carries
 refuses ownership declarations it cannot export and foreign contracts
 it cannot summarize. The production emitter has not made this export a
 condition of emitting bytes.
+
+## 213. Stage 0 process-control requests and startup states
+
+The production emitter checks `ImageGateTransportOK` on the selected
+typed gates. `Emitted.returning_gate_ordinary` shows that the resulting
+request for a returning gate belongs to the runner's ordinary request
+branch. The check reserves clone for startup and restricts process or
+thread exit to non-returning gates.
+
+`MappedImage.loader_step_no_terminal` rules out a terminal step at the
+mapped loader using the actual serialized frame word.
+`MappedImage.loader_transition` distinguishes loader bookkeeping, which
+preserves the mapping, from dispatch to the initialized root stub.
+`ImageSlotsMatch.activate_clone` preserves the simulation of all existing
+body threads while appending a pending root.
+
+`specStringConcatArgument_erfuellbar` and `specStringConcatArgument_low`
+use the same byte bound for string concatenation in the source precheck
+and in G. `fullLocalSlice_erfuellbar` retains a lexical value for its full
+slice. The array and string evaluation lemmas relate that term to the
+half-open slice model using the actual length.
