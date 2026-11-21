@@ -114,6 +114,25 @@ theorem MappedImage.loader_prefix_source [Kern] {output : Emitted src reserve op
       exact ⟨rfl, matched⟩
     | cons next tail => omega
 
+private theorem MappedImage.loader_thread [Kern] {output : Emitted src reserve options}
+    {before : Cfg imageTSO Runner.X86.X} (mapped : MappedImage output before)
+    {i : Nat} {x : Runner.X86.X} (found : before.ths[i]? = some (some x)) :
+    i = 0 ∧ Match L0 t4 x := by
+  obtain ⟨r, slot, control⟩ := rel_at mapped.loader found
+  cases i with
+  | zero =>
+    have same : r = t4 := by simpa only [List.getElem?_cons_zero, Option.some.injEq] using slot.symm
+    exact ⟨rfl, same ▸ control⟩
+  | succ i => simp at slot
+
+private theorem loader_not_next (t : T) : t4 ≠ .next t := by intro equal; cases equal
+
+private theorem loader_not_sys {x : Runner.X86.X} {req : Req} {k : Ans → Res Runner.X86.X}
+    (matched : Match L0 t4 x) (asked : actX L0 x = .ask (.sys req) k) : False := by
+  rcases inv_ask matched asked loader_not_next with ⟨_, _, impossible, _⟩ | ⟨_, impossible, _⟩
+  · cases impossible
+  · cases impossible
+
 /-- The actual first continuing x86 step from the mapped loader either
     performs runner bookkeeping or reads the serialized frame word. The
     IR prefix through dispatch therefore has length at most one. -/
@@ -123,46 +142,66 @@ theorem MappedImage.runner_loader_step [Kern] {output : Emitted src reserve opti
     ∃ ir steps, ProcessPrefix imageTSO actI ⟨before.ms, [some t4]⟩ events steps ir ∧
       steps ≤ 1 ∧ Rel L0 ir after := by
   let initial : Cfg imageTSO (Res T) := ⟨before.ms, [some t4]⟩
-  have atLoader {i : Nat} {x : Runner.X86.X} (found : before.ths[i]? = some (some x)) :
-      initial.ths[i]? = some (some t4) ∧ Match L0 t4 x := by
-    obtain ⟨r, slot, control⟩ := rel_at mapped.loader found
-    cases i with
-    | zero =>
-      have same : r = t4 := by simpa only [List.getElem?_cons_zero, Option.some.injEq] using slot.symm
-      exact ⟨rfl, same ▸ control⟩
-    | succ i => simp [initial] at slot
-  have notNext : ∀ t, t4 ≠ .next t := by
-    intro t equal
-    cases equal
-  have notSystem {x : Runner.X86.X} {req : Req} {k : Ans → Res Runner.X86.X}
-      (matched : Match L0 t4 x) (asked : actX L0 x = .ask (.sys req) k) : False := by
-    rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨_, impossible, _⟩
-    · cases impossible
-    · cases impossible
   cases step with
   | tau flush =>
     obtain ⟨i, _, _, _, pending, _⟩ := flush
     rw [mapped.emptyBuffers i] at pending
     cases pending
   | priv found continued =>
-    obtain ⟨slot, matched⟩ := atLoader found
+    obtain ⟨rfl, matched⟩ := mapped.loader_thread found
     exact ⟨initial, 0, .nil _, by decide,
-      ⟨mapped.loader.ms, relT_setX mapped.loader.th slot (inv_next matched continued notNext)⟩⟩
+      ⟨mapped.loader.ms, relT_setX mapped.loader.th rfl (inv_next matched continued loader_not_next)⟩⟩
   | @ask i x x' request k answer memory found asked ordinary answered continued =>
-    obtain ⟨slot, matched⟩ := atLoader found
-    rcases inv_ask matched asked notNext with ⟨op, valid, rfl, resumes⟩ | ⟨resume, exactRequest, resumes⟩
+    obtain ⟨rfl, matched⟩ := mapped.loader_thread found
+    rcases inv_ask matched asked loader_not_next with ⟨op, valid, rfl, resumes⟩ | ⟨resume, exactRequest, resumes⟩
     · obtain ⟨rfl, word, rfl⟩ := imageTSO_fixed _ _ _ _ _ valid answered
       exact ⟨initial, 0, .nil _, by decide,
-        ⟨mapped.loader.ms, relT_setX mapped.loader.th slot (invK_next (continued ▸ resumes word))⟩⟩
+        ⟨mapped.loader.ms, relT_setX mapped.loader.th rfl (invK_next (continued ▸ resumes word))⟩⟩
     · have ready : actI t4 = .ask request (fun a => .next (resume a)) := by
         rw [exactRequest]
         rfl
       have finished := invK_next (continued ▸ resumes answer)
-      have move := ProcessStep.ask (act := actI) slot ready ordinary answered rfl
+      have move := ProcessStep.ask (act := actI) (c := initial) (i := 0) rfl ready ordinary answered rfl
       exact ⟨_, 1, ProcessPrefix.ofStep move, Nat.le_refl 1,
         ⟨rfl, relT_set mapped.loader.th (vI := some (resume answer)) (vX := some x') finished⟩⟩
   | exit found asked _ | cloneNo found asked _ _ _ | clone found asked _ _ _ _ =>
-    exact (notSystem (atLoader found).2 asked).elim
+    exact (loader_not_sys (mapped.loader_thread found).2 asked).elim
+
+/-- An actual x86 step at the mapped loader cannot terminate the process.
+    The dispatch word is readable and is the exact frame address, so the
+    loader's only IR request also cannot fault on its answer. -/
+theorem MappedImage.loader_step_no_terminal [Kern] {output : Emitted src reserve options}
+    {before : Cfg imageTSO Runner.X86.X} {events : List Ev} {ending : Ende}
+    (mapped : MappedImage output before) (run : Tr imageTSO (actX L0) before events ending 1) :
+    ending = .lauf := by
+  cases run with
+  | tau _ suffix => cases suffix; rfl
+  | priv _ _ suffix => cases suffix; rfl
+  | ask _ _ _ _ _ suffix => cases suffix; rfl
+  | exit _ _ _ suffix => cases suffix; rfl
+  | cloneNo _ _ _ _ _ suffix => cases suffix; rfl
+  | clone _ _ _ _ _ _ suffix => cases suffix; rfl
+  | exitGroup found asked _ | cloneNoStop found asked _ _ _ =>
+    exact (loader_not_sys (mapped.loader_thread found).2 asked).elim
+  | @stop _ i x e found stopped =>
+    have matched := (mapped.loader_thread found).2
+    cases actual : actX L0 x with
+    | fault => cases inv_fault matched actual loader_not_next
+    | unk => exact (inv_unk matched actual).elim
+    | next | ask => simp only [actual, Runner.Mach.Res.ende, reduceCtorEq] at stopped
+  | @askStop _ i x request k value memory e found asked _ answered stopped =>
+    obtain ⟨rfl, matched⟩ := mapped.loader_thread found
+    rcases inv_ask matched asked loader_not_next with ⟨op, valid, rfl, resumed⟩ | ⟨resume, exact, resumed⟩
+    · obtain ⟨_, word, rfl⟩ := imageTSO_fixed _ _ _ _ _ valid answered
+      cases (invK_ende (resumed word) stopped).1
+    · simp only [t4, rd64, Runner.Res.ask.injEq] at exact
+      obtain ⟨rfl, rfl⟩ := exact
+      obtain ⟨_, extra, read⟩ := answered.1
+      have word := output.loader_frame mapped.bytes
+      have valueExact : value = some (BitVec.ofNat 64 output.image.fp0, extra) := by
+        simpa only [rdN, TSt.view, mapped.emptyBuffers 0, List.foldl_nil, word, Option.map_some] using read
+      subst value
+      cases (invK_ende (resumed _) stopped).1
 
 private theorem MappedImage.source_start_goal [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
