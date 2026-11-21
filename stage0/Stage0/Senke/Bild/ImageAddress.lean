@@ -38,8 +38,9 @@ theorem InitialLayout.cell_in_table {u : UProg} {L : Lay (declOf u)} (layout : I
     InitialLayout.tableBase L t ≤ L.elem t f index ∧
       L.elem t f index + 8 * valueWords ((declOf u).typ t f) ≤ InitialLayout.tableBase L t + tabSz u t := by
   have own := colSz_ge u t f index ((layout.count t) ▸ bounded)
-  have column := take_sum_add ((List.finRange (fieldCount u t)).map (colSz u t)) f.val (by simp)
-  simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta] at column
+  have column := take_sum_add ((List.finRange (fieldCount u t)).map (colSz u t)) f.val
+    (by simpa only [List.length_map, List.length_finRange] using f.isLt)
+  simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk] at column
   change (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum +
     colSz u t f ≤ tabSz u t at column
   rw [Lay.elem, layout.columns]
