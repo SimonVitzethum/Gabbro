@@ -8151,6 +8151,8 @@ corresponding IR process from the ELF entry, with the same memory and host event
 `runner_entry_tso_stop` locates the last running x86 and IR configurations at
 a terminal observation and preserves that observation. `irBild_loaded_entry_prefix`
 identifies the actual silent header step from the mapped CLI payload to its entry frame.
+`irBild_loaded_entry_world` also establishes the complete typed initial world at
+that step in the SC projection, with empty initial buffers.
 
 `Emitted.changedCell_in_image` bounds changed cells represented by the emitted
 column layout. `column_addresses_exclude_row_layout` proves why the shared stride
@@ -8163,3 +8165,5 @@ the answers and endpoint of a process prefix which interleaves those shared requ
 with private operations and buffer drains. `irBild_x86_private_zielsatz` transfers
 `ZielFX` to the committed state at the matching IR endpoint of an actual private x86
 prefix. The initial GX relation and the request footprint checks are explicit premises.
+`memory_process_single_thread` recovers complete instructions at control boundaries
+of the single-thread memory process, with the same final memory.

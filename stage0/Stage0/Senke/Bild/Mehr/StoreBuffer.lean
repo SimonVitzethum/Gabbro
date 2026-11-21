@@ -415,6 +415,19 @@ theorem mergedView_committed_at (state : TSt) (footprint : Nat → W → Prop) (
   rw [show viewAt state footprint y = state.m from dif_neg absent]
   exact .refl _ _
 
+/-- Before the first store, the projected memory is the actual memory
+    for every choice of private footprints. -/
+theorem mergedView_empty (state : TSt) (footprint : Nat → W → Prop)
+    (empty : ∀ i, state.buf i = []) : mergedView state footprint = state.m := by
+  apply mem_eq_of_agreement
+  intro address
+  by_cases visible : ∃ i, footprint i address
+  · change GleichAt (viewAt state footprint address) state.m address
+    rw [show viewAt state footprint address = state.view (Classical.choose visible) from dif_pos visible]
+    rw [TSt.view, empty, List.foldl_nil]
+    exact .refl _ _
+  · exact mergedView_committed_at state footprint address visible
+
 /-- A shared read that cannot be forwarded from a private buffer reads the
     exact committed word, with the same permissions and answer in SC. -/
 theorem projectSCState_read_shared {layout : Lay} {before after : (TSO layout).St}

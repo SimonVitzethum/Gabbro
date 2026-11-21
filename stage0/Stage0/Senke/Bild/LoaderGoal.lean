@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Welt.Spans.IdleValue
+public import Stage0.Senke.Bild.Mehr.StoreBuffer
 public import Runner.Beweis.Lader
 import Lean.Elab.Tactic.Omega
 
@@ -10,6 +11,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
+  Gabbro.Stage0.Senke.BildMehr
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
@@ -62,6 +64,22 @@ theorem irBild_loaded_entry_prefix [Kern] {output : Emitted src K options} {byte
     ProcessStep.ask (i := 0) rfl (by rw [read]; rfl) rfl answered
       (congrArg Res.next entered)
   exact ProcessPrefix.ofStep step
+
+/-- The actual post-mapping entry step starts at the certified frame and
+    preserves the full typed initial world in the SC projection. -/
+theorem irBild_loaded_entry_world [Kern] {output : Emitted src K options} {bytes : List Runner.B}
+    (built : emit src K options = .ok output) (payload : irBild src K options = .ok bytes)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {s : (TSO L0).St} (empty : ∀ i, s.1.buf i = [])
+    (loaded : BytesAt s.1.m Runner.Prog.IMG bytes) (footprint : Nat → W → Prop) :
+    ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1
+        ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ ∧
+      WeltAt (projectSCState footprint s).1 output.image.Y.withIdle
+        ((speicherR (output.goalUnit Q).sp0).welt []) := by
+  refine ⟨irBild_loaded_entry_prefix built payload (empty 0) loaded, ?_⟩
+  change WeltAt (mergedView s.1 footprint) _ _
+  rw [mergedView_empty _ _ empty]
+  exact (output.loaded_initial_world ((irBild_eq_output built payload).symm ▸ loaded)).withIdle
 
 /-- Every TSO answer to the loaded header read returns the same entry
     frame. The extra answer word has no effect on the loader. -/
