@@ -38,7 +38,7 @@ theorem arraySpan_reads {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr �
     induction count generalizing first with
     | zero => exact empty.symm
     | succ count ih =>
-      simp only [arraySpan, Expr.orte, List.append_nil, ih _ (by omega), empty]
+      simp only [arraySpan, Expr.orte, List.append_nil, ih (first + 1) (by omega), empty]
 
 /-- Element selection has the half-open slice semantics on every world
     and environment, including values that were read from memory. -/
@@ -144,6 +144,14 @@ def lowerIndexedSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     else .error "slice: endpoint outside the array"
   | other => do idxW (← lowerSlice first last other) index
 
+theorem lowerIndexedSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {τ : Ty} {length : Nat} (operand : Expr (declOf u) Γ Λ (.arr τ length))
+    (first last : Nat) (bounds : SliceOk length first last) (index : LowSide u Γ Λ)
+    (low : 0 ≤ index.range.1) (high : index.range.2 ≤ ((last - first : Nat) : Int) - 1) :
+    lowerIndexedSlice first last (⟨.arr τ length, operand⟩ : LowWert u Γ Λ) index =
+      .ok ⟨τ, .arrGet operand (shiftedSliceIndex bounds (.widen low high index.term))⟩ := by
+  simp only [lowerIndexedSlice, dite_eq_left bounds, dite_eq_left low, dite_eq_left high]
+
 theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {τ : Ty} {length : Nat} (operand : Expr (declOf u) Γ Λ (.arr τ length))
     (first last : Nat) (bounds : SliceOk length first last)
@@ -151,7 +159,7 @@ theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     lowerSlice first last (⟨.arr τ length, operand⟩ : LowWert u Γ Λ) =
       .ok ⟨.arr τ (last - first), arraySpan operand first (last - first)
         (by have ordered := bounds.1; have high := bounds.2; omega)⟩ := by
-  simp only [lowerSlice, dite_eq_left bounds, if_pos allowed]
+  simp only [lowerSlice, dite_eq_left bounds, ite_eq_left allowed]
 
 theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (bytes : List (Zahl 0 255)) {maximum : Nat} (stored : bytes.length ≤ maximum)
@@ -171,13 +179,21 @@ theorem eval_stringSlice {maximum : Nat} (bytes : List (Zahl 0 255))
   rfl
 
 /-- The full-range view is inhabited at every length by every array value. -/
-theorem arraySlice_erfuellbar {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length))
-    (initial world : World D) (env : Env D Γ) :
-    eval initial (arraySpan operand 0 length (by omega)) world env =
-      eval initial operand world env := by
+theorem arraySlice_erfuellbar {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {τ : Ty} {length : Nat} (slot : Var Γ (.arr τ length)) :
+    ∃ value : LowWert u Γ Λ,
+      lowerSlice 0 length (⟨.arr τ length, .var slot⟩ : LowWert u Γ Λ) = .ok value ∧
+      value.term.orte = [] ∧
+      ∀ (initial world : World (declOf u)) (env : Env (declOf u) Γ),
+        eval initial (arraySpan (Λ := Λ) (.var slot) 0 length (by omega)) world env = env.get slot := by
+  have bounds : SliceOk length 0 length := ⟨Nat.zero_le _, Nat.le_refl _⟩
+  have lexical : (Expr.var (D := declOf u) (Λ := Λ) slot).orte.isEmpty = true := rfl
+  refine ⟨_, lowerSlice_array (.var slot) 0 length bounds (.inr lexical), ?_, ?_⟩
+  · exact arraySpan_reads (.var slot) 0 _ _ (.inr lexical)
+  intro initial world env
   funext index
   rw [eval_arraySpan]
-  apply congrArg (eval initial operand world env)
+  apply congrArg (env.get slot)
   exact Fin.ext (Nat.zero_add index.val)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

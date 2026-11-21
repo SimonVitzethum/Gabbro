@@ -8102,7 +8102,7 @@ to `lowerSlice_array` and `lowerSlice_string`. `arraySpan_refines` and
 `arraySpan_reads` preserves the base's memory footprint under the materialisation
 gate. `eval_indexedArraySlice` and `indexedSlice_reads` prove equality of values
 and the exact read footprint for direct indexing with no intermediate array.
-`arraySlice_erfuellbar` exhibits the full range for every array expression.
+`arraySlice_erfuellbar` proves admission of the full range on every typed array local.
 
 `ArenaForm.restoreScopeStmt_exec` is the ordinary G implementation of the
 cursor restoration. `restoreScope_storage` covers every outcome carrying a
@@ -8115,3 +8115,31 @@ open.
 record's first running phase with its actual resource inventory.
 `reachable_encoded` reduces encoding totality on semantic reachability to
 preservation of that invariant by poll steps.
+`final_segment_encoded` preserves the return value and transfers the original
+marks on Ready. `cancelEpilogue_encoded` relates successful ordinary G cleanup
+to the exact cancelled record once its release consumes the saved inventory.
+`await_poll_rep` proves that the ordinary poll of a checked await retains the
+typed successor task. It covers nested joins, including a cached Ready sibling,
+and derives callee coverage from the checked elaboration.
+
+## 204. The goal on the emitted program and private runner prefixes
+
+`Emitted.zielsatz` instantiates the unchanged `gabbro_ziel` on the canonical compiled
+program, exact initial memory, entry arguments and ordered concurrent roots. It derives
+A4 for that logical start from `laufzeit_initRuhe`. The judged fragment and final unit
+verdict are explicit, as are the foreign call-site and hardware premises.
+
+`irBild_loader_dispatch_all` pins every answer of the real post-mapping runner header
+read to the exact emitted entry frame, when the CLI payload is mapped and the reading
+thread's buffer is empty. `WeltAt.withIdle` transports complete typed memory to the goal
+machine. Renumbering function signatures preserves all value words and addresses, including
+function pointers inside aggregates.
+`Emitted.goal_arguments_loaded` identifies the complete initialized stack bytes with
+the exact ordered start environments used by the goal theorem.
+
+`irBild_private_tso_zielsatz` gives the full `ZielFX` of the committed GX state and the
+concrete image relation at the end of every related private TSO prefix. The source
+state is already reachable and the initial relation and private footprint are premises.
+`TSOPrivateReachable.prepend` relates these private steps to the runner's ordinary IR
+process traces. B6 still requires construction of the process relation after physical
+startup and its preservation across shared commits, thread changes and terminal steps.

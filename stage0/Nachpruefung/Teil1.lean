@@ -5,6 +5,7 @@ public import Stage0
 import Grammatik.Bausteine.Arena.BlockScope
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 public import Stage0.Senke.Ausdruck.Tag
 
 @[expose] public section
@@ -22,9 +23,19 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Grammatik.Parser.parseSuffixe_slice
+#print axioms Gabbro.Stage0.Emitted.zielsatz
+#print axioms Gabbro.Stage0.Emitted.goalStart_argument
+#print axioms Gabbro.Stage0.irBild_private_tso_zielsatz
+#print axioms Gabbro.Stage0.Senke.WeltAt.withIdle
+#print axioms Gabbro.Stage0.irBild_eq_output
+#print axioms Gabbro.Stage0.irBild_loader_dispatch
+#print axioms Gabbro.Stage0.irBild_loader_dispatch_all
+#print axioms Gabbro.Stage0.Emitted.goal_arguments_loaded
+#print axioms Gabbro.Stage0.Senke.BildMehr.TSOPrivateReachable.prepend
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_string
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerIndexedSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_refines
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_reads
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_indexedArraySlice
@@ -38,6 +49,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.initial_inv
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
+#print axioms Gabbro.Grammatik.Async.Representation.cancelEpilogue_encoded
+#print axioms Gabbro.Grammatik.Async.Representation.pollTask_rep
+#print axioms Gabbro.Grammatik.Async.Representation.await_poll_rep
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock

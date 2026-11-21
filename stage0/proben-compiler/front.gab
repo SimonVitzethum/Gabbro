@@ -158,10 +158,8 @@ impl fn check_expr(ni : u32 in 0 .. 95, fuel : u32 in 0 .. 128) -> bool
         return check_args(c, fuel - 1);
     }
     if is_binop(k) {
-        let l = parse::node_a(ni);
-        narrow l to 0 .. 95 else { check_bad = true; return false; }
-        let r = parse::node_b(ni);
-        narrow r to 0 .. 95 else { check_bad = true; return false; }
+        let l = parse::node_left(ni);
+        let r = parse::node_right(ni);
         let q = check_expr(l, fuel - 1);
         if !q { return false; }
         return check_expr(r, fuel - 1);

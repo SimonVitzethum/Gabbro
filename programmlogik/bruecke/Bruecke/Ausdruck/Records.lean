@@ -198,6 +198,7 @@ theorem lowWertE_recordRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UF
                                       rw [← valOfProd_set (D := declOf u) pos
                                         (eval σ₀ baseE σ ρ) (eval σ₀ val σ ρ)]
                                       rfl
+  | .slice .., _, hb => simp only [recordRead, numericSideExprG, Option.map_none] at hb; cases hb
   | .lit _, h, hb | .slot _ _ _, h, hb | .tab _ _ _, h, hb | .old _ _ _, h, hb
   | .glob _, h, hb | .erg, h, hb | .add _ _, h, hb | .sub _ _, h, hb | .mul _ _, h, hb
   | .conv _ _ _, h, hb | .band _ _, h, hb | .bor _ _, h, hb | .bxor _ _, h, hb

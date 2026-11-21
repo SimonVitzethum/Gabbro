@@ -286,6 +286,20 @@ theorem runner_entry_sc {s : (SC L0).St} {x : X} (hrip : x.rip = BitVec.ofNat 64
   | 0 => exact loader_ok hrip
   | j + 1 => trivial
 
+/-- From the ELF entry, relate every concrete x86 endpoint to the same IR
+    process that begins with the loader's requests. -/
+theorem runner_entry_tso_prefix {s : (TSO L0).St} {x : X}
+    (entry : x.rip = BitVec.ofNat 64 (BASE + find tab LOADER))
+    {events : List Ev} {count : Nat} {after : Cfg (TSO L0) X}
+    (run : ProcessPrefix (TSO L0) (actX L0) ⟨s, [some x]⟩ events count after) :
+    ∃ final steps, ProcessPrefix (TSO L0) actI ⟨s, [some (loadTree x)]⟩ events steps final ∧
+      Rel L0 final after := by
+  apply runner_process_prefix (tso_fixed L0) cinv_L0 _ run
+  refine ⟨rfl, fun j => ?_⟩
+  cases j with
+  | zero => exact loader_ok entry
+  | succ _ => trivial
+
 set_option maxRecDepth 100000 in
 /-- The ELF header's entry point is the loader. -/
 theorem entry_is_loader : (ehdr.drop 24).take 8 = leN 8 (BASE + find tab LOADER) := by decide +kernel

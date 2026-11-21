@@ -35,6 +35,7 @@ import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
 import Grammatik.Logik.WP.Relational
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 import Grammatik.Zielsatz.BeweisAtomar
