@@ -96,7 +96,9 @@ theorem StartArgument.Plan.concurrent_roots {u : UProg} {items : List SItemTief}
     unfold wurzelIdx fnAt
     rw [findRoot_eq_fnIdx, start.resolved.named]
     rfl
-  simp only [lookup, List.filterMap_eq_map']
+  simp only [lookup]
+  exact (congrFun (List.filterMap_eq_map'
+    (f := fun start : StartArgument.SourceStart u items => start.resolved.function)) plan.concurrent).symm
 
 /-- Premise (a) for the exact typed roots and initial memory serialized by the
     emitter, when every additional root comes from an explicit concurrent member. -/
