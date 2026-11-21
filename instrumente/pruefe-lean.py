@@ -18,8 +18,7 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      compiler to IR, then through the assembly runner on `NAME.ein` (written after `NAME.warte` seconds when
      that file exists); the runner must print exactly `NAME.aus` with exit code 0.
      `stage0/Nachpruefung/Teil*.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
-     standard axioms. Every probe `stage0/proben-ir/NAME.gab` is lowered by `stage0 --ir` to an `S0IR` image, which
-     the runner binary (written by `lake exe runner`) runs; its exit code must be `NAME.code`.
+     standard axioms.
   8. The verified x86-64 runner (`stage0/runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
      `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and `decode_enc`
      depend on exactly the three standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with

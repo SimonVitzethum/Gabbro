@@ -406,7 +406,8 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
         BytesAt (after.1.view 1) (output.image.fp0 + 8 * output.image.Ks) frame) ∧
       ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
         FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
-          (GeteiltV (output.goalUnit Q).P (output.goalUnit Q).ws)
+          (GeteiltV (D := Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+            (output.goalUnit Q).P (output.goalUnit Q).ws)
           (output.bootActivation Q 0) (output.bootActivation Q 1) := by
   intro parent child
   obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
@@ -459,8 +460,9 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       BitVec.ofNat 64 (startScratch output.compiled.main + 2) := sx_nat (by omega)
   have writable : Mem.all prepared.1.m.wr
       (slot parent.fp (sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)))) 8 = true := by
+    have inFrame : startScratch output.compiled.main + 2 < output.image.Ks := by omega
     rw [destWord, committed, ← foldl_wr (s.1.buf 0) s.1.m]
-    exact frame.wr _ (by omega)
+    exact frame.wr _ inFrame
   obtain ⟨finished, resume, memory, _, finalViews⟩ :=
     tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
   have childView : finished.1.view 1 = s.1.m :=
@@ -482,6 +484,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     simpa only [Nat.min_eq_left (Nat.succ_le_of_lt present)] using decide_eq_true (Nat.le_refl 1)
   refine ⟨finished, ?_, memory.trans committed, childLive, logical,
     ⟨childBytes, childEncoded, childView.symm ▸ childLoaded⟩, fun O => output.bootActivation_step Q O present⟩
-  simpa only [List.append_nil] using ((loadedEntry.trans preparation).trans cloned).trans resume
+  simpa only [List.append_nil, List.nil_append, active, List.set_cons_zero, Nat.reduceAdd] using
+    ((loadedEntry.trans preparation).trans cloned).trans resume
 
 end Gabbro.Stage0
