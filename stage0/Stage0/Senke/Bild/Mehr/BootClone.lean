@@ -163,6 +163,70 @@ theorem bootClone_run {layout : Runner.Beweis.Lay}
   · simpa only [List.nil_append, List.set_set, Nat.reduceAdd] using read.trans (ProcessPrefix.ofStep created)
   · simpa only [List.length_set, List.set_set] using found
 
+/-- Execute the two immediate operands and the full clone instruction
+    at any prepared startup site. The host response preserves memory.
+    The parent advances by three instructions and the next process slot
+    gets the child's relocated addresses. Only parent scratch changes
+    in the local memory views. -/
+theorem bootSpawn_run [Kern] {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch entry stack : Nat}
+    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
+    (code : CodeAt (before.ms.1.view i) pc (spawnOne scratch entry stack))
+    (frame : FrameOK (before.ms.1.view i) fp K) (far : CodeFar pc 10 fp K)
+    (room : scratch + 3 ≤ K) (slots : K < 2 ^ 31) (address : entry < 2 ^ 31) (stackBound : stack < 2 ^ 31)
+    {id extra : W} (positive : 0 < id.toInt) :
+    let child : T := ⟨BitVec.ofNat 64 entry, BitVec.ofNat 64 stack⟩
+    let threads := before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩)) ++ [some (.next child)]
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 ⟨after, threads⟩ ∧
+      threads[before.ths.length]? = some (some (.next child)) ∧
+      after.1.m = before.ms.1.m ∧
+      Agree fp scratch K (before.ms.1.view i) (after.1.view i) ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  intro child threads
+  let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  obtain ⟨prepared, preparation, committed, preparedViews, beforeResult, instruction, entryRead, stackRead⟩ :=
+    spawn_prepare_prefix running code frame far (by omega) slots address stackBound
+  have operand : sx (II.f scratch) = BitVec.ofNat 64 scratch := sx_nat (by omega)
+  rw [← operand] at entryRead stackRead
+  let atClone : Cfg (TSO layout) (Res T) :=
+    ⟨prepared, before.ths.set i (some (.next parent))⟩
+  have cloneReady : atClone.ths[i]? = some (some (.next parent)) := List.getElem?_set_self inside
+  obtain ⟨cloned, _⟩ := bootClone_run (before := atClone) (i := i) (parent := parent) (child := child)
+    (extra := extra) cloneReady instruction entryRead stackRead
+    (memory := prepared) True.intro positive
+  let active : Cfg (TSO layout) (Res T) :=
+    ⟨prepared, before.ths.set i (some (ret1 parent id)) ++ [some (.next child)]⟩
+  have responseReady : active.ths[i]? = some (some (ret1 parent id)) := by
+    have within : i < (before.ths.set i (some (ret1 parent id))).length := by
+      simpa only [List.length_set] using inside
+    simp only [active, List.getElem?_append_left within, List.getElem?_set_self inside]
+  have dest : sx (II.f ((scratch + 2 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 2) :=
+    sx_nat (by omega)
+  have inFrame : scratch + 2 < K := by omega
+  have writable : Mem.all prepared.1.m.wr (slot fp (sx (II.f ((scratch + 2 : Nat) : Int)))) 8 = true := by
+    rw [dest, committed, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
+    exact frame.wr _ inFrame
+  obtain ⟨finished, resume, memory, wrote, other⟩ :=
+    tso_ret1_prefix (before := active) (i := i) (parent := parent) responseReady instruction.f1 writable
+  have advance : nxt parent = ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ := by
+    exact congrArg (fun ip => T.mk ip fp) (pcN pc 2 1 3 rfl)
+  have parentUnchanged : Agree fp scratch K (prepared.1.view i) (finished.1.view i) := by
+    rw [wrote, dest]
+    exact agree_write frame.room (by omega) inFrame _
+  refine ⟨finished, ?_, ?_, memory.trans committed, beforeResult.trans parentUnchanged,
+    fun j different => (other j different).trans (preparedViews j different)⟩
+  · have actual : ProcessPrefix (TSO layout) actI atClone [(i, cloneReq, some (id, extra))] 6 active := by
+      simpa only [atClone, active, List.set_set] using cloned
+    have parentSlot : i < (before.ths.set i (some (ret1 parent id))).length := by
+      simpa only [List.length_set] using inside
+    simpa only [List.nil_append, List.append_nil, active, List.set_append_left _ _ parentSlot, List.set_set,
+      advance, threads, Nat.reduceAdd] using (preparation.trans actual).trans resume
+  · change (before.ths.set i _ ++ [some (.next child)])[before.ths.length]? = _
+    rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
+    rfl
+
 /-- At the relocated clone instruction of a loaded image, once the two
     scratch words have been prepared, a successful response appends the
     declared child's actual entry and stack frame. The postcondition
@@ -258,9 +322,10 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     simp only [spawnC_len, count, CodeFar] at far
     unfold CodeFar
     omega
-  obtain ⟨prepared, preparation, committed, preparedViews, _, instruction, entry, stack⟩ :=
-    spawn_prepare_prefix (before := entered) (i := 0) rfl ((beforeView 0).symm ▸ site) ((beforeView 0).symm ▸ frame)
-      farSite (by omega) slots specific.1 specific.2
+  obtain ⟨finished, launched, _, committed, _, views⟩ :=
+    bootSpawn_run (before := entered) (i := 0) (extra := extra) rfl
+      ((beforeView 0).symm ▸ site) ((beforeView 0).symm ▸ frame)
+      farSite (by omega) slots specific.1 specific.2 positive
   have readFrame := output.loader_frame loaded
   have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
     have step : ProcessStep (TSO L0) actI ⟨s, [some t4]⟩
@@ -269,24 +334,8 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       .ask (i := 0) rfl rfl rfl
         ⟨rfl, 0, by simp only [beforeView 0, rdN, readFrame, Option.map_some]⟩ rfl
     exact .ofStep step
-  have sxIndex : sx (II.f (startScratch output.compiled.main)) =
-      BitVec.ofNat 64 (startScratch output.compiled.main) := sx_nat (by omega)
-  rw [← sxIndex] at entry stack
-  obtain ⟨cloned, _⟩ := bootClone_run (before := ⟨prepared, [some (.next parent)]⟩)
-    (i := 0) (child := child) rfl instruction entry stack (memory := prepared) True.intro positive
-  let active : Cfg (TSO L0) (Res T) :=
-    ⟨prepared, [some (ret1 parent id), some (.next child)]⟩
-  have destWord : sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)) =
-      BitVec.ofNat 64 (startScratch output.compiled.main + 2) := sx_nat (by omega)
-  have writable : Mem.all prepared.1.m.wr
-      (slot parent.fp (sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)))) 8 = true := by
-    have inFrame : startScratch output.compiled.main + 2 < output.image.Ks := by omega
-    rw [destWord, committed]
-    exact frame.wr _ inFrame
-  obtain ⟨finished, resume, memory, _, finalViews⟩ :=
-    tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
   have childView : finished.1.view 1 = s.1.m :=
-    (finalViews 1 (by decide)).trans ((preparedViews 1 (by decide)).trans (beforeView 1))
+    (views 1 (by decide)).trans (beforeView 1)
   obtain ⟨stackBytes, encoded, stackLoaded⟩ := output.goal_arguments_loaded Q loaded
   have selected : ((output.goalUnit Q).starts.map
       (fun initial => encodeEnv output.image.Y.withIdle (envR initial.2)))[1]? =
@@ -302,9 +351,12 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   have childLive : (output.bootActivation Q 1).lebt 1 = true := by
     change decide (1 ≤ min 1 output.starts.length) = true
     simpa only [Nat.min_eq_left (Nat.succ_le_of_lt present)] using decide_eq_true (Nat.le_refl 1)
-  refine ⟨finished, ?_, memory.trans committed, childLive, logical,
+  refine ⟨finished, ?_, committed, childLive, logical,
     ⟨childBytes, childEncoded, childView.symm ▸ childLoaded⟩, fun O => output.bootActivation_step Q O present⟩
-  simpa only [List.append_nil, List.nil_append, active, List.set_cons_zero, Nat.reduceAdd] using
-    ((loadedEntry.trans preparation).trans cloned).trans resume
+  have advance : nxt parent =
+      ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 3), BitVec.ofNat 64 output.image.fp0⟩ :=
+    congrArg (fun ip => T.mk ip (BitVec.ofNat 64 output.image.fp0)) (pcN (BitVec.ofNat 64 codeBase) 2 1 3 rfl)
+  simpa only [entered, advance, List.nil_append, List.set_cons_zero, List.singleton_append, Nat.reduceAdd] using
+    loadedEntry.trans launched
 
 end Gabbro.Stage0
