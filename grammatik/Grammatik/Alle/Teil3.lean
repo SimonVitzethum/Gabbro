@@ -21,7 +21,7 @@ import Grammatik.Bausteine.Arena.Ownership.Body.Goal
 import Grammatik.Bausteine.Arena.Ownership.Source.Admission
 import Grammatik.Bausteine.Arena.Ownership.Source.Results
 import Grammatik.Bausteine.Arena.Unbounded.GRefine
-import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert
+import Grammatik.Berechenbarkeit.BrainfuckG.Programm
 import Grammatik.Berechenbarkeit.Storage.GStack.Termination
 import Grammatik.Code.Refine.Calls.Closure
 import Grammatik.Kern.Semantik.Evaluation.Aggregates.Locals
@@ -35,6 +35,5 @@ import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
 import Grammatik.Logik.WP.Relational
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
-import Grammatik.Parser.TaggedDispatch.SourcePhases
 import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 import Grammatik.Zielsatz.BeweisAtomar

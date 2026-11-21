@@ -23,14 +23,6 @@ open Source Zielsatz
 
 variable {D : Deklaration}
 
-/-- The witness program passes the executable check, decided by the kernel. -/
-theorem witness_passes : checkProgram Witness.P Witness.A Witness.I [true, false] = true := by decide
-
-theorem witness_checked : Checked Witness.P Witness.A Witness.I :=
-  checkProgram_sound (fun f => by cases f <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_false, or_true, Bool.true_eq_false, or_self]) witness_passes
-
-#print axioms witness_checked
-
 /-- **The ownership acceptance**: every body passes the check for every declared arena. -/
 def ownershipAccepted (E : Einheit D) (arenas : List (ArenaIface D)) (fs : List D.Fn) : Bool :=
   arenas.all fun a => checkProgram E.P a.A a.I fs
