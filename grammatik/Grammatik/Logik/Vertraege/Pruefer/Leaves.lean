@@ -66,6 +66,46 @@ def slotStoreStatement {context : Context A next} (policy : A → CallObligation
         (offset.property valuation (world.lese Λ reads) actual
           ((symbols.realizes_world actual valuation world (world.lese Λ reads)).mp realized))) goals
 
+theorem scalarValue_int_cast {kind : Ty} (numeric : kind = .int lo hi) (value : Wert D kind) :
+    scalarValue kind value = (numeric ▸ value : Zahl lo hi).n := by
+  cases numeric
+  rfl
+
+/-- A transition proves the previous stage and substitutes the new stage in
+    the continuation. The slot identity is the same one used for a store. -/
+def shiftCondition {context : Context A next} (policy : A → CallObligation program)
+    {l : Bool} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
+    (table : D.Tab) (field : D.Feld table) (numeric : D.typ table field = .int lo hi)
+    (index : Expr D Γ Λ (.index (D.count table))) (source target : Int) (fits : lo ≤ target ∧ target ≤ hi)
+    (edge : D.erlaubt table field source target = true) (writes : V.schreibt table = true) (access : darf D table Λ)
+    (goals : Symbolic.Goals (program := program) (S := S) context V Γ) :
+    Except Frag.Refusal (Symbolic.StatementCondition policy
+      (.shift table field numeric index source target fits edge writes access : Stmt D V l Γ Λ Λ) symbols goals) := do
+  let encoded ← Invarianten.Frag.Symbolic.translate index symbols
+  let offset ← encoded.constantIndex
+  let key := Observation.slot table field offset.val
+  let payload : Wert D (D.typ table field) := numeric ▸ (⟨target, fits.1, fits.2⟩ : Zahl lo hi)
+  let post ← goals.normal.encode next (Nat.le_refl next) symbols bounded
+  let store := storeCondition symbols bounded (.known payload) trivial key
+    (fun world value => world.schreibSlot table Λ offset.val field value)
+    (fun world value => assignment_schreibSlot world table field offset.val Λ value)
+    goals.normal.holds post
+  let reads := (.inl table :: index.orte)
+  return {
+    formula := .and (.eq (.var (.inl key)) (.konst source)) store.formula
+    sound := fun valuation item present runtime world valid actual realized _ _ => by
+      let read := world.lese Λ reads
+      have locals := (symbols.realizes_world actual valuation world read).mp realized
+      have atSlot := offset.property valuation read actual locals
+      have before : scalarValue (D.typ table field) (read.slots table offset.val field) = source := valid.1
+      have matches := (scalarValue_int_cast numeric (read.slots table offset.val field)).symm.trans before
+      have stored := (store.read Λ reads).sound valuation item present runtime world valid.2
+        actual locals payload rfl
+      unfold Runtime.wpS
+      simp only [execStmtH, ← show read = world.lese Λ (.inl table :: index.orte) from rfl]
+      rw [atSlot, if_pos matches]
+      exact stored }
+
 def memoryIdentityStatement {context : Context A next} (policy : A → CallObligation program)
     {l : Bool} (symbols : SymEnv D Nat Γ) (bounded : symbols.Bounded next)
     (code : Stmt D V l Γ Λ Λ')
@@ -143,7 +183,8 @@ def leafCondition {context : Context A next} (policy : A → CallObligation prog
   | .next _ => do
       let pre ← goals.again.encode next (Nat.le_refl next) symbols bounded
       return pre.map (fun _ _ _ _ ready actual realized _ _ => ready actual realized)
-  | .shift .. => .error (.unsupported "contract shift requires an exact source-state observation")
+  | .shift table field numeric index source target fits edge writes access =>
+      shiftCondition policy symbols bounded table field numeric index source target fits edge writes access goals
   | .assignSlotRef .. => .error (.unsupported "contract reference store needs a tracked cell identity")
   | .putBytes .. => .error (.unsupported "contract byte store needs bytewise observation substitution")
   | .onOption .. => .error (.unsupported "contract option dispatch needs a typed payload observation")
