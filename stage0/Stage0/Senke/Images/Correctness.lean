@@ -11,6 +11,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
@@ -53,9 +54,11 @@ structure MappedImage [Kern] (output : Emitted src reserve options)
   loader : Rel L0 (M := imageTSO) ⟨machine.ms, [some t4]⟩ machine
   runnerFile : FileInv machine.ms.1.m
 
-private def sourceAccumulator : SItemTief → Bool
-  | .accT .. => true
-  | _ => false
+def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
+  (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
+    match item with
+    | .accT .. => true
+    | _ => false
 
 /-- An accumulator descriptor elaborates the actual selected declaration
     with its generated cells, locks and functions. -/
@@ -89,8 +92,7 @@ structure ImageModelUnit (output : Emitted src reserve options)
   runtimeParams : ∀ root ∈ E.gestartet, (declOf output.compiled.unit).params root.1 = []
   arenaTables : ∀ t : (declOf output.compiled.unit).Tab, (output.compiled.unit.tabs.get t).arena = true ↔
     ∃ arena ∈ E.arenen, arena.A.tab = t
-  accumulators : List.Forall₂ (ImageAccumulator output)
-    ((uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter sourceAccumulator) E.akku
+  accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) E.akku
   summary : ∀ item world value, E.Q item world value = true ↔
     ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
 
@@ -128,7 +130,7 @@ def ImageSlotsMatch [Kern] {D : Deklaration} (machine : Cfg imageTSO (Res T))
   (∀ i, state.lebt i = true ↔ i < machine.ths.length) ∧
   (∀ i, machine.ths[i]? = some none → FertigG state.m i)
 
-private def imageExternalEvent (event : Ev) : Bool :=
+def imageExternalEvent (event : Ev) : Bool :=
   let request := event.2.1
   !(decide (request = cloneReq ∨ request.nr.toNat = NR_EXIT ∨ request.nr.toNat = NR_EXIT_GROUP ∨
     request = futexReq request.a1 128 request.a3 ∨ request = futexReq request.a1 129 request.a3))
@@ -193,7 +195,7 @@ def ImageGateEvent [Kern] (output : Emitted src reserve options)
       ∃ gate word extra, layout.tor routine = some gate ∧ request.nr = BitVec.ofNat 64 gate.nr ∧
         ArgsW layout (reqArg request) args ∧ event.2.2 = some (word, extra) ∧
         ((gate.resultArea = none ∧ (O.mitRuhe.wirkt routine world args).2 = rohW gate (D.agruende routine) word) ∨
-          ∃ j τ (typed : D.aerg routine = some τ) fp base,
+          ∃ (j : Nat) (τ : Ty) (typed : D.aerg routine = some τ) (fp : W) (base : Nat),
             gate.resultArea = some j ∧ reqArg request j = slot fp (BitVec.ofNat 64 base) ∧
             AreaReply layout O.mitRuhe routine gate τ typed world args (returned.ms.1.view event.1) fp base word)
 
