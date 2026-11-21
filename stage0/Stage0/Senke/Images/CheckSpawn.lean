@@ -26,6 +26,45 @@ private theorem fetch {layout : Runner.Beweis.Lay}
     tso_read_step before inside (fun answer => opt answer fun pair =>
       op (pair.1.setWidth 8 |>.setWidth 64).toNat t) loaded
 
+private theorem tso_guard_read {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {a c scratch : Nat} {flag : W}
+    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
+    (guard : CodeAt (before.ms.1.view i) pc (guardC a c scratch))
+    (word : (before.ms.1.view i).rd64 (slot fp (sx (II.f a))) = some flag) :
+    let start : T := ⟨pc, fp⟩
+    let selected := if flag = 0 then f2 start fun offset => .next { start with pc := pc + offset }
+      else .next (nxt start)
+    ProcessPrefix (TSO layout) actI before [] 4 ⟨before.ms, before.ths.set i (some selected)⟩ := by
+  intro start selected
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
+    ⟨before.ms, before.ths.set i (some r)⟩
+  let jump := nxt start
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have atBranch : InsAt (before.ms.1.view i) pc 19 (II.f a) (II.f 32) (II.f 0) := by
+    have instruction := guard 0 (by simp [guardC])
+    simp only [Nat.mul_zero, BitVec.add_zero] at instruction
+    exact instruction
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step start)) :=
+    .priv running rfl
+  let branch (index : BitVec 32) : Res T :=
+    ld start (sx index) fun result =>
+      if result = 0 then f2 start fun offset => .next { start with pc := start.pc + offset }
+      else .next jump
+  have indexed : ProcessStep (TSO layout) actI (onThread (op 19 start)) []
+      (onThread (branch (II.f a))) := by
+    have loaded : rdN (before.ms.1.view i) 4 (pc + 4) = some ((II.f a).setWidth 64) := by
+      simp only [rdN, atBranch.f1, Option.map_some]
+    simpa [onThread, op, branch, f1, rd32] using
+      tso_read_step before inside (fun answer => opt answer fun pair => branch (pair.1.setWidth 32)) loaded
+  have evaluated : ProcessStep (TSO layout) actI (onThread (branch (II.f a))) []
+      (onThread selected) := by
+    simpa only [branch, ld, rd64, onThread, opt_some] using
+      tso_read_step before inside (width := 8) (address := slot fp (sx (II.f a))) (fun answer => opt answer fun pair =>
+        if pair.1 = 0 then f2 start fun offset => .next { start with pc := start.pc + offset }
+        else .next jump) word
+  exact .cons started (.cons (fetch before inside 19 start atBranch.op (by decide)) (.cons indexed
+    (.cons evaluated (.nil _))))
+
 /-- A true guard in the actual TSO runner follows its two branch
     instructions and skips the emitted stop code. No operand store or
     system call is made by either branch. -/
@@ -39,33 +78,12 @@ theorem tso_guard_pass [Kern] {layout : Runner.Beweis.Lay}
       ⟨before.ms, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 5), fp⟩))⟩ := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
-  let start : T := ⟨pc, fp⟩
-  let jump := nxt start
+  let jump := nxt ⟨pc, fp⟩
   have inside := (List.getElem?_eq_some_iff.mp running).1
-  have atBranch : InsAt (before.ms.1.view i) pc 19 (II.f a) (II.f 32) (II.f 0) := by
-    have instruction := guard 0 (by simp [guardC])
-    simp only [Nat.mul_zero, BitVec.add_zero] at instruction
-    exact instruction
   have atJump : InsAt (before.ms.1.view i) jump.pc 18 (II.f 64) (II.f 0) (II.f 0) :=
     guard 1 (by simp [guardC])
-  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step start)) :=
-    .priv running rfl
-  let branch (index : BitVec 32) : Res T :=
-    ld start (sx index) fun result =>
-      if result = 0 then f2 start fun offset => .next { start with pc := start.pc + offset }
-      else .next jump
-  have indexed : ProcessStep (TSO layout) actI (onThread (op 19 start)) []
-      (onThread (branch (II.f a))) := by
-    have loaded : rdN (before.ms.1.view i) 4 (pc + 4) = some ((II.f a).setWidth 64) := by
-      simp only [rdN, atBranch.f1, Option.map_some]
-    simpa [onThread, op, branch, f1, rd32] using
-      tso_read_step before inside (fun answer => opt answer fun pair => branch (pair.1.setWidth 32)) loaded
-  have passed : ProcessStep (TSO layout) actI (onThread (branch (II.f a))) []
-      (onThread (.next jump)) := by
-    simpa only [branch, ld, rd64, onThread, opt_some, ite_eq_right nonzero] using
-      tso_read_step before inside (width := 8) (address := slot fp (sx (II.f a))) (fun answer => opt answer fun pair =>
-        if pair.1 = 0 then f2 start fun offset => .next { start with pc := start.pc + offset }
-        else .next jump) word
+  have first : ProcessPrefix (TSO layout) actI before [] 4 (onThread (.next jump)) := by
+    simpa only [ite_eq_right nonzero] using tso_guard_read running guard word
   have jumped : ProcessStep (TSO layout) actI (onThread (.next jump)) [] (onThread (IR.step jump)) := by
     have move := ProcessStep.priv (act := actI) (c := onThread (.next jump)) (i := i)
       (List.getElem?_set_self inside) rfl
@@ -80,8 +98,35 @@ theorem tso_guard_pass [Kern] {layout : Runner.Beweis.Lay}
     simpa [onThread, op, f1, rd32, advance, frame] using
       tso_read_step before inside (fun answer => opt answer fun pair =>
         .next { jump with pc := jump.pc + sx (pair.1.setWidth 32) }) loaded
-  exact .cons started (.cons (fetch before inside 19 start atBranch.op (by decide)) (.cons indexed
-    (.cons passed (.cons jumped (.cons (fetch before inside 18 jump atJump.op (by decide)) (.cons target (.nil _)))))))
+  have tail : ProcessPrefix (TSO layout) actI (onThread (.next jump)) [] 3 _ :=
+    .cons jumped (.cons (fetch before inside 18 jump atJump.op (by decide)) (.cons target (.nil _)))
+  exact first.trans tail
+
+/-- The false condition reaches the actual first instruction of the
+    emitted stop, without changing any memory or issuing a host request. -/
+theorem tso_guard_fail {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {a c scratch : Nat}
+    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
+    (guard : CodeAt (before.ms.1.view i) pc (guardC a c scratch))
+    (word : (before.ms.1.view i).rd64 (slot fp (sx (II.f a))) = some 0) :
+    ProcessPrefix (TSO layout) actI before [] 5
+      ⟨before.ms, before.ths.set i (some (.next ⟨pc + 32, fp⟩))⟩ := by
+  let start : T := ⟨pc, fp⟩
+  let pending := f2 start fun offset => .next { start with pc := pc + offset }
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have first : ProcessPrefix (TSO layout) actI before [] 4 ⟨before.ms, before.ths.set i (some pending)⟩ := by
+    simpa only [ite_true] using tso_guard_read running guard word
+  have branch : InsAt (before.ms.1.view i) pc 19 (II.f a) (II.f 32) (II.f 0) := by
+    simpa only [Nat.mul_zero, BitVec.add_zero] using guard 0 (by simp [guardC])
+  have loaded : rdN (before.ms.1.view i) 4 (pc + 8) = some ((II.f 32).setWidth 64) := by
+    simp only [rdN, branch.f2, Option.map_some]
+  have offset : sx (((II.f 32).setWidth 64).setWidth 32) = 32 := rfl
+  have chosen : ProcessStep (TSO layout) actI ⟨before.ms, before.ths.set i (some pending)⟩ []
+      ⟨before.ms, before.ths.set i (some (.next ⟨pc + 32, fp⟩))⟩ := by
+    simpa only [pending, start, f2, rd32, opt_some, offset] using
+      tso_read_step before inside (fun answer => opt answer fun pair =>
+        .next { start with pc := pc + sx (pair.1.setWidth 32) }) loaded
+  exact first.trans (ProcessPrefix.ofStep chosen)
 
 /-- The signed comparison instruction reads both operands in the current
     TSO view, computes the runner's Boolean word, and writes that word
