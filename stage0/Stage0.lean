@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+public import Stage0.ForeignSummary
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
