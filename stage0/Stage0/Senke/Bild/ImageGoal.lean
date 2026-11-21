@@ -70,11 +70,14 @@ theorem Emitted.goalUnit_refuses_nonempty_axioms (output : Emitted src K options
     | true =>
       obtain ⟨certificate, checked⟩ := (nutzerPflichtGeprueftB_iff E output.fsA.1 output.lsA.1 {}).mp verdict
       unfold checkUnitLogic at checked
-      cases E.pointerSignatures with
-      | none => cases checked
-      | some signature =>
-        simp only [missing] at checked
-        repeat' first | split at checked | cases checked
+      split at checked
+      · simp only [missing, bind, Except.bind] at checked
+        split at checked
+        · cases checked
+        · split at checked
+          · cases checked
+          · split at checked <;> cases checked
+      · cases checked
   rw [akzeptiertX_pruefer_eq, show nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 =
     false from noLogic, Bool.and_false]
 
