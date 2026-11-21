@@ -8251,10 +8251,15 @@ states. The statement includes the entire `ZielFX` and matches terminal
 process observations at the last runner step.
 
 `MappedImage.runner_prefix` proves the x86-to-IR part under the host
-answer restrictions. `MappedImage.source_start` establishes the initial
-source relation. `ImageSimulation.follow`, `ImageSimulation.goal` and
+answer restrictions. `MappedImage.loader_prefix_goal` relates each
+prefix through loader dispatch to the initial GX state and derives the
+full goal at that state. `ImageSimulation.follow`, `ImageSimulation.goal` and
 `ImageSimulation.terminal` lift single-step and terminal correspondence
 to full prefixes and apply `gabbro_ziel` to the matched state.
+`stage0_correct_of_export_simulation` assembles the production statement
+from the checked source-unit export and the concrete simulation. The
+checker supplies the unit duties and the exported summary supplies
+`PostDeckt`.
 `Emitted.checked_image_model_empty` supplies the exact unit and checker
 verdict on the axiom-free domain with no arena or accumulator declarations.
 
