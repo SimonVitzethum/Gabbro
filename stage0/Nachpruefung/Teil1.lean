@@ -84,6 +84,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire_never
 #print axioms Gabbro.Stage0.ImageSlotsMatch.activate_clone
 #print axioms Gabbro.Stage0.Emitted.image_declared_clone_goal
+#print axioms Gabbro.Stage0.image_bootClone_refused
 #print axioms Gabbro.Stage0.imageStackStore_projected
 #print axioms Gabbro.Stage0.image_memory_prefix_projects
 #print axioms Gabbro.Stage0.stage0_correct_of_export_simulation

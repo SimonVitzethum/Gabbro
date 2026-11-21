@@ -178,6 +178,13 @@ theorem image_memory_prefix_projects {footprint : Nat → W → Prop}
   tso_memory_process_projects (image_prefix_tso run) buffers
     (fun seen => classify (tso_silent_prefix_image seen rfl))
 
+private theorem image_clone_answer {state : imageTSO.St} {i : Nat} {id extra : W} (nonzero : id ≠ 0) :
+    imageTSO.ans state i (.sys cloneReq) (some (id, extra)) state := by
+  refine ⟨True.intro, ?_⟩
+  change (if cloneReq = cloneReq then _ else _)
+  rw [ite_eq_left rfl]
+  exact ⟨rfl, id, extra, rfl, nonzero⟩
+
 /-- The decoded startup clone is an actual transition in the host-restricted
     runner. Its positive reply preserves memory and appends precisely the
     child addresses read from the parent's own buffered view. -/
@@ -203,16 +210,44 @@ theorem image_bootClone_run {before : Cfg imageTSO (Res T)} {i : Nat} {parent ch
     intro zero
     subst id
     exact (by decide : ¬ (0 < (0 : W).toInt)) positive
-  have answer : imageTSO.ans ready.ms i (.sys cloneReq) (some (id, extra)) ready.ms := by
-    refine ⟨True.intro, ?_⟩
-    change (if cloneReq = cloneReq then _ else _)
-    rw [ite_eq_left rfl]
-    exact ⟨rfl, id, extra, rfl, nonzero⟩
-  obtain ⟨created, found⟩ := bootClone_step (before := ready) (parent := parent) (child := child) indexed answer positive
+  obtain ⟨created, found⟩ := bootClone_step (before := ready) (parent := parent) (child := child)
+    indexed (image_clone_answer nonzero) positive
   constructor
   · simpa only [ready, threads, List.nil_append, List.set_set, Nat.reduceAdd] using
       fetched.trans (ProcessPrefix.ofStep created)
   · simpa only [ready, threads, List.length_set, List.set_set] using found
+
+/-- A negative host reply is recorded at the same decoded clone. It
+    leaves all memory and slot allocations unchanged and returns the
+    actual negative result to the waiting parent. -/
+theorem image_bootClone_refused {before : Cfg imageTSO (Res T)} {i : Nat} {parent child : T}
+    {dest index pad : BitVec 32} {id extra : W}
+    (running : before.ths[i]? = some (some (.next parent)))
+    (instruction : InsAt (before.ms.1.view i) parent.pc 24 dest index pad)
+    (entry : (before.ms.1.view i).rd64 (slot parent.fp (sx index)) = some child.pc)
+    (frame : (before.ms.1.view i).rd64 (slot parent.fp (sx index) + 8) = some child.fp)
+    (negative : id.toInt < 0) :
+    ProcessPrefix imageTSO actI before [(i, cloneReq, some (id, extra))] 6
+      ⟨before.ms, before.ths.set i (some (ret1 parent id))⟩ := by
+  let resume : Ans → Res T := fun result =>
+    opt result fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
+  let ready : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i (some (.ask (.sys cloneReq) resume))⟩
+  have fetched : ProcessPrefix imageTSO actI before [] 5 ready :=
+    tso_silent_prefix_image (bootClone_read_prefix (before := imageToTSO before) running instruction entry frame) rfl
+  have indexed : ready.ths[i]? = some (some (.ask (.sys cloneReq) resume)) :=
+    List.getElem?_set_self (List.getElem?_eq_some_iff.mp running).1
+  have nonzero : id ≠ 0 := by
+    intro zero
+    subst id
+    exact (by decide : ¬ ((0 : W).toInt < 0)) negative
+  have refused : ProcessStep imageTSO actI ready [(i, cloneReq, some (id, extra))]
+      ⟨ready.ms, ready.ths.set i (some (ret1 parent id))⟩ := by
+    refine .cloneNo indexed rfl (image_clone_answer nonzero) ?_ ?_
+    · intro result additional same
+      cases same
+      exact not_lt_of_ge negative.le
+    · simp only [resume, opt_some, ite_eq_right nonzero]
+  simpa only [ready, List.nil_append, List.set_set, Nat.reduceAdd] using fetched.trans (ProcessPrefix.ofStep refused)
 
 /-- Appending the successful startup clone activates the same next source
     slot. Earlier threads may already have executed model steps. Their
