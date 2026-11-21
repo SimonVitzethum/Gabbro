@@ -1,5 +1,5 @@
 {"version": "1.3.0",
- "packagesDir": "../grammatik/.lake/packages",
+ "packagesDir": "../../grammatik/.lake/packages",
  "packages":
  [{"type": "path",
    "scope": "",
