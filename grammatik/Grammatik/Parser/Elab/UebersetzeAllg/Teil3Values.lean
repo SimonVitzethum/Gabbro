@@ -181,6 +181,20 @@ def lowText {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (bs : List Int) 
   | some zs => .ok ⟨.str zs.length, Expr.strLit zs (Nat.le_refl _)⟩
   | none => .error "string literal outside bytes"
 
+/-- A checked predicate literal has the same exact byte type in canonical G. -/
+theorem specTextArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (ctx : UCtx) (text : String) :
+    uSpecValueArgument ctx (.str text.toUTF8.toList.length) (.ext .text [text] []) = .ok () ∧
+    ∃ typed : LowWert u Γ Λ,
+      lowText (text.toUTF8.toList.map fun b => Int.ofNat b.toNat) = .ok typed ∧
+        typed.ty = .str text.toUTF8.toList.length := by
+  refine ⟨specTextArgument_erfuellbar ctx text, ?_⟩
+  obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
+  refine ⟨⟨.str decoded.length, Expr.strLit decoded (Nat.le_refl _)⟩, ?_, ?_⟩
+  · simp only [lowText, valid]
+  · change Ty.str decoded.length = .str text.toUTF8.toList.length
+    rw [bytesZahl_laenge _ decoded valid, List.length_map]
+
 /-- `a[i]`: an element of an array (the index fitted into `0 ..< n`) or a byte of a string. -/
 def idxW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
     LowWert u Γ Λ → LowSide u Γ Λ → Except String (LowWert u Γ Λ)

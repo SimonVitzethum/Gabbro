@@ -146,6 +146,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
 #print axioms Gabbro.Grammatik.Async.Representation.cancelEpilogue_encoded
+#print axioms Gabbro.Grammatik.Async.Representation.cancelCallBlock_simulates
 #print axioms Gabbro.Grammatik.Async.Representation.pollTask_rep
 #print axioms Gabbro.Grammatik.Async.Representation.await_poll_rep
 #print axioms Gabbro.Grammatik.Async.Representation.await_construction_rep
@@ -173,6 +174,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.elabFn_guardedReturn
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uSpecValueArgument_exact
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specValueArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specTextArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTextArgument_low
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uRecordReplacement_step
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uSetzeRecordSlot_named
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff

@@ -28,6 +28,58 @@ theorem cancelEpilogue_encoded {Γ : Ctx} {l : Bool}
       before after environment environment' released,
     inv_encoded f types inventory State.cancelled _ (cancelled_inv types f inventory empty)⟩
 
+/-- A named destructor must consume the whole resource inventory of this
+    call. The ordinary call gate checks its declared authority and effects. -/
+def cancelCallBlock {Γ : Ctx} {l : Bool}
+    (state : Var Γ (stateType types f)) (destructor : D.Fn)
+    (arguments : Args D Γ Λ (D.params destructor))
+    (contract : RufPasst D V (D.signatur destructor) Λ)
+    (infallible : D.gruende destructor = 0)
+    (drained : nach D destructor Λ = []) : Block D V l Γ Λ [] :=
+  cancelEpilogue types f state (drained ▸ Stmt.call destructor arguments contract infallible)
+
+/-- Successful cancellation runs the actual destructor and then clears the
+    corresponding saved state. The semantic cleanup contract identifies the
+    destructor's world and accounts for every released owner exactly once. -/
+theorem cancelCallBlock_simulates {Γ : Ctx} {l : Bool}
+    (inventory : Inventory D) (empty : inventory.owned Phase.cancelled = [])
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (state : Var Γ (stateType types f)) (destructor : D.Fn)
+    (arguments : Args D Γ Λ (D.params destructor))
+    (contract : RufPasst D V (D.signatur destructor) Λ)
+    (infallible : D.gruende destructor = 0) (drained : nach D destructor Λ = [])
+    (source : State (Value D) (Child D types)) (world after : World D)
+    (environment : Env D Γ)
+    (own : List Nat → World D → Prop)
+    (drop : State (Value D) (Child D types) → World D → List Nat × World D)
+    (duty : DropDuty own drop) (unique : source.marks.Nodup) (owned : own source.marks world)
+    (cleanup : (drop source world).2 = after)
+    (answer : ErgVal D (D.erg destructor))
+    (success : calls destructor (world.lese Λ arguments.orte)
+      (evalArgs (world.lese Λ arguments.orte) arguments
+        (world.lese Λ arguments.orte) environment) = .ok after answer) :
+    cancelWith drop source world = (source.marks, .cancelled, after) ∧ own [] after ∧
+      execBlock oracle passes calls
+        (cancelCallBlock (l := l) state destructor arguments contract infallible drained)
+        world environment = .ok after (environment.set state (cancelledValue types f D)) ∧
+      encode D types f State.cancelled = some (cancelledValue types f D) := by
+  have cleanupDuty := duty source world unique owned
+  have castExec {Λ₁ Λ₂ : List (Res D)} (same : Λ₁ = Λ₂) (stmt : Stmt D V l Γ Λ Λ₁) :
+      execStmt oracle passes calls (same ▸ stmt : Stmt D V l Γ Λ Λ₂) world environment =
+        execStmt oracle passes calls stmt world environment := by
+    subst Λ₂
+    rfl
+  have ran : execStmt oracle passes calls
+      (drained ▸ Stmt.call destructor arguments contract infallible : Stmt D V l Γ Λ [])
+      world environment = .ok after environment := by
+    rw [castExec]
+    simp only [execStmt, success]
+  refine ⟨?_, cleanup ▸ cleanupDuty.2.2, ?_⟩
+  · simp only [cancelWith, cleanupDuty.1, cleanup]
+  · exact cancelEpilogue_encoded inventory empty oracle passes calls state _ world after
+      environment environment ran
+
 def completedIndex (types : TypeResolution) (f : AsyncFn) :
     Fin (stateCases types f).length :=
   ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩

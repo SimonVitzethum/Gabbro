@@ -1205,7 +1205,8 @@ For example, `spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;` checks each 
 that parameter type before inlining. Integer argument intervals must be contained in the declared
 range and Boolean parameters require Boolean arguments. Record, array, string and floating-point
 parameters accept named values and record field paths whose elaborated type equals the declared
-type. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
+type. A string literal also fits a string parameter whose declared bound equals its UTF-8 byte
+length. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
 fits the example parameter, while an argument with range `0 .. 101` exceeds its declared type.
 `Folds/SpecArguments.lean` checks in the caller's scope, including quantifier domains. An argument
 whose names overlap a binder of the predicate is refused as `spec …: argument … names a binder of

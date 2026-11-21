@@ -24,4 +24,18 @@ theorem bytesZahl_laenge : ∀ (bs : List Int) (zs : List (Zahl 0 255)), bytesZa
         simp only [List.length_cons, bytesZahl_laenge bs ys hz]
     · cases h
 
+theorem bytesZahl_uint8 (bytes : List UInt8) :
+    ∃ decoded, bytesZahl (bytes.map fun b => Int.ofNat b.toNat) = some decoded := by
+  induction bytes with
+  | nil => exact ⟨[], rfl⟩
+  | cons b rest ih =>
+    obtain ⟨tail, valid⟩ := ih
+    have lower : 0 ≤ (Int.ofNat b.toNat) := Int.natCast_nonneg _
+    have upper : (Int.ofNat b.toNat) ≤ 255 := by
+      change (↑b.toNat : Int) ≤ 255
+      have bound := b.toNat_lt
+      omega
+    refine ⟨⟨_, lower, upper⟩ :: tail, ?_⟩
+    simp only [List.map_cons, bytesZahl, dite_eq_left (And.intro lower upper), valid, Option.map_some]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
