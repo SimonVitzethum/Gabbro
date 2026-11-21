@@ -66,7 +66,7 @@ theorem parseModulTief_body {fuel : Nat} {tokens rest : List Token} {node : SIte
     | ok nameResult =>
       obtain ⟨path, afterPath⟩ := nameResult
       simp only [keyword, name] at parsed
-      refine ⟨afterModule, path, afterPath, rfl, rfl, ?_⟩
+      refine ⟨afterModule, path, afterPath, rfl, name, ?_⟩
       split at parsed
       · rename_i tail
         cases parameters : parseGenericParams fuel (.zeichen "[" :: tail) with

@@ -186,8 +186,9 @@ theorem restore_fields (items : List SItemTief) (u : UProg)
 /-- Entry-postcondition restoration preserves the exact invariant family. -/
 theorem restore_invariante (items : List SItemTief) (u : UProg)
     (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
-    Q.invariante = P.invariante :=
-  congrArg Programm.invariante (restore_fields items u P Q h).1
+    Q.invariante = P.invariante := by
+  have same := congrArg Programm.invariante (restore_fields items u P Q h).1
+  exact same
 
 /-- The thread roots the compiler's check judges: the compiled entry `main` first (the image
     starts it beside every other root, `Senke.bild`), then the unit's declared roots and every
@@ -251,8 +252,9 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)
     (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
-    Q.axVertrag = P.axVertrag :=
-  congrArg Programm.axVertrag (restore_fields items u P Q h).1
+    Q.axVertrag = P.axVertrag := by
+  have same := congrArg Programm.axVertrag (restore_fields items u P Q h).1
+  exact same
 
 /-- Invert the production decision on its exact program, roots, and guest
     export. The diagnostic path cannot turn a rejected Bool into acceptance. -/

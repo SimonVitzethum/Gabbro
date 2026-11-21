@@ -46,9 +46,10 @@ theorem Compiled.function_from_ast {text : String} {options : Profil.Options}
   obtain ⟨raw, functions, assembled, restored⟩ := result.lowered
   obtain ⟨lowered, loweredAt, _, body, _⟩ := lowerAllg_fields result.unit raw functions assembled f
   obtain ⟨same, expanded, requirements, source, post⟩ := OldSource.restore_fields _ _ _ _ restored
+  have bodyRestored := congrArg (fun p => p.rumpf f) same
+  have preRestored := congrArg (fun p => p.requires f) same
   exact ⟨raw, functions, lowered, expanded, requirements, assembled, loweredAt,
-    (congrArg (fun p => p.rumpf f) same).trans body,
-    (congrArg (fun p => p.requires f) same).trans (lowerAllg_requires _ _ _ assembled f loweredAt),
+    bodyRestored.trans body, preRestored.trans (lowerAllg_requires _ _ _ assembled f loweredAt),
     source, post f⟩
 
 /-- Each CLI payload uses the AST derived from its original token sequence

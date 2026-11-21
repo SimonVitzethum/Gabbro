@@ -8169,3 +8169,25 @@ prefix. The initial GX relation and the request footprint checks are explicit pr
 of the single-thread memory process, with the same final memory.
 `tso_single_thread_instructions` applies that result to an actual TSO prefix
 from empty buffers.
+
+## 206. Production AST and checker judgments
+
+`parseItemsTief_iff` proves that the actual item-list reader recognizes
+the ordered sequence production at its fuel bound. Each leaf records an
+individual item read. `parseTopTief_iff` requires the final end marker and
+`parseModulTief_body` identifies the ordered children of ordinary and
+generic modules between their actual braces.
+
+`Compiled.function_from_ast` identifies every body and precondition at the
+corresponding typed AST index. `OldSource.restore_fields` proves that entry
+snapshot restoration only replaces the postcondition family, and ties each
+new postcondition to the source header lookup for that function.
+
+`OldSource.accepts_core` inverts the actual verdict on the exact restored
+program, root enumeration and guest descriptors. `Compiled.admission`
+derives the semantic program judgment, with the arena and accumulator
+lists used by `accepts`. `irBild_frontend_sound` connects the returned CLI
+bytes to the original token-derived AST, canonical elaboration and every
+function's proved contract duties. Full grammar soundness also needs the
+individual item and expression productions. The full unit judgment needs
+the ownership exports and the exact image-state checks.
