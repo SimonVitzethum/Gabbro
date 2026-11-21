@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.EmittedZiel
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar.Fremd
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -71,6 +72,75 @@ theorem Emitted.bootStart_live (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) (i : Faden) :
     (output.bootStart Q).lebt i = true ↔ i < (output.goalUnit Q).starts.length :=
   Iff.of_eq decide_eq_true_eq
+
+/-- The logical boot state after starting the first `count` roots.
+    The entry has rank zero. Each clone adds a rank-one child and
+    advances the spawn clock without moving the initial G frames. -/
+def Emitted.bootActivation (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (count : Nat) :
+    FadenMaschine (declOf output.compiled.unit).mitRuhe :=
+  { output.goalStart Q (fun i => decide (i ≤ count)) with
+    rang := fun i => if 0 < i ∧ i ≤ count then 1 else 0
+    uhr := count }
+
+theorem Emitted.bootActivation_step (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    {count : Nat} (_declared : count < output.starts.length) :
+    FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+      (output.bootActivation Q count) (output.bootActivation Q (count + 1)) := by
+  have parent : (output.bootActivation Q count).lebt 0 = true := by
+    exact decide_eq_true (Nat.zero_le _)
+  have child : (output.bootActivation Q count).lebt (count + 1) = false := by
+    exact decide_eq_false (Nat.not_succ_le_self _)
+  have liveUpdate : (fun i => if i = count + 1 then true else (output.bootActivation Q count).lebt i) =
+      (output.bootActivation Q (count + 1)).lebt := by
+    funext i
+    change (if i = count + 1 then true else decide (i ≤ count)) = decide (i ≤ count + 1)
+    by_cases here : i = count + 1
+    · subst i
+      simp only [ite_eq_left rfl, decide_eq_true (Nat.le_refl _)]
+    · rw [ite_eq_right here]
+      have same : (i ≤ count) = (i ≤ count + 1) := propext (by omega)
+      simp only [same]
+  have rankUpdate : (fun i => if i = count + 1 then (output.bootActivation Q count).rang 0 + 1
+      else (output.bootActivation Q count).rang i) = (output.bootActivation Q (count + 1)).rang := by
+    funext i
+    change (if i = count + 1 then (if 0 < (0 : Nat) ∧ 0 ≤ count then 1 else 0) + 1
+      else if 0 < i ∧ i ≤ count then 1 else 0) = if 0 < i ∧ i ≤ count + 1 then 1 else 0
+    by_cases here : i = count + 1
+    · subst i
+      simp only [ite_eq_left rfl, Nat.lt_irrefl, false_and, ite_false, Nat.zero_add,
+        Nat.succ_pos, Nat.le_refl, and_self, ite_true]
+    · rw [ite_eq_right here]
+      have same : (0 < i ∧ i ≤ count) = (0 < i ∧ i ≤ count + 1) := propext (by omega)
+      simp only [same]
+  have stepped := FadenSchrittX.kind
+    (P := (output.goalUnit Q).P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
+    (Tg := GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+    (output.bootActivation Q count) 0 (count + 1) parent rfl child
+  rw [liveUpdate, rankUpdate] at stepped
+  exact stepped
+
+/-- Every prefix of the declared startup pool is reachable from the
+    single live entry. No undeclared position is needed in the proof. -/
+theorem Emitted.bootActivation_reached (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    {count : Nat} (declared : count ≤ output.starts.length) :
+    FadenErreichbarX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+      (output.goalStart Q (fun i => decide (i ≤ 0))) (output.bootActivation Q count) := by
+  induction count with
+  | zero =>
+    have initial : output.bootActivation Q 0 = output.goalStart Q (fun i => decide (i ≤ 0)) := by
+      have rank : (fun i : Nat => if 0 < i ∧ i ≤ 0 then 1 else 0) = fun _ => 0 := by
+        funext i
+        exact ite_eq_right (by omega)
+      simp only [Emitted.bootActivation, Emitted.goalStart, FadenStart, rank]
+    rw [initial]
+    exact .start
+  | succ count ih =>
+    exact .schritt _ _ (ih (by omega)) (output.bootActivation_step Q O (by omega))
 
 /-- Specialize the original goal theorem to the canonical program, start
     memory, arguments and pass limit of the emitted image. The compiler's
