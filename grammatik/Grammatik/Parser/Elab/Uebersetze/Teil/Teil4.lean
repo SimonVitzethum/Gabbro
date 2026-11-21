@@ -349,7 +349,7 @@ theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
   have sameName : strEq start start = true := by simp [strEq]
   simp only [arrayRead, bind, Except.bind, uFixedLocalArraySlice, sameName, Bool.not_true,
     Bool.false_eq_true, ite_false, arrayType, indexType, width, bounds, ite_true, indexRead,
-    pure, Except.pure]
+    and_self, pure, Except.pure]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
