@@ -42,7 +42,7 @@ theorem dsite_ok : (dispatch.all Ins.ok && (dispatch.flatMap enc).isPrefixOf (im
   decide +kernel
 
 private def dispatchState (t : IR.T) : X :=
-  { rax := 0, rcx := 0, rdx := 0, rbx := 0, rsp := 0, rbp := 0, rsi := 0, rdi := 0, r8 := 0, r9 := 0,
+  { rax := 0, rcx := 0, rdx := 0, rbx := 0, rsp := 0, rbp := 0, rsi := 0, rdi := 0, r8 := 0, r9 := 0, r10 := 0,
     r11 := 0, r12 := t.pc, r13 := t.fp, r14 := L0.T, r15 := 0,
     rip := BitVec.ofNat 64 (BASE + dsite), cf := none, zf := none, of := none, sf := none, mxcsr := 0x1F80 }
 
@@ -51,7 +51,7 @@ theorem runner_start_erfuellbar {m : Mem} (loaded : FileInv m) (t : IR.T) :
     ∃ (x : X) (s : (TSO L0).St), s.1 = ⟨m, fun _ => []⟩ ∧ Disp L0 t x := by
   have table : TInv L0 ⟨m, fun _ => []⟩ :=
     ⟨tab_of_file loaded, fun _ _ inEmpty => nomatch inEmpty⟩
-  have code := Bool.and_eq_true.mp dsite_ok
+  have code := Bool.and_eq_true_iff.mp dsite_ok
   exact ⟨dispatchState t, ⟨_, table⟩, rfl, code_of_image code.1 code.2, rfl, rfl, rfl, by decide⟩
 
 end Runner.Beweis

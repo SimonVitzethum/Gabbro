@@ -656,7 +656,7 @@ For the runner:
   `runner_mt` (every observation of the runner's threads -- system calls of all threads with their answers, in
   order, and the end -- is one of the IR's threads, never an undescribed step; for every program, also with data
   races, under every memory model that reads the table right), `runner_tso` and `runner_sc` on the real file,
-  `runner_zeuge`; `loader_ok` (from the ELF entry the loader makes exactly the requests `argv[1]`, `open`,
+  `runner_start_erfuellbar` for any IR entry; `loader_ok` (from the ELF entry the loader makes exactly the requests `argv[1]`, `open`,
   `lseek`, `mmap`, the first frame, and every failure ends in its own `ud2`), so `runner_entry_tso` and
   `runner_entry_sc` hold from the process's first instruction (`entry_is_loader`).
 * Named assumptions: the CPU implements the model for these forms (differential tests) and x86-TSO for `mov` and

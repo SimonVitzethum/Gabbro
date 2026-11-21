@@ -277,8 +277,8 @@ def block {context : Context A next} (policy : CallPolicy program context)
             | none =>
               have fails := negative actual locals allowed safe
               unfold Runtime.wpE at fails
-              cases execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure read actual <;>
-                simpa only [Symbolic.Goals.holds, Symbolic.Goals.endHolds, EndAusgang.zuAusgang] using fails }
+              cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure read actual <;>
+                simpa only [outcome, Symbolic.Goals.holds, Symbolic.Goals.endHolds, EndAusgang.zuAusgang] using fails }
     | .float .. | .floatLit .. | .floatOf .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
 termination_by structural fuel
 def ending {context : Context A next} (policy : CallPolicy program context)
