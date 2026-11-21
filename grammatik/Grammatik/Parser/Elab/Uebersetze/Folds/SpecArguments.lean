@@ -75,7 +75,8 @@ theorem specStringConcatArgument_erfuellbar (ctx : UCtx) (lhs rhs : SExpr) (left
     change uRechne ctx (uWertBlatt ctx) (.bin "+" lhs rhs) = _
     rw [uRechne]
     have plus : strEq "+" "+" = true := rfl
-    simp only [plus, Bool.true_or, ite_true, ← uWertBody, readLeft, readRight]
+    unfold uWertBody at readLeft readRight
+    simp only [plus, Bool.true_or, ite_true, readLeft, readRight]
   exact ⟨a, b, read, by
     simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, typedLeft, typedRight,
       pure, Option.pure_def, Except.pure, ite_true]⟩
