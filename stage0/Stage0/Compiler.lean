@@ -43,7 +43,7 @@ theorem doppelterName_none_iff (names : List String) : doppelterName names = non
       apply False.elim
       apply absent
       rw [congrFun (congrFun strEq_eq_schnell entry.1) entry.1]
-      exact decide_true rfl
+      simp [strEqSchnell]
     | some first =>
       have matched := List.find?_some lookup
       rw [congrFun (congrFun strEq_eq_schnell first.1) entry.1] at matched
