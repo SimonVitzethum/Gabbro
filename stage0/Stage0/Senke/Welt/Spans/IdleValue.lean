@@ -67,7 +67,8 @@ theorem idleProduct (L : Lay D) : ∀ (fields : List Ty) (v : ProdVal D.Fn D.pas
     have head := idleValue L τ v.1
     have tail := idleProduct L rest v.2
     constructor
-    · simpa only [Ty.mapFields, ProdVal.relocate, encodeProductFields, ProdVal.hd, ProdVal.tl]
+    · simpa only [tyR, valR, Ty.mapFields, ProdVal.relocate, encodeProductFields,
+        ProdVal.hd, ProdVal.tl]
         using congr (congrArg List.append head.1) tail.1
     · exact and_congr head.2 tail.2
 termination_by structural fields => fields
