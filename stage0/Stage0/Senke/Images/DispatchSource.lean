@@ -65,4 +65,49 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
       | zero => exact Or.inr ⟨_, rfl, rfl, entered⟩
       | succ i => exact Or.inl rfl
 
+/-- The loader part of the runner refinement is concrete: every
+    matched IR prefix through dispatch keeps the declared initial GX
+    state, including when x86 has only partially executed the dispatch. -/
+theorem MappedImage.loader_prefix_source [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {machine : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+    (O : Orakel (declOf output.compiled.unit))
+    {after : Cfg imageTSO (Res T)} {events : List Ev} {steps : Nat}
+    (run : ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps after)
+    (loaderSteps : steps ≤ 1) :
+    events = [] ∧ ImageSlotsMatch after (imageSourceStart E) ∧
+      ImageRuntimeMatches output E O events after (imageSourceStart E) := by
+  cases run with
+  | nil =>
+    obtain ⟨_, slots, _, runtime⟩ := mapped.source_start unit O
+    exact ⟨rfl, slots, runtime⟩
+  | cons step rest =>
+    cases rest with
+    | nil =>
+      obtain ⟨rfl, matched⟩ := mapped.dispatched_source unit O step
+      exact ⟨rfl, matched⟩
+    | cons next tail => omega
+
+/-- Every concrete x86 prefix that has advanced at most through loader
+    dispatch satisfies the complete goal at the declared source start. -/
+theorem MappedImage.loader_prefix_goal [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {machine finish : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : NutzerPflichtA E) (calls : CallSitePflicht E) (posts : PostDeckt E)
+    (binding : ForeignVertrag E O) (hardware : HardwareAnnahmenHw O E.Q)
+    {events : List Ev} {count : Nat} (run : ProcessPrefix imageTSO (actX L0) machine events count finish)
+    (inLoader : ∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
+      Rel L0 ir finish → steps ≤ 1) :
+    ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish ∧
+      events = [] ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+      ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
+      ImageGoalAt output E O (imageSourceStart E) := by
+  obtain ⟨ir, steps, trace, related⟩ := mapped.runner_prefix run
+  obtain ⟨quiet, slots, runtime⟩ := mapped.loader_prefix_source unit O trace (inLoader ir steps trace related)
+  refine ⟨ir, steps, trace, related, quiet, slots, runtime, ?_⟩
+  exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts O binding
+    hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ .start
+
 end Gabbro.Stage0
