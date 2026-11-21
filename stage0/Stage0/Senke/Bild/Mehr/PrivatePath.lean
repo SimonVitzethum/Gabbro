@@ -96,7 +96,7 @@ private theorem privateBuffers_set {footprint : Nat → W → Prop} {state : TSt
   intro j store pending
   by_cases same : j = i
   · subst j
-    exact owns store (by simpa only [TSt.setBuf, if_pos rfl] using pending)
+    exact owns store (by simpa only [TSt.setBuf, if_pos rfl, ↓reduceIte] using pending)
   · exact before j store (by simpa only [TSt.setBuf, if_neg same] using pending)
 
 private theorem privateBuffers_answer {layout : Runner.Beweis.Lay}
