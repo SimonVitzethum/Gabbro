@@ -129,7 +129,7 @@ theorem Emitted.goal_arguments_loaded [Kern] (output : Emitted src K options)
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
   exact ⟨stackBytes, output.goal_arguments_encoded Q ▸ made, memory⟩
 
-private theorem codeAt_spawn_site {m : Mem} {scratch : Nat} :
+private theorem codeAt_spawn_site [Kern] {m : Mem} {scratch : Nat} :
     ∀ {sites : List (Nat × Nat)} {pc : W} {j : Nat} {site : Nat × Nat},
       CodeAt m pc (spawnC scratch sites) → sites[j]? = some site →
         CodeAt m (pc + BitVec.ofNat 64 (16 * (10 * j))) (spawnOne scratch site.1 site.2) := by
@@ -182,7 +182,7 @@ theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
   rw [code, args, roots] at startup
   have ready := (spawn_ready placed startup).1
   have inside := (List.getElem?_eq_some_iff.mp declared).1
-  have site := placed.spawn_entry j (by simpa only [List.length_map] using inside)
+  have site := placed.spawn_entry j (by rw [List.length_map]; exact inside)
   have positioned : (⟨output.compiled.main, output.args⟩ :: output.starts)[j + 1]? = some start := declared
   exact ⟨codeAt_spawn_site ready (by simpa only [List.length_map] using site),
     (output.bootStart_frame Q (j + 1) start positioned).1,
@@ -204,7 +204,7 @@ private theorem processStep_threadSlots {M : MemSys} {act : θ → Res θ}
   cases step with
   | tau _ => simp
   | priv _ _ => simp
-  | @ask _ _ _ _ o _ _ _ _ _ ordinary _ _ =>
+  | @ask _ _ _ o _ _ _ _ _ ordinary _ _ =>
     cases o <;> try simp [lbl]
     rename_i q
     have distinct : q ≠ cloneReq := by
@@ -212,13 +212,13 @@ private theorem processStep_threadSlots {M : MemSys} {act : θ → Res θ}
       subst q
       simp [Op.special] at ordinary
     simp [lbl, createsThread, distinct]
-  | @exit _ _ _ q _ _ _ number =>
+  | @exit _ _ q _ _ _ number =>
     have distinct : q ≠ cloneReq := by
       intro equal
       subst q
       exact (by decide : cloneReq.nr.toNat ≠ NR_EXIT) number
     simp [createsThread, distinct]
-  | @cloneNo _ _ _ _ _ a _ _ _ _ refused _ =>
+  | @cloneNo _ _ _ _ a _ _ _ _ refused _ =>
     cases a with
     | none => simp [createsThread]
     | some pair =>
@@ -238,5 +238,27 @@ theorem processPrefix_threadSlots {M : MemSys} {act : θ → Res θ}
   | nil => simp
   | cons step _ ih =>
     rw [ih, processStep_threadSlots step, List.countP_append, Nat.add_assoc]
+
+/-- After a spawn instruction has read its entry address and frame, a
+    successful clone puts the child at those addresses in the next slot
+    and returns the thread ID to the parent's destination operation. -/
+theorem bootClone_step {M : MemSys} {before : Cfg M (Res T)} {i : Nat}
+    {parent child : T} {id extra : W} {memory : M.St}
+    (pending : before.ths[i]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
+    (answer : M.ans before.ms i (.sys cloneReq) (some (id, extra)) memory)
+    (positive : 0 < id.toInt) :
+    let threads := before.ths.set i (some (ret1 parent id)) ++ [some (.next child)]
+    ProcessStep M actI before [(i, cloneReq, some (id, extra))] ⟨memory, threads⟩ ∧
+      threads[before.ths.length]? = some (some (.next child)) := by
+  have nonzero : id ≠ 0 := by
+    intro equal
+    subst id
+    exact (by decide : ¬ (0 < (0 : W).toInt)) positive
+  constructor
+  · exact .clone pending rfl answer positive (by simp only [opt_some, if_neg nonzero]) rfl
+  · dsimp only
+    rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
+    rfl
 
 end Gabbro.Stage0
