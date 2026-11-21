@@ -133,6 +133,10 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_storage
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_excludes_suffix
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.AsyncSource.elaborated_refines
+#print axioms Gabbro.Stage0.Frontend.Async.sourceFunction
+#print axioms Gabbro.Stage0.Frontend.Async.resolveLayout
+#print axioms Gabbro.Stage0.Frontend.Async.LayoutResolution.frameField
 #print axioms Gabbro.Grammatik.Async.Representation.initial_inv
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
