@@ -127,7 +127,7 @@ theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
   · intro t
     have closed := OldSource.zertifizierbar_ohne_arena _ noOwnership (output.compiled.unit.tabs.get t)
       (List.get_mem _ _)
-    change _ ↔ ∃ arena ∈ ([] : List _), arena.A.tab = t
+    change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
     simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
   · rw [noAccumulators]
     exact .nil
