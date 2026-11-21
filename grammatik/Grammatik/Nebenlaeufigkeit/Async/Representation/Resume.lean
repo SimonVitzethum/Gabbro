@@ -84,4 +84,49 @@ public theorem await_resume_frame (tag : Nat) (destination : String) (future : F
     exact List.mem_map_of_mem Prod.fst declared
   · exact waiting.declared name (wasLive name needed same)
 
+/-- The actual Ready poll resumes at the next command with its typed
+    answer bound once. Both the branch and its world come from the
+    resolved child poll, including a completed join. -/
+public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (tag : Nat) (destination : String) (future : FutureExpr) (boundary : Boundary)
+    (rest : List Command) (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (world : World D) (value : Value D) :
+    let model := inducedModel elaboration calls prices normal
+    let answer := pollTask model task world
+    answer.1 = .ready value →
+    machineStep model (asyncExpand model f) (.waiting tag frame task) world =
+      (.next, .running (tag + 1) (save frame destination value), answer.2.2.1, answer.2.2.2 + 1) ∧
+    ∃ next, FrameRep D types f (.running (tag + 1)) (save frame destination value) next ∧
+      (save frame destination value).marks = frame.marks := by
+  intro model answer ready
+  have member : Command.await destination future boundary ∈ f.body :=
+    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
+  have polled : PollRep D types [tag] future answer.1 answer.2.1 :=
+    await_poll_rep elaboration calls prices normal tag destination future boundary member represented world
+  have typedResult : ∃ ordinary, valueAt D (taskResultType types [tag] future) value = some ordinary := by
+    rw [ready] at polled
+    cases polled with
+    | ready typed _ => exact ⟨_, typed⟩
+  obtain ⟨sourceType, binding, exactType⟩ := elaboration.awaited tag destination future boundary rest command
+  have resolved : ∃ ordinary, valueAt D (types.ordinary sourceType) value = some ordinary :=
+    (show taskResultType types [tag] future = types.ordinary sourceType from exactType) ▸ typedResult
+  obtain ⟨_, typed⟩ := resolved
+  refine ⟨?_, await_resume_frame tag destination future boundary rest command slots binding typed⟩
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  change (let (result, child', after, cost) := answer
+      match result with
+      | .pending => (Event.pending, State.waiting tag frame child', after, cost + 1)
+      | .ready returned => (Event.next, State.running (tag + 1) (save frame destination returned), after, cost + 1)) = _
+  generalize observed : answer = response at ready ⊢
+  obtain ⟨result, _, _, _⟩ := response
+  change result = .ready value at ready
+  rw [ready]
+
 end Gabbro.Grammatik.Async.Representation

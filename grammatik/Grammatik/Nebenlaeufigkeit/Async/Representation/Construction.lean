@@ -378,8 +378,8 @@ public theorem await_pending_preserves
   refine ⟨?_, waiting_phase_inv inventory tag command ⟨(saved, storage, ()), ?_⟩ newMarks⟩
   · simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
     change (match answer.1 with
-      | .pending => (.pending, .waiting tag frame answer.2.1, answer.2.2.1, answer.2.2.2 + 1)
-      | .ready value => (.next, .running (tag + 1) (save frame name value), answer.2.2.1, answer.2.2.2 + 1)) = _
+      | .pending => (Event.pending, State.waiting tag frame answer.2.1, answer.2.2.1, answer.2.2.2 + 1)
+      | .ready value => (Event.next, State.running (tag + 1) (save frame name value), answer.2.2.1, answer.2.2.2 + 1)) = _
     rw [pending]
   · exact .waiting tag future frame answer.2.1 saved storage slots childStored
 
