@@ -63,6 +63,46 @@ theorem MappedImage.runner_prefix [Kern] {output : Emitted src reserve options}
     ∃ ir steps, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish :=
   runner_process_prefix imageTSO_fixed cinv_L0 mapped.loader run
 
+/-- Every first continuing IR step at the mapped loader reads the exact
+    frame word and enters the emitted code. The caller's empty buffers
+    exclude a flush and the singleton thread list excludes other work. -/
+theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
+    {start : Cfg imageTSO Runner.X86.X} (mapped : MappedImage output start)
+    {after : Cfg imageTSO (Res T)} {events : List Ev}
+    (step : ProcessStep imageTSO actI ⟨start.ms, [some t4]⟩ events after) :
+    events = [] ∧ after =
+      ⟨start.ms, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ := by
+  have onlyThread {i : Nat} {r : Res T} (found : ([some t4] : List (Option (Res T)))[i]? = some (some r)) :
+      i = 0 ∧ r = t4 := by
+    cases i <;> simp_all
+  cases step with
+  | tau flush =>
+    obtain ⟨i, _, _, _, pending, _⟩ := flush
+    rw [mapped.emptyBuffers i] at pending
+    cases pending
+  | priv found executed =>
+    obtain ⟨_, rfl⟩ := onlyThread found
+    cases executed
+  | ask found asked _ answered continued =>
+    obtain ⟨rfl, rfl⟩ := onlyThread found
+    cases asked
+    have frame := output.loader_frame mapped.bytes
+    obtain ⟨same, extra, read⟩ := answered.1
+    have exactWord : _ = some (BitVec.ofNat 64 output.image.fp0, extra) := by
+      simpa only [rdN, TSt.view, mapped.emptyBuffers 0, List.foldl_nil, frame, Option.map_some] using read
+    subst_vars
+    cases continued
+    exact ⟨rfl, rfl⟩
+  | exit found asked _ =>
+    obtain ⟨_, rfl⟩ := onlyThread found
+    cases asked
+  | cloneNo found asked _ _ _ =>
+    obtain ⟨_, rfl⟩ := onlyThread found
+    cases asked
+  | clone found asked _ _ _ _ =>
+    obtain ⟨_, rfl⟩ := onlyThread found
+    cases asked
+
 def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
   (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
     match item with
