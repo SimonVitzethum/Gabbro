@@ -288,6 +288,13 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     same.trans (checked.mono (show scratch ≤ scratch + 3 from Nat.le_add_right scratch 3))
   have others : ∀ j, j ≠ i → after.1.view j = before.ms.1.view j :=
     fun j different => (otherChecked j different).trans (otherViews j different)
-  exact ⟨after, steps, appended, committed.trans beforeGuard, preserved, others⟩
+  exists after
+  constructor
+  · exact steps
+  constructor
+  · exact appended
+  constructor
+  · exact committed.trans beforeGuard
+  exact And.intro preserved others
 
 end Gabbro.Stage0.Senke

@@ -54,6 +54,30 @@ theorem Emitted.goal_axiomFree (output : Emitted src K options)
   subst Q
   exact output.axiomFreeLogic empty
 
+/-- The current unit export omits axiom source expressions for nonempty
+    families. For such a unit, the complete goal checker always refuses,
+    independently of the proposed summary. -/
+theorem Emitted.goalUnit_refuses_nonempty_axioms (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (nonempty : output.compiled.unit.axs.length ≠ 0) :
+    akzeptiertX_pruefer.akzeptiert (output.goalUnit Q) output.fsA.1 output.lsA.1 output.csA.1 = false := by
+  let E := output.goalUnit Q
+  have missing : E.axiomSources = none := by
+    change Gabbro.Grammatik.Parser.Cover.Differenz.leereAxQuellen output.compiled.unit Q = none
+    simp only [Gabbro.Grammatik.Parser.Cover.Differenz.leereAxQuellen, dite_eq_right nonempty]
+  have noLogic : nutzerPflichtGeprueftB E output.fsA.1 output.lsA.1 = false := by
+    cases verdict : nutzerPflichtGeprueftB E output.fsA.1 output.lsA.1 with
+    | false => rfl
+    | true =>
+      obtain ⟨certificate, checked⟩ := (nutzerPflichtGeprueftB_iff E output.fsA.1 output.lsA.1 {}).mp verdict
+      unfold checkUnitLogic at checked
+      cases E.pointerSignatures with
+      | none => cases checked
+      | some signature =>
+        simp only [missing] at checked
+        repeat' first | split at checked | cases checked
+  rw [akzeptiertX_pruefer_eq, show nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 =
+    false from noLogic, Bool.and_false]
+
 /-- The precise logical start associated with the image. Missing thread
     positions are filled by the model's canonical idle thread. -/
 abbrev Emitted.goalStart (output : Emitted src K options)
