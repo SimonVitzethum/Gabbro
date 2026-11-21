@@ -30,6 +30,7 @@ public import Stage0.Senke.Bild.EmittedZiel
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.ImageAddress
 public import Stage0.Senke.Bild.LoaderGoal
+public import Stage0.Senke.Bild.Mehr.BootClone
 public import Stage0.Senke.Bild.Rest
 public import Stage0.Senke.Bild.Gleich.Lesegleich
 public import Stage0.Senke.Bild.Gleich.LesegleichEig
