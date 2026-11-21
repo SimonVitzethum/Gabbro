@@ -397,8 +397,8 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
     ∃ after : (TSO L0).St,
-      ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [(0, cloneReq, some (id, extra))] 17
-        ⟨after, [some (ret1 parent id), some (.next child)]⟩ ∧ after.1.m = s.1.m ∧
+      ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [(0, cloneReq, some (id, extra))] 19
+        ⟨after, [some (.next (nxt parent)), some (.next child)]⟩ ∧ after.1.m = s.1.m ∧
       (output.bootActivation Q 1).lebt 1 = true ∧
       initRuhe (output.goalUnit Q).starts 1 = ⟨some start.1, envR start.2⟩ ∧
       ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
@@ -450,11 +450,20 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   rw [← sxIndex] at entry stack
   obtain ⟨cloned, _⟩ := bootClone_run (before := ⟨prepared, [some (.next parent)]⟩)
     (i := 0) (child := child) rfl instruction entry stack (memory := prepared) True.intro positive
+  let active : Cfg (TSO L0) (Res T) :=
+    ⟨prepared, [some (ret1 parent id), some (.next child)]⟩
+  have destWord : sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)) =
+      BitVec.ofNat 64 (startScratch output.compiled.main + 2) := sx_nat (by omega)
+  have writable : Mem.all prepared.1.m.wr
+      (slot parent.fp (sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)))) 8 = true := by
+    rw [destWord, committed, ← foldl_wr (s.1.buf 0) s.1.m]
+    exact frame.wr _ (by omega)
+  obtain ⟨finished, resume, memory, _⟩ := tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
   have childLive : (output.bootActivation Q 1).lebt 1 = true := by
     change decide (1 ≤ min 1 output.starts.length) = true
     rw [Nat.min_eq_left (Nat.succ_le_of_lt present)]
     rfl
-  exact ⟨prepared, (loadedEntry.trans preparation).trans cloned, committed, childLive, logical,
-    fun O => output.bootActivation_step Q O present⟩
+  refine ⟨finished, ?_, memory.trans committed, childLive, logical, fun O => output.bootActivation_step Q O present⟩
+  simpa only [List.append_nil] using ((loadedEntry.trans preparation).trans cloned).trans resume
 
 end Gabbro.Stage0
