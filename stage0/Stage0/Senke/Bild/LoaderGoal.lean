@@ -344,4 +344,43 @@ theorem bootClone_run {layout : Runner.Beweis.Lay}
   · simpa only [List.nil_append, List.set_set, Nat.reduceAdd] using read.trans (ProcessPrefix.ofStep created)
   · simpa only [List.length_set, List.set_set] using found
 
+/-- At the relocated clone instruction of a loaded image, once the two
+    scratch words have been prepared, a successful response appends the
+    declared child's actual entry and stack frame. The postcondition
+    identifies its logical boot position and exact start environment. -/
+theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {layout : Runner.Beweis.Lay} {before : Cfg (TSO layout) (Res T)}
+    {i j : Nat} {id extra : W} {memory : (TSO layout).St}
+    {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
+      Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+        ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
+    (declared : output.starts[j]? = some start)
+    (loaded : BytesAt (before.ms.1.view i) Runner.Prog.IMG output.bytes)
+    (position : before.ths.length = j + 1)
+    (answer : (TSO layout).ans before.ms i (.sys cloneReq) (some (id, extra)) memory)
+    (positive : 0 < id.toInt) :
+    let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j)) +
+      BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64
+      (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
+    let scratch := slot parent.fp (sx (II.f (startScratch output.compiled.main)))
+    before.ths[i]? = some (some (.next parent)) →
+    (before.ms.1.view i).rd64 scratch = some child.pc →
+    (before.ms.1.view i).rd64 (scratch + 8) = some child.fp →
+    let threads := before.ths.set i (some (ret1 parent id)) ++ [some (.next child)]
+    ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 6 ⟨memory, threads⟩ ∧
+      threads[j + 1]? = some (some (.next child)) ∧
+      (output.bootStart Q).lebt (j + 1) = true ∧
+      initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ := by
+  intro parent child scratch running entry frame
+  obtain ⟨code, live, logical⟩ := output.loaded_boot_site Q loaded declared
+  have decoded := code 2 (by rw [spawnOne_len]; decide)
+  have actual : InsAt (before.ms.1.view i) parent.pc 24
+      (II.f ((startScratch output.compiled.main + 2 : Nat) : Int))
+      (II.f (startScratch output.compiled.main)) (II.f 0) := decoded
+  obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
+  exact ⟨stepped, position ▸ found, live, logical⟩
+
 end Gabbro.Stage0

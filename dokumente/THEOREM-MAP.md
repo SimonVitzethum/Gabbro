@@ -8220,6 +8220,9 @@ places the new child at the position allocated by an answered clone,
 with the entry and frame read by that instruction.
 `bootClone_run` proves the actual TSO instruction fetch, operand reads
 and successful clone transition as one process prefix.
+`Emitted.loaded_boot_run` connects that prefix to the emitted image and
+the logical boot frame when the parent reaches the clone with its two
+prepared operands and the preceding thread positions allocated.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.

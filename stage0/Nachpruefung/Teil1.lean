@@ -48,6 +48,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.bootClone_step
 #print axioms Gabbro.Stage0.bootClone_read_prefix
 #print axioms Gabbro.Stage0.bootClone_run
+#print axioms Gabbro.Stage0.Emitted.loaded_boot_run
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read_shared
