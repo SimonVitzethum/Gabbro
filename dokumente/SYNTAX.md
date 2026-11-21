@@ -3607,6 +3607,9 @@ use exact `HeldB none`, and poll budgets use the ordinary G cost/call gates.
 nested joins to the typed waiting payload. `waiting_construction_inv`
 places that payload in the complete generated record at its declared tag,
 keeping the recorded ownership inventory of the running phase.
+`await_construction_preserves` takes a complete running record and shows
+that the semantic construction step preserves typed storage and the
+ordinary resource index when the two phase inventories agree.
 
 **Complete table-to-G reification remains open.** The builders still require
 actual expression, child-poll and destructor blocks with their ordinary

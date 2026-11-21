@@ -247,4 +247,51 @@ public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
     .later _ _ _ _ rfl (.later _ _ _ _ rfl selected)
   exact ⟨(wrapped, ()), exactRecord, inv_encoded f types inventory _ _ exactRecord⟩
 
+private theorem runningPhaseFrame {inventory : Inventory D} {cases : List Phase}
+    {source : State (Value D) (Child D types)} {sum}
+    (record : PhaseListRep D types f inventory cases source sum) :
+    ∀ tag frame, source = .running tag frame →
+      ∃ frameValue, FrameRep D types f (.running tag) frame frameValue ∧
+        MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame) := by
+  induction record with
+  | first _ _ _ _ phase marks =>
+    intro tag frame running
+    cases phase <;> cases running
+    exact ⟨_, ‹FrameRep D types f _ _ _›, marks⟩
+  | later _ _ _ _ _ _ ih => exact ih
+
+/-- The actual construction step preserves the complete encoded-state
+    invariant and leaves the ordinary resource index untouched. The input
+    record supplies its own running frame and ownership evidence. -/
+public theorem await_construction_preserves
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (inventory : Inventory D) (tag : Nat) (name : String) (future : FutureExpr)
+    (boundary : Boundary) (remaining : List Command)
+    (command : f.body.drop tag = Command.await name future boundary :: remaining)
+    (frame : Frame (Value D)) (record : Wert D (stateType types f))
+    (represented : Inv f types inventory (.running tag frame) record)
+    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag))
+    (localTypes : ∀ callee args, FutureExpr.call callee args ∈ callsIn future →
+      ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
+        ∀ localName type, (localName, type) ∈ expression.locals →
+          ∃ sourceType, (localName, sourceType) ∈ f.params ++ f.fields ∧
+            localName ∈ liveAt f (.running tag) ∧ types.ordinary sourceType = type)
+    (world : World D) :
+    let model := inducedModel elaboration calls prices normal
+    let built := makeTask model frame future world
+    let waiting := State.waiting tag frame built.1
+    machineStep model (asyncExpand model f) (.running tag frame) world =
+      (.next, waiting, built.2.1, built.2.2 + 1) ∧
+    inventory.resources (.waiting tag future) = inventory.resources (.running tag) ∧
+    ∃ next, Inv f types inventory waiting next ∧ encode D types f waiting = some next := by
+  obtain ⟨_, slots, marks⟩ := runningPhaseFrame (show PhaseListRep D types f inventory (phases f)
+    (.running tag frame) record.1 from represented) tag frame rfl
+  obtain ⟨stepped, payload⟩ :=
+    await_construction_rep elaboration calls prices normal tag name future boundary remaining command
+      frame _ slots localTypes world
+  refine ⟨stepped, ?_, waiting_construction_inv inventory tag command payload marks sameInventory⟩
+  rw [inventory.exact, inventory.exact, sameInventory]
+
 end Gabbro.Grammatik.Async.Representation
