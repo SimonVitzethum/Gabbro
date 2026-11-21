@@ -9,7 +9,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis
+open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
@@ -45,6 +45,23 @@ theorem irBild_loader_dispatch [Kern] {output : Emitted src K options} {bytes : 
   refine ⟨fun answer => opt answer fun pair => .next ⟨BitVec.ofNat 64 Runner.Prog.IMG + 16, pair.1⟩,
     rfl, ⟨rfl, 0, ?_⟩, rfl⟩
   simpa only [TSt.view, empty, List.foldl_nil, rdN, frame, Option.map_some]
+
+/-- The mapped CLI payload reaches its certified entry through an actual
+    continuing process step, with the same memory and no host event. -/
+theorem irBild_loaded_entry_prefix [Kern] {output : Emitted src K options} {bytes : List Runner.B}
+    (built : emit src K options = .ok output) (payload : irBild src K options = .ok bytes)
+    {s : (TSO L0).St} (empty : s.1.buf 0 = [])
+    (loaded : BytesAt s.1.m Runner.Prog.IMG bytes) :
+    ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1
+      ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ := by
+  obtain ⟨resume, read, answered, entered⟩ := irBild_loader_dispatch built payload empty loaded
+  have step : ProcessStep (TSO L0) actI ⟨s, [some t4]⟩
+      (lbl 0 (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG))
+        (some (BitVec.ofNat 64 output.image.fp0, 0)))
+      ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ :=
+    ProcessStep.ask (i := 0) rfl (by rw [read]; rfl) rfl answered
+      (congrArg Res.next entered)
+  exact ProcessPrefix.ofStep step
 
 /-- Every TSO answer to the loaded header read returns the same entry
     frame. The extra answer word has no effect on the loader. -/

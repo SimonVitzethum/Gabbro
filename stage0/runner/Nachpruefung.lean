@@ -8,7 +8,9 @@ public import Runner
 
 #print axioms Runner.Beweis.runner_entry_tso
 #print axioms Runner.Beweis.runner_entry_tso_prefix
+#print axioms Runner.Beweis.runner_entry_tso_stop
 #print axioms Runner.Beweis.runner_process_prefix
+#print axioms Runner.Beweis.runner_process_stop
 #print axioms Runner.Mach.Tr.lauf_iff_prefix
 #print axioms Runner.Beweis.runner_entry_sc
 #print axioms Runner.Beweis.loader_ok

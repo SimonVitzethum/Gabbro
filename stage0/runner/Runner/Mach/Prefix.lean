@@ -106,4 +106,41 @@ theorem Tr.lauf_iff_prefix {a : Cfg M θ} {events : List Ev} {n : Nat} :
   rintro ⟨b, path⟩
   simpa only [List.append_nil, Nat.zero_add] using path.prepend (.nil b)
 
+/-- A terminal trace has an actual last running configuration and one
+    terminal observation there. The prefix carries every earlier event. -/
+theorem Tr.split_stop {a : Cfg M θ} {events : List Ev} {ending : Ende} {n : Nat}
+    (run : Tr M act a events ending n) (stopped : ending ≠ .lauf) :
+    ∃ boundary earlier last steps,
+      ProcessPrefix M act a earlier steps boundary ∧ Tr M act boundary last ending 1 ∧
+      events = earlier ++ last ∧ n = steps + 1 := by
+  have addStep {before after : Cfg M θ} {labels rest : List Ev} {e : Ende} {count : Nat}
+      (step : ProcessStep M act before labels after)
+      (split : ∃ boundary earlier last steps,
+        ProcessPrefix M act after earlier steps boundary ∧ Tr M act boundary last e 1 ∧
+        rest = earlier ++ last ∧ count = steps + 1) :
+      ∃ boundary earlier last steps,
+        ProcessPrefix M act before earlier steps boundary ∧ Tr M act boundary last e 1 ∧
+        labels ++ rest = earlier ++ last ∧ count + 1 = steps + 1 := by
+    obtain ⟨boundary, earlier, last, steps, run, stop, rfl, rfl⟩ := split
+    exact ⟨boundary, labels ++ earlier, last, steps + 1, .cons step run, stop,
+      (List.append_assoc _ _ _).symm, rfl⟩
+  induction run with
+  | nil => exact (stopped rfl).elim
+  | tau moved _ ih => exact addStep (.tau moved) (ih stopped)
+  | priv found executed _ ih => exact addStep (.priv found executed) (ih stopped)
+  | ask found asked ordinary answered resumed _ ih =>
+    exact addStep (.ask found asked ordinary answered resumed) (ih stopped)
+  | exit found asked number _ ih => exact addStep (.exit found asked number) (ih stopped)
+  | cloneNo found asked answered failed resumed _ ih =>
+    exact addStep (.cloneNo found asked answered failed resumed) (ih stopped)
+  | clone found asked answered created parent child _ ih =>
+    exact addStep (.clone found asked answered created parent child) (ih stopped)
+  | stop found done => exact ⟨_, [], _, 0, .nil _, .stop found done, rfl, rfl⟩
+  | askStop found asked ordinary answered done =>
+    exact ⟨_, [], _, 0, .nil _, .askStop found asked ordinary answered done, rfl, rfl⟩
+  | cloneNoStop found asked answered failed done =>
+    exact ⟨_, [], _, 0, .nil _, .cloneNoStop found asked answered failed done, rfl, rfl⟩
+  | exitGroup found asked number =>
+    exact ⟨_, [], _, 0, .nil _, .exitGroup found asked number, rfl, rfl⟩
+
 end Runner.Mach

@@ -268,23 +268,25 @@ theorem loader_ok {x : X} (hrip : x.rip = BitVec.ofNat 64 (BASE + find tab LOADE
   simp only [Bool.and_eq_true] at hp
   exact loader_at (by rw [hrip]; exact code_of_image hp.1 hp.2)
 
+theorem loader_process_rel {M : MemSys} {s : M.St} {x : X}
+    (entry : x.rip = BitVec.ofNat 64 (BASE + find tab LOADER)) :
+    Rel L0 (M := M) ⟨s, [some (loadTree x)]⟩ ⟨s, [some x]⟩ := by
+  refine ⟨rfl, fun i => ?_⟩
+  cases i with
+  | zero => exact loader_ok entry
+  | succ _ => trivial
+
 /-- From the process's first instruction: every observation of the runner under x86-TSO, with all the threads
     it starts, is an observation of the IR process whose first thread begins with the loader's requests. -/
 theorem runner_entry_tso {s : (TSO L0).St} {x : X} (hrip : x.rip = BitVec.ofNat 64 (BASE + find tab LOADER))
     {l : List Ev} {e : Ende} {n : Nat} (h : Tr (TSO L0) (actX L0) ⟨s, [some x]⟩ l e n) :
-    e ≠ .unk ∧ ∃ m, Tr (TSO L0) actI ⟨s, [some (loadTree x)]⟩ l e m := by
-  refine runner_mt (tso_fixed L0) cinv_L0 n ⟨rfl, fun j => ?_⟩ h
-  match j with
-  | 0 => exact loader_ok hrip
-  | j + 1 => trivial
+    e ≠ .unk ∧ ∃ m, Tr (TSO L0) actI ⟨s, [some (loadTree x)]⟩ l e m :=
+  runner_mt (tso_fixed L0) cinv_L0 n (loader_process_rel hrip) h
 
 theorem runner_entry_sc {s : (SC L0).St} {x : X} (hrip : x.rip = BitVec.ofNat 64 (BASE + find tab LOADER))
     {l : List Ev} {e : Ende} {n : Nat} (h : Tr (SC L0) (actX L0) ⟨s, [some x]⟩ l e n) :
-    e ≠ .unk ∧ ∃ m, Tr (SC L0) actI ⟨s, [some (loadTree x)]⟩ l e m := by
-  refine runner_mt (sc_fixed L0) cinv_L0 n ⟨rfl, fun j => ?_⟩ h
-  match j with
-  | 0 => exact loader_ok hrip
-  | j + 1 => trivial
+    e ≠ .unk ∧ ∃ m, Tr (SC L0) actI ⟨s, [some (loadTree x)]⟩ l e m :=
+  runner_mt (sc_fixed L0) cinv_L0 n (loader_process_rel hrip) h
 
 /-- From the ELF entry, relate every concrete x86 endpoint to the same IR
     process that begins with the loader's requests. -/
@@ -293,12 +295,22 @@ theorem runner_entry_tso_prefix {s : (TSO L0).St} {x : X}
     {events : List Ev} {count : Nat} {after : Cfg (TSO L0) X}
     (run : ProcessPrefix (TSO L0) (actX L0) ⟨s, [some x]⟩ events count after) :
     ∃ final steps, ProcessPrefix (TSO L0) actI ⟨s, [some (loadTree x)]⟩ events steps final ∧
-      Rel L0 final after := by
-  apply runner_process_prefix (tso_fixed L0) cinv_L0 _ run
-  refine ⟨rfl, fun j => ?_⟩
-  cases j with
-  | zero => exact loader_ok entry
-  | succ _ => trivial
+      Rel L0 final after :=
+  runner_process_prefix (tso_fixed L0) cinv_L0 (loader_process_rel entry) run
+
+/-- Locate the actual final instruction of an x86 run begun at the ELF
+    entry in its corresponding IR execution, preserving its observation. -/
+theorem runner_entry_tso_stop {s : (TSO L0).St} {x : X}
+    (entry : x.rip = BitVec.ofNat 64 (BASE + find tab LOADER))
+    {events : List Ev} {ending : Ende} {n : Nat}
+    (run : Tr (TSO L0) (actX L0) ⟨s, [some x]⟩ events ending n) (terminal : ending ≠ .lauf) :
+    ∃ boundaryX boundaryI earlier last stepsX stepsI finish,
+      ProcessPrefix (TSO L0) (actX L0) ⟨s, [some x]⟩ earlier stepsX boundaryX ∧
+      ProcessPrefix (TSO L0) actI ⟨s, [some (loadTree x)]⟩ earlier stepsI boundaryI ∧
+      Rel L0 boundaryI boundaryX ∧ Tr (TSO L0) (actX L0) boundaryX last ending 1 ∧
+      Tr (TSO L0) actI boundaryI last ending finish ∧
+      events = earlier ++ last ∧ n = stepsX + 1 ∧ ending ≠ .unk :=
+  runner_process_stop (tso_fixed L0) cinv_L0 (loader_process_rel entry) run terminal
 
 set_option maxRecDepth 100000 in
 /-- The ELF header's entry point is the loader. -/

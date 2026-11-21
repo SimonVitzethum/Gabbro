@@ -412,4 +412,21 @@ theorem runner_mt {L : Lay} {M : MemSys} (hF : Fixed M L) (hI : CInv L) :
           (vI := some (kI (some (0, w)))) (vX := some xc) hMc⟩ hT'
       exact ⟨he, lift _ _ _ (.clone hr rfl (hR'.ms ▸ hans) hpos rfl rfl hm)⟩
 
+/-- Locate a terminal observation at the corresponding reachable IR
+    configuration. In particular the matched process and its threads
+    are the ones present just before the terminal runner instruction. -/
+theorem runner_process_stop {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : CInv L)
+    {cI : Cfg M (Res IR.T)} {cX : Cfg M X} {events : List Ev} {ending : Ende} {n : Nat}
+    (related : Rel L cI cX) (run : Tr M (actX L) cX events ending n) (terminal : ending ≠ .lauf) :
+    ∃ boundaryX boundaryI earlier last stepsX stepsI finish,
+      ProcessPrefix M (actX L) cX earlier stepsX boundaryX ∧
+      ProcessPrefix M actI cI earlier stepsI boundaryI ∧ Rel L boundaryI boundaryX ∧
+      Tr M (actX L) boundaryX last ending 1 ∧ Tr M actI boundaryI last ending finish ∧
+      events = earlier ++ last ∧ n = stepsX + 1 ∧ ending ≠ .unk := by
+  obtain ⟨boundaryX, earlier, last, stepsX, path, stop, eventsEq, stepsEq⟩ := run.split_stop terminal
+  obtain ⟨boundaryI, stepsI, acts, same⟩ := runner_process_prefix fixed code related path
+  obtain ⟨known, finish, stopped⟩ := runner_mt fixed code 1 same stop
+  exact ⟨boundaryX, boundaryI, earlier, last, stepsX, stepsI, finish,
+    path, acts, same, stop, stopped, eventsEq, stepsEq, known⟩
+
 end Runner.Beweis
