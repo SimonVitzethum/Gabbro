@@ -12,6 +12,16 @@ public import Grammatik.Parser.Expr.Ausdruck.Teil1
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- The slice suffix retains both endpoint expressions and continues the
+    same suffix chain after the closing bracket. -/
+theorem parseSuffixe_slice (fuel : Nat) (base first last : SExpr)
+    (tokens tail rest : List Token)
+    (lower : parseOr fuel tokens = .ok (first, .zeichen ".." :: tail))
+    (upper : parseOr fuel tail = .ok (last, .zeichen "]" :: rest)) :
+    parseSuffixe (fuel + 1) base (.zeichen "[" :: tokens) =
+      parseSuffixe fuel (.built "#slice" [base, first, last]) rest := by
+  simp only [parseSuffixe, lower, upper]
+
 /-- Trees that print bare under a prefix operator. `fnref` is not
     among them: `!&f` is refused on both sides, so it prints
     parenthesised and stays stable. -/

@@ -11,15 +11,13 @@ namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
 mutual
-def parseOr (f : Nat) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseOr (f : Nat) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseAnd f toks with
     | .ok (l, rest) => parseOrL f l rest
     | .error e => .error e
-def parseOrL (f : Nat) (l : SExpr) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseOrL (f : Nat) (l : SExpr) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match opOder toks with
@@ -27,15 +25,13 @@ def parseOrL (f : Nat) (l : SExpr) (toks : List Token) :
       | .ok (r, rest') => parseOrL f (.bin "||" l r) rest'
       | .error e => .error e
     | none => .ok (l, toks)
-def parseAnd (f : Nat) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseAnd (f : Nat) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseCmp f toks with
     | .ok (l, rest) => parseAndL f l rest
     | .error e => .error e
-def parseAndL (f : Nat) (l : SExpr) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseAndL (f : Nat) (l : SExpr) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match opUnd toks with
@@ -43,8 +39,7 @@ def parseAndL (f : Nat) (l : SExpr) (toks : List Token) :
       | .ok (r, rest') => parseAndL f (.bin "&&" l r) rest'
       | .error e => .error e
     | none => .ok (l, toks)
-def parseCmp (f : Nat) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseCmp (f : Nat) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseBit f toks with
@@ -54,15 +49,13 @@ def parseCmp (f : Nat) (toks : List Token) :
         | .error e => .error e
       | none => .ok (l, rest)
     | .error e => .error e
-def parseBit (f : Nat) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseBit (f : Nat) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseAdd f toks with
     | .ok (l, rest) => parseBitL f l rest
     | .error e => .error e
-def parseBitL (f : Nat) (l : SExpr) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseBitL (f : Nat) (l : SExpr) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match opBit toks with
@@ -70,8 +63,7 @@ def parseBitL (f : Nat) (l : SExpr) (toks : List Token) :
       | .ok (r, rest') => parseBitL f (.bin op l r) rest'
       | .error e => .error e
     | none => .ok (l, toks)
-def parseAdd (f : Nat) (toks : List Token) :
-    Except String (SExpr × List Token) :=
+def parseAdd (f : Nat) (toks : List Token) : Except String (SExpr × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseMul f toks with
@@ -502,15 +494,5 @@ def parsePredAtom (f : Nat) (toks : List Token) :
           | .error e2 => .error e2
         | _ => .error er
 end
-
-/-- The slice suffix retains both endpoint expressions and continues the
-    same suffix chain after the closing bracket. -/
-theorem parseSuffixe_slice (fuel : Nat) (base first last : SExpr)
-    (tokens tail rest : List Token)
-    (lower : parseOr fuel tokens = .ok (first, .zeichen ".." :: tail))
-    (upper : parseOr fuel tail = .ok (last, .zeichen "]" :: rest)) :
-    parseSuffixe (fuel + 1) base (.zeichen "[" :: tokens) =
-      parseSuffixe fuel (.built "#slice" [base, first, last]) rest := by
-  simp only [parseSuffixe, lower, upper]
 
 end Gabbro.Grammatik.Parser
