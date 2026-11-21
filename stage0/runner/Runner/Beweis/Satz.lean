@@ -52,6 +52,8 @@ theorem runner_start_erfuellbar {m : Mem} (loaded : FileInv m) (t : IR.T) :
   have table : TInv L0 ⟨m, fun _ => []⟩ :=
     ⟨tab_of_file loaded, fun _ _ inEmpty => nomatch inEmpty⟩
   have code := Bool.and_eq_true_iff.mp dsite_ok
-  exact ⟨dispatchState t, ⟨_, table⟩, rfl, code_of_image code.1 code.2, rfl, rfl, rfl, by decide⟩
+  refine ⟨dispatchState t, ⟨_, table⟩, rfl, code_of_image code.1 code.2, rfl, rfl, rfl, ?_⟩
+  change (((0x1F80 : BitVec 32) &&& 0xFFC0) == 0x1F80) = true
+  decide
 
 end Runner.Beweis

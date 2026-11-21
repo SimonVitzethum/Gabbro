@@ -275,10 +275,10 @@ def block {context : Context A next} (policy : CallPolicy program context)
               exact (goals.holds_shrink _ item runtime allowed _).mp
                 (positive (.cons value actual) ⟨trivial, locals⟩ allowed safe)
             | none =>
-              have fails := negative actual locals allowed safe
-              unfold Runtime.wpE at fails
-              cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure read actual <;>
-                simpa only [outcome, Symbolic.Goals.holds, Symbolic.Goals.endHolds, EndAusgang.zuAusgang] using fails }
+              have convert (result : EndAusgang V l Γ) :
+                  goals.endHolds item runtime allowed result → goals.holds item runtime allowed result.zuAusgang := by
+                cases result <;> exact id
+              exact convert _ (negative actual locals allowed safe) }
     | .float .. | .floatLit .. | .floatOf .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
 termination_by structural fuel
 def ending {context : Context A next} (policy : CallPolicy program context)
