@@ -8314,3 +8314,8 @@ array element to the ordinary aggregate local assignment.
 `localIndexedFieldDispatch_erfuellbar` derives the dispatch premise
 from a mutable array binding. Local and slot paths share the same
 replacement elaboration.
+
+`uGlobSchreib_indexedField` reuses the same replacement elaboration for a
+static aggregate. `staticIndexedField_erfuellbar` establishes the source
+path for a mutable static array of records. The ordinary global store
+checks the write authority and uses the same typed replacement proofs.

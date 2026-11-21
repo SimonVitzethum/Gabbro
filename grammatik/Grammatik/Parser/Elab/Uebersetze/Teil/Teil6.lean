@@ -338,58 +338,6 @@ def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
       | .ok xs => .ok (x :: xs)
   | _, _ => .error "argument count without G form"
 
-/-- `a[i] = v` on an aggregate held by the static at the root of `a`: the static and its new value, the element at
-    `i` replaced (`USide.upd`) at every level (`M[i][j] = v` replaces row `i` of `M` by the row with element `j`
-    replaced). -/
-def uElemSchreib (ctx : UCtx) : SExpr → SExpr → USide → Except String (String × USide)
-  | .variable g, i, v =>
-    match uWertBody ctx i with
-    | .error x => .error x
-    | .ok y => .ok (g, .upd (.glob g) y v)
-  | .index a j, i, v =>
-    match uWertBody ctx (.index a j), uWertBody ctx i with
-    | .ok cur, .ok y => uElemSchreib ctx a j (.upd cur y v)
-    | .error x, _ | _, .error x => .error x
-  | _, _, _ => .error "element write without G form"
-
-/-- `X = v;` where `X` is a static (the place reader found no slot): only a `mut` static is written. -/
-def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String UStmt :=
-  match ziel with
-  | .variable g =>
-    match ctx.globs.find? (fun x => strEq x.name g) with
-    | .none => .error e
-    | .some gl =>
-      if !gl.var then .error "write to an immutable static"
-      else if gl.atomic then .error "plain write to an atomic: every store is a publish"
-      else
-        match gl.ty, gl.optNum with
-        | _, .some num =>
-          match uOpt ctx num wert with
-          | .error x => .error x
-          | .ok o => .ok (.assignGlobO g o)
-        | .bool, _ =>
-          match uBool ctx wert with
-          | .error x => .error x
-          | .ok v => .ok (.assignGlobB g v)
-        | _, _ =>
-          match uWertBody ctx wert with
-          | .error x => .error x
-          | .ok v => .ok (.assignGlob g v)
-  | .index a i =>
-    match uWertBody ctx wert with
-    | .error x => .error x
-    | .ok v =>
-      match uElemSchreib ctx a i v with
-      | .error x => .error x
-      | .ok (g, w) =>
-        match ctx.globs.find? (fun x => strEq x.name g) with
-        | .some gl =>
-          if !gl.var then .error "write to an immutable static"
-          else if gl.atomic then .error "plain write to an atomic: every store is a publish"
-          else .ok (.assignGlob g w)
-        | .none => .error e
-  | _ => .error e
-
 /-- The words of a raw payload, as character lists (split at blanks and commas). -/
 def uWoerter : List Char → List Char → List (List Char)
   | [], acc => if acc.isEmpty then [] else [acc.reverse]

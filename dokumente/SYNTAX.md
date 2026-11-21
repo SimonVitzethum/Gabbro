@@ -1392,8 +1392,10 @@ assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
    fixed-array subscripts, as in `T.slots[i].node.children[j] = child;`.
    The checker requires in-range indices, read access to the aggregate and
    write access to the slot field. The assignment stores the rebuilt field
-   value with only the selected component replaced. Mutable local aggregates
-   support the same mixed projections, as in `nodes[i].child = child;`. *)
+   value with only the selected component replaced. Mutable local and static
+   aggregates support the same mixed projections, as in
+   `nodes[i].child = child;`. Static updates require the declared write
+   authority and cannot update an atomic static by plain assignment. *)
 stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)
 (* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
    declared transition -- the SAME construct and the same word as a device `transition`
