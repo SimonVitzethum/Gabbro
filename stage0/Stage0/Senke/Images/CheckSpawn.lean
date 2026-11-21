@@ -12,7 +12,7 @@ open Runner Runner.IR Runner.Beweis Runner.Mach Gabbro.Stage0.Senke.BildMehr
 /-- A true guard in the actual TSO runner follows its two branch
     instructions and skips the emitted stop code. No operand store or
     system call is made by either branch. -/
-theorem tso_guard_pass {layout : Runner.Beweis.Lay}
+theorem tso_guard_pass [Kern] {layout : Runner.Beweis.Lay}
     {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {a c scratch : Nat} {flag : W}
     (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
     (guard : CodeAt (before.ms.1.view i) pc (guardC a c scratch))
@@ -36,11 +36,13 @@ theorem tso_guard_pass {layout : Runner.Beweis.Lay}
   have fetch (o : Nat) (t : T) (byte : (before.ms.1.view i).rd8 t.pc = some (BitVec.ofNat 8 o))
       (range : o < 256) : ProcessStep (TSO layout) actI (onThread (IR.step t)) [] (onThread (op o t)) := by
     have decoded : ((BitVec.ofNat 8 o).setWidth 64 |>.setWidth 8 |>.setWidth 64).toNat = o := by
-      simp [BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.mod_eq_of_lt range, show o < 2 ^ 64 from
-        Nat.lt_trans range (by decide)]
+      have large : o < 18446744073709551616 := Nat.lt_trans range (by decide)
+      simp only [BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.reducePow, Nat.mod_eq_of_lt range,
+        Nat.mod_eq_of_lt large]
     have loaded : rdN (before.ms.1.view i) 1 t.pc = some ((BitVec.ofNat 8 o).setWidth 64) := by
       simp only [rdN, byte, Option.map_some]
-    simpa only [decoded] using tso_read_step before inside (fun answer => opt answer fun pair =>
+    simpa only [decoded, opt_some, onThread, IR.step, rd8] using
+      tso_read_step before inside (fun answer => opt answer fun pair =>
       op (pair.1.setWidth 8 |>.setWidth 64).toNat t) loaded
   let branch (index : BitVec 32) : Res T :=
     ld start (sx index) fun result =>
@@ -54,8 +56,8 @@ theorem tso_guard_pass {layout : Runner.Beweis.Lay}
       tso_read_step before inside (fun answer => opt answer fun pair => branch (pair.1.setWidth 32)) loaded
   have passed : ProcessStep (TSO layout) actI (onThread (branch (II.f a))) []
       (onThread (.next jump)) := by
-    simpa only [opt_some, ite_eq_right nonzero] using
-      tso_read_step before inside (fun answer => opt answer fun pair =>
+    simpa only [branch, ld, rd64, onThread, opt_some, ite_eq_right nonzero] using
+      tso_read_step before inside (width := 8) (address := slot fp (sx (II.f a))) (fun answer => opt answer fun pair =>
         if pair.1 = 0 then f2 start fun offset => .next { start with pc := start.pc + offset }
         else .next jump) word
   have jumped : ProcessStep (TSO layout) actI (onThread (.next jump)) [] (onThread (IR.step jump)) := by
@@ -66,10 +68,9 @@ theorem tso_guard_pass {layout : Runner.Beweis.Lay}
       (onThread (.next ⟨pc + BitVec.ofNat 64 (16 * 5), fp⟩)) := by
     have loaded : rdN (before.ms.1.view i) 4 (jump.pc + 4) = some ((II.f 64).setWidth 64) := by
       simp only [rdN, atJump.f1, Option.map_some]
-    have offset : sx (II.f 64) = BitVec.ofNat 64 (16 * 4) := rfl
-    have advance : jump.pc + BitVec.ofNat 64 (16 * 4) = pc + BitVec.ofNat 64 (16 * 5) :=
+    have advance : jump.pc + Runner.X86.sx32 (II.f 64) = pc + BitVec.ofNat 64 (16 * 5) :=
       pcN pc 1 4 5 rfl
-    simpa [op, f1, rd32, offset, advance] using
+    simpa [onThread, op, f1, rd32, advance] using
       tso_read_step before inside (fun answer => opt answer fun pair =>
         .next { jump with pc := jump.pc + sx (pair.1.setWidth 32) }) loaded
   exact .cons started (.cons (fetch 19 start atBranch.op (by decide)) (.cons indexed

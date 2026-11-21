@@ -341,7 +341,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
     apply codeFar_nat _ (Nat.lt_trans frameBound (by decide))
     simp only [headLen, startLen] at frameAddress
     omega
-  obtain ⟨after, prefix, appended, same, own, response, others⟩ :=
+  obtain ⟨after, run, appended, same, own, response, others⟩ :=
     bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
       (by omega) childCode childFrame positive
   have codeEnd : codeBase + (output.image.code.flatMap encII).length = output.image.fp0 := by
@@ -361,7 +361,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
       omega
     rw [own.rd, own.wr, own.b _ separate]
     exact loaded byte bound
-  exact ⟨after, prefix, position ▸ appended, same, own, response, others, codeKept, frame.agree own, logical,
+  exact ⟨after, run, position ▸ appended, same, own, response, others, codeKept, frame.agree own, logical,
     fun O => output.bootActivation_step Q O inside⟩
 
 /-- From the actual mapped payload the loader and the first clone site
