@@ -145,6 +145,7 @@ public import Stage0.Senke.Bild.Mehr.Blind
 public import Stage0.Senke.Bild.Mehr.BlindOp
 public import Stage0.Senke.Bild.Mehr.Faden
 public import Stage0.Senke.Bild.Mehr.Fuss
+public import Stage0.Senke.Bild.Mehr.Goal
 public import Stage0.Senke.Bild.Mehr.Lage
 public import Stage0.Senke.Bild.Mehr.Lokal
 public import Stage0.Senke.Bild.Mehr.Ort.Blatt

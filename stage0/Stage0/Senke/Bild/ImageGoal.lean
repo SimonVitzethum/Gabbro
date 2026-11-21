@@ -46,9 +46,11 @@ theorem Emitted.zielsatz (output : Emitted src K options)
     (hardware : HardwareAnnahmenHw O Q)
     {live : Faden → Bool} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (reached : FadenErreichbarX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
-      (GeteiltV (output.goalUnit Q).P (output.goalUnit Q).ws) (output.goalStart Q live) state) :
+      (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+      (output.goalStart Q live) state) :
     let E := output.goalUnit Q
-    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes (GeteiltV E.P E.ws)
+    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
   have verdict := output.goal_checker_concurrent Q certifiable dispatch runtime checked
   have duties : NutzerPflichtA (output.goalUnit Q) :=
@@ -64,5 +66,15 @@ theorem irBild_eq_output {output : Emitted src K options} {bytes : List Runner.B
     output.bytes = bytes := by
   rw [irBild, built] at payload
   exact Except.ok.inj payload
+
+/-- The image's entry and every serialized root occupy the same ordered
+    positions in the canonical logical start, even for duplicate functions. -/
+theorem Emitted.goalStart_argument (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (i : Faden)
+    (start : Σ f : (declOf output.compiled.unit).Fn,
+      Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f))
+    (atPosition : (⟨output.compiled.main, output.args⟩ :: output.starts)[i]? = some start) :
+    initRuhe (output.goalUnit Q).starts i = ⟨some start.1, envR start.2⟩ := by
+  simp only [initRuhe, output.goalUnit_starts, atPosition]
 
 end Gabbro.Stage0
