@@ -68,6 +68,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.MappedImage.loader_prefix_goal
 #print axioms Gabbro.Stage0.irBild_checked_loader_prefix
 #print axioms Gabbro.Stage0.Emitted.checked_image_model_empty
+#print axioms Gabbro.Stage0.Emitted.foreign_goal_checker
+#print axioms Gabbro.Stage0.Emitted.checked_image_model_foreign
+#print axioms Gabbro.Stage0.irBild_checked_foreign_unit
 #print axioms Gabbro.Stage0.Emitted.goalUnit_refuses_nonempty_axioms
 #print axioms Gabbro.Stage0.MappedImage.source_start
 #print axioms Gabbro.Stage0.MappedImage.runner_prefix
@@ -78,6 +81,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageSimulation.goal
 #print axioms Gabbro.Stage0.ImageSimulation.terminal
 #print axioms Gabbro.Stage0.ImageSimulation.no_machine_error
+#print axioms Gabbro.Stage0.ImageSlotsMatch.retire_never
+#print axioms Gabbro.Stage0.image_memory_prefix_projects
 #print axioms Gabbro.Stage0.stage0_correct_of_export_simulation
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout

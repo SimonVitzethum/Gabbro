@@ -8273,11 +8273,20 @@ verdict on the axiom-free domain with no arena or accumulator declarations.
 `irBild_checked_loader_prefix` connects this checked unit and the actual
 CLI bytes to the goal through loader dispatch on the same domain.
 `Emitted.goalUnit_refuses_nonempty_axioms` proves where the existing unit
-export falls short for declared foreign contracts.
+export without foreign source expressions falls short. The actual emitter
+also retains the result of checking the unit with reified foreign
+postconditions. `irBild_checked_foreign_unit` proves the full unit verdict
+when that check succeeds, with the exact declared post projection and
+without ownership declarations. Reification currently covers parameterless
+current-world postconditions and true postconditions with a constructible
+argument environment.
 
 The remaining compiler obligation constructs the simulation and the
 complete unit export from an arbitrary successful emission. In particular,
 shared-memory transitions, the final cause of each hardware stop and the
 loader's external mapping contract still need their concrete bridges.
-The continuing trace also needs a bridge for a non-returning gate that
-retires only its own Linux thread.
+`ImageSlotsMatch.retire_never` relates a declared non-returning Linux thread
+exit to its source head and preserves the other slots. Silent runner
+prefixes transfer in both directions between the host-restricted memory
+model and TSO. `image_memory_prefix_projects` now needs classification
+only at states reachable in the actual image model.

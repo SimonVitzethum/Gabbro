@@ -121,4 +121,22 @@ theorem Emitted.checked_image_model_foreign (output : Emitted src reserve option
   ⟨output.image_model_without_ownership _ _ checked.summary.exactPost noOwnership noAccumulators,
     output.foreign_goal_checker produced⟩
 
+/-- The actual returned payload determines the canonical program once.
+    Its retained foreign check certifies the same unit for the full
+    checker, with the source's foreign post and declared starts. -/
+theorem irBild_checked_foreign_unit {bytes : List Runner.B}
+    (wrote : irBild src reserve options = .ok bytes) :
+    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
+      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
+      ∀ {checked : output.CheckedForeign}, output.foreignLogic = .ok checked →
+        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output = [] →
+        let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
+        ImageModelUnit output E ∧
+          akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧ PostDeckt E := by
+  obtain ⟨output, emitted, payload⟩ := irBild_emitted src reserve bytes wrote
+  refine ⟨output, emitted, payload, compile_source_program src output.compiled, ?_⟩
+  intro checked produced noOwnership noAccumulators
+  obtain ⟨unit, accepted⟩ := output.checked_image_model_foreign produced noOwnership noAccumulators
+  exact ⟨unit, accepted, unit.postDeckt⟩
+
 end Gabbro.Stage0
