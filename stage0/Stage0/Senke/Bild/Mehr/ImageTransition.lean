@@ -259,14 +259,15 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
       simp
     · rw [ite_eq_right equal, slots.1]
       change j < i ↔ j < i + 1
-      omega
+      exact ⟨fun lt => lt.trans (Nat.lt_succ_self i),
+        fun lt => Nat.lt_of_le_of_ne (Nat.le_of_lt_succ lt) equal⟩
   · intro j retired
     change threads[j]? = some none at retired
     have newBound := (List.getElem?_eq_some_iff.mp retired).1
     rw [size] at newBound
     have oldBound : j < i := by
       by_contra outside
-      have equal : j = i := by omega
+      have equal : j = i := Nat.le_antisymm (Nat.le_of_lt_succ newBound) (Nat.le_of_not_gt outside)
       subst j
       rw [childSlot] at retired
       cases retired
