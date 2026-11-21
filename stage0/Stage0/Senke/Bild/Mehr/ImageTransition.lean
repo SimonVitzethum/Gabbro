@@ -88,7 +88,7 @@ theorem ImageStopMatches.no_depth_guard {src : String} {reserve : Nat} {options 
     exact Nat.not_lt_zero routine.val (noForeign ▸ routine.isLt)
   · obtain ⟨_, cause, _, code⟩ := hardware
     have impossible := status.trans code
-    cases cause <;> exact (by decide) impossible
+    cases cause <;> revert impossible <;> decide
   · exact (by decide : BitVec.ofNat 64 105 ≠ BitVec.ofNat 64 cloneCode) (status.trans refused.2.1)
 
 /-- A byte of an actual startup stack belongs to exactly one reservation. -/
