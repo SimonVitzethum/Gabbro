@@ -150,6 +150,13 @@ theorem Goals.endHolds_shrink {context : Context A next} {l : Bool}
       goals.endHolds item runtime allowed outcome.schrumpf := by
   cases outcome <;> rfl
 
+theorem Goals.endHolds_to_holds {context : Context A next} {l : Bool}
+    (goals : Goals (program := program) (S := S) context V Γ) (item : A)
+    (runtime : VC.Runtime program (fun _ => []) S) (allowed : Logik D → Prop)
+    (outcome : EndAusgang V l Γ) :
+    goals.endHolds item runtime allowed outcome → goals.holds item runtime allowed outcome.zuAusgang := by
+  cases outcome <;> exact id
+
 abbrev StatementCondition (policy : A → CallObligation program) {context : Context A next}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (code : Stmt D V l Γ Λ Λ')
     (symbols : SymEnv D Nat Γ) (goals : Goals (S := S) context V Γ) :=

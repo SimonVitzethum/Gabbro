@@ -53,9 +53,10 @@ def statement {context : Context A next} (policy : CallPolicy program context)
           ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
             allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual)))
     | .onTag expression arms => do
-        let pre ← tagCases policy facts budget hint fuel arms symbols bounded goals
-        return ((pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe =>
-          ready actual ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
+        let pre ← tagCases policy facts budget hint fuel arms symbols bounded (goals.joinIf budget.join)
+        return ((pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
+          simpa only [Goals.joinIf_holds] using ready actual
+            ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
             allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual)))
     | .retry count test body overflow =>
         if count ≤ budget.expansion then
@@ -201,9 +202,7 @@ def block {context : Context A next} (policy : CallPolicy program context)
           · simp only [dif_pos fits] at ready
             exact (goals.holds_shrink _ item runtime allowed _).mp (ready allowed safe)
           · simp only [dif_neg fits] at ready
-            have failed := ready allowed safe
-            cases outcome : execEndH S runtime.oracle runtime.environment runtime.passes runtime.calls failure (world.lese Λ expression.orte) actual <;>
-              simpa only [Runtime.wpE, outcome, Symbolic.Goals.holds, Symbolic.Goals.endHolds, EndAusgang.zuAusgang] using failed)
+            exact goals.endHolds_to_holds item runtime allowed _ (ready allowed safe))
     | .narrowRequired expression low high rest => do
         let failed : Certificate context (fun _ _ (_ : Runtime program (fun _ => []) S) (_ : World D) =>
             ∀ _ : Env D Γ, False) := { formula := .fls, sound := fun _ _ _ _ _ impossible => False.elim impossible }
@@ -274,11 +273,7 @@ def block {context : Context A next} (policy : CallPolicy program context)
             | some value =>
               exact (goals.holds_shrink _ item runtime allowed _).mp
                 (positive (.cons value actual) ⟨trivial, locals⟩ allowed safe)
-            | none =>
-              have convert (result : EndAusgang V l Γ) :
-                  goals.endHolds item runtime allowed result → goals.holds item runtime allowed result.zuAusgang := by
-                cases result <;> exact id
-              exact convert _ (negative actual locals allowed safe) }
+            | none => exact goals.endHolds_to_holds item runtime allowed _ (negative actual locals allowed safe) }
     | .float .. | .floatLit .. | .floatOf .. => .error (.unsupported "contract floating binding needs an exact typed range-check certificate")
 termination_by structural fuel
 def ending {context : Context A next} (policy : CallPolicy program context)

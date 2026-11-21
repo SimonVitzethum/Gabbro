@@ -87,7 +87,10 @@ def statementSpecializations (program : Programm D) (uniformReturn : Bool) (join
   | .onOption _ present absent => min (limit + 1)
       (blockSpecializations program uniformReturn join expansion limit continuation present +
         blockSpecializations program uniformReturn join expansion limit continuation absent)
-  | .onTag _ arms => tagSpecializations program uniformReturn join expansion limit continuation arms
+  | .onTag _ arms =>
+      if join then min (limit + 1)
+        (tagSpecializations program uniformReturn join expansion limit 1 arms + continuation)
+      else tagSpecializations program uniformReturn join expansion limit continuation arms
   | .retry 0 _ _ overflow => min (limit + 1)
       (continuation + blockSpecializations program uniformReturn join expansion limit continuation overflow)
   | .retry count _ body overflow => min (limit + 1)
