@@ -71,6 +71,11 @@ private theorem depthLookup_ofFn {functions : Nat} (f : Fin functions → Bool) 
     (Array.ofFn f)[fn.val]?.getD false = f fn := by
   simp [fn.isLt]
 
+private theorem depthSites_ofFn {α : Type} {functions : Nat} (f : Fin functions → α)
+    (fn : Fin functions) (inside : fn.val < (Array.ofFn f).size) :
+    (Array.ofFn f)[fn.val]'inside = f fn :=
+  (Array.getElem_ofFn inside).trans (congrArg f (Fin.ext rfl))
+
 def imageDepthRounds {D : Deklaration} {functions : Nat} (index : Fin functions ≃ D.Fn)
     (sites : Fin functions → List (Stelle D)) : Nat → Array Bool
   | 0 => Array.ofFn fun _ : Fin functions => false
@@ -99,7 +104,7 @@ theorem imageDepthTable_exact {D : Deklaration} {functions : Nat} (index : Fin f
     exact depthLookup_ofFn _ _
   | succ depth ih =>
     change (Array.ofFn fun f : Fin functions => _)[(index.symm fn).val]?.getD false = _
-    simp only [depthLookup_ofFn, Array.getElem_ofFn]
+    rw [depthLookup_ofFn, depthSites_ofFn]
     change (stellenE (P.rumpf (index (index.symm fn)))).all
       (Merkmal.an ⟨fun g => (imageDepthTable index P depth)[(index.symm g).val]?.getD false,
         fun _ => false, fun _ => true⟩) = rufTief P (depth + 1) fn
