@@ -8331,3 +8331,23 @@ the executable `gabbrov` (`programmlogik/bruecke/lakefile.toml`). No change of `
 | `nutzer_aus_stage0` | `Kette/Stufe0.lean` | For `c : Stage0.Compiled text` with `c.unit = u`: the duties of `u` give `NutzerPflicht` of `einheitAllg u P` for the program `P` that the generic lowering builds from the unit Stage 0 compiles (`Compiled.lowered`). The bridge package now requires `stage0`. |
 | `stimmigB_of`, `ohneTransitionB_of`, `rangB_of` | `Kette/Einheit.lean` | The unit checks of `PflichtenAlle` follow from a unit part and a part per function (no quantifier over positions). |
 | `fnPflicht_append`, `fnPflicht_cons`, `fnPflicht_nil` | `Kette/Einheit.lean` | Assembly of the per-function duties over appended chunks (logarithmic depth in the generated files). |
+
+## 211. Stage 0 loader and exit refinement
+
+`MappedImage.runner_loader_step` bounds the IR prefix corresponding to
+the first continuing x86 step by one dispatch step. Using the checked
+unit, `MappedImage.first_step_goal` proves the full goal at the declared
+source start for this actual step.
+
+`image_exit_group_boundary` identifies the exact issuing thread and IR
+request of an observed x86 process exit, at the same memory after silent
+normalization. `image_clone_refusal_stop` explains a boot-thread exit with
+the clone guard's status when the last event of that thread is a negative
+clone reply.
+
+`MappedImage.runnerFileStable` establishes the file and pending-store
+invariant at mapping. `ImageFileStable.silent_prefix` preserves it through
+reads, stores, atomic updates and buffer flushes. `ImageFileStable.sys`
+transfers preservation of the file from the issuing thread's view to
+global memory. The futex and plain gate cases use their actual host
+contracts and the emitted layout to preserve the invariant.
