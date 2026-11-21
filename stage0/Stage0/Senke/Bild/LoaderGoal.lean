@@ -461,8 +461,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   obtain ⟨finished, resume, memory, _⟩ := tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
   have childLive : (output.bootActivation Q 1).lebt 1 = true := by
     change decide (1 ≤ min 1 output.starts.length) = true
-    rw [Nat.min_eq_left (Nat.succ_le_of_lt present)]
-    rfl
+    simpa only [Nat.min_eq_left (Nat.succ_le_of_lt present)] using decide_eq_true (Nat.le_refl 1)
   refine ⟨finished, ?_, memory.trans committed, childLive, logical, fun O => output.bootActivation_step Q O present⟩
   simpa only [List.append_nil] using ((loadedEntry.trans preparation).trans cloned).trans resume
 
