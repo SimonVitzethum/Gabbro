@@ -200,8 +200,9 @@ theorem MappedImage.loader_step_no_terminal [Kern] {output : Emitted src reserve
       have word := output.loader_frame mapped.bytes
       have valueExact : value = some (BitVec.ofNat 64 output.image.fp0, extra) := by
         simpa only [rdN, TSt.view, mapped.emptyBuffers 0, List.foldl_nil, word, Option.map_some] using read
-      subst value
-      cases (invK_ende (resumed _) stopped).1
+      have failed := (invK_ende (resumed value) stopped).1
+      rw [valueExact] at failed
+      simp only [opt_some, reduceCtorEq] at failed
 
 private theorem MappedImage.source_start_goal [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
