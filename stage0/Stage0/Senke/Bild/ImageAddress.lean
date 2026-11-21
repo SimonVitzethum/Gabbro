@@ -9,7 +9,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
-  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
+  Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
