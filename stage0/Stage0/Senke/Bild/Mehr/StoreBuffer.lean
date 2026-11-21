@@ -170,11 +170,14 @@ theorem mergedView_table {layout : Lay} (state : (TSO layout).St)
     (footprint : Nat → W → Prop) : TabInv layout (mergedView state.1 footprint) := by
   intro row rowBound offset offsetBound
   let address := taddr layout (BitVec.ofNat 64 row) + BitVec.ofNat 64 offset
+  change (viewAt state.1 footprint address).b address = _ ∧
+    (viewAt state.1 footprint address).rd address = true ∧
+    (viewAt state.1 footprint address).wr address = false
   by_cases visible : ∃ i, footprint i address
-  · simpa only [mergedView, viewAt, ← show address = _ from rfl, dif_pos visible] using
-      view_table state.2 (Classical.choose visible) rowBound offset offsetBound
-  · simpa only [mergedView, viewAt, ← show address = _ from rfl, dif_neg visible] using
-      state.2.1 row rowBound offset offsetBound
+  · rw [show viewAt state.1 footprint address = state.1.view (Classical.choose visible) from dif_pos visible]
+    exact view_table state.2 (Classical.choose visible) rowBound offset offsetBound
+  · rw [show viewAt state.1 footprint address = state.1.m from dif_neg visible]
+    exact state.2.1 row rowBound offset offsetBound
 
 private theorem mem_eq_of_agreement {before after : Mem}
     (same : ∀ address, GleichAt before after address) : before = after := by
@@ -303,7 +306,7 @@ theorem projectSCState_store {layout : Lay} {before after : (TSO layout).St}
   · rcases views with ⟨refused, _⟩ | ⟨_, issued, others⟩
     · rw [accepted] at refused
       cases refused
-    · have committed : after.1.m = before.1.m := congrArg TSt.m enqueued
+    · have committed : after.1.m = before.1.m := by rw [enqueued] <;> rfl
       have written := merging_a_store footprint i address value owns
         (fun y _ => by rw [committed]; exact GleichAt.refl _ y) issued
         (fun j different y _ => by rw [others j different]; exact GleichAt.refl _ y)
@@ -347,9 +350,10 @@ theorem projectSCState_cas {layout : Lay} {before after : (TSO layout).St}
       cases refused
     · rw [projected, if_neg allowed]
   · have allowed : permitted = true := by
-      by_contra denied
-      rw [source, if_neg denied] at accepted
-      cases accepted
+      by_cases decided : permitted = true
+      · exact decided
+      · rw [source, if_neg decided] at accepted
+        cases accepted
     rw [source, if_pos allowed] at accepted
     have values := Option.some.inj accepted
     have observedEq : old = observed := congrArg Prod.fst values

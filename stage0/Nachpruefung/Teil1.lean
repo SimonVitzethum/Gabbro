@@ -32,6 +32,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_store
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_cas
+#print axioms Gabbro.Stage0.Senke.BildMehr.project_private_request
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected

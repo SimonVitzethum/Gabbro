@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.SCSchritt
 public import Stage0.Senke.Bild.Mehr.Schritt
+public import Stage0.Senke.Bild.Mehr.StoreBuffer
 
 @[expose] public section
 
@@ -50,5 +51,28 @@ theorem sc_private_runs_refine {D : Deklaration} [Runner.IR.Kern] {hardwareLayou
       setzeS_fuss found footprint writes updated
     obtain ⟨original, originalFound, oldFootprint, oldWrites⟩ := sameSets j beforeSnapshot beforeFound
     exact ⟨original, originalFound, sameFootprint.trans oldFootprint, sameWrites.trans oldWrites⟩
+
+/-- Every memory request confined to its private read and write footprints
+    preserves its answer in the SC state used by the image relation. -/
+theorem project_private_request {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+    {i : Nat} {request : Op} {answer : Ans}
+    (memoryRequest : istSpeicherOp request = true)
+    (step : (TSO layout).ans before i request answer after)
+    (footprint : Nat → W → Prop)
+    (within : ∀ address, fussOp request address → footprint i address)
+    (exclusive : schreibtOp request = true →
+      ∀ address, fussOp request address → ∀ j, footprint j address → j = i)
+    (disjoint : ∀ thread store, store ∈ before.1.buf thread →
+      ∀ other, other ≠ thread → ∀ address, footprint other address → ¬ fenster store.1 address) :
+    (SC layout).ans (projectSCState footprint before) i request answer
+      (projectSCState footprint after) := by
+  cases request with
+  | rd width base => exact projectSCState_read step footprint within disjoint
+  | wr base value => exact projectSCState_store step footprint
+      (fun address member => ⟨within address member, exclusive rfl address member⟩)
+  | cas base expected value => exact projectSCState_cas step footprint
+      (fun address member => ⟨within address member, exclusive rfl address member⟩) disjoint
+  | sys _ => cases memoryRequest
+  | fp _ _ _ => cases memoryRequest
 
 end Gabbro.Stage0.Senke.BildMehr
