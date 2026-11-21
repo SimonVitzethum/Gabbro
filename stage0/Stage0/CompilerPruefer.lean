@@ -193,6 +193,7 @@ private theorem named_start_indices (u : UProg) : ∀ {names : List String} {sta
         simp only [head, tail, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at indexed
         subst starts
         simp only [List.map_cons, List.filterMap_cons, namedStart_index u name start head, ih tail]
+        rfl
 
 /-- Every declared boot root occurs at the same position in the image and
     in the checker, including repeated concurrent or dispatch targets. -/
@@ -211,6 +212,7 @@ theorem StartArgument.Plan.exact_roots {u : UProg} {items : List SItemTief}
       (f := fun start : StartArgument.SourceStart u items => start.resolved.function)) plan.concurrent).symm
   simp only [StartArgument.Plan.starts, List.map_append, List.map_map, Function.comp_def, StartArgument.Resolved.start,
     plan.canonicalRoots, List.filterMap_append, List.filterMap_map, ordinary, named_start_indices u plan.namedOrigin]
+  rfl
 
 /-- Premise (a) for the exact boot roots and initial memory of the image. -/
 theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Profil.Options}
