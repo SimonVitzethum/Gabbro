@@ -51,7 +51,7 @@ variable {src : String} {K : Nat} {options : Profil.Options}
 
 /-- The memory the image starts with: that of the canonical initial world (the judged unit's `sp0`). -/
 abbrev Emitted.sp0 (output : Emitted src K options) : Speicher (declOf output.compiled.unit) :=
-  (Senke.initialWorld output.compiled.unit output.initialValid).speicher
+  GabbroV.sp0Of output.compiled.unit output.initialValid
 
 /-- The judged unit of an image whose only start is `main` (`Emitted.goal_checker_main`), over the image's memory. -/
 abbrev Emitted.einheit (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit)) :

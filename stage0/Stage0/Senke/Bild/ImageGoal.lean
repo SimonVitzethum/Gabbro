@@ -36,7 +36,7 @@ theorem Emitted.goal_invariants (output : Emitted src K options)
     have locks := initial.2
     unfold checkLockInitial at locks ⊢
     simpa only [initialUnit, Emitted.goalUnit, OldSource.einheitDer, OldSource.einheitVon,
-      Emitted.lsA, Emitted.sp0, (Senke.initialWorld_memory _ output.initialValid).1] using locks
+      Emitted.lsA, Emitted.sp0] using locks
   apply checked.goal_verdict
   have accepted := OldSource.accepts_program _ _ _ output.compiled.accepted
     output.compiled.checkedDeclarations.property

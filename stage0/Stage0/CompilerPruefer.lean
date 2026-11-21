@@ -193,12 +193,12 @@ theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Prof
     (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (start : unitStartGeprueftB
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q
-        (Senke.initialWorld output.compiled.unit output.initialValid).speicher
+        (GabbroV.sp0Of output.compiled.unit output.initialValid)
         output.compiled.main output.args output.starts [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length) = true) :
     akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q
-        (Senke.initialWorld output.compiled.unit output.initialValid).speicher
+        (GabbroV.sp0Of output.compiled.unit output.initialValid)
         output.compiled.main output.args output.starts [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length)
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
