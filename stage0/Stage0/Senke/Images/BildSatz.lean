@@ -93,7 +93,7 @@ theorem bild_ok [CloneAnswers] {P : Programm D} {O : Orakel D} {passes : Nat} {f
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     (match rufAt P O b.passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = 231 ∧ ExitErg b.Y (D.erg main) v q.a1
+        q.nr = 231 ∧ ExitErg b.Y (D.erg main) v q.a1 ∧ (D.erg main = none → q.a1 = 0)
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m cloneCode := by

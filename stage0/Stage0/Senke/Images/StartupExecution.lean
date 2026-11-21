@@ -20,7 +20,7 @@ theorem bild_kern [CloneAnswers] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK 
     (σ : World D) (hWa : WeltAt m Yb σ) (hy : TicketSync m Yb (BitVec.ofNat 64 fp0) Ks []) :
     (match rufAt P O passes n main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 231 ∧ ExitErg Yb (D.erg main) v q.a1
+        q.nr = BitVec.ofNat 64 231 ∧ ExitErg Yb (D.erg main) v q.a1 ∧ (D.erg main = none → q.a1 = 0)
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode e)
     | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m cloneCode := by
@@ -84,8 +84,8 @@ theorem bild_kern [CloneAnswers] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK 
   generalize rufAt P O passes n main σ ρ = o at hst ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨t', m', q, sx, hq, hnr, he, _⟩ := hst
-    exact Or.inl ⟨t', m', q, s1.trans sx, hq, hnr, he rfl⟩
+    obtain ⟨t', m', q, sx, hq, hnr, he, zero⟩ := hst
+    exact Or.inl ⟨t', m', q, s1.trans sx, hq, hnr, he rfl, zero⟩
   | logik e => exact Or.inl (Stops.prefix s1 hst)
   | hardware e => exact Or.inl (Stops.prefix s1 hst)
   | why _ _ => exact hst.elim

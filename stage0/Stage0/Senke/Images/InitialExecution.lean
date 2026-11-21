@@ -155,7 +155,8 @@ theorem bild_initialized_ok_u [CloneAnswers] {u : UProg} {P : Programm (declOf u
     (match (rufAt (D := declOf u) P O b.passes b.depth main σ ρ :
         RufAusgang (D := declOf u) main) with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧
-        StopAt t' m' q ∧ q.nr = 231 ∧ ExitErg b.Y ((declOf u).erg main) v q.a1
+        StopAt t' m' q ∧ q.nr = 231 ∧ ExitErg b.Y ((declOf u).erg main) v q.a1 ∧
+        ((declOf u).erg main = none → q.a1 = 0)
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode e)
     | _ => False) ∨ Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m cloneCode := by
