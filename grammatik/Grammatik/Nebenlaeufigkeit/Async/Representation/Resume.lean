@@ -19,10 +19,10 @@ private theorem sourceTypeUnique {fields : List (String × Parser.STyp)} {name :
     · subst head
       rcases List.mem_cons.mp right with equal | tail
       · exact (congrArg Prod.snd equal).symm
-      · exact (unique.1 (List.mem_map_of_mem Prod.fst tail)).elim
+      · exact (unique.1 (List.mem_map_of_mem tail)).elim
     · rcases List.mem_cons.mp right with atHead | tail
       · subst head
-        exact (unique.1 (List.mem_map_of_mem Prod.fst deeper)).elim
+        exact (unique.1 (List.mem_map_of_mem deeper)).elim
       · exact ih unique.2 deeper tail
 
 private theorem encodeLiveSlots (frame : Frame (Value D)) (live : List String)
@@ -81,7 +81,7 @@ public theorem await_resume_frame (tag : Nat) (destination : String) (future : F
   intro name needed
   by_cases same : name = destination
   · subst name
-    exact List.mem_map_of_mem Prod.fst declared
+    exact List.mem_map_of_mem declared
   · exact waiting.declared name (wasLive name needed same)
 
 /-- The actual Ready poll resumes at the next command with its typed
@@ -110,10 +110,15 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
     List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
   have polled : PollRep D types [tag] future answer.1 answer.2.1 :=
     await_poll_rep elaboration calls prices normal tag destination future boundary member represented world
-  have typedResult : ∃ ordinary, valueAt D (taskResultType types [tag] future) value = some ordinary := by
-    rw [ready] at polled
-    cases polled with
-    | ready typed _ => exact ⟨_, typed⟩
+  have typedOnReady {event : Poll (Value D)} {next : Task (Value D) (Child D types)}
+      (progress : PollRep D types [tag] future event next) (isReady : event = .ready value) :
+      ∃ ordinary, valueAt D (taskResultType types [tag] future) value = some ordinary := by
+    cases progress with
+    | pending _ => cases isReady
+    | ready typed _ =>
+      cases isReady
+      exact ⟨_, typed⟩
+  have typedResult := typedOnReady polled ready
   obtain ⟨sourceType, binding, exactType⟩ := elaboration.awaited tag destination future boundary rest command
   have resolved : ∃ ordinary, valueAt D (types.ordinary sourceType) value = some ordinary :=
     (show taskResultType types [tag] future = types.ordinary sourceType from exactType) ▸ typedResult
