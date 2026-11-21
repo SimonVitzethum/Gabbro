@@ -1,6 +1,6 @@
 module
 public import Runner.Beweis.Schritt
-public import Runner.Mach.Maschine
+public import Runner.Mach.Prefix
 @[expose] public section
 
 
@@ -131,10 +131,10 @@ theorem match_next {L : Lay} (hI : CInv L) {t : IR.T} {p : Pos} (h : MatchP L (.
 
 /-- From any related pair, the IR thread `j` reaches (in at most one silent step) a rest that is not a pending
     next instruction and still matches. -/
-theorem norm {L : Lay} (hI : CInv L) {M : MemSys} {cI : Cfg M (Res IR.T)} {cX : Cfg M X} (hR : Rel L cI cX)
+theorem norm_prefix {L : Lay} (hI : CInv L) {M : MemSys} {cI : Cfg M (Res IR.T)} {cX : Cfg M X} (hR : Rel L cI cX)
     {j : Nat} {x : X} (hx : cX.ths[j]? = some (some x)) :
     ∃ cI' r, Rel L cI' cX ∧ cI'.ths[j]? = some (some r) ∧ Match L r x ∧ (∀ t, r ≠ .next t) ∧
-      ∀ l e m, Tr M actI cI' l e m → ∃ m', Tr M actI cI l e m' := by
+      ∃ steps, ProcessPrefix M actI cI [] steps cI' := by
   obtain ⟨r, hr, hM⟩ := rel_at hR hx
   cases r with
   | next t =>
@@ -148,17 +148,23 @@ theorem norm {L : Lay} (hI : CInv L) {M : MemSys} {cI : Cfg M (Res IR.T)} {cX : 
     · intro t' h
       simp only [IR.step, rd8] at h
       cases h
-    · intro l e m h
-      exact ⟨m + 1, .priv hr rfl h⟩
+    · exact ⟨1, ProcessPrefix.ofStep (.priv hr rfl)⟩
   | fault =>
-    refine ⟨cI, .fault, hR, hr, hM, ?_, fun l e m h => ⟨m, h⟩⟩
+    refine ⟨cI, .fault, hR, hr, hM, ?_, 0, .nil cI⟩
     intro t h; cases h
   | unk =>
-    refine ⟨cI, .unk, hR, hr, hM, ?_, fun l e m h => ⟨m, h⟩⟩
+    refine ⟨cI, .unk, hR, hr, hM, ?_, 0, .nil cI⟩
     intro t h; cases h
   | ask o k =>
-    refine ⟨cI, .ask o k, hR, hr, hM, ?_, fun l e m h => ⟨m, h⟩⟩
+    refine ⟨cI, .ask o k, hR, hr, hM, ?_, 0, .nil cI⟩
     intro t h; cases h
+
+theorem norm {L : Lay} (hI : CInv L) {M : MemSys} {cI : Cfg M (Res IR.T)} {cX : Cfg M X}
+    (hR : Rel L cI cX) {j : Nat} {x : X} (hx : cX.ths[j]? = some (some x)) :
+    ∃ cI' r, Rel L cI' cX ∧ cI'.ths[j]? = some (some r) ∧ Match L r x ∧ (∀ t, r ≠ .next t) ∧
+      ∀ l e m, Tr M actI cI' l e m → ∃ m', Tr M actI cI l e m' := by
+  obtain ⟨cI', r, related, found, matched, notNext, steps, path⟩ := norm_prefix hI hR hx
+  exact ⟨cI', r, related, found, matched, notNext, fun _ _ m tail => ⟨m + steps, path.prepend tail⟩⟩
 
 /-- Changing only the x86 thread `i`, where an IR thread exists. -/
 theorem relT_setX {L : Lay} {lI : List (Option (Res IR.T))} {lX : List (Option X)}
@@ -232,6 +238,66 @@ theorem invK_ende {L : Lay} {r : Res IR.T} {rx : Res X} {e : Ende} (h : MatchK L
 /-! ## The theorem -/
 
 theorem lbl_rd (i n : Nat) (a : W) (b : Ans) : lbl i (.rd n a) b = [] := by rfl
+
+/-- Every continuing x86 step preserves the process relation with an
+    IR prefix of the same observation. Runner bookkeeping may stutter. -/
+theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : CInv L)
+    {cI : Cfg M (Res IR.T)} {before after : Cfg M X} {events : List Ev}
+    (related : Rel L cI before) (step : ProcessStep M (actX L) before events after) :
+    ∃ final count, ProcessPrefix M actI cI events count final ∧ Rel L final after := by
+  cases step with
+  | tau moved =>
+    exact ⟨_, 1, ProcessPrefix.ofStep (.tau (related.ms ▸ moved)), ⟨rfl, related.th⟩⟩
+  | @priv _ j x x' found executed =>
+    obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
+    exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready (inv_next matched executed notNext)⟩⟩
+  | @ask _ j x x' o k a ms found asked ordinary answered continued =>
+    obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
+    rcases inv_ask matched asked notNext with ⟨op, valid, rfl, resumes⟩ | ⟨resume, rfl, resumes⟩
+    · obtain ⟨rfl, word, rfl⟩ := fixed _ _ _ _ _ valid answered
+      have matched' := invK_next (continued ▸ resumes word)
+      exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready matched'⟩⟩
+    · have matched' := invK_next (continued ▸ resumes a)
+      have move := ProcessStep.ask (act := actI) ready rfl ordinary (rel.ms ▸ answered) rfl
+      exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
+        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
+  | @exit _ j x q k found asked number =>
+    obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
+    rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨_, rfl, _⟩
+    · cases impossible
+    · exact ⟨_, _, path.trans (ProcessPrefix.ofStep (.exit ready rfl number)),
+        ⟨rel.ms, relT_set rel.th (vI := none) (vX := none) trivial⟩⟩
+  | @cloneNo _ j x x' k a ms found asked answered failed continued =>
+    obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
+    rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
+    · cases impossible
+    · have matched' := invK_next (continued ▸ resumes a)
+      have move := ProcessStep.cloneNo (act := actI) ready rfl (rel.ms ▸ answered) failed rfl
+      exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
+        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
+  | @clone _ j x x' child k r w ms found asked answered created continued started =>
+    obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
+    rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
+    · cases impossible
+    · have parentMatch := invK_next (continued ▸ resumes (some (r, w)))
+      have childMatch := invK_next (started ▸ resumes (some (0, w)))
+      have move := ProcessStep.clone (act := actI) ready rfl (rel.ms ▸ answered) created rfl rfl
+      exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
+        ⟨rfl, relT_push (relT_set rel.th (vI := some (resume (some (r, w)))) (vX := some x') parentMatch)
+          (vI := some (resume (some (0, w)))) (vX := some child) childMatch⟩⟩
+
+/-- Every reachable x86 configuration has a related reachable IR
+    configuration, including its current memory and all live threads. -/
+theorem runner_process_prefix {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : CInv L)
+    {cI : Cfg M (Res IR.T)} {before after : Cfg M X} {events : List Ev} {count : Nat}
+    (related : Rel L cI before) (path : ProcessPrefix M (actX L) before events count after) :
+    ∃ final steps, ProcessPrefix M actI cI events steps final ∧ Rel L final after := by
+  induction path generalizing cI with
+  | nil => exact ⟨_, 0, .nil _, related⟩
+  | cons step _ ih =>
+    obtain ⟨_, _, path', rel⟩ := runner_process_step fixed code related step
+    obtain ⟨_, _, suffix, rel'⟩ := ih rel
+    exact ⟨_, _, path'.trans suffix, rel'⟩
 
 theorem runner_mt {L : Lay} {M : MemSys} (hF : Fixed M L) (hI : CInv L) :
     ∀ (n : Nat) {cI : Cfg M (Res IR.T)} {cX : Cfg M X} {l : List Ev} {e : Ende},
