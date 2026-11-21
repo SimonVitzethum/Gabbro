@@ -8294,3 +8294,9 @@ index and replacement in `updW` and checks the store in
 `lowAssignTabW` or `lowAssignDurchW`. The resulting
 `Expr.arrSet` and `Expr.prodSet` use `arrSet_ok` and `prodSet_ok`
 in the generic Stage 0 expression correctness proof.
+
+`uSetze_localIndexedField` sends a field projection through a local
+array element to the ordinary aggregate local assignment.
+`localIndexedFieldDispatch_erfuellbar` derives the dispatch premise
+from a mutable array binding. Local and slot paths share the same
+replacement elaboration.
