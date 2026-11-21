@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Ausdruck.Old.Pruefer
+public import Stage0.ForeignSummary
 
 @[expose] public section
 
@@ -65,5 +66,27 @@ def checkAxiomFreeLogic (u : UProg) (P : Programm (declOf u)) (memory : Speicher
     | .error cause => .error cause
     | .ok certificate => .ok ⟨fun _ => (nutzerPflichtGeprueftB_iff _ _ _ _).mpr ⟨certificate, read⟩⟩
   else .ok ⟨fun impossible => False.elim (noAxioms impossible)⟩
+
+/-- Install the checked expressions without changing the source program,
+    memory, or start configurations being judged. -/
+def withForeignSummary (E : Einheit D) (summary : ForeignSummary E.P) : Einheit D :=
+  { E with Q := summary.predicates, axiomSources := some summary.sources }
+
+/-- Successful checking ties the exact foreign summary to the complete
+    logic verdict of the model on the actual entry and root arguments. -/
+structure CheckedForeignLogic (u : UProg) (E : Einheit (declOf u)) where
+  summary : ForeignSummary E.P
+  verdict : @nutzerPflichtGeprueftB _ (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+    (withForeignSummary E summary) (List.finRange u.fns.length) (List.finRange u.locks.length) {} = true
+
+def checkImageForeignLogic (u : UProg) (E : Einheit (declOf u)) :
+    Except String (CheckedForeignLogic u E) := do
+  let summary ← checkForeignSummary u E.P
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+  let actual := withForeignSummary E summary
+  match checked : checkUnitLogic actual (List.finRange u.fns.length) (List.finRange u.locks.length) {} with
+  | .error refusal => .error ("foreign unit logic: " ++ refusal.message)
+  | .ok certificate => .ok ⟨summary,
+      (nutzerPflichtGeprueftB_iff _ _ _ _).mpr ⟨certificate, checked⟩⟩
 
 end Gabbro.Stage0

@@ -55,6 +55,10 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
         (⟨compiled.main, args⟩ :: startPlan.starts (Senke.initialWorld compiled.unit initialValid))
         compiled.checkedDeclarations.val)
       (List.finRange compiled.unit.fns.length) (List.finRange compiled.unit.locks.length) {} = true
+  foreignLogic : Except String (CheckedForeignLogic compiled.unit
+    (initialUnit compiled.unit compiled.program (sp0Of compiled.unit initialValid)
+      (⟨compiled.main, args⟩ :: startPlan.starts (Senke.initialWorld compiled.unit initialValid))
+      compiled.checkedDeclarations.val))
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
@@ -103,13 +107,16 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
       let axiomFreeLogic ← (checkAxiomFreeLogic u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
         compiled.checkedDeclarations.val).mapError
         (fun failure => "ir: unit logic: " ++ failure.message)
+      let foreignLogic := if u.axs.isEmpty then .error "unit has no foreign declarations" else
+        checkImageForeignLogic u (initialUnit u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
+          compiled.checkedDeclarations.val)
       match he : Senke.bild irDurchlaeufe P (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) u tor) (List.finRange u.fns.length) Fin.val
           (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
           starts K
           (Senke.bodenAusrichtung u) with
       | .error e => throw e
       | .ok image => pure ⟨compiled, tor, startPlan, initialValid, initialInvariants.down, args, hp,
-          checked.down, axiomFreeLogic.down, image, he⟩
+          checked.down, axiomFreeLogic.down, foreignLogic, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
 /-- The exact typed occurrences supplied to the image constructor. -/
