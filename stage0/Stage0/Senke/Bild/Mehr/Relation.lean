@@ -139,7 +139,8 @@ theorem MTRel.append_pending_root {P : Programm D} {O : Orakel D} {passes : Nat}
   · intro i r found
     change (c.ths ++ [none])[i]? = some (some r) at found
     by_cases inside : i < c.ths.length
-    · exact related.lebend i r ((List.getElem?_append_left inside).symm ▸ found)
+    · rw [List.getElem?_append_left inside] at found
+      exact related.lebend i r found
     · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
       cases i - c.ths.length <;> simp at found
   · intro i s known
