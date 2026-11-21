@@ -127,4 +127,81 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
   simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
   rw [show (pollTask model task world).1 = Poll.ready value from ready]
 
+private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
+    {frame : Frame (Value D)} {saved : Wert D (frameType types f)}
+    (slots : FrameRep D types f (.running tag) frame saved)
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (commands : List Command) (base offset : Nat) (bound : offset ≤ commands.length)
+    (atTag : tag = base + offset) :
+    ∃ sum, PhaseListRep D types f inventory (commandPhases base commands) (.running tag frame) sum := by
+  induction commands generalizing base offset with
+  | nil =>
+    have same : tag = base := by
+      simp only [List.length_nil, Nat.le_zero] at bound
+      omega
+    subst base
+    exact ⟨_, .first _ _ _ _ (.running tag frame saved slots) marks⟩
+  | cons command rest ih =>
+    cases offset with
+    | zero =>
+      have same : tag = base := by simpa only [Nat.add_zero] using atTag
+      subst base
+      cases command with
+      | bind => exact ⟨_, .first _ _ _ _ (.running tag frame saved slots) marks⟩
+      | await => exact ⟨_, .first _ _ _ _ (.running tag frame saved slots) marks⟩
+    | succ offset =>
+      have shorter : offset ≤ rest.length := Nat.le_of_succ_le_succ bound
+      have nextTag : tag = base + 1 + offset := by omega
+      have different : tag ≠ base := by omega
+      have skipRun : encodePhase D types f (.running base) (.running tag frame) = none := by
+        simp only [encodePhase, if_neg different]
+      obtain ⟨_, continuation⟩ := ih (base + 1) offset shorter nextTag
+      cases command with
+      | bind =>
+        exact ⟨_, .later _ _ _ _ skipRun continuation⟩
+      | await =>
+        exact ⟨_, .later _ _ _ _ skipRun (.later _ _ _ _ rfl continuation)⟩
+
+/-- The actual Ready poll restores the complete state record. This lemma
+    covers the case where the enclosing frame's own inventory is unchanged. -/
+public theorem await_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (inventory : Inventory D) (tag : Nat) (destination : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future))
+    (world : World D) (value : Value D) :
+    let model := inducedModel elaboration calls prices normal
+    let answer := pollTask model task world
+    let resumed := State.running (Child := Child D types) (tag + 1) (save frame destination value)
+    answer.1 = .ready value →
+    machineStep model (asyncExpand model f) (.waiting tag frame task) world =
+      (.next, resumed, answer.2.2.1, answer.2.2.2 + 1) ∧
+    inventory.resources (.running (tag + 1)) = inventory.resources (.waiting tag future) ∧
+    ∃ record, Inv f types inventory resumed record ∧ encode D types f resumed = some record := by
+  intro model answer resumed ready
+  obtain ⟨stepped, next, restored, sameMarks⟩ :=
+    await_ready_resumes elaboration calls prices normal tag destination future boundary rest command
+      frame task saved child slots represented world value ready
+  have within : tag + 1 ≤ f.body.length := by
+    have length := congrArg List.length command
+    simp only [List.length_drop, List.length_cons] at length
+    omega
+  have owned : MarksRep inventory (.running (tag + 1)) resumed := by
+    simpa only [MarksRep, resumed, State.marks, sameMarks, sameInventory] using marks
+  obtain ⟨_, running⟩ := runningPhaseList inventory restored owned f.body 0 (tag + 1) within
+    (Nat.zero_add (tag + 1)).symm
+  have full : PhaseListRep D types f inventory (phases f) resumed _ :=
+    .later _ _ _ _ rfl (.later _ _ _ _ rfl running)
+  have invariant : Inv f types inventory resumed (_, ()) := full
+  refine ⟨stepped, ?_, _, invariant, inv_encoded f types inventory resumed _ invariant⟩
+  rw [inventory.exact, inventory.exact, sameInventory]
+
 end Gabbro.Grammatik.Async.Representation
