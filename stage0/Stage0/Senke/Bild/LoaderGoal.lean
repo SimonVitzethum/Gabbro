@@ -129,6 +129,15 @@ theorem Emitted.goal_arguments_loaded [Kern] (output : Emitted src K options)
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
   exact ⟨stackBytes, output.goal_arguments_encoded Q ▸ made, memory⟩
 
+/-- The immutable instruction extent of the production payload, separated
+    from the initialized stacks and mutable program data. -/
+theorem Emitted.loaded_code [Kern] (output : Emitted src K options)
+    {m : Mem} (loaded : BytesAt m Runner.Prog.IMG output.bytes) :
+    BytesAt m codeBase (output.image.code.flatMap encII) := by
+  obtain ⟨_, _, _, _, _, _, _, codeAndStacks, _⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
+  exact codeAndStacks.left
+
 private theorem codeAt_spawn_site [Kern] {m : Mem} {scratch : Nat} :
     ∀ {sites : List (Nat × Nat)} {pc : W} {j : Nat} {site : Nat × Nat},
       CodeAt m pc (spawnC scratch sites) → sites[j]? = some site →
@@ -158,7 +167,7 @@ private theorem codeAt_spawn_site [Kern] {m : Mem} {scratch : Nat} :
     same root and arguments at the model's initial memory. -/
 theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
     (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
-    {m : Mem} (loaded : BytesAt m Runner.Prog.IMG output.bytes) {j : Nat}
+    {m : Mem} (loaded : BytesAt m codeBase (output.image.code.flatMap encII)) {j : Nat}
     {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
       Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
         ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
@@ -169,18 +178,14 @@ theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
           (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))) ∧
       (output.bootStart Q).lebt (j + 1) = true ∧
       initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ := by
-  obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
-    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
-  obtain ⟨_, _, _, placed, code, _, args, roots⟩ := bild_lage output.emission output.funktionen_voll
+  obtain ⟨_, _, sites, placed, code, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
     (fun base => by simp only [layU]; omega)
     (fun base => layU_sync output.compiled.unit output.tor base)
-  have startup : BytesAt m codeBase (output.image.code.flatMap encII ++
-      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
-    simpa only [made, Option.getD_some, List.append_nil] using loadedStartup
-  rw [code, args, roots] at startup
-  have ready := (spawn_ready placed startup).1
+  rw [code] at loaded
+  have ready : CodeAt m (BitVec.ofNat 64 codeBase) (spawnC (startScratch output.compiled.main) sites) :=
+    codeAt_left (codeAt_bytes _ codeBase placed.hops loaded)
   have inside := (List.getElem?_eq_some_iff.mp declared).1
   have site := placed.spawn_entry j (by rw [List.length_map]; exact inside)
   have positioned : (⟨output.compiled.main, output.args⟩ :: output.starts)[j + 1]? = some start := declared
@@ -356,7 +361,7 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
       Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
         ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
     (declared : output.starts[j]? = some start)
-    (loaded : BytesAt (before.ms.1.view i) Runner.Prog.IMG output.bytes)
+    (loaded : BytesAt (before.ms.1.view i) codeBase (output.image.code.flatMap encII))
     (position : before.ths.length = j + 1)
     (answer : (TSO layout).ans before.ms i (.sys cloneReq) (some (id, extra)) memory)
     (positive : 0 < id.toInt) :

@@ -8223,6 +8223,8 @@ and successful clone transition as one process prefix.
 `Emitted.loaded_boot_run` connects that prefix to the emitted image and
 the logical boot frame when the parent reaches the clone with its two
 prepared operands and the preceding thread positions allocated.
+`Emitted.loaded_code` extracts the instruction extent of the initial
+payload separately from the writable stacks.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.

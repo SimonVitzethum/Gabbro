@@ -43,6 +43,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.goal_axiomFree
 #print axioms Gabbro.Stage0.Emitted.zielsatz_axiomFree
 #print axioms Gabbro.Stage0.Emitted.bootStart_frame
+#print axioms Gabbro.Stage0.Emitted.loaded_code
 #print axioms Gabbro.Stage0.Emitted.loaded_boot_site
 #print axioms Gabbro.Stage0.processPrefix_threadSlots
 #print axioms Gabbro.Stage0.bootClone_step
