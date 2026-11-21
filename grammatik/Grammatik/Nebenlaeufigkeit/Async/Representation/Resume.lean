@@ -120,13 +120,6 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
   obtain ⟨_, typed⟩ := resolved
   refine ⟨?_, await_resume_frame tag destination future boundary rest command slots binding typed⟩
   simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
-  change (let (result, child', after, cost) := answer
-      match result with
-      | .pending => (Event.pending, State.waiting tag frame child', after, cost + 1)
-      | .ready returned => (Event.next, State.running (tag + 1) (save frame destination returned), after, cost + 1)) = _
-  generalize observed : answer = response at ready ⊢
-  obtain ⟨result, _, _, _⟩ := response
-  change result = .ready value at ready
-  rw [ready]
+  rw [show (pollTask model task world).1 = Poll.ready value from ready]
 
 end Gabbro.Grammatik.Async.Representation
