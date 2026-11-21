@@ -8252,6 +8252,8 @@ faults and unknown instructions, and matches terminal process observations
 at the last runner step.
 An explicit non-returning process-exit gate is matched to its typed
 source call and actual request separately from the entry's implicit exit.
+Each named hardware exit must carry the status for the exact cause at the
+issuing thread's current source head.
 
 `MappedImage.of_mmap_continuation` derives the runner relation from the
 concrete post-mmap instruction address and register.

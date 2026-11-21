@@ -219,6 +219,27 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
           simpa only [TSt.view, mapped.emptyBuffers 0, List.foldl_nil] using mapped.bytes⟩⟩
       | succ i => exact Or.inl rfl
 
+/-- Identify the exact hardware outcome at the current source head.
+    The existing named-stop rule pins the observation to this head.
+    Evaluation identifies its cause and therefore the emitted status. -/
+def ImageHardwareCause {D : Deklaration} (O : Orakel D) (passes : Nat) (M : RufMaschineG D)
+    (i : Faden) (cause : Hardware D) : Prop :=
+  ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (env : Env D Γ)
+    (rest : GRest D (vertragVon D (M.faeden i).kopf.f) l Γ Λ),
+    (M.faeden i).kopf.rest = ⟨l, Γ, Λ, env, rest⟩ ∧
+    RestHalt O passes (M.weltVon i) env .hardware rest ∧
+    match rest with
+    | .dann block _ => execBlock O passes keinRuf block (M.weltVon i) env = .hardware cause
+    | .ende block => execEnd O passes keinRuf block (M.weltVon i) env = .hardware cause
+    | _ => False
+
+/-- The exact exit cause entails the existing source-level named stop. -/
+theorem ImageHardwareCause.named {D : Deklaration} {O : Orakel D} {passes : Nat} {M : RufMaschineG D}
+    {i : Faden} {cause : Hardware D} (matched : ImageHardwareCause O passes M i cause) :
+    HaltBenannt O passes M .hardware i := by
+  obtain ⟨l, Γ, Λ, env, rest, head, stopped, _⟩ := matched
+  exact ⟨l, Γ, Λ, env, rest, head, stopped⟩
+
 /-- Match a process exit to its exact source return, declared non-returning
     gate, named hardware condition, or refused host clone at the boundary
     preceding the terminal operation. -/
@@ -238,8 +259,8 @@ def ImageStopMatches (output : Emitted src reserve options)
           (declOf output.compiled.unit).aerg routine = some .never ∧
           output.tor routine = some gate ∧ req.nr = BitVec.ofNat 64 gate.nr ∧
           ArgsW output.image.Y.withIdle (reqArg req) args) ∨
-      (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .hardware i ∧
-        110 ≤ req.a1.toNat ∧ req.a1.toNat ≤ 115) ∨
+      (state.lebt i = true ∧ ∃ cause, ImageHardwareCause O.mitRuhe output.image.passes state.m i cause ∧
+        req.a1 = BitVec.ofNat 64 (hwCode cause)) ∨
       (i = 0 ∧ req.a1 = BitVec.ofNat 64 cloneCode ∧
         ∃ prior id extra, earlier.filter (fun event => event.1 == i) =
           prior ++ [(i, cloneReq, some (id, extra))] ∧ id.toInt < 0))
