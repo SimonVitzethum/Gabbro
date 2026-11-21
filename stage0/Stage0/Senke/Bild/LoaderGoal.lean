@@ -382,18 +382,17 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
 
-set_option maxRecDepth 5000 in
 private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
     y.toNat < Runner.Prog.IMG := by
   obtain ⟨op, row, byte, width, rfl⟩ := member
-  have fit : Runner.Prog.BASE + Runner.Prog.fileLen < Runner.Prog.IMG := image_len ▸ image_fits
-  simp only [Runner.Prog.fileLen] at fit
-  have below : Runner.Prog.BASE + (Runner.Prog.tblOff + 8 * op) + byte < Runner.Prog.IMG := by
-    unfold readOnlyWidth at width
-    split at width <;> omega
-  rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (Nat.lt_trans below (by decide))]
-  exact below
+  have tableEnd (base off : Nat) (cell : byte < readOnlyWidth op) :
+      base + (off + 8 * op) + byte ≤ base + (off + 256 * 8 + 4) := by
+    unfold readOnlyWidth at cell
+    split at cell <;> omega
+  have fit : Runner.Prog.BASE + Runner.Prog.fileLen < Runner.Prog.IMG :=
+    (congrArg (fun n => Runner.Prog.BASE + n < Runner.Prog.IMG) image_len).mp image_fits
+  rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat]
+  exact (Nat.mod_le _ _).trans_lt ((tableEnd Runner.Prog.BASE Runner.Prog.tblOff width).trans_lt fit)
 
 /-- From the actual mapped payload the loader and the first clone site
     reach the first declared child. The compiled immediates supply both
@@ -431,7 +430,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   have indexed := placed.spawn_entry 0 (by rw [List.length_map]; exact present)
   have specific : codeBase + 16 * (10 * output.starts.length + startLen) < 2 ^ 31 ∧
       output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by
-    simpa only [List.length_map, Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using
+    simpa only [Emitted.starts, List.length_map, Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using
       children _ (List.mem_of_getElem? indexed)
   obtain ⟨site, live, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
   simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one, BitVec.add_zero] at site
