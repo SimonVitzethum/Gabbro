@@ -55,6 +55,28 @@ theorem arraySpan_refines {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr
   funext index
   exact eval_arraySpan operand initial world env first (last - first) _ index
 
+/-- An index in a slice is shifted only after checking its relative
+    range. The result is an ordinary index into the original array. -/
+def shiftedSliceIndex {length first last : Nat} (bounds : SliceOk length first last)
+    (index : Expr D Γ Λ (.index (last - first))) : Expr D Γ Λ (.index length) :=
+  .widen (by omega) (by have ordered := bounds.1; have high := bounds.2; omega)
+    (.add (.lit (Int.ofNat first)) index)
+
+theorem eval_indexedArraySlice {τ : Ty} {length first last : Nat}
+    (operand : Expr D Γ Λ (.arr τ length)) (bounds : SliceOk length first last)
+    (index : Expr D Γ Λ (.index (last - first)))
+    (initial world : World D) (env : Env D Γ) :
+    eval initial (.arrGet operand (shiftedSliceIndex bounds index)) world env =
+      eval initial (.arrGet (arraySpan operand first (last - first) (by
+        have ordered := bounds.1; have high := bounds.2; omega)) index) world env := by
+  simp only [eval]
+  rw [eval_arraySpan]
+  apply congrArg (eval initial operand world env)
+  apply Fin.ext
+  have nonnegative := (eval initial index world env).lo_le
+  simp only [shiftedSliceIndex, eval, Zahl.fin, Zahl.weiter, Zahl.add]
+  omega
+
 /-- Constant byte sequences are sliced by their actual length. A runtime
     string needs a separate certified lower bound on its length. -/
 def lowerSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
@@ -71,6 +93,22 @@ def lowerSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     else .error "slice: endpoint outside the string's bytes"
   | ⟨.str _, _⟩ => .error "slice: runtime string length is not certified"
   | _ => .error "slice: expected an array or string value"
+
+/-- A slice used directly as an index receiver avoids constructing the
+    intermediate array. String indexing retains the ordinary behavior. -/
+def lowerIndexedSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (first last : Nat) (base : LowWert u Γ Λ) (index : LowSide u Γ Λ) :
+    Except String (LowWert u Γ Λ) :=
+  match base with
+  | ⟨.arr τ length, operand⟩ =>
+    if bounds : SliceOk length first last then
+      if low : 0 ≤ index.range.1 then
+        if high : index.range.2 ≤ (Int.ofNat (last - first)) - 1 then
+          .ok ⟨τ, .arrGet operand (shiftedSliceIndex bounds (.widen low high index.term))⟩
+        else .error "slice: index outside the selected range"
+      else .error "slice: index outside the selected range"
+    else .error "slice: endpoint outside the array"
+  | other => do idxW (← lowerSlice first last other) index
 
 theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {τ : Ty} {length : Nat} (operand : Expr (declOf u) Γ Λ (.arr τ length))

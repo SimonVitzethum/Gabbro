@@ -118,6 +118,10 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er r with
     | .ok wa, .ok wr => consW wa wr
     | .error e, _ | _, .error e => .error e
+  | .idx (.slice base first last) i =>
+    match lowWertE u Γ Λ fn er base, zahlVon (lowWertE u Γ Λ fn er i) with
+    | .ok wa, .ok wi => lowerIndexedSlice first last wa wi
+    | .error e, _ | _, .error e => .error e
   | .idx a i =>
     match lowWertE u Γ Λ fn er a, zahlVon (lowWertE u Γ Λ fn er i) with
     | .ok wa, .ok wi => idxW wa wi
