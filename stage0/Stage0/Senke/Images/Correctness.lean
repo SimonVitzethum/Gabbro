@@ -54,6 +54,15 @@ structure MappedImage [Kern] (output : Emitted src reserve options)
   loader : Rel L0 (M := imageTSO) ⟨machine.ms, [some t4]⟩ machine
   runnerFile : FileInv machine.ms.1.m
 
+/-- The actual x86 runner maps to the same IR history under the external
+    answer restrictions, independently of any compiler simulation. -/
+theorem MappedImage.runner_prefix [Kern] {output : Emitted src reserve options}
+    {start finish : Cfg imageTSO Runner.X86.X} (mapped : MappedImage output start)
+    {events : List Ev} {count : Nat}
+    (run : ProcessPrefix imageTSO (actX L0) start events count finish) :
+    ∃ ir steps, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish :=
+  runner_process_prefix imageTSO_fixed cinv_L0 mapped.loader run
+
 def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
   (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
     match item with

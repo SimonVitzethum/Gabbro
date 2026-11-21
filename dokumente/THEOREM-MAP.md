@@ -8240,3 +8240,25 @@ gives the goal for these prefixes on the axiom-free certified domain.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
+
+## 208. Production Stage 0 image correctness statement
+
+`Stage0Correct` states B6 for the production emitter at the mapped-image
+boundary. The returned CLI bytes, canonical source, exported model unit
+and checker verdict are part of the conclusion. The simulation follows
+the x86 and IR histories and matches their endpoints to reachable GX
+states. The statement includes the entire `ZielFX` and matches terminal
+process observations at the last runner step.
+
+`MappedImage.runner_prefix` proves the x86-to-IR part under the host
+answer restrictions. `MappedImage.source_start` establishes the initial
+source relation. `ImageSimulation.follow`, `ImageSimulation.goal` and
+`ImageSimulation.terminal` lift single-step and terminal correspondence
+to full prefixes and apply `gabbro_ziel` to the matched state.
+`Emitted.checked_image_model_empty` supplies the exact unit and checker
+verdict on the axiom-free domain with no arena or accumulator declarations.
+
+The remaining compiler obligation constructs the simulation and the
+complete unit export from an arbitrary successful emission. In particular,
+shared-memory transitions, the final cause of each hardware stop and the
+loader's external mapping contract still need their concrete bridges.
