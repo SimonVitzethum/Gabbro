@@ -29,13 +29,29 @@ theorem Emitted.goalUnit_starts (output : Emitted src K options)
 theorem Emitted.goal_invariants (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) :
     invariantenGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true := by
-  have checked : CheckedInitialInvariants (output.goalUnit Q) output.lsA.1 :=
-    output.initialInvariants
+  have checked : CheckedInitialInvariants (output.goalUnit Q) output.lsA.1 := by
+    have initial := output.initialInvariants
+    unfold CheckedInitialInvariants at initial ⊢
+    exact ⟨initial.1, initial.2⟩
   apply checked.goal_verdict
   have accepted := OldSource.accepts_program _ _ _ output.compiled.accepted
     output.compiled.checkedDeclarations.property
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true] at accepted
   exact accepted.2.1
+
+/-- With an empty axiom family, the compiler supplies both branches of the
+    goal checker's verdict on the declared initial state. -/
+theorem Emitted.goal_axiomFree (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (empty : output.compiled.unit.axs.length = 0) :
+    unitStartGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true := by
+  refine Bool.and_eq_true_iff.mpr ⟨output.goal_invariants Q, ?_⟩
+  have only : Q = axWahr (declOf output.compiled.unit) := by
+    funext a
+    exact False.elim ((Nat.not_lt_zero a.val) (empty ▸ a.isLt))
+  subst Q
+  have accepted := output.axiomFreeLogic empty
+  unfold nutzerPflichtGeprueftB at accepted ⊢
+  exact accepted
 
 /-- The precise logical start associated with the image. Missing thread
     positions are filled by the model's canonical idle thread. -/

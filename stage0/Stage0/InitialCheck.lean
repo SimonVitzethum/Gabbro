@@ -8,6 +8,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Invarianten Invarianten.Pruefer Invarianten.VC
   Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.Frag Invarianten.Modell
+  Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
 variable {D : Deklaration}
 
@@ -42,5 +43,25 @@ theorem CheckedInitialInvariants.goal_verdict {E : Einheit D} {functions : List 
   cases result : collect locks _ (checkLockInitial E) with
   | error cause => simp only [result, Except.toOption, Option.isSome_none, Bool.false_eq_true] at locked
   | ok checks => rfl
+
+/-- The initial unit used for executable checks that need the program and
+    concrete starts. Nonempty axiom families need separate reification. -/
+abbrev initialUnit (u : UProg) (P : Programm (declOf u)) (memory : Speicher (declOf u))
+    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))) : Einheit (declOf u) :=
+  OldSource.einheitVon u P (axWahr _) memory starts [] []
+
+/-- For axiom-free programs the emitter can decide the whole logic branch
+    without any oracle contract supplied by the caller. -/
+def checkAxiomFreeLogic (u : UProg) (P : Programm (declOf u)) (memory : Speicher (declOf u))
+    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))) :
+    Except Frag.Refusal (PLift (u.axs.length = 0 →
+      @nutzerPflichtGeprueftB _ (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+        (initialUnit u P memory starts) (List.finRange u.fns.length) (List.finRange u.locks.length) {} = true)) :=
+  if noAxioms : u.axs.length = 0 then
+    match read : @checkUnitLogic _ (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+        (initialUnit u P memory starts) (List.finRange u.fns.length) (List.finRange u.locks.length) {} with
+    | .error cause => .error cause
+    | .ok _ => .ok ⟨fun _ => by unfold nutzerPflichtGeprueftB; rw [read]; rfl⟩
+  else .ok ⟨fun impossible => False.elim (noAxioms impossible)⟩
 
 end Gabbro.Stage0
