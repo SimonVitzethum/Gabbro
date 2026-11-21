@@ -240,4 +240,86 @@ theorem MappedImage.runnerFileStable {src : String} {reserve : Nat} {options : P
   rw [mapped.emptyBuffers i] at pending
   cases pending
 
+/-- Before a slot has been allocated, it has no private TSO writes.
+    Retired slots still belong to the allocated prefix. -/
+def ImageIdleBuffers {θ : Type} (c : Cfg imageTSO θ) : Prop :=
+  ∀ i, c.ths.length ≤ i → c.ms.1.buf i = []
+
+private theorem other_buffer {before after : imageTSO.St} {owner other : Nat}
+    {request : Op} {answer : Ans} (different : other ≠ owner)
+    (answered : imageTSO.ans before owner request answer after) :
+    after.1.buf other = before.1.buf other := by
+  cases request with
+  | rd => exact congrArg (fun s : imageTSO.St => s.1.buf other) answered.1.1
+  | fp => exact congrArg (fun s : imageTSO.St => s.1.buf other) answered.1.1
+  | wr =>
+    obtain ⟨_, _, rfl⟩ | ⟨_, _, updated⟩ := answered.1
+    · rfl
+    · rw [updated]
+      simp only [TSt.setBuf, ite_eq_right different]
+  | cas =>
+    obtain ⟨_, refused | accepted⟩ := answered.1
+    · obtain ⟨_, _, rfl⟩ := refused
+      rfl
+    · obtain ⟨_, _, _, _, updated⟩ := accepted
+      rw [updated]
+  | sys request =>
+    have host := answered.2
+    change (if request = cloneReq then after = before ∧ ∃ id extra, answer = some (id, extra) ∧ id ≠ 0
+      else Kern.ans request (before.1.view owner) answer (after.1.view owner) ∧
+        after.1.buf = before.1.buf) at host
+    split at host
+    · rw [host.1]
+    · rw [host.2]
+
+/-- Every actual process step preserves the empty buffer at future
+    slots. A successful clone can only extend the allocated prefix. -/
+theorem ImageIdleBuffers.step {θ : Type} {act : θ → Res θ}
+    {before after : Cfg imageTSO θ} {events : List Ev}
+    (empty : ImageIdleBuffers before) (step : ProcessStep imageTSO act before events after) :
+    ImageIdleBuffers after := by
+  intro future unallocated
+  cases step with
+  | tau flushed =>
+    obtain ⟨owner, _, _, _, queued, updated⟩ := flushed
+    have clear := empty future unallocated
+    have different : future ≠ owner := by
+      intro same
+      subst owner
+      rw [clear] at queued
+      cases queued
+    rw [updated]
+    simpa only [TSt.setBuf, ite_eq_right different] using clear
+  | priv | exit =>
+    exact empty future (by simpa only [List.length_set] using unallocated)
+  | @ask owner _ _ _ _ _ _ found _ _ answered _ |
+      @cloneNo owner _ _ _ _ _ found _ answered _ _ =>
+    have outside : before.ths.length ≤ future := by simpa only [List.length_set] using unallocated
+    have different : future ≠ owner :=
+      fun equal => Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp found).1 (equal ▸ outside)
+    exact (other_buffer different answered).trans (empty future outside)
+  | @clone owner _ _ _ _ _ _ _ found _ answered _ _ _ =>
+    have outside : before.ths.length ≤ future := by
+      simp only [List.length_append, List.length_set, List.length_singleton] at unallocated
+      exact (Nat.le_succ _).trans unallocated
+    have different : future ≠ owner :=
+      fun equal => Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp found).1 (equal ▸ outside)
+    exact (other_buffer different answered).trans (empty future outside)
+
+/-- Every future thread in a real run retains an empty buffer up to its
+    allocation. The result covers both the runner and its IR process. -/
+theorem ImageIdleBuffers.follow {θ : Type} {act : θ → Res θ}
+    {before after : Cfg imageTSO θ} {events : List Ev} {count : Nat}
+    (empty : ImageIdleBuffers before) (path : ProcessPrefix imageTSO act before events count after) :
+    ImageIdleBuffers after := by
+  induction path with
+  | nil => exact empty
+  | cons step _ ih => exact ih (empty.step step)
+
+/-- The load establishes the future-thread buffer invariant. -/
+theorem MappedImage.idle_buffers {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {start : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output start) : ImageIdleBuffers start :=
+  fun i _ => mapped.emptyBuffers i
+
 end Gabbro.Stage0
