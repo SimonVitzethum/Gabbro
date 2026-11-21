@@ -461,7 +461,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   have writable : Mem.all prepared.1.m.wr
       (slot parent.fp (sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)))) 8 = true := by
     have inFrame : startScratch output.compiled.main + 2 < output.image.Ks := by omega
-    rw [destWord, committed, ← foldl_wr (s.1.buf 0) s.1.m]
+    rw [destWord, committed]
     exact frame.wr _ inFrame
   obtain ⟨finished, resume, memory, _, finalViews⟩ :=
     tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
