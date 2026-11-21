@@ -5,6 +5,7 @@ public import Stage0
 import Grammatik.Bausteine.Arena.BlockScope
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 public import Stage0.Senke.Ausdruck.Tag
 
 @[expose] public section
@@ -40,6 +41,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
 #print axioms Gabbro.Grammatik.Async.Representation.cancelEpilogue_encoded
+#print axioms Gabbro.Grammatik.Async.Representation.pollTask_rep
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
