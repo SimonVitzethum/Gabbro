@@ -182,6 +182,7 @@ theorem bootSpawn_run [Kern] {layout : Runner.Beweis.Lay}
       threads[before.ths.length]? = some (some (.next child)) ∧
       after.1.m = before.ms.1.m ∧
       Agree fp scratch K (before.ms.1.view i) (after.1.view i) ∧
+      (after.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id ∧
       ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
   intro child threads
   let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
@@ -215,8 +216,12 @@ theorem bootSpawn_run [Kern] {layout : Runner.Beweis.Lay}
   have parentUnchanged : Agree fp scratch K (prepared.1.view i) (finished.1.view i) := by
     rw [wrote, dest]
     exact agree_write frame.room (by omega) inFrame _
+  have returnWord : (finished.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id := by
+    rw [wrote, dest]
+    have preparedFrame := frame.agree beforeResult
+    exact Runner.Mem.rd64_wr64 (Runner.Mem.wr64_some (preparedFrame.wr _ inFrame)) (preparedFrame.rd _ inFrame)
   refine ⟨finished, ?_, ?_, memory.trans committed, beforeResult.trans parentUnchanged,
-    fun j different => (other j different).trans (preparedViews j different)⟩
+    returnWord, fun j different => (other j different).trans (preparedViews j different)⟩
   · have actual : ProcessPrefix (TSO layout) actI atClone [(i, cloneReq, some (id, extra))] 6 active := by
       simpa only [atClone, active, List.set_set] using cloned
     have parentSlot : i < (before.ths.set i (some (ret1 parent id))).length := by
@@ -293,6 +298,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
       threads[j + 1]? = some (some (.next child)) ∧
       after.1.m = before.ms.1.m ∧
       Agree fp (startScratch output.compiled.main) output.image.Ks (before.ms.1.view 0) (after.1.view 0) ∧
+      (after.1.view 0).rd64 (slot fp (BitVec.ofNat 64 (startScratch output.compiled.main + 2))) = some id ∧
       (∀ k, k ≠ 0 → after.1.view k = before.ms.1.view k) ∧
       BytesAt (after.1.view 0) codeBase (output.image.code.flatMap encII) ∧
       FrameOK (after.1.view 0) fp output.image.Ks ∧
@@ -335,7 +341,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
     apply codeFar_nat _ (Nat.lt_trans frameBound (by decide))
     simp only [headLen, startLen] at frameAddress
     omega
-  obtain ⟨after, prefix, appended, same, own, others⟩ :=
+  obtain ⟨after, prefix, appended, same, own, response, others⟩ :=
     bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
       (by omega) childCode childFrame positive
   have codeEnd : codeBase + (output.image.code.flatMap encII).length = output.image.fp0 := by
@@ -355,7 +361,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
       omega
     rw [own.rd, own.wr, own.b _ separate]
     exact loaded byte bound
-  exact ⟨after, prefix, position ▸ appended, same, own, others, codeKept, frame.agree own, logical,
+  exact ⟨after, prefix, position ▸ appended, same, own, response, others, codeKept, frame.agree own, logical,
     fun O => output.bootActivation_step Q O inside⟩
 
 /-- From the actual mapped payload the loader and the first clone site
@@ -399,7 +405,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * 0)), BitVec.ofNat 64 output.image.fp0⟩)) := by
     simp only [Nat.mul_zero, BitVec.add_zero]
     rfl
-  obtain ⟨finished, launched, _, committed, _, views, _, _, logical, activated⟩ :=
+  obtain ⟨finished, launched, _, committed, _, _, views, _, _, logical, activated⟩ :=
     output.boot_site_prefix Q (before := entered) (extra := extra) declared code rfl
       ((beforeView 0).symm ▸ initialFrame) positive atEntry
   have readFrame := output.loader_frame loaded
