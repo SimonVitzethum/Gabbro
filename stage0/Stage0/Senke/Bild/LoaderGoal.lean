@@ -2,7 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Welt.Spans.IdleValue
-public import Stage0.Senke.Bild.Mehr.StoreBuffer
+public import Stage0.Senke.Bild.Mehr.StartupOperands
 public import Runner.Beweis.Lader
 import Lean.Elab.Tactic.Omega
 
@@ -286,13 +286,7 @@ theorem bootClone_read_prefix {layout : Runner.Beweis.Lay}
       (loaded : rdN (before.ms.1.view i) width address = some value) :
       ProcessStep (TSO layout) actI (onThread (.ask (.rd width address) resume)) []
         (onThread (resume (some (value, 0)))) := by
-    have step := ProcessStep.ask (act := actI) (i := i)
-      (c := onThread (.ask (.rd width address) resume))
-      (List.getElem?_set_self inside) rfl rfl
-      (show (TSO layout).ans before.ms i (.rd width address) (some (value, 0)) before.ms from
-        ⟨rfl, 0, by rw [loaded]; rfl⟩)
-      (t' := resume (some (value, 0))) rfl
-    simpa only [onThread, List.set_set, Mach.lbl] using step
+    exact tso_read_step before inside resume loaded
   let clone : Res T := .ask (.sys cloneReq) fun answer =>
     opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
   let readFrame (pc : W) : Res T := rd64 (slot parent.fp (sx index) + 8) fun fp =>
