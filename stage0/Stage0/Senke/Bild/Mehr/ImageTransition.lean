@@ -25,19 +25,74 @@ theorem imageStackFootprint_disjoint {src : String} {reserve : Nat} {options : P
   exact (lt_trichotomy i j).elim (fun lt => (ordered lt first second).elim)
     (fun rest => rest.elim id fun gt => (ordered gt second first).elim)
 
-/-- All emitted stack reservations lie before the compiled world's bytes. -/
-theorem imageStackFootprint_before_world {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {i : Nat} {address : W}
-    (owned : imageStackFootprint output i address) : address.toNat < output.image.Y.lo := by
+/-- The emitted frame array fits below the world and below the address limit. -/
+theorem Emitted.stackReservation_bounds {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) :
+    output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo ∧
+      output.image.Y.lo < 2 ^ 64 := by
   obtain ⟨_, _, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
     (fun base => by simp only [layU]; omega)
     (fun base => layU_sync output.compiled.unit output.tor base)
-  have room : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
-    simpa only [Emitted.starts, List.length_map] using layout.hylo
+  have room := layout.hyord
+  have limit := layout.hyhi
+  exact ⟨by simpa only [Emitted.starts, List.length_map] using layout.hylo, by omega⟩
+
+/-- All emitted stack reservations lie before the compiled world's bytes. -/
+theorem imageStackFootprint_before_world {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {i : Nat} {address : W}
+    (owned : imageStackFootprint output i address) : address.toNat < output.image.Y.lo := by
   have endOrder := Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ owned.1)
-  exact owned.2.2.trans_le ((Nat.add_le_add_left (Nat.mul_le_mul_left 8 endOrder) _).trans room)
+  exact owned.2.2.trans_le ((Nat.add_le_add_left (Nat.mul_le_mul_left 8 endOrder) _).trans
+    output.stackReservation_bounds.1)
+
+/-- Every byte touched by a startup-frame store is covered by the actual
+    reservation of the executing thread. In particular, the word address
+    calculation cannot wrap around. -/
+theorem imageStackFootprint_slot {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {i index : Nat} {address : W}
+    (declared : i ≤ output.starts.length) (inside : index < output.image.Ks)
+    (touches : fenster
+      (slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * i))) (BitVec.ofNat 64 index))
+      address) :
+    imageStackFootprint output i address := by
+  let base := output.image.fp0 + 8 * (output.image.Ks * i)
+  let fp := BitVec.ofNat 64 base
+  let word := slot fp (BitVec.ofNat 64 index)
+  have endOrder := Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ declared)
+  have room := (Nat.add_le_add_left (Nat.mul_le_mul_left 8 endOrder) output.image.fp0).trans
+    output.stackReservation_bounds.1
+  rw [Nat.mul_succ, Nat.mul_add, ← Nat.add_assoc] at room
+  change base + 8 * output.image.Ks ≤ output.image.Y.lo at room
+  have limit := room.trans_lt output.stackReservation_bounds.2
+  have exactBase : fp.toNat = base := by
+    change (BitVec.ofNat 64 base).toNat = base
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.le_add_right _ _) limit)]
+  have exactWord : word.toNat = base + 8 * index := by
+    have bounds : fp.toNat + 8 * output.image.Ks ≤ 2 ^ 64 := by rw [exactBase]; exact limit.le
+    change (slot fp (BitVec.ofNat 64 index)).toNat = base + 8 * index
+    rw [slot_toNat bounds inside, exactBase]
+  change (address - word).toNat < 8 at touches
+  have fits : (address - word).toNat + word.toNat < 2 ^ 64 := by rw [exactWord]; omega
+  have exactAddress := congrArg BitVec.toNat (BitVec.sub_add_cancel address word)
+  rw [BitVec.toNat_add, Nat.mod_eq_of_lt fits, exactWord] at exactAddress
+  refine ⟨declared, ?_, ?_⟩
+  · change base ≤ address.toNat
+    omega
+  · rw [Nat.mul_succ, Nat.mul_add, ← Nat.add_assoc]
+    change address.toNat < base + 8 * output.image.Ks
+    omega
+
+/-- An in-range emitted startup store meets the SC projection's private
+    write condition for every touched byte. -/
+theorem imageStackStore_projected {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {i index : Nat} (value : W)
+    (declared : i ≤ output.starts.length) (inside : index < output.image.Ks) :
+    ProjectedRequest (imageStackFootprint output) i (.wr
+      (slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * i))) (BitVec.ofNat 64 index)) value) :=
+  .owned rfl (fun _ touches => imageStackFootprint_slot declared inside touches)
+    (fun _ _ touches _ other => imageStackFootprint_disjoint other (imageStackFootprint_slot declared inside touches))
 
 /-- The two process models use exactly the same machine memory and
     controls. Only the permitted answers at the host boundary differ. -/
