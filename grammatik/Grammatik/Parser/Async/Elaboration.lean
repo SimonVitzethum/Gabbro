@@ -78,24 +78,10 @@ public structure Analysis where
     | _ => .error "async: explicit terminal return required"
   | _ => .error "async: explicit terminal return required"
 
-/-- A checked outer AST retains the original complete source declaration.
-    This does not certify the source contracts or grant entry into machine G. -/
-public structure Elaborated (source : Function) where
-  function : AsyncFn
-  checked : AsyncOk function
-  name : function.name = source.signature.name
-  params : function.params = source.signature.params
-
-@[expose] public def elaborate (analysis : Analysis) (source : Function) :
-    Except String (Elaborated source) := do
-  if source.signature.generics.isEmpty = false then
-    throw "async: instantiate generic declarations before async expansion"
-  if source.signature.fehler.isSome then
-    throw "async: fallible return needs a modelled result sum"
-  let type ← match source.signature.res with
-    | some type => pure type
-    | none => throw "async: explicit result type required"
-  let (statements, result) ← splitBody source.body
+/-- Compute the exact fields, commands and terminal expression of the source body. -/
+@[expose] public def elaborateBody (analysis : Analysis) (type : STyp) (body : SAnw) :
+    Except String (List (String × STyp) × List Command × SExpr) := do
+  let (statements, result) ← splitBody body
   -- `$` cannot occur in a source identifier. The ordinary duplicate-field
   -- check also protects callers supplying manually constructed surface ASTs.
   let (statements, result) := match result with
@@ -105,21 +91,46 @@ public structure Elaborated (source : Function) where
     | _ => (statements, result)
   if hasAwait result then throw "async: bind the awaited result before returning"
   let (fields, commands) ← elaborateCommands analysis 0 statements
-  let function : AsyncFn := {
-      name := source.signature.name
-      params := source.signature.params
-      resultType := type
-      fields := fields
-      body := commands
-      result := result
-      returnCostBound := analysis.cost result }
-  if checked : asyncCheck function = true then
-    pure ⟨function, checked, rfl, rfl⟩
-  else throw "async: duplicate storage, missing saved local, held lock or ownership mismatch"
+  pure (fields, commands, result)
+
+/-- A checked outer AST retains the complete source signature and its exact body derivation. -/
+public structure Elaborated (analysis : Analysis) (source : Function) where
+  function : AsyncFn
+  checked : AsyncOk function
+  name : function.name = source.signature.name
+  params : function.params = source.signature.params
+  resultType : source.signature.res = some function.resultType
+  body : elaborateBody analysis function.resultType source.body =
+    .ok (function.fields, function.body, function.result)
+
+@[expose] public def elaborate (analysis : Analysis) (source : Function) :
+    Except String (Elaborated analysis source) := do
+  if source.signature.generics.isEmpty = false then
+    throw "async: instantiate generic declarations before async expansion"
+  if source.signature.fehler.isSome then
+    throw "async: fallible return needs a modelled result sum"
+  match resultType : source.signature.res with
+  | none => throw "async: explicit result type required"
+  | some type =>
+    match body : elaborateBody analysis type source.body with
+    | .error error => .error error
+    | .ok (fields, commands, result) =>
+      let function : AsyncFn := {
+        name := source.signature.name
+        params := source.signature.params
+        resultType := type
+        fields := fields
+        body := commands
+        result := result
+        returnCostBound := analysis.cost result }
+      if checked : asyncCheck function = true then
+        .ok ⟨function, checked, rfl, rfl, resultType, body⟩
+      else .error "async: duplicate storage, missing saved local, held lock or ownership mismatch"
 
 /-- Every successful source-layer elaboration uses the existing generic
     transformation theorem; it creates no per-program implementation. -/
-public theorem elaborated_refines (source : Function) (result : Elaborated source)
+public theorem elaborated_refines {analysis : Analysis} (source : Function)
+    (result : Elaborated analysis source)
     (model : Model Value Child W) {before after : State Value Child}
     {beforeWorld afterWorld : W} {event : Event Value} {cost : Nat}
     (run : MachinePoll model (asyncExpand model result.function) before beforeWorld event after afterWorld cost) :

@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.Source
+public import Stage0.Frontend.Async
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Stage0.Frontend.Tables
 public import Grammatik.Parser.Elab.Konst.ErsetzungTor
