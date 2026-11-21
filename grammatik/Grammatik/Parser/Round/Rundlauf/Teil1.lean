@@ -191,12 +191,16 @@ def druckToks : SExpr → List Token
   | .call f xs =>
     [nameTok f, .zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
   | .fnref p => [.zeichen "&", nameTok p]
-  | .built "#slice" [base, first, last] =>
-    druckToks base ++ [.zeichen "["] ++ druckToks first ++ [.zeichen ".."] ++
-      druckToks last ++ [.zeichen "]"]
   | .built f xs =>
-    (if strEq f "#tuple" then [] else [.wort f]) ++
+    let ordinary := (if strEq f "#tuple" then [] else [.wort f]) ++
       [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]
+    match xs with
+    | [base, first, last] =>
+      if strEq f "#slice" then
+        druckToks base ++ [.zeichen "["] ++ druckToks first ++ [.zeichen ".."] ++
+          druckToks last ++ [.zeichen "]"]
+      else ordinary
+    | _ => ordinary
   | .old x =>
     [.wort "old", .zeichen "("] ++ druckToks x ++ [.zeichen ")"]
   | .res => [.wort "result"]
