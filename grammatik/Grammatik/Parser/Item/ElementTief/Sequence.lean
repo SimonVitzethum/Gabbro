@@ -28,7 +28,7 @@ private theorem parseItemsTief_succ (fuel : Nat) (tokens : List Token) :
         | .ok (nodes, closing) => .ok (node :: nodes, closing)) := by
   classical
   unfold parseItemsTief
-  split <;> simp_all [ItemsEnde]
+  split <;> simp_all [ItemsEnde] <;> rfl
 
 /-- At a fixed fuel bound the concrete reader recognizes exactly the item
     sequence production, with the same AST order and closing tokens. -/
@@ -54,13 +54,13 @@ theorem parseItemsTief_iff {fuel : Nat} {tokens closing : List Token} {nodes : L
           | error e => simp only [head, tail, reduceCtorEq] at parsed
           | ok remaining =>
             obtain ⟨following, ending⟩ := remaining
-            rw [head, tail] at parsed
+            simp only [head, tail] at parsed
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj parsed)
             exact .item continues head (ih tail)
   · intro derivation
     induction derivation with
-    | done boundary => rw [parseItemsTief_succ, if_pos boundary]
-    | item continues head _ tail => rw [parseItemsTief_succ, if_neg continues, head, tail]
+    | done boundary => rw [parseItemsTief_succ, ite_eq_left boundary]
+    | item continues head _ tail => simp only [parseItemsTief_succ, ite_eq_right continues, head, tail]
 
 theorem ItemSequence.length_lt {fuel : Nat} {tokens closing : List Token} {nodes : List SItemTief}
     (read : ItemSequence fuel tokens nodes closing) : nodes.length < fuel := by
