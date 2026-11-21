@@ -111,7 +111,9 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
     | .index base i =>
       match uArrayLocal ctx ziel with
       | some _ => uSetzeElement ctx base i w
-      | none => uSetzePlatz ctx ziel w
+      | none =>
+        if uRecordSlotPath base then uSetzeRecordSlot ctx ziel w
+        else uSetzePlatz ctx ziel w
     | .arrow (.variable r) f =>
       match uRefLokal ctx r with
       | .some _ =>
@@ -120,6 +122,23 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
         | .ok v => .ok (.assignRef r f v)
       | .none => uSetzePlatz ctx ziel w
     | _ => uSetzePlatz ctx ziel w
+
+/-- Dispatch an indexed slot projection through the aggregate store. -/
+theorem uSetze_slotIndex (ctx : UCtx) (base index value : SExpr)
+    (localArray : uArrayLocal ctx (.index base index) = none)
+    (slotField : uRecordSlotPath base = true) :
+    uSetze ctx (.index base index) "=" value =
+      uSetzeRecordSlot ctx (.index base index) value := by
+  have plain : strEq "=" "=" = true := rfl
+  simp only [uSetze, plain, ↓reduceIte, localArray, slotField]
+
+/-- A record projection below a slot can be selected by the indexed store
+    dispatcher for any slot index, element index and field names. -/
+theorem indexedSlotDispatch_erfuellbar (ctx : UCtx) (table column field : String)
+    (slot index : SExpr) :
+    let base := SExpr.field (.field (.index (.field (.variable table) "slots") slot) column) field
+    uArrayLocal ctx (.index base index) = none ∧ uRecordSlotPath base = true := by
+  exact ⟨rfl, rfl⟩
 
 /-- A call through a local function pointer `p` (bound by `let p = &f;`): `some` of the head of the function it
     points at; `none` when `p` is no such local. -/

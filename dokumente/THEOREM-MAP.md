@@ -8281,3 +8281,16 @@ shared-memory transitions, the final cause of each hardware stop and the
 loader's external mapping contract still need their concrete bridges.
 The continuing trace also needs a bridge for a non-returning gate that
 retires only its own Linux thread.
+
+## 209. Indexed assignment below a slot field
+
+`uSetze_slotIndex` sends an indexed slot projection to the ordinary
+aggregate store. `indexedSlotDispatch_erfuellbar` establishes both
+dispatch premises for an index below a nested record field.
+`uRecordReplacement_index` specifies the replacement at each array
+subscript, and `uSetzeRecordSlot_index` identifies the named-slot store
+when its array field is indexed directly. Typed elaboration checks the
+index and replacement in `updW` and checks the store in
+`lowAssignTabW` or `lowAssignDurchW`. The resulting
+`Expr.arrSet` and `Expr.prodSet` use `arrSet_ok` and `prodSet_ok`
+in the generic Stage 0 expression correctness proof.

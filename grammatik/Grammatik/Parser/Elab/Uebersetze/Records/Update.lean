@@ -15,8 +15,8 @@ def uRecordLocal (ctx : UCtx) : SExpr → Option String
   | .field base _ => uRecordLocal ctx base
   | _ => none
 
-/-- Rebuild the containing value from the selected leaf outwards. Typed lowering resolves
-    each field against its declared schema and emits `Expr.prodSet` at every level. -/
+/-- Rebuild the containing value from the selected leaf outwards. Typed lowering
+    resolves each field and checks each array index before constructing the update. -/
 def uRecordReplacement (ctx : UCtx) (root : SExpr → Bool) :
     SExpr → USide → Except String (SExpr × USide)
   | path, value =>
@@ -25,7 +25,20 @@ def uRecordReplacement (ctx : UCtx) (root : SExpr → Bool) :
     | .field base field => do
       let original ← uWertBody ctx base
       uRecordReplacement ctx root base (.replace original field value)
-    | _ => .error "source export: record update requires a field path"
+    | .index base index => do
+      let original ← uWertBody ctx base
+      let offset ← uWertBody ctx index
+      uRecordReplacement ctx root base (.upd original offset value)
+    | _ => .error "source export: record update requires a field or element path"
+
+theorem uRecordReplacement_root (ctx : UCtx) (root : SExpr → Bool)
+    (place : SExpr) (value : USide) (found : root place = true) :
+    uRecordReplacement ctx root place value = .ok (place, value) := by
+  rw [uRecordReplacement.eq_def]
+  dsimp only
+  split
+  · rfl
+  · next denied => exact False.elim (denied found)
 
 /-- Each selected field is replaced in the value read from its parent. -/
 theorem uRecordReplacement_step (ctx : UCtx) (root : SExpr → Bool) (base : SExpr)
@@ -36,6 +49,17 @@ theorem uRecordReplacement_step (ctx : UCtx) (root : SExpr → Bool) (base : SEx
       uRecordReplacement ctx root base (.replace original field value) := by
   simp only [uRecordReplacement, nested, Bool.false_eq_true, ↓reduceIte,
     read, bind, Except.bind]
+
+/-- A subscript below the store root rebuilds the array at the ordinary checked index. -/
+theorem uRecordReplacement_index (ctx : UCtx) (root : SExpr → Bool) (base index : SExpr)
+    (original offset value : USide)
+    (nested : root (.index base index) = false)
+    (read : uWertBody ctx base = .ok original)
+    (readIndex : uWertBody ctx index = .ok offset) :
+    uRecordReplacement ctx root (.index base index) value =
+      uRecordReplacement ctx root base (.upd original offset value) := by
+  simp only [uRecordReplacement, nested, Bool.false_eq_true, ↓reduceIte,
+    read, readIndex, bind, Except.bind]
 
 /-- Mutation preserves the complete local record; immutable roots are refused explicitly. -/
 def uSetzeRecord (ctx : UCtx) (name : String) (target value : SExpr) : Except String UStmt := do
@@ -53,6 +77,7 @@ def uRecordSlotRoot : SExpr → Bool
 
 def uRecordSlotPath : SExpr → Bool
   | target@(.field base _) => uRecordSlotRoot target || uRecordSlotPath base
+  | .index base _ => uRecordSlotPath base
   | _ => false
 
 /-- Both whole-slot and nested stores need the ordinary write capability. -/
@@ -62,7 +87,7 @@ def uSlotWriteRight (ctx : UCtx) (name : String) : Except String Unit := do
   | .ok (.ptr ⟨0, ⟨_, true, _⟩, .table _⟩) => pure ()
   | _ => throw "write through a read pointer"
 
-/-- A nested update is one ordinary store of the rebuilt record. The
+/-- A nested update is one ordinary store of the rebuilt aggregate. The
     base read and the store both pass the typed slot checks. -/
 def uSetzeRecordSlot (ctx : UCtx) (target value : SExpr) : Except String UStmt := do
   let value ← uRecordSide ctx value (fun source _ => uWertBody ctx source)
@@ -85,15 +110,23 @@ theorem uSetzeRecordSlot_named (ctx : UCtx) (place value : SExpr)
     uSetzeRecordSlot ctx (.field place selected) value =
       .ok (.assignTab table column index (.replace original selected replacement)) := by
   simp only [uSetzeRecordSlot, readValue, bind, Except.bind,
-    uRecordReplacement_step ctx uRecordSlotRoot place selected original replacement nested read]
-  have rebuilt : uRecordReplacement ctx uRecordSlotRoot place (.replace original selected replacement) =
-      .ok (place, .replace original selected replacement) := by
-    rw [uRecordReplacement.eq_def]
-    dsimp only
-    split
-    · rfl
-    · next denied => exact False.elim (denied root)
-  simp only [rebuilt, access, pure, Except.pure]
+    uRecordReplacement_step ctx uRecordSlotRoot place selected original replacement nested read,
+    uRecordReplacement_root ctx uRecordSlotRoot place _ root, access, pure, Except.pure]
+
+/-- An element of a named slot field becomes a checked array replacement in the ordinary store. -/
+theorem uSetzeRecordSlot_index (ctx : UCtx) (place index value : SExpr)
+    (table column : String) (slot : UIdx) (original offset replacement : USide)
+    (root : uRecordSlotRoot place = true)
+    (access : uZugriff ctx place = .ok (.tabelle table, table, column, slot))
+    (read : uWertBody ctx place = .ok original)
+    (readIndex : uWertBody ctx index = .ok offset)
+    (readValue : uRecordSide ctx value (fun source _ => uWertBody ctx source) = .ok replacement) :
+    uSetzeRecordSlot ctx (.index place index) value =
+      .ok (.assignTab table column slot (.upd original offset replacement)) := by
+  simp only [uSetzeRecordSlot, readValue, bind, Except.bind,
+    uRecordReplacement_index ctx uRecordSlotRoot place index original offset replacement
+      rfl read readIndex,
+    uRecordReplacement_root ctx uRecordSlotRoot place _ root, access, pure, Except.pure]
 
 /-- The mutable local array at the root of an element place `x[i]`, `x[i][j]`, ... -/
 def uArrayLocal (ctx : UCtx) : SExpr → Option String
