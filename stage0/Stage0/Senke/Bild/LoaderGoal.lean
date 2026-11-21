@@ -184,8 +184,8 @@ theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
     (fun base => by simp only [layU]; omega)
     (fun base => layU_sync output.compiled.unit output.tor base)
   rw [code] at loaded
-  have ready : CodeAt m (BitVec.ofNat 64 codeBase) (spawnC (startScratch output.compiled.main) sites) :=
-    codeAt_left (codeAt_bytes _ codeBase placed.hops loaded)
+  have instructions := codeAt_bytes _ codeBase placed.hops loaded
+  have ready := codeAt_left (codeAt_left (codeAt_left instructions))
   have inside := (List.getElem?_eq_some_iff.mp declared).1
   have site := placed.spawn_entry j (by rw [List.length_map]; exact inside)
   have positioned : (⟨output.compiled.main, output.args⟩ :: output.starts)[j + 1]? = some start := declared
