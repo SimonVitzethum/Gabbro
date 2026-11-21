@@ -213,6 +213,79 @@ theorem image_bootClone_run {before : Cfg imageTSO (Res T)} {i : Nat} {parent ch
       fetched.trans (ProcessPrefix.ofStep created)
   · simpa only [ready, threads, List.length_set, List.set_set] using found
 
+/-- Appending the successful startup clone activates the same next source
+    slot. Earlier threads may already have executed model steps. Their
+    local states, including the retired threads' recorded heads, are kept. -/
+theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {parent child : T} {id extra : W}
+    (slots : ImageSlotsMatch output E O history before state)
+    (entry : before.ths[0]? = some (some (.next parent)))
+    (waiting : state.wartet 0 = [])
+    (declared : before.ths.length < E.starts.length) :
+    let i := before.ths.length
+    let threads := before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]
+    ∃ next actualStart, E.starts[i]? = some actualStart ∧
+      FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
+        (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) state next ∧
+      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) ⟨before.ms, threads⟩ next := by
+  intro i threads
+  have parentInside := (List.getElem?_eq_some_iff.mp entry).1
+  have parentLive : state.lebt 0 = true := (slots.1 0).mpr parentInside
+  have childIdle : state.lebt i = false := by
+    cases ready : state.lebt i with
+    | false => rfl
+    | true => exact ((Nat.lt_irrefl _) ((slots.1 i).mp ready)).elim
+  let next : FadenMaschine (declOf output.compiled.unit).mitRuhe :=
+    ⟨state.m, fun j => if j = i then true else state.lebt j, state.wartet,
+      fun j => if j = i then state.rang 0 + 1 else state.rang j, state.uhr + 1⟩
+  have activate : FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) state next :=
+    .kind state 0 i parentLive waiting childIdle
+  have size : threads.length = i + 1 := by
+    simp only [threads, i, List.length_append, List.length_set, List.length_singleton]
+  have childSlot : threads[i]? = some (some (.next child)) := by
+    change (before.ths.set 0 _ ++ [some (.next child)])[before.ths.length]? = _
+    rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
+    rfl
+  refine ⟨next, E.starts[i]'declared, List.getElem?_eq_getElem declared, activate, ?_, ?_⟩
+  · intro j
+    change (if j = i then true else state.lebt j) = true ↔ j < threads.length
+    rw [size]
+    by_cases equal : j = i
+    · subst j
+      simp
+    · rw [ite_eq_right equal, slots.1]
+      change j < i ↔ j < i + 1
+      omega
+  · intro j retired
+    change threads[j]? = some none at retired
+    have newBound := (List.getElem?_eq_some_iff.mp retired).1
+    rw [size] at newBound
+    have oldBound : j < i := by
+      by_contra outside
+      have equal : j = i := by omega
+      subst j
+      rw [childSlot] at retired
+      cases retired
+    have atParent : j ≠ 0 := by
+      intro equal
+      subst j
+      have within : 0 < (before.ths.set 0 (some (ret1 parent id))).length := by simpa using parentInside
+      simp only [threads, List.getElem?_append_left within, List.getElem?_set_self parentInside] at retired
+      cases retired
+    have within : j < (before.ths.set 0 (some (ret1 parent id))).length := by simpa [i] using oldBound
+    have wasRetired : before.ths[j]? = some none := by
+      simpa only [threads, List.getElem?_append_left within, List.getElem?_set_ne (Ne.symm atParent)] using retired
+    obtain done | ⟨atExit, req, earlier, fromStart, since, sameHead, matched, kind, last⟩ := slots.2 j wasRetired
+    · exact Or.inl done
+    · refine Or.inr ⟨atExit, req, earlier, fromStart, .schritt state next since activate,
+        sameHead, matched, kind, ?_⟩
+      simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm atParent),
+        Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
+
 /-- A declared non-returning thread exit retires just its own slot.
     The source stays at the exact call head, and the exit is entered in
     the history of that thread only. -/
