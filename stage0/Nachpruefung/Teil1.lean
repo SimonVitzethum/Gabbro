@@ -30,6 +30,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_cas_shared
 #print axioms Gabbro.Stage0.Emitted.goalStart_argument
 #print axioms Gabbro.Stage0.irBild_private_tso_zielsatz
+#print axioms Gabbro.Stage0.irBild_x86_private_zielsatz
 #print axioms Gabbro.Stage0.Senke.BildMehr.runner_private_endpoint
 #print axioms Gabbro.Stage0.Senke.WeltAt.withIdle
 #print axioms Gabbro.Stage0.irBild_eq_output

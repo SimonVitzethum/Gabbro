@@ -8143,3 +8143,21 @@ state is already reachable and the initial relation and private footprint are pr
 `TSOPrivateReachable.prepend` relates these private steps to the runner's ordinary IR
 process traces. B6 still requires construction of the process relation after physical
 startup and its preservation across shared commits, thread changes and terminal steps.
+
+## 205. Concrete runner endpoints and emitted byte ranges
+
+`runner_entry_tso_prefix` relates each reachable x86 configuration to the
+corresponding IR process from the ELF entry, with the same memory and host events.
+`runner_entry_tso_stop` locates the last running x86 and IR configurations at
+a terminal observation and preserves that observation. `irBild_loaded_entry_prefix`
+identifies the actual silent header step from the mapped CLI payload to its entry frame.
+
+`Emitted.changedCell_in_image` bounds changed cells represented by the emitted
+column layout. `column_addresses_exclude_row_layout` proves why the shared stride
+of the model's row layout cannot describe that encoding for two nonempty fields
+and two or more indices.
+
+`projectSCState_read_shared` and `projectSCState_cas_shared` preserve the results of
+operations outside the private footprints. `irBild_x86_private_zielsatz` transfers
+`ZielFX` to the committed state at the matching IR endpoint of an actual private x86
+prefix. The initial GX relation and the request footprint checks are explicit premises.
