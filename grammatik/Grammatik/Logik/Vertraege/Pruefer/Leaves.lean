@@ -201,7 +201,7 @@ def leafCondition {context : Context A next} (policy : A → CallObligation prog
               simp only [alleIndizes, empty, List.range_zero, List.filterMap_nil]
             refine ⟨after, (assignment_lese checked Λ _).trans (assignment_lese world Λ _), ?_⟩
             simp only [execStmtH, verbrauchLauf, eval, wahr?, Bool.true_eq_false, ↓reduceIte,
-              verbrauchSel, indices, verbrauchWahl, verbrauchWahlAux, List.all_nil, Bool.not_true]) goals
+              verbrauchSel, indices, verbrauchWahl, verbrauchWahlAux, List.all_nil, Bool.not_true] <;> rfl) goals
       else .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")
   | .consumeTraverse .. => .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")
   | _ => .error (.unsupported "contract structured statement needs the recursive control compiler")
