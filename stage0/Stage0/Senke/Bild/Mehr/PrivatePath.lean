@@ -68,9 +68,11 @@ theorem project_private_request {layout : Runner.Beweis.Lay} {before after : (TS
       (projectSCState footprint after) := by
   cases request with
   | rd width base => exact projectSCState_read step footprint within disjoint
-  | wr base value => exact projectSCState_store step footprint
+  | wr base value =>
+    exact projectSCState_store step footprint
       (fun address member => ⟨within address member, exclusive rfl address member⟩)
-  | cas base expected value => exact projectSCState_cas step footprint
+  | cas base expected value =>
+    exact projectSCState_cas step footprint
       (fun address member => ⟨within address member, exclusive rfl address member⟩) disjoint
   | sys _ => cases memoryRequest
   | fp _ _ _ => cases memoryRequest
