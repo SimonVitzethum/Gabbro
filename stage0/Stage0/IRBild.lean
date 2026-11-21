@@ -17,6 +17,7 @@ public import Stage0.Senke.Welt.GlobalAlignment
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Welt.Initial
 public import Stage0.Senke.Images.SourceStarts
+public import Grammatik.Logik.Vertraege.Pruefer.Unit
 @[expose] public section
 
 
@@ -41,6 +42,9 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   /-- the environment `main` starts with: the pointer to the table each parameter's type names -/
   args : Env (declOf compiled.unit) ((declOf compiled.unit).params compiled.main)
   pointers : Senke.mainEnv ((declOf compiled.unit).params compiled.main) = some args
+  /-- The entry and each actual root satisfy their declared requires at startup. -/
+  startRequires : ∀ start ∈ ⟨compiled.main, args⟩ :: startPlan.starts (Senke.initialWorld compiled.unit initialValid),
+    ReqAmEintritt compiled.program start.1 ((sp0Of compiled.unit initialValid).welt []) start.2
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
@@ -78,12 +82,16 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     match hp : Senke.mainEnv ((declOf u).params main) with
     | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
     | some args =>
+      let starts := startPlan.starts (Senke.initialWorld u initialValid)
+      let checked ← (Invarianten.Pruefer.collect (⟨main, args⟩ :: starts) _
+        (Zielsatz.checkStartRequires P (sp0Of u initialValid))).mapError
+        (fun failure => "ir: entry precondition: " ++ failure.message)
       match he : Senke.bild irDurchlaeufe P (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) u tor) (List.finRange u.fns.length) Fin.val
           (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
-          (startPlan.starts (Senke.initialWorld u initialValid)) K
+          starts K
           (Senke.bodenAusrichtung u) with
       | .error e => throw e
-      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, image, he⟩
+      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, checked.down, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
 /-- The exact typed occurrences supplied to the image constructor. -/

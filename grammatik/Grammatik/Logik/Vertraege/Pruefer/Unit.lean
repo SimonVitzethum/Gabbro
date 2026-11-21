@@ -36,10 +36,11 @@ def checkUnitLock (E : Einheit D) (lock : D.Lock) :
     return ⟨locality.down, (formula.correct _).mp ((qf_eval _ _).mp initial)⟩
   else .error (.unsupported "lock invariant is false in the initial memory")
 
-def checkStartRequires (E : Einheit D) (start : Σ f : D.Fn, Env D (D.params f)) :
-    Except Frag.Refusal (PLift (ReqAmEintritt E.P start.1 (E.sp0.welt []) start.2)) := do
-  let encoded ← translate (E.P.requires start.1) start.2
-  if checked : (lower encoded.payload).eval (assignment (E.sp0.welt [])) = true then
+def checkStartRequires (program : Programm D) (memory : Speicher D)
+    (start : Σ f : D.Fn, Env D (D.params f)) :
+    Except Frag.Refusal (PLift (ReqAmEintritt program start.1 (memory.welt []) start.2)) := do
+  let encoded ← translate (program.requires start.1) start.2
+  if checked : (lower encoded.payload).eval (assignment (memory.welt [])) = true then
     return ⟨(encoded.bool_iff _).mpr ((lower_denote _ _).mp ((qf_eval _ _).mp checked))⟩
   else .error (.unsupported "declared start does not satisfy its requires")
 
@@ -55,7 +56,7 @@ def checkUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
   let some axiomSources := E.axiomSources
     | .error (.unsupported "oracle predicates are missing their elaborated source expressions")
   let axioms ← collect axiomSources.items _ (checkAxiomLocal E.Q axiomSources)
-  let starts ← collect (E.starts ++ E.gestartet) _ (checkStartRequires E)
+  let starts ← collect (E.starts ++ E.gestartet) _ (checkStartRequires E.P E.sp0)
   let decreases ← collect functions _ (fun f => do
     let hint ← loopHint E.loopHints f
     checkMeasure E.P E.S E.lockFormulas budget hint E.measure (zykS E.P functions) (E.sp0.welt []) f

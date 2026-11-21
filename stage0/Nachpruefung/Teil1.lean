@@ -21,6 +21,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
 #print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
+#print axioms Gabbro.Stage0.Emitted.startRequires
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected

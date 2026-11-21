@@ -1,0 +1,6 @@
+module entry_requires_false {
+static mut value : u32 in 0 .. 1 = 0;
+impl fn main() -> u32 in 0 .. 1 effects { reads value }
+    requires value == 1
+{ return 0; }
+}

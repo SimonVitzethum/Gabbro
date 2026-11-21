@@ -1,9 +1,10 @@
-// The second transition expects Idle while the cell is Busy: G's prestate stop 106.
+// Refuse the second transition, whose source state no longer holds.
 module ir_probe {
 table T count 2 { slot { s : u32 in 0 .. 2, } }
 state S { transition begin { s : Idle -> Busy } }
 impl fn main() -> u32 in 0 .. 2
     effects { reads T.slots, writes T.slots }
+    requires T.slots[1].s == 0
 {
     transition T.slots[1].s : Idle -> Busy;
     transition T.slots[1].s : Idle -> Busy;

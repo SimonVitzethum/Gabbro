@@ -1041,6 +1041,11 @@ in its head still requires that table to be `pub` (the closed export hull, N038)
 and a function name equal to a tagged case (`function and case share a name: NAME`). There is
 one meaning for a call name; constructor expansion cannot hide a function declaration.
 
+An entry that needs a fact about initialized storage declares it in `requires`.
+Stage 0 checks the declared precondition of the entry and of every configured
+start against the initial storage and the arguments it puts in the image.
+Function bodies are checked under their declared preconditions.
+
 **Generic functions (Lean frontend, check model A).** For example:
 
 ```gabbro
