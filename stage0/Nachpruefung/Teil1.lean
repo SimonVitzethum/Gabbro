@@ -57,6 +57,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_const_prefix
 #print axioms Gabbro.Stage0.Senke.spawn_prepare_prefix
 #print axioms Gabbro.Stage0.Emitted.first_boot_clone
+#print axioms Gabbro.Stage0.bootSpawn_run
+#print axioms Gabbro.Stage0.Emitted.boot_site_prefix
+#print axioms Gabbro.Stage0.Senke.tso_guard_pass
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read_shared

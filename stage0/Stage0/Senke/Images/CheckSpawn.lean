@@ -70,7 +70,8 @@ theorem tso_guard_pass [Kern] {layout : Runner.Beweis.Lay}
       simp only [rdN, atJump.f1, Option.map_some]
     have advance : jump.pc + Runner.X86.sx32 (II.f 64) = pc + BitVec.ofNat 64 (16 * 5) :=
       pcN pc 1 4 5 rfl
-    simpa [onThread, op, f1, rd32, advance] using
+    have frame : jump.fp = fp := rfl
+    simpa [onThread, op, f1, rd32, advance, frame] using
       tso_read_step before inside (fun answer => opt answer fun pair =>
         .next { jump with pc := jump.pc + sx (pair.1.setWidth 32) }) loaded
   exact .cons started (.cons (fetch 19 start atBranch.op (by decide)) (.cons indexed

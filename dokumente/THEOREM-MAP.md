@@ -8229,6 +8229,10 @@ payload separately from the writable stacks.
 immediates, with TSO store forwarding to the parent. `Emitted.first_boot_clone`
 starts at the mapped payload's loader read and reaches the child and the
 parent's next instruction on a successful, memory-preserving clone.
+`Emitted.boot_site_prefix` gives that same clone step for each declared
+relocated site and preserves the code and frame permissions for the next site.
+`tso_guard_pass` runs the branch over the emitted stop code on TSO when the
+checked flag is nonzero.
 `Emitted.bootActivation_step` accounts for the corresponding live position,
 rank and clock, and `Emitted.bootActivation_reached` covers every prefix of the
 declared root list in the logical thread machine. `Emitted.bootActivation_zielsatz`
