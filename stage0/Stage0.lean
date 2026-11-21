@@ -151,6 +151,7 @@ public import Stage0.Senke.Bild.Mehr.Ort.Commit
 public import Stage0.Senke.Bild.Mehr.Ort.Ort
 public import Stage0.Senke.Bild.Mehr.Ort.Rahmen
 public import Stage0.Senke.Bild.Mehr.Ort.Segment
+public import Stage0.Senke.Bild.Mehr.PrivatePath
 public import Stage0.Senke.Bild.Mehr.Prozess
 public import Stage0.Senke.Bild.Mehr.Relation
 public import Stage0.Senke.Bild.Mehr.Schritt

@@ -65,7 +65,7 @@ theorem tso_store_updates_view {layout : Lay} {before after : (TSO layout).St}
   · exact Or.inl ⟨refused, same⟩
   · refine Or.inr ⟨accepted, ?_, ?_⟩
     · rw [enqueued]
-      simp only [TSt.view, TSt.setBuf, if_pos rfl, List.foldl_append, List.foldl_cons, List.foldl_nil]
+      simp only [TSt.view, TSt.setBuf, if_pos rfl, ↓reduceIte, List.foldl_append, List.foldl_cons, List.foldl_nil]
     · intro j different
       rw [enqueued]
       simp only [TSt.view, TSt.setBuf, if_neg different]
