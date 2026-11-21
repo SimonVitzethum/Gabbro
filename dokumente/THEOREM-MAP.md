@@ -8102,7 +8102,7 @@ to `lowerSlice_array` and `lowerSlice_string`. `arraySpan_refines` and
 `arraySpan_reads` preserves the base's memory footprint under the materialisation
 gate. `eval_indexedArraySlice` and `indexedSlice_reads` prove equality of values
 and the exact read footprint for direct indexing with no intermediate array.
-`arraySlice_erfuellbar` exhibits the full range for every array expression.
+`arraySlice_erfuellbar` proves admission of the full range on every typed array local.
 
 `ArenaForm.restoreScopeStmt_exec` is the ordinary G implementation of the
 cursor restoration. `restoreScope_storage` covers every outcome carrying a
@@ -8115,3 +8115,6 @@ open.
 record's first running phase with its actual resource inventory.
 `reachable_encoded` reduces encoding totality on semantic reachability to
 preservation of that invariant by poll steps.
+`final_segment_encoded` preserves the return value and transfers the original
+marks on Ready. `cancelEpilogue_encoded` relates successful ordinary G cleanup
+to the exact cancelled record once its release consumes the saved inventory.

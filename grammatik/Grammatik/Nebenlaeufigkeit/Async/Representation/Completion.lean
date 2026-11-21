@@ -12,6 +12,30 @@ open Segment
 variable {D : Deklaration} {V : Vertrag D} {Λ : List (Res D)}
   {types : TypeResolution} {f : AsyncFn}
 
+/-- The exact record written by the ordinary cancellation epilogue
+    represents the empty, terminal state. -/
+theorem cancelled_inv (inventory : Inventory D) (empty : inventory.owned Phase.cancelled = []) :
+    Inv f types inventory State.cancelled (cancelledValue types f D) := by
+  have marks : MarksRep (types := types) inventory Phase.cancelled State.cancelled := by
+    simp only [MarksRep, State.marks, empty, List.map_nil]
+  exact .first _ _ _ _ .cancelled marks
+
+/-- A successful checked release reaches the actual cleared G record.
+    The release itself is responsible for consuming the entire inventory. -/
+theorem cancelEpilogue_encoded {Γ : Ctx} {l : Bool}
+    (inventory : Inventory D) (empty : inventory.owned Phase.cancelled = [])
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (state : Var Γ (stateType types f)) (release : Stmt D V l Γ Λ [])
+    (before after : World D) (environment environment' : Env D Γ)
+    (released : execStmt oracle passes calls release before environment = .ok after environment') :
+    execBlock oracle passes calls (cancelEpilogue types f state release) before environment =
+        .ok after (environment'.set state (cancelledValue types f D)) ∧
+      encode D types f State.cancelled = some (cancelledValue types f D) :=
+  ⟨cancelEpilogue_success types f oracle passes calls state release
+      before after environment environment' released,
+    inv_encoded f types inventory State.cancelled _ (cancelled_inv inventory empty)⟩
+
 /-- Ready storage contains the typed return and the completed tag. No
     saved frame or resource inventory remains in the future. -/
 theorem completed_inv (inventory : Inventory D) (value : Value D)

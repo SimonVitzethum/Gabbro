@@ -25,6 +25,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_string
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerIndexedSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_refines
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_reads
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_indexedArraySlice
@@ -38,6 +39,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.initial_inv
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
+#print axioms Gabbro.Grammatik.Async.Representation.cancelEpilogue_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
