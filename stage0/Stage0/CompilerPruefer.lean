@@ -147,7 +147,10 @@ theorem Compiled.entry_name_unique {text : String} {options : Profil.Options}
   have bound (i : (declOf result.unit).Fn) : i.val < (result.unit.fns.map (·.name)).length := by
     simpa only [List.length_map] using i.isLt
   apply result.functionNames.eq_of_getElem_eq (bound f) (bound result.main)
-  simpa only [List.getElem_map, fnAt, List.get_eq_getElem] using entryNamed.trans named.symm
+  have same := entryNamed.trans named.symm
+  unfold fnAt at same
+  rw [List.get_eq_getElem (i := f), List.get_eq_getElem (i := result.main)] at same
+  simpa only [List.getElem_map] using same
 
 /-- The explicit concurrent prefix has precisely the function occurrences
     judged by the source checker, with their original order and multiplicity. -/
