@@ -7,7 +7,7 @@ public import Stage0.Senke.Ausdruck.Old.Pruefer
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Invarianten Invarianten.Pruefer Invarianten.VC
-  Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.Modell
+  Invarianten.Elim Invarianten.Elim.Korrekt Invarianten.Frag Invarianten.Modell
 
 variable {D : Deklaration}
 
@@ -37,7 +37,7 @@ theorem CheckedInitialInvariants.goal_verdict {E : Einheit D} {functions : List 
   obtain ⟨program, read⟩ := (programInvariantsB_iff E.P E.S functions E.lockFormulas {} locks).mp accepted
   have valid := (qf_eval _ _).mpr ((program.invariants.correct _).mpr initial.1)
   unfold invariantenGeprueftB checkInvariants
-  simp only [read, bind, Except.bind, dif_pos valid]
+  simp only [read, bind, Except.bind, dite_eq_left valid]
   have locked := initial.2
   cases result : collect locks _ (checkLockInitial E) with
   | error cause => simp only [result, Except.toOption, Option.isSome_none, Bool.false_eq_true] at locked
