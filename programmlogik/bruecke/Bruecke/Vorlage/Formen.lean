@@ -135,6 +135,24 @@ def koerperAblehnung (f : UFn) : String :=
       "(an expression, a loop invariant other than `true`, or a return kind)"
   | fs => "statement forms outside the bridge: " ++ String.intercalate ", " fs
 
+/-- The largest traversal the generator reads: the Body model lists a traversal's indices explicitly
+    (`forEach`), so a traversal over a huge table would be materialised. -/
+def schleifenGrenze : Int := 65536
+
+/-- A traversal of `f` over a table with more slots than `schleifenGrenze`, named. -/
+def grosseSchleife (u : UProg) (f : UFn) : Option String :=
+  f.body.findSome? fun s =>
+    match s with
+    | .loopBeg _ tab _ =>
+      match u.tabs.find? (·.name == tab) with
+      | some t => if t.count > schleifenGrenze then
+          some ("traversal over table `" ++ tab ++ "` with " ++ toString t.count ++
+            " slots: the Body model lists a traversal's indices explicitly; more than " ++
+            toString schleifenGrenze ++ " are not read")
+        else none
+      | none => none
+    | _ => none
+
 /-- The function conditions of `stimmigB` that fail for `f`, by name. -/
 def fnAblehnungen (u : UProg) (f : UFn) : List String :=
   [("parameter kinds (artB)", artB f), ("parameter names unique (namenB)", namenB f),

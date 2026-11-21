@@ -46,7 +46,9 @@ structure Datei where
 /-- Functions per chunk. -/
 def stueckGroesse : Nat := 16
 
-def breit (x : Std.Format) : String := x.pretty 1000000
+/-- A printed term on one line. `repr` prints a proof field as `_`; every proof field of the
+    elaborated unit is a decidable fact about its data, so it is written `by decide`. -/
+def breit (x : Std.Format) : String := (x.pretty 1000000).replace " := _ " " := by decide "
 
 /-- A Lean string literal for `s`. -/
 def literal (s : String) : String := (repr s).pretty 1000000
@@ -108,7 +110,7 @@ def quelleDatei (modul src : String) : Datei :=
     replaced by `fnsAusdruck` and the cache `merk` left to its default (all caches are equal). -/
 def einheitText (u : UProg) (fnsAusdruck : String) : String :=
   let t := breit (repr { u with fns := [] })
-  (t.replace ", merk := _" "").replace ", fns := [], " (", fns := " ++ fnsAusdruck ++ ", ")
+  (t.replace ", merk := by decide" "").replace ", fns := [], " (", fns := " ++ fnsAusdruck ++ ", ")
 
 def fnName (i : Nat) : String := "f" ++ toString i
 
@@ -151,7 +153,7 @@ def pflichtDatei (modul : String) (i : Nat) (f : UFn) (body : List Gabbro.Body.S
       "theorem body" ++ si ++ "_eq : zuBodyZ u " ++ fnName i ++ " = some body" ++ si ++ " := by\n  with_unfolding_all rfl\n\n" ++
       "/-- The decided checks of `" ++ f.name ++ "`. -/\n" ++
       "theorem pruefung" ++ si ++ " : stimmigFnB u " ++ fnName i ++ " = true ∧ bindFrischB " ++ fnName i ++
-        " = true ∧ rangFnB rk " ++ fnName i ++ " = true := by\n  decide\n\n" ++
+        " = true ∧ rangFnB rk " ++ fnName i ++ " = true := by\n  with_unfolding_all decide\n\n" ++
       "/-- **What you prove about `" ++ f.name ++ "`**: from a well-formed entry state satisfying the\n" ++
       "    precondition, under the contracts of its callees, the body ends and meets the postcondition. -/\n" ++
       "def ziel" ++ si ++ " : Prop := meetsU u (wfU u) " ++ fnName i ++ " body" ++ si ++ "\n\n" ++ fuss modul }
@@ -256,9 +258,14 @@ def dateien (modul src : String) : Except String (List Datei) := do
   let rang := raenge u
   let rangTafel : Std.HashMap String Nat := rang.foldl (fun m p => m.insert p.1 p.2) {}
   let rk : String → Nat := fun n => rangTafel.getD n 0
-  let gelesen := fs.map fun (i, f) => (i, f, zuBodyZ u f)
+  let gelesen := fs.map fun (i, f) => (i, f, match grosseSchleife u f with
+    | some _ => none
+    | none => zuBodyZ u f)
   let fnAbl := gelesen.filterMap fun (_, f, b) =>
-    let gruende := (match b with | some _ => [] | none => [koerperAblehnung f]) ++
+    let gruende := (match b, grosseSchleife u f with
+      | some _, _ => []
+      | none, some g => [g]
+      | none, none => [koerperAblehnung f]) ++
       fnAblehnungen u f ++ (if bindFrischB f then [] else ["a local binder is not fresh"]) ++
       (if rangFnB rk f then [] else ["recursive call (the generator states rank duties only)"])
     if gruende.isEmpty then none else some (f.name ++ ": " ++ String.intercalate "; " gruende)
