@@ -129,4 +129,63 @@ theorem Emitted.goal_arguments_loaded [Kern] (output : Emitted src K options)
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
   exact ⟨stackBytes, output.goal_arguments_encoded Q ▸ made, memory⟩
 
+private theorem codeAt_spawn_site {m : Mem} {scratch : Nat} :
+    ∀ {sites : List (Nat × Nat)} {pc : W} {j : Nat} {site : Nat × Nat},
+      CodeAt m pc (spawnC scratch sites) → sites[j]? = some site →
+        CodeAt m (pc + BitVec.ofNat 64 (16 * (10 * j))) (spawnOne scratch site.1 site.2) := by
+  intro sites
+  induction sites with
+  | nil => intro _ _ _ _ found; simp at found
+  | cons first rest ih =>
+    intro pc j site code found
+    have placed : CodeAt m pc (spawnOne scratch first.1 first.2 ++ spawnC scratch rest) := by
+      cases first
+      exact code
+    cases j with
+    | zero =>
+      cases found
+      simpa only [Nat.mul_zero, BitVec.add_zero] using codeAt_left placed
+    | succ j =>
+      have next := codeAt_right placed
+      rw [spawnOne_len] at next
+      have siteCode := ih next (by simpa only [List.getElem?_cons_succ] using found)
+      rw [BitVec.add_assoc, ofNat_add64] at siteCode
+      have offset : 16 * (10 * (j + 1)) = 16 * 10 + 16 * (10 * j) := by omega
+      simpa only [offset] using siteCode
+
+/-- The loaded clone site for boot root `j` contains the instructions for
+    its own relocated entry and frame. Logical thread `j + 1` carries the
+    same root and arguments at the model's initial memory. -/
+theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {m : Mem} (loaded : BytesAt m Runner.Prog.IMG output.bytes) {j : Nat}
+    {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
+      Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+        ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
+    (declared : output.starts[j]? = some start) :
+    CodeAt m (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j)))
+        (spawnOne (startScratch output.compiled.main)
+          (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j))
+          (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))) ∧
+      (output.bootStart Q).lebt (j + 1) = true ∧
+      initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ := by
+  obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
+  obtain ⟨_, _, _, placed, code, _, args, roots⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have startup : BytesAt m codeBase (output.image.code.flatMap encII ++
+      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
+    simpa only [made, Option.getD_some, List.append_nil] using loadedStartup
+  rw [code, args, roots] at startup
+  have ready := (spawn_ready placed startup).1
+  have inside := (List.getElem?_eq_some_iff.mp declared).1
+  have site := placed.spawn_entry j (by simpa only [List.length_map] using inside)
+  have positioned : (⟨output.compiled.main, output.args⟩ :: output.starts)[j + 1]? = some start := declared
+  exact ⟨codeAt_spawn_site ready (by simpa only [List.length_map] using site),
+    (output.bootStart_frame Q (j + 1) start positioned).1,
+    output.goalStart_argument Q (j + 1) start positioned⟩
+
 end Gabbro.Stage0

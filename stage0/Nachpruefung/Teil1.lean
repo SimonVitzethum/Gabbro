@@ -43,6 +43,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.goal_axiomFree
 #print axioms Gabbro.Stage0.Emitted.zielsatz_axiomFree
 #print axioms Gabbro.Stage0.Emitted.bootStart_frame
+#print axioms Gabbro.Stage0.Emitted.loaded_boot_site
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read_shared
