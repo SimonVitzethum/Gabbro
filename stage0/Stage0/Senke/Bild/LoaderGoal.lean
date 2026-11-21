@@ -188,4 +188,55 @@ theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
     (output.bootStart_frame Q (j + 1) start positioned).1,
     output.goalStart_argument Q (j + 1) start positioned⟩
 
+/-- Only a positive answer to the runner's clone request allocates a
+    thread slot. Exited threads keep their old position in the list. -/
+def createsThread (event : Ev) : Bool :=
+  if event.2.1 = cloneReq then
+    match event.2.2 with
+    | some (id, _) => decide (0 < id.toInt)
+    | none => false
+  else false
+
+private theorem processStep_threadSlots {M : MemSys} {act : θ → Res θ}
+    {before after : Cfg M θ} {events : List Ev}
+    (step : ProcessStep M act before events after) :
+    after.ths.length = before.ths.length + events.countP createsThread := by
+  cases step with
+  | tau _ => simp
+  | priv _ _ => simp
+  | @ask _ _ _ _ o _ _ _ _ _ ordinary _ _ =>
+    cases o <;> try simp [lbl]
+    rename_i q
+    have distinct : q ≠ cloneReq := by
+      intro equal
+      subst q
+      simp [Op.special] at ordinary
+    simp [lbl, createsThread, distinct]
+  | @exit _ _ _ q _ _ _ number =>
+    have distinct : q ≠ cloneReq := by
+      intro equal
+      subst q
+      exact (by decide : cloneReq.nr.toNat ≠ NR_EXIT) number
+    simp [createsThread, distinct]
+  | @cloneNo _ _ _ _ _ a _ _ _ _ refused _ =>
+    cases a with
+    | none => simp [createsThread]
+    | some pair =>
+      obtain ⟨id, extra⟩ := pair
+      simp [createsThread, refused id extra rfl]
+  | clone _ _ _ positive _ _ => simp [createsThread, positive]
+
+/-- The actual runner assigns new positions consecutively. The exact
+    increase across any continuing prefix is the number of successful
+    clone events, even when exits, other system calls and memory steps
+    are interleaved. -/
+theorem processPrefix_threadSlots {M : MemSys} {act : θ → Res θ}
+    {before after : Cfg M θ} {events : List Ev} {steps : Nat}
+    (run : ProcessPrefix M act before events steps after) :
+    after.ths.length = before.ths.length + events.countP createsThread := by
+  induction run with
+  | nil => simp
+  | cons step _ ih =>
+    rw [ih, processStep_threadSlots step, List.countP_append, Nat.add_assoc]
+
 end Gabbro.Stage0

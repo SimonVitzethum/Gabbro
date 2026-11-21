@@ -8214,6 +8214,8 @@ repeated dispatch targets. `Emitted.bootStart_frame` identifies the exact
 logical start frame and live position for each occurrence.
 `Emitted.loaded_boot_site` connects the instructions at each loaded clone
 site to its relocated start address, stack frame and logical position.
+`processPrefix_threadSlots` accounts for positions allocated by successful
+clones across arbitrary continuing runner prefixes.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
