@@ -52,3 +52,61 @@ theorem lowerFnAt_error_from_body {unit : UProg} {f : Fin unit.fns.length} {erro
     reduceIte, lowerFnPlain, header.requires, header.ensures, lowEnsList, body]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
+
+namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+open Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+
+/-- The lowered pair at an index known good. -/
+theorem lowerAtPair_of_ok (u : UProg) (f : Fin u.fns.length) (hw : ∃ v, lowerFnAt u f = .ok v)
+    {v : EnsTy u f × RumpTy u f × ReqTy u f} (hv : lowerFnAt u f = .ok v) :
+    lowerAtPair u f hw = v := by
+  unfold lowerAtPair
+  split
+  · rename_i v' hv'
+    rw [hv] at hv'
+    cases hv'
+    rfl
+  · rename_i e he
+    rw [hv] at he
+    cases he
+
+/-- What the assembled program holds at a function of a successful lowering. -/
+theorem lowerAllg_fields (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+    (h : lowerAllg u = .ok (P, fs)) (c : Fin u.fns.length) :
+    ∃ v, lowerFnAt u c = .ok v ∧ P.ensures c = v.1 ∧ P.rumpf c = v.2.1 ∧
+      ((fnAt u c).needs ≠ [] → P.requires c = v.2.2) := by
+  unfold lowerAllg at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · split at h
+      · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
+        obtain ⟨v, hv⟩ := lowerEach_all_ok u (List.finRange u.fns.length) c (List.mem_finRange c)
+          ‹lowerEach u (List.finRange u.fns.length) = .ok ()›
+        refine ⟨v, hv, ?_, ?_, ?_⟩
+        · exact congrArg Prod.fst (lowerAtPair_of_ok u c _ hv)
+        · exact congrArg (fun p => p.2.1) (lowerAtPair_of_ok u c _ hv)
+        · intro hne
+          simp only [progOfFn, reqOf, hne, ↓reduceIte]
+          exact congrArg (fun p => p.2.2) (lowerAtPair_of_ok u c _ hv)
+      · cases h
+
+/-- The assembled requires keeps the actual function result and the empty-clause rule. -/
+theorem lowerAllg_requires (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+    (lowered : lowerAllg u = .ok (P, fs)) (f : Fin u.fns.length)
+    {value : EnsTy u f × RumpTy u f × ReqTy u f}
+    (functionLowered : lowerFnAt u f = .ok value) :
+    P.requires f = if (fnAt u f).needs = [] then .tru else value.2.2 := by
+  unfold lowerAllg at lowered
+  split at lowered
+  · cases lowered
+  · split at lowered
+    · cases lowered
+    · split at lowered
+      · obtain ⟨rfl, _⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq lowered
+        simp only [progOfFn, reqOf, lowerAtPair_of_ok u f _ functionLowered]
+      · cases lowered
+
+end Gabbro.Grammatik.Parser.UebersetzeAllg2
