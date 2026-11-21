@@ -15,6 +15,26 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Grammatik.Parser.Cover.Differenz Gabbro.Grammatik.Zielsatz
 
+/-- The actual compiler's checker proves the semantic contract duties of
+    each function of the exact restored typed program. -/
+theorem Compiled.contract_duties {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    ∀ f, Vertraege.Pruefer.ContractDuties result.program (sperrFamilie result.unit) f :=
+  OldSource.accepts_contract_duties result.unit result.program result.main result.accepted
+
+/-- Each CLI payload uses the AST derived from its original token sequence
+    and the exact elaborated program whose functions pass the model's
+    semantic contract checker. -/
+theorem irBild_frontend_sound {text : String} {K : Nat} {options : Profil.Options} {bytes : List Runner.B}
+    (emitted : irBild text K options = .ok bytes) :
+    ∃ output : Emitted text K options, emit text K options = .ok output ∧ output.bytes = bytes ∧
+      ItemSequence (output.compiled.source.tokens.length * 8 + 32) output.compiled.source.tokens
+        output.compiled.source.items [.ende] ∧ CanonicalSourceProgram output.compiled ∧
+      ∀ f, Vertraege.Pruefer.ContractDuties output.compiled.program (sperrFamilie output.compiled.unit) f := by
+  obtain ⟨output, built, exactBytes⟩ := irBild_emitted text K bytes emitted
+  exact ⟨output, built, exactBytes, parseTopTief_iff.mp output.compiled.source.parsed,
+    compile_source_program text output.compiled, output.compiled.contract_duties⟩
+
 /-- Premise (a) of the goal theorem for what Stage 0 compiled. The judged `Einheit` starts the
     compiled entry `result.main` with `args` (the image's start environment of `main`,
     `Senke.mainEnv`), then `roots` naming the unit's declared roots, and carries the run-time

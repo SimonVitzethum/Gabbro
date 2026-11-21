@@ -27,7 +27,7 @@ private theorem parseItemsTief_succ (fuel : Nat) (tokens : List Token) :
         | .error e => .error e
         | .ok (nodes, closing) => .ok (node :: nodes, closing)) := by
   classical
-  unfold parseItemsTief
+  conv_lhs => unfold parseItemsTief
   split <;> simp_all [ItemsEnde] <;> rfl
 
 /-- At a fixed fuel bound the concrete reader recognizes exactly the item

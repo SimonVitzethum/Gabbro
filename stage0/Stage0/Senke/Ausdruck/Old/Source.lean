@@ -237,12 +237,17 @@ theorem restore_axVertrag (items : List SItemTief) (u : UProg)
       subst Q
       rfl
 
-/-- Successful production admission retains one canonically admitted descriptor
-    per source guest. In particular, an empty adapter cannot hide a guest. -/
-theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
+/-- Invert the production decision on its exact program, roots, and guest
+    export. The diagnostic path cannot turn a rejected Bool into acceptance. -/
+theorem accepts_core (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
     (accepted : accepts u P main = .ok true) :
-    ∃ guests, sourceGuests u = .ok guests ∧ guests.length = u.guests.length ∧
-      ∀ guest ∈ guests, guest.admittedB = true := by
+    ∃ guests, sourceGuests u = .ok guests ∧
+      @AkzeptiertX (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+        (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
+        (List.finRange u.fns.length) (List.finRange u.locks.length)
+        ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
+        (judgedRoots u main) [] [] [] guests (sperrQuellen u) (fun _ => none)
+        (some (zeigerSignaturen u)) = true := by
   unfold accepts at accepted
   split at accepted
   · cases accepted
@@ -250,11 +255,29 @@ theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).
     | error error => simp only [hg, bind, Except.bind, reduceCtorEq] at accepted
     | ok guests =>
       simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure, Except.ok.injEq] at accepted
-      have accepted := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
-      refine ⟨guests, rfl, sourceGuests_complete u guests hg, ?_⟩
-      unfold AkzeptiertX at accepted
-      exact fun guest member =>
-        GuestBoundary.admissionB_each
-          (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp accepted).1).2 guest member
+      exact ⟨guests, rfl, (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted⟩
+
+/-- Successful production admission retains one canonically admitted descriptor
+    per source guest. In particular, an empty adapter cannot hide a guest. -/
+theorem accepts_guests (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
+    (accepted : accepts u P main = .ok true) :
+    ∃ guests, sourceGuests u = .ok guests ∧ guests.length = u.guests.length ∧
+      ∀ guest ∈ guests, guest.admittedB = true := by
+  obtain ⟨guests, exported, checked⟩ := accepts_core u P main accepted
+  refine ⟨guests, exported, sourceGuests_complete u guests exported, ?_⟩
+  unfold AkzeptiertX at checked
+  exact fun guest member => GuestBoundary.admissionB_each
+    (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp checked).1).2 guest member
+
+/-- Stage 0's verdict discharges every restored function's semantic contract
+    duties, including its frame and invariants. The enumeration is complete
+    even for units outside the whole-image exporter's certified fragment. -/
+theorem accepts_contract_duties (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
+    (accepted : accepts u P main = .ok true) :
+    ∀ f, Vertraege.Pruefer.ContractDuties P (sperrFamilie u) f := by
+  obtain ⟨_, _, checked⟩ := accepts_core u P main accepted
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, ← Bool.and_assoc] at checked
+  exact Vertraege.Pruefer.KontrakteGeprueftB_sound List.mem_finRange
+    (Bool.and_eq_true_iff.mp checked).2
 
 end Gabbro.Stage0.OldSource
