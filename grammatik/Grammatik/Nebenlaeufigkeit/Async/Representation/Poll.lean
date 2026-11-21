@@ -124,4 +124,39 @@ public theorem pollTask_rep (elaboration : Elaboration D V Λ types f)
     obtain ⟨rightEvent, rightTask, after, rightCost⟩ := step
     cases leftEvent <;> cases rightEvent <;> exact join_poll_rep leftResult rightResult
 
+/-- The checked ordinary elaboration resolves all leaves of an actual
+    await, including leaves nested at any depth of a join. -/
+public theorem awaitFuture_resolved (elaboration : Elaboration D V Λ types f)
+    (name : String) (future : FutureExpr) (boundary : Boundary)
+    (command : Command.await name future boundary ∈ f.body) :
+    ResolvedFuture elaboration future := by
+  have covers (callee : String) (args : List Parser.SExpr)
+      (member : FutureExpr.call callee args ∈ callsIn future) :
+      ∃ declaration, elaboration.callee callee = some declaration := by
+    obtain ⟨declaration, _, known, _, _⟩ := elaboration.arguments callee args
+      (List.mem_flatMap.mpr ⟨.await name future boundary, command, member⟩)
+    exact ⟨declaration, known⟩
+  clear command
+  induction future with
+  | call callee args => exact covers callee args List.mem_cons_self
+  | join left right leftResolved rightResolved =>
+    exact ⟨leftResolved (fun callee args member =>
+      covers callee args (List.mem_append_left _ member)),
+      rightResolved (fun callee args member =>
+        covers callee args (List.mem_append_right _ member))⟩
+
+/-- Checked waiting phases preserve the child record under the real
+    typed poll. The callee coverage comes from ordinary elaboration. -/
+public theorem await_poll_rep (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (tag : Nat) (name : String) (future : FutureExpr) (boundary : Boundary)
+    (command : Command.await name future boundary ∈ f.body)
+    {task : Task (Value D) (Child D types)} {record : Wert D (taskStorageType types [tag] future)}
+    (represented : TaskRep D types [tag] future task record) (world : World D) :
+    let step := pollTask (inducedModel elaboration calls prices normal) task world
+    PollRep D types [tag] future step.1 step.2.1 :=
+  pollTask_rep elaboration calls prices normal represented
+    (awaitFuture_resolved elaboration name future boundary command) world
+
 end Gabbro.Grammatik.Async.Representation

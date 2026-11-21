@@ -8118,3 +8118,6 @@ preservation of that invariant by poll steps.
 `final_segment_encoded` preserves the return value and transfers the original
 marks on Ready. `cancelEpilogue_encoded` relates successful ordinary G cleanup
 to the exact cancelled record once its release consumes the saved inventory.
+`await_poll_rep` proves that the ordinary poll of a checked await retains the
+typed successor task. It covers nested joins, including a cached Ready sibling,
+and derives callee coverage from the checked elaboration.

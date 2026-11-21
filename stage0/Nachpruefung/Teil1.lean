@@ -42,6 +42,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.completed_inv
 #print axioms Gabbro.Grammatik.Async.Representation.cancelEpilogue_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.pollTask_rep
+#print axioms Gabbro.Grammatik.Async.Representation.await_poll_rep
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
