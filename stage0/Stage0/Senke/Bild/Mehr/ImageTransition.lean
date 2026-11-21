@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Grammatik.Logik.Vertraege.Pruefer.Goal
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -286,6 +287,54 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
         sameHead, matched, kind, ?_⟩
       simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm atParent),
         Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
+
+/-- A prepared startup clone in the actual emitted code advances the same
+    declared GX slot and carries the entire goal to the new configuration. -/
+theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (calls : CallSitePflicht E) (binding : ForeignVertrag E O) (hardware : HardwareAnnahmenHw O E.Q)
+    {before : Cfg imageTSO (Res T)} {history : List Ev}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {j : Nat} {id extra : W}
+    {start : Σ f : (declOf output.compiled.unit).Fn, Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[j]? = some start)
+    (code : BytesAt (before.ms.1.view 0) codeBase (output.image.code.flatMap encII))
+    (position : before.ths.length = j + 1)
+    (slots : ImageSlotsMatch output E O history before state) (waiting : state.wartet 0 = [])
+    (reached : ImageReach output E O (imageSourceStart E) state) (positive : 0 < id.toInt) :
+    let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j)) +
+      BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
+    let scratch := slot parent.fp (sx (II.f (startScratch output.compiled.main)))
+    before.ths[0]? = some (some (.next parent)) →
+    (before.ms.1.view 0).rd64 scratch = some child.pc →
+    (before.ms.1.view 0).rd64 (scratch + 8) = some child.fp →
+    let after : Cfg imageTSO (Res T) :=
+      ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩
+    ProcessPrefix imageTSO actI before [(0, cloneReq, some (id, extra))] 6 after ∧
+    after.ths[j + 1]? = some (some (.next child)) ∧ E.starts[j + 1]? = some start ∧
+    ∃ next, ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧
+      ImageReach output E O (imageSourceStart E) next ∧ ImageGoalAt output E O next := by
+  intro parent child scratch running entry frame after
+  obtain ⟨site, _, _⟩ := output.loaded_boot_site E.Q code declared
+  have instruction : InsAt (before.ms.1.view 0) parent.pc 24
+      (II.f ((startScratch output.compiled.main + 2 : Nat) : Int))
+      (II.f (startScratch output.compiled.main)) (II.f 0) :=
+    site 2 (by rw [spawnOne_len]; decide)
+  obtain ⟨run, childSlot⟩ := image_bootClone_run running instruction entry frame positive
+  have head : E.starts[j + 1]? = some start := by
+    rw [unit.starts]
+    exact declared
+  have bound : before.ths.length < E.starts.length := position ▸ (List.getElem?_eq_some_iff.mp head).1
+  obtain ⟨next, _, _, stepped, matched⟩ :=
+    slots.activate_clone (child := child) (id := id) (extra := extra) running waiting bound
+  have nextReached : ImageReach output E O (imageSourceStart E) next := .schritt state next reached stepped
+  have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted
+  refine ⟨run, position ▸ childSlot, head, next, matched, nextReached, ?_⟩
+  exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls unit.postDeckt
+    O binding hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ nextReached
 
 /-- A declared non-returning thread exit retires just its own slot.
     The source stays at the exact call head, and the exit is entered in

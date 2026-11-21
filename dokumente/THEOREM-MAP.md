@@ -8290,3 +8290,9 @@ exit to its source head and preserves the other slots. Silent runner
 prefixes transfer in both directions between the host-restricted memory
 model and TSO. `image_memory_prefix_projects` now needs classification
 only at states reachable in the actual image model.
+`Emitted.image_declared_clone_goal` follows the actual prepared startup
+clone through the host-restricted IR memory model, activates the same slot
+in GX, and applies the entire goal to the resulting GX state. The earlier
+threads can have run in the meantime. The emitted stack reservations are
+disjoint and an in-range startup store is confined to its own reservation
+by `imageStackStore_projected`.
