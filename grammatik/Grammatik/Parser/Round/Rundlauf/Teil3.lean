@@ -77,7 +77,8 @@ theorem toksLang : ∀ (n : Nat) (e : SExpr),
       simp only [druckToks, List.length] at ⊢
       omega
     | built f xs =>
-      simp only [druckToks]
+      rw [druckToks.eq_def]
+      dsimp only
       split <;> (try split) <;> simp only [List.length_append, List.length] <;> omega
     | old x =>
       have hx : groesse x ≤ n := by
