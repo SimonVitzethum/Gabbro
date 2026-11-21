@@ -124,6 +124,16 @@ def uTraegerIndex (ctx : UCtx) : SExpr → Bool
   | .variable n => ctx.tabs.any (fun t => strEq t.name n)
   | _ => false
 
+/-- The length operand of a full slice names the same lexical value.
+    Restricting it to a resolved local avoids duplicating a memory read. -/
+def uFullLocalSlice (ctx : UCtx) (first : Int) : USide → SExpr → Bool
+  | .param name, .built "lenof" [.variable last] =>
+    first == 0 && strEq name last &&
+      match uValueType ctx (.param name) with
+      | some (.arr ..) | some (.str ..) => true
+      | _ => false
+  | _, _ => false
+
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. C13 adds the closed integer builtins
     (`+% -% *% <<% +|`, `clz ctz log2_floor popcount bswap rotl rotr`) at the declared storage width. -/
@@ -225,9 +235,11 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     let constants := (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
       (fun (name, value) => (name, (value, value)))
     let some first := uSchranke constants first | throw "slice: first endpoint must be static"
+    let operand ← uRechne ctx blatt base
+    if uFullLocalSlice ctx first operand last then return operand
     let some last := uSchranke constants last | throw "slice: last endpoint must be static"
     if first < 0 || last < first then throw "slice: invalid endpoint order"
-    return .slice (← uRechne ctx blatt base) first.toNat last.toNat
+    return .slice operand first.toNat last.toNat
   -- C13: `sizeof(e)` is the declared storage size of `e`, a literal only once it is resolved (`uGroesse`)
   | .built "sizeof" [a] =>
     match uGroesse ctx a with
@@ -278,6 +290,23 @@ decreasing_by
   all_goals simp_wf
   all_goals try simp_all
   all_goals omega
+
+/-- A full slice is admitted for a lexical string or array whenever the
+    first endpoint proves zero. Its source export is that same value. -/
+theorem fullLocalSlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (name : String) (first : SExpr)
+    (zero : uSchranke ((ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
+      (fun (key, value) => (key, (value, value)))) first = some 0)
+    (localValue : uRechne ctx blatt (.variable name) = .ok (.param name))
+    (aggregate : (∃ τ n, uValueType ctx (.param name) = some (.arr τ n)) ∨
+      (∃ n, uValueType ctx (.param name) = some (.str n))) :
+    uRechne ctx blatt (.built "#slice" [.variable name, first, .built "lenof" [.variable name]]) =
+      .ok (.param name) := by
+  rw [uRechne]
+  have sameName : strEq name name = true := by simp [strEq]
+  rcases aggregate with ⟨_, _, exactType⟩ | ⟨_, exactType⟩ <;>
+    simp only [zero, localValue, bind, Except.bind, uFullLocalSlice, exactType,
+      sameName, beq_self_eq_true, Bool.true_and, ite_true, pure, Except.pure]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=

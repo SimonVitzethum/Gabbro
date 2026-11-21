@@ -98,6 +98,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.runner_file_before_layout
 #print axioms Gabbro.Stage0.ImageFileStable.plain_gate
 #print axioms Gabbro.Stage0.MappedImage.runner_loader_step
+#print axioms Gabbro.Stage0.MappedImage.loader_step_no_terminal
 #print axioms Gabbro.Stage0.MappedImage.first_step_goal
 #print axioms Gabbro.Stage0.Senke.imageDepthTable_exact
 #print axioms Gabbro.Stage0.Emitted.startDepth_noAbstieg
@@ -135,6 +136,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.indexedSlice_reads
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_stringSlice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySlice_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.fullLocalSlice_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_fullLocalStringSlice
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_fullLocalArraySlice
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_storage
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_excludes_suffix

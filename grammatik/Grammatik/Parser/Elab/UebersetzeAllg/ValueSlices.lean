@@ -178,6 +178,23 @@ theorem eval_stringSlice {maximum : Nat} (bytes : List (Zahl 0 255))
   rw [eval]
   rfl
 
+/-- A full runtime slice of a string local preserves its actual bytes.
+    The ordinary local retains the original capacity as a valid bound. -/
+theorem eval_fullLocalStringSlice {maximum : Nat} (slot : Var Γ (.str maximum))
+    (initial world : World D) (env : Env D Γ) :
+    let value := env.get slot
+    (strSliceValue value 0 value.1.length ⟨Nat.zero_le _, Nat.le_refl _⟩).1 =
+      (eval initial (Expr.var (Λ := Λ) slot) world env).1 := by
+  simp only [strSliceValue, sliceValue, List.drop_zero, Nat.sub_zero, List.take_length, eval]
+
+/-- Indexing the full slice of an array local yields its original value
+    at every index. The canonical term evaluates only the local. -/
+theorem eval_fullLocalArraySlice {τ : Ty} {length : Nat} (slot : Var Γ (.arr τ length))
+    (initial world : World D) (env : Env D Γ) (i : Fin (length - 0)) :
+    arrSliceValue (env.get slot) 0 length ⟨Nat.zero_le _, Nat.le_refl _⟩ i =
+      eval initial (Expr.var (Λ := Λ) slot) world env ⟨i.val, by omega⟩ := by
+  simp only [arrSliceValue, Nat.zero_add, eval]
+
 /-- The full-range view is inhabited at every length by every array value. -/
 theorem arraySlice_erfuellbar {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {τ : Ty} {length : Nat} (slot : Var Γ (.arr τ length)) :

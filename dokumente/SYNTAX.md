@@ -844,6 +844,8 @@ produce an ordinary array value of length `last - first`. Bind a memory
 read to a local before materialising a slice with zero or multiple elements.
 Direct indexing as in `array[first .. last][i]` checks the relative index
 and reads the original array without an intermediate slice.
+The full slice `local[0 .. lenof(local)]` preserves the array or string
+local, including a string whose byte length is known only at runtime.
 
 
 
@@ -1206,7 +1208,8 @@ that parameter type before inlining. Integer argument intervals must be containe
 range and Boolean parameters require Boolean arguments. Record, array, string and floating-point
 parameters accept named values and record field paths whose elaborated type equals the declared
 type. A string literal also fits a string parameter whose declared bound equals its UTF-8 byte
-length. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
+length. Concatenating supported string arguments adds their byte bounds before the parameter
+type is checked. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`
 fits the example parameter, while an argument with range `0 .. 101` exceeds its declared type.
 `Folds/SpecArguments.lean` checks in the caller's scope, including quantifier domains. An argument
 whose names overlap a binder of the predicate is refused as `spec …: argument … names a binder of
