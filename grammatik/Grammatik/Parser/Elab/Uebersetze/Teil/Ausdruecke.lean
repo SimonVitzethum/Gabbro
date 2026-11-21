@@ -119,6 +119,9 @@ inductive USide
   | present : Int → USide → USide
   | reason : Nat → Nat → USide
   | function : Nat → String → USide
+  /-- Half-open value slice with compile-time endpoints. The typed lowering
+      checks both against the operand, including empty slices. -/
+  | slice : USide → Nat → Nat → USide
   deriving Repr
 /-- One `ensures` predicate: a comparison, truth values, or a
     boolean combination (the `tr_ensures` fragment). -/
@@ -298,6 +301,9 @@ def USide.decEq (a b : USide) : Decidable (a = b) := by
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.present.injEq])
   case reason.reason a0 a1 b0 b1 =>
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.reason.injEq])
+  case slice.slice a0 a1 a2 b0 b1 b2 =>
+    letI := USide.decEq a0 b0
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1 ∧ a2 = b2) (by simp only [USide.slice.injEq])
   case function.function a0 a1 b0 b1 =>
     exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [USide.function.injEq])
 termination_by structural a

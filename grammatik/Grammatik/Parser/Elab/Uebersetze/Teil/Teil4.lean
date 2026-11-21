@@ -222,6 +222,13 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
             | none => .error "builtin of unknown width"
       | none => blatt (.call f [a, b])
   -- C13: `sizeof(e)` is the declared storage size of `e`, a literal only once it is resolved (`uGroesse`)
+  | .built "#slice" [base, first, last] => do
+    let constants := (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
+      (fun (name, value) => (name, (value, value)))
+    let some first := uSchranke constants first | throw "slice: first endpoint must be static"
+    let some last := uSchranke constants last | throw "slice: last endpoint must be static"
+    if first < 0 || last < first then throw "slice: invalid endpoint order"
+    return .slice (← uRechne ctx blatt base) first.toNat last.toNat
   | .built "sizeof" [a] =>
     match uGroesse ctx a with
     | some n => .ok (.lit (Int.ofNat n))

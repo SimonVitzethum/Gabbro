@@ -206,7 +206,7 @@ def seiteAltErg : USide → Bool
   | .zaehle _ _ b => ensAltErg b
   | .zaehleBaum _ _ _ _ _ b => ensAltErg b
   | .zaehleFeld a _ b => seiteAltErg a || ensAltErg b
-  | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
+  | .taggedValue _ _ a | .typed _ a | .len a | .present _ a | .slice a _ _ => seiteAltErg a
   | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
   | .product _ _ fields => fields.attach.any (fun field => seiteAltErg field.val.2)
   | .field a _ => seiteAltErg a

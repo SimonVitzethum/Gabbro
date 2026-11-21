@@ -45,6 +45,8 @@ def druck : SExpr → String
     | [] => if strEq f "None" then "None" else f ++ "()"
     | _ :: _ => f ++ "(" ++ druckArgs args ++ ")"
   | .fnref p => "&" ++ p
+  | .built "#slice" [base, first, last] =>
+    druck base ++ "[" ++ druck first ++ " .. " ++ druck last ++ "]"
   | .built f args => (if strEq f "#tuple" then "" else f) ++ "(" ++ druckArgs args ++ ")"
   | .old x => "old(" ++ druck x ++ ")"
   | .res => "result"

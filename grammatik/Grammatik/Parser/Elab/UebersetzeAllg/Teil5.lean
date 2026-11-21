@@ -5,6 +5,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Comparisons
 public import Grammatik.Parser.Elab.Generic.C09Sig
+public import Grammatik.Parser.Elab.UebersetzeAllg.ValueSlices
 
 @[expose] public section
 
@@ -130,6 +131,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok wa, .ok wi, .ok wv => updW wa wi wv
     | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
   | .typed τ s => (lowLit τ s).map (⟨τ, ·⟩)
+  | .slice base first last => (lowWertE u Γ Λ fn er base).bind (lowerSlice first last)
   | .eng s lo' hi' =>
     match lowWertE u Γ Λ fn er s with
     | .ok ⟨.int _ _, t⟩ =>

@@ -378,7 +378,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
   | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
-  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
+  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. | .slice .. => .error "aggregate without G form in the 104 lowering"
   | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .ib1 .. | .ib2 .. => .error "builtin without G form in the 104 lowering"
   | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count without G form in the 104 lowering"

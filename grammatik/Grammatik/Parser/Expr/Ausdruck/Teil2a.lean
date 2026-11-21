@@ -140,6 +140,8 @@ def parsePrimary (f : Nat) (toks : List Token) :
       | .zeichen ")" :: tail => return (.ext .dyn [spec] [payload], tail)
       | _ => .error "dyn.producer.parenthesis"
     | .num v :: rest => .ok (.lit v, rest)
+    | .text t :: .zeichen "[" :: rest =>
+      parseSuffixe f (.ext .text [t] []) (.zeichen "[" :: rest)
     | .text t :: rest => .ok (.ext .text [t] [], rest)
     | .wort "exists" :: t :: .wort "in" :: rest => match nameText t with
       | some x => parseQuant f .any x rest
@@ -309,6 +311,12 @@ def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
     | .zeichen "[" :: rest => match parseOr f rest with
       | .ok (i, .zeichen "]" :: rest') =>
         parseSuffixe f (.index e i) rest'
+      | .ok (first, .zeichen ".." :: tail) =>
+        match parseOr f tail with
+        | .ok (last, .zeichen "]" :: rest') =>
+          parseSuffixe f (.built "#slice" [e, first, last]) rest'
+        | .ok (_, _) => .error "slice without ]"
+        | .error err => .error err
       | .ok (_, _) => .error "[ without ]"
       | .error e => .error e
     | .zeichen "(" :: rest => match e with

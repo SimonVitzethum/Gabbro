@@ -191,6 +191,15 @@ def uValueType (ctx : UCtx) : USide → Option Ty
     (schema.fields.find? (fun entry => strEq entry.1 field)).map (·.2)
   | .replace base _ _ => uValueType ctx base
   | .idx base _ => match uValueType ctx base with | some (.arr ty _) => some ty | _ => none
+  | .slice base first last =>
+    match base with
+    | .text bytes => if first ≤ last ∧ last ≤ bytes.length then some (.str (last - first)) else none
+    | _ => match uValueType ctx base with
+      | some (.arr ty length) =>
+        if first ≤ last ∧ last ≤ length then some (.arr ty (last - first)) else none
+      | some (.str length) =>
+        if first ≤ last ∧ last ≤ length then some (.str (last - first)) else none
+      | _ => none
   | .arrCons value .arrNil => do
     let ty ← uValueType ctx value
     pure (.arr ty 1)
