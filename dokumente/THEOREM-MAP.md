@@ -6866,12 +6866,6 @@ Continuation from `717635600` (implementation attempts only; **no Lean/lake/buil
 
 Validation boundary: the implementation and proof attempts above are uncompiled. C16 is not measured complete until the lead compiles the changed modules/importers, checks the generic source/return/history attachment attempts and the standard axioms of `gabbro_ziel`, then runs the guardians. A static finding already present at the task base is `Zielsatz/Kern/Spec/Teil4.lean:33`: it refers to `berich` whereas `CheckEvidenz` declares `bericht`; no file under `Spec` was edited. The pre-existing `Stage0/Zeugen/Annahme` folder has 24 entries; the new witness lives in a separate cohesive folder. No final emitted-image execution or external measurement was performed.
 
-`Stage0/Senke/Tore/Answers.lean` keeps `boolean_binder_admission_zeuge`
-positive on both binder APIs and both success/error continuations. Its sole
-reason now returns 9 directly, within the checked fragment; the separate
-`AxiomElseProbes` still cover explicit reason dispatch. Image and live
-false/true/error outcome witnesses remain.
-
 `Stage0/Senke/Bild/Ruf/EmittedZielL.lean` retains its image-theorem statements:
 structural acceptance is derived directly from the actual compiler Bool,
 including the invariant/contract certificates, while the existing semantic
@@ -7145,7 +7139,7 @@ The emitted ticket lock's missing WAIT, failed ticket-CAS retry, WAKE and stable
 invariant statements are listed in `stage0/Stage0/Senke/Sperre/Ticket/Offen.lean`. The sequential
 `locks_okT` entry above supplies none of those contended-path results.
 
-## 186. C08 call-site goal: `GabbroZiel` with the software duties, and its joint witness (2026-11-13)
+## 186. C08 call-site goal: `GabbroZiel` with the software duties (2026-11-13)
 
 `GabbroZiel` changed meaning (Spec.lean header, "C08 CALL-SITE GOAL"): premise (b) carries the
 call-site duties of software foreign items, premise (c) is the named hardware only. The statement
@@ -7157,16 +7151,10 @@ statements in the source; no build or axiom audit of them is recorded here (the 
 | `GabbroZiel` (definition) | `grammatik/Grammatik/Zielsatz/Kern/Spec/Fremd.lean` | (a) `C.akzeptiert`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag E O`, (c) `HardwareAnnahmenHw O E.Q`, (d) `Laufzeit` give `ZielFX` on every thread machine over GX reachable from the runtime's start. |
 | `gabbro_ziel` | `grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Fremd.lean` | Proof of `GabbroZiel`: the binding inhabits the question-world class (`axVertragOP_of_binding`), the call-site duty answers every reachable question (`relyQ_of_callSite`), then `zielFX_rely`. |
 | `GabbroZielVoll`, `gabbro_ziel_voll` | `grammatik/Grammatik/Zielsatz/Kern/Spec/Teil2.lean`, `.../BeweisAtomar/Voll.lean` | The goal under the unconditional summary premise `HardwareAnnahmen` (the statement of before, text unchanged). |
-| `CallSiteGoal.callSite_goal_zeuge` | `grammatik/Grammatik/Zielsatz/Atomar/CallSite/CallSiteGoalZeuge.lean` | JOINT WITNESS: on the unit `wE` (one function `let r = g(1); return r` with a literal-true function post; one SOFTWARE item `g(x : 0..1) -> 0..1`, `requires x != 0`, `ensures result == 1`, summary "answer is 1") and the binding `echo` (answers its argument), all premises hold at once -- (a) `akzeptiertX_pruefer`, (b) `NutzerPflichtA`, `CallSitePflicht`, `PostDeckt`, `ForeignVertrag wE echo`, (c) `HardwareAnnahmenHw`, (d) `Laufzeit` of the runtime's start. The pre holds at `1` and fails at `0`; `echo` breaks the full summary; the separate original result contract `summaryProgram` needs the summary; admission is asserted only for `wE`. The start's question has a true pre; one GX step runs the software call and reaches a return, where `gabbro_ziel` gives `ZielFX`. |
-| `CallSiteGoal.call_sites` | `.../CallSite/CallSiteGoalSites.lean` | `CallSitePflicht wE` over every binding, budget and start: the head invariant `Koepfe` (empty stacks; a return, or the call whose arguments meet the pre in every world) holds at every start and is kept by every G and GX step. |
 | `bindAxiom_ende_schritt` | `.../CallSite/CallSiteGoalStep.lean` | Generic: at a head `ende (let x = g(…); rest)` every step of the thread is `endeBindAxiom`; stack, frame function, arguments, entry world and log are kept and the residue is `ende rest` with an answer bound. |
-| `CallSiteGoal.user`, `CallSiteGoal.body_out` | `.../CallSite/CallSiteGoalUser.lean` | `NutzerPflichtA wE`: against every frame-respecting oracle of `AxVertragOP (PreQ wP) wQ` the body returns `1` (the class grants the summary because the pre `1 != 0` holds) or stops at the named hardware outcome of an undecodable answer. |
-| `CallSiteGoal.summary_used` | `.../CallSite/CallSiteGoalUser.lean` | The separate `summaryProgram` with `ensures result == 1` fails its body duty with the empty summary: the frame-respecting oracle `zeroO` returns `0`. The admitted literal-true post makes no summary-necessity claim. |
-| `CallSiteGoal.body_duties`, `CallSiteGoal.summary_koerper`, `CallSiteGoal.summary_used_zeuge` | `.../CallSite/CallSiteGoalUser.lean` | The shared body proof supplies the admitted literal post and the stronger functional post separately. The stronger companion has the same body and foreign precondition, is correct under `wQ`, and fails its duty under the empty summary. |
-| `CallSiteGoal.checker` | `.../CallSite/CallSiteGoalFixture.lean` | `akzeptiertX_pruefer.akzeptiert wE [()] [] [] = true`, decided component by component over the one body (`schnittstellenB` through `schnittstellenB_iff`). |
 
 The three C08 blocker modules (`CallSiteConditionalBite`, `CallSiteQuestionBlocker`,
-`CallSiteReplayBlocker`) moved with the witness into `Zielsatz/Atomar/CallSite/` (layout rule
+`CallSiteReplayBlocker`) moved into `Zielsatz/Atomar/CallSite/` (layout rule
 added; old module names in `lean-layout-map.json`).
 ## 187. The hold time of a lock section derived from the checked bound (2026-11-13)
 
@@ -8071,3 +8059,15 @@ is composed mathematically, without kernel evaluation of elimination.
 The numbered component formulas, their atoms, reset cell and `komp` were
 re-read unchanged. Only the `AkzeptiertX` implementation-closure pin moves.
 No goal statement, named assumption, source probe or expected exit code changes.
+
+
+## 201. Declared start preconditions and private TSO paths
+
+| Theorem | Module | Statement |
+|---|---|---|
+| `checkStartRequires_iff` | `Grammatik.Logik.Vertraege.Pruefer.Unit` | For a translated contract, the decision is equivalent to its meaning on the declared initial memory and the supplied typed arguments. |
+| `irBild_start_requires` | `Stage0.IRBild` | Every successful image emission establishes the declared preconditions of its entry and its actual typed roots. |
+| `accepts_einheitVon_iff` | `Stage0.Senke.Ausdruck.Old.Pruefer` | The source verdict and the model verdict agree for the judged unit under the certificate-fragment and start-check premises. |
+| `Emitted.goal_checker_concurrent` | `Stage0.CompilerPruefer` | The goal checker accepts the exact entry and roots of a certifiable image whose additional roots come from explicit concurrent declarations and whose unit passes the start gate. |
+| `tso_private_projects` | `Stage0.Senke.Bild.Mehr.PrivatePath` | A memory-only TSO path with private requests preserves exclusive buffers and projects to an SC path. Flushes preserve the projected state. |
+| `tso_private_runs_refine` | `Stage0.Senke.Bild.Mehr.PrivatePath` | From the initial image relation, read-blind threads and the private access premises, the SC projection preserves the source thread machine, committed memory and footprints. |
