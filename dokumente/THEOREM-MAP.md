@@ -8167,3 +8167,5 @@ with private operations and buffer drains. `irBild_x86_private_zielsatz` transfe
 prefix. The initial GX relation and the request footprint checks are explicit premises.
 `memory_process_single_thread` recovers complete instructions at control boundaries
 of the single-thread memory process, with the same final memory.
+`tso_single_thread_instructions` applies that result to an actual TSO prefix
+from empty buffers.

@@ -402,4 +402,25 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
       exact ih ⟨_, seen.trans (ProcessPrefix.ofStep quietStep)⟩ stillOwned scPath emptyTail
   exact extend path ⟨0, .nil _⟩ buffers .start rfl
 
+/-- A lone thread from empty buffers reaches every complete-instruction
+    boundary of its classified TSO path in the normal memory-only IR
+    semantics, starting with the same bytes and permissions. -/
+theorem tso_single_thread_instructions {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {entry final : T} {initial : (TSO layout).St} {state : Cfg (TSO layout) (Res T)} {count : Nat}
+    (empty : ∀ i, initial.1.buf i = [])
+    (path : ProcessPrefix (TSO layout) actI ⟨initial, [some (.next entry)]⟩ [] count state)
+    (boundary : state.ths = [some (.next final)])
+    (classify : ∀ {c : Cfg (TSO layout) (Res T)} {n},
+      ProcessPrefix (TSO layout) actI ⟨initial, [some (.next entry)]⟩ [] n c →
+      ∀ {i : Nat} {op : Op} {resume : Ans → Res T} {response : Ans} {after : (TSO layout).St},
+        c.ths[i]? = some (some (.ask op resume)) → op.special = false → lbl i op response = [] →
+        (TSO layout).ans c.ms i op response after → ProjectedRequest footprint i op) :
+    ∃ n, BildLauf.StarM n entry initial.1.m final (projectSCState footprint state.ms).1 := by
+  obtain ⟨_, projected⟩ := tso_memory_process_projects path (privateBuffers_empty empty) classify
+  obtain ⟨memorySteps, _⟩ := sc_mErreichbar (alleBlind_start entry) projected
+  have initialMemory : (projectSCState footprint initial).1 = initial.1.m :=
+    mergedView_empty initial.1 footprint empty
+  rw [← initialMemory]
+  exact memory_process_single_thread memorySteps boundary
+
 end Gabbro.Stage0.Senke.BildMehr
