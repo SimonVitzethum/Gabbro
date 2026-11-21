@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.Mehr.PrivatePath
+public import Stage0.Senke.Welt.IdleLayout
 
 @[expose] public section
 
@@ -33,10 +34,9 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
       (output.goalStart Q live) state)
     {runnerLayout : Runner.Beweis.Lay} {initial final : Cfg (TSO runnerLayout) (Res T)}
     (loaded : BytesAt initial.ms.1.m Runner.Prog.IMG bytes)
-    {layout : Senke.Lay (declOf output.compiled.unit).mitRuhe}
     {snapshots : Nat → Option Solo} {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe}
     {committed : Mem} {footprint : Nat → W → Prop}
-    (rel : MTRel (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes layout
+    (rel : MTRel (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState footprint initial.ms).1, initial.ths⟩ state snapshots positions committed)
     (blind : AlleBlind initial.ths)
     (access : ∀ {before after i},
@@ -49,7 +49,7 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
     (machineReached : TSOPrivateReachable runnerLayout footprint initial final) :
     let E := output.goalUnit Q
     WeltAt initial.ms.1.m output.image.Y (initialWorld output.compiled.unit output.initialValid) ∧
-    ∃ updated, MTRel E.P.mitRuhe O.mitRuhe output.image.passes layout
+    ∃ updated, MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
         ⟨(projectSCState footprint final.ms).1, final.ths⟩ state updated positions committed ∧
       AlleBlind final.ths ∧
       ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
