@@ -37,13 +37,13 @@ theorem eval_arraySpan {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ
     simp only [arraySpan, eval, arrConsW]
     split
     · next zero =>
-      congr 1
+      apply congrArg (eval initial operand world env)
       apply Fin.ext
       simp [Zahl.fin, Zahl.weiter, zero]
     · next nonzero =>
       rw [eval_arraySpan operand initial world env (first + 1) count (by omega)
         ⟨index.val - 1, by omega⟩]
-      congr 1
+      apply congrArg (eval initial operand world env)
       apply Fin.ext
       simp only
       omega
@@ -62,7 +62,7 @@ theorem arraySpan_refines {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr
 /-- An index in a slice is shifted only after checking its relative
     range. The result is an ordinary index into the original array. -/
 def shiftedSliceIndex {length first last : Nat} (bounds : SliceOk length first last)
-    (index : Expr D Γ Λ (.index (last - first))) : Expr D Γ Λ (.index length) := by
+    (index : Expr D Γ Λ (.index ((last - first : Nat) : Int))) : Expr D Γ Λ (.index length) := by
   have low : 0 ≤ (first : Int) + 0 := by omega
   have high : (first : Int) + (((last - first : Nat) : Int) - 1) ≤ (length : Int) - 1 := by
     have ordered := bounds.1
@@ -72,7 +72,7 @@ def shiftedSliceIndex {length first last : Nat} (bounds : SliceOk length first l
 
 theorem eval_indexedArraySlice {τ : Ty} {length first last : Nat}
     (operand : Expr D Γ Λ (.arr τ length)) (bounds : SliceOk length first last)
-    (index : Expr D Γ Λ (.index (last - first)))
+    (index : Expr D Γ Λ (.index ((last - first : Nat) : Int)))
     (initial world : World D) (env : Env D Γ) :
     eval initial (.arrGet operand (shiftedSliceIndex bounds index)) world env =
       eval initial (.arrGet (arraySpan operand first (last - first) (by
@@ -124,7 +124,7 @@ theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     lowerSlice first last (⟨.arr τ length, operand⟩ : LowWert u Γ Λ) =
       .ok ⟨.arr τ (last - first), arraySpan operand first (last - first)
         (by have ordered := bounds.1; have high := bounds.2; omega)⟩ := by
-  simp only [lowerSlice, dif_pos bounds]
+  simp only [lowerSlice, dite_eq_left bounds]
 
 theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (bytes : List (Zahl 0 255)) {maximum : Nat} (stored : bytes.length ≤ maximum)
@@ -132,7 +132,7 @@ theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     lowerSlice first last (⟨.str maximum, .strLit bytes stored⟩ : LowWert u Γ Λ) =
       .ok ⟨.str (last - first), .strLit (sliceValue bytes first last)
         (Nat.le_of_eq (sliceValue_length bytes first last bounds))⟩ := by
-  simp only [lowerSlice, dif_pos bounds]
+  simp only [lowerSlice, dite_eq_left bounds]
 
 theorem eval_stringSlice {maximum : Nat} (bytes : List (Zahl 0 255))
     (stored : bytes.length ≤ maximum) (first last : Nat)
