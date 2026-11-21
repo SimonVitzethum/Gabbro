@@ -8249,6 +8249,8 @@ and checker verdict are part of the conclusion. The simulation follows
 the x86 and IR histories and matches their endpoints to reachable GX
 states. The statement includes the entire `ZielFX` and matches terminal
 process observations at the last runner step.
+An explicit non-returning process-exit gate is matched to its typed
+source call and actual request separately from the entry's implicit exit.
 
 `MappedImage.runner_prefix` proves the x86-to-IR part under the host
 answer restrictions. `MappedImage.loader_prefix_goal` relates each
@@ -8267,3 +8269,5 @@ The remaining compiler obligation constructs the simulation and the
 complete unit export from an arbitrary successful emission. In particular,
 shared-memory transitions, the final cause of each hardware stop and the
 loader's external mapping contract still need their concrete bridges.
+The continuing trace also needs a bridge for a non-returning gate that
+retires only its own Linux thread.

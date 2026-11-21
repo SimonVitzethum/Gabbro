@@ -297,9 +297,9 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
           simpa only [TSt.view, mapped.emptyBuffers 0, List.foldl_nil] using mapped.bytes⟩⟩
       | succ i => exact Or.inl rfl
 
-/-- An accepted image may return its entry result, stop at a named
-    hardware condition, or report a refused host clone. The exit is
-    matched to the boundary preceding the terminal operation. -/
+/-- Match a process exit to its exact source return, declared non-returning
+    gate, named hardware condition, or refused host clone at the boundary
+    preceding the terminal operation. -/
 def ImageStopMatches (output : Emitted src reserve options)
     (O : Orakel (declOf output.compiled.unit)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
     (earlier last : List Ev) (ending : Ende) : Prop :=
@@ -310,6 +310,12 @@ def ImageStopMatches (output : Emitted src reserve options)
           (value : ErgVal _ (vertragVon _ thread.kopf.f).erg) (world : World _),
           thread.kopf.rest = ⟨l, Γ, (vertragVon _ thread.kopf.f).ende, env, .zurueckgekehrt (.inl value, world)⟩ ∧
           ExitErg output.image.Y.withIdle _ value req.a1) ∨
+      (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .nieZurueck i ∧
+        ∃ (routine : (declOf output.compiled.unit).Ax) world args gate,
+          state.m.foreignCallKey i = some ⟨routine, world, args⟩ ∧
+          (declOf output.compiled.unit).aerg routine = some .never ∧
+          output.tor routine = some gate ∧ req.nr = BitVec.ofNat 64 gate.nr ∧
+          ArgsW output.image.Y.withIdle (reqArg req) args) ∨
       (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .hardware i ∧
         110 ≤ req.a1.toNat ∧ req.a1.toNat ≤ 115) ∨
       (i = 0 ∧ req.a1 = BitVec.ofNat 64 cloneCode ∧
