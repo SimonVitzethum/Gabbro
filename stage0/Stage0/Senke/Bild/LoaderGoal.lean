@@ -261,4 +261,62 @@ theorem bootClone_step {M : MemSys} {before : Cfg M (Res T)} {i : Nat}
   · rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
     rfl
 
+/-- The runner fetches a spawn, reads its operand index and both stack
+    words, and reaches the pending clone. These five actual TSO steps
+    leave memory unchanged and use the parent's view of its own writes. -/
+theorem bootClone_read_prefix {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {parent child : T}
+    {dest index pad : BitVec 32}
+    (running : before.ths[i]? = some (some (.next parent)))
+    (instruction : InsAt (before.ms.1.view i) parent.pc 24 dest index pad)
+    (entry : (before.ms.1.view i).rd64 (slot parent.fp (sx index)) = some child.pc)
+    (frame : (before.ms.1.view i).rd64 (slot parent.fp (sx index) + 8) = some child.fp) :
+    ProcessPrefix (TSO layout) actI before [] 5
+      ⟨before.ms, before.ths.set i (some (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1))⟩ := by
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
+    ⟨before.ms, before.ths.set i (some r)⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have read (width : Nat) (address value : W) (resume : Ans → Res T)
+      (loaded : rdN (before.ms.1.view i) width address = some value) :
+      ProcessStep (TSO layout) actI (onThread (.ask (.rd width address) resume)) []
+        (onThread (resume (some (value, 0)))) := by
+    have step := ProcessStep.ask (act := actI) (i := i)
+      (c := onThread (.ask (.rd width address) resume))
+      (List.getElem?_set_self inside) rfl rfl
+      (show (TSO layout).ans before.ms i (.rd width address) (some (value, 0)) before.ms from
+        ⟨rfl, 0, by rw [loaded]; rfl⟩)
+      (t' := resume (some (value, 0))) rfl
+    simpa only [onThread, List.set_set, Mach.lbl] using step
+  let clone : Res T := .ask (.sys cloneReq) fun answer =>
+    opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
+  let readFrame (pc : W) : Res T := rd64 (slot parent.fp (sx index) + 8) fun fp =>
+    .ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next ⟨pc, fp⟩ else ret1 parent pair.1
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step parent)) :=
+    .priv running rfl
+  have fetched : ProcessStep (TSO layout) actI (onThread (IR.step parent)) [] (onThread (op 24 parent)) := by
+    have loaded : rdN (before.ms.1.view i) 1 parent.pc = some ((24 : B).setWidth 64) := by
+      simp only [rdN, instruction.op, Option.map_some]
+    exact read 1 parent.pc _ (fun answer => opt answer fun pair =>
+      op (pair.1.setWidth 8 |>.setWidth 64).toNat parent) loaded
+  have indexed : ProcessStep (TSO layout) actI (onThread (op 24 parent)) []
+      (onThread (ld parent (sx index) readFrame)) := by
+    have loaded : rdN (before.ms.1.view i) 4 (parent.pc + 8) = some (index.setWidth 64) := by
+      simp only [rdN, instruction.f2, Option.map_some]
+    simpa [op, f2, rd32, ld, readFrame] using
+      read 4 (parent.pc + 8) _ (fun answer => opt answer fun pair =>
+        ld parent (sx (pair.1.setWidth 32)) fun pc =>
+          rd64 (slot parent.fp (sx (pair.1.setWidth 32)) + 8) fun fp =>
+            .ask (.sys cloneReq) fun answer =>
+              opt answer fun pair => if pair.1 = 0 then .next ⟨pc, fp⟩ else ret1 parent pair.1) loaded
+  have entered : ProcessStep (TSO layout) actI (onThread (ld parent (sx index) readFrame)) []
+      (onThread (readFrame child.pc)) :=
+    read 8 _ _ (fun answer => opt answer fun pair => readFrame pair.1) entry
+  have framed : ProcessStep (TSO layout) actI (onThread (readFrame child.pc)) [] (onThread clone) :=
+    read 8 _ _ (fun answer => opt answer fun frame =>
+      .ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next ⟨child.pc, frame.1⟩ else ret1 parent pair.1) frame
+  exact .cons started (.cons fetched (.cons indexed (.cons entered (.cons framed (.nil _)))))
+
 end Gabbro.Stage0
