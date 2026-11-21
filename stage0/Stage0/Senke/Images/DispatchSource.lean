@@ -204,6 +204,34 @@ theorem MappedImage.loader_step_no_terminal [Kern] {output : Emitted src reserve
       rw [valueExact] at failed
       simp only [opt_some, reduceCtorEq] at failed
 
+/-- An actual loader step is silent and either leaves the same mapped
+    phase or establishes the root stub with its initialized arguments.
+    The declared source start is valid in both phases. -/
+theorem MappedImage.loader_transition [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {before after : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output before) (unit : ImageModelUnit output E)
+    (O : Orakel (declOf output.compiled.unit))
+    {events : List Ev} (step : ProcessStep imageTSO (actX L0) before events after) :
+    events = [] ∧ (MappedImage output after ∨
+      ∃ ir, ProcessPrefix imageTSO actI ⟨before.ms, [some t4]⟩ [] 1 ir ∧ Rel L0 ir after ∧
+        ImageSlotsMatch output E O [] ir (imageSourceStart E) ∧
+        ImageRuntimeMatches output E O [] ir (imageSourceStart E)) := by
+  obtain ⟨ir, steps, path, bound, related⟩ := mapped.runner_loader_step step
+  cases path with
+  | nil =>
+    have memory := related.ms.symm
+    refine ⟨rfl, Or.inl ⟨?_, ?_, ⟨rfl, related.th⟩, ?_⟩⟩
+    · rw [memory]; exact mapped.bytes
+    · rw [memory]; exact mapped.emptyBuffers
+    · rw [memory]; exact mapped.runnerFile
+  | cons read tail =>
+    cases tail with
+    | nil =>
+      obtain ⟨quiet, slots, runtime⟩ := mapped.dispatched_source unit O read
+      refine ⟨?_, Or.inr ⟨_, ProcessPrefix.ofStep (quiet ▸ read), related, slots, runtime⟩⟩
+      simp only [quiet, List.nil_append]
+    | cons _ _ => omega
+
 private theorem MappedImage.source_start_goal [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)

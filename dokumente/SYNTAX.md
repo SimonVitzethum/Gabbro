@@ -2638,6 +2638,10 @@ counterpart -- and both backends lower it (the C11 stub and the LLVM
 inline gate). The example block is an excerpt (`…`), not a
 translation unit.
 
+The Stage 0 Linux runner reserves syscall number `56` for generated
+thread startup. Gates bound to `exit` (`60`) or `exit_group` (`231`)
+must declare `-> never`.
+
 **The checks** — each names the passes of §1 it mirrors (`G4`, `G7` at
 `entrydecl`; `A005` at `assume`). The `syscalldecl` production whose lines
 they point at stands in §1 beside `entrydecl`.
