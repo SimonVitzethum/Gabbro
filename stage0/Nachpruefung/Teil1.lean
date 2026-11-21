@@ -4,6 +4,7 @@ public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
 import Grammatik.Bausteine.Arena.BlockScope
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 public import Stage0.Senke.Ausdruck.Tag
 
 @[expose] public section
@@ -33,6 +34,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_erfuellbar
 #print axioms Gabbro.Grammatik.Async.Representation.initial_inv
 #print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
+#print axioms Gabbro.Grammatik.Async.Representation.completed_inv
+#print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
 #print axioms Gabbro.Grammatik.Parser.EffectGroups.expandEffects_exact
