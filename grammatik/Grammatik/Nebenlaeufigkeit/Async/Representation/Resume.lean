@@ -154,7 +154,7 @@ private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
       have nextTag : tag = base + 1 + offset := by omega
       have different : tag ≠ base := by omega
       have skipRun : encodePhase D types f (.running base) (.running tag frame) = none := by
-        simp only [encodePhase, if_neg different]
+        simp only [encodePhase, ite_eq_right different]
       obtain ⟨_, continuation⟩ := ih (base + 1) offset shorter nextTag
       cases command with
       | bind =>
@@ -196,7 +196,7 @@ public theorem await_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
     omega
   have owned : MarksRep inventory (.running (tag + 1)) resumed := by
     simpa only [MarksRep, resumed, State.marks, sameMarks, sameInventory] using marks
-  obtain ⟨_, running⟩ := runningPhaseList inventory restored owned f.body 0 (tag + 1) within
+  obtain ⟨_, running⟩ := runningPhaseList inventory (tag + 1) restored owned f.body 0 (tag + 1) within
     (Nat.zero_add (tag + 1)).symm
   have full : PhaseListRep D types f inventory (phases f) resumed _ :=
     .later _ _ _ _ rfl (.later _ _ _ _ rfl running)
