@@ -205,13 +205,14 @@ private theorem processStep_threadSlots {M : MemSys} {act : θ → Res θ}
   | tau _ => simp
   | priv _ _ => simp
   | @ask _ _ _ o _ _ _ _ _ ordinary _ _ =>
-    cases o <;> try simp [lbl]
-    rename_i q
-    have distinct : q ≠ cloneReq := by
-      intro equal
-      subst q
-      simp [Op.special] at ordinary
-    simp [lbl, createsThread, distinct]
+    cases o with
+    | rd | wr | cas | fp => simp [Mach.lbl]
+    | sys q =>
+      have distinct : q ≠ cloneReq := by
+        intro equal
+        subst q
+        simp [Op.special] at ordinary
+      simp [Mach.lbl, createsThread, distinct]
   | @exit _ _ q _ _ _ number =>
     have distinct : q ≠ cloneReq := by
       intro equal
@@ -257,8 +258,6 @@ theorem bootClone_step {M : MemSys} {before : Cfg M (Res T)} {i : Nat}
     exact (by decide : ¬ (0 < (0 : W).toInt)) positive
   constructor
   · exact .clone pending rfl answer positive (by simp only [opt_some, if_neg nonzero]) rfl
-  · dsimp only
-    rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
-    rfl
+  · rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
 
 end Gabbro.Stage0
