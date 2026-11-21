@@ -2,7 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Welt.Spans.IdleValue
-public import Stage0.Senke.Bild.Mehr.StartupOperands
+public import Stage0.Senke.Images.PrepareSpawn
 public import Runner.Beweis.Lader
 import Lean.Elab.Tactic.Omega
 
@@ -381,5 +381,97 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
       (II.f (startScratch output.compiled.main)) (II.f 0) := decoded
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
+
+private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
+    y.toNat < Runner.Prog.IMG := by
+  obtain ⟨op, row, byte, width, rfl⟩ := member
+  have fit := image_fits
+  rw [image_len, Runner.Prog.fileLen] at fit
+  have below : Runner.Prog.BASE + (Runner.Prog.tblOff + 8 * op) + byte < Runner.Prog.IMG := by
+    unfold readOnlyWidth at width
+    split at width <;> omega
+  rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (Nat.lt_trans below (by decide))]
+  exact below
+
+/-- From the actual mapped payload the loader and the first clone site
+    reach the first declared child. The compiled immediates supply both
+    child addresses and the buffer holds the writes without a flush. -/
+theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {s : (TSO L0).St} (empty : s.1.buf 0 = [])
+    (loaded : BytesAt s.1.m Runner.Prog.IMG output.bytes)
+    {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
+      Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+        ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
+    (declared : output.starts[0]? = some start) {id extra : W} (positive : 0 < id.toInt) :
+    let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
+    ∃ after : (TSO L0).St,
+      ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [(0, cloneReq, some (id, extra))] 17
+        ⟨after, [some (ret1 parent id), some (.next child)]⟩ ∧ after.1.m = s.1.m ∧
+      (output.bootStart Q).lebt 1 = true ∧
+      initRuhe (output.goalUnit Q).starts 1 = ⟨some start.1, envR start.2⟩ := by
+  intro parent child
+  obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
+  obtain ⟨_, _, sites, placed, code, _, args, roots⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have startup : BytesAt s.1.m codeBase (output.image.code.flatMap encII ++
+      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
+    simpa only [made, Option.getD_some, List.append_nil] using loadedStartup
+  rw [code, args, roots] at startup
+  obtain ⟨allSites, frame, children, far, scratch, slots⟩ := spawn_ready placed startup
+  have present := (List.getElem?_eq_some_iff.mp declared).1
+  have indexed := placed.spawn_entry 0 (by rw [List.length_map]; exact present)
+  have specific := children _ (List.mem_of_getElem? indexed)
+  obtain ⟨site, live, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
+  simp only [Nat.mul_zero, Nat.add_zero, Nat.mul_one, BitVec.add_zero] at site specific
+  have beforeView : s.1.view 0 = s.1.m := by simp only [TSt.view, empty, List.foldl_nil]
+  let entered : Cfg (TSO L0) (Res T) :=
+    ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
+  have farSite : CodeFar (BitVec.ofNat 64 codeBase) 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
+    have count : sites.length = output.starts.length := by rw [placed.spawn_length, List.length_map]; rfl
+    simp only [spawnC_len, count, CodeFar] at far
+    unfold CodeFar
+    omega
+  have fit := placed.hfit
+  have frameNat : (BitVec.ofNat 64 output.image.fp0).toNat = output.image.fp0 := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have notTable (j : Nat) (hj : j < 2) (b : Nat) (hb : b < 8) :
+      ¬ TB L0 (slot (BitVec.ofNat 64 output.image.fp0)
+        (BitVec.ofNat 64 (startScratch output.compiled.main + j)) + BitVec.ofNat 64 b) := by
+    intro member
+    have below := runnerTable_below_image member
+    have atSlot := slot_toNat frame.room (i := startScratch output.compiled.main + j) (by omega)
+    have atByte : (slot (BitVec.ofNat 64 output.image.fp0)
+        (BitVec.ofNat 64 (startScratch output.compiled.main + j)) + BitVec.ofNat 64 b).toNat =
+        output.image.fp0 + 8 * (startScratch output.compiled.main + j) + b := by
+      have room := frame.lt
+      rw [BitVec.toNat_add, atSlot, frameNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (a := b) (by omega),
+        Nat.mod_eq_of_lt (by rw [frameNat] at room; omega)]
+    have high : Runner.Prog.IMG ≤ output.image.fp0 := by
+      rw [placed.hfp, codeBase]
+      omega
+    omega
+  obtain ⟨prepared, preparation, committed, _, instruction, entry, stack⟩ :=
+    spawn_prepare_prefix (before := entered) (i := 0) rfl (beforeView.symm ▸ site) (beforeView.symm ▸ frame)
+      farSite (by omega) slots specific.1 specific.2 notTable
+  have readFrame := output.loader_frame loaded
+  have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
+    exact .ofStep (ProcessStep.ask (i := 0) rfl rfl rfl
+      (show (TSO L0).ans s 0 (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG))
+          (some (BitVec.ofNat 64 output.image.fp0, 0)) s from
+        ⟨rfl, 0, by simp only [beforeView, rdN, readFrame, Option.map_some]⟩) rfl)
+  have sxIndex : sx (II.f (startScratch output.compiled.main)) =
+      BitVec.ofNat 64 (startScratch output.compiled.main) := sx_nat (by omega)
+  rw [← sxIndex] at entry stack
+  obtain ⟨cloned, _⟩ := bootClone_run (before := ⟨prepared, [some (.next parent)]⟩)
+    (i := 0) (child := child) rfl instruction entry stack (memory := prepared) True.intro positive
+  exact ⟨prepared, (loadedEntry.trans preparation).trans cloned, committed, live, logical⟩
 
 end Gabbro.Stage0
