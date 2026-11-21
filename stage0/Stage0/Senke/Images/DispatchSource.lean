@@ -110,4 +110,38 @@ theorem MappedImage.loader_prefix_goal [Kern] {output : Emitted src reserve opti
   exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts O binding
     hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ .start
 
+/-- On the domain with a complete current unit export, the actual CLI bytes
+    determine the source, checker verdict and full goal through dispatch. -/
+theorem irBild_checked_loader_prefix [Kern] {bytes : List B}
+    (emitted : irBild src reserve options = .ok bytes) :
+    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
+      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
+      (output.compiled.unit.axs.length = 0 →
+        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output = [] →
+        let E := output.goalUnit (axWahr _)
+        ImageModelUnit output E ∧
+        akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+        ∀ (O : Orakel (declOf output.compiled.unit)), HardwareAnnahmenHw O E.Q →
+          ∀ {machine finish : Cfg imageTSO Runner.X86.X} {events : List Ev} {count : Nat},
+            MappedImage output machine → ProcessPrefix imageTSO (actX L0) machine events count finish →
+            (∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
+              Rel L0 ir finish → steps ≤ 1) →
+            ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧
+              Rel L0 ir finish ∧ events = [] ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+              ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
+              ImageGoalAt output E O (imageSourceStart E)) := by
+  obtain ⟨output, wrote, payload⟩ := irBild_emitted src reserve bytes emitted
+  refine ⟨output, wrote, payload, compile_source_program src output.compiled, ?_⟩
+  intro noAxioms noOwnership noAccumulators
+  obtain ⟨unit, accepted⟩ := output.checked_image_model_empty noAxioms noOwnership noAccumulators
+  refine ⟨unit, accepted, ?_⟩
+  intro O hardware machine finish events count mapped run inLoader
+  have absent (a : (declOf output.compiled.unit).Ax) :
+      (declOf output.compiled.unit).axHerkunft a ≠ some AxOrigin.software :=
+    False.elim ((Nat.not_lt_zero a.val) (noAxioms ▸ a.isLt))
+  have duties := nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2
+    (Bool.and_eq_true_iff.mp (output.goal_axiomFree (axWahr _) noAxioms)).2
+  exact mapped.loader_prefix_goal unit accepted duties (callSitePflicht_ohne _ absent) unit.postDeckt
+    (foreignVertrag_ohne _ O absent) hardware run inLoader
+
 end Gabbro.Stage0

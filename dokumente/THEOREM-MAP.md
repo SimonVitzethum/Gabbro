@@ -8264,6 +8264,10 @@ checker supplies the unit duties and the exported summary supplies
 `PostDeckt`.
 `Emitted.checked_image_model_empty` supplies the exact unit and checker
 verdict on the axiom-free domain with no arena or accumulator declarations.
+`irBild_checked_loader_prefix` connects this checked unit and the actual
+CLI bytes to the goal through loader dispatch on the same domain.
+`Emitted.goalUnit_refuses_nonempty_axioms` proves where the existing unit
+export falls short for declared foreign contracts.
 
 The remaining compiler obligation constructs the simulation and the
 complete unit export from an arbitrary successful emission. In particular,

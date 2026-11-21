@@ -2,7 +2,6 @@ module
 
 public import Stage0.Senke.Start
 public import Stage0.Senke.Bild.Mehr.StartupOperands
-public import Stage0.Senke.Bild.Mehr.BootClone
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -221,80 +220,5 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
   refine ⟨after, ?_, same1.trans same0, safe0.trans safe1,
     fun j different => (others1 j different).trans (others0 j different)⟩
   simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
-
-/-- The complete successful site runs both the clone and its compiled
-    check. It reaches the next ten-instruction site, preserves the code
-    owner's view outside scratch, and leaves all other views unchanged. -/
-theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
-    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch entry stack : Nat}
-    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
-    (code : CodeAt (before.ms.1.view i) pc (spawnOne scratch entry stack))
-    (frame : FrameOK (before.ms.1.view i) fp K) (far : CodeFar pc 10 fp K)
-    (room : scratch + 8 ≤ K) (slots : K < 2 ^ 31) (address : entry < 2 ^ 31) (stackBound : stack < 2 ^ 31)
-    {id extra : W} (positive : 0 < id.toInt) :
-    let child : T := ⟨BitVec.ofNat 64 entry, BitVec.ofNat 64 stack⟩
-    let threads := before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 10), fp⟩)) ++ [some (.next child)]
-    ∃ after : (TSO layout).St,
-      ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 38 ⟨after, threads⟩ ∧
-      threads[before.ths.length]? = some (some (.next child)) ∧
-      after.1.m = before.ms.1.m ∧
-      Agree fp scratch K (before.ms.1.view i) (after.1.view i) ∧
-      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
-  intro child threads
-  have inside := (List.getElem?_eq_some_iff.mp running).1
-  obtain ⟨spawned, run, _, beforeGuard, same, stored, otherViews⟩ :=
-    bootSpawn_run (before := before) (i := i) (pc := pc) (fp := fp)
-      (K := K) (scratch := scratch) (entry := entry) (stack := stack) (extra := extra) running code frame far
-      (by omega) slots address stackBound positive
-  let guardPc := pc + BitVec.ofNat 64 (16 * 3)
-  let parent : T := ⟨guardPc, fp⟩
-  let afterClone : Cfg (TSO layout) (Res T) :=
-    ⟨spawned, before.ths.set i (some (.next parent)) ++ [some (.next child)]⟩
-  have within : i < (before.ths.set i (some (.next parent))).length := by
-    simpa only [List.length_set] using inside
-  have next : afterClone.ths[i]? = some (some (.next parent)) := by
-    simp only [afterClone, List.getElem?_append_left within, List.getElem?_set_self inside]
-  have allCode : CodeAt (spawned.1.view i) pc
-      ([ci 1 scratch entry 0, ci 1 ((scratch + 1 : Nat) : Int) stack 0, ci 24 ((scratch + 2 : Nat) : Int) scratch 0] ++
-        ([ci 1 ((scratch + 3 : Nat) : Int) 0 0,
-          ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)] ++
-          guardC (scratch + 4) cloneCode scratch)) :=
-    code.agree same (spawnOne_len scratch entry stack ▸ far)
-  have guardFar := codeFar_right (n := 3) (k := 7) far
-  have guardCode : CodeAt (spawned.1.view i) guardPc
-      ([ci 1 ((scratch + 3 : Nat) : Int) 0 0,
-        ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)] ++
-        guardC (scratch + 4) cloneCode scratch) :=
-    codeAt_right allCode
-  obtain ⟨after, checkRun, committed, checked, otherChecked⟩ :=
-    tso_spawn_check_pass (before := afterClone) (i := i) (pc := guardPc) (fp := fp)
-      (K := K) (scratch := scratch) next guardCode
-      (frame.agree same) guardFar (by omega) slots stored positive
-  change after.1.m = spawned.1.m at committed
-  change Agree fp (scratch + 3) K (spawned.1.view i) (after.1.view i) at checked
-  change ∀ j, j ≠ i → after.1.view j = spawned.1.view j at otherChecked
-  have advanced : guardPc + BitVec.ofNat 64 (16 * 7) = pc + BitVec.ofNat 64 (16 * 10) :=
-    pcN pc 3 7 10 rfl
-  have steps : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 38 ⟨after, threads⟩ := by
-    have cloneRun : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 afterClone := run
-    have combined := cloneRun.trans checkRun
-    simpa only [afterClone, threads, List.set_append_left _ _ within, List.set_set, List.append_nil,
-      advanced, Nat.reduceAdd] using combined
-  have appended : threads[before.ths.length]? = some (some (.next child)) := by
-    change (before.ths.set i _ ++ [some (.next child)])[before.ths.length]? = _
-    rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
-    rfl
-  have preserved : Agree fp scratch K (before.ms.1.view i) (after.1.view i) :=
-    same.trans (checked.mono (show scratch ≤ scratch + 3 from Nat.le_add_right scratch 3))
-  have others : ∀ j, j ≠ i → after.1.view j = before.ms.1.view j :=
-    fun j different => (otherChecked j different).trans (otherViews j different)
-  exists after
-  constructor
-  · exact steps
-  constructor
-  · exact appended
-  constructor
-  · exact committed.trans beforeGuard
-  exact And.intro preserved others
 
 end Gabbro.Stage0.Senke
