@@ -122,7 +122,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
           have base : uRechne ctx (uWertBlatt ctx)
               (.index (.field (.variable (nTab (tN z t))) "slots") i') =
               .error "value without G form" := by
-            simp only [uRechne, uTraegerIndex, strEq_eq, String.reduceEq, decide_true, ↓reduceIte,
+            simp only [uRechne, uLocalArraySliceObservation, uTraegerIndex, strEq_eq, String.reduceEq, decide_true, ↓reduceIte,
               uWertBlatt, uGrenzwort, uZugriff, uPraemisse, decide_false, Bool.or_self,
               Bool.false_eq_true]
           refine ⟨"bool field as a number", ?_⟩
