@@ -19,6 +19,27 @@ public structure InitialFrame (D : Deklaration) (types : TypeResolution) (f : As
   marks : MarksRep inventory (Phase.running 0)
     (State.running (Child := Child D types) 0 frame)
 
+/-- Creation is already represented by the generated record type. The
+    running arm has exactly the initial slots and owned inventory. -/
+public theorem initial_inv (f : AsyncFn) (inventory : Inventory D) (frame : Frame (Value D))
+    (initial : InitialFrame D types f inventory frame) :
+    ∃ value, Inv f types inventory
+      (Gabbro.Grammatik.Async.create (Child := Child D types) f frame).state value := by
+  obtain ⟨payload, slots⟩ := initial.live
+  have runningFirst : ∃ rest, commandPhases 0 f.body = .running 0 :: rest := by
+    cases body : f.body with
+    | nil => exact ⟨[], rfl⟩
+    | cons first rest => cases first <;> exact ⟨_, rfl⟩
+  obtain ⟨rest, first⟩ := runningFirst
+  have represented : ∃ value,
+      PhaseListRep D types f inventory (phases f) (.running 0 frame) value := by
+    unfold phases
+    rw [first]
+    exact ⟨_, .later _ _ _ _ rfl (.later _ _ _ _ rfl
+      (.first _ _ _ _ (.running 0 frame payload slots) initial.marks))⟩
+  obtain ⟨value, represented⟩ := represented
+  exact ⟨(value, ()), represented⟩
+
 /-- Actual semantic reachability from a typed creation. The step constructor
     does NOT assume target typing or Inv: those are preservation obligations,
     not conditions that may remove inconvenient executions from reachability. -/
@@ -39,6 +60,26 @@ public theorem reachable_storageValid (model : Model (Value D) (Child D types) (
   induction reachable with
   | create frame _ _ => exact storageValid_create f frame
   | step _ transition ih => exact storageValid_step model f ih transition
+
+/-- Once the poll builders preserve the concrete representation, encoding
+    is total on actual semantic reachability. Creation needs no step premise. -/
+public theorem reachable_encoded (model : Model (Value D) (Child D types) (World D))
+    (f : AsyncFn) (inventory : Inventory D)
+    (preserved : ∀ {source target before after event cost} {value},
+      Inv f types inventory source value →
+      machineStep model (asyncExpand model f) source before = (event, target, after, cost) →
+      ∃ next, Inv f types inventory target next)
+    {source : State (Value D) (Child D types)} {world : World D}
+    (reachable : Reachable model f inventory source world) :
+    ∃ value, Inv f types inventory source value ∧ encode D types f source = some value := by
+  have representation : ∃ value, Inv f types inventory source value := by
+    induction reachable with
+    | create frame _ initial => exact initial_inv f inventory frame initial
+    | step _ transition ih =>
+      obtain ⟨value, previous⟩ := ih
+      exact preserved previous transition
+  obtain ⟨value, represented⟩ := representation
+  exact ⟨value, represented, inv_encoded f types inventory source value represented⟩
 
 /-- An out-of-range running phase cannot occur, independently of the still
     separate frame/child typing preservation proof. -/
