@@ -225,6 +225,7 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
 /-- The complete successful site runs both the clone and its compiled
     check. It reaches the next ten-instruction site, preserves the code
     owner's view outside scratch, and leaves all other views unchanged. -/
+set_option maxHeartbeats 1200000 in
 theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch entry stack : Nat}
     (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))

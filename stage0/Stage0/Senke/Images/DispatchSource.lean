@@ -47,7 +47,7 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
     · simpa only [Nat.mul_zero, Nat.add_zero] using startFrameBytes_read entryFrame entryLoaded
     · refine ⟨⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩, ?_, Or.inl rfl⟩
       refine ⟨rfl, 0, Nat.zero_le _, ?_, rfl⟩
-      change 0 < 10 * output.starts.length + 8
+      simp only [ite_true, Nat.zero_add, startLen]
       omega
   refine ⟨quiet, ⟨?_, ?_⟩, ?_⟩
   · intro i
