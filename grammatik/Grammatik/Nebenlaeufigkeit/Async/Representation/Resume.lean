@@ -154,7 +154,11 @@ private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
       have nextTag : tag = base + 1 + offset := by omega
       have different : tag ≠ base := by omega
       have skipRun : encodePhase D types f (.running base) (.running tag frame) = none := by
-        simp only [encodePhase, ite_eq_right different]
+        simp only [encodePhase]
+        split
+        · rename_i same
+          exact (different same).elim
+        · rfl
       obtain ⟨_, continuation⟩ := ih (base + 1) offset shorter nextTag
       cases command with
       | bind =>
