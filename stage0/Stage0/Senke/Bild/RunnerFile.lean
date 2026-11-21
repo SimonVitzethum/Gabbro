@@ -1,12 +1,14 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
 namespace Gabbro.Stage0
 
-open Runner Runner.Beweis Runner.IR Runner.Mach Runner.Prog Gabbro.Stage0.Senke
+open Runner Runner.Beweis Runner.IR Runner.Mach Runner.Prog Gabbro.Grammatik
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Stage0.Senke
 
 variable [Kern]
 
@@ -182,8 +184,8 @@ theorem ImageFileStable.sys {state after : imageTSO.St} {i : Nat} {request : Req
 
 /-- Both emitted futex operations preserve the actual runner file,
     regardless of pending writes in any thread. -/
-theorem ImageFileStable.futex {state after : imageTSO.St} {i : Nat} {address value : W}
-    {mode : Nat} {answer : Ans} (stable : ImageFileStable state) (host : ImageFutexAnswers)
+theorem ImageFileStable.futex {state after : imageTSO.St} {i : Nat} {address value mode : W}
+    {answer : Ans} (stable : ImageFileStable state) (host : ImageFutexAnswers)
     (emitted : mode = 128 ∨ mode = 129)
     (step : imageTSO.ans state i (.sys (futexReq address mode value)) answer after) :
     ImageFileStable after := by
@@ -191,6 +193,42 @@ theorem ImageFileStable.futex {state after : imageTSO.St} {i : Nat} {address val
   intro _ answered visible
   rw [(host.unchanged address mode value answer _ _ emitted answered).1]
   exact visible
+
+/-- The actual emitted frame array and the world start after the mapped
+    runner file. This bound is taken from the emitted layout. -/
+theorem Emitted.runner_file_before_layout {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) :
+    IMG ≤ output.image.fp0 ∧ IMG ≤ output.image.Y.lo := by
+  obtain ⟨_, _, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have frameStart := layout.hfp
+  have worldStart := layout.hylo
+  simp only [codeBase] at frameStart
+  omega
+
+private theorem fileByte_before_image {offset : Nat} (loaded : offset < image.length) :
+    (BitVec.ofNat 64 (BASE + offset)).toNat < IMG :=
+  Nat.lt_of_le_of_lt (Nat.mod_le _ _) (Nat.lt_trans (Nat.add_lt_add_left loaded BASE) image_fits)
+
+/-- A returning plain gate preserves the mapped runner file by confining
+    its writes to the emitted program's world. The agreement comes from
+    the gate contract on the actual answer in the issuer's TSO view. -/
+theorem ImageFileStable.plain_gate {D : Deklaration} {layout : Gabbro.Stage0.Senke.Lay D}
+    {state after : imageTSO.St} {i : Nat} {request : Req} {answer : Ans}
+    (stable : ImageFileStable state) (step : imageTSO.ans state i (.sys request) answer after)
+    (above : IMG ≤ layout.lo)
+    (kernelFrame : request ≠ cloneReq →
+      Kern.ans request (state.1.view i) answer (after.1.view i) →
+        KernW layout (state.1.view i) (after.1.view i)) :
+    ImageFileStable after := by
+  apply stable.sys step
+  intro ordinary answered visible offset loaded
+  obtain ⟨read, write, bytes⟩ := kernelFrame ordinary answered
+  rw [read, write, bytes _ (fun inside => (Nat.not_le_of_lt (fileByte_before_image loaded)) (above.trans inside.1))]
+  exact visible offset loaded
 
 /-- The actual loader provides the read-only bytes. Empty initial buffers
     initialize the pending-write invariant without a host assumption. -/
