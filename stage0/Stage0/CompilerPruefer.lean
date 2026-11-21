@@ -69,11 +69,30 @@ theorem irBild_frontend_sound {text : String} {K : Nat} {options : Profil.Option
 def Compiled.checkedDeclarations {text : String} {options : Profil.Options} (result : Compiled text options) :
     {checks : List (CheckDecl (declOf result.unit)) // uCheckDecls result.unit = .ok checks} :=
   match found : uCheckDecls result.unit with
-  | .ok checks => ⟨checks, found⟩
+  | .ok checks => ⟨checks, rfl⟩
   | .error _ => False.elim (by
     obtain ⟨_, _, _, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
     rw [found] at derived
     cases derived)
+
+/-- The checks in the executable verdict satisfy the model's read-only
+    probe, distinct gate and linear Duty conditions, for the exact list
+    derived from the source unit. -/
+theorem Compiled.declared_checks_sound {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    CheckAdmission result.program (List.finRange result.unit.fns.length) result.checkedDeclarations.val := by
+  letI : DecidableEq (declOf result.unit).Fn := inferInstanceAs (DecidableEq (Fin result.unit.fns.length))
+  have accepted := OldSource.accepts_program _ _ _ result.accepted result.checkedDeclarations.property
+  simp only [AkzeptiertX, Bool.and_eq_true] at accepted
+  have carriers : ∀ c : (declOf result.unit).Tab ⊕ (declOf result.unit).Glob,
+      c ∈ (List.finRange result.unit.tabs.length).map Sum.inl ++
+        (List.finRange result.unit.globs.length).map Sum.inr := by
+    intro c
+    cases c with
+    | inl t => exact List.mem_append_left _ (List.mem_map_of_mem (List.mem_finRange t))
+    | inr g => exact List.mem_append_right _ (List.mem_map_of_mem (List.mem_finRange g))
+  exact (checkB_iff List.mem_finRange (tabsOf_voll carriers) (globsOf_voll carriers)).mp
+    accepted.1.1.1.1.2
 
 /-- Premise (a) for the exported unit with its actual check declarations
     and the checked judgment on its initial memory and typed starts. -/

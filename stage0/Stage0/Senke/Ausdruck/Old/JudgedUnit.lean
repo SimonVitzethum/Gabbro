@@ -34,6 +34,42 @@ theorem einheitDer_pruefungen (u : UProg) (P : Programm (declOf u)) (Q : AxEns (
     (checks : List (CheckDecl (declOf u))) :
     (einheitDer u P Q sp main args roots gestartet checks).pruefungen = checks := rfl
 
+private theorem sequenced_at {α β : Type} (lower : α → Except String β) :
+    ∀ {items : List α} {results : List β}, uSeq (items.map lower) = .ok results →
+      ∀ {i item}, items[i]? = some item →
+        ∃ value, results[i]? = some value ∧ lower item = .ok value := by
+  intro items
+  induction items with
+  | nil => intro _ _ _ _ found; cases found
+  | cons head tail ih =>
+    intro results success i item found
+    cases lowered : lower head with
+    | error error => simp only [List.map_cons, uSeq, lowered, reduceCtorEq] at success
+    | ok value =>
+      cases rest : uSeq (tail.map lower) with
+      | error error => simp only [List.map_cons, uSeq, lowered, rest, reduceCtorEq] at success
+      | ok values =>
+        simp only [List.map_cons, uSeq, lowered, rest, Except.ok.injEq] at success
+        subst results
+        cases i with
+        | zero =>
+          cases found
+          exact ⟨value, rfl, lowered⟩
+        | succ i => exact ih rest found
+
+/-- Every declared source check has its own derived descriptor at exactly
+    the same position in the list supplied to the checker. -/
+theorem uCheckDecls_at (u : UProg) {checks : List (CheckDecl (declOf u))}
+    (derived : uCheckDecls u = .ok checks) {i : Nat} {item : UCheck}
+    (atSource : u.checks[i]? = some item) :
+    ∃ check, checks[i]? = some check ∧ uCheckDecl u item = .ok check := by
+  unfold uCheckDecls at derived
+  cases valid : uSondenPruef u with
+  | error error => simp only [valid, bind, Except.bind, reduceCtorEq] at derived
+  | ok _ =>
+    simp only [valid, bind, Except.bind] at derived
+    exact sequenced_at (uCheckDecl u) derived atSource
+
 /-- **The judged starts are the roots `accepts` judged**: the entry, then starts naming the
     unit's declared roots, then the run-time roots twice (`judgedRoots`). -/
 theorem einheitDer_ws (u : UProg) (main : (declOf u).Fn)

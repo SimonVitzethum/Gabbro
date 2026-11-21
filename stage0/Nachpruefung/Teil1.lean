@@ -28,6 +28,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.parseModulTief_body
 #print axioms Gabbro.Grammatik.Parser.parseItemTief_module
 #print axioms Gabbro.Stage0.OldSource.accepts_core
+#print axioms Gabbro.Stage0.OldSource.uCheckDecls_at
+#print axioms Gabbro.Stage0.Compiled.declared_checks_sound
 #print axioms Gabbro.Stage0.OldSource.accepts_contract_duties
 #print axioms Gabbro.Stage0.Compiled.contract_duties
 #print axioms Gabbro.Stage0.Compiled.admission
