@@ -315,23 +315,18 @@ theorem projectSCState_store {layout : Lay} {before after : (TSO layout).St}
         some (Mem.write (mergedView before.1 footprint) address 8 value.toNat)
       simp only [wr64_eq, permissions, allowed, ↓reduceIte]
 
-/-- A compare-and-swap on an exclusive footprint uses the same old word,
-    permission checks and comparison as the SC projection. -/
-theorem projectSCState_cas {layout : Lay} {before after : (TSO layout).St}
+/-- The CAS comparison and answer are independent of the way the
+    projected memory agrees with, and commits writes to, its window. -/
+private theorem projectSCState_cas_agree {layout : Lay} {before after : (TSO layout).St}
     {i : Nat} {address expected value : W} {answer : Ans}
     (step : (TSO layout).ans before i (.cas address expected value) answer after)
     (footprint : Nat → W → Prop)
-    (owns : ∀ y, fenster address y → footprint i y ∧ ∀ j, footprint j y → j = i)
-    (disjoint : ∀ thread store, store ∈ before.1.buf thread →
-      ∀ other, other ≠ thread → ∀ y, footprint other y → ¬ fenster store.1 y) :
+    (agree : GleichAuf (fenster address) (mergedView before.1 footprint) before.1.m)
+    (commit : after.1 = {before.1 with m := Mem.write before.1.m address 8 value.toNat} →
+      mergedView after.1 footprint = Mem.write (mergedView before.1 footprint) address 8 value.toNat) :
     (SC layout).ans (projectSCState footprint before) i (.cas address expected value) answer
       (projectSCState footprint after) := by
-  obtain ⟨empty, outcome⟩ := step
-  have beforeView : before.1.view i = before.1.m := by
-    simp only [TSt.view, empty, List.foldl_nil]
-  have agree : GleichAuf (fenster address) (mergedView before.1 footprint) before.1.m := by
-    rw [← beforeView]
-    exact fun y touched => tso_views_merge before.1 footprint disjoint i y (owns y touched).1
+  obtain ⟨_, outcome⟩ := step
   let old := BitVec.ofNat 64 (Mem.le before.1.m address 8)
   let permitted := Mem.all before.1.m.rd address 8 && Mem.all before.1.m.wr address 8
   have source : before.1.m.cas address expected value =
@@ -369,27 +364,111 @@ theorem projectSCState_cas {layout : Lay} {before after : (TSO layout).St}
       · rw [if_pos matchesExpected] at writtenEq
         have committedWrite : after.1 = {before.1 with m := Mem.write before.1.m address 8 value.toNat} := by
           rw [state, ← writtenEq]
-        have committedOutside (y : W) (outside : ¬ fenster address y) :
-            GleichAt after.1.m before.1.m y := by
-          rw [committedWrite]
-          exact (write_nurIn before.1.m address value.toNat).gleichAt outside
-        have issuer : after.1.view i = Mem.write (before.1.view i) address 8 value.toNat := by
-          rw [committedWrite, beforeView]
-          simp only [TSt.view, empty, List.foldl_nil]
-        have others (j : Nat) (different : j ≠ i) :
-            GleichAuf (footprint j) (after.1.view j) (before.1.view j) := by
-          rw [committedWrite]
-          unfold TSt.view
-          apply buffers_agree
-          intro y member
-          exact (write_nurIn before.1.m address value.toNat).gleichAt
-            (fun touched => different ((owns y touched).2 j member))
         change mergedView after.1 footprint = _
         rw [if_pos matchesExpected]
-        exact merging_a_store footprint i address value owns committedOutside issuer others
+        exact commit committedWrite
       · rw [if_neg matchesExpected] at writtenEq
         have same : after.1 = before.1 := by rw [state, ← writtenEq]
         change mergedView after.1 footprint = _
         rw [same, if_neg matchesExpected]
+
+/-- A compare-and-swap on an exclusive footprint uses the same old word,
+    permission checks and comparison as the SC projection. -/
+theorem projectSCState_cas {layout : Lay} {before after : (TSO layout).St}
+    {i : Nat} {address expected value : W} {answer : Ans}
+    (step : (TSO layout).ans before i (.cas address expected value) answer after)
+    (footprint : Nat → W → Prop)
+    (owns : ∀ y, fenster address y → footprint i y ∧ ∀ j, footprint j y → j = i)
+    (disjoint : ∀ thread store, store ∈ before.1.buf thread →
+      ∀ other, other ≠ thread → ∀ y, footprint other y → ¬ fenster store.1 y) :
+    (SC layout).ans (projectSCState footprint before) i (.cas address expected value) answer
+      (projectSCState footprint after) := by
+  have empty := step.1
+  have beforeView : before.1.view i = before.1.m := by
+    simp only [TSt.view, empty, List.foldl_nil]
+  have agree : GleichAuf (fenster address) (mergedView before.1 footprint) before.1.m := by
+    rw [← beforeView]
+    exact fun y touched => tso_views_merge before.1 footprint disjoint i y (owns y touched).1
+  apply projectSCState_cas_agree step footprint agree
+  intro committedWrite
+  have committedOutside (y : W) (outside : ¬ fenster address y) :
+      GleichAt after.1.m before.1.m y := by
+    rw [committedWrite]
+    exact (write_nurIn before.1.m address value.toNat).gleichAt outside
+  have issuer : after.1.view i = Mem.write (before.1.view i) address 8 value.toNat := by
+    rw [committedWrite, beforeView]
+    simp only [TSt.view, empty, List.foldl_nil]
+  have others (j : Nat) (different : j ≠ i) :
+      GleichAuf (footprint j) (after.1.view j) (before.1.view j) := by
+    rw [committedWrite]
+    unfold TSt.view
+    apply buffers_agree
+    intro y member
+    exact (write_nurIn before.1.m address value.toNat).gleichAt
+      (fun touched => different ((owns y touched).2 j member))
+  exact merging_a_store footprint i address value owns committedOutside issuer others
+
+theorem mergedView_committed_at (state : TSt) (footprint : Nat → W → Prop) (y : W)
+    (absent : ¬ ∃ j, footprint j y) :
+    GleichAt (mergedView state footprint) state.m y := by
+  change GleichAt (viewAt state footprint y) state.m y
+  rw [show viewAt state footprint y = state.m from dif_neg absent]
+  exact .refl _ _
+
+/-- A shared read that cannot be forwarded from a private buffer reads the
+    exact committed word, with the same permissions and answer in SC. -/
+theorem projectSCState_read_shared {layout : Lay} {before after : (TSO layout).St}
+    {i width : Nat} {address : W} {answer : Ans}
+    (read : (TSO layout).ans before i (.rd width address) answer after)
+    (footprint : Nat → W → Prop)
+    (shared : ∀ y, fenster address y → ∀ j, ¬ footprint j y)
+    (owns : ∀ j store, store ∈ before.1.buf j →
+      ∀ y, fenster store.1 y → footprint j y) :
+    (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
+      (projectSCState footprint after) := by
+  obtain ⟨same, extra, result⟩ := read
+  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) := by
+    intro y touched
+    have noForward (store : W × W) (pending : store ∈ before.1.buf i) :
+        ¬ fenster store.1 y :=
+      fun hit => shared y touched i (owns i store pending y hit)
+    exact (view_agrees_at noForward).trans
+      (mergedView_committed_at before.1 footprint y (fun ⟨j, member⟩ => shared y touched j member)).symm
+  refine ⟨congrArg (projectSCState footprint) same, extra, ?_⟩
+  exact result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))
+
+/-- Outside all private footprints the projection uses committed memory
+    directly. A CAS on such a shared word updates that same physical span. -/
+theorem projectSCState_cas_shared {layout : Lay} {before after : (TSO layout).St}
+    {i : Nat} {address expected value : W} {answer : Ans}
+    (step : (TSO layout).ans before i (.cas address expected value) answer after)
+    (footprint : Nat → W → Prop)
+    (shared : ∀ y, fenster address y → ∀ j, ¬ footprint j y) :
+    (SC layout).ans (projectSCState footprint before) i (.cas address expected value) answer
+      (projectSCState footprint after) := by
+  apply projectSCState_cas_agree step footprint
+    (fun y touched => mergedView_committed_at before.1 footprint y (fun ⟨j, member⟩ => shared y touched j member))
+  intro written
+  apply mem_eq_of_agreement
+  intro y
+  by_cases visible : ∃ j, footprint j y
+  · let j := Classical.choose visible
+    have same (state : TSt) : GleichAt (mergedView state footprint) (state.view j) y := by
+      change GleichAt (viewAt state footprint y) (state.view j) y
+      rw [show viewAt state footprint y = state.view j from dif_pos visible]
+      exact .refl _ _
+    have outside : ¬ fenster address y :=
+      fun touched => shared y touched j (Classical.choose_spec visible)
+    have sameViews : GleichAt (after.1.view j) (before.1.view j) y := by
+      rw [written]
+      exact buffers_agree (before.1.buf j)
+        (region := fun a => ¬ fenster address a)
+        (fun _ far => (write_nurIn _ _ _).gleichAt far) y outside
+    exact (same after.1).trans (sameViews.trans ((same before.1).symm.trans
+      ((write_nurIn _ _ _).gleichAt outside).symm))
+  · have prior := (mergedView_committed_at before.1 footprint y visible).symm
+    have current := mergedView_committed_at after.1 footprint y visible
+    rw [written] at current
+    exact current.trans (write_agrees value.toNat prior)
 
 end Gabbro.Stage0.Senke.BildMehr
