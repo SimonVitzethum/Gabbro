@@ -382,6 +382,7 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
 
+set_option maxRecDepth 100000 in
 private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
     y.toNat < Runner.Prog.IMG := by
   obtain ⟨op, row, byte, width, rfl⟩ := member
@@ -394,7 +395,7 @@ private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
   simp only [Runner.Prog.fileLen] at fit
   have below := Nat.lt_of_le_of_lt (tableEnd Runner.Prog.BASE Runner.Prog.tblOff width) fit
   rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat]
-  exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) below
+  exact Nat.lt_of_le_of_lt (Nat.mod_le (Runner.Prog.BASE + (Runner.Prog.tblOff + 8 * op) + byte) (2 ^ 64)) below
 
 /-- From the actual mapped payload the loader and the first clone site
     reach the first declared child. The compiled immediates supply both
