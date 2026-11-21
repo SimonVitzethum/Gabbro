@@ -225,17 +225,15 @@ theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns 
   · rintro ⟨accepted, start⟩
     exact accepts_gibt_einheitVon u P Q sp main starts gestartet _ hws accepted start
   · intro accepted
-    letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
-    rw [akzeptiertX_pruefer_eq (einheitVon u P Q sp starts gestartet)
-      (List.finRange u.fns.length) (List.finRange u.locks.length)
-      ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)] at accepted
-    simp only [Bool.and_eq_true] at accepted
+    simp only [akzeptiertX_pruefer, Bool.and_eq_true] at accepted
     rcases accepted with ⟨⟨⟨⟨core, _⟩, _⟩, invariant⟩, logic⟩
     refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
     simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, bind, Except.bind]
     apply (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mpr
     rw [akzeptiertX_guest_eq, guest, Bool.and_true]
     rw [← hws]
-    exact core
+    exact (akzeptiertX_inst (declOf u) _ _ _ (fun x y => Classical.propDecidable (x = y))
+      P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u))).trans core
 
 end Gabbro.Stage0.OldSource
