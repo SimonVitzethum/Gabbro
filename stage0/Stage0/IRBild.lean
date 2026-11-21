@@ -119,6 +119,17 @@ theorem irBild_emitted (src : String) (K : Nat) (bytes : List Runner.B) {options
     simp only [he] at h
     exact Except.ok.inj h
 
+/-- The exact CLI payload comes from a unit whose entry and root preconditions
+    hold at the declared initial memory and the actual serialized arguments. -/
+theorem irBild_start_requires {src : String} {K : Nat} {bytes : List Runner.B} {options : Profil.Options}
+    (h : irBild src K options = .ok bytes) :
+    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.bytes = bytes ∧
+      ∀ start ∈ ⟨output.compiled.main, output.args⟩ :: output.starts,
+        ReqAmEintritt output.compiled.program start.1
+          ((sp0Of output.compiled.unit output.initialValid).welt []) start.2 := by
+  obtain ⟨output, emitted, payload⟩ := irBild_emitted src K bytes h
+  exact ⟨output, emitted, payload, output.startRequires⟩
+
 /-- The inherited IR execution conclusion for this exact emitted program and entry state; `main` runs with the
     environment whose words the image carries. Either `main`'s thread behaves as G's sequential call, or the
     startup stops with `Senke.cloneCode` because the kernel refused to create a declared thread (the checked answer
