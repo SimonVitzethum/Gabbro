@@ -16,7 +16,7 @@ variable {D : Deklaration}
     predicate uses exactly the same collector as the full model check. -/
 def CheckedInitialInvariants (E : Einheit D) (locks : List D.Lock) : Prop :=
   (∀ item ∈ D.invs, InvHaelt E.P item (E.sp0.welt [])) ∧
-    (collect locks _ (checkLockInitial E)).toOption.isSome = true
+    (collect locks _ (checkLockInitial E.S E.lockFormulas E.sp0)).toOption.isSome = true
 
 /-- Decide the invariants on the concrete initial memory after the program
     checker has already verified the writers. -/
@@ -24,7 +24,7 @@ def checkInitialInvariants (E : Einheit D) (locks : List D.Lock) :
     Except Frag.Refusal (PLift (CheckedInitialInvariants E locks)) := do
   let translated ← invariantFormula E.P D.invs
   if valid : translated.formula.eval (assignment (E.sp0.welt [])) = true then
-    match locked : collect locks _ (checkLockInitial E) with
+    match locked : collect locks _ (checkLockInitial E.S E.lockFormulas E.sp0) with
     | .error cause => .error cause
     | .ok _ => return ⟨(translated.correct _).mp ((qf_eval _ _).mp valid), by rw [locked]; rfl⟩
   else .error (.unsupported "declared invariant is false in the initial memory")
@@ -40,7 +40,7 @@ theorem CheckedInitialInvariants.goal_verdict {E : Einheit D} {functions : List 
   unfold invariantenGeprueftB checkInvariants
   simp only [read, bind, Except.bind, dite_eq_left valid]
   have locked := initial.2
-  cases result : collect locks _ (checkLockInitial E) with
+  cases result : collect locks _ (checkLockInitial E.S E.lockFormulas E.sp0) with
   | error cause => simp only [result, Except.toOption, Option.isSome_none, Bool.false_eq_true] at locked
   | ok checks => rfl
 

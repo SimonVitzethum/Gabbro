@@ -19,13 +19,13 @@ structure CheckedInvariants (E : Einheit D) (functions : List D.Fn) (locks : Lis
   initial : ∀ item ∈ D.invs, InvHaelt E.P item (E.sp0.welt [])
   lockInitial : ∀ lock ∈ locks, (E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true
 
-def checkLockInitial (E : Einheit D) (lock : D.Lock) :
-    Except Frag.Refusal (PLift ((E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)) := do
-  match source : E.lockFormulas lock with
+def checkLockInitial (S : SperrInv D) (sources : LockSources S) (memory : Speicher D) (lock : D.Lock) :
+    Except Frag.Refusal (PLift ((sources lock).isSome = true → S.inv lock memory = true)) := do
+  match source : sources lock with
   | none => return ⟨fun impossible => by simp [source] at impossible⟩
   | some _ =>
-      let formula ← lockFormula E.S E.lockFormulas lock
-      if valid : formula.formula.eval (assignment (E.sp0.welt [])) = true then
+      let formula ← lockFormula S sources lock
+      if valid : formula.formula.eval (assignment (memory.welt [])) = true then
         return ⟨fun _ => (formula.correct _).mp ((qf_eval _ _).mp valid)⟩
       else .error (.unsupported "lock invariant is false in the declared initial memory")
 
@@ -35,7 +35,7 @@ def checkInvariants (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock
   if valid : program.invariants.formula.eval (assignment (E.sp0.welt [])) = true then
     let locks ← collect locks
       (fun lock => (E.lockFormulas lock).isSome = true → E.S.inv lock E.sp0 = true)
-      (checkLockInitial E)
+      (checkLockInitial E.S E.lockFormulas E.sp0)
     return {
         program := program
         initial := (program.invariants.correct _).mp ((qf_eval _ _).mp valid)
