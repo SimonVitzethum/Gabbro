@@ -2,6 +2,9 @@
    image emission. Runtime guards and all frame/execution relations stay intact. -/
 module
 public import Stage0.Senke.Images.Bild
+public import Grammatik.Logik.Ruf.RufKeinAbstiegTief
+public import Grammatik.Logik.Terminierung.Entscheidung.Teil1
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Stellen
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -63,5 +66,45 @@ theorem bild_auto_depth {D : Deklaration} {passes : Nat} {P : Programm D}
         revert emitted
         repeat' split
         all_goals intro emitted; cases emitted
+
+private def depthLookup {functions : Nat} (table : Array Bool) (fn : Fin functions) : Bool :=
+  table[fn.val]?.getD false
+
+private theorem depthLookup_ofFn {functions : Nat} (f : Fin functions → Bool) (fn : Fin functions) :
+    depthLookup (Array.ofFn f) fn = f fn := by
+  simp [depthLookup, fn.isLt]
+
+def imageDepthRounds {D : Deklaration} {functions : Nat} (index : Fin functions ≃ D.Fn)
+    (sites : Fin functions → List (Stelle D)) : Nat → Array Bool
+  | 0 => Array.ofFn fun _ : Fin functions => false
+  | depth + 1 =>
+    let previous := imageDepthRounds index sites depth
+    Array.ofFn fun f => (sites f).all
+      (Merkmal.an ⟨fun g => depthLookup previous (index.symm g), fun _ => false, fun _ => true⟩)
+
+/-- Compute the call-depth predicate for all functions together. The
+    call sites are read once from the canonical typed bodies. Each round
+    uses only the previous table, rather than recursively walking the
+    transitive call tree separately for each root. -/
+def imageDepthTable {D : Deklaration} {functions : Nat} (index : Fin functions ≃ D.Fn)
+    (P : Programm D) (depth : Nat) : Array Bool :=
+  let sites := Array.ofFn fun f : Fin functions => stellenE (P.rumpf (index f))
+  imageDepthRounds index (fun f => sites[f.val]'(by simp [sites, f.isLt])) depth
+
+/-- The table computes exactly the model predicate with the emitted
+    depth, including refusal of an unbounded indirect call. -/
+theorem imageDepthTable_exact {D : Deklaration} {functions : Nat} (index : Fin functions ≃ D.Fn)
+    (P : Programm D) (depth : Nat) (fn : D.Fn) :
+    (imageDepthTable index P depth)[(index.symm fn).val]?.getD false = rufTief P depth fn := by
+  induction depth generalizing fn with
+  | zero =>
+    change depthLookup (Array.ofFn fun _ : Fin functions => false) (index.symm fn) = false
+    exact depthLookup_ofFn _ _
+  | succ depth ih =>
+    change depthLookup (Array.ofFn fun f => _ ) (index.symm fn) = _
+    simp only [depthLookup_ofFn, Array.getElem_ofFn, Equiv.apply_symm_apply]
+    simp only [rufTief, rufeE_mE, mE_stellen]
+    exact congrArg (fun admitted => (stellenE (P.rumpf fn)).all
+      (Merkmal.an ⟨admitted, fun _ => false, fun _ => true⟩)) (funext ih)
 
 end Gabbro.Stage0.Senke

@@ -124,6 +124,30 @@ def Emitted.starts {src : String} {K : Nat} {options : Profil.Options} (output :
     List (Σ f : (declOf output.compiled.unit).Fn, Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)) :=
   output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid)
 
+/-- Decide whether every serialized start fits the final image's call
+    depth using the exact model call sites of the compiled program. -/
+def Emitted.checkStartDepth {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) : Bool :=
+  let table := Senke.imageDepthTable (Equiv.refl (Fin output.compiled.unit.fns.length))
+    output.compiled.program output.image.depth
+  (⟨output.compiled.main, output.args⟩ :: output.starts).all fun root => table[root.1.val]?.getD false
+
+/-- A successful depth decision excludes the depth-exhaustion logic
+    outcome for main and each serialized root, in any world and for
+    every oracle. The same depth word is used by the emitted stubs. -/
+theorem Emitted.startDepth_noAbstieg {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) (fits : output.checkStartDepth = true)
+    (O : Orakel (declOf output.compiled.unit)) (world : World (declOf output.compiled.unit))
+    (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
+    (declared : root ∈ ⟨output.compiled.main, output.args⟩ :: output.starts)
+    (callee : (declOf output.compiled.unit).Fn) :
+    rufAt output.compiled.program O output.image.passes output.image.depth root.1 world root.2 ≠
+      .logik (.abstieg callee) := by
+  have accepted := List.all_eq_true.mp fits root declared
+  have model := Senke.imageDepthTable_exact (Equiv.refl (Fin output.compiled.unit.fns.length))
+    output.compiled.program output.image.depth root.1
+  exact rufAt_keinAbstieg output.compiled.program O output.image.passes _ _ _ _ _ (model ▸ accepted)
+
 /-- Type of a successful foreign-logic check retained by this emission. -/
 abbrev Emitted.CheckedForeign {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) :=
   CheckedForeignLogic output.compiled.unit (initialUnit output.compiled.unit output.compiled.program
