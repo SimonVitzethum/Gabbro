@@ -38,7 +38,7 @@ theorem arraySpan_reads {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr �
     induction count generalizing first with
     | zero => exact empty.symm
     | succ count ih =>
-      simp only [arraySpan, Expr.orte, List.append_nil, ih _ (by omega), empty]
+      simp only [arraySpan, Expr.orte, List.append_nil, ih (first + 1) (by omega), empty]
 
 /-- Element selection has the half-open slice semantics on every world
     and environment, including values that were read from memory. -/
@@ -159,7 +159,7 @@ theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     lowerSlice first last (⟨.arr τ length, operand⟩ : LowWert u Γ Λ) =
       .ok ⟨.arr τ (last - first), arraySpan operand first (last - first)
         (by have ordered := bounds.1; have high := bounds.2; omega)⟩ := by
-  simp only [lowerSlice, dite_eq_left bounds, if_pos allowed]
+  simp only [lowerSlice, dite_eq_left bounds, ite_eq_left allowed]
 
 theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (bytes : List (Zahl 0 255)) {maximum : Nat} (stored : bytes.length ≤ maximum)

@@ -45,7 +45,22 @@ public theorem leaf_poll_rep (elaboration : Elaboration D V Λ types f)
     (storage : Wert D (types.childState name)) (world : World D) :
     let step := pollTask (inducedModel elaboration calls prices normal) (.leaf (.active name storage)) world
     PollRep D types path (.call name args) step.1 step.2.1 := by
-  simp only [pollTask, inducedModel, pollChild, known, dite_eq_left]
+  have selected :
+      pollChild elaboration calls prices normal (Child.active name storage) world =
+        (let answer := normal name callee known world storage
+         let (result, updated) := decodePollAnswer D types name storage
+           (ergWert callee.pollResult answer.val.2)
+         (result, updated, answer.val.1, prices callee.poll)) := by
+    simp only [pollChild]
+    split
+    · rename_i absent
+      rw [known] at absent
+      cases absent
+    · rename_i actual found
+      have same : actual = callee := Option.some.inj (found.symm.trans known)
+      subst actual
+      rfl
+  simp only [pollTask, inducedModel, selected]
   generalize ergWert callee.pollResult (normal name callee known world storage).val.2 = answer
   obtain ⟨⟨tag, bound⟩, payload⟩ := answer
   cases tag with
