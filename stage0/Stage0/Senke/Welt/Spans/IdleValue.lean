@@ -10,9 +10,9 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+mutual
 /-- The logical idle extension is a renumbering of the stored value.
     The exact bytes and reference validity survive it. -/
-mutual
 theorem idleValue (L : Lay D) : ∀ (τ : Ty) (v : Wert D τ),
     encodeWords L.withIdle (tyR τ) (valR τ v) = encodeWords L τ v ∧
       (ValueValid L.withIdle (tyR τ) (valR τ v) ↔ ValueValid L τ v)
@@ -30,7 +30,8 @@ theorem idleValue (L : Lay D) : ∀ (τ : Ty) (v : Wert D τ),
     · cases fields with
       | nil => rfl
       | cons τ rest =>
-        simpa only [tyR, Ty.mapNumbers, Ty.mapFields, encodeWords, List.cons_ne_nil, ite_false]
+        simpa only [tyR, Ty.mapNumbers, Ty.mapFields, valR, Val.relocate, encodeWords,
+          List.cons_ne_nil, ite_false]
           using fieldsOk.1
     · exact fieldsOk.2
   | .sum cs, v => by
@@ -38,13 +39,17 @@ theorem idleValue (L : Lay D) : ∀ (τ : Ty) (v : Wert D τ),
     constructor
     · simp only [tyR, Ty.mapNumbers, encodeWords, sumFits_mapNumbers, Ty.mapCases_length]
       split
-      · rw [sumN, sumN, tag, offset]
+      · simp only [sumN, tag, offset]
       · rw [tag, payload]
         simp only [sumPayloadWords_mapCases]
     · exact valid
   | .ptr ⟨_, _, .table _⟩, _
   | .int .., _ | .bool, _ | .opt .., _ | .why .., _ | .fl .., _
-  | .fnptr .., _ | .ref .., _ | .str .., _ => ⟨rfl, Iff.rfl⟩
+  | .fnptr .., _ | .ref .., _ | .str .., _ => by
+    constructor
+    · simp only [tyR, Ty.mapNumbers, valR, Val.relocate, encodeWords, Lay.withIdle, Option.elim]
+      all_goals try rfl
+    · rfl
   | .never, v => nomatch v
 termination_by structural τ => τ
 
