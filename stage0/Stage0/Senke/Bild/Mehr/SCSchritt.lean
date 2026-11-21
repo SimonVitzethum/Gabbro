@@ -18,6 +18,7 @@ module
 public import Stage0.Senke.Bild.Mehr.SC
 public import Stage0.Senke.Bild.Mehr.Prozess
 public import Stage0.Senke.Bild.Mehr.BlindOp
+public import Stage0.Senke.Bild.Lauf
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BildMehr
@@ -163,5 +164,61 @@ theorem alleBlind_start (t : T) : AlleBlind [some (.next t)] := by
     cases h
     exact Blind.next t
   | succ j => simp at h
+
+private theorem single_thread {r actual : Res T} {i : Nat}
+    (found : [some r][i]? = some (some actual)) : i = 0 ∧ r = actual := by
+  cases i with
+  | zero => exact ⟨rfl, Option.some.inj (Option.some.inj found)⟩
+  | succ j => simp at found
+
+open Gabbro.Stage0.Senke.BildLauf
+
+private theorem starM_snoc {n : Nat} {t t' t'' : T} {m m' m'' : Mem}
+    (path : StarM n t m t' m') (last : RunM (step t') m' t'' m'') :
+    StarM (n + 1) t m t'' m'' := by
+  induction path with
+  | refl => exact .next last (.refl _ _)
+  | next instruction _ ih => exact .next instruction (ih last)
+
+/-- The memory process with one thread executes the same complete
+    instructions as `StarM`. The requests of a partial instruction are
+    accumulated until that instruction returns its next control state. -/
+theorem memory_process_single_thread {initial final : T} {memory : Mem} {c : PCfg}
+    (path : MErreichbar ⟨memory, [some (.next initial)]⟩ c)
+    (atBoundary : c.ths = [some (.next final)]) : ∃ n, StarM n initial memory final c.m := by
+  have complete {n : Nat} {last next : T} {before after : Mem}
+      (prefix : StarM n initial memory last before)
+      (pending : (.next next = Res.next last ∧ after = before) ∨
+        ∀ {t m}, RunM (.next next) after t m → RunM (step last) before t m) :
+      ∃ count, StarM count initial memory next after := by
+    rcases pending with ⟨same, rfl⟩ | resume
+    · cases same
+      exact ⟨_, prefix⟩
+    · exact ⟨_, starM_snoc prefix (resume .next)⟩
+  have collect {c : PCfg} (path : MErreichbar ⟨memory, [some (.next initial)]⟩ c) :
+      ∃ r last before n, c.ths = [some r] ∧ StarM n initial memory last before ∧
+        ((r = .next last ∧ c.m = before) ∨
+          ∀ {t m}, RunM r c.m t m → RunM (step last) before t m) := by
+    induction path with
+    | start => exact ⟨_, _, _, 0, rfl, .refl _ _, .inl ⟨rfl, rfl⟩⟩
+    | schritt _ executed ih =>
+      obtain ⟨r, last, before, n, threads, prefix, pending⟩ := ih
+      cases executed with
+      | priv found =>
+        rw [threads] at found
+        obtain ⟨rfl, rfl⟩ := single_thread found
+        obtain ⟨count, ran⟩ := complete prefix pending
+        exact ⟨_, _, _, count, by rw [threads], ran, .inr (fun done => done)⟩
+      | ask found answered =>
+        rw [threads] at found
+        obtain ⟨rfl, rfl⟩ := single_thread found
+        rcases pending with ⟨wrong, _⟩ | resume
+        · cases wrong
+        · exact ⟨_, _, _, _, by rw [threads], prefix,
+            .inr (fun done => resume (.ask answered done))⟩
+  obtain ⟨r, last, before, n, threads, prefix, pending⟩ := collect path
+  rw [atBoundary] at threads
+  have same : r = .next final := (Option.some.inj (List.cons.inj threads).1).symm
+  exact complete prefix (same ▸ pending)
 
 end Gabbro.Stage0.Senke.BildMehr

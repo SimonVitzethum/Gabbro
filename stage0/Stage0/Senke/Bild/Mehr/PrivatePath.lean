@@ -278,23 +278,23 @@ private theorem private_of_process_step {layout : Runner.Beweis.Lay} {footprint 
 theorem TSOPrivateReachable.of_process_prefix {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
     {initial final : Cfg (TSO layout) (Res T)} {count : Nat}
     (path : ProcessPrefix (TSO layout) actI initial [] count final)
-    (access : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
-      ProcessPrefix (TSO layout) actI initial events n c → PrivateRequestsAt footprint c) :
+    (access : ∀ {c : Cfg (TSO layout) (Res T)} {n},
+      ProcessPrefix (TSO layout) actI initial [] n c → PrivateRequestsAt footprint c) :
     TSOPrivateReachable layout footprint initial final := by
   have extend {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {steps : Nat}
       (remaining : ProcessPrefix (TSO layout) actI before events steps after) :
       TSOPrivateReachable layout footprint initial before →
-      (∃ ev n, ProcessPrefix (TSO layout) actI initial ev n before) →
+      (∃ n, ProcessPrefix (TSO layout) actI initial [] n before) →
       events = [] → TSOPrivateReachable layout footprint initial after := by
     induction remaining with
     | nil => intro prior _ _; exact prior
     | cons step _ ih =>
       intro prior seen silent
-      obtain ⟨_, _, seen⟩ := seen
+      obtain ⟨_, seen⟩ := seen
       obtain ⟨emptyStep, emptyTail⟩ := List.append_eq_nil_iff.mp silent
       have next := private_of_process_step prior (access seen) step emptyStep
-      exact ih next ⟨_, _, seen.trans (ProcessPrefix.ofStep step)⟩ emptyTail
-  exact extend path .start ⟨[], 0, .nil _⟩ rfl
+      exact ih next ⟨_, seen.trans (ProcessPrefix.ofStep (emptyStep ▸ step))⟩ emptyTail
+  exact extend path .start ⟨0, .nil _⟩ rfl
 
 /-- Matching a concrete x86 path retains the actual IR endpoint. The
     request checks classify that same reachable endpoint as private. -/
@@ -302,8 +302,8 @@ theorem runner_private_endpoint {layout : Runner.Beweis.Lay} {footprint : Nat �
     (fixed : Fixed (TSO layout) layout) (code : CInv layout)
     {initial : Cfg (TSO layout) (Res T)} {before after : Cfg (TSO layout) Runner.X86.X} {count : Nat}
     (related : Rel layout initial before) (path : ProcessPrefix (TSO layout) (actX layout) before [] count after)
-    (access : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
-      ProcessPrefix (TSO layout) actI initial events n c → PrivateRequestsAt footprint c) :
+    (access : ∀ {c : Cfg (TSO layout) (Res T)} {n},
+      ProcessPrefix (TSO layout) actI initial [] n c → PrivateRequestsAt footprint c) :
     ∃ final steps, ProcessPrefix (TSO layout) actI initial [] steps final ∧
       Rel layout final after ∧ TSOPrivateReachable layout footprint initial final := by
   obtain ⟨final, steps, run, same⟩ := runner_process_prefix fixed code related path
@@ -348,8 +348,8 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
     {initial final : Cfg (TSO layout) (Res T)} {count : Nat}
     (path : ProcessPrefix (TSO layout) actI initial [] count final)
     (buffers : PrivateBuffers footprint initial.ms.1)
-    (classify : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
-      ProcessPrefix (TSO layout) actI initial events n c →
+    (classify : ∀ {c : Cfg (TSO layout) (Res T)} {n},
+      ProcessPrefix (TSO layout) actI initial [] n c →
       ∀ {i : Nat} {op : Op} {resume : Ans → Res T} {response : Ans} {after : (TSO layout).St},
         c.ths[i]? = some (some (.ask op resume)) → op.special = false → lbl i op response = [] →
         (TSO layout).ans c.ms i op response after → ProjectedRequest footprint i op) :
@@ -358,8 +358,8 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
         ⟨projectSCState footprint final.ms, final.ths⟩ := by
   let projected (c : Cfg (TSO layout) (Res T)) : Cfg (SC layout) (Res T) :=
     ⟨projectSCState footprint c.ms, c.ths⟩
-  have advance {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {n : Nat}
-      (seen : ProcessPrefix (TSO layout) actI initial events n before)
+  have advance {before after : Cfg (TSO layout) (Res T)} {n : Nat}
+      (seen : ProcessPrefix (TSO layout) actI initial [] n before)
       (step : ProcessStep (TSO layout) actI before [] after)
       (owned : PrivateBuffers footprint before.ms.1)
       (reached : SCErreichbar layout (projected initial) (projected before)) :
@@ -387,7 +387,7 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
     | exit | cloneNo | clone => cases quiet
   have extend {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {steps : Nat}
       (suffix : ProcessPrefix (TSO layout) actI before events steps after) :
-      (∃ ev n, ProcessPrefix (TSO layout) actI initial ev n before) →
+      (∃ n, ProcessPrefix (TSO layout) actI initial [] n before) →
       PrivateBuffers footprint before.ms.1 → SCErreichbar layout (projected initial) (projected before) →
       events = [] → PrivateBuffers footprint after.ms.1 ∧
         SCErreichbar layout (projected initial) (projected after) := by
@@ -395,10 +395,11 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
     | nil => intro _ owned reached _; exact ⟨owned, reached⟩
     | cons step _ ih =>
       intro previous owned reached silent
-      obtain ⟨_, _, seen⟩ := previous
+      obtain ⟨_, seen⟩ := previous
       obtain ⟨emptyStep, emptyTail⟩ := List.append_eq_nil_iff.mp silent
-      obtain ⟨stillOwned, scPath⟩ := advance seen (emptyStep ▸ step) owned reached
-      exact ih ⟨_, _, seen.trans (ProcessPrefix.ofStep step)⟩ stillOwned scPath emptyTail
-  exact extend path ⟨[], 0, .nil _⟩ buffers .start rfl
+      have quietStep : ProcessStep (TSO layout) actI _ [] _ := emptyStep ▸ step
+      obtain ⟨stillOwned, scPath⟩ := advance seen quietStep owned reached
+      exact ih ⟨_, seen.trans (ProcessPrefix.ofStep quietStep)⟩ stillOwned scPath emptyTail
+  exact extend path ⟨0, .nil _⟩ buffers .start rfl
 
 end Gabbro.Stage0.Senke.BildMehr

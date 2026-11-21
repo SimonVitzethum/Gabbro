@@ -101,8 +101,8 @@ theorem irBild_x86_private_zielsatz [Kern] {output : Emitted src K options}
     (buffers : PrivateBuffers footprint initial.ms.1)
     (runnerRel : Rel L0 initial x86Start)
     (runnerPath : ProcessPrefix (TSO L0) (actX L0) x86Start [] count x86End)
-    (privateRequests : ∀ {c : Cfg (TSO L0) (Res T)} {events n},
-      ProcessPrefix (TSO L0) actI initial events n c → PrivateRequestsAt footprint c) :
+    (privateRequests : ∀ {c : Cfg (TSO L0) (Res T)} {n},
+      ProcessPrefix (TSO L0) actI initial [] n c → PrivateRequestsAt footprint c) :
     let E := output.goalUnit Q
     ∃ final steps updated, ProcessPrefix (TSO L0) actI initial [] steps final ∧ Rel L0 final x86End ∧
       MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
