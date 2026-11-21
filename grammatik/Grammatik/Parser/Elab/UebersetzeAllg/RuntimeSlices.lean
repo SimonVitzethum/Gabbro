@@ -140,7 +140,7 @@ theorem localArraySliceIndex_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
       (.variable index)) = .ok (.idx (.param array) (.add (.param first) (.param index))) := by
   rw [uRechne]
   simp only [uLocalArraySliceObservation, arrayType, firstType, lastType, indexType, bounds,
-    locals, indexBounds, ite_true]
+    locals, indexBounds, and_self, ite_true]
 
 theorem lowWertE_localArraySliceIndex {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {fn : UFn} {er : Option Ty} {array first index : String} {τ : Ty} {capacity : Nat}
