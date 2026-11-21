@@ -119,6 +119,9 @@ def blockSpecializations (program : Programm D) (uniformReturn : Bool) (join : B
           D.gruende f * endSpecializations program uniformReturn join expansion limit failure))
   | .check _ failure tail => min (limit + 1)
       (endSpecializations program uniformReturn join expansion limit failure + blockSpecializations program uniformReturn join expansion limit continuation tail)
+  | .floatNarrow _ _ _ failure tail => min (limit + 1)
+      (endSpecializations program uniformReturn join expansion limit failure +
+        blockSpecializations program uniformReturn join expansion limit continuation tail)
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
         (endSpecializations program uniformReturn join expansion limit failure + blockSpecializations program uniformReturn join expansion limit continuation tail))
@@ -146,6 +149,9 @@ def endSpecializations (program : Programm D) (uniformReturn : Bool) (join : Boo
           D.gruende f * endSpecializations program uniformReturn join expansion limit failure))
   | .ite _ yes no => min (limit + 1)
       (endSpecializations program uniformReturn join expansion limit yes + endSpecializations program uniformReturn join expansion limit no)
+  | .floatNarrow _ _ _ failure tail => min (limit + 1)
+      (endSpecializations program uniformReturn join expansion limit failure +
+        endSpecializations program uniformReturn join expansion limit tail)
   | .narrow (lo := lo) (hi := hi) _ _ _ failure tail => min (limit + 1)
       (specializationCount limit (.int lo hi) *
         (endSpecializations program uniformReturn join expansion limit failure + endSpecializations program uniformReturn join expansion limit tail))

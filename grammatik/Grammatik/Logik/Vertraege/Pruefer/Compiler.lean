@@ -55,7 +55,7 @@ def statement {context : Context A next} (policy : CallPolicy program context)
     | .onTag expression arms => do
         let pre ← tagCases policy facts budget hint fuel arms symbols bounded (goals.joinIf budget.join)
         return ((pre.read Λ expression.orte).map (fun valuation item runtime world ready actual realized allowed safe => by
-          simpa only [Goals.joinIf_holds] using ready actual
+          simpa only [Runtime.wpS, execStmtH, Goals.joinIf_holds] using ready actual
             ((symbols.realizes_world actual valuation world (world.lese Λ expression.orte)).mp realized)
             allowed safe (eval (world.lese Λ expression.orte) expression (world.lese Λ expression.orte) actual)))
     | .retry count test body overflow =>
