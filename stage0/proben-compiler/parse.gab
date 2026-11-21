@@ -2,7 +2,8 @@
 // addition, multiplication, unary, primary (numbers, names, calls,
 // parentheses). Statements are `let`, `if`/`else` (with `else if`),
 // `return`; a function holds a name, parameters and a block. Every node
-// goes into the `nodes` table; child links are indexes, 255 means none.
+// goes into the `nodes` table. Binary operands have dedicated index fields.
+// In the other payloads an optional child link uses 255 for absence.
 // Node kinds: 0 Num, 1 Name, 2 Add, 3 Sub, 4 Mul, 5 Div, 6 Lt, 7 Eq,
 // 8 Call, 9 Let, 10 If, 11 Return, 12 Seq, 13 Fn, 14 Arg, 15 Gt, 16 Le,
 // 17 Ge, 18 Ne, 19 Param, 20 Sig (a function head: params plus body).
@@ -27,8 +28,18 @@ module parse {
 // local first. Ordering facts do not travel through nested `if`s or past a
 // `mut` assignment inside a loop body, so every bounded operation repeats
 // its own guard directly at its use.
+type ExprOut = { node : u32 in 0 .. 95, pos : u32 in 0 .. 64, ok : bool, };
 type POut = { node : u32 in 0 .. 255, pos : u32 in 0 .. 64, ok : bool, };
-table nodes count 96 { slot { k : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255, } }
+table nodes count 96 {
+    slot {
+        k : u32 in 0 .. 31,
+        a : u32 in 0 .. 100000,
+        b : u32 in 0 .. 255,
+        c : u32 in 0 .. 255,
+        left : index into nodes,
+        right : index into nodes,
+    }
+}
 static mut node_used : u32 in 0 .. 96 = 0;
 static mut parse_err : bool = false;
 impl fn span_value_rec(start : u32 in 0 .. 159, k : u32 in 0 .. 159, acc : u32 in 0 .. 100000, fuel : u32 in 0 .. 128) -> u32 in 0 .. 100000
@@ -59,7 +70,7 @@ impl fn span_value_rec(start : u32 in 0 .. 159, k : u32 in 0 .. 159, acc : u32 i
     parse_err = true;
     return 0;
 }
-impl fn new_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255) -> u32 in 0 .. 95
+impl fn store_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255, left : u32 in 0 .. 95, right : u32 in 0 .. 95) -> u32 in 0 .. 95
     effects { reads node_used, writes node_used, writes nodes.slots, writes parse_err }
 {
     let i = node_used;
@@ -68,74 +79,86 @@ impl fn new_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 
     nodes.slots[i].a = a;
     nodes.slots[i].b = b;
     nodes.slots[i].c = c;
+    nodes.slots[i].left = left;
+    nodes.slots[i].right = right;
     node_used = i + 1;
     return i;
 }
-impl fn parse_primary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn new_node(kind : u32 in 0 .. 31, a : u32 in 0 .. 100000, b : u32 in 0 .. 255, c : u32 in 0 .. 255) -> u32 in 0 .. 95
+    effects { reads node_used, writes node_used, writes nodes.slots, writes parse_err }
+{
+    return store_node(kind, a, b, c, 0, 0);
+}
+impl fn new_binary(kind : u32 in 0 .. 31, left : u32 in 0 .. 95, right : u32 in 0 .. 95) -> u32 in 0 .. 95
+    effects { reads node_used, writes node_used, writes nodes.slots, writes parse_err }
+{
+    return store_node(kind, 0, 0, 0, left, right);
+}
+impl fn parse_primary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
+    narrow ti to 0 .. 63 else { return ExprOut(node: 0, pos: ti, ok: false); }
     let k = lex::tok_kind(ti);
     if k == 2 {
         let s = lex::tok_start(ti);
         let l = lex::tok_len(ti);
         let v = span_value_rec(s, l, 0, fuel - 1);
-        if parse_err { return POut(node: 0, pos: ti, ok: false); }
+        if parse_err { return ExprOut(node: 0, pos: ti, ok: false); }
         let nd = new_node(0, v, 0, 0);
-        return POut(node: nd, pos: ti + 1, ok: true);
+        return ExprOut(node: nd, pos: ti + 1, ok: true);
     }
     if k == 1 {
         let s = lex::tok_start(ti);
         let l = lex::tok_len(ti);
-        narrow ti to 0 .. 62 else { return POut(node: 0, pos: ti, ok: false); }
+        narrow ti to 0 .. 62 else { return ExprOut(node: 0, pos: ti, ok: false); }
         let k2 = lex::tok_kind(ti + 1);
         if k2 == 12 {
             let a = parse_args(ti + 2, fuel - 1);
-            if !a.ok { return POut(node: 0, pos: ti, ok: false); }
+            if !a.ok { return ExprOut(node: 0, pos: ti, ok: false); }
             let nd = new_node(8, s, l, a.node);
-            return POut(node: nd, pos: a.pos, ok: true);
+            return ExprOut(node: nd, pos: a.pos, ok: true);
         }
         let nd = new_node(1, s, l, 0);
-        return POut(node: nd, pos: ti + 1, ok: true);
+        return ExprOut(node: nd, pos: ti + 1, ok: true);
     }
     if k == 12 {
         let e = parse_expr(ti + 1, fuel - 1);
-        if !e.ok { return POut(node: 0, pos: ti, ok: false); }
+        if !e.ok { return ExprOut(node: 0, pos: ti, ok: false); }
         let ep = e.pos;
-        narrow ep to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
+        narrow ep to 0 .. 63 else { return ExprOut(node: 0, pos: ti, ok: false); }
         let k2 = lex::tok_kind(ep);
         if k2 == 13 {
-            return POut(node: e.node, pos: ep + 1, ok: true);
+            return ExprOut(node: e.node, pos: ep + 1, ok: true);
         }
-        return POut(node: 0, pos: ti, ok: false);
+        return ExprOut(node: 0, pos: ti, ok: false);
     }
-    return POut(node: 0, pos: ti, ok: false);
+    return ExprOut(node: 0, pos: ti, ok: false);
 }
-impl fn parse_unary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_unary(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
-    narrow ti to 0 .. 63 else { return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
+    narrow ti to 0 .. 63 else { return ExprOut(node: 0, pos: ti, ok: false); }
     let k = lex::tok_kind(ti);
     if k == 9 {
         let e = parse_unary(ti + 1, fuel - 1);
-        if !e.ok { return POut(node: 0, pos: ti, ok: false); }
+        if !e.ok { return ExprOut(node: 0, pos: ti, ok: false); }
         let z = new_node(0, 0, 0, 0);
-        let nd = new_node(3, z, e.node, 0);
-        return POut(node: nd, pos: e.pos, ok: true);
+        let nd = new_binary(3, z, e.node);
+        return ExprOut(node: nd, pos: e.pos, ok: true);
     }
     return parse_primary(ti, fuel - 1);
 }
-impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_mul_rest(left : u32 in 0 .. 95, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
-    let mut l : u32 in 0 .. 255 = left;
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: left, pos: ti, ok: false); }
+    if ti == 64 { return ExprOut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 95 = left;
     let mut p : u32 in 0 .. 64 = ti;
     let mut fp : u32 in 0 .. 64 = ti;
     let mut ok : bool = true;
@@ -150,7 +173,7 @@ impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                         let r = parse_unary(p + 1, fuel - 1);
                         if !r.ok { ok = false; fp = p; done = true; }
                         else {
-                            let nn = new_node(4, l, r.node, 0);
+                            let nn = new_binary(4, l, r.node);
                             l = nn;
                             p = r.pos;
                         }
@@ -162,7 +185,7 @@ impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                             let r = parse_unary(p + 1, fuel - 1);
                             if !r.ok { ok = false; fp = p; done = true; }
                             else {
-                                let nn = new_node(5, l, r.node, 0);
+                                let nn = new_binary(5, l, r.node);
                                 l = nn;
                                 p = r.pos;
                             }
@@ -174,26 +197,26 @@ impl fn parse_mul_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
             else { done = true; }
         }
     }
-    if !ok { return POut(node: 0, pos: fp, ok: false); }
-    return POut(node: l, pos: p, ok: true);
+    if !ok { return ExprOut(node: 0, pos: fp, ok: false); }
+    return ExprOut(node: l, pos: p, ok: true);
 }
-impl fn parse_mul(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_mul(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
     let l = parse_unary(ti, fuel - 1);
-    if !l.ok { return POut(node: 0, pos: ti, ok: false); }
+    if !l.ok { return ExprOut(node: 0, pos: ti, ok: false); }
     let q = parse_mul_rest(l.node, l.pos, fuel - 1);
     return q;
 }
-impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_add_rest(left : u32 in 0 .. 95, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
-    let mut l : u32 in 0 .. 255 = left;
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: left, pos: ti, ok: false); }
+    if ti == 64 { return ExprOut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 95 = left;
     let mut p : u32 in 0 .. 64 = ti;
     let mut fp : u32 in 0 .. 64 = ti;
     let mut ok : bool = true;
@@ -208,7 +231,7 @@ impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                         let r = parse_mul(p + 1, fuel - 1);
                         if !r.ok { ok = false; fp = p; done = true; }
                         else {
-                            let nn = new_node(2, l, r.node, 0);
+                            let nn = new_binary(2, l, r.node);
                             l = nn;
                             p = r.pos;
                         }
@@ -220,7 +243,7 @@ impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                             let r = parse_mul(p + 1, fuel - 1);
                             if !r.ok { ok = false; fp = p; done = true; }
                             else {
-                                let nn = new_node(3, l, r.node, 0);
+                                let nn = new_binary(3, l, r.node);
                                 l = nn;
                                 p = r.pos;
                             }
@@ -232,26 +255,26 @@ impl fn parse_add_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
             else { done = true; }
         }
     }
-    if !ok { return POut(node: 0, pos: fp, ok: false); }
-    return POut(node: l, pos: p, ok: true);
+    if !ok { return ExprOut(node: 0, pos: fp, ok: false); }
+    return ExprOut(node: l, pos: p, ok: true);
 }
-impl fn parse_add(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_add(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
     let l = parse_mul(ti, fuel - 1);
-    if !l.ok { return POut(node: 0, pos: ti, ok: false); }
+    if !l.ok { return ExprOut(node: 0, pos: ti, ok: false); }
     let q = parse_add_rest(l.node, l.pos, fuel - 1);
     return q;
 }
-impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_cmp_rest(left : u32 in 0 .. 95, ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: left, pos: ti, ok: false); }
-    if ti == 64 { return POut(node: left, pos: ti, ok: true); }
-    let mut l : u32 in 0 .. 255 = left;
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: left, pos: ti, ok: false); }
+    if ti == 64 { return ExprOut(node: left, pos: ti, ok: true); }
+    let mut l : u32 in 0 .. 95 = left;
     let mut p : u32 in 0 .. 64 = ti;
     let mut fp : u32 in 0 .. 64 = ti;
     let mut ok : bool = true;
@@ -266,7 +289,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                         let r = parse_add(p + 1, fuel - 1);
                         if !r.ok { ok = false; fp = p; done = true; }
                         else {
-                            let nn = new_node(6, l, r.node, 0);
+                            let nn = new_binary(6, l, r.node);
                             l = nn;
                             p = r.pos;
                         }
@@ -278,7 +301,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                             let r = parse_add(p + 1, fuel - 1);
                             if !r.ok { ok = false; fp = p; done = true; }
                             else {
-                                let nn = new_node(15, l, r.node, 0);
+                                let nn = new_binary(15, l, r.node);
                                 l = nn;
                                 p = r.pos;
                             }
@@ -290,7 +313,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                                 let r = parse_add(p + 1, fuel - 1);
                                 if !r.ok { ok = false; fp = p; done = true; }
                                 else {
-                                    let nn = new_node(7, l, r.node, 0);
+                                    let nn = new_binary(7, l, r.node);
                                     l = nn;
                                     p = r.pos;
                                 }
@@ -302,7 +325,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                                     let r = parse_add(p + 1, fuel - 1);
                                     if !r.ok { ok = false; fp = p; done = true; }
                                     else {
-                                        let nn = new_node(18, l, r.node, 0);
+                                        let nn = new_binary(18, l, r.node);
                                         l = nn;
                                         p = r.pos;
                                     }
@@ -314,7 +337,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                                         let r = parse_add(p + 1, fuel - 1);
                                         if !r.ok { ok = false; fp = p; done = true; }
                                         else {
-                                            let nn = new_node(16, l, r.node, 0);
+                                            let nn = new_binary(16, l, r.node);
                                             l = nn;
                                             p = r.pos;
                                         }
@@ -326,7 +349,7 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
                                             let r = parse_add(p + 1, fuel - 1);
                                             if !r.ok { ok = false; fp = p; done = true; }
                                             else {
-                                                let nn = new_node(17, l, r.node, 0);
+                                                let nn = new_binary(17, l, r.node);
                                                 l = nn;
                                                 p = r.pos;
                                             }
@@ -342,24 +365,24 @@ impl fn parse_cmp_rest(left : u32 in 0 .. 255, ti : u32 in 0 .. 64, fuel : u32 i
             else { done = true; }
         }
     }
-    if !ok { return POut(node: 0, pos: fp, ok: false); }
-    return POut(node: l, pos: p, ok: true);
+    if !ok { return ExprOut(node: 0, pos: fp, ok: false); }
+    return ExprOut(node: l, pos: p, ok: true);
 }
-impl fn parse_cmp(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_cmp(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
     let l = parse_add(ti, fuel - 1);
-    if !l.ok { return POut(node: 0, pos: ti, ok: false); }
+    if !l.ok { return ExprOut(node: 0, pos: ti, ok: false); }
     let q = parse_cmp_rest(l.node, l.pos, fuel - 1);
     return q;
 }
-impl fn parse_expr(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
+impl fn parse_expr(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> ExprOut
     effects { writes parse_err, writes node_used, writes nodes.slots }
     decreases fuel
 {
-    narrow fuel to 1 .. 128 else { parse_err = true; return POut(node: 0, pos: ti, ok: false); }
+    narrow fuel to 1 .. 128 else { parse_err = true; return ExprOut(node: 0, pos: ti, ok: false); }
     return parse_cmp(ti, fuel - 1);
 }
 impl fn parse_args(ti : u32 in 0 .. 64, fuel : u32 in 0 .. 128) -> POut
@@ -750,6 +773,16 @@ impl fn parse_failed() -> bool
     effects { reads parse_err }
 {
     return parse_err;
+}
+impl fn node_left(i : u32 in 0 .. 95) -> u32 in 0 .. 95
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].left;
+}
+impl fn node_right(i : u32 in 0 .. 95) -> u32 in 0 .. 95
+    effects { reads nodes.slots }
+{
+    return nodes.slots[i].right;
 }
 impl fn node_count() -> u32 in 0 .. 96
     effects { reads node_used }
