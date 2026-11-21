@@ -10,7 +10,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
   Gabbro.Stage0.Senke.BildMehr
 
 variable {src : String} {K : Nat} {options : Profil.Options}
@@ -399,8 +399,12 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     ∃ after : (TSO L0).St,
       ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [(0, cloneReq, some (id, extra))] 17
         ⟨after, [some (ret1 parent id), some (.next child)]⟩ ∧ after.1.m = s.1.m ∧
-      (output.bootStart Q).lebt 1 = true ∧
-      initRuhe (output.goalUnit Q).starts 1 = ⟨some start.1, envR start.2⟩ := by
+      (output.bootActivation Q 1).lebt 1 = true ∧
+      initRuhe (output.goalUnit Q).starts 1 = ⟨some start.1, envR start.2⟩ ∧
+      ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
+        FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+          (GeteiltV (output.goalUnit Q).P (output.goalUnit Q).ws)
+          (output.bootActivation Q 0) (output.bootActivation Q 1) := by
   intro parent child
   obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
@@ -420,7 +424,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by
     simpa only [Emitted.starts, List.length_map, Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using
       children _ (List.mem_of_getElem? indexed)
-  obtain ⟨site, live, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
+  obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
   simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one, BitVec.add_zero] at site
   have beforeView : s.1.view 0 = s.1.m := by simp only [TSt.view, empty, List.foldl_nil]
   let entered : Cfg (TSO L0) (Res T) :=
@@ -446,6 +450,11 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
   rw [← sxIndex] at entry stack
   obtain ⟨cloned, _⟩ := bootClone_run (before := ⟨prepared, [some (.next parent)]⟩)
     (i := 0) (child := child) rfl instruction entry stack (memory := prepared) True.intro positive
-  exact ⟨prepared, (loadedEntry.trans preparation).trans cloned, committed, live, logical⟩
+  have childLive : (output.bootActivation Q 1).lebt 1 = true := by
+    change decide (1 ≤ min 1 output.starts.length) = true
+    rw [Nat.min_eq_left (Nat.succ_le_of_lt present)]
+    rfl
+  exact ⟨prepared, (loadedEntry.trans preparation).trans cloned, committed, childLive, logical,
+    fun O => output.bootActivation_step Q O present⟩
 
 end Gabbro.Stage0

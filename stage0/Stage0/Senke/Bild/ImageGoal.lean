@@ -79,35 +79,43 @@ theorem Emitted.bootStart_live (output : Emitted src K options)
 def Emitted.bootActivation (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) (count : Nat) :
     FadenMaschine (declOf output.compiled.unit).mitRuhe :=
-  { output.goalStart Q (fun i => decide (i ≤ count)) with
-    rang := fun i => if 0 < i ∧ i ≤ count then 1 else 0
+  { output.goalStart Q (fun i => decide (i ≤ min count output.starts.length)) with
+    rang := fun i => if 0 < i ∧ i ≤ min count output.starts.length then 1 else 0
     uhr := count }
 
 theorem Emitted.bootActivation_step (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
-    {count : Nat} (_declared : count < output.starts.length) :
+    {count : Nat} (declared : count < output.starts.length) :
     FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
       (output.bootActivation Q count) (output.bootActivation Q (count + 1)) := by
+  have oldBound := Nat.min_eq_left (Nat.le_of_lt declared)
+  have newBound := Nat.min_eq_left (Nat.succ_le_of_lt declared)
   have parent : (output.bootActivation Q count).lebt 0 = true := by
     exact decide_eq_true (Nat.zero_le _)
   have child : (output.bootActivation Q count).lebt (count + 1) = false := by
+    change decide (count + 1 ≤ min count output.starts.length) = false
+    rw [oldBound]
     exact decide_eq_false (Nat.not_succ_le_self _)
   have liveUpdate : (fun i => if i = count + 1 then true else (output.bootActivation Q count).lebt i) =
       (output.bootActivation Q (count + 1)).lebt := by
     funext i
-    change (if i = count + 1 then true else decide (i ≤ count)) = decide (i ≤ count + 1)
+    change (if i = count + 1 then true else decide (i ≤ min count output.starts.length)) =
+      decide (i ≤ min (count + 1) output.starts.length)
+    rw [oldBound, newBound]
     by_cases here : i = count + 1
     · subst i
-      simp only [ite_eq_left rfl, decide_eq_true (Nat.le_refl _)]
+      simp only [decide_eq_true (Nat.le_refl _), ite_true]
     · rw [ite_eq_right here]
       have same : (i ≤ count) = (i ≤ count + 1) := propext (by omega)
       simp only [same]
   have rankUpdate : (fun i => if i = count + 1 then (output.bootActivation Q count).rang 0 + 1
       else (output.bootActivation Q count).rang i) = (output.bootActivation Q (count + 1)).rang := by
     funext i
-    change (if i = count + 1 then (if 0 < (0 : Nat) ∧ 0 ≤ count then 1 else 0) + 1
-      else if 0 < i ∧ i ≤ count then 1 else 0) = if 0 < i ∧ i ≤ count + 1 then 1 else 0
+    change (if i = count + 1 then (if 0 < (0 : Nat) ∧ 0 ≤ min count output.starts.length then 1 else 0) + 1
+      else if 0 < i ∧ i ≤ min count output.starts.length then 1 else 0) =
+      if 0 < i ∧ i ≤ min (count + 1) output.starts.length then 1 else 0
+    rw [oldBound, newBound]
     by_cases here : i = count + 1
     · subst i
       simp only [ite_eq_left rfl, Nat.lt_irrefl, false_and, ite_false, Nat.zero_add,
@@ -136,7 +144,7 @@ theorem Emitted.bootActivation_reached (output : Emitted src K options)
       have rank : (fun i : Nat => if 0 < i ∧ i ≤ 0 then 1 else 0) = fun _ => 0 := by
         funext i
         exact ite_eq_right (by omega)
-      simp only [Emitted.bootActivation, Emitted.goalStart, FadenStart, rank]
+      simp only [Emitted.bootActivation, Emitted.goalStart, FadenStart, Nat.zero_min, rank]
     rw [initial]
     exact .start
   | succ count ih =>
