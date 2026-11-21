@@ -26,12 +26,19 @@ abbrev SelectionCondition (context : Context A next) (symbols : SymEnv D Nat Γ)
 
 def knownValue? (expression : Expr D Γ Λ τ) (symbols : SymEnv D Nat Γ) : Option
     { value : Wert D τ // ∀ valuation world actual, symbols.Realizes valuation world actual →
-      eval world expression world actual = value } := do
-  let concrete ← symbols.concrete?
-  let known ← Frag.constantValue expression concrete.val
-  return ⟨known.val, fun valuation world actual realized => by
-    rw [concrete.property valuation world actual realized]
-    exact known.property world⟩
+      eval world expression world actual = value } :=
+  Option.orElse ((valueView? expression symbols).bind fun view =>
+    match observed : view.symbol with
+    | .known value => some ⟨value, fun valuation world actual realized => by
+        have result := view.realizes valuation world world actual realized
+        rw [observed] at result
+        exact Eq.symm result⟩
+    | _ => none) fun _ => do
+    let concrete ← symbols.concrete?
+    let known ← Frag.constantValue expression concrete.val
+    return ⟨known.val, fun valuation world actual realized => by
+      rw [concrete.property valuation world actual realized]
+      exact known.property world⟩
 
 /-- Only Booleans retain two cases. Even their guard is translated under the
     realizing environment, preserving correlation with prior scalar bindings. -/
