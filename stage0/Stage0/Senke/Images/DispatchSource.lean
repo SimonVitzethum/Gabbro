@@ -24,7 +24,7 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
     events = [] ∧ ImageSlotsMatch after (imageSourceStart E) ∧
       ImageRuntimeMatches output E O [] after (imageSourceStart E) := by
   obtain ⟨quiet, rfl⟩ := mapped.dispatch_step step
-  obtain ⟨_, _, _, bytes, packed, _, _, _, stacks⟩ :=
+  obtain ⟨_, _, _, bytes, packed, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll mapped.bytes
   obtain ⟨_, _, _, _, _, _, entryWords, _⟩ :=
     bild_lage output.emission output.funktionen_voll
@@ -33,7 +33,7 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
       (fun base => by simp only [layU]; omega)
       (fun base => layU_sync output.compiled.unit output.tor base)
   obtain ⟨_, entryFrame, entryLoaded⟩ :=
-    startStackBytes_frame packed output.image.fp0 stacks 0 (Nat.zero_lt_succ _)
+    startStackBytes_frame packed output.image.fp0 stackMemory 0 (Nat.zero_lt_succ _)
   simp only [List.getElem_cons_zero, Nat.mul_zero, Nat.add_zero, entryWords] at entryFrame entryLoaded
   have initialFrame := bild_initialized_frames_u output.initialValid output.emission
     output.funktionen_voll mapped.bytes 0 (Nat.zero_le _)
