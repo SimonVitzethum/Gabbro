@@ -311,7 +311,7 @@ def ImageStopMatches (output : Emitted src reserve options)
           thread.kopf.rest = ⟨l, Γ, (vertragVon _ thread.kopf.f).ende, env, .zurueckgekehrt (.inl value, world)⟩ ∧
           ExitErg output.image.Y.withIdle _ value req.a1) ∨
       (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .nieZurueck i ∧
-        ∃ (routine : (declOf output.compiled.unit).Ax) world args gate,
+        ∃ (routine : (declOf output.compiled.unit).Ax) (world : World _) (args : Env _ _) (gate : TorB),
           state.m.foreignCallKey i = some ⟨routine, world, args⟩ ∧
           (declOf output.compiled.unit).aerg routine = some .never ∧
           output.tor routine = some gate ∧ req.nr = BitVec.ofNat 64 gate.nr ∧
