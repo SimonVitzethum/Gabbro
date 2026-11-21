@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Goal
+public import Stage0.Senke.Images.ModelExport
 public import Stage0.Senke.Bild.Mehr.BootClone
 public import Stage0.Senke.Images.GateAnswers
 public import Runner.IR.Futex
@@ -104,92 +104,6 @@ theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
   | clone found asked _ _ _ _ =>
     obtain ⟨_, rfl⟩ := onlyThread found
     cases asked
-
-def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
-  (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
-    match item with
-    | .accT .. => true
-    | _ => false
-
-/-- An accumulator descriptor elaborates the actual selected declaration
-    with its generated cells, locks and functions. -/
-def ImageAccumulator (output : Emitted src reserve options) (item : SItemTief)
-    (acc : Kernzelle.AccumulatorDecl (declOf output.compiled.unit)) : Prop :=
-  let unit := output.compiled.unit
-  let scopes := output.compiled.source.scopes
-  (∃ cells locks, uAkkuDecl scopes.values scopes.types item cells locks
-    acc.kernAbfrage acc.aktualisiere acc.falte = .ok acc) ∧
-  (∀ i, (unit.globs.get (acc.zellen i)).name = acc.name ++ "#zelle" ++ toString i.val) ∧
-  (∀ i, (unit.locks.get (acc.sperren i)).name = acc.name ++ "#sperre" ++ toString i.val) ∧
-  (fnAt unit acc.kernAbfrage).name = acc.name ++ "#query" ∧
-  (fnAt unit acc.aktualisiere).name = acc.name ++ "#aktualisiere" ∧
-  (fnAt unit acc.falte).name = acc.name ++ "#falte"
-
-/-- The source's canonical bodies and initial declarations used by both
-    the compiler and the goal theorem are the same. -/
-structure ImageModelUnit (output : Emitted src reserve options)
-    (E : Einheit (declOf output.compiled.unit)) : Prop where
-  program : E.P = output.compiled.program
-  locks : E.S = Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit
-  lockSources : HEq E.lockFormulas (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
-  memory : E.sp0 = output.sp0
-  starts : E.starts = ⟨output.compiled.main, output.args⟩ :: output.starts
-  checks : E.pruefungen = output.compiled.checkedDeclarations.val
-  measure : E.measure = Gabbro.Grammatik.Parser.Cover.Differenz.massVon output.compiled.unit
-  pointerSignatures : E.pointerSignatures =
-    some (Gabbro.Grammatik.Parser.Cover.Differenz.zeigerSignaturen output.compiled.unit)
-  runtimeRoots : E.gestartet.map (·.1) =
-    output.compiled.unit.gestartet.filterMap (Gabbro.Grammatik.Parser.Cover.Differenz.wurzelIdx output.compiled.unit)
-  runtimeParams : ∀ root ∈ E.gestartet, (declOf output.compiled.unit).params root.1 = []
-  arenaTables : ∀ t : (declOf output.compiled.unit).Tab, (output.compiled.unit.tabs.get t).arena = true ↔
-    ∃ arena ∈ E.arenen, arena.A.tab = t
-  accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) E.akku
-  summary : ∀ item world value, E.Q item world value = true ↔
-    ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
-
-/-- The post summary derived from the source covers every declared
-    foreign postcondition, including those of software bindings. -/
-theorem ImageModelUnit.postDeckt {output : Emitted src reserve options}
-    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E) : PostDeckt E :=
-  fun item _ old arguments world value post => (unit.summary item world value).mpr ⟨old, arguments, post⟩
-
-/-- For the part of the current emitter with no foreign or ownership
-    declarations, the checked output supplies the specified source unit
-    and its checker verdict without an extra unit-check hypothesis. -/
-theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
-    (noAxioms : output.compiled.unit.axs.length = 0)
-    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
-    let E := output.goalUnit (axWahr _)
-    ImageModelUnit output E ∧
-      akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true := by
-  refine ⟨{
-    program := rfl
-    locks := rfl
-    lockSources := HEq.rfl
-    memory := rfl
-    starts := rfl
-    checks := rfl
-    measure := rfl
-    pointerSignatures := rfl
-    runtimeRoots := OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots
-    runtimeParams := ?_
-    arenaTables := ?_
-    accumulators := ?_
-    summary := ?_
-  }, output.goal_checker_concurrent _ (output.goal_axiomFree _ noAxioms)⟩
-  · intro root member
-    change root ∈ ([] : List _) at member
-    cases member
-  · intro t
-    have closed := OldSource.zertifizierbar_ohne_arena _ noOwnership (output.compiled.unit.tabs.get t)
-      (List.get_mem _ _)
-    change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
-    simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
-  · rw [noAccumulators]
-    exact .nil
-  · intro item _ _
-    exact False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt))
 
 /-- The source's one live entry, with every declared boot position already
     provisioned with its exact argument environment. -/
@@ -437,6 +351,27 @@ theorem ImageSimulation.terminal [Kern] {output : Emitted src reserve options}
   obtain ⟨boundary, earlier, last, steps, trace, finish, eventsEq, _⟩ := run.split_stop stopped
   obtain ⟨ir, _, state, _, endpoint, reached⟩ := sim.follow trace sim.initial
   exact ⟨earlier, last, state, eventsEq, reached, sim.stop earlier boundary ir state last ending endpoint finish stopped⟩
+
+/-- No actual execution of a simulated image ends in a machine fault
+    or an unknown instruction. Every terminal step must have a matching
+    source-level or explicitly named host outcome. -/
+theorem ImageSimulation.no_machine_error [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {start : Cfg imageTSO Runner.X86.X} (sim : ImageSimulation output E O start)
+    {events : List Ev} {ending : Ende} {count : Nat}
+    (run : Tr imageTSO (actX L0) start events ending count) :
+    ending ≠ .fault ∧ ending ≠ .unk := by
+  constructor
+  · intro fault
+    subst ending
+    obtain ⟨_, _, _, _, _, matched⟩ := sim.terminal run (by decide)
+    obtain ⟨_, _, _, _, impossible, _⟩ := matched
+    cases impossible
+  · intro unknown
+    subst ending
+    obtain ⟨_, _, _, _, _, matched⟩ := sim.terminal run (by decide)
+    obtain ⟨_, _, _, _, impossible, _⟩ := matched
+    cases impossible
 
 /-- B6 for the production Stage 0 emitter. This definition is the claim
     to prove. A successful build fixes the source and model unit before

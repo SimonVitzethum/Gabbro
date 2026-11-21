@@ -12,6 +12,31 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
+/-- The concrete successful mmap continuation establishes the runner
+    relation from its instruction address and the mapped image base. -/
+theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve options}
+    {state : imageTSO.St} {x : Runner.X86.X}
+    (payload : BytesAt state.1.m Runner.Prog.IMG output.bytes)
+    (buffers : ∀ i, state.1.buf i = [])
+    (file : FileInv state.1.m)
+    (address : x.rip = BitVec.ofNat 64 (Runner.Prog.BASE + Runner.Prog.find Runner.Prog.tab Runner.Prog.LOADER) +
+      BitVec.ofNat 64 (lenOfL (Runner.Prog.ld1 ++ [Runner.Prog.ldj1] ++ Runner.Prog.ld2 ++
+        [Runner.Prog.ldj2, Runner.Prog.ldj3] ++ Runner.Prog.ld4 ++ [Runner.Prog.ldj4])))
+    (base : x.rcx = BitVec.ofNat 64 Runner.Prog.IMG) :
+    MappedImage output ⟨state, [some x]⟩ := by
+  obtain ⟨valid, bytes⟩ := Bool.and_eq_true_iff.mp loader_placed
+  have code := code_of_image valid bytes
+  have suffix := code_append
+    (is := Runner.Prog.ld1 ++ [Runner.Prog.ldj1] ++ Runner.Prog.ld2 ++
+      [Runner.Prog.ldj2, Runner.Prog.ldj3] ++ Runner.Prog.ld4 ++ [Runner.Prog.ldj4])
+    (js := Runner.Prog.ld5 TBL ++ [.ud2])
+    (by simpa only [Runner.Prog.loaderI, List.append_assoc] using code)
+  refine ⟨payload, buffers, ⟨rfl, ?_⟩, file⟩
+  intro i
+  cases i with
+  | zero => exact seg5 (by rw [address]; exact suffix) base
+  | succ i => trivial
+
 /-- Every continuing step of the mapped loader establishes the precise
     entry stub, including its typed arguments at the serialized frame
     offsets. It takes no step of the source program. -/

@@ -63,6 +63,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.tso_slt_prefix
 #print axioms Gabbro.Stage0.Senke.tso_spawn_check_pass
 #print axioms Gabbro.Stage0.MappedImage.dispatched_source
+#print axioms Gabbro.Stage0.MappedImage.of_mmap_continuation
 #print axioms Gabbro.Stage0.MappedImage.loader_prefix_source
 #print axioms Gabbro.Stage0.MappedImage.loader_prefix_goal
 #print axioms Gabbro.Stage0.irBild_checked_loader_prefix
@@ -74,6 +75,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageSimulation.follow
 #print axioms Gabbro.Stage0.ImageSimulation.goal
 #print axioms Gabbro.Stage0.ImageSimulation.terminal
+#print axioms Gabbro.Stage0.ImageSimulation.no_machine_error
 #print axioms Gabbro.Stage0.stage0_correct_of_export_simulation
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
