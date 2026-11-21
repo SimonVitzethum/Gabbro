@@ -108,7 +108,8 @@ def ImageBodyMatches [Kern] (output : Emitted src reserve options)
   ∃ footprint snapshots positions committed,
     PrivateBuffers footprint machine.ms.1 ∧
     MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint machine.ms).1, machine.ths⟩ state snapshots positions committed
+      ⟨(projectSCState footprint machine.ms).1, machine.ths⟩ state snapshots positions committed ∧
+    ∀ i s, snapshots i = some s → (positions i).thr = i
 
 /-- Initially the loader and the startup code can stutter in G. Allocated
     root positions remain ordered, and the initialized code stays loaded. -/
@@ -119,6 +120,29 @@ def ImageBootMatches [Kern] (output : Emitted src reserve options)
   machine.ths.length ≤ E.starts.length ∧
   (∀ i, state.lebt i = true ↔ i < machine.ths.length) ∧
   BytesAt machine.ms.1.m codeBase (output.image.code.flatMap encII)
+
+/-- Slots are allocated only once. A retired runner slot still has a
+    finished logical thread at the same index. -/
+def ImageSlotsMatch [Kern] {D : Deklaration} (machine : Cfg imageTSO (Res T))
+    (state : FadenMaschine D) : Prop :=
+  (∀ i, state.lebt i = true ↔ i < machine.ths.length) ∧
+  (∀ i, machine.ths[i]? = some none → FertigG state.m i)
+
+private def imageExternalEvent (event : Ev) : Bool :=
+  let request := event.2.1
+  !(decide (request = cloneReq ∨ request.nr.toNat = NR_EXIT ∨ request.nr.toNat = NR_EXIT_GROUP ∨
+    request = futexReq request.a1 128 request.a3 ∨ request = futexReq request.a1 129 request.a3))
+
+/-- The typed program's foreign calls occur in the same global order
+    and at the same thread indices as the runner's external requests. -/
+def ImageForeignTrace (output : Emitted src reserve options)
+    (history : List Ev) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
+  let model := state.m.lauf.filterMap (fun step => match step.ereignis with
+    | .fremd (.inl routine) => some (step.faden, routine)
+    | _ => none)
+  List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
+    event.1 = typed.1 ∧ ∃ gate, output.tor typed.2 = some gate ∧
+      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent) model
 
 /-- An accepted image may return its entry result, stop at a named
     hardware condition, or report a refused host clone. The exit is
@@ -149,6 +173,30 @@ abbrev ImageGoalAt (output : Emitted src reserve options)
     (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m
     (E.arenen.map (·.mitRuhe))
 
+/-- A source call used to explain a syscall lies inside that syscall's
+    matching GX segment. Its request arguments and actual answer are tied
+    to the oracle at that call, including caller-owned result areas. -/
+def ImageGateEvent [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    (before after : FadenMaschine (declOf output.compiled.unit).mitRuhe)
+    (returned : Cfg imageTSO (Res T)) (event : Ev) : Prop :=
+  let D := (declOf output.compiled.unit).mitRuhe
+  let layout := output.image.Y.withIdle
+  let request := event.2.1
+  ∃ site : FadenMaschine D, ∃ memory : Speicher D,
+    ∃ (routine : D.Ax) (world : World D) (args : Env D (D.aparams routine)),
+      ImageReach output E O before site ∧ ImageReach output E O site after ∧
+      site.lebt event.1 = true ∧
+      (mitSpeicher site.m memory).foreignCallKey event.1 = some ⟨routine, world, args⟩ ∧
+      (∀ carrier, ¬ GeteiltV (D := declOf output.compiled.unit) E.P E.ws carrier →
+        TraegerGleich memory site.m.speicher carrier) ∧
+      ∃ gate word extra, layout.tor routine = some gate ∧ request.nr = BitVec.ofNat 64 gate.nr ∧
+        ArgsW layout (reqArg request) args ∧ event.2.2 = some (word, extra) ∧
+        ((gate.resultArea = none ∧ (O.mitRuhe.wirkt routine world args).2 = rohW gate (D.agruende routine) word) ∨
+          ∃ j τ (typed : D.aerg routine = some τ) fp base,
+            gate.resultArea = some j ∧ reqArg request j = slot fp (BitVec.ofNat 64 base) ∧
+            AreaReply layout O.mitRuhe routine gate τ typed world args (returned.ms.1.view event.1) fp base word)
+
 /-- One simulation carries the same IR endpoint and runner history through
     the entire execution. Its source steps must construct a reachable GX
     execution, including all intervening steps. -/
@@ -159,11 +207,13 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
     FadenMaschine (declOf output.compiled.unit).mitRuhe → Prop
   initial : related [] start ⟨start.ms, [some t4]⟩ (imageSourceStart E)
   image : ∀ history machine ir state, related history machine ir state →
-    Rel L0 ir machine ∧ (ImageBootMatches output E ir state ∨ ImageBodyMatches output E O ir state)
+    Rel L0 ir machine ∧ ImageSlotsMatch ir state ∧ ImageForeignTrace output history state ∧
+    (ImageBootMatches output E ir state ∨ ImageBodyMatches output E O ir state)
   step : ∀ history before ir state after events, related history before ir state →
     ProcessStep imageTSO (actX L0) before events after →
     ∃ ir' count next, ProcessPrefix imageTSO actI ir events count ir' ∧
-      related (history ++ events) after ir' next ∧ ImageReach output E O state next
+      related (history ++ events) after ir' next ∧ ImageReach output E O state next ∧
+      ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next ir' event
   stop : ∀ earlier before ir state last ending, related earlier before ir state →
     Tr imageTSO (actX L0) before last ending 1 → ending ≠ .lauf →
     ImageStopMatches output O state earlier last ending
@@ -192,7 +242,7 @@ theorem ImageSimulation.follow [Kern] {output : Emitted src reserve options}
     exact ⟨ir, 0, state, .nil ir, by simpa only [List.append_nil] using initial, .start⟩
   | cons step _ ih =>
     intro history ir state current
-    obtain ⟨midIR, count, mid, trace, matched, advanced⟩ := sim.step _ _ _ _ _ _ current step
+    obtain ⟨midIR, count, mid, trace, matched, advanced, _⟩ := sim.step _ _ _ _ _ _ current step
     obtain ⟨ir', steps, next, tail, endpoint, reached⟩ := ih matched
     exact ⟨ir', steps + count, next, trace.trans tail, by simpa only [List.append_assoc] using endpoint,
       imageReach_trans advanced reached⟩
