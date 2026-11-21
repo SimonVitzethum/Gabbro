@@ -150,6 +150,32 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
   cases Subsingleton.elim axEq₁ axEq₂
   rfl
 
+/-- The production checker proves the model's program judgment with the
+    exact function, lock, carrier and root enumerations. Guest admission
+    is a separate proved conjunct. -/
+theorem accepts_program (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
+    (accepted : accepts u P main = .ok true) :
+    @AkzeptiertX (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+      (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
+      (List.finRange u.fns.length) (List.finRange u.locks.length)
+      ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
+      (judgedRoots u main) [] [] [] [] (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u)) = true := by
+  obtain ⟨guests, _, checked⟩ := accepts_core u P main accepted
+  rw [akzeptiertX_guest_eq] at checked
+  exact (Bool.and_eq_true_iff.mp checked).1
+
+/-- Soundness of the actual checker on the program it judges. The empty
+    arena and accumulator lists are those used by `accepts`. -/
+theorem accepts_program_spec [RootNativeFloat.Hardware] (u : UProg) (P : Programm (declOf u))
+    (main : (declOf u).Fn) (accepted : accepts u P main = .ok true) :
+    AkzeptiertSpecX P (sperrFamilie u) (List.finRange u.fns.length) (judgedRoots u main) [] [] := by
+  refine akzeptiertSpecX_of List.mem_finRange List.mem_finRange ?_ [] (accepts_program u P main accepted)
+  intro carrier
+  cases carrier with
+  | inl table => exact List.mem_append_left _ (List.mem_map_of_mem List.mem_finRange)
+  | inr global => exact List.mem_append_right _ (List.mem_map_of_mem List.mem_finRange)
+
 /-- **The step behind the bridge**: a successful `accepts` gives the goal checker's `true` on
     `einheitVon`, whose arenas, accumulators and checks are empty, after the actual start gate succeeds. It says nothing
     about a unit's own arenas, accumulators or checks: the bridge on the unit's judged `Einheit`
@@ -170,43 +196,24 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
     akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
-  unfold accepts at h
-  split at h
-  · cases h
-  · cases hg : sourceGuests u with
-    | error e => simp only [hg, bind, Except.bind, reduceCtorEq] at h
-    | ok guests =>
-      simp only [hg, bind, Except.bind, Functor.map, Except.map, pure, Except.pure,
-        Except.ok.injEq] at h
-      have h := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp h
-      -- `h` carries the equality procedures `accepts` fixes with `letI`; the guest
-      -- split is instantiated with exactly these, all other arguments come from `h`.
-      have hsplit := (@akzeptiertX_guest_eq (declOf u)
-        (inferInstanceAs (DecidableEq (Fin u.fns.length)))
-        (inferInstanceAs (DecidableEq (Fin u.axs.length)))
-        P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
-        (some (zeigerSignaturen u))).symm.trans h
-      have hpre := ((Bool.and_eq_true _ _).mp hsplit).1
-      -- The goal checker decides with the caller's `hFn` and a classical procedure
-      -- for `Ax` (`akzeptiertX_pruefer`); `akzeptiertX_inst` changes both.
-      have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
-          (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
-          ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-          (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none)
-          (some (zeigerSignaturen u)) = true := by
-        rw [einheitVon_ws, hws]
-        exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
-          P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
-          (some (zeigerSignaturen u))).symm.trans hpre
-      have hB : besitzB (einheitVon u P Q sp starts gestartet)
-          (List.finRange u.fns.length) = true :=
-        besitzB_leer (einheitVon_arenen u P Q sp starts gestartet)
-      have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
-          (einheitVon u P Q sp starts gestartet).akku = true :=
-        Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet)
-      have starts := Bool.and_eq_true_iff.mp hStart
-      exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
-        ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
+  have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
+      (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
+      ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
+      (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u)) = true := by
+    rw [einheitVon_ws, hws]
+    exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
+      P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u))).symm.trans (accepts_program u P main h)
+  have hB : besitzB (einheitVon u P Q sp starts gestartet)
+      (List.finRange u.fns.length) = true :=
+    besitzB_leer (einheitVon_arenen u P Q sp starts gestartet)
+  have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
+      (einheitVon u P Q sp starts gestartet).akku = true :=
+    Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet)
+  have starts := Bool.and_eq_true_iff.mp hStart
+  exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+    ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
 
 /-- After source metadata is admitted, the core checker and the actual start
     gate together give exactly the goal checker's verdict on the exported unit. -/

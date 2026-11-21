@@ -8,6 +8,7 @@ module
 public import Stage0.Compiler
 public import Stage0.IRBild
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
+public import Grammatik.Parser.Item.ElementTief.ModuleBody
 @[expose] public section
 
 namespace Gabbro.Stage0
@@ -21,6 +22,14 @@ theorem Compiled.contract_duties {text : String} {options : Profil.Options}
     (result : Compiled text options) :
     ∀ f, Vertraege.Pruefer.ContractDuties result.program (sperrFamilie result.unit) f :=
   OldSource.accepts_contract_duties result.unit result.program result.main result.accepted
+
+/-- The model's program judgment for the exact production enumerations.
+    Unit-level ownership and initial-state checks have their own judgment. -/
+theorem Compiled.admission [RootNativeFloat.Hardware] {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    AkzeptiertSpecX result.program (sperrFamilie result.unit) (List.finRange result.unit.fns.length)
+      (OldSource.judgedRoots result.unit result.main) [] [] :=
+  OldSource.accepts_program_spec result.unit result.program result.main result.accepted
 
 /-- Each CLI payload uses the AST derived from its original token sequence
     and the exact elaborated program whose functions pass the model's

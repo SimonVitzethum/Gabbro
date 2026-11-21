@@ -25,9 +25,11 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.parseSuffixe_slice
 #print axioms Gabbro.Grammatik.Parser.parseItemsTief_iff
 #print axioms Gabbro.Grammatik.Parser.parseTopTief_iff
+#print axioms Gabbro.Grammatik.Parser.parseModulTief_body
 #print axioms Gabbro.Stage0.OldSource.accepts_core
 #print axioms Gabbro.Stage0.OldSource.accepts_contract_duties
 #print axioms Gabbro.Stage0.Compiled.contract_duties
+#print axioms Gabbro.Stage0.Compiled.admission
 #print axioms Gabbro.Stage0.irBild_frontend_sound
 #print axioms Gabbro.Stage0.Emitted.zielsatz
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
