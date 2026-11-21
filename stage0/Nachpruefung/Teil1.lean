@@ -135,6 +135,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.await_construction_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitLocalOrigins_sound
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitInventory_sound
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uGlobSchreib_indexedField
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.staticIndexedField_erfuellbar
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock

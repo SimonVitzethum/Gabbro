@@ -59,7 +59,8 @@ public theorem checkAwaitInventory_sound (inventory : Inventory D) (tag : Nat) (
     inventory.owned (.waiting tag future) = inventory.owned (.running tag) := by
   have exactEntry (left right : D.Marke × Nat)
       (same : (inventory.number left.1, left.2) = (inventory.number right.1, right.2)) : left = right :=
-    Prod.ext (inventory.injective _ _ (congrArg Prod.fst same)) (congrArg Prod.snd same)
+    Prod.ext (inventory.injective _ _ (congrArg Prod.fst same))
+      (congrArg (fun key : Nat × Nat => key.2) same)
   exact (List.map_inj_right exactEntry).mp (of_decide_eq_true checked)
 
 /-- Evaluating the resolved arguments in source order gives an ordinary
