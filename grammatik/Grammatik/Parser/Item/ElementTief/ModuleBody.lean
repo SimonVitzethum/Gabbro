@@ -88,7 +88,8 @@ theorem parseModulTief_body {fuel : Nat} {tokens rest : List Token} {node : SIte
                 | error e => simpa only [opening, body, bind, Except.bind] using parsed
                 | ok result =>
                   obtain ⟨nodes, ending⟩ := result
-                  simpa only [opening, body, bind, Except.bind, pure, Except.pure] using parsed)
+                  cases closing : fordereZeichen "}" ending <;>
+                    simpa only [opening, body, closing, bind, Except.bind, pure, Except.pure] using parsed)
         exact ⟨afterPath, inside, nodes, opening, body, .inl ⟨rfl, nodeEq⟩⟩
 
 /-- The production item-sequence leaf uses this module reader at a `module`
@@ -99,8 +100,12 @@ theorem parseItemTief_module (fuel : Nat) (tokens : List Token) :
   conv => lhs; unfold parseItemTief
   simp only [show strEq "module" "when" = false by decide,
     show strEq "module" "pub" = false by decide, Bool.false_eq_true, ↓reduceIte]
+  have modifiers : sammleModifikatoren (.wort "module" :: tokens) = ([], .wort "module" :: tokens) := by
+    cases tokens with
+    | nil => rfl
+    | cons head tail => cases head <;> rfl
   conv => lhs; unfold parseItemKopfTief
-  simp only [sammleModifikatoren, show istMod "module" = false by decide,
+  simp only [modifiers,
     show strEq "module" "spec" = false by decide, show strEq "module" "impl" = false by decide,
     show strEq "module" "module" = true by decide, Bool.false_eq_true, ↓reduceIte]
 
