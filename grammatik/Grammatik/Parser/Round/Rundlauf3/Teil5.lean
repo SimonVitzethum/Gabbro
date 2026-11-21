@@ -102,13 +102,14 @@ theorem prim_aligned_legs : ∀ (a b : SExpr)
 -- fall-through on a word or opening parenthesis (no prefix
 -- arm fires), then `tower_up`. This also covers tuple tokens.
 theorem embTower : ∀ (w : String) (xs : List SExpr),
+    strEq w "#slice" = false →
     (∀ (rest' : List Token) (G : Nat), ruhigSuff rest' = true →
       ruhigGleit rest' = true →
       12 * (groesse (.built w xs) + 1) + groesse (.built w xs) + 1 ≤ G →
       parsePrimary G (druckToks (.built w xs) ++ rest') =
         .ok (.built w xs, rest')) →
     Legs (.built w xs) := by
-  intro w xs hP
+  intro w xs plain hP
   have hU : ∀ (rest' : List Token) (G : Nat),
       ruhigSuff rest' = true → ruhigGleit rest' = true →
       12 * (groesse (.built w xs) + 1) + groesse (.built w xs) + 2 ≤ G →
@@ -121,12 +122,12 @@ theorem embTower : ∀ (w : String) (xs : List SExpr),
     by_cases ht : strEq w "#tuple" = true
     · have hd : druckToks (.built w xs) =
           .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
-        simp only [druckToks, ht, ite_true, List.cons_append, List.nil_append]
+        simp only [druckToks_built_ordinary w xs plain, ht, ite_true, List.cons_append, List.nil_append]
       simp only [hd, List.cons_append] at hP' ⊢
       exact hP'
     · have hd : druckToks (.built w xs) =
           .wort w :: .zeichen "(" :: (druckToksListe xs ++ [.zeichen ")"]) := by
-        simp only [druckToks, ht, Bool.false_eq_true, ↓reduceIte, List.cons_append,
+        simp only [druckToks_built_ordinary w xs plain, ht, Bool.false_eq_true, ↓reduceIte, List.cons_append,
           List.nil_append, List.singleton_append, List.append_assoc]
       simp only [hd, List.cons_append] at hP' ⊢
       simpa only [parseUnary] using hP'
@@ -159,20 +160,20 @@ theorem sizeofLegs : ∀ (x : SExpr),
     gutKernPlatz x = true → (!istTypWortVar x) = true →
     Legs (.built "sizeof" [x]) := by
   intro x hp htw
-  apply embTower "sizeof" [x]
+  apply embTower "sizeof" [x] rfl
   intro rest' G hrs hrg hG
   exact prim_emb1_legs "sizeof" x rest' G (Or.inl rfl) hp htw hrs hG
 theorem lenofLegs : ∀ (x : SExpr),
     gutKernPlatz x = true → (!istTypWortVar x) = true →
     Legs (.built "lenof" [x]) := by
   intro x hp htw
-  apply embTower "lenof" [x]
+  apply embTower "lenof" [x] rfl
   intro rest' G hrs hrg hG
   exact prim_emb1_legs "lenof" x rest' G (Or.inr rfl) hp htw hrs hG
 theorem alignedLegs : ∀ (a b : SExpr),
     Legs a → Legs b → Legs (.built "aligned" [a, b]) := by
   intro a b hLa hLb
-  apply embTower "aligned" [a, b]
+  apply embTower "aligned" [a, b] rfl
   intro rest' G hrs hrg hG
   exact prim_aligned_legs a b rest' G hLa hLb hrs hG
 

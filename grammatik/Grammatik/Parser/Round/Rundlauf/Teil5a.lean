@@ -166,13 +166,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
             | cons y tail => cases tail <;> rfl
         rw [rejected] at hg
         cases hg
-      have ordinary : druckToks (.built f xs) =
-          (if strEq f "#tuple" then [] else [.wort f]) ++
-            [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"] := by
-        rw [druckToks.eq_def]
-        dsimp only
-        split <;> simp only [plain, Bool.false_eq_true, ↓reduceIte] <;> rfl
-      rw [ordinary] at hT
+      rw [druckToks_built_ordinary f xs plain] at hT
       split at hT
       · simp only [List.nil_append, List.cons_append, List.singleton_append,
           List.append_assoc] at hT

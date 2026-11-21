@@ -215,6 +215,14 @@ def druckToksListe : List SExpr → List Token
   | x :: xs => druckToks x ++ [.zeichen ","] ++ druckToksListe xs
 end
 
+theorem druckToks_built_ordinary (name : String) (args : List SExpr)
+    (plain : strEq name "#slice" = false) :
+    druckToks (.built name args) = (if strEq name "#tuple" then [] else [.wort name]) ++
+      [.zeichen "("] ++ druckToksListe args ++ [.zeichen ")"] := by
+  rw [druckToks.eq_def]
+  dsimp only
+  split <;> simp only [plain, Bool.false_eq_true, ↓reduceIte] <;> rfl
+
 -- The operator groups by level, named once and shared by the
 -- printability predicate (`gutOpCmp` etc. below) and the benign
 -- follow (`istSchleifenOp`): one spelling list, two uses.
