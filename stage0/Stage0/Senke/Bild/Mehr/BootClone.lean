@@ -273,27 +273,27 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
     contain writes from earlier sites. -/
 theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
     (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
-    {layout : Runner.Beweis.Lay} {before : Cfg (TSO layout) (Res T)} {i j : Nat} {id extra : W}
+    {layout : Runner.Beweis.Lay} {before : Cfg (TSO layout) (Res T)} {j : Nat} {id extra : W}
     {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
       Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
         ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
     (declared : output.starts[j]? = some start)
-    (loaded : BytesAt (before.ms.1.view i) codeBase (output.image.code.flatMap encII))
+    (loaded : BytesAt (before.ms.1.view 0) codeBase (output.image.code.flatMap encII))
     (position : before.ths.length = j + 1)
-    (frame : FrameOK (before.ms.1.view i) (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
+    (frame : FrameOK (before.ms.1.view 0) (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
     (positive : 0 < id.toInt) :
     let pc := BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j))
     let fp := BitVec.ofNat 64 output.image.fp0
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
-    before.ths[i]? = some (some (.next ⟨pc, fp⟩)) →
-    let threads := before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩)) ++ [some (.next child)]
+    before.ths[0]? = some (some (.next ⟨pc, fp⟩)) →
+    let threads := before.ths.set 0 (some (.next ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩)) ++ [some (.next child)]
     ∃ after : (TSO layout).St,
-      ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 ⟨after, threads⟩ ∧
+      ProcessPrefix (TSO layout) actI before [(0, cloneReq, some (id, extra))] 18 ⟨after, threads⟩ ∧
       threads[j + 1]? = some (some (.next child)) ∧
       after.1.m = before.ms.1.m ∧
-      Agree fp (startScratch output.compiled.main) output.image.Ks (before.ms.1.view i) (after.1.view i) ∧
-      (∀ k, k ≠ i → after.1.view k = before.ms.1.view k) ∧
+      Agree fp (startScratch output.compiled.main) output.image.Ks (before.ms.1.view 0) (after.1.view 0) ∧
+      (∀ k, k ≠ 0 → after.1.view k = before.ms.1.view k) ∧
       initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ ∧
       ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
         FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
@@ -334,7 +334,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
     simp only [headLen, startLen] at frameAddress
     omega
   obtain ⟨after, prefix, appended, same, own, others⟩ :=
-    bootSpawn_run (before := before) (i := i) (extra := extra) running site frame far (by omega)
+    bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
       (by omega) childCode childFrame positive
   exact ⟨after, prefix, position ▸ appended, same, own, others, logical,
     fun O => output.bootActivation_step Q O inside⟩
@@ -367,38 +367,22 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
             (output.goalUnit Q).P (output.goalUnit Q).ws)
           (output.bootActivation Q 0) (output.bootActivation Q 1) := by
   intro parent child
-  obtain ⟨_, _, _, _, made, _, _, loadedStartup, _⟩ :=
-    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
-  obtain ⟨_, _, sites, placed, code, _, args, roots⟩ := bild_lage output.emission output.funktionen_voll
-    (fun base bound => layU_in output.compiled.unit output.tor base bound)
-    (fun base => layU_dis output.compiled.unit output.tor base)
-    (fun base => by simp only [layU]; omega)
-    (fun base => layU_sync output.compiled.unit output.tor base)
-  have startup : BytesAt s.1.m codeBase (output.image.code.flatMap encII ++
-      ((startStackBytes output.image.Ks (FB + FB) (output.image.args :: output.image.rootArgs)).getD [] ++ [])) := by
-    simpa only [made, Option.getD_some, List.append_nil] using loadedStartup
-  rw [code, args, roots] at startup
-  obtain ⟨allSites, frame, children, far, scratch, slots⟩ := spawn_ready placed startup
   have present := (List.getElem?_eq_some_iff.mp declared).1
-  have indexed := placed.spawn_entry 0 (by rw [List.length_map]; exact present)
-  have specific : codeBase + 16 * (10 * output.starts.length + startLen) < 2 ^ 31 ∧
-      output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by
-    simpa only [Emitted.starts, List.length_map, Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using
-      children _ (List.mem_of_getElem? indexed)
-  obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
-  simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one, BitVec.add_zero] at site
   have beforeView (i : Nat) : s.1.view i = s.1.m := by simp only [TSt.view, empty i, List.foldl_nil]
   let entered : Cfg (TSO L0) (Res T) :=
     ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
-  have farSite : CodeFar (BitVec.ofNat 64 codeBase) 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
-    have count : sites.length = output.starts.length := by rw [placed.spawn_length, List.length_map]; rfl
-    simp only [spawnC_len, count, CodeFar] at far
-    unfold CodeFar
-    omega
-  obtain ⟨finished, launched, _, committed, _, views⟩ :=
-    bootSpawn_run (before := entered) (i := 0) (extra := extra) rfl
-      ((beforeView 0).symm ▸ site) ((beforeView 0).symm ▸ frame)
-      farSite (by omega) slots specific.1 specific.2 positive
+  have initialFrame := bild_initialized_frames_u output.initialValid output.emission
+    output.funktionen_voll loaded 0 (Nat.zero_le _)
+  simp only [Nat.mul_zero, Nat.add_zero] at initialFrame
+  have code : BytesAt (s.1.view 0) codeBase (output.image.code.flatMap encII) :=
+    (beforeView 0).symm ▸ output.loaded_code loaded
+  have atEntry : entered.ths[0]? = some (some (.next
+      ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * 0)), BitVec.ofNat 64 output.image.fp0⟩)) := by
+    simp only [Nat.mul_zero, BitVec.add_zero]
+    rfl
+  obtain ⟨finished, launched, _, committed, _, views, logical, activated⟩ :=
+    output.boot_site_prefix Q (before := entered) (extra := extra) declared code rfl
+      ((beforeView 0).symm ▸ initialFrame) positive atEntry
   have readFrame := output.loader_frame loaded
   have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
     have step : ProcessStep (TSO L0) actI ⟨s, [some t4]⟩
@@ -425,11 +409,11 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     change decide (1 ≤ min 1 output.starts.length) = true
     simpa only [Nat.min_eq_left (Nat.succ_le_of_lt present)] using decide_eq_true (Nat.le_refl 1)
   refine ⟨finished, ?_, committed, childLive, logical,
-    ⟨childBytes, childEncoded, childView.symm ▸ childLoaded⟩, fun O => output.bootActivation_step Q O present⟩
+    ⟨childBytes, childEncoded, childView.symm ▸ childLoaded⟩, activated⟩
   have advance : nxt parent =
       ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 3), BitVec.ofNat 64 output.image.fp0⟩ :=
     congrArg (fun ip => T.mk ip (BitVec.ofNat 64 output.image.fp0)) (pcN (BitVec.ofNat 64 codeBase) 2 1 3 rfl)
-  simpa only [entered, advance, List.nil_append, List.set_cons_zero, List.singleton_append, Nat.reduceAdd] using
-    loadedEntry.trans launched
+  simpa only [entered, advance, List.nil_append, List.set_cons_zero, List.singleton_append, Nat.reduceAdd, Nat.mul_zero, Nat.zero_add, Nat.add_zero, Nat.mul_one,
+    BitVec.add_zero] using loadedEntry.trans launched
 
 end Gabbro.Stage0
