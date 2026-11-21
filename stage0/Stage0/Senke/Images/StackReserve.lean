@@ -67,12 +67,9 @@ theorem bild_auto_depth {D : Deklaration} {passes : Nat} {P : Programm D}
         repeat' split
         all_goals intro emitted; cases emitted
 
-private def depthLookup {functions : Nat} (table : Array Bool) (fn : Fin functions) : Bool :=
-  table[fn.val]?.getD false
-
 private theorem depthLookup_ofFn {functions : Nat} (f : Fin functions → Bool) (fn : Fin functions) :
-    depthLookup (Array.ofFn f) fn = f fn := by
-  simp [depthLookup, fn.isLt]
+    (Array.ofFn f)[fn.val]?.getD false = f fn := by
+  simp [fn.isLt]
 
 def imageDepthRounds {D : Deklaration} {functions : Nat} (index : Fin functions ≃ D.Fn)
     (sites : Fin functions → List (Stelle D)) : Nat → Array Bool
@@ -80,7 +77,7 @@ def imageDepthRounds {D : Deklaration} {functions : Nat} (index : Fin functions 
   | depth + 1 =>
     let previous := imageDepthRounds index sites depth
     Array.ofFn fun f => (sites f).all
-      (Merkmal.an ⟨fun g => depthLookup previous (index.symm g), fun _ => false, fun _ => true⟩)
+      (Merkmal.an ⟨fun g => previous[(index.symm g).val]?.getD false, fun _ => false, fun _ => true⟩)
 
 /-- Compute the call-depth predicate for all functions together. The
     call sites are read once from the canonical typed bodies. Each round
@@ -98,10 +95,10 @@ theorem imageDepthTable_exact {D : Deklaration} {functions : Nat} (index : Fin f
     (imageDepthTable index P depth)[(index.symm fn).val]?.getD false = rufTief P depth fn := by
   induction depth generalizing fn with
   | zero =>
-    change depthLookup (Array.ofFn fun _ : Fin functions => false) (index.symm fn) = false
+    change (Array.ofFn fun _ : Fin functions => false)[(index.symm fn).val]?.getD false = false
     exact depthLookup_ofFn _ _
   | succ depth ih =>
-    change depthLookup (Array.ofFn fun f => _ ) (index.symm fn) = _
+    change (Array.ofFn fun f : Fin functions => _)[(index.symm fn).val]?.getD false = _
     simp only [depthLookup_ofFn, Array.getElem_ofFn, Equiv.apply_symm_apply]
     simp only [rufTief, rufeE_mE, mE_stellen]
     exact congrArg (fun admitted => (stellenE (P.rumpf fn)).all
