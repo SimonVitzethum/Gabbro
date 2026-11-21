@@ -36,7 +36,7 @@ theorem einheitDer_pruefungen (u : UProg) (P : Programm (declOf u)) (Q : AxEns (
 
 private theorem sequenced_at {α β : Type} (lower : α → Except String β) :
     ∀ {items : List α} {results : List β}, uSeq (items.map lower) = .ok results →
-      ∀ {i item}, items[i]? = some item →
+      ∀ {i : Nat} {item : α}, items[i]? = some item →
         ∃ value, results[i]? = some value ∧ lower item = .ok value := by
   intro items
   induction items with
