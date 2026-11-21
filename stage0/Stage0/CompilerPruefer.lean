@@ -138,8 +138,9 @@ theorem Compiled.entry_name_unique {text : String} {options : Profil.Options}
       (fun f => (result.unit.fns.get f).name == Profil.entryName options) = some result.main
     simp only [findRoot_eq_fnIdx, result.entry, Except.toOption]
     rfl
-  have nameEq : ((fnAt result.unit result.main).name == Profil.entryName options) = true := List.find?_some found
-  have named := beq_iff_eq.mp nameEq
+  have nameEq := List.find?_some
+    (p := fun f => (fnAt result.unit f).name == Profil.entryName options) found
+  have named : (fnAt result.unit result.main).name = Profil.entryName options := beq_iff_eq.mp nameEq
   refine ⟨named, ?_⟩
   intro f entryNamed
   apply Fin.ext
