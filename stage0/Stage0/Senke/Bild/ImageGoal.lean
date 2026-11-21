@@ -24,6 +24,19 @@ theorem Emitted.goalUnit_starts (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) :
     (output.goalUnit Q).starts = ⟨output.compiled.main, output.args⟩ :: output.starts := rfl
 
+/-- The invariant branch of the model's unit verdict follows from the
+    compiler's writer check and the emitter's check on the serialized memory. -/
+theorem Emitted.goal_invariants (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) :
+    invariantenGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true := by
+  have checked : CheckedInitialInvariants (output.goalUnit Q) output.lsA.1 :=
+    output.initialInvariants
+  apply checked.goal_verdict
+  have accepted := OldSource.accepts_program _ _ _ output.compiled.accepted
+    output.compiled.checkedDeclarations.property
+  simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true] at accepted
+  exact accepted.2.1
+
 /-- The precise logical start associated with the image. Missing thread
     positions are filled by the model's canonical idle thread. -/
 abbrev Emitted.goalStart (output : Emitted src K options)
@@ -40,7 +53,7 @@ theorem Emitted.zielsatz (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit))
     (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
     (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
-    (checked : unitStartGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true)
+    (checked : nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true)
     (callSites : CallSitePflicht (output.goalUnit Q)) (posts : PostDeckt (output.goalUnit Q))
     (O : Orakel (declOf output.compiled.unit)) (binding : ForeignVertrag (output.goalUnit Q) O)
     (hardware : HardwareAnnahmenHw O Q)
@@ -52,9 +65,11 @@ theorem Emitted.zielsatz (output : Emitted src K options)
     ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
-  have verdict := output.goal_checker_concurrent Q dispatch runtime checked
+  have start : unitStartGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true :=
+    Bool.and_eq_true_iff.mpr ⟨output.goal_invariants Q, checked⟩
+  have verdict := output.goal_checker_concurrent Q dispatch runtime start
   have duties : NutzerPflichtA (output.goalUnit Q) :=
-    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true_iff.mp checked).2
+    nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 checked
   exact gabbro_ziel akzeptiertX_pruefer _ (output.goalUnit Q) output.fsA output.lsA output.csA
     verdict duties callSites posts O binding hardware output.image.passes _ _
     (laufzeit_initRuhe (output.goalUnit Q)) live state reached

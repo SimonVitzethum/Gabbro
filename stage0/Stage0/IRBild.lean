@@ -6,6 +6,7 @@
 module
 public import Stage0.Bindung
 public import Stage0.Compiler
+public import Stage0.InitialCheck
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
@@ -39,6 +40,9 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   startPlan : StartArgument.Plan compiled.unit
     (uMembers (pre108 compiled.source.prepared.elaborierbar)) compiled.main
   initialValid : sp0OkB compiled.unit = true
+  initialInvariants : CheckedInitialInvariants
+    (OldSource.einheitVon compiled.unit compiled.program (axWahr _) (sp0Of compiled.unit initialValid) [] [] [])
+    (List.finRange compiled.unit.locks.length)
   /-- the environment `main` starts with: the pointer to the table each parameter's type names -/
   args : Env (declOf compiled.unit) ((declOf compiled.unit).params compiled.main)
   pointers : Senke.mainEnv ((declOf compiled.unit).params compiled.main) = some args
@@ -79,6 +83,9 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
   let startPlan ← StartArgument.plan u (uMembers (pre108 compiled.source.prepared.elaborierbar)) main
   if initialValid : sp0OkB u = true then
+    let initialInvariants ← (checkInitialInvariants
+      (OldSource.einheitVon u P (axWahr _) (sp0Of u initialValid) [] [] []) (List.finRange u.locks.length)).mapError
+      (fun failure => "ir: initial invariants: " ++ failure.message)
     match hp : Senke.mainEnv ((declOf u).params main) with
     | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
     | some args =>
@@ -91,7 +98,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
           starts K
           (Senke.bodenAusrichtung u) with
       | .error e => throw e
-      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, args, hp, checked.down, image, he⟩
+      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, initialInvariants.down, args, hp, checked.down, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
 /-- The exact typed occurrences supplied to the image constructor. -/
