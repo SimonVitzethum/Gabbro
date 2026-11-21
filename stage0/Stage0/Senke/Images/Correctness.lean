@@ -90,7 +90,8 @@ theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
     obtain ⟨same, extra, read⟩ := answered.1
     have exactWord : response = some (BitVec.ofNat 64 output.image.fp0, extra) := by
       simpa only [rdN, TSt.view, mapped.emptyBuffers 0, List.foldl_nil, frame, Option.map_some] using read
-    subst_vars
+    rw [exactWord] at continued
+    cases same
     cases continued
     exact ⟨rfl, rfl⟩
   | exit found asked _ =>
