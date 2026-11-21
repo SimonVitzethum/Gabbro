@@ -131,7 +131,8 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     (hy : TicketSync m Y (BitVec.ofNat 64 fpI) Ks []) :
     match rufAt P O passes n f σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 e ∧ (keep = true → ExitErg Y (D.erg f) v q.a1)
+        q.nr = BitVec.ofNat 64 e ∧ (keep = true → ExitErg Y (D.erg f) v q.a1) ∧
+        (D.erg f = none → q.a1 = 0)
     | .logik l => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (logikCode l)
     | .hardware h => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (hwCode h)
     | _ => False := by
@@ -194,11 +195,13 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
         have mirrored := hmirror.trans hread
         rwa [slot_slot] at mirrored
       obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) hK hw he
-      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun _ => by rw [ha]; exact hexit⟩
+      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, (fun _ => ha.symm ▸ hexit), ?_⟩
+      intro void
+      simp only [void, Option.isSome_none, Bool.and_false, Bool.false_eq_true] at hs
     · simp only [hs, Bool.false_eq_true, ite_false] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := sys_ok (nr := e) (c := 0) (s := startScratch f) hexC hfE hF2 (by omega) hK
+      obtain ⟨t', m', q, sx, hq, hnr, zero⟩ := sys_ok (nr := e) (c := 0) (s := startScratch f) hexC hfE hF2 (by omega) hK
         (by decide) he
-      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun hk => ?_⟩
+      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, (fun hk => ?_), fun _ => zero⟩
       simp only [hk, Bool.true_and, Option.isSome_iff_ne_none, ne_eq, Decidable.not_not] at hs
       exact exitErg_none' hs v _
   | logik l => exact Stops.prefix s1 hcall

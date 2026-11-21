@@ -84,7 +84,7 @@ theorem bild_kern [CloneAnswers] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK 
   generalize rufAt P O passes n main σ ρ = o at hst ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨t', m', q, sx, hq, hnr, he⟩ := hst
+    obtain ⟨t', m', q, sx, hq, hnr, he, _⟩ := hst
     exact Or.inl ⟨t', m', q, s1.trans sx, hq, hnr, he rfl⟩
   | logik e => exact Or.inl (Stops.prefix s1 hst)
   | hardware e => exact Or.inl (Stops.prefix s1 hst)
