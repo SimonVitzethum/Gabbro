@@ -230,7 +230,11 @@ theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns 
     refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
     simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, bind, Except.bind]
     apply (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mpr
-    rw [akzeptiertX_guest_eq, guest, Bool.and_true]
+    refine (@akzeptiertX_guest_eq (declOf u)
+      (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+      (inferInstanceAs (DecidableEq (Fin u.axs.length)))
+      P (sperrFamilie u) _ _ _ _ _ _ _ guests (sperrQuellen u) (fun _ => none)
+      (some (zeigerSignaturen u))).trans (Bool.and_eq_true_iff.mpr ⟨?_, guest⟩)
     rw [← hws]
     exact (akzeptiertX_inst (declOf u) _ _ _ (fun x y => Classical.propDecidable (x = y))
       P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
