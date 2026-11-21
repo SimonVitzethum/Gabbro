@@ -14,6 +14,11 @@ defaultTargets = ["Bruecke"]
 name = "grammatik"
 path = "../../grammatik"
 
+# GabbroV states the duties of the unit Stage 0 compiles (`Bruecke/Kette/Stufe0.lean`, `gabbrov`).
+[[require]]
+name = "stage0"
+path = "../../stage0"
+
 [[lean_lib]]
 name = "Gabbro"
 srcDir = ".."

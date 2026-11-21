@@ -11,7 +11,7 @@ namespace Gabbro.Bruecke.Vorlage
     module prefix `MODULE` (for example `Proofs.Lexer`) below `OUTDIR`. Generated files are
     replaced on every run; your proof files `MODULE/Beweis/F<i>.lean` are written once and never
     replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 1: the files name at
-    least one refusal; 2: wrong arguments, unreadable file, or the front end refuses the source. -/
+    least one refusal; 2: wrong arguments, unreadable file, or Stage 0 refuses the source. -/
 def haupt (args : List String) : IO UInt32 := do
   let [modul, pfad, ziel] := args | do
     IO.eprintln "usage: gabbrov MODULE FILE.gab OUTDIR"

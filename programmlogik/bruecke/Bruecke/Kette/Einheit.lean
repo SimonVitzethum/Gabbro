@@ -112,21 +112,28 @@ theorem fnPflicht_nil {u : UProg} {rk : String → Nat} : ∀ f ∈ ([] : List U
 
 /-! ## Premise (b) -/
 
-/-- **Premise (b) from the duties of a unit given as data.** The source enters only through the
-    front-end equation `h`; every function of `u` is carried. -/
-theorem nutzer_aus_einheit {u : UProg} (hp : PflichtenEinheit u) {src : String}
-    {P : Programm (declOf u)} {fs : List (declOf u).Fn}
-    (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
+/-- **Premise (b) from the duties of a unit given as data**, for whichever front end built `u`:
+    the only fact about the source is that the generic lowering accepts `u`. Every function of
+    `u` is carried. -/
+theorem nutzer_aus_senkung {u : UProg} (hp : PflichtenEinheit u)
+    {P : Programm (declOf u)} {fs : List (declOf u).Fn} (hlow : lowerAllg u = .ok (P, fs)) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) := by
   obtain ⟨⟨hn, hs, ht⟩, rk, hf⟩ := hp
   have hS := getragenG_of_bools (stimmigB_of hs fun f hm => (hf f hm).1)
     (ohneTransitionB_of ht) (List.all_eq_true.mpr fun f hm => (hf f hm).2.1)
   have hZ : ∀ c : Fin u.fns.length, (fun _ => True) c → ∃ body, zuBodyZ u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body := fun c _ => (hf (fnAt u c) (List.get_mem _ _)).2.2.2
-  have hlow := lower_of_uebersetze h
   exact ⟨hn, bruecke_nutzer_M hlow hS _
     (massPflichtU_of_rang (rang_of (rangB_of fun f hm => (hf f hm).2.2.1)) hZ)
     (fun c hc => (hc True.intro).elim) hn (fun _ _ hc => (hc True.intro).elim)⟩
+
+/-- **Premise (b) from the duties of a unit given as data**, the unit built by the Lean
+    pipeline from `src`. -/
+theorem nutzer_aus_einheit {u : UProg} (hp : PflichtenEinheit u) {src : String}
+    {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
+    ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) :=
+  nutzer_aus_senkung hp (lower_of_uebersetze h)
 
 /-- The same duties supply the atomic-rely form of premise (b). -/
 theorem nutzerA_aus_einheit {u : UProg} (hp : PflichtenEinheit u) {src : String}
@@ -136,6 +143,7 @@ theorem nutzerA_aus_einheit {u : UProg} (hp : PflichtenEinheit u) {src : String}
   obtain ⟨hn, hb⟩ := nutzer_aus_einheit hp h
   exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_scalar_kein_atomar u (nullB_statics hn)) hb⟩
 
+#print axioms nutzer_aus_senkung
 #print axioms nutzer_aus_einheit
 #print axioms nutzerA_aus_einheit
 

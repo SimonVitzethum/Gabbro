@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Einheit
+public import Bruecke.Kette.Stufe0
 public import Bruecke.Vorlage.Formen
 public import Bruecke.Vorlage.Zeige
 public import Grammatik.Parser.Elab.UebersetzePipeline
@@ -8,12 +8,12 @@ public import Grammatik.Parser.Elab.UebersetzePipeline
 /-!
 # GabbroV's generator: the Lean files of a unit's duties
 
-`dateien modul src` runs the Lean front end on the source text once and writes the duties of the
-unit as Lean modules under the module prefix `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`).
-The unit is pinned AS DATA (owner, 2026-11-21): the files never evaluate the front end in the
-kernel; the generic theorem `nutzer_aus_einheit` takes the front-end equation
-`uebersetzeAllg quelle = .ok ⟨u, P, fs⟩` as its named premise, and the top file checks it by
-running the front end (`#guard`).
+`dateien modul src` runs Stage 0's front end on the source text once (`Gabbro.Stage0.compile`: the
+unit Stage 0 actually compiles) and writes the duties of the unit as Lean modules under the module
+prefix `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`). The unit is pinned AS DATA (owner,
+2026-11-21): the files never evaluate the front end in the kernel; the generic theorem
+`nutzer_aus_stage0` takes `c : Compiled quelle` with `c.unit = u` as its named premise, and the top
+file checks it by running Stage 0 (`#guard`).
 
 Layout, so that units of 500 000 lines stay usable (every file small, Lake builds them in
 parallel, no step quantifies over function positions):
@@ -189,30 +189,30 @@ def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Da
         baum (fun a b => "(fnPflicht_append " ++ a ++ " " ++ b ++ ")") "fnPflicht_nil" 64 beweise ++ "\n\n" ++
       "theorem einheit : EinheitTeil u := ⟨by decide, by decide, by decide⟩\n\n" ++
       "theorem pflichten : PflichtenEinheit u := ⟨einheit, rk, alle⟩\n\n" ++
-      "/-- **Premise (b) of the goal theorem** for the unit the front end builds from `quelle`. -/\n" ++
-      "theorem nutzer {P : Gabbro.Grammatik.Programm (declOf u)} {fs : List (declOf u).Fn}\n" ++
-      "    (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u, P, fs⟩) :\n" ++
-      "    ∃ hn : nullB u = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u P hn) :=\n" ++
-      "  nutzer_aus_einheit pflichten h\n\n"
+      "/-- **Premise (b) of the goal theorem** for the unit Stage 0 compiles from `quelle`. -/\n" ++
+      "theorem nutzer (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u) :\n" ++
+      "    ∃ (P : Gabbro.Grammatik.Programm (declOf u)) (fs : List (declOf u).Fn) (hn : nullB u = true),\n" ++
+      "      lowerAllg u = .ok (P, fs) ∧ Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u P hn) :=\n" ++
+      "  nutzer_aus_stage0 pflichten c hu\n\n"
     else
       "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
         String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
   { pfad := modul.replace "." "/"
-    text := (kopf modul ([modul ++ ".Quelle", modul ++ ".Daten"] ++
+    text := (kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"] ++
         (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
         "The unit checks and premise (b) of the goal theorem (written by `gabbrov`).").replace
         "@[expose] public section"
-        ("meta import Bruecke.Kette.Einheit\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+        ("meta import Bruecke.Kette.Stufe0\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
-      "-- The pinned unit is what the front end builds from the source (checked by running it).\n" ++
-      "#guard uOf quelle == some u\n\n" ++ rumpf ++ fuss modul }
+      "-- The pinned unit is the unit Stage 0 compiles from the source (checked by running Stage 0).\n" ++
+      "#guard (match Gabbro.Stage0.compile quelle with | .ok c => c.unit == u | .error _ => false)\n\n" ++ rumpf ++ fuss modul }
 
 /-- **The generator.** All files of the unit of `src` under the module prefix `modul`, or the
     front end's refusal. -/
 def dateien (modul src : String) : Except String (List Datei) := do
-  let u ← match uebersetzeAllg src with
-    | .ok ⟨u, _, _⟩ => pure u
-    | .error e => throw ("the Lean front end refuses the source: " ++ e)
+  let u ← match Gabbro.Stage0.compile src with
+    | .ok c => pure c.unit
+    | .error e => throw ("Stage 0 refuses the source: " ++ e)
   let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
   let stuecke := teile stueckGroesse fs
   let anzahl := stuecke.length

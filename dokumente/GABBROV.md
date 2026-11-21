@@ -38,7 +38,7 @@ of the obligations reach GabbroV.
 
 | Component | Where | Role |
 |---|---|---|
-| the duty generator | `gabbrov MODULE FILE.gab OUTDIR` (`programmlogik/bruecke/Bruecke/Vorlage.lean`, `Vorlage/Haupt.lean`) | Written in Lean: runs the Lean front end once and writes the unit's duties as Lean modules (unit as data, one module per function, your proof files never overwritten); premise (b) by `nutzer_aus_einheit` (§14). |
+| the duty generator | `gabbrov MODULE FILE.gab OUTDIR` (`programmlogik/bruecke/Bruecke/Vorlage.lean`, `Vorlage/Haupt.lean`) | Written in Lean: runs Stage 0's front end once (the unit Stage 0 compiles) and writes the unit's duties as Lean modules (unit as data, one module per function, your proof files never overwritten); premise (b) by `nutzer_aus_stage0` (§14). |
 | the Lean `Body` channel | `programmlogik/` (§13); historical Rust `gabbro prove`, `lean.rs`, `beweis.rs` | The model remains; the deleted Rust driver is history, and the bridge consumes tracked duties pending Lean V1. |
 | the specification channel | `programmlogik/gabbrov/V1.lean`, `V2.lean`; historical Rust `gabbro lean a.gab b.gab` | The Lean specifications remain; source parsing and elaboration now use `grammatik/Grammatik/Parser/`. |
 | the Lean parser (T3) | `grammatik/Grammatik/Parser/` (§14) | source text → surface tree → `UProg` → G program, computed in Lean |
@@ -56,10 +56,10 @@ measuring coverage and V2 extending the bridge to every Stage-0 form (R2).
 (the elaborated functions, 16 per module) and `Daten` (the unit `u` and the rank), `Pflicht/F<i>` (the
 function's Body as GabbroV reads it, as a Lean term and in source notation, its reading equation, its decided
 checks, and the goal `ziel<i>`), `Beweis/F<i>` (your proof of `ziel<i>`; written once, never replaced),
-`Sammlung/S<k>` and `Lexer.lean` (the unit checks, `#guard uOf quelle == some u`, and the theorem `nutzer`:
-premise (b) for the unit the front end builds from the text). The front end is never evaluated in the kernel:
-the text enters only through the premise `uebersetzeAllg quelle = .ok ⟨u, P, fs⟩`, which the `#guard` checks by
-running the front end (owner, 2026-11-21). No step quantifies over function positions, so the files of a unit of
+`Sammlung/S<k>` and `Lexer.lean` (the unit checks, a `#guard` that Stage 0 compiles the text to exactly `u`, and the theorem
+`nutzer`: premise (b) for the unit Stage 0 compiles from the text). The front end is never evaluated in the kernel:
+the text enters only through the premise `c : Compiled quelle` with `c.unit = u`, which the `#guard` checks by
+running Stage 0 (owner, 2026-11-21). No step quantifies over function positions, so the files of a unit of
 500 000 lines are many small modules Lake builds in parallel. A form or check outside the bridge is a named
 refusal in `Lexer.lean` (exit 1), and premise (b) is then not stated.
 
