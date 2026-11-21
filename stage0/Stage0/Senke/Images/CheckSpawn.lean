@@ -222,10 +222,10 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
     fun j different => (others1 j different).trans (others0 j different)⟩
   simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
 
+set_option maxHeartbeats 1200000 in
 /-- The complete successful site runs both the clone and its compiled
     check. It reaches the next ten-instruction site, preserves the code
     owner's view outside scratch, and leaves all other views unchanged. -/
-set_option maxHeartbeats 1200000 in
 theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch entry stack : Nat}
     (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
@@ -244,7 +244,8 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
   intro child threads
   have inside := (List.getElem?_eq_some_iff.mp running).1
   obtain ⟨spawned, run, _, beforeGuard, same, stored, otherViews⟩ :=
-    bootSpawn_run (before := before) (i := i) (extra := extra) running code frame far
+    bootSpawn_run (before := before) (i := i) (pc := pc) (fp := fp)
+      (K := K) (scratch := scratch) (entry := entry) (stack := stack) (extra := extra) running code frame far
       (by omega) slots address stackBound positive
   let guardPc := pc + BitVec.ofNat 64 (16 * 3)
   let parent : T := ⟨guardPc, fp⟩
@@ -261,15 +262,23 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
           guardC (scratch + 4) cloneCode scratch)) :=
     code.agree same (spawnOne_len scratch entry stack ▸ far)
   have guardFar := codeFar_right (n := 3) (k := 7) far
+  have guardCode : CodeAt (spawned.1.view i) guardPc
+      ([ci 1 ((scratch + 3 : Nat) : Int) 0 0,
+        ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)] ++
+        guardC (scratch + 4) cloneCode scratch) :=
+    codeAt_right allCode
   obtain ⟨after, checkRun, committed, checked, otherChecked⟩ :=
-    tso_spawn_check_pass (before := afterClone) (i := i) next (codeAt_right allCode)
+    tso_spawn_check_pass (before := afterClone) (i := i) (pc := guardPc) (fp := fp)
+      (K := K) (scratch := scratch) next guardCode
       (frame.agree same) guardFar (by omega) slots stored positive
   have advanced : guardPc + BitVec.ofNat 64 (16 * 7) = pc + BitVec.ofNat 64 (16 * 10) :=
     pcN pc 3 7 10 rfl
   refine ⟨after, ?_, ?_, committed.trans beforeGuard, same.trans (checked.mono (Nat.le_add_right _ _)),
     fun j different => (otherChecked j different).trans (otherViews j different)⟩
-  · simpa only [afterClone, threads, List.set_append_left _ _ within, List.set_set, List.append_nil,
-      advanced, Nat.reduceAdd] using run.trans checkRun
+  · have prefix : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 afterClone := run
+    have combined := prefix.trans checkRun
+    simpa only [afterClone, threads, List.set_append_left _ _ within, List.set_set, List.append_nil,
+      advanced, Nat.reduceAdd] using combined
   · change (before.ths.set i _ ++ [some (.next child)])[before.ths.length]? = _
     rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
     rfl
