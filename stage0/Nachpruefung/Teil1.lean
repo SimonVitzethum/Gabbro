@@ -6,6 +6,7 @@ import Grammatik.Bausteine.Arena.BlockScope
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Resume
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 public import Stage0.Senke.Ausdruck.Tag
 
@@ -134,6 +135,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.waiting_construction_inv
 #print axioms Gabbro.Grammatik.Async.Representation.await_construction_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_pending_preserves
+#print axioms Gabbro.Grammatik.Async.Representation.await_resume_frame
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitLocalOrigins_sound
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitInventory_sound
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uGlobSchreib_indexedField

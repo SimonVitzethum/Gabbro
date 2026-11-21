@@ -161,7 +161,7 @@ private theorem restrictSlots {live kept : List String} {frame : Frame (Value D)
     · exact ⟨_, .live used found typed rest⟩
     · exact ⟨_, .dead used rest⟩
 
-private theorem liveSlot {live : List String} {frame : Frame (Value D)}
+public theorem liveSlot {live : List String} {frame : Frame (Value D)}
     {fields : List (String × Parser.STyp)} {slots}
     (represented : SlotsRep D types live frame fields slots)
     (field : (name, sourceType) ∈ fields) (used : name ∈ live) :
