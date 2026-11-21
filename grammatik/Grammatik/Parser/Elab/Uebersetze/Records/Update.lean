@@ -86,7 +86,11 @@ theorem uSetzeRecordSlot_named (ctx : UCtx) (place value : SExpr)
       .ok (.assignTab table column index (.replace original selected replacement)) := by
   simp only [uSetzeRecordSlot, readValue, bind, Except.bind,
     uRecordReplacement_step ctx uRecordSlotRoot place selected original replacement nested read]
-  simp only [uRecordReplacement, root, ↓reduceIte, access, pure, Except.pure]
+  have rebuilt : uRecordReplacement ctx uRecordSlotRoot place (.replace original selected replacement) =
+      .ok (place, .replace original selected replacement) := by
+    rw [uRecordReplacement.eq_def, root]
+    rfl
+  simp only [rebuilt, access]
 
 /-- The mutable local array at the root of an element place `x[i]`, `x[i][j]`, ... -/
 def uArrayLocal (ctx : UCtx) : SExpr → Option String

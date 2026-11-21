@@ -267,7 +267,9 @@ theorem uRelReturn_eval {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   let b := eval initial right current env
   have bounded := uRelReturn_bounds (loLeft := loLeft) (hiLeft := hiLeft)
     (loRight := loRight) (hiRight := hiRight) ⟨a.lo_le, a.le_hi⟩ ⟨b.lo_le, b.le_hi⟩ passed
-  simp only [eval, Zahl.sub, dif_pos bounded]
+  simp only [eval, Zahl.sub]
+  dsimp only [a, b] at bounded
+  rw [dif_pos bounded]
 
 -- Keep a partially applied large-fuel visitor as a function during closed cbv checks.
 -- Its canonical equation evaluates only the fully supplied statement.
