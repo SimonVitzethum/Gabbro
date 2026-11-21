@@ -208,13 +208,32 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
       exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
         ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
 
-/-- A minimal certifiable unit: one parameterless function declared as the
-    only root. This witnesses certifiability independently of compilation. -/
-def zeugenFn : UFn :=
-  { name := "main", params := [], kinds := [], res := none, held := [], puts := [],
-    gives := [], body := [], ret := .empty }
-
-def zeugenEinheit : UProg :=
-  { tabs := [], locks := [], fns := [zeugenFn], roots := ["main"] }
+/-- After source metadata is admitted, the core checker and the actual start
+    gate together give exactly the goal checker's verdict on the exported unit. -/
+theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
+    (sp : Speicher (declOf u)) (main : (declOf u).Fn)
+    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
+    (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
+    (inv : sperrInvsOk u = true) {guests : List (GuestBoundary (declOf u))}
+    (exported : sourceGuests u = .ok guests) (guest : GuestBoundary.admissionB guests = true) :
+    (accepts u P main = .ok true ∧ unitStartGeprueftB (einheitVon u P Q sp starts gestartet)
+      (List.finRange u.fns.length) (List.finRange u.locks.length) = true) ↔
+    akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
+      (List.finRange u.fns.length) (List.finRange u.locks.length)
+      ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
+  constructor
+  · rintro ⟨accepted, start⟩
+    exact accepts_gibt_einheitVon u P Q sp main starts gestartet _ hws accepted start
+  · intro accepted
+    letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
+    rw [akzeptiertX_pruefer_eq] at accepted
+    simp only [Bool.and_eq_true] at accepted
+    rcases accepted with ⟨⟨⟨⟨core, _⟩, _⟩, invariant⟩, logic⟩
+    refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
+    simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, bind, Except.bind]
+    apply (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mpr
+    rw [akzeptiertX_guest_eq, guest, Bool.and_true]
+    rw [← hws]
+    exact core
 
 end Gabbro.Stage0.OldSource
