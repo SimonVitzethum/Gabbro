@@ -104,7 +104,9 @@ theorem imageDepthTable_exact {D : Deklaration} {functions : Nat} (index : Fin f
     exact depthLookup_ofFn _ _
   | succ depth ih =>
     change (Array.ofFn fun f : Fin functions => _)[(index.symm fn).val]?.getD false = _
-    rw [depthLookup_ofFn, depthSites_ofFn]
+    rw [depthLookup_ofFn]
+    dsimp only
+    rw [depthSites_ofFn (fun f => stellenE (P.rumpf (index f))) (index.symm fn)]
     change (stellenE (P.rumpf (index (index.symm fn)))).all
       (Merkmal.an ⟨fun g => (imageDepthTable index P depth)[(index.symm g).val]?.getD false,
         fun _ => false, fun _ => true⟩) = rufTief P (depth + 1) fn
