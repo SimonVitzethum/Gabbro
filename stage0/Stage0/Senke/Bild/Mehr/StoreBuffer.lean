@@ -358,7 +358,9 @@ theorem projectSCState_cas {layout : Lay} {before after : (TSO layout).St}
     have values := Option.some.inj accepted
     have observedEq : old = observed := congrArg Prod.fst values
     have writtenEq := congrArg Prod.snd values
-    refine Or.inr ⟨old, _, ?_, ?_, ?_⟩
+    refine Or.inr ⟨old, if old = expected then
+      Mem.write (mergedView before.1 footprint) address 8 value.toNat else mergedView before.1 footprint,
+      ?_, ?_, ?_⟩
     · change (mergedView before.1 footprint).cas address expected value = _
       rw [projected, if_pos allowed]
     · rw [returned, observedEq]
