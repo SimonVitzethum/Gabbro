@@ -19,10 +19,10 @@ private theorem sourceTypeUnique {fields : List (String × Parser.STyp)} {name :
     · subst head
       rcases List.mem_cons.mp right with equal | tail
       · exact (congrArg Prod.snd equal).symm
-      · exact (unique.1 (List.mem_map_of_mem tail)).elim
+      · exact (unique.1 (List.mem_map.mpr ⟨(name, second), tail, rfl⟩)).elim
     · rcases List.mem_cons.mp right with atHead | tail
       · subst head
-        exact (unique.1 (List.mem_map_of_mem deeper)).elim
+        exact (unique.1 (List.mem_map.mpr ⟨(name, first), deeper, rfl⟩)).elim
       · exact ih unique.2 deeper tail
 
 private theorem encodeLiveSlots (frame : Frame (Value D)) (live : List String)

@@ -3613,6 +3613,9 @@ ordinary resource index. The two checks use the elaborated argument
 contexts and the finite inventories of both phases.
 `await_pending_preserves` keeps the waiting tag and resource inventory
 and encodes the successor child, including a partially completed join.
+`await_ready_resumes` restores the typed continuation. It binds the polled
+result at the type of the declared destination, preserves every other live
+slot, and keeps the frame's authority marks.
 
 **Complete table-to-G reification remains open.** The builders still require
 actual expression, child-poll and destructor blocks with their ordinary
@@ -3621,8 +3624,7 @@ arbitrary frames/tasks to these finite records, full poll simulation, and
 resource transfer on Ready/cancel are missing. Thus `ReificationDuty` in
 `Async/Regeln.lean` still has no complete G instance. General control flow
 across awaits and source resolution of heterogeneous child types remain open.
-No source async case is claimed to compile. All new proof terms await the
-lead's Lean check.
+Stage 0 currently refuses source async forms.
 
 The outer reader handles mixed ordinary and `async fn` items, nested ordinary
 modules and `pub` visibility, and prints their complete signatures and bodies.
