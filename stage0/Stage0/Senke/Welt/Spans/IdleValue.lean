@@ -43,8 +43,12 @@ theorem idleValue (L : Lay D) : ∀ (τ : Ty) (v : Wert D τ),
       · rw [tag, payload]
         simp only [sumPayloadWords_mapCases]
     · exact valid
+  | .opt _, v => by
+    constructor
+    · cases v <;> simp only [tyR, Ty.mapNumbers, valR, Val.relocate, encodeWords]
+    · rfl
   | .ptr ⟨_, _, .table _⟩, _
-  | .int .., _ | .bool, _ | .opt .., _ | .why .., _ | .fl .., _
+  | .int .., _ | .bool, _ | .why .., _ | .fl .., _
   | .fnptr .., _ | .ref .., _ | .str .., _ => by
     constructor
     · simp only [tyR, Ty.mapNumbers, valR, Val.relocate, encodeWords, Lay.withIdle, Option.elim]
@@ -64,7 +68,7 @@ theorem idleProduct (L : Lay D) : ∀ (fields : List Ty) (v : ProdVal D.Fn D.pas
     have tail := idleProduct L rest v.2
     constructor
     · simpa only [Ty.mapFields, ProdVal.relocate, encodeProductFields, ProdVal.hd, ProdVal.tl]
-        using congrArg₂ List.append head.1 tail.1
+        using congr (congrArg List.append head.1) tail.1
     · exact and_congr head.2 tail.2
 termination_by structural fields => fields
 
