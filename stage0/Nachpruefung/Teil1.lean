@@ -150,6 +150,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.final_segment_encoded
 #print axioms Gabbro.Grammatik.Async.Representation.finalBlock_exec
 #print axioms Gabbro.Grammatik.Async.Representation.finalBlock_simulates
+#print axioms Gabbro.Grammatik.Async.Representation.finalBlock_duty
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
 #print axioms Gabbro.Grammatik.Parser.EffectGroups.expandEffects_exact

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Duty
 
 @[expose] public section
 
@@ -216,5 +217,57 @@ theorem finalBlock_simulates {l : Bool}
     inventory empty resolved known resultType frame locals restored world
   exact ⟨_, _, _, _, step, encoded,
     finalBlock_exec resolved resultType oracle passes calls record world locals⟩
+
+/-- Duty for the selected final running phase. The dispatcher must enter
+    with a represented record and the live locals restored from that frame. -/
+theorem finalBlock_duty {l : Bool}
+    (elaboration : Elaboration D V Λ types f)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (direct : D.Fn → Bool) (indirect : Nat → Bool) (forever : Bool)
+    (inventory : Inventory D) (empty : inventory.owned Phase.completed = [])
+    (resolved : BoundExpression D Λ)
+    (known : elaboration.expression f.result = some resolved)
+    (resultType : resolved.result = types.ordinary f.resultType) :
+    SegmentDuty (inducedModel elaboration calls prices normal) f oracle passes calls
+      prices direct indirect forever (finalBlock (V := V) (l := l) resolved resultType)
+      (fun source world environment => ∃ frame record locals,
+        source = .running f.body.length frame ∧ environment = Env.cons record locals ∧
+          Inv f types inventory source record ∧ localsEnv D resolved.locals frame = some locals ∧
+          HeldB none Λ world.haelt)
+      (fun event target _ environment => ∃ value released,
+        event = .ready value released ∧ target = .completed value ⟨[], []⟩ ∧
+          Inv f types inventory target (environment.get .here)) := by
+  constructor
+  · intro source before environment event target after cost entered stepped
+    obtain ⟨frame, record, locals, rfl, rfl, _, restored, held⟩ := entered
+    obtain ⟨semantic, represented, _⟩ := final_segment_encoded elaboration calls prices normal
+      inventory empty resolved known resultType frame locals restored before
+    rw [semantic] at stepped
+    simp only [Prod.mk.injEq] at stepped
+    obtain ⟨eventEq, targetEq, worldEq, _⟩ := stepped
+    subst event
+    subst target
+    subst after
+    refine ⟨_, finalBlock_exec resolved resultType oracle passes calls record before locals,
+      ⟨_, _, rfl, rfl, represented⟩, ?_⟩
+    change HeldB none Λ (before.lese Λ resolved.expression.orte).haelt
+    rw [lese_haelt]
+    exact held
+  · intro source before environment event target after cost entered stepped
+    obtain ⟨frame, record, locals, rfl, _, _, restored, _⟩ := entered
+    obtain ⟨semantic, _, _⟩ := final_segment_encoded elaboration calls prices normal
+      inventory empty resolved known resultType frame locals restored before
+    rw [semantic] at stepped
+    simp only [Prod.mk.injEq] at stepped
+    obtain ⟨_, _, _, exactCost⟩ := stepped
+    rw [← exactCost]
+    unfold finalBlock
+    rw [evaluateBlock_cost, resolved.liftedCost]
+    change kostenExpr resolved.expression + 1 ≤
+      2 + kostenExpr resolved.expression + (1 + _ + 1)
+    omega
+  · exact evaluateBlock_calls direct indirect forever _ _ _
 
 end Gabbro.Grammatik.Async.Representation
