@@ -393,9 +393,11 @@ def Stage0Correct [Kern] : Prop :=
             ∃ ir steps state, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧
               sim.related events finish ir state ∧ ImageReach output E O (imageSourceStart E) state ∧
               ImageGoalAt output E O state) ∧
-          (∀ events ending count, Tr imageTSO (actX L0) start events ending count → ending ≠ .lauf →
-            ∃ earlier last state, events = earlier ++ last ∧
-              ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending)
+          (∀ events ending count, Tr imageTSO (actX L0) start events ending count →
+            ending ≠ .fault ∧ ending ≠ .unk ∧
+            (ending ≠ .lauf →
+              ∃ earlier last state, events = earlier ++ last ∧
+                ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending))
 
 /-- The two remaining compiler obligations are the checked unit export
     and construction of the simulation for each actual mapped image. The
@@ -420,6 +422,6 @@ theorem stage0_correct_of_export_simulation [Kern]
   obtain ⟨sim⟩ := simulation O calls binding hardware gate answers futex visibility start mapped
   have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted
   exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls unit.postDeckt binding hardware run,
-    fun _ _ _ run stopped => sim.terminal run stopped⟩
+    fun _ _ _ run => ⟨(sim.no_machine_error run).1, (sim.no_machine_error run).2, sim.terminal run⟩⟩
 
 end Gabbro.Stage0

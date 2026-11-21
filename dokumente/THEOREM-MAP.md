@@ -8247,11 +8247,14 @@ spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
 boundary. The returned CLI bytes, canonical source, exported model unit
 and checker verdict are part of the conclusion. The simulation follows
 the x86 and IR histories and matches their endpoints to reachable GX
-states. The statement includes the entire `ZielFX` and matches terminal
-process observations at the last runner step.
+states. The statement includes the entire `ZielFX`, rules out machine
+faults and unknown instructions, and matches terminal process observations
+at the last runner step.
 An explicit non-returning process-exit gate is matched to its typed
 source call and actual request separately from the entry's implicit exit.
 
+`MappedImage.of_mmap_continuation` derives the runner relation from the
+concrete post-mmap instruction address and register.
 `MappedImage.runner_prefix` proves the x86-to-IR part under the host
 answer restrictions. `MappedImage.loader_prefix_goal` relates each
 prefix through loader dispatch to the initial GX state and derives the
