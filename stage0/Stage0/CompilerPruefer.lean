@@ -9,6 +9,7 @@ public import Stage0.Compiler
 public import Stage0.IRBild
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
 public import Grammatik.Parser.Item.ElementTief.ModuleBody
+public import Grammatik.Parser.Elab.UebersetzeAllg3.FunctionResults
 @[expose] public section
 
 namespace Gabbro.Stage0
@@ -30,6 +31,25 @@ theorem Compiled.admission [RootNativeFloat.Hardware] {text : String} {options :
     AkzeptiertSpecX result.program (sperrFamilie result.unit) (List.finRange result.unit.fns.length)
       (OldSource.judgedRoots result.unit result.main) [] [] :=
   OldSource.accepts_program_spec result.unit result.program result.main result.accepted
+
+/-- At each typed AST function index, the checked program uses the body
+    returned by lowering and exactly its lowered precondition. Restoring
+    entry snapshots supplies the postcondition from the same source header. -/
+theorem Compiled.function_from_ast {text : String} {options : Profil.Options}
+    (result : Compiled text options) (f : (declOf result.unit).Fn) :
+    ∃ raw functions lowered expanded requirements,
+      lowerAllg result.unit = .ok (raw, functions) ∧
+      lowerFnAt result.unit f = .ok lowered ∧ result.program.rumpf f = lowered.2.1 ∧
+      result.program.requires f = (if (fnAt result.unit f).needs = [] then .tru else lowered.2.2) ∧
+      expandU (pre108 result.source.prepared.elaborierbar) = .ok (expanded, requirements) ∧
+      OldSource.atFunction (OldSource.koepfeVon expanded) result.unit raw f = .ok (result.program.ensures f) := by
+  obtain ⟨raw, functions, assembled, restored⟩ := result.lowered
+  obtain ⟨lowered, loweredAt, _, body, _⟩ := lowerAllg_fields result.unit raw functions assembled f
+  obtain ⟨same, expanded, requirements, source, post⟩ := OldSource.restore_fields _ _ _ _ restored
+  exact ⟨raw, functions, lowered, expanded, requirements, assembled, loweredAt,
+    (congrArg (fun p => p.rumpf f) same).trans body,
+    (congrArg (fun p => p.requires f) same).trans (lowerAllg_requires _ _ _ assembled f loweredAt),
+    source, post f⟩
 
 /-- Each CLI payload uses the AST derived from its original token sequence
     and the exact elaborated program whose functions pass the model's

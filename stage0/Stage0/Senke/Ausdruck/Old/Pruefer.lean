@@ -162,19 +162,24 @@ theorem accepts_program (u : UProg) (P : Programm (declOf u)) (main : (declOf u)
       (judgedRoots u main) [] [] [] [] (sperrQuellen u) (fun _ => none)
       (some (zeigerSignaturen u)) = true := by
   obtain ⟨guests, _, checked⟩ := accepts_core u P main accepted
-  rw [akzeptiertX_guest_eq] at checked
-  exact (Bool.and_eq_true_iff.mp checked).1
+  have split := (@akzeptiertX_guest_eq (declOf u)
+    (inferInstanceAs (DecidableEq (Fin u.fns.length)))
+    (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
+    _ _ _ _ _ _ _ guests (sperrQuellen u) (fun _ => none) (some (zeigerSignaturen u))).symm.trans checked
+  exact (Bool.and_eq_true_iff.mp split).1
 
 /-- Soundness of the actual checker on the program it judges. The empty
     arena and accumulator lists are those used by `accepts`. -/
 theorem accepts_program_spec [RootNativeFloat.Hardware] (u : UProg) (P : Programm (declOf u))
     (main : (declOf u).Fn) (accepted : accepts u P main = .ok true) :
     AkzeptiertSpecX P (sperrFamilie u) (List.finRange u.fns.length) (judgedRoots u main) [] [] := by
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+  letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
   refine akzeptiertSpecX_of List.mem_finRange List.mem_finRange ?_ [] (accepts_program u P main accepted)
   intro carrier
   cases carrier with
-  | inl table => exact List.mem_append_left _ (List.mem_map_of_mem List.mem_finRange)
-  | inr global => exact List.mem_append_right _ (List.mem_map_of_mem List.mem_finRange)
+  | inl table => exact List.mem_append_left _ (List.mem_map_of_mem (List.mem_finRange table))
+  | inr global => exact List.mem_append_right _ (List.mem_map_of_mem (List.mem_finRange global))
 
 /-- **The step behind the bridge**: a successful `accepts` gives the goal checker's `true` on
     `einheitVon`, whose arenas, accumulators and checks are empty, after the actual start gate succeeds. It says nothing

@@ -135,6 +135,23 @@ theorem collect_eq_sammle : ∀ (n : Nat) (T : Fin n → Type) (get : (i : Fin n
   | n + 1, T, get => by
     simp only [collect, sammle, collect_eq_sammle n]
 
+private theorem collect_at : ∀ {n : Nat} {T : Fin n → Type}
+    {get : (i : Fin n) → Except String (T i)} {values : (i : Fin n) → T i},
+    collect n T get = .ok values → ∀ i, get i = .ok (values i)
+  | 0, _, _, _, _, i => nomatch i
+  | n + 1, T, get, values, read, i => by
+    cases head : get 0 with
+    | error e => simp only [collect, head, bind, Except.bind, reduceCtorEq] at read
+    | ok value =>
+      cases tail : collect n (fun j => T j.succ) (fun j => get j.succ) with
+      | error e => simp only [collect, head, tail, bind, Except.bind, reduceCtorEq] at read
+      | ok following =>
+        simp only [collect, head, tail, bind, Except.bind, pure, Except.pure] at read
+        cases Except.ok.inj read
+        cases i using Fin.cases with
+        | zero => exact head
+        | succ j => exact collect_at tail j
+
 /-- **Compiled code collects through a table filled once** (`sammleSchnell`). -/
 @[csimp] theorem collect_eq_schnell : @collect = @sammleSchnell := by
   funext n T get
@@ -146,21 +163,31 @@ def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
   let es ← collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P)
   pure {P with ensures := es}
 
-/-- Entry-postcondition restoration preserves the exact invariant family. -/
-theorem restore_invariante (items : List SItemTief) (u : UProg)
+/-- Restoring entry snapshots changes only the postcondition family. Each
+    restored predicate comes from the source header of that same function. -/
+theorem restore_fields (items : List SItemTief) (u : UProg)
     (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
-    Q.invariante = P.invariante := by
+    Q = {P with ensures := Q.ensures} ∧
+      ∃ expanded requirements, expandU items = .ok (expanded, requirements) ∧
+        ∀ f, atFunction (koepfeVon expanded) u P f = .ok (Q.ensures f) := by
   unfold restore at h
   cases hx : expandU items with
   | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
-  | ok expanded =>
+  | ok result =>
+    obtain ⟨expanded, requirements⟩ := result
     simp only [hx, bind, Except.bind] at h
-    cases hs : collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P) with
+    cases hs : collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded) u P) with
     | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
     | ok es =>
       simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
       subst Q
-      rfl
+      exact ⟨rfl, expanded, requirements, rfl, collect_at hs⟩
+
+/-- Entry-postcondition restoration preserves the exact invariant family. -/
+theorem restore_invariante (items : List SItemTief) (u : UProg)
+    (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
+    Q.invariante = P.invariante :=
+  congrArg Programm.invariante (restore_fields items u P Q h).1
 
 /-- The thread roots the compiler's check judges: the compiled entry `main` first (the image
     starts it beside every other root, `Senke.bild`), then the unit's declared roots and every
@@ -224,18 +251,8 @@ def acceptsSchnell (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn) 
 /-- Restoring function postconditions retains the exact foreign contract family. -/
 theorem restore_axVertrag (items : List SItemTief) (u : UProg)
     (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
-    Q.axVertrag = P.axVertrag := by
-  unfold restore at h
-  cases hx : expandU items with
-  | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
-  | ok expanded =>
-    simp only [hx, bind, Except.bind] at h
-    cases hs : collect u.fns.length (EnsTy u) (atFunction (koepfeVon expanded.1) u P) with
-    | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
-    | ok es =>
-      simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
-      subst Q
-      rfl
+    Q.axVertrag = P.axVertrag :=
+  congrArg Programm.axVertrag (restore_fields items u P Q h).1
 
 /-- Invert the production decision on its exact program, roots, and guest
     export. The diagnostic path cannot turn a rejected Bool into acceptance. -/

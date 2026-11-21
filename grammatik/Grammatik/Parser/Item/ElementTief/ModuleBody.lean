@@ -13,9 +13,12 @@ private theorem punctuation_read {mark : String} {tokens rest : List Token}
   | nil => cases read
   | cons token tail =>
     cases token <;> simp only [fordereZeichen, reduceCtorEq] at read
+    rename_i spelling
     split at read
     · rename_i exactMark
-      rw [(strEq_eq _ _).mp exactMark, Except.ok.inj read]
+      rw [congrFun (congrFun strEq_eq_schnell spelling) mark] at exactMark
+      have same : spelling = mark := of_decide_eq_true exactMark
+      rw [same, Except.ok.inj read]
     · cases read
 
 private theorem moduleBody_read {fuel : Nat} {header rest : List Token} {node : SItemTief}
@@ -63,7 +66,7 @@ theorem parseModulTief_body {fuel : Nat} {tokens rest : List Token} {node : SIte
     | ok nameResult =>
       obtain ⟨path, afterPath⟩ := nameResult
       simp only [keyword, name] at parsed
-      refine ⟨afterModule, path, afterPath, keyword, name, ?_⟩
+      refine ⟨afterModule, path, afterPath, rfl, rfl, ?_⟩
       split at parsed
       · rename_i tail
         cases parameters : parseGenericParams fuel (.zeichen "[" :: tail) with
@@ -74,9 +77,10 @@ theorem parseModulTief_body {fuel : Nat} {tokens rest : List Token} {node : SIte
           obtain ⟨inside, nodes, opening, body, nodeEq⟩ :=
             moduleBody_read (fun nodes => .moduleTemplateT ("::".intercalate path) params nodes) (by
               simpa only [bind, Except.bind, pure, Except.pure] using parsed)
-          exact ⟨header, inside, nodes, opening, body, .inr ⟨params, parameters, nodeEq⟩⟩
+          exact ⟨header, inside, nodes, opening, body, .inr ⟨params, rfl, nodeEq⟩⟩
       · obtain ⟨inside, nodes, opening, body, nodeEq⟩ :=
-          moduleBody_read (fun nodes => .modT ("::".intercalate path) nodes) (by
+          moduleBody_read (fuel := fuel) (header := afterPath) (rest := rest) (node := node)
+            (fun nodes => .modT ("::".intercalate path) nodes) (by
             simpa only [bind, Except.bind, pure, Except.pure] using parsed)
         exact ⟨afterPath, inside, nodes, opening, body, .inl ⟨rfl, nodeEq⟩⟩
 
