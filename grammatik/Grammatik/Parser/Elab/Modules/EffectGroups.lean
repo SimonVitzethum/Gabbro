@@ -58,19 +58,19 @@ theorem expandEffects_exact (groups : Groups) (bound : List String) (effects exp
     cases candidate : effectGroup groups bound head with
     | none =>
       cases rest : expandEffects groups bound tail with
-      | error err => simp [expandEffects, candidate, rest, bind, Except.bind] at accepted
+      | error err => simp [expandEffects, candidate, rest, bind, Except.bind, pure, Except.pure] at accepted
       | ok result =>
         have returned : [head] ++ result = expanded := by
-          simpa [expandEffects, candidate, rest, bind, Except.bind] using accepted
+          simpa [expandEffects, candidate, rest, bind, Except.bind, pure, Except.pure] using accepted
         simpa only [List.flatMap_cons, candidate, Option.getD_none, ih result rest] using returned.symm
     | some places =>
       by_cases capture : (places.flatMap (Oeffentlich.namenE [])).any bound.contains = true
-      · simp [expandEffects, candidate, capture, bind, Except.bind] at accepted
+      · simp [expandEffects, candidate, capture, bind, Except.bind, pure, Except.pure] at accepted
       · cases rest : expandEffects groups bound tail with
-        | error err => simp [expandEffects, candidate, capture, rest, bind, Except.bind] at accepted
+        | error err => simp [expandEffects, candidate, capture, rest, bind, Except.bind, pure, Except.pure] at accepted
         | ok result =>
           have returned : places ++ result = expanded := by
-            simpa [expandEffects, candidate, capture, rest, bind, Except.bind] using accepted
+            simpa [expandEffects, candidate, capture, rest, bind, Except.bind, pure, Except.pure] using accepted
           simpa only [List.flatMap_cons, candidate, Option.getD_some, ih result rest] using returned.symm
 
 /-- A declared place can be named through its group and retains its write
@@ -79,7 +79,7 @@ theorem effectGroup_erfuellbar (name place : String) :
     isCarrierEffect [place] (.writes (.variable place)) = true ∧
     expandEffects [(name, [.writes (.variable place)])] [] [.param name] =
       .ok [.writes (.variable place)] := by
-  simp [isCarrierEffect, carrier, expandEffects, effectGroup, bind, Except.bind]
+  simp [isCarrierEffect, carrier, expandEffects, effectGroup, bind, Except.bind, pure, Except.pure]
 
 def signature (groups : Groups) (bound : List String) (sig : FnSig) : Except String FnSig := do
   let bound := bound ++ sig.params.map Prod.fst ++ sig.generics.map SGenericParam.name
@@ -129,8 +129,9 @@ def prepare (items : List SItemTief) (literals : List (FnSig × SAnw)) :
   let groups := items.filterMap group
   if groups.isEmpty then return (items, literals)
   let carriers := items.filterMap carrierName
+  let names := items.filterMap Aufloesung.itemName
   for (name, effects) in groups do
-    if (groups.filter (fun other => other.1 == name)).length != 1 then
+    if (names.filter (· == name)).length != 1 then
       throw ("effect group: duplicate declaration " ++ name)
     if !(effects.all (isCarrierEffect carriers)) then
       throw ("effect group: expected reads or writes of declared carriers in " ++ name)

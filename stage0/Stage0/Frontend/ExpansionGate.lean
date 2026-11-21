@@ -16,7 +16,7 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     still run on every instantiated body afterwards (check model A). -/
 def expansionHeader : SItemTief → Bool
   | .moduleTemplateT .. | .moduleUseT .. => true
-  | .specGroupT .. | .implGroupT .. | .taggedByT .. => true
+  | .specGroupT .. | .implGroupT .. | .taggedByT .. | .effectGroupT .. => true
   | item => Generic.genericHeader item
 
 /-- Template and use headers are consumed by expansion, never lowered directly. -/
@@ -130,5 +130,14 @@ theorem checkExpansionGate_ordinary {declarations expanded : List SItemTief}
     simpa only [Modules.validOutput, Bool.and_eq_true, and_assoc] using hv
   rw [← same]
   exact ⟨parts.2.1, parts.2.2.2⟩
+
+/-- A successfully checked expansion consumes all named effect declarations. -/
+theorem checkExpansionGate_noEffectGroups {declarations expanded : List SItemTief}
+    {requirements : List (STyp × String)}
+    (h : checkExpansionGate declarations = .ok (expanded, requirements)) :
+    (expanded.any fun decl => (EffectGroups.group decl).isSome) = false := by
+  have forms := checkExpansionGate_existingForms h
+  simp only [Modules.existingForms, Bool.and_eq_true, Bool.not_eq_true'] at forms
+  exact forms.2
 
 end Gabbro.Stage0.Frontend
