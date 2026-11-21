@@ -14,6 +14,58 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable [Kern]
 
+private theorem exitGroup_request {M : MemSys} {θ : Type} {act : θ → Res θ} {before : Cfg M θ}
+    {last : List Ev} {status : W} (terminal : Tr M act before last (.exit status) 1) :
+    ∃ i t req k, before.ths[i]? = some (some t) ∧ act t = .ask (.sys req) k ∧
+      last = [(i, req, none)] ∧ req.nr.toNat = NR_EXIT_GROUP ∧ req.a1 = status := by
+  have notExit (rest : Res θ) : rest.ende ≠ some (.exit status) := by
+    cases rest <;> intro equal <;> cases equal
+  cases terminal with
+  | tau _ suffix | priv _ _ suffix | ask _ _ _ _ _ suffix | exit _ _ _ suffix |
+      cloneNo _ _ _ _ _ suffix | clone _ _ _ _ _ _ suffix => cases suffix
+  | stop _ stopped | askStop _ _ _ _ stopped | cloneNoStop _ _ _ _ stopped =>
+    exact (notExit _ stopped).elim
+  | exitGroup found asked number => exact ⟨_, _, _, _, found, asked, rfl, number, rfl⟩
+
+/-- The last x86 step of an actual process exit identifies the same request
+    in the related IR thread. The only additional IR work is silent
+    normalization at unchanged memory. -/
+theorem image_exit_group_boundary {before : Cfg imageTSO Runner.X86.X}
+    {ir : Cfg imageTSO (Res T)} {last : List Ev} {status : W}
+    (related : Rel L0 ir before) (terminal : Tr imageTSO (actX L0) before last (.exit status) 1) :
+    ∃ armed steps i req k, ProcessPrefix imageTSO actI ir [] steps armed ∧ Rel L0 armed before ∧
+      armed.ms = ir.ms ∧ armed.ths[i]? = some (some (.ask (.sys req) k)) ∧
+      last = [(i, req, none)] ∧ req.nr.toNat = NR_EXIT_GROUP ∧ req.a1 = status := by
+  obtain ⟨i, _, req, _, found, asked, events, number, arg⟩ := exitGroup_request terminal
+  obtain ⟨armed, rest, matched, slot, control, notNext, steps, silent⟩ :=
+    norm_prefix cinv_L0 related found
+  rcases inv_ask control asked notNext with ⟨_, _, different, _⟩ | ⟨k, rfl, _⟩
+  · cases different
+  · exact ⟨armed, steps, i, req, k, silent, matched, matched.ms.trans related.ms.symm, slot,
+      events, number, arg⟩
+
+/-- If the terminal step is the process exit emitted for the boot-thread
+    clone guard, its status and the refused clone come from the actual
+    runner observations. No source transition is needed for this stop. -/
+theorem image_clone_refusal_stop {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {before : Cfg imageTSO Runner.X86.X} {ir : Cfg imageTSO (Res T)}
+    {prefix last : List Ev} {status : W} {id extra : W}
+    (related : Rel L0 ir before) (terminal : Tr imageTSO (actX L0) before last (.exit status) 1)
+    (bootThread : ∀ i req, (i, req, none) ∈ last → i = 0)
+    (cloneStatus : status = BitVec.ofNat 64 cloneCode)
+    (history : (prefix.filter (fun event => event.1 == 0)).getLast? = some (0, cloneReq, some (id, extra)))
+    (refused : id.toInt < 0) :
+    ImageStopMatches output O state prefix last (.exit status) := by
+  obtain ⟨_, _, i, req, _, _, _, _, _, events, number, arg⟩ :=
+    image_exit_group_boundary related terminal
+  have issuing := bootThread i req (events.symm ▸ List.mem_cons_self)
+  subst i
+  obtain ⟨prior, appended⟩ := List.getLast?_eq_some_iff.mp history
+  exact ⟨0, req, events, number, congrArg Ende.exit arg.symm,
+    Or.inr (Or.inr (Or.inr ⟨rfl, arg.trans cloneStatus, prior, id, extra, appended, refused⟩))⟩
+
 /-- A byte of an actual startup stack belongs to exactly one reservation. -/
 theorem imageStackFootprint_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {i j : Nat} {address : W}
