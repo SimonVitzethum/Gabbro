@@ -208,13 +208,13 @@ theorem memory_process_single_thread {initial final : T} {memory : Mem} {c : PCf
         rw [threads] at found
         obtain ⟨rfl, rfl⟩ := single_thread found
         obtain ⟨count, ran⟩ := complete completed pending
-        exact ⟨_, _, _, count, by rw [threads], ran, .inr (fun done => done)⟩
+        exact ⟨_, _, _, count, by rw [threads]; rfl, ran, .inr (fun done => done)⟩
       | ask found answered =>
         rw [threads] at found
         obtain ⟨rfl, rfl⟩ := single_thread found
         rcases pending with ⟨wrong, _⟩ | resume
         · cases wrong
-        · exact ⟨_, _, _, _, by rw [threads], completed,
+        · exact ⟨_, _, _, _, by rw [threads]; rfl, completed,
             .inr (fun done => resume (.ask answered done))⟩
   obtain ⟨r, last, before, n, threads, completed, pending⟩ := collect path
   rw [atBoundary] at threads
