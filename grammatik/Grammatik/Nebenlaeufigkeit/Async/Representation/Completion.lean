@@ -52,10 +52,11 @@ theorem final_segment_encoded
   let value := Value.typed resolved.result result.1
   let model := inducedModel elaboration calls prices normal
   let done := State.completed (Child := Child D types) value ⟨[], []⟩
-  have typed : valueAt D (types.ordinary f.resultType) value =
-      some (resultType ▸ result.1) := by
-    cases resultType
-    rfl
+  have atType (actual expected : Ty) (same : actual = expected) (payload : Wert D actual) :
+      valueAt D expected (Value.typed actual payload) = some (same ▸ payload) := by
+    subst expected
+    exact valueAt_typed D actual payload
+  have typed := atType resolved.result (types.ordinary f.resultType) resultType result.1
   obtain ⟨record, represented⟩ :=
     completed_inv (f := f) inventory value _ typed empty
   refine ⟨?_, record, represented, inv_encoded f types inventory done record represented⟩
@@ -65,7 +66,8 @@ theorem final_segment_encoded
   have evaluates : model.evaluate f.result frame world = (value, result.2.1, result.2.2) := by
     exact evaluateBound_resolved elaboration f.result resolved known frame environment restored world
   change (let (value, world', cost) := model.evaluate f.result frame world
-      (.ready value frame.marks, .completed value (clear frame), world', cost + 1)) = _
+      (Event.ready value frame.marks, State.completed (Child := Child D types) value (clear frame),
+        world', cost + 1)) = _
   rw [evaluates]
   rfl
 

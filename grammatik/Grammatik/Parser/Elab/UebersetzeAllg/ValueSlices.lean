@@ -9,6 +9,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Gabbro.Grammatik.LowLevel.Construct
+open Uebersetze
 
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
@@ -17,9 +18,12 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 def arraySpan {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length)) :
     (first count : Nat) → first + count ≤ length → Expr D Γ Λ (.arr τ count)
   | _, 0, _ => .arrNil
-  | first, count + 1, fits =>
-    .arrCons (.arrGet operand (.widen (by omega) (by omega) (.lit (Int.ofNat first))))
+  | first, count + 1, fits => by
+    have low : 0 ≤ (first : Int) := by omega
+    have high : (first : Int) ≤ (length : Int) - 1 := by omega
+    exact .arrCons (.arrGet operand (.widen low high (.lit (first : Int))))
       (arraySpan operand (first + 1) count (by omega))
+termination_by structural _ count _ => count
 
 /-- Element selection has the half-open slice semantics on every world
     and environment, including values that were read from memory. -/
@@ -58,9 +62,13 @@ theorem arraySpan_refines {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr
 /-- An index in a slice is shifted only after checking its relative
     range. The result is an ordinary index into the original array. -/
 def shiftedSliceIndex {length first last : Nat} (bounds : SliceOk length first last)
-    (index : Expr D Γ Λ (.index (last - first))) : Expr D Γ Λ (.index length) :=
-  .widen (by omega) (by have ordered := bounds.1; have high := bounds.2; omega)
-    (.add (.lit (Int.ofNat first)) index)
+    (index : Expr D Γ Λ (.index (last - first))) : Expr D Γ Λ (.index length) := by
+  have low : 0 ≤ (first : Int) + 0 := by omega
+  have high : (first : Int) + (((last - first : Nat) : Int) - 1) ≤ (length : Int) - 1 := by
+    have ordered := bounds.1
+    have inside := bounds.2
+    omega
+  exact .widen low high (.add (.lit (first : Int)) index)
 
 theorem eval_indexedArraySlice {τ : Ty} {length first last : Nat}
     (operand : Expr D Γ Λ (.arr τ length)) (bounds : SliceOk length first last)
@@ -103,7 +111,7 @@ def lowerIndexedSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
   | ⟨.arr τ length, operand⟩ =>
     if bounds : SliceOk length first last then
       if low : 0 ≤ index.range.1 then
-        if high : index.range.2 ≤ (Int.ofNat (last - first)) - 1 then
+        if high : index.range.2 ≤ ((last - first : Nat) : Int) - 1 then
           .ok ⟨τ, .arrGet operand (shiftedSliceIndex bounds (.widen low high index.term))⟩
         else .error "slice: index outside the selected range"
       else .error "slice: index outside the selected range"
@@ -129,7 +137,7 @@ theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
 theorem eval_stringSlice {maximum : Nat} (bytes : List (Zahl 0 255))
     (stored : bytes.length ≤ maximum) (first last : Nat)
     (bounds : SliceOk bytes.length first last) (initial world : World D) (env : Env D Γ) :
-    eval initial (.strLit (sliceValue bytes first last)
+    eval initial (Expr.strLit (Λ := Λ) (sliceValue bytes first last)
       (Nat.le_of_eq (sliceValue_length bytes first last bounds))) world env =
       strSliceValue (⟨bytes, stored⟩ : Wert D (.str maximum)) first last bounds := by
   rw [eval]
@@ -142,6 +150,7 @@ theorem arraySlice_erfuellbar {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (
       eval initial operand world env := by
   funext index
   rw [eval_arraySpan]
-  rfl
+  apply congrArg (eval initial operand world env)
+  exact Fin.ext (Nat.zero_add index.val)
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
