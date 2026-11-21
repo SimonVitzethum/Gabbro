@@ -94,7 +94,9 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
     let value ← uRecordSide ctx wert (fun source _ => uWertBody ctx source)
     let (root, rebuilt) ← uRecordReplacement ctx uAggregateVariableRoot ziel value
     let .variable name := root | .error e
-    if ctx.names.any (strEq · name) then throw "aggregate update requires a mutable local"
+    let .ok (.glob original) := uWertBody ctx (.variable name)
+      | .error "aggregate update requires a mutable static or local"
+    if !strEq original name then throw "aggregate update resolves to a different static"
     let some global := ctx.globs.find? (fun x => strEq x.name name) | .error e
     if !global.var then throw "write to an immutable static"
     if global.atomic then throw "plain write to an atomic: every store is a publish"
@@ -104,22 +106,22 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
 /-- A field of an element of a static aggregate rebuilds both layers
     before the canonical store. The same scope and write checks apply. -/
 theorem uGlobSchreib_indexedField (ctx : UCtx) (name field error : String) (index source : SExpr)
-    (array element offset replacement : USide) (global : UGlob)
-    (localAbsent : ctx.names.any (strEq · name) = false)
+    (element offset replacement : USide) (global : UGlob)
     (lookup : ctx.globs.find? (fun x => strEq x.name name) = some global)
     (mutable : global.var = true) (ordinary : global.atomic = false)
     (readValue : uRecordSide ctx source (fun value _ => uWertBody ctx value) = .ok replacement)
-    (readArray : uWertBody ctx (.variable name) = .ok array)
+    (readArray : uWertBody ctx (.variable name) = .ok (.glob name))
     (readIndex : uWertBody ctx index = .ok offset)
     (readElement : uWertBody ctx (.index (.variable name) index) = .ok element) :
     uGlobSchreib ctx (.field (.index (.variable name) index) field) source error =
-      .ok (.assignGlob name (.upd array offset (.replace element field replacement))) := by
+      .ok (.assignGlob name (.upd (.glob name) offset (.replace element field replacement))) := by
+  have same : strEq name name = true := by simp [strEq_apply_eq_decide]
   simp only [uGlobSchreib, readValue, bind, Except.bind,
     uRecordReplacement_step ctx uAggregateVariableRoot (.index (.variable name) index)
       field element replacement rfl readElement,
-    uRecordReplacement_index ctx uAggregateVariableRoot (.variable name) index array offset _ rfl readArray readIndex,
-    uRecordReplacement_root ctx uAggregateVariableRoot (.variable name) _ rfl, localAbsent, lookup, mutable, ordinary,
-    Bool.false_eq_true, Bool.not_true, ↓reduceIte, pure, Except.pure]
+    uRecordReplacement_index ctx uAggregateVariableRoot (.variable name) index (.glob name) offset _ rfl readArray readIndex,
+    uRecordReplacement_root ctx uAggregateVariableRoot (.variable name) _ rfl, readArray, lookup, mutable, ordinary,
+    same, Bool.false_eq_true, Bool.not_true, ↓reduceIte, pure, Except.pure]
 
 /-- A mutable static array of records supplies all source-side premises for
     an indexed field update. This calculation is uniform in the remaining
@@ -133,7 +135,6 @@ theorem staticIndexedField_erfuellbar (ctx : UCtx) (name field error : String) (
         (.replace (.idx (.glob name) (.lit 0)) field (.truth true)))) := by
   intro global scope
   apply uGlobSchreib_indexedField (global := global)
-  · rfl
   · simp [scope, global, strEq_apply_eq_decide]
   · rfl
   · rfl
