@@ -2,7 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.Mehr.PrivatePath
-public import Stage0.Senke.Welt.IdleLayout
+public import Stage0.Senke.Welt.Spans.IdleValue
 
 @[expose] public section
 
@@ -48,7 +48,7 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
     (buffers : PrivateBuffers footprint initial.ms.1)
     (machineReached : TSOPrivateReachable runnerLayout footprint initial final) :
     let E := output.goalUnit Q
-    WeltAt initial.ms.1.m output.image.Y (initialWorld output.compiled.unit output.initialValid) ∧
+    WeltAt initial.ms.1.m output.image.Y.withIdle ((speicherR E.sp0).welt []) ∧
     ∃ updated, MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
         ⟨(projectSCState footprint final.ms).1, final.ths⟩ state updated positions committed ∧
       AlleBlind final.ths ∧
@@ -60,7 +60,7 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
     tso_private_runs_refine rel blind access buffers machineReached
   have imageLoaded : BytesAt initial.ms.1.m Runner.Prog.IMG output.bytes :=
     (irBild_eq_output built payload).symm ▸ loaded
-  exact ⟨output.loaded_initial_world imageLoaded, updated, rel', blind',
+  exact ⟨(output.loaded_initial_world imageLoaded).withIdle, updated, rel', blind',
     output.zielsatz Q certifiable dispatch runtime checked callSites posts O binding hardware sourceReached⟩
 
 end Gabbro.Stage0

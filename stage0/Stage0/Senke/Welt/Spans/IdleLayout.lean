@@ -31,23 +31,16 @@ def Lay.withIdle (L : Lay D) : Lay D.mitRuhe where
 
 theorem sumFits_mapNumbers (sigNum tabNum : Nat → Nat) (cases : List (Option Ty)) :
     sumFits (Ty.mapCases sigNum tabNum cases) = sumFits cases := by
-  have packed : ∀ cs : List (Option Ty),
-      (Ty.mapCases sigNum tabNum cs).all (fun
-        | none => true
-        | some (.int lo hi) => decide (hi - lo < 2 ^ 56)
-        | some _ => false) =
-      cs.all (fun
-        | none => true
-        | some (.int lo hi) => decide (hi - lo < 2 ^ 56)
-        | some _ => false) := by
-    intro cs
-    induction cs with
-    | nil => rfl
-    | cons c cs ih =>
-      cases c with
-      | none => simp only [Ty.mapCases, List.all_cons, ih]
-      | some ty => cases ty <;> simp only [Ty.mapCases, Ty.mapNumbers, List.all_cons, ih]
-  simp only [sumFits, Ty.mapCases_length, packed]
+  simp only [sumFits, Ty.mapCases_length]
+  apply congrArg (fun all => decide (cases.length ≤ 256) && all)
+  induction cases with
+  | nil => rfl
+  | cons c cs ih =>
+    cases c with
+    | none => simp only [Ty.mapCases, List.all_cons, ih]
+    | some ty =>
+      cases ty <;> simp only [Ty.mapCases, Ty.mapNumbers, List.all_cons, ih]
+
 
 mutual
 /-- Representation widths are invariant under renumbering of nominal
