@@ -191,6 +191,18 @@ def leafCondition {context : Context A next} (policy : A → CallObligation prog
   | .onTag .. => .error (.unsupported "contract tagged dispatch needs a typed payload observation")
   | .axiomCall .. | .axiomCallElse .. => .error (.unsupported "contract oracle call needs quantified answer and poststate observations")
   | .forever .. => .error (.unsupported "contract forever loop needs a checked inductive invariant")
+  | .consumeTraverse table member edge .tru bound mass body =>
+      if empty : (D.count table).toNat = 0 then
+        memoryIdentityStatement policy symbols bounded (.consumeTraverse table member edge .tru bound mass body)
+          (fun _ world _ => by
+            let checked := world.lese Λ (Expr.tru (D := D) (Γ := Γ) (Λ := Λ)).orte
+            let after := checked.lese Λ (member.orte ++ edge.orte)
+            have indices : alleIndizes (D.count table) = [] := by
+              simp only [alleIndizes, empty, List.range_zero, List.filterMap_nil]
+            refine ⟨after, (assignment_lese checked Λ _).trans (assignment_lese world Λ _), ?_⟩
+            simp only [execStmtH, verbrauchLauf, eval, wahr?, Bool.true_eq_false, ↓reduceIte,
+              verbrauchSel, indices, verbrauchWahl, verbrauchWahlAux, List.all_nil, Bool.not_true]) goals
+      else .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")
   | .consumeTraverse .. => .error (.unsupported "contract consuming traversal needs a checked membership and measure invariant")
   | _ => .error (.unsupported "contract structured statement needs the recursive control compiler")
 
