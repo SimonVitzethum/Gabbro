@@ -387,7 +387,7 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
     child addresses and the buffer holds the writes without a flush. -/
 theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
-    {s : (TSO L0).St} (empty : s.1.buf 0 = [])
+    {s : (TSO L0).St} (empty : ∀ i, s.1.buf i = [])
     (loaded : BytesAt s.1.m Runner.Prog.IMG output.bytes)
     {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
       Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
@@ -401,6 +401,9 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
         ⟨after, [some (.next (nxt parent)), some (.next child)]⟩ ∧ after.1.m = s.1.m ∧
       (output.bootActivation Q 1).lebt 1 = true ∧
       initRuhe (output.goalUnit Q).starts 1 = ⟨some start.1, envR start.2⟩ ∧
+      (∃ frame, startFrameBytes output.image.Ks (FB + FB)
+        (encodeEnv output.image.Y.withIdle (envR start.2)) = some frame ∧
+        BytesAt (after.1.view 1) (output.image.fp0 + 8 * output.image.Ks) frame) ∧
       ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
         FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
           (GeteiltV (output.goalUnit Q).P (output.goalUnit Q).ws)
@@ -426,7 +429,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       children _ (List.mem_of_getElem? indexed)
   obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q (output.loaded_code loaded) declared
   simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one, BitVec.add_zero] at site
-  have beforeView : s.1.view 0 = s.1.m := by simp only [TSt.view, empty, List.foldl_nil]
+  have beforeView (i : Nat) : s.1.view i = s.1.m := by simp only [TSt.view, empty i, List.foldl_nil]
   let entered : Cfg (TSO L0) (Res T) :=
     ⟨s, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
   have farSite : CodeFar (BitVec.ofNat 64 codeBase) 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
@@ -434,8 +437,8 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     simp only [spawnC_len, count, CodeFar] at far
     unfold CodeFar
     omega
-  obtain ⟨prepared, preparation, committed, _, instruction, entry, stack⟩ :=
-    spawn_prepare_prefix (before := entered) (i := 0) rfl (beforeView.symm ▸ site) (beforeView.symm ▸ frame)
+  obtain ⟨prepared, preparation, committed, preparedViews, _, instruction, entry, stack⟩ :=
+    spawn_prepare_prefix (before := entered) (i := 0) rfl ((beforeView 0).symm ▸ site) ((beforeView 0).symm ▸ frame)
       farSite (by omega) slots specific.1 specific.2
   have readFrame := output.loader_frame loaded
   have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
@@ -443,7 +446,7 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
         (Mach.lbl 0 (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG))
           (some (BitVec.ofNat 64 output.image.fp0, 0))) entered :=
       .ask (i := 0) rfl rfl rfl
-        ⟨rfl, 0, by simp only [beforeView, rdN, readFrame, Option.map_some]⟩ rfl
+        ⟨rfl, 0, by simp only [beforeView 0, rdN, readFrame, Option.map_some]⟩ rfl
     exact .ofStep step
   have sxIndex : sx (II.f (startScratch output.compiled.main)) =
       BitVec.ofNat 64 (startScratch output.compiled.main) := sx_nat (by omega)
@@ -458,11 +461,27 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
       (slot parent.fp (sx (II.f ((startScratch output.compiled.main + 2 : Nat) : Int)))) 8 = true := by
     rw [destWord, committed, ← foldl_wr (s.1.buf 0) s.1.m]
     exact frame.wr _ (by omega)
-  obtain ⟨finished, resume, memory, _⟩ := tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
+  obtain ⟨finished, resume, memory, _, finalViews⟩ :=
+    tso_ret1_prefix (before := active) (i := 0) rfl instruction.f1 writable
+  have childView : finished.1.view 1 = s.1.m :=
+    (finalViews 1 (by decide)).trans ((preparedViews 1 (by decide)).trans (beforeView 1))
+  obtain ⟨stackBytes, encoded, stackLoaded⟩ := output.goal_arguments_loaded Q loaded
+  have selected : ((output.goalUnit Q).starts.map
+      (fun initial => encodeEnv output.image.Y.withIdle (envR initial.2)))[1]? =
+      some (encodeEnv output.image.Y.withIdle (envR start.2)) := by
+    rw [List.getElem?_map, output.goalUnit_starts]
+    change Option.map _ output.starts[0]? = _
+    simp only [declared, Option.map_some]
+  obtain ⟨fits, exactWords⟩ := List.getElem?_eq_some_iff.mp selected
+  obtain ⟨childBytes, childEncoded, childLoaded⟩ :=
+    startStackBytes_frame encoded output.image.fp0 stackLoaded 1 fits
+  rw [exactWords] at childEncoded
+  simp only [Nat.mul_one] at childLoaded
   have childLive : (output.bootActivation Q 1).lebt 1 = true := by
     change decide (1 ≤ min 1 output.starts.length) = true
     simpa only [Nat.min_eq_left (Nat.succ_le_of_lt present)] using decide_eq_true (Nat.le_refl 1)
-  refine ⟨finished, ?_, memory.trans committed, childLive, logical, fun O => output.bootActivation_step Q O present⟩
+  refine ⟨finished, ?_, memory.trans committed, childLive, logical,
+    ⟨childBytes, childEncoded, childView.symm ▸ childLoaded⟩, fun O => output.bootActivation_step Q O present⟩
   simpa only [List.append_nil] using ((loadedEntry.trans preparation).trans cloned).trans resume
 
 end Gabbro.Stage0

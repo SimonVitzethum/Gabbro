@@ -25,6 +25,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
       ProcessPrefix (TSO layout) actI before [] 10
         ⟨after, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
+      (∀ j, j ≠ i → after.1.view j = before.ms.1.view j) ∧
       Agree fp s K (before.ms.1.view i) (after.1.view i) ∧
       InsAt (after.1.view i) (pc + BitVec.ofNat 64 (16 * 2)) 24 (II.f ((s + 2 : Nat) : Int))
         (II.f s) (II.f 0) ∧
@@ -39,7 +40,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
   have writable0 : Mem.all before.ms.1.m.wr (slot fp (sx (II.f s))) 8 = true := by
     rw [sx0, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr s (by omega)
-  obtain ⟨middle, prefix0, committed0, view0⟩ := tso_const_prefix running first writable0
+  obtain ⟨middle, prefix0, committed0, view0, other0⟩ := tso_const_prefix running first writable0
   rw [sx0, sx_nat address] at view0
   have same0 : Agree fp s K (before.ms.1.view i) (middle.1.view i) := by
     rw [view0]
@@ -54,7 +55,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
   have writable1 : Mem.all middle.1.m.wr (slot fp (sx (II.f ((s + 1 : Nat) : Int)))) 8 = true := by
     rw [sx1, ← foldl_wr (middle.1.buf i) middle.1.m]
     exact (frame.agree same0).wr (s + 1) (by omega)
-  obtain ⟨after, prefix1, committed1, view1⟩ := tso_const_prefix running1 second writable1
+  obtain ⟨after, prefix1, committed1, view1, other1⟩ := tso_const_prefix running1 second writable1
   rw [sx1, sx_nat stack] at view1
   have same1 : Agree fp s K (middle.1.view i) (after.1.view i) := by
     rw [view1]
@@ -62,7 +63,8 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
   have same := same0.trans same1
   have decoded := (code.agree same (spawnOne_len s a f ▸ far)) 2 (by rw [spawnOne_len]; decide)
   have advanced : (pc + 16 + 16) = pc + BitVec.ofNat 64 (16 * 2) := pcN pc 1 1 2 rfl
-  refine ⟨after, ?_, committed1.trans committed0, same, decoded, ?_, ?_⟩
+  refine ⟨after, ?_, committed1.trans committed0, fun j different => (other1 j different).trans (other0 j different),
+    same, decoded, ?_, ?_⟩
   · simpa only [middleCfg, nxt, List.set_set, List.nil_append, advanced, Nat.reduceAdd] using prefix0.trans prefix1
   · rw [view1, rd64_write_far (slot_far frame.room (by omega) (by omega) (by omega)), view0]
     exact rd64_wr64 (wr64_some (frame.wr _ (by omega))) (frame.rd _ (by omega))

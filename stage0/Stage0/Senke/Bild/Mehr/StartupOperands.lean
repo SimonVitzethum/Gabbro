@@ -39,7 +39,8 @@ theorem tso_ret1_prefix {layout : Lay}
       ProcessPrefix (TSO layout) actI before [] 2
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
-      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat := by
+      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
   have outsideTable (j : Nat) (inside : j < 8) :
       ¬ TB layout (slot parent.fp (sx dest) + BitVec.ofNat 64 j) := by
     intro touches
@@ -97,7 +98,7 @@ theorem tso_ret1_prefix {layout : Lay}
     rfl, ?_⟩
   rcases tso_store_updates_view answered with refused | accepted
   · cases refused.1
-  · exact accepted.2.1
+  · exact accepted.2
 
 /-- The real runner loads an immediate, enqueues its destination store,
     and advances to the next instruction. The issuer can already read
@@ -112,7 +113,8 @@ theorem tso_const_prefix {layout : Lay}
       ProcessPrefix (TSO layout) actI before [] 5
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
-      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 (sx value).toNat := by
+      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 (sx value).toNat ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
   have inside := (List.getElem?_eq_some_iff.mp running).1
@@ -131,10 +133,10 @@ theorem tso_const_prefix {layout : Lay}
       (fun answer => opt answer fun pair => ret1 parent (sx (pair.1.setWidth 32))) loaded
   have retReady : (onThread (ret1 parent (sx value))).ths[i]? = some (some (ret1 parent (sx value))) :=
     List.getElem?_set_self inside
-  obtain ⟨after, result, committed, view⟩ := tso_ret1_prefix retReady instruction.f1 writable
+  obtain ⟨after, result, committed, view, other⟩ := tso_ret1_prefix retReady instruction.f1 writable
   have reads : ProcessPrefix (TSO layout) actI before [] 3 (onThread (ret1 parent (sx value))) :=
     .cons started (.cons fetched (.cons immediate (.nil _)))
-  refine ⟨after, ?_, committed, view⟩
+  refine ⟨after, ?_, committed, view, other⟩
   simpa only [onThread, List.set_set, List.nil_append] using reads.trans result
 
 end Gabbro.Stage0.Senke.BildMehr
