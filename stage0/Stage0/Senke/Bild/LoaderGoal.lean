@@ -257,7 +257,7 @@ theorem bootClone_step {M : MemSys} {before : Cfg M (Res T)} {i : Nat}
     subst id
     exact (by decide : ¬ (0 < (0 : W).toInt)) positive
   constructor
-  · exact .clone pending rfl answer positive (by simp only [opt_some, if_neg nonzero]) rfl
+  · exact .clone pending rfl answer positive (by simp only [opt_some, ite_eq_right nonzero]) rfl
   · rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
     rfl
 
@@ -296,8 +296,8 @@ theorem bootClone_read_prefix {layout : Runner.Beweis.Lay}
   have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step parent)) :=
     .priv running rfl
   have fetched : ProcessStep (TSO layout) actI (onThread (IR.step parent)) [] (onThread (op 24 parent)) := by
-    have loaded : rdN (before.ms.1.view i) 1 parent.pc = some ((BitVec.ofNat 8 24).setWidth 64) :=
-      congrArg (Option.map fun byte => byte.setWidth 64) instruction.op
+    have loaded : rdN (before.ms.1.view i) 1 parent.pc = some ((BitVec.ofNat 8 24).setWidth 64) := by
+      simp only [rdN, instruction.op, Option.map_some]
     exact read 1 parent.pc _ (fun answer => opt answer fun pair =>
       op (pair.1.setWidth 8 |>.setWidth 64).toNat parent) loaded
   have indexed : ProcessStep (TSO layout) actI (onThread (op 24 parent)) []
