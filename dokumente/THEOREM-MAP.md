@@ -8158,6 +8158,8 @@ of the model's row layout cannot describe that encoding for two nonempty fields
 and two or more indices.
 
 `projectSCState_read_shared` and `projectSCState_cas_shared` preserve the results of
-operations outside the private footprints. `irBild_x86_private_zielsatz` transfers
+operations outside the private footprints. `tso_memory_process_projects` preserves
+the answers and endpoint of a process prefix which interleaves those shared requests
+with private operations and buffer drains. `irBild_x86_private_zielsatz` transfers
 `ZielFX` to the committed state at the matching IR endpoint of an actual private x86
 prefix. The initial GX relation and the request footprint checks are explicit premises.

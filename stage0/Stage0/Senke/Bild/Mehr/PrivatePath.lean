@@ -88,6 +88,13 @@ theorem privateBuffers_empty {footprint : Nat → W → Prop} {state : TSt}
   rw [empty i] at pending
   cases pending
 
+private theorem PrivateBuffers.disjoint {footprint : Nat → W → Prop} {state : TSt}
+    (owned : PrivateBuffers footprint state) :
+    ∀ i store, store ∈ state.buf i → ∀ j, j ≠ i →
+      ∀ address, footprint j address → ¬ fenster store.1 address :=
+  fun i store pending j different address present touched =>
+    different ((owned i store pending address touched).2 j present)
+
 private theorem privateBuffers_set {footprint : Nat → W → Prop} {state : TSt}
     (before : PrivateBuffers footprint state) (i : Nat) (stores : List (W × W))
     (owns : ∀ store, store ∈ stores → ∀ address, fenster store.1 address →
@@ -103,9 +110,8 @@ private theorem privateBuffers_answer {layout : Runner.Beweis.Lay}
     {before after : (TSO layout).St} {i : Nat} {request : Op} {answer : Ans}
     {footprint : Nat → W → Prop} (buffers : PrivateBuffers footprint before.1)
     (memory : istSpeicherOp request = true) (step : (TSO layout).ans before i request answer after)
-    (within : ∀ address, fussOp request address → footprint i address)
-    (exclusive : schreibtOp request = true →
-      ∀ address, fussOp request address → ∀ j, footprint j address → j = i) :
+    (newStore : ∀ {base value}, request = .wr base value → ∀ address, fenster base address →
+      footprint i address ∧ ∀ j, footprint j address → j = i) :
     PrivateBuffers footprint after.1 := by
   cases request with
   | rd _ _ => rw [step.1]; exact buffers
@@ -119,7 +125,7 @@ private theorem privateBuffers_answer {layout : Runner.Beweis.Lay}
       · exact buffers i store earlier address touched
       · have same : store = (base, value) := List.mem_singleton.mp last
         subst store
-        exact ⟨within address touched, exclusive rfl address touched⟩
+        exact newStore rfl address touched
   | cas _ _ _ =>
     rcases step.2 with ⟨_, _, same⟩ | ⟨_, _, _, _, updated⟩
     · rw [same]; exact buffers
@@ -171,23 +177,20 @@ theorem tso_private_projects {layout : Runner.Beweis.Lay} {footprint : Nat → W
     PrivateBuffers footprint final.ms.1 ∧
       SCErreichbar layout ⟨projectSCState footprint initial.ms, initial.ths⟩
         ⟨projectSCState footprint final.ms, final.ths⟩ := by
-  have disjoint {state : TSt} (owned : PrivateBuffers footprint state) :
-      ∀ i store, store ∈ state.buf i → ∀ j, j ≠ i →
-        ∀ address, footprint j address → ¬ fenster store.1 address :=
-    fun i store pending j different address present touched =>
-      different ((owned i store pending address touched).2 j present)
   induction reached with
   | start => exact ⟨buffers, .start⟩
   | priv _ ready ih =>
     exact ⟨ih.1, .schritt ih.2 (.priv ready)⟩
   | ask _ ready memory answer within exclusive ih =>
-    exact ⟨privateBuffers_answer ih.1 memory answer within exclusive,
+    refine ⟨privateBuffers_answer ih.1 memory answer ?_,
       .schritt ih.2 (.ask ready memory
-        (project_private_request memory answer footprint within exclusive (disjoint ih.1)))⟩
+        (project_private_request memory answer footprint within exclusive ih.1.disjoint))⟩
+    rintro _ _ rfl address touched
+    exact ⟨within address touched, exclusive rfl address touched⟩
   | flush _ flush ih =>
     refine ⟨privateBuffers_flush ih.1 flush, ?_⟩
     rw [projectSCState_flush flush footprint
-      (fun i store pending address touched => (ih.1 i store pending address touched).1) (disjoint ih.1)]
+      (fun i store pending address touched => (ih.1 i store pending address touched).1) ih.1.disjoint]
     exact ih.2
 
 /-- A private TSO path preserves the source thread machine and its committed
@@ -305,5 +308,97 @@ theorem runner_private_endpoint {layout : Runner.Beweis.Lay} {footprint : Nat �
       Rel layout final after ∧ TSOPrivateReachable layout footprint initial final := by
   obtain ⟨final, steps, run, same⟩ := runner_process_prefix fixed code related path
   exact ⟨final, steps, run, same, .of_process_prefix run access⟩
+
+/-- Requests whose answers and effects are preserved by the SC projection. -/
+inductive ProjectedRequest (footprint : Nat → W → Prop) (thread : Nat) : Op → Prop where
+  | owned {request : Op} : istSpeicherOp request = true →
+      (∀ y, fussOp request y → footprint thread y) →
+      (schreibtOp request = true → ∀ y, fussOp request y → ∀ j, footprint j y → j = thread) →
+      ProjectedRequest footprint thread request
+  | sharedRead {width : Nat} {address : W} :
+      (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
+      ProjectedRequest footprint thread (.rd width address)
+  | sharedCAS {address expected value : W} :
+      (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
+      ProjectedRequest footprint thread (.cas address expected value)
+
+private theorem ProjectedRequest.projects {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {before after : (TSO layout).St} {i : Nat} {request : Op} {response : Ans}
+    (accepted : ProjectedRequest footprint i request) (buffers : PrivateBuffers footprint before.1)
+    (answered : (TSO layout).ans before i request response after) :
+    PrivateBuffers footprint after.1 ∧ istSpeicherOp request = true ∧
+      (SC layout).ans (projectSCState footprint before) i request response (projectSCState footprint after) := by
+  cases accepted with
+  | owned memory within exclusive =>
+    refine ⟨privateBuffers_answer buffers memory answered ?_, memory,
+      project_private_request memory answered footprint within exclusive buffers.disjoint⟩
+    rintro _ _ rfl address touched
+    exact ⟨within address touched, exclusive rfl address touched⟩
+  | sharedRead outside =>
+    refine ⟨privateBuffers_answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl, ?_⟩
+    exact projectSCState_read_shared answered footprint outside
+      (fun thread store pending y touched => (buffers thread store pending y touched).1)
+  | sharedCAS outside =>
+    exact ⟨privateBuffers_answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl,
+      projectSCState_cas_shared answered footprint outside⟩
+
+/-- Every actual silent TSO prefix with classified memory requests projects
+    to SC, including shared reads and CAS between private operations. -/
+theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {initial final : Cfg (TSO layout) (Res T)} {count : Nat}
+    (path : ProcessPrefix (TSO layout) actI initial [] count final)
+    (buffers : PrivateBuffers footprint initial.ms.1)
+    (classify : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
+      ProcessPrefix (TSO layout) actI initial events n c →
+      ∀ {i : Nat} {op : Op} {resume : Ans → Res T} {response : Ans} {after : (TSO layout).St},
+        c.ths[i]? = some (some (.ask op resume)) → op.special = false → lbl i op response = [] →
+        (TSO layout).ans c.ms i op response after → ProjectedRequest footprint i op) :
+    PrivateBuffers footprint final.ms.1 ∧
+      SCErreichbar layout ⟨projectSCState footprint initial.ms, initial.ths⟩
+        ⟨projectSCState footprint final.ms, final.ths⟩ := by
+  let projected (c : Cfg (TSO layout) (Res T)) : Cfg (SC layout) (Res T) :=
+    ⟨projectSCState footprint c.ms, c.ths⟩
+  have advance {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {n : Nat}
+      (seen : ProcessPrefix (TSO layout) actI initial events n before)
+      (step : ProcessStep (TSO layout) actI before [] after)
+      (owned : PrivateBuffers footprint before.ms.1)
+      (reached : SCErreichbar layout (projected initial) (projected before)) :
+      PrivateBuffers footprint after.ms.1 ∧ SCErreichbar layout (projected initial) (projected after) := by
+    generalize quiet : ([] : List Ev) = labels at step
+    cases step with
+    | tau flushed =>
+      refine ⟨privateBuffers_flush owned flushed, ?_⟩
+      change SCErreichbar layout (projected initial) ⟨projectSCState footprint _, _⟩
+      rw [projectSCState_flush flushed footprint
+        (fun i store pending y touched => (owned i store pending y touched).1) owned.disjoint]
+      exact reached
+    | @priv i r _ ready evaluated =>
+      cases r <;> cases evaluated
+      exact ⟨owned, .schritt reached (.priv ready)⟩
+    | @ask i r _ _ _ response _ ready evaluated ordinary answered resumed =>
+      cases r with
+      | next | fault | unk => cases evaluated
+      | ask request resume =>
+        cases evaluated
+        cases resumed
+        obtain ⟨stillOwned, memory, scAnswer⟩ :=
+          (classify seen ready ordinary quiet.symm answered).projects owned answered
+        exact ⟨stillOwned, .schritt reached (.ask ready memory scAnswer)⟩
+    | exit | cloneNo | clone => cases quiet
+  have extend {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {steps : Nat}
+      (suffix : ProcessPrefix (TSO layout) actI before events steps after) :
+      (∃ ev n, ProcessPrefix (TSO layout) actI initial ev n before) →
+      PrivateBuffers footprint before.ms.1 → SCErreichbar layout (projected initial) (projected before) →
+      events = [] → PrivateBuffers footprint after.ms.1 ∧
+        SCErreichbar layout (projected initial) (projected after) := by
+    induction suffix with
+    | nil => intro _ owned reached _; exact ⟨owned, reached⟩
+    | cons step _ ih =>
+      intro previous owned reached silent
+      obtain ⟨_, _, seen⟩ := previous
+      obtain ⟨emptyStep, emptyTail⟩ := List.append_eq_nil_iff.mp silent
+      obtain ⟨stillOwned, scPath⟩ := advance seen (emptyStep ▸ step) owned reached
+      exact ih ⟨_, _, seen.trans (ProcessPrefix.ofStep step)⟩ stillOwned scPath emptyTail
+  exact extend path ⟨[], 0, .nil _⟩ buffers .start rfl
 
 end Gabbro.Stage0.Senke.BildMehr
