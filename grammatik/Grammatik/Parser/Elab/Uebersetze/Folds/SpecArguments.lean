@@ -14,12 +14,16 @@ def uSpecValuePath : SExpr → Bool
   | .field base _ => uSpecValuePath base
   | _ => false
 
-/-- A literal is typed from its decoded bytes, including when substitution
-    will erase an unused parameter. Other values use the declared path type. -/
-def uSpecValueType (ctx : UCtx) (argument : SExpr) (side : USide) : Option Ty :=
-  match argument, side with
+/-- Before substitution, read the exact type of each supported value.
+    Strings use decoded byte lengths, declared path bounds and the
+    ordinary G rule for concatenation. -/
+def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
-  | _, _ => if uSpecValuePath argument then uValueType ctx side else none
+  | .bin "+" lhs rhs, .add a b => do
+    let some (.str left) := uSpecValueType ctx lhs a | none
+    let some (.str right) := uSpecValueType ctx rhs b | none
+    pure (.str (left + right))
+  | argument, side => if uSpecValuePath argument then uValueType ctx side else none
 
 /-- Compare the full value type, including nominal record identity, array
     shape and string bound, before substituting into the predicate. -/
@@ -57,6 +61,24 @@ theorem specTextArgument_erfuellbar (ctx : UCtx) (text : String) :
     simp only [uWertBody, uRechne]
   simp only [uSpecValueArgument, parsed, bind, Except.bind, uSpecValueType, valid,
     Option.map_some, length, ite_true] <;> rfl
+
+/-- The ordinary source reader keeps a concatenation of accepted
+    arguments as the same pair of operands through the precheck. -/
+theorem specStringConcatArgument_erfuellbar (ctx : UCtx) (lhs rhs : SExpr) (left right : Nat)
+    (leftAccepted : uSpecValueArgument ctx (.str left) lhs = .ok ())
+    (rightAccepted : uSpecValueArgument ctx (.str right) rhs = .ok ()) :
+    ∃ a b, uWertBody ctx (.bin "+" lhs rhs) = .ok (.add a b) ∧
+      uSpecValueArgument ctx (.str (left + right)) (.bin "+" lhs rhs) = .ok () := by
+  obtain ⟨a, readLeft, typedLeft⟩ := uSpecValueArgument_exact leftAccepted
+  obtain ⟨b, readRight, typedRight⟩ := uSpecValueArgument_exact rightAccepted
+  have read : uWertBody ctx (.bin "+" lhs rhs) = .ok (.add a b) := by
+    change uRechne ctx (uWertBlatt ctx) (.bin "+" lhs rhs) = _
+    rw [uRechne]
+    have plus : strEq "+" "+" = true := rfl
+    simp only [plus, Bool.true_or, ite_true, ← uWertBody, readLeft, readRight]
+  exact ⟨a, b, read, by
+    simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, typedLeft, typedRight,
+      pure, Option.pure_def, Except.pure, ite_true]⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/

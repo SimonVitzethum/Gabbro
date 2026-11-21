@@ -447,6 +447,16 @@ theorem lowWertE_slice (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       (lowWertE u Γ Λ fn er base).bind (lowerSlice first last) := by
   rw [lowWertE]
 
+/-- Once the two source operands are typed, the ordinary export produces
+    the exact G concatenation at the same combined byte bound. -/
+theorem specStringConcatArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {fn : UFn} {er : Option Ty} {a b : USide} {left right : Nat}
+    {s : Expr (declOf u) Γ Λ (.str left)} {t : Expr (declOf u) Γ Λ (.str right)}
+    (readLeft : lowWertE u Γ Λ fn er a = .ok ⟨.str left, s⟩)
+    (readRight : lowWertE u Γ Λ fn er b = .ok ⟨.str right, t⟩) :
+    lowWertE u Γ Λ fn er (.add a b) = .ok ⟨.str (left + right), .strCat s t⟩ := by
+  simp only [lowWertE, readLeft, readRight, catW]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-

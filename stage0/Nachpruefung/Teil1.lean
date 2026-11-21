@@ -178,6 +178,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specValueArgument_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specTextArgument_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTextArgument_low
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specStringConcatArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specStringConcatArgument_low
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uRecordReplacement_step
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uSetzeRecordSlot_named
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
