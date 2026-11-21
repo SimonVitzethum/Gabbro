@@ -76,7 +76,7 @@ theorem Emitted.changedCell_in_image (output : Emitted src K options)
     rw [layout.count]
     have nonnegative := inExtent.1
     omega
-  obtain ⟨base, last⟩ := layout.cell_in_table t f k.toNat actual
+  obtain ⟨base, last⟩ := InitialLayout.cell_in_table layout t f k.toNat actual
   exact ⟨Nat.le_trans base lower, Nat.lt_of_lt_of_le upper last⟩
 
 /-- The row layout cannot name the exact column addresses and sizes for
