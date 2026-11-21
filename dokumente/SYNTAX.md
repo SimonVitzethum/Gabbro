@@ -3603,6 +3603,10 @@ typed saved-local slots, shape-specific child/join storage, ordinary match
 dispatch, a bounded retry poll body and release-before-clear cancellation.
 The control proof uses machine G's existing dispatch rule; lock boundaries
 use exact `HeldB none`, and poll budgets use the ordinary G cost/call gates.
+`await_construction_rep` relates lazy construction of direct calls and
+nested joins to the typed waiting payload. `waiting_construction_inv`
+places that payload in the complete generated record at its declared tag,
+keeping the recorded ownership inventory of the running phase.
 
 **Complete table-to-G reification remains open.** The builders still require
 actual expression, child-poll and destructor blocks with their ordinary

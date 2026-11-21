@@ -3,6 +3,7 @@ module
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.State
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Model
 public import Grammatik.Nebenlaeufigkeit.Async.Verfeinerung
+import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -188,5 +189,62 @@ public theorem await_construction_rep (elaboration : Elaboration D V Λ types f)
     constructed at represented ⊢
   obtain ⟨task, after, cost⟩ := constructed
   exact ⟨True.intro, _, .waiting tag future frame task waitingValue record waitingFrame represented⟩
+
+private theorem waitingPhaseList {frame : Frame (Value D)} {task : Task (Value D) (Child D types)}
+    (inventory : Inventory D) (base offset : Nat) (commands : List Command)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {remaining : List Command}
+    (found : commands.drop offset = Command.await name future boundary :: remaining)
+    (payload : ∃ value, PhaseRep D types f (.waiting (base + offset) future)
+      (.waiting (base + offset) frame task) value)
+    (marks : MarksRep inventory (.waiting (base + offset) future) (.waiting (base + offset) frame task)) :
+    ∃ record, PhaseListRep D types f inventory (commandPhases base commands)
+      (.waiting (base + offset) frame task) record := by
+  induction offset generalizing base commands with
+  | zero =>
+    simp only [List.drop_zero, Nat.add_zero] at found payload marks ⊢
+    subst commands
+    obtain ⟨value, represented⟩ := payload
+    exact ⟨_, .later _ _ _ _ rfl (.first _ _ _ value represented marks)⟩
+  | succ offset ih =>
+    cases commands with
+    | nil => simp at found
+    | cons first rest =>
+      simp only [List.drop_succ_cons] at found
+      have moved : base + (offset + 1) = base + 1 + offset := by omega
+      simp only [moved] at payload marks ⊢
+      obtain ⟨_, represented⟩ := ih (base + 1) rest found payload marks
+      cases first with
+      | bind =>
+        exact ⟨_, .later _ _ _ _ rfl represented⟩
+      | await _ earlier _ =>
+        have different : base + 1 + offset ≠ base := by omega
+        have skipped : encodePhase D types f (.waiting base earlier) (.waiting (base + 1 + offset) frame task) =
+            none := by simp only [encodePhase, ite_eq_right different]
+        exact ⟨_, .later _ _ _ _ rfl (.later _ _ _ _ skipped represented)⟩
+
+/-- A represented await belongs to the full generated state record at its
+    declared tag. Every earlier case fails to encode this state. The
+    saved resource inventory is the same one carried into construction. -/
+public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {remaining : List Command}
+    (found : f.body.drop tag = Command.await name future boundary :: remaining)
+    {frame : Frame (Value D)} {task : Task (Value D) (Child D types)}
+    (payload : ∃ value, PhaseRep D types f (.waiting tag future) (.waiting tag frame task) value)
+    (current : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag)) :
+    ∃ record, Inv f types inventory (.waiting tag frame task) record ∧
+      encode D types f (.waiting tag frame task) = some record := by
+  have marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task) := by
+    simpa only [MarksRep, State.marks, sameInventory] using current
+  obtain ⟨sum, represented⟩ := waitingPhaseList (types := types) (f := f) inventory 0 tag f.body found
+    (by simpa only [Nat.zero_add] using payload) (by simpa only [Nat.zero_add] using marks)
+  let cases := commandPhases 0 f.body
+  have selected : PhaseListRep D types f inventory cases (.waiting tag frame task) sum := by
+    simpa only [Nat.zero_add] using represented
+  let wrapped := laterPhaseValue D types f Phase.cancelled (Phase.completed :: cases)
+    (laterPhaseValue D types f Phase.completed cases sum)
+  have exactRecord : Inv f types inventory (.waiting tag frame task) (wrapped, ()) :=
+    .later _ _ _ _ rfl (.later _ _ _ _ rfl selected)
+  exact ⟨(wrapped, ()), exactRecord, inv_encoded f types inventory _ _ exactRecord⟩
 
 end Gabbro.Grammatik.Async.Representation
