@@ -65,16 +65,6 @@ theorem irBild_frontend_sound {text : String} {K : Nat} {options : Profil.Option
   exact ⟨output, built, exactBytes, parseTopTief_iff.mp output.compiled.source.parsed,
     compile_source_program text output.compiled, output.compiled.contract_duties⟩
 
-/-- The declaration list actually used by the successful production check. -/
-def Compiled.checkedDeclarations {text : String} {options : Profil.Options} (result : Compiled text options) :
-    {checks : List (CheckDecl (declOf result.unit)) // uCheckDecls result.unit = .ok checks} :=
-  match found : uCheckDecls result.unit with
-  | .ok checks => ⟨checks, rfl⟩
-  | .error _ => False.elim (by
-    obtain ⟨_, _, _, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
-    rw [found] at derived
-    cases derived)
-
 /-- The checks in the executable verdict satisfy the model's read-only
     probe, distinct gate and linear Duty conditions, for the exact list
     derived from the source unit. -/

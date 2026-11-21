@@ -132,6 +132,16 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
     Frontend.compiled_measure_lengths (pre108 source.prepared.elaborierbar) unit program
       measures.val measures.property lowered
 
+/-- The declaration list actually used by the successful production check. -/
+def Compiled.checkedDeclarations {text : String} {options : Profil.Options} (result : Compiled text options) :
+    {checks : List (CheckDecl (declOf result.unit)) // uCheckDecls result.unit = .ok checks} :=
+  match found : uCheckDecls result.unit with
+  | .ok checks => ⟨checks, rfl⟩
+  | .error _ => False.elim (by
+    obtain ⟨_, _, _, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
+    rw [found] at derived
+    cases derived)
+
 /-- The remainder of compilation once the expansion-aware gate has accepted.
     The shared elaborator expands declared checks and their producer/probe/gate functions;
     profile selection then adds the selected C16 consumer and driver to that unit.

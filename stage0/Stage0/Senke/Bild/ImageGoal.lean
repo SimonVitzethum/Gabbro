@@ -49,9 +49,7 @@ theorem Emitted.goal_axiomFree (output : Emitted src K options)
     funext a
     exact False.elim ((Nat.not_lt_zero a.val) (empty ▸ a.isLt))
   subst Q
-  have accepted := output.axiomFreeLogic empty
-  unfold nutzerPflichtGeprueftB at accepted ⊢
-  exact accepted
+  exact output.axiomFreeLogic empty
 
 /-- The precise logical start associated with the image. Missing thread
     positions are filled by the model's canonical idle thread. -/

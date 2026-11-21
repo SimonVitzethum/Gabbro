@@ -47,21 +47,23 @@ theorem CheckedInitialInvariants.goal_verdict {E : Einheit D} {functions : List 
 /-- The initial unit used for executable checks that need the program and
     concrete starts. Nonempty axiom families need separate reification. -/
 abbrev initialUnit (u : UProg) (P : Programm (declOf u)) (memory : Speicher (declOf u))
-    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))) : Einheit (declOf u) :=
-  OldSource.einheitVon u P (axWahr _) memory starts [] []
+    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)))
+    (checks : List (CheckDecl (declOf u))) : Einheit (declOf u) :=
+  OldSource.einheitVon u P (axWahr _) memory starts [] checks
 
 /-- For axiom-free programs the emitter can decide the whole logic branch
     without any oracle contract supplied by the caller. -/
 def checkAxiomFreeLogic (u : UProg) (P : Programm (declOf u)) (memory : Speicher (declOf u))
-    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))) :
+    (starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)))
+    (checks : List (CheckDecl (declOf u))) :
     Except Frag.Refusal (PLift (u.axs.length = 0 →
       @nutzerPflichtGeprueftB _ (inferInstanceAs (DecidableEq (Fin u.fns.length)))
-        (initialUnit u P memory starts) (List.finRange u.fns.length) (List.finRange u.locks.length) {} = true)) :=
+        (initialUnit u P memory starts checks) (List.finRange u.fns.length) (List.finRange u.locks.length) {} = true)) :=
   if noAxioms : u.axs.length = 0 then
     match read : @checkUnitLogic _ (inferInstanceAs (DecidableEq (Fin u.fns.length)))
-        (initialUnit u P memory starts) (List.finRange u.fns.length) (List.finRange u.locks.length) {} with
+        (initialUnit u P memory starts checks) (List.finRange u.fns.length) (List.finRange u.locks.length) {} with
     | .error cause => .error cause
-    | .ok _ => .ok ⟨fun _ => by unfold nutzerPflichtGeprueftB; rw [read]; rfl⟩
+    | .ok certificate => .ok ⟨fun _ => (nutzerPflichtGeprueftB_iff _ _ _ _).mpr ⟨certificate, read⟩⟩
   else .ok ⟨fun impossible => False.elim (noAxioms impossible)⟩
 
 end Gabbro.Stage0
