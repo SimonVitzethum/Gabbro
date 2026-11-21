@@ -8395,3 +8395,13 @@ use the same byte bound for string concatenation in the source precheck
 and in G. `fullLocalSlice_erfuellbar` retains a lexical value for its full
 slice. The array and string evaluation lemmas relate that term to the
 half-open slice model using the actual length.
+
+`lowWertE_localArraySpan` converts the source expansion for
+`array[start .. start + N]` to a typed array of length `N`.
+`eval_arraySpanFrom` identifies the original array element read for
+each result index, and `arraySpanFrom_reads` preserves the absence of
+carrier reads for lexical operands.
+
+`ImageIdleBuffers.follow` preserves empty buffers at every unallocated
+slot along the actual runner execution. The prepared clone theorem also
+identifies the new slot's original source frame.
