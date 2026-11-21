@@ -117,7 +117,9 @@ theorem tso_guard_fail {layout : Runner.Beweis.Lay}
   have first : ProcessPrefix (TSO layout) actI before [] 4 ⟨before.ms, before.ths.set i (some pending)⟩ := by
     simpa only [ite_true] using tso_guard_read running guard word
   have branch : InsAt (before.ms.1.view i) pc 19 (II.f a) (II.f 32) (II.f 0) := by
-    simpa only [Nat.mul_zero, BitVec.add_zero] using guard 0 (by simp [guardC])
+    have instruction := guard 0 (by simp [guardC])
+    simp only [Nat.mul_zero, BitVec.add_zero] at instruction
+    exact instruction
   have loaded : rdN (before.ms.1.view i) 4 (pc + 8) = some ((II.f 32).setWidth 64) := by
     simp only [rdN, branch.f2, Option.map_some]
   have offset : sx (((II.f 32).setWidth 64).setWidth 32) = 32 := rfl
