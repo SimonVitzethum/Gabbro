@@ -8194,3 +8194,23 @@ bytes to the original token-derived AST, canonical elaboration and every
 function's proved contract duties. Full grammar soundness also needs the
 individual item and expression productions. The full unit judgment needs
 the ownership exports and the exact image-state checks.
+
+## 207. Declared checks and the actual boot unit
+
+`OldSource.uCheckDecls_at` keeps each declared check at its source position.
+The production checker runs on the resulting descriptors, and
+`Compiled.declared_checks_sound` gives `CheckAdmission` for that exact list.
+`Emitted.goalUnit` carries the same declarations to the goal theorem.
+
+`Emitted.goal_invariants` derives the unit's invariant verdict from checked
+writers, the canonical serialized memory, and the initial lock checks.
+`Emitted.goal_axiomFree` derives the additional logic verdict when the axiom
+family is empty. `Emitted.zielsatz_axiomFree` applies the goal theorem to
+reachable GX states from `Emitted.bootStart`, with the existing hardware
+assumptions and the remaining arena and accumulator export restriction.
+
+`StartArgument.Plan.exact_roots` preserves all boot occurrences, including
+repeated dispatch targets. `Emitted.bootStart_frame` identifies the exact
+logical start frame and live position for each occurrence. Hosted Stage 0
+refuses dynamic `start` until its lowering carries the source call site,
+spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.

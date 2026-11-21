@@ -61,6 +61,17 @@ abbrev Emitted.goalStart (output : Emitted src K options)
   FadenStart (output.goalUnit Q).P.mitRuhe (speicherR (output.goalUnit Q).sp0)
     (initRuhe (output.goalUnit Q).starts) live
 
+/-- The logical machine after all declared startup threads have been
+    launched. Its live positions are precisely the serialized starts. -/
+abbrev Emitted.bootStart (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit)) :
+    FadenMaschine (declOf output.compiled.unit).mitRuhe :=
+  output.goalStart Q (fun i => decide (i < (output.goalUnit Q).starts.length))
+
+theorem Emitted.bootStart_live (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (i : Faden) :
+    (output.bootStart Q).lebt i = true ↔ i < (output.goalUnit Q).starts.length :=
+  decide_eq_true_eq
+
 /-- Specialize the original goal theorem to the canonical program, start
     memory, arguments and pass limit of the emitted image. The compiler's
     success supplies structural acceptance. The checked unit verdict
@@ -95,10 +106,10 @@ theorem Emitted.zielsatz_axiomFree (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) (empty : output.compiled.unit.axs.length = 0)
     (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
     (O : Orakel (declOf output.compiled.unit)) (hardware : HardwareAnnahmenHw O Q)
-    {live : Faden → Bool} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (reached : FadenErreichbarX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
-      (output.goalStart Q live) state) :
+      (output.bootStart Q) state) :
     let E := output.goalUnit Q
     ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
@@ -127,5 +138,22 @@ theorem Emitted.goalStart_argument (output : Emitted src K options)
     (atPosition : (⟨output.compiled.main, output.args⟩ :: output.starts)[i]? = some start) :
     initRuhe (output.goalUnit Q).starts i = ⟨some start.1, envR start.2⟩ := by
   simp only [initRuhe, output.goalUnit_starts, atPosition]
+
+/-- A live boot position starts with the G frame of its exact declared
+    root and arguments, in the same memory as every other boot position. -/
+theorem Emitted.bootStart_frame (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (i : Faden)
+    (start : Σ f : (declOf output.compiled.unit).Fn,
+      Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f))
+    (atPosition : (⟨output.compiled.main, output.args⟩ :: output.starts)[i]? = some start) :
+    (output.bootStart Q).lebt i = true ∧ (output.bootStart Q).wartet i = [] ∧
+      (output.bootStart Q).m.faeden i =
+        (RufStartG (output.goalUnit Q).P.mitRuhe (speicherR (output.goalUnit Q).sp0)
+          (fun _ => ⟨some start.1, envR start.2⟩)).faeden i := by
+  have inside := (List.getElem?_eq_some_iff.mp atPosition).1
+  have live := (output.bootStart_live Q i).mpr (by rw [output.goalUnit_starts Q]; exact inside)
+  refine ⟨live, rfl, ?_⟩
+  simp only [Emitted.bootStart, Emitted.goalStart, FadenStart, RufStartG,
+    output.goalStart_argument Q i start atPosition]
 
 end Gabbro.Stage0
