@@ -28,28 +28,23 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
   | .error e => uGlobSchreib ctx ziel wert e
   | .ok (.thru b, tb, f, ix) =>
-    match uStelle ctx.names b with
-    | .error e => .error e
-    | .ok j =>
-      match uArtBei ctx.kinds j with
-      | .ok (.ptr ⟨0, ⟨_, true, _⟩, .table _⟩) =>
-        if (uOptFeld ctx tb f).isSome then
-          match uOptFeld ctx tb f with
-          | .none => .error "option field without G form"
-          | .some num =>
-            match uOpt ctx num wert with
-            | .error e => .error e
-            | .ok v => .ok (.assignOpt b f ix v)
-        else
-        if uBoolFeld ctx tb f then
-          match uBool ctx wert with
-          | .error e => .error e
-          | .ok v => .ok (.assignB b f ix v)
-        else
-          match uWertBody ctx wert with
-          | .error e => .error e
-          | .ok v => .ok (.assign b f ix (uWrap ctx tb f v))
-      | _ => .error "write through a read pointer"
+    (uSlotWriteRight ctx b).bind fun _ =>
+    if (uOptFeld ctx tb f).isSome then
+      match uOptFeld ctx tb f with
+      | .none => .error "option field without G form"
+      | .some num =>
+        match uOpt ctx num wert with
+        | .error e => .error e
+        | .ok v => .ok (.assignOpt b f ix v)
+    else
+    if uBoolFeld ctx tb f then
+      match uBool ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.assignB b f ix v)
+    else
+      match uWertBody ctx wert with
+      | .error e => .error e
+      | .ok v => .ok (.assign b f ix (uWrap ctx tb f v))
   | .ok (.tabelle b, tb, f, ix) =>
     if (uOptFeld ctx tb f).isSome then
       match uOptFeld ctx tb f with
@@ -107,10 +102,12 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
   | some w =>
     match ziel with
     | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
-    | .field .. =>
+    | .field base _ =>
       match uRecordLocal ctx ziel with
       | some name => uSetzeRecord ctx name ziel w
-      | none => uSetzePlatz ctx ziel w
+      | none =>
+        if uRecordSlotPath base then uSetzeRecordSlot ctx ziel w
+        else uSetzePlatz ctx ziel w
     | .index base i =>
       match uArrayLocal ctx ziel with
       | some _ => uSetzeElement ctx base i w
