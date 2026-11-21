@@ -27,3 +27,8 @@ roots = ["Duty.Duty0104Referenz", "Duty.Duty0108DisjointStartLocks", "Duty.Duty0
 
 [[lean_lib]]
 name = "Bruecke"
+
+# GabbroV's generator: `gabbrov NAME FILE.gab [OUT.lean]` writes the Lean duty file of a source.
+[[lean_exe]]
+name = "gabbrov"
+root = "Bruecke.Vorlage.Haupt"

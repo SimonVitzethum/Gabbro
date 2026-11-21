@@ -38,8 +38,7 @@ of the obligations reach GabbroV.
 
 | Component | Where | Role |
 |---|---|---|
-| the obligation manifest | historical Rust `gabbro obligations` / `pflichten`, `crates/gabbro-check/src/pflichten.rs` | Deleted on 2026-11-10; duty files are tracked inputs until the Lean generator V1 of PLAN-COMPILER-READY exists. |
-| the manifest harness | historical Rust `gabbro gabbrov pruefe --manifest M --spec S`, `gabbrov.rs` | Deleted with Rust; the current Lean bridge is in `programmlogik/bruecke/`, with tracked duty inputs. |
+| the duty generator | `gabbrov MODULE FILE.gab OUTDIR` (`programmlogik/bruecke/Bruecke/Vorlage.lean`, `Vorlage/Haupt.lean`) | Written in Lean: runs the Lean front end once and writes the unit's duties as Lean modules (unit as data, one module per function, your proof files never overwritten); premise (b) by `nutzer_aus_einheit` (§14). |
 | the Lean `Body` channel | `programmlogik/` (§13); historical Rust `gabbro prove`, `lean.rs`, `beweis.rs` | The model remains; the deleted Rust driver is history, and the bridge consumes tracked duties pending Lean V1. |
 | the specification channel | `programmlogik/gabbrov/V1.lean`, `V2.lean`; historical Rust `gabbro lean a.gab b.gab` | The Lean specifications remain; source parsing and elaboration now use `grammatik/Grammatik/Parser/`. |
 | the Lean parser (T3) | `grammatik/Grammatik/Parser/` (§14) | source text → surface tree → `UProg` → G program, computed in Lean |
@@ -49,8 +48,20 @@ of the obligations reach GabbroV.
 
 The Rust checker, CLI and printers were deleted on 2026-11-10 (AGENTS.md §3); the current path is the Lean parser
 and elaborator in `grammatik/Grammatik/Parser/`, the bridge in `programmlogik/bruecke/` and tracked duty files until
-[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) V1 computes them from elaborated units, with V0 measuring coverage
-and V2 extending the bridge to every Stage-0 form (R2).
+[PLAN-COMPILER-READY.md](PLAN-COMPILER-READY.md) V1 computes them from elaborated units (the generator above), with V0
+measuring coverage and V2 extending the bridge to every Stage-0 form (R2).
+
+**Using the generator.** `lake build gabbrov` in `programmlogik/bruecke`, then
+`gabbrov Proofs.Lexer lexer.gab out/` writes, under `out/Proofs/Lexer/`: `Quelle` (the text), `Daten/S<k>`
+(the elaborated functions, 16 per module) and `Daten` (the unit `u` and the rank), `Pflicht/F<i>` (the
+function's Body as GabbroV reads it, as a Lean term and in source notation, its reading equation, its decided
+checks, and the goal `ziel<i>`), `Beweis/F<i>` (your proof of `ziel<i>`; written once, never replaced),
+`Sammlung/S<k>` and `Lexer.lean` (the unit checks, `#guard uOf quelle == some u`, and the theorem `nutzer`:
+premise (b) for the unit the front end builds from the text). The front end is never evaluated in the kernel:
+the text enters only through the premise `uebersetzeAllg quelle = .ok ⟨u, P, fs⟩`, which the `#guard` checks by
+running the front end (owner, 2026-11-21). No step quantifies over function positions, so the files of a unit of
+500 000 lines are many small modules Lake builds in parallel. A form or check outside the bridge is a named
+refusal in `Lexer.lean` (exit 1), and premise (b) is then not stated.
 
 ---
 

@@ -1,69 +1,54 @@
 module
-public import Bruecke.Kette.Quelle
-public import Grammatik.Parser.Lex.Lexer
-import all Init.Data.Repr
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Decode
-import all Init.Data.String.Defs
-import all Init.Data.String.Extra
-import all Init.Data.String.FindPos
-import all Init.Data.String.Hashable
-import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iterate
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.Modify
-import all Init.Data.String.OrderInstances
-import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
-import all Init.Data.String.Pattern.Char
-import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
-import all Init.Data.String.PosRaw
-import all Init.Data.String.Search
-import all Init.Data.String.Slice
-import all Init.Data.String.Stream
-import all Init.Data.String.Subslice
-import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
-import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
+public import Bruecke.Kette.Einheit
+public import Bruecke.Vorlage.Formen
+public import Bruecke.Vorlage.Zeige
+public import Grammatik.Parser.Elab.UebersetzePipeline
 @[expose] public section
 
-
 /-!
-# P6: the template a person starts from, WRITTEN BY LEAN from the source text
+# GabbroV's generator: the Lean files of a unit's duties
 
-`vorlage name src` is what `gabbro prove --template --source <file.gab>` prints. Everything in the
-STATEMENT is computed here from the text by the Lean front end (`uebersetzeAllg`); the Rust side
-only quotes the file. The four stage outputs (tokens, items, the elaborated program `u`) are
-untrusted HINTS: the kernel checks each against the pinned text (`lex_ok`, `parse_ok`, `elab_ok`,
-`low_ok`), so a wrong hint fails to build instead of proving something else.
+`dateien modul src` runs the Lean front end on the source text once and writes the duties of the
+unit as Lean modules under the module prefix `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`).
+The unit is pinned AS DATA (owner, 2026-11-21): the files never evaluate the front end in the
+kernel; the generic theorem `nutzer_aus_einheit` takes the front-end equation
+`uebersetzeAllg quelle = .ok ⟨u, P, fs⟩` as its named premise, and the top file checks it by
+running the front end (`#guard`).
 
-The source is pinned as `.toList` pieces (`zeilen`) and not as one literal: the kernel decodes a
-`String` literal at a cost that explodes with its length (O13, `Parser/Lexer.lean`), and
-`uebersetzeAllg_von_zeichen` lets the chain files avoid the decoder altogether. The output then
-states -- with the computed functions `PflichtenAlle`, `meetsU`, `zuBodyZ`, never a printed statement --
-one duty per function that a person proves, and closes with the generic theorem
-`nutzer_aus_quelleG_alle`. A unit with a call-graph cycle gets the measure forms instead
-(`PflichtenAlleM`, `meetsUM` under one well-founded `mass`, `nutzer_aus_quelleM_alle`). A construct outside the fragment shows up as a NAMED refusal (the front end
-says why, or `zuBodyZ` is `none`, or a Bool check is false): the duty is then unprovable on
-purpose, never weaker.
+Layout, so that units of 500 000 lines stay usable (every file small, Lake builds them in
+parallel, no step quantifies over function positions):
+
+* `M/Quelle.lean`        the source text, as pieces;
+* `M/Daten/S<k>.lean`    the elaborated functions of chunk `k` (`f<i> : UFn`) and their list;
+* `M/Daten.lean`         the unit `u` (its function list is the append of the chunks) and the rank;
+* `M/Pflicht/F<i>.lean`  for function `i`: its Body as GabbroV reads it, printed as a Lean term and
+  in source notation, the reading equation, the decided checks and the goal `ziel<i>`;
+* `M/Beweis/F<i>.lean`   YOUR proof of `ziel<i>`; written once as a stub, never overwritten;
+* `M/Sammlung/S<k>.lean` the duties of chunk `k` assembled;
+* `M.lean`               the unit checks and premise (b) of the goal theorem.
+
+A function or a check outside the bridge is a NAMED refusal in the files; premise (b) is then
+not stated.
 -/
 
-namespace Gabbro.Bruecke
+namespace Gabbro.Bruecke.Vorlage
 
-open Gabbro.Grammatik
-open Gabbro.Grammatik.Parser
-open Gabbro.Grammatik.Parser.Uebersetze
-open Gabbro.Grammatik.Parser.UebersetzeAllg
-open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-/-- A Lean string literal for `s` (escapes as `repr` writes them). -/
+/-- One generated file: module path relative to the output root (`/`-separated, without
+    `.lean`), its text, and whether an existing file is replaced (`false`: the user's own). -/
+structure Datei where
+  pfad : String
+  text : String
+  ersetzen : Bool := true
+
+/-- Functions per chunk. -/
+def stueckGroesse : Nat := 16
+
+def breit (x : Std.Format) : String := x.pretty 1000000
+
+/-- A Lean string literal for `s`. -/
 def literal (s : String) : String := (repr s).pretty 1000000
 
 /-- The characters cut into pieces that end at a newline or after at most 60 characters. -/
@@ -77,103 +62,177 @@ def stueckeL : Nat → List Char → List (List Char)
       | none => vor.length
     cs.take bis :: stueckeL fuel (cs.drop bis)
 
-/-- The pieces of a source text (their concatenation is the text). -/
 def stuecke (src : String) : List String :=
   (stueckeL (src.length + 1) src.toList).map String.ofList
 
-/-- The template for the source `src` of the unit `name` (a Lean identifier fragment). -/
-def vorlage (name src : String) : String :=
-  match lex src with
-  | .error _ => "-- REFUSED by the Lean front end: the text does not lex (`lex`).\n"
-  | .ok toks =>
-  match parseTopTief toks with
-  | .error e => "-- REFUSED by the Lean front end: parse: " ++ e ++ "\n"
-  | .ok items =>
-  match elabU (pre108 items) with
-  | .error e => "-- REFUSED by the Lean front end: elab: " ++ e ++ "\n"
-  | .ok u =>
-  match lowerAllg u with
-  | .error e => "-- REFUSED by the Lean front end: lower: " ++ e ++ "\n"
-  | .ok _ =>
-    let n := u.fns.length
-    let wide (x : Std.Format) : String := x.pretty 1000000
-    let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
-    let kopf :=
-      "module\npublic import Bruecke.Kette.Quelle\n@[expose] public section\n\n" ++
-      "/-! Written by `gabbro prove --template --source`. The statements below are COMPUTED from the\n" ++
-      "    pinned source by the Lean front end; nothing in them was printed by Rust. The stage\n" ++
-      "    outputs `toks`, `items` and `u` are hints the kernel checks against the text. Replace\n" ++
-      "    every remaining duty with a proof. -/\n\n" ++
-      "namespace Gabbro.Bruecke.Vorlage." ++ name ++ "\n\n" ++
-      "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
-      "open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2\n\n" ++
-      "set_option maxRecDepth 100000\n\n" ++
-      "-- SRC-BEGIN quelle\n" ++
-      "/-- THE SOURCE, byte for byte, as pieces (the guardians read this block). -/\n" ++
-      "def zeilen : List (List Char) :=\n  [" ++ zeilen ++ "]\n" ++
-      "-- SRC-END quelle\n\n" ++
-      "def quelle : String := String.ofList zeilen.flatten\n\n" ++
-      "def toks : List Token := " ++ wide (repr toks) ++ "\n\n" ++
-      "def items : List SItemTief := " ++ wide (repr items) ++ "\n\n" ++
-      "def u : UProg := " ++ wide (repr u) ++ "\n\n" ++
-      "set_option maxHeartbeats 4000000 in\n" ++
-      "theorem lex_ok : lexL zeilen.flatten = .ok toks := by decide +kernel\n\n" ++
-      "theorem parse_ok : parseTopTief toks = .ok items := rfl\n\n" ++
-      "theorem elab_ok : elabU (pre108 items) = .ok u := rfl\n\n" ++
-      "theorem low_ok : (lowerAllg u).toOption.isSome = true := by decide +kernel\n\n" ++
-      "/-- PARSE FIDELITY: the pinned text is the program `u`. -/\n" ++
-      "theorem uebersetzt : uebersetzeAllg quelle =\n" ++
-      "    .ok ⟨u, ((lowerAllg u).toOption.get low_ok).1, ((lowerAllg u).toOption.get low_ok).2⟩ :=\n" ++
-      "  uebersetzeAllg_von_zeichen lex_ok parse_ok elab_ok (except_ok_get low_ok)\n\n" ++
-      "theorem verankert : uOf quelle = some u := uOf_eq uebersetzt\n\n"
-    let bools :=
-      (if nullB u then "theorem null : nullB u = true := by decide\n"
-       else "-- REFUSED: initial table or static memory is outside the supported numeric ranges (`nullB u = false`).\n" ++
-            "theorem null : nullB u = true := by exact?\n") ++
-      (if stimmigB u then "theorem stimmig : stimmigB u = true := by decide\n"
-       else "-- REFUSED: a name condition fails (`stimmigB u = false`).\n" ++
-            "theorem stimmig : stimmigB u = true := by exact?\n") ++
-      (if bindFrischAllB u then "theorem frisch : bindFrischAllB u = true := by decide\n"
-       else "-- REFUSED: a local binder is not fresh (`bindFrischAllB u = false`).\n" ++
-            "theorem frisch : bindFrischAllB u = true := by exact?\n") ++
-      (if rangB u (rangAuto u) then "theorem rang : rangB u (rangAuto u) = true := by decide\n"
-       else "-- RECURSIVE: the call graph has a cycle (`rangB u (rangAuto u) = false`). The duties below\n" ++
-            "-- are measure duties (`meetsUM`): a callee's contract holds only below the caller's entry\n" ++
-            "-- value of `mass`, one well-founded measure for the whole unit (e.g. the `decreases` values).\n" ++
-            "noncomputable def mass : MassU := by exact?\n") ++
-      (if ohneTransitionB u then "theorem ordinary : ohneTransitionB u = true := by decide\n"
-       else "-- REFUSED: generated transition bodies have no Body simulation.\n" ++
-            "theorem ordinary : ohneTransitionB u = true := by exact?\n") ++ "\n"
-    let pflicht := (List.range n).foldl (fun acc i =>
-      let name_i := match u.fns[i]? with | some f => f.name | none => "?"
-      let hinweis :=
-        match u.fns[i]? with
-        | some f => if (zuBodyZ u f).isSome then "" else
-            "-- REFUSED: the body of this function has a statement or expression outside the bridge's\n" ++
-            "-- fragment (`zuBodyZ` is `none`), so the duty below is false on purpose.\n"
-        | none => ""
-      acc ++ "/-- The duty of `" ++ name_i ++ "`: the computed statement. -/\n" ++ hinweis ++
-        "theorem pflicht_" ++ toString i ++ " : ∃ body, zuBodyZ u (fnAt u ⟨" ++ toString i ++ ", by decide⟩) = some body ∧\n" ++
-        "    " ++ (if rangB u (rangAuto u) then "meetsU u (wfU u)" else "meetsUM u (wfU u) mass") ++
-        " (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  exact?\n\n") ""
-    let fall := (List.range n).foldl (fun acc i =>
-      acc ++ "  | ⟨" ++ toString i ++ ", _⟩ => pflicht_" ++ toString i ++ "\n") ""
-    let schluss :=
-      (if rangB u (rangAuto u) then
-        "theorem pflichten : PflichtenAlle quelle :=\n" ++
-        "  ⟨u, verankert, null, stimmig, frisch, rang, ordinary, fun c => match c with\n"
-       else
-        "theorem pflichten : PflichtenAlleM quelle :=\n" ++
-        "  ⟨u, verankert, null, stimmig, frisch, ordinary, mass, fun c _ => match c with\n") ++ fall ++
-      "  | ⟨_ + " ++ toString n ++ ", h⟩ => absurd h\n" ++
-      "      (by have hl : u.fns.length = " ++ toString n ++ " := by decide\n          omega)⟩\n\n" ++
-      "/-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/\n" ++
-      "theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
-      "    {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :\n" ++
-      "    ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=\n" ++
-      "  " ++ (if rangB u (rangAuto u) then "nutzer_aus_quelleG_alle" else "nutzer_aus_quelleM_alle") ++
-      " pflichten h\n\n" ++
-      "end Gabbro.Bruecke.Vorlage." ++ name ++ "\n"
-    kopf ++ bools ++ pflicht ++ schluss
+/-- The list `xs` cut into consecutive pieces of at most `k` elements. -/
+def teile {α : Type} (k : Nat) (xs : List α) : List (List α) :=
+  if k = 0 then [xs] else go xs.length xs
+where
+  go : Nat → List α → List (List α)
+    | 0, _ => []
+    | fuel + 1, ys => if ys.isEmpty then [] else ys.take k :: go fuel (ys.drop k)
 
-end Gabbro.Bruecke
+/-- A balanced tree over `ns` joined by `verbinde` (depth logarithmic in the length). -/
+def baum (verbinde : String → String → String) (leer : String) : Nat → List String → String
+  | _, [] => leer
+  | _, [n] => n
+  | 0, ns => ns.foldr (fun a acc => verbinde a acc) leer
+  | fuel + 1, ns =>
+    let h := ns.length / 2
+    verbinde (baum verbinde leer fuel (ns.take h)) (baum verbinde leer fuel (ns.drop h))
+
+/-- A balanced Lean expression joining the names `ns` with the infix `op`. -/
+def balanciert (op leer : String) (fuel : Nat) (ns : List String) : String :=
+  baum (fun a b => "(" ++ a ++ " " ++ op ++ " " ++ b ++ ")") leer fuel ns
+
+def kopf (modul : String) (imports : List String) (doc : String) : String :=
+  "module\n" ++ String.join (imports.map fun i => "public import " ++ i ++ "\n") ++
+  "@[expose] public section\n\n" ++ "/-! " ++ doc ++ " -/\n\n" ++
+  "namespace " ++ modul ++ "\n\n" ++
+  "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
+  "open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Bruecke\n\n" ++
+  "set_option maxRecDepth 100000\n\n"
+
+def fuss (modul : String) : String := "end " ++ modul ++ "\n"
+
+/-- The source text, kept as pieces (no long literal). -/
+def quelleDatei (modul src : String) : Datei :=
+  let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
+  { pfad := modul.replace "." "/" ++ "/Quelle"
+    text := kopf modul ["Bruecke.Kette.Einheit"] "The source text of the unit, byte for byte (written by `gabbrov`)." ++
+      "def zeilen : List (List Char) :=\n  [" ++ zeilen ++ "]\n\n" ++
+      "def quelle : String := String.ofList zeilen.flatten\n\n" ++ fuss modul }
+
+/-- The elaborated unit without its function list: its printed form with the function list
+    replaced by `fnsAusdruck` and the cache `merk` left to its default (all caches are equal). -/
+def einheitText (u : UProg) (fnsAusdruck : String) : String :=
+  let t := breit (repr { u with fns := [] })
+  (t.replace ", merk := _" "").replace ", fns := [], " (", fns := " ++ fnsAusdruck ++ ", ")
+
+def fnName (i : Nat) : String := "f" ++ toString i
+
+def stueckModul (modul : String) (k : Nat) : String := modul ++ ".Daten.S" ++ toString k
+
+def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
+  { pfad := (stueckModul modul k).replace "." "/"
+    text := kopf modul ["Bruecke.Kette.Einheit"]
+        ("The elaborated functions of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
+      String.join (fs.map fun (i, f) =>
+        "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  " ++ breit (repr f) ++ "\n\n") ++
+      "def stueck" ++ toString k ++ " : List UFn := [" ++
+        String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++ fuss modul }
+
+def datenDatei (modul : String) (u : UProg) (anzahl : Nat) (rang : List (String × Nat)) : Datei :=
+  let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
+  { pfad := modul.replace "." "/" ++ "/Daten"
+    text := kopf modul ((List.range anzahl).map (stueckModul modul))
+        "The elaborated unit `u` as data and the rank of its call graph (written by `gabbrov`)." ++
+      "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++
+      "/-- The rank of every function: every direct call goes to a lower rank. -/\n" ++
+      "def rangTafel : List (String × Nat) :=\n  " ++ breit (repr rang) ++ "\n\n" ++
+      "def rk (n : String) : Nat := (rangTafel.lookup n).getD 0\n\n" ++ fuss modul }
+
+/-- The source contract of a function in a comment line, as far as it is printable. -/
+def vertrag (f : UFn) : String :=
+  "`" ++ f.name ++ "`" ++
+  (if f.needs.isEmpty then "" else ", " ++ toString f.needs.length ++ " requires clause(s)") ++
+  (if f.gives.isEmpty then ", no ensures" else ", " ++ toString f.gives.length ++ " ensures clause(s)")
+
+def pflichtModul (modul : String) (i : Nat) : String := modul ++ ".Pflicht.F" ++ toString i
+def beweisModul (modul : String) (i : Nat) : String := modul ++ ".Beweis.F" ++ toString i
+
+def pflichtDatei (modul : String) (i : Nat) (f : UFn) (body : List Gabbro.Body.Stmt) : Datei :=
+  let si := toString i
+  { pfad := (pflichtModul modul i).replace "." "/"
+    text := kopf modul [modul ++ ".Daten"] ("The duty of " ++ vertrag f ++ " (written by `gabbrov`; regenerated on every run).") ++
+      "/-- The body of `" ++ f.name ++ "` as GabbroV reads it:\n\n```\n" ++ zeigeKoerper body ++ "```\n-/\n" ++
+      "def body" ++ si ++ " : List Gabbro.Body.Stmt :=\n  " ++ breit (repr body) ++ "\n\n" ++
+      "theorem body" ++ si ++ "_eq : zuBodyZ u " ++ fnName i ++ " = some body" ++ si ++ " := by\n  with_unfolding_all rfl\n\n" ++
+      "/-- The decided checks of `" ++ f.name ++ "`. -/\n" ++
+      "theorem pruefung" ++ si ++ " : stimmigFnB u " ++ fnName i ++ " = true ∧ bindFrischB " ++ fnName i ++
+        " = true ∧ rangFnB rk " ++ fnName i ++ " = true := by\n  decide\n\n" ++
+      "/-- **What you prove about `" ++ f.name ++ "`**: from a well-formed entry state satisfying the\n" ++
+      "    precondition, under the contracts of its callees, the body ends and meets the postcondition. -/\n" ++
+      "def ziel" ++ si ++ " : Prop := meetsU u (wfU u) " ++ fnName i ++ " body" ++ si ++ "\n\n" ++ fuss modul }
+
+/-- The user's proof file: written once, never replaced. -/
+def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
+  let si := toString i
+  { pfad := (beweisModul modul i).replace "." "/"
+    ersetzen := false
+    text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
+        "`. `gabbrov` writes this file once and never replaces it.") ++
+      "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
+      "  intro ρ s hwf hpre\n  exact?\n\n" ++ fuss modul }
+
+def sammlungModul (modul : String) (k : Nat) : String := modul ++ ".Sammlung.S" ++ toString k
+
+def sammlungDatei (modul : String) (k : Nat) (fs : List Nat) : Datei :=
+  let glied (i : Nat) : String :=
+    let si := toString i
+    "⟨pruefung" ++ si ++ ".1, pruefung" ++ si ++ ".2.1, pruefung" ++ si ++ ".2.2, body" ++ si ++ ", body" ++ si ++
+      "_eq, beweis" ++ si ++ "⟩"
+  let beweis := fs.foldr (fun i acc => "fnPflicht_cons " ++ glied i ++ "\n    (" ++ acc ++ ")") "fnPflicht_nil"
+  { pfad := (sammlungModul modul k).replace "." "/"
+    text := kopf modul (fs.map (beweisModul modul)) ("The duties of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
+      "theorem sammlung" ++ toString k ++ " : ∀ f ∈ stueck" ++ toString k ++ ", FnPflicht u rk f :=\n  " ++
+        beweis ++ "\n\n" ++ fuss modul }
+
+def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Datei :=
+  let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
+  let beweise := (List.range anzahl).map fun k => "sammlung" ++ toString k
+  let rumpf :=
+    if ablehnungen.isEmpty then
+      "theorem fns_eq : u.fns = " ++ balanciert "++" "[]" 64 namen ++ " := rfl\n\n" ++
+      "theorem alle : ∀ f ∈ u.fns, FnPflicht u rk f := by\n  rw [fns_eq]\n  exact " ++
+        baum (fun a b => "(fnPflicht_append " ++ a ++ " " ++ b ++ ")") "fnPflicht_nil" 64 beweise ++ "\n\n" ++
+      "theorem einheit : EinheitTeil u := ⟨by decide, by decide, by decide⟩\n\n" ++
+      "theorem pflichten : PflichtenEinheit u := ⟨einheit, rk, alle⟩\n\n" ++
+      "/-- **Premise (b) of the goal theorem** for the unit the front end builds from `quelle`. -/\n" ++
+      "theorem nutzer {P : Gabbro.Grammatik.Programm (declOf u)} {fs : List (declOf u).Fn}\n" ++
+      "    (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u, P, fs⟩) :\n" ++
+      "    ∃ hn : nullB u = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u P hn) :=\n" ++
+      "  nutzer_aus_einheit pflichten h\n\n"
+    else
+      "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
+        String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
+  { pfad := modul.replace "." "/"
+    text := (kopf modul ([modul ++ ".Quelle", modul ++ ".Daten"] ++
+        (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
+        "The unit checks and premise (b) of the goal theorem (written by `gabbrov`).").replace
+        "@[expose] public section"
+        ("meta import Bruecke.Kette.Einheit\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+          ".Daten\n@[expose] public section") ++
+      "-- The pinned unit is what the front end builds from the source (checked by running it).\n" ++
+      "#guard uOf quelle == some u\n\n" ++ rumpf ++ fuss modul }
+
+/-- **The generator.** All files of the unit of `src` under the module prefix `modul`, or the
+    front end's refusal. -/
+def dateien (modul src : String) : Except String (List Datei) := do
+  let u ← match uebersetzeAllg src with
+    | .ok ⟨u, _, _⟩ => pure u
+    | .error e => throw ("the Lean front end refuses the source: " ++ e)
+  let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
+  let stuecke := teile stueckGroesse fs
+  let anzahl := stuecke.length
+  let rang := u.fns.map fun f => (f.name, rangAuto u f.name)
+  let rk : String → Nat := fun n => (rang.lookup n).getD 0
+  let fnAbl := fs.filterMap fun (_, f) =>
+    let gruende := (match zuBodyZ u f with | some _ => [] | none => [koerperAblehnung f]) ++
+      fnAblehnungen u f ++ (if bindFrischB f then [] else ["a local binder is not fresh"]) ++
+      (if rangFnB rk f then [] else ["recursive call (the generator states rank duties only)"])
+    if gruende.isEmpty then none else some (f.name ++ ": " ++ String.intercalate "; " gruende)
+  let einheitAbl :=
+    (if nullB u then [] else ["initial table or static memory outside the supported numeric ranges"]) ++
+    (if stimmigUnitB u then [] else stimmigAblehnungen u |>.filter (fun r => !(r.splitOn ": ").length > 1)) ++
+    (if ohneTransitionenB u then [] else ["a state declares a generated transition"])
+  let ablehnungen := einheitAbl ++ fnAbl
+  let pflichten := fs.filterMap fun (i, f) =>
+    (zuBodyZ u f).map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
+  let sammlungen := if ablehnungen.isEmpty then
+      stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1)) else []
+  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl rang] ++
+    stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
+
+end Gabbro.Bruecke.Vorlage

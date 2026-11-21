@@ -8143,3 +8143,14 @@ state is already reachable and the initial relation and private footprint are pr
 `TSOPrivateReachable.prepend` relates these private steps to the runner's ordinary IR
 process traces. B6 still requires construction of the process relation after physical
 startup and its preservation across shared commits, thread changes and terminal steps.
+
+## 205. GabbroV writes the Lean duty files of a unit (2026-11-21)
+
+*Files: `programmlogik/bruecke/Bruecke/Kette/Einheit.lean`, `Bruecke/Vorlage.lean`, `Bruecke/Vorlage/{Formen,Zeige,Haupt}.lean`;
+the executable `gabbrov` (`programmlogik/bruecke/lakefile.toml`). No change of `Spec.lean` or of any existing statement.*
+
+| Theorem | File | Says |
+|---|---|---|
+| `nutzer_aus_einheit`, `nutzerA_aus_einheit` | `Kette/Einheit.lean` | For a unit `u` given as data: its unit part (`EinheitTeil`: `nullB`, `stimmigUnitB`, no generated transitions) and, under one rank `rk`, every function's duty `FnPflicht u rk f` (`stimmigFnB`, `bindFrischB`, `rangFnB`, a Body reading and `meetsU` over it) for every `f ∈ u.fns`, together with the front-end equation `uebersetzeAllg src = .ok ⟨u, P, fs⟩`, give `NutzerPflicht` (and `NutzerPflichtA`) of `einheitAllg u P`. |
+| `stimmigB_of`, `ohneTransitionB_of`, `rangB_of` | `Kette/Einheit.lean` | The unit checks of `PflichtenAlle` follow from a unit part and a part per function (no quantifier over positions). |
+| `fnPflicht_append`, `fnPflicht_cons`, `fnPflicht_nil` | `Kette/Einheit.lean` | Assembly of the per-function duties over appended chunks (logarithmic depth in the generated files). |

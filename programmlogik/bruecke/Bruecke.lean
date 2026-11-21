@@ -15,6 +15,10 @@ public import Bruecke.GiftZyklus
 public import Bruecke.Start
 public import Bruecke.Quelle
 public import Bruecke.Vorlage
+public import Bruecke.Vorlage.Formen
+public import Bruecke.Vorlage.Haupt
+public import Bruecke.Vorlage.Zeige
+public import Bruecke.Kette.Einheit
 public import Bruecke.Teil.Pflichten
 public import Bruecke.Teil.Simulation
 public import Bruecke.Teil.Lokal.Kopf
