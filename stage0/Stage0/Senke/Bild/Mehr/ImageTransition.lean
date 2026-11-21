@@ -343,7 +343,7 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
     ∃ next actualStart, E.starts[i]? = some actualStart ∧
       FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
         (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) state next ∧
-      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) ⟨before.ms, threads⟩ next ∧
+      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) ⟨before.ms, threads⟩ next ∧ next.m = state.m ∧
       ∀ {body : PCfg} {snapshots positions committed},
         MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
           body state snapshots positions committed →
@@ -368,7 +368,7 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
     change (before.ths.set 0 _ ++ [some (.next child)])[before.ths.length]? = _
     rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
     rfl
-  refine ⟨next, E.starts[i]'declared, List.getElem?_eq_getElem declared, activate, ⟨?_, ?_⟩, ?_⟩
+  refine ⟨next, E.starts[i]'declared, List.getElem?_eq_getElem declared, activate, ⟨?_, ?_⟩, rfl, ?_⟩
   · intro j
     change (if j = i then true else state.lebt j) = true ↔ j < threads.length
     rw [size]
@@ -438,6 +438,7 @@ theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {option
     ProcessPrefix imageTSO actI before [(0, cloneReq, some (id, extra))] 6 after ∧
     after.ths[j + 1]? = some (some (.next child)) ∧ E.starts[j + 1]? = some start ∧
     ∃ next, ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧
+      next.m.faeden (j + 1) = (imageSourceStart E).m.faeden (j + 1) ∧
       ImageReach output E O (imageSourceStart E) next ∧ ImageGoalAt output E O next := by
   intro parent child scratch running entry frame after
   obtain ⟨site, _, _⟩ := output.loaded_boot_site E.Q code declared
@@ -450,11 +451,14 @@ theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {option
     rw [unit.starts]
     exact declared
   have bound : before.ths.length < E.starts.length := position ▸ (List.getElem?_eq_some_iff.mp head).1
-  obtain ⟨next, _, _, stepped, matched, _⟩ :=
+  obtain ⟨next, _, _, stepped, matched, unchanged, _⟩ :=
     slots.activate_clone (child := child) (id := id) (extra := extra) running waiting bound
+  have dormant : state.lebt (j + 1) = false :=
+    Bool.eq_false_iff.mpr (fun live => Nat.lt_irrefl _ (position ▸ (slots.1 _).mp live))
   have nextReached : ImageReach output E O (imageSourceStart E) next := .schritt state next reached stepped
   have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted
-  refine ⟨run, position ▸ childSlot, head, next, matched, nextReached, ?_⟩
+  refine ⟨run, position ▸ childSlot, head, next, matched,
+    unchanged.symm ▸ (fadenInvX_erreichbar reached).schlaeft _ dormant, nextReached, ?_⟩
   exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls unit.postDeckt
     O binding hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ nextReached
 
