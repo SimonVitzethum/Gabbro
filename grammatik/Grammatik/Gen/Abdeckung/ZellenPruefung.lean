@@ -145,7 +145,10 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
     fresh bounded index: only the contract checker's certified forms grow; every
     numbered cell formula, reset-cell atom and `komp` remain unchanged.
     Re-reviewed for the join mode of branches (`Continuation.joined`, `VCBudget.join`):
-    only the contract checker grows; cells and `komp` unchanged. -/
+    only the contract checker grows; cells and `komp` unchanged.
+    The contract proofs for state transitions, explicit float narrowing,
+    empty consuming domains and bounded slot inputs extend the closure of
+    `AkzeptiertX`. The numbered admission predicates keep their existing hashes. -/
 
 def erwartet : List (String × UInt64) :=
   [("0 fragment", 12310482679876591554),
@@ -159,7 +162,7 @@ def erwartet : List (String × UInt64) :=
    ("8 answers", 17025460873829671098),
    ("9 masks", 11679533481577547307),
    ("komp", 9954942803692629413),
-   ("AkzeptiertX", 3830940637807695692)]
+   ("AkzeptiertX", 12073542765822158576)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
