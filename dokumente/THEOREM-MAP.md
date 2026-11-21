@@ -8231,7 +8231,8 @@ starts at the mapped payload's loader read and reaches the child and the
 parent's next instruction on a successful, memory-preserving clone.
 `Emitted.bootActivation_step` accounts for the corresponding live position,
 rank and clock, and `Emitted.bootActivation_reached` covers every prefix of the
-declared root list in the logical thread machine.
+declared root list in the logical thread machine. `Emitted.bootActivation_zielsatz`
+gives the goal for these prefixes on the axiom-free certified domain.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.

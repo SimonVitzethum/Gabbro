@@ -178,6 +178,25 @@ theorem Emitted.zielsatz (output : Emitted src K options)
     verdict duties callSites posts O binding hardware output.image.passes _ _
     (laufzeit_initRuhe (output.goalUnit Q)) live state reached
 
+private theorem Emitted.axiomFree_zielsatz_from (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (empty : output.compiled.unit.axs.length = 0)
+    (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
+    (O : Orakel (declOf output.compiled.unit)) (hardware : HardwareAnnahmenHw O Q)
+    {live : Faden → Bool} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (reached : FadenErreichbarX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+      (output.goalStart Q live) state) :
+    let E := output.goalUnit Q
+    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
+  have absent (a : (declOf output.compiled.unit).Ax) :
+      (declOf output.compiled.unit).axHerkunft a ≠ some AxOrigin.software :=
+    False.elim ((Nat.not_lt_zero a.val) (empty ▸ a.isLt))
+  exact output.zielsatz Q certifiable
+    (Bool.and_eq_true_iff.mp (output.goal_axiomFree Q empty)).2
+    (callSitePflicht_ohne _ absent) (postDeckt_ohne _ absent) O (foreignVertrag_ohne _ O absent) hardware reached
+
 /-- Axiom-free production images carry the program-logic and start verdict
     into the goal theorem. All foreign obligations have an empty domain. -/
 theorem Emitted.zielsatz_axiomFree (output : Emitted src K options)
@@ -191,13 +210,22 @@ theorem Emitted.zielsatz_axiomFree (output : Emitted src K options)
     let E := output.goalUnit Q
     ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
-      (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
-  have absent (a : (declOf output.compiled.unit).Ax) :
-      (declOf output.compiled.unit).axHerkunft a ≠ some AxOrigin.software :=
-    False.elim ((Nat.not_lt_zero a.val) (empty ▸ a.isLt))
-  exact output.zielsatz Q certifiable
-    (Bool.and_eq_true_iff.mp (output.goal_axiomFree Q empty)).2
-    (callSitePflicht_ohne _ absent) (postDeckt_ohne _ absent) O (foreignVertrag_ohne _ O absent) hardware reached
+      (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state :=
+  output.axiomFree_zielsatz_from Q empty certifiable O hardware reached
+
+/-- The goal holds while the declared roots are activated in order, from
+    the single live entry, including their actual spawn clock and ranks. -/
+theorem Emitted.bootActivation_zielsatz (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (empty : output.compiled.unit.axs.length = 0)
+    (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
+    (O : Orakel (declOf output.compiled.unit)) (hardware : HardwareAnnahmenHw O Q)
+    {count : Nat} (declared : count ≤ output.starts.length) :
+    let E := output.goalUnit Q
+    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe))
+      (output.bootActivation Q count) :=
+  output.axiomFree_zielsatz_from Q empty certifiable O hardware (output.bootActivation_reached Q O declared)
 
 /-- Successful CLI payload production identifies the exact certified
     output, also under the automatic stack-reserve policy. -/
