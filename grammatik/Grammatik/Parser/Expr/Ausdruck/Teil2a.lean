@@ -503,4 +503,14 @@ def parsePredAtom (f : Nat) (toks : List Token) :
         | _ => .error er
 end
 
+/-- The slice suffix retains both endpoint expressions and continues the
+    same suffix chain after the closing bracket. -/
+theorem parseSuffixe_slice (fuel : Nat) (base first last : SExpr)
+    (tokens tail rest : List Token)
+    (lower : parseOr fuel tokens = .ok (first, .zeichen ".." :: tail))
+    (upper : parseOr fuel tail = .ok (last, .zeichen "]" :: rest)) :
+    parseSuffixe (fuel + 1) base (.zeichen "[" :: tokens) =
+      parseSuffixe fuel (.built "#slice" [base, first, last]) rest := by
+  simp only [parseSuffixe, lower, upper]
+
 end Gabbro.Grammatik.Parser

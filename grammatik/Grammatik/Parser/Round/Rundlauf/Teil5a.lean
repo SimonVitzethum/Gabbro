@@ -152,7 +152,27 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       intro h
       simp only [Token.zeichen.injEq, String.reduceEq] at h
     | built f xs =>
-      simp only [druckToks] at hT
+      have plain : strEq f "#slice" = false := by
+        rw [strEq_apply_eq_decide]
+        apply decide_eq_false
+        intro named
+        subst f
+        have rejected : gut (.built "#slice" xs) = false := by
+          cases xs with
+          | nil => rfl
+          | cons x rest =>
+            cases rest with
+            | nil => rfl
+            | cons y tail => cases tail <;> rfl
+        rw [rejected] at hg
+        cases hg
+      have ordinary : druckToks (.built f xs) =
+          (if strEq f "#tuple" then [] else [.wort f]) ++
+            [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"] := by
+        rw [druckToks.eq_def]
+        dsimp only
+        split <;> simp only [plain, Bool.false_eq_true, ↓reduceIte] <;> rfl
+      rw [ordinary] at hT
       split at hT
       · simp only [List.nil_append, List.cons_append, List.singleton_append,
           List.append_assoc] at hT

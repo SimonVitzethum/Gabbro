@@ -834,6 +834,16 @@ placesuffix= "." ident | "." int | "[" expr "]" | "->" ident ;
 placelist  = place { "," place } ;
 ```
 
+A slice `value[first .. last]` selects the half-open range from `first`
+through the element before `last`. Stage 0 supports compile-time endpoints
+over fixed arrays and strings whose exact bytes are known to the typed
+lowerer. Both endpoints must lie in the actual domain. For a constant
+string they count UTF-8 bytes, including an endpoint equal to the byte
+length. An empty slice is valid at any checked endpoint. Array slices
+produce an ordinary array value of length `last - first`.
+
+
+
 **Attributes — every operator names the range of its result** (CHANGED «SG-2», «SG-3»):
 
 | spelling | attribute on the operands | range of the result | Lean |

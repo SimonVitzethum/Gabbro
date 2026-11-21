@@ -88,6 +88,15 @@ theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
         (Nat.le_of_eq (sliceValue_length bytes first last bounds))⟩ := by
   simp only [lowerSlice, dif_pos bounds]
 
+theorem eval_stringSlice {maximum : Nat} (bytes : List (Zahl 0 255))
+    (stored : bytes.length ≤ maximum) (first last : Nat)
+    (bounds : SliceOk bytes.length first last) (initial world : World D) (env : Env D Γ) :
+    eval initial (.strLit (sliceValue bytes first last)
+      (Nat.le_of_eq (sliceValue_length bytes first last bounds))) world env =
+      strSliceValue (⟨bytes, stored⟩ : Wert D (.str maximum)) first last bounds := by
+  rw [eval]
+  rfl
+
 /-- The full-range view is inhabited at every length by every array value. -/
 theorem arraySlice_erfuellbar {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length))
     (initial world : World D) (env : Env D Γ) :

@@ -435,6 +435,14 @@ def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | Expr.tru => .ok x
         | _ => .ok (Expr.and x y)
 
+/-- The actual dependent value reader passes the checked base to the
+    slice elaborator, even when the resulting array is empty. -/
+theorem lowWertE_slice (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) (base : USide) (first last : Nat) :
+    lowWertE u Γ Λ fn er (.slice base first last) =
+      (lowWertE u Γ Λ fn er base).bind (lowerSlice first last) := by
+  rw [lowWertE]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-

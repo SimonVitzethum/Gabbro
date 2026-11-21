@@ -2,6 +2,8 @@ module
 
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
+import Grammatik.Bausteine.Arena.BlockScope
+import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 public import Stage0.Senke.Ausdruck.Tag
 
 @[expose] public section
@@ -18,6 +20,19 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Frontend.AliasAcyclic.no_cycle
 #print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
+#print axioms Gabbro.Grammatik.Parser.parseSuffixe_slice
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_string
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_refines
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_stringSlice
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySlice_erfuellbar
+#print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec
+#print axioms Gabbro.Grammatik.ArenaForm.restoreScope_storage
+#print axioms Gabbro.Grammatik.ArenaForm.restoreScope_excludes_suffix
+#print axioms Gabbro.Grammatik.ArenaForm.restoreScope_erfuellbar
+#print axioms Gabbro.Grammatik.Async.Representation.initial_inv
+#print axioms Gabbro.Grammatik.Async.Representation.reachable_encoded
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
 #print axioms Gabbro.Grammatik.Parser.EffectGroups.expandEffects_exact
