@@ -270,6 +270,9 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     tso_spawn_check_pass (before := afterClone) (i := i) (pc := guardPc) (fp := fp)
       (K := K) (scratch := scratch) next guardCode
       (frame.agree same) guardFar (by omega) slots stored positive
+  change after.1.m = spawned.1.m at committed
+  change Agree fp (scratch + 3) K (spawned.1.view i) (after.1.view i) at checked
+  change ∀ j, j ≠ i → after.1.view j = spawned.1.view j at otherChecked
   have advanced : guardPc + BitVec.ofNat 64 (16 * 7) = pc + BitVec.ofNat 64 (16 * 10) :=
     pcN pc 3 7 10 rfl
   have steps : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 38 ⟨after, threads⟩ := by
@@ -283,7 +286,8 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     rfl
   have preserved : Agree fp scratch K (before.ms.1.view i) (after.1.view i) :=
     same.trans (checked.mono (show scratch ≤ scratch + 3 from Nat.le_add_right scratch 3))
-  exact ⟨after, steps, appended, committed.trans beforeGuard, preserved,
-    fun j different => (otherChecked j different).trans (otherViews j different)⟩
+  have others : ∀ j, j ≠ i → after.1.view j = before.ms.1.view j :=
+    fun j different => (otherChecked j different).trans (otherViews j different)
+  exact ⟨after, steps, appended, committed.trans beforeGuard, preserved, others⟩
 
 end Gabbro.Stage0.Senke
