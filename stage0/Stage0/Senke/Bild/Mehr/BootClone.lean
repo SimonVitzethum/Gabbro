@@ -266,6 +266,79 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
 
+/-- A later startup site uses exactly the same compiler-to-runner argument
+    as the first. Once the parent reaches the site with the earlier
+    positions allocated, the relocated code supplies the two operands,
+    and the clone allocates logical root `j + 1`. The current frame can
+    contain writes from earlier sites. -/
+theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {layout : Runner.Beweis.Lay} {before : Cfg (TSO layout) (Res T)} {i j : Nat} {id extra : W}
+    {start : Σ f : (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).Fn,
+      Env (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+        ((Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit).params f)}
+    (declared : output.starts[j]? = some start)
+    (loaded : BytesAt (before.ms.1.view i) codeBase (output.image.code.flatMap encII))
+    (position : before.ths.length = j + 1)
+    (frame : FrameOK (before.ms.1.view i) (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
+    (positive : 0 < id.toInt) :
+    let pc := BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j))
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
+    before.ths[i]? = some (some (.next ⟨pc, fp⟩)) →
+    let threads := before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩)) ++ [some (.next child)]
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 ⟨after, threads⟩ ∧
+      threads[j + 1]? = some (some (.next child)) ∧
+      after.1.m = before.ms.1.m ∧
+      Agree fp (startScratch output.compiled.main) output.image.Ks (before.ms.1.view i) (after.1.view i) ∧
+      (∀ k, k ≠ i → after.1.view k = before.ms.1.view k) ∧
+      initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ ∧
+      ∀ O : Orakel (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit),
+        FadenSchrittX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+          (GeteiltV (D := Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)
+            (output.goalUnit Q).P (output.goalUnit Q).ws)
+          (output.bootActivation Q j) (output.bootActivation Q (j + 1)) := by
+  intro pc fp child running threads
+  have inside := (List.getElem?_eq_some_iff.mp declared).1
+  obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q loaded declared
+  obtain ⟨_, body, _, placed, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have frameAddress : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
+    simpa only [Emitted.starts, List.length_map] using placed.hfp
+  have enough : startScratch output.compiled.main + 8 ≤ output.image.Ks :=
+    placed.hex _ (List.mem_cons_self ..)
+  have storage : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
+    simpa only [Emitted.starts, List.length_map] using placed.hylo
+  have fit := placed.hfit
+  have worldOrder := placed.hyord
+  have upper := placed.hyhi
+  have childIndex : output.image.Ks * (j + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
+    Nat.mul_le_mul_left _ (by omega)
+  have oneFrame : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
+    Nat.le_mul_of_pos_right _ (Nat.succ_pos _)
+  have frameBound : output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by omega
+  have childFrame : output.image.fp0 + 8 * (output.image.Ks * (j + 1)) < 2 ^ 31 := by omega
+  have childCode : codeBase + 16 * (10 * output.starts.length + startLen + startLen * j) < 2 ^ 31 := by
+    simp only [headLen, startLen] at frameAddress ⊢
+    omega
+  have far : CodeFar pc 10 fp output.image.Ks := by
+    change CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j))) 10
+      (BitVec.ofNat 64 output.image.fp0) output.image.Ks
+    rw [ofNat_add64]
+    apply codeFar_nat _ (Nat.lt_trans frameBound (by decide))
+    simp only [headLen, startLen] at frameAddress
+    omega
+  obtain ⟨after, prefix, appended, same, own, others⟩ :=
+    bootSpawn_run (before := before) (i := i) (extra := extra) running site frame far (by omega)
+      (by omega) childCode childFrame positive
+  exact ⟨after, prefix, position ▸ appended, same, own, others, logical,
+    fun O => output.bootActivation_step Q O inside⟩
+
 /-- From the actual mapped payload the loader and the first clone site
     reach the first declared child. The compiled immediates supply both
     child addresses and the buffer holds the writes without a flush. -/
