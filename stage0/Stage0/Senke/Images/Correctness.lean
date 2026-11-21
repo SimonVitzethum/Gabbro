@@ -145,9 +145,9 @@ private theorem imageReach_trans {output : Emitted src reserve options}
     for every continuing prefix of the actual x86 process. -/
 theorem ImageSimulation.follow [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
-    {start from finish : Cfg imageTSO Runner.X86.X} (sim : ImageSimulation output E O start)
-    {events : List Ev} {count : Nat} (run : ProcessPrefix imageTSO (actX L0) from events count finish) :
-    ∀ {history ir state}, sim.related history from ir state →
+    {start before finish : Cfg imageTSO Runner.X86.X} (sim : ImageSimulation output E O start)
+    {events : List Ev} {count : Nat} (run : ProcessPrefix imageTSO (actX L0) before events count finish) :
+    ∀ {history ir state}, sim.related history before ir state →
       ∃ ir' steps next, ProcessPrefix imageTSO actI ir events steps ir' ∧
         sim.related (history ++ events) finish ir' next ∧ ImageReach output E O state next := by
   induction run with
@@ -174,10 +174,23 @@ theorem ImageSimulation.goal [Kern] {output : Emitted src reserve options}
     ∃ ir steps state, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧
       sim.related events finish ir state ∧ ImageReach output E O (imageSourceStart E) state ∧
       ImageGoalAt output E O state := by
-  obtain ⟨ir, steps, state, trace, matches, reached⟩ := sim.follow run sim.initial
-  refine ⟨ir, steps, state, trace, matches, reached, ?_⟩
+  obtain ⟨ir, steps, state, trace, endpoint, reached⟩ := sim.follow run sim.initial
+  refine ⟨ir, steps, state, trace, endpoint, reached, ?_⟩
   exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts O binding
     hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ reached
+
+/-- A terminal observation is explained at its actual last runner step.
+    The continuing prefix determines the corresponding source state. -/
+theorem ImageSimulation.terminal [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {start : Cfg imageTSO Runner.X86.X} (sim : ImageSimulation output E O start)
+    {events : List Ev} {ending : Ende} {count : Nat}
+    (run : Tr imageTSO (actX L0) start events ending count) (stopped : ending ≠ .lauf) :
+    ∃ earlier last state, events = earlier ++ last ∧
+      ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending := by
+  obtain ⟨boundary, earlier, last, steps, trace, finish, eventsEq, _⟩ := run.split_stop stopped
+  obtain ⟨ir, _, state, _, endpoint, reached⟩ := sim.follow trace sim.initial
+  exact ⟨earlier, last, state, eventsEq, reached, sim.stop earlier boundary ir state last ending endpoint finish stopped⟩
 
 /-- B6 for the production Stage 0 emitter. This definition is the claim
     to prove. A successful build fixes the source and model unit before
