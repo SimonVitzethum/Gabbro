@@ -7,10 +7,10 @@ table tc count 2 { slot { v : u32 in 0 .. 255, } }
 impl fn worker()
     effects { pure }
 { }
+concurrent { worker };
 impl fn main(a : ptr<normal, rw> ta, b : ptr<normal, rw> tb, c : ptr<normal, rw> tc) -> u32 in 0 .. 255
     effects { writes a.slots, writes b.slots, reads c.slots, writes c.slots }
 {
-    start { worker };
     a.slots[0].v = 10;
     b.slots[1].v = 20;
     c.slots[0].v = 13;

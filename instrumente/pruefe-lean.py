@@ -243,19 +243,24 @@ def stufe_stage0():
                 falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
         for gab in irproben:
             img = kratz / (gab.stem + ".img")
-            q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
             refusal = gab.with_suffix(".error")
+            exit_code = gab.with_suffix(".code")
+            if refusal.exists() == exit_code.exists():
+                irfalsch.append(f"{gab.name}: exactly one of .error and .code is required")
+                continue
+            img.unlink(missing_ok=True)
+            q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
             if refusal.exists():
                 expected = refusal.read_bytes().strip()
-                if q.returncode != 1 or expected not in q.stderr:
+                if not expected or q.returncode != 1 or expected not in q.stderr or img.exists():
                     irfalsch.append(f"{gab.name}: expected compiler refusal {expected!r}, "
                                     f"got rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
                 continue
-            if q.returncode != 0:
+            if q.returncode != 0 or not img.is_file():
                 irfalsch.append(f"{gab.name}: stage0 --ir rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
                 continue
             r = subprocess.run([str(runner), str(img)], cwd=kratz, capture_output=True, timeout=600)
-            soll = int(gab.with_suffix(".code").read_text())
+            soll = int(exit_code.read_text())
             if r.returncode != soll:
                 irfalsch.append(f"{gab.name}: exit {r.returncode}, expected {soll}")
     print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
