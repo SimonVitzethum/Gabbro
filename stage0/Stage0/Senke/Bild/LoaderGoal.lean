@@ -259,5 +259,6 @@ theorem bootClone_step {M : MemSys} {before : Cfg M (Res T)} {i : Nat}
   constructor
   · exact .clone pending rfl answer positive (by simp only [opt_some, if_neg nonzero]) rfl
   · rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
+    rfl
 
 end Gabbro.Stage0
