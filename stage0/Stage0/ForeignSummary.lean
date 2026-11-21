@@ -18,7 +18,21 @@ variable {D : Deklaration} {params : Ctx} {result : Option Ty}
 structure ResultSummary (post : Expr D (ErgCtx params result) [] .bool) where
   expression : Expr D (ErgCtx [] result) [] .bool
   exactPost : ∀ world value, eval world expression world (ergEnv result value .nil) = true ↔
-    ∃ old (arguments : Env D params), eval old post world (ergEnv result value arguments) = true
+    ∃ (old : World D) (arguments : Env D params),
+      eval old post world (ergEnv result value arguments) = true
+
+/-- A true post projects to true only if the original argument context
+    has a value. Construct the typed environment for the common gate inputs. -/
+def summaryArguments : (params : Ctx) → Option (Env D params)
+  | [] => some .nil
+  | .int lo hi :: rest => do
+    let value ← einpassen (D := D) (fun _ => none) (.int lo hi) lo
+    return .cons value (← summaryArguments rest)
+  | .bool :: rest => (summaryArguments rest).map (.cons false)
+  | .opt _ :: rest => (summaryArguments rest).map (.cons none)
+  | .ptr _ :: rest => (summaryArguments rest).map (.cons ())
+  | .ref _ :: rest => (summaryArguments rest).map (.cons (Val.vonZelle 0))
+  | _ :: _ => none
 
 /-- A parameterless post in the current-world fragment already has the
     required result context. The old world is irrelevant by the expression
@@ -37,6 +51,10 @@ def checkResultSummary (params : Ctx) (result : Option Ty)
       · rintro ⟨old, arguments, holds⟩
         cases arguments
         exact (current.down old world _).symm ▸ holds⟩
+  | first :: rest, .tru => do
+    let some arguments := summaryArguments (D := D) (first :: rest)
+      | .error "foreign post summary needs an inhabited argument context"
+    pure ⟨.tru, fun world _ => ⟨fun _ => ⟨world, arguments, rfl⟩, fun _ => rfl⟩⟩
   | _ :: _, _ => .error "foreign post summary needs argument projection"
 
 /-- The model checker's source expressions and exact post projection
