@@ -9,7 +9,8 @@ public import Runner.IR.Futex
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser
+  Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
   Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
@@ -52,12 +53,31 @@ structure MappedImage [Kern] (output : Emitted src reserve options)
   loader : Rel L0 (M := imageTSO) ⟨machine.ms, [some t4]⟩ machine
   runnerFile : FileInv machine.ms.1.m
 
+private def sourceAccumulator : SItemTief → Bool
+  | .accT .. => true
+  | _ => false
+
+/-- An accumulator descriptor elaborates the actual selected declaration
+    with its generated cells, locks and functions. -/
+def ImageAccumulator (output : Emitted src reserve options) (item : SItemTief)
+    (acc : Kernzelle.AccumulatorDecl (declOf output.compiled.unit)) : Prop :=
+  let unit := output.compiled.unit
+  let scopes := output.compiled.source.scopes
+  (∃ cells locks, uAkkuDecl scopes.values scopes.types item cells locks
+    acc.kernAbfrage acc.aktualisiere acc.falte = .ok acc) ∧
+  (∀ i, (unit.globs.get (acc.zellen i)).name = acc.name ++ "#zelle" ++ toString i.val) ∧
+  (∀ i, (unit.locks.get (acc.sperren i)).name = acc.name ++ "#sperre" ++ toString i.val) ∧
+  (fnAt unit acc.kernAbfrage).name = acc.name ++ "#query" ∧
+  (fnAt unit acc.aktualisiere).name = acc.name ++ "#aktualisiere" ∧
+  (fnAt unit acc.falte).name = acc.name ++ "#falte"
+
 /-- The source's canonical bodies and initial declarations used by both
     the compiler and the goal theorem are the same. -/
 structure ImageModelUnit (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) : Prop where
   program : E.P = output.compiled.program
   locks : E.S = Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit
+  lockSources : HEq E.lockFormulas (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
   memory : E.sp0 = output.sp0
   starts : E.starts = ⟨output.compiled.main, output.args⟩ :: output.starts
   checks : E.pruefungen = output.compiled.checkedDeclarations.val
@@ -66,8 +86,13 @@ structure ImageModelUnit (output : Emitted src reserve options)
     some (Gabbro.Grammatik.Parser.Cover.Differenz.zeigerSignaturen output.compiled.unit)
   runtimeRoots : E.gestartet.map (·.1) =
     output.compiled.unit.gestartet.filterMap (Gabbro.Grammatik.Parser.Cover.Differenz.wurzelIdx output.compiled.unit)
+  runtimeParams : ∀ root ∈ E.gestartet, (declOf output.compiled.unit).params root.1 = []
   arenaTables : ∀ t : (declOf output.compiled.unit).Tab, (output.compiled.unit.tabs.get t).arena = true ↔
     ∃ arena ∈ E.arenen, arena.A.tab = t
+  accumulators : List.Forall₂ (ImageAccumulator output)
+    ((uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter sourceAccumulator) E.akku
+  summary : ∀ item world value, E.Q item world value = true ↔
+    ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
 
 /-- The source's one live entry, with every declared boot position already
     provisioned with its exact argument environment. -/
