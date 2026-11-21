@@ -8,12 +8,12 @@ public import Grammatik.Parser.Elab.UebersetzePipeline
 /-!
 # GabbroV's generator: the Lean files of a unit's duties
 
-`dateien modul src` runs Stage 0's front end on the source text once (`Gabbro.Stage0.compile`: the
-unit Stage 0 actually compiles) and writes the duties of the unit as Lean modules under the module
+`dateien modul src` runs Stage 0's front end on the source text once (`stufe0Einheit`: the unit
+Stage 0 compiles, without the checker that follows it) and writes the duties of the unit as Lean modules under the module
 prefix `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`). The unit is pinned AS DATA (owner,
 2026-11-21): the files never evaluate the front end in the kernel; the generic theorem
-`nutzer_aus_stage0` takes `c : Compiled quelle` with `c.unit = u` as its named premise, and the top
-file checks it by running Stage 0 (`#guard`).
+`nutzer_aus_stage0` takes `c : Compiled quelle` with `c.unit = u` as its named premise, and the module
+`M/Pruefung.lean` checks it by running Stage 0's front end (`stufe0Einheit`, `#guard`).
 
 Layout, so that units of 500 000 lines stay usable (every file small, Lake builds them in
 parallel, no step quantifies over function positions):
@@ -198,28 +198,67 @@ def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Da
       "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
         String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
   { pfad := modul.replace "." "/"
-    text := (kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"] ++
+    text := kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"] ++
         (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
-        "The unit checks and premise (b) of the goal theorem (written by `gabbrov`).").replace
+        ("The unit checks and premise (b) of the goal theorem (written by `gabbrov`). That `u` is the\n" ++
+         "    unit Stage 0 compiles from `quelle` is the premise `c.unit = u` of `nutzer`; the module\n" ++
+         "    `" ++ modul ++ ".Pruefung` checks it by running Stage 0's front end.") ++ rumpf ++ fuss modul }
+
+/-- The check of the anchoring premise, by running Stage 0's front end; no theorem imports it. -/
+def pruefungDatei (modul : String) : Datei :=
+  { pfad := modul.replace "." "/" ++ "/Pruefung"
+    text := (kopf modul ["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"]
+        "Checks that `u` is the unit Stage 0's front end builds from `quelle` (written by `gabbrov`).").replace
         "@[expose] public section"
         ("meta import Bruecke.Kette.Stufe0\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
-      "-- The pinned unit is the unit Stage 0 compiles from the source (checked by running Stage 0).\n" ++
-      "#guard (match Gabbro.Stage0.compile quelle with | .ok c => c.unit == u | .error _ => false)\n\n" ++ rumpf ++ fuss modul }
+      "#guard stufe0Einheit quelle == .ok u\n\n" ++ fuss modul }
+
+/-- The rank of every function of an acyclic call graph, in linear time (Kahn's order): a function
+    without callees has rank 0, every other one more than the highest of its callees. Functions on a
+    cycle keep rank 0; `rangFnB` then fails for them and the generator names the refusal. The ranks
+    are data of the generated files only: `rangFnB` checks them in every function's module. -/
+def raenge (u : UProg) : List (String × Nat) := Id.run do
+  let namen : Std.HashSet String := u.fns.foldl (fun s f => s.insert f.name) {}
+  let rufe : List (String × List String) :=
+    u.fns.map fun f => (f.name, (calleesOf f).filter namen.contains)
+  let rufTafel : Std.HashMap String (List String) := rufe.foldl (fun m p => m.insert p.1 p.2) {}
+  let mut offen : Std.HashMap String Nat := {}
+  let mut rufer : Std.HashMap String (List String) := {}
+  for (n, cs) in rufe do
+    offen := offen.insert n cs.length
+    for c in cs do
+      rufer := rufer.insert c (n :: rufer.getD c [])
+  let mut rang : Std.HashMap String Nat := {}
+  let mut warte : Array String := (rufe.filter fun p => p.2.isEmpty).toArray.map (·.1)
+  let mut i := 0
+  for _ in [0:rufe.length + 1] do
+    if h : i < warte.size then
+      let n := warte[i]
+      i := i + 1
+      let r := ((rufTafel.getD n []).map fun c => rang.getD c 0 + 1).foldl max 0
+      rang := rang.insert n r
+      for k in rufer.getD n [] do
+        let o := offen.getD k 1 - 1
+        offen := offen.insert k o
+        if o == 0 then warte := warte.push k
+  return u.fns.map fun f => (f.name, rang.getD f.name 0)
 
 /-- **The generator.** All files of the unit of `src` under the module prefix `modul`, or the
     front end's refusal. -/
 def dateien (modul src : String) : Except String (List Datei) := do
-  let u ← match Gabbro.Stage0.compile src with
-    | .ok c => pure c.unit
-    | .error e => throw ("Stage 0 refuses the source: " ++ e)
+  let u ← match stufe0Einheit src with
+    | .ok u => pure u
+    | .error e => throw ("Stage 0's front end refuses the source: " ++ e)
   let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
   let stuecke := teile stueckGroesse fs
   let anzahl := stuecke.length
-  let rang := u.fns.map fun f => (f.name, rangAuto u f.name)
-  let rk : String → Nat := fun n => (rang.lookup n).getD 0
-  let fnAbl := fs.filterMap fun (_, f) =>
-    let gruende := (match zuBodyZ u f with | some _ => [] | none => [koerperAblehnung f]) ++
+  let rang := raenge u
+  let rangTafel : Std.HashMap String Nat := rang.foldl (fun m p => m.insert p.1 p.2) {}
+  let rk : String → Nat := fun n => rangTafel.getD n 0
+  let gelesen := fs.map fun (i, f) => (i, f, zuBodyZ u f)
+  let fnAbl := gelesen.filterMap fun (_, f, b) =>
+    let gruende := (match b with | some _ => [] | none => [koerperAblehnung f]) ++
       fnAblehnungen u f ++ (if bindFrischB f then [] else ["a local binder is not fresh"]) ++
       (if rangFnB rk f then [] else ["recursive call (the generator states rank duties only)"])
     if gruende.isEmpty then none else some (f.name ++ ": " ++ String.intercalate "; " gruende)
@@ -228,11 +267,12 @@ def dateien (modul src : String) : Except String (List Datei) := do
     (if stimmigUnitB u then [] else stimmigAblehnungen u |>.filter (fun r => !(r.splitOn ": ").length > 1)) ++
     (if ohneTransitionenB u then [] else ["a state declares a generated transition"])
   let ablehnungen := einheitAbl ++ fnAbl
-  let pflichten := fs.filterMap fun (i, f) =>
-    (zuBodyZ u f).map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
+  let pflichten := gelesen.filterMap fun (i, f, b) =>
+    b.map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
   let sammlungen := if ablehnungen.isEmpty then
       stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1)) else []
-  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl rang] ++
+  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl rang,
+      pruefungDatei modul] ++
     stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
 
 end Gabbro.Bruecke.Vorlage
