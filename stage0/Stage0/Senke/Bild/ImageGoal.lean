@@ -25,22 +25,29 @@ theorem Emitted.goalUnit_starts (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) :
     (output.goalUnit Q).starts = ⟨output.compiled.main, output.args⟩ :: output.starts := rfl
 
-/-- The invariant branch of the model's unit verdict follows from the
-    compiler's writer check and the emitter's check on the serialized memory. -/
-theorem Emitted.goal_invariants (output : Emitted src K options)
-    (Q : AxEns (declOf output.compiled.unit)) :
-    invariantenGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true := by
-  have checked : CheckedInitialInvariants (output.goalUnit Q) output.lsA.1 := by
+private theorem Emitted.goal_invariants_with_sources (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (sources : Option (Vertraege.Pruefer.AxiomSources Q)) :
+    let E := { output.goalUnit Q with axiomSources := sources }
+    invariantenGeprueftB E output.fsA.1 output.lsA.1 = true := by
+  intro E
+  have checked : CheckedInitialInvariants E output.lsA.1 := by
     have initial := output.initialInvariants
     unfold CheckedInitialInvariants at initial ⊢
     refine ⟨initial.1, ?_⟩
-    simpa only [initialUnit, Emitted.goalUnit, OldSource.einheitDer, OldSource.einheitVon,
+    simpa only [E, initialUnit, Emitted.goalUnit, OldSource.einheitDer, OldSource.einheitVon,
       Emitted.lsA, Emitted.sp0] using initial.2
   apply checked.goal_verdict
   have accepted := OldSource.accepts_program _ _ _ output.compiled.accepted
     output.compiled.checkedDeclarations.property
   simp only [AkzeptiertX, Invarianten.Pruefer.invariantVCB, Bool.and_eq_true] at accepted
   exact accepted.2.1
+
+/-- The invariant branch of the model's unit verdict follows from the
+    compiler's writer check and the emitter's check on the serialized memory. -/
+theorem Emitted.goal_invariants (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) :
+    invariantenGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true :=
+  output.goal_invariants_with_sources Q (output.goalUnit Q).axiomSources
 
 /-- With an empty axiom family, the compiler supplies both branches of the
     goal checker's verdict on the declared initial state. -/
@@ -102,7 +109,7 @@ theorem Emitted.foreign_goal_checker (output : Emitted src K options)
   have program := OldSource.accepts_program u _ _ output.compiled.accepted
     output.compiled.checkedDeclarations.property
   have invariant : invariantenGeprueftB E output.fsA.1 output.lsA.1 = true :=
-    output.goal_invariants checked.summary.predicates
+    output.goal_invariants_with_sources checked.summary.predicates (some checked.summary.sources)
   exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
     ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨program, besitzB_leer rfl⟩,
       Kernzelle.akkuStartB_leer E⟩, invariant⟩, checked.verdict⟩
