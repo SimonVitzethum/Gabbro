@@ -391,8 +391,10 @@ private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
     split at cell <;> omega
   have fit : Runner.Prog.BASE + Runner.Prog.fileLen < Runner.Prog.IMG :=
     (congrArg (fun n => Runner.Prog.BASE + n < Runner.Prog.IMG) image_len).mp image_fits
+  simp only [Runner.Prog.fileLen] at fit
+  have below := Nat.lt_of_le_of_lt (tableEnd Runner.Prog.BASE Runner.Prog.tblOff width) fit
   rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat]
-  exact (Nat.mod_le _ _).trans_lt ((tableEnd Runner.Prog.BASE Runner.Prog.tblOff width).trans_lt fit)
+  exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) below
 
 /-- From the actual mapped payload the loader and the first clone site
     reach the first declared child. The compiled immediates supply both
