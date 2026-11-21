@@ -82,7 +82,7 @@ def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
       | some e, some es => some (e :: es)
       | _, _ => none
 
-def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
+def stmtBody (u : UProg) [FnSuche u] (f : UFn) : UStmt → Option Stmt
   | .assign p fld i v =>
       match ptrTab u f p, sideExprG u f v with
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
@@ -262,7 +262,7 @@ theorem writesU_global {f : UFn} {w : String} (h : w ∈ f.gputs) : w ∈ writes
   List.mem_append_right _ (List.mem_append_left _ h)
 
 /-- The callee hypotheses in front of the turnstile: contract and frame of every callee. -/
-def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop → Prop
+def hyps (u : UProg) [FnSuche u] (wf : State → Prop) (ρ : Env) : List String → Prop → Prop
   | [], c => c
   | g :: gs, c =>
       match fnSuch u g with
@@ -273,7 +273,7 @@ def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop →
 /-- **`meets`** -- what a person proves about `f` (`_meets_statement`). Non-vacuous only
     together with `zuBodyZ u f = some body`: `meetsU` alone over the body the reader returns
     proves nothing unless that body is the one the bridge connects to `f`. -/
-def meetsU (u : UProg) (wf : State → Prop) (f : UFn) (body : List Stmt) : Prop :=
+def meetsU (u : UProg) [FnSuche u] (wf : State → Prop) (f : UFn) (body : List Stmt) : Prop :=
   ∀ (ρ : Env) (s : State), wf s → eval s (preExpr f) = some (.bool true) →
     hyps u wf ρ (calleesOf f)
       (∃ s', finalState (exec ρ body s) = some s' ∧

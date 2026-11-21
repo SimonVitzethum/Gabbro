@@ -39,13 +39,13 @@ theorem namedOption_sicht {u : UProg} {ft fn : UFn} (h : Sicht u ft fn)
   have hn : ns.lookup ft = ns.lookup fn := funext (BodyNames.lookup_sicht h ns)
   simp only [namedOption, optionExpr_sicht h, hn]
 
-def namedStmt (u : UProg) (fn : UFn) (ns : BodyNames) (s : UStmt) :
+def namedStmt (u : UProg) [FnSuche u] (fn : UFn) (ns : BodyNames) (s : UStmt) :
     Option Gabbro.Body.Stmt :=
   (stmtBody u fn s).bind (renameStep (ns.lookup fn))
 
 /-- Result calls use the same argument reader and renamer as discard calls. Only the
     scalar result types represented by this bridge are admitted. -/
-def namedResult (u : UProg) (fn : UFn) (ns : BodyNames) (x g : String)
+def namedResult (u : UProg) [FnSuche u] (fn : UFn) (ns : BodyNames) (x g : String)
     (args : List UArg) : Option (Gabbro.Body.Stmt × Ty) := do
   let gf ← fnSuch u g
   let ty ← gf.ergTy
@@ -55,7 +55,7 @@ def namedResult (u : UProg) (fn : UFn) (ns : BodyNames) (x g : String)
   pure (.bindCall (ns.fresh x) g (gf.params.map (·.1)) renamed (preExpr gf), ty)
 
 /-- A binder allocates once; an assignment resolves the existing first-match position. -/
-def schrittB (u : UProg) (fn : UFn) (ns : BodyNames) :
+def schrittB (u : UProg) [FnSuche u] (fn : UFn) (ns : BodyNames) :
     UStmt → Option (Gabbro.Body.Stmt × UFn × BodyNames)
   | .bind x _ v => (namedSide u fn ns v).map
       (fun e => (.bindName (ns.fresh x) e, fn.mitBindung x (0, 0), ns.push x))

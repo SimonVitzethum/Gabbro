@@ -23,7 +23,7 @@ def endLocalB : UStmt → Bool
 
 /-- Read a mandatory ending, including numeric, Boolean and record locals.
     An ending arm has no joining continuation, so its local identifiers cannot escape. -/
-def endBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
+def endBodyZ (u : UProg) [FnSuche u] : Nat → UFn → BodyNames → List UStmt →
     Option (List Gabbro.Body.Stmt × List UStmt)
   | 0, _, _, _ => none
   | _ + 1, _, _, [] => none

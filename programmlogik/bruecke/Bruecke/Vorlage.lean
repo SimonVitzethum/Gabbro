@@ -114,6 +114,49 @@ def einheitText (u : UProg) (fnsAusdruck : String) : String :=
 
 def fnName (i : Nat) : String := "f" ++ toString i
 
+/-- The depth of the function tables: about log₂ of the number of functions, so buckets stay short. -/
+def tabellenTiefe (n : Nat) : Nat := Nat.log2 (n + 1) + 1
+
+/-- A table printed as a Lean term; an entry is printed by `eintrag` (a function constant or a rank). -/
+def tabellenText {α : Type} (eintrag : α → String) : Tabelle α → String
+  | .leer => "Gabbro.Bruecke.Tabelle.leer"
+  | .knoten e l r => "(Gabbro.Bruecke.Tabelle.knoten [" ++
+      String.intercalate ", " (e.map fun p => "(" ++ literal p.1 ++ ", " ++ eintrag p.2 ++ ")") ++ "] " ++
+      tabellenText eintrag l ++ " " ++ tabellenText eintrag r ++ ")"
+
+def tabelleModul (modul : String) : String := modul ++ ".Tabelle"
+
+/-- The search tables of the unit: the function table, checked once against `u.fns`, the fast
+    lookup the duty modules compute with, and the ranks. -/
+def tabelleDatei (modul : String) (u : UProg) (anzahl : Nat) (rang : List (String × Nat)) : Datei :=
+  let d := tabellenTiefe u.fns.length
+  let fnTab : Tabelle Nat := Tabelle.bauenK d (u.fns.zipIdx.map fun (f, i) => (namensHash f.name, f.name, i))
+  let rangTab : Tabelle Nat := Tabelle.bauenK d (rang.map fun (n, r) => (namensHash n, n, r))
+  let ks := List.range anzahl
+  let dreierAusdruck := balanciert "++" "[]" 64 (ks.map fun k => "dreier" ++ toString k)
+  let stueckAusdruck := balanciert "++" "[]" 64 (ks.map fun k => "stueck" ++ toString k)
+  let beweis := baum (fun a b => "(tabellenSchluessel_verbinde " ++ a ++ " " ++ b ++ ")") "rfl" 64
+    (ks.map fun k => "dreier" ++ toString k ++ "_eq")
+  { pfad := (tabelleModul modul).replace "." "/"
+    text := kopf modul [modul ++ ".Daten"] "The search tables of the unit (written by `gabbrov`)." ++
+      "def tiefe : Nat := " ++ toString d ++ "\n\n" ++
+      "def dreier : List (Nat × String × UFn) := " ++ dreierAusdruck ++ "\n\n" ++
+      "/-- The keyed entries are those of `u.fns` (each chunk checked its own keys). -/\n" ++
+      "theorem dreier_eq : dreier = tabellenSchluessel u.fns := by\n" ++
+      "  show " ++ dreierAusdruck ++ " = tabellenSchluessel " ++ stueckAusdruck ++ "\n" ++
+      "  exact " ++ beweis ++ "\n\n" ++
+      "/-- The functions by name: a binary trie over the hash of the name. -/\n" ++
+      "def tabelle : Gabbro.Bruecke.Tabelle UFn :=\n  " ++ tabellenText fnName fnTab ++ "\n\n" ++
+      "/-- Checked once, by bit arithmetic only: the table is built from the keyed entries. -/\n" ++
+      "theorem tabelle_eq : tabelle = Tabelle.bauenK tiefe dreier := by\n  with_unfolding_all rfl\n\n" ++
+      "/-- The callee lookup the duty modules compute with (`zuBodyZ_suche`, `meetsU_suche`). -/\n" ++
+      "@[reducible] def schnell : FnSuche u := ⟨Tabelle.suche tiefe tabelle⟩\n\n" ++
+      "theorem schnell_such (n : String) : Tabelle.suche tiefe tabelle n = standardSuche u n :=\n" ++
+      "  tabelle_such tabelle_eq dreier_eq n\n\n" ++
+      "/-- The rank of every function (any rank under which every call descends will do). -/\n" ++
+      "def rangTabelle : Gabbro.Bruecke.Tabelle Nat :=\n  " ++ tabellenText toString rangTab ++ "\n\n" ++
+      "def rk (n : String) : Nat := (Tabelle.suche tiefe rangTabelle n).getD 0\n\n" ++ fuss modul }
+
 def stueckModul (modul : String) (k : Nat) : String := modul ++ ".Daten.S" ++ toString k
 
 def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
@@ -123,17 +166,20 @@ def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
       String.join (fs.map fun (i, f) =>
         "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  " ++ breit (repr f) ++ "\n\n") ++
       "def stueck" ++ toString k ++ " : List UFn := [" ++
-        String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++ fuss modul }
+        String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++
+      "/-- The keyed entries of the chunk for the function table (key = hash of the name). -/\n" ++
+      "def dreier" ++ toString k ++ " : List (Nat × String × UFn) := [" ++
+        String.intercalate ", " (fs.map fun (i, f) =>
+          "(" ++ toString (namensHash f.name) ++ ", " ++ literal f.name ++ ", " ++ fnName i ++ ")") ++ "]\n\n" ++
+      "theorem dreier" ++ toString k ++ "_eq : dreier" ++ toString k ++ " = tabellenSchluessel stueck" ++
+        toString k ++ " := by\n  with_unfolding_all rfl\n\n" ++ fuss modul }
 
-def datenDatei (modul : String) (u : UProg) (anzahl : Nat) (rang : List (String × Nat)) : Datei :=
+def datenDatei (modul : String) (u : UProg) (anzahl : Nat) : Datei :=
   let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
   { pfad := modul.replace "." "/" ++ "/Daten"
     text := kopf modul ((List.range anzahl).map (stueckModul modul))
-        "The elaborated unit `u` as data and the rank of its call graph (written by `gabbrov`)." ++
-      "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++
-      "/-- The rank of every function: every direct call goes to a lower rank. -/\n" ++
-      "def rangTafel : List (String × Nat) :=\n  " ++ breit (repr rang) ++ "\n\n" ++
-      "def rk (n : String) : Nat := (rangTafel.lookup n).getD 0\n\n" ++ fuss modul }
+        "The elaborated unit `u` as data (written by `gabbrov`)." ++
+      "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++ fuss modul }
 
 /-- The source contract of a function in a comment line, as far as it is printable. -/
 def vertrag (f : UFn) : String :=
@@ -147,16 +193,17 @@ def beweisModul (modul : String) (i : Nat) : String := modul ++ ".Beweis.F" ++ t
 def pflichtDatei (modul : String) (i : Nat) (f : UFn) (body : List Gabbro.Body.Stmt) : Datei :=
   let si := toString i
   { pfad := (pflichtModul modul i).replace "." "/"
-    text := kopf modul [modul ++ ".Daten"] ("The duty of " ++ vertrag f ++ " (written by `gabbrov`; regenerated on every run).") ++
+    text := kopf modul [tabelleModul modul] ("The duty of " ++ vertrag f ++ " (written by `gabbrov`; regenerated on every run).") ++
       "/-- The body of `" ++ f.name ++ "` as GabbroV reads it:\n\n```\n" ++ zeigeKoerper body ++ "```\n-/\n" ++
       "def body" ++ si ++ " : List Gabbro.Body.Stmt :=\n  " ++ breit (repr body) ++ "\n\n" ++
-      "theorem body" ++ si ++ "_eq : zuBodyZ u " ++ fnName i ++ " = some body" ++ si ++ " := by\n  with_unfolding_all rfl\n\n" ++
+      "theorem body" ++ si ++ "_eq : zuBodyZ u " ++ fnName i ++ " = some body" ++ si ++ " := by\n" ++
+        "  rw [← zuBodyZ_suche _ schnell_such]\n  with_unfolding_all rfl\n\n" ++
       "/-- The decided checks of `" ++ f.name ++ "`. -/\n" ++
       "theorem pruefung" ++ si ++ " : stimmigFnB u " ++ fnName i ++ " = true ∧ bindFrischB " ++ fnName i ++
         " = true ∧ rangFnB rk " ++ fnName i ++ " = true := by\n  with_unfolding_all decide\n\n" ++
       "/-- **What you prove about `" ++ f.name ++ "`**: from a well-formed entry state satisfying the\n" ++
       "    precondition, under the contracts of its callees, the body ends and meets the postcondition. -/\n" ++
-      "def ziel" ++ si ++ " : Prop := meetsU u (wfU u) " ++ fnName i ++ " body" ++ si ++ "\n\n" ++ fuss modul }
+      "def ziel" ++ si ++ " : Prop := @meetsU u schnell (wfU u) " ++ fnName i ++ " body" ++ si ++ "\n\n" ++ fuss modul }
 
 /-- The user's proof file: written once, never replaced. -/
 def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
@@ -174,7 +221,7 @@ def sammlungDatei (modul : String) (k : Nat) (fs : List Nat) : Datei :=
   let glied (i : Nat) : String :=
     let si := toString i
     "⟨pruefung" ++ si ++ ".1, pruefung" ++ si ++ ".2.1, pruefung" ++ si ++ ".2.2, body" ++ si ++ ", body" ++ si ++
-      "_eq, beweis" ++ si ++ "⟩"
+      "_eq, (meetsU_suche _ schnell_such _ _ _).mp beweis" ++ si ++ "⟩"
   let beweis := fs.foldr (fun i acc => "fnPflicht_cons " ++ glied i ++ "\n    (" ++ acc ++ ")") "fnPflicht_nil"
   { pfad := (sammlungModul modul k).replace "." "/"
     text := kopf modul (fs.map (beweisModul modul)) ("The duties of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
@@ -200,7 +247,7 @@ def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Da
       "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
         String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
   { pfad := modul.replace "." "/"
-    text := kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"] ++
+    text := kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", tabelleModul modul] ++
         (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
         ("The unit checks and premise (b) of the goal theorem (written by `gabbrov`). That `u` is the\n" ++
          "    unit Stage 0 compiles from `quelle` is the premise `c.unit = u` of `nutzer`; the module\n" ++
@@ -278,8 +325,8 @@ def dateien (modul src : String) : Except String (List Datei) := do
     b.map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
   let sammlungen := if ablehnungen.isEmpty then
       stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1)) else []
-  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl rang,
-      pruefungDatei modul] ++
+  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl,
+      tabelleDatei modul u anzahl rang, pruefungDatei modul] ++
     stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
 
 end Gabbro.Bruecke.Vorlage

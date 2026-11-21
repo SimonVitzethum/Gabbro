@@ -18,7 +18,19 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-! ## 0. Lookups -/
 
-def fnSuch (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name == n)
+/-- How the body readers resolve a callee by name. Every statement of the bridge is about the one
+    standard instance, the first function of the name in `u.fns` (`instFnSuche`). A generated duty
+    module computes its readings with a logarithmic table that answers the same for every name
+    (`Kette/Suche.lean`), and rewrites back to the standard instance by `funktionsTabelle_suche`. -/
+class FnSuche (u : UProg) where
+  such : String → Option UFn
+
+/-- The standard callee lookup: the first function of the name. -/
+instance (priority := low) instFnSuche (u : UProg) : FnSuche u :=
+  ⟨fun n => u.fns.find? (fun f => f.name == n)⟩
+
+/-- The callee of the name, through the reader's lookup (by default the first function of the name). -/
+def fnSuch (u : UProg) [i : FnSuche u] (n : String) : Option UFn := i.such n
 
 /-- The pointer parameter of `f` that points at the table `tab` -- only when there is exactly one
     (a call that passes "a pointer to `tab`" names no variable in `UArg.freshPtr`). -/
