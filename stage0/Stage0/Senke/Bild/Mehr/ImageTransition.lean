@@ -405,7 +405,7 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
       simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm atParent),
         Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
   · intro body snapshots positions committed related
-    apply related.append_pending_root rfl rfl
+    apply related.append_pending_root (after := next) rfl rfl
     intro j live
     change (if j = i then true else state.lebt j) = true
     simp only [live, ite_self]
