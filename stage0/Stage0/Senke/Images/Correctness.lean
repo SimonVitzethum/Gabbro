@@ -118,6 +118,11 @@ theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
 abbrev imageSourceStart {D : Deklaration} (E : Einheit D) : FadenMaschine D.mitRuhe :=
   FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) (fun i => decide (i = 0))
 
+abbrev ImageReach (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
+  FadenErreichbarX E.P.mitRuhe O.mitRuhe output.image.passes
+    (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+
 /-- An instruction in the compiled root stub uses the stack frame and
     code range assigned to that root by the image layout. -/
 def ImageRootInstruction (output : Emitted src reserve options) (thread : Nat) (pointer : T) : Prop :=
@@ -166,12 +171,31 @@ def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
       ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
         ImageRootPhase output E history (machine.ms.1.view i) i r state
 
-/-- Slots are allocated only once. A retired runner slot still has a
-    finished logical thread at the same index. -/
-def ImageSlotsMatch [Kern] {D : Deklaration} (machine : Cfg imageTSO (Res T))
-    (state : FadenMaschine D) : Prop :=
+/-- The actual request of a non-returning gate at the issuing source thread. -/
+def ImageNeverRequest (output : Emitted src reserve options)
+    (O : Orakel (declOf output.compiled.unit)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
+    (i : Faden) (req : Req) : Prop :=
+  state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .nieZurueck i ∧
+    ∃ (routine : (declOf output.compiled.unit).Ax) (world : World _) (args : Env _ _) (gate : TorB),
+      state.m.foreignCallKey i = some ⟨routine, world, args⟩ ∧
+      (declOf output.compiled.unit).aerg routine = some .never ∧
+      output.tor routine = some gate ∧ req.nr = BitVec.ofNat 64 gate.nr ∧
+      ArgsW output.image.Y.withIdle (reqArg req) args
+
+/-- Slots are allocated only once. A retired slot comes from a source
+    return or from that thread's observed non-returning Linux exit.
+    For the latter, the source head is kept and the arguments are those
+    observed at the exit, even if other threads later change memory. -/
+def ImageSlotsMatch [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    (history : List Ev) (machine : Cfg imageTSO (Res T))
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
   (∀ i, state.lebt i = true ↔ i < machine.ths.length) ∧
-  (∀ i, machine.ths[i]? = some none → FertigG state.m i)
+  (∀ i, machine.ths[i]? = some none → FertigG state.m i ∨
+    ∃ atExit req earlier,
+      ImageReach output E O (imageSourceStart E) atExit ∧ ImageReach output E O atExit state ∧
+      state.m.faeden i = atExit.m.faeden i ∧ ImageNeverRequest output O atExit i req ∧
+      req.nr.toNat = NR_EXIT ∧ history.filter (fun event => event.1 == i) = earlier ++ [(i, req, none)])
 
 def imageExternalEvent (event : Ev) : Bool :=
   let request := event.2.1
@@ -196,7 +220,7 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
     (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
     (O : Orakel (declOf output.compiled.unit)) :
     let ir : Cfg imageTSO (Res T) := ⟨machine.ms, [some t4]⟩
-    Rel L0 ir machine ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+    Rel L0 ir machine ∧ ImageSlotsMatch output E O [] ir (imageSourceStart E) ∧
       ImageForeignTrace output [] (imageSourceStart E) ∧
       ImageRuntimeMatches output E O [] ir (imageSourceStart E) := by
   intro ir
@@ -253,22 +277,12 @@ def ImageStopMatches (output : Emitted src reserve options)
           (value : ErgVal _ (vertragVon _ thread.kopf.f).erg) (world : World _),
           thread.kopf.rest = ⟨l, Γ, (vertragVon _ thread.kopf.f).ende, env, .zurueckgekehrt (.inl value, world)⟩ ∧
           ExitErg output.image.Y.withIdle _ value req.a1) ∨
-      (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .nieZurueck i ∧
-        ∃ (routine : (declOf output.compiled.unit).Ax) (world : World _) (args : Env _ _) (gate : TorB),
-          state.m.foreignCallKey i = some ⟨routine, world, args⟩ ∧
-          (declOf output.compiled.unit).aerg routine = some .never ∧
-          output.tor routine = some gate ∧ req.nr = BitVec.ofNat 64 gate.nr ∧
-          ArgsW output.image.Y.withIdle (reqArg req) args) ∨
+      ImageNeverRequest output O state i req ∨
       (state.lebt i = true ∧ ∃ cause, ImageHardwareCause O.mitRuhe output.image.passes state.m i cause ∧
         req.a1 = BitVec.ofNat 64 (hwCode cause)) ∨
       (i = 0 ∧ req.a1 = BitVec.ofNat 64 cloneCode ∧
         ∃ prior id extra, earlier.filter (fun event => event.1 == i) =
           prior ++ [(i, cloneReq, some (id, extra))] ∧ id.toInt < 0))
-
-abbrev ImageReach (output : Emitted src reserve options)
-    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
-  FadenErreichbarX E.P.mitRuhe O.mitRuhe output.image.passes
-    (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
 
 abbrev ImageGoalAt (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
@@ -310,7 +324,8 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
     FadenMaschine (declOf output.compiled.unit).mitRuhe → Prop
   initial : related [] start ⟨start.ms, [some t4]⟩ (imageSourceStart E)
   image : ∀ history machine ir state, related history machine ir state →
-    Rel L0 ir machine ∧ FileInv machine.ms.1.m ∧ ImageSlotsMatch ir state ∧ ImageForeignTrace output history state ∧
+    Rel L0 ir machine ∧ FileInv machine.ms.1.m ∧ ImageSlotsMatch output E O history ir state ∧
+    ImageForeignTrace output history state ∧
     ImageRuntimeMatches output E O history ir state
   step : ∀ history before ir state after events, related history before ir state →
     ProcessStep imageTSO (actX L0) before events after →

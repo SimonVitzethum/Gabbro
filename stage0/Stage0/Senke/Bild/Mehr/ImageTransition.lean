@@ -6,7 +6,8 @@ public import Stage0.Senke.Images.Correctness
 
 namespace Gabbro.Stage0
 
-open Runner Runner.IR Runner.Beweis Runner.Mach
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
+  Runner Runner.IR Runner.Beweis Runner.Mach
   Gabbro.Stage0.Senke.BildMehr
 
 variable [Kern]
@@ -57,5 +58,39 @@ theorem image_memory_prefix_projects {footprint : Nat → W → Prop}
       SCErreichbar L0 ⟨projectSCState footprint initial.ms, initial.ths⟩
         ⟨projectSCState footprint final.ms, final.ths⟩ :=
   tso_memory_process_projects (image_prefix_tso run) buffers classify
+
+/-- A declared non-returning thread exit retires just its own slot.
+    The source stays at the exact call head, and the exit is entered in
+    the history of that thread only. -/
+theorem ImageSlotsMatch.retire_never {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {i : Nat} {req : Req} {resume : Ans → Res T}
+    (slots : ImageSlotsMatch output E O history before state)
+    (reached : ImageReach output E O (imageSourceStart E) state)
+    (ready : before.ths[i]? = some (some (.ask (.sys req) resume)))
+    (number : req.nr.toNat = NR_EXIT) (matching : ImageNeverRequest output O state i req) :
+    let after : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i none⟩
+    ProcessStep imageTSO actI before [(i, req, none)] after ∧
+      ImageSlotsMatch output E O (history ++ [(i, req, none)]) after state := by
+  intro after
+  refine ⟨.exit ready rfl number, ?_, ?_⟩
+  · intro j
+    simpa only [after, List.length_set] using slots.1 j
+  · intro j retired
+    by_cases same : j = i
+    · subst j
+      refine Or.inr ⟨state, req, history.filter (fun event => event.1 == i),
+        reached, .start, rfl, matching, number, ?_⟩
+      simp only [List.filter_append, List.filter_cons, beq_self_eq_true, ite_true, List.filter_nil]
+    · have unchanged : before.ths[j]? = some none := by
+        simpa only [after, List.getElem?_set_ne (Ne.symm same)] using retired
+      obtain finished | ⟨atExit, call, earlier, fromStart, since, sameHead, matched, kind, last⟩ :=
+        slots.2 j unchanged
+      · exact Or.inl finished
+      · refine Or.inr ⟨atExit, call, earlier, fromStart, since, sameHead, matched, kind, ?_⟩
+        simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm same),
+          ite_false, List.filter_nil, List.append_nil, last]
 
 end Gabbro.Stage0

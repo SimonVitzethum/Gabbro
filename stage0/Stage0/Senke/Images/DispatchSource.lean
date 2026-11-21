@@ -46,7 +46,7 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
     (O : Orakel (declOf output.compiled.unit))
     {after : Cfg imageTSO (Res T)} {events : List Ev}
     (step : ProcessStep imageTSO actI ⟨machine.ms, [some t4]⟩ events after) :
-    events = [] ∧ ImageSlotsMatch after (imageSourceStart E) ∧
+    events = [] ∧ ImageSlotsMatch output E O [] after (imageSourceStart E) ∧
       ImageRuntimeMatches output E O [] after (imageSourceStart E) := by
   obtain ⟨quiet, rfl⟩ := mapped.dispatch_step step
   obtain ⟨_, _, _, bytes, packed, _, _, _, stackMemory⟩ :=
@@ -100,7 +100,7 @@ theorem MappedImage.loader_prefix_source [Kern] {output : Emitted src reserve op
     {after : Cfg imageTSO (Res T)} {events : List Ev} {steps : Nat}
     (run : ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps after)
     (loaderSteps : steps ≤ 1) :
-    events = [] ∧ ImageSlotsMatch after (imageSourceStart E) ∧
+    events = [] ∧ ImageSlotsMatch output E O events after (imageSourceStart E) ∧
       ImageRuntimeMatches output E O events after (imageSourceStart E) := by
   cases run with
   | nil =>
@@ -126,7 +126,7 @@ theorem MappedImage.loader_prefix_goal [Kern] {output : Emitted src reserve opti
     (inLoader : ∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
       Rel L0 ir finish → steps ≤ 1) :
     ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish ∧
-      events = [] ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+      events = [] ∧ ImageSlotsMatch output E O events ir (imageSourceStart E) ∧
       ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
       ImageGoalAt output E O (imageSourceStart E) := by
   obtain ⟨ir, steps, trace, related⟩ := mapped.runner_prefix run
@@ -152,7 +152,7 @@ theorem irBild_checked_loader_prefix [Kern] {bytes : List B}
             (∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
               Rel L0 ir finish → steps ≤ 1) →
             ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧
-              Rel L0 ir finish ∧ events = [] ∧ ImageSlotsMatch ir (imageSourceStart E) ∧
+              Rel L0 ir finish ∧ events = [] ∧ ImageSlotsMatch output E O events ir (imageSourceStart E) ∧
               ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
               ImageGoalAt output E O (imageSourceStart E)) := by
   obtain ⟨output, wrote, payload⟩ := irBild_emitted src reserve bytes emitted
