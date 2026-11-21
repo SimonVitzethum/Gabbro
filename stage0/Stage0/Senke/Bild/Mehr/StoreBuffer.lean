@@ -468,7 +468,7 @@ theorem projectSCState_cas_shared {layout : Lay} {before after : (TSO layout).St
       ((write_nurIn _ _ _).gleichAt outside).symm))
   · have prior := (mergedView_committed_at before.1 footprint y visible).symm
     have current := mergedView_committed_at after.1 footprint y visible
-    rw [written] at current
+    rw [written] at current ⊢
     exact current.trans (write_agrees value.toNat prior)
 
 end Gabbro.Stage0.Senke.BildMehr
