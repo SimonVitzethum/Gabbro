@@ -36,7 +36,8 @@ theorem Emitted.stackReservation_bounds {src : String} {reserve : Nat} {options 
     (fun base => by simp only [layU]; omega)
     (fun base => layU_sync output.compiled.unit output.tor base)
   have room := layout.hyord
-  have limit := layout.hyhi
+  have allocated := layout.hyhi
+  have limit := layout.hfit
   exact ⟨by simpa only [Emitted.starts, List.length_map] using layout.hylo, by omega⟩
 
 /-- All emitted stack reservations lie before the compiled world's bytes. -/
