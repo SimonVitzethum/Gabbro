@@ -32,7 +32,10 @@ theorem Emitted.goal_invariants (output : Emitted src K options)
   have checked : CheckedInitialInvariants (output.goalUnit Q) output.lsA.1 := by
     have initial := output.initialInvariants
     unfold CheckedInitialInvariants at initial ⊢
-    exact ⟨initial.1, initial.2⟩
+    refine ⟨initial.1, ?_⟩
+    have locks := initial.2
+    unfold checkLockInitial at locks ⊢
+    exact locks
   apply checked.goal_verdict
   have accepted := OldSource.accepts_program _ _ _ output.compiled.accepted
     output.compiled.checkedDeclarations.property
@@ -65,7 +68,7 @@ abbrev Emitted.goalStart (output : Emitted src K options)
     supplies the user duty, and A4 follows from canonical initialization. -/
 theorem Emitted.zielsatz (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit))
-    (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
+    (_certifiable : OldSource.zertifizierbar output.compiled.unit = true)
     (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (checked : nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true)
     (callSites : CallSitePflicht (output.goalUnit Q)) (posts : PostDeckt (output.goalUnit Q))
@@ -87,6 +90,28 @@ theorem Emitted.zielsatz (output : Emitted src K options)
   exact gabbro_ziel akzeptiertX_pruefer _ (output.goalUnit Q) output.fsA output.lsA output.csA
     verdict duties callSites posts O binding hardware output.image.passes _ _
     (laufzeit_initRuhe (output.goalUnit Q)) live state reached
+
+/-- Axiom-free production images carry the program-logic and start verdict
+    into the goal theorem. All foreign obligations have an empty domain. -/
+theorem Emitted.zielsatz_axiomFree (output : Emitted src K options)
+    (Q : AxEns (declOf output.compiled.unit)) (empty : output.compiled.unit.axs.length = 0)
+    (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
+    (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
+    (O : Orakel (declOf output.compiled.unit)) (hardware : HardwareAnnahmenHw O Q)
+    {live : Faden → Bool} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (reached : FadenErreichbarX (output.goalUnit Q).P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) (output.goalUnit Q).P (output.goalUnit Q).ws)
+      (output.goalStart Q live) state) :
+    let E := output.goalUnit Q
+    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
+  have absent (a : (declOf output.compiled.unit).Ax) :
+      (declOf output.compiled.unit).axHerkunft a ≠ some AxOrigin.software :=
+    False.elim ((Nat.not_lt_zero a.val) (empty ▸ a.isLt))
+  exact output.zielsatz Q certifiable dispatch runtime
+    (Bool.and_eq_true_iff.mp (output.goal_axiomFree Q empty)).2
+    (callSitePflicht_ohne _ absent) (postDeckt_ohne _ absent) O (foreignVertrag_ohne _ O absent) hardware reached
 
 /-- Successful CLI payload production identifies the exact certified
     output, also under the automatic stack-reserve policy. -/

@@ -41,6 +41,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.CheckedInitialInvariants.goal_verdict
 #print axioms Gabbro.Stage0.Emitted.goal_invariants
 #print axioms Gabbro.Stage0.Emitted.goal_axiomFree
+#print axioms Gabbro.Stage0.Emitted.zielsatz_axiomFree
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read_shared
