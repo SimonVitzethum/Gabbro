@@ -254,8 +254,9 @@ def ImageStopMatches (output : Emitted src reserve options)
           ExitErg output.image.Y.withIdle _ value req.a1) ∨
       (state.lebt i = true ∧ HaltBenannt O.mitRuhe output.image.passes state.m .hardware i ∧
         110 ≤ req.a1.toNat ∧ req.a1.toNat ≤ 115) ∨
-      (req.a1 = BitVec.ofNat 64 cloneCode ∧
-        ∃ id extra, (i, cloneReq, some (id, extra)) ∈ earlier ∧ id.toInt < 0))
+      (i = 0 ∧ req.a1 = BitVec.ofNat 64 cloneCode ∧
+        ∃ prior id extra, earlier.filter (fun event => event.1 == i) =
+          prior ++ [(i, cloneReq, some (id, extra))] ∧ id.toInt < 0))
 
 abbrev ImageReach (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
@@ -302,7 +303,7 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
     FadenMaschine (declOf output.compiled.unit).mitRuhe → Prop
   initial : related [] start ⟨start.ms, [some t4]⟩ (imageSourceStart E)
   image : ∀ history machine ir state, related history machine ir state →
-    Rel L0 ir machine ∧ ImageSlotsMatch ir state ∧ ImageForeignTrace output history state ∧
+    Rel L0 ir machine ∧ FileInv machine.ms.1.m ∧ ImageSlotsMatch ir state ∧ ImageForeignTrace output history state ∧
     ImageRuntimeMatches output E O history ir state
   step : ∀ history before ir state after events, related history before ir state →
     ProcessStep imageTSO (actX L0) before events after →
@@ -388,6 +389,10 @@ def Stage0Correct [Kern] : Prop :=
         HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
         ImageFutexAnswers → SichtOK O →
         ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
-        Nonempty (ImageSimulation output E O start)
+        ∃ sim : ImageSimulation output E O start,
+          ∀ finish events count, ProcessPrefix imageTSO (actX L0) start events count finish →
+            ∃ ir steps state, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧
+              sim.related events finish ir state ∧ ImageReach output E O (imageSourceStart E) state ∧
+              ImageGoalAt output E O state
 
 end Gabbro.Stage0
