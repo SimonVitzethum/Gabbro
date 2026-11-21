@@ -382,21 +382,6 @@ theorem Emitted.loaded_boot_run [Kern] (output : Emitted src K options)
   obtain ⟨stepped, found⟩ := bootClone_run running actual entry frame answer positive
   exact ⟨stepped, position ▸ found, live, logical⟩
 
-set_option maxRecDepth 100000 in
-private theorem runnerTable_below_image {y : W} (member : TB L0 y) :
-    y.toNat < Runner.Prog.IMG := by
-  obtain ⟨op, row, byte, width, rfl⟩ := member
-  have tableEnd (base off : Nat) (cell : byte < readOnlyWidth op) :
-      base + (off + 8 * op) + byte ≤ base + (off + 256 * 8 + 4) := by
-    unfold readOnlyWidth at cell
-    split at cell <;> omega
-  have fit : Runner.Prog.BASE + Runner.Prog.fileLen < Runner.Prog.IMG :=
-    (congrArg (fun n => Runner.Prog.BASE + n < Runner.Prog.IMG) image_len).mp image_fits
-  simp only [Runner.Prog.fileLen] at fit
-  have below := Nat.lt_of_le_of_lt (tableEnd Runner.Prog.BASE Runner.Prog.tblOff width) fit
-  rw [tbl_addr op row, ofNat_add64, BitVec.toNat_ofNat]
-  exact Nat.lt_of_le_of_lt (Nat.mod_le (Runner.Prog.BASE + (Runner.Prog.tblOff + 8 * op) + byte) (2 ^ 64)) below
-
 /-- From the actual mapped payload the loader and the first clone site
     reach the first declared child. The compiled immediates supply both
     child addresses and the buffer holds the writes without a flush. -/
@@ -445,28 +430,9 @@ theorem Emitted.first_boot_clone [Kern] (output : Emitted src K options)
     simp only [spawnC_len, count, CodeFar] at far
     unfold CodeFar
     omega
-  have fit := placed.hfit
-  have frameNat : (BitVec.ofNat 64 output.image.fp0).toNat = output.image.fp0 := by
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  have notTable (j : Nat) (hj : j < 2) (b : Nat) (hb : b < 8) :
-      ¬ TB L0 (slot (BitVec.ofNat 64 output.image.fp0)
-        (BitVec.ofNat 64 (startScratch output.compiled.main + j)) + BitVec.ofNat 64 b) := by
-    intro member
-    have below := runnerTable_below_image member
-    have atSlot := slot_toNat frame.room (i := startScratch output.compiled.main + j) (by omega)
-    have atByte : (slot (BitVec.ofNat 64 output.image.fp0)
-        (BitVec.ofNat 64 (startScratch output.compiled.main + j)) + BitVec.ofNat 64 b).toNat =
-        output.image.fp0 + 8 * (startScratch output.compiled.main + j) + b := by
-      have room := frame.lt
-      rw [BitVec.toNat_add, atSlot, frameNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (a := b) (by omega),
-        Nat.mod_eq_of_lt (by rw [frameNat] at room; omega)]
-    have high : Runner.Prog.IMG ≤ output.image.fp0 := by
-      rw [placed.hfp, codeBase]
-      omega
-    omega
   obtain ⟨prepared, preparation, committed, _, instruction, entry, stack⟩ :=
     spawn_prepare_prefix (before := entered) (i := 0) rfl (beforeView.symm ▸ site) (beforeView.symm ▸ frame)
-      farSite (by omega) slots specific.1 specific.2 notTable
+      farSite (by omega) slots specific.1 specific.2
   have readFrame := output.loader_frame loaded
   have loadedEntry : ProcessPrefix (TSO L0) actI ⟨s, [some t4]⟩ [] 1 entered := by
     have step : ProcessStep (TSO L0) actI ⟨s, [some t4]⟩

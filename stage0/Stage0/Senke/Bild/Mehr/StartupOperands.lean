@@ -34,13 +34,23 @@ theorem tso_const_prefix {layout : Lay}
     {dest value pad : BitVec 32}
     (running : before.ths[i]? = some (some (.next parent)))
     (instruction : InsAt (before.ms.1.view i) parent.pc 1 dest value pad)
-    (writable : Mem.all before.ms.1.m.wr (slot parent.fp (sx dest)) 8 = true)
-    (outsideTable : ∀ j, j < 8 → ¬ TB layout (slot parent.fp (sx dest) + BitVec.ofNat 64 j)) :
+    (writable : Mem.all before.ms.1.m.wr (slot parent.fp (sx dest)) 8 = true) :
     ∃ after : (TSO layout).St,
       ProcessPrefix (TSO layout) actI before [] 5
         ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 (sx value).toNat := by
+  have outsideTable (j : Nat) (inside : j < 8) :
+      ¬ TB layout (slot parent.fp (sx dest) + BitVec.ofNat 64 j) := by
+    intro touches
+    obtain ⟨row, range, byte, width, address⟩ := touches
+    have present : byte < (readOnlyBytes layout row).length := by
+      rw [readOnlyBytes_length]
+      exact width
+    have readOnly := (before.ms.2.1 row range byte present).2.2
+    have writeAllowed := Beweis.all_spec writable inside
+    rw [address, readOnly] at writeAllowed
+    cases writeAllowed
   let pending := before.ms.1.buf i ++ [(slot parent.fp (sx dest), sx value)]
   let after : (TSO layout).St := ⟨before.ms.1.setBuf i pending, by
     refine ⟨before.ms.2.1, ?_⟩

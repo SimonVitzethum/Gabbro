@@ -20,9 +20,7 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
     (code : CodeAt (before.ms.1.view i) pc (spawnOne s a f))
     (frame : FrameOK (before.ms.1.view i) fp K)
     (far : CodeFar pc 10 fp K)
-    (room : s + 2 ≤ K) (slots : K < 2 ^ 31) (address : a < 2 ^ 31) (stack : f < 2 ^ 31)
-    (outsideTable : ∀ j, j < 2 → ∀ b, b < 8 →
-      ¬ TB layout (slot fp (BitVec.ofNat 64 (s + j)) + BitVec.ofNat 64 b)) :
+    (room : s + 2 ≤ K) (slots : K < 2 ^ 31) (address : a < 2 ^ 31) (stack : f < 2 ^ 31) :
     ∃ after : (TSO layout).St,
       ProcessPrefix (TSO layout) actI before [] 10
         ⟨after, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩))⟩ ∧
@@ -42,7 +40,6 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
     rw [sx0, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr s (by omega)
   obtain ⟨middle, prefix0, committed0, view0⟩ := tso_const_prefix running first writable0
-    (by simpa only [sx0, Nat.add_zero] using outsideTable 0 (by decide))
   rw [sx0, sx_nat address] at view0
   have same0 : Agree fp s K (before.ms.1.view i) (middle.1.view i) := by
     rw [view0]
@@ -58,7 +55,6 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
     rw [sx1, ← foldl_wr (middle.1.buf i) middle.1.m]
     exact (frame.agree same0).wr (s + 1) (by omega)
   obtain ⟨after, prefix1, committed1, view1⟩ := tso_const_prefix running1 second writable1
-    (by simpa only [sx1] using outsideTable 1 (by decide))
   rw [sx1, sx_nat stack] at view1
   have same1 : Agree fp s K (middle.1.view i) (after.1.view i) := by
     rw [view1]
