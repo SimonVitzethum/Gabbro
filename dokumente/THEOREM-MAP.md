@@ -8099,6 +8099,9 @@ aggregate table store.
 remaining suffix chain. `lowWertE_slice` binds the ordinary typed operand reader
 to `lowerSlice_array` and `lowerSlice_string`. `arraySpan_refines` and
 `eval_stringSlice` identify the values with the half-open slice model.
+`arraySpan_reads` preserves the base's memory footprint under the materialisation
+gate. `eval_indexedArraySlice` and `indexedSlice_reads` prove equality of values
+and the exact read footprint for direct indexing with no intermediate array.
 `arraySlice_erfuellbar` exhibits the full range for every array expression.
 
 `ArenaForm.restoreScopeStmt_exec` is the ordinary G implementation of the

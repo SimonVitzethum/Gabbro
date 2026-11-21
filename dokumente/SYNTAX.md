@@ -840,7 +840,10 @@ over fixed arrays and strings whose exact bytes are known to the typed
 lowerer. Both endpoints must lie in the actual domain. For a constant
 string they count UTF-8 bytes, including an endpoint equal to the byte
 length. An empty slice is valid at any checked endpoint. Array slices
-produce an ordinary array value of length `last - first`.
+produce an ordinary array value of length `last - first`. Bind a memory
+read to a local before materialising a slice with zero or multiple elements.
+Direct indexing as in `array[first .. last][i]` checks the relative index
+and reads the original array without an intermediate slice.
 
 
 

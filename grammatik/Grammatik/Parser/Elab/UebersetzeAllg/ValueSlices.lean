@@ -25,6 +25,21 @@ def arraySpan {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length))
       (arraySpan operand (first + 1) count (by omega))
 termination_by structural _ count _ => count
 
+/-- Materialising an array may duplicate its operand. The production
+    reader admits that expansion only if the read footprint is preserved. -/
+theorem arraySpan_reads {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length))
+    (first count : Nat) (fits : first + count ≤ length)
+    (allowed : count = 1 ∨ operand.orte.isEmpty = true) :
+    (arraySpan operand first count fits).orte = operand.orte := by
+  rcases allowed with one | lexical
+  · subst count
+    simp only [arraySpan, Expr.orte, List.append_nil]
+  · have empty := List.isEmpty_iff.mp lexical
+    induction count generalizing first with
+    | zero => exact empty.symm
+    | succ count ih =>
+      simp only [arraySpan, Expr.orte, List.append_nil, ih _ (by omega), empty]
+
 /-- Element selection has the half-open slice semantics on every world
     and environment, including values that were read from memory. -/
 theorem eval_arraySpan {τ : Ty} {length : Nat} (operand : Expr D Γ Λ (.arr τ length))
@@ -85,14 +100,25 @@ theorem eval_indexedArraySlice {τ : Ty} {length first last : Nat}
   simp only [shiftedSliceIndex, eval, Zahl.fin, Zahl.weiter, Zahl.add]
   omega
 
+/-- Direct indexing reads the original array and the checked index once
+    each, in their ordinary order. Both slice endpoints are constants. -/
+theorem indexedSlice_reads {τ : Ty} {length first last : Nat}
+    (operand : Expr D Γ Λ (.arr τ length)) (bounds : SliceOk length first last)
+    (index : Expr D Γ Λ (.index ((last - first : Nat) : Int))) :
+    (Expr.arrGet operand (shiftedSliceIndex bounds index)).orte =
+      operand.orte ++ index.orte := by
+  simp only [shiftedSliceIndex, Expr.orte, List.nil_append]
+
 /-- Constant byte sequences are sliced by their actual length. A runtime
     string needs a separate certified lower bound on its length. -/
 def lowerSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (first last : Nat) : LowWert u Γ Λ → Except String (LowWert u Γ Λ)
   | ⟨.arr τ length, operand⟩ =>
     if bounds : SliceOk length first last then
-      .ok ⟨.arr τ (last - first),
-        arraySpan operand first (last - first) (by have ordered := bounds.1; have high := bounds.2; omega)⟩
+      if last - first = 1 ∨ operand.orte.isEmpty = true then
+        .ok ⟨.arr τ (last - first),
+          arraySpan operand first (last - first) (by have ordered := bounds.1; have high := bounds.2; omega)⟩
+      else .error "slice: bind the array to a local before slicing"
     else .error "slice: endpoint outside the array"
   | ⟨.str _, .strLit bytes _⟩ =>
     if bounds : SliceOk bytes.length first last then
@@ -120,11 +146,12 @@ def lowerIndexedSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
 
 theorem lowerSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {τ : Ty} {length : Nat} (operand : Expr (declOf u) Γ Λ (.arr τ length))
-    (first last : Nat) (bounds : SliceOk length first last) :
+    (first last : Nat) (bounds : SliceOk length first last)
+    (allowed : last - first = 1 ∨ operand.orte.isEmpty = true) :
     lowerSlice first last (⟨.arr τ length, operand⟩ : LowWert u Γ Λ) =
       .ok ⟨.arr τ (last - first), arraySpan operand first (last - first)
         (by have ordered := bounds.1; have high := bounds.2; omega)⟩ := by
-  simp only [lowerSlice, dite_eq_left bounds]
+  simp only [lowerSlice, dite_eq_left bounds, if_pos allowed]
 
 theorem lowerSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (bytes : List (Zahl 0 255)) {maximum : Nat} (stored : bytes.length ≤ maximum)

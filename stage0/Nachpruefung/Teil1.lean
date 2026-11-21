@@ -26,7 +26,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_string
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_refines
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpan_reads
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_indexedArraySlice
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.indexedSlice_reads
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_stringSlice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySlice_erfuellbar
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec
