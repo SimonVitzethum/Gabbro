@@ -8071,3 +8071,16 @@ No goal statement, named assumption, source probe or expected exit code changes.
 | `Emitted.goal_checker_concurrent` | `Stage0.CompilerPruefer` | The goal checker accepts the exact entry and roots of a certifiable image whose additional roots come from explicit concurrent declarations and whose unit passes the start gate. |
 | `tso_private_projects` | `Stage0.Senke.Bild.Mehr.PrivatePath` | A memory-only TSO path with private requests preserves exclusive buffers and projects to an SC path. Flushes preserve the projected state. |
 | `tso_private_runs_refine` | `Stage0.Senke.Bild.Mehr.PrivatePath` | From the initial image relation, read-blind threads and the private access premises, the SC projection preserves the source thread machine, committed memory and footprints. |
+
+## 202. Named effect groups and final guarded differences
+
+`parseEffectGroup_fromBlock` relates the item reader to the ordinary effect
+list reader. `EffectGroups.expandEffects_exact` proves that group uses are
+replaced by their declared effects in order. `effectGroup_erfuellbar` proves
+admission and preservation of a write for arbitrary names.
+`checkExpansionGate_noEffectGroups` establishes that the compiler's checked
+expansion consumes the group declarations.
+
+`uRelReturn_difference` exposes a final operand difference to the ordinary
+continuation reader through one immutable binding. `uRelReturn_bounds` proves
+the range used after the exiting arm of a less-than guard.

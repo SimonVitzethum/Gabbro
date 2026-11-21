@@ -1142,6 +1142,15 @@ complete generated traverse and its direct implementation call after instantiati
 These witnesses have been added for integration checking; no new Lean build result is claimed.
 
 
+A named effect group is a module item, written
+`effects Update { reads Current, writes Current.slots };`. A signature can
+then use `effects { Update }` or `effects { cache::Update }` from another
+module. The group may list reads and writes of declared carriers. Its
+members resolve in the declaring module and replace each occurrence in order
+before ordinary effect checking. A parameter that would hide a group carrier
+is refused. Exporting the group uses the ordinary `pub` visibility rules for
+each named carrier.
+
 **`effects` is NOT fail-open.** A function **without** `effects` over a body
 derives it (lane 191: the derived hull is checked exactly like a written
 line); whoever touches nothing derives `effects { pure }`. Without a body —

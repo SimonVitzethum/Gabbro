@@ -9,11 +9,20 @@ namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
 /-- A named carrier effect group is consumed by canonical source expansion. -/
-def parseEffectGroup (fuel : Nat) (tokens : List Token) : Except String (SItemTief × List Token) := do
-  let (name, tokens) ← nimmName tokens
-  let (effects, tokens) ← parseEffektBlock fuel tokens
-  let rest ← fordereZeichen ";" tokens
-  pure (.effectGroupT name effects, rest)
+def parseEffectGroup (fuel : Nat) : List Token → Except String (SItemTief × List Token)
+  | .ident name :: tokens => do
+    let (effects, tokens) ← parseEffektBlock fuel tokens
+    let rest ← fordereZeichen ";" tokens
+    pure (.effectGroupT name effects, rest)
+  | _ => .error "effect group: expected a name"
+
+/-- The ordinary effect-list reader supplies the entire group body, in order. -/
+theorem parseEffectGroup_fromBlock (fuel : Nat) (name : String)
+    (tokens rest : List Token) (effects : List SEffekt)
+    (body : parseEffektBlock fuel tokens = .ok (effects, .zeichen ";" :: rest)) :
+    parseEffectGroup fuel (.ident name :: tokens) = .ok (.effectGroupT name effects, rest) := by
+  simp only [parseEffectGroup, body, bind, Except.bind]
+  rfl
 
 /-- One adapter parameter: `..`, `-x`, or a new `x : T`. -/
 def parseAdaptParamEinzel (f : Nat) (toks : List Token) :

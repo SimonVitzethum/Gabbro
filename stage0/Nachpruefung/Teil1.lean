@@ -19,6 +19,12 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Stage0.compile_source_program
+#print axioms Gabbro.Grammatik.Parser.parseEffectGroup_fromBlock
+#print axioms Gabbro.Grammatik.Parser.EffectGroups.expandEffects_exact
+#print axioms Gabbro.Grammatik.Parser.EffectGroups.effectGroup_erfuellbar
+#print axioms Gabbro.Stage0.Frontend.checkExpansionGate_noEffectGroups
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uRelReturn_difference
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.uRelReturn_bounds
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
 #print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
 #print axioms Gabbro.Stage0.irBild_start_requires

@@ -13,7 +13,7 @@ def carrier : SExpr → Option String
   | _ => none
 
 def carrierName : SItemTief → Option String
-  | .tableT name .. | .arenaT name .. | .globT _ name .. => some name
+  | .tableT name .. | .arenaT name .. | .globT _ name .. | .atomT name .. => some name
   | _ => none
 
 def isCarrierEffect (carriers : List String) : SEffekt → Bool
@@ -98,7 +98,9 @@ def item (groups : Groups) : SItemTief → Except String SItemTief
   | .specT sig body => return .specT (← signature groups [] sig) body
   | .asmT sig text => return .asmT (← signature groups [] sig) text
   | .transT target sig body => return .transT target (← signature groups [] sig) body
-  | .adaptT sig params parent body => return .adaptT (← signature groups [] sig) params parent body
+  | .adaptT sig params parent body =>
+    let bound := params.filterMap fun | .neu name _ => some name | _ => none
+    return .adaptT (← signature groups bound sig) params parent body
   | .specGroupT name types params functions =>
     return .specGroupT name types params (← functions.mapM (signature groups (types ++ params)))
   | .implGroupT name types effects functions =>
