@@ -8,7 +8,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0.Senke
 
-open Runner Runner.IR Runner.Beweis Runner.Mach Gabbro.Stage0.Senke.BildMehr
+open Runner Runner.IR Runner.Mem Runner.Beweis Runner.Mach Gabbro.Stage0.Senke.BildMehr
 
 /-- The two immediate instructions preceding a clone write the exact
     relocated entry and frame into the issuer's TSO view. The bytes of
@@ -34,7 +34,8 @@ theorem spawn_prepare_prefix [Kern] {layout : Runner.Beweis.Lay}
       (after.1.view i).rd64 (slot fp (BitVec.ofNat 64 s) + 8) = some (BitVec.ofNat 64 f) := by
   have first : InsAt (before.ms.1.view i) pc 1 (II.f s) (II.f a) (II.f 0) := by
     have h := code 0 (by rw [spawnOne_len]; decide)
-    simpa only [Nat.mul_zero, BitVec.add_zero] using h
+    simp only [Nat.mul_zero, BitVec.add_zero] at h
+    exact h
   have sx0 : sx (II.f s) = BitVec.ofNat 64 s := sx_nat (by omega)
   have sx1 : sx (II.f ((s + 1 : Nat) : Int)) = BitVec.ofNat 64 (s + 1) := sx_nat (by omega)
   have writable0 : Mem.all before.ms.1.m.wr (slot fp (sx (II.f s))) 8 = true := by
