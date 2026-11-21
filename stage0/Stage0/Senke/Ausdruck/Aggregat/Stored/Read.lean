@@ -2,11 +2,29 @@
 module
 public import Stage0.Senke.Ausdruck.Quant.Selection
 public import Stage0.Senke.Welt.Spans.CellStore
+public import Grammatik.Niedrig.Konstrukte.Schnitt
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
+open LowLevel.Construct
 variable [Kern] {D : Deklaration} {L : Lay D}
+
+/-- The actual frame encoding already contains every element of the
+    slice at the descriptor's translated offset, including all words
+    of a multiword element. -/
+theorem ValueAt.slice_element {m : Runner.Mem} {fp : Runner.W} {base capacity : Nat}
+    {τ : Ty} {array : Wert D (.arr τ capacity)}
+    (input : ValueAt L m fp base (.arr τ capacity) array)
+    (view : ArraySliceView capacity) (index : Fin view.length) :
+    ValueAt L m fp (base + view.offset * valueWords τ + index.val * valueWords τ)
+      τ ((view.value array).get index) := by
+  let position : Fin capacity := ⟨view.offset + index.val, by
+    have bound := view.fits
+    have inside := index.isLt
+    omega⟩
+  simpa only [position, ArraySliceView.value, ArraySliceView.read, Nat.add_mul, Nat.add_assoc]
+    using input.array_element position
 
 /-- A private address into existing storage, together with the complete value
     there in every memory representing the same environment and world. -/

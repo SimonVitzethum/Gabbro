@@ -8405,3 +8405,20 @@ carrier reads for lexical operands.
 `ImageIdleBuffers.follow` preserves empty buffers at every unallocated
 slot along the actual runner execution. The prepared clone theorem also
 identifies the new slot's original source frame.
+
+## 214. Runtime slice values and direct observations
+
+`BoundedSlice` has a static capacity and exposes only the elements within
+its runtime length. `ArraySliceView.value_ofEndpoints` and
+`ArraySliceView.value_subslice` identify an offset and length with the model
+value, including composed views. The array update lemmas characterize
+when a stored view keeps its original value after a backing update.
+`ValueAt.slice_element` identifies all words of each viewed element in the
+original Stage 0 array encoding.
+
+With local arrays and endpoints whose declared integer ranges establish
+the bounds, `lowWertE_localArraySliceLength` lowers the length observation
+to a difference and `lowWertE_localArraySliceIndex` lowers a local index
+observation to a direct array read. Their evaluation lemmas relate both
+operations to the same half-open slice value. Standalone runtime slice
+values and arbitrary runtime substrings still need executable lowering.
