@@ -81,6 +81,32 @@ theorem Emitted.goalUnit_refuses_nonempty_axioms (output : Emitted src K options
   rw [akzeptiertX_pruefer_eq, show nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 =
     false from noLogic, Bool.and_false]
 
+/-- The checked foreign-logic result includes the exact source program,
+    initial memory and serialized starts. Its logic result and the production
+    program gate together give the full model checker's verdict. -/
+theorem Emitted.foreign_goal_checker (output : Emitted src K options)
+    {checked : output.CheckedForeign}
+    (_produced : output.foreignLogic = .ok checked) :
+    let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
+    akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true := by
+  let u := output.compiled.unit
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+  letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
+  let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
+  change akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true
+  rw [akzeptiertX_pruefer_eq]
+  have roots : E.ws = OldSource.judgedRoots u output.compiled.main :=
+    OldSource.einheitDer_ws u output.compiled.main output.args output.starts []
+      (output.startPlan.exact_roots _) (OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots)
+  rw [roots]
+  have program := OldSource.accepts_program u _ _ output.compiled.accepted
+    output.compiled.checkedDeclarations.property
+  have invariant : invariantenGeprueftB E output.fsA.1 output.lsA.1 = true :=
+    output.goal_invariants checked.summary.predicates
+  exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
+    ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨program, besitzB_leer rfl⟩,
+      Kernzelle.akkuStartB_leer E⟩, invariant⟩, checked.verdict⟩
+
 /-- The precise logical start associated with the image. Missing thread
     positions are filled by the model's canonical idle thread. -/
 abbrev Emitted.goalStart (output : Emitted src K options)

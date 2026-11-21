@@ -124,6 +124,12 @@ def Emitted.starts {src : String} {K : Nat} {options : Profil.Options} (output :
     List (Σ f : (declOf output.compiled.unit).Fn, Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)) :=
   output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid)
 
+/-- Type of a successful foreign-logic check retained by this emission. -/
+abbrev Emitted.CheckedForeign {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) :=
+  CheckedForeignLogic output.compiled.unit (initialUnit output.compiled.unit output.compiled.program
+    (sp0Of output.compiled.unit output.initialValid) (⟨output.compiled.main, output.args⟩ :: output.starts)
+    output.compiled.checkedDeclarations.val)
+
 /-- The sole emitted payload, including the canonical world and all typed start frames. -/
 def Emitted.bytes {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : List Runner.B :=
