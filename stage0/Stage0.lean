@@ -27,6 +27,8 @@ public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Bild.Ziel
 public import Stage0.Senke.Bild.Emitted
 public import Stage0.Senke.Bild.EmittedZiel
+public import Stage0.Senke.Bild.ImageGoal
+public import Stage0.Senke.Bild.LoaderGoal
 public import Stage0.Senke.Bild.Rest
 public import Stage0.Senke.Bild.Gleich.Lesegleich
 public import Stage0.Senke.Bild.Gleich.LesegleichEig
@@ -144,6 +146,7 @@ public import Stage0.Senke.Bild.Mehr.Blind
 public import Stage0.Senke.Bild.Mehr.BlindOp
 public import Stage0.Senke.Bild.Mehr.Faden
 public import Stage0.Senke.Bild.Mehr.Fuss
+public import Stage0.Senke.Bild.Mehr.Goal
 public import Stage0.Senke.Bild.Mehr.Lage
 public import Stage0.Senke.Bild.Mehr.Lokal
 public import Stage0.Senke.Bild.Mehr.Ort.Blatt

@@ -213,4 +213,27 @@ theorem tso_private_runs_refine {D : Deklaration} [Runner.IR.Kern]
         ∃ original, snapshots i = some original ∧ s.F = original.F ∧ s.Wr = original.Wr :=
   sc_private_runs_refine relation blind access (tso_private_projects buffers reached).2
 
+/-- A private path is a real silent prefix of the runner's IR process.
+    Prepending it preserves the observation and ending of any suffix. -/
+theorem TSOPrivateReachable.prepend {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {initial final : Cfg (TSO layout) (Res T)}
+    (path : TSOPrivateReachable layout footprint initial final)
+    {events : List Ev} {ending : Ende} {count : Nat}
+    (suffix : Tr (TSO layout) actI final events ending count) :
+    ∃ steps, Tr (TSO layout) actI initial events ending steps := by
+  induction path generalizing count with
+  | start => exact ⟨_, suffix⟩
+  | priv _ found ih =>
+    exact ih (.priv found rfl suffix)
+  | @ask before i request resume answer state _ found memory responded _ _ ih =>
+    have quiet : request.special = false ∧ lbl i request answer = [] := by
+      cases request <;> simp only [istSpeicherOp] at memory <;>
+        first | contradiction | exact ⟨rfl, rfl⟩
+    obtain ⟨ordinary, silent⟩ := quiet
+    have step := Tr.ask (act := actI) found rfl ordinary responded rfl suffix
+    rw [silent, List.nil_append] at step
+    exact ih step
+  | flush _ flushed ih =>
+    exact ih (.tau flushed suffix)
+
 end Gabbro.Stage0.Senke.BildMehr
