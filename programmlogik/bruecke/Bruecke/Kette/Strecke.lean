@@ -162,4 +162,32 @@ abbrev BlockZiel_G {loopMode : Bool} (u : UProg) (C : Fin u.fns.length → Prop)
     (ρ : Env (declOf u) Γ) (s : Gabbro.Body.State) (t : List Gabbro.Body.Stmt) : Prop :=
   AusgangZiel_G u C c R fn ids (execBlock O passes R b σ ρ) s t
 
+/-! ## Readings that execute alike
+
+A claim about Body statements depends on them only through their execution from the claim's
+state; two lists that execute alike from that state carry the same claims. -/
+
+theorem Strecke_G.ersetze {A : List Eintrag} {s s' : Gabbro.Body.State} {bs bs' : List Gabbro.Body.Stmt}
+    {finish : Gabbro.Body.State → Gabbro.Body.Outcome}
+    (h : ∀ ρB, Gabbro.Body.exec ρB bs s = Gabbro.Body.exec ρB bs' s) (hs : Strecke_G u C A s s' bs finish) :
+    Strecke_G u C A s s' bs' finish :=
+  { hs with lauf := fun ρB hT hR => (h ρB).symm.trans (hs.lauf ρB hT hR) }
+
+theorem ausgangZiel_G_ersetze {loopMode : Bool} {c : Fin u.fns.length}
+    {R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f}
+    {Γ : Ctx} {fn : UFn} {ids : List String} {out : Ausgang (verOf u c) loopMode Γ}
+    {s : Gabbro.Body.State} {bs bs' : List Gabbro.Body.Stmt}
+    (h : ∀ ρB, Gabbro.Body.exec ρB bs s = Gabbro.Body.exec ρB bs' s)
+    (hz : AusgangZiel_G u C c R fn ids out s bs) : AusgangZiel_G u C c R fn ids out s bs' := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hz
+  refine ⟨h1, fun σ' v ho => ?_, fun σ' ρ' ho => ?_, fun leave hl σ' ρ' ho => ?_, fun σ' r ho => ?_⟩
+  · obtain ⟨A, g, o, k, hl⟩ := h2 σ' v ho
+    exact ⟨A, g, o, k, fun ρB hT hR => by rw [← h ρB]; exact hl ρB hT hR⟩
+  · obtain ⟨A, s', hs, hw, hp⟩ := h3 σ' ρ' ho
+    exact ⟨A, s', hs.ersetze h, hw, hp⟩
+  · obtain ⟨A, s', hs, hw, hp⟩ := h4 leave hl σ' ρ' ho
+    exact ⟨A, s', hs.ersetze h, hw, hp⟩
+  · obtain ⟨A, g, o, k, hl⟩ := h5 σ' r ho
+    exact ⟨A, g, o, k, fun ρB hT hR => by rw [← h ρB]; exact hl ρB hT hR⟩
+
 end Gabbro.Bruecke

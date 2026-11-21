@@ -1,5 +1,6 @@
 module
 public import Bruecke.Kette.Quelle
+public import Bruecke.Kette.Suche
 @[expose] public section
 
 /-!
@@ -20,6 +21,39 @@ namespace Gabbro.Bruecke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+/-! ## Readings through another callee lookup
+
+A generated duty module computes the Body reading of a function with a logarithmic table
+(`Kette/Suche.lean`) instead of the linear standard search; these theorems carry its result back to
+the standard instance, about which every statement of the bridge is made. -/
+
+/-- The standard lookup as a function: the first function of the name. -/
+def standardSuche (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name == n)
+
+/-- A lookup function that answers as the standard one gives the standard instance. The instances
+    are written explicitly: no instance is resolved from context in these statements. -/
+theorem fnSuche_eq {u : UProg} (s : String → Option UFn) (h : ∀ n, s n = standardSuche u n) :
+    (FnSuche.mk s : FnSuche u) = instFnSuche u := by
+  have hs : s = fun n => u.fns.find? (fun f => f.name == n) := funext h
+  subst hs
+  rfl
+
+theorem zuBodyZ_suche {u : UProg} (s : String → Option UFn) (h : ∀ n, s n = standardSuche u n)
+    (f : UFn) : @zuBodyZ u ⟨s⟩ f = @zuBodyZ u (instFnSuche u) f := by
+  rw [fnSuche_eq s h]
+
+theorem meetsU_suche {u : UProg} (s : String → Option UFn) (h : ∀ n, s n = standardSuche u n)
+    (wf : Gabbro.Body.State → Prop) (f : UFn) (body : List Gabbro.Body.Stmt) :
+    @meetsU u ⟨s⟩ wf f body ↔ @meetsU u (instFnSuche u) wf f body := by
+  rw [fnSuche_eq s h]
+
+/-- A printed table built from the keyed list of `u.fns` answers as the standard lookup. -/
+theorem tabelle_such {u : UProg} {tiefe : Nat} {t : Tabelle UFn} {ts : List (Nat × String × UFn)}
+    (ht : t = Tabelle.bauenK tiefe ts) (hts : ts = tabellenSchluessel u.fns) (n : String) :
+    Tabelle.suche tiefe t n = standardSuche u n := by
+  subst ht hts
+  exact funktionsTabelle_suche tiefe u.fns n
 
 /-! ## The checks, split into a unit part and a function part -/
 

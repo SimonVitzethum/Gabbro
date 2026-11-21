@@ -19,6 +19,7 @@ public import Bruecke.Vorlage.Formen
 public import Bruecke.Vorlage.Haupt
 public import Bruecke.Vorlage.Zeige
 public import Bruecke.Kette.Einheit
+public import Bruecke.Kette.Suche
 public import Bruecke.Kette.Stufe0
 public import Bruecke.Teil.Pflichten
 public import Bruecke.Teil.Simulation

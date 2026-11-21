@@ -210,7 +210,7 @@ theorem statischSeq_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB 
 
       have IH := ih (m + 1) (by omega) k tail fn fT (ns.resume allocated) q rest ys restZ used hΓ hS hmemTail hQ hTailZ
         (fun g gf hgf ⟨args, hc⟩ => hFss g gf hgf ⟨args, hc.mono (fun _ hm => mem_of_suffix hsuf hm)⟩)
-      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), .forEach _ _ _ _ hFrameBody IH.2.2⟩
+      exact ⟨IH.1, (IH.2.1.trans hsuf).trans (List.suffix_cons _ _), .forCount _ _ _ _ hFrameBody IH.2.2⟩
     case narrowBeg x lo hi =>
       obtain ⟨e, errorBody, tailZ, ys, hname, hEZ, hYZ, rfl⟩ := seqZ_narrow_some hbs
       obtain ⟨hn, id, hid, rfl⟩ := narrowName_some hname

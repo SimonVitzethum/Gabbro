@@ -260,6 +260,7 @@ def ruftAufStmt : Stmt → String → Prop
   | .onTag _ arms, f => ruftAufTArme arms f
   | .loop _ _ b, f => ruftAuf b f
   | .forEach _ _ b, f => ruftAuf b f
+  | .forCount _ _ b, f => ruftAuf b f
   | .retry _ _ b e, f => ruftAuf b f ∨ ruftAuf e f
   | .locked _ b, f => ruftAuf b f
   | .breaking _ b, f => ruftAuf b f

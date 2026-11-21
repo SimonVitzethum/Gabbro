@@ -33,7 +33,7 @@ def readReasonArms (read : BodyNames → List UStmt →
         pure ((caseLabel offset, body) :: arms, rest, used)
 
 /-- The active list is scoped; the returned allocation history is function-wide. -/
-def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
+def seqZ (u : UProg) [FnSuche u] : Nat → UFn → BodyNames → List UStmt →
     Option (List Gabbro.Body.Stmt × List UStmt × List String)
   | 0, _, _, _ => none
   | _ + 1, _, ns, [] => some ([], [], ns.used)
@@ -78,7 +78,7 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
       let (body, .blkEnd :: tail, used) ← seqZ u k
         (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
       let p ← seqZ u k fn (ns.resume used) tail
-      pure (.forEach (ns.fresh x) (loopIndices u t) body :: p.1, p.2.1, p.2.2)
+      pure (.forCount (ns.fresh x) (loopZahl u t) body :: p.1, p.2.1, p.2.2)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
@@ -106,10 +106,10 @@ def seqZ (u : UProg) : Nat → UFn → BodyNames → List UStmt →
       | none => none
 
 /-- Finite reason arms specialize the shared scoped arm reader. -/
-def reasonArmsZ (u : UProg) (k : Nat) (fn : UFn) := readReasonArms (seqZ u k fn)
+def reasonArmsZ (u : UProg) [FnSuche u] (k : Nat) (fn : UFn) := readReasonArms (seqZ u k fn)
 
 /-- Read a whole function, retaining allocation history across both arms and the continuation. -/
-def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet →
+def stmtsBodyZ (u : UProg) [FnSuche u] : Nat → UFn → BodyNames → List UStmt → URet →
     Option (List Gabbro.Body.Stmt)
   | 0, _, _, _, _ => none
   | _ + 1, fn, ns, [], r => namedEnd u fn ns r
@@ -155,7 +155,7 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
       let (body, .blkEnd :: tail, used) ← seqZ u k
         (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) rest | none
       let bs ← stmtsBodyZ u k fn (ns.resume used) tail r
-      pure (.forEach (ns.fresh x) (loopIndices u t) body :: bs)
+      pure (.forCount (ns.fresh x) (loopZahl u t) body :: bs)
   | k + 1, fn, ns, .narrowBeg x lo hi :: rest, r => do
       let e ← narrowName fn ns x
       let (err, .blkEnd :: tail) ← endBodyZ u k fn ns rest | none
@@ -176,7 +176,7 @@ def stmtsBodyZ (u : UProg) : Nat → UFn → BodyNames → List UStmt → URet �
       | none => none
 
 /-- The canonical whole-function reader starts in the declared entry scope. -/
-def zuBodyZ (u : UProg) (f : UFn) : Option (List Gabbro.Body.Stmt) :=
+def zuBodyZ (u : UProg) [FnSuche u] (f : UFn) : Option (List Gabbro.Body.Stmt) :=
   stmtsBodyZ u (f.body.length + 1) f (BodyNames.start f) f.body f.ret
 
 end Gabbro.Bruecke

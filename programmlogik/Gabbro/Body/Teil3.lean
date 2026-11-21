@@ -125,6 +125,10 @@ inductive Stmt where
       last; exhaustion runs `onExceeded`. `next` continues, `leave` finishes and return
       propagates. The fuel is the source's static bound. -/
   | retry (fuel : Nat) (stop : Expr) (body onExceeded : List Stmt)
+  /-- Operational traversal of `0 ..< count`: the meaning of `forEach` over that index list
+      (`step_forCount`). The count is data, so a reading of a traversal over a large table is
+      small; the index list exists only in the meaning. -/
+  | forCount (binder : String) (count : Nat) (body : List Stmt)
   deriving Repr
 
 /-- **What every routine of the program does, as a map from name to state transformer.**
@@ -414,6 +418,14 @@ def step (ρ : Env) : Stmt → State → Outcome
           | .left t' => .inr (.running t')
           | out => .inr out)
         Outcome.running (exec ρ onExceeded) Outcome.stuck fuel s
+  | .forCount x n body, s =>
+      traverseRun
+        (fun t => match exec ρ body t with
+          | .running t' | .exited t' => .inl t'
+          | .left t' => .inr (.running t')
+          | out => .inr out)
+        Outcome.running (fun t i => { t with local' := bindLocal t.local' x (.int i) })
+        ((List.range n).map Int.ofNat) s
 
 def exec (ρ : Env) : List Stmt → State → Outcome
   | [], s => .running s

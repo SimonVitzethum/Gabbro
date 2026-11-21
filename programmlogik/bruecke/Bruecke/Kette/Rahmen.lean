@@ -109,7 +109,7 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
 
         have IH := statisch_G S c hc ρB r n k tail fn fT (ns.resume allocated) q ys hΓ hS hmemTail hQ hTailZ
           (fun g gf hgf ⟨args, hc⟩ => hFss g gf hgf ⟨args, hc.mono (fun _ hm => mem_of_suffix hsuf hm)⟩)
-        exact .forEach _ _ _ _ hFrameBody IH
+        exact .forCount _ _ _ _ hFrameBody IH
       case matchTagBeg sidx x binders =>
         obtain ⟨cs, e, arms, tailZ, allocated, ys, hn, he, hAZ, hYZ, rfl⟩ := stmtsBodyZ_tag_some hbs
         obtain ⟨id, ht, hBare, hid, rfl⟩ := tagSubject_some he

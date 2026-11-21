@@ -17,7 +17,7 @@ theorem seqZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : String} {i
       seqZ u k (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) ss =
       some (body, .blkEnd :: tail, allocated) ∧
       seqZ u k fn (ns.resume allocated) tail = some (ys, rest, used) ∧
-      bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
+      bs = .forCount (ns.fresh x) (loopZahl u t) body :: ys := by
   cases inv
   case tru =>
     simp only [seqZ] at h
@@ -52,7 +52,7 @@ theorem stmtsBodyZ_loop_some {k : Nat} {fn : UFn} {ns : BodyNames} {x tab : Stri
       seqZ u k (fn.mitIndex x t.val ((declOf u).count t)) (ns.push x) ss =
       some (body, .blkEnd :: tail, allocated) ∧
       stmtsBodyZ u k fn (ns.resume allocated) tail r = some ys ∧
-      bs = .forEach (ns.fresh x) (loopIndices u t) body :: ys := by
+      bs = .forCount (ns.fresh x) (loopZahl u t) body :: ys := by
   cases inv
   case tru =>
     simp only [stmtsBodyZ] at h
