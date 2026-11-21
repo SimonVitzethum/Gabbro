@@ -38,7 +38,7 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   tor : (declOf compiled.unit).Ax → Option Senke.TorB
   /-- Starts recovered from the selected original source, before names could erase arguments. -/
   startPlan : StartArgument.Plan compiled.unit
-    (uMembers (pre108 compiled.source.prepared.elaborierbar)) compiled.main
+    (uMembers (pre108 compiled.source.prepared.elaborierbar))
   initialValid : sp0OkB compiled.unit = true
   initialInvariants : CheckedInitialInvariants
     (initialUnit compiled.unit compiled.program (sp0Of compiled.unit initialValid) [] compiled.checkedDeclarations.val)
@@ -87,7 +87,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     | none => pure ()
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
-  let startPlan ← StartArgument.plan u (uMembers (pre108 compiled.source.prepared.elaborierbar)) main
+  let startPlan ← StartArgument.plan u (uMembers (pre108 compiled.source.prepared.elaborierbar))
   if initialValid : sp0OkB u = true then
     let initialInvariants ← (checkInitialInvariants
       (initialUnit u P (sp0Of u initialValid) [] compiled.checkedDeclarations.val)

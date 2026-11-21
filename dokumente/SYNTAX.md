@@ -1466,7 +1466,9 @@ F4). Not in the EBNF above, deliberately: `start` is no word of the table in §1
 spent no keyword), and the reader decides by the head alone -- only `start` followed by `{`
 is the statement, `start = 1;` stays an assignment. The shape is the `concurrent` list
 (`"start" "{" path { "," path } [ "," ] "}" ";"`). The named roots run as threads of their
-own and are JOINED before the starter proceeds; no detached form exists. The rules:
+own and are JOINED before the starter proceeds; no detached form exists. Stage 0
+accepts boot roots and refuses this statement until its clone and join lowering
+is verified. The rules:
 
 * **A root may be a member as well.** Boot starts every `concurrent` member, `entry` root and `boot`
   dispatch; a root the statement names too runs a second time: two instances of one routine are a

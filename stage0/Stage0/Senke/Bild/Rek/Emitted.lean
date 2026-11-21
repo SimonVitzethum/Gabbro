@@ -49,7 +49,7 @@ theorem Emitted.bild_anfang_codes [Kern] (output : Emitted src K options) (hr : 
         (Senke.initialWorld output.compiled.unit output.initialValid) output.args ∧
       BildCodes output.image.Y output.compiled.program output.image.passes output.image.A C Lm ∧
       output.image.depth < 2 ^ 64 := by
-  have hst : output.starts = [] := output.starts_leer hr hg
+  have hst : output.starts = [] := output.starts_leer hr
   have hb := output.emission
   rw [show output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid) = [] from hst]
     at hb

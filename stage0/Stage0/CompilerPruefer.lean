@@ -162,35 +162,59 @@ theorem Compiled.entry_name_unique {text : String} {options : Profil.Options}
   rw [List.get_eq_getElem (i := f), List.get_eq_getElem (i := result.main)] at same
   simpa only [List.getElem_map] using same
 
-/-- The explicit concurrent prefix has precisely the function occurrences
-    judged by the source checker, with their original order and multiplicity. -/
-theorem StartArgument.Plan.concurrent_roots {u : UProg} {items : List SItemTief}
-    {main : (declOf u).Fn} (plan : StartArgument.Plan u items main) (world : World (declOf u))
-    (dispatch : plan.dispatch = []) (runtime : u.gestartet = []) :
+private theorem namedStart_index (u : UProg) (name : String) (start : StartArgument.NamedStart u)
+    (read : StartArgument.namedStart u name = .ok start) :
+    wurzelIdx u name = some start.resolved.function := by
+  unfold StartArgument.namedStart at read
+  cases resolved : StartArgument.resolve u name [] with
+  | error error => simp only [resolved, bind, Except.bind, reduceCtorEq] at read
+  | ok value =>
+    simp only [resolved, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at read
+    subst start
+    unfold wurzelIdx fnAt
+    rw [findRoot_eq_fnIdx, value.named]
+    rfl
+
+private theorem named_start_indices (u : UProg) : ∀ {names : List String} {starts : List (StartArgument.NamedStart u)},
+    names.mapM (StartArgument.namedStart u) = .ok starts →
+    starts.map (fun start => start.resolved.function) = names.filterMap (wurzelIdx u) := by
+  intro names
+  induction names with
+  | nil => rintro _ equal; cases equal; rfl
+  | cons name rest ih =>
+    intro starts indexed
+    simp only [List.mapM_cons] at indexed
+    cases head : StartArgument.namedStart u name with
+    | error error => simp only [head, bind, Except.bind, reduceCtorEq] at indexed
+    | ok start =>
+      cases tail : rest.mapM (StartArgument.namedStart u) with
+      | error error => simp only [head, tail, bind, Except.bind, reduceCtorEq] at indexed
+      | ok following =>
+        simp only [head, tail, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at indexed
+        subst starts
+        simp only [List.map_cons, List.filterMap_cons, namedStart_index u name start head, ih tail]
+
+/-- Every declared boot root occurs at the same position in the image and
+    in the checker, including repeated concurrent or dispatch targets. -/
+theorem StartArgument.Plan.exact_roots {u : UProg} {items : List SItemTief}
+    (plan : StartArgument.Plan u items) (world : World (declOf u)) :
     (plan.starts world).map (·.1) = u.roots.filterMap (wurzelIdx u) := by
-  have named := plan.namedOrigin
-  rw [dispatch, runtime] at named
-  change (Except.ok [] : Except String (List (StartArgument.NamedStart u))) = .ok plan.named at named
-  have empty : plan.named = [] := (Except.ok.inj named).symm
-  rw [plan.canonicalRoots, dispatch, List.append_nil]
-  simp only [StartArgument.Plan.starts, empty, List.map_nil, List.filter_nil, List.append_nil,
-    List.map_map, List.filterMap_map]
-  change plan.concurrent.map (fun start => start.resolved.function) =
-    plan.concurrent.filterMap (fun start => wurzelIdx u start.name)
   have lookup (start : StartArgument.SourceStart u items) :
       wurzelIdx u start.name = some start.resolved.function := by
     unfold wurzelIdx fnAt
     rw [findRoot_eq_fnIdx, start.resolved.named]
     rfl
-  simp only [lookup]
-  exact (congrFun (List.filterMap_eq_map'
-    (f := fun start : StartArgument.SourceStart u items => start.resolved.function)) plan.concurrent).symm
+  have ordinary : plan.concurrent.map (fun start => start.resolved.function) =
+      plan.concurrent.filterMap (fun start => wurzelIdx u start.name) := by
+    simp only [lookup]
+    exact (congrFun (List.filterMap_eq_map'
+      (f := fun start : StartArgument.SourceStart u items => start.resolved.function)) plan.concurrent).symm
+  simp only [StartArgument.Plan.starts, List.map_append, List.map_map, Function.comp_def, StartArgument.Resolved.start,
+    plan.canonicalRoots, List.filterMap_append, List.filterMap_map, ordinary, named_start_indices u plan.namedOrigin]
 
-/-- Premise (a) for the exact typed roots and initial memory serialized by the
-    emitter, when every additional root comes from an explicit concurrent member. -/
+/-- Premise (a) for the exact boot roots and initial memory of the image. -/
 theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
-    (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (start : unitStartGeprueftB
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q
         (GabbroV.sp0Of output.compiled.unit output.initialValid)
@@ -204,25 +228,23 @@ theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Prof
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
         (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true :=
   output.compiled.goal_checker Q _ output.args output.starts []
-    (output.startPlan.concurrent_roots _ dispatch runtime) (OldSource.gestartet_leer _ runtime) start
+    (output.startPlan.exact_roots _) (OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots) start
 
 /-- **The image of a unit without declared and run-time roots starts no thread besides `main`**:
     its canonical start plan has no `concurrent` occurrence and no named root. -/
 theorem Emitted.starts_leer {src : String} {K : Nat} {options : Profil.Options}
-    (output : Emitted src K options) (hr : output.compiled.unit.roots = [])
-    (hg : output.compiled.unit.gestartet = []) : output.starts = [] := by
+    (output : Emitted src K options) (hr : output.compiled.unit.roots = []) : output.starts = [] := by
   have h0 : output.startPlan.concurrent.map (·.name) ++ output.startPlan.dispatch = [] :=
     output.startPlan.canonicalRoots.symm.trans hr
   have hcon : output.startPlan.concurrent = [] :=
     List.map_eq_nil_iff.mp (List.append_eq_nil_iff.mp h0).1
   have hdis : output.startPlan.dispatch = [] := (List.append_eq_nil_iff.mp h0).2
   have hn := output.startPlan.namedOrigin
-  rw [hdis, hg] at hn
+  rw [hdis] at hn
   change (Except.ok [] : Except String (List (StartArgument.NamedStart output.compiled.unit))) =
     .ok output.startPlan.named at hn
   have hnamed : output.startPlan.named = [] := (Except.ok.inj hn).symm
-  simp only [Emitted.starts, StartArgument.Plan.starts, hcon, hnamed, List.map_nil, List.filter_nil,
-    List.append_nil]
+  simp only [Emitted.starts, StartArgument.Plan.starts, hcon, hnamed, List.map_nil, List.append_nil]
 
 /-- **Premise (a) on the emitted image of a unit whose only start is its entry**: the judged
     `Einheit` starts `main` with exactly the environment the image carries (`output.args`,
@@ -241,6 +263,6 @@ theorem Emitted.goal_checker_main {src : String} {K : Nat} {options : Profil.Opt
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
         (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true ∧
       output.starts = [] :=
-  ⟨output.compiled.goal_checker_main Q sp output.args hr hg hStart, output.starts_leer hr hg⟩
+  ⟨output.compiled.goal_checker_main Q sp output.args hr hg hStart, output.starts_leer hr⟩
 
 end Gabbro.Stage0

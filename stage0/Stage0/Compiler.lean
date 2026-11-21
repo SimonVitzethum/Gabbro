@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 public import Stage0.Frontend.ExpansionGate
 public import Stage0.Frontend.Constants.ArrayConstants
 public import Stage0.Frontend.Initializers
+public import Stage0.Frontend.HostedStarts
 public import Stage0.Frontend.Measures
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Grammatik.Parser.Elab.Export.HeldBinding
@@ -93,6 +94,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
       (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit
   entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   functionNames : (unit.fns.map (·.name)).Nodup
+  hostedStarts : Frontend.HostedStartShape unit
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program main = .ok true
@@ -175,6 +177,7 @@ def compileChecked (source : Frontend.Source text options)
     | .error error => throw error
     | .ok () => do
       let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
+      let hostedStarts ← Frontend.checkHostedStarts unit
       -- A call names its function; two functions of one name would leave the second unreachable.
       let uniqueness ← match unique : doppelterName (unit.fns.map (·.name)) with
         | some name => throw ("function declared twice: " ++ name)
@@ -228,6 +231,7 @@ def compileChecked (source : Frontend.Source text options)
                 elaborated := elaborated
                 entry := hm
                 functionNames := uniqueness.down
+                hostedStarts := hostedStarts.down
                 lowered := ⟨raw, fs, hl, hr⟩
                 accepted := ha
                 costs := hk

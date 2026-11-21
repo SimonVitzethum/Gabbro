@@ -24,7 +24,6 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
     (payload : irBild src K options = .ok bytes)
     (Q : AxEns (declOf output.compiled.unit))
     (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
-    (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (checked : nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true)
     (callSites : CallSitePflicht (output.goalUnit Q)) (posts : PostDeckt (output.goalUnit Q))
     (O : Orakel (declOf output.compiled.unit)) (binding : ForeignVertrag (output.goalUnit Q) O)
@@ -65,7 +64,7 @@ theorem irBild_private_tso_zielsatz [Kern] {output : Emitted src K options}
   have imageLoaded : BytesAt initial.ms.1.m Runner.Prog.IMG output.bytes :=
     (irBild_eq_output built payload).symm ▸ loaded
   exact ⟨(output.loaded_initial_world imageLoaded).withIdle, updated, rel', blind',
-    output.zielsatz Q certifiable dispatch runtime checked callSites posts O binding hardware sourceReached,
+    output.zielsatz Q certifiable checked callSites posts O binding hardware sourceReached,
     machineReached.prepend⟩
 
 /-- The actual x86 endpoint of a related private segment has the full goal
@@ -76,7 +75,6 @@ theorem irBild_x86_private_zielsatz [Kern] {output : Emitted src K options}
     (payload : irBild src K options = .ok bytes)
     (Q : AxEns (declOf output.compiled.unit))
     (certifiable : OldSource.zertifizierbar output.compiled.unit = true)
-    (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (checked : nutzerPflichtGeprueftB (output.goalUnit Q) output.fsA.1 output.lsA.1 = true)
     (callSites : CallSitePflicht (output.goalUnit Q)) (posts : PostDeckt (output.goalUnit Q))
     (O : Orakel (declOf output.compiled.unit)) (binding : ForeignVertrag (output.goalUnit Q) O)
@@ -115,7 +113,7 @@ theorem irBild_x86_private_zielsatz [Kern] {output : Emitted src K options}
   obtain ⟨final, steps, path, endpoint, memoryRun⟩ :=
     runner_private_endpoint (tso_fixed L0) cinv_L0 runnerRel runnerPath privateRequests
   obtain ⟨_, updated, related, blind', goal, _⟩ :=
-    irBild_private_tso_zielsatz built payload Q certifiable dispatch runtime checked callSites posts O
+    irBild_private_tso_zielsatz built payload Q certifiable checked callSites posts O
       binding hardware sourceReached loaded rel blind access buffers memoryRun
   exact ⟨final, steps, updated, path, endpoint, related, blind', goal⟩
 

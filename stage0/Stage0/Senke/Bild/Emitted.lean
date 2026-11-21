@@ -119,7 +119,7 @@ theorem Emitted.bild_anfang [Kern] (output : Emitted src K options) (hr : output
       (output.rahmen O C Lm rp ens).Ok ∧
       (output.rahmen O C Lm rp ens).RandIR (output.compiled.program.rumpf output.compiled.main) pc mR
         (Senke.initialWorld output.compiled.unit output.initialValid) output.args := by
-  have hst : output.starts = [] := output.starts_leer hr hg
+  have hst : output.starts = [] := output.starts_leer hr
   have hb := output.emission
   rw [show output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid) = [] from hst]
     at hb
