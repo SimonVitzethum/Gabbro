@@ -70,6 +70,27 @@ theorem image_clone_refusal_stop {src : String} {reserve : Nat} {options : Profi
   exact ⟨0, req, events, number, congrArg Ende.exit arg.symm,
     Or.inr (Or.inr (Or.inr ⟨rfl, arg.trans cloneStatus, prior, id, extra, appended, refused⟩))⟩
 
+/-- The compiler's depth-guard status cannot be explained as a source
+    outcome of a void entry with no foreign routines. In particular it
+    must never be confused with a normal void return, which emits zero. -/
+theorem ImageStopMatches.no_depth_guard {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {earlier last : List Ev}
+    (noResult : (declOf output.compiled.unit).erg output.compiled.main = none)
+    (noForeign : output.compiled.unit.axs.length = 0) :
+    ¬ ImageStopMatches output O state earlier last (.exit (BitVec.ofNat 64 105)) := by
+  rintro ⟨_, req, _, _, ended, explained⟩
+  have status := Ende.exit.inj ended
+  rcases explained with returned | never | hardware | refused
+  · obtain ⟨_, _, _, _, _, _, _, _, _, _, _, zero⟩ := returned
+    exact (by decide : (BitVec.ofNat 64 105) ≠ 0) (status.trans (zero noResult))
+  · obtain ⟨_, _, routine, _, _, _, _⟩ := never
+    exact Nat.not_lt_zero routine.val (noForeign ▸ routine.isLt)
+  · obtain ⟨_, cause, _, code⟩ := hardware
+    have impossible := status.trans code
+    cases cause <;> exact (by decide) impossible
+  · exact (by decide : BitVec.ofNat 64 105 ≠ BitVec.ofNat 64 cloneCode) (status.trans refused.2.1)
+
 /-- A byte of an actual startup stack belongs to exactly one reservation. -/
 theorem imageStackFootprint_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {i j : Nat} {address : W}

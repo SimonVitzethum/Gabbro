@@ -284,7 +284,8 @@ def ImageStopMatches (output : Emitted src reserve options)
         ∃ (l : Bool) (Γ : Ctx) (env : Env _ Γ)
           (value : ErgVal _ (vertragVon _ thread.kopf.f).erg) (world : World _),
           thread.kopf.rest = ⟨l, Γ, (vertragVon _ thread.kopf.f).ende, env, .zurueckgekehrt (.inl value, world)⟩ ∧
-          ExitErg output.image.Y.withIdle _ value req.a1) ∨
+          ExitErg output.image.Y.withIdle _ value req.a1 ∧
+          ((declOf output.compiled.unit).erg output.compiled.main = none → req.a1 = 0)) ∨
       ImageNeverRequest output O state i req ∨
       (state.lebt i = true ∧ ∃ cause, ImageHardwareCause O.mitRuhe output.image.passes state.m i cause ∧
         req.a1 = BitVec.ofNat 64 (hwCode cause)) ∨
