@@ -81,7 +81,27 @@ theorem parseModulTief_body {fuel : Nat} {tokens rest : List Token} {node : SIte
       · obtain ⟨inside, nodes, opening, body, nodeEq⟩ :=
           moduleBody_read (fuel := fuel) (header := afterPath) (rest := rest) (node := node)
             (fun nodes => .modT ("::".intercalate path) nodes) (by
-            simpa only [bind, Except.bind, pure, Except.pure] using parsed)
+              cases opening : fordereZeichen "{" afterPath with
+              | error e => simpa only [opening, bind, Except.bind] using parsed
+              | ok inside =>
+                cases body : parseItemsTief fuel inside with
+                | error e => simpa only [opening, body, bind, Except.bind] using parsed
+                | ok result =>
+                  obtain ⟨nodes, ending⟩ := result
+                  simpa only [opening, body, bind, Except.bind, pure, Except.pure] using parsed)
         exact ⟨afterPath, inside, nodes, opening, body, .inl ⟨rfl, nodeEq⟩⟩
+
+/-- The production item-sequence leaf uses this module reader at a `module`
+    head. Its two outer dispatch layers have no effect on the result. -/
+theorem parseItemTief_module (fuel : Nat) (tokens : List Token) :
+    parseItemTief (fuel + 2) (.wort "module" :: tokens) =
+      parseModulTief fuel (.wort "module" :: tokens) := by
+  conv => lhs; unfold parseItemTief
+  simp only [show strEq "module" "when" = false by decide,
+    show strEq "module" "pub" = false by decide, Bool.false_eq_true, ↓reduceIte]
+  conv => lhs; unfold parseItemKopfTief
+  simp only [sammleModifikatoren, show istMod "module" = false by decide,
+    show strEq "module" "spec" = false by decide, show strEq "module" "impl" = false by decide,
+    show strEq "module" "module" = true by decide, Bool.false_eq_true, ↓reduceIte]
 
 end Gabbro.Grammatik.Parser
