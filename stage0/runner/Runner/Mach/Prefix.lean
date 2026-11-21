@@ -74,7 +74,7 @@ theorem ProcessPrefix.prepend {a b : Cfg M θ} {events rest : List Ev} {m n : Na
   | cons step _ ih =>
     simpa only [List.append_assoc, Nat.add_succ] using step.prepend (ih suffix)
 
-theorem Res.ende_ne_lauf (r : Res θ) : r.ende ≠ some .lauf := by
+theorem ende_ne_lauf (r : Res θ) : Res.ende r ≠ some .lauf := by
   cases r <;> simp [Res.ende]
 
 theorem Tr.prefix {a : Cfg M θ} {events : List Ev} {n : Nat} (run : Tr M act a events .lauf n) :
@@ -95,7 +95,7 @@ theorem Tr.prefix {a : Cfg M θ} {events : List Ev} {n : Nat} (run : Tr M act a 
     obtain ⟨_, path⟩ := ih ending; exact ⟨_, .cons (.clone found asked answered created parent child) path⟩
   | stop _ stopped | askStop _ _ _ _ stopped | cloneNoStop _ _ _ _ stopped =>
     rw [← ending] at stopped
-    exact (Res.ende_ne_lauf _ stopped).elim
+    exact (ende_ne_lauf _ stopped).elim
   | exitGroup => cases ending
 
 /-- Keeping an endpoint neither admits new continuing observations nor
