@@ -279,6 +279,12 @@ theorem ImageIdleBuffers.step {θ : Type} {act : θ → Res θ}
     (empty : ImageIdleBuffers before) (step : ProcessStep imageTSO act before events after) :
     ImageIdleBuffers after := by
   intro future unallocated
+  have keep {owner : Nat} {thread : θ} {target : imageTSO.St} {request : Op} {answer : Ans}
+      (found : before.ths[owner]? = some (some thread)) (outside : before.ths.length ≤ future)
+      (answered : imageTSO.ans before.ms owner request answer target) : target.1.buf future = [] := by
+    have different : future ≠ owner :=
+      fun equal => Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp found).1 (equal ▸ outside)
+    exact (other_buffer different answered).trans (empty future outside)
   cases step with
   | tau flushed =>
     obtain ⟨owner, _, _, _, queued, updated⟩ := flushed
@@ -292,19 +298,15 @@ theorem ImageIdleBuffers.step {θ : Type} {act : θ → Res θ}
     simpa only [TSt.setBuf, ite_eq_right different] using clear
   | priv | exit =>
     exact empty future (by simpa only [List.length_set] using unallocated)
-  | @ask owner _ _ _ _ _ _ found _ _ answered _ |
-      @cloneNo owner _ _ _ _ _ found _ answered _ _ =>
-    have outside : before.ths.length ≤ future := by simpa only [List.length_set] using unallocated
-    have different : future ≠ owner :=
-      fun equal => Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp found).1 (equal ▸ outside)
-    exact (other_buffer different answered).trans (empty future outside)
+  | ask found _ _ answered _ =>
+    exact keep found (by simpa only [List.length_set] using unallocated) answered
+  | cloneNo found _ answered _ _ =>
+    exact keep found (by simpa only [List.length_set] using unallocated) answered
   | @clone owner _ _ _ _ _ _ _ found _ answered _ _ _ =>
     have outside : before.ths.length ≤ future := by
       simp only [List.length_append, List.length_set, List.length_singleton] at unallocated
       exact (Nat.le_succ _).trans unallocated
-    have different : future ≠ owner :=
-      fun equal => Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp found).1 (equal ▸ outside)
-    exact (other_buffer different answered).trans (empty future outside)
+    exact keep found outside answered
 
 /-- Every future thread in a real run retains an empty buffer up to its
     allocation. The result covers both the runner and its IR process. -/
@@ -321,5 +323,12 @@ theorem MappedImage.idle_buffers {src : String} {reserve : Nat} {options : Profi
     {output : Emitted src reserve options} {start : Cfg imageTSO Runner.X86.X}
     (mapped : MappedImage output start) : ImageIdleBuffers start :=
   fun i _ => mapped.emptyBuffers i
+
+/-- The next allocated slot sees exactly the shared memory, without
+    forwarding writes from another thread's buffer. -/
+theorem ImageIdleBuffers.fresh_view {θ : Type} {before : Cfg imageTSO θ}
+    (empty : ImageIdleBuffers before) :
+    before.ms.1.view before.ths.length = before.ms.1.m := by
+  simp only [TSt.view, empty _ (Nat.le_refl _), List.foldl_nil]
 
 end Gabbro.Stage0
