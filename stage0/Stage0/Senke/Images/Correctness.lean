@@ -177,7 +177,7 @@ def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
     (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
   ∃ footprint body,
     PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
-    (((∀ i r, body[i]? ≠ some (some r)) ∧
+    (((∀ (i : Nat) (r : Res T), body[i]? ≠ some (some r)) ∧
       WeltAt (projectSCState footprint machine.ms).1 output.image.Y.withIdle (state.m.speicher.welt [])) ∨
       ∃ snapshots positions committed,
         MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
