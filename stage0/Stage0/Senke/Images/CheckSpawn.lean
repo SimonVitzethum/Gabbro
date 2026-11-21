@@ -186,10 +186,10 @@ theorem tso_slt_prefix {layout : Runner.Beweis.Lay}
   refine ⟨after, ?_, memory, view, other⟩
   simpa only [onThread, List.set_set, List.nil_append] using read.trans result
 
-/-- On a successful clone, the compiled check reads the returned thread
-    ID, sets the signed comparison flag, and advances to the next site.
-    All changes remain confined to the two flag words in parent scratch. -/
-theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
+/-- The compiled clone check branches on the signed returned word. It
+    reaches the next site for a positive ID and the first instruction
+    of the emitted stop otherwise. Only parent scratch changes. -/
+theorem tso_spawn_check_outcome [Kern] {layout : Runner.Beweis.Lay}
     {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch : Nat} {id : W}
     (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
     (code : CodeAt (before.ms.1.view i) pc
@@ -198,11 +198,11 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
         guardC (scratch + 4) cloneCode scratch))
     (frame : FrameOK (before.ms.1.view i) fp K) (far : CodeFar pc 7 fp K)
     (room : scratch + 5 ≤ K) (slots : K < 2 ^ 31)
-    (stored : (before.ms.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id)
-    (success : 0 < id.toInt) :
+    (stored : (before.ms.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id) :
     ∃ after : (TSO layout).St,
-      ProcessPrefix (TSO layout) actI before [] 20
-        ⟨after, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩))⟩ ∧
+      ProcessPrefix (TSO layout) actI before [] (if 0 < id.toInt then 20 else 18)
+        ⟨after, before.ths.set i (some (.next
+          ⟨pc + BitVec.ofNat 64 (16 * (if 0 < id.toInt then 7 else 4)), fp⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       Agree fp (scratch + 3) K (before.ms.1.view i) (after.1.view i) ∧
       ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
@@ -258,14 +258,41 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
     exact Mem.rd64_wr64 (Mem.wr64_some (current.wr _ (by omega))) (current.rd _ (by omega))
   let guardCfg : Cfg (TSO layout) (Res T) := ⟨after, before.ths.set i (some (.next ⟨guardPc, fp⟩))⟩
   have guardReady : guardCfg.ths[i]? = some (some (.next ⟨guardPc, fp⟩)) := List.getElem?_set_self inside
-  have nonzero : spawnFlag id ≠ 0 := by rw [spawnFlag_pos success]; decide
-  have passed := tso_guard_pass (before := guardCfg) (i := i) guardReady guardView flagRead nonzero
   have firstTwo : ProcessPrefix (TSO layout) actI before [] 13 guardCfg := by
     simpa only [middleCfg, guardCfg, nxt, compareNext, List.nil_append, List.set_set, Nat.reduceAdd] using
       zeroRun.trans comparison
-  have nextSite : guardPc + BitVec.ofNat 64 (16 * 5) = pc + BitVec.ofNat 64 (16 * 7) := pcN pc 2 5 7 rfl
   refine ⟨after, ?_, same1.trans same0, safe0.trans safe1,
     fun j different => (others1 j different).trans (others0 j different)⟩
-  simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
+  by_cases success : 0 < id.toInt
+  · have nonzero : spawnFlag id ≠ 0 := by rw [spawnFlag_pos success]; decide
+    have passed := tso_guard_pass (before := guardCfg) (i := i) guardReady guardView flagRead nonzero
+    have nextSite : guardPc + BitVec.ofNat 64 (16 * 5) = pc + BitVec.ofNat 64 (16 * 7) := pcN pc 2 5 7 rfl
+    simpa only [guardCfg, ite_eq_left success, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using
+      firstTwo.trans passed
+  · rw [spawnFlag_nonpos (le_of_not_gt success)] at flagRead
+    have failed := tso_guard_fail (before := guardCfg) (i := i) guardReady guardView flagRead
+    have toStop : guardPc + 32 = pc + BitVec.ofNat 64 (16 * 4) := pcN pc 2 2 4 rfl
+    simpa only [guardCfg, ite_eq_right success, toStop, List.set_set, List.nil_append, Nat.reduceAdd] using
+      firstTwo.trans failed
+
+/-- The positive case reaches the next startup site. -/
+theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch : Nat} {id : W}
+    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
+    (code : CodeAt (before.ms.1.view i) pc
+      ([ci 1 ((scratch + 3 : Nat) : Int) 0 0,
+        ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)] ++
+        guardC (scratch + 4) cloneCode scratch))
+    (frame : FrameOK (before.ms.1.view i) fp K) (far : CodeFar pc 7 fp K)
+    (room : scratch + 5 ≤ K) (slots : K < 2 ^ 31)
+    (stored : (before.ms.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id)
+    (success : 0 < id.toInt) :
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [] 20
+        ⟨after, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      Agree fp (scratch + 3) K (before.ms.1.view i) (after.1.view i) ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  simpa only [ite_eq_left success] using tso_spawn_check_outcome running code frame far room slots stored
 
 end Gabbro.Stage0.Senke

@@ -62,6 +62,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.tso_guard_pass
 #print axioms Gabbro.Stage0.Senke.tso_slt_prefix
 #print axioms Gabbro.Stage0.Senke.tso_spawn_check_pass
+#print axioms Gabbro.Stage0.Senke.tso_spawn_check_outcome
 #print axioms Gabbro.Stage0.MappedImage.dispatched_source
 #print axioms Gabbro.Stage0.MappedImage.of_mmap_continuation
 #print axioms Gabbro.Stage0.MappedImage.loader_prefix_source
