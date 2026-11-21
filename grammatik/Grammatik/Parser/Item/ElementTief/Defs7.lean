@@ -8,6 +8,13 @@ public import Grammatik.Parser.Spec.Parse
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- A named carrier effect group is consumed by canonical source expansion. -/
+def parseEffectGroup (fuel : Nat) (tokens : List Token) : Except String (SItemTief × List Token) := do
+  let (name, tokens) ← nimmName tokens
+  let (effects, tokens) ← parseEffektBlock fuel tokens
+  let rest ← fordereZeichen ";" tokens
+  pure (.effectGroupT name effects, rest)
+
 /-- One adapter parameter: `..`, `-x`, or a new `x : T`. -/
 def parseAdaptParamEinzel (f : Nat) (toks : List Token) :
     Except String (SAdaptParam × List Token) :=
@@ -278,6 +285,7 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
         else if strEq s "lock" then parseSperreTief f nach
         else if strEq s "rcu" then parseRcuTief f nach
         else if strEq s "group" then parseGruppeTief f nach
+        else if strEq s "effects" then parseEffectGroup f rest
         else if strEq s "accumulates" then parseAkkumTief f nach
         else if strEq s "walk" then parseWegTief f nach
         else if strEq s "entry" then parseEingangTief f nach

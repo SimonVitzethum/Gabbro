@@ -100,6 +100,7 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .typeT fl n args ord t => .typeT fl (k.eigen n) (args.map (typ k)) ord (typO k t)
   | .constT n t v => .constT (k.eigen n) (typ k t) (konst k v)
   | .globT m n t v al s sh => .globT m (k.eigen n) (typ k t) (konst k v) (ausO k al) s sh
+  | .effectGroupT n effects => .effectGroupT (k.eigen n) (effects.map (effekt k))
   | .specGroupT n ts es fs =>
     .specGroupT (k.eigen n) ts es
       (fs.map fun s => { sig (k.mit (ts ++ es)) s with name := s.name })
@@ -124,6 +125,10 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .accT n t m p q => .accT n t m p (q.map k.ref)
   | .whyT n cs ex => .whyT (k.eigen n) (cs.map fun (a, e, b) => (a, aus k e, b)) ex
   | .callT c => .callT (syscall k c)
+  | .axiomT name params result pre effects kind =>
+    let inner := k.mit (params.map Prod.fst)
+    .axiomT (k.eigen name) (params.map fun (n, t) => (n, typ k t)) (typO k result)
+      (ausO inner pre) (effects.map (effekt inner)) kind
   | .trustT name code arch regs stack assumption service =>
     .trustT (k.eigen name) (k.ref code) arch regs stack assumption (service.map k.ref)
   | .varT n => .varT (k.eigen n)
@@ -166,6 +171,7 @@ def flach : List SItemTief → Bool
   | .useT _ :: _ => false
   | .pubT (.modT _ _) :: _ => false
   | .pubT (.useT _) :: _ => false
+  | .effectGroupT .. :: _ | .pubT (.effectGroupT ..) :: _ => false
   | _ :: rest => flach rest
 
 /-- **A unit of one name space**: no `use` line, and at most one module wrapper around flat items. -/

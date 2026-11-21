@@ -80,6 +80,7 @@ def namenTeil : STabTeil → List String
 
 /-- **The names an item's head writes** -- what an importer reads of it. -/
 def kopfNamen : SItemTief → List String
+  | .effectGroupT _ es => es.flatMap (namenE [])
   | .specGroupT _ ts es fs =>
     (fs.flatMap namenSig).filter fun n => !((ts ++ es).any (strEq n))
   | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => namenSig s
@@ -96,7 +97,7 @@ def kopfNamen : SItemTief → List String
 def darfPub : SItemTief → Bool
   | .fnT .. | .protoT .. | .specT .. | .asmT .. | .globT .. | .constT .. | .typeT .. | .atomT ..
   | .tableT .. | .arenaT .. | .lockT .. | .formatT .. | .devT .. | .whyT .. | .useT .. | .modT ..
-  | .specGroupT .. => true
+  | .specGroupT .. | .effectGroupT .. => true
   | _ => false
 
 /-- A `pub` item: where it stands, its path (if it names one) and the item. -/

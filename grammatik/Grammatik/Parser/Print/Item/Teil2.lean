@@ -29,6 +29,8 @@ def druckItem : SItemTief → List Token
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
   | .moduleTemplateT n params its => [.wort "module"] ++ rohToks n ++
     druckGenericParams params ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
+  | .effectGroupT name effects =>
+    [.wort "effects", nameTok name, .zeichen "{"] ++ druckEffekte effects ++ [.zeichen "}", .zeichen ";"]
   | .moduleUseT n path args => [.wort "use", nameTok n, .zeichen "="] ++
     pfadToks path ++ [.zeichen "::", .zeichen "["] ++
     rohToks (String.intercalate ", " args) ++ [.zeichen "]", .zeichen ";"]

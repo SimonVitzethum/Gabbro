@@ -166,7 +166,7 @@ def letzter (p : Pfad) : String := p.getLast?.getD ""
 /-- The declared name of an item, if it declares one. -/
 def itemName : SItemTief → Option String
   | .taggedByT decl _ => itemName decl
-  | .specGroupT n _ _ _ => some n
+  | .specGroupT n _ _ _ | .effectGroupT n _ => some n
   | .typeT _ n _ _ _ => some n
   | .constT n _ _ => some n
   | .globT _ n _ _ _ _ _ => some n

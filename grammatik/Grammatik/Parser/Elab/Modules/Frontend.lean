@@ -3,6 +3,7 @@ public import Grammatik.Parser.Elab.Modules.CallHoist
 public import Grammatik.Parser.Elab.Modules.MatchWildcard
 public import Grammatik.Parser.Elab.Modules.MatchNumber
 public import Grammatik.Parser.Elab.Modules.Expansion
+public import Grammatik.Parser.Elab.Modules.EffectGroups
 public import Grammatik.Parser.Elab.SourceNormalization
 public import Grammatik.Parser.Elab.Instantiation.Items
 public import Grammatik.Parser.Elab.Instantiation.FreshNamesFast
@@ -34,7 +35,8 @@ def prepareDetailedRaw (items : List SItemTief) : Except String Prepared := do
   let modules ← expandWithRequirements items
   let members := Uebersetze.uMembers modules.items
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
-  let result ← Generic.expandDetailed members modules.literals
+  let (members, literals) ← EffectGroups.prepare members modules.literals
+  let result ← Generic.expandDetailed members literals
   let (tupleItems, tupleNames) ← Tuples.expand result.items
   let target ← Uebersetze.entzuckere tupleItems
   -- Numeric scrutinees are bound once before tagged wildcard expansion and call lifting.
@@ -63,7 +65,8 @@ def prepareDetailedRawFast (items : List SItemTief) : Except String Prepared := 
   let modules ← expandWithRequirements items
   let members := Uebersetze.uMembers modules.items
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
-  let result ← Generic.expandDetailed members modules.literals
+  let (members, literals) ← EffectGroups.prepare members modules.literals
+  let result ← Generic.expandDetailed members literals
   let (tupleItems, tupleNames) ← Tuples.expand result.items
   let target ← Uebersetze.entzuckere tupleItems
   -- Numeric scrutinees are bound once before tagged wildcard expansion and call lifting.
@@ -83,7 +86,8 @@ def prepareDetailedRawFast (items : List SItemTief) : Except String Prepared := 
   simp only [prepareDetailedRawFast, prepareDetailedRaw, retainOutputNames_eq]
 
 def existingForms (items : List SItemTief) : Bool :=
-  ordinary items && !(items.any Generic.genericHeader)
+  ordinary items && !(items.any Generic.genericHeader) &&
+    !(items.any fun decl => (EffectGroups.group decl).isSome)
 
 /-- The output name list has provenance even for user-supplied synthetic ASTs that spell reserved
     names. Filtering only removes allocated declarations consumed as templates by the next phase. -/

@@ -282,6 +282,7 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
   | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))
+  | .param n => .param (k.ref n)
   | e => e
 
 /-- **A contract clause, resolved.** -/

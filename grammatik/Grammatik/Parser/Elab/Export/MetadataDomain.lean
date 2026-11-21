@@ -216,7 +216,7 @@ def itemMetadata (item : SItemTief) (callees : CalleeEffects := fun _ => none) :
       the static arena commits all its slots, so the required allocation's only
       duty is the counter bound under `KoerperGutS/SA`). -/
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
-  | .groupT .. => false
+  | .groupT .. | .effectGroupT .. => false
   /- Alignment is read and validated by the existing profile/uGlobs path. Names
       need its real constant environment; sections remain an unbound duty here. -/
   | .globT _ _ ty _ alignment sectionName _ => typeMetadata ty || alignment.any (fun e =>

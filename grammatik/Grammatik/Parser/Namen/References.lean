@@ -91,6 +91,7 @@ def namenE (lok : List String) : SEffekt → List String
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => namenA lok e
   | .masks n | .allocs n | .borrows n | .moves n | .mints n => [n]
   | .instanceEffects n ts => n :: ts.flatMap namenT
+  | .param n => if lok.any (strEq n) then [] else [n]
   | _ => []
 
 /-- The names a contract clause writes. -/

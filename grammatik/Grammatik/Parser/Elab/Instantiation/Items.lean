@@ -43,7 +43,7 @@ mutual
 def item (scope : Scope) : SItemTief → SurfaceFacts
   | .modT _ body => items scope body
   | .pubT body | .gateT body => item scope body
-  | .moduleTemplateT _ _ _ | .moduleUseT _ _ _ | .adaptT _ _ _ _ => ⟨false, []⟩
+  | .moduleTemplateT _ _ _ | .moduleUseT _ _ _ | .adaptT _ _ _ _ | .effectGroupT .. => ⟨false, []⟩
   | .taggedByT decl _ => merge ⟨false, []⟩ (item scope decl)
   | .specGroupT _ _ _ functions => merge ⟨false, []⟩ (gather (functions.map (signature scope)))
   | .implGroupT _ types effects body => gather [⟨false, []⟩,

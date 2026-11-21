@@ -201,6 +201,7 @@ def artItem : SItemTief → String
   | .adaptT .. => "adaptT"
   | .moduleTemplateT .. => "moduleTemplateT"
   | .moduleUseT .. => "moduleUseT"
+  | .effectGroupT .. => "effectGroupT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/
 def parseStuecke (toks : List Token) :

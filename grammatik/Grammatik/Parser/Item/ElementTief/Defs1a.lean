@@ -87,6 +87,9 @@ def parseEffekt (f : Nat) (toks : List Token) :
       let (ts, r) ← parseSpecTypes f rest
       let r ← fordereZeichen "]" r
       return (.instanceEffects n ts, r)
+    | .ident n :: .zeichen "::" :: rest => do
+      let (path, tail) ← nimmPfad (.ident n :: .zeichen "::" :: rest)
+      pure (.param ("::".intercalate path), tail)
     | .ident n :: rest => .ok (.param n, rest)
     | _ => .error "effect expected"
 

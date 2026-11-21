@@ -214,6 +214,8 @@ inductive SItemTief
   | moduleTemplateT : String → List SGenericParam → List SItemTief → SItemTief
   /-- A generative module application: each written alias owns fresh declarations. -/
   | moduleUseT : String → List String → List String → SItemTief
+  /-- A module-level name for a list of concrete carrier effects. -/
+  | effectGroupT : String → List SEffekt → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
@@ -244,6 +246,7 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .globT m1 a t v l1 s1 g1, .globT m2 b u w l2 s2 g2 =>
     (m1 == m2) && strEq a b && beqSTyp t u && beqSKonstWert v w &&
     beqOptExpr l1 l2 && beqOptWort s1 s2 && (g1 == g2)
+  | .effectGroupT n es, .effectGroupT m fs => strEq n m && beqSEffektList es fs
   | .fnT s b, .fnT t d => beqFnSig s t && beqSAnw b d
   | .protoT s, .protoT t => beqFnSig s t
   | .specT s p, .specT t q => beqFnSig s t && beqSExpr p q

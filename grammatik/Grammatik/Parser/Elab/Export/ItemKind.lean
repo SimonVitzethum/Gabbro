@@ -46,5 +46,6 @@ namespace Gabbro.Grammatik.Parser.ExportMetadata
   | .implGroupT .. => "SItemTief.implGroupT"
   | .moduleTemplateT .. => "SItemTief.moduleTemplateT"
   | .moduleUseT .. => "SItemTief.moduleUseT"
+  | .effectGroupT .. => "SItemTief.effectGroupT"
 
 end Gabbro.Grammatik.Parser.ExportMetadata
