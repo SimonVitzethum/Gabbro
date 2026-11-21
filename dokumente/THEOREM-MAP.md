@@ -8296,3 +8296,21 @@ in GX, and applies the entire goal to the resulting GX state. The earlier
 threads can have run in the meantime. The emitted stack reservations are
 disjoint and an in-range startup store is confined to its own reservation
 by `imageStackStore_projected`.
+## 209. Indexed assignment below a slot field
+
+`uSetze_slotIndex` sends an indexed slot projection to the ordinary
+aggregate store. `indexedSlotDispatch_erfuellbar` establishes both
+dispatch premises for an index below a nested record field.
+`uRecordReplacement_index` specifies the replacement at each array
+subscript, and `uSetzeRecordSlot_index` identifies the named-slot store
+when its array field is indexed directly. Typed elaboration checks the
+index and replacement in `updW` and checks the store in
+`lowAssignTabW` or `lowAssignDurchW`. The resulting
+`Expr.arrSet` and `Expr.prodSet` use `arrSet_ok` and `prodSet_ok`
+in the generic Stage 0 expression correctness proof.
+
+`uSetze_localIndexedField` sends a field projection through a local
+array element to the ordinary aggregate local assignment.
+`localIndexedFieldDispatch_erfuellbar` derives the dispatch premise
+from a mutable array binding. Local and slot paths share the same
+replacement elaboration.

@@ -102,16 +102,12 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
   | some w =>
     match ziel with
     | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
-    | .field base _ =>
+    | .field base _ | .index base _ =>
       match uRecordLocal ctx ziel with
-      | some name => uSetzeRecord ctx name ziel w
+      | some name => uSetzeAggregateLocal ctx name ziel w
       | none =>
         if uRecordSlotPath base then uSetzeRecordSlot ctx ziel w
         else uSetzePlatz ctx ziel w
-    | .index base i =>
-      match uArrayLocal ctx ziel with
-      | some _ => uSetzeElement ctx base i w
-      | none => uSetzePlatz ctx ziel w
     | .arrow (.variable r) f =>
       match uRefLokal ctx r with
       | .some _ =>
@@ -120,6 +116,42 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
         | .ok v => .ok (.assignRef r f v)
       | .none => uSetzePlatz ctx ziel w
     | _ => uSetzePlatz ctx ziel w
+
+/-- Dispatch an indexed slot projection through the aggregate store. -/
+theorem uSetze_slotIndex (ctx : UCtx) (base index value : SExpr)
+    (notLocal : uRecordLocal ctx (.index base index) = none)
+    (slotField : uRecordSlotPath base = true) :
+    uSetze ctx (.index base index) "=" value =
+      uSetzeRecordSlot ctx (.index base index) value := by
+  have plain : strEq "=" "=" = true := rfl
+  delta uSetze
+  simp only [plain, ↓reduceIte, notLocal, slotField]
+
+/-- A record projection below a slot can be selected by the indexed store
+    dispatcher for any slot index, element index and field names. -/
+theorem indexedSlotDispatch_erfuellbar (ctx : UCtx) (table column field : String)
+    (slot index : SExpr) :
+    let base := SExpr.field (.field (.index (.field (.variable table) "slots") slot) column) field
+    uRecordLocal ctx (.index base index) = none ∧ uRecordSlotPath base = true := by
+  exact ⟨rfl, rfl⟩
+
+/-- A mixed projection on a mutable local array uses the same aggregate
+    assignment as an ordinary field projection. -/
+theorem uSetze_localIndexedField (ctx : UCtx) (name field : String) (index value : SExpr)
+    (found : uRecordLocal ctx (.field (.index (.variable name) index) field) = some name) :
+    uSetze ctx (.field (.index (.variable name) index) field) "=" value =
+      uSetzeAggregateLocal ctx name (.field (.index (.variable name) index) field) value := by
+  have plain : strEq "=" "=" = true := rfl
+  delta uSetze
+  simp only [plain, ↓reduceIte, found]
+
+/-- A binding of a mutable array of records supplies the mixed projection
+    dispatcher with its local root for every subscript and field spelling. -/
+theorem localIndexedFieldDispatch_erfuellbar (ctx : UCtx) (name field : String)
+    (index : SExpr) (record : Nat) (fields : List Ty) (length : Nat) :
+    let localCtx := uMitLokal ctx name .wert (.arr (.prod record fields) length) (name :: ctx.muts)
+    uRecordLocal localCtx (.field (.index (.variable name) index) field) = some name := by
+  simp [uRecordLocal, uMitLokal, List.findIdx?_cons, strEq_apply_eq_decide, bind, Option.bind]
 
 /-- A call through a local function pointer `p` (bound by `let p = &f;`): `some` of the head of the function it
     points at; `none` when `p` is no such local. -/
