@@ -441,9 +441,36 @@ def Stage0Correct [Kern] : Prop :=
         ImageFutexAnswers → SichtOK O →
         ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
         ∃ sim : ImageSimulation output E O start,
-          ∀ finish events count, ProcessPrefix imageTSO (actX L0) start events count finish →
+          (∀ finish events count, ProcessPrefix imageTSO (actX L0) start events count finish →
             ∃ ir steps state, ProcessPrefix imageTSO actI ⟨start.ms, [some t4]⟩ events steps ir ∧
               sim.related events finish ir state ∧ ImageReach output E O (imageSourceStart E) state ∧
-              ImageGoalAt output E O state
+              ImageGoalAt output E O state) ∧
+          (∀ events ending count, Tr imageTSO (actX L0) start events ending count → ending ≠ .lauf →
+            ∃ earlier last state, events = earlier ++ last ∧
+              ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending)
+
+/-- The two remaining compiler obligations are the checked unit export
+    and construction of the simulation for each actual mapped image. The
+    production path supplies the bytes and the canonical source directly. -/
+theorem stage0_correct_of_export_simulation [Kern]
+    (export : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
+        (output : Emitted source reserve options), emit source reserve options = .ok output →
+        ∃ E : Einheit (declOf output.compiled.unit), ImageModelUnit output E ∧
+          akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+          ∀ (O : Orakel (declOf output.compiled.unit)),
+            NutzerPflichtA E → CallSitePflicht E → PostDeckt E → ForeignVertrag E O →
+            HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
+            ImageFutexAnswers → SichtOK O →
+            ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
+              Nonempty (ImageSimulation output E O start)) :
+    Stage0Correct := by
+  intro source reserve options bytes wrote
+  obtain ⟨output, emitted, payload⟩ := irBild_emitted source reserve bytes wrote
+  obtain ⟨E, unit, accepted, simulation⟩ := export source reserve options output emitted
+  refine ⟨output, E, emitted, payload, compile_source_program source output.compiled, unit, accepted, ?_⟩
+  intro O duties calls posts binding hardware gate answers futex visibility start mapped
+  obtain ⟨sim⟩ := simulation O duties calls posts binding hardware gate answers futex visibility start mapped
+  exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls posts binding hardware run,
+    fun _ _ _ run stopped => sim.terminal run stopped⟩
 
 end Gabbro.Stage0

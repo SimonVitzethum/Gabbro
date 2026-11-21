@@ -222,7 +222,6 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
     fun j different => (others1 j different).trans (others0 j different)⟩
   simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
 
-set_option maxHeartbeats 1200000 in
 /-- The complete successful site runs both the clone and its compiled
     check. It reaches the next ten-instruction site, preserves the code
     owner's view outside scratch, and leaves all other views unchanged. -/
@@ -275,8 +274,8 @@ theorem tso_spawn_site_pass [Kern] {layout : Runner.Beweis.Lay}
     pcN pc 3 7 10 rfl
   refine ⟨after, ?_, ?_, committed.trans beforeGuard, same.trans (checked.mono (Nat.le_add_right _ _)),
     fun j different => (otherChecked j different).trans (otherViews j different)⟩
-  · have prefix : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 afterClone := run
-    have combined := prefix.trans checkRun
+  · have cloneRun : ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 18 afterClone := run
+    have combined := cloneRun.trans checkRun
     simpa only [afterClone, threads, List.set_append_left _ _ within, List.set_set, List.append_nil,
       advanced, Nat.reduceAdd] using combined
   · change (before.ths.set i _ ++ [some (.next child)])[before.ths.length]? = _
