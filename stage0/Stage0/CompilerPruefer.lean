@@ -65,53 +65,54 @@ theorem irBild_frontend_sound {text : String} {K : Nat} {options : Profil.Option
   exact ⟨output, built, exactBytes, parseTopTief_iff.mp output.compiled.source.parsed,
     compile_source_program text output.compiled, output.compiled.contract_duties⟩
 
-/-- Premise (a) of the goal theorem for what Stage 0 compiled. The judged `Einheit` starts the
-    compiled entry `result.main` with `args` (the image's start environment of `main`,
-    `Senke.mainEnv`), then `roots` naming the unit's declared roots, and carries the run-time
-    roots `gestartet` and the unit's derived checks `checks` (`hC`). `zertifizierbar` excludes
-    the forms whose goal leg the compiler's own check does not judge or the elaborator does not
-    export (arena tables, declared checks, accumulators). The compiler assumes neither: a unit
-    outside `zertifizierbar` compiles, and this theorem is silent on it. -/
+/-- The declaration list actually used by the successful production check. -/
+def Compiled.checkedDeclarations {text : String} {options : Profil.Options} (result : Compiled text options) :
+    {checks : List (CheckDecl (declOf result.unit)) // uCheckDecls result.unit = .ok checks} :=
+  match found : uCheckDecls result.unit with
+  | .ok checks => ⟨checks, found⟩
+  | .error _ => False.elim (by
+    obtain ⟨_, _, _, derived, _⟩ := OldSource.accepts_core _ _ _ result.accepted
+    rw [found] at derived
+    cases derived)
+
+/-- Premise (a) for the exported unit with its actual check declarations
+    and the checked judgment on its initial memory and typed starts. -/
 theorem Compiled.goal_checker {text : String} {options : Profil.Options}
     (result : Compiled text options) (Q : AxEns (declOf result.unit))
     (sp : Speicher (declOf result.unit))
     (args : Env (declOf result.unit) ((declOf result.unit).params result.main))
     (roots gestartet :
       List (Σ w : (declOf result.unit).Fn, Env (declOf result.unit) ((declOf result.unit).params w)))
-    (checks : List (CheckDecl (declOf result.unit)))
-    (hZ : OldSource.zertifizierbar result.unit = true)
-    (hC : uCheckDecls result.unit = .ok checks)
     (hr : roots.map (·.1) = result.unit.roots.filterMap fun n => wurzelIdx result.unit n)
     (hg : gestartet.map (·.1) = result.unit.gestartet.filterMap fun n => wurzelIdx result.unit n)
     (hStart : unitStartGeprueftB
-      (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet checks)
+      (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet result.checkedDeclarations.val)
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
-      (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet checks)
+      (OldSource.einheitDer result.unit result.program Q sp result.main args roots gestartet result.checkedDeclarations.val)
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
       ((List.finRange result.unit.tabs.length).map Sum.inl ++
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
   OldSource.accepts_gibt_pruefer result.unit result.program Q sp result.main args roots gestartet
-    checks (hFn := inferInstance) (hZ := hZ) (hC := hC) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
+    result.checkedDeclarations.val (hFn := inferInstance) (hC := result.checkedDeclarations.property) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
 
 /-- Premise (a) for a compiled unit whose only start is its entry (no declared roots, no
-    run-time roots): the judged `Einheit` starts `result.main` alone and carries no check. -/
+    run-time roots): the judged `Einheit` starts `result.main` alone and carries its actual check declarations. -/
 theorem Compiled.goal_checker_main {text : String} {options : Profil.Options}
     (result : Compiled text options) (Q : AxEns (declOf result.unit))
     (sp : Speicher (declOf result.unit))
     (args : Env (declOf result.unit) ((declOf result.unit).params result.main))
-    (hZ : OldSource.zertifizierbar result.unit = true)
     (hr : result.unit.roots = []) (hg : result.unit.gestartet = [])
     (hStart : unitStartGeprueftB
-      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
+      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] result.checkedDeclarations.val)
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
-      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] [])
+      (OldSource.einheitDer result.unit result.program Q sp result.main args [] [] result.checkedDeclarations.val)
       (List.finRange result.unit.fns.length) (List.finRange result.unit.locks.length)
       ((List.finRange result.unit.tabs.length).map Sum.inl ++
         (List.finRange result.unit.globs.length).map Sum.inr) = true :=
   OldSource.accepts_gibt_pruefer_main result.unit result.program Q sp result.main args
-    (hFn := inferInstance) (hZ := hZ) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
+    (hFn := inferInstance) result.checkedDeclarations.val result.checkedDeclarations.property (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
 
 private theorem findRoot_eq_fnIdx (functions : List UFn) (name : String) :
     (List.finRange functions.length).find? (fun f => (functions.get f).name == name) =
@@ -180,22 +181,20 @@ theorem StartArgument.Plan.concurrent_roots {u : UProg} {items : List SItemTief}
     emitter, when every additional root comes from an explicit concurrent member. -/
 theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
-    (hZ : OldSource.zertifizierbar output.compiled.unit = true)
     (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
     (start : unitStartGeprueftB
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q
         (Senke.initialWorld output.compiled.unit output.initialValid).speicher
-        output.compiled.main output.args output.starts [] [])
+        output.compiled.main output.args output.starts [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length) = true) :
     akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q
         (Senke.initialWorld output.compiled.unit output.initialValid).speicher
-        output.compiled.main output.args output.starts [] [])
+        output.compiled.main output.args output.starts [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length)
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
         (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true :=
-  output.compiled.goal_checker Q _ output.args output.starts [] [] hZ
-    (OldSource.uCheckDecls_zertifizierbar _ hZ)
+  output.compiled.goal_checker Q _ output.args output.starts []
     (output.startPlan.concurrent_roots _ dispatch runtime) (OldSource.gestartet_leer _ runtime) start
 
 /-- **The image of a unit without declared and run-time roots starts no thread besides `main`**:
@@ -222,18 +221,17 @@ theorem Emitted.starts_leer {src : String} {K : Nat} {options : Profil.Options}
 theorem Emitted.goal_checker_main {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
     (sp : Speicher (declOf output.compiled.unit))
-    (hZ : OldSource.zertifizierbar output.compiled.unit = true)
     (hr : output.compiled.unit.roots = []) (hg : output.compiled.unit.gestartet = [])
     (hStart : unitStartGeprueftB
-      (OldSource.einheitDer output.compiled.unit output.compiled.program Q sp output.compiled.main output.args [] [] [])
+      (OldSource.einheitDer output.compiled.unit output.compiled.program Q sp output.compiled.main output.args [] [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length) = true) :
     Zielsatz.akzeptiertX_pruefer.akzeptiert
       (OldSource.einheitDer output.compiled.unit output.compiled.program Q sp output.compiled.main
-        output.args [] [] [])
+        output.args [] [] output.compiled.checkedDeclarations.val)
       (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length)
       ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
         (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true ∧
       output.starts = [] :=
-  ⟨output.compiled.goal_checker_main Q sp output.args hZ hr hg hStart, output.starts_leer hr hg⟩
+  ⟨output.compiled.goal_checker_main Q sp output.args hr hg hStart, output.starts_leer hr hg⟩
 
 end Gabbro.Stage0

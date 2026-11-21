@@ -49,37 +49,14 @@ theorem Emitted.akzeptiertSpec (output : Emitted src K options) (Q : AxEns (decl
     AkzeptiertSpec (output.einheit Q).P (output.einheit Q).S output.fsA.1 (output.einheit Q).ws
       (output.einheit Q).akku := by
   letI : RootNativeFloat.Hardware := hw
-  -- Read the structural facts from actual compiler acceptance. The theorem's
-  -- image theorems retain their separate user/start duties.
-  have accepted := output.compiled.accepted
-  unfold OldSource.accepts at accepted
-  split at accepted
-  · cases accepted
-  · cases guests : Gabbro.Grammatik.Parser.UebersetzeAllg2.sourceGuests output.compiled.unit with
-    | error cause => simp only [guests, bind, Except.bind, reduceCtorEq] at accepted
-    | ok descriptors =>
-      simp only [guests, bind, Except.bind] at accepted
-      have checked := (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mp accepted
-      have split := (@akzeptiertX_guest_eq (declOf output.compiled.unit)
-        (inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length)))
-        (inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length)))
-        output.compiled.program (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie output.compiled.unit)
-        _ _ _ _ _ _ _ _ (Gabbro.Grammatik.Parser.Cover.Differenz.sperrQuellen output.compiled.unit)
-        (fun _ => none) (some (Gabbro.Grammatik.Parser.Cover.Differenz.zeigerSignaturen output.compiled.unit))).symm.trans
-        checked
-      have structural := (Bool.and_eq_true_iff.mp split).1
-      letI : DecidableEq (declOf output.compiled.unit).Fn :=
-        inferInstanceAs (DecidableEq (Fin output.compiled.unit.fns.length))
-      letI : DecidableEq (declOf output.compiled.unit).Ax :=
-        inferInstanceAs (DecidableEq (Fin output.compiled.unit.axs.length))
-      have core := akzeptiertSpecX_of output.fsA.2 output.lsA.2 output.csA.2 [] structural
-      have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
-          (output.einheit Q).ws := by
-        change OldSource.judgedRoots output.compiled.unit output.compiled.main = [output.compiled.main]
-        simp only [OldSource.judgedRoots, hr, hg, List.append_nil, List.filterMap_nil]
-        rfl
-      rw [roots] at core
-      exact akzeptiertSpec_of_X core (keinGeteiltV hAt)
+  have core := output.compiled.admission
+  have roots : OldSource.judgedRoots output.compiled.unit output.compiled.main =
+      (output.einheit Q).ws := by
+    change OldSource.judgedRoots output.compiled.unit output.compiled.main = [output.compiled.main]
+    simp only [OldSource.judgedRoots, hr, hg, List.append_nil, List.filterMap_nil]
+    rfl
+  rw [roots] at core
+  exact akzeptiertSpec_of_X core (keinGeteiltV hAt)
 
 /-- **The goal legs on what the emitted image runs through (one thread).** Let the image be what Stage 0 emits from
     a certifiable unit (`zertifizierbar`) without declared and run-time roots and without `atomic` globals; let the

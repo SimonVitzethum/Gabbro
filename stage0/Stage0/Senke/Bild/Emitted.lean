@@ -57,7 +57,7 @@ abbrev Emitted.sp0 (output : Emitted src K options) : Speicher (declOf output.co
 abbrev Emitted.einheit (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit)) :
     Einheit (declOf output.compiled.unit) :=
   OldSource.einheitDer output.compiled.unit output.compiled.program Q output.sp0 output.compiled.main
-    output.args [] [] []
+    output.args [] [] output.compiled.checkedDeclarations.val
 
 /-- **The frame of `main`'s body in the image**: at depth `depth` (callees `rufAt (depth - 1)`), `main`'s frame at
     slot `FB` of the first stack, the caller frame `fp0`, the entry world the requires read leaves. The codes `C`, the

@@ -1,20 +1,3 @@
-/- `accepts` meets the goal theorem's checker on certifiable units.
-
-    Stage 0 checks a unit with `accepts`: `AkzeptiertX` with empty arena,
-    accumulator and check admissions and the certified guest descriptors.
-    The goal theorem's checker (`akzeptiertX_pruefer`) decides the same
-    `AkzeptiertX` on the unit's declared checks (`E.pruefungen`) and
-    additionally requires the ownership start (`besitzB`) and the neutral
-    accumulator start (`akkuStartB`).
-
-    This file defines `einheitVon` (an `Einheit` with empty arenas,
-    accumulators and checks), the Bool `zertifizierbar` saying the unit has no
-    arena table, no accumulator storage and no declared check (exactly the
-    cases where the two sides can differ), and the step theorem: a successful
-    `accepts` gives the goal checker's `true` on `einheitVon`, with the
-    compiled entry `main` among the judged starts (`judgedRoots`). The bridge
-    on the unit's judged `Einheit` (`einheitDer`), which uses
-    `zertifizierbar`, is in JudgedUnit.lean. -/
 module
 public import Stage0.Senke.Ausdruck.Old.Source
 public import Grammatik.Parser.Cover.Differenz
@@ -37,28 +20,21 @@ def enthaelt (nadel hay : String) : Bool :=
   let h := hay.toList
   (List.range (h.length + 1)).any fun i => decide ((h.drop i).take n.length = n)
 
-/-- A unit is certifiable when it has no arena table, no declared check and
-    no accumulator storage: exactly the cases where `accepts` (which runs
-    `AkzeptiertX` with empty arena, accumulator and check admissions) and the
-    goal checker's `akzeptiertX_pruefer` (which additionally judges the
-    ownership and accumulator starts) can differ. Computed from the unit,
-    never carried: accumulator storage always carries the generated `#zelle`
-    cells and `#sperre` locks, and `#` never occurs in a source name. -/
+/-- The remaining export restriction covers arena tables and accumulator
+    storage. Declared checks already have a production exporter. -/
 def zertifizierbar (u : UProg) : Bool :=
-  (u.tabs.all fun t => !t.arena) && u.checks.isEmpty &&
+  (u.tabs.all fun t => !t.arena) &&
     (u.globs.all fun g => !enthaelt "#zelle" g.name) &&
     (u.locks.all fun l => !enthaelt "#sperre" l.name)
 
-/-- The four conjuncts of `zertifizierbar`. The Bool is left-nested,
-    `((A && B) && C) && D`, so three `Bool.and_eq_true` steps take it apart. -/
+/-- The three conjuncts of the remaining export restriction. -/
 theorem zertifizierbar_teile {u : UProg} (h : zertifizierbar u = true) :
-    (u.tabs.all fun t => !t.arena) = true ∧ u.checks.isEmpty = true ∧
+    (u.tabs.all fun t => !t.arena) = true ∧
       (u.globs.all fun g => !enthaelt "#zelle" g.name) = true ∧
       (u.locks.all fun l => !enthaelt "#sperre" l.name) = true := by
   have h1 := (Bool.and_eq_true _ _).mp h
   have h2 := (Bool.and_eq_true _ _).mp h1.1
-  have h3 := (Bool.and_eq_true _ _).mp h2.1
-  exact ⟨h3.1, h3.2, h2.2, h1.2⟩
+  exact ⟨h2.1, h2.2, h1.2⟩
 
 /-- A certifiable unit has no arena table. -/
 theorem zertifizierbar_ohne_arena (u : UProg) (h : zertifizierbar u = true)
@@ -70,69 +46,22 @@ theorem zertifizierbar_ohne_arena (u : UProg) (h : zertifizierbar u = true)
     cases h1
   | false => rfl
 
-/-- A certifiable unit declares no check. -/
-theorem zertifizierbar_ohne_checks (u : UProg) (h : zertifizierbar u = true) :
-    u.checks = [] :=
-  List.isEmpty_iff.mp (zertifizierbar_teile h).2.1
-
 /-- A certifiable unit carries no accumulator storage. -/
 theorem zertifizierbar_ohne_akku (u : UProg) (h : zertifizierbar u = true) :
     (u.globs.all fun g => !enthaelt "#zelle" g.name) = true ∧
       (u.locks.all fun l => !enthaelt "#sperre" l.name) = true :=
-  (zertifizierbar_teile h).2.2
+  (zertifizierbar_teile h).2
 
-/-- The `Einheit` a Stage-0 unit and its restored program stand for in the
-    goal theorem: the restored program, the unit's lock family, the caller's
-    start memory and foreign answers, and the caller's start roots (declared
-    entry roots and run-time roots, each with its start environment).
-    Arenas, accumulators and declared checks are empty: faithful exactly on
-    certifiable units (`zertifizierbar_ohne_arena`, `zertifizierbar_ohne_akku`,
-    `zertifizierbar_ohne_checks`). -/
+/-- The exported program, locks, start environments and declared check
+    descriptors, with the remaining ownership interfaces empty. -/
 def einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
     (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    Einheit (declOf u) :=
+    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
+    (checks : List (CheckDecl (declOf u))) : Einheit (declOf u) :=
   { P := P, S := sperrFamilie u, Q := Q, starts := starts, sp0 := sp,
-    gestartet := gestartet, arenen := [], akku := [], pruefungen := [],
+    gestartet := gestartet, arenen := [], akku := [], pruefungen := checks,
     lockFormulas := sperrQuellen u, axiomSources := leereAxQuellen u Q,
     pointerSignatures := some (zeigerSignaturen u), measure := massVon u }
-
-/-- The `Einheit` carries the restored program. -/
-theorem einheitVon_P (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).P = P := rfl
-
-/-- The `Einheit` carries the unit's lock family. -/
-theorem einheitVon_S (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).S = sperrFamilie u := rfl
-
-/-- The `Einheit` declares no arena. -/
-theorem einheitVon_arenen (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).arenen = [] := rfl
-
-/-- The `Einheit` declares no accumulator. -/
-theorem einheitVon_akku (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).akku = [] := rfl
-
-/-- The `Einheit` declares no check. -/
-theorem einheitVon_pruefungen (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).pruefungen = [] := rfl
-
-/-- The `Einheit` judges the caller's start roots. -/
-theorem einheitVon_ws (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
-    (sp : Speicher (declOf u))
-    (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w))) :
-    (einheitVon u P Q sp starts gestartet).ws =
-      (starts ++ gestartet ++ gestartet).map (·.1) := rfl
 
 /-- `AkzeptiertX` does not depend on the chosen equality procedures
     (`bindetAxE_inst` for the same fact about the binding observation). -/
@@ -154,14 +83,16 @@ theorem akzeptiertX_inst (D : Deklaration) (fnEq₁ fnEq₂ : DecidableEq D.Fn)
     exact function, lock, carrier and root enumerations. Guest admission
     is a separate proved conjunct. -/
 theorem accepts_program (u : UProg) (P : Programm (declOf u)) (main : (declOf u).Fn)
-    (accepted : accepts u P main = .ok true) :
+    (accepted : accepts u P main = .ok true) {checks : List (CheckDecl (declOf u))}
+    (derived : uCheckDecls u = .ok checks) :
     @AkzeptiertX (declOf u) (inferInstanceAs (DecidableEq (Fin u.fns.length)))
       (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-      (judgedRoots u main) [] [] [] [] (sperrQuellen u) (fun _ => none)
+      (judgedRoots u main) [] checks [] [] (sperrQuellen u) (fun _ => none)
       (some (zeigerSignaturen u)) = true := by
-  obtain ⟨guests, _, checked⟩ := accepts_core u P main accepted
+  obtain ⟨guests, actual, _, exported, checked⟩ := accepts_core u P main accepted
+  cases Except.ok.inj (exported.symm.trans derived)
   have split := (@akzeptiertX_guest_eq (declOf u)
     (inferInstanceAs (DecidableEq (Fin u.fns.length)))
     (inferInstanceAs (DecidableEq (Fin u.axs.length))) P (sperrFamilie u)
@@ -175,47 +106,43 @@ theorem accepts_program_spec [RootNativeFloat.Hardware] (u : UProg) (P : Program
     AkzeptiertSpecX P (sperrFamilie u) (List.finRange u.fns.length) (judgedRoots u main) [] [] := by
   letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   letI : DecidableEq (declOf u).Ax := inferInstanceAs (DecidableEq (Fin u.axs.length))
-  refine akzeptiertSpecX_of List.mem_finRange List.mem_finRange ?_ [] (accepts_program u P main accepted)
+  obtain ⟨_, _, _, derived, _⟩ := accepts_core u P main accepted
+  refine akzeptiertSpecX_of List.mem_finRange List.mem_finRange ?_ [] (accepts_program u P main accepted derived)
   intro carrier
   cases carrier with
   | inl table => exact List.mem_append_left _ (List.mem_map_of_mem (List.mem_finRange table))
   | inr global => exact List.mem_append_right _ (List.mem_map_of_mem (List.mem_finRange global))
 
-/-- **The step behind the bridge**: a successful `accepts` gives the goal checker's `true` on
-    `einheitVon`, whose arenas, accumulators and checks are empty, after the actual start gate succeeds. It says nothing
-    about a unit's own arenas, accumulators or checks: the bridge on the unit's judged `Einheit`
-    is `accepts_gibt_pruefer` (JudgedUnit.lean), which uses `zertifizierbar`. The guest
-    descriptors `accepts` certifies ride along unchanged (`akzeptiertX_guest_eq`); the ownership
-    and accumulator starts hold vacuously over the empty lists (`besitzB_leer`,
-    `akkuStartB_leer`); the two sides use different equality procedures, bridged by
-    `akzeptiertX_inst`. `hws` says the starts are exactly the roots `accepts` judged, the
-    compiled entry `main` among them (`judgedRoots`). -/
+/-- Lift the production verdict on the declared checks to the goal
+    checker on the same roots and the checked initial state. -/
 theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
     (sp : Speicher (declOf u)) (main : (declOf u).Fn)
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
+    (checks : List (CheckDecl (declOf u))) (derived : uCheckDecls u = .ok checks)
     (hFn : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length)))
     (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
     (h : accepts u P main = .ok true)
-    (hStart : unitStartGeprueftB (einheitVon u P Q sp starts gestartet)
+    (hStart : unitStartGeprueftB (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length) = true) :
-    akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
+    akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
   have hX : @AkzeptiertX (declOf u) hFn (fun x y => Classical.propDecidable (x = y)) P
       (sperrFamilie u) (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr)
-      (einheitVon u P Q sp starts gestartet).ws [] [] [] [] (sperrQuellen u) (fun _ => none)
+      (einheitVon u P Q sp starts gestartet checks).ws [] checks [] [] (sperrQuellen u) (fun _ => none)
       (some (zeigerSignaturen u)) = true := by
-    rw [einheitVon_ws, hws]
+    have roots : (einheitVon u P Q sp starts gestartet checks).ws = judgedRoots u main := hws
+    rw [roots]
     exact (akzeptiertX_inst (declOf u) _ hFn _ (fun x y => Classical.propDecidable (x = y))
       P (sperrFamilie u) _ _ _ _ _ _ _ _ (sperrQuellen u) (fun _ => none)
-      (some (zeigerSignaturen u))).symm.trans (accepts_program u P main h)
-  have hB : besitzB (einheitVon u P Q sp starts gestartet)
+      (some (zeigerSignaturen u))).symm.trans (accepts_program u P main h derived)
+  have hB : besitzB (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) = true :=
-    besitzB_leer (einheitVon_arenen u P Q sp starts gestartet)
-  have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet)
-      (einheitVon u P Q sp starts gestartet).akku = true :=
-    Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet)
+    besitzB_leer rfl
+  have hA : Kernzelle.akkuStartB (einheitVon u P Q sp starts gestartet checks)
+      (einheitVon u P Q sp starts gestartet checks).akku = true :=
+    Kernzelle.akkuStartB_leer (einheitVon u P Q sp starts gestartet checks)
   have starts := Bool.and_eq_true_iff.mp hStart
   exact Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr
     ⟨Bool.and_eq_true_iff.mpr ⟨Bool.and_eq_true_iff.mpr ⟨hX, hB⟩, hA⟩, starts.1⟩, starts.2⟩
@@ -225,22 +152,23 @@ theorem accepts_gibt_einheitVon (u : UProg) (P : Programm (declOf u)) (Q : AxEns
 theorem accepts_einheitVon_iff (u : UProg) (P : Programm (declOf u)) (Q : AxEns (declOf u))
     (sp : Speicher (declOf u)) (main : (declOf u).Fn)
     (starts gestartet : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)))
+    (checks : List (CheckDecl (declOf u))) (derived : uCheckDecls u = .ok checks)
     (hws : (starts ++ gestartet ++ gestartet).map (·.1) = judgedRoots u main)
     (inv : sperrInvsOk u = true) {guests : List (GuestBoundary (declOf u))}
     (exported : sourceGuests u = .ok guests) (guest : GuestBoundary.admissionB guests = true) :
-    (accepts u P main = .ok true ∧ unitStartGeprueftB (einheitVon u P Q sp starts gestartet)
+    (accepts u P main = .ok true ∧ unitStartGeprueftB (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length) = true) ↔
-    akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet)
+    akzeptiertX_pruefer.akzeptiert (einheitVon u P Q sp starts gestartet checks)
       (List.finRange u.fns.length) (List.finRange u.locks.length)
       ((List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr) = true := by
   constructor
   · rintro ⟨accepted, start⟩
-    exact accepts_gibt_einheitVon u P Q sp main starts gestartet _ hws accepted start
+    exact accepts_gibt_einheitVon u P Q sp main starts gestartet checks derived _ hws accepted start
   · intro accepted
     simp only [akzeptiertX_pruefer, Bool.and_eq_true] at accepted
     rcases accepted with ⟨⟨⟨⟨core, _⟩, _⟩, invariant⟩, logic⟩
     refine ⟨?_, Bool.and_eq_true_iff.mpr ⟨invariant, logic⟩⟩
-    simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, bind, Except.bind]
+    simp only [accepts, inv, Bool.not_true, Bool.false_eq_true, ↓reduceIte, exported, derived, bind, Except.bind]
     apply (Vertraege.Pruefer.contractVerdict_true_iff _ _ _ _ _).mpr
     refine (@akzeptiertX_guest_eq (declOf u)
       (inferInstanceAs (DecidableEq (Fin u.fns.length)))

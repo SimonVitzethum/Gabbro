@@ -18,7 +18,7 @@ variable {src : String} {K : Nat} {options : Profil.Options}
 def Emitted.goalUnit (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit)) :
     Einheit (declOf output.compiled.unit) :=
   OldSource.einheitDer output.compiled.unit output.compiled.program Q output.sp0
-    output.compiled.main output.args output.starts [] []
+    output.compiled.main output.args output.starts [] output.compiled.checkedDeclarations.val
 
 theorem Emitted.goalUnit_starts (output : Emitted src K options)
     (Q : AxEns (declOf output.compiled.unit)) :
@@ -52,7 +52,7 @@ theorem Emitted.zielsatz (output : Emitted src K options)
     ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       (RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)) (E.arenen.map (·.mitRuhe)) state := by
-  have verdict := output.goal_checker_concurrent Q certifiable dispatch runtime checked
+  have verdict := output.goal_checker_concurrent Q dispatch runtime checked
   have duties : NutzerPflichtA (output.goalUnit Q) :=
     nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2 (Bool.and_eq_true_iff.mp checked).2
   exact gabbro_ziel akzeptiertX_pruefer _ (output.goalUnit Q) output.fsA output.lsA output.csA
