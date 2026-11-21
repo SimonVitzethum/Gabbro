@@ -92,7 +92,8 @@ theorem Emitted.returning_gate_ordinary {src : String} {K : Nat} {options : Prof
   have noClone : request ≠ Runner.cloneReq := by
     intro same
     apply output.gateTransports.noClone item gate bound
-    simpa only [same] using exactNumber.symm
+    have cloneNumber : Runner.cloneReq.nr.toNat = Runner.NR_CLONE := by decide
+    simpa only [same, cloneNumber] using exactNumber.symm
   simp only [Runner.Op.special, beq_eq_false_iff_ne.mpr noExit,
     beq_eq_false_iff_ne.mpr noExitGroup, beq_eq_false_iff_ne.mpr noClone, Bool.false_or]
 

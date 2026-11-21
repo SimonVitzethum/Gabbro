@@ -142,7 +142,7 @@ theorem MTRel.append_pending_root {P : Programm D} {O : Orakel D} {passes : Nat}
     · rw [List.getElem?_append_left inside] at found
       exact related.lebend i r found
     · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
-      cases i - c.ths.length <;> simp at found
+      cases offset : i - c.ths.length <;> rw [offset] at found <;> cases found
   · intro i s known
     obtain ⟨resident, ready⟩ := related.lebtG i s known
     exact ⟨live _ resident, waiting.symm ▸ ready⟩
