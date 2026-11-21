@@ -25,6 +25,51 @@ def doppelterName (names : List String) : Option String :=
     | some first => first.2 != entry.2
     | none => false).map (·.1)
 
+/-- The duplicate-name guard accepts exactly the lists with unique names.
+    The compiled table lookup is the same first occurrence as the list scan. -/
+theorem doppelterName_none_iff (names : List String) : doppelterName names = none ↔ names.Nodup := by
+  let entries := names.zipIdx
+  let table := Tafel.von (fun entry : String × Nat => entry.1) entries
+  let duplicate (entry : String × Nat) : Bool :=
+    match table.finde entry.1 with
+    | some first => first.2 != entry.2
+    | none => false
+  have firstEntry (entry : String × Nat) (member : entry ∈ entries) :
+      ∃ first, table.finde entry.1 = some first ∧ first ∈ entries ∧ first.1 = entry.1 := by
+    change ∃ first, entries.find? (fun x => strEq x.1 entry.1) = some first ∧ _
+    cases lookup : entries.find? (fun x => strEq x.1 entry.1) with
+    | none =>
+      have absent := List.find?_eq_none.mp lookup entry member
+      apply False.elim
+      apply absent
+      rw [congrFun (congrFun strEq_eq_schnell entry.1) entry.1]
+      exact decide_true rfl
+    | some first =>
+      have matched := List.find?_some lookup
+      rw [congrFun (congrFun strEq_eq_schnell first.1) entry.1] at matched
+      exact ⟨first, rfl, List.mem_of_find?_eq_some lookup, of_decide_eq_true matched⟩
+  change (entries.find? duplicate).map Prod.fst = none ↔ names.Nodup
+  rw [Option.map_eq_none_iff, List.find?_eq_none]
+  constructor
+  · intro admitted
+    apply List.nodup_iff_eq_of_getElem_eq.mpr
+    intro i j hi hj same
+    have mi : (names[i], i) ∈ entries := List.mk_mem_zipIdx_iff_getElem?.mpr (List.getElem?_eq_getElem hi)
+    have mj : (names[j], j) ∈ entries := List.mk_mem_zipIdx_iff_getElem?.mpr (List.getElem?_eq_getElem hj)
+    obtain ⟨first, lookup, _, _⟩ := firstEntry (names[i], i) mi
+    have fromI := admitted _ mi
+    have fromJ := admitted _ mj
+    change table.finde names[i] = some first at lookup
+    have atI : first.2 = i := by simpa [duplicate, lookup] using fromI
+    have atJ : first.2 = j := by simpa [duplicate, ← same, lookup] using fromJ
+    exact atI.symm.trans atJ
+  · intro unique entry member
+    obtain ⟨first, lookup, occ, key⟩ := firstEntry entry member
+    have a := List.mem_zipIdx_iff_getElem?.mp member
+    have b := List.mem_zipIdx_iff_getElem?.mp occ
+    have same := unique.eq_of_getElem?_eq (List.getElem?_eq_some_iff.mp a).1 (a.trans (key ▸ b).symm)
+    simp only [duplicate, lookup, same, bne_self_eq_false, Bool.false_eq_true, not_false_eq_true]
+
 /-- Per-loop environment fuel compiled into the image; independent of call depth. -/
 def irDurchlaeufe : Nat := 2 ^ 20
 
@@ -47,6 +92,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types) (widths := source.scopes.widths)).bind (Profil.selectUnit options)).map
       (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit
   entry : fnIdx unit.fns (Profil.entryName options) = .ok main
+  functionNames : (unit.fns.map (·.name)).Nodup
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program main = .ok true
@@ -120,8 +166,9 @@ def compileChecked (source : Frontend.Source text options)
     | .ok () => do
       let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
       -- A call names its function; two functions of one name would leave the second unreachable.
-      if let some name := doppelterName (unit.fns.map (·.name)) then
-        throw ("function declared twice: " ++ name)
+      let uniqueness ← match unique : doppelterName (unit.fns.map (·.name)) with
+        | some name => throw ("function declared twice: " ++ name)
+        | none => pure (PLift.up ((doppelterName_none_iff _).mp unique))
       -- Constructor rewriting and function lookup must agree on the meaning of a call name.
       let cases := Gabbro.Grammatik.Parser.Tafel.von (fun (name : String) => name)
         (unit.sums.flatMap fun sum => sum.cases.map (·.1))
@@ -170,6 +217,7 @@ def compileChecked (source : Frontend.Source text options)
                 program := program
                 elaborated := elaborated
                 entry := hm
+                functionNames := uniqueness.down
                 lowered := ⟨raw, fs, hl, hr⟩
                 accepted := ha
                 costs := hk

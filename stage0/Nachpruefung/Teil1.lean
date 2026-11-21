@@ -32,6 +32,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Compiled.contract_duties
 #print axioms Gabbro.Stage0.Compiled.admission
 #print axioms Gabbro.Stage0.Compiled.function_from_ast
+#print axioms Gabbro.Stage0.doppelterName_none_iff
 #print axioms Gabbro.Stage0.irBild_frontend_sound
 #print axioms Gabbro.Stage0.Emitted.zielsatz
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
