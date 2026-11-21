@@ -343,7 +343,12 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
     ∃ next actualStart, E.starts[i]? = some actualStart ∧
       FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
         (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) state next ∧
-      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) ⟨before.ms, threads⟩ next := by
+      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) ⟨before.ms, threads⟩ next ∧
+      ∀ {body : PCfg} {snapshots positions committed},
+        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+          body state snapshots positions committed →
+        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+          ⟨body.m, body.ths ++ [none]⟩ next snapshots positions committed := by
   intro i threads
   have parentInside := (List.getElem?_eq_some_iff.mp entry).1
   have parentLive : state.lebt 0 = true := (slots.1 0).mpr parentInside
@@ -363,7 +368,7 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
     change (before.ths.set 0 _ ++ [some (.next child)])[before.ths.length]? = _
     rw [List.getElem?_append_right (by rw [List.length_set]), List.length_set, Nat.sub_self]
     rfl
-  refine ⟨next, E.starts[i]'declared, List.getElem?_eq_getElem declared, activate, ?_, ?_⟩
+  refine ⟨next, E.starts[i]'declared, List.getElem?_eq_getElem declared, activate, ⟨?_, ?_⟩, ?_⟩
   · intro j
     change (if j = i then true else state.lebt j) = true ↔ j < threads.length
     rw [size]
@@ -399,6 +404,11 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
         sameHead, matched, kind, ?_⟩
       simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm atParent),
         Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
+  · intro body snapshots positions committed related
+    apply related.append_pending_root rfl rfl
+    intro j live
+    change (if j = i then true else state.lebt j) = true
+    simp only [live, ite_self]
 
 /-- A prepared startup clone in the actual emitted code advances the same
     declared GX slot and carries the entire goal to the new configuration. -/
@@ -440,7 +450,7 @@ theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {option
     rw [unit.starts]
     exact declared
   have bound : before.ths.length < E.starts.length := position ▸ (List.getElem?_eq_some_iff.mp head).1
-  obtain ⟨next, _, _, stepped, matched⟩ :=
+  obtain ⟨next, _, _, stepped, matched, _⟩ :=
     slots.activate_clone (child := child) (id := id) (extra := extra) running waiting bound
   have nextReached : ImageReach output E O (imageSourceStart E) next := .schritt state next reached stepped
   have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted

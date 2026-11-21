@@ -112,4 +112,42 @@ theorem MTRel.nach {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D} {c
       exact hs
     · exact hy j u (by rw [setzeS_ne S s' hj]; exact hu)
 
+/-- A freshly activated root has no lowered body thread yet. Adding its
+    empty body slot preserves the existing simulation and all snapshots. -/
+theorem MTRel.append_pending_root {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D}
+    {c : PCfg} {before after : FadenMaschine D} {S : Nat → Option Solo}
+    {X : Nat → MLage D} {committed : Runner.Mem}
+    (related : MTRel P O passes L c before S X committed)
+    (machine : after.m = before.m) (waiting : after.wartet = before.wartet)
+    (live : ∀ i, before.lebt i = true → after.lebt i = true) :
+    MTRel P O passes L ⟨c.m, c.ths ++ [none]⟩ after S X committed := by
+  refine {
+    zustand := ?_
+    lebend := ?_
+    mem := related.mem
+    lage := related.lage
+    prog := related.prog
+    solo := related.solo
+    lebtG := ?_
+    inj := related.inj
+    amRand := ?_
+    welt := ?_
+    aussen := related.aussen }
+  · intro i s known
+    have found := related.zustand i s known
+    exact (List.getElem?_append_left (List.getElem?_eq_some_iff.mp found).1).trans found
+  · intro i r found
+    change (c.ths ++ [none])[i]? = some (some r) at found
+    by_cases inside : i < c.ths.length
+    · exact related.lebend i r ((List.getElem?_append_left inside).symm ▸ found)
+    · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
+      cases i - c.ths.length <;> simp at found
+  · intro i s known
+    obtain ⟨resident, ready⟩ := related.lebtG i s known
+    exact ⟨live _ resident, waiting.symm ▸ ready⟩
+  · rw [machine]
+    exact related.amRand
+  · rw [machine]
+    exact related.welt
+
 end Gabbro.Stage0.Senke.BildMehr
