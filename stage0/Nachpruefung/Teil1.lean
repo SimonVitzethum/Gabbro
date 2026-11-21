@@ -102,6 +102,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.MappedImage.first_step_goal
 #print axioms Gabbro.Stage0.Senke.imageDepthTable_exact
 #print axioms Gabbro.Stage0.Emitted.startDepth_noAbstieg
+#print axioms Gabbro.Stage0.Emitted.returning_gate_ordinary
+#print axioms Gabbro.Stage0.neverExitGate_erfuellbar
 #print axioms Gabbro.Stage0.MappedImage.runnerFileStable
 #print axioms Gabbro.Stage0.imageStackStore_projected
 #print axioms Gabbro.Stage0.image_memory_prefix_projects

@@ -2,6 +2,8 @@ module
 
 public import Stage0.Senke.Ausdruck.Old.Pruefer
 public import Stage0.ForeignSummary
+public import Stage0.Senke.Welt.Lay
+public import Runner.Basis.Res
 
 @[expose] public section
 
@@ -12,6 +14,44 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Invarianten Invarianten.Pruefer 
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
 variable {D : Deklaration}
+
+/-- Linux process-control requests are interpreted by the runner instead
+    of going through the ordinary returning foreign-call continuation. -/
+structure ImageGateTransportOK {D : Deklaration} (tor : D.Ax → Option Senke.TorB) : Prop where
+  noClone : ∀ a gate, tor a = some gate → gate.nr ≠ Runner.NR_CLONE
+  termination : ∀ a gate, tor a = some gate →
+    (gate.nr = Runner.NR_EXIT ∨ gate.nr = Runner.NR_EXIT_GROUP) → D.aerg a = some .never
+
+def imageGateTransportB (number : Nat) (result : Option Ty) : Bool :=
+  decide (number ≠ Runner.NR_CLONE) &&
+    decide ((number = Runner.NR_EXIT ∨ number = Runner.NR_EXIT_GROUP) → result = some .never)
+
+/-- The executable decision keeps process control private to startup and
+    allows Linux exit gates only under the model's non-returning type. -/
+def checkImageGateTransports (u : UProg) (tor : (declOf u).Ax → Option Senke.TorB) :
+    Except String (PLift (ImageGateTransportOK tor)) :=
+  let gates := List.finRange u.axs.length
+  let valid := fun a : (declOf u).Ax => (tor a).all fun gate =>
+    imageGateTransportB gate.nr ((declOf u).aerg a)
+  if checked : gates.all valid = true then .ok ⟨by
+    have exactGate (a : (declOf u).Ax) (gate : Senke.TorB) (selected : tor a = some gate) :
+        gate.nr ≠ Runner.NR_CLONE ∧
+        ((gate.nr = Runner.NR_EXIT ∨ gate.nr = Runner.NR_EXIT_GROUP) → (declOf u).aerg a = some .never) := by
+      have accepted := List.all_eq_true.mp checked a (List.mem_finRange a)
+      simpa only [valid, selected, Option.all_some, imageGateTransportB, Bool.and_eq_true,
+        decide_eq_true_eq] using accepted
+    exact ⟨fun a gate selected => (exactGate a gate selected).1,
+      fun a gate selected => (exactGate a gate selected).2⟩⟩
+  else .error (match gates.find? (fun a => !valid a) with
+    | some a => "ir: gate " ++ (uaxAt u a).name ++
+        " binds clone or uses an exit number without returning never"
+    | none => "ir: illegal Linux process-control gate")
+
+/-- A declared non-returning process exit passes the real transport rule. -/
+theorem neverExitGate_erfuellbar :
+    imageGateTransportB Runner.NR_EXIT (some .never) = true ∧
+    imageGateTransportB Runner.NR_EXIT_GROUP (some .never) = true := by
+  decide
 
 /-- The memory-dependent portion of the invariant decision. The lock
     predicate uses exactly the same collector as the full model check. -/

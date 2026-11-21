@@ -19,6 +19,7 @@ public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Welt.Initial
 public import Stage0.Senke.Images.SourceStarts
 public import Grammatik.Logik.Vertraege.Pruefer.Unit
+public import Runner.Mach.Maschine
 @[expose] public section
 
 
@@ -36,6 +37,7 @@ def irStapel : Nat := 0
 structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) where
   compiled : Compiled text options
   tor : (declOf compiled.unit).Ax → Option Senke.TorB
+  gateTransports : ImageGateTransportOK tor
   /-- Starts recovered from the selected original source, before names could erase arguments. -/
   startPlan : StartArgument.Plan compiled.unit
     (uMembers (pre108 compiled.source.prepared.elaborierbar))
@@ -71,6 +73,30 @@ theorem Emitted.automatic_depth {src : String} {options : Profil.Options}
     (output : Emitted src irStapel options) : Senke.stackReserveDepth ≤ output.image.depth :=
   Senke.bild_auto_depth output.emission
 
+/-- The actual request of a returning emitted gate is an ordinary runner
+    operation. In particular it cannot retire the thread, exit the
+    process, or be mistaken for a startup clone. -/
+theorem Emitted.returning_gate_ordinary {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) {item : (declOf output.compiled.unit).Ax}
+    {gate : Senke.TorB} (bound : output.tor item = some gate)
+    (returns : (declOf output.compiled.unit).aerg item ≠ some .never)
+    (fits : gate.nr < 2 ^ 64) {request : Runner.Req}
+    (number : request.nr = BitVec.ofNat 64 gate.nr) :
+    (Runner.Op.sys request).special = false := by
+  have exactNumber : request.nr.toNat = gate.nr := by
+    rw [number, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits]
+  have noExit : request.nr.toNat ≠ Runner.NR_EXIT := fun same =>
+    returns (output.gateTransports.termination item gate bound (.inl (exactNumber ▸ same)))
+  have noExitGroup : request.nr.toNat ≠ Runner.NR_EXIT_GROUP := fun same =>
+    returns (output.gateTransports.termination item gate bound (.inr (exactNumber ▸ same)))
+  have noClone : request ≠ Runner.cloneReq := by
+    intro same
+    apply output.gateTransports.noClone item gate bound
+    rw [← exactNumber, same]
+    rfl
+  simp only [Runner.Op.special, beq_eq_false_iff_ne.mpr noExit,
+    beq_eq_false_iff_ne.mpr noExitGroup, beq_eq_false_iff_ne.mpr noClone, Bool.false_or]
+
 /-- One source-to-image path; no separate unchecked emitter is retained. -/
 def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) : Except String (Emitted src K options) := do
   let compiled ← compile src options
@@ -91,6 +117,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
     | none => pure ()
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
+  let gateTransports ← checkImageGateTransports u tor
   let startPlan ← StartArgument.plan u (uMembers (pre108 compiled.source.prepared.elaborierbar))
   if initialValid : sp0OkB u = true then
     let initialInvariants ← (checkInitialInvariants
@@ -115,7 +142,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
           starts K
           (Senke.bodenAusrichtung u) with
       | .error e => throw e
-      | .ok image => pure ⟨compiled, tor, startPlan, initialValid, initialInvariants.down, args, hp,
+      | .ok image => pure ⟨compiled, tor, gateTransports.down, startPlan, initialValid, initialInvariants.down, args, hp,
           checked.down, axiomFreeLogic.down, foreignLogic, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
