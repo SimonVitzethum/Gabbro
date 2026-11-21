@@ -8218,6 +8218,8 @@ site to its relocated start address, stack frame and logical position.
 clones across arbitrary continuing runner prefixes. `bootClone_step`
 places the new child at the position allocated by an answered clone,
 with the entry and frame read by that instruction.
+`bootClone_run` proves the actual TSO instruction fetch, operand reads
+and successful clone transition as one process prefix.
 Hosted Stage 0
 refuses dynamic `start` until its lowering carries the source call site,
 spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.

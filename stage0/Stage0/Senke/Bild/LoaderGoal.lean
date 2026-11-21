@@ -296,8 +296,8 @@ theorem bootClone_read_prefix {layout : Runner.Beweis.Lay}
   have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step parent)) :=
     .priv running rfl
   have fetched : ProcessStep (TSO layout) actI (onThread (IR.step parent)) [] (onThread (op 24 parent)) := by
-    have loaded : rdN (before.ms.1.view i) 1 parent.pc = some ((24 : B).setWidth 64) := by
-      simp only [rdN, instruction.op, Option.map_some]
+    have loaded : rdN (before.ms.1.view i) 1 parent.pc = some ((BitVec.ofNat 8 24).setWidth 64) :=
+      congrArg (Option.map fun byte => byte.setWidth 64) instruction.op
     exact read 1 parent.pc _ (fun answer => opt answer fun pair =>
       op (pair.1.setWidth 8 |>.setWidth 64).toNat parent) loaded
   have indexed : ProcessStep (TSO layout) actI (onThread (op 24 parent)) []
@@ -318,5 +318,30 @@ theorem bootClone_read_prefix {layout : Runner.Beweis.Lay}
       .ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next ⟨child.pc, frame.1⟩ else ret1 parent pair.1) frame
   exact .cons started (.cons fetched (.cons indexed (.cons entered (.cons framed (.nil _)))))
+
+/-- A decoded spawn and its successful host response produce exactly one
+    clone event and the child state read from the spawning thread's stack. -/
+theorem bootClone_run {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {parent child : T}
+    {dest index pad : BitVec 32} {id extra : W} {memory : (TSO layout).St}
+    (running : before.ths[i]? = some (some (.next parent)))
+    (instruction : InsAt (before.ms.1.view i) parent.pc 24 dest index pad)
+    (entry : (before.ms.1.view i).rd64 (slot parent.fp (sx index)) = some child.pc)
+    (frame : (before.ms.1.view i).rd64 (slot parent.fp (sx index) + 8) = some child.fp)
+    (answer : (TSO layout).ans before.ms i (.sys cloneReq) (some (id, extra)) memory)
+    (positive : 0 < id.toInt) :
+    let threads := before.ths.set i (some (ret1 parent id)) ++ [some (.next child)]
+    ProcessPrefix (TSO layout) actI before [(i, cloneReq, some (id, extra))] 6 ⟨memory, threads⟩ ∧
+      threads[before.ths.length]? = some (some (.next child)) := by
+  have read := bootClone_read_prefix running instruction entry frame
+  let pending : Res T := .ask (.sys cloneReq) fun result =>
+    opt result fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
+  have indexed : (before.ths.set i (some pending))[i]? = some (some pending) :=
+    List.getElem?_set_self (List.getElem?_eq_some_iff.mp running).1
+  obtain ⟨created, found⟩ := bootClone_step (before := ⟨before.ms, before.ths.set i (some pending)⟩)
+    (parent := parent) (child := child) indexed answer positive
+  constructor
+  · simpa only [List.nil_append, List.set_set, Nat.reduceAdd] using read.trans (ProcessPrefix.ofStep created)
+  · simpa only [List.length_set, List.set_set] using found
 
 end Gabbro.Stage0
