@@ -137,14 +137,16 @@ theorem Compiled.entry_name_unique {text : String} {options : Profil.Options}
     change (List.finRange result.unit.fns.length).find?
       (fun f => (result.unit.fns.get f).name == Profil.entryName options) = some result.main
     simp only [findRoot_eq_fnIdx, result.entry, Except.toOption]
-  have named := beq_iff_eq.mp (List.find?_some found)
+    rfl
+  have nameEq : ((fnAt result.unit result.main).name == Profil.entryName options) = true := List.find?_some found
+  have named := beq_iff_eq.mp nameEq
   refine ⟨named, ?_⟩
-  intro f matches
+  intro f entryNamed
   apply Fin.ext
   have bound (i : (declOf result.unit).Fn) : i.val < (result.unit.fns.map (·.name)).length := by
     simpa only [List.length_map] using i.isLt
   apply result.functionNames.eq_of_getElem_eq (bound f) (bound result.main)
-  simpa only [List.getElem_map, fnAt] using matches.trans named.symm
+  simpa only [List.getElem_map, fnAt] using entryNamed.trans named.symm
 
 /-- The explicit concurrent prefix has precisely the function occurrences
     judged by the source checker, with their original order and multiplicity. -/
