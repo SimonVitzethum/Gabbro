@@ -110,4 +110,45 @@ theorem tso_cas_updates_view {layout : Lay} {before after : (TSO layout).St}
   · rw [original, memAns_cas, accepted, state]
     simp only [TSt.view, empty, List.foldl_nil]
 
+/-- Pending stores that miss an address leave the byte and its permissions
+    equal to committed memory. -/
+theorem view_agrees_at {state : TSt} {i : Nat} {address : W}
+    (outside : ∀ store ∈ state.buf i, ¬ fenster store.1 address) :
+    GleichAt (state.view i) state.m address := by
+  have far : ∀ store ∈ state.buf i, ∀ offset, offset < 8 →
+      address ≠ store.1 + BitVec.ofNat 64 offset := by
+    intro store present offset width same
+    apply outside store present
+    rw [same]
+    exact fenster_add store.1 width
+  obtain ⟨byte, readable⟩ := foldl_far (state.buf i) state.m far
+  exact ⟨byte, readable, congrFun (foldl_wr (state.buf i) state.m) address⟩
+
+/-- Disjoint pending stores admit a single memory whose restriction agrees
+    with each thread's private TSO view. -/
+theorem tso_views_merge (state : TSt) (footprint : Nat → W → Prop)
+    (disjoint : ∀ i store, store ∈ state.buf i →
+      ∀ j, j ≠ i → ∀ address, footprint j address → ¬ fenster store.1 address) :
+    ∃ merged : Mem, ∀ i, GleichAuf (footprint i) merged (state.view i) := by
+  classical
+  let atAddress := fun address =>
+    if visible : ∃ i, footprint i address then state.view (Classical.choose visible)
+    else state.m
+  refine ⟨{ b := fun y => (atAddress y).b y, rd := fun y => (atAddress y).rd y,
+    wr := fun y => (atAddress y).wr y }, ?_⟩
+  intro i address present
+  change GleichAt (atAddress address) (state.view i) address
+  let visible : ∃ thread, footprint thread address := ⟨i, present⟩
+  rw [show atAddress address = state.view (Classical.choose visible) from dif_pos visible]
+  let other := Classical.choose visible
+  have represented : footprint other address := Classical.choose_spec visible
+  by_cases same : other = i
+  · change GleichAt (state.view other) (state.view i) address
+    rw [same]
+    exact GleichAt.refl _ _
+  · exact (view_agrees_at (fun store member =>
+      disjoint other store member i (Ne.symm same) address present)).trans
+      ((view_agrees_at (fun store member =>
+        disjoint i store member other same address represented)).symm)
+
 end Gabbro.Stage0.Senke.BildMehr
