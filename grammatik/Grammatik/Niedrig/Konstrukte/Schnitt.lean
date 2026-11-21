@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Niedrig.Konstrukte.Basis
+import Grammatik.Kern.Semantik.Evaluation.Aggregates.Values
 
 @[expose] public section
 
@@ -131,6 +132,39 @@ theorem ArraySliceView.value_eq_iff {α : Type} {capacity : Nat} (view : ArraySl
     have reads := funext slots
     change BoundedSlice.mk view.length _ (view.read saved) = BoundedSlice.mk view.length _ (view.read current)
     rw [reads]
+
+/-- An update outside the represented range leaves the saved slice value
+    unchanged, even if the same backing allocation is reused. -/
+theorem ArraySliceView.value_arrSet_outside {α : Type} {capacity : Nat}
+    (view : ArraySliceView capacity) (array : Fin capacity → α) (slot : Fin capacity) (value : α)
+    (outside : slot.val < view.offset ∨ view.offset + view.length ≤ slot.val) :
+    view.value (arrSetW array slot value) = view.value array := by
+  apply (view.value_eq_iff _ _).mpr
+  intro index
+  unfold ArraySliceView.read
+  apply arrSetW_other
+  intro same
+  have equal := congrArg Fin.val same
+  have inside := index.isLt
+  simp only at equal
+  omega
+
+/-- An update within the represented range permits reuse of the
+    allocation exactly when it writes the old element back. -/
+theorem ArraySliceView.value_arrSet_inside_iff {α : Type} {capacity : Nat}
+    (view : ArraySliceView capacity) (array : Fin capacity → α) (slot : Fin capacity) (value : α)
+    (inside : view.offset ≤ slot.val ∧ slot.val < view.offset + view.length) :
+    view.value (arrSetW array slot value) = view.value array ↔ value = array slot := by
+  constructor
+  · intro equal
+    obtain ⟨low, high⟩ := inside
+    let index : Fin view.length := ⟨slot.val - view.offset, by omega⟩
+    have atSlot : (⟨view.offset + index.val, by have bound := view.fits; have := index.isLt; omega⟩ :
+        Fin capacity) = slot := Fin.ext (by dsimp [index]; omega)
+    have readEqual := (view.value_eq_iff _ _).mp equal index
+    simpa only [ArraySliceView.read, atSlot, arrSetW_same] using readEqual
+  · rintro rfl
+    rw [arrSetW_read]
 
 /-- A full slice gives an admissible runtime length and denotes the
     original contents at every index. -/
