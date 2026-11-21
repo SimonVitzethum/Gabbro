@@ -123,6 +123,13 @@ abbrev ImageReach (output : Emitted src reserve options)
   FadenErreichbarX E.P.mitRuhe O.mitRuhe output.image.passes
     (GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
 
+/-- The declared stack reservations give each startup thread a fixed
+    private byte range, independently of the schedule and clone IDs. -/
+def imageStackFootprint (output : Emitted src reserve options) (i : Nat) (address : W) : Prop :=
+  i ≤ output.starts.length ∧
+  output.image.fp0 + 8 * (output.image.Ks * i) ≤ address.toNat ∧
+  address.toNat < output.image.fp0 + 8 * (output.image.Ks * (i + 1))
+
 /-- An instruction in the compiled root stub uses the stack frame and
     code range assigned to that root by the image layout. -/
 def ImageRootInstruction (output : Emitted src reserve options) (thread : Nat) (pointer : T) : Prop :=
@@ -229,10 +236,11 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
     cases i <;> simp [ir, imageSourceStart, FadenStart]
   · intro i retired
     cases i <;> simp [ir] at retired
-  · refine ⟨fun _ _ => False, [none], privateBuffers_empty mapped.emptyBuffers, rfl, Or.inl ⟨?_, ?_⟩, ?_⟩
+  · refine ⟨imageStackFootprint output, [none], privateBuffers_empty mapped.emptyBuffers, rfl,
+      Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp
-    · change WeltAt (mergedView machine.ms.1 (fun _ _ => False)) _
+    · change WeltAt (mergedView machine.ms.1 (imageStackFootprint output)) _
         ((speicherR E.sp0).welt [])
       rw [mergedView_empty _ _ mapped.emptyBuffers, unit.memory]
       exact (output.loaded_initial_world mapped.bytes).withIdle

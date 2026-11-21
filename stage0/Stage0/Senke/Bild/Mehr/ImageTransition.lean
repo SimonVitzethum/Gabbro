@@ -1,16 +1,43 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Runner Runner.IR Runner.Beweis Runner.Mach
   Gabbro.Stage0.Senke.BildMehr
 
 variable [Kern]
+
+/-- A byte of an actual startup stack belongs to exactly one reservation. -/
+theorem imageStackFootprint_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {i j : Nat} {address : W}
+    (first : imageStackFootprint output i address) (second : imageStackFootprint output j address) :
+    i = j := by
+  have ordered {a b : Nat} (h : a < b)
+      (left : imageStackFootprint output a address) (right : imageStackFootprint output b address) : False := by
+    have order := Nat.mul_le_mul_left output.image.Ks h
+    exact Nat.not_le_of_lt left.2.2 (right.2.1.trans' (Nat.add_le_add_left (Nat.mul_le_mul_left 8 order) _))
+  exact (lt_trichotomy i j).elim (fun lt => (ordered lt first second).elim)
+    (fun rest => rest.elim id fun gt => (ordered gt second first).elim)
+
+/-- All emitted stack reservations lie before the compiled world's bytes. -/
+theorem imageStackFootprint_before_world {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {i : Nat} {address : W}
+    (owned : imageStackFootprint output i address) : address.toNat < output.image.Y.lo := by
+  obtain ⟨_, _, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have room : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
+    simpa only [Emitted.starts, List.length_map] using layout.hylo
+  have endOrder := Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ owned.1)
+  exact owned.2.2.trans_le ((Nat.add_le_add_left (Nat.mul_le_mul_left 8 endOrder) _).trans room)
 
 /-- The two process models use exactly the same machine memory and
     controls. Only the permitted answers at the host boundary differ. -/

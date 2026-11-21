@@ -79,10 +79,11 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
     cases i <;> simp [imageSourceStart, FadenStart]
   · intro i retired
     cases i <;> simp at retired
-  · refine ⟨fun _ _ => False, [none], privateBuffers_empty mapped.emptyBuffers, rfl, Or.inl ⟨?_, ?_⟩, ?_⟩
+  · refine ⟨imageStackFootprint output, [none], privateBuffers_empty mapped.emptyBuffers, rfl,
+      Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp
-    · change WeltAt (mergedView machine.ms.1 (fun _ _ => False)) _ ((speicherR E.sp0).welt [])
+    · change WeltAt (mergedView machine.ms.1 (imageStackFootprint output)) _ ((speicherR E.sp0).welt [])
       rw [mergedView_empty _ _ mapped.emptyBuffers, unit.memory]
       exact (output.loaded_initial_world mapped.bytes).withIdle
     · intro i
