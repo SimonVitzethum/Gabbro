@@ -1,4 +1,4 @@
-// A dynamic start must be refused until its clone and join have a verified lowering.
+// IR gate regression probe.
 module ir_probe {
 impl fn worker()
     effects { pure }

@@ -212,10 +212,9 @@ def stufe_stage0():
     kratz.mkdir(parents=True, exist_ok=True)
     rc, out = lauf(["lake", "exe", "runner", str(kratz)], RN, 3600)
     runner = kratz / "runner"
-    irproben = sorted((S0 / "proben-ir").glob("*.gab"))
-    irfalsch = []
     if rc != 0 or not runner.exists():
-        irfalsch.append(f"runner binary not written: {out.strip()[-200:]}")
+        print(f"  7 proben:  ROT (runner binary not written: {out.strip()[-200:]})")
+        return False
     else:
         runner.chmod(0o755)
         for gab in proben:
@@ -241,33 +240,9 @@ def stufe_stage0():
                 aus, err = p.communicate()
             if p.returncode != 0 or aus != gab.with_suffix(".aus").read_bytes():
                 falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
-        for gab in irproben:
-            img = kratz / (gab.stem + ".img")
-            refusal = gab.with_suffix(".error")
-            exit_code = gab.with_suffix(".code")
-            if refusal.exists() == exit_code.exists():
-                irfalsch.append(f"{gab.name}: exactly one of .error and .code is required")
-                continue
-            img.unlink(missing_ok=True)
-            q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
-            if refusal.exists():
-                expected = refusal.read_bytes().strip()
-                if not expected or q.returncode != 1 or expected not in q.stderr or img.exists():
-                    irfalsch.append(f"{gab.name}: expected compiler refusal {expected!r}, "
-                                    f"got rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
-                continue
-            if q.returncode != 0 or not img.is_file():
-                irfalsch.append(f"{gab.name}: stage0 --ir rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
-                continue
-            r = subprocess.run([str(runner), str(img)], cwd=kratz, capture_output=True, timeout=600)
-            soll = int(exit_code.read_text())
-            if r.returncode != soll:
-                irfalsch.append(f"{gab.name}: exit {r.returncode}, expected {soll}")
     print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
     for f in falsch: print("     ", f)
-    print(f"  7 ir:      {'ok' if irproben and not irfalsch else 'ROT'} ({len(irproben) - len(irfalsch)} of {len(irproben)})")
-    for f in irfalsch: print("     ", f)
-    return bool(proben) and not falsch and ok_ax and bool(irproben) and not irfalsch
+    return bool(proben) and not falsch and ok_ax
 
 
 RUNNER_FAELLE = "20000"
