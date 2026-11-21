@@ -8351,3 +8351,22 @@ reads, stores, atomic updates and buffer flushes. `ImageFileStable.sys`
 transfers preservation of the file from the issuing thread's view to
 global memory. The futex and plain gate cases use their actual host
 contracts and the emitted layout to preserve the invariant.
+
+## 212. Emitted stack depth and the checked image unit
+
+`imageDepthTable_exact` computes `rufTief` on the canonical typed call
+sites. `Emitted.startDepth_noAbstieg` applies a successful depth check at
+the image's actual relocated depth to each serialized start, including
+main. The finite direct-call check does not prove the depth bound for
+recursive or indirect-call programs.
+
+`start_ok` identifies the zero status written by the void epilogue.
+`ImageStopMatches.no_depth_guard` shows that status 105 cannot be
+explained as an ordinary exit of a void entry without foreign routines.
+
+`Emitted.checkImageUnit` returns the exact checker unit through one
+interface for axiom-free and foreign images. Its success carries
+`ImageModelUnit` and the full checker verdict. The checker export still
+refuses ownership declarations it cannot export and foreign contracts
+it cannot summarize. The production emitter has not made this export a
+condition of emitting bytes.
