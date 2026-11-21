@@ -154,13 +154,30 @@ def strSliceValue {maximum : Nat} (value : Wert D (.str maximum))
 def strBoundedSliceValue {maximum : Nat} (value : Wert D (.str maximum))
     (first last : Nat) (bounds : SliceOk value.1.length first last) : Wert D (.str maximum) :=
   let sliced := strSliceValue value first last bounds
-  ⟨sliced.1, sliced.2.trans (by have high := bounds.2; have capacity := value.2; omega)⟩
+  ⟨sliced.1, Nat.le_trans sliced.2 (by have high := bounds.2; have capacity := value.2; omega)⟩
 
 theorem strBoundedSliceValue_exact {maximum : Nat} (value : Wert D (.str maximum))
     (first last : Nat) (bounds : SliceOk value.1.length first last) :
     (strBoundedSliceValue value first last bounds).1 = sliceValue value.1 first last ∧
       (strBoundedSliceValue value first last bounds).1.length = last - first :=
   ⟨rfl, sliceValue_length value.1 first last bounds⟩
+
+/-- A substring descriptor selects the same byte as the canonical
+    string value. The index bound is over the actual substring length. -/
+theorem strBoundedSliceValue_byte {maximum : Nat} (value : Wert D (.str maximum))
+    (first last : Nat) (bounds : SliceOk value.1.length first last)
+    (index : Fin (last - first)) :
+    let result := strBoundedSliceValue value first last bounds
+    result.1[index.val]'(by rw [(strBoundedSliceValue_exact value first last bounds).2]; exact index.isLt) =
+      value.1[first + index.val]'(by have hi := bounds.2; have valid := index.isLt; omega) := by
+  simp only [strBoundedSliceValue, strSliceValue, sliceValue, List.getElem_take, List.getElem_drop]
+
+/-- A full runtime substring is admissible at every actual byte length. -/
+theorem runtimeStringSlice_erfuellbar {maximum : Nat} (value : Wert D (.str maximum)) :
+    ∃ bounds : SliceOk value.1.length 0 value.1.length,
+      strBoundedSliceValue value 0 value.1.length bounds = value := by
+  refine ⟨⟨Nat.zero_le _, Nat.le_refl _⟩, Subtype.ext ?_⟩
+  simp only [strBoundedSliceValue, strSliceValue, sliceValue, List.drop_zero, Nat.sub_zero, List.take_length]
 
 def strSliceStep {maximum : Nat} (value : Wert D (.str maximum))
     (first last : Nat) (bounds : SliceOk value.1.length first last) (world : World D) :
