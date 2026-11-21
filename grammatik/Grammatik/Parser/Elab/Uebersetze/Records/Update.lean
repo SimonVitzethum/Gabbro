@@ -140,7 +140,7 @@ theorem staticIndexedField_erfuellbar (ctx : UCtx) (name field error : String) (
   · rfl
   · rfl
   · simp [scope, global, uWertBody, uRechne, uWertBlatt, uParamNr, uParamNrAux, uGlobLies, strEq_apply_eq_decide]
-  · rfl
+  · simp [uWertBody, uRechne, uWertBlatt]
   · simp [scope, global, uWertBody, uRechne, uTraegerIndex, uWertBlatt, uParamNr, uParamNrAux,
       uGlobLies, strEq_apply_eq_decide]
 

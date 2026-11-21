@@ -191,18 +191,20 @@ public theorem await_construction_rep (elaboration : Elaboration D V Λ types f)
   exact ⟨True.intro, _, .waiting tag future frame task waitingValue record waitingFrame represented⟩
 
 private theorem waitingPhaseList {frame : Frame (Value D)} {task : Task (Value D) (Child D types)}
-    (inventory : Inventory D) (base offset : Nat) (commands : List Command)
+    (inventory : Inventory D) (base offset tag : Nat) (commands : List Command)
     {name : String} {future : FutureExpr} {boundary : Boundary} {remaining : List Command}
     (found : commands.drop offset = Command.await name future boundary :: remaining)
-    (payload : ∃ value, PhaseRep D types f (.waiting (base + offset) future)
-      (.waiting (base + offset) frame task) value)
-    (marks : MarksRep inventory (.waiting (base + offset) future) (.waiting (base + offset) frame task)) :
+    (tagIndex : tag = base + offset)
+    (payload : ∃ value, PhaseRep D types f (.waiting tag future) (.waiting tag frame task) value)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task)) :
     ∃ record, PhaseListRep D types f inventory (commandPhases base commands)
-      (.waiting (base + offset) frame task) record := by
+      (.waiting tag frame task) record := by
   induction offset generalizing base commands with
   | zero =>
-    simp only [List.drop_zero, Nat.add_zero] at found payload marks ⊢
+    simp only [List.drop_zero] at found
     subst commands
+    have same : tag = base := by simpa only [Nat.add_zero] using tagIndex
+    subst tag
     obtain ⟨value, represented⟩ := payload
     exact ⟨_, .later _ _ _ _ rfl (.first _ _ _ value represented marks)⟩
   | succ offset ih =>
@@ -210,15 +212,14 @@ private theorem waitingPhaseList {frame : Frame (Value D)} {task : Task (Value D
     | nil => simp at found
     | cons first rest =>
       simp only [List.drop_succ_cons] at found
-      have moved : base + (offset + 1) = base + 1 + offset := by omega
-      simp only [moved] at payload marks ⊢
-      obtain ⟨_, represented⟩ := ih (base + 1) rest found payload marks
+      have nextTag : tag = base + 1 + offset := by omega
+      obtain ⟨_, represented⟩ := ih (base + 1) rest found nextTag
       cases first with
       | bind =>
         exact ⟨_, .later _ _ _ _ rfl represented⟩
       | await _ earlier _ =>
-        have different : base + 1 + offset ≠ base := by omega
-        have skipped : encodePhase D types f (.waiting base earlier) (.waiting (base + 1 + offset) frame task) =
+        have different : tag ≠ base := by omega
+        have skipped : encodePhase D types f (.waiting base earlier) (.waiting tag frame task) =
             none := by simp only [encodePhase, ite_eq_right different]
         exact ⟨_, .later _ _ _ _ rfl (.later _ _ _ _ skipped represented)⟩
 
@@ -236,15 +237,13 @@ public theorem waiting_construction_inv (inventory : Inventory D) (tag : Nat)
       encode D types f (.waiting tag frame task) = some record := by
   have marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task) := by
     simpa only [MarksRep, State.marks, sameInventory] using current
-  obtain ⟨sum, represented⟩ := waitingPhaseList (types := types) (f := f) inventory 0 tag f.body found
-    (by simpa only [Nat.zero_add] using payload) (by simpa only [Nat.zero_add] using marks)
+  obtain ⟨sum, represented⟩ := waitingPhaseList (types := types) (f := f) inventory 0 tag tag f.body found
+    (Nat.zero_add tag).symm payload marks
   let cases := commandPhases 0 f.body
-  have selected : PhaseListRep D types f inventory cases (.waiting tag frame task) sum := by
-    simpa only [Nat.zero_add] using represented
   let wrapped := laterPhaseValue D types f Phase.cancelled (Phase.completed :: cases)
     (laterPhaseValue D types f Phase.completed cases sum)
   have exactRecord : Inv f types inventory (.waiting tag frame task) (wrapped, ()) :=
-    .later _ _ _ _ rfl (.later _ _ _ _ rfl selected)
+    .later _ _ _ _ rfl (.later _ _ _ _ rfl represented)
   exact ⟨(wrapped, ()), exactRecord, inv_encoded f types inventory _ _ exactRecord⟩
 
 private theorem runningPhaseFrame {inventory : Inventory D} {cases : List Phase}
