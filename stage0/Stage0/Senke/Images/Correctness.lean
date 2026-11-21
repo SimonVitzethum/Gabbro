@@ -236,6 +236,7 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
     · intro i
       cases i with
       | zero => exact Or.inr ⟨t4, rfl, rfl, Or.inl ⟨rfl, rfl, rfl, by
+          change BytesAt (machine.ms.1.view 0) Runner.Prog.IMG output.bytes
           simpa only [TSt.view, mapped.emptyBuffers 0, List.foldl_nil] using mapped.bytes⟩⟩
       | succ i => exact Or.inl rfl
 
