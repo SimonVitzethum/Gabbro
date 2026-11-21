@@ -67,7 +67,7 @@ def slotStoreStatement {context : Context A next} (policy : A → CallObligation
           ((symbols.realizes_world actual valuation world (world.lese Λ reads)).mp realized))) goals
 
 theorem scalarValue_int_cast {kind : Ty} (numeric : kind = .int lo hi) (value : Wert D kind) :
-    scalarValue kind value = (numeric ▸ value : Zahl lo hi).n := by
+    scalarValue kind value = (numeric ▸ value : Wert D (.int lo hi)).n := by
   cases numeric
   rfl
 
@@ -98,12 +98,12 @@ def shiftCondition {context : Context A next} (policy : A → CallObligation pro
       have locals := (symbols.realizes_world actual valuation world read).mp realized
       have atSlot := offset.property valuation read actual locals
       have before : scalarValue (D.typ table field) (read.slots table offset.val field) = source := valid.1
-      have matches := (scalarValue_int_cast numeric (read.slots table offset.val field)).symm.trans before
+      have sourceMatches := (scalarValue_int_cast numeric (read.slots table offset.val field)).symm.trans before
       have stored := (store.read Λ reads).sound valuation item present runtime world valid.2
         actual locals payload rfl
       unfold Runtime.wpS
       simp only [execStmtH, ← show read = world.lese Λ (.inl table :: index.orte) from rfl]
-      rw [atSlot, if_pos matches]
+      rw [atSlot, if_pos sourceMatches]
       exact stored }
 
 def memoryIdentityStatement {context : Context A next} (policy : A → CallObligation program)
