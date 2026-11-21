@@ -2,8 +2,7 @@
 
    `bindAxiom_ende_schritt` (the twin of `ret_leer_schritt`, RufAdaequatG/T12.lean): every step of
    that thread is the rule `endeBindAxiom`; it keeps the stack, frame function, arguments, entry
-   world and log, and leaves the residue `rest` with the answer bound. The call-site witness
-   (`CallSiteGoalSites`) follows the heads of a run with it. -/
+   world and log, and leaves the residue `rest` with the answer bound. -/
 module
 
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12

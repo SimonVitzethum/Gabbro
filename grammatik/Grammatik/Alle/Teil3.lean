@@ -29,7 +29,6 @@ import Grammatik.Kern.Syntax.Marken.Owner.MintMove
 import Grammatik.Kern.Taktik.KernelValue
 import Grammatik.Logik.Invarianten.Modell.Decision
 import Grammatik.Logik.Invarianten.Pruefer.Goal
-import Grammatik.Logik.Invarianten.VC.ExtendedArithmetic
 import Grammatik.Logik.Ruf.Schnittstellen.Einschluss
 import Grammatik.Logik.Ruf.Schnittstellen.Hoare
 import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
@@ -37,6 +36,5 @@ import Grammatik.Logik.WP.Relational
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 import Grammatik.Parser.TaggedDispatch.SourcePhases
-import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalSites
-import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalUser
+import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 import Grammatik.Zielsatz.BeweisAtomar
