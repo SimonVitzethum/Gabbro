@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.ImageGoal
+public import Stage0.Senke.Welt.Spans.IdleValue
 public import Runner.Beweis.Lader
 import Lean.Elab.Tactic.Omega
 
@@ -8,7 +9,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0
 
-open Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis
+open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
@@ -65,5 +66,32 @@ theorem irBild_loader_dispatch_all [Kern] {output : Emitted src K options} {byte
   have equalResume := (Res.ask.inj read).2
   rw [← equalResume]
   rfl
+
+/-- The ordered start environments used in the goal theorem have exactly
+    the words serialized in the image, also after idle extension. -/
+theorem Emitted.goal_arguments_encoded (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit)) :
+    output.image.args :: output.image.rootArgs =
+      (output.goalUnit Q).starts.map (fun start => encodeEnv output.image.Y.withIdle (envR start.2)) := by
+  obtain ⟨_, _, _, _, _, _, args, roots⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  rw [args, roots, output.goalUnit_starts]
+  simp only [List.map_cons, encodeEnv_withIdle]
+
+/-- Loaded bytes contain the complete initialized stacks of the goal's
+    exact ordered start environments. -/
+theorem Emitted.goal_arguments_loaded [Kern] (output : Emitted src K options)
+    (Q : AxEns (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf output.compiled.unit))
+    {m : Mem} (loaded : BytesAt m Runner.Prog.IMG output.bytes) :
+    ∃ stackBytes, startStackBytes output.image.Ks (FB + FB)
+        ((output.goalUnit Q).starts.map (fun start => encodeEnv output.image.Y.withIdle (envR start.2))) =
+        some stackBytes ∧ BytesAt m output.image.fp0 stackBytes := by
+  obtain ⟨_, _, _, stackBytes, made, _, _, _, memory⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
+  exact ⟨stackBytes, output.goal_arguments_encoded Q ▸ made, memory⟩
 
 end Gabbro.Stage0

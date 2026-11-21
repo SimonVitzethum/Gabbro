@@ -99,6 +99,14 @@ theorem idleCase (L : Lay D) : ∀ (cs : List (Option Ty)) (v : Wert D (.sum cs)
 termination_by structural cs => cs
 end
 
+/-- The stack encoding is unchanged for an environment in the idle extension. -/
+theorem encodeEnv_withIdle (L : Lay D) {Γ : Ctx} (env : Env D Γ) :
+    encodeEnv L.withIdle (envR env) = encodeEnv L env := by
+  induction env with
+  | nil => rfl
+  | @cons τ _ value env ih =>
+    simp only [envR, encodeEnv, ih, (idleValue L τ value).1]
+
 theorem ValueAt.withIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : Nat}
     {τ : Ty} {v : Wert D τ} (stored : ValueAt L m fp base τ v) :
     ValueAt L.withIdle m fp base (tyR τ) (valR τ v) := by
