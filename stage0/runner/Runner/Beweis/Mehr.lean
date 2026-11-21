@@ -248,10 +248,10 @@ theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : C
   cases step with
   | tau moved =>
     exact ⟨_, 1, ProcessPrefix.ofStep (.tau (related.ms ▸ moved)), ⟨rfl, related.th⟩⟩
-  | @priv _ j x x' found executed =>
+  | @priv j x x' found executed =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready (inv_next matched executed notNext)⟩⟩
-  | @ask _ j x x' o k a ms found asked ordinary answered continued =>
+  | @ask j x x' o k a ms found asked ordinary answered continued =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨op, valid, rfl, resumes⟩ | ⟨resume, rfl, resumes⟩
     · obtain ⟨rfl, word, rfl⟩ := fixed _ _ _ _ _ valid answered
@@ -261,13 +261,13 @@ theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : C
       have move := ProcessStep.ask (act := actI) ready rfl ordinary (rel.ms ▸ answered) rfl
       exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
         ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
-  | @exit _ j x q k found asked number =>
+  | @exit j x q k found asked number =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨_, rfl, _⟩
     · cases impossible
     · exact ⟨_, _, path.trans (ProcessPrefix.ofStep (.exit ready rfl number)),
         ⟨rel.ms, relT_set rel.th (vI := none) (vX := none) trivial⟩⟩
-  | @cloneNo _ j x x' k a ms found asked answered failed continued =>
+  | @cloneNo j x x' k a ms found asked answered failed continued =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
     · cases impossible
@@ -275,7 +275,7 @@ theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : C
       have move := ProcessStep.cloneNo (act := actI) ready rfl (rel.ms ▸ answered) failed rfl
       exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
         ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
-  | @clone _ j x x' child k r w ms found asked answered created continued started =>
+  | @clone j x x' child k r w ms found asked answered created continued started =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
     · cases impossible
