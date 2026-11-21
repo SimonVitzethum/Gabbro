@@ -44,6 +44,26 @@ def checkStartRequires (program : Programm D) (memory : Speicher D)
     return ⟨(encoded.bool_iff _).mpr ((lower_denote _ _).mp ((qf_eval _ _).mp checked))⟩
   else .error (.unsupported "declared start does not satisfy its requires")
 
+/-- Within the translated fragment, the start decision is exact on the
+    declared initial memory and the actual typed arguments. -/
+theorem checkStartRequires_iff {program : Programm D} {memory : Speicher D}
+    {start : Σ f : D.Fn, Env D (D.params f)} {encoded}
+    (translated : translate (program.requires start.1) start.2 = .ok encoded) :
+    (checkStartRequires program memory start).toOption.isSome = true ↔
+      ReqAmEintritt program start.1 (memory.welt []) start.2 := by
+  let initial := memory.welt []
+  have correct : (lower encoded.payload).eval (assignment initial) = true ↔
+      ReqAmEintritt program start.1 initial start.2 :=
+    (qf_eval _ _).trans ((lower_denote _ _).trans (encoded.bool_iff _).symm)
+  simp only [checkStartRequires, translated, bind, Except.bind]
+  change (if checked : (lower encoded.payload).eval (assignment initial) = true then _ else _ :
+    Except Frag.Refusal (PLift (ReqAmEintritt program start.1 initial start.2))).toOption.isSome =
+      true ↔ ReqAmEintritt program start.1 initial start.2
+  split
+  · next checked => exact ⟨fun _ => correct.mp checked, fun _ => rfl⟩
+  · next refused =>
+    exact ⟨Bool.noConfusion, fun actual => False.elim (refused (correct.mpr actual))⟩
+
 /-- Whole-unit checking discharges all former user logic. Missing source
     representations and unsupported fragments are explicit refusals. -/
 def checkUnitLogic (E : Einheit D) (functions : List D.Fn) (locks : List D.Lock)
