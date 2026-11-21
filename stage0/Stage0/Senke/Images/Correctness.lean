@@ -4,6 +4,7 @@ public import Stage0.Senke.Bild.Mehr.Goal
 public import Stage0.Senke.Bild.Mehr.BootClone
 public import Stage0.Senke.Images.GateAnswers
 public import Runner.IR.Futex
+import Grammatik.Logik.Vertraege.Pruefer.Goal
 
 @[expose] public section
 
@@ -145,6 +146,12 @@ structure ImageModelUnit (output : Emitted src reserve options)
   accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) E.akku
   summary : ∀ item world value, E.Q item world value = true ↔
     ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
+
+/-- The post summary derived from the source covers every declared
+    foreign postcondition, including those of software bindings. -/
+theorem ImageModelUnit.postDeckt {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E) : PostDeckt E :=
+  fun item _ old arguments world value post => (unit.summary item world value).mpr ⟨old, arguments, post⟩
 
 /-- For the part of the current emitter with no foreign or ownership
     declarations, the checked output supplies the specified source unit
@@ -436,7 +443,7 @@ def Stage0Correct [Kern] : Prop :=
       CanonicalSourceProgram output.compiled ∧ ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
       ∀ (O : Orakel (declOf output.compiled.unit)),
-        NutzerPflichtA E → CallSitePflicht E → PostDeckt E → ForeignVertrag E O →
+        CallSitePflicht E → ForeignVertrag E O →
         HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
         ImageFutexAnswers → SichtOK O →
         ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
@@ -458,7 +465,7 @@ theorem stage0_correct_of_export_simulation [Kern]
         ∃ E : Einheit (declOf output.compiled.unit), ImageModelUnit output E ∧
           akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
           ∀ (O : Orakel (declOf output.compiled.unit)),
-            NutzerPflichtA E → CallSitePflicht E → PostDeckt E → ForeignVertrag E O →
+            CallSitePflicht E → ForeignVertrag E O →
             HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
             ImageFutexAnswers → SichtOK O →
             ∀ (start : Cfg imageTSO Runner.X86.X), MappedImage output start →
@@ -468,9 +475,10 @@ theorem stage0_correct_of_export_simulation [Kern]
   obtain ⟨output, emitted, payload⟩ := irBild_emitted source reserve bytes wrote
   obtain ⟨E, unit, accepted, simulation⟩ := checkedExport source reserve options output emitted
   refine ⟨output, E, emitted, payload, compile_source_program source output.compiled, unit, accepted, ?_⟩
-  intro O duties calls posts binding hardware gate answers futex visibility start mapped
-  obtain ⟨sim⟩ := simulation O duties calls posts binding hardware gate answers futex visibility start mapped
-  exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls posts binding hardware run,
+  intro O calls binding hardware gate answers futex visibility start mapped
+  obtain ⟨sim⟩ := simulation O calls binding hardware gate answers futex visibility start mapped
+  have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted
+  exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls unit.postDeckt binding hardware run,
     fun _ _ _ run stopped => sim.terminal run stopped⟩
 
 end Gabbro.Stage0

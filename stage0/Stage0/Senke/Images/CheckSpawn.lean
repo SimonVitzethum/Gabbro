@@ -222,6 +222,7 @@ theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
     fun j different => (others1 j different).trans (others0 j different)⟩
   simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
 
+set_option profiler true in
 set_option maxHeartbeats 1200000 in
 /-- The complete successful site runs both the clone and its compiled
     check. It reaches the next ten-instruction site, preserves the code
