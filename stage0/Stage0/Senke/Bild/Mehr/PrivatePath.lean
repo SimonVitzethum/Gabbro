@@ -236,4 +236,74 @@ theorem TSOPrivateReachable.prepend {layout : Runner.Beweis.Lay} {footprint : Na
   | flush _ flushed ih =>
     exact ih (.tau flushed suffix)
 
+/-- The footprint obligation at a real running configuration. Only
+    answered requests with no system-call event enter a private segment. -/
+def PrivateRequestsAt {layout : Runner.Beweis.Lay} (footprint : Nat → W → Prop)
+    (c : Cfg (TSO layout) (Res T)) : Prop :=
+  ∀ {i : Nat} {request : Op} {resume : Ans → Res T} {response : Ans} {after : (TSO layout).St},
+    c.ths[i]? = some (some (.ask request resume)) →
+    request.special = false → lbl i request response = [] →
+    (TSO layout).ans c.ms i request response after →
+    istSpeicherOp request = true ∧
+      (∀ y, fussOp request y → footprint i y) ∧
+      (schreibtOp request = true → ∀ y, fussOp request y → ∀ j, footprint j y → j = i)
+
+private theorem private_of_process_step {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {initial before after : Cfg (TSO layout) (Res T)} {events : List Ev}
+    (prior : TSOPrivateReachable layout footprint initial before)
+    (checks : PrivateRequestsAt footprint before)
+    (step : ProcessStep (TSO layout) actI before events after) (silent : events = []) :
+    TSOPrivateReachable layout footprint initial after := by
+  cases step with
+  | tau flushed => exact .flush prior flushed
+  | @priv i r _ ready evaluated =>
+    cases r <;> cases evaluated
+    exact .priv prior ready
+  | @ask i r _ _ _ response _ ready evaluated ordinary answered resumed =>
+    cases r with
+    | next | fault | unk => cases evaluated
+    | ask request resume =>
+      cases evaluated
+      cases resumed
+      obtain ⟨memory, within, exclusive⟩ := checks ready ordinary silent answered
+      exact .ask prior ready memory answered within exclusive
+  | exit | cloneNo | clone => cases silent
+
+/-- An actual silent runner path becomes a private TSO path from checks
+    on requests at its reachable configurations. Endpoints, answers and
+    flushes come from the process semantics. -/
+theorem TSOPrivateReachable.of_process_prefix {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    {initial final : Cfg (TSO layout) (Res T)} {count : Nat}
+    (path : ProcessPrefix (TSO layout) actI initial [] count final)
+    (access : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
+      ProcessPrefix (TSO layout) actI initial events n c → PrivateRequestsAt footprint c) :
+    TSOPrivateReachable layout footprint initial final := by
+  have extend {before after : Cfg (TSO layout) (Res T)} {events : List Ev} {steps : Nat}
+      (remaining : ProcessPrefix (TSO layout) actI before events steps after) :
+      TSOPrivateReachable layout footprint initial before →
+      (∃ ev n, ProcessPrefix (TSO layout) actI initial ev n before) →
+      events = [] → TSOPrivateReachable layout footprint initial after := by
+    induction remaining with
+    | nil => intro prior _ _; exact prior
+    | cons step _ ih =>
+      intro prior seen silent
+      obtain ⟨_, _, seen⟩ := seen
+      obtain ⟨emptyStep, emptyTail⟩ := List.append_eq_nil_iff.mp silent
+      have next := private_of_process_step prior (access seen) step emptyStep
+      exact ih next ⟨_, _, seen.trans (ProcessPrefix.ofStep step)⟩ emptyTail
+  exact extend path .start ⟨[], 0, .nil _⟩ rfl
+
+/-- Matching a concrete x86 path retains the actual IR endpoint. The
+    request checks classify that same reachable endpoint as private. -/
+theorem runner_private_endpoint {layout : Runner.Beweis.Lay} {footprint : Nat → W → Prop}
+    (fixed : Fixed (TSO layout) layout) (code : CInv layout)
+    {initial : Cfg (TSO layout) (Res T)} {before after : Cfg (TSO layout) Runner.X86.X} {count : Nat}
+    (related : Rel layout initial before) (path : ProcessPrefix (TSO layout) (actX layout) before [] count after)
+    (access : ∀ {c : Cfg (TSO layout) (Res T)} {events n},
+      ProcessPrefix (TSO layout) actI initial events n c → PrivateRequestsAt footprint c) :
+    ∃ final steps, ProcessPrefix (TSO layout) actI initial [] steps final ∧
+      Rel layout final after ∧ TSOPrivateReachable layout footprint initial final := by
+  obtain ⟨final, steps, run, same⟩ := runner_process_prefix fixed code related path
+  exact ⟨final, steps, run, same, .of_process_prefix run access⟩
+
 end Gabbro.Stage0.Senke.BildMehr
