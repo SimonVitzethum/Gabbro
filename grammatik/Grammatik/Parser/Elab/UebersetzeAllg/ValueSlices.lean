@@ -1,7 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3Values
-public import Grammatik.Niedrig.Konstrukte.Schnitt
+public import Grammatik.Parser.Elab.UebersetzeAllg.StringLength
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -109,8 +108,8 @@ theorem indexedSlice_reads {τ : Ty} {length first last : Nat}
       operand.orte ++ index.orte := by
   simp only [shiftedSliceIndex, Expr.orte, List.nil_append]
 
-/-- Constant byte sequences are sliced by their actual length. A runtime
-    string needs a separate certified lower bound on its length. -/
+/-- Constant byte sequences can be folded. Runtime prefixes reuse
+    ordinary string truncation after checking a minimum byte count. -/
 def lowerSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (first last : Nat) : LowWert u Γ Λ → Except String (LowWert u Γ Λ)
   | ⟨.arr τ length, operand⟩ =>
@@ -125,7 +124,10 @@ def lowerSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
       .ok ⟨.str (last - first), .strLit (sliceValue bytes first last)
         (Nat.le_of_eq (sliceValue_length bytes first last bounds))⟩
     else .error "slice: endpoint outside the string's bytes"
-  | ⟨.str _, _⟩ => .error "slice: runtime string length is not certified"
+  | ⟨.str _, source⟩ =>
+    if first = 0 ∧ last ≤ stringMinimum source then
+      .ok ⟨.str last, .strWeit last source⟩
+    else .error "slice: runtime string needs a certified prefix"
   | _ => .error "slice: expected an array or string value"
 
 /-- A slice used directly as an index receiver avoids constructing the
@@ -142,7 +144,31 @@ def lowerIndexedSlice {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
         else .error "slice: index outside the selected range"
       else .error "slice: index outside the selected range"
     else .error "slice: endpoint outside the array"
-  | other => do idxW (← lowerSlice first last other) index
+  | ⟨.str maximum, operand⟩ =>
+    if SliceOk (stringMinimum operand) first last ∧
+        0 ≤ index.range.1 ∧ index.range.2 < ((last - first : Nat) : Int) then
+      .ok ⟨.int 0 255, stringSliceByte operand first index.term⟩
+    else do idxW (← lowerSlice first last ⟨.str maximum, operand⟩) index
+  | _ => .error "slice: expected an array or string value"
+
+/-- The production reader returns the direct ordinary read for every
+    statically certified byte access through a runtime string slice. -/
+theorem lowerIndexedSlice_string {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {maximum : Nat} (operand : Expr (declOf u) Γ Λ (.str maximum))
+    (first last : Nat) (index : LowSide u Γ Λ)
+    (bounds : SliceOk (stringMinimum operand) first last)
+    (low : 0 ≤ index.range.1) (high : index.range.2 < ((last - first : Nat) : Int)) :
+    lowerIndexedSlice first last (⟨.str maximum, operand⟩ : LowWert u Γ Λ) index =
+      .ok ⟨.int 0 255, stringSliceByte operand first index.term⟩ := by
+  simp only [lowerIndexedSlice, ite_eq_left (And.intro bounds (And.intro low high))]
+
+theorem lowerSlice_concatPrefix {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    {n m last : Nat} (left : Expr (declOf u) Γ Λ (.str n))
+    (right : Expr (declOf u) Γ Λ (.str m))
+    (fits : last ≤ stringMinimum left + stringMinimum right) :
+    lowerSlice 0 last (⟨.str (n + m), .strCat left right⟩ : LowWert u Γ Λ) =
+      .ok ⟨.str last, .strWeit last (.strCat left right)⟩ := by
+  simp only [lowerSlice, stringMinimum, fits, and_self]
 
 theorem lowerIndexedSlice_array {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     {τ : Ty} {length : Nat} (operand : Expr (declOf u) Γ Λ (.arr τ length))
