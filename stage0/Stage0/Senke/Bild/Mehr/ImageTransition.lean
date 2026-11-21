@@ -17,6 +17,9 @@ variable [Kern]
 def imageToTSO {θ : Type} (machine : Cfg imageTSO θ) : Cfg (TSO L0) θ :=
   ⟨machine.ms, machine.ths⟩
 
+def tsoToImage {θ : Type} (machine : Cfg (TSO L0) θ) : Cfg imageTSO θ :=
+  ⟨machine.ms, machine.ths⟩
+
 /-- Forget the host restrictions while retaining the actual configuration,
     observation and transition. -/
 theorem image_step_tso {θ : Type} {act : θ → Res θ}
@@ -42,6 +45,37 @@ theorem image_prefix_tso {θ : Type} {act : θ → Res θ}
   | nil c => exact .nil (imageToTSO c)
   | cons step _ next => exact .cons (image_step_tso step) next
 
+private theorem quiet_answer {before after : (TSO L0).St} {i : Nat} {op : Op} {answer : Ans}
+    (quiet : lbl i op answer = []) (accepted : (TSO L0).ans before i op answer after) :
+    imageTSO.ans before i op answer after := by
+  cases op with
+  | rd | wr | cas | fp => exact ⟨accepted, True.intro⟩
+  | sys => cases quiet
+
+/-- A silent TSO step cannot use a host answer, so the same step is
+    available in the actual image model with its host restrictions. -/
+theorem tso_silent_step_image {θ : Type} {act : θ → Res θ}
+    {before after : Cfg (TSO L0) θ} {events : List Ev}
+    (step : ProcessStep (TSO L0) act before events after) (quiet : events = []) :
+    ProcessStep imageTSO act (tsoToImage before) events (tsoToImage after) := by
+  cases step with
+  | tau flush => exact .tau flush
+  | priv ready move => exact .priv ready move
+  | ask ready request ordinary answered next =>
+    exact .ask ready request ordinary (quiet_answer quiet answered) next
+  | exit | cloneNo | clone => cases quiet
+
+/-- Silent prefixes retain the same endpoints in both memory models. -/
+theorem tso_silent_prefix_image {θ : Type} {act : θ → Res θ}
+    {before after : Cfg (TSO L0) θ} {events : List Ev} {count : Nat}
+    (run : ProcessPrefix (TSO L0) act before events count after) (quiet : events = []) :
+    ProcessPrefix imageTSO act (tsoToImage before) events count (tsoToImage after) := by
+  induction run with
+  | nil c => exact .nil (tsoToImage c)
+  | cons step _ rest =>
+    obtain ⟨head, tail⟩ := List.append_eq_nil_iff.mp quiet
+    exact .cons (tso_silent_step_image step head) (rest tail)
+
 /-- The actual host-constrained runner path projects to the SC memory
     steps used by the compiler refinement. Flushes carry no program step.
     The request classifier is the compiler-side obligation. -/
@@ -49,15 +83,16 @@ theorem image_memory_prefix_projects {footprint : Nat → W → Prop}
     {initial final : Cfg imageTSO (Res T)} {count : Nat}
     (run : ProcessPrefix imageTSO actI initial [] count final)
     (buffers : PrivateBuffers footprint initial.ms.1)
-    (classify : ∀ {c : Cfg (TSO L0) (Res T)} {n},
-      ProcessPrefix (TSO L0) actI (imageToTSO initial) [] n c →
+    (classify : ∀ {c : Cfg imageTSO (Res T)} {n},
+      ProcessPrefix imageTSO actI initial [] n c →
       ∀ {i : Nat} {op : Op} {resume : Ans → Res T} {response : Ans} {after : (TSO L0).St},
         c.ths[i]? = some (some (.ask op resume)) → op.special = false → lbl i op response = [] →
         (TSO L0).ans c.ms i op response after → ProjectedRequest footprint i op) :
     PrivateBuffers footprint final.ms.1 ∧
       SCErreichbar L0 ⟨projectSCState footprint initial.ms, initial.ths⟩
         ⟨projectSCState footprint final.ms, final.ths⟩ :=
-  tso_memory_process_projects (image_prefix_tso run) buffers classify
+  tso_memory_process_projects (image_prefix_tso run) buffers
+    (fun seen => classify (tso_silent_prefix_image seen rfl))
 
 /-- A declared non-returning thread exit retires just its own slot.
     The source stays at the exact call head, and the exit is entered in
@@ -91,6 +126,6 @@ theorem ImageSlotsMatch.retire_never {src : String} {reserve : Nat} {options : P
       · exact Or.inl finished
       · refine Or.inr ⟨atExit, call, earlier, fromStart, since, sameHead, matched, kind, ?_⟩
         simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm same),
-          ite_false, List.filter_nil, List.append_nil, last]
+          Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
 
 end Gabbro.Stage0
