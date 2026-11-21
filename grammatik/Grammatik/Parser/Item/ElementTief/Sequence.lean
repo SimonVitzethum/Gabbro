@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Item.ElementTief.Defs7
+import Lean.Elab.Tactic.Conv
 
 @[expose] public section
 
@@ -27,7 +28,7 @@ private theorem parseItemsTief_succ (fuel : Nat) (tokens : List Token) :
         | .error e => .error e
         | .ok (nodes, closing) => .ok (node :: nodes, closing)) := by
   classical
-  conv_lhs => unfold parseItemsTief
+  conv => lhs; unfold parseItemsTief
   split <;> simp_all [ItemsEnde] <;> rfl
 
 /-- At a fixed fuel bound the concrete reader recognizes exactly the item
