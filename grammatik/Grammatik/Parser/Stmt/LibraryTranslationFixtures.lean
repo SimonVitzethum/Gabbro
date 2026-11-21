@@ -81,7 +81,9 @@ theorem LibraryFixtureProofs.empty_function (ctx : UCtx) (heads : List UFnKopf)
         (FieldNarrowing.expand 1000 ctx.names 0 (.block [] ending)).1
       else .block [] ending) = .block [] ending := by
     cases ctx.narrow <;> rfl
-  simp only [elabFn, normalized, empty_row, List.getLast?_nil, Bool.and_false,
+  have noGuardedReturn : (if ctx.narrow then uRelReturn [] ending else none) = none := by
+    cases ctx.narrow <;> rfl
+  simp only [elabFn, normalized, noGuardedReturn, empty_row, List.getLast?_nil, Bool.and_false,
     Bool.false_eq_true, ite_false, List.nil_append, bind, Except.bind, pure, Except.pure]
   repeat' first | rfl | split
   all_goals simp_all <;> subst_vars <;> simp_all
