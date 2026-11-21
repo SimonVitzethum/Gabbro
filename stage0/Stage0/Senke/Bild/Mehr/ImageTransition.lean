@@ -177,6 +177,42 @@ theorem image_memory_prefix_projects {footprint : Nat → W → Prop}
   tso_memory_process_projects (image_prefix_tso run) buffers
     (fun seen => classify (tso_silent_prefix_image seen rfl))
 
+/-- The decoded startup clone is an actual transition in the host-restricted
+    runner. Its positive reply preserves memory and appends precisely the
+    child addresses read from the parent's own buffered view. -/
+theorem image_bootClone_run {before : Cfg imageTSO (Res T)} {i : Nat} {parent child : T}
+    {dest index pad : BitVec 32} {id extra : W}
+    (running : before.ths[i]? = some (some (.next parent)))
+    (instruction : InsAt (before.ms.1.view i) parent.pc 24 dest index pad)
+    (entry : (before.ms.1.view i).rd64 (slot parent.fp (sx index)) = some child.pc)
+    (frame : (before.ms.1.view i).rd64 (slot parent.fp (sx index) + 8) = some child.fp)
+    (positive : 0 < id.toInt) :
+    let threads := before.ths.set i (some (ret1 parent id)) ++ [some (.next child)]
+    ProcessPrefix imageTSO actI before [(i, cloneReq, some (id, extra))] 6 ⟨before.ms, threads⟩ ∧
+      threads[before.ths.length]? = some (some (.next child)) := by
+  intro threads
+  let pending : Res T := .ask (.sys cloneReq) fun result =>
+    opt result fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
+  let ready : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i (some pending)⟩
+  have fetched : ProcessPrefix imageTSO actI before [] 5 ready :=
+    tso_silent_prefix_image (bootClone_read_prefix (before := imageToTSO before) running instruction entry frame) rfl
+  have indexed : ready.ths[i]? = some (some pending) :=
+    List.getElem?_set_self (List.getElem?_eq_some_iff.mp running).1
+  have nonzero : id ≠ 0 := by
+    intro zero
+    subst id
+    exact (by decide : ¬ (0 < (0 : W).toInt)) positive
+  have answer : imageTSO.ans ready.ms i (.sys cloneReq) (some (id, extra)) ready.ms := by
+    refine ⟨True.intro, ?_⟩
+    change (if cloneReq = cloneReq then _ else _)
+    rw [ite_eq_left rfl]
+    exact ⟨rfl, id, extra, rfl, nonzero⟩
+  obtain ⟨created, found⟩ := bootClone_step (before := ready) (parent := parent) (child := child) indexed answer positive
+  constructor
+  · simpa only [ready, threads, List.nil_append, List.set_set, Nat.reduceAdd] using
+      fetched.trans (ProcessPrefix.ofStep created)
+  · simpa only [ready, threads, List.length_set, List.set_set] using found
+
 /-- A declared non-returning thread exit retires just its own slot.
     The source stays at the exact call head, and the exit is entered in
     the history of that thread only. -/
