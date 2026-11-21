@@ -139,27 +139,50 @@ theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
 abbrev imageSourceStart {D : Deklaration} (E : Einheit D) : FadenMaschine D.mitRuhe :=
   FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) (fun i => decide (i = 0))
 
-/-- Payload-level correspondence once runner threads have reached their
-    lowered body positions. Private buffered writes are included in the
-    per-thread views of the shared machine. -/
-def ImageBodyMatches [Kern] (output : Emitted src reserve options)
-    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
-    (machine : Cfg imageTSO (Res T)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  ∃ footprint snapshots positions committed,
-    PrivateBuffers footprint machine.ms.1 ∧
-    MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint machine.ms).1, machine.ths⟩ state snapshots positions committed ∧
-    ∀ i s, snapshots i = some s → (positions i).thr = i
+/-- An instruction in the compiled root stub uses the stack frame and
+    code range assigned to that root by the image layout. -/
+def ImageRootInstruction (output : Emitted src reserve options) (thread : Nat) (pointer : T) : Prop :=
+  let count := output.starts.length
+  let base := if thread = 0 then 0 else 10 * count + startLen * thread
+  let size := if thread = 0 then 10 * count + startLen else startLen
+  pointer.fp = BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) ∧
+  ∃ instruction, base ≤ instruction ∧ instruction < base + size ∧
+    pointer.pc = BitVec.ofNat 64 (codeBase + 16 * instruction)
 
-/-- Initially the loader and the startup code can stutter in G. Allocated
-    root positions remain ordered, and the initialized code stays loaded. -/
-def ImageBootMatches [Kern] (output : Emitted src reserve options)
-    (E : Einheit (declOf output.compiled.unit)) (machine : Cfg imageTSO (Res T))
+/-- A thread outside the lowered body is at the mapped loader, its
+    own root stub, or the pending clone continuation of that stub. -/
+def ImageRootPhase [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (history : List Ev)
+    (memory : Mem) (thread : Nat) (control : Res T)
     (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  state.m = (imageSourceStart E).m ∧ state.wartet = (imageSourceStart E).wartet ∧
-  machine.ths.length ≤ E.starts.length ∧
-  (∀ i, state.lebt i = true ↔ i < machine.ths.length) ∧
-  BytesAt machine.ms.1.m codeBase (output.image.code.flatMap encII)
+  (thread = 0 ∧ control = t4 ∧ state = imageSourceStart E ∧
+    BytesAt memory Runner.Prog.IMG output.bytes) ∨
+  ∃ start, E.starts[thread]? = some start ∧
+    (state.m.faeden thread = (imageSourceStart E).m.faeden thread ∨ FertigG state.m thread) ∧
+    BytesAt memory codeBase (output.image.code.flatMap encII) ∧
+    FrameOK memory (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) output.image.Ks ∧
+    (∀ i (inside : i < (encodeEnv output.image.Y start.2).length),
+      memory.rd64 (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) +
+        8 * (FB + FB + i))) = some (encodeEnv output.image.Y start.2)[i]) ∧
+    ∃ t : T, ImageRootInstruction output thread t ∧
+      (control = .next t ∨ RunP (IR.step t) memory control memory ∨
+        ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ control = ret1 t id)
+
+/-- Startup and lowered body threads can coexist. Body positions use the
+    compiler's frame relation. Each omitted live slot is accounted for
+    by its exact root stub or by the loader. -/
+def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    (history : List Ev) (machine : Cfg imageTSO (Res T))
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
+  ∃ footprint body snapshots positions committed,
+    PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
+    MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
+    (∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
+    ∀ i, body[i]? = machine.ths[i]? ∨
+      ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
+        ImageRootPhase output E history (machine.ms.1.view i) i r state
 
 /-- Slots are allocated only once. A retired runner slot still has a
     finished logical thread at the same index. -/
@@ -248,7 +271,7 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
   initial : related [] start ⟨start.ms, [some t4]⟩ (imageSourceStart E)
   image : ∀ history machine ir state, related history machine ir state →
     Rel L0 ir machine ∧ ImageSlotsMatch ir state ∧ ImageForeignTrace output history state ∧
-    (ImageBootMatches output E ir state ∨ ImageBodyMatches output E O ir state)
+    ImageRuntimeMatches output E O history ir state
   step : ∀ history before ir state after events, related history before ir state →
     ProcessStep imageTSO (actX L0) before events after →
     ∃ ir' count next, ProcessPrefix imageTSO actI ir events count ir' ∧
