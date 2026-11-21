@@ -158,6 +158,7 @@ public import Stage0.Senke.Bild.Mehr.SC
 public import Stage0.Senke.Bild.Mehr.SCSchritt
 public import Stage0.Senke.Bild.Mehr.Solo
 public import Stage0.Senke.Bild.Mehr.Start
+public import Stage0.Senke.Bild.Mehr.StoreBuffer
 public import Stage0.Senke.Tore.Scalar
 public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareRun

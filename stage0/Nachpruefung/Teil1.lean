@@ -22,6 +22,11 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
 #print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
 #print axioms Gabbro.Stage0.irBild_start_requires
+#print axioms Gabbro.Stage0.Senke.BildMehr.sc_private_runs_refine
+#print axioms Gabbro.Stage0.Senke.BildMehr.tso_flush_preserves_views
+#print axioms Gabbro.Stage0.Senke.BildMehr.tso_store_updates_view
+#print axioms Gabbro.Stage0.Senke.BildMehr.tso_private_read
+#print axioms Gabbro.Stage0.Senke.BildMehr.tso_cas_updates_view
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
