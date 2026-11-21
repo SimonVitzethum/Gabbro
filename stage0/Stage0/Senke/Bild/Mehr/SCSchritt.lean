@@ -187,14 +187,14 @@ theorem memory_process_single_thread {initial final : T} {memory : Mem} {c : PCf
     (path : MErreichbar ⟨memory, [some (.next initial)]⟩ c)
     (atBoundary : c.ths = [some (.next final)]) : ∃ n, StarM n initial memory final c.m := by
   have complete {n : Nat} {last next : T} {before after : Mem}
-      (prefix : StarM n initial memory last before)
+      (completed : StarM n initial memory last before)
       (pending : (.next next = Res.next last ∧ after = before) ∨
         ∀ {t m}, RunM (.next next) after t m → RunM (step last) before t m) :
       ∃ count, StarM count initial memory next after := by
     rcases pending with ⟨same, rfl⟩ | resume
     · cases same
-      exact ⟨_, prefix⟩
-    · exact ⟨_, starM_snoc prefix (resume .next)⟩
+      exact ⟨_, completed⟩
+    · exact ⟨_, starM_snoc completed (resume .next)⟩
   have collect {c : PCfg} (path : MErreichbar ⟨memory, [some (.next initial)]⟩ c) :
       ∃ r last before n, c.ths = [some r] ∧ StarM n initial memory last before ∧
         ((r = .next last ∧ c.m = before) ∨
@@ -202,23 +202,23 @@ theorem memory_process_single_thread {initial final : T} {memory : Mem} {c : PCf
     induction path with
     | start => exact ⟨_, _, _, 0, rfl, .refl _ _, .inl ⟨rfl, rfl⟩⟩
     | schritt _ executed ih =>
-      obtain ⟨r, last, before, n, threads, prefix, pending⟩ := ih
+      obtain ⟨r, last, before, n, threads, completed, pending⟩ := ih
       cases executed with
       | priv found =>
         rw [threads] at found
         obtain ⟨rfl, rfl⟩ := single_thread found
-        obtain ⟨count, ran⟩ := complete prefix pending
+        obtain ⟨count, ran⟩ := complete completed pending
         exact ⟨_, _, _, count, by rw [threads], ran, .inr (fun done => done)⟩
       | ask found answered =>
         rw [threads] at found
         obtain ⟨rfl, rfl⟩ := single_thread found
         rcases pending with ⟨wrong, _⟩ | resume
         · cases wrong
-        · exact ⟨_, _, _, _, by rw [threads], prefix,
+        · exact ⟨_, _, _, _, by rw [threads], completed,
             .inr (fun done => resume (.ask answered done))⟩
-  obtain ⟨r, last, before, n, threads, prefix, pending⟩ := collect path
+  obtain ⟨r, last, before, n, threads, completed, pending⟩ := collect path
   rw [atBoundary] at threads
   have same : r = .next final := (Option.some.inj (List.cons.inj threads).1).symm
-  exact complete prefix (same ▸ pending)
+  exact complete completed (same ▸ pending)
 
 end Gabbro.Stage0.Senke.BildMehr
