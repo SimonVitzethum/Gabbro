@@ -100,6 +100,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
 #print axioms Gabbro.Stage0.StartArgument.Plan.exact_roots
 #print axioms Gabbro.Stage0.Frontend.HostedStartShape.noErasedStart
+#print axioms Gabbro.Stage0.Frontend.checkHostedStarts_iff
 #print axioms Gabbro.Stage0.irBild_start_requires
 #print axioms Gabbro.Stage0.Senke.BildMehr.sc_private_runs_refine
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_flush_preserves_views
