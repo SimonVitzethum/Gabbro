@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Start
 public import Stage0.Senke.Bild.Mehr.StartupOperands
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -137,5 +138,87 @@ theorem tso_slt_prefix {layout : Runner.Beweis.Lay}
     tso_ret1_prefix (before := onThread (ret1 parent (bool (a.slt b)))) (i := i) ready instruction.f1 writable
   refine ⟨after, ?_, memory, view, other⟩
   simpa only [onThread, List.set_set, List.nil_append] using read.trans result
+
+/-- On a successful clone, the compiled check reads the returned thread
+    ID, sets the signed comparison flag, and advances to the next site.
+    All changes remain confined to the two flag words in parent scratch. -/
+theorem tso_spawn_check_pass [Kern] {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {pc fp : W} {K scratch : Nat} {id : W}
+    (running : before.ths[i]? = some (some (.next ⟨pc, fp⟩)))
+    (code : CodeAt (before.ms.1.view i) pc
+      ([ci 1 ((scratch + 3 : Nat) : Int) 0 0,
+        ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)] ++
+        guardC (scratch + 4) cloneCode scratch))
+    (frame : FrameOK (before.ms.1.view i) fp K) (far : CodeFar pc 7 fp K)
+    (room : scratch + 5 ≤ K) (slots : K < 2 ^ 31)
+    (stored : (before.ms.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id)
+    (success : 0 < id.toInt) :
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [] 20
+        ⟨after, before.ths.set i (some (.next ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      Agree fp (scratch + 3) K (before.ms.1.view i) (after.1.view i) ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  let fill : II := ci 1 ((scratch + 3 : Nat) : Int) 0 0
+  let compare : II := ci 13 ((scratch + 4 : Nat) : Int) ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int)
+  let guard := guardC (scratch + 4) cloneCode scratch
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have zeroIndex : sx (II.f ((scratch + 3 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 3) := sx_nat (by omega)
+  have flagIndex : sx (II.f ((scratch + 4 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 4) := sx_nat (by omega)
+  have idIndex : sx (II.f ((scratch + 2 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 2) := sx_nat (by omega)
+  have zeroCode : InsAt (before.ms.1.view i) pc 1 (II.f ((scratch + 3 : Nat) : Int)) (II.f 0) (II.f 0) := by
+    have first := code 0 (by simp)
+    simp only [Nat.mul_zero, BitVec.add_zero] at first
+    exact first
+  have zeroWritable : Mem.all before.ms.1.m.wr (slot fp (sx (II.f ((scratch + 3 : Nat) : Int)))) 8 = true := by
+    rw [zeroIndex, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
+    exact frame.wr (scratch + 3) (by omega)
+  obtain ⟨middle, zeroRun, same0, view0, others0⟩ := tso_const_prefix running zeroCode zeroWritable
+  rw [zeroIndex] at view0
+  have safe0 : Agree fp (scratch + 3) K (before.ms.1.view i) (middle.1.view i) := by
+    rw [view0]
+    exact agree_write frame.room (Nat.le_refl _) (by omega) _
+  have size : ([fill, compare] ++ guard).length = 7 := rfl
+  have allCode : CodeAt (middle.1.view i) pc ([fill, compare] ++ guard) :=
+    code.agree safe0 (size ▸ far)
+  have compareCode : InsAt (middle.1.view i) (pc + 16) 13 (II.f ((scratch + 4 : Nat) : Int))
+      (II.f ((scratch + 3 : Nat) : Int)) (II.f ((scratch + 2 : Nat) : Int)) :=
+    allCode 1 (by rw [size]; decide)
+  have leftRead : (middle.1.view i).rd64 (slot fp (sx (II.f ((scratch + 3 : Nat) : Int)))) = some 0 := by
+    rw [zeroIndex, view0]
+    exact Mem.rd64_wr64 (Mem.wr64_some (frame.wr _ (by omega))) (frame.rd _ (by omega))
+  have rightRead : (middle.1.view i).rd64 (slot fp (sx (II.f ((scratch + 2 : Nat) : Int)))) = some id := by
+    rw [idIndex, view0, Mem.rd64_write_far (slot_far frame.room (by omega) (by omega) (by omega))]
+    exact stored
+  let middleCfg : Cfg (TSO layout) (Res T) := ⟨middle, before.ths.set i (some (.next ⟨pc + 16, fp⟩))⟩
+  have compareReady : middleCfg.ths[i]? = some (some (.next ⟨pc + 16, fp⟩)) := List.getElem?_set_self inside
+  have flagWritable : Mem.all middle.1.m.wr (slot fp (sx (II.f ((scratch + 4 : Nat) : Int)))) 8 = true := by
+    rw [flagIndex, same0, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
+    exact frame.wr (scratch + 4) (by omega)
+  obtain ⟨after, comparison, same1, view1, others1⟩ :=
+    tso_slt_prefix (before := middleCfg) (i := i) compareReady compareCode leftRead rightRead flagWritable
+  rw [flagIndex] at view1
+  have safe1 : Agree fp (scratch + 3) K (middle.1.view i) (after.1.view i) := by
+    rw [view1]
+    exact agree_write frame.room (Nat.le_succ _) (by omega) _
+  let guardPc := pc + BitVec.ofNat 64 (16 * 2)
+  have compareNext : pc + 16 + 16 = guardPc := pcN pc 1 1 2 rfl
+  have guardView : CodeAt (after.1.view i) guardPc guard :=
+    codeAt_right (a := [fill, compare]) (allCode.agree safe1 (size ▸ far))
+  have flagRead : (after.1.view i).rd64 (slot fp (sx (II.f ((scratch + 4 : Nat) : Int)))) = some (spawnFlag id) := by
+    rw [flagIndex, view1]
+    have current := frame.agree safe0
+    exact Mem.rd64_wr64 (Mem.wr64_some (current.wr _ (by omega))) (current.rd _ (by omega))
+  let guardCfg : Cfg (TSO layout) (Res T) := ⟨after, before.ths.set i (some (.next ⟨guardPc, fp⟩))⟩
+  have guardReady : guardCfg.ths[i]? = some (some (.next ⟨guardPc, fp⟩)) := List.getElem?_set_self inside
+  have nonzero : spawnFlag id ≠ 0 := by rw [spawnFlag_pos success]; decide
+  have passed := tso_guard_pass (before := guardCfg) (i := i) guardReady guardView flagRead nonzero
+  have firstTwo : ProcessPrefix (TSO layout) actI before [] 13 guardCfg := by
+    simpa only [middleCfg, guardCfg, nxt, compareNext, List.nil_append, List.set_set, Nat.reduceAdd] using
+      zeroRun.trans comparison
+  have nextSite : guardPc + BitVec.ofNat 64 (16 * 5) = pc + BitVec.ofNat 64 (16 * 7) := pcN pc 2 5 7 rfl
+  refine ⟨after, ?_, same1.trans same0, safe0.trans safe1,
+    fun j different => (others1 j different).trans (others0 j different)⟩
+  simpa only [guardCfg, nextSite, List.set_set, List.nil_append, Nat.reduceAdd] using firstTwo.trans passed
 
 end Gabbro.Stage0.Senke
