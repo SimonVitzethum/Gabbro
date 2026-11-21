@@ -22,6 +22,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Stage0.compile_source_program
 #print axioms Gabbro.Stage0.OldSource.accepts_einheitVon_iff
+#print axioms Gabbro.Stage0.Emitted.goal_checker_concurrent
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected

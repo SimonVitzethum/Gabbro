@@ -63,6 +63,63 @@ theorem Compiled.goal_checker_main {text : String} {options : Profil.Options}
   OldSource.accepts_gibt_pruefer_main result.unit result.program Q sp result.main args
     (hFn := inferInstance) (hZ := hZ) (hr := hr) (hg := hg) (h := result.accepted) (hStart := hStart)
 
+private theorem findRoot_eq_fnIdx (functions : List UFn) (name : String) :
+    (List.finRange functions.length).find? (fun f => (functions.get f).name == name) =
+      (fnIdx functions name).toOption := by
+  induction functions with
+  | nil => rfl
+  | cons first rest ih =>
+    simp only [List.length_cons, List.finRange_succ, List.find?_cons, List.get_cons_zero, fnIdx]
+    cases same : first.name == name with
+    | true => simp only [same, ↓reduceIte, Except.toOption]
+    | false =>
+      simp only [same, Bool.false_eq_true, ↓reduceIte, List.find?_map, Function.comp_def, List.get_cons_succ', ih]
+      cases fnIdx rest name <;> rfl
+
+/-- The explicit concurrent prefix has precisely the function occurrences
+    judged by the source checker, with their original order and multiplicity. -/
+theorem StartArgument.Plan.concurrent_roots {u : UProg} {items : List SItemTief}
+    {main : (declOf u).Fn} (plan : StartArgument.Plan u items main) (world : World (declOf u))
+    (dispatch : plan.dispatch = []) (runtime : u.gestartet = []) :
+    (plan.starts world).map (·.1) = u.roots.filterMap (wurzelIdx u) := by
+  have named := plan.namedOrigin
+  rw [dispatch, runtime] at named
+  change (Except.ok [] : Except String (List (StartArgument.NamedStart u))) = .ok plan.named at named
+  have empty : plan.named = [] := (Except.ok.inj named).symm
+  rw [plan.canonicalRoots, dispatch, List.append_nil]
+  simp only [StartArgument.Plan.starts, empty, List.map_nil, List.filter_nil, List.append_nil,
+    List.map_map, List.filterMap_map]
+  change plan.concurrent.map (fun start => start.resolved.function) =
+    plan.concurrent.filterMap (fun start => wurzelIdx u start.name)
+  have lookup (start : StartArgument.SourceStart u items) :
+      wurzelIdx u start.name = some start.resolved.function := by
+    unfold wurzelIdx fnAt
+    rw [findRoot_eq_fnIdx, start.resolved.named]
+    rfl
+  simp only [lookup, List.filterMap_eq_map']
+
+/-- Premise (a) for the exact typed roots and initial memory serialized by the
+    emitter, when every additional root comes from an explicit concurrent member. -/
+theorem Emitted.goal_checker_concurrent {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) (Q : AxEns (declOf output.compiled.unit))
+    (hZ : OldSource.zertifizierbar output.compiled.unit = true)
+    (dispatch : output.startPlan.dispatch = []) (runtime : output.compiled.unit.gestartet = [])
+    (start : unitStartGeprueftB
+      (OldSource.einheitDer output.compiled.unit output.compiled.program Q
+        (Senke.initialWorld output.compiled.unit output.initialValid).speicher
+        output.compiled.main output.args output.starts [] [])
+      (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length) = true) :
+    akzeptiertX_pruefer.akzeptiert
+      (OldSource.einheitDer output.compiled.unit output.compiled.program Q
+        (Senke.initialWorld output.compiled.unit output.initialValid).speicher
+        output.compiled.main output.args output.starts [] [])
+      (List.finRange output.compiled.unit.fns.length) (List.finRange output.compiled.unit.locks.length)
+      ((List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
+        (List.finRange output.compiled.unit.globs.length).map Sum.inr) = true :=
+  output.compiled.goal_checker Q _ output.args output.starts [] [] hZ
+    (OldSource.uCheckDecls_zertifizierbar _ hZ)
+    (output.startPlan.concurrent_roots _ dispatch runtime) (OldSource.gestartet_leer _ runtime) start
+
 /-- **The image of a unit without declared and run-time roots starts no thread besides `main`**:
     its canonical start plan has no `concurrent` occurrence and no named root. -/
 theorem Emitted.starts_leer {src : String} {K : Nat} {options : Profil.Options}
