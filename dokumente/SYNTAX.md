@@ -846,6 +846,10 @@ Direct indexing as in `array[first .. last][i]` checks the relative index
 and reads the original array without an intermediate slice.
 The full slice `local[0 .. lenof(local)]` preserves the array or string
 local, including a string whose byte length is known only at runtime.
+An array local also supports `array[start .. start + N]` for an integer
+local `start` and a compile-time count `N`. The complete interval of
+`start` must be nonnegative and fit with `N` inside the array length.
+The result is a value of array type with length `N`.
 
 
 

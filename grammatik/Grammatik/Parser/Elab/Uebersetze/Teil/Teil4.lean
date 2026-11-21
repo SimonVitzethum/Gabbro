@@ -134,6 +134,34 @@ def uFullLocalSlice (ctx : UCtx) (first : Int) : USide → SExpr → Bool
       | _ => false
   | _, _ => false
 
+/-- Expand a fixed number of array elements using the ordinary typed
+    expression reader. The start and array operands are lexical locals. -/
+def uLocalArraySpan (array start : USide) (element : Ty) : Nat → Nat → USide
+  | _, 0 => .typed (.arr element 0) .arrNil
+  | offset, count + 1 =>
+    .arrCons (.idx array (.add start (.lit offset))) (uLocalArraySpan array start element (offset + 1) count)
+
+def uSliceConstants (ctx : UCtx) : List (String × (Int × Int)) :=
+  (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
+    (fun (name, value) => (name, (value, value)))
+
+/-- The dynamic endpoint form `array[start .. start + N]` fixes the
+    number of selected elements statically. The same lexical start
+    must be used at both endpoints, and its complete interval must fit. -/
+def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
+    USide → SExpr → SExpr → Option USide
+  | .param array, .variable start, .bin "+" (.variable lastStart) amount => do
+    if !strEq start lastStart then none else
+      let some (.arr element length) := uValueType ctx (.param array) | none
+      let some (.int lo hi) := uValueType ctx (.param start) | none
+      let some count := uSchranke (uSliceConstants ctx) amount | none
+      if 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length then
+        if blatt (.variable start) = .ok (.param start) then
+          some (uLocalArraySpan (.param array) (.param start) element 0 count.toNat)
+        else none
+      else none
+  | _, _, _ => none
+
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. C13 adds the closed integer builtins
     (`+% -% *% <<% +|`, `clz ctz log2_floor popcount bswap rotl rotr`) at the declared storage width. -/
@@ -232,12 +260,11 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
             | none => .error "builtin of unknown width"
       | none => blatt (.call f [a, b])
   | .built "#slice" [base, first, last] => do
-    let constants := (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
-      (fun (name, value) => (name, (value, value)))
-    let some first := uSchranke constants first | throw "slice: first endpoint must be static"
     let operand ← uRechne ctx blatt base
+    if let some span := uFixedLocalArraySlice ctx blatt operand first last then return span
+    let some first := uSchranke (uSliceConstants ctx) first | throw "slice: first endpoint must be static"
     if uFullLocalSlice ctx first operand last then return operand
-    let some last := uSchranke constants last | throw "slice: last endpoint must be static"
+    let some last := uSchranke (uSliceConstants ctx) last | throw "slice: last endpoint must be static"
     if first < 0 || last < first then throw "slice: invalid endpoint order"
     return .slice operand first.toNat last.toNat
   -- C13: `sizeof(e)` is the declared storage size of `e`, a literal only once it is resolved (`uGroesse`)
@@ -295,8 +322,7 @@ decreasing_by
     first endpoint proves zero. Its source export is that same value. -/
 theorem fullLocalSlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
     (name : String) (first : SExpr)
-    (zero : uSchranke ((ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
-      (fun (key, value) => (key, (value, value)))) first = some 0)
+    (zero : uSchranke (uSliceConstants ctx) first = some 0)
     (localValue : uRechne ctx blatt (.variable name) = .ok (.param name))
     (aggregate : (∃ τ n, uValueType ctx (.param name) = some (.arr τ n)) ∨
       (∃ n, uValueType ctx (.param name) = some (.str n))) :
@@ -306,7 +332,24 @@ theorem fullLocalSlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String 
   have sameName : strEq name name = true := by simp [strEq]
   rcases aggregate with ⟨_, _, exactType⟩ | ⟨_, exactType⟩ <;>
     simp only [zero, localValue, bind, Except.bind, uFullLocalSlice, exactType,
-      sameName, beq_self_eq_true, Bool.true_and, ite_true, pure, Except.pure]
+      sameName, beq_self_eq_true, Bool.true_and, ite_true, pure, Except.pure, uFixedLocalArraySlice]
+
+theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array start : String) (element : Ty) (length : Nat) (lo hi count : Int) (amount : SExpr)
+    (arrayRead : uRechne ctx blatt (.variable array) = .ok (.param array))
+    (indexRead : blatt (.variable start) = .ok (.param start))
+    (arrayType : uValueType ctx (.param array) = some (.arr element length))
+    (indexType : uValueType ctx (.param start) = some (.int lo hi))
+    (width : uSchranke (uSliceConstants ctx) amount = some count)
+    (bounds : 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length) :
+    uRechne ctx blatt (.built "#slice"
+      [.variable array, .variable start, .bin "+" (.variable start) amount]) =
+      .ok (uLocalArraySpan (.param array) (.param start) element 0 count.toNat) := by
+  rw [uRechne]
+  have sameName : strEq start start = true := by simp [strEq]
+  simp only [arrayRead, bind, Except.bind, uFixedLocalArraySlice, sameName, Bool.not_true,
+    Bool.false_eq_true, ite_false, arrayType, indexType, width, bounds, ite_true, indexRead,
+    pure, Except.pure]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=

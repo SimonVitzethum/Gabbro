@@ -8,6 +8,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Resume
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
+import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 public import Stage0.Senke.Ausdruck.Tag
 
 @[expose] public section
@@ -142,6 +143,10 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.fullLocalSlice_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_fullLocalStringSlice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_fullLocalArraySlice
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.fixedLocalArraySlice_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_localArraySpan
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_arraySpanFrom
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.arraySpanFrom_reads
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_storage
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScope_excludes_suffix
