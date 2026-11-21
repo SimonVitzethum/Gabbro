@@ -45,4 +45,25 @@ theorem irBild_loader_dispatch [Kern] {output : Emitted src K options} {bytes : 
     rfl, ⟨rfl, 0, ?_⟩, rfl⟩
   simpa only [TSt.view, empty, List.foldl_nil, rdN, frame, Option.map_some]
 
+/-- Every TSO answer to the loaded header read returns the same entry
+    frame. The extra answer word has no effect on the loader. -/
+theorem irBild_loader_dispatch_all [Kern] {output : Emitted src K options} {bytes : List Runner.B}
+    (built : emit src K options = .ok output) (payload : irBild src K options = .ok bytes)
+    {s s' : (TSO L0).St} {thread : Nat} {answer : Ans} (empty : s.1.buf thread = [])
+    (loaded : BytesAt s.1.m Runner.Prog.IMG bytes)
+    (answered : (TSO L0).ans s thread (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG)) answer s') :
+    s' = s ∧
+      ∀ resume, t4 = .ask (.rd 8 (BitVec.ofNat 64 Runner.Prog.IMG)) resume →
+        resume answer = .next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩ := by
+  have frame := output.loader_frame ((irBild_eq_output built payload).symm ▸ loaded)
+  obtain ⟨same, extra, actual⟩ := answered
+  refine ⟨same, ?_⟩
+  intro resume read
+  have exactAnswer : answer = some (BitVec.ofNat 64 output.image.fp0, extra) := by
+    simpa only [TSt.view, empty, List.foldl_nil, rdN, frame, Option.map_some] using actual
+  rw [exactAnswer]
+  have equalResume := (Res.ask.inj read).2
+  rw [← equalResume]
+  rfl
+
 end Gabbro.Stage0

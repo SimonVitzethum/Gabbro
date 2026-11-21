@@ -29,6 +29,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.WeltAt.withIdle
 #print axioms Gabbro.Stage0.irBild_eq_output
 #print axioms Gabbro.Stage0.irBild_loader_dispatch
+#print axioms Gabbro.Stage0.irBild_loader_dispatch_all
+#print axioms Gabbro.Stage0.Senke.BildMehr.TSOPrivateReachable.prepend
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_string
