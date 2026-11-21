@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Goal
+import Grammatik.Logik.Vertraege.Pruefer.Goal
 
 @[expose] public section
 
@@ -138,5 +139,44 @@ theorem irBild_checked_foreign_unit {bytes : List Runner.B}
   intro checked produced noOwnership noAccumulators
   obtain ⟨unit, accepted⟩ := output.checked_image_model_foreign produced noOwnership noAccumulators
   exact ⟨unit, accepted, unit.postDeckt⟩
+
+/-- A checked model export retains the very unit judged by the goal's
+    checker, together with its correspondence to the emitted image. -/
+structure CheckedImageUnit (output : Emitted src reserve options) where
+  unit : Einheit (declOf output.compiled.unit)
+  exactModel : ImageModelUnit output unit
+  accepted : akzeptiertX_pruefer.akzeptiert unit output.fsA.1 output.lsA.1 output.csA.1 = true
+
+/-- Resolve the logic decision on the actual emitted unit. Both the
+    axiom-free and foreign branches produce the same checked interface.
+    A missing ownership export or refused foreign check returns a diagnostic. -/
+def Emitted.checkImageUnit (output : Emitted src reserve options) :
+    Except String (CheckedImageUnit output) := do
+  if noOwnership : OldSource.zertifizierbar output.compiled.unit = true then
+    if empty : (imageAccumulatorItems output).isEmpty = true then
+      have noAccumulators := List.isEmpty_iff.mp empty
+      if noAxioms : output.compiled.unit.axs.length = 0 then
+        have found := output.checked_image_model_empty noAxioms noOwnership noAccumulators
+        return ⟨output.goalUnit (axWahr _), found.1, found.2⟩
+      else
+        match result : output.foreignLogic with
+        | .error diagnostic => throw diagnostic
+        | .ok certificate =>
+          have found := output.checked_image_model_foreign result noOwnership noAccumulators
+          return ⟨withForeignSummary (output.goalUnit (axWahr _)) certificate.summary, found.1, found.2⟩
+    else throw "ir: accumulator declarations have no checked image export"
+  else throw "ir: ownership declarations have no checked image export"
+
+/-- The returned bytes and the complete checker verdict on their exact
+    model can be obtained from one canonical emission and one export. -/
+theorem irBild_checkImageUnit {bytes : List Runner.B} (wrote : irBild src reserve options = .ok bytes) :
+    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
+      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
+      ∀ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked →
+        PostDeckt checked.unit ∧ NutzerPflichtA checked.unit := by
+  obtain ⟨output, emitted, payload⟩ := irBild_emitted src reserve bytes wrote
+  exact ⟨output, emitted, payload, compile_source_program src output.compiled,
+    fun checked _ => ⟨checked.exactModel.postDeckt,
+      nutzerPflicht_of_akzeptiert output.fsA output.lsA checked.accepted⟩⟩
 
 end Gabbro.Stage0
