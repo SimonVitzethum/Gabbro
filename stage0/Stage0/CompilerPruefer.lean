@@ -126,6 +126,26 @@ private theorem findRoot_eq_fnIdx (functions : List UFn) (name : String) :
       simp only [same, Bool.false_eq_true, ↓reduceIte, List.find?_map, Function.comp_def, List.get_cons_succ', ih]
       cases fnIdx rest name <;> rfl
 
+/-- The selected entry is named by the profile and has a unique typed
+    function index in the admitted AST. -/
+theorem Compiled.entry_name_unique {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    (fnAt result.unit result.main).name = Profil.entryName options ∧
+      ∀ f : (declOf result.unit).Fn, (fnAt result.unit f).name = Profil.entryName options → f = result.main := by
+  have found : (List.finRange result.unit.fns.length).find?
+      (fun f => (fnAt result.unit f).name == Profil.entryName options) = some result.main := by
+    change (List.finRange result.unit.fns.length).find?
+      (fun f => (result.unit.fns.get f).name == Profil.entryName options) = some result.main
+    simp only [findRoot_eq_fnIdx, result.entry, Except.toOption]
+  have named := beq_iff_eq.mp (List.find?_some found)
+  refine ⟨named, ?_⟩
+  intro f matches
+  apply Fin.ext
+  have bound (i : (declOf result.unit).Fn) : i.val < (result.unit.fns.map (·.name)).length := by
+    simpa only [List.length_map] using i.isLt
+  apply result.functionNames.eq_of_getElem_eq (bound f) (bound result.main)
+  simpa only [List.getElem_map, fnAt] using matches.trans named.symm
+
 /-- The explicit concurrent prefix has precisely the function occurrences
     judged by the source checker, with their original order and multiplicity. -/
 theorem StartArgument.Plan.concurrent_roots {u : UProg} {items : List SItemTief}

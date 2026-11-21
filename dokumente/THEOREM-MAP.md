@@ -8176,12 +8176,15 @@ from empty buffers.
 the ordered sequence production at its fuel bound. Each leaf records an
 individual item read. `parseTopTief_iff` requires the final end marker and
 `parseModulTief_body` identifies the ordered children of ordinary and
-generic modules between their actual braces.
+generic modules between their actual braces. `parseItemTief_module`
+connects that proof to the normal item dispatcher.
 
 `Compiled.function_from_ast` identifies every body and precondition at the
 corresponding typed AST index. `OldSource.restore_fields` proves that entry
 snapshot restoration only replaces the postcondition family, and ties each
 new postcondition to the source header lookup for that function.
+`doppelterName_none_iff` proves exactness of the executable duplicate check.
+`Compiled.entry_name_unique` identifies the entry by a unique typed index.
 
 `OldSource.accepts_core` inverts the actual verdict on the exact restored
 program, root enumeration and guest descriptors. `Compiled.admission`
