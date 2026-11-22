@@ -18,6 +18,8 @@ mutual
   | .field e _ | .arrow e _ | .un _ e | .old e => expressionNames e
   | .index a b | .bin _ a b => expressionNames a ++ expressionNames b
   | .call _ args | .built _ args => argumentNames args
+  | .ext .text _ _ => []
+  | .ext .label _ args => argumentNames args
   | .ext _ names args => names ++ argumentNames args
   | _ => []
 @[expose] public def argumentNames : List SExpr → List String
@@ -39,6 +41,37 @@ end
   | .bind name expr _ :: rest => expressionNames expr ++ without name (liveBefore result rest)
   | .await name expr _ :: rest => futureNames expr ++ without name (liveBefore result rest)
 
+/-- Save only live lexical locals. Unit-scope names are resolved by the
+    ordinary expression reader, and the await result is bound on Ready. -/
+@[expose] public def requiredSaved (visible : List String) (result : SExpr)
+    (destination : String) (rest : List Command) : List String :=
+  visible.filter (without destination (liveBefore result rest)).contains
+
+/-- Compute suspension slots in lexical order. Lock and ownership
+    annotations still have to be discharged by the resource checker. -/
+@[expose] public def inferSaved (result : SExpr) : List String → List Command → List Command
+  | _, [] => []
+  | visible, .bind name value cost :: rest =>
+    .bind name value cost :: inferSaved result (name :: visible) rest
+  | visible, .await name future boundary :: rest =>
+    let saved := requiredSaved visible result name rest
+    .await name future { boundary with live := saved, saved := saved } ::
+      inferSaved result (name :: visible) rest
+
+public theorem requiredSaved_exact (visible : List String) (result : SExpr)
+    (destination : String) (rest : List Command) (name : String) :
+    name ∈ requiredSaved visible result destination rest ↔
+      name ∈ visible ∧ name ∈ liveBefore result rest ∧ name ≠ destination := by
+  simp only [requiredSaved, List.mem_filter, List.contains_iff_mem, without,
+    Bool.not_eq_true', beq_eq_false_iff_ne]
+
+public theorem inferSaved_live (visible : List String) (result : SExpr) (body : List Command) :
+    liveBefore result (inferSaved result visible body) = liveBefore result body := by
+  induction body generalizing visible with
+  | nil => rfl
+  | cons command rest ih =>
+    cases command <;> simp only [inferSaved, liveBefore, ih]
+
 /-- Explicit save, no held lock, and a bijective move of unique marks. Exact
     list equality makes the move deterministic and forbids omission/copying. -/
 @[expose] public def BoundarySafe (fields required : List String) (b : Boundary) : Prop :=
@@ -52,45 +85,65 @@ end
   unfold BoundarySafe
   infer_instance
 
-@[expose] public def bodyCheck (fields : List String) (result : SExpr) : List Command → Bool
-  | [] => true
-  | .bind name _ _ :: rest => fields.contains name && bodyCheck fields result rest
-  | .await name _ b :: rest => fields.contains name &&
-    decide (BoundarySafe fields (without name (liveBefore result rest)) b) &&
-    bodyCheck fields result rest
+@[expose] public def bodyCheck (fields : List String) (result : SExpr) :
+    List String → List Command → Bool
+  | _, [] => true
+  | visible, .bind name _ _ :: rest => fields.contains name && bodyCheck fields result (name :: visible) rest
+  | visible, .await name _ b :: rest => fields.contains name &&
+    decide (BoundarySafe fields (requiredSaved visible result name rest) b) &&
+    bodyCheck fields result (name :: visible) rest
 
 /-- The generated record retains parameters as well as all declared locals.
     Saving a superset is intentional: it avoids a second storage mechanism. -/
 @[expose] public def fieldNames (f : AsyncFn) : List String := (f.params ++ f.fields).map Prod.fst
 
 @[expose] public def asyncCheck (f : AsyncFn) : Bool :=
-  decide (fieldNames f).Nodup && bodyCheck (fieldNames f) f.result f.body
+  decide (fieldNames f).Nodup && bodyCheck (fieldNames f) f.result (f.params.map Prod.fst) f.body
 
 @[expose] public def AsyncOk (f : AsyncFn) : Prop := asyncCheck f = true
 
 /-- Declarative reading of the recursive checker. -/
-@[expose] public def BodySafe (fields : List String) (result : SExpr) : List Command → Prop
-  | [] => True
-  | .bind name _ _ :: rest => name ∈ fields ∧ BodySafe fields result rest
-  | .await name _ b :: rest => name ∈ fields ∧
-    BoundarySafe fields (without name (liveBefore result rest)) b ∧
-    BodySafe fields result rest
+@[expose] public def BodySafe (fields : List String) (result : SExpr) :
+    List String → List Command → Prop
+  | _, [] => True
+  | visible, .bind name _ _ :: rest => name ∈ fields ∧ BodySafe fields result (name :: visible) rest
+  | visible, .await name _ b :: rest => name ∈ fields ∧
+    BoundarySafe fields (requiredSaved visible result name rest) b ∧
+    BodySafe fields result (name :: visible) rest
 
-public theorem bodyCheck_sound (fields : List String) (result : SExpr) (body : List Command) :
-    bodyCheck fields result body = true → BodySafe fields result body := by
-  induction body with
+public theorem bodyCheck_sound (fields visible : List String) (result : SExpr) (body : List Command) :
+    bodyCheck fields result visible body = true → BodySafe fields result visible body := by
+  induction body generalizing visible with
   | nil => intro _; trivial
   | cons command rest ih =>
     cases command <;>
       simp only [bodyCheck, BodySafe, Bool.and_eq_true, decide_eq_true_eq,
         List.contains_iff_mem] <;> intro h
-    · exact ⟨h.1, ih h.2⟩
-    · exact ⟨h.1.1, h.1.2, ih h.2⟩
+    · exact ⟨h.1, ih _ h.2⟩
+    · exact ⟨h.1.1, h.1.2, ih _ h.2⟩
+
+/-- All automatically saved slots exist in the frame's declared scope.
+    The same boundary must still prove its lock and ownership clauses. -/
+public theorem inferredBoundary_erfuellbar {fields visible : List String} {result : SExpr}
+    {name : String} {rest : List Command} {original : Boundary}
+    (scope : ∀ name ∈ visible, name ∈ fields) (distinct : visible.Nodup)
+    (noLocks : original.heldLocks = []) (moveOnce : original.moved = original.owned)
+    (unique : original.owned.Nodup) :
+    let live := requiredSaved visible result name rest
+    BoundarySafe fields (requiredSaved visible result name (inferSaved result (name :: visible) rest))
+      { original with live := live, saved := live } := by
+  simp only [BoundarySafe, inferSaved_live]
+  refine ⟨?_, ?_, ?_, noLocks, moveOnce, unique, List.Pairwise.filter _ distinct⟩
+  · exact List.all_eq_true.mpr (fun name member => List.contains_iff_mem.mpr member)
+  · exact List.all_eq_true.mpr (fun name member => List.contains_iff_mem.mpr member)
+  · apply List.all_eq_true.mpr
+    intro name saved
+    exact List.contains_iff_mem.mpr (scope name ((requiredSaved_exact visible result _ rest name).mp saved).1)
 
 public theorem asyncCheck_sound (f : AsyncFn) (h : AsyncOk f) :
-    (fieldNames f).Nodup ∧ BodySafe (fieldNames f) f.result f.body := by
+    (fieldNames f).Nodup ∧ BodySafe (fieldNames f) f.result (f.params.map Prod.fst) f.body := by
   simp only [AsyncOk, asyncCheck, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact ⟨h.1, bodyCheck_sound _ _ _ h.2⟩
+  exact ⟨h.1, bodyCheck_sound _ _ _ _ h.2⟩
 
 public theorem boundary_no_locks {fields required : List String} {b : Boundary}
     (h : BoundarySafe fields required b) : b.heldLocks = [] := h.2.2.2.1

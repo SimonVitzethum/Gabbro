@@ -122,7 +122,8 @@ public structure Analysis where
   | _ => .error "async: explicit terminal return required"
 
 /-- Compute the exact fields, commands and terminal expression of the source body. -/
-@[expose] public def elaborateBody (analysis : Analysis) (type : STyp) (body : SAnw) :
+@[expose] public def elaborateBody (analysis : Analysis) (type : STyp)
+    (parameters : List (String × STyp)) (body : SAnw) :
     Except String (List (String × STyp) × List Command × SExpr) := do
   let (statements, result) ← splitBody body
   -- `$` cannot occur in a source identifier. The ordinary duplicate-field
@@ -134,7 +135,8 @@ public structure Analysis where
     | _ => (statements, result)
   if hasAwait result then throw "async: bind the awaited result before returning"
   let (fields, commands) ← elaborateCommands analysis 0 statements
-  pure (fields, commands, segmentValue commands.length result)
+  let returned := segmentValue commands.length result
+  pure (fields, inferSaved returned (parameters.map Prod.fst) commands, returned)
 
 /-- A checked outer AST retains the complete source signature and its exact body derivation. -/
 public structure Elaborated (analysis : Analysis) (source : Function) where
@@ -143,7 +145,7 @@ public structure Elaborated (analysis : Analysis) (source : Function) where
   name : function.name = source.signature.name
   params : function.params = source.signature.params
   resultType : source.signature.res = some function.resultType
-  body : elaborateBody analysis function.resultType source.body =
+  body : elaborateBody analysis function.resultType source.signature.params source.body =
     .ok (function.fields, function.body, function.result)
 
 @[expose] public def elaborate (analysis : Analysis) (source : Function) :
@@ -155,7 +157,7 @@ public structure Elaborated (analysis : Analysis) (source : Function) where
   match resultType : source.signature.res with
   | none => throw "async: explicit result type required"
   | some type =>
-    match body : elaborateBody analysis type source.body with
+    match body : elaborateBody analysis type source.signature.params source.body with
     | .error error => .error error
     | .ok (fields, commands, result) =>
       let function : AsyncFn := {
