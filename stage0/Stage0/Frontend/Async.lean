@@ -7,6 +7,8 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
 public import Grammatik.Nebenlaeufigkeit.Async.Creation
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Check
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
@@ -233,5 +235,36 @@ public structure ResolvedPoll (u : UProg) (V : Vertrag (declOf u)) (Λ : List (R
       resolvePoll u V Λ types child.name (parameterTypes childTypes child.params) (state ▸ constructor.code)
     else .error "async: selected child result does not match its declared type"
   else .error "async: selected child layout does not match its constructor"
+
+/-- Check every declaration in the original body using the ordinary
+    expression reader and the actual named child-poll resolver. -/
+@[expose] public def checkFunctionElaboration (u : UProg) (V : Vertrag (declOf u))
+    (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn) (function : AsyncFn) (types : TypeResolution)
+    (children : (name : String) → Option (ResolvedPoll u V Λ types name)) :
+    Except String (Elaboration (declOf u) V Λ types function) :=
+  checkElaboration types function
+    (fun source => (resolveExpression u Λ ctx fn function source).toOption.map CanonicalExpression.bound)
+    (fun name => (children name).map ResolvedPoll.callee)
+
+/-- This connects the actual source declaration and its canonical typed
+    scope to the exact generated dispatch table. -/
+public structure ResolvedFunction (u : UProg) (V : Vertrag (declOf u)) (Λ : List (Res (declOf u)))
+    (ctx : UCtx) (fn : UFn) (function : AsyncFn) (types : TypeResolution)
+    (children : (name : String) → Option (ResolvedPoll u V Λ types name)) where
+  elaboration : Elaboration (declOf u) V Λ types function
+  elaborated : checkFunctionElaboration u V Λ ctx fn function types children = .ok elaboration
+  phases : (index : Fin (phases function).length) → PhasePlan elaboration ((phases function).get index)
+  checked : checkPhaseTable elaboration = .ok phases
+
+@[expose] public def resolveFunction (u : UProg) (V : Vertrag (declOf u)) (Λ : List (Res (declOf u)))
+    (ctx : UCtx) (fn : UFn) (function : AsyncFn) (types : TypeResolution)
+    (children : (name : String) → Option (ResolvedPoll u V Λ types name)) :
+    Except String (ResolvedFunction u V Λ ctx fn function types children) :=
+  match elaborated : checkFunctionElaboration u V Λ ctx fn function types children with
+  | .error failure => .error failure
+  | .ok elaboration =>
+    match checked : checkPhaseTable elaboration with
+    | .error failure => .error failure
+    | .ok phases => .ok ⟨elaboration, elaborated, phases, checked⟩
 
 end Gabbro.Stage0.Frontend.Async
