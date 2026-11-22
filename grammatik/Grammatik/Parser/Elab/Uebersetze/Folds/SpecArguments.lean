@@ -16,18 +16,26 @@ def uSpecValuePath : SExpr → Bool
 
 /-- A literal field is checked against the constructor's declared type
     before substitution, including integer ranges and UTF-8 capacity. -/
-def specLiteralFieldFits : Ty → USide → Bool
+def specPrimitiveLiteralFieldFits : Ty → USide → Bool
   | .int lo hi, .lit value => decide (lo ≤ value ∧ value ≤ hi)
   | .bool, .truth _ => true
   | .str capacity, .text bytes =>
     match bytesZahl bytes with
     | some decoded => decide (decoded.length ≤ capacity)
     | none => false
-  | .arr _ 0, .arrNil => true
-  | .arr element (length + 1), .arrCons first rest =>
-    specLiteralFieldFits element first && specLiteralFieldFits (.arr element length) rest
   | _, _ => false
-termination_by structural _ value => value
+
+def specLiteralFieldFits : USide → Ty → Bool
+  | .arrNil, type =>
+    match type with
+    | .arr _ 0 => true
+    | _ => false
+  | .arrCons first rest, type =>
+    match type with
+    | .arr element (length + 1) => specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)
+    | _ => false
+  | value, type => specPrimitiveLiteralFieldFits type value
+termination_by structural value _ => value
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
@@ -35,7 +43,7 @@ def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
     (fields : List (Ty × USide)) : Option Ty := do
   let schema ← uRecordConstructor ctx name
   if schema.ty = .prod identity (fields.map Prod.fst) ∧
-    fields.all (fun field => specLiteralFieldFits field.1 field.2) = true then
+    fields.all (fun field => specLiteralFieldFits field.2 field.1) = true then
     some schema.ty
   else none
 
@@ -100,7 +108,7 @@ theorem specLiteralRecordArgument_erfuellbar (ctx : UCtx) (name : String) (args 
     (selected : uRecordConstructor ctx name = some schema)
     (read : uWertBody ctx (.call name args) = .ok (.product schema.identity reordered fields))
     (shape : schema.ty = .prod schema.identity (fields.map Prod.fst))
-    (valid : fields.all (fun field => specLiteralFieldFits field.1 field.2) = true) :
+    (valid : fields.all (fun field => specLiteralFieldFits field.2 field.1) = true) :
     uSpecValueArgument ctx schema.ty (.call name args) = .ok () := by
   simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, uSpecLiteralRecordType,
     selected, Option.bind_eq_bind, Option.bind_some, shape, valid, true_and, ite_true,

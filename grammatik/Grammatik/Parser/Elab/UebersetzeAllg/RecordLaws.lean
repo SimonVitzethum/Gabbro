@@ -37,10 +37,10 @@ theorem lowProductArgs_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) 
 
 /-- Every literal field admitted by the predicate argument reader is
     accepted by the ordinary checking-mode expression elaborator. -/
-theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
-    (er : Option Ty) (ty : Ty) (side : USide) (valid : specLiteralFieldFits ty side = true) :
+private theorem specPrimitiveLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ty : Ty) (side : USide) (valid : specPrimitiveLiteralFieldFits ty side = true) :
     ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
-  unfold specLiteralFieldFits at valid
+  unfold specPrimitiveLiteralFieldFits at valid
   split at valid
   · rename_i lo hi value
     obtain ⟨loFits, hiFits⟩ := of_decide_eq_true valid
@@ -66,19 +66,37 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
       · refine ⟨Expr.strWeit capacity literal, ?_⟩
         simp only [lowWertAtE, lowWertE, lowText, decoded, fitW, dite_eq_right same, literal,
           ite_eq_left fits]
-  · exact ⟨.arrNil, by rw [lowWertAtE]⟩
-  · rename_i element length first rest
-    obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp valid
-    obtain ⟨head, loweredHead⟩ := specLiteralField_lower u Γ Λ fn er element first headOk
-    obtain ⟨tail, loweredTail⟩ := specLiteralField_lower u Γ Λ fn er (.arr element length) rest tailOk
-    exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
   · cases valid
+
+theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ty : Ty) (side : USide) (valid : specLiteralFieldFits side ty = true) :
+    ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
+  cases side
+  case arrNil =>
+    cases ty <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at valid)
+    case arr element length =>
+      cases length with
+      | zero => exact ⟨.arrNil, by rw [lowWertAtE]⟩
+      | succ _ => simp only [specLiteralFieldFits, Bool.false_eq_true] at valid
+  case arrCons first rest =>
+    cases ty <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at valid)
+    case arr element length =>
+      cases length with
+      | zero => simp only [specLiteralFieldFits, Bool.false_eq_true] at valid
+      | succ length =>
+        have both : (specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)) = true :=
+          valid
+        obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp both
+        obtain ⟨head, loweredHead⟩ := specLiteralField_lower u Γ Λ fn er element first headOk
+        obtain ⟨tail, loweredTail⟩ := specLiteralField_lower u Γ Λ fn er (.arr element length) rest tailOk
+        exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
+  all_goals exact specPrimitiveLiteralField_lower u Γ Λ fn er _ _ valid
 termination_by sizeOf side
 decreasing_by all_goals (simp_wf <;> omega)
 
 theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (fields : List (Ty × USide))
-    (valid : fields.all (fun field => specLiteralFieldFits field.1 field.2) = true) :
+    (valid : fields.all (fun field => specLiteralFieldFits field.2 field.1) = true) :
     ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
   induction fields with
   | nil => exact ⟨.nil, lowProductArgs_nil u Γ Λ fn er⟩
@@ -149,12 +167,12 @@ theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
 /-- Arbitrary Boolean arrays satisfy all the recursive literal field
     checks at their exact declared length. -/
 theorem specLiteralArrayField_erfuellbar (values : List Bool) :
-    specLiteralFieldFits (.arr .bool values.length)
-      (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil) = true := by
+    specLiteralFieldFits (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
+      (.arr .bool values.length) = true := by
   induction values with
   | nil => rfl
   | cons value rest ih =>
-    simp only [List.length_cons, List.foldr_cons, specLiteralFieldFits, ih, Bool.and_self]
+    simp only [List.length_cons, List.foldr_cons, specLiteralFieldFits, specPrimitiveLiteralFieldFits, ih, Bool.and_self]
 
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
