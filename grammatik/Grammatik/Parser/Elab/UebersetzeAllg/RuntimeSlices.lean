@@ -80,7 +80,7 @@ theorem eval_localArraySpanIndex {τ : Ty} {capacity count : Nat}
     let k := eval initial index world env
     eval initial (.arrGet array (.widen (by omega) (by omega) (.add start index))) world env =
       eval initial (arraySpanFrom array start lower 0 count (by omega)) world env
-        ⟨k.n.toNat, by have high := k.le_hi; omega⟩ := by
+        ⟨k.n.toNat, by have low := k.lo_le; have high := k.le_hi; omega⟩ := by
   dsimp only
   rw [eval_arraySpanFrom array start lower initial world env 0 count (by omega)]
   simp only [eval]
@@ -343,12 +343,12 @@ theorem fixedSpanObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 6 
   have extent : uFixedLocalArrayExtent scope (uWertBlatt scope) (.param "a") (.variable "i")
       (.bin "+" (.variable "i") (.lit 2)) = some (τ, 2, .param "i") := by
     simp only [uFixedLocalArrayExtent, sameName, Bool.not_true, Bool.false_eq_true, ite_false,
-      arrayType, firstType, uSchranke, fits, ite_true, firstRead,
+      arrayType, firstType, uSchranke, fits, and_self, ite_true, firstRead,
       show (Int.ofNat 2).toNat = 2 by decide]
   have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < (2 : Nat) := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
     simp only [uWertBody, uRechne, uLocalArraySliceObservation, extent, uSliceInteger, uSchranke,
-      Option.map_some, bind, Option.bind, arrayType, arrayRead, position, ite_true]
+      Option.map_some, bind, Option.bind, arrayType, arrayRead, position, and_self, ite_true]
 
 /-- A static literal substring admitted as a predicate argument lowers
     to the exact model subsequence at the checked byte bound. -/
