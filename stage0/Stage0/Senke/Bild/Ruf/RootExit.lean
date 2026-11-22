@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Bild.Mehr.StartupOperands
+import Runner.Basis.MemLemma
 
 @[expose] public section
 
@@ -9,7 +10,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
-  Gabbro.Stage0.Senke.BildMehr
+  Gabbro.Stage0.Senke.BildMehr Runner.Mem
 
 /-- The actual thread exit retires one allocated slot. A completed call
     keeps its finished source head, and a declared non-returning call
@@ -80,7 +81,7 @@ private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat
     rw [address, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
     exact frame.wr destination inside
   obtain ⟨after, steps, _, view, _⟩ := tso_const_prefix (before := imageToTSO before) running instruction writable
-  exact ⟨after, tso_silent_prefix_image steps rfl, by rw [view, address, sx_nat valueFits]⟩
+  exact ⟨after, tso_silent_prefix_image steps rfl, by rw [view, address, sx_nat valueFits] <;> rfl⟩
 
 /-- The emitted stop sequence stores its request and then issues the exact
     process-wide exit. The actual runner reads the issuing TSO view. -/
@@ -140,19 +141,19 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
     exact rd64_wr64 (wr64_some (frame1.wr _ (by omega))) (frame1.rd _ (by omega))
   have arg (offset : Nat) (inside : offset < 7) : ∃ word,
       (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + offset))) = some word := by
-    exact ⟨_, by simp only [Mem.rd64, frame2.rd _ (by omega), ite_true]; rfl⟩
+    exact ⟨_, by simp only [Mem.rd64, frame2.rd (scratch + offset) (by omega), ite_true]; rfl⟩
   obtain ⟨a2, read2⟩ := arg 2 (by decide)
   obtain ⟨a3, read3⟩ := arg 3 (by decide)
   obtain ⟨a4, read4⟩ := arg 4 (by decide)
   obtain ⟨a5, read5⟩ := arg 5 (by decide)
   obtain ⟨a6, read6⟩ := arg 6 (by decide)
+  have load (offset : Nat) (word : W)
+      (read : (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + offset))) = some word) :
+      (second.1.view i).rd64 (slot fp (sx (II.f scratch)) + BitVec.ofNat 64 (8 * offset)) = some word := by
+    rwa [address, slot_plus fp scratch offset]
   have request := tso_sys_prefix (before := imageToTSO decoded) atSys instruction
-    (by rw [address]; exact numberRead) (by rw [address, ← show BitVec.ofNat 64 8 = 8 by rfl, slot_plus]; exact statusRead)
-    (by rw [address, ← show BitVec.ofNat 64 16 = 16 by rfl, slot_plus]; exact read2)
-    (by rw [address, ← show BitVec.ofNat 64 24 = 24 by rfl, slot_plus]; exact read3)
-    (by rw [address, ← show BitVec.ofNat 64 32 = 32 by rfl, slot_plus]; exact read4)
-    (by rw [address, ← show BitVec.ofNat 64 40 = 40 by rfl, slot_plus]; exact read5)
-    (by rw [address, ← show BitVec.ofNat 64 48 = 48 by rfl, slot_plus]; exact read6)
+    (by rw [address]; exact numberRead) (load 1 _ statusRead) (load 2 _ read2) (load 3 _ read3)
+    (load 4 _ read4) (load 5 _ read5) (load 6 _ read6)
   let req : Req := ⟨231, BitVec.ofNat 64 status, a2, a3, a4, a5, a6⟩
   let resume : Ans → Res T := fun reply => opt reply fun pair => wr64 (slot fp (sx (II.f ((scratch + 7 : Nat) : Int))))
     pair.1 (nxt sys)
