@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Async.Elaboration
 public import Grammatik.Nebenlaeufigkeit.Async.Layout
+public import Grammatik.Nebenlaeufigkeit.Async.Order
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
