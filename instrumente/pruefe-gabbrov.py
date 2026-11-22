@@ -98,7 +98,8 @@ def modul_bauen(wurzel, modul, pfad, zeit=900):
 
 def einheit(gab, aus, pfad, zeit):
     import shutil, time
-    name = "P" + re.sub(r"[^A-Za-z0-9]", "", gab.stem)
+    # one module name per probe: replaced, not dropped, characters keep two probes apart
+    name = "P_" + re.sub(r"[^A-Za-z0-9]", "_", gab.stem)
     wurzel = aus / name
     shutil.rmtree(wurzel, ignore_errors=True)
     wurzel.mkdir(parents=True)
