@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.BildLauf
   Runner Runner.IR
 
-variable {src : String} {reserve : Nat} {options : Profil.Options} [Kern]
+variable {src : String} {reserve : Nat} {options : Profil.Options}
 
 /-- The production function's fixed entry code and the lowered body
     that follows it at a strictly later instruction address. -/
@@ -50,7 +50,7 @@ def FunctionIRPrologue.bodyEntry {output : Emitted src reserve options} {memory 
 
 /-- Derive the two contiguous code regions from the image's real function
     lowering. No separate compilation, validator, or execution is needed. -/
-theorem Emitted.function_prologue {output : Emitted src reserve options} {memory : Mem}
+theorem Emitted.function_prologue [Kern] {output : Emitted src reserve options} {memory : Mem}
     (loaded : output.IRFunctionSemantics memory) (f : (declOf output.compiled.unit).Fn) :
     Nonempty (FunctionIRPrologue output memory f) := by
   obtain ⟨code, _, _, functions, _⟩ := loaded
@@ -69,7 +69,7 @@ theorem Emitted.function_prologue {output : Emitted src reserve options} {memory
 
 /-- The prologue ends at the first instruction of the actual lowered
     body, with the same frame pointer. -/
-theorem FunctionIRPrologue.partitions {output : Emitted src reserve options} {memory : Mem}
+theorem FunctionIRPrologue.partitions [Kern] {output : Emitted src reserve options} {memory : Mem}
     {f : (declOf output.compiled.unit).Fn} (compiled : FunctionIRPrologue output memory f) (fp : W) :
     CodeAt memory (compiled.entry fp).pc compiled.prefixCode ∧
       CodeAt memory (compiled.bodyEntry fp).pc compiled.body.1 :=
@@ -98,30 +98,30 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.capture_frameMemory [kernel : 
     (codeReads : ∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * code.length → reads byte)
     (cellReads : ∀ cell ∈ cells, ∀ byte : W, cell.adr L ≤ byte.toNat →
       byte.toNat < cell.adr L + 8 * valueWords cell.ty → reads byte)
-    (emitted : capture L cells base = some code)
-    (frame : FrameOK memory fp K) (small : K < 2 ^ 31) (fits : base + words cells ≤ K)
+    (emitted : EntrySnapshots.capture L cells base = some code)
+    (frame : FrameOK memory fp K) (small : K < 2 ^ 31) (fits : base + EntrySnapshots.words cells ≤ K)
     (separated : ∀ cell ∈ cells, fp.toNat + 8 * K ≤ cell.adr L)
     (installed : CodeAt memory pc code) (far : CodeFar pc code.length fp K)
-    (inputs : Inputs L world memory cells) :
+    (inputs : EntrySnapshots.Inputs L world memory cells) :
     let start : T := ⟨pc, fp⟩
     let target : T := ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩
     let restricted := maskMemory reads (inSlots fp 0 K) memory
     ∃ count finish, @IRReference kernel.withoutSyscalls count start restricted target finish ∧
       ∀ {taken : Nat} {pointer : T} {actual : Mem},
         StarM taken start memory pointer actual → taken ≤ count →
-        (taken = count → pointer = target ∧ Agree fp base (base + words cells) memory actual ∧
-          At L world actual fp cells base) ∧
+        (taken = count → pointer = target ∧ Agree fp base (base + EntrySnapshots.words cells) memory actual ∧
+          EntrySnapshots.At L world actual fp cells base) ∧
         (taken < count → ∀ {control : Res T} {atControl : Mem},
           RunP (step pointer) actual control atControl → HostFreeControl reads (inSlots fp 0 K) control) := by
   intro start target restricted
   letI : Kern := kernel.withoutSyscalls
   obtain ⟨proofFrame, proofCode⟩ := maskMemory_code_frame installed frame far.1 frameReads codeReads
-  have inputCells : Inputs L world restricted cells := by
+  have inputCells : EntrySnapshots.Inputs L world restricted cells := by
     intro cell member
-    have span := (capture_bounds cells base emitted cell member).2
+    have span := (EntrySnapshots.capture_bounds cells base emitted cell member).2
     exact expression_mask_value frameReads (span.trans (by decide)) (cellReads cell member) (inputs cell member)
   obtain ⟨finish, executed, written, stored⟩ :=
-    capture_ok cells base emitted restricted pc proofFrame small fits separated proofCode far inputCells
+    EntrySnapshots.capture_ok cells base emitted restricted pc proofFrame small fits separated proofCode far inputCells
   obtain ⟨count, reference⟩ := IRReference.of_star executed
   obtain ⟨agreement, readable, writable⟩ := maskMemory_agreement reads (inSlots fp 0 K) memory frameReads
   refine ⟨count, finish, reference, ?_⟩
