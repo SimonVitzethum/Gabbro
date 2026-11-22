@@ -163,10 +163,11 @@ theorem layU_operands_fit (u : UProg) (tor : (declOf u).Ax → Option TorB) (bas
     (∀ l, layout.lk l + 24 < 2 ^ 31) := by
   intro layout
   have worldBeforeLocks : layout.hi ≤ layout.sye := by simp only [layout, layU]; omega
-  have worldFits : layout.hi < 2 ^ 31 := worldBeforeLocks.trans_lt fits
+  have worldFits : layout.hi < 2 ^ 31 := Nat.lt_of_le_of_lt worldBeforeLocks fits
   have inside := layU_in (lockWait := lockWait) u tor base worldFits
-  refine ⟨fun g => (inside.2.1 g).2.trans_lt worldFits, ?_, ?_⟩
+  refine ⟨fun g => Nat.lt_of_le_of_lt (inside.2.1 g).2 worldFits, ?_, ?_⟩
   · intro t f
-    exact ((Nat.le_add_right _ _).trans (col_le (lockWait := lockWait) u tor base t f)).trans_lt worldFits
+    exact Nat.lt_of_le_of_lt (Nat.le_trans (Nat.le_add_right _ _)
+      (col_le (lockWait := lockWait) u tor base t f)) worldFits
   · intro l
-    exact ((layU_sync (lockWait := lockWait) u tor base).1 l).2.trans_lt fits
+    exact Nat.lt_of_le_of_lt ((layU_sync (lockWait := lockWait) u tor base).1 l).2 fits

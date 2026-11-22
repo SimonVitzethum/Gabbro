@@ -103,16 +103,16 @@ private theorem fnIdx_name {functions : List UFn} {name : String} {index : Fin f
   induction functions with
   | nil => exact index.elim0
   | cons first rest ih =>
-    by_cases matches : (first.name == name) = true
-    · simp only [fnIdx, matches, ite_true, Except.ok.injEq] at selected
+    by_cases named : (first.name == name) = true
+    · simp only [fnIdx, named, ite_true, Except.ok.injEq] at selected
       subst index
-      exact eq_of_beq matches
+      exact eq_of_beq named
     · cases found : fnIdx rest name with
       | error failure =>
-        simp only [fnIdx, matches, ite_false, found] at selected
+        simp only [fnIdx, named, ite_false, found] at selected
         cases selected
       | ok next =>
-        simp only [fnIdx, matches, ite_false, found, Except.ok.injEq] at selected
+        simp only [fnIdx, named, ite_false, found, Except.ok.injEq] at selected
         subst index
         exact ih found
 
@@ -141,7 +141,7 @@ public structure LinkedPolls (u : UProg) (base : Programm (declOf u))
   installed : program = installPollEntries base entries
   distinct : (entries.map PollEntry.slot).Nodup
 
-@[expose] public def linkPolls {u : UProg} (base : Programm (declOf u)) (entries : List (PollEntry u))
+public def linkPolls {u : UProg} (base : Programm (declOf u)) (entries : List (PollEntry u))
     (distinct : (entries.map PollEntry.sourceName).Nodup) : LinkedPolls u base entries :=
   ⟨installPollEntries base entries, rfl, pollSlots_distinct distinct⟩
 
