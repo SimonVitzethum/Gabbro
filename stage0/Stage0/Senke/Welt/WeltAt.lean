@@ -47,7 +47,7 @@ theorem ValueAt.congr_read_bytes {layout : Lay D} {before after : Runner.Mem}
 
 private theorem littleEndian_bound (memory : Runner.Mem) (base : Runner.W) :
     ∀ count, memory.le base count < 256 ^ count
-  | 0 => by decide
+  | 0 => by change 0 < 1; exact Nat.zero_lt_one
   | count + 1 => by
     let byte := (memory.b (base + BitVec.ofNat 64 count)).toNat
     have bound : byte < 256 := BitVec.isLt _
@@ -65,13 +65,13 @@ private theorem littleEndian_byte {before after : Runner.Mem} {base : Runner.W} 
   | 0, _, _, inside => (Nat.not_lt_zero _ inside).elim
   | count + 1, offset, words, inside => by
     rw [Runner.Mem.le, Runner.Mem.le] at words
-    have prefix := congrArg (· % (256 ^ count)) words
+    have lowerWords := congrArg (· % (256 ^ count)) words
     rw [Nat.add_mul_mod_self_right, Nat.add_mul_mod_self_right,
       Nat.mod_eq_of_lt (littleEndian_bound before base count),
-      Nat.mod_eq_of_lt (littleEndian_bound after base count)] at prefix
+      Nat.mod_eq_of_lt (littleEndian_bound after base count)] at lowerWords
     rcases Nat.lt_succ_iff_lt_or_eq.mp inside with lower | rfl
-    · exact littleEndian_byte prefix lower
-    · rw [prefix] at words
+    · exact littleEndian_byte lowerWords lower
+    · rw [lowerWords] at words
       apply BitVec.eq_of_toNat_eq
       exact Nat.eq_of_mul_eq_mul_right (Nat.pow_pos (by decide))
         (Nat.add_left_cancel words)
