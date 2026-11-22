@@ -149,7 +149,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
   have scope : Senke.Pre L restricted pc fp K d code env (fun m => Senke.ReadWorldAt m L world Λ) reserved :=
     ⟨masked.ctx, masked.small, masked.frame, masked.code, masked.far, masked.env,
       expression_world_mask frameReads layout worldReads valueMemory, Senke.readWorldAt_stab layout separated⟩
-  obtain ⟨finish, executed, protected, value⟩ :=
+  obtain ⟨finish, executed, preservedWords, value⟩ :=
     Senke.lowE_ok_scoped (same := entry) initial world (fun _ h => h) layout
       expression d code top lowered fits restricted pc env scope
   obtain ⟨count, reference⟩ := IRReference.of_star executed
@@ -174,7 +174,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
       by_cases inFrame : inSlots fp 0 K byte
       · have covered := frameReads byte inFrame
         exact (memoryEq.1 byte covered).1.symm.trans
-          ((protected.b byte outside).trans (agree.1 byte covered).1)
+          ((preservedWords.b byte outside).trans (agree.1 byte covered).1)
       · exact (unwritten byte inFrame).1
     · intro index present
       have indexFits : index < Senke.valueWords τ := by simpa only [Senke.encodeWords_length] using present

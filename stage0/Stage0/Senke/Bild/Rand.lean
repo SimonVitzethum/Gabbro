@@ -79,7 +79,7 @@ end Dekoder
 /-- **The fixed data of one lowered function body**: what `lowEnd_ok` keeps from the first statement of the body of
     `f` to its last — the world layout `L`, the oracle and pass budget, the call handler `R` of the function
     simulations, the code addresses `A` and codes `C`, the frame at `fp` with `K` slots (`Ks` its own), the
-    return target, the entry world and environment, the ensures code, the protected slots, the loop targets, the
+    return target, the entry world and environment, the ensures code, the preservedWords slots, the loop targets, the
     held locks `H` and the pending releases `sc`. -/
 structure BodyFrame (D : Deklaration) where
   L : Lay D
@@ -187,7 +187,7 @@ theorem BodyFrame.finishBind {B : BodyFrame D} (frame : B.Ok)
     AgreeW B.L B.fp B.lo B.K before after ∧
       B.RandIR rest (pc + BitVec.ofNat 64 (16 * code.length)) after (σ.lese Λ e.orte)
         (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := by
-  obtain ⟨all, largest, built, stack, codeFits, pre, low, view, locks, world, protected, held⟩ := start
+  obtain ⟨all, largest, built, stack, codeFits, pre, low, view, locks, world, preservedWords, held⟩ := start
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at built
   obtain ⟨⟨ce, te⟩, expression, ⟨tail, tailTop⟩, body, combined⟩ := built
   rw [lowered] at expression
@@ -208,7 +208,7 @@ theorem BodyFrame.finishBind {B : BodyFrame D} (frame : B.Ok)
   have lowNext : B.lo ≤ frei (τ :: Γ) B.reserved := by
     simp only [frei, contextWords_cons] at low ⊢; omega
   have protectedNext : ∀ j ∈ B.pr, j < frei (τ :: Γ) B.reserved := fun j used => by
-    have original := protected j used
+    have original := preservedWords j used
     simp only [frei, contextWords_cons] at original ⊢
     omega
   exact ⟨agreeW_of (agree.mono low), tail, tailTop, body, by omega, by omega, prepared, lowNext,
@@ -239,6 +239,6 @@ theorem BodyFrame.randIR_bind {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] (h
   obtain ⟨m1, s1, a1s, value⟩ :=
     lowE_ok (same := by intro _; rfl) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he
       (by omega) m pc ρ hpw
-  exact ⟨ce, m1, s1, hB.finishBind original he a1s value⟩
+  exact ⟨ce, m1, s1, BodyFrame.finishBind hB original he a1s value⟩
 
 end Gabbro.Stage0.Senke.BildLauf
