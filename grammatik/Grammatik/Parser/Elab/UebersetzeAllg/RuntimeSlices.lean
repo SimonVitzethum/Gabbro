@@ -267,9 +267,9 @@ theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
 theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 4 ≤ capacity) :
     ∃ scope : UCtx,
       uWertBody scope (.built "lenof" [.built "#slice" [.variable "a", .variable "i", .lit 4]]) =
-        .ok (.sub (.lit 4) (.param "i")) ∧
+        .ok (.sub (.lit (Int.ofNat 4)) (.param "i")) ∧
       uWertBody scope (.index (.built "#slice" [.variable "a", .variable "i", .lit 4]) (.lit 1)) =
-        .ok (.idx (.param "a") (.add (.param "i") (.lit 1))) := by
+        .ok (.idx (.param "a") (.add (.param "i") (.lit (Int.ofNat 1)))) := by
   let scope : UCtx := {
     names := ["a", "i"], kinds := [.wert, .int], types := [.arr τ capacity, .int 0 1],
     tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
@@ -282,7 +282,7 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
   have firstRead : uWertBlatt scope (.variable "i") = .ok (.param "i") := by
     simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
   have bounds : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ Int.ofNat 4 ∧ Int.ofNat 4 ≤ capacity :=
-    ⟨by decide, by decide, by omega⟩
+    ⟨by decide, by decide, Int.ofNat_le.mpr enough⟩
   have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < Int.ofNat 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
     simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, Option.map_some, bind, Option.bind,
