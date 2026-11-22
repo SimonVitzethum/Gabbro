@@ -3265,7 +3265,7 @@ masking at all (no `cli`/`sti`).
 
 *Files: `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/FadenMaschine.lean` (the machine, its invariant, both bridges),
 `Zielsatz/Kern/Spec.lean` (`Einheit.gestartet`, `Einheit.ws`, `ZielF`, the new `GabbroZiel`),
-`Zielsatz/Faeden/Faeden.lean` (the join legs), `Zielsatz/Kern/Beweis.lean` (`zielF_aus`, `gabbro_ziel`,
+`Zielsatz/Faeden/Faeden.lean` (the join legs), `Zielsatz/Kern/Beweis.lean` (`pflicht_oeffnen`, `gabbro_ziel`,
 `gabbro_ziel_g`), `Zielsatz/Faeden/FaedenVor.lean` (nothing weakened), `Zielsatz/Faeden/FaedenZeuge.lean`
 (witnesses). OFFEN O21, O22; report `messung/OPUS-A-LAUFZEITFAEDEN.md` (retired report, in the history).*
 
@@ -3282,7 +3282,7 @@ reached `Ziel` only through `klon_ziel` (§39, outside the statement), a `start`
 | `kein_warteZyklusF` | no wait cycle through locks AND joins: a lock edge never ends at a joiner, so a cycle with one non-joiner is a lock cycle (ranks), and a joiner-only cycle climbs in spawn rank |
 | `keine_verklemmungF` | if every live unfinished thread waits for a lock or an unfinished root, every live thread is finished (highest waited-for lock, or the rank bound of join chains) |
 | `fortschrittF_aus` | every stop is named on the thread machine: dormant, a join wait or an enabled `join`, or `FortschrittG`'s list with the G step admitted by `lauf` |
-| `zielF_aus`, `gabbro_ziel : GabbroZiel` | every leg of `ZielF` (= `Ziel` on the G state + `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`, `keineVerklemmung`, `keinZyklus`, `fortschritt`) on every reachable thread machine; axioms `propext`, `Classical.choice`, `Quot.sound` |
+| `pflicht_oeffnen`, `gabbro_ziel : GabbroZiel` | every leg of `ZielF` (= `Ziel` on the G state + `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`, `keineVerklemmung`, `keinZyklus`, `fortschritt`) on every reachable thread machine; axioms `propext`, `Classical.choice`, `Quot.sound` |
 | `gabbro_ziel_g` | the statement of before (`Ziel` on every G run) as a corollary; every former caller of `gabbro_ziel` uses it |
 | `ws_ohne_gestartet`, `startPflicht_vor_iff`, `laufzeit_vor_iff`, `pruefer_aus_vor_gleich`, `gabbro_ziel_vor` | nothing weakened: on units without run-time roots `ws`, (b), (d) are the old ones; an old checker is a new one with the same verdict; the old statement VERBATIM follows |
 | `mehrfach_gestartet`, `akzeptiertSpec_gestartet` | a run-time root stands twice in `ws`, so the checker guarantees no signature lock, no reasons, pool safety (model half of `N458`/`N462`; for a lifted child `N456`/`N457`) |
@@ -3441,7 +3441,7 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 
 *Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/Eigenschaften/InvariantenZeuge.lean`
 (witnesses), `Zielsatz/Kern/Spec.lean` (definitions, the invariant block of the header),
-`Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `zielF_aus`); deleted Rust `m1.rs`
+`Zielsatz/Kern/Beweis.lean` (`ziel_aus`, `pflicht_oeffnen`); deleted Rust `m1.rs`
 (`invarianten_buchen`), deleted `tests/invarianten_buchung.rs`, `examples/poison/1231`-`1234`. Report
 `messung/OPUS-D-INVARIANTEN.md` (retired report, in the history).*
 
@@ -8384,5 +8384,5 @@ model's certificate of §217 over the program Stage 0 lowers, and the generator.
 |---|---|---|
 | `programm_von` | `Zertifikat/Programm.lean` | The program `lowerAllg u` answers has at every function the postcondition, body and precondition of that function's lowering `lowerFnAt`; every form. |
 | `restore_ohneAlt` | `Zertifikat/Lauf.lean` | Without `old` of a static in a postcondition Stage 0's restoration is the identity on the lowered program. |
-| `zielF_aus`, `logikFn_aus`, tactic `gabbrov_wp` | `Zertifikat/WP.lean` | Open a function's duty at its own lowering; the exact weakest-precondition rules of the model on its body. |
+| `pflicht_oeffnen`, `logikFn_aus`, tactic `gabbrov_wp` | `Zertifikat/WP.lean` | Open a function's duty at its own lowering; the exact weakest-precondition rules of the model on its body. |
 | `einheitLeer_ziel`, `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | A function's duty proved directly over its lowered body; the premises of `nutzerA_aus_ziele` hold jointly and the lowering accepts the unit. |

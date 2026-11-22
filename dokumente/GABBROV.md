@@ -46,7 +46,7 @@ replaced), `Sammlung/S<k>`, `Lexer.lean` with `nutzerBild` (exactly the image th
 `Pruefung`. Exit 0: (b) is stated; 1: a named refusal (a postcondition reading `old` of a static); 2:
 wrong arguments, or Stage 0 refuses the source or its lowering.
 
-A proof opens with `zielF_aus` (the function's body and postcondition are those of its own lowering)
+A proof opens with `pflicht_oeffnen` (the function's body and postcondition are those of its own lowering)
 and `logikFn_aus`; the tactic `gabbrov_wp` applies the model's exact weakest-precondition rules.
 
 ## Open
