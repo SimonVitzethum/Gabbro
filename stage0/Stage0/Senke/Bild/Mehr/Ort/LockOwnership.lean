@@ -17,6 +17,12 @@ structure TicketOwnership {D : Deklaration} {N : Nat}
     lock ∈ offen (source.faeden thread.val).spur
   outside : ∀ thread, N ≤ thread → lock ∉ offen (source.faeden thread).spur
 
+/-- The source traces agree on every lock except the one being
+    entered or released. -/
+def OtherLockOwners {D : Deklaration} (selected : D.Lock) (before after : RufMaschineG D) : Prop :=
+  ∀ other, other ≠ selected → ∀ thread,
+    other ∈ offen (after.faeden thread).spur ↔ other ∈ offen (before.faeden thread).spur
+
 /-- The actual loaded lock words, the checked source startup and every
     reserved thread agree before the image executes its first instruction. -/
 theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketOwnership [Kern]
@@ -124,18 +130,25 @@ theorem TicketOwnership.enter {D : Deklaration} {N : Nat} {P : Programm D}
       ⟨l, Γ, Λ, env, .dann (.cons (.locks lock ordered body) rest) k⟩)
     (ranks : ∀ earlier ∈ offen (source.m.faeden thread.val).spur, D.rang earlier < D.rang lock) :
     ∃ next, FadenSchrittX P O passes Tg source next ∧ next.m.speicher = source.m.speicher ∧
-      TicketOwnership next.m lock (before.mit thread (.drin ticket)) := by
+      TicketOwnership next.m lock (before.mit thread (.drin ticket)) ∧ OtherLockOwners lock source.m next.m := by
   obtain ⟨unheld, free⟩ := owners.free_at_admission limit invariant saved served
   have step := RufSchrittG2.dannLocks (P := P) (O := O) (passes := passes)
     source.m thread.val l Γ Λ Λ' lock ordered body rest k env head unheld ranks free
-  refine ⟨_, .lauf source thread.val _ live ready (gx_aus_g (.g2 step)), rfl, ?_⟩
-  apply owners.update thread (.drin ticket) rfl
-  · intro other different
-    exact rufUpdateG_noteq _ _ _ different _
-  · change (Ort.drin ticket).haelt = true ↔
-      lock ∈ offen (rufUpdateG source.m.faeden thread.val _ thread.val).spur
-    rw [rufUpdateG_self]
-    exact ⟨fun _ => List.mem_cons_self, fun _ => rfl⟩
+  refine ⟨_, .lauf source thread.val _ live ready (gx_aus_g (.g2 step)), rfl, ?_, ?_⟩
+  · apply owners.update thread (.drin ticket) rfl
+    · intro other different
+      exact rufUpdateG_noteq _ _ _ different _
+    · change (Ort.drin ticket).haelt = true ↔
+        lock ∈ offen (rufUpdateG source.m.faeden thread.val _ thread.val).spur
+      rw [rufUpdateG_self]
+      exact ⟨fun _ => List.mem_cons_self, fun _ => rfl⟩
+  · intro other distinct issuer
+    change other ∈ offen (rufUpdateG source.m.faeden thread.val _ issuer).spur ↔ _
+    by_cases same : issuer = thread.val
+    · subst issuer
+      rw [rufUpdateG_self]
+      simp only [offen, List.mem_cons, distinct, false_or]
+    · rw [rufUpdateG_noteq _ _ _ same]
 
 /-- The corresponding GX scope exit forgets the owner at the serving
     word's publication point. The shared source store is preserved. -/
@@ -153,11 +166,12 @@ theorem TicketOwnership.leave {D : Deklaration} {N : Nat} {P : Programm D}
     let released : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
       upd before.pc thread .gibW, before.q.tail⟩
     ∃ next, FadenSchrittX P O passes Tg source next ∧ next.m.speicher = source.m.speicher ∧
-      lock ∈ offen (source.m.faeden thread.val).spur ∧ TicketOwnership next.m lock released := by
+      lock ∈ offen (source.m.faeden thread.val).spur ∧ TicketOwnership next.m lock released ∧
+      OtherLockOwners lock source.m next.m := by
   intro released
   have step := RufSchrittG2.freiGib (P := P) (O := O) (passes := passes)
     source.m thread.val l Γ Λ lock k env head
-  refine ⟨_, .lauf source thread.val _ live ready (gx_aus_g (.g2 step)), rfl, ?_, ?_⟩
+  refine ⟨_, .lauf source thread.val _ live ready (gx_aus_g (.g2 step)), rfl, ?_, ?_, ?_⟩
   · apply (owners.inside thread).mp
     rw [saved]
     rfl
@@ -169,6 +183,13 @@ theorem TicketOwnership.leave {D : Deklaration} {N : Nat} {P : Programm D}
       rw [rufUpdateG_self]
       exact Iff.intro (fun impossible => Bool.noConfusion impossible)
         (fun member => (List.Nodup.not_mem_erase unique member).elim)
+  · intro other distinct issuer
+    change other ∈ offen (rufUpdateG source.m.faeden thread.val _ issuer).spur ↔ _
+    by_cases same : issuer = thread.val
+    · subst issuer
+      rw [rufUpdateG_self]
+      exact List.mem_erase_of_ne distinct
+    · rw [rufUpdateG_noteq _ _ _ same]
 
 /-- The actual image CAS and the corresponding GX scope exit agree
     at a single publication point. The successor retains both
@@ -198,14 +219,17 @@ theorem image_ticket_release_GX [Kern] {D : Deklaration} {N : Nat}
     let released : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
       upd before.pc thread .gibW, before.q.tail⟩
     ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
+      memory.1 = { machine.ms.1 with
+        m := Mem.write machine.ms.1.m (BitVec.ofNat 64 (layout.lk lock + 8)) 8
+          (BitVec.ofNat 64 (expected + 1)).toNat } ∧
       TicketWordsAt memory.1.m (layout.lk lock) released ∧ Inv N released ∧
       ∃ target, FadenSchrittX P O passes Tg source target ∧ target.m.speicher = source.m.speicher ∧
-        TicketOwnership target.m lock released := by
-  obtain ⟨process, returned, _, _, words, invariant', _, _⟩ :=
+        TicketOwnership target.m lock released ∧ OtherLockOwners lock source.m target.m := by
+  obtain ⟨process, returned, memoryEq, _, words, invariant', _, _⟩ :=
     image_ticket_release limit invariant saved fits represented writable waiting answered
-  obtain ⟨target, advances, store, _, owners'⟩ :=
+  obtain ⟨target, advances, store, _, owners', others⟩ :=
     owners.leave (P := P) (O := O) (passes := passes) (Tg := Tg) saved live ready k env head unique
-  exact ⟨process, returned, words, invariant', target, advances, store, owners'⟩
+  exact ⟨process, returned, memoryEq, words, invariant', target, advances, store, owners', others⟩
 
 /-- When the actual serving read reports the caller's ticket, the same
     transition enters the corresponding source lock scope. -/
@@ -242,7 +266,8 @@ theorem image_ticket_admit_GX [Kern] {D : Deklaration} {N : Nat}
     ProcessStep imageTSO actI machine [] after ∧ memory = machine.ms ∧
       BindingStep strategy before thread admitted ∧ TicketWordsAt memory.1.m (layout.lk lock) admitted ∧
       Inv N admitted ∧ ∃ target, FadenSchrittX P O passes Tg source target ∧
-        target.m.speicher = source.m.speicher ∧ TicketOwnership target.m lock admitted := by
+        target.m.speicher = source.m.speicher ∧ TicketOwnership target.m lock admitted ∧
+          OtherLockOwners lock source.m target.m := by
   obtain ⟨process, memorySame, ⟨extra, observed⟩, next, binds, words, _, successor⟩ :=
     image_ticket_serving_read strategy spins saved represented footprint buffers shared waiting answered
   obtain ⟨expectedExtra, expected⟩ := matched

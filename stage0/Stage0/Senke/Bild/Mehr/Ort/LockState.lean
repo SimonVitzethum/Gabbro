@@ -74,8 +74,7 @@ theorem ImageTicketStates.update {D : Deklaration} [DecidableEq D.Lock] {N : Nat
     (current : ImageTicketStates layout memory source states) (separate : LaySync layout)
     (bound : layout.sye ≤ 2 ^ 64)
     (writes : GleichAuf (fun byte => ¬ LockBytes layout lock byte) nextMemory memory)
-    (preserved : ∀ other, other ≠ lock → ∀ thread,
-      other ∈ offen (nextSource.faeden thread).spur ↔ other ∈ offen (source.faeden thread).spur)
+    (preserved : OtherLockOwners lock source nextSource)
     (words : TicketWordsAt nextMemory (layout.lk lock) next) (protocol : Inv N next)
     (owners : TicketOwnership nextSource lock next) :
     ImageTicketStates layout nextMemory nextSource (fun other => if other = lock then next else states other) where
@@ -109,5 +108,24 @@ theorem ImageTicketStates.update {D : Deklaration} [DecidableEq D.Lock] {N : Nat
         exact ((current.owners other).inside thread).trans (preserved other same thread.val).symm
       · intro thread beyond held
         exact (current.owners other).outside thread beyond ((preserved other same thread).mp held)
+
+/-- A serving-word write changes only the selected reservation. The
+    release proof supplies the new owner, queue and words directly. -/
+theorem ImageTicketStates.writeServing {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {memory : Mem} {source nextSource : RufMaschineG D}
+    {states : D.Lock → Zustand N} {lock : D.Lock} {next : Zustand N} {word : W}
+    (current : ImageTicketStates layout memory source states) (separate : LaySync layout)
+    (bound : layout.sye ≤ 2 ^ 64)
+    (preserved : OtherLockOwners lock source nextSource)
+    (words : TicketWordsAt (Mem.write memory (BitVec.ofNat 64 (layout.lk lock + 8)) 8 word.toNat)
+      (layout.lk lock) next)
+    (protocol : Inv N next) (owners : TicketOwnership nextSource lock next) :
+    ImageTicketStates layout (Mem.write memory (BitVec.ofNat 64 (layout.lk lock + 8)) 8 word.toNat)
+      nextSource (fun other => if other = lock then next else states other) := by
+  refine current.update separate bound ?_ preserved words protocol owners
+  intro byte outside
+  have fits := (separate.1 lock).2.trans bound
+  exact (write_nurIn memory (BitVec.ofNat 64 (layout.lk lock + 8)) word.toNat).gleichAt (fun touched =>
+    outside (lockWord_in_bytes fits (by decide) touched))
 
 end Gabbro.Stage0.Senke.Faeden
