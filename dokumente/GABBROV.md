@@ -46,13 +46,37 @@ replaced), `Sammlung/S<k>`, `Lexer.lean` with `nutzerBild` (exactly the image th
 `Pruefung`. Exit 0: (b) is stated; 1: a named refusal (a postcondition reading `old` of a static); 2:
 wrong arguments, or Stage 0 refuses the source or its lowering.
 
-A proof opens with `pflicht_oeffnen` (the function's body and postcondition are those of its own lowering)
-and `logikFn_aus`; the tactic `gabbrov_wp` applies the model's exact weakest-precondition rules.
+Every proof file starts with `gabbrov_beweis`. It does four things:
+
+1. It opens the duty at the function's own lowering (`pflicht_oeffnen`) and puts the lowered body
+   into the kernel's normal form.
+2. It executes the body symbolically by the model's exact weakest-precondition rules (`gabbrov_wp`):
+   - sequences, bindings, assignments and writes;
+   - branches, matches and reasons, with a symbolic value split into its finitely many cases;
+   - `narrow`, checks and lock releases;
+   - bounded `retry` and `traverse`, unrolled pass by pass;
+   - calls, split on the callee's outcome, with the callee's precondition read off its own lowering;
+   - foreign calls, split on the oracle's answer.
+3. It closes the return obligation (`gabbrov_fertig`).
+4. It turns what is left over symbolic values into integer arithmetic (`gabbrov_arith`). The kernel
+   checks that this arithmetic is the evaluation, and `omega` then tries to close it.
+
+Every rule is an equivalence. Every step is checked by the kernel, and no tactic is a trust point.
+Whatever remains in the file is the program's own logic, stated readably. When a program violates its
+contract, the violated condition is what remains, for example `x + x = x + x + 1` for a wrong
+`ensures`.
+
+Measured on 110 Stage-0 probes (172 functions), 141 duties are proved by `gabbrov_beweis` alone. Of
+the 31 that remain:
+
+- 10 are refusal probes, which keep exactly their violation.
+- The others use forms without a rule yet: indirect calls, scoped returns, `exchange`, `awaits`,
+  float narrowing, `shift`, the fallible foreign call at the end of a body, and invariants over
+  tables.
 
 ## Open
 
-- Normalising the lowered body of large functions inside proofs, so that `gabbrov_wp` applies step by
-  step without evaluating whole functions.
+- Rules for the forms just listed.
 - Units whose postconditions read `old` of a static: the duty over the restored program.
 
 The guardian is `instrumente/pruefe-gabbrov.py`.
