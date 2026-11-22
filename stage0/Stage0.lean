@@ -44,6 +44,7 @@ public import Stage0.Senke.Bild.Mehr.ImageTransition
 public import Stage0.Senke.Bild.Mehr.Ort.SingleThread
 public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
 public import Stage0.Senke.Bild.Mehr.Ort.Simulation
+public import Stage0.Senke.Sperre.Bindung.Instructions
 public import Stage0.Senke.Bild.RunnerFile
 public import Stage0.Senke.Bild.Rest
 public import Stage0.Senke.Bild.Gleich.Lesegleich

@@ -128,4 +128,44 @@ theorem ImageTicketStates.writeServing {D : Deklaration} [DecidableEq D.Lock] {N
   exact (write_nurIn memory (BitVec.ofNat 64 (layout.lk lock + 8)) word.toNat).gleichAt (fun touched =>
     outside (lockWord_in_bytes fits (by decide) touched))
 
+/-- The actual draw CAS maintains the registry for every lock. Queuing
+    changes the selected lock's counter and ticket position, and the
+    committed GX state stays at the same lock-scope boundary. -/
+theorem ImageTicketStates.draw [Kern] {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N} {lock : D.Lock}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Fin N} {expected : Nat}
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64) (capacity : N ≤ 2147483647)
+    (registered : (states lock).pc thread = .casN expected) (representable : expected < 2 ^ 64)
+    (writable : Mem.all machine.ms.1.m.wr (BitVec.ofNat 64 (layout.lk lock)) 8 = true)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.cas (BitVec.ofNat 64 (layout.lk lock)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.cas (BitVec.ofNat 64 (layout.lk lock)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory) :
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths.set thread.val (some (resume reply))⟩ ∧
+      reply = some (BitVec.ofNat 64 (states lock).w.next, 0) ∧ memory.1.buf = machine.ms.1.buf ∧
+      ∃ next, Schritt (states lock) thread next ∧
+        ImageTicketStates layout memory.1.m source (fun other => if other = lock then next else states other) := by
+  have space := (geometry.1 lock).2.trans bound
+  obtain ⟨run, result, buffers, next, transition, words, ownership⟩ :=
+    image_ticket_draw registered representable space (current.words lock) writable waiting answered
+  obtain ⟨_, _, changed⟩ := image_CAS_reply (current.words lock).next writable waiting answered
+  have otherBytes : GleichAuf (fun byte => ¬ LockBytes layout lock byte) memory.1.m machine.ms.1.m := by
+    rw [changed]
+    split
+    · intro byte outside
+      exact (write_nurIn _ _ _).gleichAt (fun touched =>
+        outside (lockWord_in_bytes space (offset := 0) (by decide) (by simpa only [Nat.add_zero] using touched)))
+    · intro byte _
+      exact GleichAt.refl _ _
+  have sameOwners : TicketOwnership source lock next := by
+    refine ⟨?_, (current.owners lock).outside⟩
+    intro other
+    rw [ownership other]
+    exact (current.owners lock).inside other
+  exact ⟨run, result, buffers, next, transition,
+    current.update geometry bound otherBytes (fun _ _ _ => Iff.rfl) words
+      ((current.protocol lock).schritt capacity transition) sameOwners⟩
+
 end Gabbro.Stage0.Senke.Faeden

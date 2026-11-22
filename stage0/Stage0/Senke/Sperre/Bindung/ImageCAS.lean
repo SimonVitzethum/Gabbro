@@ -167,7 +167,8 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
     let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
     ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 before.w.next, 0) ∧
       memory.1.buf = machine.ms.1.buf ∧
-      ∃ next, Schritt before thread next ∧ TicketWordsAt memory.1.m base next := by
+      ∃ next, Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧
+        ∀ other, (next.pc other).haelt = (before.pc other).haelt := by
   intro after
   let old := BitVec.ofNat 64 before.w.next
   let requested := BitVec.ofNat 64 expected
@@ -190,7 +191,13 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
     let next : Zustand N := ⟨⟨before.w.next + 1, before.w.serv, before.w.wait⟩,
       upd before.pc thread (.ladeS before.w.next), before.q ++ [thread]⟩
     rw [if_pos same] at memoryEq
-    refine ⟨next, .zieht saved got, ?_⟩
+    refine ⟨next, .zieht saved got, ?_, ?_⟩
+    rotate_left
+    · intro other
+      by_cases sameThread : other = thread
+      · subst other
+        simp only [next, upd_self, saved, Ort.haelt]
+      · simp only [next, upd_ne _ _ sameThread]
     rw [memoryEq]
     have readable : all machine.ms.1.m.rd address 8 = true := by
       have read := represented.next
@@ -212,9 +219,14 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
       (rd64_write_far (separate 8 (by decide) (by decide))).trans represented.serving,
       (rd64_write_far (separate 16 (by decide) (by decide))).trans represented.waiters⟩
   · rw [if_neg same] at memoryEq
-    refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_⟩
-    rw [memoryEq]
-    exact ⟨represented.next, represented.serving, represented.waiters⟩
+    refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_, ?_⟩
+    · rw [memoryEq]
+      exact ⟨represented.next, represented.serving, represented.waiters⟩
+    · intro other
+      by_cases sameThread : other = thread
+      · subst other
+        simp only [Zustand.mit, upd_self, saved, Ort.haelt]
+      · simp only [Zustand.mit, upd_ne _ _ sameThread]
 
 /-- The holder's actual serving-word CAS publishes the next ticket and
     relinquishes ownership. The invariant excludes a failed comparison
