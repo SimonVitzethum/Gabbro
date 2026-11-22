@@ -34,19 +34,18 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     exact exactInstruction
   have firstSlot : sx (II.f scratch) = BitVec.ofNat 64 scratch := sx_nat (by omega)
   have secondSlot : sx (II.f ((scratch + 1 : Nat) : Int)) = BitVec.ofNat 64 (scratch + 1) := sx_nat (by omega)
-  let firstMemory := Mem.write memory (slot fp (BitVec.ofNat 64 scratch)) 8 entry
+  let firstMemory := Mem.write memory (slot fp (BitVec.ofNat 64 scratch)) 8 child.pc.toNat
   have wroteFirst : RunM (step initial) memory middle firstMemory := by
     have fits : Mem.all memory.wr (slot initial.fp (sx (II.f scratch))) 8 = true := by
       rw [firstSlot]
       exact frame.wr scratch (by omega)
     have ran := constantInstruction_memory first fits
-    simpa only [firstSlot, sx_nat entryFits, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show entry < 2 ^ 64 by omega),
-      firstMemory, initial, middle, nxt] using ran
+    simpa only [firstSlot, sx_nat entryFits, firstMemory, child, initial, middle, nxt] using ran
   have keptFirst : Agree fp scratch slots memory firstMemory :=
     agree_write frame.room (Nat.le_refl _) (by omega) _
   have second : InsAt firstMemory middle.pc 1 (II.f ((scratch + 1 : Nat) : Int)) (II.f stack) (II.f 0) :=
     (code.agree keptFirst (spawnOne_len scratch entry stack ▸ far)) 1 (by rw [spawnOne_len]; decide)
-  let prepared := Mem.write firstMemory (slot fp (BitVec.ofNat 64 (scratch + 1))) 8 stack
+  let prepared := Mem.write firstMemory (slot fp (BitVec.ofNat 64 (scratch + 1))) 8 child.fp.toNat
   have wroteSecond : RunM (step middle) firstMemory parent prepared := by
     have fits : Mem.all firstMemory.wr (slot middle.fp (sx (II.f ((scratch + 1 : Nat) : Int)))) 8 = true := by
       rw [secondSlot]
@@ -54,8 +53,7 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     have ran := constantInstruction_memory second fits
     have pointer : nxt middle = parent :=
       congrArg (fun ip => T.mk ip fp) (pcN pc 1 1 2 rfl)
-    simpa only [pointer, secondSlot, sx_nat stackFits, BitVec.toNat_ofNat,
-      Nat.mod_eq_of_lt (show stack < 2 ^ 64 by omega), prepared, middle] using ran
+    simpa only [pointer, secondSlot, sx_nat stackFits, prepared, child, middle] using ran
   have keptSecond : Agree fp scratch slots firstMemory prepared :=
     agree_write frame.room (Nat.le_succ _) (by omega) _
   have decoded : InsAt prepared parent.pc 24 (II.f ((scratch + 2 : Nat) : Int))
@@ -63,7 +61,7 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     (code.agree (keptFirst.trans keptSecond) (spawnOne_len scratch entry stack ▸ far)) 2 (by rw [spawnOne_len]; decide)
   have childEntry : prepared.rd64 (slot parent.fp (sx (II.f scratch))) = some child.pc := by
     rw [firstSlot]
-    change (Mem.write firstMemory _ 8 stack).rd64 _ = _
+    change (Mem.write firstMemory _ 8 child.fp.toNat).rd64 _ = _
     rw [rd64_write_far (slot_far frame.room (by omega) (by omega) (by omega))]
     exact rd64_wr64 (wr64_some (frame.wr scratch (by omega))) (frame.rd scratch (by omega))
   have childFrame : prepared.rd64 (slot parent.fp (sx (II.f scratch)) + 8) = some child.fp := by
