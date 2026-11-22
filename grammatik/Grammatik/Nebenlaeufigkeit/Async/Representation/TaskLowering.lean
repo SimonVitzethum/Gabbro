@@ -85,15 +85,17 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
   generalize same : env.get slot = storage at represented
   cases represented with
   | callReady typed =>
-    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval, same,
-      pendingAnswer, readyAnswer, execArms]
+    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval]
+    erw [same]
+    simp only [pendingAnswer, readyAnswer, execArms]
     simp only [runTaskPoll, pollTaskWith, pure, Except.pure, TaskStepRep]
-    refine ⟨_, ?_, .callReady path name args typed⟩
+    refine ⟨_, ?_, .callReady path name args (by assumption)⟩
     rw [← same, setCurrent]
     rfl
   | callActive _ _ _ payload =>
-    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval, same,
-      pendingAnswer, readyAnswer, execArms]
+    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval]
+    erw [same]
+    simp only [pendingAnswer, readyAnswer, execArms]
     rw [childPollBlock, waitingBlock_exec_outcome]
     obtain ⟨silent, evaluated⟩ := leafPollArguments_eval callee .here world world (.cons payload env)
     have noRead : world.lese Λ [] = world := rfl
