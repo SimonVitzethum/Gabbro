@@ -155,8 +155,11 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
     rw [slot_slot, ← Nat.add_assoc, unchanged _ within (by simp only [FB]; omega)]
     exact args i inWords
   · change (after.1.view (index + 1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 0)) = _
-    rw [slot_slot, Nat.add_zero, view,
-      Mem.rd64_write_far (slot_far frameOK.room (i := FB + 1) (j := FB) (by omega) (by omega) (by omega))]
+    rw [slot_slot, Nat.add_zero, view]
+    change (Mem.write (Mem.write (before.ms.1.view (index + 1)) (slot fp (BitVec.ofNat 64 FB)) 8
+      (nxt pointer).pc.toNat) (slot fp (BitVec.ofNat 64 (FB + 1))) 8 fp.toNat).rd64
+        (slot fp (BitVec.ofNat 64 FB)) = _
+    rw [Mem.rd64_write_far (slot_far frameOK.room (i := FB + 1) (j := FB) (by omega) (by omega) (by omega))]
     exact rd64_write_same (frameOK.rd FB (by omega))
   · change (after.1.view (index + 1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 1)) = _
     rw [slot_slot, view]
@@ -360,13 +363,12 @@ theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
   have guard : CodeAt (before.ms.1.view thread) pc (guardC 2 105 scratch) :=
     codeAt_left (by simpa only [List.append_assoc, scratch] using decoded)
   have branch := tso_guard_fail (before := imageToTSO before) running guard
-    (by rw [show sx (II.f 2) = BitVec.ofNat 64 2 by decide]; exact zero)
+    (by rw [show sx (II.f (Int.ofNat 2)) = BitVec.ofNat 64 2 by decide]; exact zero)
   refine ⟨tso_silent_prefix_image branch rfl, ?_, ?_⟩
-  · have tail := codeAt_right (a := [ci 19 2 32 0, ci 18 64 0 0]) (by
+  · have tail := codeAt_right (a := [ci 19 (Int.ofNat 2) 32 0, ci 18 64 0 0]) (by
       simpa only [guardC] using guard : CodeAt (before.ms.1.view thread) pc
-        ([ci 19 2 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
+        ([ci 19 (Int.ofNat 2) 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
     exact tail
-  · exact Gabbro.Stage0.Senke.BildLauf.rufRumpf_null_eq
-      output.compiled.program oracle output.image.passes fn world arguments
+  · simp only [rufRumpf]
 
 end Gabbro.Stage0
