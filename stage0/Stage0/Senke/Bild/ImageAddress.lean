@@ -62,6 +62,34 @@ theorem Emitted.world_survives_stack [Kern] (output : Emitted src K options)
     omega
   exact weltAt_stab output.layout_checked.1 frameEnds _ _ stored writes
 
+/-- The reserved frames are disjoint from all other frames and the
+    entire typed world, independently of who owns its carriers. -/
+theorem imageStackFootprint_owner {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {footprint : Nat → W → Prop} {issuer other : Nat} {byte : W}
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (stack : imageStackFootprint output issuer byte) (owned : footprint other byte) : other = issuer := by
+  rcases placed other byte owned with theirs | ⟨world, _⟩
+  · exact imageStackFootprint_disjoint theirs stack
+  · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack)) world).elim
+
+theorem imageStackFootprint_agree {output : Emitted src K options} {thread : Nat}
+    {before after : Runner.Mem} (declared : thread ≤ output.starts.length)
+    (agreement : Agree (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
+      0 output.image.Ks before after) :
+    GleichAuf (fun byte => ¬ imageStackFootprint output thread byte) after before := by
+  obtain ⟨reserved, addressBound⟩ := output.stackReservation_bounds
+  have ordered := Nat.mul_le_mul_left output.image.Ks (declared.trans (Nat.le_succ _))
+  have fits := (((Nat.add_le_add_left (Nat.mul_le_mul_left 8 ordered) output.image.fp0).trans
+    reserved).trans_lt addressBound)
+  intro byte outside
+  refine ⟨agreement.b byte ?_, congrFun agreement.rd byte, congrFun agreement.wr byte⟩
+  intro touched
+  apply outside
+  simp only [inSlots, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits, Nat.mul_zero, Nat.add_zero] at touched
+  refine ⟨declared, touched.1, ?_⟩
+  simpa only [Nat.mul_add, Nat.mul_one, Nat.add_assoc] using touched.2
+
 /-- Pending private stores are outside the emitted instruction extent,
     so an issuing thread fetches the same code as shared memory holds. -/
 theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)

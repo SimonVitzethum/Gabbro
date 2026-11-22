@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
 public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+public import Stage0.Senke.Bild.ImageAddress
 import Stage0.Senke.Images.DispatchSource
 import Stage0.Senke.Bild.Ruf.GateTrace
 import Stage0.Senke.Bild.RunnerFile
@@ -110,17 +111,6 @@ private theorem imageProjection_agree [Kern] {before after : imageTSO.St}
   · rw [show viewAt after.1 footprint address = after.1.m from dif_neg assigned,
       show viewAt before.1 footprint address = before.1.m from dif_neg assigned, committed]
     exact .refl _ _
-
-/-- The reserved frames are disjoint from all other frames and the
-    entire typed world, independently of who owns its carriers. -/
-theorem imageStackFootprint_owner {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {footprint : Nat → W → Prop} {issuer other : Nat} {byte : W}
-    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
-      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
-    (stack : imageStackFootprint output issuer byte) (owned : footprint other byte) : other = issuer := by
-  rcases placed other byte owned with theirs | ⟨world, _⟩
-  · exact imageStackFootprint_disjoint theirs stack
-  · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack)) world).elim
 
 /-- Register the entered body with its writable stack and the shared
     bytes below every stack reservation, including the emitted code. -/

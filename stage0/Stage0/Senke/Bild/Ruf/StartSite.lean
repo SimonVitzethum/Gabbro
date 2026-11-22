@@ -133,10 +133,12 @@ def Emitted.childStartSite [Kern] (output : Emitted src reserve options)
     disjointness of all queued stores, including existing ones. -/
 theorem ImageStartSite.queued_stores_private [Kern] {output : Emitted src reserve options}
     (site : ImageStartSite output) {before after : TSt} {stores : List (W × W)}
+    {footprint : Nat → W → Prop}
     (queue : QueuedStores before after site.thread stores)
     (within : ∀ store ∈ stores, ∀ byte, fenster store.1 byte → imageStackFootprint output site.thread byte)
-    (privateBefore : PrivateBuffers (imageStackFootprint output) before) :
-    PrivateBuffers (imageStackFootprint output) after := by
+    (owns : ∀ byte, imageStackFootprint output site.thread byte →
+      footprint site.thread byte ∧ ∀ other, footprint other byte → other = site.thread)
+    (privateBefore : PrivateBuffers footprint before) : PrivateBuffers footprint after := by
   intro thread store pending byte touched
   rw [queue thread] at pending
   rcases List.mem_append.mp pending with prior | new
@@ -144,8 +146,7 @@ theorem ImageStartSite.queued_stores_private [Kern] {output : Emitted src reserv
   · by_cases writer : thread = site.thread
     · subst thread
       rw [ite_eq_left rfl] at new
-      have slot := within store new byte touched
-      exact ⟨slot, fun _ other => imageStackFootprint_disjoint other slot⟩
+      exact owns byte (within store new byte touched)
     · simp only [ite_eq_right writer, List.not_mem_nil] at new
 
 /-- The first call-tail instruction writes the decrement operand in the

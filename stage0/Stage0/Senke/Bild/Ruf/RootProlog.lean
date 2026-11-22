@@ -221,13 +221,19 @@ theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve optio
         ⟨after, before.ths.set (index + 1) (some (.next ⟨prologue, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      GleichAuf (fun byte => ¬ imageStackFootprint output (index + 1) byte)
+        (after.1.view (index + 1)) (before.ms.1.view (index + 1)) ∧
       (∀ world, WeltAt (before.ms.1.view (index + 1)) output.image.Y world →
         WeltAt (after.1.view (index + 1)) output.image.Y world) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view (index + 1)) frame root.2 ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output (index + 1) byte →
+          footprint (index + 1) byte ∧ ∀ other, footprint other byte → other = index + 1) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       CodeAt (after.1.view (index + 1)) prologue rest := by
   intro entry target frame prologue running phase
-  obtain ⟨after, call, shared, otherViews, world, permissions, environment, _, _, depth, loaded, _⟩ :=
+  obtain ⟨after, call, shared, otherViews, agreement, world, permissions, environment, _, _, depth, loaded, buffers, _⟩ :=
     output.child_body_from_root_phase unit declared running phase
   have inside := (List.getElem?_eq_some_iff.mp running).1
   let entered : Cfg imageTSO (Res T) :=
@@ -235,7 +241,7 @@ theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve optio
   have ready : entered.ths[index + 1]? = some (some (.next ⟨target, frame⟩)) :=
     List.getElem?_set_self inside
   obtain ⟨rest, passed, code⟩ := output.root_depth_guard_pass (before := entered) root.1 loaded ready depth
-  refine ⟨after, rest, ?_, shared, otherViews, world, permissions, environment, code⟩
+  refine ⟨after, rest, ?_, shared, otherViews, agreement, world, permissions, environment, buffers, code⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 
 /-- Once startup has reached the emitted main stub, that thread enters
@@ -257,11 +263,15 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
         ⟨after, before.ths.set 0 (some (.next ⟨prologue, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ 0 → after.1.view other = before.ms.1.view other) ∧
+      GleichAuf (fun byte => ¬ imageStackFootprint output 0 byte)
+        (after.1.view 0) (before.ms.1.view 0) ∧
       (∀ world, WeltAt (before.ms.1.view 0) output.image.Y world → WeltAt (after.1.view 0) output.image.Y world) ∧
       FrameOK (after.1.view 0) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view 0) frame output.args ∧
-      (PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        PrivateBuffers (imageStackFootprint output) after.1) ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output 0 byte →
+          footprint 0 byte ∧ ∀ other, footprint other byte → other = 0) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       CodeAt (after.1.view 0) prologue rest := by
   intro site entry target frame prologue running phase
   have declared : E.starts[0]? = some ⟨output.compiled.main, output.args⟩ := by
@@ -280,7 +290,8 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
   have ready : entered.ths[0]? = some (some (.next ⟨target, frame⟩)) := List.getElem?_set_self inside
   obtain ⟨rest, passed, decoded⟩ :=
     output.root_depth_guard_pass (before := entered) (thread := 0) output.compiled.main code ready depth
-  refine ⟨after, rest, ?_, shared, views, fun _ stored => output.world_survives_stack site.bounded stored writes,
+  refine ⟨after, rest, ?_, shared, views, imageStackFootprint_agree site.bounded writes,
+    fun _ stored => output.world_survives_stack site.bounded stored writes,
     newFrame, environment, buffers, decoded⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 

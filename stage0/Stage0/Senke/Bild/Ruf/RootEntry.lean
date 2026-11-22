@@ -231,8 +231,10 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
       (after.1.view site.thread).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       BytesAt (after.1.view site.thread) codeBase (output.image.code.flatMap encII) ∧
-      (PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        PrivateBuffers (imageStackFootprint output) after.1) ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output site.thread byte →
+          footprint site.thread byte ∧ ∀ other, footprint other byte → other = site.thread) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y site.fn =
         some (code, top) ∧ CodeAt (after.1.view site.thread) target code := by
   intro entry target frame words running frameOK arguments
@@ -324,8 +326,8 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
   · intro other different
     exact (others₅ other different).trans ((others₄ other different).trans
       ((others₃ other different).trans ((others₂ other different).trans (others₁ other different))))
-  · intro privateBefore
-    apply site.queued_stores_private (queue₁.trans (queue₂.trans (queue₃.trans (queue₄.trans queue₅)))) _ privateBefore
+  · intro footprint owns privateBefore
+    apply site.queued_stores_private (queue₁.trans (queue₂.trans (queue₃.trans (queue₄.trans queue₅)))) _ owns privateBefore
     intro store stored byte touched
     simp only [List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at stored
     rcases stored with rfl | rfl | rfl | rfl | rfl | rfl
@@ -355,6 +357,8 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
         ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      GleichAuf (fun byte => ¬ imageStackFootprint output (index + 1) byte)
+        (after.1.view (index + 1)) (before.ms.1.view (index + 1)) ∧
       (∀ world, WeltAt (before.ms.1.view (index + 1)) output.image.Y world →
         WeltAt (after.1.view (index + 1)) output.image.Y world) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
@@ -365,17 +369,22 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output (index + 1) byte →
+          footprint (index + 1) byte ∧ ∀ other, footprint other byte → other = index + 1) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame running phase
   obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
-  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, code, _, body⟩ :=
+  obtain ⟨after, executed, shared, others, writes, frameOK, words, returnPC, callerFrame, depth, code, buffers, body⟩ :=
     (output.childStartSite declared).body_prefix bytes running permissions arguments
   have valid := output.startPlan.starts_valid (initialWorld _ output.initialValid) output.image.Y root
     (List.mem_of_getElem? declared)
   have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) root.2).mpr ⟨valid, words⟩
   have thread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
-  exact ⟨after, executed, shared, others, fun _ stored => output.world_survives_stack thread stored writes,
-    frameOK, environment, returnPC, callerFrame, depth, code, body⟩
+  exact ⟨after, executed, shared, others, imageStackFootprint_agree thread writes,
+    fun _ stored => output.world_survives_stack thread stored writes,
+    frameOK, environment, returnPC, callerFrame, depth, code, buffers, body⟩
 
 end Gabbro.Stage0
