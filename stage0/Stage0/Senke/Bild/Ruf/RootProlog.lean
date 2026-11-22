@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Bild.Ruf.RootEntry
 import Stage0.Senke.Bild.Ruf.RootExit
 import Stage0.Senke.Images.CheckSpawn
+import Stage0.Senke.Bild.StartG
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -13,6 +14,34 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
+
+/-- The declared initial memory discharges the entry obligation at the
+    exact initial head with its serialized arguments. The theorem is
+    fixed to the start machine, so a later call needs its own entry duty. -/
+theorem Emitted.initial_root_head (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {thread : Faden} {root : Σ f : (declOf output.compiled.unit).Fn,
+      Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root) :
+    let entered := ((imageSourceStart E).m.faeden thread).kopf
+    entered.f = some root.1 ∧ entered.s0 = worldR (E.sp0.welt []) ∧ HEq entered.rho (envR root.2) ∧
+      ReqAmEintritt E.P.mitRuhe entered.f entered.s0 entered.rho := by
+  have initial : initRuhe E.starts thread = ⟨some root.1, envR root.2⟩ := by
+    unfold initRuhe
+    rw [declared]
+    cases root
+    rfl
+  have exactHead := BildLauf.rufStartG_faeden_von E.P.mitRuhe (speicherR E.sp0) initial
+  dsimp only
+  change let entered := ((RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)).faeden thread).kopf
+    entered.f = some root.1 ∧ entered.s0 = worldR (E.sp0.welt []) ∧ HEq entered.rho (envR root.2) ∧
+      ReqAmEintritt E.P.mitRuhe entered.f entered.s0 entered.rho
+  rw [exactHead]
+  refine ⟨rfl, rfl, HEq.rfl, (req_mitRuhe_iff E.P root.1 (E.sp0.welt []) root.2).mpr ?_⟩
+  have listed := List.mem_of_getElem? declared
+  rw [unit.starts] at listed
+  rw [unit.program, unit.memory]
+  exact output.startRequires root listed
 
 /-- Main enters the same depth initialization protocol through its
     own boot frame after the emitted clone sites. -/
