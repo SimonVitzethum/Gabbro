@@ -223,7 +223,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
               (fun byte granted => writable byte (by simpa only [wr, permits.2] using granted))
               answered⟩
         | sys unavailable _ => exact unavailable.elim
-        | fp _ _ => exact ⟨fun _ no => by cases no, fun _ absent => absent.elim, fun refused => by cases refused⟩
+        | fp _ _ => exact ⟨(fun _ no => nomatch no), (fun _ absent => False.elim absent), (fun refused => nomatch refused)⟩
 
 /-- A body can advance its source binding at the exact completed IR
     boundary. Prefixes inside the bound expression supply the same
@@ -273,9 +273,9 @@ theorem _root_.Gabbro.Stage0.Senke.BildLauf.BodyFrame.bind_reference [kernel : K
   intro control current solo
   obtain ⟨taken, pointer, atPointer, ran, tail⟩ := solo
   rcases Nat.lt_or_ge taken count with inside | finished
-  · rcases tail with ⟨rfl, rfl⟩ | partial
+  · rcases tail with ⟨rfl, rfl⟩ | part
     · exact .inl trivial
-    · exact .inl ((prefixCorrect ran inside.le).2 inside partial)
+    · exact .inl ((prefixCorrect ran inside.le).2 inside part)
   · obtain ⟨atBoundary, boundary, expressionRun, later⟩ := StarM.cut ran count finished
     obtain ⟨pointerEq, memoryEffect, value⟩ := (prefixCorrect expressionRun (Nat.le_refl _)).1 rfl
     subst atBoundary
