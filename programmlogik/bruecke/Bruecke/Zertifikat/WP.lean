@@ -43,6 +43,9 @@ theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.
     (h3 : ∀ passes, PflichtKeinHalt E.P passes E.Q E.S (GeteiltA E.P E.ws) f) : LogikFn E f :=
   fun passes => ⟨h1 passes, h2 passes, h3 passes⟩
 
+/-- Loops with more passes than this are not unrolled (`gabbrov_wp`); they stay as the program's logic. -/
+meta def schleifenGrenze : Nat := 256
+
 /-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
     equivalence. Fails when no rule applies. -/
 syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
@@ -60,6 +63,13 @@ open Lean Elab Tactic Meta in
       pure (← goal.replaceTargetDefEq t', t')
     else if (t.isAppOf ``Gabbro.Bruecke.wpRetryA || t.isAppOf ``Gabbro.Bruecke.wpTravA) && args.size ≥ 4 then
       let w := args[args.size - 4]!
+      -- a loop is unrolled only up to `schleifenGrenze` passes; a wider one stays as the program's logic
+      if let some k := w.rawNatLit? then
+        if k > schleifenGrenze then throwError "gabbrov: retry bound {k} too wide to unroll"
+      if w.isAppOf ``Gabbro.Grammatik.alleIndizes then
+        if let some n ← intWert? w.appArg! then
+          if n > schleifenGrenze then throwError "gabbrov: traverse over {n} indices too wide to unroll"
+        else throwError "gabbrov: traverse over an unknown number of indices"
       let fertig := w.rawNatLit?.isSome || w.isAppOf ``List.nil || w.isAppOf ``List.cons
       if fertig then pure (goal, t) else
       let w' ← kernNormal w
