@@ -85,8 +85,12 @@ def collectArenaStorage (u : UProg) : Except String (ArenaStorageExport u) :=
         cases found : resolveArenaStorage u table with
         | error failure =>
           have verdict := List.all_eq_true.mp complete table (List.mem_finRange table)
-          simp only [found, Except.isOk, Except.toBool, Bool.or_false, Bool.not_eq_true] at verdict
-          simp only [found, Except.toOption, Option.isSome_none, verdict, Bool.false_eq_true]
+          simp only [found, Except.isOk, Except.toBool, Bool.or_false] at verdict
+          have ordinary : (tabAt u table).arena = false := by
+            cases marked : (tabAt u table).arena with
+            | false => rfl
+            | true => simp only [marked, Bool.not_true, Bool.false_eq_true] at verdict
+          simp only [found, Except.toOption, Option.isSome_none, ordinary]
         | ok storage =>
           simp only [found, Except.toOption, Option.isSome_some, storage.marked]
       resolved := by
