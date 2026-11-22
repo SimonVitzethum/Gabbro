@@ -112,7 +112,7 @@ theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     omega
   have outsideZero : outside = 0 := by
     rw [outsideEncoding]
-    simp only [scalarCmp, ↓reduceIte]
+    simp only [scalarCmp, show (13 : Opcode).val = 13 from rfl, ite_true]
     rw [slt_in newBound (by decide), slt_in boundWord newBound]
     simp only [show ¬ new < 0 by omega, show ¬ bound < new by omega,
       decide_false, Bool.false_or, Runner.IR.bool, Bool.false_eq_true, ↓reduceIte]
