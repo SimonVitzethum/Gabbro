@@ -157,4 +157,127 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
   · obtain ⟨code, top, lowered, exactCode, _, _⟩ := output.relocated_function_code updatedCode root.1
     exact ⟨code, top, lowered, exactCode⟩
 
+private theorem child_store_preserves [Kern] (output : Emitted src reserve options)
+    {index slotNo value : Nat} {memory : Mem} {words : List W}
+    (declared : index + 1 ≤ output.starts.length) (inside : slotNo < output.image.Ks)
+    (fits : FB + FB + words.length ≤ output.image.Ks)
+    (outsideArgs : slotNo < FB + FB ∨ FB + FB + words.length ≤ slotNo)
+    (loaded : BytesAt memory codeBase (output.image.code.flatMap encII)) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
+    let after := Mem.write memory (slot fp (BitVec.ofNat 64 slotNo)) 8 value
+    FrameOK memory fp output.image.Ks →
+    WordsAt memory fp (FB + FB) words →
+    BytesAt after codeBase (output.image.code.flatMap encII) ∧
+      FrameOK after fp output.image.Ks ∧ WordsAt after fp (FB + FB) words := by
+  intro fp after frame args
+  refine ⟨output.code_survives_writes (write_nurIn _ _ _) ?_ loaded, ⟨frame.lt, frame.rd, frame.wr⟩, ?_⟩
+  · intro byte touched
+    have reserved := imageStackFootprint_slot (output := output) (i := index + 1) declared inside touched
+    exact (Nat.le_add_right _ _).trans reserved.2.1
+  · intro i present
+    change (Mem.write memory (slot fp (BitVec.ofNat 64 slotNo)) 8 value).rd64
+      (slot fp (BitVec.ofNat 64 (FB + FB + i))) = _
+    have different : slotNo ≠ FB + FB + i := by rcases outsideArgs with lower | upper <;> omega
+    rw [Mem.rd64_write_far (slot_far frame.room inside (by omega) different)]
+    exact args i present
+
+/-- From its serialized entry, the actual child stub reaches the exact
+    emitted function body with the declared arguments and depth. This
+    prefix only schedules the child and leaves other views untouched. -/
+theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
+    {before : Cfg imageTSO (Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (bytes : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
+    let entry : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let target := BitVec.ofNat 64 (output.image.A root.1)
+    let frame := slot entry.fp (BitVec.ofNat 64 FB)
+    let words := encodeEnv output.image.Y root.2
+    before.ths[index + 1]? = some (some (.next entry)) →
+    FrameOK (before.ms.1.view (index + 1)) entry.fp output.image.Ks →
+    WordsAt (before.ms.1.view (index + 1)) entry.fp (FB + FB) words →
+    ∃ after : imageTSO.St,
+      ProcessPrefix imageTSO actI before [] 30
+        ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
+      WordsAt (after.1.view (index + 1)) frame FB words ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
+        some (BitVec.ofNat 64 output.image.depth) ∧
+      ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
+        some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
+  intro entry target frame words running frameOK arguments
+  let scratch := FB + FB + contextWords ((declOf output.compiled.unit).params root.1)
+  have wordCount : FB + FB + words.length = scratch := by simp only [words, scratch, encodeEnv_length]
+  obtain ⟨_, two, _, room, _⟩ := output.root_stub_code bytes declared
+  have declaredThread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
+  have scratchRoom : scratch < output.image.Ks := by
+    have margin := startScratch_ge root.1
+    dsimp only [scratch]
+    omega
+  have calleeRoom : FB + 2 < output.image.Ks := by dsimp only [scratch] at scratchRoom; simp only [FB] at *; omega
+  have fits : FB + FB + words.length ≤ output.image.Ks := by rw [wordCount]; exact scratchRoom.le
+  obtain ⟨first, depthRun, shared₁, others₁, code₁, frame₁, args₁, depth₁⟩ :=
+    output.root_depth_preserves_frame declared bytes running frameOK fits arguments
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have onThread (control : Res T) : (before.ths.set (index + 1) (some control))[index + 1]? = some (some control) :=
+    List.getElem?_set_self inside
+  obtain ⟨second, operandRun, shared₂, write₂, others₂⟩ :=
+    output.root_call_decrement_operand declared code₁ (onThread (.next (nxt entry))) frame₁
+  have preserved₂ := child_store_preserves output declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
+  rw [← write₂] at preserved₂
+  obtain ⟨code₂, frame₂, args₂⟩ := preserved₂
+  have depth₂ : (second.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 2)) =
+      some (BitVec.ofNat 64 (output.image.depth + 1)) := by
+    have separate : scratch ≠ 2 := by simp only [scratch, FB]; omega
+    rw [write₂, Mem.rd64_write_far (slot_far frame₁.room scratchRoom two separate)]
+    exact depth₁
+  have one : (second.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 scratch)) = some 1 := by
+    rw [write₂]
+    exact rd64_write_same (w := 1) (frame₁.rd scratch scratchRoom)
+  simp only [List.set_set] at operandRun
+  obtain ⟨third, subRun, shared₃, write₃, others₃⟩ :=
+    output.root_call_depth declared code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
+  simp only [List.set_set] at subRun
+  have preserved₃ := child_store_preserves output declaredThread calleeRoom fits
+    (Or.inl (by simp only [FB]; decide)) code₂ frame₂ args₂
+  rw [← write₃] at preserved₃
+  obtain ⟨code₃, frame₃, args₃⟩ := preserved₃
+  have depth₃ : (third.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 (FB + 2))) =
+      some (BitVec.ofNat 64 output.image.depth) := by
+    obtain ⟨_, _, bound, _, _⟩ := output.root_stub_code bytes declared
+    have small := (Nat.lt_succ_self _).trans (bound.trans (by decide : 2 ^ 31 < 2 ^ 64))
+    have exactWord := rd64_write_same (w := BitVec.ofNat 64 output.image.depth) (frame₂.rd _ calleeRoom)
+    rw [write₃]
+    simpa only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt small] using exactWord
+  let callConst : T := ⟨entry.pc + BitVec.ofNat 64 (16 * 3), entry.fp⟩
+  have samePC : nxt (nxt (nxt entry)) = callConst := by
+    change (⟨entry.pc + 16 + 16 + 16, entry.fp⟩ : T) = callConst
+    rw [BitVec.add_assoc, BitVec.add_assoc] <;> rfl
+  rw [samePC] at subRun
+  obtain ⟨fourth, targetRun, shared₄, others₄, write₄, code₄, frame₄, targetWord⟩ :=
+    output.root_call_target declared code₃ (onThread (.next callConst)) frame₃
+  simp only [List.set_set] at targetRun
+  have callPC : nxt callConst = ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩ := by
+    change (⟨entry.pc + BitVec.ofNat 64 (16 * 3) + 16, entry.fp⟩ : T) = _
+    rw [BitVec.add_assoc] <;> rfl
+  rw [callPC] at targetRun
+  have preserved₄ := child_store_preserves output declaredThread scratchRoom fits (Or.inr wordCount.le) code₃ frame₃ args₃
+  rw [← write₄] at preserved₄
+  have depth₄ : (fourth.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 (FB + 2))) =
+      some (BitVec.ofNat 64 output.image.depth) := by
+    have separate : scratch ≠ FB + 2 := by simp only [scratch, FB]; omega
+    rw [write₄, Mem.rd64_write_far (slot_far frame₃.room scratchRoom calleeRoom separate)]
+    exact depth₃
+  obtain ⟨after, callRun, shared₅, others₅, body⟩ := output.root_call_enter declared code₄
+    (onThread (.next ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩)) frame₄ targetWord depth₄ preserved₄.2.2
+  simp only [List.set_set] at callRun
+  refine ⟨after, ?_, shared₅.trans (shared₄.trans (shared₃.trans (shared₂.trans shared₁))), ?_, body⟩
+  · simpa only [List.nil_append] using (((depthRun.trans operandRun).trans subRun).trans targetRun).trans callRun
+  · intro other different
+    exact (others₅ other different).trans ((others₄ other different).trans
+      ((others₃ other different).trans ((others₂ other different).trans (others₁ other different))))
+
 end Gabbro.Stage0
