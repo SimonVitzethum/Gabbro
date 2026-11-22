@@ -128,7 +128,7 @@ theorem specArraySliceArgument_erfuellbar (ctx : UCtx) (name : String) (element 
       uSchranke, read, nonnegative, ordered, bind, Except.bind, pure, Except.pure]
   exact ⟨parsed, by
     simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath,
-      baseType, bounds, ite_true, Option.bind_some, pure, Except.pure] <;> rfl⟩
+      baseType, bounds, and_self, ite_true, Option.bind_some, pure, Except.pure] <;> rfl⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/

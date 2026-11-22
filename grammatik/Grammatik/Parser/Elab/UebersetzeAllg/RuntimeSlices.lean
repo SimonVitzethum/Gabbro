@@ -392,4 +392,25 @@ theorem specTextSliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf
   simp only [lowWertE, lowText, bytes, valid, Except.bind, bind]
   exact lowerSlice_string decoded (Nat.le_refl _) first last inside
 
+/-- The array argument precheck and the actual typed value export use
+    the same base, endpoints and result type before any substitution. -/
+theorem specArraySliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (ctx : UCtx) (fn : UFn) (er : Option Ty) (name : String) {element : Ty}
+    {capacity : Nat} (first last : Nat) (bounds : SliceOk capacity first last)
+    (read : uWertBody ctx (.variable name) = .ok (.param name))
+    (baseType : uValueType ctx (.param name) = some (.arr element capacity))
+    (base : Expr (declOf u) Γ Λ (.arr element capacity))
+    (typed : lowWertE u Γ Λ fn er (.param name) = .ok ⟨.arr element capacity, base⟩)
+    (allowed : last - first = 1 ∨ base.orte.isEmpty = true) :
+    let argument := SExpr.built "#slice" [.variable name, .lit first, .lit last]
+    let span := arraySpan base first (last - first) (by have ordered := bounds.1; have high := bounds.2; omega)
+    uSpecValueArgument ctx (.arr element (last - first)) argument = .ok () ∧
+      lowWertE u Γ Λ fn er (.slice (.param name) first last) = .ok ⟨.arr element (last - first), span⟩ ∧
+      ∀ entry world env, eval entry span world env = arrSliceValue (eval entry base world env) first last bounds := by
+  intro argument span
+  obtain ⟨_, accepted⟩ := specArraySliceArgument_erfuellbar ctx name element capacity first last bounds read baseType
+  refine ⟨accepted, ?_, fun entry world env => arraySpan_refines base entry world env first last bounds⟩
+  rw [lowWertE_slice, typed]
+  exact lowerSlice_array base first last bounds allowed
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg
