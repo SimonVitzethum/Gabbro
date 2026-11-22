@@ -24,11 +24,13 @@ private theorem ptrParam_tyR (types : List Ty) :
     simp only [List.getElem?_map]
     cases types[i]? with
     | none => rfl
-    | some ty =>
-      cases ty <;> try rfl
-      case ptr p =>
-        rcases p with ⟨bits, ⟨read, write, logical⟩, ⟨table⟩⟩
-        cases bits <;> cases read <;> cases logical <;> rfl
+    | some ty => cases ty <;> rfl
+
+private theorem tyR_eq_byte (ty : Ty) (same : tyR ty = .int 0 255) : ty = .int 0 255 := by
+  cases ty with
+  | ptr pointer => rcases pointer with ⟨_, _, ⟨_⟩⟩; cases same
+  | int lo hi => exact same
+  | _ => cases same
 
 private theorem WeltOhne.withIdle {L : Lay D} {m : Mem} {world : World D}
     {table : D.Tab} {field : D.Feld table} (stored : WeltOhne m L world table field) :
@@ -62,12 +64,7 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
     rw [wirkt_mitRuhe]
     have buffer' : ptrParam (D.aparams a) = some (j, n, write) :=
       (ptrParam_tyR _).symm.trans buffer
-    have byteType' : D.typ table field = .int 0 255 := by
-      change tyR (D.typ table field) = .int 0 255 at byteType
-      cases D.typ table field with
-      | ptr pointer => rcases pointer with ⟨_, _, ⟨_⟩⟩; cases byteType
-      | int lo hi => exact byteType
-      | _ => cases byteType
+    have byteType' : D.typ table field = .int 0 255 := tyR_eq_byte _ byteType
     have packed' : ∀ i, i < pufW (D.count table).toNat →
         m.rd64 (reqArg q j + BitVec.ofNat 64 (8 * i)) =
           some (packV (fun k => wAt m (L.elem table field k)) (D.count table).toNat i 8) := by
@@ -103,9 +100,10 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
     have originalLayout : LayIn L := by
       refine ⟨?_, ?_, layout.2.2⟩
       · intro t f i inside
-        simpa only [Lay.withIdle_elem, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using layout.1 t f i inside
+        simpa only [Lay.withIdle_elem, Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers]
+          using layout.1 t f i inside
       · intro g
-        simpa only [Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using layout.2.1 g
+        simpa only [Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using layout.2.1 g
     obtain ⟨tag, extra, after, answer, effects, represented, reply⟩ :=
       contract.area a b result sourceResult j bound
         (by simpa only [Deklaration.mitRuhe, List.length_map] using admitted)
