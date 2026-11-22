@@ -86,9 +86,18 @@ theorem irBild_function_semantics {bytes : List B} (wrote : irBild src reserve o
   obtain ⟨output, emitted, payload, canonical, unit, accepted, _, _⟩ := irBild_checkImageUnit wrote
   exact ⟨output, emitted, payload, canonical, unit, accepted, fun _ loaded => loaded.function_semantics⟩
 
-/-- Segment refinement at the compiler boundary. A segment may contain
-    an arbitrary number of internal IR steps and at most one host event.
-    Its endpoint may lie inside a generated block. -/
+/-- An IR segment either stays silent or ends at its first host
+    observation. The observed answer is checked at that exact endpoint,
+    before any later segment can reuse the result area. -/
+inductive ImageIRSegment : Cfg imageTSO (Res T) → List Ev → Cfg imageTSO (Res T) → Prop where
+  | silent {before after count} :
+    ProcessPrefix imageTSO actI before [] count after → ImageIRSegment before [] after
+  | observed {before cut after count event} :
+    ProcessPrefix imageTSO actI before [] count cut →
+    ProcessStep imageTSO actI cut [event] after → ImageIRSegment before [event] after
+
+/-- Segment refinement at the compiler boundary. The endpoint of a
+    silent segment may lie inside any generated block. -/
 structure ImageIRRefinement (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (memory : imageTSO.St) where
@@ -97,8 +106,8 @@ structure ImageIRRefinement (output : Emitted src reserve options)
   consistent : ∀ history ir state, related history ir state →
     ImageSlotsMatch output E O history ir state ∧ ImageForeignTrace output history state ∧
       ImageRuntimeMatches output E O history ir state
-  segment : ∀ {history before state events count after}, related history before state →
-    ProcessPrefix imageTSO actI before events count after → events.length ≤ 1 →
+  segment : ∀ {history before state events after}, related history before state →
+    ImageIRSegment before events after →
     ∃ next, related (history ++ events) after next ∧ ImageReach output E O state next ∧
       ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next after event
   stop : ∀ {history before state last ending}, related history before state →
@@ -111,6 +120,17 @@ private theorem processStep_eventCount {M : MemSys} {θ : Type} {act : θ → Re
   have counted := (step.prepend (.nil after)).events_le_steps
   simpa only [List.append_nil, Nat.zero_add] using counted
 
+private theorem ImageIRSegment.ofStep {before after : Cfg imageTSO (Res T)} {events : List Ev}
+    (step : ProcessStep imageTSO actI before events after) : ImageIRSegment before events after := by
+  have length := processStep_eventCount step
+  cases events with
+  | nil => exact .silent (.ofStep step)
+  | cons event rest =>
+    have empty : rest = [] := List.length_eq_zero_iff.mp
+      (Nat.eq_zero_of_le_zero (Nat.le_of_succ_le_succ length))
+    subst rest
+    exact .observed (.nil before) step
+
 /-- The same relation and GX history compose across the whole IR run. -/
 theorem ImageIRRefinement.follow (refinement : ImageIRRefinement output E O memory)
     {history events : List Ev} {before after : Cfg imageTSO (Res T)} {count : Nat}
@@ -122,7 +142,7 @@ theorem ImageIRRefinement.follow (refinement : ImageIRRefinement output E O memo
   | nil => exact ⟨state, by simpa only [List.append_nil] using initial, .start⟩
   | cons step _ ih =>
     obtain ⟨middle, matched, first, _⟩ :=
-      refinement.segment initial (.ofStep step) (processStep_eventCount step)
+      refinement.segment initial (ImageIRSegment.ofStep step)
     obtain ⟨next, final, reached⟩ := ih matched
     exact ⟨next, by simpa only [List.append_assoc] using final, imageReach_trans first reached⟩
 

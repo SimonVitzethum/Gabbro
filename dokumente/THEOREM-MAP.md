@@ -8252,8 +8252,10 @@ host outcome, and machine faults and unknown instructions are excluded.
 `LoadedIRImage.source_start` derives the initial relation from the
 serialized image and empty store buffers. `stage0_correct_of_ir_refinement`
 combines the checked unit with an IR segment refinement. A segment can
-span any number of internal IR instructions and up to one host event.
+span any number of internal IR instructions and can end in a host event.
 The segment proof for all admitted programs and schedules remains open.
+`irBild_function_semantics` already proves the common sequential IR
+contract for every emitted function at every representable call depth.
 
 `Stage0RunnerCorrect` additionally connects the mapped x86 execution to
 the same IR history and remains a subsequent proof obligation.
