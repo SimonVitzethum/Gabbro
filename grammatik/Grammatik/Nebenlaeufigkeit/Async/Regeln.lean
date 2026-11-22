@@ -234,12 +234,12 @@ public theorem storageValid_step (model : Model Value Child W) (f : AsyncFn)
     rcases hp : pollTask model child before with ⟨result, child', world, work⟩
     cases result with
     | pending =>
-      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp,
+      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp, waitingReply,
         List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       exact ⟨name, expr, boundary, rest, hd⟩
     | ready value =>
-      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp,
+      simp only [machineStep, table_drop, drop_compiled, hd, compileCommand, hp, waitingReply,
         List.map_nil, List.map_cons, Prod.mk.injEq, reduceCtorEq, true_and, false_and] at h
       obtain ⟨rfl, rfl, rfl, rfl⟩ := h
       exact nextTag

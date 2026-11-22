@@ -216,6 +216,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Segment.childPollBlock_reports_failure
 #print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_join_left_failure
 #print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_join_right_failure
+#print axioms Gabbro.Grammatik.Async.Segment.runWaitingPoll_error_iff
 #print axioms Gabbro.Grammatik.Async.pollTaskWith_except_normal
 #print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_agrees_with_inducedModel
 #print axioms Gabbro.Grammatik.Async.Representation.runTaskPoll_leaf_rep
@@ -231,6 +232,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.await_ready_resumes
 #print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_ready_preserves
+#print axioms Gabbro.Grammatik.Async.Representation.runWaitingPoll_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitLocalOrigins_sound
 #print axioms Gabbro.Grammatik.Async.Representation.checkAwaitInventory_sound
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.uGlobSchreib_indexedField

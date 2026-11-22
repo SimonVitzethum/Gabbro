@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
+public import Grammatik.Nebenlaeufigkeit.Async.Expand
 
 namespace Gabbro.Grammatik.Async.Segment
 
@@ -142,6 +143,29 @@ public theorem runTaskPoll_join_right_failure (elaboration : Elaboration D V Λ 
     (second : runTaskPoll elaboration calls prices right middle = .error failure) :
     runTaskPoll elaboration calls prices (.join left right) world = .error failure := by
   simp only [runTaskPoll_join, first, second, bind, Except.bind]
+
+/-- Execute the waiting entry of a resolved table with the actual
+    G call outcomes. Only a successful poll updates the continuation. -/
+@[expose] public def runWaitingPoll (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (tag : Nat) (name : String) (frame : Frame (Value D))
+    (task : Task (Value D) (Child D types)) (world : World D) :
+    Except (Logik D ⊕ Hardware D) (Event (Value D) × State (Value D) (Child D types) × World D × Nat) :=
+  match runTaskPoll elaboration calls prices task world with
+  | .error failure => .error failure
+  | .ok answer => .ok (waitingReply tag name frame answer)
+
+/-- A failed poll yields exactly its actual logic or hardware cause. -/
+public theorem runWaitingPoll_error_iff (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (tag : Nat) (name : String) (frame : Frame (Value D))
+    (task : Task (Value D) (Child D types)) (world : World D) (failure : Logik D ⊕ Hardware D) :
+    runWaitingPoll elaboration calls prices tag name frame task world = .error failure ↔
+      runTaskPoll elaboration calls prices task world = .error failure := by
+  unfold runWaitingPoll
+  cases runTaskPoll elaboration calls prices task world with
+  | ok => simp only [reduceCtorEq]
+  | error => rfl
 
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage

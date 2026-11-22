@@ -143,7 +143,7 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
     rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← ready]
   refine ⟨?_, (await_runTaskPoll_ready_frame elaboration calls prices tag destination future boundary
     rest command slots represented successful).2⟩
-  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand, waitingReply]
   rw [show (pollTask model task world).1 = Poll.ready value from ready]
 
 private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
@@ -252,7 +252,43 @@ public theorem await_ready_preserves {V : Vertrag D} {Λ : List (Res D)}
     rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← ready]
   refine ⟨?_, (await_runTaskPoll_ready_preserves elaboration calls prices inventory tag destination future
     boundary rest command frame task saved child slots represented marks sameInventory successful).2⟩
-  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand, waitingReply]
   rw [show (pollTask model task world).1 = Poll.ready value from ready]
+
+/-- A continuing wait driven by the actual G outcome preserves the
+    complete encoded state. The retained inventory obligation applies
+    on Ready, when the phase changes. -/
+public theorem runWaitingPoll_preserves {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat)
+    (inventory : Inventory D) (tag : Nat) (destination : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future))
+    {world after : World D} {event : Event (Value D)} {next : State (Value D) (Child D types)}
+    {cost : Nat} (stepped : runWaitingPoll elaboration calls prices tag destination frame task world =
+      .ok (event, next, after, cost)) :
+    ∃ record, Inv f types inventory next record ∧ encode D types f next = some record := by
+  cases polled : runTaskPoll elaboration calls prices task world with
+  | error failure => simp only [runWaitingPoll, polled, reduceCtorEq] at stepped
+  | ok answer =>
+    obtain ⟨reply, successor, nextWorld, pollCost⟩ := answer
+    cases reply with
+    | pending =>
+      simp only [runWaitingPoll, polled, waitingReply, Except.ok.injEq, Prod.mk.injEq] at stepped
+      obtain ⟨_, rfl, _, _⟩ := stepped
+      exact await_runTaskPoll_pending_preserves elaboration calls prices inventory tag destination future
+        boundary rest command frame task saved child slots represented marks polled
+    | ready value =>
+      simp only [runWaitingPoll, polled, waitingReply, Except.ok.injEq, Prod.mk.injEq] at stepped
+      obtain ⟨_, rfl, _, _⟩ := stepped
+      exact (await_runTaskPoll_ready_preserves elaboration calls prices inventory tag destination future
+        boundary rest command frame task saved child slots represented marks sameInventory polled).2.2
 
 end Gabbro.Grammatik.Async.Representation

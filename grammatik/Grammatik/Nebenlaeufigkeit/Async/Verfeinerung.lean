@@ -64,7 +64,7 @@ public theorem step_commutes (model : Model Value Child W) (f : AsyncFn)
         rcases hp : pollTask model child world with ⟨result, child', world', cost⟩
         cases result <;>
           simp only [machineStep, table_drop, drop_compiled, h, compileCommand,
-            decode, directStep, hp, tail, List.map_nil, List.map_cons]
+            decode, directStep, hp, waitingReply, tail, List.map_nil, List.map_cons]
   | completed value frame => rfl
   | cancelled => rfl
 

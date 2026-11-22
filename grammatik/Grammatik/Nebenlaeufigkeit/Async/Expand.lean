@@ -31,6 +31,15 @@ public structure Program (Value Child W : Type) where
 @[expose] public def asyncExpand (model : Model Value Child W) (f : AsyncFn) : Program Value Child W :=
   { code := f.body.map (compileCommand model), finish := model.evaluate f.result }
 
+/-- Continue from a successful poll without re-evaluating the child or
+    the saved arguments. Pending keeps the successor child record. -/
+@[expose] public def waitingReply (tag : Nat) (name : String) (frame : Frame Value)
+    (answer : Poll Value × Task Value Child × W × Nat) :
+    Event Value × State Value Child × W × Nat :=
+  match answer.1 with
+  | .pending => (.pending, .waiting tag frame answer.2.1, answer.2.2.1, answer.2.2.2 + 1)
+  | .ready value => (.next, .running (tag + 1) (save frame name value), answer.2.2.1, answer.2.2.2 + 1)
+
 /-- An invalid wait tag is refused. A running tag is meaningful only under
     tagValid; preservation is established by the simulation relation. -/
 @[expose] public def machineStep (model : Model Value Child W) (p : Program Value Child W) :
@@ -48,11 +57,7 @@ public structure Program (Value Child W : Type) where
       (.next, .waiting tag frame child, world', cost + 1)
   | .waiting tag frame child, world =>
     match p.code.drop tag with
-    | .construct name _ :: _ =>
-      let (result, child', world', cost) := pollTask model child world
-      match result with
-      | .pending => (.pending, .waiting tag frame child', world', cost + 1)
-      | .ready value => (.next, .running (tag + 1) (save frame name value), world', cost + 1)
+    | .construct name _ :: _ => waitingReply tag name frame (pollTask model child world)
     | _ => (.refused, .waiting tag frame child, world, 0)
   | .completed value frame, world => (.refused, .completed value frame, world, 0)
   | .cancelled, world => (.refused, .cancelled, world, 0)

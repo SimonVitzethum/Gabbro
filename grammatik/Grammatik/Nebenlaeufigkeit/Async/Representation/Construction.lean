@@ -402,7 +402,7 @@ public theorem await_pending_preserves
     rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← pending]
   refine ⟨?_, await_runTaskPoll_pending_preserves elaboration calls prices inventory tag name future
     boundary rest command frame task saved child slots represented marks successful⟩
-  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand, waitingReply]
   rw [show (pollTask model task world).1 = Poll.pending from pending]
 
 end Gabbro.Grammatik.Async.Representation
