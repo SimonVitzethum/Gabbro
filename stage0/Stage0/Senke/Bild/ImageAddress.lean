@@ -230,6 +230,52 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
   rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] <;> rfl
 
+/-- The first child instruction leaves its exact arguments, frame
+    permissions and code intact. The issuing view holds the depth word
+    before the store is flushed to shared memory. -/
+theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K options)
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (loaded : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
+    let pointer : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let words := encodeEnv output.image.Y root.2
+    before.ths[index + 1]? = some (some (.next pointer)) →
+    FrameOK (before.ms.1.view (index + 1)) pointer.fp output.image.Ks →
+    FB + FB + words.length ≤ output.image.Ks →
+    WordsAt (before.ms.1.view (index + 1)) pointer.fp (FB + FB) words →
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
+        ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
+      FrameOK (after.1.view (index + 1)) pointer.fp output.image.Ks ∧
+      WordsAt (after.1.view (index + 1)) pointer.fp (FB + FB) words ∧
+      (after.1.view (index + 1)).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
+        some (BitVec.ofNat 64 (output.image.depth + 1)) := by
+  intro pointer words running frame fits args
+  obtain ⟨after, run, memory, wroteDepth, others⟩ := output.root_depth_start declared loaded running frame
+  obtain ⟨_, depthSlot, depthFits⟩ := output.root_stub_code loaded declared
+  have thread : index + 1 ≤ output.starts.length :=
+    Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
+  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
+  · apply output.code_survives_writes (write_nurIn _ _ _) _ loaded
+    intro byte touched
+    have own := imageStackFootprint_slot (output := output) (i := index + 1)
+      (index := 2) thread depthSlot touched
+    exact (Nat.le_add_right _ _).trans own.2.1
+  · exact ⟨frame.lt, frame.rd, frame.wr⟩
+  · intro i present
+    have within : FB + FB + i < output.image.Ks := by omega
+    have elsewhere : 2 ≠ FB + FB + i := by simp only [FB]; omega
+    rw [Mem.rd64_write_far (slot_far frame.room depthSlot within elsewhere)]
+    exact args i present
+  · have word := rd64_write_same (w := BitVec.ofNat 64 (output.image.depth + 1)) (frame.rd 2 depthSlot)
+    simpa only [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
+
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
 theorem Emitted.layout_checked (output : Emitted src K options) :
