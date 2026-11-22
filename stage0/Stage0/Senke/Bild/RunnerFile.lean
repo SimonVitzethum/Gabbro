@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Stage0.Senke.Bild.Mehr.ImageTransition
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -352,6 +353,64 @@ theorem ImageIdleBuffers.flush_preserves_unallocated_frame
   intro affected
   have same := (privateStores owner (address, value) active byte affected).2 future belongs
   exact Nat.not_lt_of_ge unallocated (same.symm ▸ live)
+
+private theorem privateView_other_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {state : TSt} {issuer future : Nat}
+    (stores : PrivateBuffers (imageStackFootprint output) state) (different : future ≠ issuer) :
+    GleichAuf (imageStackFootprint output future) (state.view issuer) state.m := by
+  intro byte inFrame
+  have unchanged := foldl_far (state.buf issuer) state.m (y := byte) (by
+    intro store pending offset within overlap
+    have written : fenster store.1 byte := overlap.symm ▸ fenster_add _ within
+    exact different ((stores issuer store pending byte written).2 future inFrame))
+  exact ⟨unchanged.1, unchanged.2, congrFun (foldl_wr _ _) byte⟩
+
+/-- A host answer that preserves the future frame in the issuer's view
+    preserves the same bytes and permissions in shared memory. The actual
+    syscall keeps the buffers, so another thread's writes cannot mask a change. -/
+theorem image_host_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {before after : imageTSO.St}
+    {issuer future : Nat} {request : Req} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1) (different : future ≠ issuer)
+    (step : imageTSO.ans before issuer (.sys request) answer after)
+    (frame : request ≠ cloneReq →
+      Kern.ans request (before.1.view issuer) answer (after.1.view issuer) →
+      GleichAuf (imageStackFootprint output future) (before.1.view issuer) (after.1.view issuer)) :
+    GleichAuf (imageStackFootprint output future) before.1.m after.1.m := by
+  have host := step.2
+  change (if request = cloneReq then after = before ∧ ∃ id extra, answer = some (id, extra) ∧ id ≠ 0
+    else Kern.ans request (before.1.view issuer) answer (after.1.view issuer) ∧
+      after.1.buf = before.1.buf) at host
+  split at host
+  · rw [host.1]
+    exact fun byte _ => GleichAt.refl _ byte
+  · rename_i ordinary
+    have retained : PrivateBuffers (imageStackFootprint output) after.1 := by
+      intro i store pending byte touched
+      rw [host.2] at pending
+      exact stores i store pending byte touched
+    intro byte inFrame
+    exact ((privateView_other_frame stores different byte inFrame).symm.trans
+      (frame ordinary host.1 byte inFrame)).trans
+      (privateView_other_frame retained different byte inFrame)
+
+/-- A plain returning gate changes the program's world. All emitted
+    private stack reservations lie below that world. -/
+theorem image_plain_gate_preserves_future_frame {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {before after : imageTSO.St}
+    {issuer future : Nat} {request : Req} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1) (different : future ≠ issuer)
+    (step : imageTSO.ans before issuer (.sys request) answer after)
+    (gate : request ≠ cloneReq →
+      Kern.ans request (before.1.view issuer) answer (after.1.view issuer) →
+      KernW output.image.Y (before.1.view issuer) (after.1.view issuer)) :
+    GleichAuf (imageStackFootprint output future) before.1.m after.1.m := by
+  apply image_host_preserves_future_frame stores different step
+  intro ordinary answered byte inFrame
+  obtain ⟨read, write, bytes⟩ := gate ordinary answered
+  have outside := Nat.not_le_of_lt (imageStackFootprint_before_world inFrame)
+  exact ⟨(bytes byte (fun inside => outside inside.1)).symm,
+    (congrFun read byte).symm, (congrFun write byte).symm⟩
 
 /-- The next allocated slot sees exactly the shared memory, without
     forwarding writes from another thread's buffer. -/
