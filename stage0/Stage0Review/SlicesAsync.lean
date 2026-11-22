@@ -250,6 +250,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.runtimeStringSliceCarrier_ok
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specRecordArgument_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specRecordArgument_lower
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specRecordLocal_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_source_erfuellbar
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh
