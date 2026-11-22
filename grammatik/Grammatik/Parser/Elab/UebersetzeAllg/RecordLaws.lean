@@ -287,8 +287,12 @@ theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
     scope. The constructor reader keeps that field as a typed name. -/
 theorem specRecordLocal_erfuellbar (base : UCtx) (name label localName : String) (identity : Nat) :
     let schema : URecord := { name, identity, fields := [(label, .bool)] }
-    let ctx := { base with records := schema :: base.records, names := [localName],
-      kinds := [.bool], types := [.bool], unknownRanges := [] }
+    let ctx := { base with
+      records := schema :: base.records
+      names := [localName]
+      kinds := [.bool]
+      types := [.bool]
+      unknownRanges := [] }
     let args := [SExpr.ext .label [label] [.variable localName]]
     let fields := [(.bool, USide.param localName)]
     uWertBody ctx (.call name args) = .ok (.product identity false fields) ∧
