@@ -144,7 +144,10 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     let restricted := maskMemory reads (inSlots fp 0 K) memory
     ∃ count after, @IRReference kernel.withoutSyscalls count
       (compiled.entry fp) restricted (compiled.bodyEntry fp) after ∧ Agree fp FB K restricted after ∧
-      CodeAt after (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1) := by
+      CodeAt after (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1) ∧
+      EntryFrameValues output.image.Y output.compiled.program f after fp
+        (world.lese (Signatur.anfang _ ((declOf output.compiled.unit).signatur f))
+          (output.compiled.program.requires f).orte) args := by
   intro restricted
   letI : Kern := kernel.withoutSyscalls
   have loaded : CodeAt memory (compiled.entry fp).pc (table f) := exactCode.symm ▸ compiled.instructions
@@ -174,7 +177,7 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     have bounds := EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member
     exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member)
       (snapshots cell member)
-  obtain ⟨ens, pc, after, run, changed, post, position, _⟩ :=
+  obtain ⟨ens, pc, after, run, changed, post, position, values, _⟩ :=
     prolog_setup (O := O) (rp := 0) (cfp := 0) (H := []) lowered codeSize depthFits capacity
       layout small proofFrame decoded far maskedDepth maskedArgs observed saved requires
   have samePost : compiled.postcondition = ens := Option.some.inj (compiled.postconditionLowered.symm.trans post)
@@ -183,7 +186,7 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
   rw [exactCode, List.length_append, Nat.add_sub_cancel] at address
   subst pc
   obtain ⟨count, steps⟩ := IRReference.of_star run
-  exact ⟨count, after, steps, changed, exactCode ▸ decoded.agree changed far⟩
+  exact ⟨count, after, steps, changed, exactCode ▸ decoded.agree changed far, values⟩
 
 /-- Retain the production layout when the same instructions are present in another view. -/
 def FunctionIRPrologue.withCode [Kern] {output : Emitted src reserve options}
@@ -291,7 +294,7 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       (last : byte.toNat < cell.adr output.image.Y + 8 * valueWords cell.ty) : reads byte := by
     have valid := (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1
     exact .inr (.inr ⟨cell, valid, .inr member, first, by cases cell <;> exact last⟩)
-  obtain ⟨count, finished, reference, _, installed⟩ :=
+  obtain ⟨count, finished, reference, _, installed, _⟩ :=
     compiled.scoped_reference O exactCode ⟨top, lowered, topFits⟩ (by omega)
       (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
       environment stored

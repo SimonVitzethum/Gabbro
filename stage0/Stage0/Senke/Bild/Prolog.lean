@@ -62,6 +62,8 @@ theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
       (∀ body, lowEnd (reserved := (functionFrame P f).bodyReserved) passes A Y (functionFrame P f)
         ens [] (0, 0) (P.rumpf f) = some body →
         pc = BitVec.ofNat 64 (A f) + BitVec.ofNat 64 (16 * ((C f).length - body.1.length))) ∧
+      EntryFrameValues Y P f mR fp
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ ∧
       (PCode m A C fp K → WeltAt m Y σ → TicketSync m Y fp Ks H →
         m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp →
         m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
@@ -162,7 +164,7 @@ theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
     have statusBound : layout.internalResult ≤ layout.internalStatus := by
       simp only [FrameLayout.internalStatus]; omega
     omega
-  obtain ⟨mR, entryRun, entryChanged, original, lexical, saved⟩ :=
+  obtain ⟨mR, entryRun, entryChanged, values⟩ :=
     entryFrame_run P f hsnap frame1 hK entryFits
       (codeAt_left code3) (codeFar_left (n := entry.length) (k := cb.length)
         (by simpa only [List.length_append] using far3))
@@ -179,7 +181,7 @@ theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
     omega
   rw [entryLength] at codeR farR
   have entryPrefix := depthRun.trans (reqRun.trans (requiresRun.trans entryRun))
-  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens, ?_, ?_⟩
+  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens, ?_, values, ?_⟩
   · intro body compiled
     rw [hb] at compiled
     cases Option.some.inj compiled
@@ -193,12 +195,12 @@ theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
       hy.agree allChanged (by have := hW.top; have := hW.ord; omega),
       by have := hW.top; have := hW.ord; omega⟩
   have header : Kopf Y f mR fp K rp cfp ρ P σR := by
-    refine ⟨?_, ?_, original, internalFits, saved⟩
+    refine ⟨?_, ?_, values.original, internalFits, values.snapshots⟩
     · rw [agree_rd_low allChanged hF.room (by decide) (by omega)]; exact h0
     · rw [agree_rd_low allChanged hF.room (by decide) (by omega)]; exact h1
   have bodyPre : PreS Y mR _ fp K (frei (D.params f) layout.bodyReserved)
       cb ρ layout.bodyReserved :=
-    ⟨Nat.le_refl _, hK, frameR, codeR, farR, lexical, trivial, wstab_true _ _⟩
+    ⟨Nat.le_refl _, hK, frameR, codeR, farR, values.lexical, trivial, wstab_true _ _⟩
   have worldσ := weltAt_stab hW.lay hW.top m mR hWa (allChanged.mono (Nat.zero_le _))
   have room : tb + (k + 1) * Lm ≤ Ks := by omega
   exact ⟨cb, tb, hb, room, by simp only [List.length_append] at lengthBound; omega, bodyPre, bodyFrontier,
@@ -233,7 +235,7 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
     obtain ⟨_, _, _, _, _, _, snap, capture, _, _⟩ := lowered
     exact EntrySnapshots.Inputs.of_world hWa (fun cell member =>
       (EntrySnapshots.capture_bounds _ _ capture cell member).1)
-  obtain ⟨ens, pc, after, run, changed, post, address, body⟩ :=
+  obtain ⟨ens, pc, after, run, changed, post, address, _, body⟩ :=
     prolog_setup (O := O) hC hlen hk hc hW hK hF (hP f).1 (hP f).2 h2 hE
       ⟨fun t _ f k hk => hWa.1 t f k hk, fun g _ => hWa.2.1 g⟩ snapshots hreq
   exact ⟨ens, pc, after, run, changed, post, address, body hP hWa hy h0 h1 hH⟩
