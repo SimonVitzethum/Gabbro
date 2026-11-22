@@ -84,14 +84,7 @@ public theorem await_resume_frame (tag : Nat) (destination : String) (future : F
     (typed : valueAt D (types.ordinary sourceType) value = some ordinary) :
     ∃ next, FrameRep D types f (.running (tag + 1)) (save frame destination value) next ∧
       (save frame destination value).marks = frame.marks := by
-  have tail : f.body.drop (tag + 1) = rest := by
-    rw [← List.drop_drop, command]
-    rfl
-  apply store_frame destination waiting _ binding typed
-  intro name needed different
-  simp only [liveAt, tail] at needed
-  simp only [liveAt, command, without, List.mem_filter, needed, beq_eq_false_iff_ne.mpr different,
-    Bool.not_false, and_self]
+  exact store_frame destination waiting (await_retains_live tag destination future boundary rest command) binding typed
 
 /-- An ordinary bind in an async function saves its typed result and
     retains every other live value in the continuation. -/

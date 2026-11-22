@@ -262,6 +262,18 @@ public theorem trimFrameExpr_rep {Γ : Ctx} {Λ : List (Res D)} {f : AsyncFn}
       | _ => []
   | Phase.cancelled | Phase.completed => []
 
+public theorem await_retains_live {f : AsyncFn} (tag : Nat) (destination : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination future boundary :: rest) :
+    ∀ name ∈ liveAt f (.running (tag + 1)), name ≠ destination → name ∈ liveAt f (.waiting tag future) := by
+  have tail : f.body.drop (tag + 1) = rest := by
+    rw [← List.drop_drop, command]
+    rfl
+  intro name needed other
+  simp only [liveAt, tail] at needed
+  simp only [liveAt, command, without, List.mem_filter, needed, beq_eq_false_iff_ne.mpr other,
+    Bool.not_false, and_self]
+
 @[expose] public def encodeFrame (D : Deklaration) (types : TypeResolution)
     (f : AsyncFn) (phase : Phase) (frame : Frame (Value D)) :
     Option (Wert D (frameType types f)) :=
@@ -315,7 +327,7 @@ private theorem liveBindingFrame_rep {Γ : Ctx} {Λ : List (Res D)}
   have typed : valueAt D (types.ordinary sourceType) result = some (env.get .here) := valueAt_typed D _ _
   have stored := named.save_rep typed needed stable represented.unique trimmed
   refine ⟨?_, ?_, represented.unique⟩
-  · simpa only [updated, saveSlotExpr_eval, eval] using stored
+  · exact stored
   intro name live
   by_cases same : name = destination
   · subst name
