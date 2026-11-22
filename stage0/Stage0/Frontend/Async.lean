@@ -11,6 +11,7 @@ public import Grammatik.Nebenlaeufigkeit.Async.Segment.Check
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
 public import Grammatik.Nebenlaeufigkeit.Async.PollFunction
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T1
+public import Mathlib.Data.Nat.Pairing
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
@@ -84,6 +85,65 @@ public theorem LayoutResolution.frameField {function : AsyncFn} {scope : UTypeSc
     uRecordFeldTyp scope aliases tables owner spaces type = .ok (resolution.types.ordinary type) :=
   resolution.resolved type (List.mem_cons_of_mem _
     (List.mem_map.mpr ⟨(name, type), used, rfl⟩))
+
+/-- The first identity beyond all source record declarations. -/
+@[expose] public def recordCeiling : List URecord → Nat
+  | [] => 0
+  | head :: rest => max (head.identity + 1) (recordCeiling rest)
+
+public theorem record_lt_ceiling {records : List URecord} {record : URecord} (present : record ∈ records) :
+    record.identity < recordCeiling records := by
+  induction records with
+  | nil => cases present
+  | cons head rest ih =>
+    rcases List.mem_cons.mp present with rfl | contained
+    · exact Nat.lt_of_lt_of_le (Nat.lt_succ_self _) (Nat.le_max_left ..)
+    · exact Nat.lt_of_lt_of_le (ih contained) (Nat.le_max_right ..)
+
+@[expose] public def recordPath : List Nat → Nat
+  | [] => 0
+  | head :: tail => Nat.pair head (recordPath tail) + 1
+
+public theorem recordPath_injective : Function.Injective recordPath := by
+  intro first
+  induction first with
+  | nil =>
+    intro second same
+    cases second with
+    | nil => rfl
+    | cons head tail => cases same
+  | cons head tail ih =>
+    intro second same
+    cases second with
+    | nil => cases same
+    | cons other rest =>
+      have paired := Nat.succ.inj same
+      obtain ⟨rfl, equal⟩ := Nat.pair_eq_pair.mp paired
+      exact congrArg (List.cons head) (ih equal)
+
+@[expose] public def generatedRecordName (source : UTypeScope) (declaration : Nat)
+    (path : List Nat) : Nat :=
+  recordCeiling source.records + Nat.pair declaration (recordPath path)
+
+public theorem generatedRecordName_exact {source : UTypeScope} {first second : Nat} {path other : List Nat}
+    (same : generatedRecordName source first path = generatedRecordName source second other) :
+    first = second ∧ path = other := by
+  obtain ⟨declaration, place⟩ := Nat.pair_eq_pair.mp (Nat.add_left_cancel same)
+  exact ⟨declaration, recordPath_injective place⟩
+
+public theorem generatedRecordName_fresh {source : UTypeScope} {record : URecord}
+    (present : record ∈ source.records) (declaration : Nat) (path : List Nat) :
+    record.identity < generatedRecordName source declaration path :=
+  (record_lt_ceiling present).trans_le (Nat.le_add_right _ _)
+
+/-- Generated frame, state and join records occupy disjoint identities
+    across all original declarations and their internal paths. -/
+@[expose] public def resolveUnitLayout (function : AsyncFn) (identity : Nat) (scope : UTypeScope)
+    (aliases : List (String × (Int × Int))) (tables : List UTab) (owner spaces : List String)
+    (childState childResult : String → Ty) :
+    Except String (LayoutResolution function scope aliases tables owner spaces) :=
+  resolveLayout function scope aliases tables owner spaces (generatedRecordName scope identity)
+    (fun _ _ same => (generatedRecordName_exact same).2) childState childResult
 
 /-- Only referenced names from the function's declared frame participate
     in the expression scope. Other names use the ordinary unit scope. -/
