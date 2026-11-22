@@ -40,6 +40,27 @@ theorem Emitted.code_survives_writes [Kern] (output : Emitted src K options) {sa
   rw [writes.rd, writes.wr, writes.b _ outside]
   exact code index inCode
 
+/-- All changes within a single emitted stack frame leave the exact
+    typed source world and its permissions intact. -/
+theorem Emitted.world_survives_stack (output : Emitted src K options)
+    {saved current : Runner.Mem} {thread : Nat} (declared : thread ≤ output.starts.length)
+    {world : World (declOf output.compiled.unit)}
+    (stored : WeltAt saved output.image.Y world)
+    (writes : Agree (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
+      0 output.image.Ks saved current) :
+    WeltAt current output.image.Y world := by
+  obtain ⟨layoutBound, width⟩ := output.stackReservation_bounds
+  have beforeWorld := (Nat.add_le_add_left
+    (Nat.mul_le_mul_left 8 (Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ declared)))
+    output.image.fp0).trans layoutBound
+  rw [Nat.succ_eq_add_one, Nat.mul_add, Nat.mul_one, Nat.mul_add] at beforeWorld
+  have tag : output.image.fp0 + 8 * (output.image.Ks * thread) < 2 ^ 64 := by omega
+  have frameEnds : (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))).toNat +
+      8 * output.image.Ks ≤ output.image.Y.lo := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt tag]
+    omega
+  exact weltAt_stab output.layout_checked.1 frameEnds _ _ stored writes
+
 /-- Pending private stores are outside the emitted instruction extent,
     so an issuing thread fetches the same code as shared memory holds. -/
 theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
