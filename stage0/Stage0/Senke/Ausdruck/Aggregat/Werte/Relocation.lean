@@ -137,4 +137,44 @@ theorem cellAddress_measure (original relocated : Lay D) (table : D.Tab) (field 
       codeMeasure, List.length_append, List.length_cons, List.length_nil, length, frame]
   · simp only [cellAddressC, first, second, stride, and_false, ite_false, Option.map_none]
 
+private theorem codeMeasure_bind {left right : Option (List II × Nat)}
+    {nextLeft nextRight : List II × Nat → Option (List II × Nat)}
+    (before : left.map codeMeasure = right.map codeMeasure)
+    (next : ∀ a b, codeMeasure a = codeMeasure b →
+      (nextLeft a).map codeMeasure = (nextRight b).map codeMeasure) :
+    (left.bind nextLeft).map codeMeasure = (right.bind nextRight).map codeMeasure := by
+  cases left <;> cases right
+  · rfl
+  · cases before
+  · cases before
+  · exact next _ _ (Option.some.inj before)
+
+/-- Complete indexed reads and writes compose the address budget with
+    the same typed cell span, independently of its relocated address. -/
+theorem cellAccess_measure (original relocated : Lay D) (table : D.Tab) (field : D.Feld table)
+    (destination : Nat) {leftIndex rightIndex : List II × Nat}
+    (indices : codeMeasure leftIndex = codeMeasure rightIndex)
+    (first : original.col table field < 2 ^ 31) (second : relocated.col table field < 2 ^ 31) :
+    (slotValueC original table field destination leftIndex).map codeMeasure =
+      (slotValueC relocated table field destination rightIndex).map codeMeasure ∧
+    ∀ leftValue rightValue, codeMeasure leftValue = codeMeasure rightValue →
+      (slotStoreC original table field destination leftValue leftIndex).map codeMeasure =
+        (slotStoreC relocated table field destination rightValue rightIndex).map codeMeasure := by
+  have address := cellAddress_measure original relocated table field
+    (destination + valueWords (D.typ table field)) indices first second
+  constructor
+  · unfold slotValueC
+    apply codeMeasure_bind address
+    intro left right measured
+    obtain ⟨length, top⟩ := Prod.mk.inj measured
+    simp only [pure, Option.pure_def, Option.map_some, codeMeasure, List.length_append, length, top]
+  · intro leftValue rightValue values
+    obtain ⟨valueLength, valueTop⟩ := Prod.mk.inj values
+    unfold slotStoreC
+    apply codeMeasure_bind address
+    intro left right measured
+    obtain ⟨length, top⟩ := Prod.mk.inj measured
+    simp only [pure, Option.pure_def, Option.map_some, codeMeasure, List.length_append,
+      length, top, valueLength, valueTop]
+
 end Gabbro.Stage0.Senke
