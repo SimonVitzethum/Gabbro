@@ -1,8 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.Segment
-import Grammatik.Zielsatz.Atomar.AtomarZiel
-import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
