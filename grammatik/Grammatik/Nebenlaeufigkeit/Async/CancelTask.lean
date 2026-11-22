@@ -31,7 +31,8 @@ public inductive TaskDropPlan (D : Deklaration) (types : TypeResolution)
 
 @[expose] public def ChildDisposer.lower {name : String} (disposer : ChildDisposer D types V Λ name)
     (Γ : Ctx) (l : Bool) : Stmt D V l (types.childState name :: Γ) Λ Λ :=
-  disposer.retained ▸ .call disposer.function (disposer.args Γ) disposer.contract disposer.infallible
+  cast (congrArg (Stmt D V l (types.childState name :: Γ) Λ) disposer.retained)
+    (.call disposer.function (disposer.args Γ) disposer.contract disposer.infallible)
 
 /-- Cleanup dispatches over the same represented task tree as polling.
     A Ready tag skips its entire subtree, and live children run in order. -/
@@ -138,7 +139,7 @@ public theorem TaskDropPlan.lower_simulates {future : FutureExpr} (plan : TaskDr
     | callActive _ _ _ state =>
       refine ⟨disposer.drop calls state world, by simp only [TaskDropPlan.run, dite_eq_left rfl]; rfl, ?_⟩
       unfold TaskDropPlan.lower
-      rw [storedTag_active oracle passes calls slot (.cons (disposer.lower Γ l) .nil) .nil
+      erw [storedTag_active oracle passes calls slot (.cons (disposer.lower Γ l) .nil) .nil
         world env state exactState]
       simp only [execBlock, ChildDisposer.lower_exec]
       cases disposer.drop calls state world with
@@ -165,8 +166,7 @@ public theorem TaskDropPlan.lower_simulates {future : FutureExpr} (plan : TaskDr
       have restored :
           execStmt oracle passes calls ((TaskDropPlan.join first second).lower path (l := l) slot) world env =
           (((execBlock oracle passes calls (.cons firstStmt (.cons secondStmt .nil)) world loaded).schrumpf).schrumpf).schrumpf := by
-        rw [began]
-        rfl
+        exact began.trans rfl
       obtain ⟨firstOutcome, modelFirst, firstRun⟩ :=
         firstIH (0 :: path) (l := l) (.there .here) world loaded leftRep rfl
       change execStmt oracle passes calls firstStmt world loaded = _ at firstRun
