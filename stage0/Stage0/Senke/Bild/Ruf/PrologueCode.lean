@@ -235,14 +235,29 @@ abbrev ImageProloguePhase.reads [Kern] {output : Emitted src reserve options}
     (phase : ImageProloguePhase output E thread control memory state) : W → Prop :=
   imagePrologueReads output thread phase.root.1
 
+/-- The prologue boundary is also valid in the projected memory used
+    to register all threads, as it agrees on this root's scoped bytes. -/
+theorem ImageProloguePhase.boundary_agrees [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory projected : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory)
+    (agrees : GleichAuf phase.reads projected memory) :
+    MaskedAgreement phase.reads phase.writes phase.finish projected := by
+  refine ⟨fun byte read => ?_, fun byte writable => ?_⟩
+  · exact ⟨(reached.1 byte read).1.trans (agrees byte read).1.symm,
+      (reached.1 byte read).2.trans (agrees byte read).2.1.symm⟩
+  · exact (reached.2 byte writable).trans
+      (agrees byte (.inl (phase.privateWrites byte writable))).2.2.symm
+
 /-- The actual issuing view has the restored arguments and snapshots
     at the decoded prologue boundary. -/
 theorem ImageProloguePhase.entry_values [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
-    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
-    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) :
-    EntryFrameValues output.image.Y output.compiled.program phase.root.1 memory
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) :
+    EntryFrameValues output.image.Y output.compiled.program phase.root.1 view
       (imagePrologueFrame output thread) phase.entryWorld phase.root.2 :=
   phase.entryValues.congr_read_frame phase.entryFrame phase.entryFits fun byte inside =>
     let same := reached.1 byte (.inl (phase.privateWrites byte (phase.frameWritable byte inside)))
@@ -252,10 +267,10 @@ theorem ImageProloguePhase.entry_values [Kern] {output : Emitted src reserve opt
     whole prologue proof, for every slot in the thread's reservation. -/
 theorem ImageProloguePhase.entry_frame [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
-    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
-    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) :
-    FrameOK memory (imagePrologueFrame output thread) (output.image.Ks - FB) := by
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) :
+    FrameOK view (imagePrologueFrame output thread) (output.image.Ks - FB) := by
   have same index fits offset inside :=
     let frame := frame_slot_byte phase.entryFrame (index := index) fits (offset := offset) inside
     let write := phase.frameWritable _ frame
@@ -272,10 +287,10 @@ theorem ImageProloguePhase.entry_frame [Kern] {output : Emitted src reserve opti
     that the startup stub installed before the prologue. -/
 theorem ImageProloguePhase.entry_header [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
-    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {memory view : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
-    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) (index : Fin FB) :
-    memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view) (index : Fin FB) :
+    view.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
       phase.header index := by
   have fits : index.val < output.image.Ks - FB := by
     have withinHeader := index.isLt

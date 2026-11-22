@@ -370,10 +370,10 @@ theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src res
     canonical GX return header and lexical environment for that root. -/
 theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
-    {thread : Nat} {control : Res T} {memory : Mem}
+    {thread : Nat} {control : Res T} {memory view : Mem}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
-    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish view)
     {rp caller : W} (returnPointer : phase.header ⟨0, by decide⟩ = some rp)
     (callerFrame : phase.header ⟨1, by decide⟩ = some caller) :
     let program := E.P.mitRuhe
@@ -382,8 +382,8 @@ theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options
     let fp := imagePrologueFrame output thread
     let K := output.image.Ks - FB
     let args := envR phase.root.2
-    FrameOK memory fp K ∧ Kopf layout fn memory fp K rp caller args program (worldR phase.entryWorld) ∧
-      EnvAt layout memory fp args (functionFrame program fn).bodyReserved := by
+    FrameOK view fp K ∧ Kopf layout fn view fp K rp caller args program (worldR phase.entryWorld) ∧
+      EnvAt layout view fp args (functionFrame program fn).bodyReserved := by
   dsimp only
   rw [unit.program]
   have values := (phase.entry_values reached).withIdle

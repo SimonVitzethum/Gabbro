@@ -82,6 +82,28 @@ theorem Emitted.prologue_read_owner [Kern] (output : Emitted src reserve options
     exact plainWriterFootprint_access hardware accepted duties separated allocated begins ends plain reached
       (.inl inFootprint)
 
+/-- Every prologue read sees the same bytes in the projected memory and
+    in the issuer's actual TSO view. -/
+theorem ImageRuntimePartition.prologue_projection [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {machine : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition (imageRuntimeFootprint output E state.m)
+      output E O history machine state body pendingPhase)
+    {thread : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root) :
+    GleichAuf (imagePrologueReads output thread root.1)
+      (projectSCState (imageRuntimeFootprint output E state.m) machine.ms).1 (machine.ms.1.view thread) := by
+  intro byte read
+  exact mergedView_accessible_at machine.ms.1 _ thread byte
+    (fun issuer store queued address touched => (partition.1 issuer store queued address touched).1)
+    (fun _ owned => output.prologue_read_owner unit hardware accepted duties declared read owned)
+
 /-- A pending root reads the exact committed model values. Other bodies
     can have tentative writes, but none of their write footprints can
     overlap the checked prologue reads. -/
@@ -104,11 +126,7 @@ theorem ImageRuntimePartition.prologue_world [Kern] {output : Emitted src reserv
   have accessible (byte : W) (read : imagePrologueReads output thread root.1 byte)
       (owner : Nat) (owned : footprint owner byte) : owner = thread :=
     output.prologue_read_owner unit hardware accepted duties declared read owned
-  have projected (byte : W) (read : imagePrologueReads output thread root.1 byte) :
-      GleichAt (projectSCState footprint machine.ms).1 (machine.ms.1.view thread) byte :=
-    mergedView_accessible_at machine.ms.1 footprint thread byte
-      (fun i store queued address touched => (partition.1 i store queued address touched).1)
-      (accessible byte read)
+  have projected := partition.prologue_projection unit hardware accepted duties declared
   have main {m : Mem} (stored : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
       WeltAt m output.image.Y (worldZ (state.m.speicher.welt [])) := by
     apply WeltAt.withIdle_iff.mp
