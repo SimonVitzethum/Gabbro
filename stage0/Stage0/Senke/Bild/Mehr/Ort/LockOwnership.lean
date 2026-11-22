@@ -6,7 +6,7 @@ public import Stage0.Senke.Sperre.Bindung.ImageFutex
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik
+open Gabbro.Grammatik Runner Runner.IR Runner.Mach Runner.Beweis
 
 /-- A ticket lock and the source traces name the same owner. Source
     slots outside the fixed image's reservations hold no lock. -/
@@ -135,5 +135,41 @@ theorem TicketOwnership.leave {D : Deklaration} {N : Nat} {P : Programm D}
       rw [rufUpdateG_self]
       exact Iff.intro (fun impossible => Bool.noConfusion impossible)
         (fun member => (List.Nodup.not_mem_erase unique member).elim)
+
+/-- The actual image CAS and the corresponding GX scope exit agree
+    at a single publication point. The successor retains both
+    the physical ticket invariant and the source owner relation. -/
+theorem image_ticket_release_GX [Kern] {D : Deklaration} {N : Nat}
+    {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Tab ⊕ D.Glob → Prop}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {source : FadenMaschine D} {lock : D.Lock} {before : Zustand N}
+    {thread : Fin N} {ticket expected base : Nat}
+    (owners : TicketOwnership source.m lock before)
+    (limit : N ≤ 2147483647) (invariant : Inv N before)
+    (saved : before.pc thread = .gibC ticket expected)
+    (fits : base + 24 ≤ 2 ^ 64) (represented : TicketWordsAt machine.ms.1.m base before)
+    (writable : all machine.ms.1.m.wr (BitVec.ofNat 64 (base + 8)) 8 = true)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory)
+    (live : source.lebt thread.val = true) (ready : source.wartet thread.val = [])
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (k : GRest D (vertragVon D (source.m.faeden thread.val).kopf.f) l Γ Λ)
+    (env : Env D Γ)
+    (head : (source.m.faeden thread.val).kopf.rest = ⟨l, Γ, Res.held lock :: Λ, env, .frei lock k⟩)
+    (unique : (offen (source.m.faeden thread.val).spur).Nodup) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
+    let released : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
+      upd before.pc thread .gibW, before.q.tail⟩
+    ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
+      TicketWordsAt memory.1.m base released ∧ Inv N released ∧
+      ∃ target, FadenSchrittX P O passes Tg source target ∧ target.m.speicher = source.m.speicher ∧
+        TicketOwnership target.m lock released := by
+  obtain ⟨process, returned, _, _, words, invariant', _, _⟩ :=
+    image_ticket_release limit invariant saved fits represented writable waiting answered
+  obtain ⟨target, advances, store, _, owners'⟩ :=
+    owners.leave (P := P) (O := O) (passes := passes) (Tg := Tg) saved live ready k env head unique
+  exact ⟨process, returned, words, invariant', target, advances, store, owners'⟩
 
 end Gabbro.Stage0.Senke.Faeden
