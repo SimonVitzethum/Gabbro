@@ -177,8 +177,7 @@ theorem EntryPrefix.activate_declared_workers [DecidableEq D.Fn] {E : Einheit D}
   have bounds (thread : Faden) (member : thread ∈ workers) : 1 ≤ thread ∧ thread < 1 + (E.starts.length - 1) :=
     List.mem_range'_1.mp member
   have positive (thread : Faden) (member : thread ∈ workers) : thread ≠ 0 := by
-    have first := (bounds thread member).1
-    omega
+    exact Nat.ne_of_gt ((bounds thread member).1 : 0 < thread)
   have distinct : workers.Nodup := List.nodup_range'
   have dormant (thread : Faden) (member : thread ∈ workers) : before.lebt thread = false :=
     Bool.eq_false_iff.mpr (fun live => positive thread member ((only.1 thread).mp live))
@@ -189,7 +188,8 @@ theorem EntryPrefix.activate_declared_workers [DecidableEq D.Fn] {E : Einheit D}
   · intro member
     have different := positive thread member
     have declared : thread < E.starts.length := by
-      obtain ⟨_, upper⟩ := bounds thread member
+      have lower : 1 ≤ (thread : Nat) := (bounds thread member).1
+      have upper : (thread : Nat) < 1 + (E.starts.length - 1) := (bounds thread member).2
       omega
     have found := List.getElem?_eq_getElem declared
     exact ⟨different, (live thread).mpr (.inl member),
