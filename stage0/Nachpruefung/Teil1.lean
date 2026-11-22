@@ -195,6 +195,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.root_depth_start
 #print axioms Gabbro.Stage0.Emitted.root_depth_preserves_frame
 #print axioms Gabbro.Stage0.Emitted.root_depth_phase
+#print axioms Gabbro.Stage0.Emitted.root_call_decrement_operand
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.resultFieldProjection_erfuellbar
 #print axioms Gabbro.Stage0.checkResultSummary

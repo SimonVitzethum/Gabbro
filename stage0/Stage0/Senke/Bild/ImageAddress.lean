@@ -151,7 +151,8 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     (declared : output.starts[index]? = some root) :
     CodeAt memory (BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)))
       (startC output.image.A root.1 output.image.depth 60 false) ∧
-      2 < output.image.Ks ∧ output.image.depth + 1 < 2 ^ 31 := by
+      2 < output.image.Ks ∧ output.image.depth + 1 < 2 ^ 31 ∧
+      startScratch root.1 + 8 ≤ output.image.Ks ∧ output.image.Ks < 2 ^ 31 := by
   obtain ⟨functions, body, sites, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
@@ -172,7 +173,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
       startC output.image.A output.compiled.main output.image.depth 231 true) header
   rw [ofNat_add64, List.length_append, spawns, startC_len] at rootCode
   have code := rootsC_at output.image.A output.image.depth roots _ index listed rootCode
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simpa only [selected, Nat.mul_add, Nat.add_assoc] using code
   · have room := layout.hroom
     simp only [FB] at room
@@ -184,6 +185,16 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
       simp only [depthOf, FB] at quotient room ⊢
       omega
     have allocation := layout.hylo
+    have order := layout.hyord
+    have last := layout.hyhi
+    have limit := layout.hfit
+    have reserved := Nat.le_mul_of_pos_right output.image.Ks
+      (Nat.succ_pos ((output.starts.map (·.1)).length))
+    simp only [List.length_map, Emitted.starts, Nat.succ_eq_add_one] at allocation reserved
+    omega
+  · exact layout.hex root.1 (List.mem_cons_of_mem _ (List.mem_map.mpr
+      ⟨root, List.mem_of_getElem? declared, rfl⟩))
+  · have allocation := layout.hylo
     have order := layout.hyord
     have last := layout.hyhi
     have limit := layout.hfit
@@ -212,7 +223,7 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
         (slot pointer.fp (BitVec.ofNat 64 2)) 8 (output.image.depth + 1) ∧
       ∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other := by
   intro pointer running frame
-  obtain ⟨stub, enough, depthFits⟩ := output.root_stub_code loaded declared
+  obtain ⟨stub, enough, depthFits, _, _⟩ := output.root_stub_code loaded declared
   have first := stub 0 (by rw [startC_len]; decide)
   have instruction : InsAt (before.ms.1.view (index + 1)) pointer.pc 1
       (II.f 2) (II.f ((output.image.depth + 1 : Nat) : Int)) (II.f 0) := by
@@ -257,7 +268,7 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
         some (BitVec.ofNat 64 (output.image.depth + 1)) := by
   intro pointer words running frame fits args
   obtain ⟨after, run, memory, wroteDepth, others⟩ := output.root_depth_start declared loaded running frame
-  obtain ⟨_, depthSlot, depthFits⟩ := output.root_stub_code loaded declared
+  obtain ⟨_, depthSlot, depthFits, _, _⟩ := output.root_stub_code loaded declared
   have thread : index + 1 ≤ output.starts.length :=
     Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
   refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
@@ -327,6 +338,46 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
           BitVec.ofNat 64 16 = _
       rw [← BitVec.ofNat_add]
       congr 1
+
+/-- The first call-tail instruction writes the decrement operand in the
+    scratch word immediately after the serialized parameter span. -/
+theorem Emitted.root_call_decrement_operand [Kern] (output : Emitted src K options)
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (loaded : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
+    let entry : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let scratch := FB + FB + contextWords ((declOf output.compiled.unit).params root.1)
+    before.ths[index + 1]? = some (some (.next (nxt entry))) →
+    FrameOK (before.ms.1.view (index + 1)) entry.fp output.image.Ks →
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
+        ⟨after, before.ths.set (index + 1) (some (.next (nxt (nxt entry))))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view (index + 1) =
+        Mem.write (before.ms.1.view (index + 1)) (slot entry.fp (BitVec.ofNat 64 scratch)) 8 1 ∧
+      ∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other := by
+  intro entry scratch running frame
+  obtain ⟨stub, _, _, exitRoom, signed⟩ := output.root_stub_code loaded declared
+  have callRoom : scratch < output.image.Ks := by
+    have margin := startScratch_ge root.1
+    dsimp only [scratch]
+    omega
+  have instruction : InsAt (before.ms.1.view (index + 1)) (nxt entry).pc 1
+      (II.f (scratch : Int)) (II.f 1) (II.f 0) := by
+    have first := stub 1 (by rw [startC_len]; decide)
+    simpa only [startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+      List.getElem_cons_succ, List.getElem_cons_zero] using first
+  have destination : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
+  have operand : (sx (II.f 1)).toNat = 1 := by decide
+  have writable : Mem.all before.ms.1.m.wr (slot entry.fp (sx (II.f (scratch : Int)))) 8 = true := by
+    rw [destination, ← Runner.Beweis.foldl_wr (before.ms.1.buf (index + 1)) before.ms.1.m]
+    exact frame.wr scratch callRoom
+  obtain ⟨after, run, memory, view, others⟩ :=
+    tso_const_prefix (before := imageToTSO before) running instruction writable
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
+  rw [view, destination, operand] <;> rfl
 
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
