@@ -135,7 +135,7 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.capture_frameMemory [kernel : 
       actual.b byte = finish.b byte ∧ actual.rd byte = finish.rd byte :=
     ⟨(relevant.1 byte (frameReads byte inside)).1.symm, (relevant.1 byte (frameReads byte inside)).2.symm⟩
   refine ⟨rfl, ⟨readMap, writeMap, ?_⟩,
-    snapshots_agree (proofFrame.agree (written.widen fits)) fits same stored⟩
+    snapshots_agree (proofFrame.agree (Senke.Agree.widen written fits)) fits same stored⟩
   intro byte outside
   by_cases inside : inSlots fp 0 K byte
   · exact (same byte inside).1.trans ((written.b byte outside).trans (agreement.1 byte (frameReads byte inside)).1)
