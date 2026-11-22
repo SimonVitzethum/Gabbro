@@ -36,6 +36,32 @@ public theorem phaseArms_exec (types : TypeResolution) (f : AsyncFn)
     phaseArms_exec types f oracle passes calls world env rest (fun index => block index.succ)
       ⟨offset, Nat.lt_of_succ_lt_succ valid⟩ value
 
+public theorem phaseArms_cost (types : TypeResolution) (f : AsyncFn)
+    (exit : Nat) (calls : D.Fn → Nat) (passes limit : Nat) :
+    ∀ (cases : List Phase)
+      (blocks : (index : Fin cases.length) →
+        Block D V l (phaseType types f (cases.get index) :: Γ) Λ Λ),
+      (∀ index, kostenBlock exit calls passes (blocks index) ≤ limit) →
+      kostenArms exit calls passes (phaseArms types f cases blocks) ≤ limit
+  | [], _, _ => Nat.zero_le _
+  | _ :: rest, blocks, bounded =>
+    max_le (bounded ⟨0, Nat.zero_lt_succ _⟩)
+      (phaseArms_cost types f exit calls passes limit rest (fun index => blocks index.succ)
+        (fun index => bounded index.succ))
+
+public theorem phaseArms_calls (types : TypeResolution) (f : AsyncFn)
+    (direct : D.Fn → Bool) (indirect : Nat → Bool) (forever : Bool) :
+    ∀ (cases : List Phase)
+      (blocks : (index : Fin cases.length) →
+        Block D V l (phaseType types f (cases.get index) :: Γ) Λ Λ),
+      (∀ index, rufeB direct indirect forever (blocks index) = true) →
+      rufeArms direct indirect forever (phaseArms types f cases blocks) = true
+  | [], _, _ => rfl
+  | _ :: rest, blocks, admitted =>
+    Bool.and_eq_true.mpr ⟨admitted ⟨0, Nat.zero_lt_succ _⟩,
+      phaseArms_calls types f direct indirect forever rest (fun index => blocks index.succ)
+        (fun index => admitted index.succ)⟩
+
 public theorem PhaseListRep.locate {types : TypeResolution} {f : AsyncFn} {inventory : Inventory D}
     {cases : List Phase} {source : State (Value D) (Child D types)}
     {sum : Wert D (.sum (cases.map fun phase => some (phaseType types f phase)))}

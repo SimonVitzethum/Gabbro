@@ -132,6 +132,36 @@ termination_by activationFuel f source
   .retry (2 * f.body.length + 2) (.var finished)
     (.cons (checkedDispatch table state finished) .nil) exhausted
 
+/-- The actual checked retry charges for its dispatch, loop exit test,
+    child calls and the ordinary overflow branch. -/
+public theorem checkedRetryStmt_cost {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (exhausted : Block D V l Γ Λ Λ) (exit : Nat) (calls : D.Fn → Nat) (passes limit : Nat)
+    (bounded : ∀ index, kostenBlock exit calls passes ((table index).block (l := true) state finished) ≤ limit) :
+    kostenStmt exit calls passes (checkedRetryStmt table state finished exhausted) ≤
+      4 + (2 * f.body.length + 2) * (6 + limit) + kostenBlock exit calls passes exhausted := by
+  let blocks := fun index => (table index).block (l := true) state finished
+  have arms := phaseArms_cost types f exit calls passes limit (phases f) blocks bounded
+  have scaled := Nat.mul_le_mul_left (2 * f.body.length + 2) (Nat.add_le_add_left arms 6)
+  change 2 + (2 * f.body.length + 2) *
+    (2 + (1 + 0) + kostenArms exit calls passes (phaseArms types f (phases f) blocks) + 1 + 0 + 2) +
+    (2 + 0 + kostenBlock exit calls passes exhausted) ≤ _
+  simp only [Nat.add_zero] at *
+  omega
+
+public theorem checkedRetryStmt_calls {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (exhausted : Block D V l Γ Λ Λ) (direct : D.Fn → Bool) (indirect : Nat → Bool) (forever : Bool)
+    (admitted : ∀ index, rufeB direct indirect forever ((table index).block (l := true) state finished) = true)
+    (overflow : rufeB direct indirect forever exhausted = true) :
+    rufeS direct indirect forever (checkedRetryStmt table state finished exhausted) = true := by
+  have arms := phaseArms_calls types f direct indirect forever (phases f)
+    (fun index => (table index).block (l := true) state finished) admitted
+  simp only [checkedRetryStmt, checkedDispatch, phaseDispatch, rufeS, rufeB, arms, overflow,
+    Bool.true_and, Bool.and_true]
+
 /-- The emitted loop resets its flag for each poll and retains the ordinary
     G overflow branch. Its proof discharges that branch on represented inputs. -/
 @[expose] public def checkedPoll {elaboration : Elaboration D V Λ types f}
