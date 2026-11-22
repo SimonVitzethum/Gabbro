@@ -227,7 +227,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   obtain ⟨second, operandRun, shared₂, write₂, others₂⟩ :=
     output.root_call_decrement_operand (before := ⟨first, before.ths.set (index + 1) (some (.next (nxt entry)))⟩)
       declared code₁ (onThread (.next (nxt entry))) frame₁
-  have preserved₂ := child_store_preserves output declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
+  have preserved₂ := child_store_preserves output (value := 1)
+    declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
   rw [← write₂] at preserved₂
   obtain ⟨code₂, frame₂, args₂⟩ := preserved₂
   have depth₂ : (second.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 2)) =
@@ -243,7 +244,7 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     output.root_call_depth (before := ⟨second, before.ths.set (index + 1) (some (.next (nxt (nxt entry))))⟩)
       declared code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
   simp only [List.set_set] at subRun
-  have preserved₃ := child_store_preserves output declaredThread calleeRoom fits
+  have preserved₃ := child_store_preserves output (value := output.image.depth) declaredThread calleeRoom fits
     (Or.inl (by simp only [FB]; decide)) code₂ frame₂ args₂
   rw [← write₃] at preserved₃
   obtain ⟨code₃, frame₃, args₃⟩ := preserved₃
@@ -267,7 +268,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     change (⟨entry.pc + BitVec.ofNat 64 (16 * 3) + 16, entry.fp⟩ : T) = _
     rw [BitVec.add_assoc] <;> rfl
   rw [callPC] at targetRun
-  have preserved₄ := child_store_preserves output declaredThread scratchRoom fits (Or.inr wordCount.le) code₃ frame₃ args₃
+  have preserved₄ := child_store_preserves output (value := output.image.A root.1)
+    declaredThread scratchRoom fits (Or.inr wordCount.le) code₃ frame₃ args₃
   rw [← write₄] at preserved₄
   have depth₄ : (fourth.1.view (index + 1)).rd64 (slot entry.fp (BitVec.ofNat 64 (FB + 2))) =
       some (BitVec.ofNat 64 output.image.depth) := by
