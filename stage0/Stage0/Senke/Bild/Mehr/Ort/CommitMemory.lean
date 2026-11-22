@@ -14,13 +14,13 @@ variable {D : Deklaration}
 
 /-- The bytes of all allocated cells belonging to the selected carriers. -/
 def carrierFootprint (layout : Lay D) (carriers : D.Tab ⊕ D.Glob → Prop) (byte : W) : Prop :=
-  ∃ cell : Zelle D, cell.da layout ∧ carriers cell.carrier ∧
+  ∃ cell : Zelle D, cell.da layout ∧ carriers (Zelle.carrier cell) ∧
     cell.adr layout ≤ byte.toNat ∧ byte.toNat < cell.adr layout + cell.bytes
 
 theorem carrierFootprint_iff {layout : Lay D} {carriers : D.Tab ⊕ D.Glob → Prop}
     (separated : LayDis layout) {cell : Zelle D} (allocated : cell.da layout) {byte : W}
     (first : cell.adr layout ≤ byte.toNat) (last : byte.toNat < cell.adr layout + cell.bytes) :
-    carrierFootprint layout carriers byte ↔ carriers cell.carrier := by
+    carrierFootprint layout carriers byte ↔ carriers (Zelle.carrier cell) := by
   constructor
   · rintro ⟨other, present, selected, before, after⟩
     have same : cell = other := by
@@ -76,16 +76,16 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
     (changed : OrtGleich carriers observed committed)
     (unchanged : ∀ carrier, ¬ carriers carrier → TraegerGleich committed.speicher original.speicher carrier) :
     WeltAt (commitBytes before after (carrierFootprint layout carriers)) layout committed := by
+  classical
   let memory := commitBytes before after (carrierFootprint layout carriers)
   have copy {cell : Zelle D} (allocated : cell.da layout) {ty : Ty} {value : Wert D ty}
       (size : cell.bytes = 8 * valueWords ty)
       (bound : cell.adr layout + cell.bytes < 2 ^ 64) :
-      (if carriers cell.carrier then ValueAt layout after (BitVec.ofNat 64 (cell.adr layout)) 0 ty value
+      (if carriers (Zelle.carrier cell) then ValueAt layout after (BitVec.ofNat 64 (cell.adr layout)) 0 ty value
         else ValueAt layout before (BitVec.ofNat 64 (cell.adr layout)) 0 ty value) →
       ValueAt layout memory (BitVec.ofNat 64 (cell.adr layout)) 0 ty value := by
-    classical
     intro encoded
-    by_cases chosen : carriers cell.carrier
+    by_cases chosen : carriers (Zelle.carrier cell)
     · rw [if_pos chosen] at encoded
       apply valueAt_congr_bytes (size ▸ bound) _ encoded
       intro byte first last
@@ -96,7 +96,6 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
       intro byte first last
       have excluded := fun selected => chosen ((carrierFootprint_iff separated allocated first (size.symm ▸ last)).mp selected)
       exact ⟨by simp only [memory, commitBytes, dif_neg excluded, if_neg excluded], rfl⟩
-  classical
   refine ⟨?_, ?_, beforeWorld.2.2⟩
   · intro table field index allocated
     apply copy (cell := .elem table field index) allocated rfl
