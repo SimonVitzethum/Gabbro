@@ -17,6 +17,7 @@
 -/
 module
 public import Stage0.Senke.Bild.Mehr.Ort.Commit
+public import Stage0.Senke.Bild.Mehr.Relation
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BildMehr
@@ -115,8 +116,58 @@ theorem fadenX_segment {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Ta
     ∃ (N' : RufMaschineG D) (σe' : World D),
       FadenErreichbarX P O passes Tg K0 ⟨N', K.lebt, K.wartet, K.rang, K.uhr⟩ ∧
       RandG thr stapel f rho s0 Agl ebe N' σe' ρe ∧ OrtGleich C σe σe' ∧
+      (∀ j, j ≠ thr → N'.faeden j = K.m.faeden j) ∧
       ∀ c, ¬ C c → TraegerGleich σe'.speicher σ'.speicher c := by
   obtain ⟨N', σe', hl', hR, hσe, hfr⟩ := randG_segment_ein hRuf hk h hσ hf hsp hA
-  exact ⟨N', σe', fadenErreichbarX_lauf' hl' hl hw hK, hR, hσe, hfr⟩
+  exact ⟨N', σe', fadenErreichbarX_lauf' hl' hl hw hK, hR, hσe, rufLaufG_fremd hl', hfr⟩
+
+/-- Commit a complete private segment from a registered IR thread to
+    the current GX machine. Its saved view supplies the same typed
+    endpoint and values on the segment carriers. Every other source
+    thread and every carrier outside the segment is preserved. -/
+theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
+    {passes : Nat} {layout : Lay D} {program : PCfg} {source : FadenMaschine D}
+    {snapshots : Nat → Option Solo} {positions : Nat → MLage D} {committed : Runner.Mem}
+    {thread : Nat} {snapshot : Solo}
+    (matched : MTRel P O passes layout program source snapshots positions committed)
+    (registered : snapshots thread = some snapshot)
+    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : Runner.W}
+    (quiet : let x := positions thread
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+    (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
+    (boundary : let x := positions thread
+      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+    (agree : let x := positions thread
+      OrtGleich carriers x.σ (source.m.speicher.welt x.σ.spur))
+    (free : FreiA (positions thread).Agl source.m (positions thread).thr) :
+    let x := positions thread
+    ∃ machine finalWorld,
+      FadenErreichbarX P O passes shared source
+        ⟨machine, source.lebt, source.wartet, source.rang, source.uhr⟩ ∧
+      program.ths[thread]? = some (some (.next ⟨pc, x.B.fp⟩)) ∧
+      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe ∧
+      RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl x.ebe machine finalWorld x.ρe ∧
+      OrtGleich carriers x.σe finalWorld ∧
+      (∀ other, other ≠ x.thr → machine.faeden other = source.m.faeden other) ∧
+      ∀ cell, ¬ carriers cell → TraegerGleich finalWorld.speicher source.m.speicher cell := by
+  intro x
+  obtain ⟨sameProgram, sameOracle, samePasses, _⟩ := matched.prog thread snapshot registered
+  have position := matched.lage thread snapshot registered
+  have calls : RufOk P O passes x.thr x.Agl x.B.R x.Cg := by
+    rw [← sameProgram, ← sameOracle, ← samePasses]
+    exact position.ruf
+  have semantics : Segment O passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe := by
+    rw [← sameOracle, ← samePasses]
+    exact quiet
+  have storage : source.m.speicher = (source.m.speicher.welt x.σ.spur).speicher :=
+    (speicher_welt_speicher _ _).symm
+  obtain ⟨alive, waiting⟩ := matched.lebtG thread snapshot registered
+  obtain ⟨machine, world, reached, sourceBoundary, sameWorld, otherThreads, otherCarriers⟩ :=
+    fadenX_segment (Tg := shared) calls semantics position.rand.2 agree .start alive waiting
+      (matched.amRand thread snapshot registered) storage free
+  refine ⟨machine, world, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_⟩
+  · exact (matched.zustand thread snapshot registered).trans (by rw [control])
+  · intro cell outside
+    simpa only [speicher_welt_speicher] using otherCarriers cell outside
 
 end Gabbro.Stage0.Senke.BildMehr
