@@ -100,7 +100,7 @@ theorem lowWertE_localArraySliceLength {u : UProg} {Γ : Ctx} {Λ : List (Res (d
     (readLast : lowWertE u Γ Λ fn er (.param last) = .ok ⟨.int lastLo lastHi, finish⟩) :
     lowWertE u Γ Λ fn er (.sub (.param last) (.param first)) =
       .ok ⟨.int (lastLo - firstHi) (lastHi - firstLo), .sub finish begin⟩ := by
-  simp only [lowWertE, readFirst, readLast, zahlVon, LowSide.minus, LowSide.wert]
+  simp only [lowWertE, readFirst, readLast, zahlVon, LowWert.zahl, LowSide.minus, LowSide.wert]
 
 /-- Interval checking suffices for all runtime endpoints. The generated
     subtraction returns the exact length of the model slice. -/
@@ -172,7 +172,8 @@ theorem eval_localArraySliceIndex {τ : Ty} {capacity : Nat}
     let index := eval initial position world env
     ∃ valid : SliceOk capacity first.n.toNat last.n.toNat,
       ∃ inside : index.n.toNat < last.n.toNat - first.n.toNat,
-        eval initial (.arrGet base (.widen (by omega) (by omega) (.add begin position))) world env =
+        eval initial (.arrGet base (.widen (by omega)
+          (by have low := last.lo_le; have high := last.le_hi; omega) (.add begin position))) world env =
           (BoundedSlice.ofArray (eval initial base world env) first.n.toNat last.n.toNat valid).get
             ⟨index.n.toNat, inside⟩ := by
   dsimp only
@@ -183,6 +184,7 @@ theorem eval_localArraySliceIndex {τ : Ty} {capacity : Nat}
   have indexLo := (eval initial position world env).lo_le
   have indexHi := (eval initial position world env).le_hi
   refine ⟨⟨by omega, by omega⟩, by omega, ?_⟩
+  simp only [eval, BoundedSlice.ofArray, arrSliceValue]
   apply congrArg (eval initial base world env)
   apply Fin.ext
   simp only [Zahl.fin, Zahl.weiter, Zahl.add]

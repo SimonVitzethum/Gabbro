@@ -24,7 +24,10 @@ theorem lowE_runtimeSliceIndex_ok [Kern] {D : Deklaration} {L : Lay D}
     {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
     (memory : ∀ m, W m → WeltAt m L world) (layout : LayIn L)
     (made : lowE (currentOld := true) L (reserved := reserved)
-      (.arrGet base (.widen (by omega) (by omega) (.add begin position))) d = some (code, top))
+      (.arrGet base (.widen (by omega) (by
+        have low := (eval world finish world env).lo_le
+        have high := (eval world finish world env).le_hi
+        omega) (.add begin position))) d = some (code, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d code env W reserved) :
     let first := eval world begin world env
     let last := eval world finish world env
