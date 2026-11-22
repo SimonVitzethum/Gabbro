@@ -66,6 +66,41 @@ def resolveArenaStorage (u : UProg) (table : (declOf u).Tab) :
         else throw "ir: invalid arena memory types or aliased arena metadata"
   else throw "ir: table is not a declared arena"
 
+/-- The finite arena table is read from the actual canonical declarations.
+    Ordinary tables have no arena storage and every declared arena has
+    an entry produced by the same typed resolver. -/
+structure ArenaStorageExport (u : UProg) where
+  entry : (table : (declOf u).Tab) → Option (ResolvedArenaStorage u table)
+  coverage : ∀ table, (entry table).isSome = true ↔ (tabAt u table).arena = true
+  resolved : ∀ table storage, entry table = some storage → resolveArenaStorage u table = .ok storage
+
+def collectArenaStorage (u : UProg) : Except String (ArenaStorageExport u) :=
+  if complete : (List.finRange u.tabs.length).all (fun table =>
+      !(tabAt u table).arena || (resolveArenaStorage u table).isOk) = true then
+    .ok {
+      entry := fun table => (resolveArenaStorage u table).toOption
+      coverage := by
+        intro table
+        cases found : resolveArenaStorage u table with
+        | error failure =>
+          have verdict := List.all_eq_true.mp complete table (List.mem_finRange table)
+          simp only [found, Except.isOk, Except.toBool, Bool.or_false, Bool.not_eq_true] at verdict
+          simp only [found, Except.toOption, Option.isSome_none, verdict, Bool.false_eq_true]
+        | ok storage =>
+          simp only [found, Except.toOption, Option.isSome_some, storage.marked]
+      resolved := by
+        intro table storage read
+        cases resolved : resolveArenaStorage u table with
+        | error failure =>
+          simp only [resolved, Except.toOption] at read
+          cases read
+        | ok found =>
+          have same : found = storage := Option.some.inj (by
+            simpa only [resolved, Except.toOption] using read)
+          cases same
+          rfl }
+  else .error "ir: a declared arena has unresolved ownership storage"
+
 /-- Ownership starts in the same store as the emitted image. Its used
     counter is zero and its free head is the model's empty marker. -/
 theorem checkedArena_initial {u : UProg} {table : (declOf u).Tab}

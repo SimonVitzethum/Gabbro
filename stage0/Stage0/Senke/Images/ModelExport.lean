@@ -33,6 +33,9 @@ structure ImageModelUnit (output : Emitted src reserve options)
   runtimeParams : ∀ root ∈ E.gestartet, (declOf output.compiled.unit).params root.1 = []
   arenaTables : ∀ t : (declOf output.compiled.unit).Tab, (output.compiled.unit.tabs.get t).arena = true ↔
     ∃ arena ∈ E.arenen, arena.A.tab = t
+  arenaStorage : ∀ arena ∈ E.arenen,
+    ∃ storage : ResolvedArenaStorage output.compiled.unit arena.A.tab,
+      resolveArenaStorage output.compiled.unit arena.A.tab = .ok storage ∧ storage.shape = arena.A
   accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) E.akku
   summary : ∀ item world value, E.Q item world value = true ↔
     ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
@@ -66,6 +69,7 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
     runtimeRoots := OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots
     runtimeParams := ?_
     arenaTables := ?_
+    arenaStorage := ?_
     accumulators := accumulators
     summary := summary
   }
@@ -82,6 +86,9 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
         cases marked
     change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
     simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
+  · intro arena present
+    change arena ∈ ([] : List _) at present
+    cases present
 
 private theorem Emitted.image_model_empty_accumulators (output : Emitted src reserve options)
     (Q : AxEns (declOf output.compiled.unit))
