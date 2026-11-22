@@ -12,6 +12,7 @@
 module
 public import Stage0.Senke.Bild.Lauf
 public import Stage0.Senke.Bild.Mehr.Lokal
+public import Stage0.Senke.Bild.Mehr.Blind
 public import Runner.Mach.Maschine
 @[expose] public section
 
@@ -61,6 +62,58 @@ theorem RunP.remaining {start current : Res T} {before now : Mem}
       simp only [Option.some.injEq, Prod.mk.injEq] at same
       obtain ⟨rfl, rfl⟩ := same
       exact ih later
+
+/-- A successful reference instruction in memory restricted to the
+    declared regions determines every actual request of that instruction.
+    Memory outside its write region is preserved. -/
+theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
+    {reads writes : W → Prop}
+    (ran : RunM r reference target finish) (tree : Blind r)
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    {actual : Mem} (agrees : GleichAuf reads reference actual) :
+    ∃ result, RunM r actual target result ∧ GleichAuf reads finish result ∧
+      (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
+      ∀ {current : Mem} {request : Op} {resume : Ans → Res T},
+        RunP r actual (.ask request resume) current →
+          (∀ byte, fussOp request byte → reads byte) ∧
+          (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+  induction ran generalizing actual with
+  | next =>
+    refine ⟨actual, .next, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
+    intro current request resume prefix
+    cases prefix
+  | @ask op k before middle after answer dest answered rest ih =>
+    cases answer with
+    | none =>
+      rw [tree.missing] at rest
+      cases rest
+    | some words =>
+      have confined := memAns_confined readable writable answered
+      obtain ⟨advanced, sameAnswer, sameTouched⟩ :=
+        memAns_gleich (fun y touched => agrees y (confined.1 y touched)) answered
+      have referenceStable := memAns_nurIn answered
+      have actualStable := memAns_nurIn sameAnswer
+      have sameRegion : GleichAuf reads middle advanced := by
+        intro byte included
+        by_cases touched : fussOp op byte
+        · exact sameTouched byte touched
+        · exact (referenceStable.gleichAt touched).trans
+            ((agrees byte included).trans (actualStable.gleichAt touched).symm)
+      obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _)
+        (fun byte permission => readable byte (by simpa only [referenceStable.rd] using permission))
+        (fun byte permission => writable byte (by simpa only [referenceStable.wr] using permission)) sameRegion
+      refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
+      · intro byte outside
+        exact (otherBytes byte outside).trans (memAns_aussen sameAnswer confined.2 byte outside)
+      · intro current request resume prefix
+        cases prefix with
+        | refl => exact confined
+        | ask wasAnswered leftover =>
+          rw [sameAnswer] at wasAnswered
+          simp only [Option.some.injEq, Prod.mk.injEq] at wasAnswered
+          obtain ⟨rfl, rfl⟩ := wasAnswered
+          exact pending leftover
 
 /-- A partial execution of a proved memory-only instruction can wait
     only on a memory request, or be at the exact next instruction. -/
