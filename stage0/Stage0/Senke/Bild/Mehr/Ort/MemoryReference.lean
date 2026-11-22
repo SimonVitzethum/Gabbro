@@ -8,6 +8,27 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Beweis Runner.Mach BildLauf
 
+/-- Normalize the auxiliary response word once for any generated
+    read whose requested bytes agree with the proof memory. -/
+theorem tso_read_matches {layout : Runner.Beweis.Lay}
+    {before after : (TSO layout).St} {thread width : Nat} {address : W}
+    {resume : Ans → Res T} {answer : Ans} {localMemory : Mem}
+    (tree : Blind (.ask (.rd width address) resume))
+    (agrees : GleichAuf (byteWindow (readWidth width) address) (before.1.view thread) localMemory)
+    (answered : (TSO layout).ans before thread (.rd width address) answer after) :
+    after = before ∧ ∃ normalized,
+      memAns localMemory (.rd width address) = some (normalized, localMemory) ∧
+      resume answer = resume normalized := by
+  obtain ⟨unchanged, extra, response⟩ := answered
+  obtain ⟨valid, ignores⟩ := tree.lesen rfl
+  refine ⟨unchanged, (rdN localMemory width address).map (·, 0), ?_, ?_⟩
+  · rcases valid with rfl | rfl | rfl <;>
+      simp only [memAns_rd, rdAntwort, rdN, Option.map_map, Function.comp_def]
+  · rw [response, rdN_agrees width agrees]
+    cases rdN localMemory width address with
+    | none => rfl
+    | some word => exact ignores word extra
+
 theorem frame_slot_byte {memory : Mem} {fp : W} {K index offset : Nat}
     (frame : FrameOK memory fp K) (slotFits : index < K) (inWord : offset < 8) :
     inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) := by

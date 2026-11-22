@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.Mehr.Ort.MemoryReference
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -11,7 +12,6 @@ namespace Gabbro.Stage0
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR
-open Runner.Beweis (rdN)
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
@@ -350,8 +350,7 @@ theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
     after = before ∧ ImageRootPhase output E history (after.1.view thread) thread (resume answer) state := by
   obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
   · exact (pastLoader.elim (· firstThread) (· loader)).elim
-  have read := answered.1
-  obtain ⟨unchanged, extra, rfl⟩ := read
+  have unchanged := answered.1.1
   subst after
   refine ⟨rfl, .inr ⟨start, chosen, head, code, frame, fits, args, pointer, site, ?_⟩⟩
   have appendRead {entry : Res T}
@@ -359,20 +358,13 @@ theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
       (pending : ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
         RunP entry equivalent (.ask (.rd width address) resume) equivalent) :
       ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
-        RunP entry equivalent (resume ((rdN (before.1.view thread) width address).map (·, extra))) equivalent := by
+        RunP entry equivalent (resume answer) equivalent := by
     intro equivalent agrees
     have part := pending equivalent agrees
-    obtain ⟨valid, ignores⟩ := (part.blind blind).lesen rfl
-    have equal := rdN_agrees width (fun byte needed => agrees byte (scope byte needed))
-    have memRead : memAns equivalent (.rd width address) =
-        some (((rdN equivalent width address).map (·, 0)), equivalent) := by
-      rcases valid with rfl | rfl | rfl <;>
-        simp only [memAns_rd, rdAntwort, rdN, Option.map_map, Function.comp_def]
-    rw [equal]
-    have continued := runP_snoc part memRead
-    cases received : rdN equivalent width address with
-    | none => simpa only [received, Option.map_none] using continued
-    | some word => simpa only [received, Option.map_some, ignores word extra] using continued
+    obtain ⟨_, _, read, continued⟩ := tso_read_matches (part.blind blind)
+      (fun byte needed => agrees byte (scope byte needed)) answered.1
+    rw [continued]
+    exact runP_snoc part read
   rcases phase with impossible | pending | ⟨id, extra, called, pending⟩
   · cases impossible
   · exact .inr (.inl (appendRead (blind_step _) pending))
