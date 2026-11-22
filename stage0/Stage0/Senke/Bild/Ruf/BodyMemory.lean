@@ -159,4 +159,28 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
     exact (Option.some.inj (Option.some.inj atSlot)) ▸ blind)
   exact ⟨step, image_body_local_change length related indices roots present covers buffers' otherViews relatedStep⟩
 
+/-- Once every live slot has a body relation, an actual buffer drain
+    preserves all body states and the exact committed GX world. -/
+theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
+    {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem} {memory : imageTSO.St}
+    (buffers : PrivateBuffers footprint before.ms.1)
+    (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState footprint before.ms).1, before.ths⟩ state snapshots positions committed)
+    (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
+    (flushed : imageTSO.tau before.ms memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths⟩
+    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatches output E O history after state := by
+  have same := projectSCState_flush (layout := L0) flushed footprint
+    (fun i store pending byte hit => (buffers i store pending byte hit).1) buffers.disjoint
+  have stable : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState footprint memory).1, before.ths⟩ state snapshots positions committed := by
+    rw [same]
+    exact related
+  exact ⟨.tau flushed, footprint, before.ths, buffers.flush flushed, rfl,
+    .inr ⟨snapshots, positions, committed, stable, indices⟩, fun _ => .inl rfl⟩
+
 end Gabbro.Stage0

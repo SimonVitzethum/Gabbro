@@ -126,7 +126,7 @@ theorem projectSCState_read_accessible {layout : Runner.Beweis.Lay} {before afte
   exact ⟨congrArg (projectSCState footprint) same, extra,
     result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))⟩
 
-private theorem PrivateBuffers.disjoint {footprint : Nat → W → Prop} {state : TSt}
+theorem PrivateBuffers.disjoint {footprint : Nat → W → Prop} {state : TSt}
     (owned : PrivateBuffers footprint state) :
     ∀ i store, store ∈ state.buf i → ∀ j, j ≠ i →
       ∀ address, footprint j address → ¬ fenster store.1 address :=
@@ -171,7 +171,7 @@ private theorem privateBuffers_answer {layout : Runner.Beweis.Lay}
   | sys _ => cases memory
   | fp _ _ _ => cases memory
 
-private theorem privateBuffers_flush {layout : Runner.Beweis.Lay}
+theorem PrivateBuffers.flush {layout : Runner.Beweis.Lay}
     {before after : (TSO layout).St} {footprint : Nat → W → Prop}
     (buffers : PrivateBuffers footprint before.1) (flush : (TSO layout).tau before after) :
     PrivateBuffers footprint after.1 := by
@@ -253,7 +253,7 @@ theorem tso_private_projects {layout : Runner.Beweis.Lay} {footprint : Nat → W
     rintro _ _ rfl address touched
     exact ⟨within address touched, exclusive rfl address touched⟩
   | flush _ flush ih =>
-    refine ⟨privateBuffers_flush ih.1 flush, ?_⟩
+    refine ⟨ih.1.flush flush, ?_⟩
     rw [projectSCState_flush flush footprint
       (fun i store pending address touched => (ih.1 i store pending address touched).1) ih.1.disjoint]
     exact ih.2
@@ -432,7 +432,7 @@ theorem tso_memory_process_projects {layout : Runner.Beweis.Lay} {footprint : Na
     generalize quiet : ([] : List Ev) = labels at step
     cases step with
     | tau flushed =>
-      refine ⟨privateBuffers_flush owned flushed, ?_⟩
+      refine ⟨owned.flush flushed, ?_⟩
       change SCErreichbar layout (projected initial) ⟨projectSCState footprint _, _⟩
       rw [projectSCState_flush flushed footprint
         (fun i store pending y touched => (owned i store pending y touched).1) owned.disjoint]
