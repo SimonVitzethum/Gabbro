@@ -43,8 +43,10 @@ theorem Emitted.prologue_geometry [Kern] (output : Emitted src reserve options) 
   have top : start.toNat + 8 * output.image.Ks < 2 ^ 64 := root.top.trans_lt beforeLimit.2
   have exactBase : start.toNat = base := by
     have inside := Nat.mul_le_mul_left output.image.Ks (declared.trans (Nat.le_succ _))
+    have bounded : base ≤ output.image.Y.lo :=
+      (Nat.add_le_add_left (Nat.mul_le_mul_left 8 inside) output.image.fp0).trans stackBand
     change (BitVec.ofNat 64 base).toNat = base
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by dsimp [base]; omega)]
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (bounded.trans_lt limit)]
   have frameOffset : fp.toNat = base + 8 * FB := by
     change (slot start (BitVec.ofNat 64 FB)).toNat = _
     rw [slot_toNat top.le header, exactBase]
@@ -156,9 +158,14 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     have slotFits : 2 < K := by unfold frei FB at room; omega
     have sameWord (offset : Nat) (inside : offset < 8) :=
       sameFrame _ (frame_slot_byte frame slotFits inside)
-    simp only [Mem.rd64, Mem.all_congr (fun j hj => (sameWord j hj).2),
-      Mem.le_congr (fun j hj => (sameWord j hj).1)]
-    exact depthWord
+    have samePermissions : Mem.all restricted.rd (slot fp (BitVec.ofNat 64 2)) 8 =
+        Mem.all memory.rd (slot fp (BitVec.ofNat 64 2)) 8 :=
+      Mem.all_congr (fun j hj => (sameWord j hj).2)
+    have sameValue : restricted.le (slot fp (BitVec.ofNat 64 2)) 8 =
+        memory.le (slot fp (BitVec.ofNat 64 2)) 8 :=
+      Mem.le_congr (fun j hj => (sameWord j hj).1)
+    unfold Mem.rd64 at depthWord ⊢
+    rwa [samePermissions, sameValue]
   have observed := expression_world_mask frameReads layout.lay requiresReads
     (⟨fun t _ field index valid => stored.1 t field index valid, fun g _ => stored.2.1 g⟩ :
       WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
@@ -219,5 +226,86 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
   let scope := maskMemory_agreement reads writes memory frameReads
   ⟨root, declared, alive, unentered, reads, writes, ownsWrites, maskMemory reads writes memory,
     after, compiled, ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
+
+/-- Only the private root stack, image code, required carriers and
+    captured cells can supply a root prologue's physical reads. -/
+def imagePrologueReads (output : Emitted src reserve options) (thread : Nat)
+    (f : (declOf output.compiled.unit).Fn) (byte : W) : Prop :=
+  imageStackFootprint output thread byte ∨ byte.toNat < output.image.fp0 ∨
+    ∃ cell : Zelle (declOf output.compiled.unit), cell.da output.image.Y ∧
+      (cell.carrier ∈ (output.compiled.program.requires f).orte ∨
+        cell ∈ oldCells (output.compiled.program.ensures f)) ∧
+      cell.adr output.image.Y ≤ byte.toNat ∧ byte.toNat < cell.adr output.image.Y + cell.bytes
+
+/-- At the exact relocated entry, the serialized root arguments and
+    the checked precondition establish the scheduled prologue phase. -/
+theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    (O : Orakel (declOf output.compiled.unit)) {thread : Nat} {memory : Mem}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
+    (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
+    (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
+    (loaded : output.IRFunctionSemantics memory)
+    {world : World (declOf output.compiled.unit)}
+    (stored : WeltAt memory output.image.Y world)
+    (requires : ReqAmEintritt output.compiled.program root.1 world root.2)
+    (frame : FrameOK memory (imagePrologueFrame output thread) (output.image.Ks - FB))
+    (environment : EnvAt output.image.Y memory (imagePrologueFrame output thread) root.2)
+    (depthWord : memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 2)) =
+      some (BitVec.ofNat 64 output.image.depth)) :
+    ∃ phase : ImageProloguePhase output E thread
+        (.next ⟨BitVec.ofNat 64 (output.image.A root.1), imagePrologueFrame output thread⟩) memory state,
+      phase.root = root ∧ phase.reads = imagePrologueReads output thread root.1 := by
+  have declaredStack : thread ≤ output.starts.length := by
+    have present := (List.getElem?_eq_some_iff.mp declared).1
+    rw [unit.starts, List.length_cons] at present
+    omega
+  obtain ⟨layout, small, positive, depthBound, aboveCode, ownsWrites⟩ := output.prologue_geometry declaredStack
+  obtain ⟨table, words, space, functions, _⟩ := loaded
+  obtain ⟨top, lowered, topFits, decoded, extent⟩ := functions root.1
+  obtain ⟨compiled, exactCode, parameters⟩ := FunctionIRPrologue.of_lowered lowered decoded extent
+  let slots := output.image.Ks - FB
+  let depth := output.image.depth - 1
+  let fp := imagePrologueFrame output thread
+  let reads := imagePrologueReads output thread root.1
+  have depthEq : depth + 1 = output.image.depth := by dsimp [depth]; omega
+  have capacity : (depth + 1 + 1) * words ≤ slots := by rw [depthEq]; dsimp [slots]; omega
+  have room : frei ((declOf output.compiled.unit).params root.1) ≤ slots :=
+    parameters.trans (topFits.trans ((Nat.le_mul_of_pos_left _ (by omega : 0 < depth + 1 + 1)).trans capacity))
+  have codeBound : output.image.fp0 < 2 ^ 31 :=
+    aboveCode.trans_lt ((Nat.le_add_right _ _).trans_lt
+      (layout.top.trans_lt (layout.ord.trans_lt layout.lay.2.2)))
+  have pc : (compiled.entry fp).pc.toNat = output.image.A root.1 := by
+    change (BitVec.ofNat 64 (output.image.A root.1)).toNat = _
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have far : CodeFar (compiled.entry fp).pc (table root.1).length fp slots :=
+    ⟨by rw [pc]; omega, (layout.top.trans_lt (layout.ord.trans_lt layout.lay.2.2)).le.trans (by decide),
+      by rw [pc]; exact extent.trans aboveCode⟩
+  have frameReads : ∀ byte, inSlots fp 0 slots byte → reads byte :=
+    fun byte inside => .inl (ownsWrites byte inside)
+  have codeReads : ∀ byte, (compiled.entry fp).pc.toNat ≤ byte.toNat →
+      byte.toNat < (compiled.entry fp).pc.toNat + 16 * (table root.1).length → reads byte := by
+    intro byte _ inside
+    rw [pc] at inside
+    exact .inr (.inl (inside.trans_le extent))
+  have requiresReads (cell : Zelle (declOf output.compiled.unit)) (valid : cell.da output.image.Y)
+      (member : cell.carrier ∈ (output.compiled.program.requires root.1).orte) (byte : W)
+      (first : cell.adr output.image.Y ≤ byte.toNat)
+      (last : byte.toNat < cell.adr output.image.Y + cell.bytes) : reads byte :=
+    .inr (.inr ⟨cell, valid, .inl member, first, last⟩)
+  have snapshotReads (cell : Zelle (declOf output.compiled.unit))
+      (member : cell ∈ oldCells (output.compiled.program.ensures root.1)) (byte : W)
+      (first : cell.adr output.image.Y ≤ byte.toNat)
+      (last : byte.toNat < cell.adr output.image.Y + 8 * valueWords cell.ty) : reads byte := by
+    have valid := (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1
+    exact .inr (.inr ⟨cell, valid, .inr member, first, by cases cell <;> exact last⟩)
+  obtain ⟨count, finished, reference, _, installed⟩ :=
+    compiled.scoped_reference O exactCode ⟨top, lowered, topFits⟩ (by omega)
+      (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
+      environment stored requires reads frameReads codeReads requiresReads snapshotReads
+  let finishedCode := compiled.withCode installed
+  exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode reads slots frameReads ownsWrites reference,
+    rfl, rfl⟩
 
 end Gabbro.Stage0

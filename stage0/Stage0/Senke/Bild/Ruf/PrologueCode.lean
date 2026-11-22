@@ -49,24 +49,42 @@ def FunctionIRPrologue.bodyEntry {output : Emitted src reserve options} {memory 
     {f : (declOf output.compiled.unit).Fn} (entry : FunctionIRPrologue output memory f) (fp : W) : T :=
   ⟨(entry.entry fp).pc + BitVec.ofNat 64 (16 * entry.prefixCode.length), fp⟩
 
-/-- Derive the two contiguous code regions from the image's real function
-    lowering. No separate compilation, validator, or execution is needed. -/
-theorem Emitted.function_prologue [Kern] {output : Emitted src reserve options} {memory : Mem}
-    (loaded : output.IRFunctionSemantics memory) (f : (declOf output.compiled.unit).Fn) :
-    Nonempty (FunctionIRPrologue output memory f) := by
-  obtain ⟨code, _, _, functions, _⟩ := loaded
-  obtain ⟨_, lowered, _, exactCode, fits⟩ := functions f
+/-- The actual lowered function has one contiguous prologue followed by
+    its body. This decomposition preserves the original instruction table. -/
+theorem FunctionIRPrologue.of_lowered [Kern] {output : Emitted src reserve options} {memory : Mem}
+    {f : (declOf output.compiled.unit).Fn} {code : List II} {top : Nat}
+    (lowered : lowFun output.image.passes output.compiled.program output.image.A output.image.Y f = some (code, top))
+    (exactCode : CodeAt memory (BitVec.ofNat 64 (output.image.A f)) code)
+    (fits : output.image.A f + 16 * code.length ≤ output.image.fp0) :
+    ∃ prologue : FunctionIRPrologue output memory f,
+      code = prologue.prefixCode ++ prologue.body.1 ∧ frei ((declOf output.compiled.unit).params f) ≤ top := by
   simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
   obtain ⟨requirement, requirementLowered, post, postLowered, body, bodyLowered,
-    capture, captureLowered, built, _⟩ := lowered
+    capture, captureLowered, built, frameTop⟩ := lowered
   let frame := functionFrame output.compiled.program f
   let prefixCode := guardC 2 105 frame.canonicalResult ++ requirement.1 ++
     guardC frame.canonicalResult 101 frame.canonicalResult ++
     relocateC FB frame.ensReserved frame.parameterWords ++ capture ++
     relocateC frame.ensParams (frame.bodyReserved - frame.ensReserved) frame.parameterWords
-  have equal : prefixCode ++ body.1 = code f := built
+  have equal : prefixCode ++ body.1 = code := built
+  have room : frei ((declOf output.compiled.unit).params f) ≤ top := by
+    have storage : frei ((declOf output.compiled.unit).params f) frame.bodyReserved =
+        frame.bodyParams + frame.parameterWords := rfl
+    change max (retTop frame) (max requirement.2 (max (frame.bodyParams + frame.parameterWords) body.2)) = top
+      at frameTop
+    unfold frei at storage ⊢
+    omega
   exact ⟨⟨requirement, post, capture, body, prefixCode, requirementLowered,
-    postLowered, captureLowered, bodyLowered, rfl, equal.symm ▸ exactCode, equal.symm ▸ fits⟩⟩
+    postLowered, captureLowered, bodyLowered, rfl, equal.symm ▸ exactCode, equal.symm ▸ fits⟩,
+    equal.symm, room⟩
+
+theorem Emitted.function_prologue [Kern] {output : Emitted src reserve options} {memory : Mem}
+    (loaded : output.IRFunctionSemantics memory) (f : (declOf output.compiled.unit).Fn) :
+    Nonempty (FunctionIRPrologue output memory f) := by
+  obtain ⟨code, _, _, functions, _⟩ := loaded
+  obtain ⟨_, lowered, _, exactCode, fits⟩ := functions f
+  obtain ⟨prologue, _, _⟩ := FunctionIRPrologue.of_lowered lowered exactCode fits
+  exact ⟨prologue⟩
 
 /-- The prologue ends at the first instruction of the actual lowered
     body, with the same frame pointer. -/
