@@ -10,6 +10,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 set_option maxHeartbeats 2000000
 
+/-- The entry frame reads only its parameters and the captured source cells. -/
 theorem entryFrame_run (P : Programm D) (f : D.Fn)
     {snap : List II} {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {σ : World D}
     {ρ : Env D (D.params f)}
@@ -26,14 +27,14 @@ theorem entryFrame_run (P : Programm D) (f : D.Fn)
         (snap ++ relocateC (functionFrame P f).ensParams
           ((functionFrame P f).bodyReserved - (functionFrame P f).ensReserved)
           (contextWords (D.params f)))).length fp K)
-    (env : EnvAt L m fp ρ) (world : WeltAt m L σ) (layoutIn : LayIn L)
-    (separated : fp.toNat + 8 * K ≤ L.lo) :
+    (env : EnvAt L m fp ρ) (inputs : EntrySnapshots.Inputs L σ m (oldCells (P.ensures f)))
+    (separated : ∀ cell ∈ oldCells (P.ensures f), fp.toNat + 8 * K ≤ cell.adr L) :
     ∃ m', Star ⟨pc, fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (2 * contextWords (D.params f) + snap.length)), fp⟩ m' ∧
       Agree fp FB K m m' ∧
       EnvAt L m' fp ρ (functionFrame P f).ensReserved ∧
       EnvAt L m' fp ρ (functionFrame P f).bodyReserved ∧
-      EntrySnapshots.At L σ m' fp (oldCells (P.ensures f)) FB ∧ WeltAt m' L σ := by
+      EntrySnapshots.At L σ m' fp (oldCells (P.ensures f)) FB := by
   let layout := functionFrame P f
   change frei (D.params f) layout.bodyReserved ≤ K at fits
   change CodeAt m pc (relocateC FB layout.ensReserved (contextWords (D.params f)) ++
@@ -66,21 +67,22 @@ theorem entryFrame_run (P : Programm D) (f : D.Fn)
         (contextWords (D.params f))).length) (by simpa only [List.length_append] using far)))
   have first := Agree.widen changed1 (by simpa only [Nat.zero_add] using ensFits)
   have frame1 := frame.agree first
-  have world1 := weltAt_stab layoutIn separated m m1 world (first.mono (Nat.zero_le _))
+  have inputCells := inputs.agree first separated
+    (fun cell member => (EntrySnapshots.capture_bounds _ _ emitted cell member).2)
   have far1 := codeFar_tail (a := relocateC FB layout.ensReserved (contextWords (D.params f))) far
   have code1 := (codeAt_right code).agree first far1
   simp only [relocateC_length] at code1 far1
-  obtain ⟨m2, captured, changed2, saved⟩ := EntrySnapshots.capture_world_ok emitted frame1 small
+  obtain ⟨m2, captured, changed2, saved⟩ := EntrySnapshots.capture_ok _ _ emitted m1 _ frame1 small
     (by rw [snapshotEnd]; have := ensFits; unfold frei at this; omega)
+    separated
     (codeAt_left code1) (codeFar_left (by rw [← List.length_append]; exact far1))
-    world1 layoutIn separated
+    inputCells
   have second : Agree fp FB K m1 m2 := Agree.widen changed2
     (by rw [snapshotEnd]; have := ensFits; unfold frei at this; omega)
   have frame2 := frame1.agree second
   have env2 : EnvAt L m2 fp ρ layout.ensReserved :=
     EntrySnapshots.envAt_above (by simpa only [Nat.zero_add] using env1)
       changed2 frame1 (by rw [snapshotEnd]; rfl) ensFits
-  have world2 := weltAt_stab layoutIn separated m1 m2 world1 (second.mono (Nat.zero_le _))
   have far2 := codeFar_tail (a := snap) far1
   have code2 := (codeAt_right code1).agree second far2
   have shift : layout.ensReserved + (layout.bodyReserved - layout.ensReserved) =
@@ -95,10 +97,9 @@ theorem entryFrame_run (P : Programm D) (f : D.Fn)
   have saved3 := saved.agree frame2 third
     (by rw [snapshotEnd]; exact prefixOrder.1.trans (internalStatus.trans (Nat.le_of_lt prefixOrder.2)))
     bodyFits
-  have world3 := weltAt_stab layoutIn separated m2 m3 world2 (third.mono (Nat.zero_le _))
   refine ⟨m3, ?_, (first.mono (by unfold FB; omega)).trans
     (second.trans (third.mono (by unfold FrameLayout.bodyParams; omega))),
-    original, by simpa only [shift] using lexical, saved3, world3⟩
+    original, by simpa only [shift] using lexical, saved3⟩
   have sizes : contextWords (D.params f) + (snap.length + contextWords (D.params f)) =
       2 * contextWords (D.params f) + snap.length := by omega
   simpa only [Nat.zero_add, relocateC_length, pc_add, Nat.add_assoc, sizes]
