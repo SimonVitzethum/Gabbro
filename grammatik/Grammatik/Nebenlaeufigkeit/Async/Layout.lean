@@ -97,6 +97,49 @@ public inductive Phase where
   .prod (types.recordName [1])
     (.cons (.case (stateCases types f) phase payload) .nil)
 
+/-- Select a Running case in command order. An await inserts a Waiting
+    case before the next command, so the command offset alone is not a tag. -/
+@[expose] public def commandRunningIndex (base : Nat) : (body : List Command) →
+    (offset : Nat) → offset ≤ body.length →
+    {index : Fin (commandPhases base body).length //
+      (commandPhases base body).get index = .running (base + offset)}
+  | [], 0, _ => ⟨0, rfl⟩
+  | [], offset + 1, valid => False.elim (Nat.not_succ_le_zero offset valid)
+  | .bind _ _ _ :: _, 0, _ => ⟨0, rfl⟩
+  | .await _ _ _ :: _, 0, _ => ⟨0, rfl⟩
+  | .bind _ _ _ :: rest, offset + 1, valid =>
+    let next := commandRunningIndex (base + 1) rest offset (Nat.le_of_succ_le_succ valid)
+    ⟨next.val.succ, by
+      have tag : base + 1 + offset = base + (offset + 1) := by omega
+      change (commandPhases (base + 1) rest).get next.val = .running (base + (offset + 1))
+      exact next.property.trans (congrArg Phase.running tag)⟩
+  | .await _ _ _ :: rest, offset + 1, valid =>
+    let next := commandRunningIndex (base + 1) rest offset (Nat.le_of_succ_le_succ valid)
+    ⟨next.val.succ.succ, by
+      have tag : base + 1 + offset = base + (offset + 1) := by omega
+      change (commandPhases (base + 1) rest).get next.val = .running (base + (offset + 1))
+      exact next.property.trans (congrArg Phase.running tag)⟩
+termination_by structural body _ _ => body
+
+/-- Generate the typed constructor for a resumed frame at a checked
+    program position. The payload remains at its declared frame type. -/
+@[expose] public def runningExpr (types : TypeResolution) (f : AsyncFn)
+    {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
+    (frame : Expr D Γ Λ (frameType types f)) : Expr D Γ Λ (stateType types f) :=
+  let selected := commandRunningIndex 0 f.body tag within
+  let index : Fin (stateCases types f).length :=
+    ⟨selected.val.val + 2, by
+      have valid := selected.val.isLt
+      simp only [stateCases, phases, List.length_map, List.length_cons]
+      omega⟩
+  have payloadType : (stateCases types f).get index = some (frameType types f) := by
+    rw [List.get_eq_getElem, stateCases, List.getElem_map]
+    change some (phaseType types f ((commandPhases 0 f.body).get selected.val)) =
+      some (frameType types f)
+    rw [selected.property]
+    rfl
+  stateExpr types f index (payloadType.symm ▸ NutzlastExpr.val frame)
+
 @[expose] public def awaitCount : List Command → Nat
   | [] => 0
   | .bind _ _ _ :: rest => awaitCount rest
