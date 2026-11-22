@@ -95,7 +95,8 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
       reads byte) :
     let restricted := maskMemory reads (inSlots fp 0 K) memory
     ∃ count after, @IRReference kernel.withoutSyscalls count
-      (compiled.entry fp) restricted (compiled.bodyEntry fp) after ∧ Agree fp FB K restricted after := by
+      (compiled.entry fp) restricted (compiled.bodyEntry fp) after ∧ Agree fp FB K restricted after ∧
+      CodeAt after (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1) := by
   intro restricted
   letI : Kern := kernel.withoutSyscalls
   have loaded : CodeAt memory (compiled.entry fp).pc (table f) := exactCode.symm ▸ compiled.instructions
@@ -132,33 +133,46 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
   rw [exactCode, List.length_append, Nat.add_sub_cancel] at address
   subst pc
   obtain ⟨count, steps⟩ := IRReference.of_star run
-  exact ⟨count, after, steps, changed⟩
+  exact ⟨count, after, steps, changed, exactCode ▸ decoded.agree changed far⟩
 
-/-- Retain the production code and layout data after private frame
-    setup has written only above the installed instruction region. -/
+/-- Retain the production layout when the same instructions are present in another view. -/
+def FunctionIRPrologue.withCode [Kern] {output : Emitted src reserve options}
+    {f : (declOf output.compiled.unit).Fn} {before after : Mem}
+    (compiled : FunctionIRPrologue output before f)
+    (installed : CodeAt after (BitVec.ofNat 64 (output.image.A f)) (compiled.prefixCode ++ compiled.body.1)) :
+    FunctionIRPrologue output after f :=
+  ⟨compiled.requirement, compiled.postcondition, compiled.capture, compiled.body, compiled.prefixCode,
+    compiled.requirementLowered, compiled.postconditionLowered, compiled.captureLowered, compiled.bodyLowered,
+    compiled.assembled, installed, compiled.beforeStacks⟩
+
+/-- Retain the production code and layout data after private frame setup. -/
 def FunctionIRPrologue.agree [Kern] {output : Emitted src reserve options}
     {f : (declOf output.compiled.unit).Fn} {before after : Mem} {fp : W} {lo K : Nat}
     (compiled : FunctionIRPrologue output before f) (written : Agree fp lo K before after)
     (separated : CodeFar (compiled.entry fp).pc (compiled.prefixCode ++ compiled.body.1).length fp K) :
     FunctionIRPrologue output after f :=
-  ⟨compiled.requirement, compiled.postcondition, compiled.capture, compiled.body, compiled.prefixCode,
-    compiled.requirementLowered, compiled.postconditionLowered, compiled.captureLowered, compiled.bodyLowered,
-    compiled.assembled, compiled.instructions.agree written separated, compiled.beforeStacks⟩
+  compiled.withCode (compiled.instructions.agree written separated)
 
 /-- Start tracking a prologue at the actual function entry, using its
     verified continuation to the already installed body boundary. -/
-def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src reserve options}
+noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread count : Nat} {memory after : Mem}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
     (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
-    (compiled : FunctionIRPrologue output after root.1) (reads : W → Prop)
+    (compiled : FunctionIRPrologue output after root.1) (reads : W → Prop) (K : Nat)
+    (frameReads : ∀ byte, inSlots (imagePrologueFrame output thread) 0 K byte → reads byte)
+    (ownsWrites : ∀ byte, inSlots (imagePrologueFrame output thread) 0 K byte →
+      imageStackFootprint output thread byte)
     (continuation : @IRReference kernel.withoutSyscalls count
-      (compiled.entry (imagePrologueFrame output thread)) memory
+      (compiled.entry (imagePrologueFrame output thread))
+      (maskMemory reads (inSlots (imagePrologueFrame output thread) 0 K) memory)
       (compiled.bodyEntry (imagePrologueFrame output thread)) after) :
     ImageProloguePhase output E thread (.next (compiled.entry (imagePrologueFrame output thread))) memory state :=
-  ⟨root, declared, alive, unentered, reads, memory, after, compiled, ⟨count, continuation⟩,
-    .next _, fun byte _ => GleichAt.refl _ byte⟩
+  let writes := inSlots (imagePrologueFrame output thread) 0 K
+  let scope := maskMemory_agreement reads writes memory frameReads
+  ⟨root, declared, alive, unentered, reads, writes, ownsWrites, maskMemory reads writes memory,
+    after, compiled, ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
 
 end Gabbro.Stage0
