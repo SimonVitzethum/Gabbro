@@ -42,7 +42,7 @@ private theorem entryIndex_ruE :
   | _, _, _, .wenn .. | _, _, _, .eng .. | _, _, _, .intBuiltin1 ..
   | _, _, _, .intBuiltin2 .. | _, _, _, .count .. | _, _, _, .prod ..
   | _, _, _, .prodGet .. | _, _, _, .prodSet .. => rfl
-termination_by structural expr => expr
+termination_by structural _ _ _ expr => expr
 
 private theorem idleColumn (table : D.Tab) (field : D.Feld table) (first count : Nat) :
     EntrySnapshots.column (D := D.mitRuhe) table field first count =
@@ -93,7 +93,7 @@ theorem oldCells_ruE :
   | _, _, _, .strLt .. | _, _, _, .strWeit .. | _, _, _, .wenn ..
   | _, _, _, .eng .. | _, _, _, .count .. | _, _, _, .prod ..
   | _, _, _, .prodGet .. | _, _, _, .prodSet .. => rfl
-termination_by structural expr => expr
+termination_by structural _ _ _ expr => expr
 
 /-- Renaming the source functions leaves the stored spans and their
     emitted entry loads byte-for-byte identical. -/
