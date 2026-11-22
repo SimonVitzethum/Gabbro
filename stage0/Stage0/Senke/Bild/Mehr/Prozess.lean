@@ -45,4 +45,30 @@ theorem MSchritt.fremd {i : Nat} {c c' : PCfg} (hs : MSchritt i c c') {j : Nat} 
   | priv _ => exact set_fremd _ _ hj
   | ask _ _ => exact set_fremd _ _ hj
 
+/-- An instruction and its requests have a unique next memory and
+    control state once the issuing thread is selected. -/
+theorem MSchritt.deterministic {i : Nat} {before left right : PCfg}
+    (first : MSchritt i before left) (second : MSchritt i before right) : left = right := by
+  cases first with
+  | priv found =>
+    cases second with
+    | priv other =>
+      rw [found] at other
+      cases other
+      rfl
+    | ask other _ =>
+      rw [found] at other
+      cases other
+  | ask found answered =>
+    cases second with
+    | priv other =>
+      rw [found] at other
+      cases other
+    | ask other answer =>
+      rw [found] at other
+      cases other
+      rw [answered] at answer
+      cases answer
+      rfl
+
 end Gabbro.Stage0.Senke.BildMehr

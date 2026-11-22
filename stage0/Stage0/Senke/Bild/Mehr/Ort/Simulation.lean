@@ -8,7 +8,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
-  Gabbro.Grammatik.Parser.UebersetzeAllg Runner Runner.IR Runner.Beweis Runner.Mach
+  Gabbro.Grammatik.Parser.UebersetzeAllg Senke Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options} [Kern]
   {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
@@ -40,7 +40,7 @@ theorem ImageIRSimulation.follow (sim : ImageIRSimulation output E O start)
     ∃ next, sim.related (history ++ events) after next ∧ ImageReach output E O state next ∧
       (events = [] → imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf) := by
   induction run generalizing history state with
-  | nil => exact ⟨state, by simpa only [List.append_nil] using related, .start _, fun _ => rfl⟩
+  | nil => exact ⟨state, by simpa only [List.append_nil] using related, .start, fun _ => rfl⟩
   | cons head _ ih =>
     obtain ⟨middle, first, advanced, stillForeign, _⟩ := sim.step _ _ _ _ _ related head
     obtain ⟨last, final, continued, finallyForeign⟩ := ih first
@@ -52,12 +52,12 @@ theorem ImageIRSimulation.follow (sim : ImageIRSimulation output E O start)
 private theorem ImageGateEvent.after_silent
     {before middle after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {ir : Cfg imageTSO (Res T)} {event : Ev}
-    (prefix : ImageReach output E O before middle)
+    (segment : ImageReach output E O before middle)
     (history : imageSourceForeignEvents middle.m.lauf = imageSourceForeignEvents before.m.lauf)
     (matched : ImageGateEvent output E O middle after ir event) :
     ImageGateEvent output E O before after ir event := by
   obtain ⟨site, memory, routine, world, args, first, last, live, call, extended, privateMemory, gate⟩ := matched
-  exact ⟨site, memory, routine, world, args, imageReach_trans prefix first, last, live, call,
+  exact ⟨site, memory, routine, world, args, imageReach_trans segment first, last, live, call,
     extended.trans (congrArg (· ++ [(event.1, routine)]) history), privateMemory, gate⟩
 
 /-- With the IR relation established, the same simulation applies to
@@ -76,20 +76,20 @@ theorem ImageIRSimulation.toRunner (sim : ImageIRSimulation output E O start)
     rw [← matching.1.ms]
     exact sim.image history ir state matching.2
   · intro history native ir state native' events matching moved
-    obtain ⟨ir', steps, trace, same, silent | ⟨cut, _, prefix, last⟩⟩ :=
+    obtain ⟨ir', steps, trace, same, silent | ⟨cut, _, segment, last⟩⟩ :=
       runner_process_step imageTSO_fixed cinv_L0 matching.1 moved
     · subst events
       obtain ⟨next, related, reach, _⟩ := sim.follow trace matching.2
       exact ⟨ir', steps, next, trace, ⟨same, related⟩, reach, fun _ absent => False.elim (List.not_mem_nil absent)⟩
-    · obtain ⟨middle, related, reached, unchanged⟩ := sim.follow prefix matching.2
+    · obtain ⟨middle, related, reached, unchanged⟩ := sim.follow segment matching.2
       rw [List.append_nil] at related
       obtain ⟨next, final, advanced, _, observed⟩ := sim.step _ _ _ _ _ related last
       exact ⟨ir', steps, next, trace, ⟨same, final⟩, imageReach_trans reached advanced,
         fun event occurs external => (observed event occurs external).after_silent reached (unchanged rfl)⟩
   · intro history native ir state events ending matching terminal stopped
     obtain ⟨_, _, projected⟩ := runner_mt imageTSO_fixed cinv_L0 1 matching.1 terminal
-    obtain ⟨boundary, earlier, last, _, prefix, tail, exactEvents, _⟩ := projected.split_stop stopped
-    obtain ⟨middle, related, first, _⟩ := sim.follow prefix matching.2
+    obtain ⟨boundary, earlier, last, _, segment, tail, exactEvents, _⟩ := projected.split_stop stopped
+    obtain ⟨middle, related, first, _⟩ := sim.follow segment matching.2
     obtain ⟨next, continued, matched⟩ := sim.stop _ boundary middle last ending related tail stopped
     have lastLength : last.length = 1 := by
       obtain ⟨_, _, same, _, _, _⟩ := matched
@@ -118,7 +118,9 @@ theorem stage0_correct_of_ir_simulation
               Nonempty (ImageIRSimulation output E O start)) :
     Stage0Correct := by
   apply stage0_correct_of_simulation
-  intro source reserve options output emitted O calls foreign hardware gate answers futex visibility start mapped
+  intro source reserve options output emitted
+  dsimp only
+  intro O calls foreign hardware gate answers futex visibility start mapped
   obtain ⟨ir⟩ := simulate source reserve options output emitted O calls foreign hardware gate answers futex visibility start mapped
   exact ir.toRunner mapped
 
