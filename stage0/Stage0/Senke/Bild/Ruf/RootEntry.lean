@@ -8,7 +8,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
@@ -287,6 +287,35 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   · intro other different
     exact (others₅ other different).trans ((others₄ other different).trans
       ((others₃ other different).trans ((others₂ other different).trans (others₁ other different))))
+
+/-- The root phase of the actual image supplies the serialized inputs
+    for the complete silent prefix into its lowered function. -/
+theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {before : Cfg imageTSO (Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root) {history : List Ev}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} :
+    let entry : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let target := BitVec.ofNat 64 (output.image.A root.1)
+    let frame := slot entry.fp (BitVec.ofNat 64 FB)
+    before.ths[index + 1]? = some (some (.next entry)) →
+    ImageRootPhase output E history (before.ms.1.view (index + 1)) (index + 1) (.next entry) state →
+    ∃ after : imageTSO.St,
+      ProcessPrefix imageTSO actI before [] 30
+        ⟨after, before.ths.set (index + 1) (some (.next ⟨target, frame⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
+      WordsAt (after.1.view (index + 1)) frame FB (encodeEnv output.image.Y root.2) ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
+        some (BitVec.ofNat 64 output.image.depth) ∧
+      ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
+        some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
+  intro entry target frame running phase
+  obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
+  exact output.child_body_prefix declared bytes running permissions arguments
 
 /-- A zero depth word at an emitted function entry branches directly
     to the stop for that function's model depth exhaustion. -/

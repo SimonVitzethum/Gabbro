@@ -286,6 +286,35 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
     simpa only [BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
 
+/-- The child's startup phase carries the exact typed stack payload
+    of the corresponding declared source root. -/
+theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {memory : Mem} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {control : Res T} (phase : ImageRootPhase output E history memory (index + 1) control state) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
+    BytesAt memory codeBase (output.image.code.flatMap encII) ∧
+      FrameOK memory fp output.image.Ks ∧
+      WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
+  intro fp
+  have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
+  obtain ⟨firstThread, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
+  · exact (Nat.succ_ne_zero _ firstThread).elim
+  have same := Option.some.inj (chosen.symm.trans exported)
+  subst start
+  refine ⟨code, frame, ?_⟩
+  intro i present
+  have address : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) := by
+    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
+      BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+  rw [address]
+  exact args i present
+
 /-- The concrete child startup prefix advances the IR counter within
     the child's stub and retains the same dormant GX head. -/
 theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
@@ -311,21 +340,14 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
         some (BitVec.ofNat 64 (output.image.depth + 1)) := by
   intro pointer view running phase fits
   have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
-  obtain ⟨firstThread, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
-  · exact (Nat.succ_ne_zero _ firstThread).elim
-  have same := Option.some.inj (chosen.symm.trans exported)
-  subst start
+  obtain ⟨code, frame, args⟩ := output.child_phase_payload unit declared phase
   have address (i : Nat) : slot pointer.fp (BitVec.ofNat 64 (FB + FB + i)) =
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) := by
     change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
       BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-  have arguments : WordsAt view pointer.fp (FB + FB) (encodeEnv output.image.Y root.2) := by
-    intro i present
-    rw [address]
-    exact args i present
   obtain ⟨after, run, shared, others, loaded, permissions, words, depth⟩ :=
-    output.root_depth_preserves_frame declared code running frame fits arguments
+    output.root_depth_preserves_frame declared code running frame fits args
   refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
   · intro i present
     rw [← address i]
