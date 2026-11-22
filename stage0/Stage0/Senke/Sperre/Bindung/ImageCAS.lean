@@ -19,6 +19,37 @@ structure TicketWordsAt (memory : Mem) (base : Nat) {N : Nat} (state : Zustand N
   serving : memory.rd64 (BitVec.ofNat 64 (base + 8)) = some (BitVec.ofNat 64 state.w.serv)
   waiters : memory.rd64 (BitVec.ofNat 64 (base + 16)) = some (BitVec.ofNat 64 state.w.wait)
 
+/-- A readable and writable CAS returns the actual committed word, even
+    when the comparison fails. Both outcomes preserve every store buffer. -/
+theorem image_CAS_reply [Kern] {machine : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {address expected update old : W} {thread : Nat}
+    (readable : machine.ms.1.m.rd64 address = some old)
+    (writable : all machine.ms.1.m.wr address 8 = true)
+    (waiting : machine.ths[thread]? = some (some (.ask (.cas address expected update) resume)))
+    (answered : imageTSO.ans machine.ms thread (.cas address expected update) reply memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread (some (resume reply))⟩
+    ProcessStep imageTSO actI machine [] after ∧ reply = some (old, 0) ∧
+      memory.1 = { machine.ms.1 with m :=
+        if old = expected then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m } := by
+  intro after
+  have specification := cas_spec (e := expected) (n := update) readable writable
+  obtain ⟨_, outcome⟩ := answered.1
+  change (machine.ms.1.m.cas address expected update = none ∧ _) ∨
+    (∃ oldWord newMemory, machine.ms.1.m.cas address expected update = some (oldWord, newMemory) ∧
+      reply = some (oldWord, 0) ∧ memory.1 = { machine.ms.1 with m := newMemory }) at outcome
+  rcases outcome with ⟨failure, _, _⟩ | ⟨oldWord, newMemory, actual, returned, changed⟩
+  · rw [specification] at failure
+    cases failure
+  · have exactPair := Option.some.inj (actual.symm.trans specification)
+    have exactOld : oldWord = old := congrArg Prod.fst exactPair
+    have exactMemory : newMemory =
+        (if old = expected then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m) :=
+      congrArg Prod.snd exactPair
+    exact ⟨.ask waiting rfl rfl answered rfl,
+      returned.trans (congrArg (fun word => some (word, (0 : W))) exactOld),
+      changed.trans (congrArg (fun bytes => { machine.ms.1 with m := bytes }) exactMemory)⟩
+
 theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketWords [Kern] {src : String} {reserve : Nat}
     {options : Profil.Options} (output : Emitted src reserve options) (N : Nat)
     {memory : Mem} (loaded : BytesAt memory Runner.Prog.IMG output.bytes)
@@ -56,63 +87,108 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
   let requested := BitVec.ofNat 64 expected
   let address := BitVec.ofNat 64 base
   let update := BitVec.ofNat 64 (expected + 1)
-  have specification : machine.ms.1.m.cas address requested update =
-      some (old, if old = requested then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m) :=
-    cas_spec represented.next writable
-  obtain ⟨_, outcome⟩ := answered.1
-  change (machine.ms.1.m.cas address requested update = none ∧ _) ∨
-    (∃ oldWord newMemory, machine.ms.1.m.cas address requested update = some (oldWord, newMemory) ∧
-      reply = some (oldWord, 0) ∧ memory.1 = { machine.ms.1 with m := newMemory }) at outcome
-  rcases outcome with ⟨failure, _, _⟩ | ⟨oldWord, newMemory, actual, returned, memoryEq⟩
-  · rw [specification] at failure
-    cases failure
-  · have exactPair := Option.some.inj (actual.symm.trans specification)
-    have exactOld : oldWord = old := congrArg Prod.fst exactPair
-    have exactMemory : newMemory =
-        (if old = requested then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m) :=
-      congrArg Prod.snd exactPair
-    refine ⟨.ask waiting rfl rfl answered rfl,
-      returned.trans (congrArg (fun word => some (word, (0 : W))) exactOld), ?_, ?_⟩
-    · have bufferEq := congrArg TSt.buf memoryEq
-      exact bufferEq
-    · have compare : old = requested ↔ before.w.next % 2 ^ 64 = expected := by
-        constructor
-        · intro equal
-          have same := congrArg BitVec.toNat equal
-          simpa only [old, requested, BitVec.toNat_ofNat, Nat.mod_eq_of_lt isWord] using same
-        · intro equal
-          apply BitVec.eq_of_toNat_eq
-          simp only [old, requested, BitVec.toNat_ofNat, Nat.mod_eq_of_lt isWord, equal]
-      by_cases same : old = requested
-      · have got := compare.mp same
-        let next : Zustand N := ⟨⟨before.w.next + 1, before.w.serv, before.w.wait⟩,
-          upd before.pc thread (.ladeS before.w.next), before.q ++ [thread]⟩
-        rw [if_pos same] at exactMemory
-        refine ⟨next, .zieht saved got, ?_⟩
-        rw [memoryEq, exactMemory]
-        have readable : all machine.ms.1.m.rd address 8 = true := by
-          have read := represented.next
-          unfold Mem.rd64 at read
-          split at read
-          · assumption
-          · cases read
-        have exactUpdate : update = BitVec.ofNat 64 next.w.next := by
-          change BitVec.ofNat 64 (expected + 1) = BitVec.ofNat 64 (before.w.next + 1)
-          rw [BitVec.ofNat_add, BitVec.ofNat_add]
-          exact congrArg (· + BitVec.ofNat 64 1) same.symm
-        have separate (offset : Nat) (low : 8 ≤ offset) (high : offset ≤ 16) :
-            Far address 8 (BitVec.ofNat 64 (base + offset)) 8 := by
-          have a : base < 2 ^ 64 := by omega
-          have b : base + offset < 2 ^ 64 := by omega
-          simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt a, Nat.mod_eq_of_lt b]
-          omega
-        exact ⟨(rd64_write_same (w := update) readable).trans (congrArg some exactUpdate),
-          (rd64_write_far (separate 8 (by decide) (by decide))).trans represented.serving,
-          (rd64_write_far (separate 16 (by decide) (by decide))).trans represented.waiters⟩
-      · rw [if_neg same] at exactMemory
-        refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_⟩
-        rw [memoryEq, exactMemory]
-        exact ⟨represented.next, represented.serving, represented.waiters⟩
+  obtain ⟨stepped, returned, memoryEq⟩ :=
+    image_CAS_reply represented.next writable waiting answered
+  refine ⟨stepped, returned, congrArg TSt.buf memoryEq, ?_⟩
+  have compare : old = requested ↔ before.w.next % 2 ^ 64 = expected := by
+    constructor
+    · intro equal
+      have same := congrArg BitVec.toNat equal
+      simpa only [old, requested, BitVec.toNat_ofNat, Nat.mod_eq_of_lt isWord] using same
+    · intro equal
+      apply BitVec.eq_of_toNat_eq
+      simp only [old, requested, BitVec.toNat_ofNat, Nat.mod_eq_of_lt isWord, equal]
+  by_cases same : old = requested
+  · have got := compare.mp same
+    let next : Zustand N := ⟨⟨before.w.next + 1, before.w.serv, before.w.wait⟩,
+      upd before.pc thread (.ladeS before.w.next), before.q ++ [thread]⟩
+    rw [if_pos same] at memoryEq
+    refine ⟨next, .zieht saved got, ?_⟩
+    rw [memoryEq]
+    have readable : all machine.ms.1.m.rd address 8 = true := by
+      have read := represented.next
+      unfold Mem.rd64 at read
+      split at read
+      · assumption
+      · cases read
+    have exactUpdate : update = BitVec.ofNat 64 next.w.next := by
+      change BitVec.ofNat 64 (expected + 1) = BitVec.ofNat 64 (before.w.next + 1)
+      rw [BitVec.ofNat_add, BitVec.ofNat_add]
+      exact congrArg (· + BitVec.ofNat 64 1) same.symm
+    have separate (offset : Nat) (low : 8 ≤ offset) (high : offset ≤ 16) :
+        Far address 8 (BitVec.ofNat 64 (base + offset)) 8 := by
+      have a : base < 2 ^ 64 := by omega
+      have b : base + offset < 2 ^ 64 := by omega
+      simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt a, Nat.mod_eq_of_lt b]
+      omega
+    exact ⟨(rd64_write_same (w := update) readable).trans (congrArg some exactUpdate),
+      (rd64_write_far (separate 8 (by decide) (by decide))).trans represented.serving,
+      (rd64_write_far (separate 16 (by decide) (by decide))).trans represented.waiters⟩
+  · rw [if_neg same] at memoryEq
+    refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_⟩
+    rw [memoryEq]
+    exact ⟨represented.next, represented.serving, represented.waiters⟩
+
+/-- The holder's actual serving-word CAS publishes the next ticket and
+    relinquishes ownership. The invariant excludes a failed comparison
+    even when the physical counter wraps. -/
+theorem image_ticket_release [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {base expected ticket : Nat} {thread : Fin N} {before : Zustand N}
+    (limit : N ≤ 2147483647) (invariant : Inv N before)
+    (saved : before.pc thread = .gibC ticket expected)
+    (fits : base + 24 ≤ 2 ^ 64) (represented : TicketWordsAt machine.ms.1.m base before)
+    (writable : all machine.ms.1.m.wr (BitVec.ofNat 64 (base + 8)) 8 = true)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
+    let next : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
+      upd before.pc thread .gibW, before.q.tail⟩
+    ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
+      memory.1 = { machine.ms.1 with m := Mem.write machine.ms.1.m (BitVec.ofNat 64 (base + 8))
+        8 (BitVec.ofNat 64 (expected + 1)).toNat } ∧
+      Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next ∧
+      (before.pc thread).haelt = true ∧ (next.pc thread).haelt = false := by
+  intro after next
+  let address := BitVec.ofNat 64 (base + 8)
+  let update := BitVec.ofNat 64 (expected + 1)
+  have loaded : expected = before.w.serv % 2 ^ 64 := invariant.ort_an saved
+  have equal : BitVec.ofNat 64 before.w.serv = BitVec.ofNat 64 expected := by
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, loaded, Nat.mod_mod]
+  obtain ⟨process, returned, memoryEq⟩ :=
+    image_CAS_reply represented.serving writable waiting answered
+  rw [ite_eq_left equal] at memoryEq
+  have step : Schritt before thread next := .gibt saved loaded.symm
+  refine ⟨process, ?_, memoryEq, step, ?_, invariant.schritt limit step, ?_, ?_⟩
+  · rwa [equal] at returned
+  · rw [memoryEq]
+    have readable : all machine.ms.1.m.rd address 8 = true := by
+      have read := represented.serving
+      unfold Mem.rd64 at read
+      split at read
+      · assumption
+      · cases read
+    have exactUpdate : update = BitVec.ofNat 64 next.w.serv := by
+      change BitVec.ofNat 64 (expected + 1) = BitVec.ofNat 64 (before.w.serv + 1)
+      rw [BitVec.ofNat_add, BitVec.ofNat_add]
+      exact congrArg (· + BitVec.ofNat 64 1) equal.symm
+    have separate (offset : Nat) (available : offset ≤ 16) (other : offset = 0 ∨ offset = 16) :
+        Far address 8 (BitVec.ofNat 64 (base + offset)) 8 := by
+      have first : base + 8 < 2 ^ 64 := by omega
+      have second : base + offset < 2 ^ 64 := by omega
+      simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt first, Nat.mod_eq_of_lt second]
+      omega
+    exact ⟨(rd64_write_far (separate 0 (by decide) (.inl rfl))).trans represented.next,
+      (rd64_write_same (w := update) readable).trans (congrArg some exactUpdate),
+      (rd64_write_far (separate 16 (by decide) (.inr rfl))).trans represented.waiters⟩
+  · rw [saved]
+    rfl
+  · change (upd before.pc thread .gibW thread).haelt = false
+    rw [upd_self]
+    rfl
 
 /-- A real serving-word read admits the issuing ticket precisely when
     it matches modulo the machine word. The hosted binding registers an
