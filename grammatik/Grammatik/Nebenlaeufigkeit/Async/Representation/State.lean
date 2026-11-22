@@ -166,6 +166,22 @@ public theorem inv_encoded (f : AsyncFn) (types : TypeResolution) (inventory : I
   rw [encoded]
   rfl
 
+@[expose] public def runningValue (D : Deklaration) (types : TypeResolution) (f : AsyncFn)
+    (tag : Nat) (within : tag ≤ f.body.length) (frame : Wert D (frameType types f)) :
+    Wert D (stateType types f) :=
+  let selected := runningCase types f tag within
+  let payload : Nutzlast D.Fn D.passt (some (frameType types f)) := frame
+  (⟨selected.val, Fall.ofNutzlast D.Fn D.passt _ selected.val (selected.property.symm ▸ payload)⟩, ())
+
+/-- The generated constructor carries the actual evaluated frame. Transport
+    across the selector's type equality changes no field in that frame. -/
+public theorem runningExpr_eval {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (tag : Nat) (within : tag ≤ f.body.length)
+    (expression : Expr D Γ Λ (frameType types f)) (entry world : World D) (env : Env D Γ) :
+    eval entry (runningExpr types f tag within expression) world env =
+      runningValue D types f tag within (eval entry expression world env) := by
+  simp only [runningExpr, stateExpr, runningValue, eval, evalProd, evalNutz_cast, evalNutz]
+
 /-- Change the dispatch tag after the next frame has been constructed.
     Both the frame input and the state destination are ordinary locals. -/
 @[expose] public def resumeBlock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -179,14 +195,16 @@ public theorem resumeBlock_exec {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (world : World D) (env : Env D Γ) :
-    let successor : Expr D Γ Λ (stateType types f) := runningExpr types f tag within (.var saved)
     execBlock oracle passes calls (resumeBlock (V := V) (l := l) types f tag within saved state) world env =
-      .ok world (env.set state (eval world successor world env)) := by
-  intro successor
+      .ok world (env.set state (runningValue D types f tag within (env.get saved))) := by
+  let successor : Expr D Γ Λ (stateType types f) := runningExpr types f tag within (.var saved)
   have reads : successor.orte = [] := runningExpr_reads types f tag within (.var saved)
   have execution := constructBlock_exec (V := V) (l := l) oracle passes calls state successor world env
   have noRead : world.lese Λ [] = world := rfl
   simp only [reads, noRead] at execution
+  have exactFrame := runningExpr_eval types f tag within (Expr.var (Λ := Λ) saved) world world env
+  change eval world successor world env = runningValue D types f tag within (env.get saved) at exactFrame
+  rw [exactFrame] at execution
   exact execution
 
 public theorem cancelled_encoded (types : TypeResolution) (f : AsyncFn) :
