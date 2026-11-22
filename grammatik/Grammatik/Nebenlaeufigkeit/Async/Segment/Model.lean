@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
-public import Grammatik.Nebenlaeufigkeit.Async.Expand
+public import Grammatik.Nebenlaeufigkeit.Async.Verfeinerung
 
 namespace Gabbro.Grammatik.Async.Segment
 
@@ -254,6 +254,61 @@ public theorem runTaskPoll_agrees_with_inducedModel (elaboration : Elaboration D
         have same := Option.some.inj (found.symm.trans selected)
         subst actual
         rw [runChildPoll_normal elaboration calls prices normal name callee selected storage before]
+
+/-- One resolved source activation, retaining ordinary G call failures.
+    Each successful answer reports the source event, state, world and cost. -/
+@[expose] public def runActivation (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (source : State (Value D) (Child D types)) (world : World D) :
+    Except (Logik D ⊕ Hardware D) (Event (Value D) × State (Value D) (Child D types) × World D × Nat) :=
+  match source with
+  | .running tag frame =>
+    match f.body.drop tag with
+    | .bind name expr _ :: _ =>
+      let (value, after, cost) := evaluateBound elaboration expr frame world
+      .ok (.next, .running (tag + 1) (save frame name value), after, cost + 1)
+    | .await _ future _ :: _ =>
+      let (task, after, cost) :=
+        makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame future world
+      .ok (.next, .waiting tag frame task, after, cost + 1)
+    | [] =>
+      let (value, after, cost) := evaluateBound elaboration f.result frame world
+      .ok (.ready value frame.marks, .completed value (clear frame), after, cost + 1)
+  | .waiting tag frame task =>
+    match f.body.drop tag with
+    | .await name _ _ :: _ => runWaitingPoll elaboration calls prices tag name frame task world
+    | _ => .ok (.refused, source, world, 0)
+  | .completed .. | .cancelled => .ok (.refused, source, world, 0)
+
+/-- On the total fragment the failure-aware model is the existing async
+    transition, including the exact order of effects and modeled cost. -/
+public theorem runActivation_agrees_with_inducedModel (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (source : State (Value D) (Child D types)) (world : World D) :
+    runActivation elaboration calls prices source world =
+      .ok (machineStep (inducedModel elaboration calls prices normal)
+        (asyncExpand (inducedModel elaboration calls prices normal) f) source world) := by
+  let model := inducedModel elaboration calls prices normal
+  cases source with
+  | running tag frame =>
+    rw [runActivation, machineStep, table_drop]
+    cases position : f.body.drop tag with
+    | nil => rfl
+    | cons command rest => cases command <;> rfl
+  | waiting tag frame task =>
+    rw [runActivation, machineStep, table_drop]
+    cases position : f.body.drop tag with
+    | nil => rfl
+    | cons command rest =>
+      cases command with
+      | bind => rfl
+      | await name future boundary =>
+        change runWaitingPoll elaboration calls prices tag name frame task world =
+          .ok (waitingReply tag name frame (pollTask model task world))
+        rw [runWaitingPoll, runTaskPoll_agrees_with_inducedModel elaboration calls prices normal]
+  | completed => rfl
+  | cancelled => rfl
 
 public theorem evaluateBound_resolved (elaboration : Elaboration D V Λ types f)
     (source : Parser.SExpr) (resolved : BoundExpression D Λ)
