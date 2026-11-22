@@ -302,8 +302,35 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
       Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
   · exact agree_write frame.room (Nat.zero_le _) depthSlot _
 
-/-- The child's startup phase carries the exact typed stack payload
-    of the corresponding declared source root. -/
+/-- Past the loader, the root phase carries the exact arguments serialized
+    for the selected declaration, with its private stack permissions. -/
+theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
+    {E : Einheit (declOf output.compiled.unit)} {memory : Mem} {thread : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root)
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {control : Res T} (phase : ImageRootPhase output E history memory thread control state)
+    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+    BytesAt memory codeBase (output.image.code.flatMap encII) ∧
+      FrameOK memory fp output.image.Ks ∧
+      WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
+  intro fp
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
+  · exact (pastLoader.elim (· firstThread) (· loader)).elim
+  have same := Option.some.inj (chosen.symm.trans declared)
+  subst start
+  refine ⟨code, frame, ?_⟩
+  intro i present
+  have address : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) + 8 * (FB + FB + i)) := by
+    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) +
+      BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+  rw [address]
+  exact args i present
+
+/-- The root phase exposes a child's arguments in declared start order. -/
 theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)
     {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
     {memory : Mem} {index : Nat}
@@ -315,21 +342,8 @@ theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)
     BytesAt memory codeBase (output.image.code.flatMap encII) ∧
       FrameOK memory fp output.image.Ks ∧
       WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
-  intro fp
   have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
-  obtain ⟨firstThread, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
-  · exact (Nat.succ_ne_zero _ firstThread).elim
-  have same := Option.some.inj (chosen.symm.trans exported)
-  subst start
-  refine ⟨code, frame, ?_⟩
-  intro i present
-  have address : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
-      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) := by
-    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
-      BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
-    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-  rw [address]
-  exact args i present
+  exact ImageRootPhase.payload exported phase (.inl (Nat.succ_ne_zero _))
 
 /-- The concrete child startup prefix advances the IR counter within
     the child's stub and retains the same dormant GX head. -/

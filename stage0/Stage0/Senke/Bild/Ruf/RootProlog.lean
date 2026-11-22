@@ -184,4 +184,48 @@ theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve optio
   refine ⟨after, rest, ?_, shared, otherViews, world, permissions, environment, code⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 
+/-- Once startup has reached the emitted main stub, that thread enters
+    its actual relocated function with the checked startup arguments.
+    The prefix leaves the shared memory and all other views intact. -/
+theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {before : Cfg imageTSO (Res T)} {history : List Ev}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} :
+    let site := output.mainStartSite
+    let entry := site.entry
+    let target := BitVec.ofNat 64 (output.image.A output.compiled.main)
+    let frame := slot entry.fp (BitVec.ofNat 64 FB)
+    let prologue := target + BitVec.ofNat 64 (16 * 5)
+    before.ths[0]? = some (some (.next entry)) →
+    ImageRootPhase output E history (before.ms.1.view 0) 0 (.next entry) state →
+    ∃ after : imageTSO.St, ∃ rest,
+      ProcessPrefix imageTSO actI before [] 37
+        ⟨after, before.ths.set 0 (some (.next ⟨prologue, frame⟩))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ 0 → after.1.view other = before.ms.1.view other) ∧
+      (∀ world, WeltAt (before.ms.1.view 0) output.image.Y world → WeltAt (after.1.view 0) output.image.Y world) ∧
+      FrameOK (after.1.view 0) frame (output.image.Ks - FB) ∧
+      EnvAt output.image.Y (after.1.view 0) frame output.args ∧
+      CodeAt (after.1.view 0) prologue rest := by
+  intro site entry target frame prologue running phase
+  have declared : E.starts[0]? = some ⟨output.compiled.main, output.args⟩ := by
+    rw [unit.starts]
+    rfl
+  have pastLoader : (Res.next entry : Res T) ≠ Runner.Beweis.t4 := by
+    intro equal
+    cases equal
+  obtain ⟨bytes, permissions, arguments⟩ := ImageRootPhase.payload declared phase (.inr pastLoader)
+  obtain ⟨after, call, shared, views, writes, newFrame, words, _, _, depth, code, _⟩ :=
+    site.body_prefix bytes running permissions arguments
+  have valid := fun τ x => mainEnv_valid output.image.Y _ output.args output.pointers τ x
+  have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) output.args).mpr ⟨valid, words⟩
+  let entered : Cfg imageTSO (Res T) := ⟨after, before.ths.set 0 (some (.next ⟨target, frame⟩))⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have ready : entered.ths[0]? = some (some (.next ⟨target, frame⟩)) := List.getElem?_set_self inside
+  obtain ⟨rest, passed, decoded⟩ :=
+    output.root_depth_guard_pass (before := entered) output.compiled.main code ready depth
+  refine ⟨after, rest, ?_, shared, views, fun _ stored => output.world_survives_stack site.bounded stored writes,
+    newFrame, environment, decoded⟩
+  simpa only [entered, List.set_set, List.nil_append] using call.trans passed
+
 end Gabbro.Stage0
