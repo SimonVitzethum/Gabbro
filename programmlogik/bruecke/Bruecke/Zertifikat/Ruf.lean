@@ -58,7 +58,8 @@ meta def rufStelle? (t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) :=
   let last := args.back!
   let heads := [``Gabbro.Bruecke.bindRufEA, ``Gabbro.Grammatik.WP.bindRufBA, ``Gabbro.Bruecke.bindRufSonstEA,
     ``Gabbro.Bruecke.bindRufSonstBA, ``Gabbro.Bruecke.retryWeiter, ``Gabbro.Bruecke.travWeiter,
-    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA]
+    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA,
+    ``Gabbro.Bruecke.axSonstEA, ``Gabbro.Bruecke.axSonstBA, ``Gabbro.Bruecke.indRufEA, ``Gabbro.Bruecke.indZielEA]
   let (x, bau) : Lean.Expr × (Lean.Expr → Lean.Expr) ←
     if heads.any t.isAppOf then pure (last, fun y => mkAppN t.getAppFn (args.set! (args.size - 1) y))
     else if last.isAppOf ``Gabbro.Grammatik.WP.rufZuAusgang && last.getAppNumArgs ≥ 1 then
@@ -100,6 +101,16 @@ open Lean Meta in
 meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarId)) := do
   let some (G, x) ← rufStelle? t | return none
   let x := x.headBeta
+  -- the value of a function pointer: its normal form shows the callee
+  let x ← if t.headBeta.isAppOf ``Gabbro.Bruecke.indZielEA then
+      match Kernel.whnf (← getEnv) (← getLCtx) x with
+      | .ok x' => pure x'
+      | .error _ => pure x
+    else pure x
+  if t.headBeta.isAppOf ``Gabbro.Bruecke.indZielEA && x.getAppFn.constName?.any (fun c =>
+      c == ``Subtype.mk || c == ``Sigma.mk || c == ``PSigma.mk) then
+    let some t' ← delta? (mkApp G x).headBeta | return none
+    return some [← goal.replaceTargetDefEq (← whnfCore t'.headBeta)]
   -- a known outcome: read the continuation off its definition (delta, then the match)
   let antwortBekannt := x.isAppOfArity ``Prod.mk 4 &&
     ((x.getArg! 3).isAppOf ``Option.some || (x.getArg! 3).isAppOf ``Option.none)
@@ -108,7 +119,8 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
     let t := t.headBeta
     let heads := [``Gabbro.Bruecke.bindRufEA, ``Gabbro.Grammatik.WP.bindRufBA, ``Gabbro.Bruecke.bindRufSonstEA,
       ``Gabbro.Bruecke.bindRufSonstBA, ``Gabbro.Bruecke.retryWeiter, ``Gabbro.Bruecke.travWeiter,
-    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA]
+    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA,
+    ``Gabbro.Bruecke.axSonstEA, ``Gabbro.Bruecke.axSonstBA, ``Gabbro.Bruecke.indRufEA, ``Gabbro.Bruecke.indZielEA]
     if heads.any t.isAppOf then
       let some t' ← delta? t | return none
       return some [← goal.replaceTargetDefEq (← whnfCore t'.headBeta)]
@@ -155,6 +167,26 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
         let (_, m') ← m.mvarId!.intro `hbed
         out := out ++ [m']
       return some out
+  -- the answer of a fallible foreign call
+  if x.isAppOf ``Gabbro.Grammatik.axiomAntwortSonst then
+    let ty ← whnfR (← inferType x)
+    unless ty.isAppOfArity ``Prod 2 do return none
+    let wty ← whnfR (ty.getArg! 0)
+    let oty ← whnfR (ty.getArg! 1)
+    unless wty.isAppOfArity ``Gabbro.Grammatik.World 1 && oty.isAppOfArity ``Option 1 do return none
+    let sty ← whnfR (oty.getArg! 0)
+    unless sty.isAppOfArity ``Sum 2 do return none
+    let pf0 := mkAppN (mkConst ``Gabbro.Bruecke.antwortSonst_faelle)
+      #[wty.getArg! 0, sty.getArg! 0, sty.getArg! 1, G, x]
+    let (ms, _, _) ← forallMetaTelescopeReducing (← inferType pf0) (some 3)
+    goal.assign (mkAppN pf0 ms)
+    let mut out := []
+    for (m, k) in ms.toList.zip [0, 1, 2] do
+      m.mvarId!.setKind .syntheticOpaque
+      let namen := if k == 0 then [`σ', `v, `hax] else if k == 1 then [`σ', `r, `hax] else [`σ', `hax]
+      let (_, m') ← m.mvarId!.introN namen.length namen
+      out := out ++ [m']
+    return some out
   -- the oracle's answer to a foreign call
   if x.isAppOf ``Gabbro.Grammatik.axiomAntwort then
     let ty ← whnfR (← inferType x)
