@@ -152,3 +152,21 @@ theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h :
     dsimp only [actual] at hg
     simp only [layU, globEnd_one, globSz] at *
     omega
+
+/-- The image extent bounds every relocated world operand. A column
+    still has a bounded base when its declared table has zero cells. -/
+theorem layU_operands_fit (u : UProg) (tor : (declOf u).Ax → Option TorB) (base : Nat)
+    (fits : (layU (lockWait := lockWait) u tor base).sye < 2 ^ 31) :
+    let layout := layU (lockWait := lockWait) u tor base
+    (∀ g, layout.ga g + 8 * valueWords ((declOf u).gtyp g) < 2 ^ 31) ∧
+    (∀ t f, layout.col t f < 2 ^ 31) ∧
+    (∀ l, layout.lk l + 24 < 2 ^ 31) := by
+  intro layout
+  have worldBeforeLocks : layout.hi ≤ layout.sye := by simp only [layout, layU]; omega
+  have worldFits : layout.hi < 2 ^ 31 := worldBeforeLocks.trans_lt fits
+  have inside := layU_in (lockWait := lockWait) u tor base worldFits
+  refine ⟨fun g => (inside.2.1 g).2.trans_lt worldFits, ?_, ?_⟩
+  · intro t f
+    exact ((Nat.le_add_right _ _).trans (col_le (lockWait := lockWait) u tor base t f)).trans_lt worldFits
+  · intro l
+    exact ((layU_sync (lockWait := lockWait) u tor base).1 l).2.trans_lt fits
