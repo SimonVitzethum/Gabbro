@@ -80,6 +80,14 @@ theorem RunP.remaining_run {start current : Res T} {before now : Mem}
       exact ih later
     | sys | fp => cases answered
 
+/-- A partially answered instruction inherits the request behavior of
+    the original decoded instruction. -/
+theorem RunP.blind {start current : Res T} {before now : Mem}
+    (part : RunP start before current now) (original : Blind start) : Blind current := by
+  induction part with
+  | refl => exact original
+  | ask _ _ ih => exact ih (original.weiter _)
+
 /-- A host-free reference excludes host requests throughout its
     memory-only prefixes. This also covers the prefix before a native
     floating answer, without choosing that answer in the actual run. -/
@@ -291,7 +299,7 @@ private theorem RunM.permissions {r : Res T} {before after : Mem} {next : T}
     have stable := memAns_nurIn answered
     exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
 
-private theorem RunP.permissions {r r' : Res T} {before after : Mem}
+theorem RunP.permissions {r r' : Res T} {before after : Mem}
     (run : RunP r before r' after) : after.rd = before.rd ∧ after.wr = before.wr := by
   induction run with
   | refl => exact ⟨rfl, rfl⟩

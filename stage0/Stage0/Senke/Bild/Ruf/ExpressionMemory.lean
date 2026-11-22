@@ -77,8 +77,10 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
         StarM taken start memory pointer actual → taken ≤ count →
         (taken = count → pointer = target ∧
           Senke.ValueAt L actual fp d τ (eval initial expression world env)) ∧
-        (taken < count → ∀ {request : Req} {resume : Ans → Res T} {atRequest : Mem},
-          ¬ RunP (step pointer) actual (.ask (.sys request) resume) atRequest) := by
+        (taken < count → ∀ {request : Op} {resume : Ans → Res T} {atRequest : Mem},
+          RunP (step pointer) actual (.ask request resume) atRequest →
+          (∀ call, request ≠ .sys call) ∧
+          (schreibtOp request = true → ∀ byte, fussOp request byte → inSlots fp 0 K byte)) := by
   intro start target restricted
   obtain ⟨finish, executed, _, value⟩ :=
     expression_reference_memory expression lowered fits pre valueMemory layout separated entry
@@ -93,23 +95,52 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
   · intro completed
     subst taken
     rw [Nat.sub_self] at remaining
-    cases remaining
+    have endpoint : pointer = target ∧ cut = finish := by
+      cases remaining
+      exact ⟨rfl, rfl⟩
+    obtain ⟨rfl, exactMemory⟩ := endpoint
+    subst cut
     refine ⟨rfl, value.1, ?_⟩
     intro index present
     have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
-        cut.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
+        finish.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
       simp only [Mem.rd64, Mem.all_congr (fun _ _ => (memoryEq.1 _ trivial).2.symm),
         Mem.le_congr (fun _ _ => (memoryEq.1 _ trivial).1.symm)]
     rw [sameRead]
     exact value.2 index present
   · intro inside request resume atRequest waiting
     have left : 0 < count - taken := Nat.sub_pos_of_lt inside
-    cases remaining with
-    | start => exact (Nat.lt_irrefl _ left).elim
-    | extend first rest =>
-      obtain ⟨_, aligned, _⟩ := waiting.align_reference first (blind_step _)
-        (fun byte granted => readable byte (by simpa only [rd] using granted))
-        (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
-      exact aligned.no_syscall (kernel := kernel) first
+    cases available : count - taken with
+    | zero => omega
+    | succ unused =>
+      have restOfReference : IRReference (Nat.succ unused) pointer cut target finish := by
+        simpa only [available] using remaining
+      cases restOfReference with
+      | extend first rest =>
+        obtain ⟨_, aligned, _⟩ := waiting.align_reference first (blind_step _)
+          (fun byte granted => readable byte (by simpa only [rd] using granted))
+          (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
+        constructor
+        · intro call equal
+          subst request
+          exact aligned.no_syscall (kernel := kernel) first
+        · intro writesRequest
+          have allowed := aligned.remaining_run first
+          have permits := aligned.permissions
+          cases allowed with
+          | ask answered continued =>
+            rename_i reply
+            cases reply with
+            | none =>
+              have rejected := (aligned.blind (blind_step _)).missing
+              rw [rejected] at continued
+              cases continued
+            | some words =>
+              exact (memAns_confined (reads := fun _ => True) (writes := inSlots fp 0 K)
+                (fun _ _ => trivial)
+                (fun byte granted => writable byte (by simpa only [wr, permits.2] using granted))
+                answered).2 writesRequest
+          | sys unavailable _ => exact unavailable.elim
+          | fp _ _ => cases writesRequest
 
 end Gabbro.Stage0
