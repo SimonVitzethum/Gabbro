@@ -139,7 +139,36 @@ meta def tAussage? (p : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option L
 /-- **Translate the conditions over symbolic values into integer arithmetic and try `omega`.** -/
 syntax (name := gabbrovArith) "gabbrov_arith" : tactic
 
+/-- The entry precondition `ReqAmEintritt P f σ ρ` of the opened duty, read at the function's own
+    lowering (`requires_eq`), as a further hypothesis. -/
+meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
+  let some hlow ← findeLow? | return goal
+  let mut g := goal
+  for d in ← getLCtx do
+    if LocalDecl.isImplementationDetail d then continue
+    let ty ← instantiateMVars (LocalDecl.type d)
+    unless ty.isAppOf ``Gabbro.Grammatik.ReqAmEintritt && ty.getAppNumArgs ≥ 4 do continue
+    let f := ty.getAppArgs[ty.getAppNumArgs - 3]!
+    let some body ← delta? ty | continue
+    let some (_, lhs, _) := body.eq? | continue
+    -- lhs = wahr? (eval σ X σ ρ)
+    let ev := lhs.appArg!
+    unless ev.isAppOf ``Gabbro.Grammatik.eval && ev.getAppNumArgs ≥ 4 do continue
+    let X := ev.getAppArgs[ev.getAppNumArgs - 3]!
+    let some eq ← (try some <$> mkAppM ``Gabbro.Bruecke.requires_eq #[hlow, f] catch _ => pure none) | continue
+    let some (_, _, rhs) := (← inferType eq).eq? | continue
+    let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
+    let motiv := mkLambda `r .default (← inferType X) motivRumpf
+    let neu := (mkApp motiv rhs).headBeta
+    let pf ← mkEqMP (← mkCongrArg motiv eq) d.toExpr
+    g ← g.assert `hreq neu pf
+    let (_, g') ← g.intro1
+    g := g'
+  return g
+
 @[tactic gabbrovArith] meta def evalGabbrovArith : Tactic := fun _ => withMainContext do
+  replaceMainGoal [← reqLesen (← getMainGoal)]
+  withMainContext do
   let goal ← getMainGoal
   let (r, atome) ← (do
     let mut goal := goal

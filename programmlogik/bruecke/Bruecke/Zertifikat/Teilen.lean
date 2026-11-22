@@ -91,8 +91,10 @@ open Lean Meta in
 meta def motivVon (goal : MVarId) (x : Lean.Expr) : MetaM (Lean.Expr × Lean.Expr) := do
   let t ← instantiateMVars (← goal.getType)
   let ty ← inferType x
-  let body ← kabstract t x
-  return (mkLambda `y .default ty body, ty)
+  -- syntactic abstraction through a fresh local (no definitional unification over the goal)
+  let G ← withLocalDeclD `y ty fun y => do
+    mkLambdaFVars #[y] (t.replace fun e => if e == x then some y else none)
+  return (G, ty)
 
 open Lean Meta in
 /-- **A branch inside the goal** (not under a binder): taken when the kernel decides it, split
