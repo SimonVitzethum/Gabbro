@@ -29,8 +29,6 @@ theorem Emitted.initial_root_head (output : Emitted src reserve options)
   have initial : initRuhe E.starts thread = ⟨some root.1, envR root.2⟩ := by
     unfold initRuhe
     rw [declared]
-    cases root
-    rfl
   have exactHead := BildLauf.rufStartG_faeden_von E.P.mitRuhe (speicherR E.sp0) initial
   dsimp only
   change let entered := ((RufStartG E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts)).faeden thread).kopf
