@@ -84,7 +84,7 @@ theorem keeps_write {fp : Runner.W} {pr : List Nat} {K x : Nat} {m : Runner.Mem}
 theorem guard_brz {m : Runner.Mem} {pc : Runner.W} {a c s : Nat} (hc : CodeAt m pc (guardC a c s)) :
     InsAt m pc 19 (II.f (a : Int)) (II.f 32) (II.f 0) := by
   have h := hc 0 (by simp [guardC])
-  simpa [guardC, ci, II.o] using h
+  simpa [guardC, ci, II.o, show (19 : Opcode).val = 19 from rfl] using h
 
 /-- The guard over slot `a`, which holds zero: `exit_group(c)`. -/
 theorem guard_stop {m : Runner.Mem} {pc fp : Runner.W} {K a c s : Nat} (hc : CodeAt m pc (guardC a c s))
