@@ -222,6 +222,23 @@ theorem strBoundedSliceValue_byte {maximum : Nat} (value : Wert D (.str maximum)
       value.1[first + index.val]'(by have hi := bounds.2; have valid := index.isLt; omega) := by
   simp only [strBoundedSliceValue, strSliceValue, sliceValue, List.getElem_take, List.getElem_drop]
 
+/-- Composing substring offsets returns the same byte sequence as
+    taking both slices, including when either length is zero. -/
+theorem strBoundedSliceValue_subslice {maximum : Nat} (value : Wert D (.str maximum))
+    (first last : Nat) (outer : SliceOk value.1.length first last)
+    (begin finish : Nat)
+    (inner : SliceOk (strBoundedSliceValue value first last outer).1.length begin finish)
+    (combined : SliceOk value.1.length (first + begin) (first + finish)) :
+    strBoundedSliceValue (strBoundedSliceValue value first last outer) begin finish inner =
+      strBoundedSliceValue value (first + begin) (first + finish) combined := by
+  apply Subtype.ext
+  apply List.ext_getElem
+  · rw [(strBoundedSliceValue_exact _ _ _ inner).2, (strBoundedSliceValue_exact _ _ _ combined).2]
+    omega
+  · intro i left right
+    simp only [strBoundedSliceValue, strSliceValue, sliceValue, List.getElem_take,
+      List.getElem_drop, Nat.add_assoc]
+
 /-- A full runtime substring is admissible at every actual byte length. -/
 theorem runtimeStringSlice_erfuellbar {maximum : Nat} (value : Wert D (.str maximum)) :
     ∃ bounds : SliceOk value.1.length 0 value.1.length,

@@ -90,6 +90,21 @@ theorem ValueAt.string_slice_byte [Kern] {D : Deklaration} {layout : Lay D} {mem
   dsimp only
   rw [span _ present, Option.some.inj word, strBoundedSliceValue_byte value first last bounds index]
 
+/-- The visible bytes of a long runtime substring already occupy one
+    contiguous span. The descriptor's length uses the actual byte count. -/
+theorem ValueAt.string_slice_view [Kern] {D : Deklaration} {layout : Lay D}
+    {memory : Runner.Mem} {frame : Runner.W} {base capacity : Nat}
+    {value : Wert D (.str capacity)} (long : 2 ≤ capacity)
+    (input : ValueAt layout memory frame base (.str capacity) value)
+    (first last : Nat) (bounds : SliceOk value.1.length first last) :
+    let slice := strBoundedSliceValue value first last bounds
+    WordsAt memory frame (base + 1 + first) (slice.1.map fun byte => BitVec.ofInt 64 byte.n) := by
+  intro result i present
+  have length := (strBoundedSliceValue_exact value first last bounds).2
+  have valid : i < last - first := by simpa only [List.length_map, result, length] using present
+  have read := input.string_slice_byte long first last bounds ⟨i, valid⟩
+  simpa only [Nat.add_assoc, List.getElem_map, result] using read
+
 /-- Stage 0's actual expression code returns the selected element of the
     runtime slice. The generated term accesses the original array through
     the already verified array indexing path. -/
