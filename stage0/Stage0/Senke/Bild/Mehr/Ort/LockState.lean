@@ -282,13 +282,13 @@ theorem ImageTicketStates.flush [Kern] {D : Deklaration} {N : Nat} {layout : Lay
     (fun issuer store pending byte hit => (buffers issuer store pending byte hit).1) buffers.disjoint, ?_⟩
   have stable (lock : D.Lock) : GleichAuf (LockBytes layout lock) memory.1.m machine.ms.1.m := by
     obtain ⟨issuer, address, value, tail, head, changed⟩ := flushed
-    intro byte protected
+    intro byte lockByte
     have pending : (address, value) ∈ machine.ms.1.buf issuer := by
       rw [head]
       exact List.mem_cons_self
     rw [changed]
     exact (write_nurIn _ _ _).gleichAt (fun hit =>
-      outside lock byte protected issuer (buffers issuer (address, value) pending byte hit).1)
+      outside lock byte lockByte issuer (buffers issuer (address, value) pending byte hit).1)
   refine ⟨?_, current.protocol, current.owners⟩
   intro lock
   have fits := (geometry.1 lock).2.trans bound

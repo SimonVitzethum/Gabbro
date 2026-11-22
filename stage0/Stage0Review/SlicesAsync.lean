@@ -99,6 +99,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_waiter_CAS_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.adjustWaiters
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.retryServing
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.flush
 #print axioms Gabbro.Stage0.Senke.Faeden.image_release_scope
 #print axioms Gabbro.Stage0.Senke.Faeden.image_admit_scope
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
