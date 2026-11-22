@@ -14,6 +14,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.AwaitLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ArgumentLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ConstructLowering
+import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedAwait
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
@@ -308,6 +309,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.constructLeafBlock_assign
 #print axioms Gabbro.Grammatik.Async.Representation.ConstructPlan.lower_assign
 #print axioms Gabbro.Grammatik.Async.Representation.beginAwaitBlock_simulates
+#print axioms Gabbro.Grammatik.Async.Representation.CheckedAwait.start_simulates
+#print axioms Gabbro.Grammatik.Async.Representation.CheckedAwait.poll_simulates
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep
