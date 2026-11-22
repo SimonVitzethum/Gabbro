@@ -108,7 +108,7 @@ theorem ImageStartSite.call_decrement_operand [Kern] {output : Emitted src reser
       (II.f (scratch : Int)) (II.f 1) (II.f 0) := by
     have first := stub 1 (by rw [startC_len]; decide)
     change InsAt _ (entry.pc + BitVec.ofNat 64 (16 * 1)) 1 (II.f (scratch : Int)) (II.f 1) (II.f 0)
-    simpa only [scratch, entry, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [scratch, entry, ImageStartSite.entry, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using first
   have destination : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
   have operand : (sx (II.f 1)).toNat = 1 := by decide
@@ -157,7 +157,7 @@ theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
       change entry.pc + 16 + 16 = _
       rw [BitVec.add_assoc]
       rfl]
-    simpa only [entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [entry, ImageStartSite.entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using subtract
   have out : sx (II.f ((FB + 2 : Nat) : Int)) = BitVec.ofNat 64 (FB + 2) := sx_nat (calleeRoom.trans signed)
   have lhs : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
