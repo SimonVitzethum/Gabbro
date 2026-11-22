@@ -50,6 +50,35 @@ public theorem slotsRep_encoded (types : TypeResolution) (live : List String)
     simp only [encodeSlots, *, ite_true, ite_false, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def] <;> rfl
 
+/-- The typed field offset belongs to the declared name even when
+    several saved locals have the same ordinary type. -/
+public inductive NamedFrameSlot (types : TypeResolution) (name : String) (sourceType : Parser.STyp) :
+    (fields : List (String × Parser.STyp)) →
+    FieldAt (slotTypes types fields) (.sum [none, some (types.ordinary sourceType)]) → Prop where
+  | head : NamedFrameSlot types name sourceType ((name, sourceType) :: rest) .head
+  | tail (other : label ≠ name) (slot : NamedFrameSlot types name sourceType rest position) :
+      NamedFrameSlot types name sourceType ((label, type) :: rest) (.tail position)
+
+/-- Compute the field address from the very declaration lookup checked
+    for the bound value. No caller chooses an offset independently. -/
+@[expose] public def frameSlot (types : TypeResolution) (name : String) (sourceType : Parser.STyp) :
+    (fields : List (String × Parser.STyp)) → fields.lookup name = some sourceType →
+    {pos : FieldAt (slotTypes types fields) (.sum [none, some (types.ordinary sourceType)]) //
+      NamedFrameSlot types name sourceType fields pos}
+  | [], absent => by cases absent
+  | (label, type) :: rest, present =>
+    if same : name = label then
+      have exactType : type = sourceType := by
+        simpa only [List.lookup_cons, same, beq_self_eq_true, ite_true, Option.some.injEq] using present
+      by
+        subst label
+        subst type
+        exact ⟨.head, .head⟩
+    else
+      let selected := frameSlot types name sourceType rest
+        (by simpa only [List.lookup_cons, beq_eq_false_iff_ne.mpr same, Bool.false_eq_true, ite_false] using present)
+      ⟨.tail selected.val, .tail (Ne.symm same) selected.property⟩
+
 /-- Generate the ordinary product arguments for the smaller live set.
     Retained slots are projected at their declared types. Dead slots
     use the absent tag, which has no source payload. -/
@@ -131,6 +160,45 @@ public theorem trimFrameExpr_rep {Γ : Ctx} {Λ : List (Res D)} {f : AsyncFn}
       (fun _ => rfl)
   · exact trimSlotArgs_rep kept entry world env represented (fun field => Expr.prodGet (.var saved) field)
       (fun _ => rfl)
+
+/-- Ordinary G code for a live binding. It evaluates the bound expression
+    once, clears dead slots and installs the result at the typed position. -/
+@[expose] public def bindFrameBlock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (types : TypeResolution) (f : AsyncFn) (keep : List String)
+    (saved : Var Γ (frameType types f))
+    (destination : FieldAt (frameFields types f) (.sum [none, some τ]))
+    (expression : Expr D Γ Λ τ) : Block D V l Γ Λ Λ :=
+  evaluateBlock expression saved
+    (saveSlotExpr types f (trimFrameExpr types f keep (.there saved)) destination (.var .here))
+
+/-- Frame maintenance observes only local data. The resulting world is
+    the one returned by evaluating the original bound expression. -/
+public theorem bindFrameBlock_exec {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (types : TypeResolution) (f : AsyncFn) (keep : List String)
+    (saved : Var Γ (frameType types f))
+    (destination : FieldAt (frameFields types f) (.sum [none, some τ]))
+    (expression : Expr D Γ Λ τ) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) :
+    let answer := evaluateExpression expression world env
+    let cleared : Expr D (τ :: Γ) Λ (frameType types f) := trimFrameExpr types f keep (.there saved)
+    let updated := prodSetW (F := D.Fn) (passt := D.passt) destination
+      (eval answer.2.1 cleared answer.2.1 (.cons answer.1 env)) (presentValue D τ answer.1)
+    execBlock oracle passes calls (bindFrameBlock (V := V) (l := l) types f keep saved destination expression) world env =
+      .ok answer.2.1 (env.set saved updated) := by
+  intro answer cleared updated
+  have read : cleared.orte = [] :=
+    trimSlotArgs_reads types keep (f.params ++ f.fields) (fun field => Expr.prodGet (.var (.there saved)) field)
+      (fun _ => rfl)
+  let temporary : Expr D (τ :: Γ) Λ τ := .var .here
+  have savedRead : (saveSlotExpr types f cleared destination temporary).orte = [] := by
+    simp only [saveSlotExpr, Expr.orte, NutzlastExpr.orte, temporary, read, List.nil_append]
+  have noRead (current : World D) : current.lese Λ [] = current := rfl
+  have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression saved
+    (saveSlotExpr types f cleared destination temporary) world env
+  simp only [savedRead, noRead, saveSlotExpr_eval] at executed
+  exact executed
 
 /-- Only source values live AFTER construction are needed while waiting.
     The awaited destination itself is not initialised until Ready. -/
