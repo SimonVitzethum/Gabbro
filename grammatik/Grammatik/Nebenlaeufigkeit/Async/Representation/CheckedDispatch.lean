@@ -80,12 +80,12 @@ public theorem CheckedFinal.inner_exec {elaboration : Elaboration D V Λ types f
     rw [(castExpression checked.result renamed read read env).2,
       layout.2.2 read read locals env (get_keepLocal outer locals)]
     rfl
-  change .ok (world.lese Λ expr.orte)
+  change Ausgang.ok (world.lese Λ expr.orte)
     ((env.set (prependLocal state scope) (completedValue D types f
       (eval (world.lese Λ expr.orte) expr (world.lese Λ expr.orte) env))).set
         (prependLocal finished scope) true) = _
   rw [reads, show world.lese Λ term.orte = read from rfl, value]
-  change .ok read (((appendLocals locals outer).set (prependLocal state scope) completed).set
+  change Ausgang.ok read (((appendLocals locals outer).set (prependLocal state scope) completed).set
     (prependLocal finished scope) true) = _
   rw [set_prependLocal, set_prependLocal]
   rfl
