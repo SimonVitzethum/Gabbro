@@ -160,16 +160,18 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     have owner := (indices j s found).2.write address write
     exact different j s found (accessible address current j owner)
 
-private theorem root_after_activation [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+theorem ImageRootPhase.advance_source [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {memory : Mem} {history extension : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {thread : Nat} {control : Res T}
     (phase : ImageRootPhase output E history memory thread control before)
-    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4) (machine : after.m = before.m) :
+    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4)
+    (sameHead : after.m.faeden thread = before.m.faeden thread) :
     ImageRootPhase output E (history ++ extension) memory thread control after := by
   obtain ⟨entry, loader, _⟩ | ⟨root, declared, head, code, frame, fits, args, pointer, site, phase⟩ := phase
   · exact (pastLoader.elim (· entry) (· loader)).elim
-  refine .inr ⟨root, declared, by simpa only [machine] using head, code, frame, fits, args, pointer, site, ?_⟩
+  refine .inr ⟨root, declared, ?_, code, frame, fits, args, pointer, site, ?_⟩
+  · simpa only [FertigG, sameHead] using head
   rcases phase with advanced | pending | ⟨id, extra, event, pending⟩
   · exact .inl advanced
   · exact .inr (.inl pending)
@@ -257,7 +259,8 @@ private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {o
       · have unchanged : threads[i]? = before.ths[i]? := List.getElem?_set_ne (Ne.symm first)
         rcases roots i with same | ⟨control, pending, live, phase⟩
         · exact .inl (same.trans unchanged.symm)
-        · exact .inr ⟨control, pending, unchanged.trans live, root_after_activation phase (.inl first) machine⟩
+        · exact .inr ⟨control, pending, unchanged.trans live,
+            phase.advance_source (.inl first) (congrArg (fun m => m.faeden i) machine)⟩
     · subst i
       have newBody : (body ++ [none])[before.ths.length]? = some none := by
         rw [List.getElem?_append_right length.le, length, Nat.sub_self]
@@ -265,7 +268,8 @@ private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {o
       have newSlot : (threads ++ [some (.next child)])[before.ths.length]? = some (some (.next child)) := by
         rw [List.getElem?_append_right size.le, size, Nat.sub_self]
         rfl
-      exact .inr ⟨.next child, newBody, newSlot, root_after_activation prepared (.inl spawned) machine⟩
+      exact .inr ⟨.next child, newBody, newSlot,
+        prepared.advance_source (.inl spawned) (congrArg (fun m => m.faeden before.ths.length) machine)⟩
     · left
       have beyondBody : (body ++ [none]).length ≤ i := by
         simpa only [List.length_append, List.length_singleton, length, Nat.succ_eq_add_one] using

@@ -287,6 +287,7 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     {after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
     {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem}
+    {body : List (Option (Res T))}
     {thread : Nat} {snapshot : Solo} {pc : W}
     {carriers : (declOf output.compiled.unit).mitRuhe.Tab ⊕ (declOf output.compiled.unit).mitRuhe.Glob → Prop}
     {Γ : Ctx} {Λ : List (Grammatik.Res (declOf output.compiled.unit).mitRuhe)}
@@ -294,8 +295,13 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
       (vertragVon _ (positions thread).B.f) (positions thread).l Γ Λ}
     {world : World (declOf output.compiled.unit).mitRuhe} {env : Env _ Γ}
     (buffers : PrivateBuffers footprint after.ms.1)
+    (length : body.length = after.ths.length)
     (matched : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint after.ms).1, after.ths⟩ state snapshots positions committed)
+      ⟨(projectSCState footprint after.ms).1, body⟩ state snapshots positions committed)
+    (roots : ∀ j, body[j]? = after.ths[j]? ∨
+      ∃ r, body[j]? = some none ∧ after.ths[j]? = some (some r) ∧
+        ImageRootPhase output E history (after.ms.1.view j) j r state)
+    (pastLoader : after.ths[0]? ≠ some (some Runner.Beweis.t4))
     (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
     (registered : snapshots thread = some snapshot)
     (quiet : let x := positions thread
@@ -310,18 +316,34 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
     ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next := by
-  obtain ⟨machine, _, next, reaches, _, _, _, _, _, _, threadEq, related⟩ :=
+  obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
-  refine ⟨{ state with m := machine }, reaches, after.ths, buffers, rfl,
-    .inr ⟨snapshots, _, _, related, ?_⟩, fun _ => .inl rfl⟩
-  intro i s found
-  obtain ⟨identity, owned⟩ := indices i s found
-  refine ⟨?_, owned⟩
-  by_cases current : i = thread
-  · subst i
-    simpa only [ite_true] using threadEq.trans identity
-  · simpa only [ite_eq_right current] using identity
+  refine ⟨{ state with m := machine }, reaches, body, buffers, length,
+    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩
+  · intro i s found
+    obtain ⟨identity, owned⟩ := indices i s found
+    refine ⟨?_, owned⟩
+    by_cases current : i = thread
+    · subst i
+      simpa only [ite_true] using threadEq.trans identity
+    · simpa only [ite_eq_right current] using identity
+  · intro i
+    rcases roots i with same | ⟨residual, absent, live, root⟩
+    · exact .inl same
+    · have another : i ≠ thread := by
+        intro same
+        subst i
+        rw [absent] at atBody
+        cases atBody
+      have installed : i ≠ 0 ∨ residual ≠ Runner.Beweis.t4 := by
+        by_cases entry : i = 0
+        · subst i
+          exact .inr (fun loader => pastLoader (loader ▸ live))
+        · exact .inl entry
+      refine .inr ⟨residual, absent, live, ?_⟩
+      simpa only [List.append_nil] using root.advance_source (extension := []) installed
+        (otherHeads i (fun same => another (same.trans (indices thread snapshot registered).1)))
 
 /-- The current carrier ownership can change at a lock boundary without
     modifying the runner or the committed GX memory. Each executing
