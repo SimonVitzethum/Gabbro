@@ -78,7 +78,7 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
 
 /-- When only the issuer's TSO view changes, the projected image memory
     is unchanged at every address outside that issuer's footprint. -/
-theorem imageProjection_agree_other {before after : imageTSO.St}
+theorem imageProjection_agree_other [Kern] {before after : imageTSO.St}
     {footprint : Nat → W → Prop} {issuer : Nat}
     (committed : after.1.m = before.1.m)
     (otherViews : ∀ thread, thread ≠ issuer → after.1.view thread = before.1.view thread) :
