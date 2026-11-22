@@ -29,6 +29,11 @@ def frageEnde (m : Bool) (name : String) (ty : Option STyp) (e : SExpr) :
     else .error "? without ;"
   | _ => .error "? without ;"
 
+/-- A block that ends in `return`, `leave` or `next`: it never falls through. -/
+def blockEndet : SAnw → Bool
+  | .block _ (some _) => true
+  | _ => false
+
 mutual
 /-- After the head word: a call through a path or a place, or an
     assignment (`parse.rs` `zuweisung_oder_ruf`). -/
@@ -130,6 +135,7 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "retires" then parseRetires rest
       else if strEq w "while" then parseSchleife f rest 3
       else if strEq w "for" then parseSchleife f rest 4
+      else if strEq w "check" then parseCheck f rest
       else parsePlatzStmt f toks
     | .ident "start" :: .zeichen "{" :: rest => parseStart f rest
     | .zeichen "@" :: _ => parseLibStmt f toks
@@ -260,6 +266,24 @@ def parseChild (f : Nat) (toks : List Token) :
   | f + 1 => do
     let (b, r) ← parseBlock f toks
     pure (.child b, r)
+
+/-- `check c else { … }` (behind `check`): a run-time check. The `else` block must end
+    (`return`, `leave`, `next`); it never falls through. The form is a branch on `!c` whose
+    then-block is the `else` block, so it means exactly `Block.check` of the model: the
+    statements after it run only where `c` holds, and the checker may assume `c` there. -/
+def parseCheck (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseOr f toks with
+    | .error e => .error e
+    | .ok (c, rest) => match nimmWort "else" rest with
+      | .error e => .error e
+      | .ok rest' => match parseBlock f rest' with
+        | .error e => .error e
+        | .ok (b, rest'') =>
+          if blockEndet b then .ok (.cond (.un "!" c) b [] none, rest'')
+          else .error "check: the else block must end with return, leave or next"
 
 def parseWenn (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
