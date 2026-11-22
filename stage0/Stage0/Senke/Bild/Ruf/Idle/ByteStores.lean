@@ -25,11 +25,12 @@ theorem putBytesL_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
     have word := byteIndex (Γ := Γ) (Λ := Λ) table a b H j lower (by omega)
     have mapped := lowE_withIdle L reserved true word (frei Γ reserved + 3)
     have indexCode : lowE L.withIdle
-        (byteIndex (Γ := Γ.map tyR) (Λ := Λ.map resR) table a b H j lower (by omega))
+        (byteIndex (Γ := Γ.map tyR) (Λ := Λ.map resR) table a b H j lower
+          (by change b + j < D.count table; omega))
           (frei Γ reserved + 3) reserved = lowE L word (frei Γ reserved + 3) reserved :=
       mapped
     simp only [putBytesL, frei_withIdle, indexCode, slotA_withIdle,
-      putBytesL_withIdle L table field a b H lower reserved n (j + 1) (by omega)]
+      putBytesL_withIdle L table field a b H lower reserved n (j + 1) (by omega), word]
 termination_by structural n _ _ => n
 
 theorem putBytesWordsL_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
@@ -50,11 +51,10 @@ theorem putBytesWordsL_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
     simp only [putBytesWordsL, captured, frei_withIdle, compiled, source, putBytesL_withIdle]
     split
     · rfl
-    · congr 2
-      funext _
-      split
-      · exact putBytesWordsL_withIdle L table field a b H lower reserved words (n - 8) (q + 1) (by omega)
-      · rfl
+    · by_cases more : 8 < n
+      · simp only [dif_pos more,
+          putBytesWordsL_withIdle L table field a b H lower reserved words (n - 8) (q + 1) (by omega)]
+      · simp only [dif_neg more]
 termination_by structural words _ _ _ => words
 
 theorem putBytesWideL_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
