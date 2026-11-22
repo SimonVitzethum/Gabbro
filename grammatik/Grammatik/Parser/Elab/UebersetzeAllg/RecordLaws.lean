@@ -229,9 +229,19 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
               of_decide_eq_true id
             have extent : sizeOf base < fuel := by rw [← size]; simp +arith
             obtain ⟨_, fitted⟩ := smaller (sizeOf base) extent base rfl (.prod identity fields) baseAccepted
-            obtain ⟨parent, lowered⟩ := lowWertE_aggregate_of_fit (.inl ⟨identity, fields, rfl⟩) (by
-              rw [lowWertAtE]
-              cases lowWertE u Γ Λ fn er base <;> rfl) fitted
+            have lowered : ∃ parent, lowWertE u Γ Λ fn er base = .ok ⟨.prod identity fields, parent⟩ := by
+              cases read : lowWertE u Γ Λ fn er base with
+              | error diagnostic => simp only [lowWertAtE, read] at fitted; cases fitted
+              | ok value =>
+                obtain ⟨valueType, parent⟩ := value
+                simp only [lowWertAtE, read, fitW] at fitted
+                split at fitted
+                · next same =>
+                  change valueType = .prod identity fields at same
+                  subst valueType
+                  exact ⟨parent, rfl⟩
+                · cases valueType <;> cases fitted
+            obtain ⟨parent, lowered⟩ := lowered
             rw [scope] at nominal
             obtain ⟨fieldType, fieldAt⟩ := field
             have schemaType : Ty.prod identity fields =
@@ -243,16 +253,18 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
         · cases accepted
       · cases accepted
     case idx array offset =>
-      rw [specCompositeArgumentFits.eq_def] at accepted
+      simp only [specCompositeArgumentFits, specCompositeIndexFits] at accepted
       split at accepted
       · next name index =>
         split at accepted
         · next element capacity selected =>
-          obtain ⟨⟨rfl, first, last⟩, baseAccepted⟩ :=
+          obtain ⟨⟨rfl, first, last⟩, known⟩ :=
             (Bool.and_eq_true_iff.mp accepted).imp of_decide_eq_true id
+          have baseAccepted : specCompositeArgumentFits ctx (.param name) (.arr element capacity) = true := by
+            simp only [specCompositeArgumentFits, selected, decide_true, Bool.and_true, known]
           obtain ⟨_, fitted⟩ := lexical name (.arr element capacity) baseAccepted
           obtain ⟨base, lowered⟩ := lowWertE_aggregate_of_fit (.inr ⟨element, capacity, rfl⟩)
-            (by rw [lowWertAtE]; cases lowWertE u Γ Λ fn er (.param name) <;> rfl) fitted
+            (by simp only [lowWertAtE]; split <;> rfl) fitted
           have high : index ≤ (capacity : Int) - 1 := by omega
           let position : Expr (declOf u) Γ Λ (.index capacity) := .widen first high (.lit index)
           have access : lowWertE u Γ Λ fn er (.idx (.param name) (.lit index)) =

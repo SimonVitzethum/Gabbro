@@ -51,6 +51,16 @@ decreasing_by
 
 /-- Array elements and nominal record fields admit lexical values at
     the declared type, including when the two constructors are nested. -/
+def specCompositeIndexFits (ctx : UCtx) (base offset : USide) (expected : Ty) : Bool :=
+  match base, offset with
+  | .param name, .lit index =>
+    match uValueType ctx (.param name) with
+    | some (.arr element length) =>
+      decide (element = expected ∧ 0 ≤ index ∧ index < (length : Int)) &&
+        !ctx.unknownRanges.contains name
+    | _ => false
+  | _, _ => false
+
 def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
   | .arrCons head tail, expected =>
     match expected with
@@ -72,15 +82,7 @@ def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
         | .error _ => false
       | .error _ => false
     | _ => false
-  | .idx base offset, expected =>
-    match base, offset with
-    | .param name, .lit index =>
-      match uValueType ctx (.param name) with
-      | some (.arr element length) =>
-        decide (element = expected ∧ 0 ≤ index ∧ index < (length : Int)) &&
-          specCompositeArgumentFits ctx (.param name) (.arr element length)
-      | _ => false
-    | _, _ => false
+  | .idx base offset, expected => specCompositeIndexFits ctx base offset expected
   | .param name, expected =>
     !ctx.unknownRanges.contains name && decide (uValueType ctx (.param name) = some expected)
   | value, expected => specLiteralFieldFits ctx.records value expected
@@ -111,7 +113,7 @@ theorem specCompositeIndex_erfuellbar (ctx : UCtx) (name : String) (element : Ty
     (read : uValueType ctx (.param name) = some (.arr element count))
     (resolved : ctx.unknownRanges.contains name = false) :
     specCompositeArgumentFits ctx (.idx (.param name) (.lit index)) element = true := by
-  simp only [specCompositeArgumentFits, read, resolved, Bool.not_false, bounds.1, bounds.2,
+  simp only [specCompositeArgumentFits, specCompositeIndexFits, read, resolved, Bool.not_false, bounds.1, bounds.2,
     true_and, decide_true, Bool.and_self]
 
 /-- Check the nominal schema and each already ordered field returned
