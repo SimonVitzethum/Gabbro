@@ -110,10 +110,13 @@ public theorem Expr.ren_sound {Γ Γ' : Ctx} {τ : Ty}
     · simp only [Expr.ren, kostenExpr, argument.2.1, alternative.2.1]
     · intro entry world original renamed agrees
       simp only [Expr.ren, eval]
+      have equal : (eval entry (a.ren rename) world renamed, eval entry (fallback.ren rename) world renamed) =
+          (eval entry a world original, eval entry fallback world original) :=
+        Prod.ext (argument.2.2 entry world original renamed agrees)
+          (alternative.2.2 entry world original renamed agrees)
       exact congrArg (fun pair : Zahl _ _ × Zahl lower upper =>
         if within : lower ≤ pair.1.n ∧ pair.1.n ≤ upper then ⟨pair.1.n, within.1, within.2⟩ else pair.2)
-        (Prod.ext (argument.2.2 entry world original renamed agrees)
-          (alternative.2.2 entry world original renamed agrees))
+        equal
   | .arrSet a b c
   | .wenn a b c => by
     have aSound := Expr.ren_sound a rename
