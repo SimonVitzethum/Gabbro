@@ -315,6 +315,8 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     {world : World (declOf output.compiled.unit).mitRuhe} {env : Env _ Γ}
     (buffers : PrivateBuffers footprint after.ms.1)
     (length : body.length = after.ths.length)
+    (slots : ImageSlotsMatch output E O history after state)
+    (foreign : ImageForeignTrace output history state)
     (matched : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState footprint after.ms).1, body⟩ state snapshots positions committed)
     (roots : ∀ j, body[j]? = after.ths[j]? ∨
@@ -334,14 +336,29 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
-    ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next ∧
+    ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O history after next ∧
+      ImageForeignTrace output history next ∧ ImageRuntimeMatchesAt footprint output E O history after next ∧
       imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf ∧
       ∀ issuer, offen (next.m.faeden issuer).spur = offen (state.m.faeden issuer).spur := by
   obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, holdings, trace, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
-  refine ⟨{ state with m := machine }, reaches, ⟨body, buffers, length,
-    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, privateTrace_foreign trace, holdings⟩
+  let published := { state with m := machine }
+  have retired (i : Nat) (inactive : after.ths[i]? = some none) :
+      published.m.faeden i = state.m.faeden i := by
+    apply otherHeads i
+    intro same
+    have own := same.trans (indices thread snapshot registered).1
+    subst i
+    rw [body_slot_present roots atBody] at inactive
+    cases inactive
+  have sameTrace := privateTrace_foreign trace
+  refine ⟨published, reaches, slots.follow_silent (.nil after) reaches rfl retired, ?_,
+    ⟨body, buffers, length, .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, sameTrace, holdings⟩
+  · unfold ImageForeignTrace at foreign ⊢
+    change ImageForeignTraceAlignment output history (imageSourceForeignEvents machine.lauf)
+    rw [sameTrace]
+    exact foreign
   · intro i s found
     obtain ⟨identity, owned⟩ := indices i s found
     refine ⟨?_, owned⟩
