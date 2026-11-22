@@ -349,14 +349,13 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     apply otherHeads i
     intro same
     have own := same.trans (indices thread snapshot registered).1
-    subst i
-    rw [body_slot_present roots atBody] at inactive
+    rw [own, body_slot_present roots atBody] at inactive
     cases inactive
   have sameTrace := privateTrace_foreign trace
   refine ⟨published, reaches, slots.follow_silent (.nil after) reaches rfl retired, ?_,
     ⟨body, buffers, length, .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, sameTrace, holdings⟩
-  · unfold ImageForeignTrace at foreign ⊢
-    change ImageForeignTraceAlignment output history (imageSourceForeignEvents machine.lauf)
+  · change ImageForeignTraceAlignment output history
+      (imageSourceForeignEvents (D := (declOf output.compiled.unit).mitRuhe) machine.lauf)
     rw [sameTrace]
     exact foreign
   · intro i s found
