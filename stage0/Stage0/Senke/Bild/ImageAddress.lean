@@ -41,6 +41,40 @@ theorem Emitted.code_survives_writes [Kern] (output : Emitted src K options) {sa
   rw [writes.rd, writes.wr, writes.b _ outside]
   exact code index inCode
 
+/-- Pending private stores are outside the emitted instruction extent,
+    so an issuing thread fetches the same code as shared memory holds. -/
+theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
+    (state : Runner.Beweis.TSt) (stores : PrivateBuffers (imageStackFootprint output) state)
+    (code : BytesAt state.m codeBase (output.image.code.flatMap encII)) (thread : Nat) :
+    BytesAt (state.view thread) codeBase (output.image.code.flatMap encII) := by
+  intro index inCode
+  let address := BitVec.ofNat 64 (codeBase + index)
+  have unchanged := Runner.Beweis.foldl_far (state.buf thread) state.m (y := address) (by
+    intro store queued offset inside overlap
+    have touched : fenster store.1 address := overlap.symm ▸ fenster_add _ inside
+    have privateByte := (stores thread store queued address touched).1
+    have above := (Nat.le_add_right _ _).trans privateByte.2.1
+    exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) above)
+  obtain ⟨readable, writable, byte⟩ := code index inCode
+  exact ⟨unchanged.2.trans readable, (congrFun (Runner.Beweis.foldl_wr _ _) address).trans writable,
+    unchanged.1.trans byte⟩
+
+/-- A real asynchronous flush writes only within its own emitted
+    stack reservation and preserves the shared instruction bytes. -/
+theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
+    {state after : imageTSO.St} (stores : PrivateBuffers (imageStackFootprint output) state.1)
+    (code : BytesAt state.1.m codeBase (output.image.code.flatMap encII))
+    (flushed : imageTSO.tau state after) :
+    BytesAt after.1.m codeBase (output.image.code.flatMap encII) := by
+  obtain ⟨issuer, address, value, _, pending, updated⟩ := flushed
+  have member : (address, value) ∈ state.1.buf issuer := by
+    rw [pending]
+    exact List.mem_cons_self
+  rw [updated]
+  apply output.code_survives_writes (write_nurIn state.1.m address value.toNat) _ code
+  intro byte hit
+  exact (Nat.le_add_right _ _).trans (stores issuer (address, value) member byte hit).1.2.1
+
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
 theorem Emitted.layout_checked (output : Emitted src K options) :

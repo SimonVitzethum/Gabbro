@@ -186,6 +186,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.MappedImage.future_root_phase
 #print axioms Gabbro.Stage0.Emitted.code_end
 #print axioms Gabbro.Stage0.Emitted.code_survives_writes
+#print axioms Gabbro.Stage0.Emitted.code_in_private_view
+#print axioms Gabbro.Stage0.Emitted.code_after_private_flush
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.checkResultSummary
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec
