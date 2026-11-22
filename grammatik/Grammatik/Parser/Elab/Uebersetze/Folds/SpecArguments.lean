@@ -45,7 +45,7 @@ decreasing_by
   all_goals
     simp_wf
     first
-    | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
+    | have smaller := recordField_sizeOf_lt fields field.val field.property
       omega
     | omega
 
