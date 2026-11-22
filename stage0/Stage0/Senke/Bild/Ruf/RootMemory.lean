@@ -61,6 +61,28 @@ private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {opt
       · exact .inl (same.trans unchanged.symm)
       · exact .inr ⟨control, idle, unchanged.trans live, by rw [views j issuer]; exact phase⟩
 
+/-- Starting an installed instruction changes only the pending root's
+    control. Its first request is the one selected by the Lean decoder. -/
+theorem image_pending_root_begin [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))} {i : Nat} {pointer : T}
+    (partition : ImageRuntimePartition footprint output E O history before state body)
+    (pending : body[i]? = some none) (running : before.ths[i]? = some (some (.next pointer)))
+    (site : ImageRootInstruction output i pointer) :
+    let after : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i (some (IR.step pointer))⟩
+    ProcessStep imageTSO actI before [] after ∧ ImageRuntimePartition footprint output E O history after state body := by
+  intro after
+  have phase := pending_root_phase partition pending running
+  have continued : ImageRootPhase output E history (after.ms.1.view i) i (IR.step pointer) state := by
+    obtain ⟨_, loader, _⟩ | ⟨start, declared, head, code, frame, fits, args, _⟩ := phase
+    · cases loader
+    exact .inr ⟨start, declared, head, code, frame, fits, args, pointer, site,
+      .inr (.inl (fun _ _ => RunP.refl _ _))⟩
+  exact ⟨.priv running rfl, pending_root_progress partition pending rfl continued
+    (fun _ _ => rfl) partition.1 (fun world => world) (fun related _ => ⟨_, related⟩)⟩
+
 /-- A real scoped startup store advances the pending root in the shared
     runtime partition. Its byte effect is retained in the IR view and
     stays disjoint from all admitted bodies and the source world. -/
