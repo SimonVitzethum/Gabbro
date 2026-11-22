@@ -220,4 +220,51 @@ theorem IRContinuation.answer [Kern] {before after : imageTSO.St} {thread : Nat}
     image_private_continuation current blind scope agreement nativeUnique replied
   exact ⟨updated, .ofRun continued rest, kept⟩
 
+/-- Adjacent regions preserve the unfinished part of the current
+    instruction while extending its eventual destination. -/
+theorem IRContinuation.append [Kern] {control : Res T} {memory middle finish : Mem}
+    {target next : T} {count : Nat}
+    (first : IRContinuation target middle control memory) (suffix : IRReference count target middle next finish) :
+    IRContinuation next finish control memory := by
+  cases control with
+  | next pointer =>
+    obtain ⟨_, initial⟩ := first
+    exact ⟨_, initial.append suffix⟩
+  | ask request resume =>
+    obtain ⟨pointer, after, _, instruction, initial⟩ := first
+    exact ⟨pointer, after, _, instruction, initial.append suffix⟩
+  | fault | unk => exact False.elim first
+
+/-- A root is already in its lowered function and its first body
+    instruction is still the destination of the active IR reference.
+    The same phase covers pending memory and native comparison requests. -/
+structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (thread : Nat) (control : Res T) (memory : Mem)
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) where
+  root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)
+  declared : E.starts[thread]? = some root
+  alive : state.lebt thread = true
+  unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread
+  reads : W → Prop
+  reference : Mem
+  finish : Mem
+  lowered : FunctionIRPrologue output finish root.1
+  running : let frame := slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
+      (BitVec.ofNat 64 FB)
+    IRContinuation (lowered.bodyEntry frame) finish control reference
+  agrees : GleichAuf reads memory reference
+
+/-- A scheduler change outside the retained reference's read scope
+    preserves the active function prologue and its exact destination. -/
+theorem ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory nextMemory : Mem} {state nextState : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (sameBytes : GleichAuf phase.reads nextMemory memory)
+    (alive : nextState.lebt thread = true) (sameHead : nextState.m.faeden thread = state.m.faeden thread) :
+    ImageProloguePhase output E thread control nextMemory nextState :=
+  ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered, phase.reads,
+    phase.reference, phase.finish, phase.lowered, phase.running,
+    fun byte inside => (sameBytes byte inside).trans (phase.agrees byte inside)⟩
+
 end Gabbro.Stage0
