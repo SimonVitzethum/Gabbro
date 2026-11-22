@@ -200,7 +200,7 @@ public theorem runTaskPoll_agrees_with_inducedModel (elaboration : Elaboration D
     runTaskPoll elaboration calls prices task world =
       .ok (pollTask (inducedModel elaboration calls prices normal) task world) := by
   unfold runTaskPoll
-  apply pollTaskWith_except_normal
+  apply pollTaskWith_except_normal (inducedModel elaboration calls prices normal)
   intro child before
   cases child with
   | invalid => rfl
