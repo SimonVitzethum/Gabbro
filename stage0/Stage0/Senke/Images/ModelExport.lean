@@ -42,7 +42,9 @@ theorem ImageModelUnit.postDeckt {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E) : PostDeckt E :=
   fun item _ old arguments world value post => (unit.summary item world value).mpr ⟨old, arguments, post⟩
 
-private theorem Emitted.image_model_without_arenas (output : Emitted src reserve options)
+/-- Export the exact checked descriptors of a unit whose declaration
+    table contains no arena. -/
+theorem Emitted.image_model_without_arenas (output : Emitted src reserve options)
     (Q : AxEns (declOf output.compiled.unit))
     (sources : Option (Vertraege.Pruefer.AxiomSources Q))
     (summary : ∀ item world value, Q item world value = true ↔
