@@ -333,7 +333,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have tops := slotValueC_top hs
     have tiK : ti ≤ K := by have := tops.1; simp only at this; omega
-    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay hWL
+    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay (fun m stored => (hWL m stored).1 _ _)
       (fun m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i _ ci1 ti hci tiK m pc ρ hp).word trivial) hp
   | _, _, .case cs i nutz, d, c, top, h, hK, m, pc, ρ, hp => by
     exact case_value_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) cs i nutz
@@ -371,7 +371,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fun ce te he hte m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .getBytes t f hf n i hlo hhi access, d, c, top, h, hK, m, pc, ρ, hp =>
-    getBytes_ok i hf n hlo hhi access hWL hLay
+    getBytes_ok i hf n hlo hhi access (fun m stored => (hWL m stored).1 t f) hLay
       (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
       h hK hp
   | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -381,7 +381,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     (quantL_ok false (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
   | _, _, .reaches t f hf a b _, d, c, top, h, hK, m, pc, ρ, hp =>
-    (reachesL_ok hf hWL (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
+    (reachesL_ok hf (fun m stored => (hWL m stored).1 t f) (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
       (fun ca ta ha hta m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
       (fun cb tb hb htb m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) hp).value rfl
   | _, _, .count n body, d, c, top, h, hK, m, pc, ρ, hp =>
@@ -410,9 +410,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun q ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
       d c top h hK m pc hp
   | _, _, .oldG g access, d, c, top, h, hK, m, pc, ρ, hp =>
-    oldGlobal_ok σ₀ σ hWL g access same h hK hp
+    oldGlobal_ok σ₀ σ (fun m stored => (hWL m stored).reads Λ) g access same h hK hp
   | _, _, .oldS t f i access, d, c, top, h, hK, m, pc, ρ, hp =>
-    oldSlot_ok σ₀ σ hWL hLay t f i access same
+    oldSlot_ok σ₀ σ (fun m stored => (hWL m stored).reads Λ) hLay t f i access same
       (fun ci ti lower fits m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i _ ci ti lower fits m pc ρ hp) h hK hp
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 /-- Storage-address induction shares the exact expression induction; table row
@@ -426,11 +426,11 @@ theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
       StoredOk (L := L) m pc fp K d c ρ W reserved τ (eval σ₀ e σ ρ)
   | _, _, .slot _ _ i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ _ _ _ i _, d, c, top, h, hK, m, pc, ρ, hp
   | _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _
+    lowStorage_sound (currentOld := currentOld) σ₀ σ (fun m stored => (hWL m stored).reads Λ) _
       (fun q cc tt hc ht mm pp pre => lowE_ok (same := same) σ₀ σ hWL hLay i q cc tt hc ht mm pp ρ pre)
       h hK hp
   | _, _, .slotRef r _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _
+    lowStorage_sound (currentOld := currentOld) σ₀ σ (fun m stored => (hWL m stored).reads Λ) _
       (fun q cc tt hc ht mm pp pre => lowE_ok (same := same) σ₀ σ hWL hLay r q cc tt hc ht mm pp ρ pre)
       h hK hp
   | _, _, .lit .., _, _, _, h, hK, _, _, _, hp | _, _, .tru .., _, _, _, h, hK, _, _, _, hp | _, _, .fls .., _, _, _, h, hK, _, _, _, hp | _, _, .var .., _, _, _, h, hK, _, _, _, hp
@@ -448,7 +448,7 @@ theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
   | _, _, .strEq .., _, _, _, h, hK, _, _, _, hp | _, _, .strLt .., _, _, _, h, hK, _, _, _, hp | _, _, .eng .., _, _, _, h, hK, _, _, _, hp | _, _, .prodSet .., _, _, _, h, hK, _, _, _, hp
   | _, _, .getBytes .., _, _, _, h, hK, _, _, _, hp | _, _, .case .., _, _, _, h, hK, _, _, _, hp | _, _, .arrSet .., _, _, _, h, hK, _, _, _, hp | _, _, .wenn .., _, _, _, h, hK, _, _, _, hp
   | _, _, .intBuiltin1 .., _, _, _, h, hK, _, _, _, hp | _, _, .intBuiltin2 .., _, _, _, h, hK, _, _, _, hp | _, _, .count .., _, _, _, h, hK, _, _, _, hp | _, _, .prod .., _, _, _, h, hK, _, _, _, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ trivial h hK hp
+    lowStorage_sound (currentOld := currentOld) σ₀ σ (fun m stored => (hWL m stored).reads Λ) _ trivial h hK hp
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :

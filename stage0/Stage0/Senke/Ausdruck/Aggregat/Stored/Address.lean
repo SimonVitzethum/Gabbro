@@ -40,17 +40,17 @@ theorem storageCell_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {σ : World D} {t : D.Tab} {f : D.Feld t} {idx d K top reserved : Nat}
     {index : List II × Nat} {c : List II} {m : Runner.Mem} {pc fp : Runner.W}
     (made : cellAddressC L t f d index = some (c, top)) (fits : top ≤ K)
-    (bound : (idx : Int) < L.count t) (world : ∀ m, W m → WeltAt m L σ requireWrites)
+    (source : ∀ m, W m → ValueAt L m (BitVec.ofNat 64 (L.elem t f idx)) 0 (D.typ t f) (σ.slots t idx f))
     (child : ∀ m pc, Pre L m pc fp K d index.1 ρ W reserved →
       Ok m pc fp K d index.1 (· = BitVec.ofNat 64 idx))
     (pre : Pre L m pc fp K d c ρ W reserved) :
     StoredOk (L := L) m pc fp K d c ρ W reserved (D.typ t f) (σ.slots t idx f) :=
-  ⟨_, cellAddressC_ok made fits child pre, fun m _ hm => (world m hm).1 t f idx bound⟩
+  ⟨_, cellAddressC_ok made fits child pre, fun m _ hm => source m hm⟩
 
 /-- Address lowering never copies a stored value. Unsupported roots return none;
     accepted roots use the same canonical environment and world representation. -/
 theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (world : ∀ m, W m → WeltAt m L σ requireWrites)
+    (σ₀ σ : World D) (world : ∀ m, W m → ReadWorldAt m L σ Λ)
     (e : Expr D Γ Λ τ) {ρ : Env D Γ} {fp pc : Runner.W} {K d top reserved : Nat}
     {c : List II} {m : Runner.Mem}
     (child : StorageChildrenOk (L := L) (currentOld := currentOld) σ₀ σ ρ fp K reserved W e)
@@ -70,7 +70,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
     split at made
     · next literal =>
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj made)
-      refine ⟨BitVec.ofNat 64 (L.ga g), ?_, fun m _ hm => (world m hm).2.1 g⟩
+      refine ⟨BitVec.ofNat 64 (L.ga g), ?_, fun m _ hm => (world m hm).global g access⟩
       exact (const_ok pre (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
         (by omega)).mono fun w hw => by simpa only [BitVec.ofInt_natCast] using hw
     · cases made
@@ -83,7 +83,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
     have nonnegative := index.lo_le
     have bound : (index.n.toNat : Int) < L.count t :=
       L.bounded (by have := index.le_hi; omega)
-    have result := storageCell_ok made fits bound world
+    have result := storageCell_ok made fits (fun m stored => (world m stored).table t access f _ bound)
       (fun m pc hp => (child d ci' ti hi (by omega) m pc hp).word trivial |>.mono fun w hw => by
         change w = BitVec.ofInt 64 index.n at hw
         rw [hw, ← BitVec.ofInt_natCast, Int.toNat_of_nonneg nonnegative]) pre
@@ -103,7 +103,7 @@ theorem lowStorage_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {W : Runner.Me
     obtain ⟨_, _, t', ht', _, bound⟩ := hv
     have equal : t' = t := Option.some.inj (ht'.symm.trans ht)
     subst t'
-    exact storageCell_ok made fits bound world
+    exact storageCell_ok made fits (fun m stored => (world m stored).table t access f _ bound)
       (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1) pre
 
 end Gabbro.Stage0.Senke

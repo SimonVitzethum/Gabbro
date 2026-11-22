@@ -31,7 +31,7 @@ theorem reachEqL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ} {
 
 theorem reachL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt (D.count t))
     {σ : World D} {fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hn : (D.count t).toNat < 2 ^ 31)
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (hn : (D.count t).toNat < 2 ^ 31)
     (goal : Zahl 0 (D.count t - 1)) :
     ∀ fuel (a b : Option (List II × Nat)) (k : Zahl 0 (D.count t - 1)) c top,
     reachL L t f d fuel a b = some (c, top) → top ≤ K →
@@ -95,7 +95,7 @@ theorem reachL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt 
 theorem reachesL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt (D.count t))
     {σ : World D} {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc : Runner.W} {a b : Option (List II × Nat)} {c : List II}
-    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (k goal : Zahl 0 (D.count t - 1))
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (k goal : Zahl 0 (D.count t - 1))
     (h : reachesL L t f d a b = some (c, top)) (hK : top ≤ K)
     (ha : ∀ c t', a = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Ok m pc fp K d c (fun w => w = BitVec.ofInt 64 k.n))

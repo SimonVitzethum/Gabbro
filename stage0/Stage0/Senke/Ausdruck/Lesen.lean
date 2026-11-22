@@ -163,7 +163,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) k))
-    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t k.n f)) := by
   have hs0 := hs
   simp only [slotC] at hs
@@ -178,7 +178,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
     refine ok_seq hp (slotA_value_ok k.lo_le (slotC_width hs0) ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
     obtain ⟨v, hv, he⟩ := ValueAt.word _ _ (aggregateFits_compat (slotC_fits hs0))
-      ((hWL m3 hp3.welt).1 t f _ (L.bounded hkc))
+      (hWL m3 hp3.welt _ (L.bounded hkc))
     rw [slot_zero] at hv
     rw [e3] at r3
     rw [hkn] at he
@@ -190,7 +190,7 @@ theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : 
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) (eval σ₀ i σ ρ)))
-    (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t (eval σ₀ i σ ρ).n f)) :=
   slotC_value_ok hs hK ih hWL hp
 

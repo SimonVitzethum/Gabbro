@@ -73,6 +73,24 @@ theorem WeltAt.withWriteMap {m : Runner.Mem} {L : Lay D} {σ : World D} {require
     WeltAt { m with wr := writeMap } L σ false :=
   ⟨world.1, world.2.1, trivial⟩
 
+/-- The complete representation of the allocated cells of one column. -/
+def ColumnAt (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
+  ∀ k : Nat, (k : Int) < L.count t →
+    ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)
+
+/-- A typed expression can read the world carriers authorized by its
+    resource context. Representation of other threads' carriers is
+    independent of this local read obligation. -/
+structure ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop where
+  table : ∀ t, darf D t resources → ∀ f, ColumnAt m L σ t f
+  global : ∀ g, gdarf D g resources →
+    ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)
+
+theorem WeltAt.reads {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
+    (world : WeltAt m L σ requireWrites) (resources : List (Res D)) :
+    ReadWorldAt m L σ resources :=
+  ⟨fun t _ f k valid => world.1 t f k valid, fun g _ => world.2.1 g⟩
+
 /-- A word of the world may be written. -/
 theorem WeltWr.word {m : Runner.Mem} {L : Lay D} (h : WeltWr m L) {a : Nat} (h1 : L.lo ≤ a) (h2 : a + 8 ≤ L.hi)
     (hl : L.hi < 2 ^ 31) : Runner.Mem.all m.wr (BitVec.ofNat 64 a) 8 = true := by
