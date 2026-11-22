@@ -18,6 +18,11 @@ open Runner Runner.IR
 
 variable [Kern]
 
+/-- Keep the same floating contracts while withholding host responses
+    from a local reference execution. -/
+def _root_.Runner.IR.Kern.withoutSyscalls (kernel : Kern) : Kern :=
+  { kernel with ans := fun _ _ _ _ => False }
+
 /-- A request tree answered by the memory alone: no system call, no floating request. -/
 inductive RunM : Res T → Mem → T → Mem → Prop
   | next {t : T} {m : Mem} : RunM (.next t) m t m

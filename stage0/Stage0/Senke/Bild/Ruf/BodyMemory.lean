@@ -208,7 +208,7 @@ theorem image_body_float [Kern] {before : Cfg imageTSO (Res T)}
 
 /-- The production expression proof works with write permission confined
     to its frame. The memory restriction is used only in the proof. -/
-theorem lowE_frameMemory [Kern] {D : Deklaration} {L : Senke.Lay D} {Λ : List (Res D)}
+theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ : List (Res D)}
     {Γ : Ctx} {τ : Ty} {memory : Mem} {pc fp : W} {K d reserved top : Nat}
     {code : List II} {world initial : World D} {env : Env D Γ} {currentOld : Bool}
     (expression : Expr D Γ Λ τ)
@@ -216,7 +216,7 @@ theorem lowE_frameMemory [Kern] {D : Deklaration} {L : Senke.Lay D} {Λ : List (
     (fits : top ≤ K) (pre : Senke.PreS L memory pc fp K d code env reserved)
     (valueMemory : Senke.WeltAt memory L world) (layout : Senke.LayIn L)
     (separated : fp.toNat + 8 * K ≤ L.lo) (entry : currentOld = true → initial = world) :
-    Senke.ValueOk L (maskMemory (fun _ => True) (inSlots fp 0 K) memory) pc fp K d code τ
+    @Senke.ValueOk D kernel.withoutSyscalls L (maskMemory (fun _ => True) (inSlots fp 0 K) memory) pc fp K d code τ
       (eval initial expression world env) := by
   classical
   let scoped := maskMemory (fun _ => True) (inSlots fp 0 K) memory
@@ -249,6 +249,7 @@ theorem lowE_frameMemory [Kern] {D : Deklaration} {L : Senke.Lay D} {Λ : List (
       exact pre.code
     · rw [exactMemory]
       exact pre.env
+  letI : Kern := kernel.withoutSyscalls
   exact Senke.lowE_ok (same := entry) initial world (fun _ h => h) layout expression d code top lowered fits scoped pc env prepared
 
 /-- A whole private memory segment may run on several threads before
