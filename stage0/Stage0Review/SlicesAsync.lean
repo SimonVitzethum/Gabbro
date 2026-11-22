@@ -139,6 +139,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.SliceAt.agree_visible
 #print axioms Gabbro.Stage0.Senke.SliceAt.subslice
 #print axioms Gabbro.Stage0.Senke.SliceAt.write_slot
+#print axioms Gabbro.Stage0.Senke.lowE_arrayUpdate_retainsSlices
 #print axioms Gabbro.Stage0.Senke.ValueAt.string_slice_byte
 #print axioms Gabbro.Stage0.Senke.lowE_runtimeSliceIndex_ok
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.elaborated_refines

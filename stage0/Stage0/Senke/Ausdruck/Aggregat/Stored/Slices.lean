@@ -175,6 +175,34 @@ theorem lowE_slice_descriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
   have descriptor : WordsAt after fp d (sliceDescriptorWords view) := encoding ▸ stored.2
   exact ⟨ordered, after, run, confined, preserved.decode_slice_descriptor view capacityFits descriptor⟩
 
+/-- Updating an array into a fresh frame location preserves every
+    previously formed slice of the old array. Slice creation shares the
+    original storage. The ordinary array update produces the new value
+    in its own frame range, including for aggregate elements. -/
+theorem lowE_arrayUpdate_retainsSlices [Kern] {D : Deklaration} {layout : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {capacity : Nat}
+    (array : Expr D Γ Λ (.arr τ capacity)) (index : Expr D Γ Λ (.index capacity))
+    (replacement : Expr D Γ Λ τ)
+    {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K destination backing top reserved : Nat} {code : List II}
+    (worldAt : ∀ memory, W memory → WeltAt memory layout world) (layoutIn : LayIn layout)
+    (saved : ValueAt layout m fp backing (.arr τ capacity) (eval world array world env))
+    (disjoint : backing + valueWords (.arr τ capacity) ≤ destination)
+    (lowered : lowE (currentOld := true) layout (reserved := reserved) (.arrSet array index replacement)
+      destination = some (code, top)) (fits : top ≤ K)
+    (pre : Pre layout m pc fp K destination code env W reserved) :
+    Executes m pc fp K destination code (fun after =>
+      ValueAt layout after fp destination (.arr τ capacity) (eval world (.arrSet array index replacement) world env) ∧
+      ∀ view : ArraySliceView capacity,
+        SliceAt (τ := τ) layout after fp (backing + view.offset * valueWords τ)
+          (view.value (eval world array world env))) := by
+  let operation := Expr.arrSet array index replacement
+  have within : destination ≤ K := (lowE_top operation destination code top lowered).le.trans fits
+  obtain ⟨after, run, changed, updated⟩ :=
+    lowE_ok (same := fun _ => rfl) world world worldAt layoutIn operation destination code top lowered fits m pc env pre
+  have original := saved.agree_low changed pre.frame.room disjoint within
+  exact ⟨after, run, changed, updated, fun view => original.slice_view view⟩
+
 /-- The representation of an existing slice can be narrowed by moving
     the base. All observed bytes and their layout obligations are inherited. -/
 theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
