@@ -45,19 +45,53 @@ theorem Emitted.code_survives_writes [Kern] (output : Emitted src K options) {sa
     so an issuing thread fetches the same code as shared memory holds. -/
 theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
     (state : Runner.Beweis.TSt) (stores : PrivateBuffers (imageStackFootprint output) state)
-    (code : BytesAt state.m codeBase (output.image.code.flatMap encII)) (thread : Nat) :
-    BytesAt (state.view thread) codeBase (output.image.code.flatMap encII) := by
-  intro index inCode
-  let address := BitVec.ofNat 64 (codeBase + index)
-  have unchanged := Runner.Beweis.foldl_far (state.buf thread) state.m (y := address) (by
-    intro store queued offset inside overlap
-    have touched : fenster store.1 address := overlap.symm ▸ fenster_add _ inside
-    have privateByte := (stores thread store queued address touched).1
-    have above := (Nat.le_add_right _ _).trans privateByte.2.1
-    exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) above)
-  obtain ⟨readable, writable, byte⟩ := code index inCode
-  exact ⟨unchanged.2.trans readable, (congrFun (Runner.Beweis.foldl_wr _ _) address).trans writable,
-    unchanged.1.trans byte⟩
+    (thread : Nat) :
+    BytesAt (state.view thread) codeBase (output.image.code.flatMap encII) ↔
+      BytesAt state.m codeBase (output.image.code.flatMap encII) := by
+  have agrees (index : Nat) (inCode : index < (output.image.code.flatMap encII).length) :
+      GleichAt (state.view thread) state.m (BitVec.ofNat 64 (codeBase + index)) := by
+    let address := BitVec.ofNat 64 (codeBase + index)
+    have unchanged := Runner.Beweis.foldl_far (state.buf thread) state.m (y := address) (by
+      intro store queued offset inside overlap
+      have touched : fenster store.1 address := overlap.symm ▸ fenster_add _ inside
+      have privateByte := (stores thread store queued address touched).1
+      have above := (Nat.le_add_right _ _).trans privateByte.2.1
+      exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) above)
+    exact ⟨unchanged.1, unchanged.2, congrFun (Runner.Beweis.foldl_wr _ _) address⟩
+  constructor
+  · intro code index inCode
+    obtain ⟨byte, read, write⟩ := agrees index inCode
+    simpa only [byte, read, write] using code index inCode
+  · intro code index inCode
+    obtain ⟨byte, read, write⟩ := agrees index inCode
+    rw [byte, read, write]
+    exact code index inCode
+
+/-- A host answer that keeps the emitted code in the issuer's TSO view
+    also keeps it in shared memory. The actual syscall keeps the buffers. -/
+theorem Emitted.code_after_host_answer [Kern] (output : Emitted src K options)
+    {before after : imageTSO.St} {issuer : Nat} {req : Req} {answer : Ans}
+    (stores : PrivateBuffers (imageStackFootprint output) before.1)
+    (code : BytesAt before.1.m codeBase (output.image.code.flatMap encII))
+    (step : imageTSO.ans before issuer (.sys req) answer after)
+    (keeps : req ≠ cloneReq → Kern.ans req (before.1.view issuer) answer (after.1.view issuer) →
+      BytesAt (before.1.view issuer) codeBase (output.image.code.flatMap encII) →
+      BytesAt (after.1.view issuer) codeBase (output.image.code.flatMap encII)) :
+    BytesAt after.1.m codeBase (output.image.code.flatMap encII) := by
+  have host := step.2
+  change (if req = cloneReq then after = before ∧ ∃ id extra, answer = some (id, extra) ∧ id ≠ 0
+    else Kern.ans req (before.1.view issuer) answer (after.1.view issuer) ∧
+      after.1.buf = before.1.buf) at host
+  split at host
+  · rw [host.1]
+    exact code
+  · rename_i ordinary
+    have retained : PrivateBuffers (imageStackFootprint output) after.1 := by
+      intro i store pending byte touched
+      rw [host.2] at pending
+      exact stores i store pending byte touched
+    exact (output.code_in_private_view _ retained issuer).mp
+      (keeps ordinary host.1 ((output.code_in_private_view _ stores issuer).mpr code))
 
 /-- A real asynchronous flush writes only within its own emitted
     stack reservation and preserves the shared instruction bytes. -/
