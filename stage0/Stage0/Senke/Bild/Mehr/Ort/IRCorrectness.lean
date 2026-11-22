@@ -56,7 +56,9 @@ theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) 
     simpa only [packed, Option.getD_some, List.append_nil] using startup
   rw [code, entry, roots] at exactBytes
   obtain ⟨lowered, located, _, _, _⟩ := layout.code exactBytes
-  refine ⟨_, maxTop functions, ?_, ?_, ?_⟩
+  let functionCode (fn : (declOf output.compiled.unit).Fn) :=
+    ((functions[fn.val]?).map (·.1)).getD []
+  refine ⟨functionCode, maxTop functions, ?_, ?_, ?_⟩
   · have enough : FB ≤ output.image.Ks := Nat.le_trans (Nat.le_add_right _ _) layout.hroom
     have reduced : 0 < output.image.depth := layout.depth_pos
     have quotient : output.image.depth + 1 = (output.image.Ks - FB) / maxTop functions := by
@@ -72,6 +74,17 @@ theorem LoadedIRImage.function_semantics (loaded : LoadedIRImage output memory) 
     letI := gates
     letI := visibility
     exact layout.funSpec exactBytes depth fitted
+
+/-- The production frontend, executable checker, and sequential
+    function lowering agree on a single typed program and image. -/
+theorem irBild_function_semantics {bytes : List B} (wrote : irBild src reserve options = .ok bytes) :
+    ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
+      output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
+      ImageModelUnit output output.checkedUnit.unit ∧
+      akzeptiertX_pruefer.akzeptiert output.checkedUnit.unit output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+      ∀ memory : imageTSO.St, LoadedIRImage output memory → output.IRFunctionSemantics memory.1.m := by
+  obtain ⟨output, emitted, payload, canonical, unit, accepted, _, _⟩ := irBild_checkImageUnit wrote
+  exact ⟨output, emitted, payload, canonical, unit, accepted, fun _ loaded => loaded.function_semantics⟩
 
 /-- Segment refinement at the compiler boundary. A segment may contain
     an arbitrary number of internal IR steps and at most one host event.

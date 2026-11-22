@@ -125,6 +125,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_refinement
 #print axioms Gabbro.Stage0.LoadedIRImage.source_start
 #print axioms Gabbro.Stage0.LoadedIRImage.function_semantics
+#print axioms Gabbro.Stage0.irBild_function_semantics
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
 #print axioms Gabbro.Grammatik.Async.inferredBoundary_erfuellbar
