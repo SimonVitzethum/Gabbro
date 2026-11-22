@@ -58,6 +58,9 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
       Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨pc, fp⟩ mR ∧
       Agree fp FB K m mR ∧
       lowPost Y (functionFrame P f) P f (functionFrame P f).internalStatus = some ens ∧
+      (∀ body, lowEnd (reserved := (functionFrame P f).bodyReserved) passes A Y (functionFrame P f)
+        ens [] (0, 0) (P.rumpf f) = some body →
+        pc = BitVec.ofNat 64 (A f) + BitVec.ofNat 64 (16 * ((C f).length - body.1.length))) ∧
       (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
         (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
         (P.rumpf f) pc mR σ ρ := by
@@ -180,9 +183,14 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
     rw [← hσR] at worldR
     exact worldR
   have room : tb + (k + 1) * Lm ≤ Ks := by omega
-  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens,
+  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens, ?_,
     cb, tb, hb, room, by simp only [List.length_append] at lengthBound; omega, bodyPre, bodyFrontier,
     surroundings, header, worldσ, (fun _ h => nomatch h), hH⟩
+  intro body compiled
+  rw [hb] at compiled
+  cases Option.some.inj compiled
+  rw [← codes, List.length_append, Nat.add_sub_cancel]
+  simp only [entry, layout, q, List.length_append, Nat.mul_add, BitVec.ofNat_add, BitVec.add_assoc]
 
 /-- The first body boundary with the standing call protocol. -/
 theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
@@ -206,7 +214,7 @@ theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [Sic
       (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
         (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
         (P.rumpf f) pc mR σ ρ := by
-  obtain ⟨ens, pc, after, run, _, post, body⟩ :=
+  obtain ⟨ens, pc, after, run, _, post, _, body⟩ :=
     prolog_randIR (O := O) (hC f) (hlen f) hk hc hW hK hF hP h0 h1 h2 hE hWa hy hH hreq
   have callee := lowFun_spec (P := P) (O := O) (passes := passes) hLA hC hA hlen k (by omega)
   exact ⟨ens, pc, after, run, ⟨callee, hA, rfl, post, (fun _ h => nomatch h), hW⟩, body⟩

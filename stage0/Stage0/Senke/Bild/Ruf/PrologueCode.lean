@@ -7,7 +7,7 @@ public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 
 namespace Gabbro.Stage0
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.BildLauf
   Runner Runner.IR
 
@@ -236,6 +236,7 @@ theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle f
     (first : IRContinuation target middle control memory)
     (suffix : @IRReference kernel.withoutSyscalls count target middle next finish) :
     IRContinuation next finish control memory := by
+  letI : Kern := kernel.withoutSyscalls
   cases control with
   | next pointer =>
     obtain ⟨_, initial⟩ := first
@@ -244,6 +245,9 @@ theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle f
     obtain ⟨pointer, after, _, instruction, initial⟩ := first
     exact ⟨pointer, after, _, instruction, initial.append suffix⟩
   | fault | unk => exact False.elim first
+
+private def imagePrologueFrame (output : Emitted src reserve options) (thread : Nat) : W :=
+  slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) (BitVec.ofNat 64 FB)
 
 /-- A root is already in its lowered function and its first body
     instruction is still the destination of the active IR reference.
@@ -259,9 +263,7 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   reference : Mem
   finish : Mem
   lowered : FunctionIRPrologue output finish root.1
-  running : let frame := slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
-      (BitVec.ofNat 64 FB)
-    IRContinuation (lowered.bodyEntry frame) finish control reference
+  running : IRContinuation (lowered.bodyEntry (imagePrologueFrame output thread)) finish control reference
   blind : Blind control
   agrees : GleichAuf reads memory reference
 
@@ -284,7 +286,7 @@ theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {pointer : T}
     {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread (.next pointer) memory state) :
-    let frame := slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) (BitVec.ofNat 64 FB)
+    let frame := imagePrologueFrame output thread
     (pointer = phase.lowered.bodyEntry frame ∧ GleichAuf phase.reads memory phase.finish) ∨
       Nonempty (ImageProloguePhase output E thread (IR.step pointer) memory state) := by
   intro frame
