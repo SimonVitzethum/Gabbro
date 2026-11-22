@@ -100,7 +100,7 @@ private theorem ChildDisposer.lower_exec {name : String} (disposer : ChildDispos
       dropOutcome (.cons state env) (disposer.drop calls state world) := by
   have castExec {endResources : List (Res D)} (equal : endResources = Λ)
       (stmt : Stmt D V l (types.childState name :: Γ) Λ endResources) :
-      execStmt oracle passes calls (equal ▸ stmt : Stmt D V l (types.childState name :: Γ) Λ Λ)
+      execStmt oracle passes calls (cast (congrArg (Stmt D V l (types.childState name :: Γ) Λ) equal) stmt)
         world (.cons state env) = execStmt oracle passes calls stmt world (.cons state env) := by
     subst endResources
     rfl
@@ -141,7 +141,8 @@ public theorem TaskDropPlan.lower_simulates {future : FutureExpr} (plan : TaskDr
       unfold TaskDropPlan.lower
       erw [storedTag_active oracle passes calls slot (.cons (disposer.lower Γ l) .nil) .nil
         world env state exactState]
-      simp only [execBlock, ChildDisposer.lower_exec]
+      simp only [execBlock]
+      erw [ChildDisposer.lower_exec disposer oracle passes calls world env state]
       cases disposer.drop calls state world with
       | ok => rfl
       | error failure => cases failure <;> rfl
