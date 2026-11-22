@@ -57,8 +57,11 @@ theorem guardSlice_exec (length : Expr D Γ Λ (.int 0 capacity))
   have exact := sliceBoundsExpr_exact length first last read read env
   change (if wahr? (eval read (sliceBoundsExpr length first last) read env) = true then _ else _) = _
   by_cases valid : SignedSliceOk (eval read length read env).n.toNat (env.get first).n (env.get last).n
-  · rw [if_pos (exact.mpr valid), if_pos valid]
-  · rw [if_neg (fun taken => valid (exact.mp taken)), if_neg valid]
+  · have inRange : wahr? (eval read (sliceBoundsExpr length first last) read env) = true := exact.mpr valid
+    rw [if_pos inRange, if_pos valid]
+  · have refuses : wahr? (eval read (sliceBoundsExpr length first last) read env) ≠ true :=
+      fun taken => valid (exact.mp taken)
+    rw [if_neg refuses, if_neg valid]
 
 /-- The generated guard uses the string's length word. A successful
     guard is equivalent to obtaining a well-typed model substring. -/
