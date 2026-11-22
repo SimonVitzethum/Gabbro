@@ -91,7 +91,7 @@ theorem relativeSliceWithLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Excep
       some (offset, extent, countLo) := by
   have same : strEq name name = true := by simp [strEq]
   simp only [uRelativeSliceWithLength, show strEq "+" "+" = true from rfl, same, Bool.and_self,
-    ite_true, bind, Option.bind, first, count, bounds]
+    ite_true, bind, Option.bind, first, count, ite_eq_left bounds]
 
 /-- The correlated lowering retains precisely the model's dynamic
     length and shifts every observation once into the original array. -/
