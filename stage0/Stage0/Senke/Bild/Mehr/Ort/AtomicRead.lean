@@ -60,8 +60,10 @@ theorem image_awaits_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
     ∃ next, FadenSchrittX P O passes shared source next ∧ next.m.speicher = source.m.speicher ∧
       next.m.lauf = source.m.lauf ++
         rufEigenG thread (leseEv question Λ [.inr global] ++ [.fremd (.inr (.inr global))]) ∧
-      (next.m.faeden thread).kopf.rest =
-        ⟨l, D.gtyp global :: Γ, Λ, .cons (input.globs global) env, .dann body (.schrumpf tail)⟩ := by
+      HEq (next.m.faeden thread).kopf.rest
+        (⟨l, D.gtyp global :: Γ, Λ, .cons (input.globs global) env, .dann body (.schrumpf tail)⟩ :
+          Σ local : Bool, Σ types : Ctx, Σ resources : List (Res D),
+            Env D types × GRest D (vertragVon D (source.m.faeden thread).kopf.f) local types resources) := by
   intro input question
   let address := BitVec.ofNat 64 (layout.ga global)
   obtain ⟨word, read, encoded⟩ := ValueAt.cellWord (aggregateFits_compat single) (represented.2.1 global)
@@ -75,14 +77,12 @@ theorem image_awaits_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
   let appended := leseEv question Λ [.inr global] ++ [.fremd (.inr (.inr global))]
   have trace : observed.spur = appended ++ (source.m.faeden thread).spur := by
     change (question.lese Λ [.inr global]).spur = _
-    rw [lese_spur]
-    rfl
+    rw [lese_spur] <;> rfl
   have step := RufSchrittG5.dannAwaits (P := P) (O := O) (passes := passes)
     source.m thread l Γ Λ Λ' global (D.nutzlast global) rfl allowed atomic body tail env head
     (SichtOK.sicht (O := O) (g := global) (σ := question)) observed rfl appended trace held
   refine ⟨ran, unchanged, ⟨word, extra, returned, encoded⟩, _, .lauf source thread _ live ready (gx_aus_g (.g5 step)),
     rfl, rfl, ?_⟩
-  simp only [rufUpdateG_self]
-  rfl
+  simp only [rufUpdateG_self] <;> rfl
 
 end Gabbro.Stage0.Senke.BildMehr
