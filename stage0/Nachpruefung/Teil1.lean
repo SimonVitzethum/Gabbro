@@ -158,6 +158,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.LowLevel.Construct.ArraySliceView.value_arrSet_inside_iff
 #print axioms Gabbro.Grammatik.LowLevel.Construct.runtimeArraySlice_erfuellbar
 #print axioms Gabbro.Grammatik.LowLevel.Construct.strBoundedSliceValue_exact
+#print axioms Gabbro.Grammatik.LowLevel.Construct.checkStringSlice_exact
 #print axioms Gabbro.Grammatik.LowLevel.Construct.strBoundedSliceValue_byte
 #print axioms Gabbro.Grammatik.LowLevel.Construct.strBoundedSliceValue_subslice
 #print axioms Gabbro.Stage0.Senke.ValueAt.string_slice_view

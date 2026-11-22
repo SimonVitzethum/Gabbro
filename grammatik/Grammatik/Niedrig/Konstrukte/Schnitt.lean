@@ -206,6 +206,20 @@ def strBoundedSliceValue {maximum : Nat} (value : Wert D (.str maximum))
   let sliced := strSliceValue value first last bounds
   ⟨sliced.1, Nat.le_trans sliced.2 (by have high := bounds.2; have capacity := value.2; omega)⟩
 
+/-- Check signed source endpoints before projecting them to natural byte
+    positions. The upper bound is the actual length of the string. -/
+def checkStringSlice {maximum : Nat} (value : Wert D (.str maximum)) (first last : Int) :
+    Option (Wert D (.str maximum)) :=
+  if valid : 0 ≤ first ∧ first ≤ last ∧ last ≤ value.1.length then
+    some (strBoundedSliceValue value first.toNat last.toNat ⟨by omega, by omega⟩)
+  else none
+
+theorem checkStringSlice_exact {maximum : Nat} (value : Wert D (.str maximum)) (first last : Int) :
+    (checkStringSlice value first last).isSome = true ↔
+      0 ≤ first ∧ first ≤ last ∧ last ≤ value.1.length := by
+  unfold checkStringSlice
+  split <;> simp_all
+
 theorem strBoundedSliceValue_exact {maximum : Nat} (value : Wert D (.str maximum))
     (first last : Nat) (bounds : SliceOk value.1.length first last) :
     (strBoundedSliceValue value first last bounds).1 = sliceValue value.1 first last ∧
