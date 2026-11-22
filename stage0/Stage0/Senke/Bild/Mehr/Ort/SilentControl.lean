@@ -127,7 +127,7 @@ theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
     SCMemoryPrefix layout before (second + first) after := by
   induction a with
   | nil => exact b
-  | cons step _ ih => exact .cons step ih
+  | cons step _ ih => exact .cons step (ih b)
 
 /-- The sequential correctness proof supplies a memory reference for
     the SC runner, one decoded request at a time. -/
@@ -135,7 +135,7 @@ theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
     {control : Res T} {before after : Mem} {next : T}
     (ran : RunM control before next after) (table : TabInv layout before)
     (blind : Blind control) :
-    ∃ count (final : TabInv layout after),
+    ∃ (count : Nat) (final : TabInv layout after),
       SCMemoryPrefix layout ⟨⟨before, table⟩, [some control]⟩ count ⟨⟨after, final⟩, [some (.next next)]⟩ := by
   induction ran with
   | next => exact ⟨0, table, .nil _⟩
@@ -155,7 +155,7 @@ theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
 theorem StarM.sc_reference {layout : Runner.Beweis.Lay}
     {initial final : T} {before after : Mem} {instructions : Nat}
     (ran : StarM instructions initial before final after) (table : TabInv layout before) :
-    ∃ count (preserved : TabInv layout after),
+    ∃ (count : Nat) (preserved : TabInv layout after),
       SCMemoryPrefix layout ⟨⟨before, table⟩, [some (.next initial)]⟩ count
         ⟨⟨after, preserved⟩, [some (.next final)]⟩ := by
   induction ran with
