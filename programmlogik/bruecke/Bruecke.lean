@@ -13,6 +13,7 @@ public import Bruecke.Zertifikat.Wert
 public import Bruecke.Zertifikat.Teilen
 public import Bruecke.Zertifikat.Generisch
 public import Bruecke.Zertifikat.WP
+public import Bruecke.Zertifikat.Logik
 public import Bruecke.Zertifikat.Erfuellbar
 public import Bruecke.Vorlage
 public import Bruecke.Vorlage.Haupt

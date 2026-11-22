@@ -46,7 +46,16 @@ replaced), `Sammlung/S<k>`, `Lexer.lean` with `nutzerBild` (exactly the image th
 `Pruefung`. Exit 0: (b) is stated; 1: a named refusal (a postcondition reading `old` of a static); 2:
 wrong arguments, or Stage 0 refuses the source or its lowering.
 
-Every proof file starts with `gabbrov_beweis`. It does four things:
+**The logic is output.** For every function `gabbrov` writes `Logik/F<i>` with the command
+`gabbrov_logik logik<i> : ziel<i>`, which is regenerated on every run. The command runs the
+automation below on the duty and states what it leaves: each remaining goal, closed over the variables
+and hypotheses it depends on, is one conjunct of `logik<i> : Prop`, and `True` when nothing remains.
+It proves `logik<i>.genuegt : logik<i> → ziel<i>` with the automation's own proof, checked by the
+kernel. Your file `Beweis/F<i>` is `theorem beweis<i> : ziel<i> := logik<i>.genuegt (by trivial)`:
+`trivial` closes it when nothing remains; otherwise `#print logik<i>` shows the program's logic you
+prove there, for example `∀ ρ, x ≤ 100 → 0 ≤ x → x + x = x + x + 1` for a wrong `ensures`.
+
+The automation (`gabbrov_beweis`) does four things:
 
 1. It opens the duty at the function's own lowering (`pflicht_oeffnen`) and puts the lowered body
    into the kernel's normal form.
@@ -56,7 +65,10 @@ Every proof file starts with `gabbrov_beweis`. It does four things:
    - `narrow`, checks and lock releases;
    - bounded `retry` and `traverse`, unrolled pass by pass;
    - calls, split on the callee's outcome, with the callee's precondition read off its own lowering;
-   - foreign calls, split on the oracle's answer.
+   - foreign calls, split on the oracle's answer;
+   - every other form by one step of the semantics' own equation lemmas, a split of the `match` it
+     leaves on a symbolic value, and reading a remaining sub-block as its weakest precondition again
+     (`Generisch.lean`); no form needs a rule of its own.
 3. It closes the return obligation (`gabbrov_fertig`).
 4. It turns what is left over symbolic values into integer arithmetic (`gabbrov_arith`). The kernel
    checks that this arithmetic is the evaluation, and `omega` then tries to close it.

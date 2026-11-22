@@ -180,16 +180,28 @@ def pflichtDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
       "    environment move the goal theorem quantifies. Nothing else is owed. -/\n" ++
       "def ziel" ++ si ++ " : Prop := ZielF u ⟨" ++ si ++ ", lt" ++ si ++ "⟩\n\n" ++ fuss modul }
 
+def logikModul (modul : String) (i : Nat) : String := modul ++ ".Logik.F" ++ toString i
+
+/-- What remains of the duty after the language's automation: `logik<i>`, the program's logic as one
+    statement, and `logik<i>.genuegt : logik<i> → ziel<i>` (regenerated on every run). -/
+def logikDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
+  let si := toString i
+  { pfad := (logikModul modul i).replace "." "/"
+    text := kopf modul [pflichtModul modul i, "Bruecke.Zertifikat.Logik"]
+        ("The program's logic owed by `" ++ f.name ++ "`: what the language's proof of its duty leaves " ++
+         "(written by `gabbrov`; regenerated on every run). `True` when nothing remains.") stringModule ++
+      "gabbrov_logik logik" ++ si ++ " : ziel" ++ si ++ "\n\n" ++ fuss modul }
+
 /-- The user's proof file: written once, never replaced. -/
 def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
   let si := toString i
   { pfad := (beweisModul modul i).replace "." "/"
     ersetzen := false
-    text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
-        "`. `gabbrov` writes this file once and never replaces it.") stringModule ++
-      "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
-      "  gabbrov_beweis\n" ++
-      "  -- what remains here is your program's own logic\n\n" ++ fuss modul }
+    text := kopf modul [logikModul modul i] ("Your proof of the duty of `" ++ f.name ++
+        "`. `gabbrov` writes this file once and never replaces it.") ++
+      "/-- The language proves everything but `logik" ++ si ++ "` (`#print logik" ++ si ++ "` shows it); `trivial`\n" ++
+      "    proves it when nothing remains. Otherwise replace `trivial` by your proof of the program's logic. -/\n" ++
+      "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := logik" ++ si ++ ".genuegt (by trivial)\n\n" ++ fuss modul }
 
 def sammlungModul (modul : String) (k : Nat) : String := modul ++ ".Sammlung.S" ++ toString k
 
@@ -262,7 +274,7 @@ def dateien (modul src : String) : Except String (List Datei) := do
   | .ok _ => pure ()
   let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
   let stuecke := teile stueckGroesse fs
-  let pflichten := fs.map fun (i, f) => [pflichtDatei modul i f, beweisDatei modul i f]
+  let pflichten := fs.map fun (i, f) => [pflichtDatei modul i f, logikDatei modul i f, beweisDatei modul i f]
   let sammlungen := stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1))
   pure ([quelleDatei modul src, wurzelDatei modul u (stuecke.map (·.map (·.1))) (stufe0AltFreiB src),
       datenDatei modul u stuecke.length, pruefungDatei modul] ++
