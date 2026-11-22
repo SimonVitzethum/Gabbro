@@ -50,12 +50,15 @@ structure MTRel (P : Programm D) (O : Orakel D) (passes : Nat) (L : Lay D) (c : 
     registered. The committed view is already the exact source world. -/
 theorem MTRel.no_registered_threads {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D}
     {c : PCfg} {state : FadenMaschine D} (positions : Nat → MLage D)
-    (empty : ∀ (i : Nat) (r : Res T), c.ths[i]? ≠ some (some r))
+    (empty : ∀ (i : Nat) (r : Runner.Res T), c.ths[i]? ≠ some (some r))
     (world : WeltAt c.m L (state.m.speicher.welt [])) :
     MTRel P O passes L c state (fun _ => none) positions c.m where
   zustand := fun _ _ h => by cases h
   lebend := fun i r h => (empty i r h).elim
-  mem := ⟨fun _ _ h => by cases h, fun _ _ h => by cases h, fun _ _ _ _ _ h => by cases h⟩
+  mem := {
+    gleich := fun _ _ h => by cases h
+    wrF := fun _ _ h => by cases h
+    getrennt := fun _ _ _ _ _ h => by cases h }
   lage := fun _ _ h => by cases h
   prog := fun _ _ h => by cases h
   solo := fun _ _ h => by cases h
