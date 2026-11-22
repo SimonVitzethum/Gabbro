@@ -169,7 +169,7 @@ theorem Emitted.SpawnPrefix.begin {index : Nat} {view : Mem} {pointer : T}
 theorem Emitted.SpawnPrefix.answer_memory {index : Nat} (declared : index < output.starts.length)
     {before after : imageTSO.St} {request : Op} {resume : Ans → Res T} {reply : Ans}
     (phase : output.SpawnPrefix index (.ask request resume) (before.1.view 0))
-    (ordinary : istSpeicherOp request = true)
+    (ordinary : BildMehr.istSpeicherOp request = true)
     (answered : imageTSO.ans before 0 request reply after) :
     output.SpawnPrefix index (resume reply) (after.1.view 0) := by
   obtain ⟨initial, localMemory, table, code, frame, run, agrees⟩ := phase
