@@ -1,12 +1,13 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+public import Stage0.Senke.Bild.Lauf
 
 @[expose] public section
 
 namespace Gabbro.Stage0
 
-open Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis
+open Gabbro.Stage0.Senke.BildLauf Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis
 
 /-- The remaining instructions of an established IR region. Its current
     instruction may be between requests, and the last full instruction
