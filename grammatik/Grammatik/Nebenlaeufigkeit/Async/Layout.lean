@@ -103,10 +103,10 @@ public inductive Phase where
     (offset : Nat) → offset ≤ body.length →
     {index : Fin (commandPhases base body).length //
       (commandPhases base body).get index = .running (base + offset)}
-  | [], 0, _ => ⟨0, rfl⟩
+  | [], 0, _ => ⟨⟨0, Nat.zero_lt_succ _⟩, rfl⟩
   | [], offset + 1, valid => False.elim (Nat.not_succ_le_zero offset valid)
-  | .bind _ _ _ :: _, 0, _ => ⟨0, rfl⟩
-  | .await _ _ _ :: _, 0, _ => ⟨0, rfl⟩
+  | .bind _ _ _ :: _, 0, _ => ⟨⟨0, Nat.zero_lt_succ _⟩, rfl⟩
+  | .await _ _ _ :: _, 0, _ => ⟨⟨0, Nat.zero_lt_succ _⟩, rfl⟩
   | .bind _ _ _ :: rest, offset + 1, valid =>
     let next := commandRunningIndex (base + 1) rest offset (Nat.le_of_succ_le_succ valid)
     ⟨next.val.succ, by
@@ -121,24 +121,25 @@ public inductive Phase where
       exact next.property.trans (congrArg Phase.running tag)⟩
 termination_by structural body _ _ => body
 
+@[expose] public def runningCase (types : TypeResolution) (f : AsyncFn)
+    (tag : Nat) (within : tag ≤ f.body.length) :
+    {index : Fin (stateCases types f).length // (stateCases types f).get index = some (frameType types f)} :=
+  let selected := commandRunningIndex 0 f.body tag within
+  let phase : Fin (phases f).length := selected.val.succ.succ
+  let index : Fin (stateCases types f).length :=
+    ⟨phase.val, by simpa only [stateCases, List.length_map] using phase.isLt⟩
+  ⟨index, by
+    have mapped : (stateCases types f).get index = some (phaseType types f ((phases f).get phase)) :=
+      List.getElem_map (fun p => some (phaseType types f p)) (h := index.isLt)
+    exact mapped.trans (congrArg (fun p => some (phaseType types f p)) selected.property)⟩
+
 /-- Generate the typed constructor for a resumed frame at a checked
     program position. The payload remains at its declared frame type. -/
 @[expose] public def runningExpr (types : TypeResolution) (f : AsyncFn)
     {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
     (frame : Expr D Γ Λ (frameType types f)) : Expr D Γ Λ (stateType types f) :=
-  let selected := commandRunningIndex 0 f.body tag within
-  let index : Fin (stateCases types f).length :=
-    ⟨selected.val.val + 2, by
-      have valid := selected.val.isLt
-      simp only [stateCases, phases, List.length_map, List.length_cons]
-      omega⟩
-  have payloadType : (stateCases types f).get index = some (frameType types f) := by
-    rw [List.get_eq_getElem, stateCases, List.getElem_map]
-    change some (phaseType types f ((commandPhases 0 f.body).get selected.val)) =
-      some (frameType types f)
-    rw [selected.property]
-    rfl
-  stateExpr types f index (payloadType.symm ▸ NutzlastExpr.val frame)
+  let selected := runningCase types f tag within
+  stateExpr types f selected.val (selected.property.symm ▸ NutzlastExpr.val frame)
 
 public theorem runningExpr_reads (types : TypeResolution) (f : AsyncFn)
     {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} (tag : Nat) (within : tag ≤ f.body.length)
