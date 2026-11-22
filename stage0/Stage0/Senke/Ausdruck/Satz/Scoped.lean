@@ -7,7 +7,7 @@ set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {currentOld : Bool}
 local macro "inherit_reads" parent:ident : term => `(by
   intro carrier member
-  apply $parent
+  refine ($parent:ident) carrier ?_
   simp only [Expr.orte, Args.orte, NutzlastExpr.orte, List.mem_append, List.mem_cons]
   solve_by_elim only [member, Or.inl, Or.inr])
 mutual
