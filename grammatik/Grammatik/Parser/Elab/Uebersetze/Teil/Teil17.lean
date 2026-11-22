@@ -81,11 +81,11 @@ def uAkkuItem (consts : List (String × Int)) (alias : List (String × (Int × I
 /-- Export a source descriptor once its generated carriers and function bindings
     have been resolved. Bindings are explicit: no placeholder core query or
     update/reduction function is invented by the storage expansion. -/
-def uAkkuDecl {D : Deklaration}
+def uAkkuDeclWith {D : Deklaration}
     (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (item : SItemTief)
-    (cells : (k : Nat) → Fin k → D.Glob)
-    (locks : (k : Nat) → Fin k → D.Lock)
+    (cells : (k : Nat) → Except String (Fin k → D.Glob))
+    (locks : (k : Nat) → Except String (Fin k → D.Lock))
     (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) := do
   let .accT name ty merge count _ := item
     | .error "expected accumulator declaration"
@@ -101,6 +101,8 @@ def uAkkuDecl {D : Deklaration}
     else if strEq merge "or" then pure Kernzelle.AccOperator.or
     else if strEq merge "and" then pure Kernzelle.AccOperator.and
     else throw "accumulator operator without G form"
+  let cellNames ← cells k
+  let lockNames ← locks k
   return {
     name := name
     kernZahl := k
@@ -109,11 +111,17 @@ def uAkkuDecl {D : Deklaration}
     lo := lo
     hi := hi
     op := op
-    zellen := cells k
-    sperren := locks k
+    zellen := cellNames
+    sperren := lockNames
     kernAbfrage := query
     aktualisiere := update
     falte := fold }
+
+def uAkkuDecl {D : Deklaration}
+    (consts : List (String × Int)) (alias : List (String × (Int × Int))) (item : SItemTief)
+    (cells : (k : Nat) → Fin k → D.Glob) (locks : (k : Nat) → Fin k → D.Lock)
+    (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) :=
+  uAkkuDeclWith consts alias item (fun k => pure (cells k)) (fun k => pure (locks k)) query update fold
 
 /-- The storage of every admitted `accumulates` item of the unit. -/
 def uAkkuErweiterung (consts : List (String × Int)) (alias : List (String × (Int × Int)))

@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Goal
+public import Stage0.Senke.Images.AccumulatorExport
 import Grammatik.Logik.Vertraege.Pruefer.Goal
 
 @[expose] public section
@@ -12,26 +13,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser
   Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
-
-def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
-  (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
-    match item with
-    | .accT .. => true
-    | _ => false
-
-/-- An accumulator descriptor elaborates the actual selected declaration
-    with its generated cells, locks and functions. -/
-def ImageAccumulator (output : Emitted src reserve options) (item : SItemTief)
-    (acc : Kernzelle.AccumulatorDecl (declOf output.compiled.unit)) : Prop :=
-  let unit := output.compiled.unit
-  let scopes := output.compiled.source.scopes
-  (∃ cells locks, uAkkuDecl scopes.values scopes.types item cells locks
-    acc.kernAbfrage acc.aktualisiere acc.falte = .ok acc) ∧
-  (∀ i, (unit.globs.get (acc.zellen i)).name = acc.name ++ "#zelle" ++ toString i.val) ∧
-  (∀ i, (unit.locks.get (acc.sperren i)).name = acc.name ++ "#sperre" ++ toString i.val) ∧
-  (fnAt unit acc.kernAbfrage).name = acc.name ++ "#query" ∧
-  (fnAt unit acc.aktualisiere).name = acc.name ++ "#aktualisiere" ∧
-  (fnAt unit acc.falte).name = acc.name ++ "#falte"
 
 /-- The source's canonical bodies and initial declarations used by both
     the compiler and the goal theorem are the same. -/
