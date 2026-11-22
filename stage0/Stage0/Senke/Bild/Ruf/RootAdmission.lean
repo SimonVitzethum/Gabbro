@@ -174,7 +174,8 @@ theorem ImageRootPhase.advance_source [Kern] {src : String} {reserve : Nat} {opt
   · let ready (frame : RufFadenG (declOf output.compiled.unit).mitRuhe) : Prop :=
       frame = (imageSourceStart E).m.faeden thread ∨
         frame.stapel = [] ∧ frame.kopf.rest.2.2.2.2.anRueck = true
-    exact (congrArg ready sameHead.symm) ▸ head
+    change ready (after.m.faeden thread)
+    exact Eq.mp (congrArg ready sameHead.symm) head
   rcases phase with advanced | pending | ⟨id, extra, event, pending⟩
   · exact .inl advanced
   · exact .inr (.inl pending)
