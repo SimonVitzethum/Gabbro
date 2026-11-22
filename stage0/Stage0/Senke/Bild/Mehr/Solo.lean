@@ -12,7 +12,7 @@
 module
 public import Stage0.Senke.Bild.Lauf
 public import Stage0.Senke.Bild.Mehr.Lokal
-public import Stage0.Senke.Bild.Mehr.Blind
+public import Stage0.Senke.Bild.Mehr.BlindOp
 public import Runner.Mach.Maschine
 @[expose] public section
 
@@ -188,6 +188,43 @@ private theorem RunP.permissions {r r' : Res T} {before after : Mem}
   | ask answered _ ih =>
     have stable := memAns_nurIn answered
     exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
+
+/-- One successful restricted run characterizes all memory requests of
+    the actual IR up to the corresponding instruction boundary. The
+    statement quantifies over every partial instruction on that path. -/
+theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem}
+    {reads writes : W → Prop}
+    (ran : StarM count start reference target finish)
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    {actual : Mem} (agrees : MaskedAgreement reads writes reference actual) :
+    ∃ result, StarM count start actual target result ∧ MaskedAgreement reads writes finish result ∧
+      (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
+      ∀ {taken : Nat} {instruction : T} {atInstruction current : Mem}
+        {request : Op} {resume : Ans → Res T},
+        StarM taken start actual instruction atInstruction → taken < count →
+        RunP (step instruction) atInstruction (.ask request resume) current →
+        (∀ byte, fussOp request byte → reads byte) ∧
+        (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+  induction ran generalizing actual with
+  | refl =>
+    exact ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte,
+      fun _ impossible _ => (Nat.not_lt_zero _ impossible).elim⟩
+  | next head _ ih =>
+    obtain ⟨middle, executed, reached, otherBytes, requests⟩ :=
+      head.replay_on (blind_step _) readable writable agrees
+    obtain ⟨rd, wr⟩ := head.permissions
+    obtain ⟨result, ran, agreement, laterBytes, laterRequests⟩ := ih
+      (fun byte granted => readable byte (by simpa only [rd] using granted))
+      (fun byte granted => writable byte (by simpa only [wr] using granted)) reached
+    refine ⟨result, .next executed ran, agreement,
+      fun byte outside => (laterBytes byte outside).trans (otherBytes byte outside), ?_⟩
+    intro taken instruction atInstruction current request resume complete within pending
+    cases complete with
+    | refl => exact requests pending
+    | next moved remaining =>
+      obtain ⟨rfl, rfl⟩ := executed.det moved.run
+      exact laterRequests remaining (Nat.lt_of_succ_lt_succ within) pending
 
 /-- The common memory permissions stay fixed through complete and
     partially executed instructions, independently of their number. -/
