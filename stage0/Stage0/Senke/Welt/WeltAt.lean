@@ -16,6 +16,35 @@ def LayIn (L : Lay D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < L.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 * valueWords (D.typ t f) ≤ L.hi) ∧
   (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 * valueWords (D.gtyp g) ≤ L.hi) ∧ L.hi < 2 ^ 31
 
+/-- A typed value depends on the readable bytes of its complete span. -/
+theorem ValueAt.congr_read_bytes {layout : Lay D} {before after : Runner.Mem}
+    {address : Nat} {ty : Ty} {value : Wert D ty}
+    (bound : address + 8 * valueWords ty < 2 ^ 64)
+    (agrees : ∀ byte, address ≤ byte.toNat → byte.toNat < address + 8 * valueWords ty →
+      after.b byte = before.b byte ∧ after.rd byte = before.rd byte)
+    (encoded : ValueAt layout before (BitVec.ofNat 64 address) 0 ty value) :
+    ValueAt layout after (BitVec.ofNat 64 address) 0 ty value := by
+  refine ⟨encoded.1, fun index present => ?_⟩
+  have indexFits : index < valueWords ty := by simpa only [encodeWords_length] using present
+  have slotAddress : slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + index)) =
+      BitVec.ofNat 64 (address + 8 * index) := by
+    simp only [Nat.zero_add, slot]
+    change BitVec.ofNat 64 address + BitVec.ofNat 64 index * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+    congr 1
+    omega
+  have byteEq (offset : Nat) (inside : offset < 8) :=
+    agrees (BitVec.ofNat 64 (address + 8 * index) + BitVec.ofNat 64 offset)
+      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
+      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
+  have same : after.rd64 (BitVec.ofNat 64 (address + 8 * index)) =
+      before.rd64 (BitVec.ofNat 64 (address + 8 * index)) := by
+    simp only [Runner.Mem.rd64, Runner.Mem.all_congr (fun j hj => (byteEq j hj).2),
+      Runner.Mem.le_congr (fun j hj => (byteEq j hj).1)]
+  rw [slotAddress, same]
+  have old := encoded.2 index present
+  rwa [slotAddress] at old
+
 /-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
 inductive Zelle (D : Deklaration) where
   | glob (g : D.Glob)

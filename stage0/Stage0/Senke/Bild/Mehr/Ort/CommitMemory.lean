@@ -35,34 +35,6 @@ noncomputable def commitBytes (before after : Mem) (selected : W → Prop) : Mem
   classical
   exact { before with b := fun byte => if selected byte then after.b byte else before.b byte }
 
-private theorem valueAt_congr_bytes {layout : Lay D} {before after : Mem}
-    {address : Nat} {ty : Ty} {value : Wert D ty}
-    (bound : address + 8 * valueWords ty < 2 ^ 64)
-    (agrees : ∀ byte, address ≤ byte.toNat → byte.toNat < address + 8 * valueWords ty →
-      after.b byte = before.b byte ∧ after.rd byte = before.rd byte)
-    (encoded : ValueAt layout before (BitVec.ofNat 64 address) 0 ty value) :
-    ValueAt layout after (BitVec.ofNat 64 address) 0 ty value := by
-  refine ⟨encoded.1, fun index present => ?_⟩
-  have indexFits : index < valueWords ty := by simpa only [encodeWords_length] using present
-  have slotAddress : slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + index)) =
-      BitVec.ofNat 64 (address + 8 * index) := by
-    simp only [Nat.zero_add, slot]
-    change BitVec.ofNat 64 address + BitVec.ofNat 64 index * BitVec.ofNat 64 8 = _
-    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add]
-    congr 1
-    omega
-  have byteEq (offset : Nat) (inside : offset < 8) :=
-    agrees (BitVec.ofNat 64 (address + 8 * index) + BitVec.ofNat 64 offset)
-      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
-      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
-  have same : after.rd64 (BitVec.ofNat 64 (address + 8 * index)) =
-      before.rd64 (BitVec.ofNat 64 (address + 8 * index)) := by
-    simp only [Mem.rd64, Mem.all_congr (fun j hj => (byteEq j hj).2),
-      Mem.le_congr (fun j hj => (byteEq j hj).1)]
-  rw [slotAddress, same]
-  have old := encoded.2 index present
-  rwa [slotAddress] at old
-
 /-- A segment's physical writes can be committed using its carrier set.
     The exact typed values of every other carrier remain those of the
     current committed world, including nested aggregates and pointers. -/
@@ -86,12 +58,12 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
     intro encoded
     by_cases chosen : carriers (Zelle.carrier cell)
     · rw [if_pos chosen] at encoded
-      apply valueAt_congr_bytes (size ▸ bound) _ encoded
+      apply ValueAt.congr_read_bytes (size ▸ bound) _ encoded
       intro byte first last
       have selected := (carrierFootprint_iff separated allocated first (size.symm ▸ last)).mpr chosen
       exact ⟨by simp only [memory, commitBytes, dif_pos selected, if_pos selected], congrFun reads.symm byte⟩
     · rw [if_neg chosen] at encoded
-      apply valueAt_congr_bytes (size ▸ bound) _ encoded
+      apply ValueAt.congr_read_bytes (size ▸ bound) _ encoded
       intro byte first last
       have excluded := fun selected => chosen ((carrierFootprint_iff separated allocated first (size.symm ▸ last)).mp selected)
       exact ⟨by simp only [memory, commitBytes, dif_neg excluded, if_neg excluded], rfl⟩

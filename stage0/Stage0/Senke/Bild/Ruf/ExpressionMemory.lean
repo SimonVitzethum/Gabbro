@@ -80,6 +80,36 @@ theorem expression_pre_mask {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx}
       Mem.le_congr (fun j inside => (sameWord j inside).1)]
     exact stored.2 word present
 
+private theorem expression_mask_value {D : Deklaration} {L : Senke.Lay D}
+    {memory : Mem} {reads writes : W → Prop} {address : Nat} {ty : Ty} {value : Wert D ty}
+    (writeReads : ∀ byte, writes byte → reads byte)
+    (bound : address + 8 * Senke.valueWords ty < 2 ^ 64)
+    (covered : ∀ byte : W, address ≤ byte.toNat → byte.toNat < address + 8 * Senke.valueWords ty → reads byte)
+    (typed : Senke.ValueAt L memory (BitVec.ofNat 64 address) 0 ty value) :
+    Senke.ValueAt L (maskMemory reads writes memory) (BitVec.ofNat 64 address) 0 ty value := by
+  have agree := (maskMemory_agreement reads writes memory writeReads).1
+  exact Senke.ValueAt.congr_read_bytes bound (fun byte first last => agree.1 byte (covered byte first last)) typed
+
+/-- A physical read region containing the authorized carriers
+    preserves their complete value representations in the proof memory. -/
+theorem expression_world_mask {D : Deklaration} {L : Senke.Lay D} {memory : Mem}
+    {reads writes : W → Prop} {world : World D} {resources : List (Res D)}
+    (writeReads : ∀ byte, writes byte → reads byte) (layout : Senke.LayIn L)
+    (authorized : ∀ cell : Senke.Zelle D, cell.da L →
+      Sum.elim (fun table => darf D table resources) (fun global => gdarf D global resources) cell.carrier →
+      ∀ byte : W, cell.adr L ≤ byte.toNat → byte.toNat < cell.adr L + cell.bytes → reads byte)
+    (values : Senke.ReadWorldAt memory L world resources) :
+    Senke.ReadWorldAt (maskMemory reads writes memory) L world resources := by
+  refine ⟨?_, ?_⟩
+  · intro table access field index valid
+    have inside := (layout.1 table field index valid).2.trans_lt layout.2.2
+    exact expression_mask_value writeReads (inside.trans (by decide))
+      (authorized (.elem table field index) valid access) (values.table table access field index valid)
+  · intro global access
+    have inside := (layout.2.1 global).2.trans_lt layout.2.2
+    exact expression_mask_value writeReads (inside.trans (by decide))
+      (authorized (.glob global) trivial access) (values.global global access)
+
 /-- Every successful production expression lowering has an exact
     host-free reference. Any actual memory prefix reaches the same
     typed result when complete and cannot ask the host while incomplete. -/
@@ -92,7 +122,10 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     (lowered : Senke.lowE (reserved := reserved) (currentOld := currentOld) L expression d = some (code, top))
     (fits : top ≤ K) (resultFits : d + Senke.valueWords τ ≤ K)
     (pre : Senke.PreS L memory pc fp K d code env reserved)
-    (valueMemory : Senke.ReadWorldAt (maskMemory reads (inSlots fp 0 K) memory) L world Λ)
+    (valueMemory : Senke.ReadWorldAt memory L world Λ)
+    (worldReads : ∀ cell : Senke.Zelle D, cell.da L →
+      Sum.elim (fun table => darf D table Λ) (fun global => gdarf D global Λ) cell.carrier →
+      ∀ byte : W, cell.adr L ≤ byte.toNat → byte.toNat < cell.adr L + cell.bytes → reads byte)
     (layout : Senke.LayIn L)
     (separated : fp.toNat + 8 * K ≤ L.lo) (entry : currentOld = true → initial = world) :
     let start : T := ⟨pc, fp⟩
@@ -113,7 +146,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
   have masked := expression_pre_mask frameReads codeReads (by omega : d ≤ K) pre
   have scope : Senke.Pre L restricted pc fp K d code env (fun m => Senke.ReadWorldAt m L world Λ) reserved :=
     ⟨masked.ctx, masked.small, masked.frame, masked.code, masked.far, masked.env,
-      valueMemory, Senke.readWorldAt_stab layout separated⟩
+      expression_world_mask frameReads layout worldReads valueMemory, Senke.readWorldAt_stab layout separated⟩
   obtain ⟨finish, executed, _, value⟩ :=
     Senke.lowE_ok_scoped (same := entry) initial world (fun _ h => h) layout
       expression d code top lowered fits restricted pc env scope
