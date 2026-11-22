@@ -36,7 +36,7 @@ theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (
       lowWertE u Γ Λ fn er side = .ok ⟨.int lo hi, term⟩ ∧ term.orte = [] := by
   cases classified : source
   case «variable» name =>
-    simp only [uSliceInteger] at recognized
+    simp only [classified, uSliceInteger] at recognized
     split at recognized
     · next localLo localHi declared =>
       split at recognized
@@ -47,7 +47,7 @@ theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (
       · cases recognized
       · exact uSliceIntegerConstant_low ctx fn er _ recognized
   case bin op left right =>
-    simp only [uSliceInteger] at recognized
+    simp only [classified, uSliceInteger] at recognized
     split at recognized
     · exact uSliceIntegerConstant_low ctx fn er _ recognized
     · cases readLeft : uSliceInteger ctx blatt left with
@@ -71,7 +71,7 @@ theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (
               exact lowWertE_arraySliceLength hb ha
             · cases recognized
   all_goals
-    simp only [uSliceInteger] at recognized
+    simp only [classified, uSliceInteger] at recognized
     exact uSliceIntegerConstant_low ctx fn er _ recognized
 termination_by sizeOf source
 decreasing_by
