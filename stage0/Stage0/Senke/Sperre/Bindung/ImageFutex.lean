@@ -24,7 +24,9 @@ theorem image_futex_reply [Kern] {machine : Cfg imageTSO (Res T)} {memory : imag
       projectSCState footprint memory = projectSCState footprint machine.ms := by
   intro after
   let request := futexReq address mode value
-  have number : request.nr ≠ cloneReq.nr := by decide
+  have number : request.nr ≠ cloneReq.nr := by
+    change (202 : W) ≠ cloneReq.nr
+    decide
   have noClone : request ≠ cloneReq := fun equal => number (congrArg Req.nr equal)
   have valid : (Op.sys request).special = false := rfl
   have external := answered.2
