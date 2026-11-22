@@ -133,6 +133,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.image_body_publish
 #print axioms Gabbro.Stage0.image_body_float
 #print axioms Gabbro.Stage0.lowE_frameMemory
+#print axioms Gabbro.Stage0.Senke.BildLauf.BodyFrame.bind_reference
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
 #print axioms Gabbro.Grammatik.Async.inferredBoundary_erfuellbar
