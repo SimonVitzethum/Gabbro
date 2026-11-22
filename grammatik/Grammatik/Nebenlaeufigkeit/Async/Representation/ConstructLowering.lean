@@ -100,4 +100,45 @@ public theorem constructLeafBlock_assign (elaboration : Elaboration D V Λ types
   rw [← exactChild.2.1]
   rfl
 
+/-- The checked construction plan follows the exact finite source tree.
+    Each leaf establishes the arglist types against the callee signature. -/
+public inductive ConstructPlan (elaboration : Elaboration D V Λ types f) (tag : Nat) :
+    FutureExpr → Type where
+  | call (name : String) (args : List Parser.SExpr) (callee : AwaitedCall D V Λ types name)
+      (known : elaboration.callee name = some callee)
+      (arguments : CheckedArguments elaboration tag args callee.parameters) :
+      ConstructPlan elaboration tag (.call name args)
+  | join : ConstructPlan elaboration tag left → ConstructPlan elaboration tag right →
+      ConstructPlan elaboration tag (.join left right)
+
+@[expose] public def ConstructPlan.resolve (elaboration : Elaboration D V Λ types f) (tag : Nat) :
+    (future : FutureExpr) → Except String (ConstructPlan elaboration tag future)
+  | .call name args => do
+    match found : elaboration.callee name with
+    | none => throw "async: unresolved child constructor"
+    | some callee =>
+      let ⟨parameterTypes, checked⟩ ← checkArguments elaboration tag args
+      if same : parameterTypes = callee.parameters then
+        pure (.call name args callee found (same ▸ checked))
+      else throw "async: constructor arguments disagree with the resolved signature"
+  | .join left right => do
+    let first ← resolve elaboration tag left
+    let second ← resolve elaboration tag right
+    pure (.join first second)
+
+/-- The G syntax is nested in source order. The left constructor
+    completes before any argument of the right child is evaluated. -/
+@[expose] public def ConstructPlan.lower {elaboration : Elaboration D V Λ types f} {tag : Nat} :
+    {future : FutureExpr} → ConstructPlan elaboration tag future →
+    (path : List Nat) → {Γ : Ctx} → Var Γ (frameType types f) →
+    (∀ {Δ : Ctx}, (∀ {τ : Ty}, Var Γ τ → Var Δ τ) →
+      Var Δ (taskStorageType types path future) → Block D V l Δ Λ Λ) → Block D V l Γ Λ Λ
+  | _, .call name args callee _ checked, path, _, saved, body =>
+    constructLeafBlock tag path name args callee checked saved body
+  | _, @ConstructPlan.join _ _ _ _ _ _ _ left right first second, path, _, saved, body =>
+    lower first (0 :: path) saved (fun extend a =>
+      lower second (1 :: path) (extend saved) (fun later b =>
+        .bind (joinChildrenExpr types path left right (.var (later a)) (.var b))
+          (body (fun var => .there (later (extend var))) .here)))
+
 end Gabbro.Grammatik.Async.Representation

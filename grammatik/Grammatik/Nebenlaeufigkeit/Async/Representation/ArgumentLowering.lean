@@ -191,8 +191,10 @@ public theorem CheckedArguments.lower_assign {elaboration : Elaboration D V Λ t
     obtain ⟨arguments, typed, lowered⟩ := ih (extension destination) (extension saved) restBody restEffect
       answer.2.1 scope newFrame restCorrect
     refine ⟨.cons answer.1 arguments, ?_, ?_⟩
-    · simp only [evalArgumentsBy, value, argumentsEnv, valueAt_typed, typed,
+    · simp only [evalArgumentsBy, value, argumentsEnv, valueAt_typed,
         Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+      erw [typed]
+      rfl
     · change execBlock oracle passes calls (head.lower saved continuation) world env = _
       rw [ran]
       change removeLocals (head.term.locals.map Prod.snd)
