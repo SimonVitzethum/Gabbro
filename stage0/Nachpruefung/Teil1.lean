@@ -229,7 +229,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.world_survives_stack
 #print axioms Gabbro.Stage0.Emitted.main_stub_code
 #print axioms Gabbro.Stage0.Emitted.main_depth_start
-#print axioms Gabbro.Stage0.Emitted.root_depth_preserves_frame
+#print axioms Gabbro.Stage0.ImageStartSite.depth_preserves_frame
 #print axioms Gabbro.Stage0.Emitted.root_depth_phase
 #print axioms Gabbro.Stage0.ImageStartSite.call_decrement_operand
 #print axioms Gabbro.Stage0.ImageStartSite.call_depth

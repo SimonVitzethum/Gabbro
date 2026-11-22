@@ -254,54 +254,6 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
   obtain ⟨stub, enough, depthFits, _, _⟩ := output.root_stub_code loaded declared
   exact image_depth_setup (before := before) stub enough depthFits running frame
 
-/-- The first child instruction leaves its exact arguments, frame
-    permissions and code intact. The issuing view holds the depth word
-    before the store is flushed to shared memory. -/
-theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K options)
-    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
-    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
-    (declared : output.starts[index]? = some root)
-    (loaded : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
-    let pointer : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
-      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
-    let words := encodeEnv output.image.Y root.2
-    before.ths[index + 1]? = some (some (.next pointer)) →
-    FrameOK (before.ms.1.view (index + 1)) pointer.fp output.image.Ks →
-    FB + FB + words.length ≤ output.image.Ks →
-    WordsAt (before.ms.1.view (index + 1)) pointer.fp (FB + FB) words →
-    ∃ after : imageTSO.St,
-      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
-        ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
-      after.1.m = before.ms.1.m ∧
-      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
-      BytesAt (after.1.view (index + 1)) codeBase (output.image.code.flatMap encII) ∧
-      FrameOK (after.1.view (index + 1)) pointer.fp output.image.Ks ∧
-      WordsAt (after.1.view (index + 1)) pointer.fp (FB + FB) words ∧
-      (after.1.view (index + 1)).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
-        some (BitVec.ofNat 64 (output.image.depth + 1)) ∧
-      Agree pointer.fp 0 output.image.Ks (before.ms.1.view (index + 1)) (after.1.view (index + 1)) := by
-  intro pointer words running frame fits args
-  obtain ⟨after, run, memory, wroteDepth, others⟩ := output.root_depth_start declared loaded running frame
-  obtain ⟨_, depthSlot, depthFits, _, _⟩ := output.root_stub_code loaded declared
-  have thread : index + 1 ≤ output.starts.length :=
-    Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
-  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
-  · apply output.code_survives_writes (write_nurIn _ _ _) _ loaded
-    intro byte touched
-    have own := imageStackFootprint_slot (output := output) (i := index + 1)
-      (index := 2) thread depthSlot touched
-    exact (Nat.le_add_right _ _).trans own.2.1
-  · exact ⟨frame.lt, frame.rd, frame.wr⟩
-  · intro i present
-    have within : FB + FB + i < output.image.Ks := by omega
-    have elsewhere : 2 ≠ FB + FB + i := by simp only [FB]; omega
-    rw [Mem.rd64_write_far (slot_far frame.room depthSlot within elsewhere)]
-    exact args i present
-  · have word := rd64_write_same (w := BitVec.ofNat 64 (output.image.depth + 1)) (frame.rd 2 depthSlot)
-    simpa only [BitVec.toNat_ofNat,
-      Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
-  · exact agree_write frame.room (Nat.zero_le _) depthSlot _
-
 /-- Past the loader, the root phase carries the exact arguments serialized
     for the selected declaration, with its private stack permissions. -/
 theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
@@ -344,50 +296,5 @@ theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)
       WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
   have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
   exact ImageRootPhase.payload exported phase (.inl (Nat.succ_ne_zero _))
-
-/-- The concrete child startup prefix advances the IR counter within
-    the child's stub and retains the same dormant GX head. -/
-theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
-    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
-    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
-    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
-    (declared : output.starts[index]? = some root)
-    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    (head : state.m.faeden (index + 1) = (imageSourceStart E).m.faeden (index + 1)) :
-    let pointer : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
-      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
-    let view := before.ms.1.view (index + 1)
-    before.ths[index + 1]? = some (some (.next pointer)) →
-    ImageRootPhase output E history view (index + 1) (.next pointer) state →
-    FB + FB + (encodeEnv output.image.Y root.2).length ≤ output.image.Ks →
-    ∃ after : imageTSO.St,
-      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
-        ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
-      ImageRootPhase output E history (after.1.view (index + 1)) (index + 1) (.next (nxt pointer)) state ∧
-      after.1.m = before.ms.1.m ∧
-      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
-      (after.1.view (index + 1)).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
-        some (BitVec.ofNat 64 (output.image.depth + 1)) := by
-  intro pointer view running phase fits
-  have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
-  obtain ⟨code, frame, args⟩ := output.child_phase_payload unit declared phase
-  have address (i : Nat) : slot pointer.fp (BitVec.ofNat 64 (FB + FB + i)) =
-      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) := by
-    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
-      BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
-    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-  obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _⟩ :=
-    output.root_depth_preserves_frame declared code running frame fits args
-  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
-  · intro i present
-    rw [← address i]
-    exact words i present
-  · refine ⟨nxt pointer, ⟨rfl, 10 * output.starts.length + startLen + startLen * index + 1, ?_, ?_, ?_⟩, Or.inl rfl⟩
-    · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
-    · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
-    · change BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)) +
-          BitVec.ofNat 64 16 = _
-      rw [← BitVec.ofNat_add]
-      congr 1
 
 end Gabbro.Stage0
