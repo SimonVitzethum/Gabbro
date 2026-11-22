@@ -6,12 +6,14 @@ public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
+public import Grammatik.Nebenlaeufigkeit.Async.Creation
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Async.Segment
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
+open Gabbro.Grammatik.Async.Representation
 
 /-- The declaration used to generate a layout comes from this position in the
     canonical outer parse. The complete ordinary signature stays attached. -/
@@ -219,5 +221,17 @@ public structure ResolvedPoll (u : UProg) (V : Vertrag (declOf u)) (Λ : List (R
         else .error "async: poll violates the ordinary call contract"
       else .error "async: poll result differs from Ready/Pending"
     else .error "async: poll takes a different state record"
+
+/-- Use the constructor of the resolved child declaration at each await
+    site. The site's layout must select the same state and result types. -/
+@[expose] public def resolveChild (u : UProg) (V : Vertrag (declOf u)) {Λ : List (Res (declOf u))}
+    (types : TypeResolution) {childTypes : TypeResolution} {child : AsyncFn}
+    {inventory : Inventory (declOf u)} (constructor : Constructor childTypes child inventory Λ) :
+    Except String (ResolvedPoll u V Λ types child.name) :=
+  if state : stateType childTypes child = types.childState child.name then
+    if childTypes.ordinary child.resultType = types.childResult child.name then
+      resolvePoll u V Λ types child.name (parameterTypes childTypes child.params) (state ▸ constructor.code)
+    else .error "async: selected child result does not match its declared type"
+  else .error "async: selected child layout does not match its constructor"
 
 end Gabbro.Stage0.Frontend.Async

@@ -107,4 +107,13 @@ public structure Constructor (types : TypeResolution) (f : AsyncFn) (inventory :
     else .error "async: a live entry name has no declared frame slot"
   else .error "async: duplicate entry frame slot"
 
+/-- Evaluating the emitted constructor gives exactly the canonical encoder's
+    first running record. The returned value contains no resource authority. -/
+public theorem Constructor.encoded {types : TypeResolution} {f : AsyncFn} {inventory : Inventory D}
+    (constructor : Constructor types f inventory Λ) (world : World D)
+    (arguments : Env D (parameterTypes types f.params)) :
+    encode D types f (.running 0 (entryFrame types f inventory arguments)) =
+      some (eval world constructor.code world arguments) :=
+  inv_encoded f types inventory _ _ (constructor.represents world arguments)
+
 end Gabbro.Grammatik.Async.Representation
