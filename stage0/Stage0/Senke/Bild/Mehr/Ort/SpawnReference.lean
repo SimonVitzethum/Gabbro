@@ -206,7 +206,7 @@ theorem Emitted.clone_reply_boundary [kernel : Kern] {src : String} {reserve : N
       have exactAddress : (parent.pc + 4 + BitVec.ofNat 64 offset).toNat = pc.toNat + (36 + offset) := by
         change (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 4 + BitVec.ofNat 64 offset).toNat = _
         simp only [BitVec.add_assoc, ← BitVec.ofNat_add, BitVec.toNat_add, BitVec.toNat_ofNat]
-        rw [Nat.mod_eq_of_lt (a := 16 * 2 + (4 + offset)) (by omega), Nat.mod_eq_of_lt (by omega)]
+        rw [Nat.mod_eq_of_lt (a := 16 * 2 + 4 + offset) (by omega), Nat.mod_eq_of_lt (by omega)]
         omega
       have fpValue : fp.toNat = output.image.fp0 := by
         change (BitVec.ofNat 64 output.image.fp0).toNat = _
