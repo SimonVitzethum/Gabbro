@@ -147,7 +147,9 @@ public theorem checkedRetryStmt_cost {elaboration : Elaboration D V Λ types f}
   change 2 + (2 * f.body.length + 2) *
     (2 + (1 + 0) + kostenArms exit calls passes (phaseArms types f (phases f) blocks) + 1 + 0 + 2) +
     (2 + 0 + kostenBlock exit calls passes exhausted) ≤ _
-  simp only [Nat.add_zero] at *
+  have charge : 2 + (1 + 0) + kostenArms exit calls passes (phaseArms types f (phases f) blocks) + 1 + 0 + 2 =
+      6 + kostenArms exit calls passes (phaseArms types f (phases f) blocks) := by omega
+  rw [charge]
   omega
 
 public theorem checkedRetryStmt_calls {elaboration : Elaboration D V Λ types f}
@@ -159,8 +161,8 @@ public theorem checkedRetryStmt_calls {elaboration : Elaboration D V Λ types f}
     rufeS direct indirect forever (checkedRetryStmt table state finished exhausted) = true := by
   have arms := phaseArms_calls types f direct indirect forever (phases f)
     (fun index => (table index).block (l := true) state finished) admitted
-  simp only [checkedRetryStmt, checkedDispatch, phaseDispatch, rufeS, rufeB, arms, overflow,
-    Bool.true_and, Bool.and_true]
+  simp only [checkedRetryStmt, checkedDispatch, phaseDispatch, rufeS, rufeB, overflow, Bool.and_true]
+  exact arms
 
 /-- The emitted loop resets its flag for each poll and retains the ordinary
     G overflow branch. Its proof discharges that branch on represented inputs. -/
