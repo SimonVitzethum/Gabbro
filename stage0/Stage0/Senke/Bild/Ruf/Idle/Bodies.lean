@@ -49,6 +49,13 @@ private theorem globalStoreC_withIdle (L : Lay D) (global : D.Glob) (dest : Nat)
     globalStoreC L.withIdle global dest value = globalStoreC L global dest value := by
   simp only [globalStoreC, Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers]
 
+private theorem signatur_some (fn : D.Fn) : D.mitRuhe.signatur (some fn) = sigR (D.signatur fn) := rfl
+
+private theorem locksCodeT_withIdle (L : Lay D) (address scratch : Nat) (body : List II) (next leave : Int) :
+    locksCodeT L.withIdle address scratch body next leave = locksCodeT L address scratch body next leave := rfl
+
+private theorem lockAddress_withIdle (L : Lay D) (lock : D.Lock) : L.withIdle.lk lock = L.lk lock := rfl
+
 /-- The same body lowering is valid after extending the model with
     idle thread slots. Every branch retains the installed code and scratch bound. -/
 theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : FrameLayout)
@@ -57,6 +64,9 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       lowEnd passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruEnd e) reserved sc =
         lowEnd passes A L frame ens pr ex e reserved sc := by
   let shifted : D.mitRuhe.Fn → Nat := fun f => f.elim 0 A
+  have expression (reserved : Nat) {Γ' : Ctx} {Λ' : List (Res D)} {ty : Ty}
+      (source : Expr D Γ' Λ' ty) (dest : Nat) :=
+    lowE_withIdle L reserved true source dest
   apply Endblock.rec
     (motive_1 := fun _ _ _ _ s => ∀ pr ex reserved sc,
       lowS passes shifted L.withIdle frame.withIdle ens pr ex (ruS s) reserved sc =
@@ -88,6 +98,12 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       receiveC_withIdle, receiveTop_withIdle, elseC_withIdle, elseTopInd_withIdle,
       slotStoreC_withIdle, globalStoreC_withIdle, plainForeignC_withIdle, fallibleForeignC_withIdle,
       torC_withIdle, torC0_withIdle, counterDepthB_ru, aggregateFits_tyR, valueWords_mapNumbers, *]
+    try simp only [expression, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
+      lowRetScoped, lowRetWhyScoped, retScopedC_withIdle, retWhyScopedC_withIdle, retTop_withIdle,
+      signatur_some, sigNrM, receiveC_withIdle, receiveTop_withIdle, elseC_withIdle,
+      elseTop_withIdle, elseTopInd_withIdle, callC_withIdle, shifted, slotC_withIdle,
+      locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, Ty.mapCases_length,
+      lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, *]
     try rfl
 
 end Gabbro.Stage0.Senke

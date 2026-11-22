@@ -231,7 +231,7 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
             obtain ⟨_, fitted⟩ := smaller (sizeOf base) extent base rfl (.prod identity fields) baseAccepted
             obtain ⟨parent, lowered⟩ := lowWertE_aggregate_of_fit (.inl ⟨identity, fields, rfl⟩) (by
               rw [lowWertAtE]
-              rfl) fitted
+              cases lowWertE u Γ Λ fn er base <;> rfl) fitted
             rw [scope] at nominal
             obtain ⟨fieldType, fieldAt⟩ := field
             have schemaType : Ty.prod identity fields =
@@ -243,7 +243,7 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
         · cases accepted
       · cases accepted
     case idx array offset =>
-      simp only [specCompositeArgumentFits] at accepted
+      rw [specCompositeArgumentFits.eq_def] at accepted
       split at accepted
       · next name index =>
         split at accepted
@@ -252,7 +252,7 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
             (Bool.and_eq_true_iff.mp accepted).imp of_decide_eq_true id
           obtain ⟨_, fitted⟩ := lexical name (.arr element capacity) baseAccepted
           obtain ⟨base, lowered⟩ := lowWertE_aggregate_of_fit (.inr ⟨element, capacity, rfl⟩)
-            (by rw [lowWertAtE]; rfl) fitted
+            (by rw [lowWertAtE]; cases lowWertE u Γ Λ fn er (.param name) <;> rfl) fitted
           have high : index ≤ (capacity : Int) - 1 := by omega
           let position : Expr (declOf u) Γ Λ (.index capacity) := .widen first high (.lit index)
           have access : lowWertE u Γ Λ fn er (.idx (.param name) (.lit index)) =
