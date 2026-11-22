@@ -87,7 +87,7 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
       ∀ (reads : W → Prop), (∀ byte, inSlots fp 0 slots byte → reads byte) →
         (∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * 10 → reads byte) →
         ∀ {control actual}, SoloLauf ⟨pc, fp⟩ memory control actual →
-          HostFreeControl reads (inSlots fp 0 slots) control ∨ control = pending := by
+          MemoryScopedControl reads (inSlots fp 0 slots) control ∨ control = pending := by
   intro parent child pending
   obtain ⟨prepared, initialBlock, request⟩ := spawnSite_memory code frame far scratchFits slotsFit entryFits stackFits
   obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock request table

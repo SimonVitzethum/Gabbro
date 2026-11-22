@@ -70,7 +70,7 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] ∧
       ∀ {control : Res T} {actual : Mem}, BildMehr.SoloLauf ⟨pc, parent.fp⟩ view control actual →
-        BildMehr.HostFreeControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
+        BildMehr.MemoryScopedControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
           control = .ask (.sys cloneReq) (fun answer =>
             opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) := by
   intro pc parent child
@@ -130,7 +130,7 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
   refine ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl, ?_⟩
   intro control actual solo
   rcases confined (imageRootReads output 0) readFrame readCode solo with inside | pending
-  · exact .inl (Eq.mp (congrArg (fun writes => BildMehr.HostFreeControl (imageRootReads output 0) writes control)
+  · exact .inl (Eq.mp (congrArg (fun writes => BildMehr.MemoryScopedControl (imageRootReads output 0) writes control)
       ownFrame) inside)
   · exact .inr pending
 

@@ -161,7 +161,7 @@ theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
     (writable : ∀ byte, restricted.wr byte = true → reads byte ∧ writes byte)
     (agreement : MaskedAgreement reads writes restricted actual) :
     ∀ {control memory}, SoloLauf start actual control memory →
-      HostFreeControl reads writes control ∨ control = .ask (.sys call) resume := by
+      MemoryScopedControl reads writes control ∨ control = .ask (.sys call) resume := by
   obtain ⟨_, replay, atRequest, _, prefixScoped⟩ := StarM.replay_on reference readable writable agreement
   obtain ⟨readMap, writeMap⟩ := StarM.permissions reference
   obtain ⟨_, reached, _, _, requestScoped⟩ := request.replay_on (blind_step _)

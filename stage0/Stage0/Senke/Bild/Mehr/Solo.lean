@@ -13,6 +13,7 @@ module
 public import Stage0.Senke.Bild.Lauf
 public import Stage0.Senke.Bild.Mehr.Lokal
 public import Stage0.Senke.Bild.Mehr.BlindOp
+public import Stage0.Senke.Bild.Mehr.SCSchritt
 public import Runner.Mach.Maschine
 @[expose] public section
 
@@ -187,14 +188,20 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
           fun byte outside => (untouched byte outside).trans (memAns_aussen same written byte outside)⟩
     | sys | fp => cases actualAnswer
 
-/-- Inside a host-free IR region, memory remains in scope. A native
-    floating answer uses the CPU relation, and terminal faults are excluded. -/
-def HostFreeControl (reads writes : W → Prop) : Res T → Prop
+/-- Intermediate IR controls use only the permitted request kinds
+    and the region's readable and writable bytes. -/
+def ScopedControl (reads writes : W → Prop) (permitted : Op → Prop) : Res T → Prop
   | .next _ => True
   | .ask request _ =>
-    (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
+    permitted request ∧ (∀ byte, fussOp request byte → reads byte) ∧
       (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte)
   | .fault | .unk => False
+
+abbrev HostFreeControl (reads writes : W → Prop) :=
+  ScopedControl reads writes (fun request => ∀ call, request ≠ .sys call)
+
+abbrev MemoryScopedControl (reads writes : W → Prop) :=
+  ScopedControl reads writes (fun request => istSpeicherOp request = true)
 
 /-- A restricted reference ending at a memory-independent boundary
     determines every request before that boundary in the actual memory.
@@ -210,7 +217,7 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
     ∃ result, RunP r actual target result ∧ MaskedAgreement reads writes finish result ∧
       (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
       ∀ {current : Mem} {control : Res T}, RunP r actual control current →
-        control = target ∨ HostFreeControl reads writes control := by
+        control = target ∨ MemoryScopedControl reads writes control := by
   induction ran generalizing actual with
   | refl =>
     refine ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
@@ -239,32 +246,14 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
       · intro current control partialRun
         cases partialRun with
         | refl =>
-          have noHost (call : Req) : op ≠ .sys call := by
-            rintro rfl
-            cases answered
-          exact .inr ⟨noHost, included, written⟩
+          have fromMemory : istSpeicherOp op = true := by
+            cases op <;> first | rfl | cases answered
+          exact .inr ⟨fromMemory, included, written⟩
         | ask wasAnswered leftover =>
           rw [sameAnswer] at wasAnswered
           simp only [Option.some.injEq, Prod.mk.injEq] at wasAnswered
           obtain ⟨rfl, rfl⟩ := wasAnswered
           exact pending leftover
-
-/-- A partial execution of a proved memory-only instruction can wait
-    only on a memory request, or be at the exact next instruction. -/
-theorem RunP.control_of_runM {start current : Res T} {before now after : Mem} {next : T}
-    (part : RunP start before current now) (whole : RunM start before next after) :
-    (current = .next next ∧ now = after) ∨
-      ∃ request resume, current = .ask request resume ∧ request.special = false := by
-  cases part.remaining whole with
-  | next => exact Or.inl ⟨rfl, rfl⟩
-  | @ask request resume _ _ _ _ _ answered _ =>
-    refine Or.inr ⟨request, resume, rfl, ?_⟩
-    cases request with
-    | rd => rfl
-    | wr => rfl
-    | cas => rfl
-    | sys => cases answered
-    | fp => cases answered
 
 /-- A partial run that has reached the end of the tree is a memory-only step. -/
 theorem runP_runM {r r' : Res T} {m m1 : Mem} (h : RunP r m r' m1) : ∀ {t : T}, r' = .next t → RunM r m t m1 := by
@@ -373,7 +362,7 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
         {control : Res T},
         StarM taken start actual instruction atInstruction → taken < count →
         RunP (step instruction) atInstruction control current →
-        HostFreeControl reads writes control := by
+        MemoryScopedControl reads writes control := by
   induction ran generalizing actual with
   | refl =>
     exact ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte,
