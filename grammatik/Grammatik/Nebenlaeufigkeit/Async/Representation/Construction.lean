@@ -346,8 +346,36 @@ public theorem await_construction_preserves
   refine ⟨stepped, ?_, waiting_construction_inv inventory tag command payload marks sameInventory⟩
   rw [inventory.exact, inventory.exact, sameInventory]
 
-/-- A Pending poll retains the phase tag, frame and owned marks, and
-    re-encodes the actual successor child, including partial joins. -/
+/-- A Pending reply from the actual call semantics retains the
+    frame and its marks and encodes exactly the returned child state. -/
+public theorem await_runTaskPoll_pending_preserves
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat)
+    (inventory : Inventory D) (tag : Nat) (name : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (represented : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    {world after : World D} {successor : Task (Value D) (Child D types)} {cost : Nat}
+    (successful : runTaskPoll elaboration calls prices task world =
+      .ok (.pending, successor, after, cost)) :
+    ∃ next, Inv f types inventory (.waiting tag frame successor) next ∧
+      encode D types f (.waiting tag frame successor) = some next := by
+  have member : Command.await name future boundary ∈ f.body :=
+    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
+  have polled := await_runTaskPoll_rep elaboration calls prices tag name future boundary
+    member represented successful
+  obtain ⟨storage, childStored⟩ := polled.storage
+  have newMarks : MarksRep inventory (.waiting tag future) (.waiting tag frame successor) := marks
+  exact waiting_phase_inv inventory tag command
+    ⟨(saved, storage, ()), .waiting tag future frame successor saved storage slots childStored⟩ newMarks
+
+/-- A Pending poll in the total model retains the phase tag, frame and
+    owned marks, including for partial joins. -/
 public theorem await_pending_preserves
     (elaboration : Elaboration D V Λ types f)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
@@ -369,15 +397,12 @@ public theorem await_pending_preserves
     ∃ next, Inv f types inventory (.waiting tag frame answer.2.1) next ∧
       encode D types f (.waiting tag frame answer.2.1) = some next := by
   intro model answer pending
-  have member : Command.await name future boundary ∈ f.body :=
-    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
-  have polled : PollRep D types [tag] future answer.1 answer.2.1 :=
-    await_poll_rep elaboration calls prices normal tag name future boundary member represented world
-  obtain ⟨storage, childStored⟩ := polled.storage
-  have newMarks : MarksRep inventory (.waiting tag future) (.waiting tag frame answer.2.1) := marks
-  refine ⟨?_, waiting_phase_inv inventory tag command ⟨(saved, storage, ()), ?_⟩ newMarks⟩
-  · simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
-    rw [show (pollTask model task world).1 = Poll.pending from pending]
-  · exact .waiting tag future frame answer.2.1 saved storage slots childStored
+  have successful : runTaskPoll elaboration calls prices task world =
+      .ok (.pending, answer.2.1, answer.2.2.1, answer.2.2.2) := by
+    rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← pending]
+  refine ⟨?_, await_runTaskPoll_pending_preserves elaboration calls prices inventory tag name future
+    boundary rest command frame task saved child slots represented marks successful⟩
+  simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  rw [show (pollTask model task world).1 = Poll.pending from pending]
 
 end Gabbro.Grammatik.Async.Representation
