@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Images.Correctness
 public import Stage0.Senke.Bild.Emitted
+public import Stage0.Senke.Bild.Mehr.Ort.SingleThread
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -23,6 +24,22 @@ structure LoadedIRImage (output : Emitted src reserve options) (memory : imageTS
 def Emitted.irEntry (output : Emitted src reserve options) (memory : imageTSO.St) :
     Cfg imageTSO (Res T) :=
   ⟨memory, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
+
+/-- Until the first host observation, the loaded image runs on its one
+    initial thread. Its entire buffer-visible execution has an SC run
+    with the same endpoint and memory. -/
+theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
+    (loaded : LoadedIRImage output memory)
+    (path : ProcessPrefix imageTSO actI (output.irEntry memory) [] count finish) :
+    let startSC := BildMehr.singleThreadSC (imageToTSO (output.irEntry memory))
+    let finishSC := BildMehr.singleThreadSC (imageToTSO finish)
+    ∃ steps, steps ≤ count ∧ finish.ths.length = 1 ∧
+      ProcessPrefix (SC L0) actI startSC [] steps finishSC ∧
+      startSC.ms.1 = memory.1.m ∧ finishSC.ms.1 = finish.ms.1.view 0 := by
+  obtain ⟨owned, steps, bound, run⟩ := BildMehr.tso_silent_single_thread
+    (image_prefix_tso path) rfl rfl (privateBuffers_empty loaded.emptyBuffers)
+  exact ⟨steps, bound, path.silent_slots rfl, run, mergedView_empty _ _ loaded.emptyBuffers,
+    BildMehr.singleThreadView _ owned⟩
 
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
