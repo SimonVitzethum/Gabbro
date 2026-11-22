@@ -144,17 +144,18 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.capture_frameMemory [kernel : 
 /-- A private request advances the same IR continuation in the reference
     and the scheduled image. For a native scalar answer the proof needs
     uniqueness of that operation's word, as holds for comparisons. -/
-theorem image_private_continuation [Kern] {before after : imageTSO.St} {thread : Nat}
+private theorem image_private_continuation [kernel : Kern] {before after : imageTSO.St} {thread : Nat}
     {reads writes : W → Prop} {localMemory finish : Mem} {target : T}
     {request : Op} {resume : Ans → Res T} {answer : Ans}
-    (reference : Run (.ask request resume) localMemory target finish)
+    (reference : @Run kernel.withoutSyscalls (.ask request resume) localMemory target finish)
     (blind : Blind (.ask request resume))
     (scope : HostFreeControl reads writes (.ask request resume))
     (agreement : GleichAuf reads (before.1.view thread) localMemory)
     (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
       NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
     (replied : imageTSO.ans before thread request answer after) :
-    ∃ updated, Run (resume answer) updated target finish ∧ GleichAuf reads (after.1.view thread) updated := by
+    ∃ updated, @Run kernel.withoutSyscalls (resume answer) updated target finish ∧
+      GleichAuf reads (after.1.view thread) updated := by
   cases reference with
   | ask expected rest =>
     have memory : istSpeicherOp request = true := by
@@ -164,7 +165,7 @@ theorem image_private_continuation [Kern] {before after : imageTSO.St} {thread :
     rw [expected] at exactAnswer
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj exactAnswer)
     exact ⟨_, continued.symm ▸ rest, same⟩
-  | sys _ _ => exact (scope.1 _ rfl).elim
+  | sys impossible _ => exact False.elim impossible
   | fp expected rest =>
     obtain ⟨rfl, word, rfl, observed⟩ := replied.1
     have same := nativeUnique _ _ _ _ _ rfl expected observed
@@ -174,16 +175,17 @@ theorem image_private_continuation [Kern] {before after : imageTSO.St} {thread :
 /-- The remaining instructions of an established IR region. Its current
     instruction may be between requests, and the last full instruction
     ends at the same fixed boundary in every case. -/
-def IRContinuation [Kern] (target : T) (finish : Mem) (control : Res T) (memory : Mem) : Prop :=
+def IRContinuation [kernel : Kern] (target : T) (finish : Mem) (control : Res T) (memory : Mem) : Prop :=
   match control with
-  | .next pointer => ∃ count, IRReference count pointer memory target finish
+  | .next pointer => ∃ count, @IRReference kernel.withoutSyscalls count pointer memory target finish
   | .ask .. => ∃ next middle count,
-      Run control memory next middle ∧ IRReference count next middle target finish
+      @Run kernel.withoutSyscalls control memory next middle ∧
+      @IRReference kernel.withoutSyscalls count next middle target finish
   | .fault | .unk => False
 
-private theorem IRContinuation.ofRun [Kern] {target next : T} {memory middle finish : Mem}
-    {control : Res T} {count : Nat} (step : Run control memory next middle)
-    (remaining : IRReference count next middle target finish) :
+private theorem IRContinuation.ofRun [kernel : Kern] {target next : T} {memory middle finish : Mem}
+    {control : Res T} {count : Nat} (step : @Run kernel.withoutSyscalls control memory next middle)
+    (remaining : @IRReference kernel.withoutSyscalls count next middle target finish) :
     IRContinuation target finish control memory := by
   cases control with
   | next pointer =>
@@ -191,6 +193,13 @@ private theorem IRContinuation.ofRun [Kern] {target next : T} {memory middle fin
     exact ⟨count, remaining⟩
   | ask request resume => exact ⟨next, middle, count, step, remaining⟩
   | fault | unk => cases step
+
+theorem IRContinuation.noHost [Kern] {target : T} {memory finish : Mem} {request : Req} {resume : Ans → Res T}
+    (pending : IRContinuation target finish (.ask (.sys request) resume) memory) : False := by
+  obtain ⟨_, _, _, instruction, _⟩ := pending
+  cases instruction with
+  | ask impossible _ => cases impossible
+  | sys impossible _ => exact impossible
 
 /-- Decoding the next instruction either opens the remaining reference
     or identifies the exact boundary where the region has finished. -/
@@ -222,9 +231,10 @@ theorem IRContinuation.answer [Kern] {before after : imageTSO.St} {thread : Nat}
 
 /-- Adjacent regions preserve the unfinished part of the current
     instruction while extending its eventual destination. -/
-theorem IRContinuation.append [Kern] {control : Res T} {memory middle finish : Mem}
+theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle finish : Mem}
     {target next : T} {count : Nat}
-    (first : IRContinuation target middle control memory) (suffix : IRReference count target middle next finish) :
+    (first : IRContinuation target middle control memory)
+    (suffix : @IRReference kernel.withoutSyscalls count target middle next finish) :
     IRContinuation next finish control memory := by
   cases control with
   | next pointer =>
@@ -252,6 +262,7 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   running : let frame := slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
       (BitVec.ofNat 64 FB)
     IRContinuation (lowered.bodyEntry frame) finish control reference
+  blind : Blind control
   agrees : GleichAuf reads memory reference
 
 /-- A scheduler change outside the retained reference's read scope
@@ -264,7 +275,39 @@ theorem ImageProloguePhase.transport [Kern] {output : Emitted src reserve option
     (alive : nextState.lebt thread = true) (sameHead : nextState.m.faeden thread = state.m.faeden thread) :
     ImageProloguePhase output E thread control nextMemory nextState :=
   ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered, phase.reads,
-    phase.reference, phase.finish, phase.lowered, phase.running,
+    phase.reference, phase.finish, phase.lowered, phase.running, phase.blind,
     fun byte inside => (sameBytes byte inside).trans (phase.agrees byte inside)⟩
+
+/-- Decoding either advances a prologue or identifies the precise memory
+    and pointer at which the source body can be admitted. -/
+theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {pointer : T}
+    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread (.next pointer) memory state) :
+    let frame := slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) (BitVec.ofNat 64 FB)
+    (pointer = phase.lowered.bodyEntry frame ∧ GleichAuf phase.reads memory phase.finish) ∨
+      Nonempty (ImageProloguePhase output E thread (IR.step pointer) memory state) := by
+  intro frame
+  rcases IRContinuation.decode phase.running with ⟨boundary, reference⟩ | progress
+  · exact .inl ⟨boundary, reference ▸ phase.agrees⟩
+  · exact .inr ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
+      phase.reads, phase.reference, phase.finish, phase.lowered, progress, blind_step pointer, phase.agrees⟩⟩
+
+/-- An actual memory or native response leaves the root headed to the
+    same lowered entry and retains agreement on the active read scope. -/
+theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {before after : imageTSO.St}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread (.ask request resume) (before.1.view thread) state)
+    (scope : HostFreeControl phase.reads (imageStackFootprint output thread) (.ask request resume))
+    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
+      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
+    (response : imageTSO.ans before thread request answer after) :
+    Nonempty (ImageProloguePhase output E thread (resume answer) (after.1.view thread) state) := by
+  obtain ⟨updated, progress, kept⟩ :=
+    IRContinuation.answer phase.running phase.blind scope phase.agrees nativeUnique response
+  exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered, phase.reads,
+    updated, phase.finish, phase.lowered, progress, phase.blind.weiter answer, kept⟩⟩
 
 end Gabbro.Stage0

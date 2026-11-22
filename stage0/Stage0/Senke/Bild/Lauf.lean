@@ -141,7 +141,7 @@ theorem IRReference.append {first second : Nat} {entry middle target : T} {befor
   induction initial with
   | start => simpa only [Nat.zero_add] using suffix
   | extend instruction _ ih =>
-    simpa only [Nat.succ_add] using IRReference.extend instruction ih
+    simpa only [Nat.succ_add] using IRReference.extend instruction (ih suffix)
 
 /-- An arbitrary memory-only prefix consumes that many reference
     instructions with identical intermediate memories. The remaining
