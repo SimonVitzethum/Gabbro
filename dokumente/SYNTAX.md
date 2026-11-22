@@ -851,8 +851,9 @@ local `start` and a compile-time count `N`. The complete interval of
 `start` must be nonnegative and fit with `N` inside the array length.
 The result is a value of array type with length `N`.
 Stage 0 also supports `lenof(array[first .. last])` and
-`array[first .. last][index]` when the array and integer operands are
-locals. The endpoint ranges must imply `0 <= first <= last <= lenof(array)`.
+`array[first .. last][index]` for a local array. Each integer operand can
+be a local with a resolved interval or a static expression.
+The endpoint ranges must imply `0 <= first <= last <= lenof(array)`.
 The index range must imply `0 <= index < last - first`. The numeric locals
 must have resolved intervals. These forms compute the length or read the
 original array directly.

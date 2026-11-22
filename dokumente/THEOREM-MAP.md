@@ -8419,22 +8419,27 @@ issuer's reservation.
 the actual loaded arguments and the reachable dormant GX head.
 `Emitted.code_survives_writes` uses the exact end of the emitted code
 to preserve its byte representation under confined writes.
+`Emitted.root_call_enter` executes the emitted child's call under TSO.
+It reaches the relocated body with its exact typed arguments and depth.
 
 ## 214. Runtime slice values and direct observations
 
 `BoundedSlice` has a static capacity and exposes only the elements within
 its runtime length. `ArraySliceView.value_ofEndpoints` and
 `ArraySliceView.value_subslice` identify an offset and length with the model
-value, including composed views. The array update lemmas characterize
+value, including composed views. `ArraySliceView.relocated_value_eq_iff`
+characterizes equality by runtime length and the corresponding element
+reads, independently of the offsets. The array update lemmas characterize
 when a stored view keeps its original value after a backing update.
 `ValueAt.slice_element` identifies all words of each viewed element in the
 original Stage 0 array encoding.
 `ValueAt.slice_view` and `SliceAt.subslice` keep the same backing bytes
 when constructing or composing the view.
 
-With local arrays and endpoints whose declared integer ranges establish
-the bounds, `lowWertE_localArraySliceLength` lowers the length observation
-to a difference and `lowWertE_localArraySliceIndex` lowers a local index
-observation to a direct array read. Their evaluation lemmas relate both
+With local arrays and verified operand intervals,
+`lowWertE_arraySliceLength` lowers the length observation to a difference
+and `lowWertE_localArraySliceIndex` lowers indexing to a direct array read.
+The operands can mix static integers and locals with resolved intervals.
+Their evaluation lemmas relate both
 operations to the same half-open slice value. Standalone runtime slice
 values and arbitrary runtime substrings still need executable lowering.

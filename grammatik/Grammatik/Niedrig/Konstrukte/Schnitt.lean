@@ -72,6 +72,22 @@ def BoundedSlice.subslice {α : Type} {capacity : Nat} (slice : BoundedSlice α 
   ⟨last - first, by have high := bounds.2; have fits := slice.fits; omega,
     arrSliceValue slice.get first last bounds⟩
 
+/-- Slice equality observes the actual length and exactly its elements. -/
+theorem BoundedSlice.eq_iff {α : Type} {capacity : Nat} (left right : BoundedSlice α capacity) :
+    left = right ↔ ∃ length : left.length = right.length,
+      ∀ i : Fin left.length, left.get i = right.get (Fin.cast length i) := by
+  constructor
+  · rintro rfl
+    exact ⟨rfl, fun _ => rfl⟩
+  · obtain ⟨leftLength, leftFits, leftGet⟩ := left
+    obtain ⟨rightLength, rightFits, rightGet⟩ := right
+    rintro ⟨length, observed⟩
+    dsimp only at length observed
+    subst rightLength
+    have same : leftGet = rightGet := funext observed
+    subst rightGet
+    rfl
+
 /-- Offset and length suffice to represent a slice of an immutable array
     value. A physical implementation must preserve that backing value. -/
 structure ArraySliceView (capacity : Nat) where
@@ -117,21 +133,21 @@ theorem ArraySliceView.value_subslice {α : Type} {capacity : Nat} (view : Array
     BoundedSlice.mk (last - first) _ (arrSliceValue (view.read array) first last bounds)
   rw [same]
 
+/-- Relocating a slice descriptor preserves the value exactly when its
+    runtime length and the translated element reads are preserved. -/
+theorem ArraySliceView.relocated_value_eq_iff {α : Type} {capacity : Nat}
+    (left right : ArraySliceView capacity) (saved current : Fin capacity → α) :
+    left.value saved = right.value current ↔ ∃ length : left.length = right.length,
+      ∀ index : Fin left.length, left.read saved index = right.read current (Fin.cast length index) :=
+  BoundedSlice.eq_iff _ _
+
 /-- A candidate backing array can stand for the saved value exactly
     when each observable slice element agrees on its translated index. -/
 theorem ArraySliceView.value_eq_iff {α : Type} {capacity : Nat} (view : ArraySliceView capacity)
     (saved current : Fin capacity → α) :
     view.value saved = view.value current ↔ ∀ index, view.read saved index = view.read current index := by
-  constructor
-  · intro equal index
-    have projected := congrArg (fun slice : BoundedSlice α capacity => (⟨slice.length, slice.get⟩ :
-      Σ n : Nat, Fin n → α)) equal
-    have reads : view.read saved = view.read current := eq_of_heq (Sigma.mk.inj projected).2
-    exact congrFun reads index
-  · intro slots
-    have reads := funext slots
-    change BoundedSlice.mk view.length _ (view.read saved) = BoundedSlice.mk view.length _ (view.read current)
-    rw [reads]
+  rw [view.relocated_value_eq_iff view saved current]
+  exact ⟨fun ⟨_, same⟩ => same, fun same => ⟨rfl, same⟩⟩
 
 /-- An update outside the represented range leaves the saved slice value
     unchanged, even if the same backing allocation is reused. -/
