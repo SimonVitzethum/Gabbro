@@ -179,7 +179,7 @@ theorem lowS_ok_forever {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
       exact ⟨entry.ctx, entry.small, entry.frame, codeAt_left emittedCode,
         codeFar_left (n := control.length) (k := 4) emittedFar,
         entry.env, trivial, wstab_true _ _⟩
-    case edge => simpa [ci, II.o, II.f] using backCode 0 (by simp)
+    case edge => simpa [ci, II.o, II.f, show (18 : Opcode).val = 18 from rfl] using backCode 0 (by simp)
     case stopCode => rw [stopAddress]; exact budgetCode
     case htc => omega
     case htb => omega
