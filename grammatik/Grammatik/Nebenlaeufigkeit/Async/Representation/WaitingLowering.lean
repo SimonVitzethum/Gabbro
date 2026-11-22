@@ -239,7 +239,12 @@ public theorem lowerLeafPoll_pending (elaboration : Elaboration D V Λ types f) 
   dsimp only at executed
   rw [pending, pollAnswerArms_pending] at executed
   have silent : arm.orte = [] := by
-    simp only [arm, leafPendingExpr, waitingExpr_reads, activeLeafExpr, Expr.orte, NutzlastExpr.orte, List.nil_append]
+    change (waitingExpr types f tag command (Expr.var (.there (.there saved)))
+      (activeLeafExpr types [tag] name args (Expr.var .here)) :
+      Expr D (types.childState name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+        Λ (stateType types f)).orte = []
+    rw [waitingExpr_reads]
+    rfl
   simp only [silent, noRead] at executed
   let current : Wert D (taskStorageType types [tag] (.call name args)) :=
     readyAnswer D (types.childState name) (types.childResult name) updated
@@ -333,7 +338,9 @@ public theorem lowerLeafPoll_ready (elaboration : Elaboration D V Λ types f) (i
   dsimp only at executed
   rw [completed, pollAnswerArms_ready] at executed
   let extended := Env.cons result (.cons reply env)
-  let storage := readyBindingFrame (Λ := Λ) types f (.running (tag + 1)) destination sourceType same binding (.there saved)
+  let storage : Expr D (types.childResult name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ (frameType types f) :=
+    readyBindingFrame types f (.running (tag + 1)) destination sourceType same binding (.there saved)
   obtain ⟨silentFrame, frameRep⟩ := readyBindingFrame_rep (Λ := Λ) destination sourceType same binding
     (await_retains_live tag destination (.call name args) boundary rest command) (.there saved) after
     (.cons reply env) result frame stored
@@ -351,5 +358,76 @@ public theorem lowerLeafPoll_ready (elaboration : Elaboration D V Λ types f) (i
   have invariant : Inv f types inventory target value :=
     runningValue_inv types f inventory (tag + 1) within _ nextFrame frameRep marks
   exact ⟨value, executed, invariant, inv_encoded f types inventory _ value invariant⟩
+
+/-- A resolved leaf await simulates the actual poll outcome. Every typed
+    successful answer is accounted for, and a failed call propagates its cause. -/
+public theorem lowerLeafPoll_simulates (elaboration : Elaboration D V Λ types f) (inventory : Inventory D)
+    (tag : Nat) (within : tag + 1 ≤ f.body.length) (destination name : String)
+    {args : List Parser.SExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (sourceType : Parser.STyp) (same : types.childResult name = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (child : Var Γ (types.childState name)) (saved : Var Γ (frameType types f))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (stored : FrameRep D types f (.waiting tag (.call name args)) frame (env.get saved))
+    (owned : MarksRep inventory (.waiting tag (.call name args)) (.waiting tag frame (.leaf (.active name (env.get child)))))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag (.call name args))) :
+    let ready := leafReadyExpr (Λ := Λ) types f tag within destination name sourceType same binding saved
+    let executed := execBlock oracle passes calls (lowerLeafPoll (V := V) (l := l) types f tag command
+      callee child saved state finished ready) world env
+    match runWaitingPoll elaboration calls prices tag destination frame (.leaf (.active name (env.get child))) world with
+    | .error (.inl logic) => executed = .logik logic
+    | .error (.inr hardware) => executed = .hardware hardware
+    | .ok (event, target, after, _) =>
+      ∃ value, executed = .ok after
+          (match event with | .pending => (env.set state value).set finished true | _ => env.set state value) ∧
+        Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro ready executed
+  have fails {cause : Logik D ⊕ Hardware D}
+      (failed : runChildPoll callee calls prices (env.get child) world = .error cause) :
+      executed = (match cause with | .inl logic => .logik logic | .inr hardware => .hardware hardware) := by
+    let arguments := leafPollArguments callee child
+    obtain ⟨silent, argsEval⟩ := leafPollArguments_eval callee child world world env
+    have evaluated : world.lese Λ arguments.orte = world := by
+      change world.lese Λ (leafPollArguments callee child).orte = world
+      rw [silent]
+      rfl
+    exact childPollBlock_reports_failure oracle passes calls prices callee arguments
+      (pollAnswerArms state finished ready (leafPendingExpr types f tag command saved)) world env (env.get child)
+      (by simpa only [evaluated, arguments] using argsEval) (by simpa only [evaluated] using failed)
+  cases returned : calls callee.poll world (pollEnvironment callee (env.get child)) with
+  | why _ reason => exact keinGrund callee.pollInfallible reason
+  | logik logic =>
+    simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
+      bind, Except.bind]
+    exact fails (by simp only [runChildPoll, returned, decodeChildOutcome])
+  | hardware hardware =>
+    simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
+      bind, Except.bind]
+    exact fails (by simp only [runChildPoll, returned, decodeChildOutcome])
+  | ok after answer =>
+    generalize converted : ergWert callee.pollResult answer = reply
+    obtain ⟨⟨caseTag, bound⟩, payload⟩ := reply
+    cases caseTag with
+    | zero =>
+      obtain ⟨run, proof⟩ := lowerLeafPoll_ready (V := V) (l := l) elaboration inventory tag within destination name
+        command sourceType same binding callee known child saved state finished oracle passes calls prices world after
+        env frame stored owned sameInventory answer payload returned converted
+      rw [run]
+      exact proof
+    | succ caseTag =>
+      cases caseTag with
+      | zero =>
+        obtain ⟨run, proof⟩ := lowerLeafPoll_pending (V := V) (l := l) elaboration inventory tag command
+          callee known child saved state finished ready oracle passes calls prices world after env frame stored owned
+          answer payload returned converted
+        rw [run]
+        exact proof
+      | succ caseTag =>
+        have invalid : caseTag + 2 < 2 := bound
+        omega
 
 end Gabbro.Grammatik.Async.Representation
