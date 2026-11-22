@@ -94,6 +94,12 @@ theorem wpGrundA_succ {Λ Λ' : List (Res D)} {n : Nat} (b : Block D V l Γ Λ �
   unfold wpGrundA
   simp only [execGrundHA]
 
+theorem wpSA_breaking {Λ Λ' : List (Res D)} (i : D.Inv) (body : Block D V l Γ Λ Λ') (Q : Ausgang V l Γ → Prop)
+    (σ : World D) (ρ : Env D Γ) :
+    wpSA S O U A passes R (.breaking i body) Q σ ρ ↔ wpBA S O U A passes R body Q σ ρ := by
+  unfold wpSA wpBA
+  simp only [execStmtHA]
+
 end HA
 
 /-! ## The return obligation at a known outcome -/

@@ -52,4 +52,24 @@ theorem programm_von {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u)
 
 #print axioms programm_von
 
+
+/-- Every function of an accepted lowering is lowered. -/
+theorem lower_ok {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : lowerAllg u = .ok (P, fs)) (g : Fin u.fns.length) : ∃ v, lowerFnAt u g = .ok v :=
+  let ⟨v, hv, _⟩ := programm_von h g; ⟨v, hv⟩
+
+/-- The postcondition of any function `g` of the program: that of its own lowering. -/
+theorem ensures_eq {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : lowerAllg u = .ok (P, fs)) (g : Fin u.fns.length) :
+    P.ensures g = (lowerAtPair u g (lower_ok h g)).1 := by
+  obtain ⟨v, hv, he, _⟩ := programm_von h g
+  rw [he, lowerAtPair_von g (lower_ok h g) hv]
+
+/-- The precondition of any function `g` of the program: that of its own lowering. -/
+theorem requires_eq {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : lowerAllg u = .ok (P, fs)) (g : Fin u.fns.length) :
+    P.requires g = (if (fnAt u g).needs = [] then Expr.tru else (lowerAtPair u g (lower_ok h g)).2.2) := by
+  obtain ⟨v, hv, _, _, hr⟩ := programm_von h g
+  rw [hr, lowerAtPair_von g (lower_ok h g) hv]
+
 end Gabbro.Bruecke
