@@ -50,6 +50,84 @@ public theorem slotsRep_encoded (types : TypeResolution) (live : List String)
     simp only [encodeSlots, *, ite_true, ite_false, Option.bind_eq_bind,
       Option.bind_some, Option.pure_def] <;> rfl
 
+/-- Generate the ordinary product arguments for the smaller live set.
+    Retained slots are projected at their declared types. Dead slots
+    use the absent tag, which has no source payload. -/
+@[expose] public def trimSlotArgs {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution)
+    (keep : List String) : (fields : List (String × Parser.STyp)) →
+    (∀ {τ}, FieldAt (slotTypes types fields) τ → Expr D Γ Λ τ) →
+    Args D Γ Λ (slotTypes types fields)
+  | [], _ => .nil
+  | (name, sourceType) :: rest, project =>
+    let type := types.ordinary sourceType
+    let argument := if name ∈ keep then project .here
+      else Expr.case [none, some type] ⟨0, Nat.zero_lt_succ 1⟩ .empty
+    .cons argument (trimSlotArgs types keep rest (fun field => project (.there field)))
+
+public theorem trimSlotArgs_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution)
+    (keep : List String) (fields : List (String × Parser.STyp))
+    (project : ∀ {τ}, FieldAt (slotTypes types fields) τ → Expr D Γ Λ τ)
+    (localRead : ∀ {τ} (field : FieldAt (slotTypes types fields) τ), (project field).orte = []) :
+    (trimSlotArgs types keep fields project).orte = [] := by
+  induction fields with
+  | nil => rfl
+  | cons field rest ih =>
+    obtain ⟨name, sourceType⟩ := field
+    have tail := ih (fun field => project (.there field)) (fun field => localRead (.there field))
+    by_cases live : name ∈ keep
+    · simp only [trimSlotArgs, live, ite_true, Args.orte, localRead, tail, List.nil_append]
+    · simp only [trimSlotArgs, live, ite_false, Args.orte, Expr.orte, NutzlastExpr.orte, tail, List.nil_append]
+
+/-- The generated arguments preserve exactly the represented fields
+    required by the next phase. The projection function is tied to the
+    original typed record by the ordinary expression evaluator. -/
+public theorem trimSlotArgs_rep {Γ : Ctx} {Λ : List (Res D)} {oldLive keep : List String}
+    {frame : Frame (Value D)}
+    (kept : ∀ name ∈ keep, name ∈ oldLive) (entry world : World D) (env : Env D Γ)
+    {fields : List (String × Parser.STyp)} {payload : ProdVal D.Fn D.passt (slotTypes types fields)}
+    (represented : SlotsRep D types oldLive frame fields payload) :
+    ∀ (project : ∀ {τ}, FieldAt (slotTypes types fields) τ → Expr D Γ Λ τ),
+      (∀ {τ} (field : FieldAt (slotTypes types fields) τ), eval entry (project field) world env = prodGetW field payload) →
+      SlotsRep D types keep frame fields (evalProd entry (trimSlotArgs types keep fields project) world env) := by
+  induction represented with
+  | nil => exact fun _ _ => .nil
+  | @dead name sourceType fields rest unused tail ih =>
+    intro project exactField
+    have removed : name ∉ keep := fun member => unused (kept name member)
+    have following := ih (fun field => project (.there field)) (fun field => exactField (.there field))
+    simpa only [trimSlotArgs, removed, ite_false, evalProd] using
+      (SlotsRep.dead (sourceType := sourceType) removed following)
+  | @live name sourceType value ordinary fields rest needed found typed tail ih =>
+    intro project exactField
+    have following := ih (fun field => project (.there field)) (fun field => exactField (.there field))
+    by_cases retained : name ∈ keep
+    · simpa only [trimSlotArgs, retained, ite_true, evalProd, exactField, prodGetW] using
+        (SlotsRep.live retained found typed following)
+    · simpa only [trimSlotArgs, retained, ite_false, evalProd] using
+        (SlotsRep.dead (sourceType := sourceType) retained following)
+
+/-- Rebuild the canonical frame from its saved local, clearing exactly
+    the slots outside the selected live set. -/
+@[expose] public def trimFrameExpr {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution)
+    (f : AsyncFn) (keep : List String) (saved : Var Γ (frameType types f)) :
+    Expr D Γ Λ (frameType types f) :=
+  Expr.prod (types.recordName [0])
+    (trimSlotArgs types keep (f.params ++ f.fields) (fun field => Expr.prodGet (.var saved) field))
+
+public theorem trimFrameExpr_rep {Γ : Ctx} {Λ : List (Res D)} {f : AsyncFn}
+    {frame : Frame (Value D)} {oldLive keep : List String}
+    (saved : Var Γ (frameType types f)) (kept : ∀ name ∈ keep, name ∈ oldLive)
+    (entry world : World D) (env : Env D Γ)
+    (represented : SlotsRep D types oldLive frame (f.params ++ f.fields) (env.get saved)) :
+    let expression : Expr D Γ Λ (frameType types f) := trimFrameExpr types f keep saved
+    expression.orte = [] ∧
+      SlotsRep D types keep frame (f.params ++ f.fields) (eval entry expression world env) := by
+  refine ⟨?_, ?_⟩
+  · exact trimSlotArgs_reads types keep (f.params ++ f.fields) (fun field => Expr.prodGet (.var saved) field)
+      (fun _ => rfl)
+  · exact trimSlotArgs_rep kept entry world env represented (fun field => Expr.prodGet (.var saved) field)
+      (fun _ => rfl)
+
 /-- Only source values live AFTER construction are needed while waiting.
     The awaited destination itself is not initialised until Ready. -/
 @[expose] public def liveAt (f : AsyncFn) : Phase → List String
