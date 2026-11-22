@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Ruf.RootAdmission
+public import Stage0.Senke.Bild.Ruf.RootMemory
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
