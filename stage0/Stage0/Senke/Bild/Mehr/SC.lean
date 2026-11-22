@@ -57,4 +57,39 @@ theorem sc_memAns_rd {L : Lay} {s s' : (SC L).St} {i n : Nat} {x : W} {a : Ans}
       subst hw
       simp [memAns, rdN, hr]
 
+/-- The memory answer of a generated request is a valid SC answer
+    on the same bytes. A write or CAS preserves the dispatch table,
+    and a read takes the allowed zero auxiliary word. -/
+theorem memAns_sc {L : Lay} {s : (SC L).St} {i : Nat}
+    {request : Op} {a : Ans} {after : Mem}
+    (width : ∀ n x, request = .rd n x → n = 1 ∨ n = 4 ∨ n = 8)
+    (answer : memAns s.1 request = some (a, after)) :
+    ∃ invariant : TabInv L after, (SC L).ans s i request a ⟨after, invariant⟩ := by
+  cases request with
+  | rd n address =>
+    obtain rfl | rfl | rfl := width n address rfl <;>
+      simp only [memAns, Option.some.injEq, Prod.mk.injEq] at answer <;>
+      obtain ⟨rfl, rfl⟩ := answer
+    all_goals
+      refine ⟨s.2, rfl, 0, ?_⟩
+      simp only [rdN, Option.map_map, Function.comp_def]
+  | wr address value =>
+    cases written : s.1.wr64 address value <;>
+      simp only [memAns_wr, written, Option.some.injEq, Prod.mk.injEq] at answer <;>
+      obtain ⟨rfl, rfl⟩ := answer
+    · exact ⟨s.2, .inl ⟨written, rfl, rfl⟩⟩
+    · exact ⟨s.2.keep (wr64_keeps written), .inr ⟨_, written, rfl, rfl⟩⟩
+  | cas address expected value =>
+    cases compared : s.1.cas address expected value with
+    | none =>
+      simp only [memAns_cas, compared, Option.some.injEq, Prod.mk.injEq] at answer
+      obtain ⟨rfl, rfl⟩ := answer
+      exact ⟨s.2, .inl ⟨compared, rfl, rfl⟩⟩
+    | some returned =>
+      rcases returned with ⟨old, changed⟩
+      simp only [memAns_cas, compared, Option.some.injEq, Prod.mk.injEq] at answer
+      obtain ⟨rfl, rfl⟩ := answer
+      exact ⟨s.2.keep (cas_keeps compared), .inr ⟨_, _, compared, rfl, rfl⟩⟩
+  | fp | sys => cases answer
+
 end Gabbro.Stage0.Senke.BildMehr
