@@ -357,6 +357,9 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     {initial : imageTSO.St} (loaded : LoadedIRImage output initial)
     (unit : ImageModelUnit output E) {O : Orakel (declOf output.compiled.unit)}
     {history : List Ev} {count index : Nat} {before after : Cfg imageTSO (Res T)}
+    {spawnView : Mem} (spawnTable : TabInv L0 spawnView)
+    (spawnCode : BytesAt spawnView codeBase (output.image.code.flatMap encII))
+    (spawnFrame : FrameOK spawnView (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {id extra : W}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))}
     {start : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
@@ -386,15 +389,25 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     let parent : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index + 2)), BitVec.ofNat 64 output.image.fp0⟩
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
-    before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
-      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)) →
+    (∃ seen resume, before.ths[0]? = some (some (.ask (.sys seen) resume)) ∧
+      SoloLauf ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)), parent.fp⟩ spawnView
+        (.ask (.sys seen) resume) (before.ms.1.view 0)) →
     let events : List Ev := [(0, cloneReq, some (id, extra))]
     ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O (history ++ events) after next ∧
       ImageForeignTrace output (history ++ events) next ∧
       ImageObservation output E O state next after (0, cloneReq, some (id, extra)) ∧
       ImageRuntimePartition footprint output E O (history ++ events) after next (body ++ [none]) := by
-  intro parent child waiting events
+  intro parent child startup events
   have within := (List.getElem?_eq_some_iff.mp declared).1
+  obtain ⟨seen, resume, running, solo⟩ := startup
+  obtain ⟨_, _, _, _, unique⟩ := output.workerReference spawnTable spawnCode spawnFrame within
+  have control := (unique solo).1
+  have parentEq : (⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)) + BitVec.ofNat 64 (16 * 2),
+      BitVec.ofNat 64 output.image.fp0⟩ : T) = parent := by
+    dsimp only [parent]
+    rw [← BitVec.ofNat_add, Nat.mul_add, Nat.add_assoc]
+  rw [parentEq] at control
+  rw [control] at running
   have inside : before.ths.length < E.starts.length := by
     rw [order, unit.starts, List.length_cons]
     exact Nat.succ_lt_succ within
@@ -408,7 +421,7 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
       have unused := (Nat.le_add_right _ _).trans (length ▸ bound)
       future_stack_step (empty.follow prior) (buffers prior) (effects prior unused) step bound)
     declared code slots reached
-  exact image_worker_activation partition slots trace entrySlot waiting parentSite parentReady inside
+  exact image_worker_activation partition slots trace entrySlot running parentSite parentReady inside
     (by simpa only [order] using childPhase) observed positive
 
 end Gabbro.Stage0

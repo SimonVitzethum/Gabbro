@@ -63,7 +63,7 @@ theorem SoloLauf.host_unique [Kern] {start boundary : T} {before middle after : 
       | ask answer _ => cases answer
     | next executed later =>
       obtain ⟨rfl, rfl⟩ := first.det executed.run
-      exact ih ⟨_, _, _, later, Or.inr pending⟩
+      exact ih tail ⟨_, _, _, later, Or.inr pending⟩
 
 /-- A memory-only execution of an instruction tree supplies the SC
     reference up to its residual control, including pending host calls. -/
