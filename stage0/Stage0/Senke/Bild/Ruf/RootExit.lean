@@ -147,7 +147,7 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
       (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + offset))) = some word := by
     have readable : Mem.all (second.1.view i).rd (slot fp (BitVec.ofNat 64 (scratch + offset))) 8 = true :=
       frame2.rd (scratch + offset) (by omega)
-    exact ⟨_, by simp only [Mem.rd64, readable, ite_true]⟩
+    exact ⟨_, by simp only [Mem.rd64, readable, ite_true] <;> rfl⟩
   obtain ⟨a2, read2⟩ := arg 2 (by decide)
   obtain ⟨a3, read3⟩ := arg 3 (by decide)
   obtain ⟨a4, read4⟩ := arg 4 (by decide)
