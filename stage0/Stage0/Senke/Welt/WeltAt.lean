@@ -144,6 +144,21 @@ theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
     · trivial
     · exact WeltWr.keep hwr ha.wr
 
+/-- Frame writes leave the authorized world representation intact. -/
+theorem readWorldAt_stab {L : Lay D} {σ : World D} {resources : List (Res D)} {fp : Runner.W} {K : Nat}
+    (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
+    WStab (fun m => ReadWorldAt m L σ resources) fp K := by
+  intro before after stored writes
+  refine ⟨?_, ?_⟩
+  · intro table access field index bound
+    have inside := layout.1 table field index bound
+    exact valueAt_world_stab writes (by omega) (by have := layout.2.2; omega)
+      (stored.table table access field index bound)
+  · intro global access
+    have inside := layout.2.1 global
+    exact valueAt_world_stab writes (by omega) (by have := layout.2.2; omega)
+      (stored.global global access)
+
 /-! ## What a statement changes: its frame's slots from `lo` and the world -/
 
 /-- The byte `x` lies in the world. -/
