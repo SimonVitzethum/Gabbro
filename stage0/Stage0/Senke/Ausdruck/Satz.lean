@@ -32,7 +32,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     have same : t' = t := Option.some.inj (ht'.symm.trans ht)
     subst same
     exact slotValueC_ok hs hK hk hLay (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
-      (fun m stored => (hWL m stored).1 t f _ hk) hp
+      (fun m stored => (hWL m stored).1 _ f _ hk) hp
   | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
   | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
     arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
