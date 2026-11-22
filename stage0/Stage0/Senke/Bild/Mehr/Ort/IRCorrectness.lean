@@ -121,6 +121,50 @@ private theorem singleObservation {before after : Cfg imageTSO (Res T)} {events 
       (Nat.eq_zero_of_le_zero (Nat.le_of_succ_le_succ length))
     exact .inr ⟨event, congrArg (event :: ·) empty⟩
 
+/-- Silent IR stretches preserve the allocation and retirement of slots.
+    An advancing GX segment keeps the retirement evidence for every
+    source head it leaves in place. -/
+theorem ImageSlotsMatch.follow_silent {history : List Ev}
+    {before after : Cfg imageTSO (Res T)} {count : Nat}
+    {state next : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (slots : ImageSlotsMatch output E O history before state)
+    (execution : ProcessPrefix imageTSO actI before [] count after)
+    (advanced : ImageReach output E O state next) (live : next.lebt = state.lebt)
+    (heads : ∀ thread, before.ths[thread]? = some none → next.m.faeden thread = state.m.faeden thread) :
+    ImageSlotsMatch output E O history after next := by
+  have retired_unchanged (thread : Nat) : after.ths[thread]? = some none → before.ths[thread]? = some none := by
+    have setPreserves {slots : List (Option (Res T))} {issuer : Nat} {previous control : Res T}
+        (active : slots[issuer]? = some (some previous))
+        (retired : (slots.set issuer (some control))[thread]? = some none) : slots[thread]? = some none := by
+      by_cases owns : thread = issuer
+      · subst thread
+        rw [List.getElem?_set_self (List.getElem?_eq_some_iff.mp active).1] at retired
+        cases retired
+      · rwa [List.getElem?_set_ne owns.symm] at retired
+    have noRetire {a b : Cfg imageTSO (Res T)} {events : List Ev}
+        (step : ProcessStep imageTSO actI a events b) (quiet : events = [])
+        (retired : b.ths[thread]? = some none) : a.ths[thread]? = some none := by
+      cases step with
+      | tau => exact retired
+      | priv active _ | ask active _ _ _ _ => exact setPreserves active retired
+      | exit | cloneNo | clone => cases quiet
+    generalize quiet : ([] : List Ev) = events at execution
+    induction execution with
+    | nil => exact id
+    | cons step _ ih =>
+      obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet.symm
+      exact fun retired => noRetire step first (ih rest.symm retired)
+  refine ⟨fun thread => by rw [execution.silent_slots rfl, live]; exact slots.1 thread, ?_⟩
+  intro thread retired
+  have beforeSlot := retired_unchanged thread retired
+  rcases slots.2 thread beforeSlot with finished | ⟨atExit, req, earlier, reached, since, head, binding, number, last⟩
+  · left
+    unfold FertigG at finished ⊢
+    rw [heads thread beforeSlot]
+    exact finished
+  · exact .inr ⟨atExit, req, earlier, reached, imageReach_trans since advanced,
+      (heads thread beforeSlot).trans head, binding, number, last⟩
+
 /-- Compose entire silent stretches of the IR execution at its
     observations. Only the last stretch can end inside a block without
     reaching another observation. -/
