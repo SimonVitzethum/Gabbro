@@ -132,7 +132,10 @@ public theorem childPollBlock_exec_return {l : Bool} {Γ : Ctx} {Λ : List (Res 
   have transport {start finish : List (Res D)} (same : start = finish)
       (arm : Arms D V l (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
         start Λ [some (types.childResult name), some (types.childState name)]) :
-      execArms O passes calls (same ▸ arm) reply after (.cons reply env) =
+      execArms O passes calls (Eq.mp (congrArg (fun resources => Arms D V l
+        (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+        resources Λ [some (types.childResult name), some (types.childState name)]) same) arm)
+        reply after (.cons reply env) =
         execArms O passes calls arm reply after (.cons reply env) := by
     cases same
     rfl
