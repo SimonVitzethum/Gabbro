@@ -31,7 +31,7 @@ theorem PCode.withIdle {m : Runner.Mem} {layout : Lay D} {code : D.Fn → List I
         BitVec.toNat_ofNat, Nat.zero_mod, Nat.add_zero, Nat.zero_le, and_true, frame]
       decide
 
-private theorem entryIndex_ruE :
+theorem entryIndex_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
       entryIndex (ruE expr) = entryIndex expr
   | _, _, _, .widen _ _ expr => entryIndex_ruE expr
@@ -79,7 +79,7 @@ private theorem idleColumn (table : D.Tab) (field : D.Feld table) (first count :
   | zero => rfl
   | succ count ih => simp only [EntrySnapshots.column, List.map_cons, Zelle.withIdle, ih]
 
-private theorem idleColumnFits (table : D.Tab) (field : D.Feld table) :
+theorem idleColumnFits (table : D.Tab) (field : D.Feld table) :
     EntrySnapshots.columnFits (D := D.mitRuhe) table field = EntrySnapshots.columnFits (D := D) table field := by
   simp only [EntrySnapshots.columnFits, tyR, valueWords_mapNumbers]
 

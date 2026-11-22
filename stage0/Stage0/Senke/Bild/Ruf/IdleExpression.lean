@@ -52,13 +52,13 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
   | _, _, _, .widen _ _ e, _ | _, _, _, .neg e, _ | _, _, _, .not e, _
   | _, _, _, .strLen e, _ | _, _, _, .strWeit _ e, _ | _, _, _, .some e, _
   | _, _, _, .istSome e, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld e)
-    simp only [lowE] at mapped
-    simp only [lowE, ruE, lowEWith, mapped]
+    have mapped := lowE_withIdle L reserve currentOld e
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
+    simp only [lowE, ruE, lowEWith, tyR, Ty.mapNumbers, mapped, funext mapped]
   | _, _, _, .intBuiltin1 op e, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld e)
-    simp only [lowE] at mapped
-    cases op <;> simp only [lowE, ruE, lowEWith, ibR, BitBuiltin.unary, mapped]
+    have mapped := lowE_withIdle L reserve currentOld e
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
+    cases op <;> simp only [lowE, ruE, lowEWith, ibR, BitBuiltin.unary, tyR, Ty.mapNumbers, mapped, funext mapped]
   | _, _, _, .add a b, _ | _, _, _, .sub a b, _ | _, _, _, .mul a b, _
   | _, _, _, .lt a b, _ | _, _, _, .le a b, _ | _, _, _, .eq a b, _
   | _, _, _, .fllt a b, _ | _, _, _, .flle a b, _ | _, _, _, .and a b, _
@@ -69,72 +69,72 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
   | _, _, _, .strCat a b, _ | _, _, _, .strGet a b, _ | _, _, _, .strEq a b, _
   | _, _, _, .strLt a b, _ | _, _, _, .refEq a b, _ | _, _, _, .eng a _ _ b, _
   | _, _, _, .arrCons a b, _ => by
-    have left := funext (lowE_withIdle L reserve currentOld a)
-    have right := funext (lowE_withIdle L reserve currentOld b)
-    simp only [lowE] at left right
+    have left := lowE_withIdle L reserve currentOld a
+    have right := lowE_withIdle L reserve currentOld b
+    simp only [lowE, tyR, Ty.mapNumbers] at left right
     simp only [lowE, ruE, lowEWith, inUE, inWE, nichtMin, lt64, Ty.mapNumbers,
-      valueWords_mapNumbers, left, right]
+      valueWords_mapNumbers, left, right, funext left, funext right]
   | _, _, _, .intBuiltin2 op a b, _ => by
-    have left := funext (lowE_withIdle L reserve currentOld a)
-    have right := funext (lowE_withIdle L reserve currentOld b)
-    simp only [lowE] at left right
-    cases op <;> simp only [lowE, ruE, lowEWith, ibR, intBuiltin2L, left, right]
+    have left := lowE_withIdle L reserve currentOld a
+    have right := lowE_withIdle L reserve currentOld b
+    simp only [lowE, tyR, Ty.mapNumbers] at left right
+    cases op <;> simp only [lowE, ruE, lowEWith, ibR, intBuiltin2L, tyR, Ty.mapNumbers, left, right, funext left, funext right]
   | _, _, _, .slot _ _ index _, _ | _, _, _, .thru _ _ _ _ index _, _
   | _, _, _, .thruOwn _ _ _ _ index _ _ _ _ _ _, _ | _, _, _, .slotRef index _ _ _ _ _, _
   | _, _, _, .oldS _ _ index _, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld index)
-    simp only [lowE] at mapped
+    have mapped := lowE_withIdle L reserve currentOld index
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
     simp only [lowE, ruE, lowEWith, Deklaration.mitRuhe, tyR,
-      valueWords_mapNumbers, slotValueC_withIdle, mapped]
+      valueWords_mapNumbers, Ty.mapNumbers, slotValueC_withIdle, mapped]
   | _, _, _, .getBytes _ _ _ _ index _ _ _, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld index)
-    simp only [lowE] at mapped
-    simp only [lowE, ruE, lowEWith, readBytesWideL_withIdle, mapped]
+    have mapped := lowE_withIdle L reserve currentOld index
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
+    simp only [lowE, ruE, lowEWith, readBytesWideL_withIdle, tyR, Ty.mapNumbers, funext mapped]
   | _, _, _, .forallSlots _ body _, _ | _, _, _, .existsSlots _ body _, _
   | _, _, _, .count _ body, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld body)
-    simp only [lowE] at mapped
-    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle, Deklaration.mitRuhe, mapped]
+    have mapped := lowE_withIdle L reserve currentOld body
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
+    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle, Deklaration.mitRuhe, tyR, Ty.mapNumbers, List.map_cons, mapped]
   | _, _, _, .reaches _ _ _ a b _, _ => by
-    have left := funext (lowE_withIdle L reserve currentOld a)
-    have right := funext (lowE_withIdle L reserve currentOld b)
-    simp only [lowE] at left right
-    simp only [lowE, ruE, lowEWith, reachesL_withIdle, left, right]
+    have left := lowE_withIdle L reserve currentOld a
+    have right := lowE_withIdle L reserve currentOld b
+    simp only [lowE, tyR, Ty.mapNumbers] at left right
+    simp only [lowE, ruE, lowEWith, reachesL_withIdle, tyR, Ty.mapNumbers, left, right]
   | _, _, _, .wenn cond a b, _ => by
-    have test := funext (lowE_withIdle L reserve currentOld cond)
-    have left := funext (lowE_withIdle L reserve currentOld a)
-    have right := funext (lowE_withIdle L reserve currentOld b)
-    simp only [lowE] at test left right
-    simp only [lowE, ruE, lowEWith, test, left, right]
+    have test := lowE_withIdle L reserve currentOld cond
+    have left := lowE_withIdle L reserve currentOld a
+    have right := lowE_withIdle L reserve currentOld b
+    simp only [lowE, tyR, Ty.mapNumbers] at test left right
+    simp only [lowE, ruE, lowEWith, tyR, Ty.mapNumbers, test, left, right]
   | _, _, _, .arrGet a i, _ => by
-    have address := funext (lowStorage_withIdle L reserve currentOld a)
-    have array := funext (lowE_withIdle L reserve currentOld a)
-    have index := funext (lowE_withIdle L reserve currentOld i)
-    simp only [lowE, lowStorage] at address array index
+    have address := lowStorage_withIdle L reserve currentOld a
+    have array := lowE_withIdle L reserve currentOld a
+    have index := lowE_withIdle L reserve currentOld i
+    simp only [lowE, lowStorage, tyR, Ty.mapNumbers] at address array index
     simp only [lowE, ruE, lowEWith, storedExpr_ru, arrReadL, arrGetL,
-      tyR, Ty.mapNumbers, valueWords_mapNumbers, address, array, index]
+      tyR, Ty.mapNumbers, valueWords_mapNumbers, valueWords, address, array, index]
   | _, _, _, .arrSet a i v, _ => by
-    have array := funext (lowE_withIdle L reserve currentOld a)
-    have index := funext (lowE_withIdle L reserve currentOld i)
-    have value := funext (lowE_withIdle L reserve currentOld v)
-    simp only [lowE] at array index value
-    simp only [lowE, ruE, lowEWith, arrSetL, tyR, Ty.mapNumbers, valueWords_mapNumbers, array, index, value]
+    have array := lowE_withIdle L reserve currentOld a
+    have index := lowE_withIdle L reserve currentOld i
+    have value := lowE_withIdle L reserve currentOld v
+    simp only [lowE, tyR, Ty.mapNumbers] at array index value
+    simp only [lowE, ruE, lowEWith, arrSetL, tyR, Ty.mapNumbers, valueWords_mapNumbers, valueWords, array, index, value]
   | _, _, _, .prodGet v field, _ => by
-    have value := funext (lowE_withIdle L reserve currentOld v)
-    simp only [lowE] at value
+    have value := lowE_withIdle L reserve currentOld v
+    simp only [lowE, tyR, Ty.mapNumbers] at value
     simp only [lowE, ruE, lowEWith, prodGetL, productOffset_withIdle,
       tyR, Ty.mapNumbers, valueWords_mapNumbers, productWords_mapFields, valueWords, value]
   | _, _, _, .prodSet v field next, _ => by
-    have source := funext (lowE_withIdle L reserve currentOld v)
-    have value := funext (lowE_withIdle L reserve currentOld next)
-    simp only [lowE] at source value
+    have source := lowE_withIdle L reserve currentOld v
+    have value := lowE_withIdle L reserve currentOld next
+    simp only [lowE, tyR, Ty.mapNumbers] at source value
     simp only [lowE, ruE, lowEWith, prodSetL, productOffset_withIdle,
       tyR, Ty.mapNumbers, valueWords_mapNumbers, productWords_mapFields, valueWords, source, value]
   | _, _, _, .prod _ args, dst => by
-    have mapped := (lowProdArgs_types _ (ruA args) L.withIdle dst reserve currentOld).trans
+    have mapped := (lowProdArgs_types (Ty.map_eq_mapFields (· + 1) id _) (ruA args) L.withIdle dst reserve currentOld).trans
       (lowProdArgs_withIdle L reserve currentOld args dst)
     simp only [lowProdArgs] at mapped
-    simp only [lowE, ruE, lowEWith, mapped]
+    simp only [lowE, ruE, lowEWith, tyR, Ty.mapNumbers, mapped, funext mapped]
   | _, _, _, .case cases tag payload, dst => by
     let cast := (Ty.mapCases_get (· + 1) id cases tag).symm
     have compact := (lowN_kind cast (ruN payload) L.withIdle tag.val dst reserve currentOld).trans
@@ -153,9 +153,9 @@ private theorem lowStorage_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bo
   | _, _, _, .glob .., _ => rfl
   | _, _, _, .slot _ _ i _, _ | _, _, _, .thru _ _ _ _ i _, _
   | _, _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, _ | _, _, _, .slotRef i _ _ _ _ _, _ => by
-    have mapped := funext (lowE_withIdle L reserve currentOld i)
-    simp only [lowE] at mapped
-    simp only [lowStorage, ruE, lowStorageWith, cellAddressC_withIdle, mapped]
+    have mapped := lowE_withIdle L reserve currentOld i
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
+    simp only [lowStorage, ruE, lowStorageWith, cellAddressC_withIdle, tyR, Ty.mapNumbers, mapped]
   | _, _, _, .lit .., _ | _, _, _, .tru .., _ | _, _, _, .fls .., _
   | _, _, _, .ptrOf .., _ | _, _, _, .fnref .., _ | _, _, _, .refEq .., _
   | _, _, _, .oldG .., _ | _, _, _, .oldS .., _ | _, _, _, .widen .., _
@@ -191,9 +191,8 @@ private theorem lowN_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
   | _, _, _, .empty, _, _ => rfl
   | _, _, _, .val (τ := τ) value, tag, dst => by
     have mapped := lowE_withIdle L reserve currentOld value dst
-    simp only [lowE] at mapped
+    simp only [lowE, tyR, Ty.mapNumbers] at mapped
     cases τ <;> simp only [lowN, ruN, lowNWith, Option.map_some, tyR, Ty.mapNumbers, mapped]
-    case ptr ptr => rcases ptr with ⟨_, _, ⟨_⟩⟩; rfl
 termination_by structural _ _ _ p _ _ => p
 
 private theorem lowProdArgs_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :

@@ -37,6 +37,7 @@ public import Stage0.Senke.Bild.Ruf.IdleGates
 public import Stage0.Senke.Bild.Ruf.IdleCounters
 public import Stage0.Senke.Bild.Ruf.IdleOperands
 public import Stage0.Senke.Bild.Ruf.IdleExpression
+public import Stage0.Senke.Bild.Ruf.IdleContracts
 public import Stage0.Senke.Bild.Ruf.RootExit
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Ruf.BodyMemory
