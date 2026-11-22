@@ -52,7 +52,7 @@ theorem exitw_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr s r : Nat} {w : Runne
     simpa using this
   have hF2 := hF1.agree a2
   have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
   have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (nr : Int)) := by
     simp only [m2]
@@ -297,7 +297,7 @@ theorem spawn3_ok {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
     a1.trans a2, ?_⟩
   intro r x hr0 hk
   have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have h0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (a : Int)) := by
     simp only [m2]
     rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]

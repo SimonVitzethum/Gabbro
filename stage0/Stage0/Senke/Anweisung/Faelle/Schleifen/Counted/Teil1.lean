@@ -42,15 +42,15 @@ theorem bin_counted_keep {m : Runner.Mem} {pc fp : Runner.W} {K d na nb : Nat} {
   have hs1 : sx (II.f ((d : Int) + 1)) = BitVec.ofNat 64 (d + 1) := by
     have := sx_nat (d := d + 1) (by omega); simpa using this
   have hi := h2.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have s3 := counted_ins (fp := fp) (m' := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) h2.code ho (by
-    simp only [ci]
+    simp only [ci, II.o]
     rw [hop]
     refine run_bin (t := ⟨_, fp⟩) (m1 := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) hi (va := wa)
       (vb := wb) ?_ ?_ hr ?_
-    · simpa [ci, hs] using ra2
-    · simpa [ci, hs1] using rb
-    · simpa [ci, hs] using hw)
+    · simpa [ci, II.o, hs] using ra2
+    · simpa [ci, II.o, hs1] using rb
+    · simpa [ci, II.o, hs] using hw)
   refine ⟨_, (s1.trans s2).trans ?_, (a1.trans (a2.mono (Nat.le_succ d))).trans a3, r, hrd, pr⟩
   have e : pc + BitVec.ofNat 64 (16 * (ca ++ cb ++ [ci o d d (d + 1)]).length) =
       pc + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * cb.length) +

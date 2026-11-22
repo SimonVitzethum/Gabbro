@@ -106,7 +106,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     have hk1 := hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)
     have spre := s1.trans ((star_cast hcs rfl (by simp)).trans sxor)
     have hbrz := h1.code 0 (by simp)
-    simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
+    simp only [ci, II.o, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
     have h2 := h1.next (a := [ci 19 (frei Γ reserved + 1) (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
       (by omega)
     have hd0 : sx (II.f ((frei Γ reserved : Int) + 1)) = BitVec.ofNat 64 (frei Γ reserved + 1) := by
@@ -123,8 +123,8 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         have := k.lo_le
         simp only [decide_eq_true_eq] at he
         omega
-      have sb := star_ins (fp := fp) (m' := m3) (codeAt_left h1.code) (by simp [ci])
-        (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact rx) hne)
+      have sb := star_ins (fp := fp) (m' := m3) (codeAt_left h1.code) (by simp [ci, II.o])
+        (by simp only [ci, II.o]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact rx) hne)
       have hpt : PreS (reserved := reserved) L m3 _ fp K (frei (.index n :: Γ) reserved) ct (Env.cons (τ := .index n) k ρ) :=
         ⟨by simp only [frei, contextWords_cons, hindex]; omega, h2.small, h2.frame, h2.left.code, h2.left.far,
           envAt_cons h2.env (ValueAt.of_enc hindex ri hi), trivial, wstab_true _ _⟩
@@ -139,7 +139,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         exact tgt_eq (by omega)
       have hc3 := codeAt_agreeWIn hW a2 (codeAt_right h2.code) hf3
       have hjmp := hc3 0 (by simp)
-      simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hjmp
+      simp only [ci, II.o, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hjmp
       have sj := Star.one (run_step (t := ⟨_, fp⟩) hjmp (by decide) (run_jmp (t := ⟨_, fp⟩) hjmp))
       have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
         have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this

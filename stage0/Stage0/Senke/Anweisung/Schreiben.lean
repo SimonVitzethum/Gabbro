@@ -28,9 +28,9 @@ theorem st_step {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.
     (ha : m.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) = some va) (hb : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some vb)
     (hw : m.wr64 va vb = some m') : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m' := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine star_ins hc (by simp [ci]) ?_
-  simp only [ci]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  refine star_ins hc (by simp [ci, II.o]) ?_
+  simp only [ci, II.o]
   exact run_st (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact ha) (by rw [sx_nat (by omega)]; exact hb) hw
 
 /-- The store of a cell at address `a`: the value code `ce` into `s`, the address code `ca` into `s + 1`, `st`. -/

@@ -118,7 +118,7 @@ theorem jmp_reach {L : Lay D} {Γ : Ctx} {m : Runner.Mem} {pc fp : Runner.W} {lo
     (he : EnvAt L m fp ρ reserved) (hw : WeltAt m L σ) :
     Reach L fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * [ci 18 (16 + x) 0 0].length) + BitVec.ofInt 64 x) σ ρ reserved := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   refine ⟨m, star_cast (Star.one (run_step (t := ⟨pc, fp⟩) hi (by decide) (run_jmp (t := ⟨pc, fp⟩) hi))) rfl ?_,
     AgreeW.refl _ _ _ _ _, he, hw, Keeps.refl _ _ _⟩
   simp only [T.mk.injEq, and_true]

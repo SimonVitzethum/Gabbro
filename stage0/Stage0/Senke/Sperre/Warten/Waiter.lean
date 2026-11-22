@@ -29,7 +29,7 @@ theorem ls_cas_waiters (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
     ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (i + 1)), fp⟩ m' ∧
       LS m0 m' fp s a (upd f (b + 4) w) o c (f (b + 2)) := by
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hcas := cas_spec (e := f (b + 1)) (n := f (b + 2)) h.w (by rw [h.ag.wr]; exact E.wr2)
   rw [heq, ite_eq_left rfl] at hcas
@@ -51,7 +51,7 @@ theorem ls_cas_waiters (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
     (by simp only [memAns, heq, hcas]) ?_
   simp only [opt_some, ret1]
   have hI1 := E.ins hL.ag hi
-  simp only [ci] at hI1
+  simp only [ci, II.o] at hI1
   refine f1_run hI1 ?_
   rw [sx_nat (d := s + (b + 4)) (by omega)]
   exact run_wr64 (wr64_some (hF.wr _ (by omega)))

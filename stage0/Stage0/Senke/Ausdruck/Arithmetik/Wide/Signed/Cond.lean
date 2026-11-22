@@ -25,7 +25,7 @@ theorem aluRun_high {K d : Nat} {code : List II} (h : ∀ i ∈ code, AluIns K d
     have hA := h i (List.mem_cons_self ..)
     show slotUpd s i.a.toNat (aluVal i s) j = s j
     apply slotUpd_other
-    cases hA <;> (simp only [ci, Int.toNat_natCast]; omega)
+    cases hA <;> (simp only [ci, II.o, Int.toNat_natCast]; omega)
 
 theorem mask_of_flag (f : Nat) (hf : f < 2) :
     (0 : Runner.W) - BitVec.ofNat 64 f = if f = 1 then BitVec.allOnes 64 else 0 := by

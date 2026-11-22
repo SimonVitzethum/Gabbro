@@ -134,7 +134,7 @@ theorem call_eintritt {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II
         intro k hk
         have : k = 0 := by simp only [List.length_singleton] at hk; omega
         subst k
-        simpa only [ci, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
+        simpa only [ci, II.o, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
       have st := mov_to hc2 hF2 (j := T) (s := F) (by omega) (by omega) hK hread
       simpa only [List.length_singleton, show BitVec.ofNat 64 (16 * 1) = (16 : Runner.W) by decide, e16] using st
   -- 4: call T F

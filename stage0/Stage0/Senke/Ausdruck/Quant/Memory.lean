@@ -17,7 +17,7 @@ theorem span_load_step [Kern] {m : Runner.Mem} {pc fp a w : Runner.W} {K dst ptr
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
       (write m (slot fp (BitVec.ofNat 64 dst)) 8 w.toNat) := by
   have hi := code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   apply Star.one
   apply run_step (t := ⟨pc, fp⟩) hi (by decide)
   simp only [op]
@@ -49,7 +49,7 @@ theorem span_add_step [Kern] {m : Runner.Mem} {pc fp a b : Runner.W} {K dst ptr 
     (offset : m.rd64 (slot fp (BitVec.ofNat 64 dst)) = some b) :
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 dst)) 8 (a + b).toNat) := by
   have hi := code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   apply Star.one
   apply run_step (t := ⟨pc, fp⟩) hi (by decide)
   simp only [op]

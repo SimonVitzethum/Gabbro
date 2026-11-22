@@ -26,10 +26,10 @@ theorem frameAddress_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (pre : Pre L m pc fp K d [ci 17 d base 0] ρ W reserved)
     (baseFits : base < K) (destFits : d < K) :
     Ok m pc fp K d [ci 17 d base 0] (· = slot fp (BitVec.ofNat 64 base)) := by
-  refine one_ok pre (by simp [ci]) destFits rfl fun m' write => ?_
+  refine one_ok pre (by simp [ci, II.o]) destFits rfl fun m' write => ?_
   have instruction := pre.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨_, fp⟩) instruction ?_
   simp only [ret1]
   refine f1_run (t := ⟨_, fp⟩) instruction ?_

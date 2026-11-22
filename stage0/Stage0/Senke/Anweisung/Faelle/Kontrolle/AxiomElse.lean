@@ -56,7 +56,7 @@ private theorem discardGate_result {O : Orakel D} {passes : Nat}
   rcases hgate with ⟨v, m2, rfl, s12, a12, hw⟩ | ⟨r, m2, rfl, s12, a12, hw2, hw⟩ | ⟨rfl, hst⟩
   · have hq := hp'.nextW hW a12 (d' := frei Γ reserved) (by have := hp.ctx; omega) (by omega) (by omega)
     have hj := hq.left.code 0 (by simp)
-    simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
+    simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
     have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp (t := ⟨_, fp⟩) hj))
     have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
       have := sx_nat (d := 16 * (ce.length + 1)) (by simp only [List.length_append, List.length_singleton] at hs; omega)

@@ -54,7 +54,7 @@ theorem code_jmp {m : Mem} {pc fp : W} {code : List II} {i : Nat} {X : Int} (hc 
   obtain ⟨hl, hx⟩ := List.getElem?_eq_some_iff.mp hi
   have hI := hc i hl
   rw [hx] at hI
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   refine Star.one (run_step (t := ⟨_, fp⟩) hI (by decide) ?_)
   simp only [op]
   refine f1_run hI ?_

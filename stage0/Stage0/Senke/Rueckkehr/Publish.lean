@@ -62,7 +62,7 @@ theorem publishResult_run (layout : FrameLayout) {v : ErgVal D layout.result}
   have far3 := codeFar_tail (a := [ci 2 2 layout.canonicalResult 0]) far2
   have code3 := (codeAt_right (a := [ci 2 2 layout.canonicalResult 0]) code2).agree third far3
   have ret := code3 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ret
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ret
   have beforeMirror := first.trans second
   have r0 : m3.rd64 fp = some rp := by
     rw [← slot_zero fp]

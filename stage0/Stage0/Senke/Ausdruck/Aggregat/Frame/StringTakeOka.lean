@@ -26,10 +26,10 @@ theorem bin_exact_ok {a b : Nat} {o : Opcode} {va vb r : Runner.W}
   obtain ⟨hw, hrd, _⟩ := wr_slot hp.frame hd r
   refine ⟨_, ?_, agree_write (K := d + 1) (by have := hp.frame.room; omega) (Nat.le_refl d)
     (Nat.lt_succ_self d) _, hrd⟩
-  refine star_ins hp.code (by simpa [ci] using ho) ?_
+  refine star_ins hp.code (by simpa [ci, II.o] using ho) ?_
   have hi := hp.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o]
   rw [hop]
   apply run_bin hi
   · simpa only [sx_nat (d := a) (by omega)] using ra

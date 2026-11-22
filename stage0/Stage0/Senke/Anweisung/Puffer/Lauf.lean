@@ -25,9 +25,9 @@ theorem lea_step {m : Runner.Mem} {pc fp : Runner.W} {K d a : Nat} (hc : CodeAt 
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 17 d a 0].length), fp⟩
       (write m (slot fp (BitVec.ofNat 64 d)) 8 (slot fp (BitVec.ofNat 64 a)).toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine star_ins hc (by simp [ci]) ?_
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  refine star_ins hc (by simp [ci, II.o]) ?_
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   simp only [ret1]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_

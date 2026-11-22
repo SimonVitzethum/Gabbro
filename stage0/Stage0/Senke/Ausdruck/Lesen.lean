@@ -60,10 +60,10 @@ theorem ld_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : E
     (ha : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some a) (hv : m.rd64 a = some v) :
     Ok m pc fp K d [ci 15 d d 0] (· = v) := by
   have := h.small
-  refine one_ok h (by simp [ci]) hd rfl fun m' hw => ?_
+  refine one_ok h (by simp [ci, II.o]) hd rfl fun m' hw => ?_
   have hi := h.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
   refine run_rd64 ha ?_

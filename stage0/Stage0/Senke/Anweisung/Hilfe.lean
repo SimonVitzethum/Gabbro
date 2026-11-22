@@ -22,9 +22,9 @@ theorem const_to {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
       (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   change Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 1 j k 0].length), fp⟩ _
-  refine star_ins hc (by simp [ci]) ?_
+  refine star_ins hc (by simp [ci, II.o]) ?_
   simp only [op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   simp only [ret1]
@@ -39,9 +39,9 @@ theorem mov_to {m : Runner.Mem} {pc fp : Runner.W} {K j s : Nat} {w : Runner.W}
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 2 j s 0].length), fp⟩
       (write m (slot fp (BitVec.ofNat 64 j)) 8 w.toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine star_ins hc (by simp [ci]) ?_
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  refine star_ins hc (by simp [ci, II.o]) ?_
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
   refine run_rd64 hv ?_
@@ -106,8 +106,8 @@ theorem guard_pass {m : Runner.Mem} {pc fp : Runner.W} {a c s : Nat} {v : Runner
   have hbrz := guard_brz hc
   have hd : sx (II.f (a : Int)) = BitVec.ofNat 64 a := sx_nat (by omega)
   have rb := run_brz_ne (t := ⟨pc, fp⟩) hbrz (by rw [hd]; exact hv) hne
-  have sb := star_ins (fp := fp) (m' := m) (codeAt_left (a := [ci 19 a 32 0]) hc) (by simp [ci])
-    (by simp only [ci]; exact rb)
+  have sb := star_ins (fp := fp) (m' := m) (codeAt_left (a := [ci 19 a 32 0]) hc) (by simp [ci, II.o])
+    (by simp only [ci, II.o]; exact rb)
   have hj := codeAt_right (a := [ci 19 a 32 0]) hc
   have hjmp := hj 0 (by simp [guardC])
   simp only [guardC, ci, List.cons_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hjmp

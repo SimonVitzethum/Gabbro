@@ -66,7 +66,7 @@ theorem wideEng_ok {lo hi lo' hi' : Int} (x : Zahl lo hi) (fallback result : Zah
         fb'.2.1 fb'.2.2 w2
       have h3 := h2.next a3 (Nat.le_refl d) (by omega)
       have brz := h3.code 0 (by simp)
-      simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero,
+      simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero,
         BitVec.add_zero] at brz
       rw [← sx_nat (d := d + engWords lo hi lo' hi' + 3) (by have := hp.small; omega)] at flag
       have narrowed : lo' ≤ x.n ∧ x.n ≤ hi' → ValueAt L m3 fp d (.int lo' hi') result :=

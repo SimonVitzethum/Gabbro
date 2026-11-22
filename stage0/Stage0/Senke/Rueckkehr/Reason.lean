@@ -75,7 +75,7 @@ theorem retWhy_ok {P : Programm D} {σ0 : World D} {reserved : Nat} {f : D.Fn} {
   have far3 := codeFar_tail (a := [ci 1 (q + returnWords (D.erg f) (D.gruende f)) 0 0]) far2
   have code3 := (codeAt_right (a := [ci 1 (q + returnWords (D.erg f) (D.gruende f)) 0 0]) code2).agree a3 far3
   have ret := code3 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ret
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ret
   have head0 : m3.rd64 fp = some rp := by
     rw [← slot_zero fp]
     dsimp only [m3, m2]

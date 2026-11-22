@@ -39,19 +39,18 @@ theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
   have hs1 : sx (II.f ((d : Int) + 1)) = BitVec.ofNat 64 (d + 1) := by
     simpa using (sx_nat (d := d + 1) (by omega))
   have hi := h2.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.ofNat_eq_ofNat, BitVec.add_zero] at hi
-  have opcode := kind.code_bounds
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.ofNat_eq_ofNat, BitVec.add_zero] at hi
   have s3 := star_ins (fp := fp)
     (m' := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) h2.code
-    (by simpa only [ci] using (show kind.code < 256 by omega)) (by
-      simp only [ci]
+    (II.opcode_fits _) (by
+      simp only [ci, II.o, nativeFPOpcode]
       rw [dispatch]
       refine run_fp (t := ⟨_, fp⟩)
         (m1 := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) hi
         (va := wa) (vb := wb) ?_ ?_ hr ?_
-      · simpa [ci, hs] using ra2
-      · simpa [ci, hs1] using rb
-      · simpa [ci, hs] using hw)
+      · simpa [ci, II.o, hs] using ra2
+      · simpa [ci, II.o, hs1] using rb
+      · simpa [ci, II.o, hs] using hw)
   refine ⟨_, (s1.trans s2).trans ?_,
     (a1.trans (a2.mono (Nat.le_succ d))).trans a3, r, hrd, pr⟩
   have finish : pc + BitVec.ofNat 64 (16 * (ca ++ cb ++ [ci (nativeFPOpcode kind) d d (d + 1)]).length) =

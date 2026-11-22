@@ -228,10 +228,10 @@ theorem counter_header {D : Deklaration} {L : Lay D} {H : List D.Lock} {P : Prog
   obtain ⟨positive, subtract⟩ := counter_fuel_step n fits
   obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofNat 64 n)
   have run1 := Star.one (counter_positive (t := ⟨pc, fp⟩) test
-    (by simpa only [ci, sc] using read) positive)
+    (by simpa only [ci, II.o, sc] using read) positive)
   have run2 := Star.one (counter_decrement (t := ⟨pc + 16, fp⟩) dec
-    (by simpa only [ci, sc] using read) (by simpa only [ci, so] using readOne)
-    (by simpa only [ci, sc, subtract] using write))
+    (by simpa only [ci, II.o, sc] using read) (by simpa only [ci, II.o, so] using readOne)
+    (by simpa only [ci, II.o, sc, subtract] using write))
   have allFrame := frame.mono low
   have env := (reserved_write_preserves (L := L) (j := counter - FB) (BitVec.ofNat 64 n).toNat
     pre.frame.room bound (by omega) pre.env).1

@@ -30,7 +30,7 @@ theorem ls_cas_serve (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i 
       LS m0 m' fp s a (upd f d c) o (if c = f x then f (x + 1) else c) w := by
   subst hD hA hX
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hcas := cas_spec (e := f x) (n := f (x + 1)) h.c (by rw [h.ag.wr]; exact E.wr1)
   have hL1 : LS m0 (if c = f x then write m (BitVec.ofNat 64 (a + 8)) 8 (f (x + 1)).toNat else m) fp s a f
@@ -56,7 +56,7 @@ theorem ls_cas_serve (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i 
   refine .ask (a := some (c, 0)) (m' := m1) (by simp only [memAns, hcas]) ?_
   simp only [opt_some, ret1]
   have hI1 := E.ins hL1.ag hi
-  simp only [ci] at hI1
+  simp only [ci, II.o] at hI1
   refine f1_run hI1 ?_
   rw [sx_nat (d := s + d) (by omega)]
   exact run_wr64 (wr64_some (hF.wr _ (by omega)))

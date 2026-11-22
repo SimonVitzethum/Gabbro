@@ -87,7 +87,7 @@ theorem aluRun_append (a b : List II) (s : Nat → Runner.W) :
 /-- Slots below the destination bound are never written by admitted code. -/
 theorem aluStep_low {K d : Nat} {i : II} (h : AluIns K d i) (s : Nat → Runner.W) {j : Nat}
     (hj : j < d) : aluStep i s j = s j := by
-  cases h <;> (apply slotUpd_other; simp only [ci, Int.toNat_natCast]; omega)
+  cases h <;> (apply slotUpd_other; simp only [ci, II.o, Int.toNat_natCast]; omega)
 
 theorem aluRun_low {K d : Nat} {code : List II} (h : ∀ i ∈ code, AluIns K d i)
     (s : Nat → Runner.W) {j : Nat} (hj : j < d) : aluRun code s j = s j := by
@@ -121,7 +121,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
   | const a k h1 h2 hk =>
     have ins' : InsAt m pc 1 (II.f a) (II.f k) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (BitVec.ofInt 64 k) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simp [ci]) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simp [ci, II.o]) ?_, ag, fun j hj => ?_⟩
     · show Run (op 1 ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       simp only [op]
       refine f2_run (t := ⟨pc, fp⟩) ins' ?_
@@ -133,7 +133,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
   | mov a b h1 h2 h3 =>
     have ins' : InsAt m pc 2 (II.f a) (II.f b) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (s b) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simp [ci]) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simp [ci, II.o]) ?_, ag, fun j hj => ?_⟩
     · show Run (op 2 ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       simp only [op]
       refine f2_run (t := ⟨pc, fp⟩) ins' ?_
@@ -148,7 +148,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
   | bin o a b c f hf h1 h2 h3 h4 =>
     have ins' : InsAt m pc o (II.f a) (II.f b) (II.f c) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (f (s b) (s c)) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simpa [ci] using aluFn_lt hf) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simpa [ci, II.o] using aluFn_lt hf) ?_, ag, fun j hj => ?_⟩
     · show Run (op o ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       rw [aluFn_op hf]
       refine run_bin (t := ⟨pc, fp⟩) (m1 := m1) ins' (va := s b) (vb := s c) ?_ ?_ rfl ?_

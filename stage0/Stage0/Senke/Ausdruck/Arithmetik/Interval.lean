@@ -20,10 +20,10 @@ theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b reserved : Nat} 
     (hop : op o = bin g) (ho : o.val < 256) (hg : g va vb = some r) :
     Ok m pc fp K d [ci o d a b] (· = r) := by
   have := hp.small
-  refine one_ok hp (by simpa [ci] using ho) hd rfl fun m' hw => ?_
+  refine one_ok hp (by simpa [ci, II.o] using ho) hd rfl fun m' hw => ?_
   have hi := hp.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o]
   rw [hop]
   apply run_bin hi
   · simpa only [sx_nat (d := a) (by omega)] using ra
