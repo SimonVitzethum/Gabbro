@@ -31,6 +31,49 @@ end
   | .call _ args => argumentNames args
   | .join a b => futureNames a ++ futureNames b
 
+/-- Each leaf is a nominal child, including leaves of nested joins.
+    Argument expressions do not introduce additional future edges. -/
+@[expose] public def FutureExpr.callees : FutureExpr → List String
+  | .call name _ => [name]
+  | .join left right => left.callees ++ right.callees
+
+@[expose] public def AsyncFn.callees (function : AsyncFn) : List String :=
+  function.body.flatMap fun
+    | .bind .. => []
+    | .await _ future _ => future.callees
+
+/-- An ordered batch resolves each child before its parent's generated
+    record can refer to it. Unknown names, duplicate declarations, and
+    direct or indirect recursive futures all fail the same decision. -/
+@[expose] public def asyncOrderB (functions : List AsyncFn) : Bool :=
+  let names := functions.map AsyncFn.name
+  decide names.Nodup && functions.all fun function =>
+    function.callees.all fun child =>
+      names.contains child && decide (names.idxOf child < names.idxOf function.name)
+
+@[expose] public def AsyncDependency (functions : List AsyncFn) (child caller : String) : Prop :=
+  ∃ function ∈ functions, function.name = caller ∧ child ∈ function.callees
+
+/-- The single batch decision supplies a closed, well-founded child
+    relation for construction, polling and destruction of the same
+    declaration graph. -/
+public theorem asyncOrder_sound {functions : List AsyncFn} (ordered : asyncOrderB functions = true) :
+    let names := functions.map AsyncFn.name
+    names.Nodup ∧
+    (∀ child caller, AsyncDependency functions child caller →
+      child ∈ names ∧ names.idxOf child < names.idxOf caller) ∧
+    WellFounded (AsyncDependency functions) := by
+  intro names
+  obtain ⟨distinct, children⟩ := Bool.and_eq_true_iff.mp ordered
+  have edge (child caller : String) (dependency : AsyncDependency functions child caller) :
+      child ∈ names ∧ names.idxOf child < names.idxOf caller := by
+    obtain ⟨function, listed, rfl, called⟩ := dependency
+    have valid := List.all_eq_true.mp (List.all_eq_true.mp children function listed) child called
+    exact ⟨List.contains_iff_mem.mp (Bool.and_eq_true_iff.mp valid).1,
+      of_decide_eq_true (Bool.and_eq_true_iff.mp valid).2⟩
+  exact ⟨of_decide_eq_true distinct, edge,
+    Subrelation.wf (fun h => (edge _ _ h).2) (measure_wf names.idxOf)⟩
+
 @[expose] public def without (name : String) (names : List String) : List String :=
   names.filter (fun candidate => !(candidate == name))
 
