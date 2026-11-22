@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Bild.Ruf.RootMemory
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
+public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 import Stage0.Senke.Bild.ImageAddress
 import Lean.Elab.Tactic.Omega
@@ -12,7 +13,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
-  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
+    Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Beweis Runner.Mach
 
 private theorem body_slot_present [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)} {history : List Ev}
@@ -164,35 +165,43 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
     exact (Option.some.inj (Option.some.inj atSlot)) ▸ blind)
   exact ⟨step, image_body_local_change length related indices roots present covers buffers' otherViews relatedStep⟩
 
-/-- A flush is silent even while other roots are entering. Removing a
-    pending private stack store preserves the SC projection and each
-    root's code, arguments, and exact pending control. -/
+/-- A silent flush preserves the IR projection, startup frames,
+    admitted bodies, and ticket registry for the same GX state. -/
 theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    {memory : imageTSO.St}
-    (matched : ImageRuntimeMatchesAt (imageStackFootprint output) output E O history before state)
+    {memory : imageTSO.St} {N : Nat} {tickets : _ → Faeden.Zustand N}
+    (matched : ImageRuntimeMatchesAt (Faeden.imageProtectedFootprint output state.m)
+      output E O history before state)
+    (registry : Faeden.ImageTicketStates output.image.Y.withIdle before.ms.1.m state.m tickets)
+    (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
+    (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (allocated : before.ths.length ≤ output.starts.length + 1)
     (pastLoader : before.ths[0]? ≠ some (some Runner.Beweis.t4))
     (flushed : imageTSO.tau before.ms memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths⟩
     ProcessStep imageTSO actI before [] after ∧
-      ImageRuntimeMatchesAt (imageStackFootprint output) output E O history after state := by
+      ImageRuntimeMatchesAt (Faeden.imageProtectedFootprint output state.m) output E O history after state ∧
+      Faeden.ImageTicketStates output.image.Y.withIdle memory.1.m state.m tickets := by
   intro after
   obtain ⟨body, buffers, length, registered, roots⟩ := matched
-  have projection := projectSCState_flush (layout := L0) flushed (imageStackFootprint output)
-    (fun i store pending byte hit => (buffers i store pending byte hit).1) buffers.disjoint
+  obtain ⟨step, buffers', projection, registry'⟩ := registry.flush synchronized bound buffers
+    (fun _ _ lockByte _ owned =>
+      Faeden.imageProtectedFootprint_lock_disjoint inLayout synchronized order owned lockByte) flushed
   have preserved := tso_flush_preserves_views (layout := L0) flushed (imageRootReads output) (by
     intro i store pending j different address readable written
     have privateByte := (buffers i store pending address written).1
     rcases readable with own | code
-    · exact different (imageStackFootprint_disjoint own privateByte)
-    · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans privateByte.2.1))
-  refine ⟨.tau flushed, body, buffers.flush flushed, length, ?_, ?_⟩
+    · exact different (Faeden.imageProtectedFootprint_stack_owner inLayout privateByte own)
+    · rcases privateByte with stack | data
+      · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans stack.2.1)
+      · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans
+          (Faeden.protectedCellFootprint_bounds inLayout data).1))
+  refine ⟨step, ⟨body, buffers', length, ?_, ?_⟩, registry'⟩
   · change _ ∨ ∃ snapshots positions committed,
       MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-        ⟨(projectSCState (imageStackFootprint output) memory).1, body⟩ state snapshots positions committed ∧ _
+        ⟨(projectSCState (Faeden.imageProtectedFootprint output state.m) memory).1, body⟩ state snapshots positions committed ∧ _
     rw [projection]
     exact registered
   · intro thread

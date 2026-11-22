@@ -94,7 +94,7 @@ theorem ImageTicketStates.transport {D : Deklaration} {N : Nat}
   refine ⟨fun lock => TicketWordsAt.agree_lock (current.words lock) ((separate.1 lock).2.trans bound) (words lock),
     current.protocol, ?_⟩
   intro lock
-  exact ⟨fun thread => ((current.owners lock).inside thread).trans (owners lock thread.val).symm,
+  exact ⟨fun thread => ((current.owners lock).inside thread).trans (owners lock thread.val),
     fun thread beyond held => (current.owners lock).outside thread beyond ((owners lock thread).mpr held)⟩
 
 /-- A transition at one lock preserves the entire collection. Machine
@@ -312,18 +312,7 @@ theorem ImageTicketStates.flush [Kern] {D : Deklaration} {N : Nat} {layout : Lay
     rw [changed]
     exact (write_nurIn _ _ _).gleichAt (fun hit =>
       outside lock byte lockByte issuer (buffers issuer (address, value) pending byte hit).1)
-  refine ⟨?_, current.protocol, current.owners⟩
-  intro lock
-  have fits := (geometry.1 lock).2.trans bound
-  have read (offset : Nat) (within : offset ≤ 16) :
-      memory.1.m.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) =
-        machine.ms.1.m.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) :=
-    gleich_rd64 fun byte hit => stable lock byte (lockWord_in_bytes fits within hit)
-  have first := read 0 (by decide)
-  rw [Nat.add_zero] at first
-  exact ⟨first.trans (current.words lock).next,
-    (read 8 (by decide)).trans (current.words lock).serving,
-    (read 16 (by decide)).trans (current.words lock).waiters⟩
+  exact current.transport geometry bound stable (fun _ _ => Iff.rfl)
 
 /-- A control-only lock transition can change the entire waiter queue.
     Only its ownership bits and the three physical counters must stay
