@@ -301,15 +301,15 @@ private theorem liveBindingFrame_rep {Γ : Ctx} {Λ : List (Res D)}
     (needed : destination ∈ liveAt f next)
     (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
     (saved : Var Γ (frameType types f)) (entry world : World D)
-    (env : Env D (types.ordinary sourceType :: Γ)) (frame : Frame (Value D))
+    (env : Env D (types.ordinary sourceType :: Γ)) (frame : Frame (Value D)) (result : Value D)
+    (typed : valueAt D (types.ordinary sourceType) result = some (env.get .here))
     (represented : FrameRep D types f before frame (env.get (.there saved))) :
     let keep := without destination (liveAt f next)
     let slot := (frameSlot types destination sourceType (f.params ++ f.fields) binding).val
-    let result := Value.typed (types.ordinary sourceType) (env.get .here)
     let updated : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=
       saveSlotExpr types f (trimFrameExpr types f keep (.there saved)) slot (.var .here)
     FrameRep D types f next (save frame destination result) (eval entry updated world env) := by
-  intro keep slot result updated
+  intro keep slot updated
   have kept (name : String) (member : name ∈ keep) : name ∈ liveAt f before := by
     have present := List.mem_filter.mp (show name ∈ (liveAt f next).filter
       (fun candidate => !(candidate == destination)) from member)
@@ -324,7 +324,6 @@ private theorem liveBindingFrame_rep {Γ : Ctx} {Λ : List (Res D)}
   have trimmed := (trimFrameExpr_rep (Λ := Λ) (.there saved) kept entry world env represented.slots).2
   have named : NamedFrameSlot types destination sourceType (f.params ++ f.fields) slot :=
     (frameSlot types destination sourceType (f.params ++ f.fields) binding).property
-  have typed : valueAt D (types.ordinary sourceType) result = some (env.get .here) := valueAt_typed D _ _
   have stored := named.save_rep typed needed stable represented.unique trimmed
   refine ⟨?_, ?_, represented.unique⟩
   · exact stored
@@ -370,16 +369,16 @@ public theorem bindingFrameExpr_rep {Γ : Ctx} {Λ : List (Res D)}
     (binding : (f.params ++ f.fields).lookup destination = some sourceType)
     (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
     (saved : Var Γ (frameType types f)) (entry world : World D)
-    (env : Env D (types.ordinary sourceType :: Γ)) (frame : Frame (Value D))
+    (env : Env D (types.ordinary sourceType :: Γ)) (frame : Frame (Value D)) (result : Value D)
+    (typed : valueAt D (types.ordinary sourceType) result = some (env.get .here))
     (represented : FrameRep D types f before frame (env.get (.there saved))) :
-    let result := Value.typed (types.ordinary sourceType) (env.get .here)
     let expression : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=
       bindingFrameExpr types f next destination sourceType binding saved
     FrameRep D types f next (save frame destination result) (eval entry expression world env) := by
-  intro result expression
+  intro expression
   by_cases needed : destination ∈ liveAt f next
   · simpa only [expression, bindingFrameExpr, if_pos needed] using
-      liveBindingFrame_rep (Λ := Λ) destination sourceType binding needed retained saved entry world env frame represented
+      liveBindingFrame_rep (Λ := Λ) destination sourceType binding needed retained saved entry world env frame result typed represented
   · simp only [expression, bindingFrameExpr, if_neg needed]
     have kept (name : String) (live : name ∈ liveAt f next) : name ∈ liveAt f before :=
       retained name live (fun equal => needed (equal ▸ live))

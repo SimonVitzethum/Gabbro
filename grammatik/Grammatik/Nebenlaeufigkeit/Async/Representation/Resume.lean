@@ -252,7 +252,7 @@ public theorem lowerRunningBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
   have noRead (current : World D) : current.lese Λ [] = current := rfl
   let record := eval answer.2.1 update answer.2.1 (.cons answer.1 env)
   have stored := bindingFrameExpr_rep (Λ := Λ) destination sourceType binding retained saved
-    answer.2.1 answer.2.1 (.cons answer.1 env) frame represented
+    answer.2.1 answer.2.1 (.cons answer.1 env) frame (.typed _ answer.1) (valueAt_typed D _ _) represented
   have stillOwned : MarksRep inventory (.running (tag + 1)) resumed := by
     simpa only [MarksRep, resumed, State.marks, save, sameInventory] using marks
   let value := runningValue D types f (tag + 1) within record

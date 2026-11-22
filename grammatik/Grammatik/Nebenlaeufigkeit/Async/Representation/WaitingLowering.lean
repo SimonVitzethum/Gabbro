@@ -271,15 +271,16 @@ public theorem readyBindingFrame_rep {before next : Phase} (destination : String
     (binding : (f.params ++ f.fields).lookup destination = some sourceType)
     (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
     (saved : Var Γ (frameType types f)) (world : World D) (env : Env D Γ) (result : Wert D actual)
-    (frame : Frame (Value D)) (represented : FrameRep D types f before frame (env.get saved)) :
+    (frame : Frame (Value D)) (source : Value D) (typed : valueAt D actual source = some result)
+    (represented : FrameRep D types f before frame (env.get saved)) :
     let expression : Expr D (actual :: Γ) Λ (frameType types f) :=
       readyBindingFrame types f next destination sourceType same binding saved
-    expression.orte = [] ∧ FrameRep D types f next (save frame destination (Value.typed actual result))
+    expression.orte = [] ∧ FrameRep D types f next (save frame destination source)
       (eval world expression world (.cons result env)) := by
   subst actual
   exact ⟨bindingFrameExpr_reads types f next destination sourceType binding saved,
     bindingFrameExpr_rep (Λ := Λ) destination sourceType binding retained saved world world
-      (.cons result env) frame represented⟩
+      (.cons result env) frame source typed represented⟩
 
 /-- The Ready arm saves its typed result, clears dead slots and advances
     to the selected Running case. -/
@@ -343,7 +344,7 @@ public theorem lowerLeafPoll_ready (elaboration : Elaboration D V Λ types f) (i
     readyBindingFrame types f (.running (tag + 1)) destination sourceType same binding (.there saved)
   obtain ⟨silentFrame, frameRep⟩ := readyBindingFrame_rep (Λ := Λ) destination sourceType same binding
     (await_retains_live tag destination (.call name args) boundary rest command) (.there saved) after
-    (.cons reply env) result frame stored
+    (.cons reply env) result frame (.typed _ result) (valueAt_typed D _ _) stored
   have silent : ready.orte = [] := (runningExpr_reads types f (tag + 1) within storage).trans silentFrame
   simp only [silent, noRead] at executed
   let nextFrame := eval after storage after extended
