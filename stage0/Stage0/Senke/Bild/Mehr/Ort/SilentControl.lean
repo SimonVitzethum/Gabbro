@@ -86,39 +86,50 @@ private theorem SCSchritt.slots {layout : Runner.Beweis.Lay} {i : Nat}
     after.ths.length = before.ths.length := by
   cases step <;> exact List.length_set
 
-/-- Every silent one-thread execution that stays within the length of
-    a memory reference is a prefix of that same reference. The endpoint
-    and its remaining memory operations are fixed by the executable
-    instruction tree, regardless of the unused read answer word. -/
+private theorem SCMemoryPrefix.consume_to_boundary {layout : Runner.Beweis.Lay}
+    {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
+    (reference : SCMemoryPrefix layout before available expected)
+    (actual : ProcessPrefix (SC layout) actI before [] taken after)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths)
+    (bound : taken ≤ available ∨ ∀ next, ¬ ProcessStep (SC layout) actI expected [] next) :
+    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected := by
+  suffices consume : ∀ {before after : Cfg (SC layout) (Res T)} {events taken},
+      ProcessPrefix (SC layout) actI before events taken after →
+      events = [] → before.ths.length = 1 → AlleBlind before.ths →
+      ∀ {expected available}, SCMemoryPrefix layout before available expected →
+        (taken ≤ available ∨ ∀ next, ¬ ProcessStep (SC layout) actI expected [] next) →
+        taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected from
+    consume actual rfl one blind reference bound
+  intro initial final events taken run
+  induction run with
+  | nil =>
+    intro _ _ _ target available reference _
+    exact ⟨Nat.zero_le _, by simpa only [Nat.sub_zero] using reference⟩
+  | cons step _ ih =>
+    intro quiet one blind target available reference bound
+    obtain ⟨first, remaining⟩ := List.append_eq_nil_iff.mp quiet
+    cases reference with
+    | nil =>
+      rcases bound with within | blocked
+      · omega
+      · exact (blocked _ (first ▸ step)).elim
+    | cons head tail =>
+      have same := sc_memory_step_exact one blind head step first
+      cases same
+      have room := bound.imp Nat.le_of_succ_le_succ id
+      obtain ⟨within, rest⟩ := ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
+      exact ⟨Nat.succ_le_succ within, by simpa only [Nat.succ_sub_succ_eq_sub] using rest⟩
+
+/-- A silent one-thread execution within the reference length is a
+    prefix of that reference, with a uniquely determined remainder. -/
 theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
     {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
     (reference : SCMemoryPrefix layout before available expected)
     (actual : ProcessPrefix (SC layout) actI before [] taken after)
     (one : before.ths.length = 1) (blind : AlleBlind before.ths)
     (within : taken ≤ available) :
-    SCMemoryPrefix layout after (available - taken) expected := by
-  suffices consume : ∀ {before after : Cfg (SC layout) (Res T)} {events taken},
-      ProcessPrefix (SC layout) actI before events taken after →
-      events = [] → before.ths.length = 1 → AlleBlind before.ths →
-      ∀ {expected available}, SCMemoryPrefix layout before available expected → taken ≤ available →
-        SCMemoryPrefix layout after (available - taken) expected from
-    consume actual rfl one blind reference within
-  intro initial final events taken run
-  induction run with
-  | nil =>
-    intro _ _ _ target available reference _
-    simpa only [Nat.sub_zero] using reference
-  | cons step _ ih =>
-    intro quiet one blind target available reference within
-    cases reference with
-    | nil => omega
-    | cons head tail =>
-      obtain ⟨first, remaining⟩ := List.append_eq_nil_iff.mp quiet
-      have same := sc_memory_step_exact one blind head step first
-      cases same
-      have room : _ ≤ _ := Nat.le_of_succ_le_succ within
-      simpa only [Nat.succ_sub_succ_eq_sub] using
-        ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
+    SCMemoryPrefix layout after (available - taken) expected :=
+  (reference.consume_to_boundary actual one blind (.inl within)).2
 
 private theorem sc_waiting_host_no_silent {layout : Runner.Beweis.Lay}
     {before after : Cfg (SC layout) (Res T)} {events : List Ev}
@@ -133,7 +144,6 @@ private theorem sc_waiting_host_no_silent {layout : Runner.Beweis.Lay}
   cases step with
   | tau impossible => cases impossible
   | priv ready moved =>
-    subst_vars
     have ready := issuer ready
     cases ready
     cases moved
@@ -155,25 +165,8 @@ theorem SCMemoryPrefix.consume_until_host {layout : Runner.Beweis.Lay}
     (waiting : expected.ths = [some (.ask (.sys request) resume)])
     (actual : ProcessPrefix (SC layout) actI before [] taken after)
     (one : before.ths.length = 1) (blind : AlleBlind before.ths) :
-    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected := by
-  suffices bounded : ∀ {start finish : Cfg (SC layout) (Res T)} {events done},
-      ProcessPrefix (SC layout) actI start events done finish → events = [] →
-      start.ths.length = 1 → AlleBlind start.ths →
-      ∀ {budget}, SCMemoryPrefix layout start budget expected → done ≤ budget from
-    let within := bounded actual rfl one blind reference
-    ⟨within, reference.consume actual one blind within⟩
-  intro start finish events done run
-  induction run with
-  | nil => exact fun _ _ _ _ _ => Nat.zero_le _
-  | cons step _ ih =>
-    intro quiet one blind budget reference
-    obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet
-    cases reference with
-    | nil => exact (sc_waiting_host_no_silent waiting step first).elim
-    | cons next reference =>
-      have same := sc_memory_step_exact one blind next step first
-      cases same
-      exact Nat.succ_le_succ (ih rest (next.slots.trans one) (alleBlind_schritt next blind) reference)
+    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected :=
+  reference.consume_to_boundary actual one blind (.inr fun _ step => sc_waiting_host_no_silent waiting step rfl)
 
 private theorem actI_ask_no_terminal {control : Res T}
     {request : Op} {resume : Ans → Res (Res T)} {reply : Ans} {ending : Ende}
