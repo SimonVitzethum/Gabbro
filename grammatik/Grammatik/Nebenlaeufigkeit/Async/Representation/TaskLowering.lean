@@ -51,7 +51,7 @@ public theorem storedTag_cached {active result : Ty}
 
 /-- A task step updates only its own private value slot and preserves the
     exact world and error returned by the ordinary calls. -/
-public def TaskStepRep (types : TypeResolution) (path : List Nat) (future : FutureExpr)
+@[expose] public def TaskStepRep (types : TypeResolution) (path : List Nat) (future : FutureExpr)
     (slot : Var Γ (taskStorageType types path future)) (env : Env D Γ) (output : Ausgang V l Γ)
     (model : Except (Logik D ⊕ Hardware D)
       (Poll (Value D) × Task (Value D) (Child D types) × World D × Nat)) : Prop :=
