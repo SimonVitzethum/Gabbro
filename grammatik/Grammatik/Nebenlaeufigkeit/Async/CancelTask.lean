@@ -189,4 +189,33 @@ public theorem TaskDropPlan.lower_simulates {future : FutureExpr} (plan : TaskDr
           | ok => rfl
           | error failure => cases failure <;> rfl
 
+/-- The generated waiting arm reads the child from the actual saved
+    record. The saved continuation frame remains available for release. -/
+@[expose] public def TaskDropPlan.waitingBlock {future : FutureExpr} (plan : TaskDropPlan D types V Λ future)
+    (function : AsyncFn) (tag : Nat) {Γ : Ctx} {l : Bool} :
+    Block D V l (phaseType types function (.waiting tag future) :: Γ) Λ Λ :=
+  .bind (.prodGet (.var .here) (.tail .head)) (.cons (plan.lower [tag] .here) .nil)
+
+public theorem TaskDropPlan.waitingBlock_simulates {future : FutureExpr} (plan : TaskDropPlan D types V Λ future)
+    (function : AsyncFn) (tag : Nat) {Γ : Ctx} {l : Bool}
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (before : World D) (env : Env D Γ) (saved : Wert D (frameType types function))
+    {task : Task (Value D) (Child D types)} {child : Wert D (taskStorageType types [tag] future)}
+    (represented : TaskRep D types [tag] future task child) :
+    ∃ outcome, plan.run calls task before = some outcome ∧
+      (execBlock oracle passes calls (plan.waitingBlock function tag (l := l))
+        before (.cons (saved, child, ()) env)).schrumpf = dropOutcome env outcome := by
+  let stored : Env D (phaseType types function (.waiting tag future) :: Γ) :=
+    .cons (saved, child, ()) env
+  obtain ⟨outcome, dropped, executed⟩ :=
+    plan.lower_simulates oracle passes calls [tag] (l := l) .here before (.cons child stored) represented rfl
+  refine ⟨outcome, dropped, ?_⟩
+  have noReads : before.lese Λ [] = before := by cases before; rfl
+  simp only [TaskDropPlan.waitingBlock, execBlock, Expr.orte, noReads, eval, Env.get, prodGetW]
+  erw [executed]
+  cases outcome with
+  | ok => rfl
+  | error failure => cases failure <;> rfl
+
 end Gabbro.Grammatik.Async.Representation
