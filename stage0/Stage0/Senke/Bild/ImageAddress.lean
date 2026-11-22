@@ -10,7 +10,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
-  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR
+  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
@@ -350,7 +350,8 @@ theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
   obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
   · exact (pastLoader.elim (· firstThread) (· loader)).elim
   have read := answered.1
-  obtain ⟨rfl, extra, rfl⟩ := read
+  obtain ⟨unchanged, extra, rfl⟩ := read
+  subst after
   refine ⟨rfl, .inr ⟨start, chosen, head, code, frame, fits, args, pointer, site, ?_⟩⟩
   have appendRead {entry : Res T}
       (blind : Blind entry)
