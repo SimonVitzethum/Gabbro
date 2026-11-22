@@ -158,11 +158,11 @@ theorem Reach.counter_backedge {D : Deklaration} {L : Lay D} {Γ : Ctx}
     intro k hk
     have : k = 0 := by simpa using hk
     subst k
-    simpa [II.f] using edge
+    simpa [II.f, II.o, show (18 : Opcode).val = 18 from rfl] using edge
   have code' := codeAt_agreeWIn layout frame code far
   have edge' := code' 0 (by simp)
   simp only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at edge'
-  have hj := Star.one (run_step (t := ⟨pc, fp⟩) edge' (by decide)
+  have hj := Star.one (run_step (t := ⟨pc, fp⟩) edge' ((18 : Opcode).isLt)
     (run_jmp (t := ⟨pc, fp⟩) edge'))
   refine ⟨m', run.trans ?_, frame, env, world, keeps, ?_⟩
   · simpa [II.f] using hj
