@@ -66,13 +66,17 @@ Whatever remains in the file is the program's own logic, stated readably. When a
 contract, the violated condition is what remains, for example `x + x = x + x + 1` for a wrong
 `ensures`.
 
-Measured on 110 Stage-0 probes (172 functions), 141 duties are proved by `gabbrov_beweis` alone. Of
-the 31 that remain:
+Measured on 110 Stage-0 probes (172 functions), 148 duties are proved by `gabbrov_beweis` alone. Of
+the 24 that remain:
 
 - 10 are refusal probes, which keep exactly their violation.
-- The others use forms without a rule yet: indirect calls, scoped returns, `exchange`, `awaits`,
-  float narrowing, `shift`, the fallible foreign call at the end of a body, and invariants over
-  tables.
+- 14 are still open:
+  - fallible and block-level indirect calls, and a function pointer whose value is only known at
+    run time;
+  - `shift`;
+  - invariants and quantifiers over tables;
+  - `count` over arrays;
+  - 4 timeouts of the elaborator's `whnf` in nested locks inside loops.
 
 ## Open
 

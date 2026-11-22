@@ -4,6 +4,7 @@ public import Bruecke.Zertifikat.Programm
 public import Bruecke.Zertifikat.Regeln
 public import Bruecke.Zertifikat.Aufrufe
 public import Bruecke.Zertifikat.Schleifen
+public import Bruecke.Zertifikat.Formen
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -100,6 +101,17 @@ meta def wpRegel? (t0 : Lean.Expr) : Option Name :=
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindCall => some ``Gabbro.Grammatik.WP.wpBA_bindCall
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.breaking => some ``Gabbro.Bruecke.wpSA_breaking
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.retry => some ``Gabbro.Bruecke.wpSA_retry_lauf
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.retScoped => some ``Gabbro.Bruecke.wpSA_retScoped
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.retWhyScoped => some ``Gabbro.Bruecke.wpSA_retWhyScoped
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.retScoped => some ``Gabbro.Bruecke.wpEA_retScoped
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.retWhyScoped => some ``Gabbro.Bruecke.wpEA_retWhyScoped
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.exchange => some ``Gabbro.Bruecke.wpEA_exchange
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.exchange => some ``Gabbro.Bruecke.wpBA_exchange
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindAxiomElse => some ``Gabbro.Bruecke.wpEA_bindAxiomElse
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindAxiomElse => some ``Gabbro.Bruecke.wpBA_bindAxiomElse
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindCallInd => some ``Gabbro.Bruecke.wpEA_bindCallInd
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.awaits => some ``Gabbro.Bruecke.wpEA_awaits
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.awaits => some ``Gabbro.Bruecke.wpBA_awaits
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.axiomCall => some ``Gabbro.Bruecke.wpSA_axiomCall
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindAxiom => some ``Gabbro.Bruecke.wpBA_bindAxiom
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindAxiom => some ``Gabbro.Bruecke.wpEA_bindAxiom
