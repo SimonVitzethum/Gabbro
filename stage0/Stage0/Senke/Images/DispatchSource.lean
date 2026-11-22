@@ -200,10 +200,11 @@ theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve op
 theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {memory : imageTSO.St}
     (loaded : LoadedIRImage output memory) (unit : ImageModelUnit output E)
-    (O : Orakel (declOf output.compiled.unit)) :
+    (O : Orakel (declOf output.compiled.unit))
+    (footprint : Nat → W → Prop := imageStackFootprint output) :
     ImageSlotsMatch output E O [] (output.irEntry memory) (imageSourceStart E) ∧
       ImageForeignTrace output [] (imageSourceStart E) ∧
-      ImageRuntimeMatchesAt (imageStackFootprint output) output E O [] (output.irEntry memory)
+      ImageRuntimeMatchesAt footprint output E O [] (output.irEntry memory)
         (imageSourceStart E) := by
   obtain ⟨_, _, _, bytes, packed, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
@@ -243,7 +244,7 @@ theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
       Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp
-    · change WeltAt (mergedView memory.1 (imageStackFootprint output)) _ ((speicherR E.sp0).welt [])
+    · change WeltAt (mergedView memory.1 footprint) _ ((speicherR E.sp0).welt [])
       rw [mergedView_empty _ _ loaded.emptyBuffers, unit.memory]
       exact (output.loaded_initial_world loaded.payload).withIdle
     · intro i

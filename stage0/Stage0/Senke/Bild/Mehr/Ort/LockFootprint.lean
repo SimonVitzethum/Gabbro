@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.LockState
+public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Mehr.ImageTransition
 public import Stage0.Senke.Images.DispatchSource
 import Lean.Elab.Tactic.Omega
@@ -26,12 +27,10 @@ theorem protectedCellFootprint_bounds {D : Deklaration} {layout : Lay D}
     {source : RufMaschineG D} {thread : Nat} {address : W}
     (inLayout : LayIn layout) (owned : protectedCellFootprint layout source thread address) :
     layout.lo ≤ address.toNat ∧ address.toNat < layout.hi := by
-  obtain ⟨cell, allocated, first, last, _, _⟩ := owned
-  have inside : layout.lo ≤ cell.adr layout ∧ cell.adr layout + cell.bytes ≤ layout.hi := by
-    cases cell with
-    | glob global => exact inLayout.2.1 global
-    | elem table field index => exact inLayout.1 table field index allocated
-  exact ⟨inside.1.trans first, last.trans_le inside.2⟩
+  obtain ⟨cell, allocated, first, last, guarded, held⟩ := owned
+  exact carrierFootprint_bounds (carriers := fun carrier => (∃ lock, Bewacht carrier lock) ∧
+    ∀ lock, Bewacht carrier lock → lock ∈ offen (source.faeden thread).spur)
+    inLayout ⟨cell, allocated, ⟨guarded, held⟩, first, last⟩
 
 /-- Distinct allocated cells cannot overlap. If the same cell was
     claimed twice, its physical ticket queue identifies the same owner. -/
@@ -76,6 +75,25 @@ def imageProtectedFootprint {src : String} {reserve : Nat} {options : Profil.Opt
   imageStackFootprint output thread address ∨
     protectedCellFootprint output.image.Y.withIdle source thread address
 
+/-- A process view combines its stack, its current lock ownership, and
+    any plain cells assigned to its declared root by the checker. -/
+def imageRuntimeFootprint {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) (E : Einheit (declOf output.compiled.unit))
+    (source : RufMaschineG (declOf output.compiled.unit).mitRuhe) (thread : Nat) (byte : W) : Prop :=
+  imageProtectedFootprint output source thread byte ∨
+    plainWriterFootprint E output.fsA.1 output.image.Y.withIdle thread byte
+
+theorem imageRuntimeFootprint_placed {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (layout : LayIn output.image.Y.withIdle) {thread : Nat} {byte : W}
+    (owned : imageRuntimeFootprint output E source thread byte) :
+    imageStackFootprint output thread byte ∨ output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi := by
+  rcases owned with (stack | guarded) | plain
+  · exact .inl stack
+  · exact .inr (protectedCellFootprint_bounds layout guarded)
+  · exact .inr (carrierFootprint_bounds layout plain)
+
 theorem imageProtectedFootprint_initial {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {N : Nat} {memory : Mem}
@@ -104,13 +122,13 @@ theorem _root_.Gabbro.Stage0.LoadedIRImage.initial_lock_projection [Kern]
     let source := imageSourceStart E
     let ir := output.irEntry memory
     ImageSlotsMatch output E O [] ir source ∧ ImageForeignTrace output [] source ∧
-      ImageRuntimeMatchesAt (imageProtectedFootprint output source.m) output E O [] ir source ∧
+      ImageRuntimeMatchesAt (imageRuntimeFootprint output E source.m) output E O [] ir source ∧
       ImageTicketStates output.image.Y.withIdle memory.1.m source.m
         (fun _ => start (output.starts.length + 1)) := by
   intro source ir
-  obtain ⟨slots, events, runtime⟩ := loaded.source_start unit O
+  obtain ⟨slots, events, runtime⟩ := loaded.source_start unit O (imageRuntimeFootprint output E source.m)
   have locks := output.loaded_ticketStates loaded.payload accepted
-  exact ⟨slots, events, imageProtectedFootprint_initial locks ▸ runtime, locks⟩
+  exact ⟨slots, events, runtime, locks⟩
 
 /-- The mapped image and its accepted model share one initial projection.
     No protected cell has an owner before the first image step. -/
@@ -168,15 +186,29 @@ theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : N
     exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
   · exact protectedCellFootprint_lock_disjoint inLayout synchronized data
 
-theorem imageProtectedFootprint_stack_owner [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
-    (layout : LayIn output.image.Y.withIdle) {owner thread : Nat} {byte : W}
-    (covered : imageProtectedFootprint output source owner byte)
-    (stack : imageStackFootprint output thread byte) : owner = thread := by
-  rcases covered with owned | data
-  · exact imageStackFootprint_disjoint owned stack
-  · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack))
-      (protectedCellFootprint_bounds layout data).1).elim
+/-- The combined view has at most one owner at every physical byte. -/
+theorem imageRuntimeFootprint_exclusive [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {N : Nat} {memory : Mem} {states : _ → Zustand N}
+    (locks : ImageTicketStates output.image.Y.withIdle memory source states)
+    (inside : LayIn output.image.Y.withIdle) (separated : LayDis output.image.Y.withIdle)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {first second : Nat} {byte : W}
+    (left : imageRuntimeFootprint output E source first byte)
+    (right : imageRuntimeFootprint output E source second byte) : first = second := by
+  have cross {protectedOwner plainOwner : Nat} (guarded : imageProtectedFootprint output source protectedOwner byte)
+      (privateByte : plainWriterFootprint E output.fsA.1 output.image.Y.withIdle plainOwner byte) : False := by
+    rcases guarded with stack | ⟨cell, allocated, start, finish, ⟨lock, guard⟩, _⟩
+    · exact (Nat.not_le_of_lt (imageStackFootprint_before_world stack)) (carrierFootprint_bounds inside privateByte).1
+    · exact ((carrierFootprint_iff separated allocated start finish).mp privateByte).1 lock guard
+  rcases left with left | left <;> rcases right with right | right
+  · exact imageProtectedFootprint_exclusive locks inside separated left right
+  · exact (cross left right).elim
+  · exact (cross right left).elim
+  · obtain ⟨cell, allocated, ⟨_, _, fn, reached, writes⟩, start, finish⟩ := right
+    exact plainWriterFootprint_access hardware accepted duties separated allocated start finish left reached (.inr writes)
 
 /-- Effects confined to the world and frames retain the registered
     ticket words. The issuing thread's private stores cannot cover a

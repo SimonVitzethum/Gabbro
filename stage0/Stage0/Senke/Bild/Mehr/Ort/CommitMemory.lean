@@ -19,6 +19,16 @@ def carrierFootprint (layout : Lay D) (carriers : D.Tab ⊕ D.Glob → Prop) (by
   ∃ cell : Zelle D, cell.da layout ∧ carriers (Zelle.carrier cell) ∧
     cell.adr layout ≤ byte.toNat ∧ byte.toNat < cell.adr layout + cell.bytes
 
+theorem carrierFootprint_bounds {layout : Lay D} {carriers : D.Tab ⊕ D.Glob → Prop} {byte : W}
+    (inside : LayIn layout) (covered : carrierFootprint layout carriers byte) :
+    layout.lo ≤ byte.toNat ∧ byte.toNat < layout.hi := by
+  obtain ⟨cell, allocated, _, first, last⟩ := covered
+  have span : layout.lo ≤ cell.adr layout ∧ cell.adr layout + cell.bytes ≤ layout.hi := by
+    cases cell with
+    | glob global => exact inside.2.1 global
+    | elem table field index => exact inside.1 table field index allocated
+  exact ⟨span.1.trans first, last.trans_le span.2⟩
+
 theorem carrierFootprint_iff {layout : Lay D} {carriers : D.Tab ⊕ D.Glob → Prop}
     (separated : LayDis layout) {cell : Zelle D} (allocated : cell.da layout) {byte : W}
     (first : cell.adr layout ≤ byte.toNat) (last : byte.toNat < cell.adr layout + cell.bytes) :

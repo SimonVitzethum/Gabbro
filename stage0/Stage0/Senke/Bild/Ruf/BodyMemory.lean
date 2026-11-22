@@ -172,36 +172,45 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {memory : imageTSO.St} {N : Nat} {tickets : _ → Senke.Faeden.Zustand N}
-    (matched : ImageRuntimeMatchesAt (Senke.Faeden.imageProtectedFootprint output state.m)
-      output E O history before state)
+    {footprint : Nat → W → Prop}
+    (matched : ImageRuntimeMatchesAt footprint output E O history before state)
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
     (registry : Senke.Faeden.ImageTicketStates output.image.Y.withIdle before.ms.1.m state.m tickets)
-    (inLayout : Senke.LayIn output.image.Y.withIdle) (synchronized : Senke.LaySync output.image.Y.withIdle)
+    (synchronized : Senke.LaySync output.image.Y.withIdle)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (allocated : before.ths.length ≤ output.starts.length + 1)
     (pastLoader : before.ths[0]? ≠ some (some Runner.Beweis.t4))
     (flushed : imageTSO.tau before.ms memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths⟩
     ProcessStep imageTSO actI before [] after ∧
-      ImageRuntimeMatchesAt (Senke.Faeden.imageProtectedFootprint output state.m) output E O history after state ∧
+      ImageRuntimeMatchesAt footprint output E O history after state ∧
       Senke.Faeden.ImageTicketStates output.image.Y.withIdle memory.1.m state.m tickets := by
   intro after
   obtain ⟨body, buffers, length, registered, roots⟩ := matched
+  have belowLocks : ∀ thread byte, footprint thread byte → byte.toNat < output.image.Y.hi := by
+    intro thread byte owned
+    rcases placed thread byte owned with stack | ⟨_, world⟩
+    · exact (imageStackFootprint_before_world stack).trans_le order
+    · exact world
   obtain ⟨step, buffers', projection, registry'⟩ := registry.flush synchronized bound buffers
-    (fun _ _ lockByte _ owned =>
-      Senke.Faeden.imageProtectedFootprint_lock_disjoint inLayout synchronized order owned lockByte) flushed
+    (fun lock byte lockByte thread owned => Nat.not_le_of_lt (belowLocks thread byte owned)
+      ((synchronized.1 lock).1.trans lockByte.1)) flushed
   have preserved := tso_flush_preserves_views (layout := L0) flushed (imageRootReads output) (by
     intro i store pending j different address readable written
     have privateByte := (buffers i store pending address written).1
+    have placedByte := placed i address privateByte
     rcases readable with own | code
-    · exact different (Senke.Faeden.imageProtectedFootprint_stack_owner inLayout privateByte own).symm
-    · rcases privateByte with stack | data
+    · rcases placedByte with stack | ⟨lo, _⟩
+      · exact different (imageStackFootprint_disjoint own stack)
+      · exact (Nat.not_le_of_lt (imageStackFootprint_before_world own)) lo
+    · rcases placedByte with stack | ⟨lo, _⟩
       · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans stack.2.1)
-      · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans
-          (Senke.Faeden.protectedCellFootprint_bounds inLayout data).1))
+      · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans lo))
   refine ⟨step, ⟨body, buffers', length, ?_, ?_⟩, registry'⟩
   · change _ ∨ ∃ snapshots positions committed,
       MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-        ⟨(projectSCState (Senke.Faeden.imageProtectedFootprint output state.m) memory).1, body⟩ state snapshots positions committed ∧ _
+        ⟨(projectSCState footprint memory).1, body⟩ state snapshots positions committed ∧ _
     rw [projection]
     exact registered
   · intro thread
