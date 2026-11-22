@@ -16,11 +16,15 @@ private theorem entryIndex_ruE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : 
     entryIndex (ruE expr) = entryIndex expr := by
   cases expr with
   | widen _ _ expr => exact entryIndex_ruE expr
-  | neg expr => simp only [ruE, entryIndex, entryIndex_ruE expr]
+  | neg expr =>
+    simp only [ruE, entryIndex]
+    rw [entryIndex_ruE expr]
   | add left right | sub left right | mul left right =>
-    simp only [ruE, entryIndex, entryIndex_ruE left, entryIndex_ruE right]
+    simp only [ruE, entryIndex]
+    rw [entryIndex_ruE left, entryIndex_ruE right]
   | _ => rfl
-termination_by structural expr
+termination_by sizeOf expr
+decreasing_by all_goals simp_wf <;> omega
 
 private theorem idleColumn (table : D.Tab) (field : D.Feld table) (first count : Nat) :
     EntrySnapshots.column (D := D.mitRuhe) table field first count =
@@ -39,19 +43,23 @@ theorem oldCells_ruE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ 
     oldCells (ruE expr) = (oldCells expr).map Zelle.withIdle := by
   cases expr with
   | oldS table field index _ =>
-    simp only [ruE, oldCells, entryIndex_ruE]
+    simp only [ruE, oldCells]
+    rw [entryIndex_ruE index]
     cases entryIndex index with
     | some _ => rfl
     | none =>
-      simp only [idleColumnFits, Deklaration.mitRuhe, idleColumn, oldCells_ruE index]
+      rw [idleColumnFits (D := D) table field]
+      rw [oldCells_ruE index, idleColumn (D := D) table field 0 (D.count table).toNat]
       split <;> simp only [List.map_append, List.map_nil]
   | widen _ _ expr | not expr | neg expr | intBuiltin1 _ expr =>
     exact oldCells_ruE expr
   | add left right | sub left right | mul left right | eq left right | lt left right | le left right
   | and left right | or left right | intBuiltin2 _ left right =>
-    simp only [ruE, oldCells, List.map_append, oldCells_ruE left, oldCells_ruE right]
+    simp only [ruE, oldCells, List.map_append]
+    rw [oldCells_ruE left, oldCells_ruE right]
   | _ => rfl
-termination_by structural expr
+termination_by sizeOf expr
+decreasing_by all_goals simp_wf <;> omega
 
 /-- Renaming the source functions leaves the stored spans and their
     emitted entry loads byte-for-byte identical. -/
