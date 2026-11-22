@@ -140,42 +140,43 @@ theorem LoadedIRImage.workerStartup
       (BildMehr.privateBuffers_empty loaded.emptyBuffers)
     exact stopped (reference.no_silent_stop_until_host waiting sc rfl (BildMehr.alleBlind_start _))
 
-private theorem firstWorker_clone_control
+private theorem clone_control
     {before after : Cfg imageTSO (Res T)} {parent child : T} {id extra : W}
-    (waiting : before.ths = [some (.ask (.sys cloneReq) fun answer =>
-      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)])
+    (waiting : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
     (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
     (positive : 0 < id.toInt) :
-    after = ⟨before.ms, [some (ret1 parent id), some (.next child)]⟩ := by
+    after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ := by
   let pending : Res T := .ask (.sys cloneReq) fun answer =>
     opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
-  have issuer {i : Nat} {control : Res T} (found : before.ths[i]? = some (some control)) :
-      i = 0 ∧ control = pending := by
-    rw [waiting] at found
-    cases i <;> simp_all only [List.getElem?_cons_zero, Option.some.injEq, List.getElem?_cons_succ,
-      List.getElem?_nil, reduceCtorEq, and_false, true_and, pending]
   have nonzero : id ≠ 0 := by
     rintro rfl
     exact (by decide : ¬ (0 < (0 : W).toInt)) positive
   suffices exactClone : ∀ {labels}, ProcessStep imageTSO actI before labels after →
       labels = [(0, cloneReq, some (id, extra))] →
-      after = ⟨before.ms, [some (ret1 parent id), some (.next child)]⟩ from exactClone observed rfl
+      after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩
+    from exactClone observed rfl
   intro labels transition logged
   cases transition with
   | tau | priv => cases logged
-  | ask found asked ordinary _ _ =>
-    obtain ⟨rfl, rfl⟩ := issuer found
-    cases asked
-    exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
+  | @ask _ _ _ _ request _ _ _ _ _ ordinary _ _ =>
+    cases request with
+    | sys call =>
+      simp only [lbl, List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
+      obtain ⟨_, rfl, _⟩ := logged
+      exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
+    | rd | wr | cas | fp => cases logged
   | exit => cases logged
   | cloneNo _ _ _ refused _ =>
     simp only [List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
     obtain ⟨_, accepted⟩ := logged
     exact (refused id extra accepted positive).elim
   | clone found asked response _ resumed spawned =>
-    obtain ⟨rfl, rfl⟩ := issuer found
     simp only [List.cons.injEq, Prod.mk.injEq, Option.some.injEq, true_and, and_true] at logged
-    obtain ⟨rfl, rfl⟩ := logged
+    obtain ⟨rfl, rfl, rfl⟩ := logged
+    have same := found.symm.trans waiting
+    have exactControl := Option.some.inj (Option.some.inj same)
+    subst_vars
     cases asked
     have sameMemory := response.2
     change (if cloneReq = cloneReq then _ else _) at sameMemory
@@ -183,8 +184,29 @@ private theorem firstWorker_clone_control
     obtain ⟨rfl, _⟩ := sameMemory
     simp only [pending, opt_some, ite_eq_right nonzero, ite_eq_left rfl, Res.next.injEq] at resumed spawned
     subst_vars
-    rw [waiting]
     rfl
+
+/-- Every actual successful startup clone activates the next declared GX
+    slot with its exact arguments, even when earlier children have
+    already run or retired. -/
+theorem ImageSlotsMatch.observed_clone {history : List Ev}
+    {before after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {parent child : T} {id extra : W}
+    (slots : ImageSlotsMatch output E O history before state)
+    (waiting : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
+    (notWaiting : state.wartet 0 = [])
+    (declared : before.ths.length < E.starts.length)
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
+    (positive : 0 < id.toInt) :
+    ∃ next actualStart, E.starts[before.ths.length]? = some actualStart ∧
+      ImageReach output E O state next ∧
+      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧ next.m = state.m := by
+  obtain ⟨next, actualStart, start, step, matched, unchanged, _⟩ :=
+    slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
+      waiting notWaiting declared
+  exact ⟨next, actualStart, start, .schritt _ _ .start step,
+    (clone_control waiting observed positive).symm ▸ matched, unchanged⟩
 
 /-- The first successful worker activation in the actual Lean IR agrees
     with the declared GX activation, including the source thread's
@@ -204,7 +226,6 @@ theorem LoadedIRImage.firstWorkerActivation
   let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
     BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
   have pending := (loaded.workerStartup workers).1 quiet observed
-  have exactSlots := firstWorker_clone_control pending observed positive
   have ready : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
       opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)) := by
     rw [pending]
@@ -218,14 +239,10 @@ theorem LoadedIRImage.firstWorkerActivation
   have declared : before.ths.length < E.starts.length := by
     rw [pending, unit.starts, List.length_cons, List.length_cons, List.length_nil]
     omega
-  obtain ⟨next, _, _, advanced, matched, unchanged, _⟩ :=
-    slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
-      ready rfl declared
-  refine ⟨next, ?_, .schritt _ _ .start advanced, unchanged, ?_⟩
-  · rw [pending] at matched
-    rw [exactSlots]
-    exact matched
-  · rw [unit.starts]
-    rfl
+  obtain ⟨next, _, _, reached, matched, unchanged⟩ :=
+    slots.observed_clone ready rfl declared observed positive
+  refine ⟨next, matched, reached, unchanged, ?_⟩
+  rw [unit.starts]
+  rfl
 
 end Gabbro.Stage0
