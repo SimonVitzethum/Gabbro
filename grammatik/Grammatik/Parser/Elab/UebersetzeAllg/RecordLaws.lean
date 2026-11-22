@@ -68,11 +68,25 @@ private theorem specPrimitiveLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : Lis
           ite_eq_left fits]
   · cases valid
 
+private theorem lowProductArgs_of_fields (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (fields : List (Ty × USide))
+    (lower : ∀ field ∈ fields, ∃ value, lowWertAtE u Γ Λ fn er field.1 field.2 = .ok value) :
+    ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
+  induction fields with
+  | nil => exact ⟨.nil, lowProductArgs_nil u Γ Λ fn er⟩
+  | cons field rest ih =>
+    obtain ⟨value, lowValue⟩ := lower field List.mem_cons_self
+    obtain ⟨args, lowArgs⟩ := ih (fun tailField present => lower tailField (List.mem_cons_of_mem _ present))
+    cases field
+    exact ⟨.cons value args, by
+      simp only [lowProductArgs, lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
+
 theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
-    (er : Option Ty) (ty : Ty) (side : USide) (valid : specLiteralFieldFits side ty = true) :
+    (er : Option Ty) (ty : Ty) (side : USide) (gate : u.exportGate = .ok ())
+    (valid : specLiteralFieldFits u.records side ty = true) :
     ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
   suffices lowers : ∀ (measure : Nat) (source : USide), sizeOf source = measure →
-      ∀ (target : Ty), specLiteralFieldFits source target = true →
+      ∀ (target : Ty), specLiteralFieldFits u.records source target = true →
         ∃ expression, lowWertAtE u Γ Λ fn er target source = .ok expression from
     lowers _ side rfl ty valid
   intro amount
@@ -92,29 +106,39 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
         cases length with
         | zero => simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted
         | succ length =>
-          have both : (specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)) = true :=
-            accepted
+          have both : (specLiteralFieldFits u.records first element &&
+              specLiteralFieldFits u.records rest (.arr element length)) = true := by
+            simpa only [specLiteralFieldFits] using accepted
           obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp both
           have extent : 1 + sizeOf first + sizeOf rest = amount := measure
           obtain ⟨head, loweredHead⟩ := smaller (sizeOf first) (by omega) first rfl element headOk
           obtain ⟨tail, loweredTail⟩ :=
             smaller (sizeOf rest) (by omega) rest rfl (.arr element length) tailOk
           exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
-    all_goals exact specPrimitiveLiteralField_lower u Γ Λ fn er _ _ accepted
+    case product identity reordered fields =>
+      simp only [specLiteralFieldFits, Bool.and_eq_true_iff, decide_eq_true_eq] at accepted
+      obtain ⟨⟨rfl, declared⟩, good⟩ := accepted
+      cases named : uRecordOf u.records (.prod identity (fields.map Prod.fst)) with
+      | error e => simp only [named, Except.isOk, Except.toBool, Bool.false_eq_true] at declared
+      | ok schema =>
+        obtain ⟨args, lowered⟩ := lowProductArgs_of_fields u Γ Λ fn er fields (by
+          intro field present
+          have checked := List.all_eq_true.mp good ⟨field, present⟩ (List.mem_attach _ _)
+          have less := recordField_sizeOf_lt fields field present
+          have extent : 1 + sizeOf identity + sizeOf reordered + sizeOf fields = amount := measure
+          exact smaller (sizeOf field.2) (by omega) field.2 rfl field.1 checked)
+        have built := record_lower u Γ Λ fn er identity reordered fields args gate lowered schema named
+        exact ⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩
+    all_goals
+      apply specPrimitiveLiteralField_lower u Γ Λ fn er
+      simpa only [specLiteralFieldFits] using accepted
 
 theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
-    (er : Option Ty) (fields : List (Ty × USide))
-    (valid : fields.all (fun field => specLiteralFieldFits field.2 field.1) = true) :
+    (er : Option Ty) (fields : List (Ty × USide)) (gate : u.exportGate = .ok ())
+    (valid : fields.all (fun field => specLiteralFieldFits u.records field.2 field.1) = true) :
     ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
-  induction fields with
-  | nil => exact ⟨.nil, lowProductArgs_nil u Γ Λ fn er⟩
-  | cons field rest ih =>
-    obtain ⟨head, tail⟩ := Bool.and_eq_true_iff.mp valid
-    obtain ⟨value, lowValue⟩ := specLiteralField_lower u Γ Λ fn er field.1 field.2 head
-    obtain ⟨args, lowArgs⟩ := ih tail
-    cases field
-    exact ⟨.cons value args, by
-      simp only [lowProductArgs, lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
+  exact lowProductArgs_of_fields u Γ Λ fn er fields (fun field present =>
+    specLiteralField_lower u Γ Λ fn er field.1 field.2 gate (List.all_eq_true.mp valid field present))
 
 /-- Bind the successful source argument to the ordinary G nominal
     constructor. Every field passed checking mode at the declared type. -/
@@ -148,7 +172,9 @@ theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
           ∃ hit, uRecordOf u.records type = .ok hit :=
         same ▸ uRecordOf_complete member
       obtain ⟨hit, exactSchema⟩ := schemaExists _ checked.1
-      obtain ⟨args, lowered⟩ := specLiteralFields_lower u Γ Λ fn er fields checked.2
+      have valid : fields.all (fun field => specLiteralFieldFits u.records field.2 field.1) = true :=
+        scope.symm ▸ checked.2
+      obtain ⟨args, lowered⟩ := specLiteralFields_lower u Γ Λ fn er fields gate valid
       exact ⟨args, resultType.symm.trans checked.1,
         record_lower u Γ Λ fn er identity reordered fields args gate lowered _ exactSchema⟩
     · cases typeRead
@@ -170,17 +196,34 @@ theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
     cases value <;>
       simp [argument, fields, uWertBody, uRechne, chosen, uRecordSides, uRecordSide, uRecordValues,
         schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure] <;> rfl
-  exact ⟨read, specLiteralRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl rfl⟩
+  refine ⟨read, specLiteralRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl ?_⟩
+  simp only [fields, List.all_cons, List.all_nil, specLiteralFieldFits, specPrimitiveLiteralFieldFits, Bool.and_self]
 
 /-- Arbitrary Boolean arrays satisfy all the recursive literal field
     checks at their exact declared length. -/
-theorem specLiteralArrayField_erfuellbar (values : List Bool) :
-    specLiteralFieldFits (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
+theorem specLiteralArrayField_erfuellbar (records : List URecord) (values : List Bool) :
+    specLiteralFieldFits records (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
       (.arr .bool values.length) = true := by
   induction values with
-  | nil => rfl
+  | nil => simp only [List.foldr_nil, List.length_nil, specLiteralFieldFits]
   | cons value rest ih =>
     simp only [List.length_cons, List.foldr_cons, specLiteralFieldFits, specPrimitiveLiteralFieldFits, ih, Bool.and_self]
+
+theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (value : Bool)
+    (booleanField : schema.fields = [(field, Ty.bool)]) (records : List URecord)
+    (declared : schema ∈ records) :
+    specLiteralFieldFits records (.product schema.identity false [(.bool, .truth value)]) schema.ty = true := by
+  have shape : schema.ty = .prod schema.identity [.bool] := by
+    simp only [URecord.ty, booleanField, List.map_cons, List.map_nil, Ty.prodOf]
+  obtain ⟨resolved, exactRecord⟩ := uRecordOf_complete declared
+  simp only [specLiteralFieldFits, shape, decide_true, Bool.true_and, Bool.and_eq_true_iff]
+  constructor
+  · rw [← shape, exactRecord]
+    rfl
+  · apply List.all_eq_true.mpr
+    intro field present
+    have same : field.val = (Ty.bool, USide.truth value) := List.mem_singleton.mp field.property
+    simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
 
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)

@@ -25,17 +25,29 @@ def specPrimitiveLiteralFieldFits : Ty → USide → Bool
     | none => false
   | _, _ => false
 
-def specLiteralFieldFits : USide → Ty → Bool
+def specLiteralFieldFits (records : List URecord) : USide → Ty → Bool
   | .arrNil, type =>
     match type with
     | .arr _ 0 => true
     | _ => false
   | .arrCons first rest, type =>
     match type with
-    | .arr element (length + 1) => specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)
+    | .arr element (length + 1) =>
+      specLiteralFieldFits records first element && specLiteralFieldFits records rest (.arr element length)
     | _ => false
+  | .product identity _ fields, type =>
+    decide (type = .prod identity (fields.map Prod.fst)) &&
+      (uRecordOf records type).isOk &&
+      fields.attach.all (fun field => specLiteralFieldFits records field.val.2 field.val.1)
   | value, type => specPrimitiveLiteralFieldFits type value
-termination_by structural value _ => value
+termination_by value _ => sizeOf value
+decreasing_by
+  all_goals
+    simp_wf
+    first
+    | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
+      omega
+    | omega
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
@@ -43,7 +55,7 @@ def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
     (fields : List (Ty × USide)) : Option Ty := do
   let schema ← uRecordConstructor ctx name
   if schema.ty = .prod identity (fields.map Prod.fst) ∧
-    fields.all (fun field => specLiteralFieldFits field.2 field.1) = true then
+    fields.all (fun field => specLiteralFieldFits ctx.records field.2 field.1) = true then
     some schema.ty
   else none
 
@@ -108,7 +120,7 @@ theorem specLiteralRecordArgument_erfuellbar (ctx : UCtx) (name : String) (args 
     (selected : uRecordConstructor ctx name = some schema)
     (read : uWertBody ctx (.call name args) = .ok (.product schema.identity reordered fields))
     (shape : schema.ty = .prod schema.identity (fields.map Prod.fst))
-    (valid : fields.all (fun field => specLiteralFieldFits field.2 field.1) = true) :
+    (valid : fields.all (fun field => specLiteralFieldFits ctx.records field.2 field.1) = true) :
     uSpecValueArgument ctx schema.ty (.call name args) = .ok () := by
   simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, uSpecLiteralRecordType,
     selected, Option.bind_eq_bind, Option.bind_some, shape, valid, true_and, ite_true,
