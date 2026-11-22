@@ -80,6 +80,18 @@ theorem RunP.remaining_run {start current : Res T} {before now : Mem}
       exact ih later
     | sys | fp => cases answered
 
+/-- A host-free reference excludes host requests throughout its
+    memory-only prefixes. This also covers the prefix before a native
+    floating answer, without choosing that answer in the actual run. -/
+theorem RunP.no_syscall {kernel : Kern} {start : Res T} {before now after : Mem}
+    {request : Req} {resume : Ans → Res T} {target : T}
+    (part : RunP start before (.ask (.sys request) resume) now)
+    (reference : @Run kernel.withoutSyscalls start before target after) : False := by
+  letI : Kern := kernel.withoutSyscalls
+  cases part.remaining_run reference with
+  | ask memory _ => cases memory
+  | sys unavailable _ => exact unavailable
+
 /-- A reference can mask writes to shared read-only bytes. It agrees
     with the actual memory on the permissions that can affect it. -/
 def MaskedAgreement (reads writes : W → Prop) (reference actual : Mem) : Prop :=
