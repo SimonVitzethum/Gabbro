@@ -289,6 +289,27 @@ theorem image_ticket_release [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
     rw [upd_self]
     rfl
 
+/-- Every answer to a shared word read returns the committed word.
+    Pending stores are private and therefore cannot forward a different
+    value at this address. -/
+theorem image_shared_word_reply [Kern] {machine : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T} {thread : Nat}
+    {address value : W} {footprint : Nat → W → Prop}
+    (committed : machine.ms.1.m.rd64 address = some value)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (shared : ∀ byte, fenster address byte → ¬ footprint thread byte)
+    (waiting : machine.ths[thread]? = some (some (.ask (.rd 8 address) resume)))
+    (answered : imageTSO.ans machine.ms thread (.rd 8 address) reply memory) :
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths.set thread (some (resume reply))⟩ ∧
+      memory = machine.ms ∧ ∃ extra, reply = some (value, extra) := by
+  have agreement : GleichAuf (fenster address) (machine.ms.1.view thread) machine.ms.1.m :=
+    fun byte hit => view_agrees_at (fun store pending touched =>
+      shared byte hit ((buffers thread store pending byte touched).1))
+  obtain ⟨unchanged, extra, result⟩ := answered.1
+  change reply = ((machine.ms.1.view thread).rd64 address).map (·, extra) at result
+  rw [gleich_rd64 agreement, committed] at result
+  exact ⟨.ask waiting rfl rfl answered rfl, unchanged, extra, result⟩
+
 /-- A real serving-word read admits the issuing ticket precisely when
     it matches modulo the machine word. The hosted binding registers an
     unmatched waiter, while spin retries without changing the lock state. -/
@@ -313,16 +334,9 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
             | .futex => before.mit thread (.incL ticket before.w.serv)
             | .spin => before) := by
   intro after
-  let address := BitVec.ofNat 64 (base + 8)
-  have agreement : GleichAuf (fenster address) (machine.ms.1.view thread.val) machine.ms.1.m :=
-    fun byte hit => view_agrees_at (fun store pending touched =>
-      shared byte hit thread.val ((buffers thread.val store pending byte touched).1))
-  obtain ⟨memorySame, extra, result⟩ := answered.1
-  have observed : reply = some (BitVec.ofNat 64 before.w.serv, extra) := by
-    change reply = ((machine.ms.1.view thread.val).rd64 address).map (·, extra) at result
-    rw [gleich_rd64 agreement, represented.serving] at result
-    exact result
-  refine ⟨.ask waiting rfl rfl answered rfl, memorySame, ⟨extra, observed⟩, ?_⟩
+  obtain ⟨step, memorySame, answer⟩ := image_shared_word_reply represented.serving buffers
+    (fun byte hit => shared byte hit thread.val) waiting answered
+  refine ⟨step, memorySame, answer, ?_⟩
   by_cases admitted : before.w.serv % 2 ^ 64 = ticket % 2 ^ 64
   · let next := before.mit thread (.drin ticket)
     have stepped : Schritt before thread next := .tritt saved admitted

@@ -5,6 +5,7 @@ public import Stage0.Senke.Sperre.Bindung.ImageWaiters
 public import Stage0.Senke.Sperre.Schritta
 public import Stage0.Senke.Sperre.Faeden.Maschine
 public import Stage0.Senke.Sperre.Warten.Futex
+public import Stage0.Senke.Bild.Mehr.Ort.LockReads
 import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Bild.Mehr.StartupOperands
 import Stage0.Senke.Stopp
@@ -228,5 +229,48 @@ theorem image_ticket_waiter_CAS_prefix {position expected : Nat} (mode : WaitAdj
   simpa only [address, sample, replacement] using
     savedCAS environment slots (address := 7) (expected := 8) (dest := 11)
       (by decide) (by decide) cell running
+
+def CounterLoad.code {D : Deklaration} (load : CounterLoad) (layout : Senke.Lay D)
+    (base scratch : Nat) : List II :=
+  match load with
+  | .release _ | .wake => gibT layout base scratch
+  | _ => nimmT layout base scratch
+
+def CounterLoad.cellIndex : CounterLoad → Nat
+  | .draw | .release _ => 1
+  | .increment .. => 13
+  | .decrement .. => 28
+  | .wake => 6
+
+def CounterLoad.addressSlot : CounterLoad → Nat
+  | .increment .. | .decrement .. => 7
+  | _ => 1
+
+private theorem CounterLoad.addressSlot_fits (load : CounterLoad) : load.addressSlot < 18 := by
+  cases load <;> decide
+
+/-- The current program counter and the relocated emitted cell select
+    the same shared word as the ticket protocol's pending read. -/
+theorem image_ticket_counter_load_prefix {position : Nat} (load : CounterLoad)
+    (environment : LE baseline pc fp scratch base code)
+    (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
+    (atCode : At code position (load.code layout base scratch)) (hosted : layout.lockWait = .futex)
+    (address : registers load.addressSlot = BitVec.ofNat 64 (base + load.offset))
+    (running : machine.ths[thread]? =
+      some (some (.next ⟨pc + BitVec.ofNat 64 (16 * (position + load.cellIndex)), fp⟩))) :
+    let pointer : T := ⟨pc + BitVec.ofNat 64 (16 * (position + load.cellIndex)), fp⟩
+    ProcessPrefix imageTSO actI machine [] 4
+      ⟨machine.ms, machine.ths.set thread (some (.ask
+        (.rd 8 (BitVec.ofNat 64 (base + load.offset))) (fun reply => opt reply fun pair => ret1 pointer pair.1)))⟩ := by
+  have cell : code[position + load.cellIndex]? = some
+      (ci 15 ((scratch + (load.addressSlot + 1) : Nat) : Int)
+        ((scratch + load.addressSlot : Nat) : Int) 0) := by
+    cases load
+    · exact atCode.get (nimmT_ladeN layout base scratch).2
+    · exact atCode.get (nimmT_inc layout base scratch hosted).2.1
+    · exact atCode.get (nimmT_dec layout base scratch).1
+    · exact atCode.get (gibT_schritte layout base scratch hosted).2.1
+    · exact atCode.get (gibT_schritte layout base scratch hosted).2.2.2.2.1
+  simpa only [address] using savedLoad environment slots load.addressSlot_fits cell running
 
 end Gabbro.Stage0.Senke.Faeden

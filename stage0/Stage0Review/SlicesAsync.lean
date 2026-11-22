@@ -101,6 +101,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wait_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_waiter_CAS_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_counter_load_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.readCounter
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.adjustWaiters
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.retryServing
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.flush
