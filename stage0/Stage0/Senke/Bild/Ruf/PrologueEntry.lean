@@ -38,6 +38,8 @@ theorem Emitted.prologue_geometry [Kern] (output : Emitted src reserve options) 
   have positive := maxTop_pos functions
   have header : FB < output.image.Ks := by omega
   have beforeLimit := output.stackReservation_bounds
+  have stackBand := beforeLimit.1
+  have limit := beforeLimit.2
   have top : start.toNat + 8 * output.image.Ks < 2 ^ 64 := root.top.trans_lt beforeLimit.2
   have exactBase : start.toNat = base := by
     have inside := Nat.mul_le_mul_left output.image.Ks (declared.trans (Nat.le_succ _))
@@ -143,7 +145,7 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
   intro restricted
   letI : Kern := kernel.withoutSyscalls
   have loaded : CodeAt memory (compiled.entry fp).pc (table f) := exactCode.symm ▸ compiled.instructions
-  obtain ⟨protected, decoded⟩ := maskMemory_code_frame loaded frame far.1 frameReads codeReads
+  obtain ⟨proofFrame, decoded⟩ := maskMemory_code_frame loaded frame far.1 frameReads codeReads
   have agreement := (maskMemory_agreement reads (inSlots fp 0 K) memory frameReads).1
   have sameFrame (byte : W) (inside : inSlots fp 0 K byte) := agreement.1 byte (frameReads byte inside)
   have maskedArgs : EnvAt output.image.Y restricted fp args := by
@@ -169,7 +171,7 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member) original
   obtain ⟨ens, pc, after, run, changed, post, position, _⟩ :=
     prolog_setup (O := O) (rp := 0) (cfp := 0) (H := []) lowered codeSize depthFits capacity
-      layout small protected decoded far maskedDepth maskedArgs observed saved requires
+      layout small proofFrame decoded far maskedDepth maskedArgs observed saved requires
   have samePost : compiled.postcondition = ens := Option.some.inj (compiled.postconditionLowered.symm.trans post)
   subst ens
   have address := position compiled.body compiled.bodyLowered
