@@ -29,7 +29,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralTyped_low
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLocal_erfuellbar
-#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayArgument_lower
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specCompositeArgument_lower
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTypedArray_low
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
@@ -248,8 +248,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.other
 #print axioms Gabbro.Stage0.Senke.runtimeArraySliceCarrier_ok
 #print axioms Gabbro.Stage0.Senke.runtimeStringSliceCarrier_ok
-#print axioms Gabbro.Grammatik.Parser.Uebersetze.specLiteralRecordArgument_erfuellbar
-#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_lower
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specRecordArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specRecordArgument_lower
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_source_erfuellbar
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh
