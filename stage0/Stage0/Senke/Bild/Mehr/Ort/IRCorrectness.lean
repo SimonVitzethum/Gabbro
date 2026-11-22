@@ -54,20 +54,16 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
   obtain ⟨empty, same⟩ := rest.at_observation (M := imageTSO) (before := finish) rfl one observed visible
   exact ⟨by omega, same⟩
 
-/-- When the image has workers, every possible first observable event
-    comes from the first generated clone instruction. Its continuation
-    uses the actual relocated worker entry and stack. -/
-theorem LoadedIRImage.firstWorkerBoundary
-    {before after : Cfg imageTSO (Res T)} {event : Ev} {count : Nat}
-    (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length)
-    (quiet : ProcessPrefix imageTSO actI (output.irEntry memory) [] count before)
-    (observed : ProcessStep imageTSO actI before [event] after) :
+private theorem LoadedIRImage.firstWorkerReference
+    (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
     let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
-    before.ths = [some (.ask (.sys cloneReq) fun answer =>
-      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
-  intro parent child
+    let initial := BildMehr.singleThreadSC (imageToTSO (output.irEntry memory))
+    ∃ count expected, BildMehr.SCMemoryPrefix L0 initial count expected ∧
+      expected.ths = [some (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
+  intro parent child initial
   let entry := codeBase + 16 * (10 * output.starts.length + startLen)
   let stack := output.image.fp0 + 8 * output.image.Ks
   let scratch := startScratch output.compiled.main
@@ -104,8 +100,9 @@ theorem LoadedIRImage.firstWorkerBoundary
     apply codeFar_nat _ (Nat.lt_trans stackFits (by decide))
     simp only [headLen, startLen] at frameStart
     omega
-  obtain ⟨_, _, _, _, startMemory, _, covers⟩ := loaded.silentEntry quiet
-  have exactStart : BildMehr.singleThreadSC (imageToTSO (output.irEntry memory)) =
+  have startMemory : initial.ms.1 = memory.1.m :=
+    BildMehr.mergedView_empty _ _ loaded.emptyBuffers
+  have exactStart : initial =
       (⟨⟨memory.1.m, memory.2.1⟩, [some (.next
         ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ : Cfg (SC L0) (Res T)) := by
     exact congrArg (fun state : (SC L0).St =>
@@ -113,10 +110,35 @@ theorem LoadedIRImage.firstWorkerBoundary
       (Subtype.ext startMemory)
   obtain ⟨referenceSteps, prepared, invariant, reference⟩ := BildMehr.spawnSite_reference (layout := L0)
     memory.2.1 code firstFrame far (by omega) slotsFit entryFits stackFits
-  rw [← exactStart] at reference
-  obtain ⟨_, _, atHost⟩ := covers _ referenceSteps cloneReq _ reference rfl
-  obtain ⟨_, same⟩ := atHost observed (by simp)
-  exact congrArg Cfg.ths same
+  exact ⟨referenceSteps, _, exactStart.symm ▸ reference, rfl⟩
+
+/-- Before the first worker launch, the loaded IR cannot stop silently.
+    Any first visible transition is at the generated clone request,
+    with the exact relocated worker entry and stack. -/
+theorem LoadedIRImage.workerStartup
+    (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
+    let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
+    (∀ {before after : Cfg imageTSO (Res T)} {event : Ev} {count : Nat},
+      ProcessPrefix imageTSO actI (output.irEntry memory) [] count before →
+      ProcessStep imageTSO actI before [event] after →
+      before.ths = [some (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)]) ∧
+    ∀ {ending count}, Tr imageTSO actI (output.irEntry memory) [] ending count → ending = .lauf := by
+  intro parent child
+  obtain ⟨available, expected, reference, waiting⟩ := loaded.firstWorkerReference workers
+  constructor
+  · intro before after event count quiet observed
+    obtain ⟨_, _, _, _, _, _, covers⟩ := loaded.silentEntry quiet
+    obtain ⟨_, _, atHost⟩ := covers expected available cloneReq _ reference waiting
+    obtain ⟨_, same⟩ := atHost observed (by simp)
+    exact (congrArg Cfg.ths same).trans waiting
+  · intro ending count actual
+    by_contra stopped
+    obtain ⟨_, _, sc⟩ := BildMehr.image_silent_trace_sc actual stopped rfl
+      (BildMehr.privateBuffers_empty loaded.emptyBuffers)
+    exact stopped (reference.no_silent_stop_until_host waiting sc rfl (BildMehr.alleBlind_start _))
 
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
