@@ -51,8 +51,8 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
         dite_eq_left loFits, dite_eq_left hiFits]
   · rename_i value
     cases value
-    · exact ⟨Expr.fls, by simp only [lowWertAtE, lowWertE, fitW, dite_true]⟩
-    · exact ⟨Expr.tru, by simp only [lowWertAtE, lowWertE, fitW, dite_true]⟩
+    · exact ⟨Expr.fls, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩
+    · exact ⟨Expr.tru, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩
   · rename_i capacity bytes
     cases decoded : bytesZahl bytes with
     | none => simp only [decoded, Bool.false_eq_true] at valid
@@ -100,7 +100,9 @@ theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
   change uSpecLiteralRecordType ctx name identity fields = some result at typeRead
   unfold uSpecLiteralRecordType at typeRead
   cases selected : uRecordConstructor ctx name with
-  | none => simp only [selected, Option.bind_eq_bind, Option.bind_none] at typeRead
+  | none =>
+    simp only [selected, Option.bind_eq_bind, Option.bind_none] at typeRead
+    cases typeRead
   | some schema =>
     simp only [selected, Option.bind_eq_bind, Option.bind_some] at typeRead
     split at typeRead
