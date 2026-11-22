@@ -150,4 +150,43 @@ theorem privateBuffers_after_release [Kern] {src : String} {reserve : Nat} {opti
     exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive locks inLayout cells assigned current⟩
   exact ⟨oldAfter, newAfter, projectSCState_reassign oldAfter newAfter⟩
 
+/-- The CAS publishes the serving word in the SC projection while
+    reassigning the protected cells according to the new source owner.
+    The physical lock words themselves stay outside the private views. -/
+theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options}
+    {source target : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {before after : imageTSO.St} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
+    {lock : (declOf output.compiled.unit).Lock} {start released : Zustand N}
+    {expected word : W} {reply : Ans}
+    (answered : imageTSO.ans before thread.val
+      (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) expected word) reply after)
+    (old : PrivateBuffers (imageProtectedFootprint output source) before.1)
+    (locks : ImageTicketStates output.image.Y.withIdle after.1.m target states)
+    (prior : TicketOwnership source lock start) (next : TicketOwnership target lock released)
+    (releasedPC : released.pc = upd start.pc thread .gibW) (otherLocks : OtherLockOwners lock source target)
+    (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
+    (order : output.image.Y.lo ≤ output.image.Y.hi) :
+    PrivateBuffers (imageProtectedFootprint output target) after.1 ∧
+      (SC L0).ans (projectSCState (imageProtectedFootprint output source) before) thread.val
+        (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) expected word) reply
+        (projectSCState (imageProtectedFootprint output target) after) := by
+  have transferred (other : Nat) (different : other ≠ thread.val) (guard : (declOf output.compiled.unit).Lock)
+      (held : guard ∈ offen (source.faeden other).spur) : guard ∈ offen (target.faeden other).spur := by
+    by_cases selected : guard = lock
+    · subst guard
+      apply (prior.thread_frame next other ?_).mp held
+      intro inside
+      rw [releasedPC, upd_ne _ _ (fun equal => different (congrArg Fin.val equal))]
+    · exact (otherLocks guard selected other).mpr held
+  obtain ⟨_, pending, projection⟩ := privateBuffers_after_release answered old locks inLayout cells transferred
+  have shared (byte : W) (hit : fenster (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) byte) :
+      ∀ other, ¬ imageProtectedFootprint output source other byte := by
+    intro other owned
+    have fits : output.image.Y.withIdle.lk lock + 24 ≤ 2 ^ 64 := (synchronized.1 lock).2.trans bound
+    exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
+      (lockWord_in_bytes fits (by decide) hit)
+  exact ⟨pending, projection.symm ▸ projectSCState_cas_shared answered.1 _ shared⟩
+
 end Gabbro.Stage0.Senke.Faeden

@@ -23,6 +23,21 @@ def OtherLockOwners {D : Deklaration} (selected : D.Lock) (before after : RufMas
   ∀ other, other ≠ selected → ∀ thread,
     other ∈ offen (after.faeden thread).spur ↔ other ∈ offen (before.faeden thread).spur
 
+/-- Every thread whose ticket place is unchanged keeps its source
+    ownership of that lock, including slots outside the image range. -/
+theorem TicketOwnership.thread_frame {D : Deklaration} {N : Nat} {lock : D.Lock}
+    {source target : RufMaschineG D} {before after : Zustand N}
+    (old : TicketOwnership source lock before) (new : TicketOwnership target lock after)
+    (thread : Nat) (unchanged : ∀ bounded : thread < N, after.pc ⟨thread, bounded⟩ = before.pc ⟨thread, bounded⟩) :
+    lock ∈ offen (source.faeden thread).spur ↔ lock ∈ offen (target.faeden thread).spur := by
+  by_cases inside : thread < N
+  · let atThread : Fin N := ⟨thread, inside⟩
+    have same : (after.pc atThread).haelt = true ↔ (before.pc atThread).haelt = true := by
+      rw [unchanged inside]
+    exact (old.inside atThread).symm.trans (same.symm.trans (new.inside atThread))
+  · have beyond := Nat.le_of_not_gt inside
+    exact ⟨fun held => (old.outside thread beyond held).elim, fun held => (new.outside thread beyond held).elim⟩
+
 /-- The actual loaded lock words, the checked source startup and every
     reserved thread agree before the image executes its first instruction. -/
 theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketOwnership [Kern]
