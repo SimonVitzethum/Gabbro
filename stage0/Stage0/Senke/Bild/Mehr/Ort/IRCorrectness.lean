@@ -2,7 +2,7 @@ module
 
 public import Stage0.Senke.Images.Correctness
 public import Stage0.Senke.Bild.Emitted
-public import Stage0.Senke.Bild.Mehr.Ort.SingleThread
+public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -26,8 +26,8 @@ def Emitted.irEntry (output : Emitted src reserve options) (memory : imageTSO.St
   ⟨memory, [some (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩
 
 /-- Until the first host observation, the loaded image runs on its one
-    initial thread. Its entire buffer-visible execution has an SC run
-    with the same endpoint and memory. -/
+    initial thread. Buffer flushes project away. Every generated memory
+    reference ending at a host request contains the projected execution. -/
 theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
     (loaded : LoadedIRImage output memory)
     (path : ProcessPrefix imageTSO actI (output.irEntry memory) [] count finish) :
@@ -35,11 +35,16 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
     let finishSC := BildMehr.singleThreadSC (imageToTSO finish)
     ∃ steps, steps ≤ count ∧ finish.ths.length = 1 ∧
       ProcessPrefix (SC L0) actI startSC [] steps finishSC ∧
-      startSC.ms.1 = memory.1.m ∧ finishSC.ms.1 = finish.ms.1.view 0 := by
+      startSC.ms.1 = memory.1.m ∧ finishSC.ms.1 = finish.ms.1.view 0 ∧
+      ∀ expected available request resume,
+        BildMehr.SCMemoryPrefix L0 startSC available expected →
+        expected.ths = [some (.ask (.sys request) resume)] →
+        steps ≤ available ∧ BildMehr.SCMemoryPrefix L0 finishSC (available - steps) expected := by
   obtain ⟨owned, steps, bound, run⟩ := BildMehr.tso_silent_single_thread
     (image_prefix_tso path) rfl rfl (privateBuffers_empty loaded.emptyBuffers)
   exact ⟨steps, bound, path.silent_slots rfl, run, mergedView_empty _ _ loaded.emptyBuffers,
-    BildMehr.singleThreadView _ owned⟩
+    BildMehr.singleThreadView _ owned, fun _ _ _ _ reference waiting =>
+      reference.consume_until_host waiting run rfl (BildMehr.alleBlind_start _)⟩
 
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
