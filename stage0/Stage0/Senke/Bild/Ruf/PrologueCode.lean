@@ -141,4 +141,34 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.capture_frameMemory [kernel : 
   · exact (same byte inside).1.trans ((written.b byte outside).trans (agreement.1 byte (frameReads byte inside)).1)
   · exact (untouched byte inside).1
 
+/-- A private request advances the same IR continuation in the reference
+    and the scheduled image. For a native scalar answer the proof needs
+    uniqueness of that operation's word, as holds for comparisons. -/
+theorem image_private_continuation [Kern] {before after : imageTSO.St} {thread : Nat}
+    {reads writes : W → Prop} {localMemory finish : Mem} {target : T}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    (reference : Run (.ask request resume) localMemory target finish)
+    (blind : Blind (.ask request resume))
+    (scope : HostFreeControl reads writes (.ask request resume))
+    (agreement : GleichAuf reads (before.1.view thread) localMemory)
+    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
+      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
+    (replied : imageTSO.ans before thread request answer after) :
+    ∃ updated, Run (resume answer) updated target finish ∧ GleichAuf reads (after.1.view thread) updated := by
+  cases reference with
+  | ask expected rest =>
+    have memory : istSpeicherOp request = true := by
+      cases request <;> first | rfl | cases expected
+    obtain ⟨updated, _, exactAnswer, continued, same⟩ :=
+      tso_memory_response_matches blind agreement scope.2.1 memory replied.1
+    rw [expected] at exactAnswer
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj exactAnswer)
+    exact ⟨updated, continued.symm ▸ rest, same⟩
+  | sys _ _ => exact (scope.1 _ rfl).elim
+  | fp expected rest =>
+    obtain ⟨rfl, word, rfl, observed⟩ := replied.1
+    have same := nativeUnique _ _ _ _ _ rfl expected observed
+    cases same
+    exact ⟨localMemory, rest, agreement⟩
+
 end Gabbro.Stage0
