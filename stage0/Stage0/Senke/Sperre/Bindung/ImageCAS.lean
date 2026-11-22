@@ -89,7 +89,8 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
   let update := BitVec.ofNat 64 (expected + 1)
   obtain ⟨stepped, returned, memoryEq⟩ :=
     image_CAS_reply represented.next writable waiting answered
-  refine ⟨stepped, returned, congrArg TSt.buf memoryEq, ?_⟩
+  have bufferEq := congrArg TSt.buf memoryEq
+  refine ⟨stepped, returned, bufferEq, ?_⟩
   have compare : old = requested ↔ before.w.next % 2 ^ 64 = expected := by
     constructor
     · intro equal
@@ -147,8 +148,8 @@ theorem image_ticket_release [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
     let next : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
       upd before.pc thread .gibW, before.q.tail⟩
     ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
-      memory.1 = { machine.ms.1 with m := Mem.write machine.ms.1.m (BitVec.ofNat 64 (base + 8))
-        8 (BitVec.ofNat 64 (expected + 1)).toNat } ∧
+      memory.1 = { machine.ms.1 with
+        m := Mem.write machine.ms.1.m (BitVec.ofNat 64 (base + 8)) 8 (BitVec.ofNat 64 (expected + 1)).toNat } ∧
       Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next ∧
       (before.pc thread).haelt = true ∧ (next.pc thread).haelt = false := by
   intro after next
