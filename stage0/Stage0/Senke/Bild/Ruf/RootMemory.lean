@@ -85,6 +85,36 @@ theorem image_refused_worker [Kern] {src : String} {reserve : Nat} {options : Pr
       · exact .inl (identical.trans same.symm)
       · exact .inr ⟨used, idle, same.trans running, active.advance_source (.inl own) rfl⟩
 
+/-- Every actual memory prefix of the emitted clone-refusal guard
+    that reaches the host issues the specified process exit. -/
+theorem image_refused_worker_terminal [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {history : List Ev}
+    {before : Cfg imageTSO (Res T)} {request : Req} {resume : Ans → Res T} {id extra : W}
+    {initial : Mem} {pc fp : W} {capacity scratch entry stack : Nat}
+    (code : CodeAt initial pc ((spawnOne scratch entry stack).drop 3))
+    (frame : FrameOK initial fp capacity) (far : CodeFar pc 7 fp capacity)
+    (room : scratch + 8 ≤ capacity) (small : capacity < 2 ^ 31)
+    (stored : initial.rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id)
+    (refused : id.toInt < 0)
+    (last : (history.filter (fun event => event.1 == 0)).getLast? = some (0, cloneReq, some (id, extra)))
+    (running : before.ths[0]? = some (some (.ask (.sys request) resume)))
+    (ran : SoloLauf ⟨pc, fp⟩ initial (.ask (.sys request) resume) (before.ms.1.view 0)) :
+    let observed : List Ev := [(0, request, none)]
+    Tr imageTSO actI before observed (.exit request.a1) 1 ∧
+      ImageStopMatches output O state history observed (.exit request.a1) := by
+  intro observed
+  have stop : @Stops kernel.withoutSyscalls ⟨pc, fp⟩ initial cloneCode := by
+    letI : Kern := kernel.withoutSyscalls
+    exact (spawnCheck_ok code frame room small far stored).2 refused.le
+  obtain ⟨number, status⟩ := SoloLauf.stop_matches (kernel := kernel) stop ran
+  have exits : request.nr.toNat = NR_EXIT_GROUP := by
+    rw [number]
+    rfl
+  obtain ⟨prior, previous⟩ := List.getLast?_eq_some_iff.mp last
+  exact ⟨.exitGroup running rfl exits, 0, request, rfl, exits, rfl,
+    .inr (.inr (.inr (.inl ⟨rfl, status, prior, id, extra, previous, refused⟩)))⟩
+
 private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}

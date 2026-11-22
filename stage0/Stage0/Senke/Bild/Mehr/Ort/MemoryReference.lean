@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
+import Stage0.Senke.Stopp
 
 @[expose] public section
 
@@ -181,6 +182,50 @@ theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
     | next first _ =>
       cases reached.remaining first with
       | ask answer _ => cases answer
+
+private theorem RunP.stop_matches {tree control : Res T} {before after : Mem}
+    {observed : Req} {resume : Ans → Res T} (path : RunP tree before control after)
+    (atHost : control = .ask (.sys observed) resume) :
+    ∀ {expected}, RunTo tree before expected → observed = expected := by
+  induction path with
+  | refl =>
+    cases atHost
+    intro expected reference
+    cases reference with
+    | sys => rfl
+    | ask answer _ => cases answer
+  | ask answered _ ih =>
+    intro expected reference
+    cases reference with
+    | sys | fp => cases answered
+    | ask reply rest =>
+      rw [answered] at reply
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj reply)
+      exact ih atHost rest
+
+/-- A source-backed reference that stops without an intervening host
+    response determines the actual terminal request of a solo IR path. -/
+theorem SoloLauf.stop_matches [kernel : Kern] {start : T} {before after : Mem}
+    {status : Nat} {request : Req} {resume : Ans → Res T}
+    (reference : @Stops kernel.withoutSyscalls start before status)
+    (path : SoloLauf start before (.ask (.sys request) resume) after) :
+    request.nr = 231 ∧ request.a1 = BitVec.ofNat 64 status := by
+  letI : Kern := kernel.withoutSyscalls
+  obtain ⟨terminal, atTerminal, expected, completed, stopped, number, result⟩ := reference
+  obtain ⟨_, current, currentMemory, actual, pending⟩ := path
+  rcases pending with ⟨impossible, _⟩ | pending
+  · cases impossible
+  have same : request = expected := by
+    rcases actual.weiche completed with forward | ⟨_, passed⟩
+    · cases forward with
+      | refl => exact RunP.stop_matches pending rfl stopped
+      | next first _ =>
+        cases pending.remaining_run first with
+        | ask answered _ => cases answered
+        | sys answered _ => exact False.elim answered
+    · obtain ⟨rfl, rfl⟩ := passed.halt stopped
+      exact RunP.stop_matches pending rfl stopped
+  exact ⟨same ▸ number, same ▸ result⟩
 
 /-- A memory-only execution of an instruction tree supplies the SC
     reference up to its residual control, including pending host calls. -/
