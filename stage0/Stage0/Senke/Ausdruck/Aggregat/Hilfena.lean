@@ -106,6 +106,48 @@ def constWords : List Runner.W → Nat → List II × Nat
     let tail := constWords ws (d + 1)
     (head.1 ++ tail.1, max head.2 tail.2)
 
+/-- Length and temporary-frame use are the dimensions needed by the
+    image layout before absolute addresses are available. -/
+def codeMeasure (code : List II × Nat) : Nat × Nat :=
+  (code.1.length, code.2)
+
+private theorem konstWL_measure (chunks first second destination : Nat) :
+    codeMeasure (konstWL chunks first destination) =
+      codeMeasure (konstWL chunks second destination) := by
+  induction chunks generalizing first second with
+  | zero => rfl
+  | succ chunks ih =>
+    have lower := ih (first / 65536) (second / 65536)
+    obtain ⟨length, frame⟩ := Prod.mk.inj lower
+    simp only [konstWL, bin2, codeMeasure, List.length_append, List.length_singleton, length, frame]
+
+/-- Relocating encoded constants without changing which values fit in
+    a single immediate preserves the dimensions of their emitted code.
+    The actual words may differ arbitrarily within that partition. -/
+theorem constWords_measure {first second : List Runner.W}
+    (same : first.map (fun word => lit32 word.toInt) = second.map (fun word => lit32 word.toInt))
+    (destination : Nat) :
+    codeMeasure (constWords first destination) = codeMeasure (constWords second destination) := by
+  induction first generalizing second destination with
+  | nil =>
+    cases second with
+    | nil => rfl
+    | cons word rest => cases same
+  | cons word rest ih =>
+    cases second with
+    | nil => cases same
+    | cons updated remaining =>
+      have ⟨head, tail⟩ := List.cons.inj same
+      have sameWord : codeMeasure (wordConst word destination) =
+          codeMeasure (wordConst updated destination) := by
+        simp only [wordConst, head]
+        split
+        · rfl
+        · exact konstWL_measure 4 _ _ _
+      have ⟨headLength, headFrame⟩ := Prod.mk.inj sameWord
+      have ⟨tailLength, tailFrame⟩ := Prod.mk.inj (ih tail (destination + 1))
+      simp only [constWords, codeMeasure, List.length_append, headLength, headFrame, tailLength, tailFrame]
+
 theorem wordConst_top (w : Runner.W) (d : Nat) : d < (wordConst w d).2 := by
   unfold wordConst
   split
