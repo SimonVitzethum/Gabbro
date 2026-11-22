@@ -141,4 +141,63 @@ public inductive ConstructPlan (elaboration : Elaboration D V Λ types f) (tag :
         .bind (joinChildrenExpr types path left right (.var (later a)) (.var b))
           (body (fun var => .there (later (extend var))) .here)))
 
+public theorem CheckedArguments.expressions {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    {args : List Parser.SExpr} {parameters : Ctx} (checked : CheckedArguments elaboration tag args parameters) :
+    ∃ terms, ExpressionsResolved elaboration.expression args terms ∧ terms.map BoundExpression.result = parameters := by
+  induction checked with
+  | nil => exact ⟨[], .nil, rfl⟩
+  | cons head tail ih =>
+    obtain ⟨terms, resolved, typesEq⟩ := ih
+    exact ⟨head.term :: terms, .cons head.known resolved, congrArg (head.term.result :: ·) typesEq⟩
+
+public theorem CheckedArguments.locals_defined {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    {args : List Parser.SExpr} {parameters : Ctx} (checked : CheckedArguments elaboration tag args parameters)
+    (frame : Frame (Value D)) (saved : Wert D (frameType types f))
+    (represented : FrameRep D types f (.running tag) frame saved) :
+    ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
+      ∃ environment, localsEnv D expression.locals frame = some environment := by
+  induction checked with
+  | nil =>
+    intro source member
+    cases member
+  | cons head tail ih =>
+    intro source member expression known
+    rcases List.mem_cons.mp member with rfl | rest
+    · have equal := Option.some.inj (known.symm.trans head.known)
+      subst expression
+      exact head.restore.locals_defined (.running tag) frame saved represented head.live
+    · exact ih source rest expression known
+
+/-- Every represented running frame provides a typed encoding of the
+    future described by this executable constructor plan. -/
+public theorem ConstructPlan.representable {elaboration : Elaboration D V Λ types f} {tag : Nat}
+    {future : FutureExpr} (plan : ConstructPlan elaboration tag future)
+    (frame : Frame (Value D)) (saved : Wert D (frameType types f))
+    (represented : FrameRep D types f (.running tag) frame saved)
+    (path : List Nat) (world : World D) :
+    ∃ record, TaskRep D types path future
+      (makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame future world).1 record := by
+  apply makeTask_rep elaboration frame future _ _ path world
+  · intro name args selected
+    induction plan with
+    | call declaredName declaredArgs callee known checked =>
+      simp only [callsIn, List.mem_singleton, FutureExpr.call.injEq] at selected
+      obtain ⟨rfl, rfl⟩ := selected
+      obtain ⟨terms, resolved, same⟩ := checked.expressions
+      exact ⟨callee, terms, known, resolved, same⟩
+    | join _ _ first second =>
+      rcases List.mem_append.mp selected with left | right
+      · exact first left
+      · exact second right
+  · intro name args selected source used term known
+    induction plan with
+    | call declaredName declaredArgs callee found checked =>
+      simp only [callsIn, List.mem_singleton, FutureExpr.call.injEq] at selected
+      obtain ⟨rfl, rfl⟩ := selected
+      exact checked.locals_defined frame saved represented source used term known
+    | join _ _ first second =>
+      rcases List.mem_append.mp selected with left | right
+      · exact first left
+      · exact second right
+
 end Gabbro.Grammatik.Async.Representation

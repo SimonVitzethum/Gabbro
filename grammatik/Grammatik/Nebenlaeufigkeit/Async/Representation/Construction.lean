@@ -229,6 +229,8 @@ public theorem await_construction_rep (elaboration : Elaboration D V Λ types f)
         restoreLiveLocals slots.slots expression.locals
           (localTypes callee args leaf source argument expression known)) [tag] world
   simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
+  change TaskRep D types [tag] future (makeTask (inducedModel elaboration calls prices normal) frame future world).1
+    record at represented
   generalize makeTask (inducedModel elaboration calls prices normal) frame future world =
     constructed at represented ⊢
   obtain ⟨task, after, cost⟩ := constructed
