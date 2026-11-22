@@ -4,12 +4,14 @@ public import Grammatik.Parser.Async.Elaboration
 public import Grammatik.Nebenlaeufigkeit.Async.Layout
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil3
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Async.Segment
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 /-- The declaration used to generate a layout comes from this position in the
     canonical outer parse. The complete ordinary signature stays attached. -/
@@ -149,5 +151,38 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
   simp only [uWertBody, uRechne, uWertBlatt, lowWertE, LowSide.wert, FrameLocals, List.map_nil,
     CanonicalExpression.bound, BoundExpression.ofExpr]
   exact ⟨_, rfl, rfl, rfl⟩
+
+/-- The poll entry is private to the expansion and cannot collide with
+    any source identifier. The same name is used by all child-call sites. -/
+@[expose] public def pollName (child : String) : String :=
+  "$async$poll$" ++ child
+
+public structure ResolvedPoll (u : UProg) (V : Vertrag (declOf u)) (Λ : List (Res (declOf u)))
+    (types : TypeResolution) (child : String) where
+  callee : AwaitedCall (declOf u) V Λ types child
+  found : fnNr u (pollName child) = .ok callee.poll
+
+/-- Check the actual generated poll signature with the same finite call
+    checker as ordinary G. Construction code has already been typed
+    against the generated child's initial record. -/
+@[expose] public def resolvePoll (u : UProg) (V : Vertrag (declOf u)) (Λ : List (Res (declOf u)))
+    (types : TypeResolution) (child : String) (parameters : List Ty)
+    (construct : Expr (declOf u) parameters Λ (types.childState child)) :
+    Except String (ResolvedPoll u V Λ types child) :=
+  match found : fnNr u (pollName child) with
+  | .error failure => .error failure
+  | .ok poll =>
+    if args : (declOf u).params poll = [types.childState child] then
+      if result : (declOf u).erg poll =
+          some (.sum [some (types.childResult child), some (types.childState child)]) then
+        if admitted : rufPasstB u V ((declOf u).signatur poll) Λ = true then
+          if reasons : (declOf u).gruende poll = 0 then
+            if inventory : nach (declOf u) poll Λ = Λ then
+              .ok ⟨⟨parameters, construct, poll, args, result, rufPasstB_ok admitted, reasons, inventory⟩, found⟩
+            else .error "async: poll changes the resource index"
+          else .error "async: poll has an unchecked reason channel"
+        else .error "async: poll violates the ordinary call contract"
+      else .error "async: poll result differs from Ready/Pending"
+    else .error "async: poll takes a different state record"
 
 end Gabbro.Stage0.Frontend.Async
