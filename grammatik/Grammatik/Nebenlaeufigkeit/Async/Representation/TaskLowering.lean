@@ -99,7 +99,7 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
     rw [childPollBlock, waitingBlock_exec_outcome]
     obtain ⟨silent, evaluated⟩ := leafPollArguments_eval callee .here world world (.cons payload env)
     have noRead : world.lese Λ [] = world := rfl
-    simp only [silent, noRead, evaluated, Env.get]
+    erw [silent, noRead, evaluated]
     cases returned : calls callee.poll world (pollEnvironment callee payload) with
     | why _ reason => exact keinGrund callee.pollInfallible reason
     | logik _ | hardware _ =>

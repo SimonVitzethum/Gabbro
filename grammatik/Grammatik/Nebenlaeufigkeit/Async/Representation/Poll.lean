@@ -21,7 +21,8 @@ variable {D : Deklaration} {V : Vertrag D} {Λ : List (Res D)}
 public inductive PollRep (D : Deklaration) (types : TypeResolution)
     (path : List Nat) (future : FutureExpr) :
     Poll (Value D) → Task (Value D) (Child D types) → Prop where
-  | pending (stored : TaskRep D types path future task record) :
+  | pending (stored : TaskRep D types path future task record)
+      (active : ∀ value, task ≠ .ready value) :
       PollRep D types path future Poll.pending task
   | ready (typed : valueAt D (taskResultType types path future) value = some result)
       (stored : TaskRep D types path future (.ready value) record) :
@@ -32,7 +33,7 @@ public theorem PollRep.storage {path : List Nat} {future : FutureExpr}
     (progress : PollRep D types path future event task) :
     ∃ record, TaskRep D types path future task record := by
   cases progress with
-  | pending stored => exact ⟨_, stored⟩
+  | pending stored _ => exact ⟨_, stored⟩
   | ready _ stored => exact ⟨_, stored⟩
 
 /-- A real successful leaf poll supplies the typed representation of
@@ -65,7 +66,7 @@ public theorem runTaskPoll_leaf_rep (elaboration : Elaboration D V Λ types f)
       | zero =>
         simp only [decodePollAnswer, bind, Except.bind, pure, Except.pure] at successful
         cases successful
-        exact .pending (.callActive _ _ _ payload)
+        exact .pending (.callActive _ _ _ payload) (fun _ impossible => Task.noConfusion impossible)
       | succ tag =>
         have invalid : tag + 2 < 2 := bound
         omega
@@ -82,12 +83,13 @@ public theorem join_poll_rep {path : List Nat} {left right : FutureExpr}
       | _, _ => (.pending, .join l r)
     PollRep D types path (.join left right) result.1 result.2 := by
   cases leftRep with
-  | pending stored =>
+  | pending stored _ =>
     obtain ⟨_, rightStored⟩ := rightRep.storage
-    exact .pending (.joinActive stored rightStored)
+    exact .pending (.joinActive stored rightStored) (fun _ impossible => Task.noConfusion impossible)
   | @ready leftValue leftResult leftRecord leftTyped leftStored =>
     cases rightRep with
-    | pending rightStored => exact .pending (.joinActive leftStored rightStored)
+    | pending rightStored _ =>
+      exact .pending (.joinActive leftStored rightStored) (fun _ impossible => Task.noConfusion impossible)
     | @ready rightValue rightResult rightRecord rightTyped rightStored =>
       have typed : valueAt D (taskResultType types path (.join left right))
           (.pair leftValue rightValue) = some (leftResult, rightResult, ()) := by
