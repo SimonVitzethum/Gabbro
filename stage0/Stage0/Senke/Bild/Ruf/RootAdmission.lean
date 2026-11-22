@@ -138,7 +138,7 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     apply tso_views_merge
     intro j store pending k distinct address inside touches
     exact distinct (imageStackFootprint_disjoint inside (buffers j store pending address touches).1)
-  have outside := imageProjection_agree_other shared otherViews
+  have outside := imageProjection_agree_other (footprint := imageStackFootprint output) shared otherViews
   refine ImageRuntimeMatches.register_body length related indices roots empty entryOK exactProgram thread alive waiting
     sourceHead threads otherViews buffers (imageStackFootprint output i) (fun _ proof => proof) atStack outside ?_ ?_
   · intro j s found address write owns
