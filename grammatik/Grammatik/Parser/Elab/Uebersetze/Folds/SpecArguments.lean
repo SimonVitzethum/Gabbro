@@ -233,7 +233,9 @@ theorem specIndexedFieldArgument_erfuellbar (field : String) (target : Ty)
     specArrayIndexArgument_of_local ctx "array" schema.ty capacity index inside arrayRead baseType access
   have typed : uSpecValueType ctx base operand = some schema.ty := by
     obtain ⟨parsed, read, type⟩ := uSpecValueArgument_exact baseAccepted
-    exact (Except.ok.inj (read.symm.trans baseRead)) ▸ type
+    have same : parsed = operand := Except.ok.inj (read.symm.trans baseRead)
+    rw [same] at type
+    exact type
   have nominal : uRecordOf ctx.records schema.ty = .ok ⟨schema, rfl⟩ := by
     simp only [ctx, uRecordOf, dite_true]
   have same : strEq field field = true := by simp [strEq_apply_eq_decide]
