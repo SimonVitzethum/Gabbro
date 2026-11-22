@@ -189,7 +189,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     the committed GX state and every thread's footprint throughout it. -/
 theorem image_body_memory_segment [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
-    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {O : Orakel (declOf output.compiled.unit)}
     {before after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
     {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem} {count : Nat}
@@ -209,10 +209,14 @@ theorem image_body_memory_segment [Kern] {src : String} {reserve : Nat} {options
         (∀ byte, fussOp request byte → s.F byte) ∧
         (schreibtOp request = true → ∀ byte, fussOp request byte → s.Wr byte))
     (segment : ProcessPrefix imageTSO actI before [] count after) :
-    ImageRuntimeMatchesAt footprint output E O history after state ∧ AlleBlind after.ths := by
+    PrivateBuffers footprint after.ms.1 ∧ AlleBlind after.ths ∧
+    ∃ updated : Nat → Option Solo,
+      MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+        ⟨(projectSCState footprint after.ms).1, after.ths⟩ state updated positions committed ∧
+      ∀ i s, updated i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s := by
   obtain ⟨pending, projected⟩ := image_memory_prefix_projects segment buffers classify
   obtain ⟨updated, matched, stable, sameFootprints⟩ := sc_private_runs_refine related blind access projected
-  refine ⟨⟨after.ths, pending, rfl, .inr ⟨updated, positions, committed, matched, ?_⟩, fun _ => .inl rfl⟩, stable⟩
+  refine ⟨pending, stable, updated, matched, ?_⟩
   intro i s known
   obtain ⟨first, present, reads, writes⟩ := sameFootprints i s known
   obtain ⟨thread, owned⟩ := indices i first present
