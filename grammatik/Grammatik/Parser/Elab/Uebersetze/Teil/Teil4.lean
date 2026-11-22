@@ -145,6 +145,11 @@ def uSliceConstants (ctx : UCtx) : List (String × (Int × Int)) :=
   (ctx.lits.filter fun entry => !ctx.names.any (strEq · entry.1)).map
     (fun (name, value) => (name, (value, value)))
 
+/-- Bounds must come from a resolved binding, never from an untyped
+    local's placeholder range awaiting dependent lowering. -/
+def uSliceLocalType (ctx : UCtx) (name : String) : Option Ty :=
+  if ctx.unknownRanges.contains name then none else uValueType ctx (.param name)
+
 /-- The dynamic endpoint form `array[start .. start + N]` fixes the
     number of selected elements statically. The same lexical start
     must be used at both endpoints, and its complete interval must fit. -/
@@ -152,8 +157,8 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
     USide → SExpr → SExpr → Option USide
   | .param array, .variable start, .bin "+" (.variable lastStart) amount => do
     if !strEq start lastStart then none else
-      let some (.arr element length) := uValueType ctx (.param array) | none
-      let some (.int lo hi) := uValueType ctx (.param start) | none
+      let some (.arr element length) := uSliceLocalType ctx array | none
+      let some (.int lo hi) := uSliceLocalType ctx start | none
       let some count := uSchranke (uSliceConstants ctx) amount | none
       if 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length then
         if blatt (.variable start) = .ok (.param start) then
@@ -167,16 +172,16 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
 def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
     (index : Option SExpr) : SExpr → Option USide
   | .built "#slice" [.variable array, .variable first, .variable last] => do
-    let some (.arr _ capacity) := uValueType ctx (.param array) | none
-    let some (.int firstLo firstHi) := uValueType ctx (.param first) | none
-    let some (.int lastLo lastHi) := uValueType ctx (.param last) | none
+    let some (.arr _ capacity) := uSliceLocalType ctx array | none
+    let some (.int firstLo firstHi) := uSliceLocalType ctx first | none
+    let some (.int lastLo lastHi) := uSliceLocalType ctx last | none
     if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
       if blatt (.variable array) = .ok (.param array) ∧
           blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last) then
         match index with
         | none => some (.sub (.param last) (.param first))
         | some (.variable name) => do
-          let some (.int lo hi) := uValueType ctx (.param name) | none
+          let some (.int lo hi) := uSliceLocalType ctx name | none
           if 0 ≤ lo ∧ hi < lastLo - firstHi ∧ blatt (.variable name) = .ok (.param name) then
             some (.idx (.param array) (.add (.param first) (.param name)))
           else none
@@ -364,8 +369,8 @@ theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
     (array start : String) (element : Ty) (length : Nat) (lo hi count : Int) (amount : SExpr)
     (arrayRead : uRechne ctx blatt (.variable array) = .ok (.param array))
     (indexRead : blatt (.variable start) = .ok (.param start))
-    (arrayType : uValueType ctx (.param array) = some (.arr element length))
-    (indexType : uValueType ctx (.param start) = some (.int lo hi))
+    (arrayType : uSliceLocalType ctx array = some (.arr element length))
+    (indexType : uSliceLocalType ctx start = some (.int lo hi))
     (width : uSchranke (uSliceConstants ctx) amount = some count)
     (bounds : 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length) :
     uRechne ctx blatt (.built "#slice"
@@ -380,9 +385,9 @@ theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
 /-- The accepted source shape exposes the actual length through subtraction. -/
 theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
     (array first last : String) (τ : Ty) (capacity : Nat) (firstLo firstHi lastLo lastHi : Int)
-    (arrayType : uValueType ctx (.param array) = some (.arr τ capacity))
-    (firstType : uValueType ctx (.param first) = some (.int firstLo firstHi))
-    (lastType : uValueType ctx (.param last) = some (.int lastLo lastHi))
+    (arrayType : uSliceLocalType ctx array = some (.arr τ capacity))
+    (firstType : uSliceLocalType ctx first = some (.int firstLo firstHi))
+    (lastType : uSliceLocalType ctx last = some (.int lastLo lastHi))
     (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
     (locals : blatt (.variable array) = .ok (.param array) ∧
       blatt (.variable first) = .ok (.param first) ∧ blatt (.variable last) = .ok (.param last)) :
