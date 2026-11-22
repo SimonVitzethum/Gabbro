@@ -40,7 +40,9 @@ theorem imageNamedIndex_sound {α : Type} {entries : List α} {name : α → Str
   | some selected =>
     rw [result] at found
     cases found
-    exact beq_iff_eq.mp (List.find?_some result)
+    have matches : (name (entries.get position) == expected) = true :=
+      List.find?_some (p := fun index => name (entries.get index) == expected) result
+    exact beq_iff_eq.mp matches
 
 def imageAccumulatorMembers (output : Emitted src reserve options) (name : String)
     (k : Nat) : Except String (Fin k → (declOf output.compiled.unit).Glob) :=
