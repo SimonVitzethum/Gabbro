@@ -66,7 +66,7 @@ public theorem runTaskPoll_leaf_rep (elaboration : Elaboration D V Λ types f)
       | zero =>
         simp only [decodePollAnswer, bind, Except.bind, pure, Except.pure] at successful
         cases successful
-        exact .pending (.callActive _ _ _ payload) (fun _ impossible => Task.noConfusion impossible)
+        exact .pending (.callActive _ _ _ payload) (fun _ impossible => by cases impossible)
       | succ tag =>
         have invalid : tag + 2 < 2 := bound
         omega
@@ -85,11 +85,11 @@ public theorem join_poll_rep {path : List Nat} {left right : FutureExpr}
   cases leftRep with
   | pending stored _ =>
     obtain ⟨_, rightStored⟩ := rightRep.storage
-    exact .pending (.joinActive stored rightStored) (fun _ impossible => Task.noConfusion impossible)
+    exact .pending (.joinActive stored rightStored) (fun _ impossible => by cases impossible)
   | @ready leftValue leftResult leftRecord leftTyped leftStored =>
     cases rightRep with
     | pending rightStored _ =>
-      exact .pending (.joinActive leftStored rightStored) (fun _ impossible => Task.noConfusion impossible)
+      exact .pending (.joinActive leftStored rightStored) (fun _ impossible => by cases impossible)
     | @ready rightValue rightResult rightRecord rightTyped rightStored =>
       have typed : valueAt D (taskResultType types path (.join left right))
           (.pair leftValue rightValue) = some (leftResult, rightResult, ()) := by
