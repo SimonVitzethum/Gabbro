@@ -43,6 +43,29 @@ theorem Emitted.initial_root_head (output : Emitted src reserve options)
   rw [unit.program, unit.memory]
   exact output.startRequires root listed
 
+/-- An original root starts without a lock, so its contracts can
+    read only carriers that require no guard. -/
+theorem Emitted.root_contract_unguarded (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    {root : (declOf output.compiled.unit).Fn} (declared : root ∈ E.ws)
+    {carrier : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob}
+    (reads : carrier ∈ (E.P.requires root).orte ∨ carrier ∈ (E.P.ensures root).orte) :
+    ∀ lock, ¬ Bewacht carrier lock := by
+  have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware accepted).1
+  have lockless := (valid.wurzeln root declared).1
+  intro lock guard
+  have signed : lock ∈ (declOf output.compiled.unit).haelt root := by
+    rcases reads with requires | ensures
+    · apply (held_anfang _ lock).mp
+      have allowed := (E.P.requires root).orte_darf carrier requires
+      cases carrier <;> exact allowed (.inl lock) guard
+    · apply (held_ende (vertragVon (declOf output.compiled.unit) root) lock).mp
+      have allowed := (E.P.ensures root).orte_darf carrier ensures
+      cases carrier <;> exact allowed (.inl lock) guard
+  rw [lockless] at signed
+  exact List.not_mem_nil signed
+
 /-- The checked requires and entry snapshot readers of a root access
     carriers separated from the other declared roots. -/
 theorem Emitted.root_contract_local (output : Emitted src reserve options)
@@ -53,18 +76,7 @@ theorem Emitted.root_contract_local (output : Emitted src reserve options)
     (reads : carrier ∈ (E.P.requires root).orte ∨ carrier ∈ (E.P.ensures root).orte) :
     Getrennt E.P output.fsA.1 E.ws carrier := by
   have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware accepted).1
-  have lockless := (valid.wurzeln root declared).1
-  have unguarded (lock : (declOf output.compiled.unit).Lock) (guard : Bewacht carrier lock) : False := by
-    have signed : lock ∈ (declOf output.compiled.unit).haelt root := by
-      rcases reads with requires | ensures
-      · apply (held_anfang _ lock).mp
-        have allowed := (E.P.requires root).orte_darf carrier requires
-        cases carrier <;> exact allowed (.inl lock) guard
-      · apply (held_ende (vertragVon (declOf output.compiled.unit) root) lock).mp
-        have allowed := (E.P.ensures root).orte_darf carrier ensures
-        cases carrier <;> exact allowed (.inl lock) guard
-    rw [lockless] at signed
-    exact List.not_mem_nil signed
+  have unguarded := output.root_contract_unguarded hardware accepted declared reads
   have footprint : carrier ∈ fussOrte E.P root :=
     reads.elim (fun h => fuss_req E.P root h) (fun h => fuss_ens E.P root h)
   rcases (valid.fuss root).1 carrier footprint with localOrGuard | ⟨lock, guarded, _⟩ | shared

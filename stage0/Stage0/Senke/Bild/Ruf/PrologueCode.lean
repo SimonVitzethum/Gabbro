@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Bild.Mehr.Ort.IRStartup
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 public import Stage0.Senke.Bild.Ruf.RootMemory
+public import Stage0.Senke.Bild.Ruf.PrologueAccess
 
 @[expose] public section
 
@@ -305,7 +306,6 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   declared : E.starts[thread]? = some root
   alive : state.lebt thread = true
   unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread
-  reads : W → Prop
   writes : W → Prop
   privateWrites : ∀ byte, writes byte → imageStackFootprint output thread byte
   reference : Mem
@@ -313,9 +313,15 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   lowered : FunctionIRPrologue output finish root.1
   running : IRContinuation (lowered.bodyEntry (imagePrologueFrame output thread)) finish control reference
   blind : Blind control
-  readable : ∀ byte, reference.rd byte = true → reads byte
-  writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte
-  agrees : MaskedAgreement reads writes reference memory
+  readable : ∀ byte, reference.rd byte = true → imagePrologueReads output thread root.1 byte
+  writable : ∀ byte, reference.wr byte = true → imagePrologueReads output thread root.1 byte ∧ writes byte
+  agrees : MaskedAgreement (imagePrologueReads output thread root.1) writes reference memory
+
+abbrev ImageProloguePhase.reads [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T} {memory : Mem}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state) : W → Prop :=
+  imagePrologueReads output thread phase.root.1
 
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
@@ -328,7 +334,7 @@ def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
     (sameWrites : ∀ byte, phase.writes byte → nextMemory.wr byte = memory.wr byte)
     (alive : nextState.lebt thread = true) (sameHead : nextState.m.faeden thread = state.m.faeden thread) :
     ImageProloguePhase output E thread control nextMemory nextState :=
-  ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered, phase.reads,
+  ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered,
     phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered, phase.running, phase.blind,
     phase.readable, phase.writable, ⟨fun byte inside =>
       ⟨(phase.agrees.1 byte inside).1.trans (sameReads byte inside).1.symm,
@@ -348,7 +354,7 @@ theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
   rcases IRContinuation.decode phase.running with ⟨boundary, reference⟩ | progress
   · exact .inl ⟨boundary, reference ▸ phase.agrees⟩
   · exact .inr ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
-      phase.reads, phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered, progress,
+      phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered, progress,
       blind_step pointer, phase.readable, phase.writable, phase.agrees⟩⟩
 
 theorem ImageProloguePhase.request_scope [Kern] {output : Emitted src reserve options}
@@ -372,7 +378,7 @@ theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
     Nonempty (ImageProloguePhase output E thread (resume answer) (after.1.view thread) state) := by
   obtain ⟨updated, progress, kept, readMap, writeMap⟩ :=
     IRContinuation.answer phase.running phase.blind phase.readable phase.writable phase.agrees nativeUnique response
-  exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered, phase.reads,
+  exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
     phase.writes, phase.privateWrites, updated, phase.finish, phase.lowered, progress, phase.blind.weiter answer,
     fun byte permit => phase.readable byte (by simpa only [readMap] using permit),
     fun byte permit => phase.writable byte (by simpa only [writeMap] using permit), kept⟩⟩

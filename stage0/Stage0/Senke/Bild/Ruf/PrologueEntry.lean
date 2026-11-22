@@ -213,29 +213,20 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
     (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
     (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
-    (compiled : FunctionIRPrologue output after root.1) (reads : W → Prop) (K : Nat)
-    (frameReads : ∀ byte, inSlots (imagePrologueFrame output thread) 0 K byte → reads byte)
+    (compiled : FunctionIRPrologue output after root.1) (K : Nat)
     (ownsWrites : ∀ byte, inSlots (imagePrologueFrame output thread) 0 K byte →
       imageStackFootprint output thread byte)
     (continuation : @IRReference kernel.withoutSyscalls count
       (compiled.entry (imagePrologueFrame output thread))
-      (maskMemory reads (inSlots (imagePrologueFrame output thread) 0 K) memory)
+      (maskMemory (imagePrologueReads output thread root.1)
+        (inSlots (imagePrologueFrame output thread) 0 K) memory)
       (compiled.bodyEntry (imagePrologueFrame output thread)) after) :
     ImageProloguePhase output E thread (.next (compiled.entry (imagePrologueFrame output thread))) memory state :=
   let writes := inSlots (imagePrologueFrame output thread) 0 K
-  let scope := maskMemory_agreement reads writes memory frameReads
-  ⟨root, declared, alive, unentered, reads, writes, ownsWrites, maskMemory reads writes memory,
+  let reads := imagePrologueReads output thread root.1
+  let scope := maskMemory_agreement reads writes memory (fun byte hit => Or.inl (ownsWrites byte hit))
+  ⟨root, declared, alive, unentered, writes, ownsWrites, maskMemory reads writes memory,
     after, compiled, ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
-
-/-- Only the private root stack, image code, required carriers and
-    captured cells can supply a root prologue's physical reads. -/
-def imagePrologueReads (output : Emitted src reserve options) (thread : Nat)
-    (f : (declOf output.compiled.unit).Fn) (byte : W) : Prop :=
-  imageStackFootprint output thread byte ∨ byte.toNat < output.image.fp0 ∨
-    ∃ cell : Zelle (declOf output.compiled.unit), cell.da output.image.Y ∧
-      (cell.carrier ∈ (output.compiled.program.requires f).orte ∨
-        cell ∈ oldCells (output.compiled.program.ensures f)) ∧
-      cell.adr output.image.Y ≤ byte.toNat ∧ byte.toNat < cell.adr output.image.Y + cell.bytes
 
 /-- At the exact relocated entry, the serialized root arguments and
     the checked precondition establish the scheduled prologue phase. -/
@@ -305,7 +296,7 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
       environment stored requires reads frameReads codeReads requiresReads snapshotReads
   let finishedCode := compiled.withCode installed
-  exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode reads slots frameReads ownsWrites reference,
+  exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode slots ownsWrites reference,
     rfl, rfl⟩
 
 end Gabbro.Stage0
