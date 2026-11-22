@@ -9,7 +9,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0.Senke.Faeden
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg
-  Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mem Runner.Mach
+  Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mem Runner.Mach Runner.Beweis
 
 /-- The actual three committed words of one emitted ticket lock. The
     unbounded counters are observed exactly modulo the machine word. -/
@@ -70,7 +70,8 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
     have exactMemory : newMemory =
         (if old = requested then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m) :=
       congrArg Prod.snd exactPair
-    refine ⟨.ask waiting rfl rfl answered rfl, exactOld ▸ returned, ?_, ?_⟩
+    refine ⟨.ask waiting rfl rfl answered rfl,
+      returned.trans (congrArg (fun word => some (word, (0 : W))) exactOld), ?_, ?_⟩
     · exact congrArg TSt.buf memoryEq
     · have compare : old = requested ↔ before.w.next % 2 ^ 64 = expected := by
         constructor
@@ -103,7 +104,7 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
           have b : base + offset < 2 ^ 64 := by omega
           simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt a, Nat.mod_eq_of_lt b]
           omega
-        exact ⟨exactUpdate ▸ rd64_write_same readable,
+        exact ⟨(rd64_write_same (w := update) readable).trans (congrArg some exactUpdate),
           (rd64_write_far (separate 8 (by decide) (by decide))).trans represented.serving,
           (rd64_write_far (separate 16 (by decide) (by decide))).trans represented.waiters⟩
       · rw [if_neg same] at exactMemory
