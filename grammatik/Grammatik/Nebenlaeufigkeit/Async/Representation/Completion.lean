@@ -109,25 +109,23 @@ theorem cancelBody_simulates {Γ : Ctx} {l : Bool}
     (sameWorld : ∀ index reached after final, (table index).run calls source before = some (.ok reached) →
       execStmt oracle passes calls release reached env = .ok after final →
       (drop source before).2 = after) :
+    let afterChild : Except (Logik D ⊕ Hardware D) (World D) → Ausgang V l Γ
+      | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
+      | .error failure => dropOutcome env (.error failure)
     ∃ index, ∃ outcome : Except (Logik D ⊕ Hardware D) (World D),
       MarksRep inventory ((phases f).get index) source ∧
       (table index).run calls source before = some outcome ∧
-      (execBlock oracle passes calls (cancelBody table state release) before env =
-        match outcome with
-        | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
-        | .error failure => dropOutcome env (.error failure)) ∧
+      execBlock oracle passes calls (cancelBody table state release) before env = afterChild outcome ∧
       ∀ between after final, outcome = .ok between →
         execStmt oracle passes calls release between env = .ok after final →
         cancelWith drop source before = (source.marks, .cancelled, after) ∧ own [] after ∧
         execBlock oracle passes calls (cancelBody table state release) before env =
           .ok after (final.set state (cancelledValue types f D)) ∧
         Inv f types inventory State.cancelled ((final.set state (cancelledValue types f D)).get state) := by
+  intro afterChild
   obtain ⟨index, _, outcome, _, marks, dropped, executed⟩ :=
     dropChildren_simulates (l := l) table inventory state oracle passes calls before env source represented
-  have ran : execBlock oracle passes calls (cancelBody table state release) before env =
-      match outcome with
-      | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
-      | .error failure => dropOutcome env (.error failure) := by
+  have ran : execBlock oracle passes calls (cancelBody table state release) before env = afterChild outcome := by
     rw [cancelBody, execBlock, executed]
     cases outcome with
     | ok => rfl
