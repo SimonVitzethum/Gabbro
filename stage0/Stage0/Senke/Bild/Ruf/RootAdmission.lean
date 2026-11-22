@@ -278,7 +278,9 @@ private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {o
 private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {before after : Cfg imageTSO (Res T)} {events : List Ev}
     (idle : ImageIdleBuffers before) (privateWrites : PrivateBuffers (imageStackFootprint output) before.ms.1)
-    (directEffects : ∀ {thread request reply memory}, (match request with | .sys .. | .cas .. => True | _ => False) →
+    (directEffects : ∀ {thread request resume reply memory},
+      before.ths[thread]? = some (some (.ask request resume)) →
+      (match request with | .sys .. | .cas .. => True | _ => False) →
       imageTSO.ans before.ms thread request reply memory →
       GleichAuf (imageStackFootprint output future) before.ms.1.m memory.1.m)
     (step : ProcessStep imageTSO actI before events after) (outside : after.ths.length ≤ future) :
@@ -306,18 +308,22 @@ private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {
     rw [updated]
     exact ((write_nurIn _ address value.toNat).gleichAt untouched).symm
   | priv | exit => exact fun byte _ => GleichAt.refl _ byte
-  | @ask _ _ _ request _ _ _ _ _ _ answered _ =>
-    cases request with
-    | cas | sys => exact directEffects trivial answered
-    | rd | fp =>
-      rw [answered.1.1]
-      exact fun byte _ => GleichAt.refl _ byte
-    | wr =>
-      rcases answered.1 with ⟨_, _, same⟩ | ⟨_, _, enqueued⟩
-      · rw [same]
+  | @ask _ control _ _ _ _ _ running offered _ answered _ =>
+    cases control with
+    | next | fault | unk => cases offered
+    | ask request resume =>
+      cases offered
+      cases request with
+      | cas | sys => exact directEffects running trivial answered
+      | rd | fp =>
+        rw [answered.1.1]
         exact fun byte _ => GleichAt.refl _ byte
-      · rw [enqueued]
-        exact fun byte _ => GleichAt.refl _ byte
+      | wr =>
+        rcases answered.1 with ⟨_, _, same⟩ | ⟨_, _, enqueued⟩
+        · rw [same]
+          exact fun byte _ => GleichAt.refl _ byte
+        · rw [enqueued]
+          exact fun byte _ => GleichAt.refl _ byte
   | cloneNo _ _ answered _ _ | clone _ _ answered _ _ _ =>
     rw [cloneKeeps answered]
     exact fun byte _ => GleichAt.refl _ byte
@@ -342,7 +348,9 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
       PrivateBuffers (imageStackFootprint output) first.ms.1)
     (effects : ∀ {first : Cfg imageTSO (Res T)} {earlier : List Ev} {steps : Nat},
       ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps first →
-      ∀ {thread request reply memory}, (match request with | .sys .. | .cas .. => True | _ => False) →
+      first.ths.length ≤ index + 1 →
+      ∀ {thread request resume reply memory}, first.ths[thread]? = some (some (.ask request resume)) →
+      (match request with | .sys .. | .cas .. => True | _ => False) →
       imageTSO.ans first.ms thread request reply memory →
       GleichAuf (imageStackFootprint output (index + 1)) first.ms.1.m memory.1.m)
     (code : BytesAt before.ms.1.m codeBase (output.image.code.flatMap encII))
@@ -372,7 +380,10 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     all_goals simp only [ite_true, startLen, Nat.zero_add]; omega
   have empty : ImageIdleBuffers (output.irEntry initial) := fun i _ => loaded.emptyBuffers i
   have childPhase := loaded.future_root_phase unit path order.le
-    (fun prior step bound => future_stack_step (empty.follow prior) (buffers prior) (effects prior) step bound)
+    (fun prior step bound =>
+      have length := processStep_threadSlots step
+      have unused := (Nat.le_add_right _ _).trans (length ▸ bound)
+      future_stack_step (empty.follow prior) (buffers prior) (effects prior unused) step bound)
     declared code slots reached
   exact image_worker_activation partition slots trace entrySlot waiting parentSite parentReady inside
     (by simpa only [order] using childPhase) observed positive
