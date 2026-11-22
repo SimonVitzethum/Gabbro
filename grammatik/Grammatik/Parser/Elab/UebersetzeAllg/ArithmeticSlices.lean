@@ -8,6 +8,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Uebersetze
+open LowLevel.Construct
 
 variable {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
 
@@ -155,7 +156,61 @@ theorem nestedLocalArraySlice_observations (ctx : UCtx) (blatt : SExpr → Excep
   dsimp only
   constructor <;> rw [uRechne] <;>
     simp only [uLocalArraySliceObservation, uLocalArrayView, arrayType, arrayRead, independent,
-      outerBounds, innerBounds, position, indexBounds, bind, Option.bind, ite_true]
+      outerBounds, innerBounds, position, indexBounds, and_self, bind, Option.bind, ite_true]
+
+/-- Both observations are accepted for a dynamically sized outer slice
+    and a proper inner slice. The premise admits every array capacity above the endpoints. -/
+theorem nestedLocalArraySlice_erfuellbar (element : Ty) (capacity : Nat) (fits : 5 ≤ capacity) :
+    ∃ scope : UCtx,
+      let outer := SExpr.built "#slice" [.variable "a", .variable "i", .variable "j"]
+      let inner := SExpr.built "#slice" [outer, .lit 1, .lit 2]
+      uWertBody scope (.built "lenof" [inner]) = .ok (.sub (.lit 2) (.lit 1)) ∧
+        uWertBody scope (.index inner (.lit 0)) =
+          .ok (.idx (.param "a") (.add (.add (.param "i") (.lit 1)) (.lit 0))) := by
+  let scope : UCtx := {
+    names := ["a", "i", "j"], kinds := [.wert, .int, .int]
+    types := [.arr element capacity, .int 0 1, .int 4 5]
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have array : uSliceLocalType scope "a" = some (.arr element capacity) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have begin : uSliceLocalType scope "i" = some (.int 0 1) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have finish : uSliceLocalType scope "j" = some (.int 4 5) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have readArray : uWertBlatt scope (.variable "a") = .ok (.param "a") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have readFirst : uWertBlatt scope (.variable "i") = .ok (.param "i") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have readLast : uWertBlatt scope (.variable "j") = .ok (.param "j") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have range : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ 4 ∧ (5 : Int) ≤ capacity := by omega
+  have outer : uRelativeSlice scope (uWertBlatt scope) capacity (.variable "i") (.variable "j") =
+      some (.param "i", .sub (.param "j") (.param "i"), 3) := by
+    simp only [uRelativeSlice, uSliceInteger, begin, finish, readFirst, readLast, range, bind, Option.bind,
+      and_self, ite_true] <;> rfl
+  refine ⟨scope, nestedLocalArraySlice_observations scope (uWertBlatt scope) "a" element capacity
+    (.variable "i") (.variable "j") (.lit 1) (.lit 2) (.lit 0)
+    (.param "i") (.sub (.param "j") (.param "i")) (.lit 1) (.sub (.lit 2) (.lit 1)) (.lit 0)
+    3 1 0 0 array readArray rfl outer ?_ ?_ (by decide)⟩ <;> rfl
+
+/-- The actual typed elaborator emits one array read with the translated
+    index. The outer start, inner start and selected index are evaluated once. -/
+theorem lowWertE_nestedLocalArraySliceIndex {fn : UFn} {er : Option Ty}
+    {array : String} {first cut index : USide} {τ : Ty} {capacity : Nat} {a b c d i j : Int}
+    {base : Expr (declOf u) Γ Λ (.arr τ capacity)}
+    {begin : Expr (declOf u) Γ Λ (.int a b)} {innerBegin : Expr (declOf u) Γ Λ (.int c d)}
+    {position : Expr (declOf u) Γ Λ (.int i j)}
+    (readArray : lowWertE u Γ Λ fn er (.param array) = .ok ⟨.arr τ capacity, base⟩)
+    (readFirst : lowWertE u Γ Λ fn er first = .ok ⟨.int a b, begin⟩)
+    (readCut : lowWertE u Γ Λ fn er cut = .ok ⟨.int c d, innerBegin⟩)
+    (readIndex : lowWertE u Γ Λ fn er index = .ok ⟨.int i j, position⟩)
+    (lower : 0 ≤ a + c + i) (upper : b + d + j ≤ (capacity : Int) - 1) :
+    lowWertE u Γ Λ fn er (.idx (.param array) (.add (.add first cut) index)) =
+      .ok ⟨τ, .arrGet base (.widen lower upper (.add (.add begin innerBegin) position))⟩ := by
+  have readStart : lowWertE u Γ Λ fn er (.add first cut) =
+      .ok ⟨.int (a + c) (b + d), .add begin innerBegin⟩ := by
+    simp only [lowWertE, readFirst, readCut, zahlVon, LowSide.plus, LowSide.wert, LowWert.zahl]
+  exact lowWertE_localArraySliceIndex readArray readStart readIndex lower upper
 
 /-- Reading the composed index in G returns the exact element of the
     nested value slice. The typed term has one array operand. -/
