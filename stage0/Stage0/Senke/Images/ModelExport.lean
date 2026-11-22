@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.Goal
 public import Stage0.Senke.Images.AccumulatorExport
+public import Stage0.Senke.Welt.Initial.Arenas
 import Grammatik.Logik.Vertraege.Pruefer.Goal
 
 @[expose] public section
