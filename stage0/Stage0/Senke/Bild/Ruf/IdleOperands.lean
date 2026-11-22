@@ -45,6 +45,7 @@ private theorem slotC_withIdle (L : Lay D) (t : D.Tab) (f : D.Feld t) (dest : Na
     slotC L.withIdle t f dest index = slotC L t f dest index := by
   have compat : aggregateFits (D.mitRuhe.typ t f) = aggregateFits (D.typ t f) := aggregateFits_tyR _
   simp only [slotC, compat, slotA, Lay.withIdle]
+  with_unfolding_all rfl
 
 theorem reachesL_withIdle (L : Lay D) (t : D.Tab) (f : D.Feld t) (dest : Nat)
     (left right : Option (List II × Nat)) :
