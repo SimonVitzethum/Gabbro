@@ -88,7 +88,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     maskMemory_agreement (fun _ => True) (inSlots fp 0 K) memory (fun _ _ => trivial)
   refine ⟨count, finish, reference, ?_⟩
   intro taken pointer actual ran within
-  obtain ⟨cut, remaining, matches, rd, wr⟩ := StarM.align_reference ran reference within readable writable agree
+  obtain ⟨cut, remaining, memoryEq, rd, wr⟩ := StarM.align_reference ran reference within readable writable agree
   constructor
   · intro completed
     subst taken
@@ -98,8 +98,8 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     intro index present
     have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
         cut.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
-      simp only [Mem.rd64, Mem.all_congr (fun _ _ => (matches.1 _ trivial).2.symm),
-        Mem.le_congr (fun _ _ => (matches.1 _ trivial).1.symm)]
+      simp only [Mem.rd64, Mem.all_congr (fun _ _ => (memoryEq.1 _ trivial).2.symm),
+        Mem.le_congr (fun _ _ => (memoryEq.1 _ trivial).1.symm)]
     rw [sameRead]
     exact value.2 index present
   · intro inside request resume atRequest waiting
@@ -109,7 +109,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     | extend first rest =>
       obtain ⟨_, aligned, _⟩ := waiting.align_reference first (blind_step _)
         (fun byte granted => readable byte (by simpa only [rd] using granted))
-        (fun byte granted => writable byte (by simpa only [wr] using granted)) matches
-      exact aligned.no_syscall first
+        (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
+      exact aligned.no_syscall (kernel := kernel) first
 
 end Gabbro.Stage0
