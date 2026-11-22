@@ -111,6 +111,37 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.At.congr_read_frame
       simpa only [EntrySnapshots.words, Nat.add_assoc] using fits
     exact ⟨frame_value_agrees frame (by omega) same saved.1, ih bound saved.2⟩
 
+/-- Restored arguments and old values depend only on their complete frame spans. -/
+theorem _root_.Gabbro.Stage0.Senke.EntryFrameValues.congr_read_frame
+    {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
+    {before after : Mem} {fp : W} {K : Nat} {entry : World D} {args : Env D (D.params f)}
+    (stored : EntryFrameValues L P f before fp entry args) (frame : FrameOK before fp K)
+    (fits : frei (D.params f) (functionFrame P f).bodyReserved ≤ K)
+    (same : ∀ byte, inSlots fp 0 K byte → after.b byte = before.b byte ∧ after.rd byte = before.rd byte) :
+    EntryFrameValues L P f after fp entry args := by
+  let layout := functionFrame P f
+  have reserves : layout.ensReserved ≤ layout.bodyReserved := by
+    simp only [FrameLayout.ensReserved, FrameLayout.bodyReserved]
+    omega
+  have move (reserved : Nat) (bound : reserved ≤ layout.bodyReserved)
+      (env : EnvAt L before fp args reserved) : EnvAt L after fp args reserved := by
+    intro ty x
+    refine frame_value_agrees frame ?_ same (env ty x)
+    have extent := variableOffset_bound x
+    change frei (D.params f) layout.bodyReserved ≤ K at fits
+    unfold frei vslot at *
+    omega
+  have snapshotEnd : FB + EntrySnapshots.words (oldCells (P.ensures f)) = layout.ensParams := rfl
+  have snapshotFits : FB + EntrySnapshots.words (oldCells (P.ensures f)) ≤ K := by
+    rw [snapshotEnd]
+    have start : layout.ensParams = FB + layout.ensReserved := rfl
+    change frei (D.params f) layout.bodyReserved ≤ K at fits
+    unfold frei at fits
+    omega
+  exact ⟨move layout.ensReserved reserves stored.original,
+    move layout.bodyReserved (Nat.le_refl _) stored.lexical,
+    stored.snapshots.congr_read_frame frame snapshotFits same⟩
+
 /-- Snapshot capture is confined to the generated instructions, the
     declared source cells, and the destination frame. This single
     reference accounts for every prefix of the complete capture. -/
@@ -199,6 +230,21 @@ abbrev ImageProloguePhase.reads [Kern] {output : Emitted src reserve options}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state) : W → Prop :=
   imagePrologueReads output thread phase.root.1
+
+/-- The actual issuing view has the restored arguments and snapshots
+    at the decoded prologue boundary. -/
+theorem ImageProloguePhase.entry_values [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (frameReads : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte →
+      phase.reads byte)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) :
+    EntryFrameValues output.image.Y output.compiled.program phase.root.1 memory
+      (imagePrologueFrame output thread) phase.entryWorld phase.root.2 :=
+  phase.entryValues.congr_read_frame phase.entryFrame phase.entryFits fun byte inside =>
+    let same := reached.1 byte (frameReads byte inside)
+    ⟨same.1.symm, same.2.symm⟩
 
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
