@@ -100,7 +100,8 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
       | true =>
         rw [ht, Bool.not_true] at marked
         cases marked
-    change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
+    change (output.compiled.unit.tabs.get t).arena = true ↔
+      ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
     simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
   · intro arena present
     cases present
