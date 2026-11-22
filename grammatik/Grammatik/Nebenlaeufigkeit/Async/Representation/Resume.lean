@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
-import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -258,17 +257,9 @@ public theorem lowerRunningBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
     bindingFrameExpr types f (.running (tag + 1)) destination sourceType binding saved
   have reads : update.orte = [] := bindingFrameExpr_reads types f (.running (tag + 1)) destination sourceType binding saved
   have noRead (current : World D) : current.lese Λ [] = current := rfl
-  obtain ⟨record, bound, stored⟩ := lowerBinding_rep (V := V) (l := l) destination sourceType binding
-    retained saved expression oracle passes calls world env frame represented
-  have evaluateFrame := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression saved update world env
-  simp only [reads, noRead] at evaluateFrame
-  change execBlock oracle passes calls
-    (lowerBinding (V := V) (l := l) types f (.running (tag + 1)) destination sourceType binding saved expression)
-      world env = .ok answer.2.1 (env.set saved (eval answer.2.1 update answer.2.1 (.cons answer.1 env))) at evaluateFrame
-  rw [bound] at evaluateFrame
-  have exactFrame : eval answer.2.1 update answer.2.1 (.cons answer.1 env) = record := by
-    have equal := congrArg (fun current : Env D Γ => current.get saved) (Ausgang.ok.inj evaluateFrame).2
-    simpa only [Env.get_set_same] using equal.symm
+  let record := eval answer.2.1 update answer.2.1 (.cons answer.1 env)
+  have stored := bindingFrameExpr_rep (Λ := Λ) destination sourceType binding retained saved
+    answer.2.1 answer.2.1 (.cons answer.1 env) frame represented
   have stillOwned : MarksRep inventory (.running (tag + 1)) resumed := by
     simpa only [MarksRep, resumed, State.marks, save, sameInventory] using marks
   let value := runningValue D types f (tag + 1) within record
@@ -280,7 +271,6 @@ public theorem lowerRunningBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
   have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression state successor world env
   simp only [successorReads, noRead] at executed
   have encoded := runningExpr_eval types f (tag + 1) within update answer.2.1 answer.2.1 (.cons answer.1 env)
-  rw [exactFrame] at encoded
   change eval answer.2.1 successor answer.2.1 (.cons answer.1 env) = value at encoded
   change execBlock oracle passes calls
     (lowerRunningBinding (V := V) (l := l) types f tag within destination sourceType binding saved state expression)
