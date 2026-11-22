@@ -338,6 +338,35 @@ theorem Emitted.layout_checked (output : Emitted src K options) :
       (fun base => layU_sync output.compiled.unit output.tor base)
   exact ⟨layout.hlay, layout.hdis, layout.hsync⟩
 
+/-- Each relocated function address fetches the exact output of lowering
+    that function in the emitted program and fits in a signed IR immediate. -/
+theorem Emitted.relocated_function_code [Runner.IR.Kern] (output : Emitted src K options) {memory : Runner.Mem}
+    (loaded : BytesAt memory codeBase (output.image.code.flatMap encII))
+    (fn : (declOf output.compiled.unit).Fn) :
+    ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y fn =
+      some (code, top) ∧
+      Runner.IR.CodeAt memory (BitVec.ofNat 64 (output.image.A fn)) code ∧
+      output.image.A fn + 16 * code.length ≤ output.image.fp0 ∧ output.image.A fn < 2 ^ 31 := by
+  obtain ⟨functions, body, spawnSites, layout, serialized, _, _, _⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  let header := spawnC (startScratch output.compiled.main) spawnSites ++
+    startC output.image.A output.compiled.main output.image.depth 231 true ++
+    rootsC output.image.A output.image.depth (output.starts.map (·.1))
+  have exactBytes : BytesAt memory codeBase ((header ++ body).flatMap encII) :=
+    serialized ▸ loaded
+  obtain ⟨lowered, addresses, _⟩ := bild_code (C := fun g => ((functions[g.val]?).map (·.1)).getD [])
+    (fun _ => rfl) layout.hbody (by rw [show header.length = _ from layout.head]; exact layout.hfp)
+    (by rw [show header.length = _ from layout.head]; exact layout.haddr)
+    layout.hlen layout.hlow layout.hpos layout.hops exactBytes
+  obtain ⟨top, produced, _⟩ := lowered fn
+  obtain ⟨code, extent⟩ := addresses fn
+  have fits := layout.hfit
+  exact ⟨_, top, produced, code, extent, by omega⟩
+
 /-- Physical base of the table's complete, consecutive columns. -/
 def InitialLayout.tableBase {u : UProg} (L : Lay (declOf u)) (t : (declOf u).Tab) : Nat :=
   L.lo + globEnd (List.finRange u.globs.length) 0 (globSz u) (fun g => wordAlign (globAlign u g)) +
