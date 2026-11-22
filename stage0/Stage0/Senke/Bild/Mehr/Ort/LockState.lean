@@ -8,6 +8,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0.Senke.Faeden
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Stage0.Senke.BildMehr
   Runner Runner.IR Runner.Beweis Runner.Mem
 
 /-- The three consecutive machine words reserved for one declared lock. -/
