@@ -26,7 +26,8 @@ theorem expression_pre_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx
     (destination : d ≤ K) (pre : Senke.PreS L memory pc fp K d code env reserved) :
     Senke.PreS L (maskMemory reads (inSlots fp 0 K) memory) pc fp K d code env reserved := by
   let restricted := maskMemory reads (inSlots fp 0 K) memory
-  have agree := (maskMemory_agreement reads (inSlots fp 0 K) memory frameReads).1
+  have agree : MaskedAgreement reads (inSlots fp 0 K) restricted memory :=
+    (maskMemory_agreement reads (inSlots fp 0 K) memory frameReads).1
   have withinFrame (index : Nat) (present : index < K) (offset : Nat) (inWord : offset < 8) :
       inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) :=
     expression_frame_byte pre.frame present inWord
