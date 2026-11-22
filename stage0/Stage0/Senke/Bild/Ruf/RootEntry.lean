@@ -98,6 +98,8 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       WordsAt (after.1.view (index + 1)) frame FB words ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) = some (nxt pointer).pc ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
@@ -143,7 +145,7 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
     rw [view]
     exact output.code_survives_writes (write_nurIn _ _ _) (above (FB + 1) (by omega))
       (output.code_survives_writes (write_nurIn _ _ _) (above FB (by omega)) bytes)
-  refine ⟨after, tso_silent_prefix_image run rfl, shared, others, frame_sub frameAfter (by omega), ?_, ?_, ?_⟩
+  refine ⟨after, tso_silent_prefix_image run rfl, shared, others, frame_sub frameAfter (by omega), ?_, ?_, ?_, ?_, ?_⟩
   · intro i inWords
     have within : FB + FB + i < output.image.Ks := by
       have count : words.length = contextWords ((declOf output.compiled.unit).params root.1) := encodeEnv_length _ _
@@ -152,6 +154,13 @@ theorem Emitted.root_call_enter [Kern] (output : Emitted src reserve options)
     change (after.1.view (index+1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 (FB + i))) = _
     rw [slot_slot, ← Nat.add_assoc, unchanged _ within (by simp only [FB]; omega)]
     exact args i inWords
+  · change (after.1.view (index + 1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 0)) = _
+    rw [slot_slot, Nat.add_zero, view,
+      Mem.rd64_write_far (slot_far frameOK.room (i := FB + 1) (j := FB) (by omega) (by omega) (by omega))]
+    exact rd64_write_same (frameOK.rd FB (by omega))
+  · change (after.1.view (index + 1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 1)) = _
+    rw [slot_slot, view]
+    exact rd64_write_same (frameOK.rd (FB + 1) (by omega))
   · change (after.1.view (index+1)).rd64 (slot (slot fp (BitVec.ofNat 64 FB)) (BitVec.ofNat 64 2)) = _
     rw [slot_slot, unchanged _ headRoom (Nat.le_refl _)]
     exact depth
@@ -205,6 +214,9 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       WordsAt (after.1.view (index + 1)) frame FB words ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) =
+        some (nxt ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩).pc ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some entry.fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
@@ -308,14 +320,22 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
-      WordsAt (after.1.view (index + 1)) frame FB (encodeEnv output.image.Y root.2) ∧
+      EnvAt output.image.Y (after.1.view (index + 1)) frame root.2 ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 0)) =
+        some (nxt ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩).pc ∧
+      (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 1)) = some entry.fp ∧
       (after.1.view (index + 1)).rd64 (slot frame (BitVec.ofNat 64 2)) =
         some (BitVec.ofNat 64 output.image.depth) ∧
       ∃ code top, lowFun output.image.passes output.compiled.program output.image.A output.image.Y root.1 =
         some (code, top) ∧ CodeAt (after.1.view (index + 1)) target code := by
   intro entry target frame running phase
   obtain ⟨bytes, permissions, arguments⟩ := output.child_phase_payload unit declared phase
-  exact output.child_body_prefix declared bytes running permissions arguments
+  obtain ⟨after, executed, shared, others, frameOK, words, returnPC, callerFrame, depth, body⟩ :=
+    output.child_body_prefix declared bytes running permissions arguments
+  have valid := output.startPlan.starts_valid (initialWorld _ output.initialValid) output.image.Y root
+    (List.mem_of_getElem? declared)
+  have environment := (envAt_encoding (reserved := 0) (L := output.image.Y) root.2).mpr ⟨valid, words⟩
+  exact ⟨after, executed, shared, others, frameOK, environment, returnPC, callerFrame, depth, body⟩
 
 /-- A zero depth word at an emitted function entry branches directly
     to the stop for that function's model depth exhaustion. -/
