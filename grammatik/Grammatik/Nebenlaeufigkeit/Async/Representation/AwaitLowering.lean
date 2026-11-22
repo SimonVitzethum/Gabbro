@@ -208,8 +208,7 @@ public theorem waitingPhaseBlock_simulates (elaboration : Elaboration D V Λ typ
       unfold executed waitingPhaseBlock inner
       simp only [execBlock, Expr.orte, List.nil_append, eval, prodGetW, World.lese, World.merke, List.map_nil]
       erw [loaded]
-      have right : (Env.cons frameValue env).get (.there payload) = (frameValue, taskValue, ()) := loaded
-      erw [right]
+      rfl
     have distinct : (Var.here : Var (taskStorageType types [tag] future :: frameType types f :: Γ)
         (taskStorageType types [tag] future)).position ≠
       (Var.there Var.here : Var (taskStorageType types [tag] future :: frameType types f :: Γ)
