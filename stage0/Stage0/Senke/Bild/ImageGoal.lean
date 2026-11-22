@@ -358,7 +358,8 @@ theorem Emitted.relocated_function_code [Runner.IR.Kern] (output : Emitted src K
     rootsC output.image.A output.image.depth (output.starts.map (·.1))
   have exactBytes : BytesAt memory codeBase ((header ++ body).flatMap encII) :=
     serialized ▸ loaded
-  obtain ⟨lowered, addresses, _⟩ := bild_code (C := fun g => ((functions[g.val]?).map (·.1)).getD [])
+  obtain ⟨lowered, addresses, _⟩ := bild_code (D := declOf output.compiled.unit) (hd := header)
+    (C := fun (g : Fin output.compiled.unit.fns.length) => ((functions[g.val]?).map (·.1)).getD [])
     (fun _ => rfl) layout.hbody (by rw [show header.length = _ from layout.head]; exact layout.hfp)
     (by rw [show header.length = _ from layout.head]; exact layout.haddr)
     layout.hlen layout.hlow layout.hpos layout.hops exactBytes
