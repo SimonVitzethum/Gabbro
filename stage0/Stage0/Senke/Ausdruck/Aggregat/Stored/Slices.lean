@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Ausdruck.Satz
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Span
 public import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 
 @[expose] public section
@@ -41,6 +42,30 @@ theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem
     omega
   have stored := slice ⟨first + index.val, seen⟩
   simpa only [BoundedSlice.subslice, arrSliceValue, Nat.add_mul, Nat.add_assoc] using stored
+
+/-- A substring of a long string reads its exact byte at the translated
+    position in the existing storage, after the source length word. -/
+theorem ValueAt.string_slice_byte {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
+    {base capacity : Nat} {value : Wert D (.str capacity)} (long : 2 ≤ capacity)
+    (input : ValueAt layout memory frame base (.str capacity) value)
+    (first last : Nat) (bounds : SliceOk value.1.length first last) (index : Fin (last - first)) :
+    let result := strBoundedSliceValue value first last bounds
+    let byte := result.1[index.val]'(by rw [(strBoundedSliceValue_exact value first last bounds).2]; exact index.isLt)
+    memory.rd64 (slot frame (BitVec.ofNat 64 (base + 1 + (first + index.val)))) =
+      some (BitVec.ofInt 64 byte.n) := by
+  have inside : first + index.val < value.1.length := by
+    have ordered := bounds.1
+    have within := bounds.2
+    have valid := index.isLt
+    omega
+  have within := inside.trans_le value.2
+  have span := stringSpan_bytes long (Nat.le_refl capacity) value value.2 input
+  have present : first + index.val < (stringBytes capacity value.1).length := by
+    rwa [stringBytes_length value.1 value.2]
+  have word := stringBytes_get value.1 value.2 (first + index.val) within
+  rw [List.getElem?_eq_getElem present, List.getElem?_eq_getElem inside, Option.getD_some] at word
+  dsimp only
+  rw [span _ present, Option.some.inj word, strBoundedSliceValue_byte value first last bounds index]
 
 /-- Stage 0's actual expression code returns the selected element of the
     runtime slice. The generated term accesses the original array through
