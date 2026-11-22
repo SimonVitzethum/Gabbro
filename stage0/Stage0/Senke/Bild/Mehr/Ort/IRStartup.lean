@@ -314,19 +314,27 @@ theorem LoadedIRImage.workerStartup
       (BildMehr.privateBuffers_empty loaded.emptyBuffers)
     exact stopped (reference.no_silent_stop_until_host waiting sc rfl (BildMehr.alleBlind_start _))
 
-private theorem clone_control
+/-- Both outcomes of an actual clone response install the exact parent
+    continuation. A positive result also appends the decoded child. -/
+theorem image_clone_response
     {before after : Cfg imageTSO (Res T)} {parent child : T} {id extra : W}
     (waiting : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
       opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
-    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
-    (positive : 0 < id.toInt) :
-    after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ := by
-  have nonzero : id ≠ 0 := by
-    rintro rfl
-    exact (by decide : ¬ (0 < (0 : W).toInt)) positive
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after) :
+    id ≠ 0 ∧ after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++
+      (if 0 < id.toInt then [some (.next child)] else [])⟩ := by
+  have responseState {issuer : Nat} {memory : imageTSO.St}
+      (response : imageTSO.ans before.ms issuer (.sys cloneReq) (some (id, extra)) memory) :
+      memory = before.ms ∧ id ≠ 0 := by
+    have actual := response.2
+    change (if cloneReq = cloneReq then _ else _) at actual
+    rw [if_pos rfl] at actual
+    obtain ⟨unchanged, result, additional, exactWords, nonzero⟩ := actual
+    exact ⟨unchanged, (Prod.mk.inj (Option.some.inj exactWords)).1.symm ▸ nonzero⟩
   suffices exactClone : ∀ {labels}, ProcessStep imageTSO actI before labels after →
       labels = [(0, cloneReq, some (id, extra))] →
-      after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩
+      id ≠ 0 ∧ after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++
+        (if 0 < id.toInt then [some (.next child)] else [])⟩
     from exactClone observed rfl
   intro labels transition logged
   cases transition with
@@ -339,24 +347,28 @@ private theorem clone_control
       exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
     | rd | wr | cas | fp => cases logged
   | exit => cases logged
-  | cloneNo _ _ _ refused _ =>
+  | cloneNo found asked response refused resumed =>
     simp only [List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
-    obtain ⟨_, accepted⟩ := logged
-    exact (refused id extra accepted positive).elim
-  | clone found asked response _ resumed spawned =>
+    obtain ⟨rfl, rfl⟩ := logged
+    have exactControl := Option.some.inj (Option.some.inj (found.symm.trans waiting))
+    subst_vars
+    cases asked
+    obtain ⟨rfl, nonzero⟩ := responseState response
+    have negative := refused id extra rfl
+    simp only [opt_some, ite_eq_right nonzero, Res.next.injEq] at resumed
+    subst_vars
+    exact ⟨nonzero, by simp only [ite_eq_right negative, List.append_nil]⟩
+  | clone found asked response positive resumed spawned =>
     simp only [List.cons.injEq, Prod.mk.injEq, Option.some.injEq, true_and, and_true] at logged
     obtain ⟨rfl, rfl, rfl⟩ := logged
     have same := found.symm.trans waiting
     have exactControl := Option.some.inj (Option.some.inj same)
     subst_vars
     cases asked
-    have sameMemory := response.2
-    change (if cloneReq = cloneReq then _ else _) at sameMemory
-    rw [ite_eq_left rfl] at sameMemory
-    obtain ⟨rfl, _⟩ := sameMemory
+    obtain ⟨rfl, nonzero⟩ := responseState response
     simp only [opt_some, ite_eq_right nonzero, Res.next.injEq] at resumed spawned
     subst_vars
-    rfl
+    exact ⟨nonzero, by rw [if_pos positive]⟩
 
 /-- Every actual successful startup clone activates the next declared GX
     slot with its exact arguments, even when earlier children have
@@ -383,7 +395,8 @@ theorem ImageSlotsMatch.observed_clone {history : List Ev}
   obtain ⟨next, actualStart, start, step, matched, unchanged, append⟩ :=
     slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
       waiting notWaiting declared
-  have control := clone_control waiting observed positive
+  have control : after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ := by
+    simpa only [if_pos positive] using (image_clone_response waiting observed).2
   exact ⟨next, actualStart, start, .schritt _ _ .start step, control.symm ▸ matched, unchanged, control, append⟩
 
 /-- The first successful worker activation in the actual Lean IR agrees
