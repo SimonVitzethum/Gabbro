@@ -305,23 +305,26 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
   · exact (Nat.succ_ne_zero _ firstThread).elim
   have same := Option.some.inj (chosen.symm.trans exported)
   subst start
+  have address (i : Nat) : slot pointer.fp (BitVec.ofNat 64 (FB + FB + i)) =
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) := by
+    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
+      BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
   have arguments : WordsAt view pointer.fp (FB + FB) (encodeEnv output.image.Y root.2) := by
     intro i present
-    change view.rd64 _ = _
-    rw [show slot pointer.fp (BitVec.ofNat 64 (FB + FB + i)) =
-      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) by
-        simp only [pointer, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]]
+    rw [address]
     exact args i present
   obtain ⟨after, run, shared, others, loaded, permissions, words, depth⟩ :=
     output.root_depth_preserves_frame declared code running frame fits arguments
   refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
   · intro i present
-    simpa only [pointer, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
-      using words i present
+    simpa only [address] using words i present
   · refine ⟨nxt pointer, ⟨rfl, 10 * output.starts.length + startLen + startLen * index + 1, ?_, ?_, ?_⟩, Or.inl rfl⟩
     · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
     · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
-    · simp only [nxt, pointer, ← BitVec.ofNat_add]
+    · change BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)) +
+          BitVec.ofNat 64 16 = _
+      rw [← BitVec.ofNat_add]
       congr 1
       omega
 
