@@ -22,7 +22,7 @@ theorem QueuedStores.trans {before middle after : TSt} {thread : Nat}
   intro i
   rw [right i, left i]
   by_cases equal : i = thread
-  · simp only [equal, ite_eq_left rfl, List.append_assoc]
+  · simp only [ite_eq_left equal, List.append_assoc]
   · simp only [ite_eq_right equal, List.append_nil]
 
 /-- The read part of an IR instruction leaves the TSO state and all other
