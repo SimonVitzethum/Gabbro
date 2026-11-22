@@ -105,15 +105,17 @@ theorem cancelBody_simulates {Γ : Ctx} {l : Bool}
     (represented : Inv f types inventory source (env.get state))
     (own : List Nat → World D → Prop)
     (drop : State (Value D) (Child D types) → World D → List Nat × World D)
-    (duty : DropDuty own drop) (once : source.marks.Nodup) (owned : own source.marks before)
+    (duty : DropDuty own drop) (owned : own source.marks before)
     (sameWorld : ∀ index reached after final, (table index).run calls source before = some (.ok reached) →
       execStmt oracle passes calls release reached env = .ok after final →
       (drop source before).2 = after) :
     ∃ index, ∃ outcome : Except (Logik D ⊕ Hardware D) (World D),
       MarksRep inventory ((phases f).get index) source ∧
       (table index).run calls source before = some outcome ∧
-      (∀ failure, outcome = .error failure →
-        execBlock oracle passes calls (cancelBody table state release) before env = dropOutcome env (.error failure)) ∧
+      (execBlock oracle passes calls (cancelBody table state release) before env =
+        match outcome with
+        | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
+        | .error failure => dropOutcome env (.error failure)) ∧
       ∀ between after final, outcome = .ok between →
         execStmt oracle passes calls release between env = .ok after final →
         cancelWith drop source before = (source.marks, .cancelled, after) ∧ own [] after ∧
@@ -122,18 +124,23 @@ theorem cancelBody_simulates {Γ : Ctx} {l : Bool}
         Inv f types inventory State.cancelled ((final.set state (cancelledValue types f D)).get state) := by
   obtain ⟨index, _, outcome, _, marks, dropped, executed⟩ :=
     dropChildren_simulates table inventory state oracle passes calls before env source represented
-  refine ⟨index, outcome, marks, dropped, ?_, ?_⟩
-  · intro failure failed
-    rw [cancelBody, execBlock, executed, failed]
-    cases failure <;> rfl
-  · intro between after final returned released
-    have cleanup := duty source before once owned
-    have same := sameWorld index between after final (dropped.trans (congrArg some returned)) released
-    refine ⟨by simp only [cancelWith, cleanup.1, same], same ▸ cleanup.2.2, ?_, ?_⟩
-    · rw [cancelBody, execBlock, executed, returned]
-      exact cancelEpilogue_success types f oracle passes calls state release between after env final released
-    · rw [Env.get_set_same]
-      exact cancelled_inv types f inventory empty
+  have ran : execBlock oracle passes calls (cancelBody table state release) before env =
+      match outcome with
+      | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
+      | .error failure => dropOutcome env (.error failure) := by
+    rw [cancelBody, execBlock, executed]
+    cases outcome with
+    | ok => rfl
+    | error failure => cases failure <;> rfl
+  refine ⟨index, outcome, marks, dropped, ran, ?_⟩
+  intro between after final returned released
+  have cleanup := duty source before (MarksRep.nodup marks) owned
+  have same := sameWorld index between after final (dropped.trans (congrArg some returned)) released
+  refine ⟨by simp only [cancelWith, cleanup.1, same], same ▸ cleanup.2.2, ?_, ?_⟩
+  · rw [ran, returned]
+    exact cancelEpilogue_success types f oracle passes calls state release between after env final released
+  · rw [Env.get_set_same]
+    exact cancelled_inv types f inventory empty
 
 def completedIndex (types : TypeResolution) (f : AsyncFn) :
     Fin (stateCases types f).length :=
