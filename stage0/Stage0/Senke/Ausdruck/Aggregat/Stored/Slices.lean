@@ -42,9 +42,9 @@ theorem ValueAt.checked_slice_view {D : Deklaration} {layout : Lay D} {memory : 
   let selected := ArraySliceView.ofEndpoints first.toNat last.toNat valid
   have stored : SliceAt (τ := τ) layout memory frame (base + selected.offset * valueWords τ)
       (selected.value value) := ValueAt.slice_view array selected
-  change SliceAt (τ := τ) layout memory frame (base + first.toNat * valueWords τ)
-    ((ArraySliceView.ofEndpoints first.toNat last.toNat valid).value value) at stored
-  rwa [ArraySliceView.value_ofEndpoints] at stored
+  have same : selected.value value = BoundedSlice.ofArray value first.toNat last.toNat valid :=
+    ArraySliceView.value_ofEndpoints (α := Wert D τ) (capacity := capacity) value first.toNat last.toNat valid
+  exact same ▸ stored
 
 /-- The representation of an existing slice can be narrowed by moving
     the base. All observed bytes and their layout obligations are inherited. -/
