@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.LockOwnership
+public import Stage0.Senke.Sperre.Bindung.ImageWaiters
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -167,6 +168,43 @@ theorem ImageTicketStates.draw [Kern] {D : Deklaration} [DecidableEq D.Lock] {N 
   exact ⟨run, result, buffers, next, transition,
     current.update geometry bound otherBytes (fun _ _ _ => Iff.rfl) words
       ((current.protocol lock).schritt capacity transition) sameOwners⟩
+
+/-- Registering or unregistering a waiter changes only the selected
+    lock's counter and wait phase. Failure of CAS changes neither the
+    counter nor ownership, and lets the thread reload the word. -/
+theorem ImageTicketStates.adjustWaiters [Kern] {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N} {lock : D.Lock}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Fin N} {ticket sampled expected : Nat} (mode : WaitAdjustment)
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64) (capacity : N ≤ 2147483647)
+    (saved : (states lock).pc thread = mode.expectedPlace ticket sampled expected)
+    (representable : expected < 2 ^ 64)
+    (writable : Mem.all machine.ms.1.m.wr (BitVec.ofNat 64 (layout.lk lock + 16)) 8 = true)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.cas (BitVec.ofNat 64 (layout.lk lock + 16)) (BitVec.ofNat 64 expected)
+        (BitVec.ofNat 64 (mode.count expected))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.cas (BitVec.ofNat 64 (layout.lk lock + 16)) (BitVec.ofNat 64 expected)
+        (BitVec.ofNat 64 (mode.count expected))) reply memory) :
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths.set thread.val (some (resume reply))⟩ ∧
+      reply = some (BitVec.ofNat 64 (states lock).w.wait, 0) ∧ memory.1.buf = machine.ms.1.buf ∧
+      ∃ next, Schritt (states lock) thread next ∧
+        ImageTicketStates layout memory.1.m source (fun other => if other = lock then next else states other) := by
+  have fits := (geometry.1 lock).2.trans bound
+  obtain ⟨step, returned, buffers, next, advanced, words, invariant, owners, write⟩ :=
+    image_ticket_waiter_CAS mode capacity (current.protocol lock) saved representable fits
+      (current.words lock) writable waiting answered
+  have untouched : GleichAuf (fun byte => ¬ LockBytes layout lock byte) memory.1.m machine.ms.1.m := by
+    intro byte outside
+    exact write byte (fun hit => outside (lockWord_in_bytes fits (by decide) hit))
+  have sameOwners : TicketOwnership source lock next := by
+    refine ⟨?_, (current.owners lock).outside⟩
+    intro issuer
+    rw [owners issuer]
+    exact (current.owners lock).inside issuer
+  exact ⟨step, returned, buffers, next, advanced,
+    current.update geometry bound untouched (fun _ _ _ => Iff.rfl) words invariant sameOwners⟩
 
 /-- A control-only lock transition can change the entire waiter queue.
     Only its ownership bits and the three physical counters must stay

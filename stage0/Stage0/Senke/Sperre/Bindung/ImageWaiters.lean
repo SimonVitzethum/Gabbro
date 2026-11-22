@@ -72,7 +72,9 @@ theorem image_ticket_waiter_CAS [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
     let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
     ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 before.w.wait, 0) ∧
       memory.1.buf = machine.ms.1.buf ∧
-      ∃ next, Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next := by
+      ∃ next, Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next ∧
+        (∀ other, (next.pc other).haelt = (before.pc other).haelt) ∧
+        GleichAuf (fun byte => ¬ fenster (BitVec.ofNat 64 (base + 16)) byte) memory.1.m machine.ms.1.m := by
   intro after
   let address := BitVec.ofNat 64 (base + 16)
   let old := BitVec.ofNat 64 before.w.wait
@@ -88,25 +90,34 @@ theorem image_ticket_waiter_CAS [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
     let next : Zustand N := ⟨⟨before.w.next, before.w.serv, mode.count expected⟩,
       upd before.pc thread (mode.commitPlace ticket sampled), before.q⟩
     have stepping : Schritt before thread next := WaitAdjustment.commit saved same
-    refine ⟨next, stepping, ?_, invariant.schritt limit stepping⟩
-    rw [memoryEq]
-    have readable : all machine.ms.1.m.rd address 8 = true := by
-      have read := represented.waiters
-      unfold Mem.rd64 at read
-      split at read
-      · assumption
-      · cases read
-    have apart (offset : Nat) (within : offset ≤ 8) :
-        Far address 8 (BitVec.ofNat 64 (base + offset)) 8 := by
-      have first : base + 16 < 2 ^ 64 := by omega
-      have second : base + offset < 2 ^ 64 := by omega
-      simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt first, Nat.mod_eq_of_lt second]
-      omega
-    have first := apart 0 (Nat.zero_le 8)
-    rw [Nat.add_zero] at first
-    exact ⟨(rd64_write_far first).trans represented.next,
-      (rd64_write_far (apart 8 (Nat.le_refl _))).trans represented.serving,
-      rd64_write_same (w := update) readable⟩
+    refine ⟨next, stepping, ?_, invariant.schritt limit stepping, ?_, ?_⟩
+    · rw [memoryEq]
+      have readable : all machine.ms.1.m.rd address 8 = true := by
+        have read := represented.waiters
+        unfold Mem.rd64 at read
+        split at read
+        · assumption
+        · cases read
+      have apart (offset : Nat) (within : offset ≤ 8) :
+          Far address 8 (BitVec.ofNat 64 (base + offset)) 8 := by
+        have first : base + 16 < 2 ^ 64 := by omega
+        have second : base + offset < 2 ^ 64 := by omega
+        simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt first, Nat.mod_eq_of_lt second]
+        omega
+      have first := apart 0 (Nat.zero_le 8)
+      rw [Nat.add_zero] at first
+      exact ⟨(rd64_write_far first).trans represented.next,
+        (rd64_write_far (apart 8 (Nat.le_refl _))).trans represented.serving,
+        rd64_write_same (w := update) readable⟩
+    · intro other
+      by_cases sameThread : other = thread
+      · subst other
+        cases mode <;> simp only [next, upd_self, saved, WaitAdjustment.commitPlace,
+          WaitAdjustment.expectedPlace, Ort.haelt]
+      · exact congrArg Ort.haelt (upd_ne _ _ sameThread)
+    · rw [memoryEq]
+      intro byte outside
+      exact (write_nurIn _ _ _).gleichAt outside
   · have waitBound := List.countP_le_length (p := fun t => (before.pc t).gezaehlt) (l := before.q)
     have bounded : before.w.wait < 2 ^ 64 := by
       rw [invariant.wait]
@@ -120,8 +131,16 @@ theorem image_ticket_waiter_CAS [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
     rw [ite_eq_right different] at memoryEq
     let next := before.mit thread (mode.retryPlace ticket sampled)
     have stepping : Schritt before thread next := WaitAdjustment.retry saved same
-    refine ⟨next, stepping, ?_, invariant.schritt limit stepping⟩
-    rw [memoryEq]
-    exact ⟨represented.next, represented.serving, represented.waiters⟩
+    refine ⟨next, stepping, ?_, invariant.schritt limit stepping, ?_, ?_⟩
+    · rw [memoryEq]
+      exact ⟨represented.next, represented.serving, represented.waiters⟩
+    · intro other
+      by_cases sameThread : other = thread
+      · subst other
+        cases mode <;> simp only [next, Zustand.mit, upd_self, saved, WaitAdjustment.retryPlace,
+          WaitAdjustment.expectedPlace, Ort.haelt]
+      · exact congrArg Ort.haelt (upd_ne _ _ sameThread)
+    · rw [memoryEq]
+      exact fun byte _ => GleichAt.refl _ byte
 
 end Gabbro.Stage0.Senke.Faeden

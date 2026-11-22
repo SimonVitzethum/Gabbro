@@ -94,6 +94,10 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.wait_reply
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.wake_reply
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_draw_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wait_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_waiter_CAS_prefix
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.adjustWaiters
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
@@ -111,6 +115,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayIndexArgument_low
 #print axioms Gabbro.Stage0.Senke.ValueAt.slice_element
 #print axioms Gabbro.Stage0.Senke.ValueAt.slice_view
+#print axioms Gabbro.Stage0.Senke.SliceAt.agree_visible
 #print axioms Gabbro.Stage0.Senke.SliceAt.subslice
 #print axioms Gabbro.Stage0.Senke.SliceAt.write_slot
 #print axioms Gabbro.Stage0.Senke.ValueAt.string_slice_byte

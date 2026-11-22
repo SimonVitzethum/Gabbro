@@ -1,8 +1,10 @@
 module
 
 public import Stage0.Senke.Sperre.Bindung.ImageCAS
+public import Stage0.Senke.Sperre.Bindung.ImageWaiters
 public import Stage0.Senke.Sperre.Schritta
 public import Stage0.Senke.Sperre.Faeden.Maschine
+public import Stage0.Senke.Sperre.Warten.Futex
 import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Bild.Mehr.StartupOperands
 import Stage0.Senke.Stopp
@@ -131,9 +133,7 @@ private theorem savedFutex (environment : LE baseline pc fp scratch base code)
     (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
     {index : Nat} {mode value : W}
     (cell : code[index]? = some (ci 23 ((scratch + 10 + 7 : Nat) : Int) ((scratch + 10 : Nat) : Int) 0))
-    (number : registers 10 = 202) (address : registers 11 = BitVec.ofNat 64 (base + 8))
-    (operation : registers 12 = mode) (argument : registers 13 = value)
-    (fourth : registers 14 = 0) (fifth : registers 15 = 0) (sixth : registers 16 = 0)
+    (arguments : FutexArgs registers (BitVec.ofNat 64 (base + 8)) mode value)
     (running : machine.ths[thread]? =
       some (some (.next ⟨pc + BitVec.ofNat 64 (16 * index), fp⟩))) :
     let pointer : T := ⟨pc + BitVec.ofNat 64 (16 * index), fp⟩
@@ -143,6 +143,7 @@ private theorem savedFutex (environment : LE baseline pc fp scratch base code)
       ⟨machine.ms, machine.ths.set thread (some
         (.ask (.sys (futexReq (BitVec.ofNat 64 (base + 8)) mode value)) resume))⟩ := by
   intro pointer resume
+  obtain ⟨number, address, operation, argument, fourth, fifth, sixth⟩ := arguments
   have instruction := environment.ins slots.ag cell
   have small := environment.small
   have argsSlot := sx_nat (d := scratch + 10) (by omega)
@@ -182,9 +183,7 @@ theorem image_ticket_wait_prefix {position sampled : Nat}
     (environment : LE baseline pc fp scratch base code)
     (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
     (atCode : At code position (nimmT layout base scratch)) (futex : layout.lockWait = .futex)
-    (number : registers 10 = 202) (address : registers 11 = BitVec.ofNat 64 (base + 8))
-    (operation : registers 12 = 128) (argument : registers 13 = BitVec.ofNat 64 sampled)
-    (fourth : registers 14 = 0) (fifth : registers 15 = 0) (sixth : registers 16 = 0)
+    (arguments : FutexArgs registers (BitVec.ofNat 64 (base + 8)) 128 (BitVec.ofNat 64 sampled))
     (running : machine.ths[thread]? =
       some (some (.next ⟨pc + BitVec.ofNat 64 (16 * (position + 26)), fp⟩))) :
     let pointer : T := ⟨pc + BitVec.ofNat 64 (16 * (position + 26)), fp⟩
@@ -194,16 +193,14 @@ theorem image_ticket_wait_prefix {position sampled : Nat}
       ⟨machine.ms, machine.ths.set thread (some
         (.ask (.sys (futexReq (BitVec.ofNat 64 (base + 8)) 128 (BitVec.ofNat 64 sampled))) resume))⟩ :=
   savedFutex environment slots (atCode.get (nimmT_futexW layout base scratch futex).2.2.2)
-    number address operation argument fourth fifth sixth running
+    arguments running
 
 /-- The relocated release code issues WAKE-all against the same serving word. -/
 theorem image_ticket_wake_prefix {position : Nat}
     (environment : LE baseline pc fp scratch base code)
     (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
     (atCode : At code position (gibT layout base scratch)) (futex : layout.lockWait = .futex)
-    (number : registers 10 = 202) (address : registers 11 = BitVec.ofNat 64 (base + 8))
-    (operation : registers 12 = 129) (argument : registers 13 = 2147483647)
-    (fourth : registers 14 = 0) (fifth : registers 15 = 0) (sixth : registers 16 = 0)
+    (arguments : FutexArgs registers (BitVec.ofNat 64 (base + 8)) 129 2147483647)
     (running : machine.ths[thread]? =
       some (some (.next ⟨pc + BitVec.ofNat 64 (16 * (position + 15)), fp⟩))) :
     let pointer : T := ⟨pc + BitVec.ofNat 64 (16 * (position + 15)), fp⟩
@@ -213,6 +210,35 @@ theorem image_ticket_wake_prefix {position : Nat}
       ⟨machine.ms, machine.ths.set thread (some
         (.ask (.sys (futexReq (BitVec.ofNat 64 (base + 8)) 129 2147483647)) resume))⟩ :=
   savedFutex environment slots (atCode.get (gibT_schritte layout base scratch futex).2.2.2.2.2.2.2)
-    number address operation argument fourth fifth sixth running
+    arguments running
+
+/-- Both adjustment loops have the same operand layout in the emitted
+    scratch frame. Only the instruction offset and replacement differ. -/
+def WaitAdjustment.cellIndex : WaitAdjustment → Nat
+  | .register => 16
+  | .unregister => 31
+
+theorem image_ticket_waiter_CAS_prefix {position expected : Nat} (mode : WaitAdjustment)
+    (environment : LE baseline pc fp scratch base code)
+    (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
+    (atCode : At code position (nimmT layout base scratch)) (futex : layout.lockWait = .futex)
+    (address : registers 7 = BitVec.ofNat 64 (base + 16))
+    (sample : registers 8 = BitVec.ofNat 64 expected)
+    (replacement : registers 9 = BitVec.ofNat 64 (mode.count expected))
+    (running : machine.ths[thread]? =
+      some (some (.next ⟨pc + BitVec.ofNat 64 (16 * (position + mode.cellIndex)), fp⟩))) :
+    let pointer : T := ⟨pc + BitVec.ofNat 64 (16 * (position + mode.cellIndex)), fp⟩
+    ProcessPrefix imageTSO actI machine [] 7
+      ⟨machine.ms, machine.ths.set thread (some (.ask
+        (.cas (BitVec.ofNat 64 (base + 16)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (mode.count expected)))
+        (fun reply => opt reply fun pair => ret1 pointer pair.1)))⟩ := by
+  have cell : code[position + mode.cellIndex]? = some
+      (ci 22 ((scratch + 11 : Nat) : Int) ((scratch + 7 : Nat) : Int) ((scratch + 8 : Nat) : Int)) := by
+    cases mode
+    · exact atCode.get (nimmT_inc layout base scratch futex).2.2
+    · exact atCode.get (nimmT_dec layout base scratch).2.1
+  simpa only [address, sample, replacement] using
+    savedCAS environment slots (address := 7) (expected := 8) (dest := 11)
+      (by decide) (by decide) cell running
 
 end Gabbro.Stage0.Senke.Faeden
