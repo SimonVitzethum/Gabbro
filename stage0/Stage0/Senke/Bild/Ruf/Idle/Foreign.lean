@@ -76,10 +76,12 @@ theorem torC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
       | none => rfl
       | some info =>
         obtain ⟨index, number, writable⟩ := info
+        dsimp only
         cases found : D.tabNr number with
-        | none => rfl
+        | none => simp only [found]
         | some table =>
-          cases field : L.byte table <;> rfl
+          simp only [found]
+          cases field : L.byte table <;> simp only [field] <;> rfl
     · simp only [allowed, ite_false]
 
 theorem torC0_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)

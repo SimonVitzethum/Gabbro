@@ -129,7 +129,8 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
     (far : CodeFar (compiled.entry fp).pc (table f).length fp K)
     (depthWord : memory.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (depth + 1)))
     (environment : EnvAt output.image.Y memory fp args)
-    (stored : WeltAt memory output.image.Y world)
+    (stored : WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
+    (snapshots : EntrySnapshots.Inputs output.image.Y world memory (oldCells (output.compiled.program.ensures f)))
     (requires : ReqAmEintritt output.compiled.program f world args)
     (reads : W → Prop) (frameReads : ∀ byte, inSlots fp 0 K byte → reads byte)
     (codeReads : ∀ byte, (compiled.entry fp).pc.toNat ≤ byte.toNat →
@@ -166,16 +167,13 @@ theorem FunctionIRPrologue.scoped_reference [kernel : Kern]
       Mem.le_congr (fun j hj => (sameWord j hj).1)
     unfold Mem.rd64 at depthWord ⊢
     rwa [samePermissions, sameValue]
-  have observed := expression_world_mask frameReads layout.lay requiresReads
-    (⟨fun t _ field index valid => stored.1 t field index valid, fun g _ => stored.2.1 g⟩ :
-      WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires f).orte))
+  have observed := expression_world_mask frameReads layout.lay requiresReads stored
   have saved : EntrySnapshots.Inputs output.image.Y world restricted
       (oldCells (output.compiled.program.ensures f)) := by
     intro cell member
     have bounds := EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member
-    have original := EntrySnapshots.Inputs.of_world stored
-      (fun cell member => (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1) cell member
-    exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member) original
+    exact expression_mask_value frameReads (bounds.2.trans (by decide)) (snapshotReads cell member)
+      (snapshots cell member)
   obtain ⟨ens, pc, after, run, changed, post, position, _⟩ :=
     prolog_setup (O := O) (rp := 0) (cfp := 0) (H := []) lowered codeSize depthFits capacity
       layout small proofFrame decoded far maskedDepth maskedArgs observed saved requires
@@ -239,7 +237,9 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
     (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread)
     (loaded : output.IRFunctionSemantics memory)
     {world : World (declOf output.compiled.unit)}
-    (stored : WeltAt memory output.image.Y world)
+    (stored : WorldOnAt memory output.image.Y world (· ∈ (output.compiled.program.requires root.1).orte))
+    (snapshots : ∀ cell ∈ oldCells (output.compiled.program.ensures root.1), cell.da output.image.Y →
+      ValueAt output.image.Y memory (BitVec.ofNat 64 (cell.adr output.image.Y)) 0 cell.ty (cell.val world))
     (requires : ReqAmEintritt output.compiled.program root.1 world root.2)
     (frame : FrameOK memory (imagePrologueFrame output thread) (output.image.Ks - FB))
     (environment : EnvAt output.image.Y memory (imagePrologueFrame output thread) root.2)
@@ -294,9 +294,43 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
   obtain ⟨count, finished, reference, _, installed⟩ :=
     compiled.scoped_reference O exactCode ⟨top, lowered, topFits⟩ (by omega)
       (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
-      environment stored requires reads frameReads codeReads requiresReads snapshotReads
+      environment stored
+      (fun cell member => snapshots cell member (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1)
+      requires reads frameReads codeReads requiresReads snapshotReads
   let finishedCode := compiled.withCode installed
   exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode slots ownsWrites reference,
     rfl, rfl⟩
+
+/-- The scheduled runtime partition supplies the prologue's exact world
+    inputs at the issuing thread's actual memory view. -/
+theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {O : Orakel (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread : Nat} {history : List Runner.Mach.Ev}
+    {machine : Runner.Mach.Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition (Senke.Faeden.imageRuntimeFootprint output E state.m)
+      output E O history machine state body pendingPhase)
+    (pending : body[thread]? = some none)
+    (root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f))
+    (declared : E.starts[thread]? = some root) (alive : state.lebt thread = true)
+    (unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread) :
+    let memory := machine.ms.1.view thread
+    let frame := imagePrologueFrame output thread
+    output.IRFunctionSemantics memory →
+    ReqAmEintritt output.compiled.program root.1 (worldZ (state.m.speicher.welt [])) root.2 →
+    FrameOK memory frame (output.image.Ks - FB) →
+    EnvAt output.image.Y memory frame root.2 →
+    memory.rd64 (slot frame (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 output.image.depth) →
+    Nonempty (ImageProloguePhase output E thread
+      (.next ⟨BitVec.ofNat 64 (output.image.A root.1), frame⟩) memory state) := by
+  intro memory frame loaded requires frameOK environment depthWord
+  obtain ⟨committed, world, agrees⟩ := partition.prologue_world unit hardware accepted duties pending declared
+  obtain ⟨inputs, snapshots⟩ := output.prologue_sources world agrees
+  obtain ⟨phase, _, _⟩ := output.enter_prologue unit O root declared alive unentered
+    loaded inputs snapshots requires frameOK environment depthWord
+  exact ⟨phase⟩
 
 end Gabbro.Stage0
