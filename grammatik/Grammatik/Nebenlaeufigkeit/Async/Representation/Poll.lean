@@ -170,7 +170,7 @@ public theorem runTaskPoll_rep (elaboration : Elaboration D V Λ types f)
       | ok answer =>
         obtain ⟨rp, rightNext, final, rc⟩ := answer
         have rightStored := rightIH resolved.2 second
-        simp only [second, Except.bind] at successful
+        simp only [second, Except.bind, joinPollReplies] at successful
         cases lp <;> cases rp <;> cases successful <;> exact join_poll_rep leftStored rightStored
 
 public theorem pollTask_rep (elaboration : Elaboration D V Λ types f)

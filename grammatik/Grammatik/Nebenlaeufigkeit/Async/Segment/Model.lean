@@ -117,11 +117,9 @@ public theorem runTaskPoll_join (elaboration : Elaboration D V Λ types f)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (prices : D.Fn → Nat) (left right : Task (Value D) (Child D types)) (world : World D) :
     runTaskPoll elaboration calls prices (.join left right) world = (do
-      let (lp, l, middle, lc) ← runTaskPoll elaboration calls prices left world
-      let (rp, r, after, rc) ← runTaskPoll elaboration calls prices right middle
-      match lp, rp with
-      | .ready a, .ready b => pure (.ready (.pair a b), .ready (.pair a b), after, lc + rc + 1)
-      | _, _ => pure (.pending, .join l r, after, lc + rc + 1)) := by
+      let first ← runTaskPoll elaboration calls prices left world
+      let second ← runTaskPoll elaboration calls prices right first.2.2.1
+      pure (joinPollReplies Value.pair first second)) := by
   simp only [runTaskPoll, pollTaskWith]
 
 /-- Left failure stops the join before a right poll can change the world. -/
@@ -232,9 +230,6 @@ public theorem runTaskPoll_agrees_with_inducedModel (elaboration : Elaboration D
         have same := Option.some.inj (found.symm.trans selected)
         subst actual
         rw [runChildPoll_normal elaboration calls prices normal name callee selected storage before]
-        cases decodePollAnswer D types name storage
-          (ergWert callee.pollResult (normal name callee selected before storage).val.2)
-        rfl
 
 public theorem evaluateBound_resolved (elaboration : Elaboration D V Λ types f)
     (source : Parser.SExpr) (resolved : BoundExpression D Λ)

@@ -46,6 +46,18 @@ public structure Model (Value Child W : Type) where
     let (r, world'', rc) := makeTask model frame right world'
     (.join l r, world'', lc + rc + 1)
 
+/-- Combine the two actual answers after the right poll has run. -/
+@[expose] public def joinPollReplies (pair : Value → Value → Value)
+    (left right : Poll Value × Task Value Child × W × Nat) :
+    Poll Value × Task Value Child × W × Nat :=
+  let (lp, l, _, lc) := left
+  let (rp, r, after, rc) := right
+  match lp, rp with
+  | .ready a, .ready b =>
+    let value := pair a b
+    (.ready value, .ready value, after, lc + rc + 1)
+  | _, _ => (.pending, .join l r, after, lc + rc + 1)
+
 /-- Left precedes right even if it suspends. Ready children are cached and
     have no further world effects. A call effect can stop before the
     next child, while Pending saves the updated child storage. -/
@@ -60,13 +72,9 @@ public structure Model (Value Child W : Type) where
     | .ready value => pure (.ready value, .ready value, world', cost)
     | .pending => pure (.pending, .leaf child', world', cost)
   | .join left right, world => do
-    let (lp, l, world', lc) ← pollTaskWith poll pair left world
-    let (rp, r, world'', rc) ← pollTaskWith poll pair right world'
-    match lp, rp with
-    | .ready a, .ready b =>
-      let value := pair a b
-      pure (.ready value, .ready value, world'', lc + rc + 1)
-    | _, _ => pure (.pending, .join l r, world'', lc + rc + 1)
+    let first ← pollTaskWith poll pair left world
+    let second ← pollTaskWith poll pair right first.2.2.1
+    pure (joinPollReplies pair first second)
 termination_by structural task _ => task
 
 @[expose] public def pollTask (model : Model Value Child W) :
@@ -82,13 +90,8 @@ public theorem pollTask_leaf (model : Model Value Child W) (child : Child) (worl
 
 public theorem pollTask_join (model : Model Value Child W) (left right : Task Value Child) (world : W) :
     pollTask model (.join left right) world =
-      (let (lp, l, middle, lc) := pollTask model left world
-       let (rp, r, after, rc) := pollTask model right middle
-       match lp, rp with
-       | .ready a, .ready b =>
-         let value := model.pair a b
-         (.ready value, .ready value, after, lc + rc + 1)
-       | _, _ => (.pending, .join l r, after, lc + rc + 1)) := rfl
+      (let first := pollTask model left world
+       joinPollReplies model.pair first (pollTask model right first.2.2.1)) := rfl
 
 /-- The outcome-aware task scheduler agrees with ordinary polling
     whenever the leaf calls have the same normal answers. -/
