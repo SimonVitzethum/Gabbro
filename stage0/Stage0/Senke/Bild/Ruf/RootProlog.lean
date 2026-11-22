@@ -153,6 +153,29 @@ theorem Emitted.root_contract_other_step (output : Emitted src reserve options)
   exact traegerGleich_trans (gx_aussen presents changed kept carrier notShared)
     (traegerGleich_trans (schritt_traeger good step carrier (.inr noWrite)) (presents carrier notShared))
 
+/-- Pending roots can retain their exact initial contract values even
+    when other threads have changed the rest of the source world. -/
+theorem Emitted.root_initial_contract_other_step (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (hardware : HardwareAnnahmenHw O E.Q)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread issuer : Nat} (different : thread ≠ issuer)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root)
+    {before after : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m before)
+    (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after) :
+    let reads := fun carrier =>
+      carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte ∨
+        carrier ∈ (E.P.mitRuhe.ensures (some root.1)).orte
+    (∀ carrier, reads carrier → TraegerGleich before.speicher (speicherR E.sp0) carrier) →
+      ∀ carrier, reads carrier → TraegerGleich after.speicher (speicherR E.sp0) carrier := by
+  intro reads previous carrier read
+  exact traegerGleich_trans (output.root_contract_other_step hardware accepted duties different
+    declared reached stepped carrier read) (previous carrier read)
+
 /-- The checked root requirement remains true while other threads run. -/
 theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}

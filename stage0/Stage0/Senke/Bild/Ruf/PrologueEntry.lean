@@ -375,17 +375,20 @@ theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options
     (phase : ImageProloguePhase output E thread control memory state)
     (reached : MaskedAgreement phase.reads phase.writes phase.finish view)
     {rp caller : W} (returnPointer : phase.header ⟨0, by decide⟩ = some rp)
-    (callerFrame : phase.header ⟨1, by decide⟩ = some caller) :
+    (callerFrame : phase.header ⟨1, by decide⟩ = some caller)
+    {sourceEntry : World (declOf output.compiled.unit).mitRuhe}
+    (entryValues : ∀ cell ∈ oldCells (E.P.mitRuhe.ensures (some phase.root.1)),
+      cell.val (worldR phase.entryWorld) = cell.val sourceEntry) :
     let program := E.P.mitRuhe
     let layout := output.image.Y.withIdle
     let fn := some phase.root.1
     let fp := imagePrologueFrame output thread
     let K := output.image.Ks - FB
     let args := envR phase.root.2
-    FrameOK view fp K ∧ Kopf layout fn view fp K rp caller args program (worldR phase.entryWorld) ∧
+    FrameOK view fp K ∧ Kopf layout fn view fp K rp caller args program sourceEntry ∧
       EnvAt layout view fp args (functionFrame program fn).bodyReserved := by
   dsimp only
-  rw [unit.program]
+  rw [unit.program] at entryValues ⊢
   have values := (phase.entry_values reached).withIdle
   have offsets := functionFrame_offsets_withIdle output.compiled.program output.image.Y phase.root.1
   have resultFits : (functionFrame output.compiled.program.mitRuhe (some phase.root.1)).internalResult ≤
@@ -399,6 +402,6 @@ theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options
   exact ⟨phase.entry_frame reached, ⟨
     (phase.entry_header reached ⟨0, by decide⟩).trans returnPointer,
     (phase.entry_header reached ⟨1, by decide⟩).trans callerFrame,
-    values.original, resultFits, values.snapshots⟩, values.lexical⟩
+    values.original, resultFits, values.snapshots.congr_values entryValues⟩, values.lexical⟩
 
 end Gabbro.Stage0

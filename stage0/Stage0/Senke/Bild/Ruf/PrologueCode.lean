@@ -111,6 +111,19 @@ theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.At.congr_read_frame
       simpa only [EntrySnapshots.words, Nat.add_assoc] using fits
     exact ⟨frame_value_agrees frame (by omega) same saved.1, ih bound saved.2⟩
 
+/-- Captures represent every entry world that agrees on their exact cells. -/
+theorem _root_.Gabbro.Stage0.Senke.EntrySnapshots.At.congr_values
+    {D : Deklaration} {L : Lay D} {before after : World D} {memory : Mem} {fp : W}
+    {cells : List (Zelle D)} {base : Nat}
+    (saved : EntrySnapshots.At L before memory fp cells base)
+    (same : ∀ cell ∈ cells, cell.val before = cell.val after) :
+    EntrySnapshots.At L after memory fp cells base := by
+  induction cells generalizing base with
+  | nil => trivial
+  | cons cell tail ih =>
+    exact ⟨same cell List.mem_cons_self ▸ saved.1,
+      ih saved.2 (fun other inside => same other (List.mem_cons_of_mem _ inside))⟩
+
 /-- Restored arguments and old values depend only on their complete frame spans. -/
 theorem _root_.Gabbro.Stage0.Senke.EntryFrameValues.congr_read_frame
     {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
