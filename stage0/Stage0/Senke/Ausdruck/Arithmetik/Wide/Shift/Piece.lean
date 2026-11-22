@@ -63,7 +63,7 @@ theorem selP_run (src M T a j : Nat) (h1 : T ≠ a + j) (h3 : T ≠ M) (s : Nat 
 
 /-! ## Bit shift with carry from a neighbour -/
 
-@[simp] theorem bitP_length (src Rr O W T T2 a j : Nat) (oM oX : Opcode) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
+@[simp] theorem bitP_length (oM oX : Opcode) (src Rr O W T T2 a j : Nat) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
 
 theorem bitP_run (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
     (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (hM1 : oM ≠ 1) (hM2 : oM ≠ 2)

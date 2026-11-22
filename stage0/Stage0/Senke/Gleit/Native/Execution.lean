@@ -20,9 +20,9 @@ theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
     (result : ∀ wa wb, Pa wa → Pb wb →
       ∃ r, Runner.NativeFPEval kind wa wb r ∧ P r)
     (hK : d + 1 < K)
-    (h : Pre L m pc fp K d (ca ++ cb ++ [ci kind.code d d (d + 1)]) ρ W reserved) :
-    Ok m pc fp K d (ca ++ cb ++ [ci kind.code d d (d + 1)]) P := by
-  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci kind.code d d (d + 1)])) ρ W reserved := by
+    (h : Pre L m pc fp K d (ca ++ cb ++ [ci (nativeFPOpcode kind) d d (d + 1)]) ρ W reserved) :
+    Ok m pc fp K d (ca ++ cb ++ [ci (nativeFPOpcode kind) d d (d + 1)]) P := by
+  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci (nativeFPOpcode kind) d d (d + 1)])) ρ W reserved := by
     simpa using h
   obtain ⟨m1, s1, a1, wa, ra, pa⟩ := hA m pc h'.left
   have h1 := h'.next a1 (Nat.le_succ d) (by omega)
@@ -54,9 +54,9 @@ theorem nativeFP_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
       · simpa [ci, hs] using hw)
   refine ⟨_, (s1.trans s2).trans ?_,
     (a1.trans (a2.mono (Nat.le_succ d))).trans a3, r, hrd, pr⟩
-  have finish : pc + BitVec.ofNat 64 (16 * (ca ++ cb ++ [ci kind.code d d (d + 1)]).length) =
+  have finish : pc + BitVec.ofNat 64 (16 * (ca ++ cb ++ [ci (nativeFPOpcode kind) d d (d + 1)]).length) =
       pc + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * cb.length) +
-        BitVec.ofNat 64 (16 * [ci kind.code d d (d + 1)].length) := by
+        BitVec.ofNat 64 (16 * [ci (nativeFPOpcode kind) d d (d + 1)].length) := by
     simp only [List.length_append, List.length_singleton, pc_add]
   rw [finish]
   exact s3

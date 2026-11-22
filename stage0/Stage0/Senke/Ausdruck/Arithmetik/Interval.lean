@@ -31,13 +31,13 @@ theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b reserved : Nat} 
   · exact hg
   · simpa only [sx_nat (d := d) (by omega)] using hw
 
-theorem engTest_length (d : Nat) (o : Opcode) (lo hi : Int) :
+theorem engTest_length (o : Opcode) (d : Nat) (lo hi : Int) :
     (engTest o d lo hi).1.length =
       (if lit32 lo then 1 else 17) + (if lit32 hi then 1 else 17) + 3 := by
   simp only [engTest, List.length_append, List.length_cons, List.length_nil, wordConstant_length]
   omega
 
-theorem engTest_top (d : Nat) (o : Opcode) (lo hi : Int) :
+theorem engTest_top (o : Opcode) (d : Nat) (lo hi : Int) :
     d + 2 < (engTest o d lo hi).2 ∧ (engTest o d lo hi).2 ≤ d + 4 := by
   have lower := wordConstant_top (d + 1) lo
   have upper := wordConstant_top (d + 2) hi

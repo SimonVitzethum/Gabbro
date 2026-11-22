@@ -14,7 +14,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-@[simp] theorem bitChain_length (n A B : Nat) (o : Opcode) : (bitChain o n A B).length = n := by
+@[simp] theorem bitChain_length (o : Opcode) (n A B : Nat) : (bitChain o n A B).length = n := by
   induction n generalizing A B with
   | zero => rfl
   | succ n ih => simp [bitChain, ih]
