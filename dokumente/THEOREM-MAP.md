@@ -7330,78 +7330,6 @@ proof additionally needs progress at the strategy's retry place under scheduler 
 statements and their assumptions remain intact; no spin liveness theorem is claimed here. FIFO and ghost
 refinement do not need that progress premise. P2 keeps WAKE-all for Linux; wake-one remains unsupported.
 
-## 191. The bridge carries recursive units by a well-founded measure (2026-11-14)
-
-*Files: `programmlogik/bruecke/Bruecke/Kette/Mass/{Pflicht,Realisierung,Zeuge}.lean`, `Kette/{Simulation,Quelle,Pflichten}.lean`, `Vorlage.lean`, `GiftZyklus.lean`. No change of `Spec.lean`; the rank theorems keep their statements and are derived from the measure theorems.*
-
-| Theorem | File | Statement |
-|---|---|---|
-| `MassU`, `hypsM`, `meetsUM`, `MassPflichtU` (definitions) | `Kette/Mass/Pflicht.lean` | One well-founded measure per unit (values, order, `mass : String → State → Wert`). `meetsUM` is `meetsU` with each callee's contract assumed only on entry states strictly below the caller's entry value; frames stay unconditional. |
-| `meetsUM_of_rang`, `massPflichtU_of_rang` | `Kette/Mass/Pflicht.lean` | Under a call-graph rank, `meetsU` implies `meetsUM` for `MassU.rang rk`: every acyclic duty is a measure duty. |
-| `massEnv`, `massEnv_antwort` | `Kette/Mass/Realisierung.lean` | `massEnv u` answers each entry with an answer keeping the frame and meeting the contract where one exists; by well-founded induction one exists at every precondition-satisfying entry of a carried function. |
-| `realisiert_mass_G`, `realisiert_alle_mass_G` | `Kette/Mass/Realisierung.lean` | `Getragen u C`, `MassPflichtU u C M`, every carried body lowers: contracts and frames of every carried function in `massEnv u` -- recursion and mutual recursion included. |
-| `lauf_P_mass_G` (`lauf_P_G` derived) | `Kette/Simulation.lean` | The run of a carried function under a measure: handler-answered calls, ensures at every return. |
-| `bruecke_{koerperGutR,keineLogik,koerperGutS,logik,nutzer}_M`, `nutzer_aus_quelleM[_alle]`, `nutzerA_aus_quelleM` (the `_G` forms derived) | `Kette/Quelle.lean` | Premise (b) of the goal theorem from the measure duties; `PflichtenTeilM`/`PflichtenAlleM` (`Kette/Pflichten.lean`) drop the rank conjunct `rangB u (rangAuto u) = true`. |
-| `keine_massPflicht` | `GiftZyklus.lean` | The F2 poison unit (full-contract duties vacuously true, premise (b) false) is refused by the measure duties under every measure. |
-| `nutzer_mass_zeuge` | `Kette/Mass/Zeuge.lean` | `down` (self-recursive) and `ping`/`pong` (mutual): the rank gate refuses the unit, the measure `k` proves every `meetsUM` with the recursive call taken, and `bruecke_nutzer_M` gives `NutzerPflicht`. |
-
-The template (`Vorlage.lean`) emits the measure forms for a unit with a call-graph cycle instead
-of a refusal. The measure is supplied by the person (e.g. the values of the `decreases`
-clauses); it is not yet computed from `UFn.decreases` or fed from the checker's `MassPflicht`.
-
-## 192. The bridge measure computed from the `decreases` clauses (2026-11-14)
-
-*Files: `programmlogik/bruecke/Bruecke/Kette/Mass/{Wert,Rang,Abstieg,Senkung,QuelleZeuge}.lean`. No change of `Spec.lean` and of any existing statement.*
-
-| Theorem | File | Statement |
-|---|---|---|
-| `quellWert`, `massTupel` (definitions), `quellWert_of_source` | `Kette/Mass/Wert.lean` | A `decreases` clause read on a Body binding; on a binding that reads every parameter at its position (`LRel`), it has exactly the value `SourceValue` denotes. |
-| `massTupel_wert`, `massTupel_eintritt` | `Kette/Mass/Wert.lean` | Preservation: the Body tuple is the exported canonical `Mass.wert` (`Measures.Export`, the measure `lowerAllg` checks); at the bridge entry state with unique parameter names. |
-| `massTupel_faellt`, `unterQ_of_lexLt` | `Kette/Mass/{Wert,Abstieg}.lean` | Where the canonical gate `massTor` admits a call (`lexLt` of the exported values), the Body source value of the callee entry lies below the caller's, i.e. the source guard `unterQ` admits it at the bridge entry states. |
-| `ErreichtU`, `ZyklusU`, `rangU`; `rangU_kante_le`, `rangU_kante_lt` | `Kette/Mass/Rang.lean` | The computed call-graph rank never rises along a call and falls off a cycle. |
-| `massQuelle`, `meetsUQ`, `meetsUM_of_meetsUQ`, `massPflichtU_quelle`, `meetsUQ_of_meetsU` | `Kette/Mass/Abstieg.lean` | The unit's measure (rank, `decreases` value) under `lexLt`/`lexLt_wf 2`; the source duty assumes callees off the cycle fully and callees on it below the caller's `decreases` value, and is a `meetsUM` duty under `massQuelle`. |
-| `lowering_ok_mass` | `Kette/Mass/Senkung.lean` | The lowering of a unit all of whose functions declare a measure (witness support). |
-| `nutzer_quelle_zeuge`, `wert_zeuge`, `top_wert_steigt` | `Kette/Mass/QuelleZeuge.lean` | Self, mutual and acyclic calls under `decreases k`: duties from the computed measure, the acyclic edge admitted by the rank where the source value rises, the exported value equal to the Body value, and `NutzerPflicht`. |
-
-Open: the run-level transport of the checker's `MassPflicht` (G runs behind `massTor`) to the
-Body duty. `unterQ_of_lexLt` covers the gate's test at encoded entries; the Body realisation
-quantifies over all Body states and Body environments, so a reverse simulation (Body run of a
-carried body ↦ G run, call by call) is still required.
-
-## 193. Terminal bridge scopes retain option tables and structured dispatch (2026-11-15)
-
-The canonical direct-call scope is `mitRuf`: when the declared result has `resOpt`, it
-uses `mitOpt` to retain the source table number and extent. The Body reader uses
-`mitTy` because its lookups depend on parameter types. The existing `mitRuf_params`,
-`Sicht.bindRuf` and `UmfangB.bindRuf` relate these scopes under the carried callee's
-`resultTypeB` check. Terminal sequences now use that relation, as ordinary blocks
-already did. Neither lowering nor the language model changes to identify the scopes.
-
-| Statement | File | Meaning |
-|---|---|---|
-| `lowEndL_bindOpt_ok` | `programmlogik/bruecke/Bruecke/Anweisung/Zweig/EndKopf.lean` | A successful terminal option binding exposes the actual `lowOpt` expression and the continuation in the canonical table-aware `mitOpt` scope. |
-| `lowEndL_struct_ok` | same | Its structural-prefix inversion also covers option, tag and reason dispatch; each exposes the unchanged `lowStructL` result and following end block. |
-| `statischEndSeq_G`, `laufEndSeq_G` | `programmlogik/bruecke/Bruecke/Kette/Ende/{Rahmen,Simulation}.lean` | Statements unchanged; proofs now connect option and record locals, option updates, both option field writes, all three dispatch forms and table-aware option call results. Inner dispatch arms reuse the existing block frame and simulation theorems. |
-| `option_unit_zeuge` | `programmlogik/bruecke/Bruecke/Kette/Ende/Zeuge.lean` | The same option effects occur inside an actual terminal conditional of a carried whole unit that the canonical lowerer accepts. |
-| `lowEndL_bindOpt_ok_zeuge` | `programmlogik/bruecke/Bruecke/Kette/Ende/Zeuge.lean` | One terminal fixture lowers with an explicit closer and reads the exact Body sequence: two direct option calls, a local option binding and update, and pointer/table field writes on a two-slot table. |
-| `lowEndL_struct_ok_zeuge` | same | All three two-arm dispatch fixtures lower as structured prefixes before a terminal return and retain their explicit closing marker. |
-| `I104.einzahlen_clause_zeuge`, `I104.lies_clause_zeuge` | `programmlogik/bruecke/Bruecke/Instanzen/Instanz104.lean` | The shared readers compute the original old-value comparison and result comparison of the 104 source fixture. |
-| `I104.einzahlen_post_eq`, `I104.lies_post_eq`, `I104.einzahlen_meets_eq`, `I104.lies_meets_eq` | same | Those clause certificates identify the original postconditions and frame-aware duty statements with the current bridge statements; the existing user-obligation theorems are retained. |
-
-`fieldIndex_none` (`Kodierung/Slots.lean`) proves that a missing declared name has no
-dependent field index. The concrete 104/108 shapes and the cyclic-duty counterexample
-reuse it. `Zyklus.fieldIndex_none_zeuge` checks it on the two-slot cycle fixture. That
-fixture and its actual lowering certificate now live in `Kette/Mass/CycleFixture.lean`;
-the model values, negative rank result, vacuous full-contract duties, failed machine
-premise and universal measure refusal keep their statements and remain connected.
-
-`OptionStorageZeuge.names_zeuge` proves the two distinct parameter names once for the
-existing read/write and return simulations. The option-value and storage fixtures also
-explicitly supply their absent integer-result field and import the canonical lowering
-theorem; their semantic witness statements are retained.
-
-No bridge duty, simulation premise, refusal witness or goal-theorem statement is weakened.
-
 ## 194. Contract control certificates and a nonliteral accepted call-site fixture (2026-11-16)
 
 The strict contract compiler retains its semantic output: every successful condition
@@ -8331,26 +8259,6 @@ replacement elaboration.
 static aggregate. `staticIndexedField_erfuellbar` establishes the source
 path for a mutable static array of records. The ordinary global store
 checks the write authority and uses the same typed replacement proofs.
-## 210. GabbroV writes the Lean duty files of a unit (2026-11-21)
-
-*Files: `programmlogik/bruecke/Bruecke/Kette/Einheit.lean`, `Bruecke/Vorlage.lean`, `Bruecke/Vorlage/{Formen,Zeige,Haupt}.lean`;
-the executable `gabbrov` (`programmlogik/bruecke/lakefile.toml`). No change of `Spec.lean` or of any existing statement.*
-
-| Theorem | File | Says |
-|---|---|---|
-| `nutzer_aus_einheit`, `nutzerA_aus_einheit` | `Kette/Einheit.lean` | For a unit `u` given as data: its unit part (`EinheitTeil`: `nullB`, `stimmigUnitB`, no generated transitions) and, under one rank `rk`, every function's duty `FnPflicht u rk f` (`stimmigFnB`, `bindFrischB`, `rangFnB`, a Body reading and `meetsU` over it) for every `f ∈ u.fns`, together with the front-end equation `uebersetzeAllg src = .ok ⟨u, P, fs⟩`, give `NutzerPflicht` (and `NutzerPflichtA`) of `einheitAllg u P`. |
-| `nutzer_aus_senkung` | `Kette/Einheit.lean` | The same for whichever front end built `u`: only `lowerAllg u = .ok (P, fs)` is used. |
-| `nutzer_aus_stage0` | `Kette/Andocken/Stufe0.lean` | For `c : Stage0.Compiled text` with `c.unit = u`: the duties of `u` give `NutzerPflicht` of `einheitAllg u P` for the program `P` that the generic lowering builds from the unit Stage 0 compiles (`Compiled.lowered`). The bridge package now requires `stage0`. |
-| `stimmigB_of`, `ohneTransitionB_of`, `rangB_of` | `Kette/Einheit.lean` | The unit checks of `PflichtenAlle` follow from a unit part and a part per function (no quantifier over positions). |
-| `fnPflicht_append`, `fnPflicht_cons`, `fnPflicht_nil` | `Kette/Einheit.lean` | Assembly of the per-function duties over appended chunks (logarithmic depth in the generated files). |
-| `Tabelle.suche_bauenK`, `funktionsTabelle_suche` | `Kette/Suche.lean` | A binary trie over the bits of a name hash, built from keyed entries whose keys are the hashes of their names, answers as the first-match search of the list for every name; instantiated for function lists. |
-| `fnSuche_eq`, `zuBodyZ_suche`, `meetsU_suche`, `tabelle_such` | `Kette/Einheit.lean` | A Body reading or duty computed with a callee lookup that answers as the standard one (`instFnSuche`, the first function of the name) is the standard reading or duty; a printed table built from the keyed list of `u.fns` is such a lookup. |
-| `step_forCount` | `programmlogik/Gabbro/Body/Traverse.lean` | The new Body statement `forCount x n body` (a traversal of `0 ..< n`) means `forEach` over `zaehlIndizes n`. |
-| `loopIndices_zahl`, `ausgangZiel_G_ersetze` | `Anweisung/Schleife/Basis.lean`, `Kette/Strecke.lean` | A traversal's index list is the counted one; a claim about Body statements carries over to statements that execute alike. The reader emits `forCount`, so a reading of a traversal over a table of any size stays small (`stmtZiel_loop_G` restated). |
-| `restore_ohneAlt` | `Kette/Andocken/Bild.lean` | Without `old` of a static in any source postcondition, Stage 0's restoration returns the lowered program unchanged. |
-| `nutzerA_einheitDer`, `nutzerA_aus_compiled` | `Kette/Andocken/Bild.lean` | **No gap to Stage 0's image theorem**: the duties of a unit given as data (`PflichtenEinheit`) of a unit with no lock and no foreign body give `NutzerPflichtA` of Stage 0's judged unit over the compiled program, for every axiom family, initial memory, entry arguments, further starts and declared checks; with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` this is the premise of the image theorems (`output.einheit Q`, `output.goalUnit Q`). |
-| `nutzerA_aus_compiled_erfuellbar` | `Kette/Andocken/BildErfuellbar.lean` | The premises hold jointly for a unit with one function `main` returning `42`, whose duty `meetsU` is proved. |
-
 ## 211. Stage 0 loader and exit refinement
 
 `MappedImage.runner_loader_step` bounds the IR prefix corresponding to
@@ -8459,36 +8367,6 @@ Their evaluation lemmas relate both
 operations to the same half-open slice value. Standalone runtime slice
 values and arbitrary runtime substrings still need executable lowering.
 
-## 215. GabbroV units with locks (2026-11-22)
-
-A carried function takes no lock (the reader refuses `locks`); these theorems prove that its lowered
-body contains no `locks` block and no scoped return, so a unit that declares locks reaches Stage 0's
-premise (b) with its lock family. The induction mirrors the simulation (`laufSeq_G`, `laufEndSeq_G`,
-`lauf_G`) form by form, without its semantic content.
-
-| Theorem | File | Statement |
-|---|---|---|
-| `lowStmtL_einzeln_ohne`, `lowRetStmt_ohne`, `lowRetEnd_ohne`, `lowEnd_ohne` | `Kette/Ohne/Blatt.lean` | Carried single statements, top-level returns and body ends lower without `locks`. |
-| `endBodyZ_ohne`, `arms_ohne_with`, `seq_ohne`, `ende_ohne`, `lauf_ohne` | `Kette/Ohne/*.lean` | Every block, arm and ending of a carried body read by `seqZ`/`endBodyZ`/`stmtsBodyZ` lowers without `locks`. |
-| `rumpf_ohne` | `Kette/Ohne/Lauf.lean` | **The lowered body of a carried function satisfies `ohneLocks`**: the premise of `koerperGutS_ohne`. |
-| `logik_sperren` | `Kette/Andocken/Sperren.lean` | The duties of a unit give `LogikPflicht` under every local lock family. |
-| `nutzerA_einheitDer_sperren`, `nutzerA_aus_compiled_sperren` | `Kette/Andocken/Sperren.lean` | **Premise (b) of Stage 0's image theorem for units with locks**: the duties, no foreign body, the run facts of `nutzerA_aus_compiled` and Stage 0's own lock decision `checkUnitLock` on the judged unit (`sperrenGeprueftB`; `sperren_of_geprueft`: locality and the initial-memory duty) give `NutzerPflichtA` of the judged unit. |
-| `nutzerA_aus_compiled_sperren_erfuellbar` | `Kette/Andocken/SperrenErfuellbar.lean` | The premises hold jointly for a unit with one declared lock and one carried function whose duty is proved; Stage 0's lock decision accepts its judged unit for every program, memory, entry, starts and checks. |
-
-## 216. GabbroV carries `let x = T::C;` of a bare tagged type (2026-11-22)
-
-The Body reading of `let x = T::C;` (`UStmt.bindSum`) binds the case label, the encoding `valOf` gives every
-value of a bare tagged type; a tagged local copies. The form is carried through the whole chain: the
-readers, the lowering, the block, ending and body simulations, the frames and the lock-freedom induction.
-
-| Theorem | File | Statement |
-|---|---|---|
-| `schrittB_bindSum`, `namedSum_sicht` | `Anweisung/Lokal/Benannt.lean` | The reading of the binder: a bare tagged type, the case label or the copied local, the scope `UFn.mitSum`. |
-| `Sicht.bindSum`, `UmfangB.bindSum`, `PositionalLRel.pushSum`, `protectedNames_mitSum` | `Anweisung/Summe/Scope.lean` | The scope after the binder keeps every visibility and typing fact of the bridge. |
-| `lowBodyF_bindSum_ok`, `lowSeq_bindSum_ok`, `lowEndL_bindSum_ok` | `Anweisung/Summe/Kopf.lean` | The lowering of the binder in its three readers. |
-| `lowSVal_named_sim`, `lowBindSum_named_sim`, `blockZiel_bindSum_G` | `Anweisung/Summe/Werte.lean` | **The binder simulates**: the Body reading evaluates to the encoding of the lowered value, and the positional relation grows by the new local. |
-| `bindSum_erfuellbar` | `Kette/Andocken/FormenErfuellbar.lean` | The form occurs in a unit whose duties hold, its `meetsU` proved. |
-
 ## 217. GabbroV's one theorem: the model's certificate of the compiled unit (2026-11-22)
 
 GabbroV states the model's certificate (`LogikPflichten`, exactly premise (b) by `logikPflichten_iff`)
@@ -8497,8 +8375,21 @@ language and none is refused.
 
 | Theorem | File | Statement |
 |---|---|---|
-| `entschieden_sound` | `Kette/Andocken/Zertifikat.lean` | Stage 0's decision of the data parts (`checkUnitLock`, `checkStartRequires`) gives the certificate's lock and start duties. |
-| `nutzerA_aus_logik`, `logik_aus_nutzerA` | `Kette/Andocken/Zertifikat.lean` | Every function's logic (`LogikFn`), the foreign bodies' locality and the decided data parts give premise (b) for every unit; conversely (b) gives the logic and the locality: the duties are not stronger than (b). |
-| `nutzerA_aus_compiled_logik` | `Kette/Andocken/Zertifikat.lean` | **Premise (b) of Stage 0's image theorem for every compilation and every language form**, over `c.program` itself. |
-| `nutzerA_aus_ziele`, `alle_ziele` | `Kette/Andocken/Zertifikat.lean` | The same from the duties of the unit given as data (`ZielF`, one per function), with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded`. |
-| `nutzerA_aus_ziele_erfuellbar` | `Kette/Andocken/ZertifikatErfuellbar.lean` | The premises hold jointly for a unit with one function; Stage 0's decision accepts its judged unit. |
+| `entschieden_sound` | `Zertifikat/Satz.lean` | Stage 0's decision of the data parts (`checkUnitLock`, `checkStartRequires`) gives the certificate's lock and start duties. |
+| `nutzerA_aus_logik`, `logik_aus_nutzerA` | `Zertifikat/Satz.lean` | Every function's logic (`LogikFn`), the foreign bodies' locality and the decided data parts give premise (b) for every unit; conversely (b) gives the logic and the locality: the duties are not stronger than (b). |
+| `nutzerA_aus_compiled_logik` | `Zertifikat/Satz.lean` | **Premise (b) of Stage 0's image theorem for every compilation and every language form**, over `c.program` itself. |
+| `nutzerA_aus_ziele`, `alle_ziele` | `Zertifikat/Satz.lean` | The same from the duties of the unit given as data (`ZielF`, one per function), with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded`. |
+| `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | The premises hold jointly for a unit with one function; Stage 0's decision accepts its judged unit. |
+
+## 218. GabbroV without a second language: the bridge is the certificate (2026-11-22)
+
+The per-form bridge (the Body reading of a function, its simulation per language form, the frames,
+the lock-freedom induction) is deleted; sections 191-193, 210, 215 and 216 described it. GabbroV is the
+model's certificate of §217 over the program Stage 0 lowers, and the generator.
+
+| Theorem | File | Statement |
+|---|---|---|
+| `programm_von` | `Zertifikat/Programm.lean` | The program `lowerAllg u` answers has at every function the postcondition, body and precondition of that function's lowering `lowerFnAt`; every form. |
+| `restore_ohneAlt` | `Zertifikat/Lauf.lean` | Without `old` of a static in a postcondition Stage 0's restoration is the identity on the lowered program. |
+| `zielF_aus`, `logikFn_aus`, tactic `gabbrov_wp` | `Zertifikat/WP.lean` | Open a function's duty at its own lowering; the exact weakest-precondition rules of the model on its body. |
+| `einheitLeer_ziel`, `nutzerA_aus_ziele_erfuellbar` | `Zertifikat/Erfuellbar.lean` | A function's duty proved directly over its lowered body; the premises of `nutzerA_aus_ziele` hold jointly and the lowering accepts the unit. |
