@@ -392,8 +392,8 @@ theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options
       output.image.Ks - FB := by
     rw [offsets.2.2.2.2.1]
     have available := phase.entryFits
-    have protected := (functionFrame output.compiled.program phase.root.1).protected_prefix.2
-    unfold FrameLayout.internalStatus FrameLayout.bodyParams at protected
+    have prefixLength := (functionFrame output.compiled.program phase.root.1).protected_prefix.2
+    unfold FrameLayout.internalStatus FrameLayout.bodyParams at prefixLength
     unfold frei at available
     omega
   exact ⟨phase.entry_frame reached, ⟨

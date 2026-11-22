@@ -99,7 +99,7 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
   all_goals
     intros
     try (apply And.intro <;> intros)
-    try (match goal with | result : Option Ty |- _ => cases result)
+    try cases ‹Option Ty›
     try simp only [ruS, ruB, ruEnd, ruArms, ruGArms, lowS, lowB, lowEnd, lowTags, lowSumTags, lowGrund,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, vslot_varR, Ty.mapCases,
       tagPayloadC_withIdle, sumSpanPayloadC_withIdle,
