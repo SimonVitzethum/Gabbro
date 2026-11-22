@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.PrologueCode
 public import Stage0.Senke.Bild.Prolog
+import Stage0.Senke.Bild.Ruf.Idle.Counters
 import Stage0.Senke.Bild.Mehr.ImageTransition
 
 @[expose] public section
@@ -364,5 +365,40 @@ theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src res
   obtain ⟨phase, selected, _, header⟩ := output.enter_prologue unit O root declared alive unentered
     (Emitted.function_semantics_at loaded) inputs snapshots requires frameOK environment depthWord
   exact ⟨phase, selected, header⟩
+
+/-- The actual issuing view at the decoded body address supplies the
+    canonical GX return header and lexical environment for that root. -/
+theorem ImageProloguePhase.gx_frame [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {thread : Nat} {control : Res T} {memory : Mem}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory)
+    {rp caller : W} (returnPointer : phase.header ⟨0, by decide⟩ = some rp)
+    (callerFrame : phase.header ⟨1, by decide⟩ = some caller) :
+    let program := E.P.mitRuhe
+    let layout := output.image.Y.withIdle
+    let fn := some phase.root.1
+    let fp := imagePrologueFrame output thread
+    let K := output.image.Ks - FB
+    let args := envR phase.root.2
+    FrameOK memory fp K ∧ Kopf layout fn memory fp K rp caller args program (worldR phase.entryWorld) ∧
+      EnvAt layout memory fp args (functionFrame program fn).bodyReserved := by
+  dsimp only
+  rw [unit.program]
+  have values := (phase.entry_values reached).withIdle
+  have offsets := functionFrame_offsets_withIdle output.compiled.program output.image.Y phase.root.1
+  have resultFits : (functionFrame output.compiled.program.mitRuhe (some phase.root.1)).internalResult ≤
+      output.image.Ks - FB := by
+    rw [offsets.2.2.2.2.1]
+    have available := phase.entryFits
+    have protected := (functionFrame output.compiled.program phase.root.1).protected_prefix.2
+    unfold FrameLayout.internalStatus FrameLayout.bodyParams at protected
+    unfold frei at available
+    omega
+  exact ⟨phase.entry_frame reached, ⟨
+    (phase.entry_header reached ⟨0, by decide⟩).trans returnPointer,
+    (phase.entry_header reached ⟨1, by decide⟩).trans callerFrame,
+    values.original, resultFits, values.snapshots⟩, values.lexical⟩
 
 end Gabbro.Stage0
