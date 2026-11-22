@@ -190,4 +190,40 @@ theorem eval_localArraySliceIndex {τ : Ty} {capacity : Nat}
   simp only [Zahl.fin, Zahl.weiter, Zahl.add]
   omega
 
+/-- The two productive slice observations have jointly satisfiable
+    source premises, with both endpoints admitting more than one value. -/
+theorem runtimeSliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 4 ≤ capacity) :
+    ∃ scope : UCtx,
+      uWertBody scope (.built "lenof" [.built "#slice" [.variable "a", .variable "i", .variable "j"]]) =
+        .ok (.sub (.param "j") (.param "i")) ∧
+      uWertBody scope (.index (.built "#slice" [.variable "a", .variable "i", .variable "j"]) (.variable "k")) =
+        .ok (.idx (.param "a") (.add (.param "i") (.param "k"))) := by
+  let scope : UCtx := {
+    names := ["a", "i", "j", "k"], kinds := [.wert, .int, .int, .int]
+    types := [.arr τ capacity, .int 0 1, .int 3 4, .int 0 1]
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have types : uSliceLocalType scope "a" = some (.arr τ capacity) ∧
+      uSliceLocalType scope "i" = some (.int 0 1) ∧ uSliceLocalType scope "j" = some (.int 3 4) ∧
+      uSliceLocalType scope "k" = some (.int 0 1) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have reads : uWertBlatt scope (.variable "a") = .ok (.param "a") ∧
+      uWertBlatt scope (.variable "i") = .ok (.param "i") ∧
+      uWertBlatt scope (.variable "j") = .ok (.param "j") ∧
+      uWertBlatt scope (.variable "k") = .ok (.param "k") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  obtain ⟨arrayType, firstType, lastType, indexType⟩ := types
+  obtain ⟨arrayRead, firstRead, lastRead, indexRead⟩ := reads
+  have bounds : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ 3 ∧ (4 : Int) ≤ capacity :=
+    ⟨by decide, by decide, by omega⟩
+  refine ⟨scope, ?_, ?_⟩
+  · exact localArraySliceLength_erfuellbar scope (uWertBlatt scope) "a" "i" "j" τ capacity 0 1 3 4
+      arrayType firstType lastType bounds ⟨arrayRead, firstRead, lastRead⟩
+  · exact localArraySliceIndex_erfuellbar scope (uWertBlatt scope) "a" "i" "j" "k" τ capacity 0 1 3 4 0 1
+      arrayType firstType lastType indexType bounds ⟨arrayRead, firstRead, lastRead⟩
+      ⟨by decide, by decide, indexRead⟩
+
+theorem uSliceLocalType_unknown (ctx : UCtx) (name : String)
+    (unresolved : ctx.unknownRanges.contains name = true) : uSliceLocalType ctx name = none := by
+  simp only [uSliceLocalType, unresolved, ite_true]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg

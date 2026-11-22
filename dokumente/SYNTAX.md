@@ -853,8 +853,9 @@ The result is a value of array type with length `N`.
 Stage 0 also supports `lenof(array[first .. last])` and
 `array[first .. last][index]` when the array and integer operands are
 locals. The endpoint ranges must imply `0 <= first <= last <= lenof(array)`.
-The index range must imply `0 <= index < last - first`. These forms compute
-the length or read the original array directly.
+The index range must imply `0 <= index < last - first`. The numeric locals
+must have resolved intervals. These forms compute the length or read the
+original array directly.
 
 
 
