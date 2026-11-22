@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Stufe0
+public import Bruecke.Kette.Bild
 public import Bruecke.Vorlage.Formen
 public import Bruecke.Vorlage.Zeige
 public import Grammatik.Parser.Elab.UebersetzePipeline
@@ -228,7 +228,7 @@ def sammlungDatei (modul : String) (k : Nat) (fs : List Nat) : Datei :=
       "theorem sammlung" ++ toString k ++ " : ∀ f ∈ stueck" ++ toString k ++ ", FnPflicht u rk f :=\n  " ++
         beweis ++ "\n\n" ++ fuss modul }
 
-def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Datei :=
+def wurzelDatei (modul : String) (u : UProg) (anzahl : Nat) (ablehnungen : List String) : Datei :=
   let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
   let beweise := (List.range anzahl).map fun k => "sammlung" ++ toString k
   let rumpf :=
@@ -242,12 +242,28 @@ def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Da
       "theorem nutzer (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u) :\n" ++
       "    ∃ (P : Gabbro.Grammatik.Programm (declOf u)) (fs : List (declOf u).Fn) (hn : nullB u = true),\n" ++
       "      lowerAllg u = .ok (P, fs) ∧ Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u P hn) :=\n" ++
-      "  nutzer_aus_stage0 pflichten c hu\n\n"
+      "  nutzer_aus_stage0 pflichten c hu\n\n" ++
+      (if u.locks.isEmpty && u.axs.isEmpty then
+        "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
+        "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`: the judged unit over\n" ++
+        "    the compiled program, for every axiom family, memory, entry, starts and checks. `hold` is\n" ++
+        "    checked in `Pruefung`. -/\n" ++
+        "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
+        "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
+        "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
+        "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
+        "    (checks : List (CheckDecl (declOf c.unit))) :\n" ++
+        "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
+        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
+        "  nutzerA_aus_compiled pflichten rfl rfl c hu hold Q sp args roots gestartet checks\n\n"
+       else
+        "/-! Premise (b) of Stage 0's image theorem is not stated for this unit: it declares a lock or a\n" ++
+        "    foreign body, and `nutzerA_aus_compiled` covers units with neither. -/\n\n")
     else
       "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
         String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
   { pfad := modul.replace "." "/"
-    text := kopf modul (["Bruecke.Kette.Stufe0", modul ++ ".Quelle", tabelleModul modul] ++
+    text := kopf modul (["Bruecke.Kette.Bild", modul ++ ".Quelle", tabelleModul modul] ++
         (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
         ("The unit checks and premise (b) of the goal theorem (written by `gabbrov`). That `u` is the\n" ++
          "    unit Stage 0 compiles from `quelle` is the premise `c.unit = u` of `nutzer`; the module\n" ++
@@ -256,12 +272,14 @@ def wurzelDatei (modul : String) (anzahl : Nat) (ablehnungen : List String) : Da
 /-- The check of the anchoring premise, by running Stage 0's front end; no theorem imports it. -/
 def pruefungDatei (modul : String) : Datei :=
   { pfad := modul.replace "." "/" ++ "/Pruefung"
-    text := (kopf modul ["Bruecke.Kette.Stufe0", modul ++ ".Quelle", modul ++ ".Daten"]
+    text := (kopf modul ["Bruecke.Kette.Bild", modul ++ ".Quelle", modul ++ ".Daten"]
         "Checks that `u` is the unit Stage 0's front end builds from `quelle` (written by `gabbrov`).").replace
         "@[expose] public section"
-        ("meta import Bruecke.Kette.Stufe0\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+        ("meta import Bruecke.Kette.Bild\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
-      "#guard stufe0Einheit quelle == .ok u\n\n" ++ fuss modul }
+      "#guard stufe0Einheit quelle == .ok u\n\n" ++
+      "-- No postcondition reads `old` of a static (the run fact `hold` of `nutzerBild`).\n" ++
+      "#guard stufe0AltFreiB quelle\n\n" ++ fuss modul }
 
 /-- The rank of every function of an acyclic call graph, in linear time (Kahn's order): a function
     without callees has rank 0, every other one more than the highest of its callees. Functions on a
@@ -320,7 +338,7 @@ def dateien (modul src : String) : Except String (List Datei) := do
     b.map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
   let sammlungen := if ablehnungen.isEmpty then
       stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1)) else []
-  pure ([quelleDatei modul src, wurzelDatei modul anzahl ablehnungen, datenDatei modul u anzahl,
+  pure ([quelleDatei modul src, wurzelDatei modul u anzahl ablehnungen, datenDatei modul u anzahl,
       tabelleDatei modul u anzahl rang, pruefungDatei modul] ++
     stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
 

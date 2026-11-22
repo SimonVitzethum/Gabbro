@@ -8335,6 +8335,9 @@ the executable `gabbrov` (`programmlogik/bruecke/lakefile.toml`). No change of `
 | `fnSuche_eq`, `zuBodyZ_suche`, `meetsU_suche`, `tabelle_such` | `Kette/Einheit.lean` | A Body reading or duty computed with a callee lookup that answers as the standard one (`instFnSuche`, the first function of the name) is the standard reading or duty; a printed table built from the keyed list of `u.fns` is such a lookup. |
 | `step_forCount` | `programmlogik/Gabbro/Body/Traverse.lean` | The new Body statement `forCount x n body` (a traversal of `0 ..< n`) means `forEach` over `zaehlIndizes n`. |
 | `loopIndices_zahl`, `ausgangZiel_G_ersetze` | `Anweisung/Schleife/Basis.lean`, `Kette/Strecke.lean` | A traversal's index list is the counted one; a claim about Body statements carries over to statements that execute alike. The reader emits `forCount`, so a reading of a traversal over a table of any size stays small (`stmtZiel_loop_G` restated). |
+| `restore_ohneAlt` | `Kette/Bild.lean` | Without `old` of a static in any source postcondition, Stage 0's restoration returns the lowered program unchanged. |
+| `nutzerA_einheitDer`, `nutzerA_aus_compiled` | `Kette/Bild.lean` | **No gap to Stage 0's image theorem**: the duties of a unit given as data (`PflichtenEinheit`) of a unit with no lock and no foreign body give `NutzerPflichtA` of Stage 0's judged unit over the compiled program, for every axiom family, initial memory, entry arguments, further starts and declared checks; with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` this is the premise of the image theorems (`output.einheit Q`, `output.goalUnit Q`). |
+| `nutzerA_aus_compiled_erfuellbar` | `Kette/BildErfuellbar.lean` | The premises hold jointly for a unit with one function `main` returning `42`, whose duty `meetsU` is proved. |
 
 ## 211. Stage 0 loader and exit refinement
 
