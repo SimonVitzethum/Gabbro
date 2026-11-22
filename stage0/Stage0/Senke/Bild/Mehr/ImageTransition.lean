@@ -462,38 +462,4 @@ theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {option
   exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls unit.postDeckt
     O binding hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ nextReached
 
-/-- A declared non-returning thread exit retires just its own slot.
-    The source stays at the exact call head, and the exit is entered in
-    the history of that thread only. -/
-theorem ImageSlotsMatch.retire_never {src : String} {reserve : Nat} {options : Profil.Options}
-    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
-    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
-    {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    {i : Nat} {req : Req} {resume : Ans → Res T}
-    (slots : ImageSlotsMatch output E O history before state)
-    (reached : ImageReach output E O (imageSourceStart E) state)
-    (ready : before.ths[i]? = some (some (.ask (.sys req) resume)))
-    (number : req.nr.toNat = NR_EXIT) (matching : ImageNeverRequest output O state i req) :
-    let after : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set i none⟩
-    ProcessStep imageTSO actI before [(i, req, none)] after ∧
-      ImageSlotsMatch output E O (history ++ [(i, req, none)]) after state := by
-  intro after
-  refine ⟨.exit ready rfl number, ?_, ?_⟩
-  · intro j
-    simpa only [after, List.length_set] using slots.1 j
-  · intro j retired
-    by_cases same : j = i
-    · subst j
-      refine Or.inr ⟨state, req, history.filter (fun event => event.1 == i),
-        reached, .start, rfl, matching, number, ?_⟩
-      simp only [List.filter_append, List.filter_cons, beq_self_eq_true, ite_true, List.filter_nil]
-    · have unchanged : before.ths[j]? = some none := by
-        simpa only [after, List.getElem?_set_ne (Ne.symm same)] using retired
-      obtain finished | ⟨atExit, call, earlier, fromStart, since, sameHead, matched, kind, last⟩ :=
-        slots.2 j unchanged
-      · exact Or.inl finished
-      · refine Or.inr ⟨atExit, call, earlier, fromStart, since, sameHead, matched, kind, ?_⟩
-        simp only [List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm same),
-          Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
-
 end Gabbro.Stage0
