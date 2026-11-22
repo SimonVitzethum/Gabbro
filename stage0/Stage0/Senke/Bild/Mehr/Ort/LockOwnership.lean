@@ -6,7 +6,7 @@ public import Stage0.Senke.Sperre.Bindung.ImageFutex
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik Runner Runner.IR Runner.Mach Runner.Beweis
+open Gabbro.Grammatik Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
 
 /-- A ticket lock and the source traces name the same owner. Source
     slots outside the fixed image's reservations hold no lock. -/

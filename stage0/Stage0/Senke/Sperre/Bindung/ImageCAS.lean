@@ -208,7 +208,8 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
     ProcessStep imageTSO actI machine [] after ∧ memory = machine.ms ∧
       (∃ extra, reply = some (BitVec.ofNat 64 before.w.serv, extra)) ∧
       ∃ next, BindingStep strategy before thread next ∧ TicketWordsAt memory.1.m base next ∧
-        ((next.pc thread).haelt = true ↔ before.w.serv % 2 ^ 64 = ticket % 2 ^ 64) := by
+        ((next.pc thread).haelt = true ↔ before.w.serv % 2 ^ 64 = ticket % 2 ^ 64) ∧
+        (before.w.serv % 2 ^ 64 = ticket % 2 ^ 64 → next = before.mit thread (.drin ticket)) := by
   intro after
   let address := BitVec.ofNat 64 (base + 8)
   have agreement : GleichAuf (fenster address) (machine.ms.1.view thread.val) machine.ms.1.m :=
@@ -236,7 +237,7 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
         · change (upd before.pc thread (.drin ticket) other).spin
           rw [upd_ne _ _ same]
           exact spins rfl other
-    refine ⟨next, adopted, ?_, ?_⟩
+    refine ⟨next, adopted, ?_, ?_, fun _ => rfl⟩
     · rw [memorySame]
       exact ⟨represented.next, represented.serving, represented.waiters⟩
     · change (upd before.pc thread (.drin ticket) thread).haelt = true ↔ _
@@ -244,7 +245,7 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
       exact ⟨fun _ => admitted, fun _ => rfl⟩
   · cases strategy
     · let next := before.mit thread (.incL ticket before.w.serv)
-      refine ⟨next, .wartet saved admitted, ?_, ?_⟩
+      refine ⟨next, .wartet saved admitted, ?_, ?_, fun equal => (admitted equal).elim⟩
       · rw [memorySame]
         exact ⟨represented.next, represented.serving, represented.waiters⟩
       · change (upd before.pc thread (.incL ticket before.w.serv) thread).haelt = true ↔ _
@@ -253,7 +254,8 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
         · intro impossible
           cases impossible
         · exact fun equal => (admitted equal).elim
-    · refine ⟨before, .inr ⟨ticket, saved, admitted, rfl⟩, memorySame.symm ▸ represented, ?_⟩
+    · refine ⟨before, .inr ⟨ticket, saved, admitted, rfl⟩, memorySame.symm ▸ represented, ?_,
+        fun equal => (admitted equal).elim⟩
       rw [saved]
       constructor
       · intro impossible
