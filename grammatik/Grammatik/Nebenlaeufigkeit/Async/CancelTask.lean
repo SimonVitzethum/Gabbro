@@ -105,16 +105,15 @@ private theorem ChildDisposer.lower_exec {name : String} (disposer : ChildDispos
     subst endResources
     rfl
   unfold ChildDisposer.lower
-  rw [castExec]
+  rw [castExec disposer.retained]
   obtain ⟨reads, args⟩ := disposer.args_value world env state
-  simp only [execStmt, reads, World.lese, World.merke, List.map_nil, List.nil_append, args,
-    ChildDisposer.drop]
-  split
-  · rfl
-  · rename_i _ reason
-    exact Fin.elim0 (disposer.infallible ▸ reason)
-  · rfl
-  · rfl
+  have noReads : world.lese Λ [] = world := by cases world; rfl
+  simp only [execStmt, reads, noReads, args, ChildDisposer.drop]
+  cases calls disposer.function world (disposer.parameters.symm ▸ Env.cons state .nil) with
+  | ok => rfl
+  | why _ reason => exact Fin.elim0 (disposer.infallible ▸ reason)
+  | logik => rfl
+  | hardware => rfl
 
 /-- Cancellation of every represented task uses exactly its typed child
     destructors, skips completed branches, and propagates the first
