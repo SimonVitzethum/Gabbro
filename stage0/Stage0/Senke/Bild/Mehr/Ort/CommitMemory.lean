@@ -67,10 +67,9 @@ theorem plainWriterFootprint_access [DecidableEq D.Fn] {E : Einheit D}
   obtain ⟨unguarded, plain, writes, reachable, modifies⟩ :=
     (carrierFootprint_iff separated allocated first last).mp privateByte
   have valid := (akzeptiertX_pruefer.korrekt E fs ls cs hardware accepted).1
+  have validIdle := akzeptiertSpecX_mitRuhe E.P fs.2 valid
   have start := startZulaessig_aus E fs.1 duties (laufzeit_initRuhe E)
-  have pool := einzelnPool_mitRuhe E.P fs.2 valid.abg valid.einzeln
-  have apart := schreibGetrennt_mitRuhe E.P fs.2 valid.abg (valid.renn _ unguarded plain)
-  have graphApart := schreibGetrenntK_of start pool unguarded plain apart
+  have graphApart := schreibGetrenntK_of start validIdle.einzeln unguarded plain (validIdle.renn _ unguarded plain)
   by_contra different
   obtain ⟨noWrite, noRead⟩ := graphApart writer accessor different writes reachable modifies fn reached
   exact access.elim noRead (fun write => Bool.noConfusion (noWrite.symm.trans write))
