@@ -55,7 +55,7 @@ theorem guardSlice_exec (length : Expr D Γ Λ (.int 0 capacity))
   intro read
   rw [guardSlice, execBlock, sliceBoundsExpr_reads]
   have exact := sliceBoundsExpr_exact length first last read read env
-  change (if eval read (sliceBoundsExpr length first last) read env = true then _ else _) = _
+  change (if wahr? (eval read (sliceBoundsExpr length first last) read env) = true then _ else _) = _
   by_cases valid : SignedSliceOk (eval read length read env).n.toNat (env.get first).n (env.get last).n
   · rw [if_pos (exact.mpr valid), if_pos valid]
   · rw [if_neg (fun taken => valid (exact.mp taken)), if_neg valid]
