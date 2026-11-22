@@ -220,4 +220,61 @@ theorem StarM.sc_reference {layout : Runner.Beweis.Lay}
     obtain ⟨rest, finalTable, tail⟩ := ih middleTable
     exact ⟨rest + first + 1, finalTable, .cons (.priv rfl) (requests.trans tail)⟩
 
+/-- Before issuing a syscall or creating another thread, a terminal IR
+    observation is the same terminal control in its SC projection. -/
+private theorem image_silent_terminal_sc [Kern]
+    {before : Cfg imageTSO (Res T)} {events : List Ev} {ending : Ende}
+    (terminal : Tr imageTSO actI before events ending 1) (quiet : events = []) (stop : ending ≠ .lauf) :
+    Tr (SC L0) actI (singleThreadSC (imageToTSO before)) [] ending 1 := by
+  cases terminal with
+  | tau _ rest | priv _ _ rest | ask _ _ _ _ _ rest =>
+    cases rest
+    exact (stop rfl).elim
+  | stop found finished => exact .stop found finished
+  | askStop _ asked _ _ finished => exact (actI_ask_no_terminal asked finished).elim
+  | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
+
+/-- Every terminal observation in a silent one-thread IR execution
+    projects to a terminal SC observation of the same kind. Private
+    TSO buffer drains can only shorten the projected execution. -/
+theorem image_silent_trace_sc [Kern] {before : Cfg imageTSO (Res T)}
+    {ending : Ende} {count : Nat}
+    (run : Tr imageTSO actI before [] ending count) (stop : ending ≠ .lauf)
+    (one : before.ths.length = 1) (buffers : PrivateBuffers singleThreadFootprint before.ms.1) :
+    ∃ steps, steps ≤ count ∧ Tr (SC L0) actI (singleThreadSC (imageToTSO before)) [] ending steps := by
+  obtain ⟨middle, earlier, last, steps, taken, terminal, labels, rfl⟩ := run.split_stop stop
+  obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp labels.symm
+  obtain ⟨_, count, bound, projected⟩ := tso_silent_single_thread (image_prefix_tso taken) rfl one buffers
+  exact ⟨1 + count, by omega, projected.prepend (image_silent_terminal_sc terminal rfl stop)⟩
+
 end Gabbro.Stage0.Senke.BildMehr
+
+namespace Gabbro.Stage0
+
+open Runner Runner.IR Runner.Beweis Runner.Mach Senke.BildMehr
+
+/-- Before exhausting a certified memory reference, the mapped native
+    image cannot stop in a silent one-thread run. The bound measures
+    normalized IR transitions, rather than physical x86 microsteps. -/
+theorem MappedImage.no_early_silent_terminal [Kern] {src : String} {reserve : Nat}
+    {options : Profil.Options} {output : Emitted src reserve options}
+    {start : Cfg imageTSO X86.X} (mapped : MappedImage output start)
+    {expected : Cfg (SC L0) (Res T)} {available count : Nat} {ending : Ende}
+    (reference : SCMemoryPrefix L0
+      (singleThreadSC (imageToTSO (⟨start.ms, [some t4]⟩ : Cfg imageTSO (Res T)))) available expected)
+    (run : Tr imageTSO (actX L0) start [] ending count)
+    (within : ∀ steps, Tr imageTSO actI ⟨start.ms, [some t4]⟩ [] ending steps → steps ≤ available) :
+    ending = .lauf := by
+  by_contra stopped
+  obtain ⟨_, count, ir⟩ := runner_mt imageTSO_fixed cinv_L0 _ mapped.loader run
+  obtain ⟨steps, bound, sc⟩ := image_silent_trace_sc ir stopped rfl (privateBuffers_empty mapped.emptyBuffers)
+  have blind : AlleBlind [some t4] := by
+    intro thread control found
+    have first := onlySlot rfl found
+    subst thread
+    have same : control = t4 := (Option.some.inj (Option.some.inj found)).symm
+    subst control
+    exact blind_rd64 _ (fun _ => .next _)
+  exact stopped (reference.no_terminal sc rfl blind (bound.trans (within count ir)))
+
+end Gabbro.Stage0
