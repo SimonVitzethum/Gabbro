@@ -334,30 +334,35 @@ theorem specArrayArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u
       ∃ slot : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var slot))
     (valid : specArrayArgumentFits ctx raw type = true) :
     ∃ term : Expr (declOf u) Γ Λ type, lowWertAtE u Γ Λ fn er type raw = .ok term := by
-  cases raw with
-  | param name =>
-    obtain ⟨slot, read⟩ := lexical name type valid
-    exact ⟨.var slot, read⟩
-  | arrCons head tail =>
-    cases type <;> try (simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid)
-    case arr element count =>
-      cases count with
-      | zero => simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid
-      | succ count =>
-        have fields : (specArrayArgumentFits ctx head element &&
-            specArrayArgumentFits ctx tail (.arr element count)) = true := by
-          simpa only [specArrayArgumentFits] using valid
-        have accepted := Bool.and_eq_true_iff.mp fields
-        obtain ⟨first, readFirst⟩ :=
-          specArrayArgument_lower fn er ctx element head gate scope lexical accepted.1
-        obtain ⟨rest, readRest⟩ :=
-          specArrayArgument_lower fn er ctx (.arr element count) tail gate scope lexical accepted.2
-        exact ⟨.arrCons first rest, by simp only [lowWertAtE, readFirst, readRest]⟩
-  all_goals
-    apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
-    simpa only [specArrayArgumentFits, scope] using valid
-termination_by sizeOf raw
-decreasing_by all_goals simp_wf <;> omega
+  suffices lowers : ∀ (fuel : Nat) (source : USide), sizeOf source = fuel →
+      ∀ (target : Ty), specArrayArgumentFits ctx source target = true →
+        ∃ term : Expr (declOf u) Γ Λ target, lowWertAtE u Γ Λ fn er target source = .ok term from
+    lowers _ raw rfl type valid
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind fuel smaller =>
+    intro source size target accepted
+    cases source
+    case param name =>
+      obtain ⟨slot, read⟩ := lexical name target accepted
+      exact ⟨.var slot, read⟩
+    case arrCons head tail =>
+      cases target <;> try (simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted)
+      case arr element count =>
+        cases count with
+        | zero => simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted
+        | succ count =>
+          have fields : (specArrayArgumentFits ctx head element &&
+              specArrayArgumentFits ctx tail (.arr element count)) = true := by
+            simpa only [specArrayArgumentFits] using accepted
+          obtain ⟨firstOk, restOk⟩ := Bool.and_eq_true_iff.mp fields
+          have extent : 1 + sizeOf head + sizeOf tail = fuel := size
+          obtain ⟨first, readFirst⟩ := smaller (sizeOf head) (by omega) head rfl element firstOk
+          obtain ⟨rest, readRest⟩ := smaller (sizeOf tail) (by omega) tail rfl (.arr element count) restOk
+          exact ⟨.arrCons first rest, by simp only [lowWertAtE, readFirst, readRest]⟩
+    all_goals
+      apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
+      simpa only [specArrayArgumentFits, scope] using accepted
 
 /-- A source array literal can mix a run-time Boolean and a literal
     without losing either type. The actual canonical array retains the
