@@ -44,14 +44,17 @@ public theorem frameType_eq (types : TypeResolution) (f : AsyncFn) :
   | .join left right => .prod (types.recordName (3 :: path))
       [taskResultType types (0 :: path) left, taskResultType types (1 :: path) right]
 
-/-- Each child has an active/ready sum. A partial join stores both updated
-    children, including the cached Ready side, by value. Its shape is bounded
-    by the source FutureExpr, unlike the unrestricted semantic Task type. -/
-@[expose] public def taskStorageType (types : TypeResolution) (path : List Nat) : FutureExpr → Ty
-  | .call name _ => .sum [some (types.childState name), some (types.childResult name)]
-  | .join left right => .sum [some (.prod (types.recordName (4 :: path))
-      [taskStorageType types (0 :: path) left, taskStorageType types (1 :: path) right]),
-      some (taskResultType types path (.join left right))]
+/-- An active join retains the active or cached record of each child. -/
+@[expose] public def taskActiveType (types : TypeResolution) (path : List Nat) : FutureExpr → Ty
+  | .call name _ => types.childState name
+  | .join left right => .prod (types.recordName (4 :: path))
+      [.sum [some (taskActiveType types (0 :: path) left), some (taskResultType types (0 :: path) left)],
+       .sum [some (taskActiveType types (1 :: path) right), some (taskResultType types (1 :: path) right)]]
+
+/-- A task is either active or has a cached result. The type follows the
+    finite source tree rather than the unrestricted semantic Task type. -/
+@[expose] public def taskStorageType (types : TypeResolution) (path : List Nat) (future : FutureExpr) : Ty :=
+  .sum [some (taskActiveType types path future), some (taskResultType types path future)]
 
 /-- Names here describe code positions, never saved continuations. -/
 public inductive Phase where
