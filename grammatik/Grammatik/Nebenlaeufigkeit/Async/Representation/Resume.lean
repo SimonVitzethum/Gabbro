@@ -84,6 +84,38 @@ public theorem await_resume_frame (tag : Nat) (destination : String) (future : F
     exact List.mem_map_of_mem declared
   · exact waiting.declared name (wasLive name needed same)
 
+/-- A successful poll of the resolved child restores the typed continuation
+    frame. The call semantics may also produce a logic or hardware outcome. -/
+public theorem await_runTaskPoll_ready_frame {V : Vertrag D} {Λ : List (Res D)}
+    (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (tag : Nat) (destination : String) (future : FutureExpr)
+    (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    {frame : Frame (Value D)} {saved : Wert D (frameType types f)}
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    {task successor : Task (Value D) (Child D types)}
+    {child : Wert D (taskStorageType types [tag] future)}
+    (represented : TaskRep D types [tag] future task child)
+    {world after : World D} {value : Value D} {cost : Nat}
+    (successful : runTaskPoll elaboration calls prices task world =
+      .ok (.ready value, successor, after, cost)) :
+    successor = .ready value ∧
+    ∃ next, FrameRep D types f (.running (tag + 1)) (save frame destination value) next ∧
+      (save frame destination value).marks = frame.marks := by
+  have member : Command.await destination future boundary ∈ f.body :=
+    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
+  have polled := await_runTaskPoll_rep elaboration calls prices tag destination future boundary
+    member represented successful
+  cases polled with
+  | ready typed _ =>
+    obtain ⟨sourceType, binding, exactType⟩ := elaboration.awaited tag destination future boundary rest command
+    have resolved : ∃ ordinary, valueAt D (types.ordinary sourceType) value = some ordinary :=
+      exactType ▸ (show ∃ ordinary, valueAt D (taskResultType types [tag] future) value = some ordinary
+        from ⟨_, typed⟩)
+    obtain ⟨_, typedAnswer⟩ := resolved
+    exact ⟨rfl, await_resume_frame tag destination future boundary rest command slots binding typedAnswer⟩
+
 /-- The actual Ready poll resumes at the next command with its typed
     answer bound once. Both the branch and its world come from the
     resolved child poll, including a completed join. -/
@@ -106,24 +138,12 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
     ∃ next, FrameRep D types f (.running (tag + 1)) (save frame destination value) next ∧
       (save frame destination value).marks = frame.marks := by
   intro model answer ready
-  have member : Command.await destination future boundary ∈ f.body :=
-    List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
-  have polled : PollRep D types [tag] future answer.1 answer.2.1 :=
-    await_poll_rep elaboration calls prices normal tag destination future boundary member represented world
-  have typedOnReady {event : Poll (Value D)} {next : Task (Value D) (Child D types)}
-      (progress : PollRep D types [tag] future event next) (isReady : event = .ready value) :
-      ∃ ordinary, valueAt D (taskResultType types [tag] future) value = some ordinary := by
-    cases progress with
-    | pending _ => cases isReady
-    | ready typed _ =>
-      cases isReady
-      exact ⟨_, typed⟩
-  have typedResult := typedOnReady polled ready
-  obtain ⟨sourceType, binding, exactType⟩ := elaboration.awaited tag destination future boundary rest command
-  have resolved : ∃ ordinary, valueAt D (types.ordinary sourceType) value = some ordinary :=
-    (show taskResultType types [tag] future = types.ordinary sourceType from exactType) ▸ typedResult
-  obtain ⟨_, typed⟩ := resolved
-  refine ⟨?_, await_resume_frame tag destination future boundary rest command slots binding typed⟩
+  have successful : runTaskPoll elaboration calls prices task world =
+      .ok (.ready value, answer.2.1, answer.2.2.1, answer.2.2.2) := by
+    rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← ready]
+    rfl
+  refine ⟨?_, (await_runTaskPoll_ready_frame elaboration calls prices tag destination future boundary
+    rest command slots represented successful).2⟩
   simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
   rw [show (pollTask model task world).1 = Poll.ready value from ready]
 
