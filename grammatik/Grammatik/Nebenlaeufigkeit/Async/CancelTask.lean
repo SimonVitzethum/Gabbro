@@ -82,13 +82,14 @@ private theorem ChildDisposer.args_value {name : String} (disposer : ChildDispos
     {Γ : Ctx} (world : World D) (env : Env D Γ) (state : Wert D (types.childState name)) :
     (disposer.args Γ).orte = [] ∧
     evalArgs world (disposer.args Γ) world (.cons state env) = disposer.parameters.symm ▸ Env.cons state .nil := by
-  obtain ⟨function, parameters, _, _, _⟩ := disposer
-  change
-    ((parameters.symm ▸ Args.cons (Expr.var .here) .nil : Args D (types.childState name :: Γ) Λ (D.params function)).orte = []) ∧
-      _ = _
-  generalize D.params function = inputs at parameters
-  cases parameters
-  exact ⟨rfl, rfl⟩
+  have castArgs {input : Ctx} (parameters : input = [types.childState name]) :
+      let arguments : Args D (types.childState name :: Γ) Λ input :=
+        parameters.symm ▸ .cons (.var .here) .nil
+      arguments.orte = [] ∧
+        evalArgs world arguments world (.cons state env) = parameters.symm ▸ Env.cons state .nil := by
+    subst input
+    exact ⟨rfl, rfl⟩
+  exact castArgs disposer.parameters
 
 private theorem ChildDisposer.lower_exec {name : String} (disposer : ChildDisposer D types V Λ name)
     {Γ : Ctx} {l : Bool} (oracle : Orakel D) (passes : Nat)
@@ -109,7 +110,8 @@ private theorem ChildDisposer.lower_exec {name : String} (disposer : ChildDispos
     ChildDisposer.drop]
   split
   · rfl
-  · next reason _ => exact (Fin.elim0 (disposer.infallible ▸ reason))
+  · rename_i _ reason
+    exact Fin.elim0 (disposer.infallible ▸ reason)
   · rfl
   · rfl
 
@@ -163,7 +165,6 @@ public theorem TaskDropPlan.lower_simulates {future : FutureExpr} (plan : TaskDr
       have restored :
           execStmt oracle passes calls ((TaskDropPlan.join first second).lower path (l := l) slot) world env =
           (((execBlock oracle passes calls (.cons firstStmt (.cons secondStmt .nil)) world loaded).schrumpf).schrumpf).schrumpf := by
-        change _ at began
         rw [began]
         rfl
       obtain ⟨firstOutcome, modelFirst, firstRun⟩ :=
