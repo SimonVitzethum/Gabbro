@@ -315,12 +315,13 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
-    ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next := by
-  obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, _, _, threadEq, related⟩ :=
+    ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next ∧
+      ∀ issuer, offen (next.m.faeden issuer).spur = offen (state.m.faeden issuer).spur := by
+  obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, holdings, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
-  refine ⟨{ state with m := machine }, reaches, body, buffers, length,
-    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩
+  refine ⟨{ state with m := machine }, reaches, ⟨body, buffers, length,
+    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, holdings⟩
   · intro i s found
     obtain ⟨identity, owned⟩ := indices i s found
     refine ⟨?_, owned⟩

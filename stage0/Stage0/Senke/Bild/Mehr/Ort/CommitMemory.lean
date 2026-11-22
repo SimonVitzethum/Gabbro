@@ -213,6 +213,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
         rest machine world env ∧
       WeltAt published layout (machine.speicher.welt []) ∧
       (∀ other, other ≠ position.thr → machine.faeden other = source.m.faeden other) ∧
+      (∀ thread, offen (machine.faeden thread).spur = offen (source.m.faeden thread).spur) ∧
       (∀ byte, selected byte → GleichAt published program.m byte) ∧
       (∀ byte, ¬ selected byte → GleichAt published committed byte) ∧
       next.thr = position.thr ∧
@@ -220,7 +221,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
         (fun i => if i = thread then next else positions i) published := by
   classical
   intro position selected published
-  obtain ⟨machine, finalWorld, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
+  obtain ⟨machine, finalWorld, reached, pointer, _, sourceBoundary, changes, preserved, holdings, others⟩ :=
     matched.commit_segment registered (shared := shared) quiet control boundary agree free
   have exactLayout := (matched.prog thread snapshot registered).2.2.2
   obtain ⟨rd, wr⟩ := (matched.solo thread snapshot registered).permissions
@@ -257,6 +258,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     · exact (matched.aussen byte unwritten).trans (unchanged byte chosen).symm
   have continued := reanchorCommitted matched registered preserved exactBytes outside valid
     (matched.prog thread snapshot registered) (show next.thr = position.thr from rfl) rfl control rfl
-  exact ⟨machine, finalWorld, next, reached, pointer, sourceBoundary, exactBytes, preserved, updated, unchanged, rfl, continued⟩
+  exact ⟨machine, finalWorld, next, reached, pointer, sourceBoundary, exactBytes, preserved, holdings,
+    updated, unchanged, rfl, continued⟩
 
 end Gabbro.Stage0.Senke.BildMehr

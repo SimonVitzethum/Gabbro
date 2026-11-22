@@ -56,6 +56,28 @@ theorem segment_zerlegung {B : BodyFrame D} {Agl : D.Lock → Prop} {Cg : D.Fn �
   | schritt s rest ebe σ σ1 σe ρ ρ1 ρe hs _ hex _ ih => exact .schritt s rest ebe σ σ1 σe ρ ρ1 ρe hs hex ih
   | bind e rest ebe σ σe ρ ρe _ _ ih => exact .bind e rest ebe σ σe ρ ρe ih
 
+private theorem OrtPrem.blatt {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ out : List (Res D)} {C : D.Tab ⊕ D.Glob → Prop} {s : Stmt D V l Γ Λ out}
+    (admitted : OrtPrem C s) : BlattG s := by
+  cases s <;> first | exact False.elim admitted | constructor
+
+/-- Internal memory segments preserve the exact set of held locks.
+    Bindings record reads and the ordinary statement theorem covers
+    each admitted memory effect. -/
+theorem Segment.holdings {O : Orakel D} {passes : Nat}
+    {R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g}
+    {Agl : D.Lock → Prop} {Cg : D.Fn → Prop} {C : D.Tab ⊕ D.Glob → Prop} {V : Vertrag D} {l : Bool}
+    {Γ Γe : Ctx} {Λ Λe : List (Res D)} {eb : Endblock D V l Γ Λ} {ebe : Endblock D V l Γe Λe}
+    {σ σe : World D} {ρ : Env D Γ} {ρe : Env D Γe}
+    (segment : Segment O passes R Agl Cg C eb σ ρ ebe σe ρe) :
+    offen σe.spur = offen σ.spur := by
+  induction segment with
+  | halt => rfl
+  | schritt _ _ _ _ _ _ _ _ _ _ admitted executed _ ih =>
+    exact ih.trans ((OrtPrem.blatt admitted).erw O passes R _ _ _ _ executed).offen
+  | bind _ _ _ _ _ _ _ _ _ ih =>
+    exact ih.trans ((Erw.lese _ _ _).offen)
+
 /-- **THE COMMIT OF A SEGMENT**, from the current machine. -/
 theorem randG_segment {P : Programm D} {O : Orakel D} {passes : Nat}
     {R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g} {Cg : D.Fn → Prop} {thr : Faden}
@@ -151,6 +173,7 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
       RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl rest machine finalWorld env ∧
       OrtGleich carriers world finalWorld ∧
       (∀ other, other ≠ x.thr → machine.faeden other = source.m.faeden other) ∧
+      (∀ thread, offen (machine.faeden thread).spur = offen (source.m.faeden thread).spur) ∧
       ∀ cell, ¬ carriers cell → TraegerGleich finalWorld.speicher source.m.speicher cell := by
   intro x
   obtain ⟨sameProgram, sameOracle, samePasses, _⟩ := matched.prog thread snapshot registered
@@ -167,8 +190,16 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
   obtain ⟨machine, finalWorld, reached, sourceBoundary, sameWorld, otherThreads, otherCarriers⟩ :=
     fadenX_segment (Tg := shared) calls semantics position.rand.2 agree .start alive waiting
       (matched.amRand thread snapshot registered) storage free
-  refine ⟨machine, finalWorld, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_⟩
+  refine ⟨machine, finalWorld, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_, ?_⟩
   · exact (matched.zustand thread snapshot registered).trans (by rw [control])
+  · intro issuer
+    by_cases current : issuer = x.thr
+    · rw [current]
+      obtain ⟨_, entered⟩ := position.rand.2.1
+      obtain ⟨_, exited⟩ := sourceBoundary.1
+      have sourceSpur := congrArg RufFadenG.spur (matched.amRand thread snapshot registered)
+      rw [exited.spur, ← sameWorld.spur, semantics.holdings, sourceSpur, entered.spur]
+    · rw [otherThreads issuer current]
   · intro cell outside
     simpa only [speicher_welt_speicher] using otherCarriers cell outside
 
