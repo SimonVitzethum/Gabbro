@@ -231,7 +231,7 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
             obtain ⟨_, fitted⟩ := smaller (sizeOf base) extent base rfl (.prod identity fields) baseAccepted
             have lowered : ∃ parent, lowWertE u Γ Λ fn er base = .ok ⟨.prod identity fields, parent⟩ := by
               cases read : lowWertE u Γ Λ fn er base with
-              | error diagnostic => simp only [lowWertAtE, read] at fitted
+              | error diagnostic => simp only [lowWertAtE, read] at fitted; cases fitted
               | ok value =>
                 obtain ⟨valueType, parent⟩ := value
                 simp only [lowWertAtE, read, fitW] at fitted
@@ -243,9 +243,12 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
                 · cases valueType <;> cases fitted
             obtain ⟨parent, lowered⟩ := lowered
             rw [scope] at nominal
-            refine ⟨Expr.prodGet (cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) parent) field.2, ?_⟩
+            obtain ⟨fieldType, fieldAt⟩ := field
+            have schemaType : Ty.prod identity fields =
+                Ty.prod schema.val.identity (schema.val.fields.map (·.2)) := schema.property.symm
+            refine ⟨Expr.prodGet (cast (congrArg (Expr (declOf u) Γ Λ) schemaType) parent) fieldAt, ?_⟩
             simp only [lowWertAtE, lowWertE, gate, lowered, nominal, selected,
-              bind, Except.bind, pure, Except.pure, fitW, dite_true]
+              bind, Except.bind, pure, Except.pure] <;> rfl
           · cases accepted
         · cases accepted
       · cases accepted
