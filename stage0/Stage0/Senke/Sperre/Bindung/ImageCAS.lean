@@ -72,7 +72,8 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
       congrArg Prod.snd exactPair
     refine ⟨.ask waiting rfl rfl answered rfl,
       returned.trans (congrArg (fun word => some (word, (0 : W))) exactOld), ?_, ?_⟩
-    · exact congrArg TSt.buf memoryEq
+    · have bufferEq := congrArg TSt.buf memoryEq
+      exact bufferEq
     · have compare : old = requested ↔ before.w.next % 2 ^ 64 = expected := by
         constructor
         · intro equal
@@ -110,6 +111,6 @@ theorem image_ticket_draw [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
       · rw [if_neg same] at exactMemory
         refine ⟨before.mit thread .ladeN, .verfehlt saved (fun equal => same (compare.mpr equal)), ?_⟩
         rw [memoryEq, exactMemory]
-        exact represented
+        exact ⟨represented.next, represented.serving, represented.waiters⟩
 
 end Gabbro.Stage0.Senke.Faeden
