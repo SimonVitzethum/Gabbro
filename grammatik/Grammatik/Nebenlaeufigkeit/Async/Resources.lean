@@ -123,5 +123,7 @@ public theorem cancelBody_exec (types : TypeResolution) (f : AsyncFn)
     change execArms oracle passes calls (dispatchArms (stateCases types f) children) stored world env = child
     exact dispatchArms_exec oracle passes calls world env _ children stored
   simp only [cancelBody, execBlock, selected]
+  generalize child = result
+  cases result <;> rfl
 
 end Gabbro.Grammatik.Async
