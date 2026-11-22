@@ -209,6 +209,7 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   alive : state.lebt thread = true
   unentered : state.m.faeden thread = (imageSourceStart E).m.faeden thread
   writes : W → Prop
+  frameWritable : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte → writes byte
   privateWrites : ∀ byte, writes byte → imageStackFootprint output thread byte
   reference : Mem
   finish : Mem
@@ -237,14 +238,32 @@ theorem ImageProloguePhase.entry_values [Kern] {output : Emitted src reserve opt
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
     {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
-    (frameReads : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte →
-      phase.reads byte)
     (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) :
     EntryFrameValues output.image.Y output.compiled.program phase.root.1 memory
       (imagePrologueFrame output thread) phase.entryWorld phase.root.2 :=
   phase.entryValues.congr_read_frame phase.entryFrame phase.entryFits fun byte inside =>
-    let same := reached.1 byte (frameReads byte inside)
+    let same := reached.1 byte (.inl (phase.privateWrites byte (phase.frameWritable byte inside)))
     ⟨same.1.symm, same.2.symm⟩
+
+/-- Frame permissions in the actual view agree with those used by the
+    whole prologue proof, for every slot in the thread's reservation. -/
+theorem ImageProloguePhase.entry_frame [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) :
+    FrameOK memory (imagePrologueFrame output thread) (output.image.Ks - FB) := by
+  have same index fits offset inside :=
+    let frame := frame_slot_byte phase.entryFrame (index := index) fits (offset := offset) inside
+    let write := phase.frameWritable _ frame
+    And.intro (reached.1 _ (.inl (phase.privateWrites _ write))).2.symm (reached.2 _ write).symm
+  refine ⟨phase.entryFrame.lt, ?_, ?_⟩
+  · intro index fits
+    rw [Mem.all_congr (fun offset inside => (same index fits offset inside).1)]
+    exact phase.entryFrame.rd index fits
+  · intro index fits
+    rw [Mem.all_congr (fun offset inside => (same index fits offset inside).2)]
+    exact phase.entryFrame.wr index fits
 
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
@@ -258,7 +277,7 @@ def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
     (alive : nextState.lebt thread = true) (sameHead : nextState.m.faeden thread = state.m.faeden thread) :
     ImageProloguePhase output E thread control nextMemory nextState :=
   ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered,
-    phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
+    phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
     phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.running, phase.blind,
     phase.readable, phase.writable, ⟨fun byte inside =>
       ⟨(phase.agrees.1 byte inside).1.trans (sameReads byte inside).1.symm,
@@ -278,7 +297,7 @@ theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
   rcases IRContinuation.decode phase.running with ⟨boundary, reference⟩ | progress
   · exact .inl ⟨boundary, reference ▸ phase.agrees⟩
   · exact .inr ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
-      phase.writes, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
+      phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
       phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, progress,
       blind_step pointer, phase.readable, phase.writable, phase.agrees⟩⟩
 
@@ -304,7 +323,7 @@ theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
   obtain ⟨updated, progress, kept, readMap, writeMap⟩ :=
     IRContinuation.answer phase.running phase.blind phase.readable phase.writable phase.agrees nativeUnique response
   exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
-    phase.writes, phase.privateWrites, updated, phase.finish, phase.lowered,
+    phase.writes, phase.frameWritable, phase.privateWrites, updated, phase.finish, phase.lowered,
     phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, progress, phase.blind.weiter answer,
     fun byte permit => phase.readable byte (by simpa only [readMap] using permit),
     fun byte permit => phase.writable byte (by simpa only [writeMap] using permit), kept⟩⟩

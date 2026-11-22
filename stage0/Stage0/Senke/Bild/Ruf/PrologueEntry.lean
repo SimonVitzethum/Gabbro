@@ -233,7 +233,7 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
   let writes := inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB)
   let reads := imagePrologueReads output thread root.1
   let scope := maskMemory_agreement reads writes memory (fun byte hit => Or.inl (ownsWrites byte hit))
-  ⟨root, declared, alive, unentered, writes, ownsWrites, maskMemory reads writes memory,
+  ⟨root, declared, alive, unentered, writes, fun _ inside => inside, ownsWrites, maskMemory reads writes memory,
     after, compiled, entryWorld, values, entryFrame, entryFits,
     ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
 
