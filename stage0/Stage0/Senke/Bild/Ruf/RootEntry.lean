@@ -47,7 +47,8 @@ theorem ImageStartSite.call_target [Kern] {output : Emitted src reserve options}
   have instruction : InsAt (before.ms.1.view site.thread) pointer.pc 1
       (II.f (scratch : Int)) (II.f ((output.image.A site.fn : Nat) : Int)) (II.f 0) := by
     have immediate := stub 3 (by rw [startC_len]; decide)
-    simpa only [pointer, entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [pointer, entry, scratch, startC, callTail, callTailN, ci, II.o,
+      show (1 : Opcode).val = 1 from rfl, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero, Bool.false_eq_true, ↓reduceIte] using immediate
   have dest : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
   have target : sx (II.f ((output.image.A site.fn : Nat) : Int)) = BitVec.ofNat 64 (output.image.A site.fn) :=
@@ -115,7 +116,8 @@ theorem ImageStartSite.call_enter [Kern] {output : Emitted src reserve options}
   have instruction : InsAt (before.ms.1.view site.thread) pointer.pc 20
       (II.f (scratch : Int)) (II.f (FB : Int)) (II.f 0) := by
     have call := stub 4 (by rw [startC_len]; decide)
-    simpa only [pointer, entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [pointer, entry, scratch, startC, callTail, callTailN, ci, II.o,
+      show (20 : Opcode).val = 20 from rfl, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using call
   have targetSlot : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (scratchRoom.trans signed)
   have frameSlot : sx (II.f (FB : Int)) = BitVec.ofNat 64 FB := sx_nat (by omega)
