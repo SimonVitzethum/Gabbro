@@ -167,8 +167,9 @@ theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve optio
   have dormant : state.lebt (index + 1) = false :=
     Bool.eq_false_iff.mpr (fun live => Nat.not_lt_of_ge unused ((slots.1 _).mp live))
   have head := (fadenInvX_erreichbar reached).schlaeft _ dormant
+  have preserved := image_future_frame_of_prefix (output := output) (final := current) path unused classify
   rw [view]
-  exact output.fresh_root_phase unit mapped.bytes declared (image_future_frame_of_prefix path unused classify) code head
+  exact output.fresh_root_phase unit mapped.bytes declared preserved code head
 
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/

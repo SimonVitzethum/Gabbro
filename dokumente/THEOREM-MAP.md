@@ -8415,6 +8415,10 @@ flush. The future-frame lemmas transfer the plain, pointer-buffer,
 result-area and futex contracts from the issuer's view to shared memory.
 Area and buffer answers use confinement of the destination to the
 issuer's reservation.
+`MappedImage.future_root_phase` combines per-step preservation with
+the actual loaded arguments and the reachable dormant GX head.
+`Emitted.code_survives_writes` uses the exact end of the emitted code
+to preserve its byte representation under confined writes.
 
 ## 214. Runtime slice values and direct observations
 
@@ -8425,6 +8429,8 @@ value, including composed views. The array update lemmas characterize
 when a stored view keeps its original value after a backing update.
 `ValueAt.slice_element` identifies all words of each viewed element in the
 original Stage 0 array encoding.
+`ValueAt.slice_view` and `SliceAt.subslice` keep the same backing bytes
+when constructing or composing the view.
 
 With local arrays and endpoints whose declared integer ranges establish
 the bounds, `lowWertE_localArraySliceLength` lowers the length observation
