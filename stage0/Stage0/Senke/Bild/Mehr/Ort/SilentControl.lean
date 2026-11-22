@@ -331,7 +331,7 @@ theorem StarM.sc_reference_through {layout : Runner.Beweis.Lay}
     ∃ (count : Nat) (preserved : TabInv layout after),
       SCMemoryPrefix layout ⟨⟨before, table⟩, [some (.next initial)]⟩ count
         ⟨⟨after, preserved⟩, [some residual]⟩ := by
-  obtain ⟨prefixCount, middleTable, initialRun⟩ := ran.sc_reference table
+  obtain ⟨prefixCount, middleTable, initialRun⟩ := StarM.sc_reference ran table
   obtain ⟨tailCount, finalTable, suffix⟩ := tail.sc_reference middleTable (blind_step _)
   exact ⟨tailCount + 1 + prefixCount, finalTable, initialRun.trans (.cons (.priv rfl) suffix)⟩
 
@@ -340,14 +340,16 @@ private theorem RunP.read8 {before after : Mem} {address : W} {byte : B}
     (tail : RunP (resume (byte.setWidth 64)) before finish after) :
     RunP (rd8 address resume) before finish after := by
   refine .ask (a := some (byte.setWidth 64, 0)) (m' := before) (by simp [memAns, read]) ?_
-  simpa only [opt_some] using tail
+  simpa only [opt_some, BitVec.setWidth_setWidth_of_le byte (k := 8) (l := 64) (by decide),
+    BitVec.setWidth_eq] using tail
 
 private theorem RunP.read32 {before after : Mem} {address : W} {word : BitVec 32}
     {resume : BitVec 32 → Res T} {finish : Res T} (read : before.rd32 address = some word)
     (tail : RunP (resume word) before finish after) :
     RunP (rd32 address resume) before finish after := by
   refine .ask (a := some (word.setWidth 64, 0)) (m' := before) (by simp [memAns, read]) ?_
-  simpa only [opt_some, BitVec.setWidth_setWidth_of_le (by decide : 32 ≤ 64)] using tail
+  simpa only [opt_some, BitVec.setWidth_setWidth_of_le word (k := 32) (l := 64) (by decide),
+    BitVec.setWidth_eq] using tail
 
 private theorem RunP.read64 {before after : Mem} {address word : W}
     {resume : W → Res T} {finish : Res T} (read : before.rd64 address = some word)
@@ -357,7 +359,7 @@ private theorem RunP.read64 {before after : Mem} {address word : W}
 
 /-- The immediate instruction selects its operand and writes one word
     using only the IR memory semantics. -/
-theorem constantInstruction_memory {pointer : T} {memory : Mem} {dest value pad : BitVec 32}
+theorem constantInstruction_memory [Kern] {pointer : T} {memory : Mem} {dest value pad : BitVec 32}
     (instruction : InsAt memory pointer.pc 1 dest value pad)
     (writable : Mem.all memory.wr (slot pointer.fp (sx dest)) 8 = true) :
     RunM (step pointer) memory (nxt pointer)

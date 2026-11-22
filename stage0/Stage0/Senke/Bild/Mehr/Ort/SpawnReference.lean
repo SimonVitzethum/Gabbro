@@ -12,7 +12,7 @@ open Runner Runner.IR Runner.Mem Runner.Beweis Runner.Mach BildLauf
 
 /-- The emitted startup prefix supplies one SC reference ending exactly
     at the clone request, with both relocated child operands. -/
-theorem spawnSite_reference {layout : Runner.Beweis.Lay}
+theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     {memory : Mem} {pc fp : W} {slots scratch entry stack : Nat}
     (table : TabInv layout memory)
     (code : CodeAt memory pc (spawnOne scratch entry stack))
@@ -72,7 +72,7 @@ theorem spawnSite_reference {layout : Runner.Beweis.Lay}
     exact rd64_wr64 (wr64_some (next.wr (scratch + 1) (by omega))) (next.rd (scratch + 1) (by omega))
   have initialBlock : StarM 2 initial memory parent prepared :=
     .next wroteFirst (.next wroteSecond (.refl _ _))
-  obtain ⟨count, invariant, reference⟩ := initialBlock.sc_reference_through
+  obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock
     (spawnInstruction_reference decoded childEntry childFrame) table
   exact ⟨count, prepared, invariant, reference⟩
 
