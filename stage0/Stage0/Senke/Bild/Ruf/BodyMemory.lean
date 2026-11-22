@@ -184,6 +184,41 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
   exact ⟨.tau flushed, footprint, before.ths, buffers.flush flushed, rfl,
     .inr ⟨snapshots, positions, committed, stable, indices⟩, fun _ => .inl rfl⟩
 
+/-- A whole private memory segment may run on several threads before
+    the next source boundary. The generic IR memory semantics preserves
+    the committed GX state and every thread's footprint throughout it. -/
+theorem image_body_memory_segment [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {before after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
+    {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem} {count : Nat}
+    (buffers : PrivateBuffers footprint before.ms.1)
+    (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState footprint before.ms).1, before.ths⟩ state snapshots positions committed)
+    (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
+    (blind : AlleBlind before.ths)
+    (classify : ∀ {c : Cfg imageTSO (Res T)} {steps},
+      ProcessPrefix imageTSO actI before [] steps c →
+      ∀ {i : Nat} {request : Op} {resume : Ans → Res T} {response : Ans} {memory : (TSO L0).St},
+        c.ths[i]? = some (some (.ask request resume)) → request.special = false → lbl i request response = [] →
+        (TSO L0).ans c.ms i request response memory → ProjectedRequest footprint i request)
+    (access : ∀ {first last i},
+      SCErreichbar L0 ⟨projectSCState footprint before.ms, before.ths⟩ first → SCSchritt L0 i first last →
+      ∀ {s request resume}, snapshots i = some s → first.ths[i]? = some (some (.ask request resume)) →
+        (∀ byte, fussOp request byte → s.F byte) ∧
+        (schreibtOp request = true → ∀ byte, fussOp request byte → s.Wr byte))
+    (segment : ProcessPrefix imageTSO actI before [] count after) :
+    ImageRuntimeMatchesAt footprint output E O history after state ∧ AlleBlind after.ths := by
+  obtain ⟨pending, projected⟩ := image_memory_prefix_projects segment buffers classify
+  obtain ⟨updated, matched, stable, sameFootprints⟩ := sc_private_runs_refine related blind access projected
+  refine ⟨⟨after.ths, pending, rfl, .inr ⟨updated, positions, committed, matched, ?_⟩, fun _ => .inl rfl⟩, stable⟩
+  intro i s known
+  obtain ⟨first, present, reads, writes⟩ := sameFootprints i s known
+  obtain ⟨thread, owned⟩ := indices i first present
+  exact ⟨thread, ⟨fun byte read => owned.read byte (reads ▸ read),
+    fun byte write => owned.write byte (writes ▸ write)⟩⟩
+
 /-- The current carrier ownership can change at a lock boundary without
     modifying the runner or the committed GX memory. Each executing
     segment must retain access to its remaining reads and writes. -/
