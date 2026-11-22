@@ -286,4 +286,89 @@ theorem lowE_runtimeSliceIndex_ok [Kern] {D : Deklaration} {L : Lay D}
     lowE_ok (same := fun _ => rfl) world world memory layout _ d code top made fits m pc env pre
   exact ⟨valid, inside, meaning ▸ execution⟩
 
+/-- After the signed bounds check the endpoints may still have overlapping
+    static intervals. The two output words are the original start and the
+    evaluated difference, independent of the backing aggregate type. -/
+def runtimeSliceDescriptor {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi)) :
+    Expr D Γ Λ (.prod 0 [.int firstLo firstHi, .int (lastLo - firstHi) (lastHi - firstLo)]) :=
+  .prod 0 (.cons (.var first) (.cons (.sub (.var last) (.var first)) .nil))
+
+/-- The ordinary expression emitter writes an exact descriptor even
+    when only a runtime check establishes the relation between the
+    two endpoint values. The output contains no copied element. -/
+theorem runtimeSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {firstLo firstHi lastLo lastHi : Int} {length : Nat}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (firstFits : -(2 ^ 63) ≤ firstLo ∧ firstHi < 2 ^ 63)
+    (differenceFits : -(2 ^ 63) ≤ lastLo - firstHi ∧ lastHi - firstLo < 2 ^ 63)
+    {world : World D} {env : Env D Γ}
+    (valid : SignedSliceOk length (env.get first).n (env.get last).n)
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d top reserved : Nat} {code : List II}
+    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (made : lowE (currentOld := true) layout (reserved := reserved)
+      (runtimeSliceDescriptor (Λ := Λ) first last) d = some (code, top))
+    (fits : top ≤ K) (pre : Pre layout m pc fp K d code env W reserved) :
+    ∃ bounds : SliceOk length (env.get first).n.toNat (env.get last).n.toNat,
+      let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
+      Executes m pc fp K d code (fun after => WordsAt after fp d (sliceDescriptorWords view)) := by
+  obtain ⟨nonnegative, ordered, within⟩ := valid
+  have bounds : SliceOk length (env.get first).n.toNat (env.get last).n.toNat := ⟨by omega, by omega⟩
+  let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
+  let expression := runtimeSliceDescriptor (D := D) (Λ := Λ) first last
+  have offset : BitVec.ofInt 64 (env.get first).n = BitVec.ofNat 64 view.offset := by
+    change BitVec.ofInt 64 (env.get first).n = BitVec.ofNat 64 (env.get first).n.toNat
+    simpa only [BitVec.ofInt_natCast] using
+      congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonnegative).symm
+  have exactLength : (((env.get last).n.toNat - (env.get first).n.toNat : Nat) : Int) =
+      (env.get last).n - (env.get first).n := by omega
+  have lengthWord : BitVec.ofInt 64 ((env.get last).n - (env.get first).n) = BitVec.ofNat 64 view.length := by
+    rw [← exactLength, BitVec.ofInt_natCast]
+    rfl
+  have firstWidth := integerWords_word firstFits.1 firstFits.2
+  have diffWidth := integerWords_word differenceFits.1 differenceFits.2
+  have encoding : encodeWords layout _ (eval world expression world env) = sliceDescriptorWords view := by
+    simp only [expression, runtimeSliceDescriptor, eval, evalProd, encodeWords, encodeProductFields,
+      reduceCtorEq, ite_false, ProdVal.hd, ProdVal.tl, firstWidth, diffWidth, integerEncoding,
+      List.cons_append, List.nil_append, Zahl.sub]
+    change [BitVec.ofInt 64 (env.get first).n, BitVec.ofInt 64 ((env.get last).n - (env.get first).n)] =
+      [BitVec.ofNat 64 view.offset, BitVec.ofNat 64 view.length]
+    rw [offset, lengthWord]
+  obtain ⟨after, run, confined, stored⟩ :=
+    lowE_ok (same := fun _ => rfl) world world worldAt layoutIn expression d code top made fits m pc env pre
+  exact ⟨bounds, after, run, confined, encoding ▸ stored.2⟩
+
+/-- For a string with a word per byte, runtime descriptor emission
+    preserves and reuses the original substring span. -/
+theorem runtimeStringSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {capacity : Nat}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (firstFits : -(2 ^ 63) ≤ firstLo ∧ firstHi < 2 ^ 63)
+    (differenceFits : -(2 ^ 63) ≤ lastLo - firstHi ∧ lastHi - firstLo < 2 ^ 63)
+    (value : Wert D (.str capacity)) (long : 2 ≤ capacity) (sized : capacity < 2 ^ 64)
+    {world : World D} {env : Env D Γ}
+    (valid : SignedSliceOk value.1.length (env.get first).n (env.get last).n)
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d base top reserved : Nat} {code : List II}
+    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (backing : ValueAt layout m fp base (.str capacity) value) (below : base + valueWords (.str capacity) ≤ d)
+    (made : lowE (currentOld := true) layout (reserved := reserved)
+      (runtimeSliceDescriptor (Λ := Λ) first last) d = some (code, top))
+    (fits : top ≤ K) (pre : Pre layout m pc fp K d code env W reserved) :
+    ∃ bounds : SliceOk value.1.length (env.get first).n.toNat (env.get last).n.toNat,
+      let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
+      let result := strBoundedSliceValue value (env.get first).n.toNat (env.get last).n.toNat bounds
+      Executes m pc fp K d code (fun after => readSliceDescriptor after fp d value.1.length = some view ∧
+        WordsAt after fp (base + 1 + view.offset) (result.1.map fun byte => BitVec.ofInt 64 byte.n)) := by
+  obtain ⟨bounds, after, run, confined, words⟩ := runtimeSliceDescriptor_ok first last firstFits differenceFits valid
+    worldAt layoutIn made fits pre
+  let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
+  have inFrame : d ≤ K := (lowE_top (runtimeSliceDescriptor first last) d code top made).le.trans fits
+  have preserved := backing.agree_low confined pre.frame.room below inFrame
+  exact ⟨bounds, after, run, confined, readSliceDescriptor_exact view (value.2.trans_lt sized) words,
+    preserved.string_slice_view long _ _ bounds⟩
+
 end Gabbro.Stage0.Senke
