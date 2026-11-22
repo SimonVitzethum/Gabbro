@@ -2,7 +2,6 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.Mehr.ImageTransition
-import Stage0.Senke.Images.CheckSpawn
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section

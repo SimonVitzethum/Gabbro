@@ -152,4 +152,80 @@ theorem tso_const_prefix {layout : Lay}
   refine ⟨after, ?_, committed, view, other⟩
   simpa only [onThread, List.set_set, List.nil_append] using reads.trans result
 
+theorem tso_fetch_opcode {layout : Runner.Beweis.Lay}
+    (before : Cfg (TSO layout) (Res T)) {i : Nat} (inside : i < before.ths.length)
+    (o : Nat) (t : T) (byte : (before.ms.1.view i).rd8 t.pc = some (BitVec.ofNat 8 o))
+    (range : o < 256) :
+    ProcessStep (TSO layout) actI ⟨before.ms, before.ths.set i (some (IR.step t))⟩ []
+      ⟨before.ms, before.ths.set i (some (op o t))⟩ := by
+  have decoded : ((BitVec.ofNat 8 o).setWidth 64 |>.setWidth 8 |>.setWidth 64).toNat = o := by
+    have large : o < 18446744073709551616 := Nat.lt_trans range (by decide)
+    simp only [BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.reducePow, Nat.mod_eq_of_lt range,
+      Nat.mod_eq_of_lt large]
+  have loaded : rdN (before.ms.1.view i) 1 t.pc = some ((BitVec.ofNat 8 o).setWidth 64) := by
+    simp only [rdN, byte, Option.map_some]
+  simpa only [decoded, opt_some, IR.step, rd8] using
+    tso_read_step before inside (fun answer => opt answer fun pair =>
+      op (pair.1.setWidth 8 |>.setWidth 64).toNat t) loaded
+
+/-- A successful binary instruction reads both slots from the issuing
+    view and buffers its exact result at the decoded destination. -/
+theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {parent : T}
+    {dest lhs rhs : BitVec 32} {a b value : W} {opcode : Nat}
+    {compute : W → W → Option W}
+    (decoded : op opcode parent = bin compute parent) (range : opcode < 256)
+    (running : before.ths[i]? = some (some (.next parent)))
+    (instruction : InsAt (before.ms.1.view i) parent.pc opcode dest lhs rhs)
+    (left : (before.ms.1.view i).rd64 (slot parent.fp (sx lhs)) = some a)
+    (right : (before.ms.1.view i).rd64 (slot parent.fp (sx rhs)) = some b)
+    (computed : compute a b = some value)
+    (writable : Mem.all before.ms.1.m.wr (slot parent.fp (sx dest)) 8 = true) :
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [] 8
+        ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
+    ⟨before.ms, before.ths.set i (some r)⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  let result (lhs rhs : W) := opt (compute lhs rhs) (ret1 parent)
+  let readRight (index : BitVec 32) (left : W) :=
+    ld parent (sx index) (result left)
+  let afterLeft (left : W) := rd32 (parent.pc + 12) fun index => readRight index left
+  let readLeft (index : BitVec 32) := ld parent (sx index) afterLeft
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step parent)) :=
+    .priv running rfl
+  have firstIndex : ProcessStep (TSO layout) actI (onThread (op opcode parent)) []
+      (onThread (readLeft lhs)) := by
+    have field : rdN (before.ms.1.view i) 4 (parent.pc + 8) = some (lhs.setWidth 64) := by
+      simp only [rdN, instruction.f2, Option.map_some]
+    simpa [onThread, decoded, bin, f2, f3, rd32, ld, readLeft, afterLeft, readRight, result, opt] using
+      tso_read_step before inside (fun answer => opt answer fun pair => readLeft (pair.1.setWidth 32)) field
+  have firstRead : ProcessStep (TSO layout) actI (onThread (readLeft lhs)) []
+      (onThread (afterLeft a)) :=
+    tso_read_step before inside (width := 8) (address := slot parent.fp (sx lhs))
+      (fun answer => opt answer fun pair => afterLeft pair.1) left
+  have secondIndex : ProcessStep (TSO layout) actI (onThread (afterLeft a)) []
+      (onThread (readRight rhs a)) := by
+    have field : rdN (before.ms.1.view i) 4 (parent.pc + 12) = some (rhs.setWidth 64) := by
+      simp only [rdN, instruction.f3, Option.map_some]
+    simpa [onThread, afterLeft, rd32] using tso_read_step before inside
+      (fun answer => opt answer fun pair => readRight (pair.1.setWidth 32) a) field
+  have secondRead : ProcessStep (TSO layout) actI (onThread (readRight rhs a)) []
+      (onThread (ret1 parent value)) := by
+    have read := tso_read_step before inside (width := 8) (address := slot parent.fp (sx rhs))
+      (fun answer => opt answer fun pair => result a pair.1) right
+    simpa only [onThread, readRight, ld, rd64, result, computed, opt_some] using read
+  have read : ProcessPrefix (TSO layout) actI before [] 6 (onThread (ret1 parent value)) :=
+    .cons started (.cons (tso_fetch_opcode before inside opcode parent instruction.op range) (.cons firstIndex
+      (.cons firstRead (.cons secondIndex (.cons secondRead (.nil _))))))
+  have ready : (onThread (ret1 parent value)).ths[i]? = some (some (ret1 parent value)) :=
+    List.getElem?_set_self inside
+  obtain ⟨after, result, memory, view, other⟩ :=
+    tso_ret1_prefix (before := onThread (ret1 parent value)) (i := i) ready instruction.f1 writable
+  refine ⟨after, ?_, memory, view, other⟩
+  simpa only [onThread, List.set_set, List.nil_append] using read.trans result
+
 end Gabbro.Stage0.Senke.BildMehr
