@@ -208,7 +208,8 @@ theorem Emitted.loaded_spawn_site [Kern] (output : Emitted src K options)
   have worldEnd := placed.hyhi
   have imageEnd := placed.hfit
   have used := Nat.mul_le_mul_left output.image.Ks (Nat.add_le_add_right inside.le 1)
-  have oneFrame := Nat.le_mul_of_pos_right output.image.Ks (Nat.succ_pos output.starts.length)
+  have oneFrame : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
+    Nat.le_mul_of_pos_right _ (Nat.succ_pos output.starts.length)
   have stackFits : stack < 2 ^ 31 := by dsimp only [stack]; omega
   have entryFits : entry < 2 ^ 31 := by
     dsimp only [entry]
