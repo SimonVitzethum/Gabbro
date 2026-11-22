@@ -60,9 +60,9 @@ public theorem slotsRep_encoded (types : TypeResolution) (live : List String)
   | [], _ => .nil
   | (name, sourceType) :: rest, project =>
     let type := types.ordinary sourceType
-    let argument := if name ∈ keep then project .here
+    let argument := if name ∈ keep then project .head
       else Expr.case [none, some type] ⟨0, Nat.zero_lt_succ 1⟩ .empty
-    .cons argument (trimSlotArgs types keep rest (fun field => project (.there field)))
+    .cons argument (trimSlotArgs types keep rest (fun field => project (.tail field)))
 
 public theorem trimSlotArgs_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeResolution)
     (keep : List String) (fields : List (String × Parser.STyp))
@@ -73,7 +73,7 @@ public theorem trimSlotArgs_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeRe
   | nil => rfl
   | cons field rest ih =>
     obtain ⟨name, sourceType⟩ := field
-    have tail := ih (fun field => project (.there field)) (fun field => localRead (.there field))
+    have tail := ih (fun field => project (.tail field)) (fun field => localRead (.tail field))
     by_cases live : name ∈ keep
     · simp only [trimSlotArgs, live, ite_true, Args.orte, localRead, tail, List.nil_append]
     · simp only [trimSlotArgs, live, ite_false, Args.orte, Expr.orte, NutzlastExpr.orte, tail, List.nil_append]
@@ -91,15 +91,15 @@ public theorem trimSlotArgs_rep {Γ : Ctx} {Λ : List (Res D)} {oldLive keep : L
       SlotsRep D types keep frame fields (evalProd entry (trimSlotArgs types keep fields project) world env) := by
   induction represented with
   | nil => exact fun _ _ => .nil
-  | @dead name sourceType fields rest unused tail ih =>
+  | @dead name fields rest sourceType unused tail ih =>
     intro project exactField
     have removed : name ∉ keep := fun member => unused (kept name member)
-    have following := ih (fun field => project (.there field)) (fun field => exactField (.there field))
+    have following := ih (fun field => project (.tail field)) (fun field => exactField (.tail field))
     simpa only [trimSlotArgs, removed, ite_false, evalProd] using
       (SlotsRep.dead (sourceType := sourceType) removed following)
-  | @live name sourceType value ordinary fields rest needed found typed tail ih =>
+  | @live name value sourceType ordinary fields rest needed found typed tail ih =>
     intro project exactField
-    have following := ih (fun field => project (.there field)) (fun field => exactField (.there field))
+    have following := ih (fun field => project (.tail field)) (fun field => exactField (.tail field))
     by_cases retained : name ∈ keep
     · simpa only [trimSlotArgs, retained, ite_true, evalProd, exactField, prodGetW] using
         (SlotsRep.live retained found typed following)
