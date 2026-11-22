@@ -140,6 +140,93 @@ theorem LoadedIRImage.workerStartup
       (BildMehr.privateBuffers_empty loaded.emptyBuffers)
     exact stopped (reference.no_silent_stop_until_host waiting sc rfl (BildMehr.alleBlind_start _))
 
+private theorem firstWorker_clone_control
+    {before after : Cfg imageTSO (Res T)} {parent child : T} {id extra : W}
+    (waiting : before.ths = [some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)])
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
+    (positive : 0 < id.toInt) :
+    after = ⟨before.ms, [some (ret1 parent id), some (.next child)]⟩ := by
+  let pending : Res T := .ask (.sys cloneReq) fun answer =>
+    opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
+  have issuer {i : Nat} {control : Res T} (found : before.ths[i]? = some (some control)) :
+      i = 0 ∧ control = pending := by
+    rw [waiting] at found
+    cases i <;> simp_all only [List.getElem?_cons_zero, Option.some.injEq, List.getElem?_cons_succ,
+      List.getElem?_nil, reduceCtorEq, and_false, true_and, pending]
+  have nonzero : id ≠ 0 := by
+    rintro rfl
+    exact (by decide : ¬ (0 < (0 : W).toInt)) positive
+  suffices exactClone : ∀ {labels}, ProcessStep imageTSO actI before labels after →
+      labels = [(0, cloneReq, some (id, extra))] →
+      after = ⟨before.ms, [some (ret1 parent id), some (.next child)]⟩ from exactClone observed rfl
+  intro labels transition logged
+  cases transition with
+  | tau | priv => cases logged
+  | ask found asked ordinary _ _ =>
+    obtain ⟨rfl, rfl⟩ := issuer found
+    cases asked
+    exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
+  | exit => cases logged
+  | cloneNo _ _ _ refused _ =>
+    simp only [List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
+    obtain ⟨_, accepted⟩ := logged
+    exact (refused id extra accepted positive).elim
+  | clone found asked response _ resumed spawned =>
+    obtain ⟨rfl, rfl⟩ := issuer found
+    simp only [List.cons.injEq, Prod.mk.injEq, Option.some.injEq, true_and, and_true] at logged
+    obtain ⟨rfl, rfl⟩ := logged
+    cases asked
+    have sameMemory := response.2
+    change (if cloneReq = cloneReq then _ else _) at sameMemory
+    rw [ite_eq_left rfl] at sameMemory
+    obtain ⟨rfl, _⟩ := sameMemory
+    simp only [pending, opt_some, ite_eq_right nonzero, ite_eq_left rfl, Res.next.injEq] at resumed spawned
+    subst_vars
+    rw [waiting]
+    rfl
+
+/-- The first successful worker activation in the actual Lean IR agrees
+    with the declared GX activation, including the source thread's
+    original start environment. -/
+theorem LoadedIRImage.firstWorkerActivation
+    {before after : Cfg imageTSO (Res T)} {id extra : W} {count : Nat}
+    (loaded : LoadedIRImage output memory) (unit : ImageModelUnit output E)
+    (workers : 0 < output.starts.length)
+    (quiet : ProcessPrefix imageTSO actI (output.irEntry memory) [] count before)
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
+    (positive : 0 < id.toInt) :
+    ∃ next : FadenMaschine (declOf output.compiled.unit).mitRuhe,
+      ImageSlotsMatch output E O [(0, cloneReq, some (id, extra))] after next ∧
+      ImageReach output E O (imageSourceStart E) next ∧ next.m = (imageSourceStart E).m ∧
+      E.starts[1]? = output.starts[0]? := by
+  let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+  let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
+    BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
+  have pending := (loaded.workerStartup workers).1 quiet observed
+  have exactSlots := firstWorker_clone_control pending observed positive
+  have ready : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)) := by
+    rw [pending]
+  have slots : ImageSlotsMatch output E O [] before (imageSourceStart E) := by
+    refine ⟨?_, ?_⟩
+    · intro i
+      cases i <;> simp [pending, imageSourceStart, entryStart, FadenStart]
+    · intro i retired
+      cases i <;> simp [pending] at retired
+  have declared : before.ths.length < E.starts.length := by
+    rw [pending, unit.starts, List.length_cons, List.length_cons, List.length_nil]
+    omega
+  obtain ⟨next, _, _, advanced, matched, unchanged, _⟩ :=
+    slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
+      ready rfl declared
+  refine ⟨next, ?_, .schritt _ _ .start advanced, unchanged, ?_⟩
+  · rw [pending] at matched
+    rw [exactSlots]
+    exact matched
+  · rw [unit.starts]
+    rfl
+
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
     table is used for all calls, including indirect and recursive calls. -/
