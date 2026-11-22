@@ -247,7 +247,7 @@ private theorem specBooleanArrayFits (ctx : UCtx) (values : List Bool) :
     specArrayArgumentFits ctx (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
       (.arr .bool values.length) = true := by
   induction values with
-  | nil => rfl
+  | nil => simp only [List.foldr_nil, List.length_nil, specArrayArgumentFits, specLiteralFieldFits]
   | cons value rest ih =>
     simp only [List.length_cons, List.foldr_cons, specArrayArgumentFits, specLiteralFieldFits,
       specPrimitiveLiteralFieldFits, ih, Bool.and_self]
@@ -331,13 +331,13 @@ theorem specArrayArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u
     (fn : UFn) (er : Option Ty) (ctx : UCtx) (type : Ty) (raw : USide) (gate : u.exportGate = .ok ())
     (scope : ctx.records = u.records)
     (lexical : ∀ name type, specArrayArgumentFits ctx (.param name) type = true →
-      ∃ variable : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var variable))
+      ∃ slot : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var slot))
     (valid : specArrayArgumentFits ctx raw type = true) :
     ∃ term : Expr (declOf u) Γ Λ type, lowWertAtE u Γ Λ fn er type raw = .ok term := by
   cases raw with
   | param name =>
-    obtain ⟨variable, read⟩ := lexical name type valid
-    exact ⟨.var variable, read⟩
+    obtain ⟨slot, read⟩ := lexical name type valid
+    exact ⟨.var slot, read⟩
   | arrCons head tail =>
     cases type <;> try (simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid)
     case arr element count =>
@@ -380,10 +380,10 @@ theorem specArrayLocal_erfuellbar (ctx : UCtx) (name : String)
       decide_true, Bool.and_self, pure, Except.pure]
   · have parameter : lowWertAtE u [.bool] Λ declaration none .bool (.param name) = .ok (.var .here) := by
       simp only [lowWertAtE, lowWertE, declaration, lowParamWert, paramPos, BEq.rfl,
-        ite_true, List.getElem?_cons_zero, Option.isSome_none, lowVar, ↓reduceDIte, fitW]
+        ite_true, List.getElem?_cons_zero, Option.isSome_none, Bool.false_eq_true, ite_false,
+        Nat.zero_add, lowVar, ↓reduceDIte, fitW] <;> rfl
     have truth : lowWertAtE u [.bool] Λ declaration none .bool (.truth false) = .ok .fls := by
-      rw [lowWertAtE, lowWertE]
-      rfl
+      simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl
     simp only [lowWertE, raw, lowLit, lowWertAtE, parameter, truth, Except.map]
 
 /-- Nominal literal construction retains every identity, schema and field-type check. -/
