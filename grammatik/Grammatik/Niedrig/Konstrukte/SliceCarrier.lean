@@ -45,7 +45,8 @@ def packSliceCarrier (identity : Nat) {capacity : Nat} {backing : Ty}
 def rangeCarrierExpr (identity : Nat) {capacity : Nat} {backing : Ty}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
-    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity) :
+    (source : Expr D Γ Λ backing)
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastLo ≤ lastHi ∧ lastHi ≤ capacity) :
     Expr D Γ Λ (sliceCarrierType identity capacity backing) :=
   sliceCarrierExpr identity
     (.widen bounds.1 (by omega) (.var first))
@@ -54,14 +55,16 @@ def rangeCarrierExpr (identity : Nat) {capacity : Nat} {backing : Ty}
 theorem rangeCarrierExpr_reads (identity : Nat) {capacity : Nat} {backing : Ty}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
-    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity) :
+    (source : Expr D Γ Λ backing)
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastLo ≤ lastHi ∧ lastHi ≤ capacity) :
     (rangeCarrierExpr identity first last source bounds).orte = source.orte := by
   simp only [rangeCarrierExpr, sliceCarrierExpr_reads, Expr.orte, List.nil_append]
 
 theorem rangeCarrierExpr_eval (identity : Nat) {capacity : Nat} {backing : Ty}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
-    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (source : Expr D Γ Λ backing)
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastLo ≤ lastHi ∧ lastHi ≤ capacity)
     (entry world : World D) (env : Env D Γ) :
     ∃ exact : SliceOk capacity (env.get first).n.toNat (env.get last).n.toNat,
       eval entry (rangeCarrierExpr identity first last source bounds) world env =
@@ -108,7 +111,7 @@ theorem rangeArrayCarrierExpr_exact (identity : Nat) {capacity : Nat} {τ : Ty}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
     (array : Expr D Γ Λ (.arr τ capacity))
-    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastLo ≤ lastHi ∧ lastHi ≤ capacity)
     (entry world : World D) (env : Env D Γ) :
     ∃ exact : SliceOk capacity (env.get first).n.toNat (env.get last).n.toNat,
       decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
@@ -116,7 +119,24 @@ theorem rangeArrayCarrierExpr_exact (identity : Nat) {capacity : Nat} {τ : Ty}
       some (BoundedSlice.ofArray (eval entry array world env) _ _ exact) := by
   obtain ⟨valid, packed⟩ := rangeCarrierExpr_eval identity first last array bounds entry world env
   refine ⟨valid, ?_⟩
-  rw [packed, decodeArrayCarrier_pack, ArraySliceView.value_ofEndpoints]
+  rw [packed]
+  exact decodeArrayCarrier_pack identity (ArraySliceView.ofEndpoints _ _ valid) _
+
+/-- The typed carrier accepts both endpoint intervals in a single
+    context with an arbitrary array and independently varying bounds. -/
+theorem rangeArrayCarrierExpr_erfuellbar (identity : Nat) {capacity : Nat} {τ : Ty}
+    (enough : 4 ≤ capacity) (array : Wert D (.arr τ capacity))
+    (first : Zahl 0 1) (last : Zahl 3 4) (entry world : World D) :
+    let context := [Ty.int 0 1, Ty.int 3 4, Ty.arr τ capacity]
+    let env : Env D context := .cons first (.cons last (.cons array .nil))
+    let source : Expr D context Λ (.arr τ capacity) := .var (.there (.there .here))
+    let carrier := rangeCarrierExpr identity .here (.there .here) source
+      ⟨by decide, by decide, by decide, by omega⟩
+    ∃ valid : SliceOk capacity first.n.toNat last.n.toNat,
+      decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
+        (eval entry carrier world env) = some (BoundedSlice.ofArray array _ _ valid) := by
+  exact rangeArrayCarrierExpr_exact identity .here (.there .here) _
+    ⟨by decide, by decide, by decide, by omega⟩ entry world _
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/
@@ -149,7 +169,7 @@ theorem rangeStringCarrierExpr_exact (identity : Nat) {capacity : Nat}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
     (string : Expr D Γ Λ (.str capacity))
-    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastLo ≤ lastHi ∧ lastHi ≤ capacity)
     (entry world : World D) (env : Env D Γ)
     (present : (env.get last).n ≤ (eval entry string world env).1.length) :
     checkStringSlice (eval entry string world env) (env.get first).n (env.get last).n =
