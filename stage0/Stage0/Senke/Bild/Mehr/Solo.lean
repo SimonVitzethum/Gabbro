@@ -69,6 +69,34 @@ def MaskedAgreement (reads writes : W → Prop) (reference actual : Mem) : Prop 
   (∀ byte, reads byte → reference.b byte = actual.b byte ∧ reference.rd byte = actual.rd byte) ∧
   (∀ byte, writes byte → reference.wr byte = actual.wr byte)
 
+/-- Restrict the allowed read and write bytes of a reference memory.
+    The actual process and its memory have no such transformation. -/
+noncomputable def maskMemory (reads writes : W → Prop) (memory : Mem) : Mem := by
+  classical
+  exact { memory with
+    rd := fun byte => memory.rd byte && decide (reads byte)
+    wr := fun byte => memory.wr byte && decide (writes byte) }
+
+/-- The restriction grants access only inside the selected regions and
+    agrees with the actual memory wherever that access is permitted. -/
+theorem maskMemory_agreement (reads writes : W → Prop) (memory : Mem)
+    (within : ∀ byte, writes byte → reads byte) :
+    let masked := maskMemory reads writes memory
+    MaskedAgreement reads writes masked memory ∧
+      (∀ byte, masked.rd byte = true → reads byte) ∧
+      (∀ byte, masked.wr byte = true → reads byte ∧ writes byte) := by
+  classical
+  refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+  · intro byte read
+    exact ⟨rfl, by simp only [maskMemory, read, decide_true, Bool.and_true]⟩
+  · intro byte write
+    simp only [maskMemory, write, decide_true, Bool.and_true]
+  · intro byte granted
+    exact of_decide_eq_true (Bool.and_eq_true_iff.mp granted).2
+  · intro byte granted
+    have write : writes byte := of_decide_eq_true (Bool.and_eq_true_iff.mp granted).2
+    exact ⟨within byte write, write⟩
+
 /-- A successful reference instruction in memory restricted to the
     declared regions determines every actual request of that instruction.
     Memory outside its write region is preserved. -/
