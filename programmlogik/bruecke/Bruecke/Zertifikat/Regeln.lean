@@ -1,6 +1,7 @@
 module
 public import Bruecke.Zertifikat.Satz
 import all Grammatik.Speichermodell.Atomar.AtomarSem.Teil1
+import all Grammatik.Kern.Semantik.Semantik.T1.Teil1
 @[expose] public section
 
 /-!
@@ -94,5 +95,18 @@ theorem wpGrundA_succ {Λ Λ' : List (Res D)} {n : Nat} (b : Block D V l Γ Λ �
   simp only [execGrundHA]
 
 end HA
+
+/-! ## The evaluation that chooses an arm -/
+
+theorem eval_var_here {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (σ₀ σ : World D) (x : Wert D τ) (ρ : Env D Γ) :
+    eval σ₀ (Expr.var (Λ := Λ) (Var.here (Γ := Γ))) σ (Env.cons x ρ) = x := rfl
+
+theorem eval_var_there {Γ : Ctx} {Λ : List (Res D)} {τ τ' : Ty} (σ₀ σ : World D) (y : Var Γ τ) (x : Wert D τ')
+    (ρ : Env D Γ) :
+    eval σ₀ (Expr.var (Λ := Λ) (Var.there y)) σ (Env.cons x ρ) = eval σ₀ (Expr.var (Λ := Λ) y) σ ρ := rfl
+
+theorem eval_case {Γ : Ctx} {Λ : List (Res D)} (cs : List (Option Ty)) (i : Fin cs.length)
+    (nutz : NutzlastExpr D Γ Λ (cs.get i)) (σ₀ σ : World D) (ρ : Env D Γ) :
+    eval σ₀ (Expr.case cs i nutz) σ ρ = ⟨i, Fall.ofNutzlast _ _ _ _ (evalNutz σ₀ nutz σ ρ)⟩ := rfl
 
 end Gabbro.Bruecke
