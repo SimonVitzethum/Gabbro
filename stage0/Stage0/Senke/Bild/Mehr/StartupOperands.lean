@@ -272,7 +272,7 @@ theorem tso_call_prefix {layout : Lay}
     simpa [onThread, decodeFrame, f2, rd32] using
       tso_read_step before inside (fun answer => opt answer fun pair => stores (sx (pair.1.setWidth 32)) target) field
   let afterDecode := onThread (stores (sx frameSlot) target)
-  have prefix : ProcessPrefix (TSO layout) actI before [] 5 afterDecode :=
+  have decodedCall : ProcessPrefix (TSO layout) actI before [] 5 afterDecode :=
     .cons started (.cons (tso_fetch_opcode before inside 20 caller instruction.op (by decide))
       (.cons decoded (.cons selected (.cons chosen (.nil _)))))
   obtain ⟨first, savedPC, committed, firstView, firstOthers⟩ :=
@@ -289,7 +289,7 @@ theorem tso_call_prefix {layout : Lay}
   have saveFP : ProcessStep (TSO layout) actI afterPC []
       ⟨after, before.ths.set i (some (.next enter))⟩ := by
     simpa only [afterPC, storeFrame, wr64, opt_some, List.set_set] using savedFP
-  exact ⟨after, prefix.trans (.cons savePC (.cons saveFP (.nil _))),
+  exact ⟨after, decodedCall.trans (.cons savePC (.cons saveFP (.nil _))),
     finalMemory.trans committed, finalView.trans (congrArg (fun m => Mem.write m (frame + 8) 8 caller.fp.toNat) firstView),
     fun j different => (finalOthers j different).trans (firstOthers j different)⟩
 
