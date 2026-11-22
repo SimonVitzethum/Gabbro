@@ -26,25 +26,32 @@ public structure Model (Value Child W : Type) where
 @[expose] public def clear (frame : Frame Value) : Frame Value := { values := [], marks := [] }
 
 /-- Arguments execute left to right, passing each successor world onward. -/
-@[expose] public def evalArguments (model : Model Value Child W) (frame : Frame Value) :
+@[expose] public def evalArgumentsBy (evaluate : SExpr → Frame Value → W → Value × W × Nat) (frame : Frame Value) :
     List SExpr → W → List Value × W × Nat
   | [], world => ([], world, 0)
   | e :: es, world =>
-    let (v, world', c) := model.evaluate e frame world
-    let (vs, world'', cs) := evalArguments model frame es world'
+    let (v, world', c) := evaluate e frame world
+    let (vs, world'', cs) := evalArgumentsBy evaluate frame es world'
     (v :: vs, world'', c + cs)
 
+@[expose] public def evalArguments (model : Model Value Child W) :=
+  evalArgumentsBy model.evaluate
+
 /-- Construction evaluates arguments but never polls a child. -/
-@[expose] public def makeTask (model : Model Value Child W) (frame : Frame Value) :
+@[expose] public def makeTaskBy (evaluate : SExpr → Frame Value → W → Value × W × Nat)
+    (construct : String → List Value → W → Child × W × Nat) (frame : Frame Value) :
     FutureExpr → W → Task Value Child × W × Nat
   | .call name args, world =>
-    let (values, world', cost) := evalArguments model frame args world
-    let (child, world'', childCost) := model.newChild name values world'
+    let (values, world', cost) := evalArgumentsBy evaluate frame args world
+    let (child, world'', childCost) := construct name values world'
     (.leaf child, world'', cost + childCost + 1)
   | .join left right, world =>
-    let (l, world', lc) := makeTask model frame left world
-    let (r, world'', rc) := makeTask model frame right world'
+    let (l, world', lc) := makeTaskBy evaluate construct frame left world
+    let (r, world'', rc) := makeTaskBy evaluate construct frame right world'
     (.join l r, world'', lc + rc + 1)
+
+@[expose] public def makeTask (model : Model Value Child W) :=
+  makeTaskBy model.evaluate model.newChild
 
 /-- Combine the two actual answers after the right poll has run. -/
 @[expose] public def joinPollReplies (pair : Value → Value → Value)

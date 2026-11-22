@@ -131,8 +131,7 @@ public theorem CheckedArguments.exactTypes {elaboration : Elaboration D V Λ typ
 public theorem CheckedArguments.lower_assign {elaboration : Elaboration D V Λ types f} {tag : Nat}
     {sources : List Parser.SExpr} {parameters : Ctx} (checked : CheckedArguments elaboration tag sources parameters)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (normal : PollRuns elaboration calls)
-    (prices : D.Fn → Nat) {τ : Ty} (destination : Var Γ τ) (saved : Var Γ (frameType types f))
+    {τ : Ty} (destination : Var Γ τ) (saved : Var Γ (frameType types f))
     (body : ∀ {Δ : Ctx}, (∀ {type : Ty}, Var Γ type → Var Δ type) →
       (∀ {type : Ty}, Var parameters type → Var Δ type) → Block D V l Δ Λ Λ)
     (oracle : Orakel D) (passes : Nat)
@@ -146,7 +145,7 @@ public theorem CheckedArguments.lower_assign {elaboration : Elaboration D V Λ t
       execBlock oracle passes calls (body extend formals) world scope =
         let answer := effect arguments world
         .ok answer.2 (scope.set (extend destination) answer.1)) :
-    let args := evalArguments (inducedModel elaboration calls prices normal) frame sources world
+    let args := evalArgumentsBy (evaluateBound elaboration) frame sources world
     ∃ arguments, argumentsEnv D parameters args.1 = some arguments ∧
       execBlock oracle passes calls (checked.lower saved body) world env =
         let answer := effect arguments args.2.1
@@ -191,18 +190,20 @@ public theorem CheckedArguments.lower_assign {elaboration : Elaboration D V Λ t
         | there var => exact agrees var
     obtain ⟨arguments, typed, lowered⟩ := ih (extension destination) (extension saved) restBody restEffect
       answer.2.1 scope newFrame restCorrect
-    have evaluated : (inducedModel elaboration calls prices normal).evaluate source frame world =
-        (Value.typed head.term.result answer.1, answer.2) := value
     refine ⟨.cons answer.1 arguments, ?_, ?_⟩
-    · simp only [evalArguments, evaluated, argumentsEnv, valueAt_typed, typed,
+    · simp only [evalArgumentsBy, value, argumentsEnv, valueAt_typed, typed,
         Option.bind_eq_bind, Option.bind_some, Option.pure_def]
     · change execBlock oracle passes calls (head.lower saved continuation) world env = _
       rw [ran]
       change removeLocals (head.term.locals.map Prod.snd)
         (execBlock oracle passes calls (tail.lower (extension saved) restBody) answer.2.1 scope).schrumpf = _
       rw [lowered]
-      simp only [evalArguments, evaluated]
-      dsimp only [restEffect, scope, extension, Env.set, Ausgang.schrumpf]
-      erw [set_prependLocal, removeLocals_ok]
+      simp only [evalArgumentsBy, value]
+      let result := effect (.cons answer.1 arguments)
+        (evalArgumentsBy (evaluateBound elaboration) frame rest answer.2.1).2.1
+      change removeLocals (head.term.locals.map Prod.snd)
+        (.ok result.2 ((appendLocals locals env).set (prependLocal destination (head.term.locals.map Prod.snd)) result.1)) =
+        .ok result.2 (env.set destination result.1)
+      rw [set_prependLocal, removeLocals_ok]
 
 end Gabbro.Grammatik.Async.Representation

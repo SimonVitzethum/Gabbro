@@ -81,7 +81,7 @@ private theorem evalArguments_typed (elaboration : Elaboration D V Λ types f)
   | nil => exact ⟨.nil, rfl⟩
   | @cons source expression sources expressions found _ ih =>
     obtain ⟨localEnvironment, localRestored⟩ := restored source List.mem_cons_self expression found
-    simp only [evalArguments]
+    simp only [evalArguments, evalArgumentsBy]
     change ∃ environment, argumentsEnv D (expression.result :: expressions.map BoundExpression.result)
       (let (value, middle, _) := evaluateBound elaboration source frame world
        value :: (evalArguments (inducedModel elaboration calls prices normal) frame sources middle).1) =
@@ -118,7 +118,7 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       (restored name args List.mem_cons_self) world
     rw [parameterTypes] at typed
     obtain ⟨environment, typed⟩ := typed
-    simp only [makeTask]
+    simp only [makeTask, makeTaskBy]
     generalize evalArguments (inducedModel elaboration calls prices normal) frame args world =
       evaluated at typed ⊢
     obtain ⟨values, middle, cost⟩ := evaluated
@@ -133,7 +133,7 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       (fun name args member => resolved name args (List.mem_append_left _ member))
       (fun name args member => restored name args (List.mem_append_left _ member))
       (0 :: path) world
-    simp only [makeTask]
+    simp only [makeTask, makeTaskBy]
     generalize makeTask (inducedModel elaboration calls prices normal) frame left world =
       leftStep at leftRep ⊢
     obtain ⟨leftTask, middle, leftCost⟩ := leftStep
