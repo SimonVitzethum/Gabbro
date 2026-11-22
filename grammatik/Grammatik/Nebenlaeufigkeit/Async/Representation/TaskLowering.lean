@@ -96,7 +96,7 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
     simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval]
     erw [same]
     simp only [pendingAnswer, readyAnswer, execArms]
-    rw [childPollBlock, waitingBlock_exec_outcome]
+    rw [childPollBlock_exec_outcome]
     obtain ⟨silent, evaluated⟩ := leafPollArguments_eval callee .here world world (.cons payload env)
     have noRead : world.lese Λ [] = world := rfl
     erw [silent, noRead, evaluated]
@@ -119,5 +119,68 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
         | succ tag =>
           have invalid : tag + 2 < 2 := bound
           omega
+
+/-- Two child slots have already been polled. Only the two cached tags
+    select the combined result arm. -/
+@[expose] public def collectStored
+    {la lr ra rr : Ty}
+    (left : Var Γ (.sum [some la, some lr])) (right : Var Γ (.sum [some ra, some rr]))
+    (leftActive : Block D V l (la :: Γ) Λ Λ)
+    (rightActive : Block D V l (ra :: lr :: Γ) Λ Λ)
+    (bothCached : Block D V l (rr :: lr :: Γ) Λ Λ) :
+    Stmt D V l Γ Λ Λ :=
+  .onTag (.var left) (.cons leftActive
+    (.cons (.cons (.onTag (.var (.there right)) (.cons rightActive (.cons bothCached .nil))) .nil) .nil))
+
+public theorem collectStored_leftActive {la lr ra rr : Ty}
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (left : Var Γ (.sum [some la, some lr])) (right : Var Γ (.sum [some ra, some rr]))
+    (leftActive : Block D V l (la :: Γ) Λ Λ)
+    (rightActive : Block D V l (ra :: lr :: Γ) Λ Λ)
+    (bothCached : Block D V l (rr :: lr :: Γ) Λ Λ)
+    (world : World D) (env : Env D Γ) (first : Wert D la)
+    (stored : env.get left = readyAnswer D la lr first) :
+    execStmt oracle passes calls (collectStored left right leftActive rightActive bothCached) world env =
+      (execBlock oracle passes calls leftActive world (.cons first env)).schrumpf :=
+  storedTag_active oracle passes calls left leftActive _ world env first stored
+
+public theorem collectStored_rightActive {la lr ra rr : Ty}
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (left : Var Γ (.sum [some la, some lr])) (right : Var Γ (.sum [some ra, some rr]))
+    (leftActive : Block D V l (la :: Γ) Λ Λ)
+    (rightActive : Block D V l (ra :: lr :: Γ) Λ Λ)
+    (bothCached : Block D V l (rr :: lr :: Γ) Λ Λ)
+    (world : World D) (env : Env D Γ) (first : Wert D lr) (second : Wert D ra)
+    (firstStored : env.get left = pendingAnswer D la lr first)
+    (secondStored : env.get right = readyAnswer D ra rr second) :
+    execStmt oracle passes calls (collectStored left right leftActive rightActive bothCached) world env =
+      ((execBlock oracle passes calls rightActive world (.cons second (.cons first env))).schrumpf).schrumpf := by
+  unfold collectStored
+  rw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
+  simp only [execBlock]
+  rw [storedTag_active oracle passes calls (.there right) rightActive bothCached world
+    (.cons first env) second secondStored]
+  cases execBlock oracle passes calls rightActive world (.cons second (.cons first env)) <;> rfl
+
+public theorem collectStored_bothCached {la lr ra rr : Ty}
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (left : Var Γ (.sum [some la, some lr])) (right : Var Γ (.sum [some ra, some rr]))
+    (leftActive : Block D V l (la :: Γ) Λ Λ)
+    (rightActive : Block D V l (ra :: lr :: Γ) Λ Λ)
+    (bothCached : Block D V l (rr :: lr :: Γ) Λ Λ)
+    (world : World D) (env : Env D Γ) (first : Wert D lr) (second : Wert D rr)
+    (firstStored : env.get left = pendingAnswer D la lr first)
+    (secondStored : env.get right = pendingAnswer D ra rr second) :
+    execStmt oracle passes calls (collectStored left right leftActive rightActive bothCached) world env =
+      ((execBlock oracle passes calls bothCached world (.cons second (.cons first env))).schrumpf).schrumpf := by
+  unfold collectStored
+  rw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
+  simp only [execBlock]
+  rw [storedTag_cached oracle passes calls (.there right) rightActive bothCached world
+    (.cons first env) second secondStored]
+  cases execBlock oracle passes calls bothCached world (.cons second (.cons first env)) <;> rfl
 
 end Gabbro.Grammatik.Async.Representation

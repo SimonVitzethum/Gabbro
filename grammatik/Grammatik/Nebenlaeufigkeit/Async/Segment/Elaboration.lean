@@ -108,12 +108,48 @@ public structure Elaboration (D : Deklaration) (V : Vertrag D) (Λ : List (Res D
     callee.pollInfallible
     (Eq.mp (congrArg
       (fun resources => Arms D V l
-        (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
-        resources Λ [some (types.childResult name), some (types.childState name)])
+          (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+          resources Λ [some (types.childResult name), some (types.childState name)])
       callee.pollInventory.symm) arms)
 
 /-- The actual returned child value selects the same G arm before and
     after transport across the resolved call's inventory equality. -/
+public theorem childPollBlock_exec_outcome {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {types : TypeResolution} {name : String}
+    (callee : AwaitedCall D V Λ types name)
+    (arguments : Args D Γ Λ (D.params callee.poll))
+    (arms : Arms D V l (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ Λ [some (types.childResult name), some (types.childState name)])
+    (O : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) :
+    execBlock O passes calls (childPollBlock callee arguments arms) world env =
+      match calls callee.poll (world.lese Λ arguments.orte)
+        (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) env) with
+      | .ok after answer =>
+        let reply := ergWert callee.pollResult answer
+        (execArms O passes calls arms reply after (.cons reply env)).schrumpf
+      | .why _ reason => keinGrund callee.pollInfallible reason
+      | .logik cause => .logik cause
+      | .hardware cause => .hardware cause := by
+  rw [childPollBlock, waitingBlock_exec_outcome]
+  cases calls callee.poll (world.lese Λ arguments.orte)
+      (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) env) with
+  | why _ reason => exact keinGrund callee.pollInfallible reason
+  | logik _ | hardware _ => rfl
+  | ok after answer =>
+    let reply := ergWert callee.pollResult answer
+    have transport {start finish : List (Res D)} (same : start = finish)
+        (arm : Arms D V l (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+          start Λ [some (types.childResult name), some (types.childState name)]) :
+        execArms O passes calls (Eq.mp (congrArg (fun resources => Arms D V l
+        (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+        resources Λ [some (types.childResult name), some (types.childState name)]) same) arm)
+        reply after (.cons reply env) =
+        execArms O passes calls arm reply after (.cons reply env) := by
+      cases same
+      rfl
+    exact congrArg Ausgang.schrumpf (transport callee.pollInventory.symm arms)
+
 public theorem childPollBlock_exec_return {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {types : TypeResolution} {name : String}
     (callee : AwaitedCall D V Λ types name)
@@ -127,18 +163,6 @@ public theorem childPollBlock_exec_return {l : Bool} {Γ : Ctx} {Λ : List (Res 
     let reply := ergWert callee.pollResult answer
     execBlock O passes calls (childPollBlock callee arguments arms) world env =
       (execArms O passes calls arms reply after (.cons reply env)).schrumpf := by
-  intro reply
-  rw [childPollBlock, waitingBlock_exec_outcome, returned]
-  have transport {start finish : List (Res D)} (same : start = finish)
-      (arm : Arms D V l (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
-        start Λ [some (types.childResult name), some (types.childState name)]) :
-      execArms O passes calls (Eq.mp (congrArg (fun resources => Arms D V l
-        (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
-        resources Λ [some (types.childResult name), some (types.childState name)]) same) arm)
-        reply after (.cons reply env) =
-        execArms O passes calls arm reply after (.cons reply env) := by
-    cases same
-    rfl
-  exact congrArg Ausgang.schrumpf (transport callee.pollInventory.symm arms)
+  rw [childPollBlock_exec_outcome, returned]
 
 end Gabbro.Grammatik.Async.Segment
