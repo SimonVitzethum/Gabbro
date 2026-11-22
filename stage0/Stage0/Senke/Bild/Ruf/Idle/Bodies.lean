@@ -57,6 +57,18 @@ private theorem locksCodeT_withIdle (L : Lay D) (address scratch : Nat) (body : 
 
 private theorem lockAddress_withIdle (L : Lay D) (lock : D.Lock) : L.withIdle.lk lock = L.lk lock := rfl
 
+private theorem tagPayloadC_withIdle (d : Nat) (payload : Ty) :
+    tagPayloadC d (some (tyR payload)) = tagPayloadC d (some payload) := by
+  cases payload <;> rfl
+
+private theorem sumSpanPayloadC_withIdle (d : Nat) (payload : Ty) :
+    sumSpanPayloadC d (some (tyR payload)) = sumSpanPayloadC d (some payload) := by
+  simp only [sumSpanPayloadC, payloadWords, tyR, valueWords_mapNumbers]
+
+private theorem sumWords_withIdle (cases : List (Option Ty)) :
+    valueWords (.sum (Ty.mapCases (· + 1) id cases)) = valueWords (.sum cases) :=
+  valueWords_mapNumbers (· + 1) id (.sum cases)
+
 /-- The same body lowering is valid after extending the model with
     idle thread slots. Every branch retains the installed code and scratch bound. -/
 theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : FrameLayout)
@@ -64,32 +76,33 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
     ∀ (pr : List Nat) (ex : Int × Int) (reserved : Nat) (sc : List D.Lock),
       lowEnd passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruEnd e) reserved sc =
         lowEnd passes A L frame ens pr ex e reserved sc := by
-  let shifted : D.mitRuhe.Fn → Nat := fun f => f.elim 0 A
   apply Endblock.rec
     (motive_1 := fun _ _ _ _ s => ∀ pr ex reserved sc,
-      lowS passes shifted L.withIdle frame.withIdle ens pr ex (ruS s) reserved sc =
+      lowS passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruS s) reserved sc =
         lowS passes A L frame ens pr ex s reserved sc)
     (motive_2 := fun _ _ _ _ b => ∀ pr ex reserved sc,
-      lowB passes shifted L.withIdle frame.withIdle ens pr ex (ruB b) reserved sc =
+      lowB passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruB b) reserved sc =
         lowB passes A L frame ens pr ex b reserved sc)
     (motive_3 := fun _ _ _ body => ∀ pr ex reserved sc,
-      lowEnd passes shifted L.withIdle frame.withIdle ens pr ex (ruEnd body) reserved sc =
+      lowEnd passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruEnd body) reserved sc =
         lowEnd passes A L frame ens pr ex body reserved sc)
     (motive_4 := fun _ _ _ _ _ arms =>
       (∀ pr ex tag reserved sc,
-        lowTags passes shifted L.withIdle frame.withIdle ens pr ex (ruArms arms) tag reserved sc =
+        lowTags passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruArms arms) tag reserved sc =
           lowTags passes A L frame ens pr ex arms tag reserved sc) ∧
       (∀ pr ex span tag reserved sc,
-        lowSumTags passes shifted L.withIdle frame.withIdle ens pr ex (ruArms arms) span tag reserved sc =
+        lowSumTags passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruArms arms) span tag reserved sc =
           lowSumTags passes A L frame ens pr ex arms span tag reserved sc))
     (motive_5 := fun _ _ _ _ _ arms => ∀ pr ex tag reserved sc,
-      lowGrund passes shifted L.withIdle frame.withIdle ens pr ex (ruGArms arms) tag reserved sc =
+      lowGrund passes (fun (f : D.mitRuhe.Fn) => f.elim 0 A) L.withIdle frame.withIdle ens pr ex (ruGArms arms) tag reserved sc =
         lowGrund passes A L frame ens pr ex arms tag reserved sc)
   all_goals
     intros
     try (apply And.intro <;> intros)
+    try (match goal with | result : Option Ty |- _ => cases result)
     try simp only [ruS, ruB, ruEnd, ruArms, ruGArms, lowS, lowB, lowEnd, lowTags, lowSumTags, lowGrund,
-      lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, vslot_varR,
+      lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, vslot_varR, Ty.mapCases,
+      tagPayloadC_withIdle, sumSpanPayloadC_withIdle,
       lowE_withIdle, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
       retC_withIdle, retTop_withIdle, retWhyC_withIdle, retScopedC_withIdle, retWhyScopedC_withIdle,
       FrameLayout.internalResult_withIdle, callC_withIdle, callTop_withIdle, elseTop_withIdle,
@@ -102,7 +115,7 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       signatur_some, sigNrM, receiveC_withIdle, receiveTop_withIdle, elseC_withIdle,
       elseTop_withIdle, elseTopInd_withIdle, callC_withIdle, slotC_withIdle,
       slotA_withIdle, putBytesL_withIdle, putBytesWideL_withIdle,
-      locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, Ty.mapCases_length, vertragR,
+      locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, sumWords_withIdle, Ty.mapCases_length, vertragR,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, *]
     try erw [lowS_resources, lowS]
     try repeat' first
@@ -111,7 +124,13 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       | erw [lowErg_withIdle]
       | erw [lowInd_withIdle]
       | erw [lowIndElse_withIdle]
-    try simp only [shifted, callC_withIdle, putBytesL_withIdle, putBytesWideL_withIdle]
+      | erw [lowB_resources]
+      | erw [lowEnd_resources]
+      | erw [receiveC_withIdle]
+      | erw [receiveTop_withIdle]
+    try simp only [callC_withIdle, putBytesL_withIdle, putBytesWideL_withIdle,
+      lowS_resources, lowB_resources, lowEnd_resources,
+      receiveC_withIdle, receiveTop_withIdle, elseC_withIdle, sigNrM, frei_withIdle, *]
     try rfl
 
 end Gabbro.Stage0.Senke
