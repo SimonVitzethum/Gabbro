@@ -49,7 +49,11 @@ meta partial def tInt (s0 s : Lean.Expr) (e ρ : Lean.Expr) : StateRefT (Array L
   let a := e.getAppArgs
   let n := a.size
   match e.getAppFn.constName? with
-  | some `Gabbro.Grammatik.Expr.lit => pure a[n-1]!
+  | some `Gabbro.Grammatik.Expr.lit => do
+      -- as a numeral (`omega` reads numerals, not `Int.ofNat` of a raw literal)
+      match ← intWert? a[n-1]! with
+      | some v => pure (toExpr v)
+      | none => pure a[n-1]!
   | some `Gabbro.Grammatik.Expr.var => tVarInt ρ a[n-1]!
   | some `Gabbro.Grammatik.Expr.widen => tInt s0 s a[n-1]! ρ
   | some `Gabbro.Grammatik.Expr.add => do mkAppM ``HAdd.hAdd #[← tInt s0 s a[n-2]! ρ, ← tInt s0 s a[n-1]! ρ]
@@ -227,6 +231,13 @@ meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
   if imZiel then
     evalTactic (← `(tactic| try simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true',
       decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true, Bool.not_false]))
-  evalTactic (← `(tactic| try omega))
+  -- the language's division and remainder round towards zero (`tdiv`/`tmod`); on non-negative operands
+  -- they are `omega`'s `/`/`%`
+  for nm in namen do
+    evalTactic (← `(tactic| try simp (disch := omega) only [Int.tmod_eq_emod_of_nonneg, Int.tdiv_eq_ediv_of_nonneg]
+      at $(mkIdent nm):ident))
+  if imZiel then
+    evalTactic (← `(tactic| try simp (disch := omega) only [Int.tmod_eq_emod_of_nonneg, Int.tdiv_eq_ediv_of_nonneg]))
+  evalTactic (← `(tactic| first | omega | (exfalso; omega) | skip))
 
 end Gabbro.Bruecke

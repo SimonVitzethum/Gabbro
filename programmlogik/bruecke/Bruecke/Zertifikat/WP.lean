@@ -147,6 +147,36 @@ open Lean Elab Tactic Meta in
   else if let some g ← entfalten? goal t then replaceMainGoal [g]
   else throwError "gabbrov_generisch: no generic step applies"
 
+/-- `gabbrov_normal_at h` with `h : a = b`: `b` in the kernel's normal form (once per function, shared by
+    all its duties); the hypothesis changes only up to definitional equality. -/
+syntax (name := gabbrovNormalAt) "gabbrov_normal_at " ident : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovNormalAt] meta def evalGabbrovNormalAt : Tactic := fun stx => withMainContext do
+  let goal ← getMainGoal
+  let d ← getLocalDeclFromUserName stx[1].getId
+  let ty ← instantiateMVars d.type
+  let some (α, l, r) := ty.eq? | throwError "gabbrov_normal_at: not an equation"
+  let r' ← kernNormal r
+  let lv ← getLevel α
+  let ty' := mkApp3 (mkConst ``Eq [lv]) α l r'
+  replaceMainGoal [← goal.replaceLocalDeclDefEq d.fvarId ty']
+
+meta def istAusgangCtor' (x : Lean.Expr) : Bool :=
+  match x.getAppFn.constName? with
+  | some c => c.getPrefix == ``Gabbro.Grammatik.Ausgang || c.getPrefix == ``Gabbro.Grammatik.EndAusgang
+  | none => false
+
+/-- A step by `simp`/`dsimp` pays only where its lemma can fire: the continuation applied to an outcome
+    (`weiterEA`, `weiterBA` at the head), or a shrinking of a constructor somewhere in the goal. -/
+meta def lohntSimp (t : Lean.Expr) : Bool :=
+  let t := t.headBeta
+  (t.isAppOf ``Gabbro.Grammatik.WP.weiterEA || t.isAppOf ``Gabbro.Grammatik.WP.weiterBA) &&
+    (match t.getAppArgs.back? with
+     | some x => istAusgangCtor' x
+     | none => false)
+
+
 /-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
     to every goal (symbolic execution of a lowered body by the model's own rules), within a budget of
     `n` steps (default 20000): a goal on which no step applies stays as it is. -/
@@ -165,13 +195,19 @@ open Lean Elab Tactic Meta in
     if ← g.isAssigned then continue
     setGoals [g]
     let s ← saveState
+    let t ← instantiateMVars (← g.getType)
+    let simpOk := lohntSimp t
     let ok ← tryCatchRuntimeEx (withCurrHeartbeats do
-        evalTactic (← `(tactic| first
-          | gabbrov_schritt
-          | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])
-          | (dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
-              Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang])
-          | gabbrov_generisch))
+        if simpOk then
+          evalTactic (← `(tactic| first
+            | simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA]
+            | gabbrov_schritt | gabbrov_generisch))
+        else
+          evalTactic (← `(tactic| first
+            | gabbrov_schritt
+            | dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
+                Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang]
+            | gabbrov_generisch))
         pure true)
       (fun _ => do s.restore; pure false)
     if ok then offen := (← getGoals) ++ offen
@@ -210,10 +246,11 @@ macro "gabbrov_beweis" : tactic => `(tactic| (
   apply Gabbro.Bruecke.pflicht_oeffnen
   intro P fs hlow v hv hens hrumpf Q sp main args roots gestartet checks
   rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
+  gabbrov_normal_at hrumpf
   refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
     intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
     show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
-    rw [hrumpf] <;> gabbrov_rumpf <;> gabbrov_wp
+    rw [hrumpf] <;> gabbrov_wp
   all_goals gabbrov_sicher gabbrov_fertig hens
   all_goals gabbrov_sicher gabbrov_arith))
 

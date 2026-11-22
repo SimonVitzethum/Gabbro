@@ -31,6 +31,10 @@ meta def fertigSchritt (hens : Lean.Expr) (goal : MVarId) : MetaM (Option (List 
     match Kernel.isDefEq (← getEnv) (← getLCtx) a b with
     | .ok r => pure r
     | .error _ => pure false
+  -- True
+  if t.isConstOf ``True then
+    goal.assign (mkConst ``True.intro)
+    return some []
   -- a ∧ b
   if t.isAppOfArity ``And 2 then
     let a ← mkFreshExprSyntheticOpaqueMVar (t.getArg! 0) (← goal.getTag)
