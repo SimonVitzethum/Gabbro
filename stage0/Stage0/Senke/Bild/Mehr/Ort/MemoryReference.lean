@@ -97,6 +97,7 @@ theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
   rcases Nat.lt_or_ge used count with inside | outside
   · exact .inl (prefixScoped complete inside residual)
   · have remaining := StarM.after_reference replay complete outside
+    generalize used - count = remainingCount at remaining
     cases remaining with
     | refl => exact (requestScoped residual).symm
     | next first _ =>
