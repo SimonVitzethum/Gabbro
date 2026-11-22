@@ -173,6 +173,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.image_area_gate_preserves_future_frame
 #print axioms Gabbro.Stage0.image_buffer_gate_preserves_future_frame
 #print axioms Gabbro.Stage0.image_futex_preserves_future_frame
+#print axioms Gabbro.Stage0.image_future_frame_of_prefix
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.checkResultSummary
 #print axioms Gabbro.Grammatik.ArenaForm.restoreScopeStmt_exec

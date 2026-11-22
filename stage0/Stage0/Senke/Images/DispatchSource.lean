@@ -12,6 +12,29 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
+/-- Before allocation, a future stack keeps its loaded bytes and
+    permissions along the actual runner prefix. A local write
+    classification is sufficient, since allocated slots only grow. -/
+theorem image_future_frame_of_prefix [Kern] {output : Emitted src reserve options}
+    {θ : Type} {act : θ → Res θ} {initial final : Cfg imageTSO θ}
+    {history : List Ev} {count future : Nat}
+    (path : ProcessPrefix imageTSO act initial history count final)
+    (unallocated : final.ths.length ≤ future)
+    (classify : ∀ {before after : Cfg imageTSO θ} {earlier events : List Ev} {steps : Nat},
+      ProcessPrefix imageTSO act initial earlier steps before →
+      ProcessStep imageTSO act before events after → after.ths.length ≤ future →
+      GleichAuf (imageStackFootprint output future) before.ms.1.m after.ms.1.m) :
+    GleichAuf (imageStackFootprint output future) initial.ms.1.m final.ms.1.m := by
+  induction path with
+  | nil => exact fun byte _ => GleichAt.refl _ byte
+  | cons step tail ih =>
+    have remaining := processPrefix_threadSlots tail
+    have stillUnallocated := (Nat.le_add_right _ _).trans (remaining ▸ unallocated)
+    have first := classify (.nil _) step stillUnallocated
+    have rest := ih unallocated (fun earlier next bound =>
+      classify ((ProcessPrefix.ofStep step).trans earlier) next bound)
+    exact fun byte inFrame => (first byte inFrame).trans (rest byte inFrame)
+
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
 theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve options}
