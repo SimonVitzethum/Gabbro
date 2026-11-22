@@ -121,13 +121,15 @@ private theorem konstWL_measure (chunks first second destination : Nat) :
     obtain ⟨length, frame⟩ := Prod.mk.inj lower
     simp only [konstWL, bin2, codeMeasure, List.length_append, List.length_singleton, length, frame]
 
+set_option maxRecDepth 4096 in
 private theorem wordConst_measure (first second : Runner.W) (destination : Nat)
     (same : lit32 first.toInt = lit32 second.toInt) :
     codeMeasure (wordConst first destination) = codeMeasure (wordConst second destination) := by
-  simp only [wordConst, same]
-  split
-  · rfl
-  · exact konstWL_measure 4 _ _ _
+  by_cases small : lit32 second.toInt = true
+  · rw [wordConst, wordConst, same, if_pos small, if_pos small]
+    rfl
+  · rw [wordConst, wordConst, same, if_neg small, if_neg small]
+    exact konstWL_measure 4 first.toNat second.toNat destination
 
 private theorem codeMeasure_concat (head tail : List II × Nat) :
     codeMeasure (head.1 ++ tail.1, max head.2 tail.2) =
@@ -147,12 +149,12 @@ theorem constWords_measure {first second : List Runner.W}
     | nil => rfl
     | cons word rest =>
       simp only [List.map_nil, List.map_cons] at same
-      exact List.noConfusion same
+      cases same
   | cons word rest ih =>
     cases second with
     | nil =>
       simp only [List.map_nil, List.map_cons] at same
-      exact List.noConfusion same
+      cases same
     | cons updated remaining =>
       simp only [List.map_cons, List.cons.injEq] at same
       simp only [constWords, codeMeasure_concat,
