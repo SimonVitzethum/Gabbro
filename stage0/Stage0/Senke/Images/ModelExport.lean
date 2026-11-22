@@ -11,7 +11,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
-  Gabbro.Grammatik.Parser.UebersetzeAllg2
+  Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Stage0.Senke
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
