@@ -4,7 +4,7 @@ public import Stage0.Senke.Images.ModelExport
 public import Stage0.Senke.Bild.Mehr.BootClone
 public import Stage0.Senke.Images.GateAnswers
 public import Runner.IR.Futex
-import Grammatik.Logik.Vertraege.Pruefer.Goal
+import Grammatik.Zielsatz.Faeden.EntryPrefix
 
 @[expose] public section
 
@@ -116,7 +116,7 @@ theorem MappedImage.dispatch_step [Kern] {output : Emitted src reserve options}
 /-- The source's one live entry, with every declared boot position already
     provisioned with its exact argument environment. -/
 abbrev imageSourceStart {D : Deklaration} (E : Einheit D) : FadenMaschine D.mitRuhe :=
-  FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) (fun i => decide (i = 0))
+  entryStart E
 
 abbrev ImageReach (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
@@ -239,7 +239,7 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
   intro ir
   refine ⟨mapped.loader, ⟨?_, ?_⟩, .nil, ?_⟩
   · intro i
-    cases i <;> simp [ir, imageSourceStart, FadenStart]
+    cases i <;> simp [ir, imageSourceStart, entryStart, FadenStart]
   · intro i retired
     cases i <;> simp [ir] at retired
   · refine ⟨[none], privateBuffers_empty mapped.emptyBuffers, rfl,

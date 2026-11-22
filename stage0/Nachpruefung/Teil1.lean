@@ -6,6 +6,7 @@ import Grammatik.Bausteine.Arena.BlockScope
 import Stage0Review.SlicesAsync
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Grammatik.Niedrig.Konstrukte.SliceCheck
+import Grammatik.Zielsatz.Faeden.EntryPrefix
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
 public import Stage0.Senke.Ausdruck.Tag
 
@@ -78,6 +79,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.irBild_checked_foreign_unit
 #print axioms Gabbro.Stage0.Emitted.goalUnit_refuses_nonempty_axioms
 #print axioms Gabbro.Stage0.MappedImage.source_start
+#print axioms Gabbro.Grammatik.Zielsatz.oneShotEntry_parts
+#print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.goal
 #print axioms Gabbro.Stage0.MappedImage.runner_prefix
 #print axioms Gabbro.Stage0.MappedImage.no_unknown_instruction
 #print axioms Gabbro.Stage0.MappedImage.dispatch_step

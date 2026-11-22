@@ -36,7 +36,7 @@ theorem oneShotEntry_parts [DecidableEq D.Fn] {E : Einheit D} {functions : List 
 
 /-- The startup thread receives the declared initial memory. Every
     worker has a prepared frame and remains dormant. -/
-def entryStart (E : Einheit D) : FadenMaschine D.mitRuhe :=
+abbrev entryStart (E : Einheit D) : FadenMaschine D.mitRuhe :=
   FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) (fun thread => decide (thread = 0))
 
 /-- A prefix before activating any worker consists of actual GX steps
