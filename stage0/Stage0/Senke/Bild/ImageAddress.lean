@@ -166,7 +166,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
   have allCode := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
   have header := codeAt_left (b := body) allCode
   have spawns : (spawnC (startScratch output.compiled.main) sites).length = 10 * output.starts.length := by
-    rw [spawnC_len, layout.hsp, List.length_map, List.length_range, List.length_map]
+    simp only [spawnC_len, layout.hsp, List.length_map, List.length_range, Emitted.starts]
   have rootCode := codeAt_right
     (a := spawnC (startScratch output.compiled.main) sites ++
       startC output.image.A output.compiled.main output.image.depth 231 true) header
@@ -189,13 +189,14 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     have limit := layout.hfit
     have reserved := Nat.le_mul_of_pos_right output.image.Ks
       (Nat.succ_pos ((output.starts.map (·.1)).length))
+    simp only [List.length_map, Emitted.starts] at allocation reserved
     omega
 
 /-- The first instruction of a declared child actually writes the image's
     depth word to its own slot 2, advances its PC and preserves all other
     thread views. The shared memory has not flushed that store. -/
 theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
-    {before : Runner.Mach.Cfg imageTSO (Runner.Mach.Res T)} {index : Nat}
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
     {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
     (declared : output.starts[index]? = some root)
     (loaded : BytesAt (before.ms.1.view (index + 1)) codeBase (output.image.code.flatMap encII)) :
@@ -222,9 +223,9 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
   have writable : Runner.Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f 2))) 8 = true := by
     rw [slotNumber, ← Runner.Beweis.foldl_wr (before.ms.1.buf (index + 1)) before.ms.1.m]
     exact frame.wr 2 enough
-  obtain ⟨after, prefix, memory, view, others⟩ :=
+  obtain ⟨after, run, memory, view, others⟩ :=
     tso_const_prefix (before := imageToTSO before) running instruction writable
-  refine ⟨after, tso_silent_prefix_image prefix rfl, memory, ?_, others⟩
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
   rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))]
 
