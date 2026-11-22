@@ -28,6 +28,9 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralNestedRecord_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralTyped_low
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLocal_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayArgument_lower
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTypedArray_low
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
@@ -105,6 +108,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_admit_scope
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
 #print axioms Gabbro.Stage0.Senke.BildMehr.SCMemoryPrefix.consume
+#print axioms Gabbro.Stage0.Senke.BildMehr.SCMemoryPrefix.no_terminal
 #print axioms Gabbro.Stage0.Senke.BildMehr.StarM.sc_reference
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation

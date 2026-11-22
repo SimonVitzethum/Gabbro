@@ -243,6 +243,15 @@ theorem specLiteralArrayField_erfuellbar (records : List URecord) (values : List
   | cons value rest ih =>
     simp only [List.length_cons, List.foldr_cons, specLiteralFieldFits, specPrimitiveLiteralFieldFits, ih, Bool.and_self]
 
+private theorem specBooleanArrayFits (ctx : UCtx) (values : List Bool) :
+    specArrayArgumentFits ctx (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
+      (.arr .bool values.length) = true := by
+  induction values with
+  | nil => rfl
+  | cons value rest ih =>
+    simp only [List.length_cons, List.foldr_cons, specArrayArgumentFits, specLiteralFieldFits,
+      specPrimitiveLiteralFieldFits, ih, Bool.and_self]
+
 theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (value : Bool)
     (booleanField : schema.fields = [(field, Ty.bool)]) (records : List URecord)
     (declared : schema ∈ records) :
@@ -289,7 +298,7 @@ theorem specArrayLiteral_erfuellbar (ctx : UCtx) (values : List Bool)
   have read : uRechne ctx (uWertBlatt ctx) array = .ok literal := by
     simp only [array, uRechne, uArraySides_booleans ctx values _ rfl, literal]
   refine ⟨?_, ?_⟩
-  · simp only [uSpecArrayArgument, uWertBody, read, literal, specLiteralArrayField_erfuellbar,
+  · simp only [uSpecArrayArgument, uWertBody, read, literal, specBooleanArrayFits,
       bind, Except.bind, ite_true, pure, Except.pure]
   · simp only [uWertBody, uRechne, specFound, argFound, typed, read,
       bind, Except.bind, pure, Except.pure]
@@ -301,13 +310,81 @@ theorem specLiteralTyped_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
     (valid : specLiteralFieldFits u.records literal type = true) :
     ∃ value : Expr (declOf u) Γ Λ type, lowWertE u Γ Λ fn er (.typed type literal) = .ok ⟨type, value⟩ := by
   obtain ⟨value, read⟩ := (specLiteralField_lower u Γ Λ fn er type literal gate valid).2
-  exact ⟨value, by simp only [lowWertE, read, Except.map]⟩
+  exact ⟨value, by simp only [lowWertE, read]⟩
 
-/-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
-theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
-    (er : Option Ty) (ty : Ty) (raw : USide) :
-    lowWertE u Γ Λ fn er (.typed ty raw) = (lowLit ty raw).map (⟨ty, ·⟩) := by
-  rw [lowWertE]
+/-- A typed predicate array uses the same canonical checking mode as
+    an ordinary array argument. Closed literals also use their existing
+    literal reader. Both paths have the declared array type. -/
+theorem specTypedArray_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (fn : UFn) (er : Option Ty) (element : Ty) (count : Nat) (raw : USide)
+    (term : Expr (declOf u) Γ Λ (.arr element count))
+    (checked : lowWertAtE u Γ Λ fn er (.arr element count) raw = .ok term) :
+    ∃ value : Expr (declOf u) Γ Λ (.arr element count),
+      lowWertE u Γ Λ fn er (.typed (.arr element count) raw) = .ok ⟨.arr element count, value⟩ := by
+  cases literal : lowLit (u := u) (Γ := Γ) (Λ := Λ) (.arr element count) raw with
+  | ok value => exact ⟨value, by simp only [lowWertE, literal]⟩
+  | error diagnostic => exact ⟨term, by simp only [lowWertE, literal, checked, Except.map]⟩
+
+/-- Resolved lexical elements and checked literals keep their declared
+    element types through each ordinary dependent array constructor. -/
+theorem specArrayArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (fn : UFn) (er : Option Ty) (ctx : UCtx) (type : Ty) (raw : USide) (gate : u.exportGate = .ok ())
+    (scope : ctx.records = u.records)
+    (lexical : ∀ name type, specArrayArgumentFits ctx (.param name) type = true →
+      ∃ variable : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var variable))
+    (valid : specArrayArgumentFits ctx raw type = true) :
+    ∃ term : Expr (declOf u) Γ Λ type, lowWertAtE u Γ Λ fn er type raw = .ok term := by
+  cases raw with
+  | param name =>
+    obtain ⟨variable, read⟩ := lexical name type valid
+    exact ⟨.var variable, read⟩
+  | arrCons head tail =>
+    cases type <;> try (simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid)
+    case arr element count =>
+      cases count with
+      | zero => simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid
+      | succ count =>
+        have accepted := Bool.and_eq_true_iff.mp (show
+          (specArrayArgumentFits ctx head element && specArrayArgumentFits ctx tail (.arr element count)) = true from valid)
+        obtain ⟨first, readFirst⟩ :=
+          specArrayArgument_lower fn er ctx element head gate scope lexical accepted.1
+        obtain ⟨rest, readRest⟩ :=
+          specArrayArgument_lower fn er ctx (.arr element count) tail gate scope lexical accepted.2
+        exact ⟨.arrCons first rest, by simp only [lowWertAtE, readFirst, readRest]⟩
+  all_goals
+    apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
+    simpa only [specArrayArgumentFits, scope] using valid
+termination_by sizeOf raw
+decreasing_by all_goals simp_wf <;> omega
+
+/-- A source array literal can mix a run-time Boolean and a literal
+    without losing either type. The actual canonical array retains the
+    variable, rather than folding the argument at the caller. -/
+theorem specArrayLocal_erfuellbar (ctx : UCtx) (name : String)
+    (u : UProg) (fn : UFn) (Λ : List (Res (declOf u))) :
+    let scope := { ctx with names := [name], types := [.bool], kinds := [.bool], unknownRanges := [] }
+    let declaration := { fn with params := [(name, .bool)], kinds := [.bool] }
+    let raw := USide.arrCons (.param name) (.arrCons (.truth false) .arrNil)
+    uSpecArrayArgument scope (.arr .bool 2) (.ext .array [] [.variable name, .fls]) = .ok () ∧
+    lowWertE u [.bool] Λ declaration none (.typed (.arr .bool 2) raw) =
+      .ok ⟨.arr .bool 2, .arrCons (.var .here) (.arrCons .fls .arrNil)⟩ := by
+  intro scope declaration raw
+  have same : strEq name name = true := by simp only [strEq, BEq.rfl]
+  have source : uWertBody scope (.ext .array [] [.variable name, .fls]) = .ok raw := by
+    simp [scope, raw, uWertBody, uRechne, uArraySides, uRecordSide,
+      uParamNr, uParamNrAux, same, bind, Except.bind, pure, Except.pure] <;> rfl
+  constructor
+  · simp only [uSpecArrayArgument, source, bind, Except.bind, specArrayArgumentFits, raw,
+      specLiteralFieldFits, specPrimitiveLiteralFieldFits, scope, List.contains_nil, Bool.not_false,
+      uValueType, List.findIdx?_cons, same, ite_true, Option.bind_some, List.getElem?_cons_zero,
+      decide_true, Bool.and_self, pure, Except.pure]
+  · have parameter : lowWertAtE u [.bool] Λ declaration none .bool (.param name) = .ok (.var .here) := by
+      simp only [lowWertAtE, lowWertE, declaration, lowParamWert, paramPos, BEq.rfl,
+        ite_true, List.getElem?_cons_zero, Option.isSome_none, lowVar, ↓reduceDIte, fitW]
+    have truth : lowWertAtE u [.bool] Λ declaration none .bool (.truth false) = .ok .fls := by
+      rw [lowWertAtE, lowWertE]
+      rfl
+    simp only [lowWertE, raw, lowLit, lowWertAtE, parameter, truth, Except.map]
 
 /-- Nominal literal construction retains every identity, schema and field-type check. -/
 theorem lowLit_product (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))

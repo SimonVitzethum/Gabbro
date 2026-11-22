@@ -49,6 +49,16 @@ decreasing_by
       omega
     | omega
 
+/-- An array constructor can also read immutable or mutable lexical
+    values of the declared element type. Each nested array preserves
+    its own length and type, including empty tails. -/
+def specArrayArgumentFits (ctx : UCtx) : USide → Ty → Bool
+  | .arrCons head tail, .arr element (length + 1) =>
+    specArrayArgumentFits ctx head element && specArrayArgumentFits ctx tail (.arr element length)
+  | .param name, expected =>
+    !ctx.unknownRanges.contains name && decide (uValueType ctx (.param name) = some expected)
+  | value, expected => specLiteralFieldFits ctx.records value expected
+
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
 def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
@@ -65,7 +75,7 @@ def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
     An array slice uses the element type and extent of its checked base. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .built "#spec-array" [_, _, _], .typed type literal =>
-    if specLiteralFieldFits ctx.records literal type then some type else none
+    if specArrayArgumentFits ctx literal type then some type else none
   | .call name _, .product identity _ fields => uSpecLiteralRecordType ctx name identity fields
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
   | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
@@ -311,7 +321,7 @@ theorem specIndexedFieldArgument_erfuellbar (field : String) (target : Ty)
     it is empty or its elements are independently narrower. -/
 def uSpecArrayArgument (ctx : UCtx) (expected : Ty) (argument : SExpr) : Except String Unit := do
   let value ← uWertBody ctx argument
-  if specLiteralFieldFits ctx.records value expected then pure ()
+  if specArrayArgumentFits ctx value expected then pure ()
   else throw "spec array literal does not fit its declared element type or length"
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.

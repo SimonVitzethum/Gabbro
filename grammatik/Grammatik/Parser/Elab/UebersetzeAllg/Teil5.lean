@@ -134,7 +134,13 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowWertE u Γ Λ fn er a, zahlVon (lowWertE u Γ Λ fn er i), lowWertE u Γ Λ fn er v with
     | .ok wa, .ok wi, .ok wv => updW wa wi wv
     | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
-  | .typed τ s => (lowLit τ s).map (⟨τ, ·⟩)
+  | .typed τ s =>
+    match lowLit τ s with
+    | .ok term => .ok ⟨τ, term⟩
+    | .error error =>
+      match τ with
+      | .arr .. => (lowWertAtE u Γ Λ fn er τ s).map (⟨τ, ·⟩)
+      | _ => .error error
   | .slice base first last => (lowWertE u Γ Λ fn er base).bind (lowerSlice first last)
   | .eng s lo' hi' =>
     match lowWertE u Γ Λ fn er s with
