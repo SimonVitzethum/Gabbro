@@ -11,7 +11,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
 variable {u : UProg}
 
 def LeseZ : UStmt → Prop
-  | .bind .. | .bindMut .. | .bindB .. | .bindOpt .. | .bindCall .. | .setVar .. | .setVarB .. | .setVarOpt .. | .assign .. | .assignTab .. | .assignOpt .. | .assignTabOpt .. | .assignGlob .. | .assignGlobB .. | .call .. => True
+  | .bind .. | .bindMut .. | .bindB .. | .bindOpt .. | .bindSum .. | .bindCall .. | .setVar .. | .setVarB .. | .setVarOpt .. | .assign .. | .assignTab .. | .assignOpt .. | .assignTabOpt .. | .assignGlob .. | .assignGlobB .. | .call .. => True
   | _ => False
 
 theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : List UStmt}
@@ -22,7 +22,7 @@ theorem seqZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt} {rest : L
            (fun p => (b :: p.1, p.2.1, p.2.2))
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindOpt | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
+  case bind | bindMut | bindB | bindOpt | bindSum | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
@@ -32,7 +32,7 @@ theorem stmtsBodyZ_schritt {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}
        | some (b, fn', ns') => (stmtsBodyZ u k fn' ns' rest r).map (b :: ·)
        | none => none) := by
   cases s
-  case bind | bindMut | bindB | bindOpt | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
+  case bind | bindMut | bindB | bindOpt | bindSum | bindCall | setVar | setVarB | setVarOpt | assign | assignTab | assignOpt | assignTabOpt | assignGlob | assignGlobB | call => rfl
   all_goals cases hs
 
 theorem seqZ_schritt_some {k : Nat} {fn : UFn} {ns : BodyNames} {s : UStmt}

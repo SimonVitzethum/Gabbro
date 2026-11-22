@@ -104,6 +104,7 @@ def getragenB : UStmt → Bool
   | .bindMut .. => true
   | .bindB .. => true
   | .bindOpt .. => true
+  | .bindSum .. => true
   | .setVarOpt .. => true
   | .bindCall .. => true
   | .setVarB .. => true

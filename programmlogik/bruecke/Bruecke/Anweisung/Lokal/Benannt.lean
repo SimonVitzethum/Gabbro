@@ -39,6 +39,21 @@ theorem namedOption_sicht {u : UProg} {ft fn : UFn} (h : Sicht u ft fn)
   have hn : ns.lookup ft = ns.lookup fn := funext (BodyNames.lookup_sicht h ns)
   simp only [namedOption, optionExpr_sicht h, hn]
 
+/-- A bare tagged value (`let x = T::C;` of a case without payload, or a copy of a tagged local):
+    its ordinal case label, the value `valOf` gives every value of a bare tagged type. -/
+def namedSum (fn : UFn) (ns : BodyNames) (cs : List (Option Ty)) : USVal → Option Gabbro.Body.Expr
+  | .fall i none => if i < cs.length then some (.lit (.tagged (caseLabel i) none)) else none
+  | .var p => (ns.lookup fn p).map .name
+  | _ => none
+
+theorem namedSum_sicht {u : UProg} {ft fn : UFn} (h : Sicht u ft fn) (ns : BodyNames)
+    (cs : List (Option Ty)) (v : USVal) : namedSum ft ns cs v = namedSum fn ns cs v := by
+  cases v with
+  | var p => simp only [namedSum, BodyNames.lookup_sicht h ns p]
+  | fall i pl => cases pl <;> rfl
+  | slot _ _ _ => rfl
+  | tab _ _ _ => rfl
+
 def namedStmt (u : UProg) [FnSuche u] (fn : UFn) (ns : BodyNames) (s : UStmt) :
     Option Gabbro.Body.Stmt :=
   (stmtBody u fn s).bind (renameStep (ns.lookup fn))
@@ -83,6 +98,13 @@ def schrittB (u : UProg) [FnSuche u] (fn : UFn) (ns : BodyNames) :
         match ns.lookup fn x, namedSide u fn ns v with
         | some id, some e => some (.bindName id e, fn, ns)
         | _, _ => none
+      else none
+  | .bindSum x sidx v =>
+      if hs : sidx < u.sums.length then
+        if (u.sums.get ⟨sidx, hs⟩).spec.all Option.isNone then
+          (namedSum fn ns (u.sums.get ⟨sidx, hs⟩).spec v).map (fun e =>
+            (.bindName (ns.fresh x) e, fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec, ns.push x))
+        else none
       else none
   | s => (namedStmt u fn ns s).map (fun b => (b, fn, ns))
 
@@ -212,6 +234,24 @@ theorem schrittB_bindOpt {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
       exact ⟨hn, e, rfl, h.1.symm, h.2.1.symm, h.2.2.symm⟩
   · cases h
 
+theorem schrittB_bindSum {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
+    {x : String} {sidx : Nat} {v : USVal} {b : Gabbro.Body.Stmt}
+    (h : schrittB u fn ns (.bindSum x sidx v) = some (b, fn', ns')) :
+    ∃ (hs : sidx < u.sums.length), (u.sums.get ⟨sidx, hs⟩).spec.all Option.isNone = true ∧
+      ∃ e, namedSum fn ns (u.sums.get ⟨sidx, hs⟩).spec v = some e ∧
+      b = .bindName (ns.fresh x) e ∧
+      fn' = fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec ∧ ns' = ns.push x := by
+  simp only [schrittB] at h
+  split at h
+  · rename_i hs
+    split at h
+    · rename_i hb
+      simp only [Option.map_eq_some_iff, Prod.mk.injEq] at h
+      obtain ⟨e, he, rfl, rfl, rfl⟩ := h
+      exact ⟨hs, hb, e, he, rfl, rfl, rfl⟩
+    · cases h
+  · cases h
+
 theorem schrittB_setVarOpt {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
     {x : String} {num : Nat} {v : UOpt} {b : Gabbro.Body.Stmt}
     (h : schrittB u fn ns (.setVarOpt x num v) = some (b, fn', ns')) :
@@ -256,7 +296,8 @@ theorem schrittB_stmt {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
     (hbb : ∀ x v, s ≠ .bindB x v) (hvb : ∀ x v, s ≠ .setVarB x v)
     (hcall : ∀ x g args, s ≠ .bindCall x g args)
     (hopt : ∀ x num v, s ≠ .bindOpt x num v)
-    (hsetopt : ∀ x num v, s ≠ .setVarOpt x num v) :
+    (hsetopt : ∀ x num v, s ≠ .setVarOpt x num v)
+    (hsum : ∀ x sidx v, s ≠ .bindSum x sidx v := by intro _ _ _ h; cases h) :
     namedStmt u fn ns s = some b ∧ fn' = fn ∧ ns' = ns := by
   have he : (namedStmt u fn ns s).map (fun b => (b, fn, ns)) = some (b, fn', ns') := by
     cases s
@@ -268,6 +309,7 @@ theorem schrittB_stmt {u : UProg} {fn fn' : UFn} {ns ns' : BodyNames}
     case bindCall x g args => exact False.elim (hcall x g args rfl)
     case bindOpt x num v => exact False.elim (hopt x num v rfl)
     case setVarOpt x num v => exact False.elim (hsetopt x num v rfl)
+    case bindSum x sidx v => exact False.elim (hsum x sidx v rfl)
     all_goals exact h
   cases hb : namedStmt u fn ns s with
   | none => rw [hb] at he; cases he

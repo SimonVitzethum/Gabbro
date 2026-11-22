@@ -147,6 +147,19 @@ theorem laufEndSeq_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getrage
       obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindOpt_named_sim (x := x) hev heB hU S.tab σ ρ s hW hL
       exact endZiel_bind_G hstep (fun w => Int.le_refl _)
         (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
+    case bindSum x sidx v =>
+      obtain ⟨bT, fT', ns', ys, ht, hy, rfl⟩ := seqZ_schritt_some hbs (by exact True.intro)
+      obtain ⟨hs, hbare, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindSum ht
+      obtain ⟨hx, hF'⟩ := bindFrischL_bindSum hF
+      obtain ⟨ev, q, hev, hq, rfl⟩ := lowEndL_bindSum_ok (hs := hs) hlow
+      have heB := (namedSum_sicht hS ns _ v).symm.trans heT
+      have IH := ih n (Nat.lt_succ_self n) k ss (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec)
+        (fT.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) (ns.push x) q rest ys restZ used (hU.bindSum sidx hbare hx)
+        (hS.bindSum x sidx _) hmemss (by rw [protectedNames_mitSum]; exact hF') hm hq hy
+      refine ⟨IH.1, IH.2.1.trans (List.suffix_cons _ _), fun σ ρ s hW hL => ?_⟩
+      obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindSum_named_sim (x := x) hev heB hU σ ρ s hW hL
+      exact endZiel_bind_G hstep (fun w => Int.le_refl _)
+        (IH.2.2 _ _ ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL')
     case matchWhyBeg x =>
       obtain ⟨count, e, arms, tailZ, allocated, ys, he, hAZ, hYZ, rfl⟩ := seqZ_reason_some hbs
       obtain ⟨id, ht, hid, rfl⟩ := reasonSubject_some he

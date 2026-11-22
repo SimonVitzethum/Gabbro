@@ -135,6 +135,20 @@ theorem lauf_G {P : Programm (declOf u)} (G : GesenktC u C P) (S : Getragen u C)
           ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
         exact laufZiel_schritt_teilB (bind_lauf O passes R ev rest σ ρ) (fun ρB _ => hstep ρB)
           (fun w => Int.le_refl _) IH
+      case bindSum x sidx v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨hs, hbare, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindSum hstep0
+        obtain ⟨hx, hF'⟩ := bindFrischL_bindSum hF
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindSum_ok c (hs := hs) hlow
+        have heB := (namedSum_sicht hS ns _ v).symm.trans heT
+        obtain ⟨bv, hstep, hWl, hL'⟩ := lowBindSum_named_sim (x := x) hev heB hU σ ρ s hW hL
+        have IH := lauf_G G S c hc O passes R hRR r n k ss (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec)
+          (fT.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) (ns.push x) rest bs' (hU.bindSum sidx hbare hx)
+          (hS.bindSum x sidx _) hmemss (by rw [protectedNames_mitSum]; exact hF') hrest hbs' _ _
+          ⟨s.world, Gabbro.Body.bindLocal s.local' (ns.fresh x) bv⟩ hWl hL'
+        exact laufZiel_schritt_teilB (bind_lauf O passes R ev rest σ ρ) (fun ρB _ => hstep ρB)
+          (fun w => Int.le_refl _) IH
       case loopBeg x tab inv =>
         obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow

@@ -84,6 +84,15 @@ theorem statisch_G (S : Getragen u C) (c : Fin u.fns.length) (hc : C c) (ρB : G
           (fT.mitOpt x num ((declOf u).count ⟨num, hn⟩)) (ns.push x) rest bs'
           (by rw [mitOpt_ctx]; exact congrArg (List.cons _) hΓ)
           (hS.bindOpt x num ((declOf u).count ⟨num, hn⟩)) hmemss hrest hbs' hFss)
+      case bindSum x sidx v =>
+        obtain ⟨bB, fT', ns', bs', hstep0, hbs', rfl⟩ :=
+          stmtsBodyZ_schritt_some hbs (by exact True.intro)
+        obtain ⟨hs, hbare, eT, heT, rfl, rfl, rfl⟩ := schrittB_bindSum hstep0
+        obtain ⟨ev, rest, hev, hrest, rfl⟩ := lowBodyF_bindSum_ok c (hs := hs) hlow
+        exact .bindName _ _ _ (statisch_G S c hc ρB r n k ss (fn.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec)
+          (fT.mitSum x sidx (u.sums.get ⟨sidx, hs⟩).spec) (ns.push x) rest bs'
+          (by rw [mitSum_ctx]; exact congrArg (List.cons _) hΓ)
+          (hS.bindSum x sidx _) hmemss hrest hbs' hFss)
       case loopBeg x tab inv =>
         obtain ⟨rfl, tZ, bodyB, tailZ, allocated, ys, htZ, hBodyZ, hTailZ, rfl⟩ := stmtsBodyZ_loop_some hbs
         obtain ⟨Λ₁, st, tail, q, hStruct, hQ, rfl⟩ := lowBodyF_loop_ok hlow

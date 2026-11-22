@@ -32,6 +32,9 @@ theorem schrittB_used {fn fn' : UFn} {ns ns' : BodyNames} {st : UStmt}
   case bindOpt x num v =>
     obtain ⟨hn, e, _, _, _, rfl⟩ := schrittB_bindOpt h
     exact BodyNames.used_push ns x
+  case bindSum x sidx v =>
+    obtain ⟨_, _, e, _, _, _, rfl⟩ := schrittB_bindSum h
+    exact BodyNames.used_push ns x
   case setVarOpt x num v =>
     obtain ⟨id, e, _, _, _, _, rfl⟩ := schrittB_setVarOpt h
     exact fun _ hx => hx
