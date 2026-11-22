@@ -190,8 +190,7 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
     (declared : i ≤ output.starts.length) (inside : index < output.image.Ks)
     (successor : ImageRootInstruction output i next)
     (apart : ∀ start, E.starts[i]? = some start →
-      ∀ n, n < (encodeEnv output.image.Y start.2).length → index ≠ FB + FB + n)
-    (layout : LayIn output.image.Y.withIdle) :
+      ∀ n, n < (encodeEnv output.image.Y start.2).length → index ≠ FB + FB + n) :
     let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * i))
     let address := slot fp (BitVec.ofNat 64 index)
     before.ths[i]? = some (some (wr64 address word next)) →
@@ -234,7 +233,7 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
     room.trans output.stackReservation_bounds.2.le
   have preserve {m : Mem} (world : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
       WeltAt (Mem.write m address 8 word.toNat) output.image.Y.withIdle (state.m.speicher.welt []) :=
-    weltAt_stab layout room _ _ world (agree_write bound (Nat.zero_le _) inside _)
+    weltAt_stab output.layout_checked.1.withIdle room _ _ world (agree_write bound (Nat.zero_le _) inside _)
   refine ⟨.ask running rfl rfl answered rfl, pending_root_progress partition pending rfl phase views buffered ?_ ?_⟩
   · rw [show after.ms = memory from rfl, bytes]
     exact preserve

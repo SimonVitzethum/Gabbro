@@ -177,7 +177,6 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
       output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
     (registry : Senke.Faeden.ImageTicketStates output.image.Y.withIdle before.ms.1.m state.m tickets)
-    (synchronized : Senke.LaySync output.image.Y.withIdle)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (allocated : before.ths.length ≤ output.starts.length + 1)
     (pastLoader : before.ths[0]? ≠ some (some Runner.Beweis.t4))
@@ -188,6 +187,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
       Senke.Faeden.ImageTicketStates output.image.Y.withIdle memory.1.m state.m tickets := by
   intro after
   obtain ⟨body, buffers, length, registered, roots⟩ := matched
+  have synchronized := output.layout_checked.2.2.withIdle
   have belowLocks : ∀ thread byte, footprint thread byte → byte.toNat < output.image.Y.hi := by
     intro thread byte owned
     rcases placed thread byte owned with stack | ⟨_, world⟩
@@ -333,7 +333,6 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (agree : let x := positions thread
       OrtGleich carriers x.σ (state.m.speicher.welt x.σ.spur))
     (free : FreiA (positions thread).Agl state.m (positions thread).thr)
-    (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
     ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O history after next ∧
@@ -342,7 +341,7 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
       ∀ issuer, offen (next.m.faeden issuer).spur = offen (state.m.faeden issuer).spur := by
   obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, holdings, trace, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
-      quiet control boundary agree free inside separated covers permissions
+      quiet control boundary agree free output.layout_checked.1.withIdle output.layout_checked.2.1.withIdle covers permissions
   let published := { state with m := machine }
   have retired (i : Nat) (inactive : after.ths[i]? = some none) :
       published.m.faeden i = state.m.faeden i := by
