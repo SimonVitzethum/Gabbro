@@ -221,6 +221,27 @@ theorem Emitted.SpawnPrefix.follow_silent {index : Nat} (declared : index < outp
     obtain ⟨residual, ready, remaining⟩ := activePhase.silent_step declared active step first (stable earlier silent)
     exact ih rest (earlier.trans (.ofStep silent)) ready remaining
 
+/-- A successful guard may already have started the following spawn
+    site. Its original boundary stays available for the same prefix
+    proof used at the preceding site. -/
+theorem Emitted.next_spawn_prefix {index : Nat} {view : Mem} {id : W}
+    (nextDeclared : index + 1 < output.starts.length) (positive : 0 < id.toInt)
+    (table : TabInv L0 view) (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
+    let guard := nxt ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+    let result := Mem.write view (slot fp (BitVec.ofNat 64 (startScratch output.compiled.main + 2))) 8 id.toNat
+    ∀ {control : Res T} {current : Mem}, BildMehr.SoloLauf guard result control current →
+      BildMehr.HostFreeControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
+      output.SpawnPrefix (index + 1) control current := by
+  intro fp pc guard result control current path
+  rcases output.clone_guard_progress (Nat.lt_of_succ_lt nextDeclared) positive table loaded frame path with
+    inside | ⟨boundary, continued, invariant, code, wholeFrame⟩
+  · exact .inl inside
+  · exact .inr ⟨boundary, current, invariant, code, wholeFrame, continued,
+      fun byte _ => BildMehr.GleichAt.refl _ byte⟩
+
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
     let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩

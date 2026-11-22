@@ -169,7 +169,7 @@ end Gabbro.Stage0.Senke.BildMehr
 
 namespace Gabbro.Stage0
 
-open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR
+open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR Runner.Beweis
 
 /-- A positive reply selects the successor in the actual startup
     header. Every partial memory run stays in the same scope until its
@@ -177,6 +177,7 @@ open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR
 theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     (output : Emitted src reserve options) {index : Nat} {view : Mem} {id : W}
     (declared : index < output.starts.length) (positive : 0 < id.toInt)
+    (table : TabInv L0 view)
     (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
     (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
     let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
@@ -188,7 +189,8 @@ theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : N
     ∀ {control current}, SoloLauf guard result control current →
       HostFreeControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
       ∃ boundary, SoloLauf next boundary control current ∧
-        BytesAt boundary codeBase (output.image.code.flatMap encII) ∧ FrameOK boundary fp output.image.Ks := by
+        TabInv L0 boundary ∧ BytesAt boundary codeBase (output.image.code.flatMap encII) ∧
+        FrameOK boundary fp output.image.Ks := by
   intro pc fp scratch guard next result control current path
   obtain ⟨code, far, room, small, _, childFits⟩ := output.loaded_spawn_site loaded declared
   have fpValue : fp.toNat = output.image.fp0 := by
@@ -220,12 +222,16 @@ theorem Emitted.clone_guard_progress [kernel : Kern] {src : String} {reserve : N
     internal | ⟨boundary, complete, suffix, _, unchanged⟩
   · exact .inl (Eq.mp (congrArg (fun written => HostFreeControl reads written control) frameRegion) internal)
   · obtain ⟨rd, wr⟩ := StarM.permissions complete
+    have inFrame : scratch + 2 < output.image.Ks := by omega
     have answerFrame : Agree fp 0 output.image.Ks view result :=
-      agree_write frame.room (Nat.zero_le _) (by omega : scratch + 2 < output.image.Ks) _
+      agree_write frame.room (Nat.zero_le _) inFrame _
     have guardFrame : Agree fp 0 output.image.Ks result boundary :=
       ⟨rd, wr, fun byte outside => (unchanged byte outside).1⟩
     have kept := answerFrame.trans guardFrame
-    refine .inr ⟨boundary, suffix, ?_, frame.agree kept⟩
+    have wrote : view.wr64 (slot fp (BitVec.ofNat 64 (scratch + 2))) id = some result :=
+      Mem.wr64_some (frame.wr _ inFrame)
+    obtain ⟨_, installed, _⟩ := StarM.sc_reference complete (table.keep (wr64_keeps wrote))
+    refine .inr ⟨boundary, suffix, installed, ?_, frame.agree kept⟩
     intro byte present
     have below := output.code_byte_before_stacks present
     have outside : ¬ inSlots fp 0 output.image.Ks (BitVec.ofNat 64 (codeBase + byte)) := by
