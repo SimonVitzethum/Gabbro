@@ -1,34 +1,26 @@
 module
-public import Bruecke.Kette.Andocken.Bild
-public import Bruecke.Vorlage.Formen
-public import Bruecke.Vorlage.Zeige
+public import Bruecke.Kette.Andocken.Zertifikat
 public import Grammatik.Parser.Elab.UebersetzePipeline
 @[expose] public section
 
 /-!
-# GabbroV's generator: the Lean files of a unit's duties
+# GabbroV's generator: the Lean files of a unit's certificate
 
-`dateien modul src` runs Stage 0's front end on the source text once (`stufe0Einheit`: the unit
-Stage 0 compiles, without the checker that follows it) and writes the duties of the unit as Lean modules under the module
-prefix `modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`). The unit is pinned AS DATA (owner,
-2026-11-21): the files never evaluate the front end in the kernel; the generic theorem
-`nutzer_aus_stage0` takes `c : Compiled quelle` with `c.unit = u` as its named premise, and the module
-`M/Pruefung.lean` checks it by running Stage 0's front end (`stufe0Einheit`, `#guard`).
-
-Layout, so that units of 500 000 lines stay usable (every file small, Lake builds them in
-parallel, no step quantifies over function positions):
+`dateien modul src` runs Stage 0's front end on the source text once (`stufe0Einheit`, the unit
+Stage 0 compiles) and writes the certificate of that unit as Lean modules under the module prefix
+`modul` (the tool `gabbrov`, `Vorlage/Haupt.lean`). The duties are the model's certificate
+(`LogikPflichten`, exactly premise (b) by `logikPflichten_iff`) over the program the lowering builds
+from the unit: ONE theorem (`nutzerA_aus_ziele`) covers every language form; nothing is read into
+another language and no form is refused. The unit is pinned as data; the run facts `c.unit = u` and
+`ohneAltGlobalB c.expanded` are facts of Stage 0's run, checked in `M/Pruefung.lean`.
 
 * `M/Quelle.lean`        the source text, as pieces;
-* `M/Daten/S<k>.lean`    the elaborated functions of chunk `k` (`f<i> : UFn`) and their list;
-* `M/Daten.lean`         the unit `u` (its function list is the append of the chunks) and the rank;
-* `M/Pflicht/F<i>.lean`  for function `i`: its Body as GabbroV reads it, printed as a Lean term and
-  in source notation, the reading equation, the decided checks and the goal `ziel<i>`;
-* `M/Beweis/F<i>.lean`   YOUR proof of `ziel<i>`; written once as a stub, never overwritten;
-* `M/Sammlung/S<k>.lean` the duties of chunk `k` assembled;
-* `M.lean`               the unit checks and premise (b) of the goal theorem.
-
-A function or a check outside the bridge is a NAMED refusal in the files; premise (b) is then
-not stated.
+* `M/Daten/S<k>.lean`    the elaborated functions of chunk `k` and their list;
+* `M/Daten.lean`         the unit `u` and its length;
+* `M/Pflicht/F<i>.lean`  the duty `ziel<i>` of function `i`: its logic (`ZielF`);
+* `M/Beweis/F<i>.lean`   YOUR proof of `ziel<i>`; written once, never overwritten;
+* `M/Sammlung/S<k>.lean` the duties of chunk `k` collected;
+* `M.lean`               premise (b) of Stage 0's image theorem (`nutzerBild`).
 -/
 
 namespace Gabbro.Bruecke.Vorlage
@@ -102,7 +94,7 @@ def fuss (modul : String) : String := "end " ++ modul ++ "\n"
 def quelleDatei (modul src : String) : Datei :=
   let zeilen := String.intercalate ",\n   " ((stuecke src).map fun s => literal s ++ ".toList")
   { pfad := modul.replace "." "/" ++ "/Quelle"
-    text := kopf modul ["Bruecke.Kette.Einheit"] "The source text of the unit, byte for byte (written by `gabbrov`)." ++
+    text := kopf modul ["Bruecke.Kette.Andocken.Zertifikat"] "The source text of the unit, byte for byte (written by `gabbrov`)." ++
       "def zeilen : List (List Char) :=\n  [" ++ zeilen ++ "]\n\n" ++
       "def quelle : String := String.ofList zeilen.flatten\n\n" ++ fuss modul }
 
@@ -114,74 +106,27 @@ def einheitText (u : UProg) (fnsAusdruck : String) : String :=
 
 def fnName (i : Nat) : String := "f" ++ toString i
 
-/-- The depth of the function tables: about log₂ of the number of functions, so buckets stay short. -/
-def tabellenTiefe (n : Nat) : Nat := Nat.log2 (n + 1) + 1
-
-/-- A table printed as a Lean term; an entry is printed by `eintrag` (a function constant or a rank). -/
-def tabellenText {α : Type} (eintrag : α → String) : Tabelle α → String
-  | .leer => "Gabbro.Bruecke.Tabelle.leer"
-  | .knoten e l r => "(Gabbro.Bruecke.Tabelle.knoten [" ++
-      String.intercalate ", " (e.map fun p => "(" ++ literal p.1 ++ ", " ++ eintrag p.2 ++ ")") ++ "] " ++
-      tabellenText eintrag l ++ " " ++ tabellenText eintrag r ++ ")"
-
-def tabelleModul (modul : String) : String := modul ++ ".Tabelle"
-
-/-- The search tables of the unit: the function table, checked once against `u.fns`, the fast
-    lookup the duty modules compute with, and the ranks. -/
-def tabelleDatei (modul : String) (u : UProg) (anzahl : Nat) (rang : List (String × Nat)) : Datei :=
-  let d := tabellenTiefe u.fns.length
-  let fnTab : Tabelle Nat := Tabelle.bauenK d (u.fns.zipIdx.map fun (f, i) => (namensHash f.name, f.name, i))
-  let rangTab : Tabelle Nat := Tabelle.bauenK d (rang.map fun (n, r) => (namensHash n, n, r))
-  let ks := List.range anzahl
-  let dreierAusdruck := balanciert "++" "[]" 64 (ks.map fun k => "dreier" ++ toString k)
-  let stueckAusdruck := balanciert "++" "[]" 64 (ks.map fun k => "stueck" ++ toString k)
-  let beweis := baum (fun a b => "(tabellenSchluessel_verbinde " ++ a ++ " " ++ b ++ ")") "rfl" 64
-    (ks.map fun k => "dreier" ++ toString k ++ "_eq")
-  { pfad := (tabelleModul modul).replace "." "/"
-    text := kopf modul [modul ++ ".Daten"] "The search tables of the unit (written by `gabbrov`)." ++
-      "def tiefe : Nat := " ++ toString d ++ "\n\n" ++
-      "def dreier : List (Nat × String × UFn) := " ++ dreierAusdruck ++ "\n\n" ++
-      "/-- The keyed entries are those of `u.fns` (each chunk checked its own keys). -/\n" ++
-      "theorem dreier_eq : dreier = tabellenSchluessel u.fns := by\n" ++
-      "  show " ++ dreierAusdruck ++ " = tabellenSchluessel " ++ stueckAusdruck ++ "\n" ++
-      "  exact " ++ beweis ++ "\n\n" ++
-      "/-- The functions by name: a binary trie over the hash of the name. -/\n" ++
-      "def tabelle : Gabbro.Bruecke.Tabelle UFn :=\n  " ++ tabellenText fnName fnTab ++ "\n\n" ++
-      "/-- Checked once, by bit arithmetic only: the table is built from the keyed entries. -/\n" ++
-      "theorem tabelle_eq : tabelle = Tabelle.bauenK tiefe dreier := by\n  with_unfolding_all rfl\n\n" ++
-      "/-- The callee lookup the duty modules compute with (`zuBodyZ_suche`, `meetsU_suche`). -/\n" ++
-      "@[reducible] def schnell : FnSuche u := ⟨Tabelle.suche tiefe tabelle⟩\n\n" ++
-      "theorem schnell_such (n : String) : Tabelle.suche tiefe tabelle n = standardSuche u n :=\n" ++
-      "  tabelle_such tabelle_eq dreier_eq n\n\n" ++
-      "/-- The rank of every function (any rank under which every call descends will do). -/\n" ++
-      "def rangTabelle : Gabbro.Bruecke.Tabelle Nat :=\n  " ++ tabellenText toString rangTab ++ "\n\n" ++
-      "def rk (n : String) : Nat := (Tabelle.suche tiefe rangTabelle n).getD 0\n\n" ++ fuss modul }
 
 def stueckModul (modul : String) (k : Nat) : String := modul ++ ".Daten.S" ++ toString k
 
 def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
   { pfad := (stueckModul modul k).replace "." "/"
-    text := kopf modul ["Bruecke.Kette.Einheit"]
+    text := kopf modul ["Bruecke.Kette.Andocken.Zertifikat"]
         ("The elaborated functions of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
       String.join (fs.map fun (i, f) =>
         "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  " ++ breit (repr f) ++ "\n\n") ++
       "def stueck" ++ toString k ++ " : List UFn := [" ++
-        String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++
-      "/-- The keyed entries of the chunk for the function table (key = hash of the name). -/\n" ++
-      "def dreier" ++ toString k ++ " : List (Nat × String × UFn) := [" ++
-        String.intercalate ", " (fs.map fun (i, f) =>
-          "(" ++ toString (namensHash f.name) ++ ", " ++ literal f.name ++ ", " ++ fnName i ++ ")") ++ "]\n\n" ++
-      "theorem dreier" ++ toString k ++ "_eq : dreier" ++ toString k ++ " = tabellenSchluessel stueck" ++
-        toString k ++ " := by\n  with_unfolding_all rfl\n\n" ++ fuss modul }
+        String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++ fuss modul }
 
 def datenDatei (modul : String) (u : UProg) (anzahl : Nat) : Datei :=
   let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
   { pfad := modul.replace "." "/" ++ "/Daten"
     text := kopf modul ((List.range anzahl).map (stueckModul modul))
         "The elaborated unit `u` as data (written by `gabbrov`)." ++
-      "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++ fuss modul }
+      "def u : UProg :=\n  " ++ einheitText u (balanciert "++" "[]" 64 namen) ++ "\n\n" ++
+      "theorem laenge : u.fns.length = " ++ toString u.fns.length ++ " := rfl\n\n" ++ fuss modul }
 
-/-- The source contract of a function in a comment line, as far as it is printable. -/
+/-- The source contract of a function in a comment line. -/
 def vertrag (f : UFn) : String :=
   "`" ++ f.name ++ "`" ++
   (if f.needs.isEmpty then "" else ", " ++ toString f.needs.length ++ " requires clause(s)") ++
@@ -190,20 +135,16 @@ def vertrag (f : UFn) : String :=
 def pflichtModul (modul : String) (i : Nat) : String := modul ++ ".Pflicht.F" ++ toString i
 def beweisModul (modul : String) (i : Nat) : String := modul ++ ".Beweis.F" ++ toString i
 
-def pflichtDatei (modul : String) (i : Nat) (f : UFn) (body : List Gabbro.Body.Stmt) : Datei :=
+def pflichtDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
   let si := toString i
   { pfad := (pflichtModul modul i).replace "." "/"
-    text := kopf modul [tabelleModul modul] ("The duty of " ++ vertrag f ++ " (written by `gabbrov`; regenerated on every run).") ++
-      "/-- The body of `" ++ f.name ++ "` as GabbroV reads it:\n\n```\n" ++ zeigeKoerper body ++ "```\n-/\n" ++
-      "def body" ++ si ++ " : List Gabbro.Body.Stmt :=\n  " ++ breit (repr body) ++ "\n\n" ++
-      "theorem body" ++ si ++ "_eq : zuBodyZ u " ++ fnName i ++ " = some body" ++ si ++ " := by\n" ++
-        "  rw [← zuBodyZ_suche _ schnell_such]\n  with_unfolding_all rfl\n\n" ++
-      "/-- The decided checks of `" ++ f.name ++ "`. -/\n" ++
-      "theorem pruefung" ++ si ++ " : stimmigFnB u " ++ fnName i ++ " = true ∧ bindFrischB " ++ fnName i ++
-        " = true ∧ rangFnB rk " ++ fnName i ++ " = true := by\n  with_unfolding_all decide\n\n" ++
-      "/-- **What you prove about `" ++ f.name ++ "`**: from a well-formed entry state satisfying the\n" ++
-      "    precondition, under the contracts of its callees, the body ends and meets the postcondition. -/\n" ++
-      "def ziel" ++ si ++ " : Prop := @meetsU u schnell (wfU u) " ++ fnName i ++ " body" ++ si ++ "\n\n" ++ fuss modul }
+    text := kopf modul [modul ++ ".Daten"] ("The duty of " ++ vertrag f ++ " (written by `gabbrov`; regenerated on every run).") ++
+      "theorem lt" ++ si ++ " : " ++ si ++ " < u.fns.length := by rw [laenge]; decide\n\n" ++
+      "/-- **What you prove about `" ++ f.name ++ "`**: its logic over the program Stage 0 lowers from `u`\n" ++
+      "    (`ZielF`): from `requires`, every return meets `ensures` and the owed invariants, and no call\n" ++
+      "    stops on a precondition or a logic stop, at every budget, under every call meaning, oracle and\n" ++
+      "    environment move the goal theorem quantifies. Nothing else is owed. -/\n" ++
+      "def ziel" ++ si ++ " : Prop := ZielF u ⟨" ++ si ++ ", lt" ++ si ++ "⟩\n\n" ++ fuss modul }
 
 /-- The user's proof file: written once, never replaced. -/
 def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
@@ -213,119 +154,67 @@ def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
     text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
         "`. `gabbrov` writes this file once and never replaces it.") ++
       "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
-      "  intro ρ s hwf hpre\n  exact?\n\n" ++ fuss modul }
+      "  intro P fs hlow Q sp main args roots gestartet checks passes\n  exact?\n\n" ++ fuss modul }
 
 def sammlungModul (modul : String) (k : Nat) : String := modul ++ ".Sammlung.S" ++ toString k
 
-def sammlungDatei (modul : String) (k : Nat) (fs : List Nat) : Datei :=
-  let glied (i : Nat) : String :=
-    let si := toString i
-    "⟨pruefung" ++ si ++ ".1, pruefung" ++ si ++ ".2.1, pruefung" ++ si ++ ".2.2, body" ++ si ++ ", body" ++ si ++
-      "_eq, (meetsU_suche _ schnell_such _ _ _).mp beweis" ++ si ++ "⟩"
-  let beweis := fs.foldr (fun i acc => "fnPflicht_cons " ++ glied i ++ "\n    (" ++ acc ++ ")") "fnPflicht_nil"
+def indexListe (is : List Nat) : String := "[" ++ String.intercalate ", " (is.map toString) ++ "]"
+
+def sammlungDatei (modul : String) (k : Nat) (is : List Nat) : Datei :=
+  let beweis := is.foldr (fun i acc => "zielI_cons (fun _ => beweis" ++ toString i ++ ")\n    (" ++ acc ++ ")") "zielI_nil"
   { pfad := (sammlungModul modul k).replace "." "/"
-    text := kopf modul (fs.map (beweisModul modul)) ("The duties of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
-      "theorem sammlung" ++ toString k ++ " : ∀ f ∈ stueck" ++ toString k ++ ", FnPflicht u rk f :=\n  " ++
+    text := kopf modul (is.map (beweisModul modul)) ("The duties of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
+      "theorem sammlung" ++ toString k ++ " : ∀ i ∈ " ++ indexListe is ++ ", ZielI u i :=\n  " ++
         beweis ++ "\n\n" ++ fuss modul }
 
-def wurzelDatei (modul : String) (u : UProg) (anzahl : Nat) (ablehnungen : List String) : Datei :=
-  let namen := (List.range anzahl).map fun k => "stueck" ++ toString k
-  let beweise := (List.range anzahl).map fun k => "sammlung" ++ toString k
+def wurzelDatei (modul : String) (u : UProg) (stuecke : List (List Nat)) (altFrei : Bool) : Datei :=
+  let ks := List.range stuecke.length
+  let listen := stuecke.map indexListe
+  let beweis := baum (fun a b => "(zielI_append " ++ a ++ " " ++ b ++ ")") "zielI_nil" 64
+    (ks.map fun k => "sammlung" ++ toString k)
   let rumpf :=
-    if ablehnungen.isEmpty then
-      "theorem fns_eq : u.fns = " ++ balanciert "++" "[]" 64 namen ++ " := rfl\n\n" ++
-      "theorem alle : ∀ f ∈ u.fns, FnPflicht u rk f := by\n  rw [fns_eq]\n  exact " ++
-        baum (fun a b => "(fnPflicht_append " ++ a ++ " " ++ b ++ ")") "fnPflicht_nil" 64 beweise ++ "\n\n" ++
-      "theorem einheit : EinheitTeil u := ⟨by decide, by decide, by decide⟩\n\n" ++
-      "theorem pflichten : PflichtenEinheit u := ⟨einheit, rk, alle⟩\n\n" ++
-      "/-- **Premise (b) of the goal theorem** for the unit Stage 0 compiles from `quelle`. -/\n" ++
-      "theorem nutzer (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u) :\n" ++
-      "    ∃ (P : Gabbro.Grammatik.Programm (declOf u)) (fs : List (declOf u).Fn) (hn : nullB u = true),\n" ++
-      "      lowerAllg u = .ok (P, fs) ∧ Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u P hn) :=\n" ++
-      "  nutzer_aus_stage0 pflichten c hu\n\n" ++
-      (if u.locks.isEmpty && u.axs.isEmpty then
-        "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
-        "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`: the judged unit over\n" ++
-        "    the compiled program, for every axiom family, memory, entry, starts and checks. `hold` is\n" ++
-        "    checked in `Pruefung`. -/\n" ++
-        "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
-        "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
-        "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
-        "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
-        "    (checks : List (CheckDecl (declOf c.unit))) :\n" ++
-        "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
-        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
-        "  nutzerA_aus_compiled pflichten rfl rfl c hu hold Q sp args roots gestartet checks\n\n"
-       else if u.axs.isEmpty then
-        "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
-        "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`, a unit with locks:\n" ++
-        "    `hold` is checked in `Pruefung`; `hlock` is Stage 0's own lock decision (`checkUnitLock`)\n" ++
-        "    on the judged unit, which `checkUnitLogic` runs on the image's initial memory. -/\n" ++
-        "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
-        "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
-        "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
-        "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
-        "    (checks : List (CheckDecl (declOf c.unit)))\n" ++
-        "    (hlock : sperrenGeprueftB\n" ++
-        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks)\n" ++
-        "      (List.finRange c.unit.locks.length) = true) :\n" ++
-        "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
-        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
-        "  nutzerA_aus_compiled_sperren pflichten rfl c hu hold Q sp args roots gestartet checks hlock\n\n"
-       else
-        "/-! Premise (b) of Stage 0's image theorem is not stated for this unit: it declares a foreign\n" ++
-        "    body, which the bridge does not carry yet. -/\n\n")
-    else
-      "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
-        String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
+    "theorem bereich_eq : List.range " ++ toString u.fns.length ++ " = " ++
+      balanciert "++" "[]" 64 listen ++ " := rfl\n\n" ++
+    "/-- Every function's duty. -/\n" ++
+    "theorem alle : ∀ f, ZielF u f :=\n  alle_ziele laenge (by rw [bereich_eq]; exact " ++ beweis ++ ")\n\n" ++
+    (if altFrei then
+      "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
+      "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`, every language form:\n" ++
+      "    the run facts `hu` and `hold` (checked in `Pruefung`), the environment contract of the foreign\n" ++
+      "    bodies (`hax`) and Stage 0's decision of the data parts on the judged unit (`hent`). -/\n" ++
+      "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
+      "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
+      "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
+      "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
+      "    (checks : List (CheckDecl (declOf c.unit))) (hax : ∀ a, Gabbro.Grammatik.WP.AxLokalAn Q a)\n" ++
+      "    (hent : entschiedenB\n" ++
+      "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks)\n" ++
+      "      (List.finRange c.unit.locks.length) = true) :\n" ++
+      "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
+      "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
+      "  nutzerA_aus_ziele alle c hu hold Q sp args roots gestartet checks hax hent\n\n"
+     else
+      "/-! REFUSED: a postcondition reads `old` of a static; Stage 0 restores it in the compiled program,\n" ++
+      "    and the duties above are stated over the unrestored lowering. -/\n\n")
   { pfad := modul.replace "." "/"
-    text := kopf modul (["Bruecke.Kette.Andocken.Sperren", modul ++ ".Quelle", tabelleModul modul] ++
-        (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
-        ("The unit checks and premise (b) of the goal theorem (written by `gabbrov`). That `u` is the\n" ++
-         "    unit Stage 0 compiles from `quelle` is the premise `c.unit = u` of `nutzer`; the module\n" ++
-         "    `" ++ modul ++ ".Pruefung` checks it by running Stage 0's front end.") ++ rumpf ++ fuss modul }
+    text := kopf modul ([modul ++ ".Quelle", modul ++ ".Daten"] ++ ks.map (sammlungModul modul))
+        ("Premise (b) of the goal theorem for the unit Stage 0 compiles from `quelle` (written by `gabbrov`).\n" ++
+         "    That `u` is that unit is the premise `c.unit = u`; `" ++ modul ++ ".Pruefung` checks it by running\n" ++
+         "    Stage 0's front end.") ++ rumpf ++ fuss modul }
 
-/-- The check of the anchoring premise, by running Stage 0's front end; no theorem imports it. -/
+/-- The checks of the run facts, by running Stage 0's front end; no theorem imports it. -/
 def pruefungDatei (modul : String) : Datei :=
   { pfad := modul.replace "." "/" ++ "/Pruefung"
-    text := (kopf modul ["Bruecke.Kette.Andocken.Bild", modul ++ ".Quelle", modul ++ ".Daten"]
-        "Checks that `u` is the unit Stage 0's front end builds from `quelle` (written by `gabbrov`).").replace
+    text := (kopf modul ["Bruecke.Kette.Andocken.Zertifikat", modul ++ ".Quelle", modul ++ ".Daten"]
+        "Checks the run facts of `nutzerBild` by running Stage 0's front end (written by `gabbrov`).").replace
         "@[expose] public section"
-        ("meta import Bruecke.Kette.Andocken.Bild\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+        ("meta import Bruecke.Kette.Andocken.Zertifikat\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
       "#guard stufe0Einheit quelle == .ok u\n\n" ++
       "-- No postcondition reads `old` of a static (the run fact `hold` of `nutzerBild`).\n" ++
-      "#guard stufe0AltFreiB quelle\n\n" ++ fuss modul }
-
-/-- The rank of every function of an acyclic call graph, in linear time (Kahn's order): a function
-    without callees has rank 0, every other one more than the highest of its callees. Functions on a
-    cycle keep rank 0; `rangFnB` then fails for them and the generator names the refusal. The ranks
-    are data of the generated files only: `rangFnB` checks them in every function's module. -/
-def raenge (u : UProg) : List (String × Nat) := Id.run do
-  let namen : Std.HashSet String := u.fns.foldl (fun s f => s.insert f.name) {}
-  let rufe : List (String × List String) :=
-    u.fns.map fun f => (f.name, (calleesOf f).filter namen.contains)
-  let rufTafel : Std.HashMap String (List String) := rufe.foldl (fun m p => m.insert p.1 p.2) {}
-  let mut offen : Std.HashMap String Nat := {}
-  let mut rufer : Std.HashMap String (List String) := {}
-  for (n, cs) in rufe do
-    offen := offen.insert n cs.length
-    for c in cs do
-      rufer := rufer.insert c (n :: rufer.getD c [])
-  let mut rang : Std.HashMap String Nat := {}
-  let mut warte : Array String := (rufe.filter fun p => p.2.isEmpty).toArray.map (·.1)
-  let mut i := 0
-  for _ in [0:rufe.length + 1] do
-    if h : i < warte.size then
-      let n := warte[i]
-      i := i + 1
-      let r := ((rufTafel.getD n []).map fun c => rang.getD c 0 + 1).foldl max 0
-      rang := rang.insert n r
-      for k in rufer.getD n [] do
-        let o := offen.getD k 1 - 1
-        offen := offen.insert k o
-        if o == 0 then warte := warte.push k
-  return u.fns.map fun f => (f.name, rang.getD f.name 0)
+      "#guard stufe0AltFreiB quelle\n\n" ++
+      "-- The lowering accepts `u`: the duties are not vacuous.\n" ++
+      "#guard (match lowerAllg u with | .ok _ => true | .error _ => false)\n\n" ++ fuss modul }
 
 /-- **The generator.** All files of the unit of `src` under the module prefix `modul`, or the
     front end's refusal. -/
@@ -333,29 +222,15 @@ def dateien (modul src : String) : Except String (List Datei) := do
   let u ← match stufe0Einheit src with
     | .ok u => pure u
     | .error e => throw ("Stage 0's front end refuses the source: " ++ e)
+  match lowerAllg u with
+  | .error e => throw ("Stage 0's lowering refuses the unit (Stage 0 compiles no image of it): " ++ e)
+  | .ok _ => pure ()
   let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
   let stuecke := teile stueckGroesse fs
-  let anzahl := stuecke.length
-  let rang := raenge u
-  let rangTafel : Std.HashMap String Nat := rang.foldl (fun m p => m.insert p.1 p.2) {}
-  let rk : String → Nat := fun n => rangTafel.getD n 0
-  let gelesen := fs.map fun (i, f) => (i, f, zuBodyZ u f)
-  let fnAbl := gelesen.filterMap fun (_, f, b) =>
-    let gruende := (match b with | some _ => [] | none => [koerperAblehnung f]) ++
-      fnAblehnungen u f ++ (if bindFrischB f then [] else ["a local binder is not fresh"]) ++
-      (if rangFnB rk f then [] else ["recursive call (the generator states rank duties only)"])
-    if gruende.isEmpty then none else some (f.name ++ ": " ++ String.intercalate "; " gruende)
-  let einheitAbl :=
-    (if nullB u then [] else ["initial table or static memory outside the supported numeric ranges"]) ++
-    (if stimmigUnitB u then [] else stimmigAblehnungen u |>.filter (fun r => !(r.splitOn ": ").length > 1)) ++
-    (if ohneTransitionenB u then [] else ["a state declares a generated transition"])
-  let ablehnungen := einheitAbl ++ fnAbl
-  let pflichten := gelesen.filterMap fun (i, f, b) =>
-    b.map fun body => [pflichtDatei modul i f body, beweisDatei modul i f]
-  let sammlungen := if ablehnungen.isEmpty then
-      stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1)) else []
-  pure ([quelleDatei modul src, wurzelDatei modul u anzahl ablehnungen, datenDatei modul u anzahl,
-      tabelleDatei modul u anzahl rang, pruefungDatei modul] ++
+  let pflichten := fs.map fun (i, f) => [pflichtDatei modul i f, beweisDatei modul i f]
+  let sammlungen := stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1))
+  pure ([quelleDatei modul src, wurzelDatei modul u (stuecke.map (·.map (·.1))) (stufe0AltFreiB src),
+      datenDatei modul u stuecke.length, pruefungDatei modul] ++
     stuecke.zipIdx.map (fun (st, k) => datenStueck modul k st) ++ pflichten.flatten ++ sammlungen)
 
 end Gabbro.Bruecke.Vorlage

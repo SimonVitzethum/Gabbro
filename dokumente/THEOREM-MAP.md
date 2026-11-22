@@ -8481,3 +8481,17 @@ readers, the lowering, the block, ending and body simulations, the frames and th
 | `lowBodyF_bindSum_ok`, `lowSeq_bindSum_ok`, `lowEndL_bindSum_ok` | `Anweisung/Summe/Kopf.lean` | The lowering of the binder in its three readers. |
 | `lowSVal_named_sim`, `lowBindSum_named_sim`, `blockZiel_bindSum_G` | `Anweisung/Summe/Werte.lean` | **The binder simulates**: the Body reading evaluates to the encoding of the lowered value, and the positional relation grows by the new local. |
 | `bindSum_erfuellbar` | `Kette/Andocken/FormenErfuellbar.lean` | The form occurs in a unit whose duties hold, its `meetsU` proved. |
+
+## 217. GabbroV's one theorem: the model's certificate of the compiled unit (2026-11-22)
+
+GabbroV states the model's certificate (`LogikPflichten`, exactly premise (b) by `logikPflichten_iff`)
+over the program Stage 0 lowers; one theorem covers every language form, no form is read into another
+language and none is refused.
+
+| Theorem | File | Statement |
+|---|---|---|
+| `entschieden_sound` | `Kette/Andocken/Zertifikat.lean` | Stage 0's decision of the data parts (`checkUnitLock`, `checkStartRequires`) gives the certificate's lock and start duties. |
+| `nutzerA_aus_logik`, `logik_aus_nutzerA` | `Kette/Andocken/Zertifikat.lean` | Every function's logic (`LogikFn`), the foreign bodies' locality and the decided data parts give premise (b) for every unit; conversely (b) gives the logic and the locality: the duties are not stronger than (b). |
+| `nutzerA_aus_compiled_logik` | `Kette/Andocken/Zertifikat.lean` | **Premise (b) of Stage 0's image theorem for every compilation and every language form**, over `c.program` itself. |
+| `nutzerA_aus_ziele`, `alle_ziele` | `Kette/Andocken/Zertifikat.lean` | The same from the duties of the unit given as data (`ZielF`, one per function), with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded`. |
+| `nutzerA_aus_ziele_erfuellbar` | `Kette/Andocken/ZertifikatErfuellbar.lean` | The premises hold jointly for a unit with one function; Stage 0's decision accepts its judged unit. |

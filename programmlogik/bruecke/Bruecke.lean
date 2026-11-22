@@ -15,9 +15,7 @@ public import Bruecke.GiftZyklus
 public import Bruecke.Start
 public import Bruecke.Quelle
 public import Bruecke.Vorlage
-public import Bruecke.Vorlage.Formen
 public import Bruecke.Vorlage.Haupt
-public import Bruecke.Vorlage.Zeige
 public import Bruecke.Kette.Einheit
 public import Bruecke.Kette.Suche
 public import Bruecke.Kette.Andocken.Stufe0
@@ -26,6 +24,8 @@ public import Bruecke.Kette.Andocken.BildErfuellbar
 public import Bruecke.Kette.Andocken.Sperren
 public import Bruecke.Kette.Andocken.SperrenErfuellbar
 public import Bruecke.Kette.Andocken.FormenErfuellbar
+public import Bruecke.Kette.Andocken.Zertifikat
+public import Bruecke.Kette.Andocken.ZertifikatErfuellbar
 public import Bruecke.Teil.Pflichten
 public import Bruecke.Teil.Simulation
 public import Bruecke.Teil.Lokal.Kopf
