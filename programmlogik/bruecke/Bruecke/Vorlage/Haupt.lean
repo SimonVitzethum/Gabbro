@@ -7,6 +7,40 @@ meta import Bruecke.Vorlage
 
 namespace Gabbro.Bruecke.Vorlage
 
+/-- The Lake package of a generated unit (written once, kept when present): `lean_lib MODULE` on top of GabbroV
+    (`bruecke`, by path), on GabbroV's toolchain and manifest, with the packages shared with
+    `grammatik/.lake/packages` (no second Mathlib). `lake build` then checks again only what a change
+    touched; a changed body touches only its own function's duty. -/
+def paketDateien (ziel modul : String) : IO Unit := do
+  let app ← IO.appPath
+  let some root := app.parent >>= (·.parent) >>= (·.parent) >>= (·.parent) | return
+  let root ← IO.FS.realPath root
+  let repo ← IO.FS.realPath (root / ".." / "..")
+  let abs := repo.toString ++ "/"
+  let schreib (name text : String) : IO Unit := do
+    let p : System.FilePath := System.FilePath.mk ziel / name
+    unless ← p.pathExists do IO.FS.writeFile p text
+  let man ← IO.FS.readFile (root / "lake-manifest.json")
+  let bruecke := "{\"type\": \"path\",\n   \"scope\": \"\",\n   \"name\": \"bruecke\",\n" ++
+    "   \"manifestFile\": \"lake-manifest.json\",\n   \"inherited\": false,\n   \"dir\": \"" ++ root.toString ++
+    "\",\n   \"copy\": false,\n   \"configFile\": \"lakefile.toml\"},\n  "
+  let man := ((((man.replace "\"dir\": \"../../" ("\"dir\": \"" ++ abs)).replace
+      "\"packagesDir\": \"../../" ("\"packagesDir\": \"" ++ abs)).replace
+      "\"inherited\": false" "\"inherited\": true").replace
+      "\"packages\":\n [" ("\"packages\":\n [" ++ bruecke)).replace
+      "\"name\": \"bruecke\",\n \"lakeDir\"" ("\"name\": \"" ++ modul ++ "\",\n \"lakeDir\"")
+  schreib "lake-manifest.json" man
+  schreib "lean-toolchain" (← IO.FS.readFile (root / "lean-toolchain"))
+  schreib "lakefile.toml" <|
+    "name = \"" ++ modul ++ "\"\n" ++
+    "packagesDir = \"" ++ abs ++ "grammatik/.lake/packages\"\n" ++
+    "weakLeanArgs = [\"-DmaxHeartbeats=400000\"]\n" ++
+    "defaultTargets = [\"" ++ modul ++ "\"]\n\n" ++
+    "# A Gabbro unit's duties, written by `gabbrov` (GabbroV). `lake build` checks them; your proofs are\n" ++
+    "# `" ++ modul.replace "." "/" ++ "/Beweis/F<i>.lean`.\n\n" ++
+    "[[require]]\nname = \"bruecke\"\npath = \"" ++ root.toString ++ "\"\n\n" ++
+    "[[lean_lib]]\nname = \"" ++ modul ++ "\"\n"
+
 /-- `gabbrov MODULE FILE.gab OUTDIR`: write the duty modules of the unit of `FILE.gab` under the
     module prefix `MODULE` (for example `Proofs.Lexer`) below `OUTDIR`. Generated files are
     replaced on every run; your proof files `MODULE/Beweis/F<i>.lean` are written once and never
@@ -39,6 +73,7 @@ def haupt (args : List String) : IO UInt32 := do
         if let some dir := datei.parent then IO.FS.createDirAll dir
         IO.FS.writeFile datei d.text
         neu := neu + 1
+    unless ein do paketDateien ziel modul
     let abgelehnt := ds.any fun d => (d.text.splitOn "REFUSED").length > 1
     IO.println s!"gabbrov: {neu} files written, {behalten} proof files kept, under {ziel}/{modul.replace "." "/"}"
     if abgelehnt then
