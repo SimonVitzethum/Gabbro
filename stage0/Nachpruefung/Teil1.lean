@@ -167,6 +167,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_localArraySliceIndex
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.runtimeSliceObservations_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceLocalType_unknown
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specTextSliceArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTextSliceArgument_low
 #print axioms Gabbro.Stage0.Senke.ValueAt.slice_element
 #print axioms Gabbro.Stage0.Senke.ValueAt.slice_view
 #print axioms Gabbro.Stage0.Senke.SliceAt.subslice

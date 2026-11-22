@@ -226,4 +226,27 @@ theorem uSliceLocalType_unknown (ctx : UCtx) (name : String)
     (unresolved : ctx.unknownRanges.contains name = true) : uSliceLocalType ctx name = none := by
   simp only [uSliceLocalType, unresolved, ite_true]
 
+/-- A static literal substring admitted as a predicate argument lowers
+    to the exact model subsequence at the checked byte bound. -/
+theorem specTextSliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (ctx : UCtx) (fn : UFn) (er : Option Ty) (text : String) (first last : Nat)
+    (bounds : first ≤ last ∧ last ≤ text.toUTF8.toList.length) :
+    let argument := SExpr.built "#slice" [.ext .text [text] [], .lit first, .lit last]
+    let bytes := text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)
+    uSpecValueArgument ctx (.str (last - first)) argument = .ok () ∧
+      ∃ decoded, bytesZahl bytes = some decoded ∧
+        ∃ inside : SliceOk decoded.length first last,
+          lowWertE u Γ Λ fn er (.slice (.text bytes) first last) =
+            .ok ⟨.str (last - first), .strLit (sliceValue decoded first last)
+              (Nat.le_of_eq (sliceValue_length decoded first last inside))⟩ := by
+  intro argument bytes
+  obtain ⟨_, checked⟩ := specTextSliceArgument_erfuellbar ctx text first last bounds
+  obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
+  have length := bytesZahl_laenge _ decoded valid
+  rw [List.length_map] at length
+  have inside : SliceOk decoded.length first last := ⟨bounds.1, length ▸ bounds.2⟩
+  refine ⟨checked, decoded, valid, inside, ?_⟩
+  simp only [lowWertE, lowText, bytes, valid, Except.bind, bind]
+  exact lowerSlice_string decoded (Nat.le_refl _) first last inside
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg

@@ -15,10 +15,13 @@ def uSpecValuePath : SExpr → Bool
   | _ => false
 
 /-- Before substitution, read the exact type of each supported value.
-    Strings use decoded byte lengths, declared path bounds and the
-    ordinary G rule for concatenation. -/
+    Strings use decoded byte lengths, checked literal slice ranges,
+    declared path bounds and the ordinary G rule for concatenation. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
+  | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
+    let decoded ← bytesZahl bytes
+    if first ≤ last ∧ last ≤ decoded.length then some (.str (last - first)) else none
   | .bin "+" lhs rhs, .add a b => do
     let some (.str left) := uSpecValueType ctx lhs a | none
     let some (.str right) := uSpecValueType ctx rhs b | none
@@ -61,6 +64,26 @@ theorem specTextArgument_erfuellbar (ctx : UCtx) (text : String) :
     simp only [uWertBody, uRechne]
   simp only [uSpecValueArgument, parsed, bind, Except.bind, uSpecValueType, valid,
     Option.map_some, length, ite_true] <;> rfl
+
+/-- A checked literal substring uses the same half-open UTF-8 byte
+    interval during argument checking and ordinary source elaboration. -/
+theorem specTextSliceArgument_erfuellbar (ctx : UCtx) (text : String) (first last : Nat)
+    (bounds : first ≤ last ∧ last ≤ text.toUTF8.toList.length) :
+    let argument := SExpr.built "#slice" [.ext .text [text] [], .lit first, .lit last]
+    let bytes := text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)
+    uWertBody ctx argument = .ok (.slice (.text bytes) first last) ∧
+      uSpecValueArgument ctx (.str (last - first)) argument = .ok () := by
+  intro argument bytes
+  have ordered : ¬ (last : Int) < first := by have low := bounds.1; omega
+  have read : uWertBody ctx argument = .ok (.slice (.text bytes) first last) := by
+    simp [argument, bytes, uWertBody, uRechne, uFixedLocalArraySlice, uFullLocalSlice, uSchranke, ordered]
+  obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
+  have length := bytesZahl_laenge _ decoded valid
+  rw [List.length_map] at length
+  have inside : first ≤ last ∧ last ≤ decoded.length := ⟨bounds.1, length ▸ bounds.2⟩
+  refine ⟨read, ?_⟩
+  simp only [uSpecValueArgument, read, bind, Except.bind, argument, uSpecValueType, bytes, valid,
+    Option.bind_some, inside, ite_true, pure, Except.pure] <;> rfl
 
 /-- The ordinary source reader keeps a concatenation of accepted
     arguments as the same pair of operands through the precheck. -/
