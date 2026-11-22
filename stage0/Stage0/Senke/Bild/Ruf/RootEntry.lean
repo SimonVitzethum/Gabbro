@@ -46,7 +46,7 @@ theorem ImageStartSite.call_target [Kern] {output : Emitted src reserve options}
       (II.f (scratch : Int)) (II.f ((output.image.A site.fn : Nat) : Int)) (II.f 0) := by
     have immediate := stub 3 (by rw [startC_len]; decide)
     simpa only [pointer, entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
-      List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using immediate
+      List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero, Bool.false_eq_true, ↓reduceIte] using immediate
   have dest : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
   have target : sx (II.f ((output.image.A site.fn : Nat) : Int)) = BitVec.ofNat 64 (output.image.A site.fn) :=
     sx_nat targetFits
@@ -290,7 +290,7 @@ theorem ImageStartSite.body_prefix [Kern] {output : Emitted src reserve options}
   have callPC : nxt callConst = ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩ := by
     change (⟨entry.pc + BitVec.ofNat 64 (16 * 3) + 16, entry.fp⟩ : T) = _
     rw [BitVec.add_assoc] <;> rfl
-  rw [callPC] at targetRun
+  erw [callPC] at targetRun
   have preserved₄ := site.store_preserves (value := output.image.A site.fn)
     scratchRoom fits (Or.inr wordCount.le) code₃ frame₃ args₃
   rw [← write₄] at preserved₄
