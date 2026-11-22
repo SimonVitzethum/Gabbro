@@ -81,7 +81,8 @@ public theorem asyncOrder_sound {functions : List AsyncFn} (ordered : asyncOrder
     Except String { ordered : List AsyncFn // ordered.Perm todo }
   | _, _, [] => .ok ⟨[], .refl _⟩
   | 0, _, _ :: _ => .error "async: exhausted declaration ordering"
-  | fuel + 1, defined, todo@(_ :: _) => do
+  | fuel + 1, defined, head :: tail => do
+    let todo := head :: tail
     let ready := fun function : AsyncFn => function.callees.all defined.contains
     let available := todo.filter ready
     if available.isEmpty then throw "async: unknown or recursive future dependency"
