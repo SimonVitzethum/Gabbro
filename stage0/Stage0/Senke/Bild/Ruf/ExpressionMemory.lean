@@ -112,15 +112,6 @@ theorem expression_world_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {memory
     exact expression_mask_value writeReads (inside.trans (by decide))
       (authorized (.glob global) trivial access) (values.global global access)
 
-/-- At any expression cut, memory effects stay in scope. The instruction
-    may continue at a pointer or request an internal floating response. -/
-def ExpressionControl (reads writes : W → Prop) : Res T → Prop
-  | .next _ => True
-  | .ask request _ =>
-    (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
-      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte)
-  | .fault | .unk => False
-
 /-- Every successful production expression lowering has an exact
     host-free reference. Any actual memory prefix reaches the same
     typed result when complete and cannot ask the host while incomplete. -/
@@ -148,7 +139,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
         (taken = count → pointer = target ∧ Agree fp d K memory actual ∧
           Senke.ValueAt L actual fp d τ (eval initial expression world env)) ∧
         (taken < count → ∀ {control : Res T} {atControl : Mem},
-          RunP (step pointer) actual control atControl → ExpressionControl reads (inSlots fp 0 K) control) := by
+          RunP (step pointer) actual control atControl → HostFreeControl reads (inSlots fp 0 K) control) := by
   intro start target restricted
   letI : Kern := kernel.withoutSyscalls
   have masked := expression_pre_mask frameReads codeReads (by omega : d ≤ K) pre
@@ -163,17 +154,10 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     maskMemory_agreement reads (inSlots fp 0 K) memory frameReads
   refine ⟨count, finish, reference, ?_⟩
   intro taken pointer actual ran within
-  obtain ⟨cut, remaining, memoryEq, rd, wr, unwritten⟩ :=
-    StarM.align_reference ran reference within readable writable agree
-  constructor
-  · intro completed
-    subst taken
-    rw [Nat.sub_self] at remaining
-    have endpoint : pointer = target ∧ cut = finish := by
-      cases remaining
-      exact ⟨rfl, rfl⟩
-    obtain ⟨rfl, exactMemory⟩ := endpoint
-    subst cut
+  obtain ⟨completed, remaining⟩ := IRReference.scoped_prefix (kernel := kernel) reference agree readable writable ran within
+  refine ⟨?_, remaining⟩
+  · intro exactCount
+    obtain ⟨rfl, memoryEq, unwritten⟩ := completed exactCount
     obtain ⟨rdActual, wrActual⟩ := StarM.permissions ran
     refine ⟨rfl, ⟨rdActual, wrActual, ?_⟩, value.1, ?_⟩
     · intro byte outside
@@ -192,38 +176,6 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
           Mem.le_congr (fun offset valid => (agreeWord offset valid).1.symm)]
       rw [sameRead]
       exact value.2 index present
-  · intro inside control atControl waiting
-    have left : 0 < count - taken := Nat.sub_pos_of_lt inside
-    cases available : count - taken with
-    | zero => omega
-    | succ unused =>
-      have restOfReference : IRReference (Nat.succ unused) pointer cut target finish := by
-        simpa only [available] using remaining
-      cases restOfReference with
-      | extend first rest =>
-        obtain ⟨_, aligned, _, _⟩ := waiting.align_reference first (blind_step _)
-          (fun byte granted => readable byte (by simpa only [rd] using granted))
-          (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
-        have permits := aligned.permissions
-        have allowed := aligned.remaining_run first
-        cases allowed with
-        | next => trivial
-        | @ask request resume start middle finish reply next answered continued =>
-          cases reply with
-          | none =>
-            have rejected := (aligned.blind (blind_step _)).missing
-            rw [rejected] at continued
-            cases continued
-          | some words =>
-            have nonSyscall (call : Req) : request ≠ .sys call := by
-              rintro rfl
-              cases answered
-            exact ⟨nonSyscall, memAns_confined (reads := reads) (writes := inSlots fp 0 K)
-              (fun byte granted => readable byte (by simpa only [rd, permits.1] using granted))
-              (fun byte granted => writable byte (by simpa only [wr, permits.2] using granted))
-              answered⟩
-        | sys unavailable _ => exact unavailable.elim
-        | fp _ _ => exact ⟨(fun _ no => nomatch no), (fun _ absent => False.elim absent), (fun refused => nomatch refused)⟩
 
 /-- A body can advance its source binding at the exact completed IR
     boundary. Prefixes inside the bound expression supply the same
@@ -244,7 +196,7 @@ theorem _root_.Gabbro.Stage0.Senke.BildLauf.BodyFrame.bind_reference [kernel : K
     let observed := σ.lese Λ bound.orte
     ∃ count, ∀ {control : Res T} {current : Mem},
       SoloLauf ⟨pc, B.fp⟩ memory control current →
-      ExpressionControl reads (inSlots B.fp 0 B.Ks) control ∨
+      HostFreeControl reads (inSlots B.fp 0 B.Ks) control ∨
       ∃ boundary : Mem, StarM count ⟨pc, B.fp⟩ memory ⟨target, B.fp⟩ boundary ∧
         SoloLauf ⟨target, B.fp⟩ boundary control current ∧
         Senke.AgreeW B.L B.fp B.lo B.K memory boundary ∧

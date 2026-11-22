@@ -88,18 +88,6 @@ theorem RunP.blind {start current : Res T} {before now : Mem}
   | refl => exact original
   | ask _ _ ih => exact ih (original.weiter _)
 
-/-- A host-free reference excludes host requests throughout its
-    memory-only prefixes. This also covers the prefix before a native
-    floating answer, without choosing that answer in the actual run. -/
-theorem RunP.no_syscall {kernel : Kern} {start : Res T} {before now after : Mem}
-    {request : Req} {resume : Ans → Res T} {target : T}
-    (part : RunP start before (.ask (.sys request) resume) now)
-    (reference : @Run kernel.withoutSyscalls start before target after) : False := by
-  letI : Kern := kernel.withoutSyscalls
-  cases part.remaining_run reference with
-  | ask memory _ => cases memory
-  | sys unavailable _ => exact unavailable
-
 /-- A reference can mask writes to shared read-only bytes. It agrees
     with the actual memory on the permissions that can affect it. -/
 def MaskedAgreement (reads writes : W → Prop) (reference actual : Mem) : Prop :=
@@ -425,5 +413,71 @@ theorem SoloLauf.starM {tb t : T} {mb m : Mem} (h : SoloLauf tb mb (.next t) m) 
   · cases e
     exact ⟨n, hs⟩
   · exact ⟨n + 1, starM_snoc hs (runP_runM hp rfl)⟩
+
+/-- Inside a host-free IR region, memory remains in scope. A native
+    floating answer uses the CPU relation, and terminal faults are excluded. -/
+def HostFreeControl (reads writes : W → Prop) : Res T → Prop
+  | .next _ => True
+  | .ask request _ =>
+    (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
+      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte)
+  | .fault | .unk => False
+
+/-- A proof over restricted memory determines every actual memory
+    prefix before the region ends. A completed prefix agrees with the
+    exact reference on all observed bytes, and preserves the rest. -/
+theorem _root_.Gabbro.Stage0.Senke.BildLauf.IRReference.scoped_prefix {kernel : Kern} {reads writes : W → Prop}
+    {count taken : Nat} {start pointer target : T} {reference finish memory actual : Mem}
+    (proof : @IRReference kernel.withoutSyscalls count start reference target finish)
+    (agreement : MaskedAgreement reads writes reference memory)
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    (ran : StarM taken start memory pointer actual) (within : taken ≤ count) :
+    (taken = count → pointer = target ∧ MaskedAgreement reads writes finish actual ∧
+      ∀ byte, ¬ writes byte → GleichAt actual memory byte) ∧
+    (taken < count → ∀ {control : Res T} {atControl : Mem},
+      RunP (step pointer) actual control atControl → HostFreeControl reads writes control) := by
+  letI : Kern := kernel.withoutSyscalls
+  obtain ⟨cut, remaining, memoryEq, rd, wr, untouched⟩ :=
+    StarM.align_reference ran proof within readable writable agreement
+  constructor
+  · intro completed
+    subst taken
+    rw [Nat.sub_self] at remaining
+    cases remaining
+    exact ⟨rfl, memoryEq, untouched⟩
+  · intro inside control atControl waiting
+    have left : 0 < count - taken := Nat.sub_pos_of_lt inside
+    cases available : count - taken with
+    | zero => exact (Nat.not_lt_zero _ (available ▸ left)).elim
+    | succ unused =>
+      have restOfReference : IRReference (Nat.succ unused) pointer cut target finish := by
+        simpa only [available] using remaining
+      cases restOfReference with
+      | extend first rest =>
+        obtain ⟨_, aligned, _, _⟩ := waiting.align_reference first (blind_step _)
+          (fun byte granted => readable byte (by simpa only [rd] using granted))
+          (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
+        have permits := aligned.permissions
+        have allowed := aligned.remaining_run first
+        cases allowed with
+        | next => trivial
+        | @ask request resume start middle finish reply next answered continued =>
+          cases reply with
+          | none =>
+            have rejected := (aligned.blind (blind_step _)).missing
+            rw [rejected] at continued
+            cases continued
+          | some words =>
+            have nonSyscall (call : Req) : request ≠ .sys call := by
+              rintro rfl
+              cases answered
+            exact ⟨nonSyscall, memAns_confined (reads := reads) (writes := writes)
+              (fun byte granted => readable byte (by simpa only [rd, permits.1] using granted))
+              (fun byte granted => writable byte (by simpa only [wr, permits.2] using granted))
+              answered⟩
+        | sys unavailable _ => exact unavailable.elim
+        | fp _ _ =>
+          exact ⟨(fun _ no => nomatch no), (fun _ absent => False.elim absent), (fun refused => nomatch refused)⟩
 
 end Gabbro.Stage0.Senke.BildMehr
