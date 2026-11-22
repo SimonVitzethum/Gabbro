@@ -280,6 +280,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.lowB_ok
 #print axioms Gabbro.Stage0.Senke.lowEnd_ok
 #print axioms Gabbro.Stage0.Senke.lowE_ok
+#print axioms Gabbro.Stage0.Senke.lowE_ok_scoped
 #print axioms Gabbro.Stage0.Senke.wideBinary_ok
 #print axioms Gabbro.Stage0.Senke.wideUnary_ok
 #print axioms Gabbro.Stage0.Senke.wideAdd_ok
