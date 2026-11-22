@@ -223,7 +223,7 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
   have inside := (List.getElem?_eq_some_iff.mp running).1
   have ready : entered.ths[0]? = some (some (.next ⟨target, frame⟩)) := List.getElem?_set_self inside
   obtain ⟨rest, passed, decoded⟩ :=
-    output.root_depth_guard_pass (before := entered) output.compiled.main code ready depth
+    output.root_depth_guard_pass (before := entered) (thread := 0) output.compiled.main code ready depth
   refine ⟨after, rest, ?_, shared, views, fun _ stored => output.world_survives_stack site.bounded stored writes,
     newFrame, environment, decoded⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
