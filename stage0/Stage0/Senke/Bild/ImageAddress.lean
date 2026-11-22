@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Grammatik.Speichermodell.Adressen.Bereich
+public import Stage0.Senke.Bild.Mehr.ImageTransition
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -10,8 +11,35 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
+  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR
 
 variable {src : String} {K : Nat} {options : Profil.Options}
+
+/-- Every actual instruction byte address is below all stack and world
+    addresses. In particular its 64-bit address is exact. -/
+theorem Emitted.code_byte_before_stacks [Kern] (output : Emitted src K options) {index : Nat}
+    (inCode : index < (output.image.code.flatMap encII).length) :
+    (BitVec.ofNat 64 (codeBase + index)).toNat < output.image.fp0 := by
+  have below : codeBase + index < output.image.fp0 := by
+    rw [← output.code_end]
+    omega
+  obtain ⟨stacks, limit⟩ := output.stackReservation_bounds
+  have frameFits : output.image.fp0 < 2 ^ 64 := by omega
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (below.trans frameFits)]
+  exact below
+
+/-- Writes confined to the emitted stacks and the area following them
+    leave every instruction byte and its permissions unchanged. -/
+theorem Emitted.code_survives_writes [Kern] (output : Emitted src K options) {saved current : Runner.Mem}
+    {footprint : W → Prop} (writes : NurIn footprint saved current)
+    (afterCode : ∀ byte, footprint byte → output.image.fp0 ≤ byte.toNat)
+    (code : BytesAt saved codeBase (output.image.code.flatMap encII)) :
+    BytesAt current codeBase (output.image.code.flatMap encII) := by
+  intro index inCode
+  have outside : ¬ footprint (BitVec.ofNat 64 (codeBase + index)) :=
+    fun written => (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) (afterCode _ written)
+  rw [writes.rd, writes.wr, writes.b _ outside]
+  exact code index inCode
 
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/

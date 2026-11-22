@@ -311,7 +311,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
   intro pc fp child running threads
   have inside := (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q loaded declared
-  obtain ⟨_, body, _, placed, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+  obtain ⟨_, body, _, placed, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
     (fun base => by simp only [layU]; omega)
