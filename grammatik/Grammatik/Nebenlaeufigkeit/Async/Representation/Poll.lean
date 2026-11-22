@@ -60,7 +60,7 @@ public theorem leaf_poll_rep (elaboration : Elaboration D V Λ types f)
       have same : actual = callee := Option.some.inj (found.symm.trans known)
       subst actual
       rfl
-  simp only [pollTask, inducedModel, selected]
+  simp only [pollTask, pollTaskWith, inducedModel, selected, bind, Id.bind, pure, Id.pure]
   generalize ergWert callee.pollResult (normal name callee known world storage).val.2 = answer
   obtain ⟨⟨tag, bound⟩, payload⟩ := answer
   cases tag with
@@ -116,7 +116,7 @@ public theorem pollTask_rep (elaboration : Elaboration D V Λ types f)
   | joinReady typed => exact .ready typed (.joinReady typed)
   | joinActive leftRep rightRep leftPoll rightPoll =>
     have leftResult := leftPoll resolved.1 world
-    simp only [pollTask]
+    simp only [pollTask, pollTaskWith, bind, Id.bind, pure, Id.pure]
     generalize pollTask (inducedModel elaboration calls prices normal) _ world = step at leftResult ⊢
     obtain ⟨leftEvent, leftTask, middle, leftCost⟩ := step
     have rightResult := rightPoll resolved.2 middle

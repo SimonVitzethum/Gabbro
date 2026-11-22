@@ -47,23 +47,30 @@ public structure Model (Value Child W : Type) where
     (.join l r, world'', lc + rc + 1)
 
 /-- Left precedes right even if it suspends. Ready children are cached and
-    have no further world effects; Pending saves the updated child storage. -/
-@[expose] public def pollTask (model : Model Value Child W) :
-    Task Value Child → W → Poll Value × Task Value Child × W × Nat
-  | .ready value, world => (.ready value, .ready value, world, 0)
-  | .leaf child, world =>
-    let (result, child', world', cost) := model.pollChild child world
+    have no further world effects. A call effect can stop before the
+    next child, while Pending saves the updated child storage. -/
+@[expose] public def pollTaskWith {M : Type → Type} [Monad M]
+    (poll : Child → W → M (Poll Value × Child × W × Nat))
+    (pair : Value → Value → Value) :
+    Task Value Child → W → M (Poll Value × Task Value Child × W × Nat)
+  | .ready value, world => pure (.ready value, .ready value, world, 0)
+  | .leaf child, world => do
+    let (result, child', world', cost) ← poll child world
     match result with
-    | .ready value => (.ready value, .ready value, world', cost)
-    | .pending => (.pending, .leaf child', world', cost)
-  | .join left right, world =>
-    let (lp, l, world', lc) := pollTask model left world
-    let (rp, r, world'', rc) := pollTask model right world'
+    | .ready value => pure (.ready value, .ready value, world', cost)
+    | .pending => pure (.pending, .leaf child', world', cost)
+  | .join left right, world => do
+    let (lp, l, world', lc) ← pollTaskWith poll pair left world
+    let (rp, r, world'', rc) ← pollTaskWith poll pair right world'
     match lp, rp with
     | .ready a, .ready b =>
-      let value := model.pair a b
-      (.ready value, .ready value, world'', lc + rc + 1)
-    | _, _ => (.pending, .join l r, world'', lc + rc + 1)
+      let value := pair a b
+      pure (.ready value, .ready value, world'', lc + rc + 1)
+    | _, _ => pure (.pending, .join l r, world'', lc + rc + 1)
+
+@[expose] public def pollTask (model : Model Value Child W) :
+    Task Value Child → W → Poll Value × Task Value Child × W × Nat :=
+  pollTaskWith (M := Id) model.pollChild model.pair
 
 public inductive Event (Value : Type) where
   | next
