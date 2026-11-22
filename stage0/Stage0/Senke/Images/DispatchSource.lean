@@ -61,6 +61,51 @@ theorem image_stack_frame_preserved {output : Emitted src reserve options} {thre
     rw [← gleich_rd64 (slotAgreement (base + index) within)]
     exact arguments index inside
 
+/-- Every serialized root in the actual image has its declared typed
+    arguments at the final frame address assigned to that thread. -/
+theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
+    {memory : Mem} (loaded : BytesAt memory Runner.Prog.IMG output.bytes) {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
+    let words := encodeEnv output.image.Y root.2
+    (FB + FB + words.length ≤ output.image.Ks) ∧
+      FrameOK memory fp output.image.Ks ∧ WordsAt memory fp (FB + FB) words := by
+  intro fp words
+  obtain ⟨_, _, _, _, packed, _, _, _, stacks⟩ :=
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
+  obtain ⟨_, _, _, _, _, roots, _, rootWords⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  have chosen : (output.image.args :: output.image.rootArgs)[index + 1]? = some words := by
+    simp only [List.getElem?_cons_succ, rootWords, List.getElem?_map, declared, Option.map_some, words]
+  obtain ⟨within, exactWords⟩ := List.getElem?_eq_some_iff.mp chosen
+  obtain ⟨_, frameMade, frameBytes⟩ := startStackBytes_frame packed output.image.fp0 stacks (index + 1) within
+  rw [exactWords] at frameMade
+  have fits : FB + FB + words.length ≤ output.image.Ks := by
+    unfold startFrameBytes at frameMade
+    split at frameMade
+    · assumption
+    · cases frameMade
+  have bound : index + 1 ≤ output.image.roots.length := by
+    rw [roots, List.length_map]
+    exact Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
+  have frame := bild_initialized_frames_u output.initialValid output.emission
+    output.funktionen_voll loaded (index + 1) bound
+  refine ⟨fits, frame, ?_⟩
+  intro position present
+  have address : slot fp (BitVec.ofNat 64 (FB + FB + position)) =
+      BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks * (index + 1) +
+        8 * (FB + FB + position)) := by
+    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
+      BitVec.ofNat 64 (FB + FB + position) * BitVec.ofNat 64 8 = _
+    simp only [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_assoc, Nat.mul_comm (FB + FB + position) 8]
+  rw [address]
+  exact startFrameBytes_read frameMade frameBytes position present
+
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
 theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve options}
