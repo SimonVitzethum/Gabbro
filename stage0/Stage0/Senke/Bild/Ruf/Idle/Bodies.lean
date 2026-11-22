@@ -69,6 +69,13 @@ private theorem sumWords_withIdle (arms : List (Option Ty)) :
     valueWords (.sum (Ty.mapCases (· + 1) id arms)) = valueWords (.sum arms) :=
   valueWords_mapNumbers (· + 1) id (.sum arms)
 
+private theorem lowFloatWithIdle (L : Lay D) (reserved : Nat)
+    {Γ : Ctx} {Λ : List (Res D)} {lower upper : Int × Int}
+    (value : Expr D Γ Λ (.fl lower upper)) (dest : Nat) :
+    @lowE D.mitRuhe L.withIdle (Λ.map resR) (Γ.map tyR) (.fl lower upper) (ruE value)
+      dest reserved true = lowE L value dest reserved :=
+  lowE_withIdle L reserved true value dest
+
 /-- The same body lowering is valid after extending the model with
     idle thread slots. Every branch retains the installed code and scratch bound. -/
 theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : FrameLayout)
@@ -131,6 +138,9 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
     try simp only [callC_withIdle, putBytesL_withIdle, putBytesWideL_withIdle,
       lowS_resources, lowB_resources, lowEnd_resources,
       receiveC_withIdle, receiveTop_withIdle, elseC_withIdle, sigNrM, frei_withIdle, *]
+    try dsimp only [List.map_cons, resR, tyR, Ty.mapNumbers, ArmCtx, Option.map_some] at *
+    try simp only [Consuming.lower, lowFloatWithIdle, frei_withIdle, lowB_resources,
+      lowEnd_resources, counterDepthB_ru, FrameLayout.internalResult_withIdle, *]
     try rfl
 
 end Gabbro.Stage0.Senke
