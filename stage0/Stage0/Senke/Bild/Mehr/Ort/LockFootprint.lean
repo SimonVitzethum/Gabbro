@@ -83,8 +83,8 @@ theorem imageRuntimeFootprint_placed {src : String} {reserve : Nat} {options : P
     imageStackFootprint output thread byte ∨ output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi := by
   rcases owned with (stack | guarded) | plain
   · exact .inl stack
-  · exact .inr (protectedCellFootprint_bounds layout guarded)
-  · exact .inr (carrierFootprint_bounds layout plain)
+  · exact .inr (protectedCellFootprint_bounds (layout := output.image.Y.withIdle) layout guarded)
+  · exact .inr (carrierFootprint_bounds (layout := output.image.Y.withIdle) layout plain)
 
 theorem imageProtectedFootprint_initial {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
@@ -229,7 +229,7 @@ theorem ImageTicketStates.transport_image_effect [Kern] {src : String} {reserve 
 /-- Changing the current source trace of the CAS issuer leaves every
     pending store assigned to the same owning thread. The actual TSO
     rule requires the issuer's buffer to have drained before answering. -/
-theorem privateBuffers_after_release {before after : imageTSO.St} {thread : Nat}
+theorem privateBuffers_after_release [Kern] {before after : imageTSO.St} {thread : Nat}
     {sourceView targetView : Nat → W → Prop}
     {address expected word : W} {reply : Ans}
     (answered : imageTSO.ans before thread (.cas address expected word) reply after)

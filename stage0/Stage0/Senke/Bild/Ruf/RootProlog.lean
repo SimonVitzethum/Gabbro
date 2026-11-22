@@ -81,9 +81,9 @@ theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
     (declared : E.starts[thread]? = some root)
     {before after : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
-      (GeteiltV E.P E.ws) (imageSourceStart E).m before)
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m before)
     (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
-      (GeteiltV E.P E.ws) before issuer after) :
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after) :
     ReqAmEintritt E.P.mitRuhe (some root.1) (after.speicher.welt []) (envR root.2) ↔
       ReqAmEintritt E.P.mitRuhe (some root.1) (before.speicher.welt []) (envR root.2) := by
   let fs := fsRuhe output.fsA.1
@@ -97,7 +97,8 @@ theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
     · exact (transferred.wurzeln _ listed).1
     · exact idle.1
   have good := gutO_mitRuhe hardware.1
-  have facts := fadenFakten_GX (K := graph) good (fsRuhe_voll output.fsA.2)
+  have facts := fadenFakten_GX (K := graph) (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+    good (fsRuhe_voll output.fsA.2)
     (fun _ shared => shared.1.1) (speicherR E.sp0) init (startExklusiv_ohne_haelt init noLocks)
     (fun i => transferred.abg (init i).1) (fun i => reachB_wurzel E.P.mitRuhe fs (init i).1) reached
   have listed : root.1 ∈ E.ws := by
