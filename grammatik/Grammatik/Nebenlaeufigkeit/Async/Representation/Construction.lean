@@ -119,6 +119,7 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
     rw [parameterTypes] at typed
     obtain ⟨environment, typed⟩ := typed
     simp only [makeTask, makeTaskBy]
+    unfold evalArguments at typed
     generalize evalArgumentsBy (inducedModel elaboration calls prices normal).evaluate frame args world =
       evaluated at typed ⊢
     obtain ⟨values, middle, cost⟩ := evaluated
@@ -134,6 +135,7 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       (fun name args member => restored name args (List.mem_append_left _ member))
       (0 :: path) world
     simp only [makeTask, makeTaskBy]
+    unfold makeTask at leftRep
     generalize makeTaskBy (inducedModel elaboration calls prices normal).evaluate
       (inducedModel elaboration calls prices normal).newChild frame left world =
       leftStep at leftRep ⊢
@@ -142,6 +144,7 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       (fun name args member => resolved name args (List.mem_append_right _ member))
       (fun name args member => restored name args (List.mem_append_right _ member))
       (1 :: path) middle
+    unfold makeTask at rightRep
     generalize makeTaskBy (inducedModel elaboration calls prices normal).evaluate
       (inducedModel elaboration calls prices normal).newChild frame right middle =
       rightStep at rightRep ⊢
