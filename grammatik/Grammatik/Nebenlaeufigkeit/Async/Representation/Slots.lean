@@ -75,8 +75,10 @@ public theorem trimSlotArgs_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeRe
     obtain ⟨name, sourceType⟩ := field
     have tail := ih (fun field => project (.tail field)) (fun field => localRead (.tail field))
     by_cases live : name ∈ keep
-    · simp only [trimSlotArgs, live, ite_true, Args.orte, localRead, tail, List.nil_append]
-    · simp only [trimSlotArgs, live, ite_false, Args.orte, Expr.orte, NutzlastExpr.orte, tail, List.nil_append]
+    · simp only [trimSlotArgs, live, ite_true, Args.orte]
+      rw [localRead .head, tail, List.nil_append]
+    · simp only [trimSlotArgs, live, ite_false, Args.orte, Expr.orte, NutzlastExpr.orte, List.nil_append]
+      exact tail
 
 /-- The generated arguments preserve exactly the represented fields
     required by the next phase. The projection function is tied to the
@@ -95,16 +97,17 @@ public theorem trimSlotArgs_rep {Γ : Ctx} {Λ : List (Res D)} {oldLive keep : L
     intro project exactField
     have removed : name ∉ keep := fun member => unused (kept name member)
     have following := ih (fun field => project (.tail field)) (fun field => exactField (.tail field))
-    simpa only [trimSlotArgs, removed, ite_false, evalProd] using
-      (SlotsRep.dead (sourceType := sourceType) removed following)
+    simp only [trimSlotArgs, removed, ite_false, evalProd, eval, evalNutz]
+    exact .dead removed following
   | @live name value sourceType ordinary fields rest needed found typed tail ih =>
     intro project exactField
     have following := ih (fun field => project (.tail field)) (fun field => exactField (.tail field))
     by_cases retained : name ∈ keep
-    · simpa only [trimSlotArgs, retained, ite_true, evalProd, exactField, prodGetW] using
-        (SlotsRep.live retained found typed following)
-    · simpa only [trimSlotArgs, retained, ite_false, evalProd] using
-        (SlotsRep.dead (sourceType := sourceType) retained following)
+    · simp only [trimSlotArgs, retained, ite_true, evalProd]
+      rw [exactField .head]
+      exact .live retained found typed following
+    · simp only [trimSlotArgs, retained, ite_false, evalProd, eval, evalNutz]
+      exact .dead retained following
 
 /-- Rebuild the canonical frame from its saved local, clearing exactly
     the slots outside the selected live set. -/
