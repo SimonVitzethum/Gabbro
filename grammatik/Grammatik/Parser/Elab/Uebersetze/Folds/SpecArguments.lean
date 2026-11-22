@@ -16,12 +16,16 @@ def uSpecValuePath : SExpr → Bool
 
 /-- Before substitution, read the exact type of each supported value.
     Strings use decoded byte lengths, checked literal slice ranges,
-    declared path bounds and the ordinary G rule for concatenation. -/
+    declared path bounds and the ordinary G rule for concatenation.
+    An array slice uses the element type and extent of its checked base. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
   | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
     let decoded ← bytesZahl bytes
     if first ≤ last ∧ last ≤ decoded.length then some (.str (last - first)) else none
+  | .built "#slice" [base, _, _], .slice operand first last => do
+    let some (.arr element capacity) := uSpecValueType ctx base operand | none
+    if first ≤ last ∧ last ≤ capacity then some (.arr element (last - first)) else none
   | .bin "+" lhs rhs, .add a b => do
     let some (.str left) := uSpecValueType ctx lhs a | none
     let some (.str right) := uSpecValueType ctx rhs b | none
@@ -105,6 +109,26 @@ theorem specStringConcatArgument_erfuellbar (ctx : UCtx) (lhs rhs : SExpr) (left
   exact ⟨a, b, read, by
     simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, typedLeft, typedRight,
       pure, Option.pure_def, Except.pure, ite_true]⟩
+
+/-- Before inlining a static array slice, check both the original base
+    and the actual interval. The resulting array retains its element type. -/
+theorem specArraySliceArgument_erfuellbar (ctx : UCtx) (name : String) (element : Ty)
+    (capacity first last : Nat) (bounds : first ≤ last ∧ last ≤ capacity)
+    (read : uWertBody ctx (.variable name) = .ok (.param name))
+    (baseType : uValueType ctx (.param name) = some (.arr element capacity)) :
+    let argument := SExpr.built "#slice" [.variable name, .lit first, .lit last]
+    uWertBody ctx argument = .ok (.slice (.param name) first last) ∧
+      uSpecValueArgument ctx (.arr element (last - first)) argument = .ok () := by
+  intro argument
+  have nonnegative : ¬ (first : Int) < 0 := by omega
+  have ordered : ¬ (last : Int) < first := by have low := bounds.1; omega
+  have parsed : uWertBody ctx argument = .ok (.slice (.param name) first last) := by
+    change uRechne ctx (uWertBlatt ctx) (.variable name) = _ at read
+    simp [argument, uWertBody, uRechne, uFixedLocalArraySlice, uFixedLocalArrayExtent, uFullLocalSlice,
+      uSchranke, read, nonnegative, ordered, bind, Except.bind, pure, Except.pure]
+  exact ⟨parsed, by
+    simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath,
+      baseType, bounds, ite_true, Option.bind_some, pure, Except.pure] <;> rfl⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/
