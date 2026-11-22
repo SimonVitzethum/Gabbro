@@ -119,6 +119,22 @@ theorem ValueAt.ofWithIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : 
   obtain ⟨words, valid⟩ := idleValue L τ v
   exact ⟨valid.mp stored.1, words ▸ stored.2⟩
 
+/-- Variables in the extended environment use the same canonical frame offsets. -/
+theorem EnvAt.withIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {reserved : Nat}
+    {Γ : Ctx} {env : Env D Γ} (stored : EnvAt L m fp env reserved) :
+    EnvAt L.withIdle m fp (envR env) reserved := by
+  induction env with
+  | nil => intro _ var; exact nomatch var
+  | @cons τ Γ head tail ih =>
+    intro ty var
+    cases var with
+    | here =>
+      have cell := (stored τ .here).withIdle
+      rw [← vslot_varR (Var.here (τ := τ) (Γ := Γ)) reserved] at cell
+      exact cell
+    | there var =>
+      exact ih (fun σ x => stored σ (.there x)) ty var
+
 /-- Both machines give the same representation to every allocated world
     cell, including any worlds reached after entry. -/
 theorem WeltAt.withIdle_iff {L : Lay D} {m : Runner.Mem} {world : World D}

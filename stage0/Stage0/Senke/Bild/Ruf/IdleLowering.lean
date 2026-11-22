@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Funktion
+public import Stage0.Senke.Spez
 public import Stage0.Senke.Welt.Spans.IdleLayout
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil2
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
@@ -9,9 +10,26 @@ import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 namespace Gabbro.Stage0.Senke
 
-open Gabbro.Grammatik
+open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration}
+
+/-- The goal machine adds an idle function with no physical instructions.
+    The real functions retain their exact code ranges and frame separation. -/
+theorem PCode.withIdle {m : Runner.Mem} {layout : Lay D} {code : D.Fn → List II}
+    {fp : Runner.W} {budget : Nat} (present : PCode m layout.fa code fp budget)
+    (frame : fp.toNat + 8 * budget ≤ 2 ^ 64) :
+    PCode m layout.withIdle.fa (fun f => f.elim [] code) fp budget := by
+  intro f
+  cases f with
+  | some f => exact present f
+  | none =>
+    refine ⟨fun _ atInstruction => ?_, ?_⟩
+    · have impossible : False := by simpa only [Option.elim, List.length_nil, Nat.not_lt_zero] using atInstruction
+      exact impossible.elim
+    · simp only [Lay.withIdle, Option.elim, CodeFar, List.length_nil, Nat.mul_zero,
+        BitVec.toNat_ofNat, Nat.zero_mod, Nat.add_zero, Nat.zero_le, and_true, frame]
+      decide
 
 private theorem entryIndex_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
@@ -130,5 +148,29 @@ theorem EntrySnapshots.withIdle (layout : Lay D) (cells : List (Zelle D)) (base 
     · simp only [List.map_cons, EntrySnapshots.words, width, (ih base).1]
     · simp only [List.map_cons, EntrySnapshots.capture, width, Zelle.withIdle_adr, (ih _).2] <;>
         cases cell <;> rfl
+
+private theorem oldCells_context {Γ Γ' : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (equal : Γ = Γ') (expr : Expr D Γ Λ τ) :
+    oldCells (expr.umΓ equal) = oldCells expr := by
+  cases equal
+  rfl
+
+private theorem oldCells_holdings {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    (equal : Λ = Λ') (expr : Expr D Γ Λ τ) :
+    oldCells (expr.umΛ equal) = oldCells expr := by
+  cases equal
+  rfl
+
+/-- A shifted signature and its postcondition still capture each cell
+    at the same address and reserve exactly the original number of words. -/
+theorem postSnapshots_withIdle (P : Programm D) (layout : Lay D) (f : D.Fn) (base : Nat) :
+    let cells := oldCells (P.ensures f)
+    let shifted := oldCells (P.mitRuhe.ensures (some f))
+    EntrySnapshots.words shifted = EntrySnapshots.words cells ∧
+      EntrySnapshots.capture layout.withIdle shifted base = EntrySnapshots.capture layout cells base := by
+  have cells : oldCells (P.mitRuhe.ensures (some f)) = (oldCells (P.ensures f)).map Zelle.withIdle := by
+    simp only [Programm.mitRuhe, oldCells_context, oldCells_holdings, oldCells_ruE]
+  simp only [cells]
+  exact EntrySnapshots.withIdle layout (oldCells (P.ensures f)) base
 
 end Gabbro.Stage0.Senke
