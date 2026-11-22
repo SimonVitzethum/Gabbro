@@ -10,7 +10,8 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
-  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach
+  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR
+open Runner.Beweis (rdN)
 
 variable {src : String} {K : Nat} {options : Profil.Options}
 
