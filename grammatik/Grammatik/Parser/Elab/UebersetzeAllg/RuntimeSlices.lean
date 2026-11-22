@@ -413,4 +413,28 @@ theorem specArraySliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declO
   rw [lowWertE_slice, typed]
   exact lowerSlice_array base first last bounds allowed
 
+/-- The checked index is the same `Fin` used by the ordinary aggregate read. -/
+theorem specArrayIndexArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (ctx : UCtx) (fn : UFn) (er : Option Ty) (name : String) {element : Ty}
+    {capacity : Nat} (index : Fin capacity)
+    (read : uWertBody ctx (.variable name) = .ok (.param name))
+    (baseType : uValueType ctx (.param name) = some (.arr element capacity))
+    (array : uTraegerIndex ctx (.variable name) = false)
+    (base : Expr (declOf u) Γ Λ (.arr element capacity))
+    (typed : lowWertE u Γ Λ fn er (.param name) = .ok ⟨.arr element capacity, base⟩) :
+    let position : Expr (declOf u) Γ Λ (.index capacity) :=
+      .widen (Int.ofNat_zero_le index.val) (by have := index.isLt; omega) (.lit index.val)
+    uSpecValueArgument ctx element (.index (.variable name) (.lit index.val)) = .ok () ∧
+      lowWertE u Γ Λ fn er (.idx (.param name) (.lit index.val)) = .ok ⟨element, .arrGet base position⟩ ∧
+      ∀ entry world env, eval entry (.arrGet base position) world env = eval entry base world env index := by
+  intro position
+  have high : (index.val : Int) ≤ (capacity : Int) - 1 := by have := index.isLt; omega
+  obtain ⟨_, accepted⟩ := specArrayIndexArgument_of_local ctx name element capacity index.val index.isLt read baseType array
+  refine ⟨accepted, ?_, ?_⟩
+  · rw [lowWertE]
+    simp only [typed, lowWertE, LowSide.wert, zahlVon, idxW, dite_eq_left (Int.ofNat_zero_le index.val),
+      dite_eq_left high] <;> rfl
+  · intro entry world env
+    simp only [eval, position, Zahl.fin, Zahl.weiter, Int.toNat_ofNat] <;> rfl
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg

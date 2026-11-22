@@ -26,6 +26,10 @@ def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .built "#slice" [base, _, _], .slice operand first last => do
     let some (.arr element capacity) := uSpecValueType ctx base operand | none
     if first ≤ last ∧ last ≤ capacity then some (.arr element (last - first)) else none
+  | .index base _, .idx operand index => do
+    let some (.arr element capacity) := uSpecValueType ctx base operand | none
+    let (lo, hi) ← foldRangeWithIndexCheck ctx true index
+    if 0 ≤ lo ∧ hi < (capacity : Int) then some element else none
   | .bin "+" lhs rhs, .add a b => do
     let some (.str left) := uSpecValueType ctx lhs a | none
     let some (.str right) := uSpecValueType ctx rhs b | none
@@ -130,13 +134,11 @@ theorem specArraySliceArgument_of_local (ctx : UCtx) (name : String) (element : 
     simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath,
       baseType, bounds, and_self, ite_true, Option.bind_some, pure, Except.pure] <;> rfl⟩
 
-theorem specArraySliceArgument_erfuellbar (element : Ty) (capacity first last : Nat)
-    (bounds : first ≤ last ∧ last ≤ capacity) :
+private theorem specArrayLocal (element : Ty) (capacity : Nat) :
     ∃ ctx : UCtx,
       uWertBody ctx (.variable "array") = .ok (.param "array") ∧
       uValueType ctx (.param "array") = some (.arr element capacity) ∧
-      uSpecValueArgument ctx (.arr element (last - first))
-        (.built "#slice" [.variable "array", .lit first, .lit last]) = .ok () := by
+      uTraegerIndex ctx (.variable "array") = false := by
   let ctx : UCtx := {
     names := ["array"], kinds := [.wert], types := [.arr element capacity],
     tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
@@ -144,8 +146,47 @@ theorem specArraySliceArgument_erfuellbar (element : Ty) (capacity first last : 
     simp [ctx, uWertBody, uRechne, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
   have baseType : uValueType ctx (.param "array") = some (.arr element capacity) := by
     simp [ctx, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  exact ⟨ctx, read, baseType, rfl⟩
+
+theorem specArraySliceArgument_erfuellbar (element : Ty) (capacity first last : Nat)
+    (bounds : first ≤ last ∧ last ≤ capacity) :
+    ∃ ctx : UCtx,
+      uWertBody ctx (.variable "array") = .ok (.param "array") ∧
+      uValueType ctx (.param "array") = some (.arr element capacity) ∧
+      uSpecValueArgument ctx (.arr element (last - first))
+        (.built "#slice" [.variable "array", .lit first, .lit last]) = .ok () := by
+  obtain ⟨ctx, read, baseType, _⟩ := specArrayLocal element capacity
   exact ⟨ctx, read, baseType, (specArraySliceArgument_of_local ctx "array" element capacity first last
     bounds read baseType).2⟩
+
+/-- An aggregate array element must be in bounds even when substitution
+    erases the argument from the predicate's body. -/
+theorem specArrayIndexArgument_of_local (ctx : UCtx) (name : String) (element : Ty)
+    (capacity index : Nat) (inside : index < capacity)
+    (read : uWertBody ctx (.variable name) = .ok (.param name))
+    (baseType : uValueType ctx (.param name) = some (.arr element capacity))
+    (array : uTraegerIndex ctx (.variable name) = false) :
+    let argument := SExpr.index (.variable name) (.lit index)
+    uWertBody ctx argument = .ok (.idx (.param name) (.lit index)) ∧
+      uSpecValueArgument ctx element argument = .ok () := by
+  intro argument
+  have parsed : uWertBody ctx argument = .ok (.idx (.param name) (.lit index)) := by
+    change uRechne ctx (uWertBlatt ctx) (.variable name) = _ at read
+    simp only [argument, uWertBody, uRechne, uLocalArraySliceObservation, array, Bool.false_eq_true, ite_false, read] <;> rfl
+  have valid : (0 : Int) ≤ index ∧ (index : Int) < capacity := ⟨Int.ofNat_zero_le _, Int.ofNat_lt.mpr inside⟩
+  exact ⟨parsed, by
+    simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath, baseType,
+      foldRangeWithIndexCheck, Option.bind_some, valid, and_self, ite_true, pure, Except.pure] <;> rfl⟩
+
+theorem specArrayIndexArgument_erfuellbar (element : Ty) (capacity index : Nat) (inside : index < capacity) :
+    ∃ ctx : UCtx,
+      uWertBody ctx (.variable "array") = .ok (.param "array") ∧
+      uValueType ctx (.param "array") = some (.arr element capacity) ∧
+      uTraegerIndex ctx (.variable "array") = false ∧
+      uSpecValueArgument ctx element (.index (.variable "array") (.lit index)) = .ok () := by
+  obtain ⟨ctx, read, baseType, array⟩ := specArrayLocal element capacity
+  exact ⟨ctx, read, baseType, array,
+    (specArrayIndexArgument_of_local ctx "array" element capacity index inside read baseType array).2⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/
