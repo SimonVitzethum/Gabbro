@@ -24,9 +24,11 @@ theorem textSliceObservations_source (ctx : UCtx) (blatt : SExpr → Except Stri
     uRechne ctx blatt (.built "lenof" [slice]) = .ok (.sub finish begin) ∧
       uRechne ctx blatt (.index slice index) = .ok (.idx (.text bytes) (.add begin position)) := by
   dsimp only
+  obtain ⟨nonnegative, ordered, upper⟩ := bounds
+  obtain ⟨indexNonnegative, indexUpper⟩ := inside
   constructor <;> rw [uRechne] <;>
-    simp only [uSliceObservation, uSliceView, uRelativeSlice, readFirst, readLast, readIndex, bounds,
-      inside, bind, Option.bind, ite_true]
+    simp only [uSliceObservation, uSliceView, uRelativeSlice, readFirst, readLast, readIndex,
+      nonnegative, ordered, upper, indexNonnegative, indexUpper, and_self, bind, Option.bind, ite_true]
 
 /-- The actual body elaborator admits both observations with genuinely
     varying indices and endpoints for every literal long enough. -/
@@ -90,14 +92,23 @@ theorem eval_textSliceObservations {D : Deklaration} {Γ : Ctx} {Λ : List (Res 
   have lastHi := (eval initial finish world env).le_hi
   have indexLo := (eval initial position world env).lo_le
   have indexHi := (eval initial position world env).le_hi
-  refine ⟨⟨by omega, by omega⟩, ?_, ?_⟩
-  · simp only [eval, Zahl.sub, strSliceValue, sliceValue_length _ _ _ (show SliceOk _ _ _ from
-      ⟨by omega, by omega⟩)]
+  have valid : SliceOk (eval initial base world env).1.length
+      (eval initial begin world env).n.toNat (eval initial finish world env).n.toNat :=
+    ⟨by omega, by omega⟩
+  refine ⟨valid, ?_, ?_⟩
+  · simp only [eval, Zahl.sub, strSliceValue, sliceValue_length _ _ _ valid]
     omega
   · simp only [eval, Zahl.add]
-    rw [← Int.toNat_of_nonneg (show 0 ≤ (eval initial position world env).n by omega),
-      strSliceValue_get _ _ _ _ _ (by omega)]
-    congr 1
-    omega
+    have selected : (eval initial position world env).n.toNat <
+        (eval initial finish world env).n.toNat - (eval initial begin world env).n.toNat := by omega
+    calc
+      _ = strGetW (eval initial base world env)
+          ↑((eval initial begin world env).n.toNat + (eval initial position world env).n.toNat) := by
+        congr 1
+        omega
+      _ = strGetW (strSliceValue (eval initial base world env) _ _ valid)
+          ↑(eval initial position world env).n.toNat :=
+        (strSliceValue_get _ _ _ _ valid selected).symm
+      _ = _ := by rw [Int.toNat_of_nonneg (show 0 ≤ (eval initial position world env).n by omega)]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
