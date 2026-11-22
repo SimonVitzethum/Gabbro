@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Bild
+public import Bruecke.Kette.Andocken.Bild
 @[expose] public section
 
 /-!

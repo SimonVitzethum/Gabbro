@@ -1,5 +1,5 @@
 module
-public import Bruecke.Kette.Bild
+public import Bruecke.Kette.Andocken.Bild
 public import Bruecke.Vorlage.Formen
 public import Bruecke.Vorlage.Zeige
 public import Grammatik.Parser.Elab.UebersetzePipeline
@@ -256,14 +256,30 @@ def wurzelDatei (modul : String) (u : UProg) (anzahl : Nat) (ablehnungen : List 
         "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
         "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
         "  nutzerA_aus_compiled pflichten rfl rfl c hu hold Q sp args roots gestartet checks\n\n"
+       else if u.axs.isEmpty then
+        "/-- **Premise (b) of Stage 0's image theorem** (`NutzerPflichtA (output.einheit Q)`, also of\n" ++
+        "    `output.goalUnit Q`) for every compilation of `quelle` whose unit is `u`, a unit with locks:\n" ++
+        "    `hold` is checked in `Pruefung`; `hlock` is Stage 0's own lock decision (`checkUnitLock`)\n" ++
+        "    on the judged unit, which `checkUnitLogic` runs on the image's initial memory. -/\n" ++
+        "theorem nutzerBild (c : Gabbro.Stage0.Compiled quelle) (hu : c.unit = u)\n" ++
+        "    (hold : ohneAltGlobalB c.expanded = true) (Q : AxEns (declOf c.unit))\n" ++
+        "    (sp : Speicher (declOf c.unit)) (args : Env (declOf c.unit) ((declOf c.unit).params c.main))\n" ++
+        "    (roots gestartet : List (Σ w : (declOf c.unit).Fn, Env (declOf c.unit) ((declOf c.unit).params w)))\n" ++
+        "    (checks : List (CheckDecl (declOf c.unit)))\n" ++
+        "    (hlock : sperrenGeprueftB\n" ++
+        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks)\n" ++
+        "      (List.finRange c.unit.locks.length) = true) :\n" ++
+        "    Gabbro.Grammatik.Zielsatz.NutzerPflichtA\n" ++
+        "      (Gabbro.Stage0.OldSource.einheitDer c.unit c.program Q sp c.main args roots gestartet checks) :=\n" ++
+        "  nutzerA_aus_compiled_sperren pflichten rfl c hu hold Q sp args roots gestartet checks hlock\n\n"
        else
-        "/-! Premise (b) of Stage 0's image theorem is not stated for this unit: it declares a lock or a\n" ++
-        "    foreign body, and `nutzerA_aus_compiled` covers units with neither. -/\n\n")
+        "/-! Premise (b) of Stage 0's image theorem is not stated for this unit: it declares a foreign\n" ++
+        "    body, which the bridge does not carry yet. -/\n\n")
     else
       "/-! REFUSED: premise (b) is not stated, because the bridge does not carry this unit yet:\n" ++
         String.join (ablehnungen.map fun r => "  * " ++ r ++ "\n") ++ "-/\n\n"
   { pfad := modul.replace "." "/"
-    text := kopf modul (["Bruecke.Kette.Bild", modul ++ ".Quelle", tabelleModul modul] ++
+    text := kopf modul (["Bruecke.Kette.Andocken.Sperren", modul ++ ".Quelle", tabelleModul modul] ++
         (if ablehnungen.isEmpty then (List.range anzahl).map (sammlungModul modul) else []))
         ("The unit checks and premise (b) of the goal theorem (written by `gabbrov`). That `u` is the\n" ++
          "    unit Stage 0 compiles from `quelle` is the premise `c.unit = u` of `nutzer`; the module\n" ++
@@ -272,10 +288,10 @@ def wurzelDatei (modul : String) (u : UProg) (anzahl : Nat) (ablehnungen : List 
 /-- The check of the anchoring premise, by running Stage 0's front end; no theorem imports it. -/
 def pruefungDatei (modul : String) : Datei :=
   { pfad := modul.replace "." "/" ++ "/Pruefung"
-    text := (kopf modul ["Bruecke.Kette.Bild", modul ++ ".Quelle", modul ++ ".Daten"]
+    text := (kopf modul ["Bruecke.Kette.Andocken.Bild", modul ++ ".Quelle", modul ++ ".Daten"]
         "Checks that `u` is the unit Stage 0's front end builds from `quelle` (written by `gabbrov`).").replace
         "@[expose] public section"
-        ("meta import Bruecke.Kette.Bild\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
+        ("meta import Bruecke.Kette.Andocken.Bild\nmeta import " ++ modul ++ ".Quelle\nmeta import " ++ modul ++
           ".Daten\n@[expose] public section") ++
       "#guard stufe0Einheit quelle == .ok u\n\n" ++
       "-- No postcondition reads `old` of a static (the run fact `hold` of `nutzerBild`).\n" ++

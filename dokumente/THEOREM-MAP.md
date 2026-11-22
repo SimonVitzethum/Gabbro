@@ -8328,16 +8328,16 @@ the executable `gabbrov` (`programmlogik/bruecke/lakefile.toml`). No change of `
 |---|---|---|
 | `nutzer_aus_einheit`, `nutzerA_aus_einheit` | `Kette/Einheit.lean` | For a unit `u` given as data: its unit part (`EinheitTeil`: `nullB`, `stimmigUnitB`, no generated transitions) and, under one rank `rk`, every function's duty `FnPflicht u rk f` (`stimmigFnB`, `bindFrischB`, `rangFnB`, a Body reading and `meetsU` over it) for every `f ∈ u.fns`, together with the front-end equation `uebersetzeAllg src = .ok ⟨u, P, fs⟩`, give `NutzerPflicht` (and `NutzerPflichtA`) of `einheitAllg u P`. |
 | `nutzer_aus_senkung` | `Kette/Einheit.lean` | The same for whichever front end built `u`: only `lowerAllg u = .ok (P, fs)` is used. |
-| `nutzer_aus_stage0` | `Kette/Stufe0.lean` | For `c : Stage0.Compiled text` with `c.unit = u`: the duties of `u` give `NutzerPflicht` of `einheitAllg u P` for the program `P` that the generic lowering builds from the unit Stage 0 compiles (`Compiled.lowered`). The bridge package now requires `stage0`. |
+| `nutzer_aus_stage0` | `Kette/Andocken/Stufe0.lean` | For `c : Stage0.Compiled text` with `c.unit = u`: the duties of `u` give `NutzerPflicht` of `einheitAllg u P` for the program `P` that the generic lowering builds from the unit Stage 0 compiles (`Compiled.lowered`). The bridge package now requires `stage0`. |
 | `stimmigB_of`, `ohneTransitionB_of`, `rangB_of` | `Kette/Einheit.lean` | The unit checks of `PflichtenAlle` follow from a unit part and a part per function (no quantifier over positions). |
 | `fnPflicht_append`, `fnPflicht_cons`, `fnPflicht_nil` | `Kette/Einheit.lean` | Assembly of the per-function duties over appended chunks (logarithmic depth in the generated files). |
 | `Tabelle.suche_bauenK`, `funktionsTabelle_suche` | `Kette/Suche.lean` | A binary trie over the bits of a name hash, built from keyed entries whose keys are the hashes of their names, answers as the first-match search of the list for every name; instantiated for function lists. |
 | `fnSuche_eq`, `zuBodyZ_suche`, `meetsU_suche`, `tabelle_such` | `Kette/Einheit.lean` | A Body reading or duty computed with a callee lookup that answers as the standard one (`instFnSuche`, the first function of the name) is the standard reading or duty; a printed table built from the keyed list of `u.fns` is such a lookup. |
 | `step_forCount` | `programmlogik/Gabbro/Body/Traverse.lean` | The new Body statement `forCount x n body` (a traversal of `0 ..< n`) means `forEach` over `zaehlIndizes n`. |
 | `loopIndices_zahl`, `ausgangZiel_G_ersetze` | `Anweisung/Schleife/Basis.lean`, `Kette/Strecke.lean` | A traversal's index list is the counted one; a claim about Body statements carries over to statements that execute alike. The reader emits `forCount`, so a reading of a traversal over a table of any size stays small (`stmtZiel_loop_G` restated). |
-| `restore_ohneAlt` | `Kette/Bild.lean` | Without `old` of a static in any source postcondition, Stage 0's restoration returns the lowered program unchanged. |
-| `nutzerA_einheitDer`, `nutzerA_aus_compiled` | `Kette/Bild.lean` | **No gap to Stage 0's image theorem**: the duties of a unit given as data (`PflichtenEinheit`) of a unit with no lock and no foreign body give `NutzerPflichtA` of Stage 0's judged unit over the compiled program, for every axiom family, initial memory, entry arguments, further starts and declared checks; with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` this is the premise of the image theorems (`output.einheit Q`, `output.goalUnit Q`). |
-| `nutzerA_aus_compiled_erfuellbar` | `Kette/BildErfuellbar.lean` | The premises hold jointly for a unit with one function `main` returning `42`, whose duty `meetsU` is proved. |
+| `restore_ohneAlt` | `Kette/Andocken/Bild.lean` | Without `old` of a static in any source postcondition, Stage 0's restoration returns the lowered program unchanged. |
+| `nutzerA_einheitDer`, `nutzerA_aus_compiled` | `Kette/Andocken/Bild.lean` | **No gap to Stage 0's image theorem**: the duties of a unit given as data (`PflichtenEinheit`) of a unit with no lock and no foreign body give `NutzerPflichtA` of Stage 0's judged unit over the compiled program, for every axiom family, initial memory, entry arguments, further starts and declared checks; with the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` this is the premise of the image theorems (`output.einheit Q`, `output.goalUnit Q`). |
+| `nutzerA_aus_compiled_erfuellbar` | `Kette/Andocken/BildErfuellbar.lean` | The premises hold jointly for a unit with one function `main` returning `42`, whose duty `meetsU` is proved. |
 
 ## 211. Stage 0 loader and exit refinement
 
@@ -8432,3 +8432,19 @@ to a difference and `lowWertE_localArraySliceIndex` lowers a local index
 observation to a direct array read. Their evaluation lemmas relate both
 operations to the same half-open slice value. Standalone runtime slice
 values and arbitrary runtime substrings still need executable lowering.
+
+## 215. GabbroV units with locks (2026-11-22)
+
+A carried function takes no lock (the reader refuses `locks`); these theorems prove that its lowered
+body contains no `locks` block and no scoped return, so a unit that declares locks reaches Stage 0's
+premise (b) with its lock family. The induction mirrors the simulation (`laufSeq_G`, `laufEndSeq_G`,
+`lauf_G`) form by form, without its semantic content.
+
+| Theorem | File | Statement |
+|---|---|---|
+| `lowStmtL_einzeln_ohne`, `lowRetStmt_ohne`, `lowRetEnd_ohne`, `lowEnd_ohne` | `Kette/Ohne/Blatt.lean` | Carried single statements, top-level returns and body ends lower without `locks`. |
+| `endBodyZ_ohne`, `arms_ohne_with`, `seq_ohne`, `ende_ohne`, `lauf_ohne` | `Kette/Ohne/*.lean` | Every block, arm and ending of a carried body read by `seqZ`/`endBodyZ`/`stmtsBodyZ` lowers without `locks`. |
+| `rumpf_ohne` | `Kette/Ohne/Lauf.lean` | **The lowered body of a carried function satisfies `ohneLocks`**: the premise of `koerperGutS_ohne`. |
+| `logik_sperren` | `Kette/Andocken/Sperren.lean` | The duties of a unit give `LogikPflicht` under every local lock family. |
+| `nutzerA_einheitDer_sperren`, `nutzerA_aus_compiled_sperren` | `Kette/Andocken/Sperren.lean` | **Premise (b) of Stage 0's image theorem for units with locks**: the duties, no foreign body, the run facts of `nutzerA_aus_compiled` and Stage 0's own lock decision `checkUnitLock` on the judged unit (`sperrenGeprueftB`; `sperren_of_geprueft`: locality and the initial-memory duty) give `NutzerPflichtA` of the judged unit. |
+| `nutzerA_aus_compiled_sperren_erfuellbar` | `Kette/Andocken/SperrenErfuellbar.lean` | The premises hold jointly for a unit with one declared lock and one carried function whose duty is proved; Stage 0's lock decision accepts its judged unit for every program, memory, entry, starts and checks. |

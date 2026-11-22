@@ -61,7 +61,11 @@ checks, and the goal `ziel<i>`), `Beweis/F<i>` (your proof of `ziel<i>`; written
 the text enters only through the premise `c : Compiled quelle` with `c.unit = u`, which the `#guard` checks by
 running Stage 0 (owner, 2026-11-21). No step quantifies over function positions, so the files of a unit of
 500 000 lines are many small modules Lake builds in parallel. A form or check outside the bridge is a named
-refusal in `Lexer.lean` (exit 1), and premise (b) is then not stated.
+refusal in `Lexer.lean` (exit 1), and premise (b) is then not stated. For a unit without foreign
+bodies `Lexer.lean` also states `nutzerBild`, exactly the premise `NutzerPflichtA` of Stage 0's image
+theorems, from the run facts `c.unit = u` and `ohneAltGlobalB c.expanded` (checked in `Pruefung`); for a
+unit that declares locks it takes Stage 0's own lock decision `sperrenGeprueftB` on the judged unit
+(`nutzerA_aus_compiled_sperren`, THEOREM-MAP §215).
 
 ---
 
