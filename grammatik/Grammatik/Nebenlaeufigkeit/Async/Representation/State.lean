@@ -227,7 +227,9 @@ public theorem runningValue_inv (types : TypeResolution) (f : AsyncFn) (inventor
     Inv f types inventory (.running tag frame) (runningValue D types f tag within saved) := by
   let selected := commandRunningIndex 0 f.body tag within
   let index : Fin (phases f).length := selected.val.succ.succ
-  have active : (phases f).get index = .running tag := selected.property
+  have active : (phases f).get index = .running tag := by
+    change (commandPhases 0 f.body).get selected.val = .running tag
+    simpa only [Nat.zero_add] using selected.property
   have sameType : phaseType types f ((phases f).get index) = frameType types f :=
     congrArg (phaseType types f) active
   have payload : PhaseRep D types f ((phases f).get index) (.running tag frame) (sameType.symm ▸ saved) := by
@@ -250,6 +252,7 @@ public theorem runningValue_inv (types : TypeResolution) (f : AsyncFn) (inventor
           ⟨position, Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ inList)⟩
         have closer : previous.val < selected.val.val := Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ earlier)
         have different := commandRunningIndex_first 0 f.body tag within previous closer
+        simp only [Nat.zero_add] at different
         change encodePhase D types f ((commandPhases 0 f.body).get previous) (.running tag frame) = none
         cases atPhase : (commandPhases 0 f.body).get previous with
         | cancelled => rfl
@@ -259,7 +262,7 @@ public theorem runningValue_inv (types : TypeResolution) (f : AsyncFn) (inventor
           have other : tag ≠ current := by
             intro equal
             exact (different (atPhase.trans (congrArg Phase.running equal.symm)))
-          exact if_neg other
+          exact ite_eq_right other
   have matched := phaseListRep_at types f inventory (.running tag frame) (phases f) index _ payload presentMarks absent
   have exactValue : phaseValueAt D types f (phases f) index (sameType.symm ▸ saved) =
       (runningValue D types f tag within saved).1 :=

@@ -350,17 +350,39 @@ public theorem bindFrameBlock_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Li
     exact List.mem_map_of_mem (f := Prod.fst) member
   · exact represented.declared name (retained name live same)
 
-/-- Emit the binding segment from its checked declaration. An unused
-    result is evaluated for its reads and then discarded. -/
+/-- Construct the continuation frame from the bound local and the old
+    slots. An unused result has no slot in the continuation. -/
+@[expose] public def bindingFrameExpr {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (next : Phase) (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (saved : Var Γ (frameType types f)) : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=
+  if destination ∈ liveAt f next then
+    saveSlotExpr types f (trimFrameExpr types f (without destination (liveAt f next)) (.there saved))
+      (frameSlot types destination sourceType (f.params ++ f.fields) binding).val (.var .here)
+  else trimFrameExpr types f (liveAt f next) (.there saved)
+
+public theorem bindingFrameExpr_reads {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (next : Phase) (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType) (saved : Var Γ (frameType types f)) :
+    (bindingFrameExpr (D := D) (Λ := Λ) types f next destination sourceType binding saved).orte = [] := by
+  have trimmed (keep : List String) :
+      (trimFrameExpr (D := D) (Λ := Λ) types f keep (.there (σ := types.ordinary sourceType) saved)).orte = [] :=
+    trimSlotArgs_reads types keep (f.params ++ f.fields)
+      (fun field => Expr.prodGet (.var (.there saved)) field) (fun _ => rfl)
+  unfold bindingFrameExpr
+  split
+  · simp only [saveSlotExpr, Expr.orte, NutzlastExpr.orte, List.append_nil]
+    exact trimmed _
+  · exact trimmed _
+
+/-- Emit the binding segment from its checked declaration. Evaluation is
+    preserved even when the result is unused. -/
 @[expose] public def lowerBinding {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (types : TypeResolution) (f : AsyncFn) (next : Phase) (destination : String) (sourceType : Parser.STyp)
     (binding : (f.params ++ f.fields).lookup destination = some sourceType)
     (saved : Var Γ (frameType types f)) (expression : Expr D Γ Λ (types.ordinary sourceType)) :
     Block D V l Γ Λ Λ :=
-  if destination ∈ liveAt f next then
-    bindFrameBlock types f (without destination (liveAt f next)) saved
-      (frameSlot types destination sourceType (f.params ++ f.fields) binding).val expression
-  else evaluateBlock expression saved (trimFrameExpr types f (liveAt f next) (.there saved))
+  evaluateBlock expression saved (bindingFrameExpr types f next destination sourceType binding saved)
 
 /-- Every generated binding, including a discarded result, has the exact
     source read transition and restores the canonical live frame. -/
@@ -381,10 +403,10 @@ public theorem lowerBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
       FrameRep D types f next (save frame destination result) record := by
   intro answer result
   by_cases needed : destination ∈ liveAt f next
-  · simp only [lowerBinding, if_pos needed]
+  · simp only [lowerBinding, bindingFrameExpr, if_pos needed]
     exact bindFrameBlock_rep destination sourceType binding needed retained saved expression oracle passes calls
       world env frame represented
-  · simp only [lowerBinding, if_neg needed]
+  · simp only [lowerBinding, bindingFrameExpr, if_neg needed]
     have kept (name : String) (live : name ∈ liveAt f next) : name ∈ liveAt f before :=
       retained name live (fun equal => needed (equal ▸ live))
     let cleared : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=

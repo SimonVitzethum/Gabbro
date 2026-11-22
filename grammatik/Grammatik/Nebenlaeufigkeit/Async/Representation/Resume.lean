@@ -212,6 +212,80 @@ private theorem runningPhaseList (inventory : Inventory D) (tag : Nat)
       | await =>
         exact ⟨_, .later _ _ _ _ skipRun (.later _ _ _ _ rfl continuation)⟩
 
+/-- The generated ordinary G block evaluates one source expression and
+    installs the successor dispatch case with that binding's live frame. -/
+@[expose] public def lowerRunningBinding {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (tag : Nat) (within : tag + 1 ≤ f.body.length)
+    (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f))
+    (expression : Expr D Γ Λ (types.ordinary sourceType)) : Block D V l Γ Λ Λ :=
+  evaluateBlock expression state (runningExpr types f (tag + 1) within
+    (bindingFrameExpr types f (.running (tag + 1)) destination sourceType binding saved))
+
+/-- For a resolved bind command the generated update and the semantic
+    continuation agree on the exact read trace, state and owned marks. -/
+public theorem lowerRunningBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (inventory : Inventory D) (tag : Nat) (within : tag + 1 ≤ f.body.length)
+    (destination : String) (source : Parser.SExpr) (limit : Nat) (rest : List Command)
+    (command : f.body.drop tag = Command.bind destination source limit :: rest) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f))
+    (expression : Expr D Γ Λ (types.ordinary sourceType)) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (represented : FrameRep D types f (.running tag) frame (env.get saved))
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.running tag)) :
+    let answer := evaluateExpression expression world env
+    let resumed := State.running (Child := Child D types) (tag + 1)
+      (save frame destination (Value.typed (types.ordinary sourceType) answer.1))
+    ∃ value, execBlock oracle passes calls
+        (lowerRunningBinding (V := V) (l := l) types f tag within destination sourceType binding saved state expression)
+          world env = .ok answer.2.1 (env.set state value) ∧
+      Inv f types inventory resumed value ∧ encode D types f resumed = some value := by
+  intro answer resumed
+  have tail : f.body.drop (tag + 1) = rest := by
+    rw [← List.drop_drop, command]
+    rfl
+  have retained (name : String) (needed : name ∈ liveAt f (.running (tag + 1))) (different : name ≠ destination) :
+      name ∈ liveAt f (.running tag) := by
+    simp only [liveAt, tail] at needed
+    simp only [liveAt, command, liveBefore, List.mem_append, without, List.mem_filter, needed,
+      beq_eq_false_iff_ne.mpr different, Bool.not_false, and_self, or_true]
+  let update : Expr D (types.ordinary sourceType :: Γ) Λ (frameType types f) :=
+    bindingFrameExpr types f (.running (tag + 1)) destination sourceType binding saved
+  have reads : update.orte = [] := bindingFrameExpr_reads types f (.running (tag + 1)) destination sourceType binding saved
+  have noRead (current : World D) : current.lese Λ [] = current := rfl
+  obtain ⟨record, bound, stored⟩ := lowerBinding_rep (V := V) (l := l) destination sourceType binding
+    retained saved expression oracle passes calls world env frame represented
+  have evaluateFrame := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression saved update world env
+  simp only [reads, noRead] at evaluateFrame
+  change execBlock oracle passes calls
+    (lowerBinding (V := V) (l := l) types f (.running (tag + 1)) destination sourceType binding saved expression)
+      world env = .ok answer.2.1 (env.set saved (eval answer.2.1 update answer.2.1 (.cons answer.1 env))) at evaluateFrame
+  rw [bound] at evaluateFrame
+  have exactFrame : eval answer.2.1 update answer.2.1 (.cons answer.1 env) = record := by
+    have equal := congrArg (fun current : Env D Γ => current.get saved) (Ausgang.ok.inj evaluateFrame).2
+    simpa only [Env.get_set_same] using equal.symm
+  have stillOwned : MarksRep inventory (.running (tag + 1)) resumed := by
+    simpa only [MarksRep, resumed, State.marks, save, sameInventory] using marks
+  let value := runningValue D types f (tag + 1) within record
+  have invariant : Inv f types inventory resumed value :=
+    runningValue_inv types f inventory (tag + 1) within _ record stored stillOwned
+  refine ⟨value, ?_, invariant, inv_encoded types f inventory resumed value invariant⟩
+  let successor := runningExpr types f (tag + 1) within update
+  have successorReads : successor.orte = [] := (runningExpr_reads types f (tag + 1) within update).trans reads
+  have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression state successor world env
+  simp only [successorReads, noRead] at executed
+  have encoded := runningExpr_eval types f (tag + 1) within update answer.2.1 answer.2.1 (.cons answer.1 env)
+  rw [exactFrame] at encoded
+  change eval answer.2.1 successor answer.2.1 (.cons answer.1 env) = value at encoded
+  change execBlock oracle passes calls
+    (lowerRunningBinding (V := V) (l := l) types f tag within destination sourceType binding saved state expression)
+      world env = .ok answer.2.1 (env.set state (eval answer.2.1 successor answer.2.1 (.cons answer.1 env))) at executed
+  rwa [encoded] at executed
+
 /-- The resolved ordinary expression of a bind produces a representable
     next state with its exact result and retained authority marks. -/
 public theorem evaluateBind_preserves {V : Vertrag D} {Λ : List (Res D)}
