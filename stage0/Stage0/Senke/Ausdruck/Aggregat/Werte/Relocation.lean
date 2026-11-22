@@ -83,9 +83,9 @@ private theorem encodeSumPayload_immediateShape : (cases : List (Option Ty)) →
   | none :: _, ⟨0, _⟩, _ => rfl
   | some type :: _, ⟨0, _⟩, value =>
     encodeWords_immediateShape type value
-  | _ :: tail, ⟨index + 1, bound⟩, value =>
-    encodeSumPayload_immediateShape tail
-      ⟨index, Nat.lt_of_succ_lt_succ bound⟩ value
+  | _ :: tail, ⟨index + 1, bound⟩, value => by
+    simpa only [encodeSumPayload] using
+      encodeSumPayload_immediateShape tail ⟨index, Nat.lt_of_succ_lt_succ bound⟩ value
 termination_by structural cases => cases
 
 private theorem encodeProductFields_immediateShape : (fields : List Ty) →
