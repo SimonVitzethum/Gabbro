@@ -111,7 +111,7 @@ theorem mergedView_accessible_at (state : TSt) (footprint : Nat → W → Prop) 
 
 /-- The bytes of a single load may lie both in the issuer's private
     region and in committed memory. The entire observed word agrees. -/
-theorem projectSCState_read_accessible {layout : Lay} {before after : (TSO layout).St}
+theorem projectSCState_read_accessible {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
     {i width : Nat} {address : W} {answer : Ans}
     (read : (TSO layout).ans before i (.rd width address) answer after)
     (footprint : Nat → W → Prop)
@@ -182,6 +182,33 @@ private theorem privateBuffers_flush {layout : Runner.Beweis.Lay}
   apply buffers i store
   rw [head]
   exact List.mem_cons_of_mem _ pending
+
+/-- Run an answered request at a related body position through the SC
+    projection, retaining the actual answer and exclusive pending stores. -/
+theorem SoloFootprint.project_answer {layout : Runner.Beweis.Lay}
+    {before after : (TSO layout).St} {i : Nat} {request : Op} {answer : Ans} {resume : Ans → Res T}
+    {footprint : Nat → W → Prop} {solo : Solo}
+    (locality : SoloFootprint footprint i solo) (covers : ImFuss solo)
+    (ready : solo.r = .ask request resume) (memory : istSpeicherOp request = true)
+    (buffers : PrivateBuffers footprint before.1) (step : (TSO layout).ans before i request answer after) :
+    PrivateBuffers footprint after.1 ∧
+      (SC layout).ans (projectSCState footprint before) i request answer (projectSCState footprint after) := by
+  obtain ⟨reading, writing⟩ := covers request resume ready
+  have owns : schreibtOp request = true → ∀ byte, fussOp request byte →
+      footprint i byte ∧ ∀ j, footprint j byte → j = i := fun stores byte touched =>
+    ⟨locality.write byte (writing stores byte touched), locality.read byte (reading byte touched)⟩
+  refine ⟨privateBuffers_answer buffers memory step ?_, ?_⟩
+  · rintro _ _ rfl byte touched
+    exact owns rfl byte touched
+  · cases request with
+    | rd width base =>
+      exact projectSCState_read_accessible step footprint
+        (fun byte touched => locality.read byte (reading byte touched))
+        (fun j store pending byte touched => (buffers j store pending byte touched).1)
+    | wr base value => exact projectSCState_store step footprint (owns rfl)
+    | cas base old value => exact projectSCState_cas step footprint (owns rfl) buffers.disjoint
+    | sys _ => cases memory
+    | fp _ _ _ => cases memory
 
 /-- The memory-only fragment of the runner's TSO process. Private reads
     stay inside their footprint and writes require exclusive ownership. -/
