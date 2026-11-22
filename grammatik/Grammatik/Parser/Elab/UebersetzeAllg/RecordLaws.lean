@@ -71,28 +71,36 @@ private theorem specPrimitiveLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : Lis
 theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (side : USide) (valid : specLiteralFieldFits side ty = true) :
     ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
-  cases side
-  case arrNil =>
-    cases ty <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at valid)
-    case arr element length =>
-      cases length with
-      | zero => exact ⟨.arrNil, by rw [lowWertAtE]⟩
-      | succ _ => simp only [specLiteralFieldFits, Bool.false_eq_true] at valid
-  case arrCons first rest =>
-    cases ty <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at valid)
-    case arr element length =>
-      cases length with
-      | zero => simp only [specLiteralFieldFits, Bool.false_eq_true] at valid
-      | succ length =>
-        have both : (specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)) = true :=
-          valid
-        obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp both
-        obtain ⟨head, loweredHead⟩ := specLiteralField_lower u Γ Λ fn er element first headOk
-        obtain ⟨tail, loweredTail⟩ := specLiteralField_lower u Γ Λ fn er (.arr element length) rest tailOk
-        exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
-  all_goals exact specPrimitiveLiteralField_lower u Γ Λ fn er _ _ valid
-termination_by sizeOf side
-decreasing_by all_goals (simp_wf <;> omega)
+  suffices lowers : ∀ (measure : Nat) (source : USide), sizeOf source = measure →
+      ∀ (target : Ty), specLiteralFieldFits source target = true →
+        ∃ expression, lowWertAtE u Γ Λ fn er target source = .ok expression from
+    lowers _ side rfl ty valid
+  intro amount
+  induction amount using Nat.strongRecOn with
+  | ind amount smaller =>
+    intro source measure target accepted
+    cases source
+    case arrNil =>
+      cases target <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted)
+      case arr element length =>
+        cases length with
+        | zero => exact ⟨.arrNil, by rw [lowWertAtE]⟩
+        | succ _ => simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted
+    case arrCons first rest =>
+      cases target <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted)
+      case arr element length =>
+        cases length with
+        | zero => simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted
+        | succ length =>
+          have both : (specLiteralFieldFits first element && specLiteralFieldFits rest (.arr element length)) = true :=
+            accepted
+          obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp both
+          have extent : 1 + sizeOf first + sizeOf rest = amount := measure
+          obtain ⟨head, loweredHead⟩ := smaller (sizeOf first) (by omega) first rfl element headOk
+          obtain ⟨tail, loweredTail⟩ :=
+            smaller (sizeOf rest) (by omega) rest rfl (.arr element length) tailOk
+          exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
+    all_goals exact specPrimitiveLiteralField_lower u Γ Λ fn er _ _ accepted
 
 theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (fields : List (Ty × USide))
