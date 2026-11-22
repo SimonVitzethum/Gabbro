@@ -159,7 +159,9 @@ theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve optio
     let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index))
     let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
     ImageRootPhase output E history (current.ms.1.view (index + 1)) (index + 1) (.next ⟨pc, fp⟩) state := by
-  have buffers := ImageIdleBuffers.follow (fun i _ => mapped.emptyBuffers i) path
+  have empty : ImageIdleBuffers (⟨mappedAt.ms, [some t4]⟩ : Cfg imageTSO (Res T)) :=
+    fun i _ => mapped.emptyBuffers i
+  have buffers := empty.follow path
   have view : current.ms.1.view (index + 1) = current.ms.1.m := by
     simp only [TSt.view, buffers _ unused, List.foldl_nil]
   have dormant : state.lebt (index + 1) = false :=

@@ -23,7 +23,7 @@ theorem Emitted.code_byte_before_stacks [Kern] (output : Emitted src K options) 
   have below : codeBase + index < output.image.fp0 := by
     rw [← output.code_end]
     omega
-  obtain ⟨stacks, limit⟩ := output.stackReservation_bounds
+  obtain ⟨stackBound, limit⟩ := output.stackReservation_bounds
   have frameFits : output.image.fp0 < 2 ^ 64 := by omega
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (below.trans frameFits)]
   exact below
