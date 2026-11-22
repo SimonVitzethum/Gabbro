@@ -26,33 +26,30 @@ theorem tso_read_step {layout : Lay} (before : Cfg (TSO layout) (Res T))
     (t' := resume (some (value, 0))) rfl
   simpa only [List.set_set, Mach.lbl] using step
 
-/-- Finishing an instruction's result operation reads its destination,
-    enqueues the word and advances the program counter. The writer sees
-    the update without a TSO flush. -/
-theorem tso_ret1_prefix {layout : Lay}
-    {before : Cfg (TSO layout) (Res T)} {i : Nat} {parent : T}
-    {dest : BitVec 32} {value : W}
-    (running : before.ths[i]? = some (some (ret1 parent value)))
-    (destination : (before.ms.1.view i).rd32 (parent.pc + 4) = some dest)
-    (writable : Mem.all before.ms.1.m.wr (slot parent.fp (sx dest)) 8 = true) :
+/-- A permitted word store enqueues its value and resumes the exact
+    instruction continuation in one silent process step. -/
+theorem tso_write_step {layout : Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {address value : W} {resume : Ans → Res T}
+    (running : before.ths[i]? = some (some (.ask (.wr address value) resume)))
+    (writable : Mem.all before.ms.1.m.wr address 8 = true) :
     ∃ after : (TSO layout).St,
-      ProcessPrefix (TSO layout) actI before [] 2
-        ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
+      ProcessStep (TSO layout) actI before []
+        ⟨after, before.ths.set i (some (resume (some (0, 0))))⟩ ∧
       after.1.m = before.ms.1.m ∧
-      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
+      after.1.view i = Mem.write (before.ms.1.view i) address 8 value.toNat ∧
       ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
   have outsideTable (j : Nat) (inside : j < 8) :
-      ¬ TB layout (slot parent.fp (sx dest) + BitVec.ofNat 64 j) := by
+      ¬ TB layout (address + BitVec.ofNat 64 j) := by
     intro touches
-    obtain ⟨row, range, byte, width, address⟩ := touches
+    obtain ⟨row, range, byte, width, located⟩ := touches
     have present : byte < (readOnlyBytes layout row).length := by
       rw [readOnlyBytes_length]
       exact width
     have readOnly := (before.ms.2.1 row range byte present).2.2
     have writeAllowed := Beweis.all_spec writable inside
-    rw [address, readOnly] at writeAllowed
+    rw [located, readOnly] at writeAllowed
     cases writeAllowed
-  let pending := before.ms.1.buf i ++ [(slot parent.fp (sx dest), value)]
+  let pending := before.ms.1.buf i ++ [(address, value)]
   let after : (TSO layout).St := ⟨before.ms.1.setBuf i pending, by
     refine ⟨before.ms.2.1, ?_⟩
     intro thread store present
@@ -66,9 +63,30 @@ theorem tso_ret1_prefix {layout : Lay}
         subst store
         exact outsideTable
     · exact before.ms.2.2 thread store (by simpa only [TSt.setBuf, ite_eq_right writer] using present)⟩
-  have answered : (TSO layout).ans before.ms i (.wr (slot parent.fp (sx dest)) value)
-      (some (0, 0)) after :=
+  have answered : (TSO layout).ans before.ms i (.wr address value) (some (0, 0)) after :=
     Or.inr ⟨writable, rfl, rfl⟩
+  have stored := ProcessStep.ask (act := actI) running rfl rfl answered
+    (t' := resume (some (0, 0))) rfl
+  refine ⟨after, ?_, rfl, ?_⟩
+  · simpa only [Mach.lbl] using stored
+  rcases tso_store_updates_view answered with refused | accepted
+  · cases refused.1
+  · exact accepted.2
+
+/-- Finishing an instruction's result operation reads its destination,
+    enqueues the word and advances the program counter. -/
+theorem tso_ret1_prefix {layout : Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {parent : T}
+    {dest : BitVec 32} {value : W}
+    (running : before.ths[i]? = some (some (ret1 parent value)))
+    (destination : (before.ms.1.view i).rd32 (parent.pc + 4) = some dest)
+    (writable : Mem.all before.ms.1.m.wr (slot parent.fp (sx dest)) 8 = true) :
+    ∃ after : (TSO layout).St,
+      ProcessPrefix (TSO layout) actI before [] 2
+        ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view i = Mem.write (before.ms.1.view i) (slot parent.fp (sx dest)) 8 value.toNat ∧
+      ∀ j, j ≠ i → after.1.view j = before.ms.1.view j := by
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) :=
     ⟨before.ms, before.ths.set i (some r)⟩
   obtain ⟨inside, current⟩ := List.getElem?_eq_some_iff.mp running
@@ -87,18 +105,13 @@ theorem tso_ret1_prefix {layout : Lay}
         exact List.set_getElem_self inside
       simp only [onThread, threads]
     exact original ▸ decoded
-  have stored : ProcessStep (TSO layout) actI
-      (onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent))) []
+  obtain ⟨after, queued, committed, view, others⟩ :=
+    tso_write_step (before := onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent)))
+      (List.getElem?_set_self inside) writable
+  have stored : ProcessStep (TSO layout) actI (onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent))) []
       ⟨after, before.ths.set i (some (.next (nxt parent)))⟩ := by
-    have step := ProcessStep.ask (act := actI) (i := i)
-      (c := onThread (wr64 (slot parent.fp (sx dest)) value (nxt parent)))
-      (List.getElem?_set_self inside) rfl rfl answered (t' := .next (nxt parent)) rfl
-    simpa only [onThread, List.set_set, Mach.lbl] using step
-  refine ⟨after, .cons decoded (.cons stored (.nil _)),
-    rfl, ?_⟩
-  rcases tso_store_updates_view answered with refused | accepted
-  · cases refused.1
-  · exact accepted.2
+    simpa only [onThread, List.set_set, wr64, opt_some] using queued
+  exact ⟨after, .cons decoded (.cons stored (.nil _)), committed, view, others⟩
 
 /-- The real runner loads an immediate, enqueues its destination store,
     and advances to the next instruction. The issuer can already read
