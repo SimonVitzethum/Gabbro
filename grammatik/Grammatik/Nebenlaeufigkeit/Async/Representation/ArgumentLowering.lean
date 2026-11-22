@@ -184,23 +184,25 @@ public theorem CheckedArguments.lower_assign {elaboration : Elaboration D V Λ t
           .ok (restEffect arguments middle).2 (context.set (later (extension destination)) (restEffect arguments middle).1) := by
       apply correct
       · intro type var
-        exact (get_prependLocal var env locals).symm.trans (retained (extension var))
+        exact (retained (extension var)).trans (get_prependLocal var env locals)
       · intro type var
         cases var with
         | here => exact retained .here
         | there var => exact agrees var
     obtain ⟨arguments, typed, lowered⟩ := ih (extension destination) (extension saved) restBody restEffect
       answer.2.1 scope newFrame restCorrect
+    have evaluated : (inducedModel elaboration calls prices normal).evaluate source frame world =
+        (Value.typed head.term.result answer.1, answer.2) := value
     refine ⟨.cons answer.1 arguments, ?_, ?_⟩
-    · simp only [evalArguments, value, argumentsEnv, valueAt_typed, typed,
+    · simp only [evalArguments, evaluated, argumentsEnv, valueAt_typed, typed,
         Option.bind_eq_bind, Option.bind_some, Option.pure_def]
     · change execBlock oracle passes calls (head.lower saved continuation) world env = _
       rw [ran]
       change removeLocals (head.term.locals.map Prod.snd)
         (execBlock oracle passes calls (tail.lower (extension saved) restBody) answer.2.1 scope).schrumpf = _
       rw [lowered]
-      simp only [evalArguments, value]
+      simp only [evalArguments, evaluated]
       dsimp only [restEffect, scope, extension, Env.set, Ausgang.schrumpf]
-      rw [set_prependLocal, removeLocals_ok]
+      erw [set_prependLocal, removeLocals_ok]
 
 end Gabbro.Grammatik.Async.Representation
