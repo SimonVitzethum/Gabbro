@@ -439,4 +439,26 @@ theorem specArrayIndexArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declO
   · intro entry world env
     simp only [eval, position, Zahl.fin, Zahl.weiter, Int.toNat_natCast] <;> rfl
 
+/-- A compound predicate argument and the dependent term select the
+    same field of the same checked parent value, including array elements. -/
+theorem specFieldArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (ctx : UCtx) (fn : UFn) (er : Option Ty) (base : SExpr) (field : String)
+    {operand : USide} {parent target : Ty} {schema : {s : URecord // s.ty = parent}}
+    {position : FieldAt (schema.val.fields.map (·.2)) target}
+    (read : uWertBody ctx (.field base field) = .ok (.field operand field))
+    (prechecked : uSpecValueType ctx base operand = some parent)
+    (schemas : ctx.records = u.records) (gate : u.exportGate = .ok ())
+    (nominal : uRecordOf ctx.records parent = .ok schema)
+    (selected : uRecordPosition schema.val.fields field = .ok ⟨target, position⟩)
+    (value : Expr (declOf u) Γ Λ parent)
+    (typed : lowWertE u Γ Λ fn er operand = .ok ⟨parent, value⟩) :
+    let aggregate := cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) value
+    uSpecValueArgument ctx target (.field base field) = .ok () ∧
+      lowWertE u Γ Λ fn er (.field operand field) = .ok ⟨target, Expr.prodGet aggregate position⟩ ∧
+      ∀ initial world env, eval initial (.prodGet aggregate position) world env =
+        prodGetW position (eval initial aggregate world env) := by
+  intro aggregate
+  refine ⟨specFieldArgument_of_checked ctx base field read prechecked nominal selected, ?_, fun _ _ _ => rfl⟩
+  simp only [lowWertE, gate, typed, ← schemas, nominal, selected, bind, Except.bind, pure, Except.pure, aggregate]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg

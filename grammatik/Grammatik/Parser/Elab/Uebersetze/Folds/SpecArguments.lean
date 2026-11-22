@@ -30,6 +30,12 @@ def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
     let some (.arr element capacity) := uSpecValueType ctx base operand | none
     let (lo, hi) ← foldRangeWithIndexCheck ctx true index
     if 0 ≤ lo ∧ hi < (capacity : Int) then some element else none
+  | .field base name, .field operand field => do
+    if !strEq name field then none else
+      let ty ← uSpecValueType ctx base operand
+      let schema ← (uRecordOf ctx.records ty).toOption
+      let position ← (uRecordPosition schema.val.fields field).toOption
+      pure position.1
   | .bin "+" lhs rhs, .add a b => do
     let some (.str left) := uSpecValueType ctx lhs a | none
     let some (.str right) := uSpecValueType ctx rhs b | none
@@ -187,6 +193,56 @@ theorem specArrayIndexArgument_erfuellbar (element : Ty) (capacity index : Nat) 
   obtain ⟨ctx, read, baseType, array⟩ := specArrayLocal element capacity
   exact ⟨ctx, read, baseType, array,
     (specArrayIndexArgument_of_local ctx "array" element capacity index inside read baseType array).2⟩
+
+/-- A projection retains the prechecked base and uses the same nominal
+    schema and field index as dependent record lowering. -/
+theorem specFieldArgument_of_checked (ctx : UCtx) (base : SExpr) (field : String)
+    {operand : USide} {parent target : Ty} {schema : {s : URecord // s.ty = parent}}
+    {position : FieldAt (schema.val.fields.map (·.2)) target}
+    (read : uWertBody ctx (.field base field) = .ok (.field operand field))
+    (typed : uSpecValueType ctx base operand = some parent)
+    (nominal : uRecordOf ctx.records parent = .ok schema)
+    (selected : uRecordPosition schema.val.fields field = .ok ⟨target, position⟩) :
+    uSpecValueArgument ctx target (.field base field) = .ok () := by
+  have same : strEq field field = true := by simp [strEq_apply_eq_decide]
+  simp only [uSpecValueArgument, read, bind, Except.bind, uSpecValueType, same, Bool.not_true,
+    Bool.false_eq_true, ite_false, typed, nominal, selected, Option.bind_some,
+    Except.toOption, pure, Option.pure_def, Except.pure, ite_true]
+
+/-- A field of an indexed local record is a compound argument and all
+    source obligations hold together for every in-bounds index. -/
+theorem specIndexedFieldArgument_erfuellbar (field : String) (target : Ty)
+    (identity capacity index : Nat) (inside : index < capacity) :
+    ∃ ctx : UCtx,
+      let base := SExpr.index (.variable "array") (.lit index)
+      uWertBody ctx (.field base field) =
+        .ok (.field (.idx (.param "array") (.lit index)) field) ∧
+      uSpecValueArgument ctx target (.field base field) = .ok () := by
+  let schema : URecord := { name := "record", identity, fields := [(field, target)] }
+  let ctx : UCtx := {
+    names := ["array"], kinds := [.wert], types := [.arr schema.ty capacity], records := [schema],
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  let base := SExpr.index (.variable "array") (.lit index)
+  let operand := USide.idx (.param "array") (.lit index)
+  have arrayRead : uWertBody ctx (.variable "array") = .ok (.param "array") := by
+    simp [ctx, uWertBody, uRechne, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have baseType : uValueType ctx (.param "array") = some (.arr schema.ty capacity) := by
+    simp [ctx, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have access : uTraegerIndex ctx (.variable "array") = false := rfl
+  obtain ⟨baseRead, baseAccepted⟩ :=
+    specArrayIndexArgument_of_local ctx "array" schema.ty capacity index inside arrayRead baseType access
+  have typed : uSpecValueType ctx base operand = some schema.ty := by
+    obtain ⟨parsed, read, type⟩ := uSpecValueArgument_exact baseAccepted
+    exact (Except.ok.inj (read.symm.trans baseRead)) ▸ type
+  have nominal : uRecordOf ctx.records schema.ty = .ok ⟨schema, rfl⟩ := by
+    simp only [ctx, uRecordOf, dite_true]
+  have same : strEq field field = true := by simp [strEq_apply_eq_decide]
+  have selected : uRecordPosition schema.fields field = .ok ⟨target, .head⟩ := by
+    simp only [schema, uRecordPosition, same, ite_true]
+  have read : uWertBody ctx (.field base field) = .ok (.field operand field) := by
+    change uRechne ctx (uWertBlatt ctx) base = .ok operand at baseRead
+    simp only [uWertBody, uRechne, baseRead] <;> rfl
+  exact ⟨ctx, read, specFieldArgument_of_checked ctx base field read typed nominal selected⟩
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/
