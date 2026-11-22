@@ -6,7 +6,7 @@ public import Stage0.Senke.Sperre.Bindung.ImageFutex
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
+open Gabbro.Grammatik Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
 
 /-- A ticket lock and the source traces name the same owner. Source
     slots outside the fixed image's reservations hold no lock. -/
@@ -143,16 +143,17 @@ theorem image_ticket_release_GX [Kern] {D : Deklaration} {N : Nat}
     {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Tab ⊕ D.Glob → Prop}
     {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
     {source : FadenMaschine D} {lock : D.Lock} {before : Zustand N}
-    {thread : Fin N} {ticket expected base : Nat}
+    {thread : Fin N} {ticket expected : Nat} (layout : Lay D)
     (owners : TicketOwnership source.m lock before)
     (limit : N ≤ 2147483647) (invariant : Inv N before)
     (saved : before.pc thread = .gibC ticket expected)
-    (fits : base + 24 ≤ 2 ^ 64) (represented : TicketWordsAt machine.ms.1.m base before)
-    (writable : all machine.ms.1.m.wr (BitVec.ofNat 64 (base + 8)) 8 = true)
+    (fits : layout.lk lock + 24 ≤ 2 ^ 64)
+    (represented : TicketWordsAt machine.ms.1.m (layout.lk lock) before)
+    (writable : all machine.ms.1.m.wr (BitVec.ofNat 64 (layout.lk lock + 8)) 8 = true)
     (waiting : machine.ths[thread.val]? = some (some (.ask
-      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
+      (.cas (BitVec.ofNat 64 (layout.lk lock + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
     (answered : imageTSO.ans machine.ms thread.val
-      (.cas (BitVec.ofNat 64 (base + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory)
+      (.cas (BitVec.ofNat 64 (layout.lk lock + 8)) (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory)
     (live : source.lebt thread.val = true) (ready : source.wartet thread.val = [])
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (k : GRest D (vertragVon D (source.m.faeden thread.val).kopf.f) l Γ Λ)
@@ -163,7 +164,7 @@ theorem image_ticket_release_GX [Kern] {D : Deklaration} {N : Nat}
     let released : Zustand N := ⟨⟨before.w.next, before.w.serv + 1, before.w.wait⟩,
       upd before.pc thread .gibW, before.q.tail⟩
     ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
-      TicketWordsAt memory.1.m base released ∧ Inv N released ∧
+      TicketWordsAt memory.1.m (layout.lk lock) released ∧ Inv N released ∧
       ∃ target, FadenSchrittX P O passes Tg source target ∧ target.m.speicher = source.m.speicher ∧
         TicketOwnership target.m lock released := by
   obtain ⟨process, returned, _, _, words, invariant', _, _⟩ :=
@@ -171,5 +172,52 @@ theorem image_ticket_release_GX [Kern] {D : Deklaration} {N : Nat}
   obtain ⟨target, advances, store, _, owners'⟩ :=
     owners.leave (P := P) (O := O) (passes := passes) (Tg := Tg) saved live ready k env head unique
   exact ⟨process, returned, words, invariant', target, advances, store, owners'⟩
+
+/-- When the actual serving read reports the caller's ticket, the same
+    transition enters the corresponding source lock scope. -/
+theorem image_ticket_admit_GX [Kern] {D : Deklaration} {N : Nat}
+    {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Tab ⊕ D.Glob → Prop}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {source : FadenMaschine D} {lock : D.Lock} {before : Zustand N}
+    {thread : Fin N} {ticket : Nat} (layout : Lay D)
+    (owners : TicketOwnership source.m lock before) (strategy : LockWait)
+    (spins : strategy = .spin → SpinState before)
+    (limit : N ≤ 2147483647) (invariant : Inv N before)
+    (saved : before.pc thread = .ladeS ticket)
+    (represented : TicketWordsAt machine.ms.1.m (layout.lk lock) before)
+    (footprint : Nat → W → Prop) (buffers : PrivateBuffers footprint machine.ms.1)
+    (shared : ∀ byte, fenster (BitVec.ofNat 64 (layout.lk lock + 8)) byte →
+      ∀ owner, ¬ footprint owner byte)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.rd 8 (BitVec.ofNat 64 (layout.lk lock + 8))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val (.rd 8 (BitVec.ofNat 64 (layout.lk lock + 8))) reply memory)
+    (matched : ∃ extra, reply = some (BitVec.ofNat 64 ticket, extra))
+    (live : source.lebt thread.val = true) (ready : source.wartet thread.val = [])
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (ordered : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang lock)
+    (body : Block D (vertragVon D (source.m.faeden thread.val).kopf.f) l Γ
+      (Res.held lock :: Λ) (Res.held lock :: Λ))
+    (rest : Block D (vertragVon D (source.m.faeden thread.val).kopf.f) l Γ Λ Λ')
+    (k : GRest D (vertragVon D (source.m.faeden thread.val).kopf.f) l Γ Λ')
+    (env : Env D Γ)
+    (head : (source.m.faeden thread.val).kopf.rest =
+      ⟨l, Γ, Λ, env, .dann (.cons (.locks lock ordered body) rest) k⟩)
+    (ranks : ∀ earlier ∈ offen (source.m.faeden thread.val).spur, D.rang earlier < D.rang lock) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
+    let admitted := before.mit thread (.drin ticket)
+    ProcessStep imageTSO actI machine [] after ∧ memory = machine.ms ∧
+      BindingStep strategy before thread admitted ∧ TicketWordsAt memory.1.m (layout.lk lock) admitted ∧
+      Inv N admitted ∧ ∃ target, FadenSchrittX P O passes Tg source target ∧
+        target.m.speicher = source.m.speicher ∧ TicketOwnership target.m lock admitted := by
+  obtain ⟨process, memorySame, ⟨extra, observed⟩, next, binds, words, _, successor⟩ :=
+    image_ticket_serving_read strategy spins saved represented footprint buffers shared waiting answered
+  obtain ⟨expectedExtra, expected⟩ := matched
+  have same := congrArg (fun pair : W × W => pair.1.toNat) (Option.some.inj (observed.symm.trans expected))
+  have served : before.w.serv % 2 ^ 64 = ticket % 2 ^ 64 := by
+    simpa only [BitVec.toNat_ofNat] using same
+  rw [successor served] at binds words
+  have ticketStep := Schritt.tritt saved served
+  exact ⟨process, memorySame, binds, words, invariant.schritt limit ticketStep,
+    owners.enter limit invariant saved served live ready ordered body rest k env head ranks⟩
 
 end Gabbro.Stage0.Senke.Faeden
