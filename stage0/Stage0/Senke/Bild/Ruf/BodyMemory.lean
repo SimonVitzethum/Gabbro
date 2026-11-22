@@ -246,7 +246,9 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     refine ⟨pre.ctx, pre.small, frames, ?_, pre.far, ?_, original,
       Senke.weltAt_stab (requireWrites := false) layout separated⟩
     · rw [exactMemory]
-      exact pre.code
+      intro index present
+      obtain ⟨opcode, first, second, third⟩ := pre.code index present
+      exact ⟨opcode, first, second, third⟩
     · rw [exactMemory]
       exact pre.env
   letI : Kern := kernel.withoutSyscalls
