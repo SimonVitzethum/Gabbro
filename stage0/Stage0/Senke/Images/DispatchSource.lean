@@ -153,14 +153,18 @@ theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve optio
     {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
     (declared : output.starts[index]? = some root)
     (code : BytesAt current.ms.1.m codeBase (output.image.code.flatMap encII))
-    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    (head : state.m.faeden (index + 1) = (imageSourceStart E).m.faeden (index + 1)) :
+    {O : Orakel (declOf output.compiled.unit)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (slots : ImageSlotsMatch output E O history current state)
+    (reached : ImageReach output E O (imageSourceStart E) state) :
     let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index))
     let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
     ImageRootPhase output E history (current.ms.1.view (index + 1)) (index + 1) (.next ⟨pc, fp⟩) state := by
   have buffers := ImageIdleBuffers.follow (fun i _ => mapped.emptyBuffers i) path
   have view : current.ms.1.view (index + 1) = current.ms.1.m := by
     simp only [TSt.view, buffers _ unused, List.foldl_nil]
+  have dormant : state.lebt (index + 1) = false :=
+    Bool.eq_false_iff.mpr (fun live => Nat.not_lt_of_ge unused ((slots.1 _).mp live))
+  have head := (fadenInvX_erreichbar reached).schlaeft _ dormant
   rw [view]
   exact output.fresh_root_phase unit mapped.bytes declared (image_future_frame_of_prefix path unused classify) code head
 
