@@ -227,7 +227,7 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
     simp only [uWertBody, uRechne, uWertBlatt]
   let term : LowWert u [] Λ := ⟨.int value value, .lit value⟩
   have lowered : lowerExpression u Λ fn [] none (.lit value) = .ok term := by
-    simp only [lowerExpression, lowWertE, LowSide.wert, term]
+    rfl
   let resolved : CanonicalExpression u Λ ctx fn function (.lit value) :=
     ⟨[], .lit value, term, parameters, read, lowered⟩
   refine ⟨resolved, ?_, rfl, rfl⟩

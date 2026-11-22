@@ -174,14 +174,38 @@ public theorem cancelWith_refines (Owns : List Nat → W → Prop)
     correctness is separate because it may change the world when dropping. -/
 public structure ReificationDuty (model : Model Value Child W) (f : AsyncFn)
     (Target : Type) (step : Target → W → Event Value × Target × W × Nat)
-    (cancel : Target → W → List Nat × Target × W) where
+    (cancel : Target → W → List Nat × Target × W)
+    (owns : List Nat → W → Prop) (drop : State Value Child → W → List Nat × W) where
   encode : State Value Child → Target
   stepCorrect : ∀ source before event target after cost,
     StorageValid f source →
     machineStep model (asyncExpand model f) source before = (event, target, after, cost) →
     step (encode source) before = (event, encode target, after, cost)
+  dropCorrect : DropDuty owns drop
   cancelCorrect : ∀ source world, StorageValid f source →
-    cancel (encode source) world = (source.marks, encode .cancelled, world)
+    source.marks.Nodup → owns source.marks world →
+    let (released, target, after) := cancelWith drop source world
+    cancel (encode source) world = (released, encode target, after)
+
+/-- Cancellation of a reified state runs the declared cleanup, releases
+    exactly the saved marks and leaves the cleaned world for its caller. -/
+public theorem ReificationDuty.cancel_releases {model : Model Value Child W} {f : AsyncFn}
+    {Target : Type} {step : Target → W → Event Value × Target × W × Nat}
+    {cancel : Target → W → List Nat × Target × W} {owns : List Nat → W → Prop}
+    {drop : State Value Child → W → List Nat × W}
+    (verified : ReificationDuty model f Target step cancel owns drop)
+    (source : State Value Child) (world : W) (valid : StorageValid f source)
+    (unique : source.marks.Nodup) (owned : owns source.marks world) :
+    let after := (drop source world).2
+    cancel (verified.encode source) world = (source.marks, verified.encode .cancelled, after) ∧
+      directCancel (decode f source) after = (source.marks, decode f .cancelled, after) ∧
+      owns [] after := by
+  have cleanup := verified.dropCorrect source world unique owned
+  have cancelled := verified.cancelCorrect source world valid unique owned
+  have direct := cancellation_refines f source (drop source world).2 valid
+  refine ⟨?_, ?_, cleanup.2.2⟩
+  · simpa only [cancelWith, cleanup.1] using cancelled
+  · simpa only [machineCancel] using direct
 
 /-- Computed liveness reaches actual generated record fields, transitively
     through the written save list. -/
