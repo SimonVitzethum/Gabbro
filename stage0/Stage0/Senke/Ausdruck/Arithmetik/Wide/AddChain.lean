@@ -71,8 +71,8 @@ theorem addLimb_run (s : Nat → Runner.W) (A B m c t : Nat)
       slotUpd_other _ _ (outside j 4 (by decide) h3),
       slotUpd_other _ _ (outside j 3 (by decide) h3),
       slotUpd_other _ _ (outside j 2 (by decide) h3),
-      slotUpd_other _ _ (outside j 1 (by decide) h3),
-      slotUpd_other _ _ (outside j 0 (by decide) h3)]
+      slotUpd_other _ _ (outside j 1 (by decide) h3)]
+    exact slotUpd_other _ _ (by simpa only [Nat.add_zero] using outside j 0 (by decide) h3)
 
 /-! ## The chain -/
 
