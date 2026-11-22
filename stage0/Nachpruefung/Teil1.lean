@@ -7,7 +7,6 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
 import Grammatik.Nebenlaeufigkeit.Async.Representation.BindLowering
-import Grammatik.Nebenlaeufigkeit.Async.Representation.Restore
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
@@ -279,6 +278,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep
+#print axioms Gabbro.Grammatik.Async.Representation.restoredBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.frameSlot
 #print axioms Gabbro.Grammatik.Async.Representation.evaluateBind_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_frame

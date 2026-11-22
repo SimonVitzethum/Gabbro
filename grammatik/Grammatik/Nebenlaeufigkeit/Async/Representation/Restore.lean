@@ -43,9 +43,32 @@ public theorem get_prependLocal {τ : Ty} (x : Var Γ τ) (outer : Env D Γ) :
   | _, .nil => rfl
   | _, .cons _ rest => get_prependLocal x outer rest
 
+@[expose] public def keepLocal (suffix : Ctx) : ∀ {scope : Ctx} {τ : Ty},
+    Var scope τ → Var (scope ++ suffix) τ
+  | _, _, .here => .here
+  | _, _, .there x => .there (keepLocal suffix x)
+
+public theorem get_keepLocal (outer : Env D Γ) :
+    ∀ {scope : Ctx} {τ : Ty} (locals : Env D scope) (x : Var scope τ),
+      (appendLocals locals outer).get (keepLocal Γ x) = locals.get x
+  | _, _, .cons _ _, .here => rfl
+  | _, _, .cons _ rest, .there x => get_keepLocal outer rest x
+
+public theorem set_prependLocal {τ : Ty} (x : Var Γ τ) (outer : Env D Γ) (value : Wert D τ) :
+    ∀ {scope : Ctx} (locals : Env D scope),
+      (appendLocals locals outer).set (prependLocal x scope) value = appendLocals locals (outer.set x value)
+  | _, .nil => rfl
+  | _, .cons localValue rest => congrArg (Env.cons localValue) (set_prependLocal x outer value rest)
+
 @[expose] public def removeLocals : (locals : Ctx) → Ausgang V l (locals ++ Γ) → Ausgang V l Γ
   | [], result => result
   | _ :: rest, result => removeLocals rest result.schrumpf
+
+public theorem removeLocals_ok (world : World D) (outer : Env D Γ) :
+    ∀ {scope : Ctx} (locals : Env D scope),
+      removeLocals (V := V) (l := l) scope (.ok world (appendLocals locals outer)) = .ok world outer
+  | _, .nil => rfl
+  | _, .cons _ rest => removeLocals_ok world outer rest
 
 /-- Emit ordinary tagged projections in the lexical order of the scope.
     A dead field goes to the ordinary checked refusal arm. -/
