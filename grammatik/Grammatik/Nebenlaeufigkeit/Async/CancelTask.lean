@@ -3,6 +3,7 @@ module
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.JoinLowering
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -249,7 +250,7 @@ public theorem TaskDropPlan.waitingBlock_simulates {future : FutureExpr} (plan :
     {phase : Phase} → PhaseDropPlan D types V Λ phase →
       State (Value D) (Child D types) → World D → Option (Except (Logik D ⊕ Hardware D) (World D))
   | .waiting tag _, plan, .waiting position _ task, world =>
-    if position = tag then plan.run calls task world else none
+    if position = tag then TaskDropPlan.run calls plan task world else none
   | .waiting .., _, _, _ => none
   | .cancelled, _, .cancelled, world | .completed, _, .completed .., world => some (.ok world)
   | .running tag, _, .running position _, world =>
@@ -268,9 +269,9 @@ private theorem phaseDrop_exec {f : AsyncFn} {phase : Phase} {Γ : Ctx} {l : Boo
   cases represented with
   | cancelled | completed => exact ⟨.ok world, rfl, rfl⟩
   | running =>
-    exact ⟨.ok world, by simp only [PhaseDropPlan.run, if_pos rfl], rfl⟩
+    exact ⟨.ok world, by simp only [PhaseDropPlan.run, ite_eq_left rfl], rfl⟩
   | waiting tag future frame task saved child _ childRep =>
-    simpa only [PhaseDropPlan.run, PhaseDropPlan.lower, if_pos rfl] using
+    simpa only [PhaseDropPlan.run, PhaseDropPlan.lower, ite_eq_left rfl] using
       (TaskDropPlan.waitingBlock_simulates plan f tag (l := l) oracle passes calls world env saved childRep)
 
 @[expose] public def resolveDropTable (f : AsyncFn)
@@ -293,7 +294,7 @@ public theorem dropChildren_simulates {f : AsyncFn} {Γ : Ctx} {l : Bool}
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (world : World D) (env : Env D Γ) (source : State (Value D) (Child D types))
     (represented : Inv f types inventory source (env.get state)) :
-    ∃ (index : Fin (phases f).length) (value : Wert D (phaseType types f ((phases f).get index))) outcome,
+    ∃ (index : Fin (phases f).length) (value : Wert D (phaseType types f ((phases f).get index))) (outcome : Except (Logik D ⊕ Hardware D) (World D)),
       PhaseRep D types f ((phases f).get index) source value ∧
       MarksRep inventory ((phases f).get index) source ∧
       (table index).run calls source world = some outcome ∧
