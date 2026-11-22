@@ -39,10 +39,10 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     ∀ j code ceiling, a j = some (code, ceiling) → ceiling ≤ K →
       ∀ m pc, Pre L m pc fp K j code ρ W reserved → Ok m pc fp K j code P
   have binary {a b : Nat → Option (List II × Nat)}
-      {Pa Pb P : Runner.W → Prop} {o : Nat} {g : Runner.W → Runner.W → Option Runner.W}
+      {Pa Pb P : Runner.W → Prop} {o : Opcode} {g : Runner.W → Runner.W → Option Runner.W}
       (ha : proves a Pa) (hb : proves b Pb)
       (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r)
-      (hop : op o = bin g) (ho : o < 256) :
+      (hop : op o = bin g) (ho : o.val < 256) :
       proves (fun j => wordL o j (a j) (b (j + 1))) P := by
     intro j code ceiling hc ht m pc hp
     exact wordL_ok hc ht (fun _ _ he ht => ha _ _ _ he ht)

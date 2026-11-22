@@ -15,7 +15,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Seq
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem aluStep_cn {o a b c : Nat} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
+theorem aluStep_cn {a b c : Nat} {o : Opcode} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
     (ho1 : o ≠ 1) (ho2 : o ≠ 2) (s : Nat → Runner.W) :
     aluStep (cn o a b c) s = slotUpd s a (f (s b) (s c)) := by
   simp only [aluStep, aluVal, cn, ci, Int.toNat_natCast, hf, ho1, ho2, ite_false]
@@ -63,9 +63,9 @@ theorem selP_run (src M T a j : Nat) (h1 : T ≠ a + j) (h3 : T ≠ M) (s : Nat 
 
 /-! ## Bit shift with carry from a neighbour -/
 
-@[simp] theorem bitP_length (oM oX src Rr O W T T2 a j : Nat) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
+@[simp] theorem bitP_length (src Rr O W T T2 a j : Nat) (oM oX : Opcode) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
 
-theorem bitP_run (oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
+theorem bitP_run (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
     (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (hM1 : oM ≠ 1) (hM2 : oM ≠ 2)
     (hX1 : oX ≠ 1) (hX2 : oX ≠ 2) (src Rr O W T T2 a j : Nat)
     (hT : T ≠ a + j) (hT2 : T2 ≠ a + j) (hTT : T ≠ T2) (hs : T ≠ src ∧ T2 ≠ src)

@@ -22,8 +22,8 @@ variable {reserved : Nat}
 variable {D : Deklaration} {L : Lay D}
 
 /-- `d := g a b` in one step. -/
-theorem bin_star {m : Runner.Mem} {pc fp : Runner.W} {K o d a b : Nat} {g : Runner.W → Runner.W → Option Runner.W}
-    {va vb r : Runner.W} (hc : CodeAt m pc [ci o d a b]) (hop : op o = bin g) (ho : o < 256) (hF : FrameOK m fp K)
+theorem bin_star {m : Runner.Mem} {pc fp : Runner.W} {K d a b : Nat} {o : Opcode} {g : Runner.W → Runner.W → Option Runner.W}
+    {va vb r : Runner.W} (hc : CodeAt m pc [ci o d a b]) (hop : op o = bin g) (ho : o.val < 256) (hF : FrameOK m fp K)
     (hd : d < K) (ha : a < K) (hb : b < K) (hK : K < 2 ^ 31)
     (hra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va) (hrb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
     (hg : g va vb = some r) :

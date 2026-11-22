@@ -27,7 +27,7 @@ theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {me
       (fun base => layU_dis output.compiled.unit output.tor base)
       (fun base => by simp only [layU]; omega)
       (fun base => layU_sync output.compiled.unit output.tor base)
-  have actual := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
+  have actual := codeAt_bytes _ codeBase (serialized ▸ loaded)
   have main := codeAt_right (a := spawnC (startScratch output.compiled.main) spawnSites) (by
     simpa only [Emitted.starts, List.append_assoc] using actual :
       CodeAt memory (BitVec.ofNat 64 codeBase)

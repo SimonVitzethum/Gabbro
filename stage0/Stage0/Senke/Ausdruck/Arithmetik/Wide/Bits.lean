@@ -14,12 +14,12 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-@[simp] theorem bitChain_length (o n A B : Nat) : (bitChain o n A B).length = n := by
+@[simp] theorem bitChain_length (n A B : Nat) (o : Opcode) : (bitChain o n A B).length = n := by
   induction n generalizing A B with
   | zero => rfl
   | succ n ih => simp [bitChain, ih]
 
-theorem bitChain_value (o : Nat) (f : Runner.W → Runner.W → Runner.W) (hf : aluFn o = some f)
+theorem bitChain_value (o : Opcode) (f : Runner.W → Runner.W → Runner.W) (hf : aluFn o = some f)
     (ho1 : o ≠ 1) (ho2 : o ≠ 2) : ∀ (n A B : Nat) (s : Nat → Runner.W), A + n ≤ B →
     (∀ j, j < n → aluRun (bitChain o n A B) s (A + j) = f (s (A + j)) (s (B + j))) ∧
     (∀ j, (j < A ∨ A + n ≤ j) → aluRun (bitChain o n A B) s j = s j)
@@ -79,7 +79,7 @@ theorem lmb_xor (x y j : Nat) : lmb ((x ^^^ y : Nat) : Int) j = lmb (x : Int) j 
 
 /-! ## Execution -/
 
-theorem bitChain_aluIns {K d : Nat} (o : Nat) (f : Runner.W → Runner.W → Runner.W) (hf : aluFn o = some f) :
+theorem bitChain_aluIns {K d : Nat} (o : Opcode) (f : Runner.W → Runner.W → Runner.W) (hf : aluFn o = some f) :
     ∀ (n A B : Nat), d ≤ A → A + n ≤ K → B + n ≤ K → ∀ i ∈ bitChain o n A B, AluIns K d i
   | 0, _, _, _, _, _, i, hi => by simp [bitChain] at hi
   | n + 1, A, B, hd, h1, h2, i, hi => by
@@ -90,7 +90,7 @@ theorem bitChain_aluIns {K d : Nat} (o : Nat) (f : Runner.W → Runner.W → Run
 
 variable [Kern]
 
-theorem wideBit_run {o : Nat} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
+theorem wideBit_run {o : Opcode} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
     (ho1 : o ≠ 1) (ho2 : o ≠ 2) (g : Nat → Nat → Nat)
     (law : ∀ x y j, lmb ((g x y : Nat) : Int) j = f (lmb (x : Int) j) (lmb (y : Int) j))
     {m : Runner.Mem} {pc fp : Runner.W} {K k a : Nat}

@@ -57,7 +57,7 @@ def scalarCompareL (equal : Bool) (d : Nat) (l1 h1 l2 h2 : Int)
     else none
 
 /-- One raw interval predicate. Its flag is in `d+1`; the input in `d` is preserved. -/
-def engTest (o d : Nat) (lo hi : Int) : List II × Nat :=
+def engTest (o : Opcode) (d : Nat) (lo hi : Int) : List II × Nat :=
   ((wordConstant (d + 1) lo).1 ++ [ci o (d + 1) d (d + 1)] ++
     (wordConstant (d + 2) hi).1 ++
     [ci o (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)],

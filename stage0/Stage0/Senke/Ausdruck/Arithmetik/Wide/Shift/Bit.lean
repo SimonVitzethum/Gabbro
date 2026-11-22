@@ -13,11 +13,11 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stages
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem bitC_length (k a oM oX : Nat) (srcB : Nat → Nat) (l : List Nat) :
+theorem bitC_length (k a : Nat) (oM oX : Opcode) (srcB : Nat → Nat) (l : List Nat) :
     (bitC k a oM oX srcB l).length = 4 * l.length := by
   simp only [bitC, seqC_length _ 4 (fun j => bitP_length _ _ _ _ _ _ _ _ _ j)]
 
-theorem bitC_value (k a oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
+theorem bitC_value (k a : Nat) (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
     (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (hM1 : oM ≠ 1) (hM2 : oM ≠ 2)
     (hX1 : oX ≠ 1) (hX2 : oX ≠ 2) (srcB : Nat → Nat) (l : List Nat) (hlk : ∀ j ∈ l, j < k)
     (hsrc : ∀ j, j < k → srcB j < a + k ∨ srcB j = a + k + 5)

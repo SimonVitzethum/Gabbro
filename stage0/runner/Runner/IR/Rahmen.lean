@@ -13,13 +13,23 @@ public import Runner.IR.Seq
 namespace Runner.IR
 open Runner.Mem
 
+/-- The opcode is exactly the one byte occupied by the IR encoding. -/
+abbrev Opcode := Fin 256
+
 /-- A lowered instruction: opcode and three fields. -/
 structure II where
-  o : Nat
+  opcode : Opcode
   a : Int
   b : Int
   c : Int
   deriving DecidableEq, Repr
+
+abbrev II.o (i : II) : Nat := i.opcode.val
+
+theorem II.opcode_fits (i : II) : i.o < 256 := i.opcode.isLt
+
+theorem II.opcodes_fit (code : List II) : code.all (fun i => decide (i.o < 256)) = true :=
+  List.all_eq_true.mpr fun i _ => decide_eq_true i.opcode_fits
 
 def II.f (v : Int) : BitVec 32 := BitVec.ofInt 32 v
 

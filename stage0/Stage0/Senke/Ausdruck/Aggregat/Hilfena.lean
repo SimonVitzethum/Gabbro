@@ -46,13 +46,13 @@ def inU (lo hi : Int) : Bool := decide (0 ≤ lo) && decide (hi < 2 ^ 64)
 def scalarFits (lo hi : Int) : Bool := inW lo hi || inU lo hi
 
 /-- Select the interpretation in which both complete scalar intervals fit. -/
-def scalarOrder (l1 h1 l2 h2 : Int) : Option Nat :=
+def scalarOrder (l1 h1 l2 h2 : Int) : Option Opcode :=
   if inW l1 h1 && inW l2 h2 then some 13
   else if inU l1 h1 && inU l2 h2 then some 27 else none
 
 def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
-def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
+def ci (o : Opcode) (a b c : Int) : II := ⟨o, a, b, c⟩
 
 /-- `if c then a else b` as a value into slot `d`: the condition, `brz` over the `then` code and its jump. -/
 def wennC (d : Nat) (cc ca cb : List II) : List II :=
@@ -68,17 +68,17 @@ def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Na
   else none
 
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
-def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
+def bin2 (o : Opcode) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
 
 /-- A word operation whose operands have already been lowered; reserve its two operand slots explicitly. -/
-def wordL (o d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+def wordL (o : Opcode) (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
   let a ← a
   let b ← b
   pure ((bin2 o d a b).1, max (max a.2 b.2) (d + 2))
 
 /-- A word operation against a small constant. -/
-def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II × Nat) :=
+def wordK (o : Opcode) (d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II × Nat) :=
   wordL o d a (some ([ci 1 (d + 1) k 0], d + 2))
 
 /-- A short string's byte at zero, or zero at every other signed index. -/

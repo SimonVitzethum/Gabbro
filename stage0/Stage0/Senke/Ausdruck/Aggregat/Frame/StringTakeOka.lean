@@ -14,12 +14,12 @@ variable {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 variable {fp : Runner.W} {K d top : Nat} {c : List II} {m : Runner.Mem} {pc : Runner.W}
 
 /-- A binary instruction with its exact footprint: only its own destination slot changes. -/
-theorem bin_exact_ok {a b o : Nat} {va vb r : Runner.W}
+theorem bin_exact_ok {a b : Nat} {o : Opcode} {va vb r : Runner.W}
     {g : Runner.W → Runner.W → Option Runner.W}
     (hp : Pre L m pc fp K d [ci o d a b] ρ W reserved) (hd : d < K) (ha : a < K) (hb : b < K)
     (ra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va)
     (rb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
-    (hop : op o = bin g) (ho : o < 256) (hg : g va vb = some r) :
+    (hop : op o = bin g) (ho : o.val < 256) (hg : g va vb = some r) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m' ∧ Agree fp d (d + 1) m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some r := by
   have small := hp.small

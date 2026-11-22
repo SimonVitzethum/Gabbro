@@ -19,12 +19,12 @@ variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- The same child-IH architecture as `bin_ok_keep`, retaining the exact
     child counts. This includes the final real opcode, not just code lengths. -/
-theorem bin_counted_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o na nb : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+theorem bin_counted_keep {m : Runner.Mem} {pc fp : Runner.W} {K d na nb : Nat} {o : Opcode} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : CountedOk na m pc fp K d ca Pa)
     (hB : ∀ m' pc, Agree fp d K m m' → Pre L m' pc fp K (d + 1) cb ρ W reserved → CountedOk nb m' pc fp K (d + 1) cb Pb)
-    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
+    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o.val < 256)
     (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     CountedOk (na + nb + 1) m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
   have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W reserved := by simpa using h
@@ -202,7 +202,7 @@ theorem lowE_literal_counted {Γ : Ctx} {Λ : List (Res D)} {n : Int} {d top K :
     expression execution or whole expression cost is assumed. -/
 theorem bin2_counted {Γ : Ctx} {Λ : List (Res D)} {τa τb : Ty}
     {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb}
-    {d o top K na nb : Nat} {code : List II} {fp : Runner.W}
+    {d top K na nb : Nat} {o : Opcode} {code : List II} {fp : Runner.W}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} {Pa Pb P : Runner.W → Prop}
     {g : Runner.W → Runner.W → Option Runner.W}
     (lower : (do let ca ← lowE L (reserved := reserved) a d
@@ -214,7 +214,7 @@ theorem bin2_counted {Γ : Ctx} {Λ : List (Res D)} {τa τb : Ty}
     (right : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K →
       ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved → CountedOk nb m pc fp K (d + 1) cb Pb)
     (values : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r)
-    (opcode : op o = bin g) (byte : o < 256)
+    (opcode : op o = bin g) (byte : o.val < 256)
     {m : Runner.Mem} {pc : Runner.W}
     (pre : Pre L m pc fp K d code ρ W reserved) :
     CountedOk (na + nb + 1) m pc fp K d code P := by
@@ -239,7 +239,7 @@ inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
   | truth {d : Nat} : ExprCost L reserved .tru d 1 (· = 1)
   | falsity {d : Nat} : ExprCost L reserved .fls d 1 (· = 0)
   | binary {τ τa τb : Ty} {e : Expr D Γ Λ τ}
-      {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d o na nb : Nat}
+      {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d na nb : Nat} {o : Opcode}
       {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
       (equation : ∀ code top, lowE L (reserved := reserved) e d = some (code, top) →
         (do let ca ← lowE L (reserved := reserved) a d
@@ -249,7 +249,7 @@ inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
       (left : ExprCost L reserved a d na Pa)
       (right : ExprCost L reserved b (d + 1) nb Pb)
       (values : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r)
-      (opcode : op o = bin g) (byte : o < 256) :
+      (opcode : op o = bin g) (byte : o.val < 256) :
       ExprCost L reserved e d (na + nb + 1) P
 
 /-- The actual addition constructor composes certificates without another

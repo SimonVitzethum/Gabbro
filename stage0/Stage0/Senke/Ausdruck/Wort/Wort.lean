@@ -93,10 +93,10 @@ theorem beq_unsigned {x y : Int} (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : 0 ≤ y ∧
 def scalarCmp (o : Nat) (a b : Runner.W) : Bool := if o = 13 then a.slt b else a.ult b
 
 /-- The selected actual opcode preserves both integer ordering and equality. -/
-theorem scalarOrder_spec {l1 h1 l2 h2 x y : Int} {o : Nat}
+theorem scalarOrder_spec {l1 h1 l2 h2 x y : Int} {o : Opcode}
     (selected : scalarOrder l1 h1 l2 h2 = some o)
     (hx0 : l1 ≤ x) (hx1 : x ≤ h1) (hy0 : l2 ≤ y) (hy1 : y ≤ h2) :
-    op o = bin (fun a b => some (Runner.IR.bool (scalarCmp o a b))) ∧ o < 256 ∧
+    op o = bin (fun a b => some (Runner.IR.bool (scalarCmp o a b))) ∧ o.val < 256 ∧
       scalarCmp o (BitVec.ofInt 64 x) (BitVec.ofInt 64 y) = decide (x < y) ∧
       (BitVec.ofInt 64 x == BitVec.ofInt 64 y) = decide (x = y) := by
   unfold scalarOrder at selected

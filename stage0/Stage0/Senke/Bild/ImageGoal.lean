@@ -363,7 +363,7 @@ theorem Emitted.relocated_function_code [Runner.IR.Kern] (output : Emitted src K
     (C := fun (g : Fin output.compiled.unit.fns.length) => ((functions[g.val]?).map (·.1)).getD [])
     (fun _ => rfl) layout.hbody (by rw [show header.length = _ from layout.head]; exact layout.hfp)
     (by rw [show header.length = _ from layout.head]; exact layout.haddr)
-    layout.hlen layout.hlow layout.hpos layout.hops exactBytes
+    layout.hlen layout.hlow layout.hpos exactBytes
   obtain ⟨top, produced, _⟩ := lowered fn
   obtain ⟨code, extent⟩ := addresses fn
   have fits := layout.hfit

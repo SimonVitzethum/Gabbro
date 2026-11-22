@@ -96,7 +96,7 @@ def wideMulL (l1 h1 l2 h2 lr hr : Int) (d : Nat) (fa fb : Nat → Option (List I
     (wideMulC (arithWords l1 h1 l2 h2 lr hr) d) fa fb
 
 /-- Bitwise operators by their opcode: `8` and, `9` or, `10` xor. -/
-def wideBitL (o : Nat) (l1 h1 l2 h2 lr hr : Int) (d : Nat) (fa fb : Nat → Option (List II × Nat)) :
+def wideBitL (o : Opcode) (l1 h1 l2 h2 lr hr : Int) (d : Nat) (fa fb : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   wideBinaryL (integerWords l1 h1) (integerWords l2 h2) (arithWords l1 h1 l2 h2 lr hr)
     (arithWords l1 h1 l2 h2 lr hr) (extSigned l1) (extSigned l2) d (2 * arithWords l1 h1 l2 h2 lr hr)

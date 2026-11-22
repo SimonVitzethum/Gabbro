@@ -16,7 +16,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Wort
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem ci_succ_bin (o d : Nat) : ci o d d ((d : Int) + 1) = cn o d d (d + 1) := by
+theorem ci_succ_bin (d : Nat) (o : Opcode) : ci o d d ((d : Int) + 1) = cn o d d (d + 1) := by
   simp [cn, ci]
 
 theorem ci_succ_const (d : Nat) (v : Int) : ci 1 ((d : Int) + 1) v 0 = ci 1 ((d + 1 : Nat) : Int) v 0 := by

@@ -23,7 +23,8 @@
   the same (checked, not assumed).
 
   `bild` then checks the finished layout as one decidable proposition (`BildGut`): the typed root environments,
-  the lengths unmoved, the image below `2^31`, room for one call and for each start's scratch, every opcode a byte.
+  the lengths unmoved, the image below `2^31`, and room for one call and for each start's scratch.
+  Every instruction carries a byte-sized opcode by construction.
 
   The start code sets the depth to `n + 1` (G's `fuel`: `main` runs as `rufAt n`), calls `main` with its frame at
   slot `FB` and ends with `exit_group` of `main`'s result (`0` for a `main` without one). `n` is as large as the
@@ -183,14 +184,14 @@ def stackReserve (requested largest scratch : Nat) : Nat :=
 
 /-- What `bild` checks of the finished layout. -/
 def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
-    (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
+    (fp0 Ks K : Nat) (Y : Lay D) : Prop :=
   D.gruende main = 0 ∧ roots.all (fun f => decide (D.gruende f = 0)) = true ∧ cs.map (·.1.length) = lens ∧
     fp0 + 8 * K < 2 ^ 31 ∧ FB + 2 * maxTop cs ≤ Ks ∧ (main :: roots).all (fun f => decide (startScratch f + 8 ≤ Ks)) = true ∧
-    code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧
+    fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧
     Y.sye ≤ fp0 + 8 * K
 
 instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
-    (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Decidable (BildGut D main roots lens cs fp0 Ks K Y code) := by
+    (fp0 Ks K : Nat) (Y : Lay D) : Decidable (BildGut D main roots lens cs fp0 Ks K Y) := by
   unfold BildGut; infer_instance
 
 /-- The image of a program, or why not: `Ks` slots of stack (zero selects automatic sizing), the world laid out by `Y` from its first
@@ -222,7 +223,7 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       let n := depthOf Ks (maxTop cs)
       let sp := (List.range k).map fun j => (codeBase + 16 * (10 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
-      if BildGut D main roots lens cs fp0 Ks K Yb code ∧
+      if BildGut D main roots lens cs fp0 Ks K Yb ∧
           fp0 = codeBase + 16 * (headLen k + body.length) ∧
           (requested ≠ 0 ∨ stackReserveDepth ≤ n) then
         .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ,
@@ -233,7 +234,6 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       else if fp0 + 8 * K ≥ 2 ^ 31 then .error "ir: the image does not fit below 2^31"
       else if Ks < FB + 2 * maxTop cs ∨ ((main :: roots).all fun f => decide (startScratch f + 8 ≤ Ks)) = false then
         .error "ir: the stack is too small for one call"
-      else if (code.all fun i => decide (i.o < 256)) = false then .error "ir: an opcode above 255"
       else if requested = 0 ∧ n < stackReserveDepth then
         .error "ir: relocated frames exceed the automatic stack reserve"
       else .error "ir: the world does not lie above the stack"

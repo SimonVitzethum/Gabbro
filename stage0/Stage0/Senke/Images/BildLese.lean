@@ -35,7 +35,7 @@ theorem rd32_bytes {m : Runner.Mem} {p : Nat} {v : BitVec 32} (h : BytesAt m p (
   omega
 
 /-- One instruction from its 16 bytes. -/
-theorem insAt_bytes {m : Runner.Mem} {p : Nat} {i : II} (ho : i.o < 256)
+theorem insAt_bytes {m : Runner.Mem} {p : Nat} {i : II}
     (h : BytesAt m p (Runner.Prog.insB i.o i.a i.b i.c)) :
     InsAt m (BitVec.ofNat 64 p) i.o (II.f i.a) (II.f i.b) (II.f i.c) := by
   simp only [Runner.Prog.insB, Runner.Prog.i32] at h
@@ -60,14 +60,13 @@ theorem flatMap_enc_len : (is : List II) → (is.flatMap encII).length = 16 * is
     omega
 
 /-- A list of instructions from its bytes. -/
-theorem codeAt_bytes {m : Runner.Mem} : (is : List II) → (p : Nat) → is.all (fun i => decide (i.o < 256)) = true →
+theorem codeAt_bytes {m : Runner.Mem} : (is : List II) → (p : Nat) →
     BytesAt m p (is.flatMap encII) → CodeAt m (BitVec.ofNat 64 p) is
-  | [], _, _, _ => fun k hk => absurd hk (by simp)
-  | i :: is, p, ho, h => by
-    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at ho
+  | [], _, _ => fun k hk => absurd hk (by simp)
+  | i :: is, p, h => by
     simp only [List.flatMap_cons] at h
-    have hi := insAt_bytes ho.1 h.left
-    have hr := codeAt_bytes is (p + 16) ho.2 (by have := h.right; rwa [encII_len] at this)
+    have hi := insAt_bytes h.left
+    have hr := codeAt_bytes is (p + 16) (by have := h.right; rwa [encII_len] at this)
     intro k hk
     cases k with
     | zero => simpa using hi

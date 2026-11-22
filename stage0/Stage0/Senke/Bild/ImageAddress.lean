@@ -157,7 +157,7 @@ theorem Emitted.root_instruction_decodes [Kern] (output : Emitted src K options)
     · simp only [entry, ite_false, startLen] at rootBound ⊢
       omega
   have inside := inHeader.trans_le header
-  have decoded := codeAt_bytes _ codeBase (serialized.symm ▸ layout.hops) loaded
+  have decoded := codeAt_bytes _ codeBase loaded
   refine ⟨index, inside, address, ?_⟩
   rw [address, ← ofNat_add64]
   exact decoded index inside
@@ -184,7 +184,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
   have selected : roots[index] = root.1 := by
     change (output.starts.map (·.1))[index] = root.1
     rw [List.getElem_map, exactRoot]
-  have allCode := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
+  have allCode := codeAt_bytes _ codeBase (serialized ▸ loaded)
   have header := codeAt_left (b := body) allCode
   have spawns : (spawnC (startScratch output.compiled.main) sites).length = 10 * output.starts.length := by
     simp only [spawnC_len, layout.hsp, List.length_map, List.length_range, Emitted.starts]

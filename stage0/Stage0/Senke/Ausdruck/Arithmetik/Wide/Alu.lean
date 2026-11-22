@@ -46,7 +46,7 @@ theorem aluFn_lt {o : Nat} {f : Runner.W → Runner.W → Runner.W} (h : aluFn o
 inductive AluIns (K d : Nat) : II → Prop
   | const (a : Nat) (k : Int) : d ≤ a → a < K → lit32 k = true → AluIns K d (ci 1 a k 0)
   | mov (a b : Nat) : d ≤ a → a < K → b < K → AluIns K d (ci 2 a b 0)
-  | bin (o a b c : Nat) (f : Runner.W → Runner.W → Runner.W) : aluFn o = some f →
+  | bin (o : Opcode) (a b c : Nat) (f : Runner.W → Runner.W → Runner.W) : aluFn o = some f →
       d ≤ a → a < K → b < K → c < K → AluIns K d (ci o a b c)
 
 /-- The slot valuation with slot `a` replaced. -/

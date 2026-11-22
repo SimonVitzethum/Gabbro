@@ -61,8 +61,8 @@ theorem ls_mov (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e : 
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr _ (by omega)))
 
-theorem ls_bin (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e g' : Nat} {D A B : Int} {op' : Nat}
-    {g : W → W → Option W} {r : W} (hi : code[i]? = some (ci op' D A B)) (hop : op op' = bin g) (ho : op' < 256)
+theorem ls_bin (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e g' : Nat} {D A B : Int} {op' : Opcode}
+    {g : W → W → Option W} {r : W} (hi : code[i]? = some (ci op' D A B)) (hop : op op' = bin g) (ho : op'.val < 256)
     (hD : D = ((s + d : Nat) : Int)) (hA : A = ((s + e : Nat) : Int)) (hB : B = ((s + g' : Nat) : Int))
     (hd : d < 18) (he : e < 18) (hg' : g' < 18) (hr : g (f e) (f g') = some r) :
     Next1 m0 m pc fp s a i d f o c w r := by
