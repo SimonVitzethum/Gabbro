@@ -22,7 +22,7 @@ private theorem uSliceIntegerConstant_low (ctx : UCtx) (fn : UFn) (er : Option T
   | some value =>
     rw [folded] at recognized
     cases recognized
-    exact ⟨.lit value, by simp only [lowWertE, LowSide.wert], rfl⟩
+    exact ⟨.lit lo, by simp only [lowWertE, LowSide.wert], rfl⟩
 
 /-- Every recognized endpoint or index has precisely the interval used
     by its surface bound check. The typed term reads lexical values only. -/
@@ -34,14 +34,14 @@ theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (
     (recognized : uSliceInteger ctx blatt source = some (lo, hi, side)) :
     ∃ term : Expr (declOf u) Γ Λ (.int lo hi),
       lowWertE u Γ Λ fn er side = .ok ⟨.int lo hi, term⟩ ∧ term.orte = [] := by
-  cases source
+  cases classified : source
   case «variable» name =>
     simp only [uSliceInteger] at recognized
     split at recognized
     · next localLo localHi declared =>
       split at recognized
       · cases recognized
-        exact locals name localLo localHi declared
+        exact locals name _ _ declared
       · cases recognized
     · split at recognized
       · cases recognized
@@ -74,7 +74,9 @@ theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (
     simp only [uSliceInteger] at recognized
     exact uSliceIntegerConstant_low ctx fn er _ recognized
 termination_by sizeOf source
-decreasing_by all_goals simp_wf <;> omega
+decreasing_by
+  all_goals rw [classified]
+  all_goals simp_wf <;> omega
 
 /-- Independent runtime bounds can be arithmetic expressions. The
     source length is their difference and a projected element stays a
