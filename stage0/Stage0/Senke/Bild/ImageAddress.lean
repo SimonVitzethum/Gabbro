@@ -42,7 +42,7 @@ theorem Emitted.code_survives_writes [Kern] (output : Emitted src K options) {sa
 
 /-- All changes within a single emitted stack frame leave the exact
     typed source world and its permissions intact. -/
-theorem Emitted.world_survives_stack (output : Emitted src K options)
+theorem Emitted.world_survives_stack [Kern] (output : Emitted src K options)
     {saved current : Runner.Mem} {thread : Nat} (declared : thread ≤ output.starts.length)
     {world : World (declOf output.compiled.unit)}
     (stored : WeltAt saved output.image.Y world)
