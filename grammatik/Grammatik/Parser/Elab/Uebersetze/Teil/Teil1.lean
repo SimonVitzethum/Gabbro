@@ -191,8 +191,8 @@ structure UTab where
       placeholder range `0 .. 1`, so every field index is the position it always was); its
       TYPE is `Ty.bool`, and it is never read or written as a number. -/
   bools : List String := []
-  /-- The table of an `arena A capacity lo .. hi of T;` (`ArenaForm.tab`): `count` is `hi`, the one field is
-      `wert`, and the counter is the static `A#used` (`ArenaForm.zaehl`). -/
+  /-- A fixed arena's table has capacity `hi`, payload field `wert` and a private free-list link.
+      The used counter is the static `A#used` (`ArenaForm.zaehl`). -/
   arena : Bool := false
   /-- The option fields (`n : option index into T`): the field name and the number of the table `T`. Like a bool
       field an option field keeps its place in `cols` (placeholder range `0 .. 1`); its TYPE is `Ty.opt` of the

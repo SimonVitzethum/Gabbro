@@ -117,9 +117,39 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
           | .error e => .error e
           | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true, nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite widths t | _ => 0 } :: gs)
   | _ :: rest => uGlobs consts alias rest widths
-/-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
-    field `wert`, and the counter static `A#used` over `0 .. hi` starting at zero. A dynamic ceiling and a
-    placement have no form here. -/
+/-- The free-list link occupies a private column in the arena table. -/
+def arenaLinkField : String := "#nextFree"
+
+def arenaExtentWord (name : String) : String := name ++ "#committed"
+
+def arenaHeadWord (name : String) : String := name ++ "#freeHead"
+
+/-- Fixed arenas commit their full reservation. The used counter remains
+    zero and the free head equals the empty marker. The payload retains
+    its original name, range, index and declared storage width. -/
+def uFixedArenaStorage (name : String) (capacity : Int) (payload : Int × Int) (width : Nat) :
+    UTab × List UGlob :=
+  let metadataType := GTy.int 0 capacity
+  ({ name, count := capacity, cols := [("wert", payload), (arenaLinkField, (0, capacity))],
+     arena := true, breiten := if 0 < width then [("wert", width)] else [] },
+    [{ name := name ++ "#used", ty := metadataType, init := 0, var := true },
+     { name := arenaExtentWord name, ty := metadataType, init := capacity, var := true },
+     { name := arenaHeadWord name, ty := metadataType, init := capacity, var := true }])
+
+/-- The arena layout retains the original payload and the three exactly
+    typed initial metadata values. -/
+theorem uFixedArenaStorage_exact (name : String) (capacity : Int) (payload : Int × Int) (width : Nat) :
+    let storage := uFixedArenaStorage name capacity payload width
+    storage.1.name = name ∧ storage.1.count = capacity ∧ storage.1.arena = true ∧
+      storage.1.cols = [("wert", payload), (arenaLinkField, (0, capacity))] ∧
+      storage.2.map (fun word => (word.name, word.ty, word.init)) =
+        [(name ++ "#used", GTy.int 0 capacity, 0),
+         (arenaExtentWord name, GTy.int 0 capacity, capacity),
+         (arenaHeadWord name, GTy.int 0 capacity, capacity)] :=
+  ⟨rfl, rfl, rfl, rfl, rfl⟩
+
+/-- Elaboration of the arena's concrete declaration and initial store.
+    Dynamic ceilings and placement have separate model requirements. -/
 def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (items : List SItemTief) (widths : List (String × (Int × Int)) := []) : Except String (List UTab × List UGlob) :=
   match items with
@@ -139,8 +169,8 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
           | .error e => .error e
           | .ok (ts, gs) =>
             if 0 < h then
-              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true, breiten := (let w := uSpeicherBreite widths t; if 0 < w then [("wert", w)] else []) } :: ts,
-                   { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
+              let storage := uFixedArenaStorage n h r (uSpeicherBreite widths t)
+              .ok (storage.1 :: ts, storage.2 ++ gs)
             else .error "arena of no slots"
   | _ :: rest => uArenen consts alias rest widths
 /-- The closed merge operators of `accumulates` (SYNTAX.md §11.4, C15):

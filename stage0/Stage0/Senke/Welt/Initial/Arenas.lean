@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 
 @[expose] public section
 
@@ -19,11 +20,11 @@ structure ResolvedArenaStorage (u : UProg) (table : (declOf u).Tab) where
   marked : (tabAt u table).arena = true
   payload : ∃ hit, fieldHit u table "wert" = .ok hit ∧
     shape.feld = (tableExact.symm ▸ hit.idx)
-  link : ∃ hit, fieldHit u table "#nextFree" = .ok hit ∧
+  link : ∃ hit, fieldHit u table arenaLinkField = .ok hit ∧
     shape.nxt = (tableExact.symm ▸ hit.idx)
   used : globIdx u.globs ((tabAt u table).name ++ "#used") = .ok shape.zaehl
-  committed : globIdx u.globs ((tabAt u table).name ++ "#committed") = .ok shape.komm
-  head : globIdx u.globs ((tabAt u table).name ++ "#freeHead") = .ok shape.kopf
+  committed : globIdx u.globs (arenaExtentWord (tabAt u table).name) = .ok shape.komm
+  head : globIdx u.globs (arenaHeadWord (tabAt u table).name) = .ok shape.kopf
 
 /-- Resolve the actual payload, counter, committed count, and free-list
     words after elaboration. A marked table alone supplies no descriptor. -/
@@ -31,12 +32,12 @@ def resolveArenaStorage (u : UProg) (table : (declOf u).Tab) :
     Except String (ResolvedArenaStorage u table) := do
   if marked : (tabAt u table).arena = true then
     let name := (tabAt u table).name
-    match payload : fieldHit u table "wert", link : fieldHit u table "#nextFree" with
+    match payload : fieldHit u table "wert", link : fieldHit u table arenaLinkField with
     | .error error, _ | _, .error error => throw error
     | .ok payloadField, .ok linkField =>
       match used : globIdx u.globs (name ++ "#used"),
-            committed : globIdx u.globs (name ++ "#committed"),
-            head : globIdx u.globs (name ++ "#freeHead") with
+            committed : globIdx u.globs (arenaExtentWord name),
+            head : globIdx u.globs (arenaHeadWord name) with
       | .error error, _, _ | _, .error error, _ | _, _, .error error => throw error
       | .ok usedWord, .ok extentWord, .ok headWord =>
         let limit : Ty := .int 0 ((declOf u).count table)
