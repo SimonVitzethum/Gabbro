@@ -31,7 +31,7 @@ theorem slotValueC_index_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t}
   have result := slotValueC_ok (idx := index.n.toNat) made fits (L.bounded bound) layout
     (fun m pc hp => (ih m pc hp).mono fun w hw => by
       simp only [Enc] at hw
-      rw [hw, toWord]) world pre
+      rw [hw, toWord]) (fun m stored => (world m stored).1 t f index.n.toNat (L.bounded bound)) pre
   rw [Int.toNat_of_nonneg index.lo_le] at result
   exact result
 
@@ -49,7 +49,7 @@ theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
   · next enabled =>
     have equal := same enabled
     subst σ₀
-    exact globalValueC_ok made fits world pre
+    exact globalValueC_ok made fits (fun m stored => (world m stored).2.1 g) pre
   · cases made
 
 /-- An old slot read evaluates its index in the same current world as every ordinary slot read. -/

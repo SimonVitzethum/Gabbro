@@ -31,7 +31,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨_, _, t', ht', _, hk⟩ := hv
     have same : t' = t := Option.some.inj (ht'.symm.trans ht)
     subst same
-    exact slotValueC_ok hs hK hk hLay (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1) hWL hp
+    exact slotValueC_ok hs hK hk hLay (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
+      (fun m stored => (hWL m stored).1 t f _ hk) hp
   | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
   | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
     arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
@@ -326,7 +327,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     istSome_ok e (fun ce te he hte m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp) h hK hp
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
-    exact globalValueC_ok h hK hWL hp
+    exact globalValueC_ok h hK (fun m stored => (hWL m stored).2.1 g) hp
   | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thruOwn _ t _ _ i _ _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
