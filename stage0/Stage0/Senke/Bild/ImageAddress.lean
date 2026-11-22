@@ -189,7 +189,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     have limit := layout.hfit
     have reserved := Nat.le_mul_of_pos_right output.image.Ks
       (Nat.succ_pos ((output.starts.map (·.1)).length))
-    simp only [List.length_map, Emitted.starts] at allocation reserved
+    simp only [List.length_map, Emitted.starts, Nat.succ_eq_add_one] at allocation reserved
     omega
 
 /-- The first instruction of a declared child actually writes the image's
@@ -216,7 +216,8 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
   have first := stub 0 (by rw [startC_len]; decide)
   have instruction : InsAt (before.ms.1.view (index + 1)) pointer.pc 1
       (II.f 2) (II.f ((output.image.depth + 1 : Nat) : Int)) (II.f 0) := by
-    simpa only [startC, List.singleton_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] using first
+    simpa only [startC, List.singleton_append, List.cons_append, List.getElem_cons_zero,
+      Nat.mul_zero, BitVec.add_zero, ci, pointer] using first
   have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
   have depthWord : sx (II.f ((output.image.depth + 1 : Nat) : Int)) =
       BitVec.ofNat 64 (output.image.depth + 1) := sx_nat depthFits
@@ -227,7 +228,7 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
     tso_const_prefix (before := imageToTSO before) running instruction writable
   refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
   rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))]
+    Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] <;> rfl
 
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
