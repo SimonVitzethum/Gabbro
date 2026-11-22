@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.Ort.LockState
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+public import Stage0.Senke.Images.DispatchSource
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -92,6 +93,25 @@ theorem imageProtectedFootprint_initial {src : String} {reserve : Nat} {options 
       · exact ((locks.owners guard).outside thread (Nat.le_of_not_gt inside) owns).elim
   · exact Or.inl
 
+/-- Serialized IR initializes thread controls, world and ticket words
+    in the same projection, with no protected carrier assigned yet. -/
+theorem _root_.Gabbro.Stage0.LoadedIRImage.initial_lock_projection [Kern]
+    {src : String} {reserve : Nat} {options : Profil.Options} {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {memory : imageTSO.St}
+    (loaded : LoadedIRImage output memory) (unit : ImageModelUnit output E)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (O : Orakel (declOf output.compiled.unit)) :
+    let source := imageSourceStart E
+    let ir := output.irEntry memory
+    ImageSlotsMatch output E O [] ir source ∧ ImageForeignTrace output [] source ∧
+      ImageRuntimeMatchesAt (imageProtectedFootprint output source.m) output E O [] ir source ∧
+      ImageTicketStates output.image.Y.withIdle memory.1.m source.m
+        (fun _ => start (output.starts.length + 1)) := by
+  intro source ir
+  obtain ⟨slots, events, runtime⟩ := loaded.source_start unit O
+  have locks := output.loaded_ticketStates loaded.payload accepted
+  exact ⟨slots, events, imageProtectedFootprint_initial locks ▸ runtime, locks⟩
+
 /-- The mapped image and its accepted model share one initial projection.
     No protected cell has an owner before the first image step. -/
 theorem _root_.Gabbro.Stage0.MappedImage.initial_lock_projection [Kern]
@@ -147,6 +167,16 @@ theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : N
     have below := imageStackFootprint_before_world stack
     exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
   · exact protectedCellFootprint_lock_disjoint inLayout synchronized data
+
+theorem imageProtectedFootprint_stack_owner {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (layout : LayIn output.image.Y.withIdle) {owner thread : Nat} {byte : W}
+    (protected : imageProtectedFootprint output source owner byte)
+    (stack : imageStackFootprint output thread byte) : owner = thread := by
+  rcases protected with owned | data
+  · exact imageStackFootprint_disjoint owned stack
+  · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack))
+      (protectedCellFootprint_bounds layout data).1).elim
 
 /-- Changing the current source trace of the CAS issuer leaves every
     pending store assigned to the same owning thread. The actual TSO

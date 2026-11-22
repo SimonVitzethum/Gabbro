@@ -122,36 +122,21 @@ private theorem image_host_answer [Kern] {before : Cfg imageTSO (Res T)} {after 
   rw [if_neg notClone] at external
   exact external
 
-/-- A host answer's effect on the issuer's view determines the committed
-    bytes at any reservation outside that issuer's stack. -/
-private theorem image_gate_dormant_frame [Kern] {output : Emitted src reserve options}
-    {before : Cfg imageTSO (Res T)} {after : imageTSO.St} {thread future : Nat} {control : Res T}
-    (running : before.ths[thread]? = some (some control)) (unused : before.ths.length ≤ future)
-    (buffers : PrivateBuffers (imageStackFootprint output) before.ms.1)
-    (sameBuffers : after.1.buf = before.ms.1.buf)
-    (outside : GleichAuf (imageStackFootprint output future) (before.ms.1.view thread) (after.1.view thread)) :
-    GleichAuf (imageStackFootprint output future) before.ms.1.m after.1.m := by
-  have distinct : thread ≠ future := by
-    intro equal
-    exact (Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp running).1) (equal.symm ▸ unused)
-  intro byte reserved
-  have untouched (store : W × W) (queued : store ∈ before.ms.1.buf thread) : ¬ fenster store.1 byte :=
-    fun touched => distinct (imageStackFootprint_disjoint (buffers thread store queued byte touched).1 reserved)
-  have current : GleichAt (after.1.view thread) after.1.m byte := by
+/-- A host response preserving the buffer and the issuer's view also
+    preserves committed bytes that the issuer does not forward. -/
+private theorem image_gate_committed {before after : TSt} {footprint : Nat → W → Prop}
+    {thread : Nat} {byte : W} (buffers : PrivateBuffers footprint before)
+    (sameBuffers : after.buf = before.buf) (outside : ¬ footprint thread byte)
+    (sameView : GleichAt (before.view thread) (after.view thread) byte) :
+    GleichAt before.m after.m byte := by
+  have untouched (store : W × W) (queued : store ∈ before.buf thread) : ¬ fenster store.1 byte :=
+    fun touched => outside (buffers thread store queued byte touched).1
+  have current : GleichAt (after.view thread) after.m byte := by
     apply view_agrees_at
     intro store queued
     rw [sameBuffers] at queued
     exact untouched store queued
-  exact (view_agrees_at untouched).symm.trans ((outside byte reserved).trans current)
-
-private theorem stack_byte_below_world [Kern] {output : Emitted src reserve options}
-    {thread : Nat} {byte : W} (reserved : imageStackFootprint output thread byte) :
-    byte.toNat < output.image.Y.lo := by
-  have slots : output.image.Ks * (thread + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
-    Nat.mul_le_mul_left _ (Nat.add_le_add_right reserved.1 1)
-  have limit := (Nat.add_le_add_left (Nat.mul_le_mul_left 8 slots) output.image.fp0).trans
-    output.stackReservation_bounds.1
-  exact reserved.2.2.trans_le limit
+  exact (view_agrees_at untouched).symm.trans (sameView.trans current)
 
 /-- A real response to a returning scalar gate supplies the observed
     word and the model answer on the exact issuing thread and call. -/
@@ -185,8 +170,8 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
       ImageGateEvent output E O first last after (thread, req, answer) ∧
       KernW output.image.Y (before.ms.1.view thread) (after.ms.1.view thread) ∧
       WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 ∧
-      ∀ future, before.ths.length ≤ future → PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        GleichAuf (imageStackFootprint output future) before.ms.1.m after.ms.1.m := by
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧ ¬ InWelt output.image.Y byte) before.ms.1.m after.ms.1.m := by
   intro after
   obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨word, extra, response, frame, nextWorld, outcome⟩ :=
@@ -200,11 +185,9 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
       carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
     rw [wirkt_mitRuhe O]
     exact outcome
-  · intro future dormant buffers
-    apply image_gate_dormant_frame waiting dormant buffers sameBuffers
-    intro byte reserved
-    have below := stack_byte_below_world reserved
-    exact ⟨(frame.2.2 _ (fun hit => (Nat.not_le_of_lt below) hit.1)).symm,
+  · intro footprint buffers byte outside
+    apply image_gate_committed buffers sameBuffers outside.1
+    exact ⟨(frame.2.2 byte outside.2).symm,
       congrFun frame.1.symm byte, congrFun frame.2.1.symm byte⟩
 
 private theorem foreignDecode_withIdle {D : Deklaration} (O : Orakel D) (routine : D.Ax) (raw : Int) :
@@ -285,9 +268,9 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
       ImageGateEvent output E O first last after (thread, req, answer) ∧
       AreaFrame output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
       WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 ∧
-      ∀ future, before.ths.length ≤ future → PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        (∀ byte, inSlots fp base (base + valueWords τ) byte → imageStackFootprint output thread byte) →
-        GleichAuf (imageStackFootprint output future) before.ms.1.m after.ms.1.m := by
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧
+          ¬ inSlots fp base (base + valueWords τ) byte ∧ ¬ InWelt output.image.Y byte) before.ms.1.m after.ms.1.m := by
   intro after
   obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨tag, extra, response, retained, nextWorld, reply⟩ :=
@@ -301,15 +284,9 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
       gate, tag, extra, selected, number, ArgsW.withIdle_words args types registers, response,
       .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
     retained, nextWorld, ?_⟩
-  intro future dormant buffers owned
-  apply image_gate_dormant_frame waiting dormant buffers sameBuffers
-  intro byte reserved
-  have distinct : thread ≠ future := fun equal =>
-    (Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp waiting).1) (equal.symm ▸ dormant)
-  have outside : ¬ inSlots fp base (base + valueWords τ) byte :=
-    fun hit => distinct (imageStackFootprint_disjoint (owned byte hit) reserved)
-  have below := stack_byte_below_world reserved
-  exact ⟨(retained.b _ outside (fun hit => (Nat.not_le_of_lt below) hit.1)).symm,
+  intro footprint buffers byte outside
+  apply image_gate_committed buffers sameBuffers outside.1
+  exact ⟨(retained.b byte outside.2.1 outside.2.2).symm,
     congrFun retained.rd.symm byte, congrFun retained.wr.symm byte⟩
 
 /-- A pointer-buffer gate reports its actual scalar result and leaves the
@@ -361,11 +338,10 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
       (∀ k, k < ((declOf output.compiled.unit).count table).toNat →
         Enc output.image.Y ((declOf output.compiled.unit).typ table field) ((O.wirkt routine world args).1.slots table k field)
           (if writable then byteOf current (reqArg req pointer) k else wAt prior (output.image.Y.elem table field k))) ∧
-      ∀ future, before.ths.length ≤ future → PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        (∀ byte, (reqArg req pointer).toNat ≤ byte.toNat →
-          byte.toNat < (reqArg req pointer).toNat + 8 * pufW ((declOf output.compiled.unit).count table).toNat →
-          imageStackFootprint output thread byte) →
-        GleichAuf (imageStackFootprint output future) before.ms.1.m after.ms.1.m := by
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧ ¬ ((reqArg req pointer).toNat ≤ byte.toNat ∧
+          byte.toNat < (reqArg req pointer).toNat + 8 * pufW ((declOf output.compiled.unit).count table).toNat))
+          before.ms.1.m after.ms.1.m := by
   intro prior current after
   obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨word, extra, response, readable, writableMap, outside, remaining, cells, outcome⟩ :=
@@ -379,12 +355,9 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
       carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
     rw [wirkt_mitRuhe O]
     exact outcome
-  · intro future dormant buffers owned
-    apply image_gate_dormant_frame waiting dormant buffers sameBuffers
-    intro byte reserved
-    have distinct : thread ≠ future := fun equal =>
-      (Nat.not_le_of_lt (List.getElem?_eq_some_iff.mp waiting).1) (equal.symm ▸ dormant)
-    exact ⟨(outside _ (fun hit => distinct (imageStackFootprint_disjoint (owned byte hit.1 hit.2) reserved))).symm,
+  · intro footprint buffers byte untouched
+    apply image_gate_committed buffers sameBuffers untouched.1
+    exact ⟨(outside byte untouched.2).symm,
       congrFun readable.symm byte, congrFun writableMap.symm byte⟩
 
 end Gabbro.Stage0

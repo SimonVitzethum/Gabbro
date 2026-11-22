@@ -203,7 +203,8 @@ theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
     (O : Orakel (declOf output.compiled.unit)) :
     ImageSlotsMatch output E O [] (output.irEntry memory) (imageSourceStart E) ∧
       ImageForeignTrace output [] (imageSourceStart E) ∧
-      ImageRuntimeMatches output E O [] (output.irEntry memory) (imageSourceStart E) := by
+      ImageRuntimeMatchesAt (imageStackFootprint output) output E O [] (output.irEntry memory)
+        (imageSourceStart E) := by
   obtain ⟨_, _, _, bytes, packed, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
   obtain ⟨_, _, _, _, _, _, entryWords, _⟩ :=
@@ -238,7 +239,7 @@ theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
     cases i <;> simp [Emitted.irEntry, imageSourceStart, FadenStart]
   · intro i retired
     cases i <;> simp [Emitted.irEntry] at retired
-  · refine ⟨imageStackFootprint output, [none], privateBuffers_empty loaded.emptyBuffers, rfl,
+  · refine ⟨[none], privateBuffers_empty loaded.emptyBuffers, rfl,
       Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp
@@ -262,7 +263,7 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
   obtain ⟨quiet, rfl⟩ := mapped.dispatch_step step
   obtain ⟨slots, _, runtime⟩ :=
     LoadedIRImage.source_start ⟨mapped.bytes, mapped.emptyBuffers⟩ unit O
-  exact ⟨quiet, slots, runtime⟩
+  exact ⟨quiet, slots, imageStackFootprint output, runtime⟩
 
 /-- The loader part of the runner refinement is concrete: every
     matched IR prefix through dispatch keeps the declared initial GX

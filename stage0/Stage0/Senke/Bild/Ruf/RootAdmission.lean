@@ -292,7 +292,9 @@ private theorem tso_cas_committed {layout : Runner.Beweis.Lay} {before after : (
 
 private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {before after : Cfg imageTSO (Res T)} {events : List Ev}
-    (idle : ImageIdleBuffers before) (privateWrites : PrivateBuffers (imageStackFootprint output) before.ms.1)
+    (idle : ImageIdleBuffers before)
+    (privateWrites : ∀ owner store, store ∈ before.ms.1.buf owner → ∀ byte,
+      fenster store.1 byte → imageStackFootprint output future byte → owner = future)
     (directEffects : ∀ {thread request resume reply memory},
       before.ths[thread]? = some (some (.ask request resume)) →
       imageTSO.ans before.ms thread request reply memory →
@@ -321,7 +323,7 @@ private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {
       cases pending
     intro byte belongs
     have untouched : ¬ fenster address byte := fun hit =>
-      other (imageStackFootprint_disjoint (privateWrites owner _ pending byte hit).1 belongs)
+      other (privateWrites owner _ pending byte hit belongs)
     rw [updated]
     exact ((write_nurIn _ address value.toNat).gleichAt untouched).symm
   | priv | exit => exact fun byte _ => GleichAt.refl _ byte
@@ -369,7 +371,8 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     (reached : ImageReach output E O (imageSourceStart E) state)
     (buffers : ∀ {first : Cfg imageTSO (Res T)} {earlier : List Ev} {steps : Nat},
       ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps first →
-      PrivateBuffers (imageStackFootprint output) first.ms.1)
+      ∀ owner store, store ∈ first.ms.1.buf owner → ∀ byte,
+        fenster store.1 byte → imageStackFootprint output (index + 1) byte → owner = index + 1)
     (effects : ∀ {first : Cfg imageTSO (Res T)} {earlier : List Ev} {steps : Nat},
       ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps first →
       first.ths.length ≤ index + 1 →
