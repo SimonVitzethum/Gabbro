@@ -169,7 +169,8 @@ theorem ImageIRRefinement.terminal (refinement : ImageIRRefinement output E O me
 def Stage0Correct : Prop :=
   ∀ (source : String) (reserve : Nat) (options : Profil.Options) (bytes : List B),
     irBild source reserve options = .ok bytes →
-    ∃ (output : Emitted source reserve options) (E : Einheit (declOf output.compiled.unit)),
+    ∃ output : Emitted source reserve options,
+      let E := output.checkedUnit.unit
       emit source reserve options = .ok output ∧ output.bytes = bytes ∧
       CanonicalSourceProgram output.compiled ∧ ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
@@ -205,7 +206,7 @@ theorem stage0_correct_of_ir_refinement
   intro source reserve options bytes wrote
   obtain ⟨output, emitted, payload, canonical, model, accepted, posts, duties⟩ := irBild_checkImageUnit wrote
   let E := output.checkedUnit.unit
-  refine ⟨output, E, emitted, payload, canonical, model, accepted, ?_⟩
+  refine ⟨output, emitted, payload, canonical, model, accepted, ?_⟩
   intro oracle calls foreign hardware gates answers futex visibility memory loaded
   obtain ⟨refinement⟩ := refineIR source reserve options output emitted oracle calls foreign hardware gates
     answers futex visibility memory loaded
