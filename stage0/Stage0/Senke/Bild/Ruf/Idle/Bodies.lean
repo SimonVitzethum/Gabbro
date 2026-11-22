@@ -65,9 +65,9 @@ private theorem sumSpanPayloadC_withIdle (d : Nat) (payload : Ty) :
     sumSpanPayloadC d (some (tyR payload)) = sumSpanPayloadC d (some payload) := by
   simp only [sumSpanPayloadC, payloadWords, tyR, valueWords_mapNumbers]
 
-private theorem sumWords_withIdle (cases : List (Option Ty)) :
-    valueWords (.sum (Ty.mapCases (· + 1) id cases)) = valueWords (.sum cases) :=
-  valueWords_mapNumbers (· + 1) id (.sum cases)
+private theorem sumWords_withIdle (arms : List (Option Ty)) :
+    valueWords (.sum (Ty.mapCases (· + 1) id arms)) = valueWords (.sum arms) :=
+  valueWords_mapNumbers (· + 1) id (.sum arms)
 
 /-- The same body lowering is valid after extending the model with
     idle thread slots. Every branch retains the installed code and scratch bound. -/
