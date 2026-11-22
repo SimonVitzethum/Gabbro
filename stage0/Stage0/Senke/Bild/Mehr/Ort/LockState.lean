@@ -237,9 +237,10 @@ theorem ImageTicketStates.wait_reply [Kern] {D : Deklaration} [DecidableEq D.Loc
   intro request next
   obtain ⟨ran, returned, sameMemory, trace, committed⟩ :=
     image_ticket_wait_reply host saved footprint buffers waiting answered
-  have nextInv : Inv N next := by
-    change Relation.ReflTransGen (fun current target => Schritt current thread target) (states lock) next at trace
-    induction trace with
+  have preserve {target : Zustand N}
+      (steps : Relation.ReflTransGen (fun current target => Schritt current thread target) (states lock) target) :
+      Inv N target := by
+    induction steps with
     | refl => exact current.protocol lock
     | tail _ step ih => exact ih.schritt capacity step
   have owns (t : Fin N) : (next.pc t).haelt = ((states lock).pc t).haelt := by
@@ -250,7 +251,7 @@ theorem ImageTicketStates.wait_reply [Kern] {D : Deklaration} [DecidableEq D.Loc
     · rw [upd_ne _ _ same]
   exact ⟨ran, returned, sameMemory,
     current.control_update geometry bound (fun other byte present => committed byte (outside other byte present))
-      rfl nextInv owns⟩
+      rfl (preserve trace) owns⟩
 
 /-- The real WAKE-all response updates every blocked position at this
     lock and preserves the complete registry, including other locks. -/
