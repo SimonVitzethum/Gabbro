@@ -355,6 +355,24 @@ private theorem RunP.read64 {before after : Mem} {address word : W}
     RunP (rd64 address resume) before finish after := by
   exact .ask (a := some (word, 0)) (m' := before) (by simp [memAns, read]) tail
 
+/-- The immediate instruction selects its operand and writes one word
+    using only the IR memory semantics. -/
+theorem constantInstruction_memory {pointer : T} {memory : Mem} {dest value pad : BitVec 32}
+    (instruction : InsAt memory pointer.pc 1 dest value pad)
+    (writable : Mem.all memory.wr (slot pointer.fp (sx dest)) 8 = true) :
+    RunM (step pointer) memory (nxt pointer)
+      (Mem.write memory (slot pointer.fp (sx dest)) 8 (sx value).toNat) := by
+  apply runP_runM (t := nxt pointer) ?_ rfl
+  unfold step
+  refine RunP.read8 instruction.op ?_
+  change RunP (op 1 pointer) _ _ _
+  simp only [op]
+  apply RunP.read32 instruction.f2
+  simp only [ret1]
+  apply RunP.read32 instruction.f1
+  refine .ask (a := some (0, 0)) (by rw [memAns_wr, Mem.wr64_some writable]) ?_
+  exact .refl _ _
+
 /-- The IR instruction tree reaches the host with the continuation
     selected by the operands that it read from the issuing frame. -/
 theorem spawnInstruction_reference {parent child : T} {memory : Mem} {dest index pad : BitVec 32}
