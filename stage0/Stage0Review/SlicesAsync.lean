@@ -17,7 +17,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Grammatik.Niedrig.Konstrukte.SliceCheck
-import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
+import Stage0.Senke.Ausdruck.Aggregat.Stored.Carriers
 import Grammatik.Nebenlaeufigkeit.Async.Creation
 import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 
@@ -181,6 +181,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 #print axioms Gabbro.Stage0.Frontend.Async.NamedPoll.linkedCall_refines
 #print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.body
 #print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.other
+#print axioms Gabbro.Stage0.Senke.runtimeArraySliceCarrier_ok
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh
 #print axioms Gabbro.Grammatik.Async.Representation.checkedRetryStmt_cost
