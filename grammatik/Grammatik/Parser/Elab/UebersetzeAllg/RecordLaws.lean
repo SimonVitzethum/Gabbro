@@ -226,7 +226,8 @@ theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (
   simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
 
 private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
-    (read : (source : SExpr) → sizeOf source < sizeOf (values.map (fun n => if n then .tru else .fls)) →
+    (read : (source : SExpr) →
+      sizeOf source < sizeOf (values.map (fun n => if n then SExpr.tru else SExpr.fls)) →
       Except String USide) :
     uArraySides ctx (values.map (fun n => if n then .tru else .fls)) read =
       .ok (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil) := by
