@@ -246,7 +246,7 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     {source : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
-    {lock : (declOf output.compiled.unit).Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
+    {lock : (declOf output.compiled.unit).mitRuhe.Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
     {ticket expected : Nat}
     (locks : ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m states)
     (buffers : PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1)
