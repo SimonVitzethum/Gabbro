@@ -38,7 +38,7 @@ theorem imageSourceForeignEvents_call {D : Deklaration} {O : Orakel D} (oracle :
     apply List.append_cancel_right (bs := before.spur)
     change (O.wirkt routine question arguments).1.spur = added ++ before.spur at events
     rw [← events, written]
-    simp only [question, writes, World.fragt, World.lese, World.merke, readEvent, List.append_assoc]
+    simp only [question, writes, World.fragt, World.lese, World.merke, readEvent, List.append_assoc] <;> rfl
   let observation : Ereignis D → Option (Faden × D.Ax) := fun event => match event with
     | .fremd (.inl called) => some (thread, called)
     | _ => none
@@ -51,7 +51,7 @@ theorem imageSourceForeignEvents_call {D : Deklaration} {O : Orakel D} (oracle :
     apply List.filterMap_eq_nil_iff.mpr
     intro event member
     rcases axiomSpur_mem member with ⟨_, _, _, rfl⟩ | ⟨_, _, _, rfl⟩ <;> rfl
-  have projected : ((writes ++ [.fremd (.inl routine)] ++ reads.map readEvent).reverse).filterMap
+  have projected : ((writes ++ [Ereignis.fremd (.inl routine)] ++ reads.map readEvent).reverse).filterMap
       observation = [(thread, routine)] := by
     simp only [List.reverse_append, List.filterMap_append, List.filterMap_reverse,
       readsSilent, writesSilent, List.reverse_nil, List.nil_append, List.append_nil]
@@ -80,7 +80,7 @@ theorem ImageForeignTrace.appendGate [Kern] {output : Emitted src reserve option
     (matched : ImageForeignTrace output history before) (external : imageExternalEvent event = true)
     (call : ImageGateEvent output E O before after returned event) :
     ImageForeignTrace output (history ++ [event]) after := by
-  obtain ⟨_, _, routine, _, _, _, _, _, _, log, gate, _, _, present, number, _⟩ := call
+  obtain ⟨_, _, routine, _, _, _, _, _, _, log, _, gate, _, _, present, number, _⟩ := call
   unfold ImageForeignTrace at matched ⊢
   rw [log, List.filter_append]
   simp only [List.filter_cons, external, ite_true, List.filter_nil]
