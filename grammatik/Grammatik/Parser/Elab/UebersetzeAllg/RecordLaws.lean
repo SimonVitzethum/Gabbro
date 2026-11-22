@@ -39,11 +39,14 @@ theorem lowProductArgs_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) 
     accepted by the ordinary checking-mode expression elaborator. -/
 private theorem specPrimitiveLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (side : USide) (valid : specPrimitiveLiteralFieldFits ty side = true) :
-    ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
+    (∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression) ∧
+      (∃ expression : Expr (declOf u) Γ Λ ty, lowLit ty side = .ok expression) := by
   unfold specPrimitiveLiteralFieldFits at valid
   split at valid
   · rename_i lo hi value
     obtain ⟨loFits, hiFits⟩ := of_decide_eq_true valid
+    refine ⟨?_, ⟨Expr.widen loFits hiFits (Expr.lit value),
+      by simp only [lowLit, dite_eq_left loFits, dite_eq_left hiFits]⟩⟩
     by_cases same : Ty.int value value = .int lo hi
     · refine ⟨same ▸ Expr.lit value, ?_⟩
       simp only [lowWertAtE, lowWertE, LowSide.wert, fitW, dite_eq_left same]
@@ -52,13 +55,16 @@ private theorem specPrimitiveLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : Lis
         dite_eq_left loFits, dite_eq_left hiFits]
   · rename_i value
     cases value
-    · exact ⟨Expr.fls, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩
-    · exact ⟨Expr.tru, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩
+    · exact ⟨⟨Expr.fls, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩,
+        ⟨Expr.fls, by simp only [lowLit]⟩⟩
+    · exact ⟨⟨Expr.tru, by simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl⟩,
+        ⟨Expr.tru, by simp only [lowLit]⟩⟩
   · rename_i capacity bytes
     cases decoded : bytesZahl bytes with
     | none => simp only [decoded, Bool.false_eq_true] at valid
     | some words =>
       have fits : words.length ≤ capacity := of_decide_eq_true (by simpa only [decoded] using valid)
+      refine ⟨?_, ⟨Expr.strLit words fits, by simp only [lowLit, decoded, dite_eq_left fits]⟩⟩
       let literal : Expr (declOf u) Γ Λ (.str words.length) := .strLit words (Nat.le_refl _)
       by_cases same : Ty.str words.length = .str capacity
       · refine ⟨same ▸ literal, ?_⟩
@@ -81,13 +87,30 @@ private theorem lowProductArgs_of_fields (u : UProg) (Γ : Ctx) (Λ : List (Res 
     exact ⟨.cons value args, by
       simp only [lowProductArgs, lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
 
+private theorem lowLitFields_of_fields (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fields : List (Ty × USide))
+    (lower : ∀ field ∈ fields, ∃ value : Expr (declOf u) Γ Λ field.1, lowLit field.1 field.2 = .ok value) :
+    ∃ args : Args (declOf u) Γ Λ (fields.map Prod.fst),
+      lowLitFields (fields.map Prod.fst) fields = .ok args := by
+  induction fields with
+  | nil => exact ⟨.nil, by simp only [List.map_nil, lowLitFields]⟩
+  | cons field rest ih =>
+    obtain ⟨value, lowValue⟩ := lower field List.mem_cons_self
+    obtain ⟨args, lowArgs⟩ := ih (fun entry present => lower entry (List.mem_cons_of_mem _ present))
+    cases field
+    exact ⟨.cons value args, by
+      simp only [List.map_cons, lowLitFields, bne_self_eq_false, Bool.false_eq_true, ite_false,
+        lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
+
 theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (side : USide) (gate : u.exportGate = .ok ())
     (valid : specLiteralFieldFits u.records side ty = true) :
-    ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
+    (∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression) ∧
+      (∃ expression : Expr (declOf u) Γ Λ ty, lowLit ty side = .ok expression) := by
   suffices lowers : ∀ (measure : Nat) (source : USide), sizeOf source = measure →
       ∀ (target : Ty), specLiteralFieldFits u.records source target = true →
-        ∃ expression, lowWertAtE u Γ Λ fn er target source = .ok expression from
+        (∃ expression, lowWertAtE u Γ Λ fn er target source = .ok expression) ∧
+          (∃ expression : Expr (declOf u) Γ Λ target, lowLit target source = .ok expression) from
     lowers _ side rfl ty valid
   intro amount
   induction amount using Nat.strongRecOn with
@@ -98,7 +121,7 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
       cases target <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted)
       case arr element length =>
         cases length with
-        | zero => exact ⟨.arrNil, by rw [lowWertAtE]⟩
+        | zero => exact ⟨⟨.arrNil, by rw [lowWertAtE]⟩, ⟨.arrNil, by rw [lowLit]⟩⟩
         | succ _ => simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted
     case arrCons first rest =>
       cases target <;> try (simp only [specLiteralFieldFits, Bool.false_eq_true] at accepted)
@@ -111,26 +134,34 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
             simpa only [specLiteralFieldFits] using accepted
           obtain ⟨headOk, tailOk⟩ := Bool.and_eq_true_iff.mp both
           have extent : 1 + sizeOf first + sizeOf rest = amount := measure
-          obtain ⟨head, loweredHead⟩ := smaller (sizeOf first) (by omega) first rfl element headOk
-          obtain ⟨tail, loweredTail⟩ :=
+          obtain ⟨⟨head, loweredHead⟩, ⟨literalHead, loweredLiteralHead⟩⟩ :=
+            smaller (sizeOf first) (by omega) first rfl element headOk
+          obtain ⟨⟨tail, loweredTail⟩, ⟨literalTail, loweredLiteralTail⟩⟩ :=
             smaller (sizeOf rest) (by omega) rest rfl (.arr element length) tailOk
-          exact ⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩
+          exact ⟨⟨.arrCons head tail, by simp only [lowWertAtE, loweredHead, loweredTail]⟩,
+            ⟨.arrCons literalHead literalTail, by simp only [lowLit, loweredLiteralHead, loweredLiteralTail]⟩⟩
     case product identity reordered fields =>
       simp only [specLiteralFieldFits, Bool.and_eq_true_iff, decide_eq_true_eq] at accepted
       obtain ⟨⟨rfl, declared⟩, good⟩ := accepted
       cases named : uRecordOf u.records (.prod identity (fields.map Prod.fst)) with
       | error e => simp only [named, Except.isOk, Except.toBool, Bool.false_eq_true] at declared
       | ok schema =>
-        obtain ⟨args, lowered⟩ := lowProductArgs_of_fields u Γ Λ fn er fields (by
-          intro field present
+        have extent : sizeOf fields < amount := by
+          rw [← measure]
+          simp +arith
+        have lowerField (field : Ty × USide) (present : field ∈ fields) :=
           have checked := List.all_eq_true.mp good ⟨field, present⟩ (List.mem_attach _ _)
           have less := recordField_sizeOf_lt fields field present
-          have extent : sizeOf fields < amount := by
-            rw [← measure]
-            simp +arith
-          exact smaller (sizeOf field.2) (by omega) field.2 rfl field.1 checked)
+          smaller (sizeOf field.2) (by omega) field.2 rfl field.1 checked
+        obtain ⟨args, lowered⟩ :=
+          lowProductArgs_of_fields u Γ Λ fn er fields (fun field present => (lowerField field present).1)
+        obtain ⟨literals, literalLowered⟩ :=
+          lowLitFields_of_fields u Γ Λ fields (fun field present => (lowerField field present).2)
         have built := record_lower u Γ Λ fn er identity reordered fields args gate lowered schema named
-        exact ⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩
+        exact ⟨⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩,
+          ⟨.prod identity literals, by
+            simp only [lowLit, bne_self_eq_false, Bool.false_eq_true, ite_false, named,
+              literalLowered, bind, Except.bind, pure, Except.pure]⟩⟩
     all_goals
       apply specPrimitiveLiteralField_lower u Γ Λ fn er
       simpa only [specLiteralFieldFits] using accepted
@@ -140,7 +171,7 @@ theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
     (valid : fields.all (fun field => specLiteralFieldFits u.records field.2 field.1) = true) :
     ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
   exact lowProductArgs_of_fields u Γ Λ fn er fields (fun field present =>
-    specLiteralField_lower u Γ Λ fn er field.1 field.2 gate (List.all_eq_true.mp valid field present))
+    (specLiteralField_lower u Γ Λ fn er field.1 field.2 gate (List.all_eq_true.mp valid field present)).1)
 
 /-- Bind the successful source argument to the ordinary G nominal
     constructor. Every field passed checking mode at the declared type. -/
@@ -234,8 +265,11 @@ private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
   induction values with
   | nil => rfl
   | cons value rest ih =>
+    change uArraySides ctx
+      ((if value then SExpr.tru else SExpr.fls) :: rest.map (fun n => if n then .tru else .fls)) read = _
+    simp only [uArraySides, List.foldr_cons]
     cases value <;>
-      simp only [List.map_cons, List.foldr_cons, uArraySides, uRecordSide, Bool.false_eq_true, ite_false,
+      simp only [uRecordSide, Bool.false_eq_true, ite_false,
         ite_true, ih, bind, Except.bind, pure, Except.pure]
 
 /-- The literal array accepted at a predicate parameter retains its
@@ -261,27 +295,12 @@ theorem specArrayLiteral_erfuellbar (ctx : UCtx) (values : List Bool)
       bind, Except.bind, pure, Except.pure]
 
 /-- The canonical literal reader of the actual typed substitution
-    accepts the same array and retains its exact type. -/
-theorem specArrayLiteral_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
-    (fn : UFn) (er : Option Ty) (values : List Bool) :
-    let literal := values.foldr (fun value rest => USide.arrCons (.truth value) rest) USide.arrNil
-    ∃ value : Expr (declOf u) Γ Λ (.arr .bool values.length),
-      lowWertE u Γ Λ fn er (.typed (.arr .bool values.length) literal) =
-        .ok ⟨.arr .bool values.length, value⟩ := by
-  have lowered : ∀ values : List Bool, ∃ expression : Expr (declOf u) Γ Λ (.arr .bool values.length),
-      lowLit (.arr .bool values.length)
-        (values.foldr (fun value rest => USide.arrCons (.truth value) rest) USide.arrNil) = .ok expression := by
-    intro values
-    induction values with
-    | nil => exact ⟨.arrNil, by simp only [List.length_nil, List.foldr_nil, lowLit]⟩
-    | cons head rest ih =>
-      obtain ⟨tail, readTail⟩ := ih
-      cases head
-      · refine ⟨.arrCons .fls tail, ?_⟩
-        simp only [List.length_cons, List.foldr_cons, lowLit, readTail]
-      · refine ⟨.arrCons .tru tail, ?_⟩
-        simp only [List.length_cons, List.foldr_cons, lowLit, readTail]
-  obtain ⟨value, read⟩ := lowered values
+    accepts every checked literal with its exact declared type. -/
+theorem specLiteralTyped_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (fn : UFn) (er : Option Ty) (type : Ty) (literal : USide) (gate : u.exportGate = .ok ())
+    (valid : specLiteralFieldFits u.records literal type = true) :
+    ∃ value : Expr (declOf u) Γ Λ type, lowWertE u Γ Λ fn er (.typed type literal) = .ok ⟨type, value⟩ := by
+  obtain ⟨value, read⟩ := (specLiteralField_lower u Γ Λ fn er type literal gate valid).2
   exact ⟨value, by simp only [lowWertE, read, Except.map]⟩
 
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/

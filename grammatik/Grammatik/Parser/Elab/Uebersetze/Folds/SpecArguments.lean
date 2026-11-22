@@ -356,6 +356,14 @@ def uSpecAscribeArrays (ctx : UCtx) (name : String) (args : List SExpr) : List S
       | .ext .array [] _ => .built "#spec-array" [.lit specIndex, .lit index, argument]
       | _ => argument
 
+theorem uSpecAscribeArray_exact (ctx : UCtx) (name : String) (elements : List SExpr)
+    {specIndex : Nat}
+    (selected : ctx.specTypen.findIdx? (fun entry => strEq entry.1 name) = some specIndex) :
+    uSpecAscribeArrays ctx name [.ext .array [] elements] =
+      [.built "#spec-array" [.lit specIndex, .lit 0, .ext .array [] elements]] := by
+  simp only [uSpecAscribeArrays, selected]
+  rfl
+
 def uSpecEinTyped (ctx : UCtx) : Nat → SExpr → SExpr :=
   uSpecEinUsing ctx.specs (uSpecAscribeArrays ctx)
 

@@ -27,7 +27,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralNestedRecord_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_erfuellbar
-#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_low
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralTyped_low
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
@@ -99,6 +99,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
+#print axioms Gabbro.Grammatik.Async.inferredBoundary_erfuellbar
+#print axioms Gabbro.Grammatik.Async.requiredSaved_exact
 #print axioms Gabbro.Grammatik.Async.ReificationDuty.cancel_releases
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceLocalType_unknown
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specTextSliceArgument_erfuellbar

@@ -28,6 +28,28 @@ theorem ValueAt.slice_view {D : Deklaration} {layout : Lay D} {memory : Runner.M
     SliceAt (τ := τ) layout memory frame (base + view.offset * valueWords τ) (view.value value) :=
   fun index => array.slice_element view index
 
+/-- A saved slice can keep sharing its original allocation while other
+    elements change. Only the words of its visible extent participate in
+    the refinement of its immutable value. -/
+theorem SliceAt.agree_visible {D : Deklaration} {layout : Lay D}
+    {before after : Runner.Mem} {frame : Runner.W} {base capacity : Nat} {τ : Ty}
+    {slice : BoundedSlice (Wert D τ) capacity}
+    (represented : SliceAt (τ := τ) layout before frame base slice)
+    (same : ∀ offset, offset < slice.length * valueWords τ →
+      after.rd64 (slot frame (BitVec.ofNat 64 (base + offset))) =
+        before.rd64 (slot frame (BitVec.ofNat 64 (base + offset)))) :
+    SliceAt (τ := τ) layout after frame base slice := by
+  intro position
+  let element := represented position
+  refine ⟨element.1, ?_⟩
+  intro word used
+  have within : word < valueWords τ := by simpa only [encodeWords_length] using used
+  have extent := Nat.mul_le_mul_right (valueWords τ) (Nat.succ_le_of_lt position.isLt)
+  change (position.val + 1) * valueWords τ ≤ slice.length * valueWords τ at extent
+  rw [Nat.add_mul, Nat.one_mul] at extent
+  rw [Nat.add_assoc, same _ (by omega), ← Nat.add_assoc]
+  exact element.2 word used
+
 /-- A successful signed endpoint check selects a span of the existing
     array. It represents the exact value and needs no new element storage. -/
 theorem ValueAt.checked_slice_view {D : Deklaration} {layout : Lay D} {memory : Runner.Mem}

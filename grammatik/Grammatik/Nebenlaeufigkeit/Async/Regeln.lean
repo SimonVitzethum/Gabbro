@@ -132,7 +132,11 @@ public theorem inferredBoundary_erfuellbar {fields visible : List String} {resul
     let live := requiredSaved visible result name rest
     BoundarySafe fields (requiredSaved visible result name (inferSaved result (name :: visible) rest))
       { original with live := live, saved := live } := by
-  simp only [BoundarySafe, inferSaved_live]
+  have same : requiredSaved visible result name (inferSaved result (name :: visible) rest) =
+      requiredSaved visible result name rest := by
+    simp only [requiredSaved, inferSaved_live]
+  rw [same]
+  simp only [BoundarySafe]
   refine ⟨?_, ?_, ?_, noLocks, moveOnce, unique, List.Pairwise.filter _ distinct⟩
   · exact List.all_eq_true.mpr (fun name member => List.contains_iff_mem.mpr member)
   · exact List.all_eq_true.mpr (fun name member => List.contains_iff_mem.mpr member)
