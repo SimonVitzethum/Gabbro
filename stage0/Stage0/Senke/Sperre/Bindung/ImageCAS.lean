@@ -43,6 +43,40 @@ theorem image_cas_at [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat} {poin
   have run := tso_cas_prefix (before := imageToTSO before) running instruction addressRead expectedRead updateRead
   exact tso_silent_prefix_image run rfl
 
+/-- An emitted load cell selects the exact machine word before its
+    shared read. This covers the ticket, serving and waiter counters. -/
+theorem image_load_at [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat} {pointer : T}
+    {base : W} {code : List II} {index : Nat} {dest addressSlot : Int}
+    (running : before.ths[thread]? = some (some (.next pointer)))
+    (encoded : CodeAt (before.ms.1.view thread) base code)
+    (location : pointer.pc = base + BitVec.ofNat 64 (16 * index))
+    (cell : code[index]? = some (ci 15 dest addressSlot 0)) {address : W}
+    (addressRead : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f addressSlot))) = some address) :
+    let resume : Ans → Res T := fun reply => opt reply fun pair => ret1 pointer pair.1
+    ProcessPrefix imageTSO actI before [] 4
+      ⟨before.ms, before.ths.set thread (some (.ask (.rd 8 address) resume))⟩ := by
+  obtain ⟨inside, opcode⟩ := List.getElem?_eq_some_iff.mp cell
+  have instruction := encoded index inside
+  rw [opcode, ← location] at instruction
+  exact tso_silent_prefix_image (tso_load_prefix (before := imageToTSO before) running instruction addressRead) rfl
+
+/-- The result write of a load or CAS enqueues its actual return word
+    in the issuing frame and reaches exactly the next instruction. -/
+theorem image_memory_result [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat}
+    {pointer : T} {dest : BitVec 32} {value : W}
+    (running : before.ths[thread]? = some (some (ret1 pointer value)))
+    (destination : (before.ms.1.view thread).rd32 (pointer.pc + 4) = some dest)
+    (writable : all before.ms.1.m.wr (slot pointer.fp (sx dest)) 8 = true) :
+    ∃ result : imageTSO.St, ProcessPrefix imageTSO actI before [] 2
+        ⟨result, before.ths.set thread (some (.next (nxt pointer)))⟩ ∧
+      result.1.m = before.ms.1.m ∧
+      result.1.view thread = Mem.write (before.ms.1.view thread) (slot pointer.fp (sx dest)) 8 value.toNat ∧
+      (∀ other, other ≠ thread → result.1.view other = before.ms.1.view other) ∧
+      QueuedStores before.ms.1 result.1 thread [(slot pointer.fp (sx dest), value)] := by
+  obtain ⟨result, prefix, committed, localView, others, stores⟩ :=
+    tso_ret1_prefix (before := imageToTSO before) running destination writable
+  exact ⟨result, tso_silent_prefix_image prefix rfl, committed, localView, others, stores⟩
+
 /-- A readable and writable CAS returns the actual committed word, even
     when the comparison fails. Both outcomes preserve every store buffer. -/
 theorem image_CAS_reply [Kern] {machine : Cfg imageTSO (Res T)}
@@ -73,6 +107,34 @@ theorem image_CAS_reply [Kern] {machine : Cfg imageTSO (Res T)}
     exact ⟨.ask waiting rfl rfl answered rfl,
       returned.trans (congrArg (fun word => some (word, (0 : W))) exactOld),
       changed.trans (congrArg (fun bytes => { machine.ms.1 with m := bytes }) exactMemory)⟩
+
+/-- Finish the actual CAS after its operands have been read. Both a
+    winning comparison and a retry save the old committed word in the
+    instruction's destination, then reach its exact next address. -/
+theorem image_CAS_result [Kern] {machine : Cfg imageTSO (Res T)} {thread : Nat} {pointer : T}
+    {memory : imageTSO.St} {reply : Ans} {dest : BitVec 32}
+    {address expected update old : W}
+    (readable : machine.ms.1.m.rd64 address = some old)
+    (writable : all machine.ms.1.m.wr address 8 = true)
+    (waiting : machine.ths[thread]? = some (some (.ask (.cas address expected update)
+      (fun answer => opt answer fun pair => ret1 pointer pair.1))))
+    (answered : imageTSO.ans machine.ms thread (.cas address expected update) reply memory)
+    (destination : (memory.1.view thread).rd32 (pointer.pc + 4) = some dest)
+    (resultWritable : all memory.1.m.wr (slot pointer.fp (sx dest)) 8 = true) :
+    ∃ result : imageTSO.St, ProcessPrefix imageTSO actI machine [] 3
+        ⟨result, machine.ths.set thread (some (.next (nxt pointer)))⟩ ∧
+      result.1.m = (if old = expected then Mem.write machine.ms.1.m address 8 update.toNat else machine.ms.1.m) ∧
+      QueuedStores memory.1 result.1 thread [(slot pointer.fp (sx dest), old)] := by
+  obtain ⟨process, returned, memoryEq⟩ := image_CAS_reply readable writable waiting answered
+  let middle : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread (some (ret1 pointer old))⟩
+  have process' : ProcessStep imageTSO actI machine [] middle := by
+    simpa only [returned, opt_some, middle] using process
+  have inside := (List.getElem?_eq_some_iff.mp waiting).1
+  have ready : middle.ths[thread]? = some (some (ret1 pointer old)) := List.getElem?_set_self inside
+  obtain ⟨result, run, committed, _, _, stores⟩ := image_memory_result ready destination resultWritable
+  refine ⟨result, ?_, ?_, stores⟩
+  · simpa only [middle, List.set_set] using ProcessPrefix.cons process' run
+  · rw [committed, memoryEq]
 
 theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketWords [Kern] {src : String} {reserve : Nat}
     {options : Profil.Options} (output : Emitted src reserve options) (N : Nat)

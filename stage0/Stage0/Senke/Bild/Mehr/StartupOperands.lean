@@ -304,6 +304,36 @@ theorem tso_cas_prefix {layout : Runner.Beweis.Lay}
   refine .cons started (.cons opRead (.cons addressIndex (.cons addressValue (.cons valueIndex ?_))))
   exact .cons (load64 _ expectedRead) (.cons (load64 _ updateRead) (.nil _))
 
+/-- Decode the address of an emitted load before it observes the shared
+    word. The address is read from the issuing thread's own frame. -/
+theorem tso_load_prefix {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {t : T} {dest addressField pad : BitVec 32}
+    (running : before.ths[i]? = some (some (.next t)))
+    (instruction : InsAt (before.ms.1.view i) t.pc 15 dest addressField pad) {address : W}
+    (addressRead : (before.ms.1.view i).rd64 (slot t.fp (sx addressField)) = some address) :
+    let resume : Ans → Res T := fun reply => opt reply fun pair => ret1 t pair.1
+    ProcessPrefix (TSO layout) actI before [] 4
+      ⟨before.ms, before.ths.set i (some (.ask (.rd 8 address) resume))⟩ := by
+  intro resume
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) := ⟨before.ms, before.ths.set i (some r)⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  let dereference (field : W) : Res T := rd64 (slot t.fp field) fun addr => rd64 addr (ret1 t)
+  have started : ProcessStep (TSO layout) actI before [] (onThread (IR.step t)) := .priv running rfl
+  have opcode : ProcessStep (TSO layout) actI (onThread (IR.step t)) [] (onThread (op 15 t)) :=
+    tso_fetch_opcode before inside 15 t instruction.op (by decide)
+  have fieldLoaded : rdN (before.ms.1.view i) 4 (t.pc + 8) = some (addressField.setWidth 64) := by
+    simp only [rdN, instruction.f2, Option.map_some]
+  have fieldStep : ProcessStep (TSO layout) actI (onThread (op 15 t)) []
+      (onThread (dereference (sx addressField))) := by
+    simpa [onThread, op, f2, rd32, ld, dereference] using tso_read_step before inside
+      (fun answer => opt answer fun pair => dereference (sx (pair.1.setWidth 32))) fieldLoaded
+  have addressStep : ProcessStep (TSO layout) actI (onThread (dereference (sx addressField))) []
+      (onThread (.ask (.rd 8 address) resume)) := by
+    simpa only [onThread, dereference, rd64, opt_some] using tso_read_step before inside
+      (fun answer => opt answer fun pair => rd64 pair.1 (ret1 t))
+      (show rdN (before.ms.1.view i) 8 (slot t.fp (sx addressField)) = some address from addressRead)
+  exact .cons started (.cons opcode (.cons fieldStep (.cons addressStep (.nil _))))
+
 /-- A successful binary instruction reads both slots from the issuing
     view and buffers its exact result at the decoded destination. -/
 theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
