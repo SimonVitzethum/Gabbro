@@ -276,9 +276,10 @@ theorem SCMemoryPrefix.no_silent_stop_until_host {layout : Runner.Beweis.Lay}
     (actual : Tr (SC layout) actI before [] ending taken)
     (one : before.ths.length = 1) (blind : AlleBlind before.ths) : ending = .lauf := by
   by_contra stopped
-  obtain ⟨_, earlier, last, _, path, terminal, events, _⟩ := actual.split_stop stopped
+  obtain ⟨_, earlier, last, steps, path, terminal, events, _⟩ := actual.split_stop stopped
   obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
   obtain ⟨_, remaining⟩ := reference.consume_until_host waiting path one blind
+  generalize available - steps = budget at remaining
   cases remaining with
   | nil => exact stopped (sc_waiting_host_empty_terminal waiting terminal rfl)
   | cons next _ =>
