@@ -316,6 +316,7 @@ public import Grammatik.Niedrig.Authority.NoBypassSaetze
 public import Grammatik.Niedrig.Konstrukte.Basis
 public import Grammatik.Niedrig.Konstrukte.Adresse
 public import Grammatik.Niedrig.Konstrukte.Schnitt
+public import Grammatik.Niedrig.Konstrukte.SliceCheck
 public import Grammatik.Niedrig.Konstrukte.SichtTypen
 public import Grammatik.Niedrig.Konstrukte.Sicht
 public import Grammatik.Niedrig.Konstrukte.SichtScope

@@ -1,4 +1,5 @@
 module
+import Grammatik.Niedrig.Konstrukte.SliceCheck
 
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
@@ -179,6 +180,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.LowLevel.Construct.checkStringSlice_result
 #print axioms Gabbro.Grammatik.LowLevel.Construct.strBoundedSliceValue_byte
 #print axioms Gabbro.Grammatik.LowLevel.Construct.strBoundedSliceValue_subslice
+#print axioms Gabbro.Grammatik.LowLevel.Construct.guardSlice_exec
+#print axioms Gabbro.Grammatik.LowLevel.Construct.stringSliceBounds_erfuellbar
 #print axioms Gabbro.Stage0.Senke.ValueAt.string_slice_view
 #print axioms Gabbro.Stage0.Senke.lowE_runtimeSliceLength_ok
 #print axioms Gabbro.Grammatik.LowLevel.Construct.runtimeStringSlice_erfuellbar
