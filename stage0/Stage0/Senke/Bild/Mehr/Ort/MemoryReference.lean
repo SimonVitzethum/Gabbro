@@ -8,14 +8,16 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Beweis Runner.Mach BildLauf
 
-private theorem RunP.host_unique {initial : Res T} {before after : Mem}
+private theorem RunP.host_unique {initial residual : Res T} {before after : Mem}
     {call : Req} {resume : Ans → Res T}
-    (reference : RunP initial before (.ask (.sys call) resume) after) :
+    (reference : RunP initial before residual after)
+    (atHost : residual = .ask (.sys call) resume) :
     ∀ {seen : Req} {k : Ans → Res T} {actual : Mem},
       RunP initial before (.ask (.sys seen) k) actual →
       (.ask (.sys seen) k : Res T) = .ask (.sys call) resume ∧ actual = after := by
   induction reference with
   | refl =>
+    cases atHost
     intro seen k actual ran
     cases ran with
     | refl => exact ⟨rfl, rfl⟩
@@ -27,12 +29,12 @@ private theorem RunP.host_unique {initial : Res T} {before after : Mem}
     | ask observed rest =>
       rw [answer] at observed
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj observed)
-      exact ih rest
+      exact ih atHost rest
 
 /-- A whole memory reference through the final request selects the same
     host continuation for every solo run from its entry. The run may be
     interleaved with other threads that preserve this memory view. -/
-theorem SoloLauf.host_unique {start boundary : T} {before middle after : Mem}
+theorem SoloLauf.host_unique [Kern] {start boundary : T} {before middle after : Mem}
     {count : Nat} {call : Req} {resume : Ans → Res T}
     (reference : StarM count start before boundary middle)
     (tail : RunP (step boundary) middle (.ask (.sys call) resume) after) :
@@ -46,7 +48,7 @@ theorem SoloLauf.host_unique {start boundary : T} {before middle after : Mem}
     rcases pending with ⟨impossible, _⟩ | pending
     · cases impossible
     cases complete with
-    | refl => exact RunP.host_unique tail pending
+    | refl => exact RunP.host_unique tail rfl pending
     | next first _ =>
       cases tail.remaining first with
       | ask answer _ => cases answer
