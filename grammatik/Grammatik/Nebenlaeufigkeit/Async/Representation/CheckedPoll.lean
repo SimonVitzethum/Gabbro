@@ -125,6 +125,13 @@ public theorem resolvedPoll_machinePoll (elaboration : Elaboration D V Λ types 
       exact .stop actual (by intro impossible; cases impossible)
 termination_by activationFuel f source
 
+@[expose] public def checkedRetryStmt {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (exhausted : Block D V l Γ Λ Λ) : Stmt D V l Γ Λ Λ :=
+  .retry (2 * f.body.length + 2) (.var finished)
+    (.cons (checkedDispatch table state finished) .nil) exhausted
+
 /-- The emitted loop resets its flag for each poll and retains the ordinary
     G overflow branch. Its proof discharges that branch on represented inputs. -/
 @[expose] public def checkedPoll {elaboration : Elaboration D V Λ types f}
@@ -132,8 +139,7 @@ termination_by activationFuel f source
     (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
     (exhausted : Block D V l Γ Λ Λ) : Block D V l Γ Λ Λ :=
   .cons (.assignVar finished .fls)
-    (.cons (.retry (2 * f.body.length + 2) (.var finished)
-      (.cons (checkedDispatch table state finished) .nil) exhausted) .nil)
+    (.cons (checkedRetryStmt table state finished exhausted) .nil)
 
 private theorem singleStatement (statement : Stmt D V l Γ Λ Λ)
     (oracle : Orakel D) (passes : Nat)
@@ -232,6 +238,23 @@ private theorem checkedRetry_refines {elaboration : Elaboration D V Λ types f}
           rw [resolvedPoll, answered]
           exact refine_addCost inventory state finished _ cost _ rest
 
+public theorem checkedRetryStmt_refines {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (inventory : Inventory D) (fixed : FixedActivationInventory (f := f) inventory)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (separate : state.position ≠ finished.position)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (exhausted : Block D V l Γ Λ Λ)
+    (source : State (Value D) (Child D types)) (world : World D) (env : Env D Γ)
+    (unfinished : env.get finished = false) (represented : Inv f types inventory source (env.get state)) :
+    ActivationRefines inventory state finished
+      (execStmt oracle passes calls (checkedRetryStmt table state finished exhausted) world env)
+      (resolvedPoll elaboration calls prices source world) := by
+  rw [checkedRetryStmt, execStmt]
+  simp only [singleStatement]
+  exact checkedRetry_refines table inventory fixed state finished separate oracle passes calls prices
+    (execBlock oracle passes calls exhausted) _ source world env (activationFuel_le f source) unfinished represented
+
 public theorem checkedPoll_refines {elaboration : Elaboration D V Λ types f}
     (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
     (inventory : Inventory D) (fixed : FixedActivationInventory (f := f) inventory)
@@ -249,13 +272,10 @@ public theorem checkedPoll_refines {elaboration : Elaboration D V Λ types f}
     (Env.get_set_other env finished state (false : Wert D .bool) (Ne.symm separate)).symm ▸ represented
   have cleared : reset.get finished = false := Env.get_set_same env finished (false : Wert D .bool)
   change ActivationRefines inventory state finished
-    (execBlock oracle passes calls (.cons
-      (.retry (2 * f.body.length + 2) (.var finished) (.cons (checkedDispatch table state finished) .nil)
-        exhausted) .nil) world reset) _
-  rw [singleStatement, execStmt]
-  simp only [singleStatement]
-  exact checkedRetry_refines table inventory fixed state finished separate oracle passes calls prices
-    (execBlock oracle passes calls exhausted) _ source world reset (activationFuel_le f source) cleared kept
+    (execBlock oracle passes calls (.cons (checkedRetryStmt table state finished exhausted) .nil) world reset) _
+  rw [singleStatement]
+  exact checkedRetryStmt_refines table inventory fixed state finished separate oracle passes calls prices
+    exhausted source world reset cleared kept
 
 /-- The actual dispatcher closes the reachable-state representation
     obligation for fixed resource indices. Every reachable semantic
