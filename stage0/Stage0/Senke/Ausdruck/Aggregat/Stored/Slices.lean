@@ -340,15 +340,56 @@ theorem runtimeSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
     lowE_ok (same := fun _ => rfl) world world worldAt layoutIn expression d code top made fits m pc env pre
   exact ⟨bounds, after, run, confined, encoding ▸ stored.2⟩
 
-/-- For a string with a word per byte, runtime descriptor emission
-    preserves and reuses the original substring span. -/
+/-- The original encoding determines how to read a byte. The short case
+    keeps its packed source word and never addresses an adjacent word. -/
+def readStringSliceByte (memory : Runner.Mem) (frame : Runner.W) (base capacity offset index : Nat) :
+    Option Runner.W :=
+  if capacity ≤ 1 then
+    if offset + index = 0 then
+      (memory.rd64 (slot frame (BitVec.ofNat 64 base))).map (fun word => word &&& 255)
+    else none
+  else memory.rd64 (slot frame (BitVec.ofNat 64 (base + 1 + (offset + index))))
+
+/-- The same view semantics apply to both packed and word-per-byte
+    backing values. Reading a visible byte never needs a new backing span. -/
+theorem ValueAt.string_slice_read [Kern] {D : Deklaration} {layout : Lay D}
+    {memory : Runner.Mem} {frame : Runner.W} {base capacity : Nat}
+    {value : Wert D (.str capacity)} (backing : ValueAt layout memory frame base (.str capacity) value)
+    (first last : Nat) (bounds : SliceOk value.1.length first last)
+    (index : Fin (last - first)) :
+    let result := strBoundedSliceValue value first last bounds
+    let byte := result.1[index.val]'(by rw [(strBoundedSliceValue_exact value first last bounds).2]; exact index.isLt)
+    readStringSliceByte memory frame base capacity first index.val = some (BitVec.ofInt 64 byte.n) := by
+  intro result byte
+  by_cases packed : capacity ≤ 1
+  · have inside : first + index.val < value.1.length := by
+      have selected := index.isLt
+      obtain ⟨ordered, within⟩ := bounds
+      omega
+    have zero : first + index.val = 0 := by
+      have capacityBound := value.2
+      omega
+    have stored := backing.2 0 (by rw [encodeWords_length]; exact valueWords_pos _)
+    simp only [encodeWords, ite_eq_left packed, List.getElem_cons_zero, Nat.add_zero] at stored
+    have sourceByte : strGetW value 0 = value.1[first + index.val] := by
+      simp only [strGetW, Int.le_refl, ite_true, Int.toNat_zero]
+      rw [← zero, List.getElem?_eq_getElem inside, Option.getD_some]
+    have same : byte = value.1[first + index.val] :=
+      strBoundedSliceValue_byte value first last bounds index
+    simp only [readStringSliceByte, ite_eq_left packed, ite_eq_left zero, stored, Option.map_some,
+      strN_byte value packed, sourceByte, same]
+  · simp only [readStringSliceByte, ite_eq_right packed]
+    exact backing.string_slice_byte (by omega) first last bounds index
+
+/-- Runtime descriptor emission preserves and reuses the exact
+    backing string, with both physical string encodings. -/
 theorem runtimeStringSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
     {Γ : Ctx} {Λ : List (Res D)} {capacity : Nat}
     {firstLo firstHi lastLo lastHi : Int}
     (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
     (firstFits : -(2 ^ 63) ≤ firstLo ∧ firstHi < 2 ^ 63)
     (differenceFits : -(2 ^ 63) ≤ lastLo - firstHi ∧ lastHi - firstLo < 2 ^ 63)
-    (value : Wert D (.str capacity)) (long : 2 ≤ capacity) (sized : capacity < 2 ^ 64)
+    (value : Wert D (.str capacity)) (sized : capacity < 2 ^ 64)
     {world : World D} {env : Env D Γ}
     (valid : SignedSliceOk value.1.length (env.get first).n (env.get last).n)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
@@ -362,13 +403,17 @@ theorem runtimeStringSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D
       let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
       let result := strBoundedSliceValue value (env.get first).n.toNat (env.get last).n.toNat bounds
       Executes m pc fp K d code (fun after => readSliceDescriptor after fp d value.1.length = some view ∧
-        WordsAt after fp (base + 1 + view.offset) (result.1.map fun byte => BitVec.ofInt 64 byte.n)) := by
+        ∀ index : Fin (view.length),
+          let byte := result.1[index.val]'(by
+            rw [(strBoundedSliceValue_exact _ _ _ bounds).2]
+            exact index.isLt)
+          readStringSliceByte after fp base capacity view.offset index.val = some (BitVec.ofInt 64 byte.n)) := by
   obtain ⟨bounds, after, run, confined, words⟩ := runtimeSliceDescriptor_ok first last firstFits differenceFits valid
     worldAt layoutIn made fits pre
   let view := ArraySliceView.ofEndpoints (env.get first).n.toNat (env.get last).n.toNat bounds
   have inFrame : d ≤ K := (lowE_top (runtimeSliceDescriptor first last) d code top made).le.trans fits
   have preserved := backing.agree_low confined pre.frame.room below inFrame
   exact ⟨bounds, after, run, confined, readSliceDescriptor_exact view (value.2.trans_lt sized) words,
-    preserved.string_slice_view long _ _ bounds⟩
+    preserved.string_slice_read _ _ bounds⟩
 
 end Gabbro.Stage0.Senke
