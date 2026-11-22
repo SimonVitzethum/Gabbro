@@ -65,7 +65,7 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
-    ∃ count (expected : Cfg (SC L0) (Res T)),
+    ∃ (count : Nat) (expected : Cfg (SC L0) (Res T)),
       SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
