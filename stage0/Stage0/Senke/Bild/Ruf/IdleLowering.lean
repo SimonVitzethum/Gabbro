@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Funktion
 public import Stage0.Senke.Welt.Spans.IdleLayout
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil2
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 @[expose] public section
 
@@ -16,13 +17,18 @@ private theorem entryIndex_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
       entryIndex (ruE expr) = entryIndex expr
   | _, _, _, .widen _ _ expr => entryIndex_ruE expr
-  | _, _, _, .neg expr => congrArg (fun i => i.map Int.neg) (entryIndex_ruE expr)
+  | _, _, _, .neg expr => by
+    simpa only [ruE, entryIndex] using
+      congrArg (fun i : Option Int => do return -(← i)) (entryIndex_ruE expr)
   | _, _, _, .add left right =>
-    kongr₂ (fun a b => a.bind (fun i => b.map (i + ·))) (entryIndex_ruE left) (entryIndex_ruE right)
+    by simpa only [ruE, entryIndex] using
+      kongr₂ (fun a b : Option Int => do return (← a) + (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .sub left right =>
-    kongr₂ (fun a b => a.bind (fun i => b.map (i - ·))) (entryIndex_ruE left) (entryIndex_ruE right)
+    by simpa only [ruE, entryIndex] using
+      kongr₂ (fun a b : Option Int => do return (← a) - (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .mul left right =>
-    kongr₂ (fun a b => a.bind (fun i => b.map (i * ·))) (entryIndex_ruE left) (entryIndex_ruE right)
+    by simpa only [ruE, entryIndex] using
+      kongr₂ (fun a b : Option Int => do return (← a) * (← b)) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .lit .. | _, _, _, .tru .. | _, _, _, .fls ..
   | _, _, _, .var .. | _, _, _, .glob .. | _, _, _, .slot ..
   | _, _, _, .thru .. | _, _, _, .thruOwn .. | _, _, _, .ptrOf ..
@@ -54,7 +60,7 @@ private theorem idleColumn (table : D.Tab) (field : D.Feld table) (first count :
 
 private theorem idleColumnFits (table : D.Tab) (field : D.Feld table) :
     EntrySnapshots.columnFits (D := D.mitRuhe) table field = EntrySnapshots.columnFits (D := D) table field := by
-  simp only [EntrySnapshots.columnFits, Deklaration.mitRuhe, tyR, valueWords_mapNumbers]
+  simp only [EntrySnapshots.columnFits, tyR, valueWords_mapNumbers]
 
 /-- The original and idle-extended postconditions capture the same
     entry cells in the same order, including dynamic columns. -/
@@ -62,14 +68,22 @@ theorem oldCells_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
       oldCells (ruE expr) = (oldCells expr).map Zelle.withIdle
   | _, _, _, .oldS table field index _ => by
-    simp only [ruE, oldCells]
-    with_unfolding_all rw [entryIndex_ruE index]
-    cases entryIndex index with
-    | some _ => rfl
-    | none =>
-      rw [idleColumnFits (D := D) table field]
-      with_unfolding_all rw [oldCells_ruE index, idleColumn (D := D) table field 0 (D.count table).toNat]
-      split <;> simp only [List.map_append, List.map_nil]
+    let cells (i : Option Int) (rest : List (Zelle D.mitRuhe)) : List (Zelle D.mitRuhe) :=
+      match i with
+      | some k => [.elem table field k.toNat]
+      | none => if EntrySnapshots.columnFits (D := D.mitRuhe) table field then
+          rest ++ EntrySnapshots.column (D := D.mitRuhe) table field 0 (D.count table).toNat else []
+    calc
+      _ = cells (entryIndex (ruE index)) (oldCells (ruE index)) := by simp only [ruE, oldCells, cells]
+      _ = cells (entryIndex index) ((oldCells index).map Zelle.withIdle) :=
+        kongr₂ cells (entryIndex_ruE index) (oldCells_ruE index)
+      _ = _ := by
+        simp only [oldCells]
+        cases entryIndex index with
+        | some _ => rfl
+        | none =>
+          simp only [cells, idleColumnFits (D := D), idleColumn (D := D)]
+          split <;> simp only [List.map_append, List.map_nil]
   | _, _, _, .widen _ _ expr | _, _, _, .not expr | _, _, _, .neg expr | _, _, _, .intBuiltin1 _ expr =>
     oldCells_ruE expr
   | _, _, _, .add left right | _, _, _, .sub left right | _, _, _, .mul left right
