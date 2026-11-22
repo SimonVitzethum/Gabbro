@@ -96,6 +96,46 @@ public theorem childPollBlock_reports_failure {l : Bool} {Γ : Ctx} {name : Stri
     | logik cause => cases failed <;> rfl
     | hardware cause => cases failed <;> rfl
 
+/-- Run the same ordered task tree using actual ordinary call outcomes.
+    A failure is terminal for this poll; Pending continues to preserve
+    the updated child storage and Ready results stay cached. -/
+@[expose] public def runTaskPoll (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) :
+    Task (Value D) (Child D types) → World D →
+      Except (Logik D ⊕ Hardware D) (Poll (Value D) × Task (Value D) (Child D types) × World D × Nat) :=
+  pollTaskWith (M := Except (Logik D ⊕ Hardware D))
+    (fun child world => match child with
+      | .invalid => .ok (.pending, .invalid, world, 0)
+      | .active name storage =>
+        match elaboration.callee name with
+        | none => .ok (.pending, .invalid, world, 0)
+        | some callee => runChildPoll callee calls prices storage world)
+    Value.pair
+
+/-- Left failure stops the join before a right poll can change the world. -/
+public theorem runTaskPoll_join_left_failure (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (left right : Task (Value D) (Child D types)) (world : World D)
+    (failure : Logik D ⊕ Hardware D)
+    (failed : runTaskPoll elaboration calls prices left world = .error failure) :
+    runTaskPoll elaboration calls prices (.join left right) world = .error failure := by
+  unfold runTaskPoll at failed ⊢
+  simp only [pollTaskWith, failed, bind, Except.bind]
+
+/-- A right failure is observed in the actual successor world of the
+    left poll, even if that left answer was Pending. -/
+public theorem runTaskPoll_join_right_failure (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (left right : Task (Value D) (Child D types)) (world middle : World D)
+    (event : Poll (Value D)) (successor : Task (Value D) (Child D types)) (cost : Nat)
+    (failure : Logik D ⊕ Hardware D)
+    (first : runTaskPoll elaboration calls prices left world = .ok (event, successor, middle, cost))
+    (second : runTaskPoll elaboration calls prices right middle = .error failure) :
+    runTaskPoll elaboration calls prices (.join left right) world = .error failure := by
+  unfold runTaskPoll at first second ⊢
+  simp only [pollTaskWith, first, second, bind, Except.bind]
+
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage
     invariant excludes; it never fabricates an inhabitant of a source type. -/
