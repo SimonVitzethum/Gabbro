@@ -100,11 +100,12 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
     obtain ⟨silent, evaluated⟩ := leafPollArguments_eval callee .here world world (.cons payload env)
     have noRead : world.lese Λ [] = world := rfl
     erw [silent, noRead, evaluated]
+    simp only [Env.get]
     cases returned : calls callee.poll world (pollEnvironment callee payload) with
     | why _ reason => exact keinGrund callee.pollInfallible reason
     | logik _ | hardware _ =>
       simp only [runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
-        bind, Except.bind, TaskStepRep, Ausgang.schrumpf]
+        bind, Except.bind, TaskStepRep, Ausgang.schrumpf] <;> rfl
     | ok after answer =>
       simp only [runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome]
       generalize ergWert callee.pollResult answer = reply
