@@ -113,6 +113,34 @@ def stringModule : List String :=
    "Init.Data.String.Termination",
    "Init.Data.String.ToSlice"]
 
+/-- The guardian's form of a unit: ONE module with the source, the data, every duty and every logic
+    statement (no proof files), so that a whole unit is checked by one `lean` process. The parts are the
+    generated modules' bodies, in their dependency order. -/
+def einDatei (modul : String) (ds : List Datei) : Datei :=
+  let basis := modul.replace "." "/"
+  let rang (d : Datei) : Option Nat :=
+    if d.pfad == basis ++ "/Quelle" then some 0
+    else if (d.pfad.splitOn (basis ++ "/Daten/S")).length > 1 then some 1
+    else if d.pfad == basis ++ "/Daten" then some 2
+    else if (d.pfad.splitOn (basis ++ "/Pflicht/F")).length > 1 then some 3
+    else if (d.pfad.splitOn (basis ++ "/Logik/F")).length > 1 then some 4
+    else none
+  let rumpf (d : Datei) : String :=
+    let nachKopf := match d.text.splitOn "set_option maxRecDepth 100000\n\n" with
+      | _ :: rest => "set_option maxRecDepth 100000\n\n".intercalate rest
+      | [] => d.text
+    match nachKopf.splitOn ("end " ++ modul ++ "\n") with
+    | teile@(_ :: _ :: _) => "".intercalate teile.dropLast
+    | _ => nachKopf
+  let teile := (List.range 5).flatMap fun k => (ds.filter (rang · == some k)).map rumpf
+  { pfad := basis ++ "/Ein"
+    text := "module\npublic import Bruecke.Zertifikat.WP\npublic import Bruecke.Zertifikat.Logik\n" ++
+      String.join (stringModule.map fun i => "import all " ++ i ++ "\n") ++
+      "@[expose] public section\n\nnamespace " ++ modul ++ "\n\n" ++
+      "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
+      "open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Bruecke\n\n" ++
+      "set_option maxRecDepth 100000\n\n" ++ "\n".intercalate teile ++ "\nend " ++ modul ++ "\n" }
+
 def kopf (modul : String) (imports : List String) (doc : String) (alle : List String := []) : String :=
   "module\n" ++ String.join (imports.map fun i => "public import " ++ i ++ "\n") ++
   String.join (alle.map fun i => "import all " ++ i ++ "\n") ++

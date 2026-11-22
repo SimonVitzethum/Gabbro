@@ -13,8 +13,12 @@ namespace Gabbro.Bruecke.Vorlage
     replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 1: premise (b) is not
     stated (see the top file); 2: wrong arguments, unreadable file, or Stage 0 refuses the source. -/
 def haupt (args : List String) : IO UInt32 := do
+  -- `--ein`: the guardian's form, one module `MODULE/Ein.lean` (`einDatei`)
+  let (ein, args) := match args with
+    | "--ein" :: rest => (true, rest)
+    | _ => (false, args)
   let [modul, pfad, ziel] := args | do
-    IO.eprintln "usage: gabbrov MODULE FILE.gab OUTDIR"
+    IO.eprintln "usage: gabbrov [--ein] MODULE FILE.gab OUTDIR"
     return 2
   let src ← try IO.FS.readFile pfad catch e => do
     IO.eprintln s!"gabbrov: cannot read {pfad}: {e}"
@@ -24,6 +28,7 @@ def haupt (args : List String) : IO UInt32 := do
     IO.eprintln s!"gabbrov: {e}"
     return 2
   | .ok ds =>
+    let ds := if ein then [einDatei modul ds] else ds
     let mut neu := 0
     let mut behalten := 0
     for d in ds do
