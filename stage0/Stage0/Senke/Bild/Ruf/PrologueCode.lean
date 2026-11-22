@@ -247,7 +247,7 @@ theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle f
     exact ⟨pointer, after, _, instruction, initial.append suffix⟩
   | fault | unk => exact False.elim first
 
-private def imagePrologueFrame (output : Emitted src reserve options) (thread : Nat) : W :=
+def imagePrologueFrame (output : Emitted src reserve options) (thread : Nat) : W :=
   slot (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) (BitVec.ofNat 64 FB)
 
 /-- A root is already in its lowered function and its first body
@@ -270,7 +270,7 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
 
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
-theorem ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
+def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
     {memory nextMemory : Mem} {state nextState : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (phase : ImageProloguePhase output E thread control memory state)
@@ -344,6 +344,38 @@ theorem ImageRuntimePartition.prologue_decode [Kern] {output : Emitted src reser
   · exact .inl atBody
   · refine .inr ⟨.priv running rfl, ?_⟩
     exact partition.advance_pending pending rfl (.inr progress) (fun _ _ => rfl)
-      partition.1 id (fun _ related => ⟨_, related⟩)
+      partition.1 id (fun related _ => ⟨_, related⟩)
+
+/-- A read or native comparison advances the real prologue without
+    moving any other thread or changing its memory view. -/
+theorem ImageRuntimePartition.prologue_read_answer [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {before : Cfg imageTSO (Res T)} {memory : imageTSO.St}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))} {thread : Nat}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    (partition : ImageRuntimePartition footprint output E O history before state body
+      (ImagePendingRoot output E history state))
+    (pending : body[thread]? = some none)
+    (running : before.ths[thread]? = some (some (.ask request resume)))
+    (phase : ImageProloguePhase output E thread (.ask request resume) (before.ms.1.view thread) state)
+    (scope : HostFreeControl phase.reads (imageStackFootprint output thread) (.ask request resume))
+    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
+      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
+    (readOnly : schreibtOp request = false) (response : imageTSO.ans before.ms thread request answer memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO Runner.Beweis.actI before [] after ∧
+      ImageRuntimePartition footprint output E O history after state body (ImagePendingRoot output E history state) := by
+  have unchanged : memory = before.ms ∧ request.special = false ∧ lbl thread request answer = [] := by
+    cases request with
+    | rd | fp => exact ⟨response.1.1, rfl, rfl⟩
+    | wr | cas => cases readOnly
+    | sys => exact (IRContinuation.noHost phase.running).elim
+  obtain ⟨rfl, ordinary, silent⟩ := unchanged
+  intro after
+  have progress := phase.answer scope nativeUnique response
+  refine ⟨?_, partition.advance_pending pending rfl (.inr progress) (fun _ _ => rfl)
+    partition.1 id (fun related _ => ⟨_, related⟩)⟩
+  exact silent ▸ ProcessStep.ask running rfl ordinary response rfl
 
 end Gabbro.Stage0
