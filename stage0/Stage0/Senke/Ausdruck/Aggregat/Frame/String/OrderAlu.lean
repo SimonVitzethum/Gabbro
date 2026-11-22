@@ -108,7 +108,7 @@ theorem stringCompare_value (acc : Nat) (s : Nat → Runner.W) (x y : Nat) (r : 
     aluRun (stringCompareC (acc + 1) (acc + 2) acc (acc + 3)) s acc =
       Runner.IR.bool (scanStep x y r) := by
   simp (disch := omega) only [stringCompareC, aluRun_cons, aluRun_nil, aluStep, aluVal,
-    ci, aluFn, Int.toNat_natCast, slotUpd_same, slotUpd_other, ite_true, ite_false,
+    ci, II.o, aluOpcodeLiterals, aluFn, Int.toNat_natCast, slotUpd_same, slotUpd_other, ite_true, ite_false,
     OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true]
   rw [rx, ry, rr]
   have lt : (BitVec.ofNat 64 x).ult (BitVec.ofNat 64 y) = decide (x < y) := by
