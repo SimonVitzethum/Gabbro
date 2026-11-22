@@ -258,6 +258,44 @@ theorem IRContinuation.answer [Kern] {before after : imageTSO.St} {thread : Nat}
     image_private_continuation current blind scope agreement nativeUnique replied
   exact ⟨updated, .ofRun continued rest, kept⟩
 
+/-- Consuming an actual response preserves the restricted continuation
+    and its reusable read and write permissions. -/
+theorem IRContinuation.answer_scoped [kernel : Kern] {before after : imageTSO.St} {thread : Nat}
+    {reads writes : W → Prop} {reference finish : Mem} {target : T}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    (continuation : IRContinuation target finish (.ask request resume) reference)
+    (blind : Blind (.ask request resume))
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    (agreement : MaskedAgreement reads writes reference (before.1.view thread))
+    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
+      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
+    (replied : imageTSO.ans before thread request answer after) :
+    ∃ updated, IRContinuation target finish (resume answer) updated ∧
+      MaskedAgreement reads writes updated (after.1.view thread) ∧
+      updated.rd = reference.rd ∧ updated.wr = reference.wr := by
+  obtain ⟨_, _, _, instruction, suffix⟩ := continuation
+  cases instruction with
+  | ask expected rest =>
+    have memory : istSpeicherOp request = true := by
+      cases request <;> first | rfl | cases expected
+    rename_i normalized
+    cases normalized with
+    | none =>
+      rw [blind.missing] at rest
+      cases rest
+    | some words =>
+      obtain ⟨sameControl, sameView⟩ :=
+        tso_scoped_memory_response blind readable writable agreement memory expected replied.1
+      have permissions := memAns_nurIn expected
+      exact ⟨_, .ofRun (sameControl.symm ▸ rest) suffix, sameView, permissions.rd, permissions.wr⟩
+  | sys impossible _ => exact False.elim impossible
+  | fp expected rest =>
+    obtain ⟨rfl, word, rfl, observed⟩ := replied.1
+    have same := nativeUnique _ _ _ _ _ rfl expected observed
+    cases same
+    exact ⟨reference, .ofRun rest suffix, agreement, rfl, rfl⟩
+
 /-- Adjacent regions preserve the unfinished part of the current
     instruction while extending its eventual destination. -/
 theorem IRContinuation.append [kernel : Kern] {control : Res T} {memory middle finish : Mem}

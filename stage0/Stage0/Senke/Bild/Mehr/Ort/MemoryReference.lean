@@ -77,6 +77,32 @@ theorem tso_memory_response_matches {layout : Runner.Beweis.Lay} {before after :
     exact ⟨_, answer, result, rfl, retained⟩
   | sys | fp => cases memory
 
+/-- A TSO memory answer advances a restricted IR reference. Only its read
+    bytes and its private writable bytes need agree with the physical view. -/
+theorem tso_scoped_memory_response {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+    {thread : Nat} {reference finish : Mem} {reads writes : W → Prop}
+    {request : Op} {resume : Ans → Res T} {answer : Ans} {expected : W × W}
+    (tree : Blind (.ask request resume))
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    (agrees : MaskedAgreement reads writes reference (before.1.view thread))
+    (memory : istSpeicherOp request = true)
+    (step : memAns reference request = some (some expected, finish))
+    (answered : (TSO layout).ans before thread request answer after) :
+    resume answer = resume (some expected) ∧ MaskedAgreement reads writes finish (after.1.view thread) := by
+  obtain ⟨predicted, predictedAnswer, retained, _, _⟩ := memAns_replay_scoped readable writable agrees step
+  obtain ⟨observed, normalized, observedAnswer, sameControl, sameView⟩ :=
+    tso_memory_response_matches (region := fun _ => True) tree
+      (fun byte _ => GleichAt.refl _ byte) (fun _ _ => trivial) memory answered
+  rw [predictedAnswer] at observedAnswer
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj observedAnswer)
+  refine ⟨sameControl, ?_, ?_⟩
+  · intro byte covered
+    exact ⟨(retained.1 byte covered).1.trans (sameView byte trivial).1.symm,
+      (retained.1 byte covered).2.trans (sameView byte trivial).2.1.symm⟩
+  · intro byte covered
+    exact (retained.2 byte covered).trans (sameView byte trivial).2.2.symm
+
 /-- The actual TSO answer advances a solo proof of a scoped IR region.
     Other memory in the issuing view may contain concurrent effects. -/
 theorem SoloLauf.answer_tso [Kern] {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
