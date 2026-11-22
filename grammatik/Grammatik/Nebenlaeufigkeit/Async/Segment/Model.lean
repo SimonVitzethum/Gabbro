@@ -82,17 +82,19 @@ public theorem childPollBlock_reports_failure {l : Bool} {Γ : Ctx} {name : Stri
       match failure with
       | .inl logic => .logik logic
       | .inr hardware => .hardware hardware := by
-  rw [childPollBlock, waitingBlock_exec_outcome, argumentsAre]
-  unfold runChildPoll decodeChildOutcome at failed
-  generalize calls callee.poll (world.lese Λ arguments.orte) (pollEnvironment callee storage) = result
-    at failed ⊢
-  cases result with
-  | ok after value =>
-    cases decoded : decodePollAnswer D types name storage (ergWert callee.pollResult value)
-    simp only [decoded, reduceCtorEq] at failed
-  | why _ reason => exact keinGrund callee.pollInfallible reason
-  | logik cause => cases failed; rfl
-  | hardware cause => cases failed; rfl
+  cases failure <;> dsimp only
+  all_goals
+    rw [childPollBlock, waitingBlock_exec_outcome, argumentsAre]
+    unfold runChildPoll decodeChildOutcome at failed
+    generalize calls callee.poll (world.lese Λ arguments.orte) (pollEnvironment callee storage) = result
+      at failed ⊢
+    cases result with
+    | ok after value =>
+      cases decoded : decodePollAnswer D types name storage (ergWert callee.pollResult value)
+      simp only [decoded, reduceCtorEq] at failed
+    | why _ reason => exact keinGrund callee.pollInfallible reason
+    | logik cause => cases failed <;> rfl
+    | hardware cause => cases failed <;> rfl
 
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage
