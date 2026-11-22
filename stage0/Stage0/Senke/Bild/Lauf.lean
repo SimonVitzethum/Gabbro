@@ -151,4 +151,25 @@ theorem StarM.consume_reference {taken count : Nat} {entry middle finish : T}
       obtain ⟨rfl, rfl⟩ := head.det first
       simpa only [Nat.succ_sub_succ_eq_sub] using tail remaining (Nat.le_of_succ_le_succ within)
 
+/-- Every longer actual memory run has an exact cut at the reference
+    length. Both parts use the original Lean IR semantics. -/
+theorem StarM.cut {count : Nat} {entry finish : T} {before after : Mem}
+    (actual : StarM count entry before finish after) :
+    ∀ used, used ≤ count →
+      ∃ (pointer : T) (memory : Mem), StarM used entry before pointer memory ∧
+        StarM (count - used) pointer memory finish after := by
+  induction actual with
+  | refl =>
+    intro used within
+    have empty := Nat.eq_zero_of_le_zero within
+    subst used
+    exact ⟨_, _, .refl _ _, .refl _ _⟩
+  | next executed remaining ih =>
+    intro used within
+    cases used with
+    | zero => exact ⟨_, _, .refl _ _, .next executed remaining⟩
+    | succ used =>
+      obtain ⟨pointer, memory, head, tail⟩ := ih used (Nat.le_of_succ_le_succ within)
+      exact ⟨pointer, memory, .next executed head, by simpa only [Nat.succ_sub_succ_eq_sub] using tail⟩
+
 end Gabbro.Stage0.Senke.BildLauf
