@@ -123,7 +123,7 @@ theorem cancelBody_simulates {Γ : Ctx} {l : Bool}
           .ok after (final.set state (cancelledValue types f D)) ∧
         Inv f types inventory State.cancelled ((final.set state (cancelledValue types f D)).get state) := by
   obtain ⟨index, _, outcome, _, marks, dropped, executed⟩ :=
-    dropChildren_simulates table inventory state oracle passes calls before env source represented
+    dropChildren_simulates (l := l) table inventory state oracle passes calls before env source represented
   have ran : execBlock oracle passes calls (cancelBody table state release) before env =
       match outcome with
       | .ok between => execBlock oracle passes calls (cancelEpilogue types f state release) between env
