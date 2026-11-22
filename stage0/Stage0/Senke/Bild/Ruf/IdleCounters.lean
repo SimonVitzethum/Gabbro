@@ -137,8 +137,8 @@ theorem functionFrame_withIdle (P : Programm D) (L : Lay D) (f : D.Fn) :
     { params := (D.params f).map tyR, result := (D.erg f).map tyR, reasons := D.gruende f,
       snapshotWords := EntrySnapshots.words (oldCells (P.ensures f)),
       counterDepth := counterDepthE (P.rumpf f) }
-  exact kongr₂ (fun s c => { params := (D.params f).map tyR, result := (D.erg f).map tyR,
-    reasons := D.gruende f, snapshotWords := s, counterDepth := c } : FrameLayout) snapshots counters
+  exact kongr₂ (FrameLayout.mk ((D.params f).map tyR) ((D.erg f).map tyR) (D.gruende f))
+    snapshots counters
 
 /-- Every physical offset used by the function prologue and its return
     protocol is independent of the logical function-number shift. -/
