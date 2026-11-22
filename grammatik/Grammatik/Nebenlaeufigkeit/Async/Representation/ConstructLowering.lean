@@ -282,7 +282,7 @@ public theorem ConstructPlan.lower_assign {elaboration : Elaboration D V Λ type
       have code := taskRep_encoded types (1 :: path) right (make right middle).1 bStorage bRep
       change execBlock oracle passes calls (second.lower (1 :: path) (extend saved) finish) middle middleEnv = _
       rw [ran]
-      simp only [firstEffect, code]
+      simp only [firstEffect, code] <;> rfl
     obtain ⟨aStorage, aRep, ran⟩ := firstIH (0 :: path) destination saved rest firstEffect world env represented executes
     obtain ⟨bStorage, bRep⟩ := second.representable frame (env.get saved) represented (1 :: path) (make left world).2.1
     have encoded := taskRep_encoded types (1 :: path) right _ bStorage bRep
@@ -291,6 +291,8 @@ public theorem ConstructPlan.lower_assign {elaboration : Elaboration D V Λ type
       .ok (effect (collect aStorage bStorage) (make right (make left world).2.1).2.1).2
         (env.set destination (effect (collect aStorage bStorage) (make right (make left world).2.1).2.1).1)
     rw [ran]
-    simp only [firstEffect, encoded, secondEffect]
+    simp only [firstEffect, secondEffect]
+    erw [encoded]
+    rfl
 
 end Gabbro.Grammatik.Async.Representation
