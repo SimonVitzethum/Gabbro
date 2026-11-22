@@ -44,8 +44,39 @@ public theorem waitingBlock_cost (calls : D.Fn → Nat) (passes : Nat)
       (waitingBlock (V := V) (l := l) childPoll arguments resultType contract infallible arms) =
       2 + kostenArgs arguments + calls childPoll + (2 + kostenArms 0 calls passes arms + 1) := rfl
 
-/-- Successful ordinary G execution, with no invented callback execution
-    rule. Failure outcomes remain the outcomes of the underlying call. -/
+/-- The generated G block interprets the real ordinary call outcome.
+    Only a normal answer reaches the Ready/Pending arms. Hardware and
+    logic outcomes propagate without evaluating either arm. -/
+public theorem waitingBlock_exec_outcome (O : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (childPoll : D.Fn) (arguments : Args D Γ Λ (D.params childPoll))
+    (resultType : D.erg childPoll = some (.sum cases))
+    (contract : RufPasst D V (D.signatur childPoll) Λ)
+    (infallible : D.gruende childPoll = 0)
+    (arms : Arms D V l (.sum cases :: Γ) (nach D childPoll Λ) Λ cases)
+    (world : World D) (environment : Env D Γ) :
+    execBlock O passes calls (waitingBlock (V := V) (l := l) childPoll arguments resultType contract infallible arms)
+      world environment =
+      match calls childPoll (world.lese Λ arguments.orte)
+        (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) environment) with
+      | .ok after answer =>
+        (execArms O passes calls arms (ergWert resultType answer) after
+          (.cons (ergWert resultType answer) environment)).schrumpf
+      | .why _ reason => keinGrund infallible reason
+      | .logik failure => .logik failure
+      | .hardware failure => .hardware failure := by
+  simp only [waitingBlock, execBlock]
+  cases calls childPoll (world.lese Λ arguments.orte)
+    (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) environment) with
+  | ok after answer =>
+    simp only [execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval, Env.get]
+    cases execArms O passes calls arms (ergWert resultType answer) after
+      (.cons (ergWert resultType answer) environment) <;> rfl
+  | why _ reason => exact keinGrund infallible reason
+  | logik _ | hardware _ => rfl
+
+/-- The normal branch dispatches the precise typed answer of the
+    underlying call in its returned world. -/
 public theorem waitingBlock_exec (O : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (childPoll : D.Fn) (arguments : Args D Γ Λ (D.params childPoll))
@@ -62,11 +93,6 @@ public theorem waitingBlock_exec (O : Orakel D) (passes : Nat)
       world environment =
       (execArms O passes calls arms (ergWert resultType answer) after
         (.cons (ergWert resultType answer) environment)).schrumpf := by
-  simp only [waitingBlock, execBlock]
-  rw [success]
-  simp only [execStmt, Expr.orte, World.lese,
-    World.merke, List.map_nil, List.nil_append, eval, Env.get]
-  cases execArms O passes calls arms (ergWert resultType answer) after
-    (.cons (ergWert resultType answer) environment) <;> rfl
+  rw [waitingBlock_exec_outcome, success]
 
 end Gabbro.Grammatik.Async.Segment
