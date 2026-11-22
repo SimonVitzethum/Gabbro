@@ -52,7 +52,8 @@ meta def abhaengige (t : Lean.Expr) : MetaM (Array Lean.Expr) := do
 
 /-- The remaining goals of the automation on `ziel`, each closed over what it depends on. -/
 meta def reste (g : MVarId) : TermElabM (List MVarId) := do
-  Term.withoutErrToSorry do
+  -- each run of the automation gets its own heartbeat budget (its steps refresh it themselves)
+  withCurrHeartbeats <| Term.withoutErrToSorry do
     Tactic.run g (evalTactic (← `(tactic| gabbrov_beweis)))
 
 meta def geschlossen (r : MVarId) : MetaM Lean.Expr := r.withContext do
@@ -85,7 +86,7 @@ syntax (name := gabbrovLogikCmd) "gabbrov_logik " ident " : " ident : command
     -- first run: what remains
     let g1 ← mkFreshExprSyntheticOpaqueMVar zielTy
     let rs ← reste g1.mvarId!
-    let props ← rs.mapM fun r => (geschlossen r : MetaM Lean.Expr)
+    let props ← withCurrHeartbeats <| rs.mapM fun r => (geschlossen r : MetaM Lean.Expr)
     let logik := konjunktion props
     let dv : DefinitionVal := {
       name := logikName, levelParams := [], type := mkSort Level.zero, value := logik,
@@ -93,7 +94,7 @@ syntax (name := gabbrovLogikCmd) "gabbrov_logik " ident " : " ident : command
     -- exported with its body: the user's proof file imports it and must see the statement
     withExporting (addDecl (Declaration.defnDecl dv))
     -- second run: the same automation, each remaining goal taken from the hypothesis
-    let pf ← withLocalDeclD `h (mkConst logikName) fun h => do
+    let pf ← withCurrHeartbeats <| withLocalDeclD `h (mkConst logikName) fun h => do
       let g2 ← mkFreshExprSyntheticOpaqueMVar zielTy
       let rs2 ← reste g2.mvarId!
       unless rs2.length == props.length do
