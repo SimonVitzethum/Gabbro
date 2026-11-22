@@ -100,8 +100,9 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
     have originalLayout : LayIn L := by
       refine ⟨?_, ?_, layout.2.2⟩
       · intro t f i inside
-        simpa only [Lay.withIdle_elem, Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers]
-          using layout.1 t f i inside
+        have placed := layout.1 t f i inside
+        rw [Lay.withIdle_elem] at placed
+        simpa only [Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using placed
       · intro g
         simpa only [Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using layout.2.1 g
     obtain ⟨tag, extra, after, answer, effects, represented, reply⟩ :=

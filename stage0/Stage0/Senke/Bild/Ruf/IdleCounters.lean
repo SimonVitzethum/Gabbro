@@ -122,4 +122,38 @@ theorem functionCounterDepth_withIdle (P : Programm D) (f : D.Fn) :
     (functionFrame P.mitRuhe (some f)).counterDepth = (functionFrame P f).counterDepth :=
   (counterDepthE_cast _ _).trans (counterDepthE_ru (P.rumpf f))
 
+/-- The function retains all layout inputs except the nominal type labels. -/
+theorem functionFrame_withIdle (P : Programm D) (L : Lay D) (f : D.Fn) :
+    functionFrame P.mitRuhe (some f) =
+      { functionFrame P f with
+        params := (D.params f).map tyR
+        result := (D.erg f).map tyR } := by
+  have snapshots := (postSnapshots_withIdle P L f FB).1
+  have counters := functionCounterDepth_withIdle P f
+  change
+    { params := (D.params f).map tyR, result := (D.erg f).map tyR, reasons := D.gruende f,
+      snapshotWords := EntrySnapshots.words (oldCells (P.mitRuhe.ensures (some f))),
+      counterDepth := counterDepthE (P.mitRuhe.rumpf (some f)) } =
+    { params := (D.params f).map tyR, result := (D.erg f).map tyR, reasons := D.gruende f,
+      snapshotWords := EntrySnapshots.words (oldCells (P.ensures f)),
+      counterDepth := counterDepthE (P.rumpf f) }
+  exact kongr₂ (fun s c => { params := (D.params f).map tyR, result := (D.erg f).map tyR,
+    reasons := D.gruende f, snapshotWords := s, counterDepth := c } : FrameLayout) snapshots counters
+
+/-- Every physical offset used by the function prologue and its return
+    protocol is independent of the logical function-number shift. -/
+theorem functionFrame_offsets_withIdle (P : Programm D) (L : Lay D) (f : D.Fn) :
+    let shifted := functionFrame P.mitRuhe (some f)
+    let original := functionFrame P f
+    shifted.parameterWords = original.parameterWords ∧
+      shifted.returnSpan = original.returnSpan ∧ shifted.ensReserved = original.ensReserved ∧
+      shifted.canonicalResult = original.canonicalResult ∧ shifted.internalResult = original.internalResult ∧
+      shifted.internalStatus = original.internalStatus ∧ shifted.bodyReserved = original.bodyReserved := by
+  dsimp only
+  rw [functionFrame_withIdle P L f]
+  simp only [FrameLayout.parameterWords, FrameLayout.returnSpan, FrameLayout.ensReserved,
+    FrameLayout.canonicalResult, FrameLayout.internalResult, FrameLayout.ensParams,
+    FrameLayout.internalStatus, FrameLayout.bodyReserved, functionFrame, tyR,
+    contextWords_mapNumbers, returnWords_mapNumbers, and_self]
+
 end Gabbro.Stage0.Senke
