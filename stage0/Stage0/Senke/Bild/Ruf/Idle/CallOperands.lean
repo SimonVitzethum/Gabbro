@@ -44,24 +44,22 @@ theorem callTop_withIdle (f : D.Fn) (offset top : Nat) :
     contextWords_mapNumbers (· + 1) id _
   simp only [callTop, width]
 
-private theorem signatureWidth_withIdle (number : Nat) :
-    contextWords (D.mitRuhe.sigNr (number + 1)).params = contextWords (D.sigNr number).params :=
-  contextWords_mapNumbers (· + 1) id _
-
 theorem lowInd_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (ptr : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (reserved : Nat) :
     lowInd L.withIdle (n := n + 1) (ruE ptr) (ruA args) reserved = lowInd L ptr args reserved := by
-  have reasons : (D.mitRuhe.sigNr (n + 1)).gruende = (D.sigNr n).gruende := rfl
   have pointerCode := lowE_withIdle L reserved true ptr (frei Γ reserved)
   have arguments := lowA_withIdle L reserved args (frei Γ reserved + FB)
-  simp only [lowInd, reasons, frei_withIdle, pointerCode, arguments, indC, indTop, signatureWidth_withIdle]
+  simp only [tyR, Ty.mapNumbers] at pointerCode arguments
+  simp only [lowInd, sigNrM, sigR, frei_withIdle, indC, indTop, tyR, Ty.mapNumbers,
+    contextWords_mapNumbers, pointerCode, arguments]
 
 theorem lowIndElse_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (ptr : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (reserved : Nat) :
     lowIndElse L.withIdle (n := n + 1) (ruE ptr) (ruA args) reserved = lowIndElse L ptr args reserved := by
-  have reasons : (D.mitRuhe.sigNr (n + 1)).gruende = (D.sigNr n).gruende := rfl
   have pointerCode := lowE_withIdle L reserved true ptr (frei Γ reserved)
   have arguments := lowA_withIdle L reserved args (frei Γ reserved + FB)
-  simp only [lowIndElse, reasons, frei_withIdle, pointerCode, arguments, indC, indTop, signatureWidth_withIdle]
+  simp only [tyR, Ty.mapNumbers] at pointerCode arguments
+  simp only [lowIndElse, sigNrM, sigR, frei_withIdle, indC, indTop, tyR, Ty.mapNumbers,
+    contextWords_mapNumbers, pointerCode, arguments]
 
 end Gabbro.Stage0.Senke

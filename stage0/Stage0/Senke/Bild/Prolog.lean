@@ -38,17 +38,15 @@ abbrev rumpfRahmen (Y : Lay D) (O : Orakel D) (passes : Nat) (P : Programm D) (A
 
 variable [Kern]
 
-/-- **The prologue, to the first body boundary**: from the entry of `f` at depth `k + 1` (the premises of
-    `FunSpec.run` with depth word `k + 1`), when `requires` holds at the entry world, the image runs the depth guard,
-    the requires code and guard and the entry frame, and stands at the start of the body's code with `RandIR` of the
-    whole body, at the entry world `σ` and the entry environment `ρ`, in a frame that satisfies `BodyFrame.Ok`. -/
-theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
+/-- From the actual entry of a function, the depth and requires guards
+    and the snapshot and parameter moves reach its first body boundary.
+    The setup stays within the function's frame and uses only its own code. -/
+theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
     {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
-    (hLA : Y.fa = A)
-    (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ Lm)
-    (hA : ∀ g, A g < 2 ^ 31) (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) {k : Nat} (hk : k + 1 < 2 ^ 64)
     {f : D.Fn} {m : Runner.Mem} {fp : Runner.W} {K Ks : Nat} {rp cfp : Runner.W} {σ : World D}
     {ρ : Env D (D.params f)} {H : List D.Lock}
+    (hC : ∃ top, lowFun passes P A Y f = some (C f, top) ∧ top ≤ Lm)
+    (hlen : 16 * (C f).length < 2 ^ 31) {k : Nat} (hk : k + 1 < 2 ^ 64)
     (hc : (k + 1 + 1) * Lm ≤ Ks) (hW : WIn Y fp Ks K) (hK : K < 2 ^ 31) (hF : FrameOK m fp K)
     (hP : PCode m A C fp K) (h0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp)
     (h1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp)
@@ -58,14 +56,13 @@ theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [Sic
     (hreq : ReqAmEintritt P f σ ρ) :
     ∃ (ens : List II × Nat) (pc : Runner.W) (mR : Runner.Mem),
       Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨pc, fp⟩ mR ∧
-      (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
-        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).Ok ∧
+      Agree fp FB K m mR ∧
+      lowPost Y (functionFrame P f) P f (functionFrame P f).internalStatus = some ens ∧
       (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
         (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
         (P.rumpf f) pc mR σ ρ := by
   have hks := hW.ks
-  have smaller := lowFun_spec (P := P) (O := O) (passes := passes) hLA hC hA hlen k (by omega)
-  obtain ⟨top, lower, bound⟩ := hC f
+  obtain ⟨top, lower, bound⟩ := hC
   simp only [lowFun] at lower
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
   obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, snap, hsnap, codes, tops⟩ := lower
@@ -94,9 +91,8 @@ theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [Sic
     rw [← codes] at this
     simpa only [entry, layout, q, List.append_assoc] using this
   have lengthBound : 16 * (entry ++ cb).length < 2 ^ 31 := by
-    have := hlen f
-    rw [← codes] at this
-    simp only [entry, layout, q, List.length_append] at this ⊢
+    rw [← codes] at hlen
+    simp only [entry, layout, q, List.length_append] at hlen ⊢
     omega
   have nonzero : BitVec.ofNat 64 (k + 1) ≠ 0 := by
     intro equal
@@ -184,8 +180,35 @@ theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [Sic
     rw [← hσR] at worldR
     exact worldR
   have room : tb + (k + 1) * Lm ≤ Ks := by omega
-  refine ⟨(cens, tens), _, mR, entryPrefix, ⟨smaller, hA, rfl, hens, (fun _ h => nomatch h), hW⟩,
+  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens,
     cb, tb, hb, room, by simp only [List.length_append] at lengthBound; omega, bodyPre, bodyFrontier,
     surroundings, header, worldσ, (fun _ h => nomatch h), hH⟩
+
+/-- The first body boundary with the standing call protocol. -/
+theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
+    {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
+    (hLA : Y.fa = A)
+    (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ Lm)
+    (hA : ∀ g, A g < 2 ^ 31) (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) {k : Nat} (hk : k + 1 < 2 ^ 64)
+    {f : D.Fn} {m : Runner.Mem} {fp : Runner.W} {K Ks : Nat} {rp cfp : Runner.W} {σ : World D}
+    {ρ : Env D (D.params f)} {H : List D.Lock}
+    (hc : (k + 1 + 1) * Lm ≤ Ks) (hW : WIn Y fp Ks K) (hK : K < 2 ^ 31) (hF : FrameOK m fp K)
+    (hP : PCode m A C fp K) (h0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp)
+    (h1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp)
+    (h2 : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (k + 1)))
+    (hE : EnvAt Y m fp ρ) (hWa : WeltAt m Y σ) (hy : TicketSync m Y fp Ks H)
+    (hH : HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden)
+    (hreq : ReqAmEintritt P f σ ρ) :
+    ∃ (ens : List II × Nat) (pc : Runner.W) (mR : Runner.Mem),
+      Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨pc, fp⟩ mR ∧
+      (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).Ok ∧
+      (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
+        (P.rumpf f) pc mR σ ρ := by
+  obtain ⟨ens, pc, after, run, _, post, body⟩ :=
+    prolog_randIR (O := O) (hC f) (hlen f) hk hc hW hK hF hP h0 h1 h2 hE hWa hy hH hreq
+  have callee := lowFun_spec (P := P) (O := O) (passes := passes) hLA hC hA hlen k (by omega)
+  exact ⟨ens, pc, after, run, ⟨callee, hA, rfl, post, (fun _ h => nomatch h), hW⟩, body⟩
 
 end Gabbro.Stage0.Senke.BildLauf

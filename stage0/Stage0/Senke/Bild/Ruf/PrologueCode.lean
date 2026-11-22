@@ -9,7 +9,7 @@ namespace Gabbro.Stage0
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Runner Runner.IR
 
-variable {src : String} {reserve : Nat} {options : Profil.Options}
+variable {src : String} {reserve : Nat} {options : Profil.Options} [Kern]
 
 /-- The production function's fixed entry code and the lowered body
     that follows it at a strictly later instruction address. -/
