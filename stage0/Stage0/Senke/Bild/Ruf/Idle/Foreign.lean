@@ -66,7 +66,21 @@ theorem torC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
   have byteType (t : D.Tab) (f : D.Feld t) : (D.mitRuhe.typ t f = .int 0 255) ↔
       D.typ t f = .int 0 255 := byteType_tyR _
   simp only [torC, binding, width, types, pointer, count, table, bytes, extent,
-    L.withIdle_count, lowR_withIdle, byteType, packI_withIdle, unpackK_withIdle] <;> rfl
+    L.withIdle_count, lowR_withIdle, byteType, packI_withIdle, unpackK_withIdle]
+  cases selected : L.tor a with
+  | none => rfl
+  | some row =>
+    by_cases allowed : torGut row (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true
+    · simp only [allowed, ite_true]
+      cases buffer : ptrParam (D.aparams a) with
+      | none => rfl
+      | some info =>
+        obtain ⟨index, number, writable⟩ := info
+        cases found : D.tabNr number with
+        | none => rfl
+        | some table =>
+          cases field : L.byte table <;> rfl
+    · simp only [allowed, ite_false]
 
 theorem torC0_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (dest reserved : Nat) :
