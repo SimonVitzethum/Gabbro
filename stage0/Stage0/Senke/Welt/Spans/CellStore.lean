@@ -29,7 +29,7 @@ theorem slotValueC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {σ : World D} {idx 
     (cell : (idx : Int) < L.count t) (layout : LayIn L)
     (ih : ∀ m pc, Pre L m pc fp K (d + valueWords (D.typ t f)) index.1 ρ W reserved →
       Ok m pc fp K (d + valueWords (D.typ t f)) index.1 (· = BitVec.ofNat 64 idx))
-    (world : ∀ m, W m → WeltAt m L σ) (pre : Pre L m pc fp K d code ρ W reserved) :
+    (world : ∀ m, W m → WeltAt m L σ requireWrites) (pre : Pre L m pc fp K d code ρ W reserved) :
     ValueOk L m pc fp K d code (D.typ t f) (σ.slots t idx f) := by
   have tops := slotValueC_top made
   have hin := layout.1 t f idx cell

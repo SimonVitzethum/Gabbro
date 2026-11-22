@@ -68,8 +68,9 @@ def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) (requireWrites : Bool := 
   (∀ g, ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)) ∧
   (if requireWrites then WeltWr m L else True)
 
-theorem WeltAt.readOnly {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
-    (world : WeltAt m L σ requireWrites) : WeltAt m L σ false :=
+theorem WeltAt.withWriteMap {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
+    (world : WeltAt m L σ requireWrites) (writeMap : Runner.W → Bool) :
+    WeltAt { m with wr := writeMap } L σ false :=
   ⟨world.1, world.2.1, trivial⟩
 
 /-- A word of the world may be written. -/
@@ -111,15 +112,19 @@ theorem valueAt_world_stab {m m' : Runner.Mem} {fp : Runner.W} {K address : Nat}
   have h := input.2 i hi
   rwa [addr] at h
 
-theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : LayIn L)
-    (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ) fp K := by
+theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
+    {requireWrites : Bool := true} (hl : LayIn L)
+    (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ requireWrites) fp K := by
   intro m m' hm ha
   obtain ⟨hs, hg, hwr⟩ := hm
-  refine ⟨fun t f k hk => ?_, fun g => ?_, hwr.keep ha.wr⟩
+  refine ⟨fun t f k hk => ?_, fun g => ?_, ?_⟩
   · have hin := hl.1 t f k hk
     exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hs t f k hk)
   · have hin := hl.2.1 g
     exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hg g)
+  · cases requireWrites
+    · trivial
+    · exact WeltWr.keep hwr ha.wr
 
 /-! ## What a statement changes: its frame's slots from `lo` and the world -/
 

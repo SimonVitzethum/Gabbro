@@ -20,7 +20,7 @@ theorem globalValueC_ok [Kern] {L : Lay D} {g : D.Glob} {dst top K reserved : Na
     {code : List II} {m : Runner.Mem} {pc fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ}
     {σ : World D} {W : Runner.Mem → Prop}
     (made : globalValueC L g dst = some (code, top)) (room : top ≤ K)
-    (world : ∀ m, W m → WeltAt m L σ)
+    (world : ∀ m, W m → WeltAt m L σ requireWrites)
     (pre : Pre L m pc fp K dst code ρ W reserved) :
     ValueOk L m pc fp K dst code (D.gtyp g) (σ.globs g) := by
   unfold globalValueC at made
