@@ -104,6 +104,7 @@ meta def wpRegel? (t0 : Lean.Expr) : Option Name :=
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindAxiom => some ``Gabbro.Bruecke.wpBA_bindAxiom
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindAxiom => some ``Gabbro.Bruecke.wpEA_bindAxiom
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.narrowRequired => some ``Gabbro.Bruecke.wpBA_narrowRequired
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.narrow => some ``Gabbro.Bruecke.wpEA_narrow
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.narrowRequired => some ``Gabbro.Bruecke.wpEA_narrowRequired
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.traverse => some ``Gabbro.Bruecke.wpSA_traverse_lauf
   | some ``Gabbro.Bruecke.wpTravA, some ``List.nil => some ``Gabbro.Bruecke.wpTravA_nil
@@ -142,7 +143,11 @@ meta partial def passe (p e : Lean.Expr) : MetaM Bool := do
       match e with
       | .app (.app (.app (.app (.app (.app (.const ``HAdd.hAdd _) _) _) _) _) a') b' =>
         return (← passe a a') && (← passe b b')
-      | _ => return false
+      | _ =>
+        -- a number the kernel computes (`D.gruende f`): its normal form, then again
+        match Kernel.whnf (← getEnv) (← getLCtx) e with
+        | .ok e' => if e' == e then return false else passe p e'
+        | .error _ => return false
   | .mdata _ p', _ => passe p' e
   | _, .mdata _ e' => passe p e'
   | .app _ _, _ =>

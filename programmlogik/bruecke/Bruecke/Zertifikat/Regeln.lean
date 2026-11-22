@@ -124,6 +124,19 @@ theorem wpEA_narrowRequired {Λ : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ 
   simp only [execEndHA]
   rw [apply_dite Q]
 
+theorem wpEA_narrow {Λ : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+    (sonst : Endblock D V l Γ Λ) (rest : Endblock D V l (.int lo' hi' :: Γ) Λ) (Q : EndAusgang V l Γ → Prop)
+    (σ : World D) (ρ : Env D Γ) :
+    wpEA S O U A passes R (.narrow e lo' hi' sonst rest) Q σ ρ ↔
+      if h : lo' ≤ (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ∧
+          (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ≤ hi' then
+        wpEA S O U A passes R rest (fun o => Q o.schrumpf) (leseA A σ Λ e.orte)
+          (.cons ⟨(eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n, h.1, h.2⟩ ρ)
+      else wpEA S O U A passes R sonst Q (leseA A σ Λ e.orte) ρ := by
+  unfold wpEA
+  simp only [execEndHA]
+  rw [apply_dite Q]
+
 /-- **A dependent branch the kernel does not decide**: both branches, each under its condition. -/
 theorem dite_faelle {α : Sort _} {G : α → Prop} (c : Prop) [Decidable c] (a : c → α) (b : ¬c → α)
     (ha : ∀ h : c, G (a h)) (hb : ∀ h : ¬c, G (b h)) : G (if h : c then a h else b h) := by
@@ -132,6 +145,30 @@ theorem dite_faelle {α : Sort _} {G : α → Prop} (c : Prop) [Decidable c] (a 
   · rw [dif_neg h]; exact hb h
 
 end HA
+
+/-! ## Splitting a symbolic value into its cases -/
+
+/-- A tagged value is its case and its payload. -/
+theorem sigma_faelle {α : Type} {β : α → Type} {G : Sigma β → Prop} (w : Sigma β)
+    (h : ∀ a b, w = ⟨a, b⟩ → G ⟨a, b⟩) : G w := by
+  cases w with
+  | mk a b => exact h a b rfl
+
+/-- A tagged value over `n + 1` cases is case `0` with its payload or a later case with its payload. -/
+theorem sum_faelle {n : Nat} {β : Fin (n + 1) → Type} {G : Sigma β → Prop} (w : Sigma β)
+    (h0 : ∀ b : β 0, w = ⟨0, b⟩ → G ⟨0, b⟩)
+    (hs : ∀ (i : Fin n) (b : β i.succ), w = ⟨i.succ, b⟩ → G ⟨i.succ, b⟩) : G w := by
+  rcases w with ⟨i, b⟩
+  cases i using Fin.cases with
+  | zero => exact h0 b rfl
+  | succ i => exact hs i b rfl
+
+/-- A case number below `n + 1` is `0` or the successor of one below `n`. -/
+theorem fin_faelle {n : Nat} {G : Fin (n + 1) → Prop} (r : Fin (n + 1))
+    (h0 : r = 0 → G 0) (hs : ∀ i : Fin n, r = i.succ → G i.succ) : G r := by
+  cases r using Fin.cases with
+  | zero => exact h0 rfl
+  | succ i => exact hs i rfl
 
 /-! ## The return obligation at a known outcome -/
 

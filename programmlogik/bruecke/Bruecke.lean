@@ -9,6 +9,7 @@ public import Bruecke.Zertifikat.Abgleich
 public import Bruecke.Zertifikat.Ruf
 public import Bruecke.Zertifikat.Fertig
 public import Bruecke.Zertifikat.Wert
+public import Bruecke.Zertifikat.Teilen
 public import Bruecke.Zertifikat.WP
 public import Bruecke.Zertifikat.Erfuellbar
 public import Bruecke.Vorlage

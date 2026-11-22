@@ -1,7 +1,7 @@
 module
 public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Programm
-public import Bruecke.Zertifikat.Wert
+public import Bruecke.Zertifikat.Teilen
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -43,71 +43,6 @@ theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.
     (h3 : ∀ passes, PflichtKeinHalt E.P passes E.Q E.S (GeteiltA E.P E.ws) f) : LogikFn E f :=
   fun passes => ⟨h1 passes, h2 passes, h3 passes⟩
 
-open Lean Meta in
-/-- A branch the kernel does not decide: both branches, each under its condition (`ite_faelle`). -/
-meta def iteTeilen (goal : MVarId) (t : Lean.Expr) : MetaM (List MVarId) := do
-  let xa := t.getAppArgs
-  let G ← withLocalDeclD `p xa[0]! fun p => mkLambdaFVars #[p] p
-  let u ← getLevel xa[0]!
-  let pf0 := mkAppN (mkConst ``Gabbro.Bruecke.ite_faelle [u]) #[xa[0]!, G, xa[1]!, xa[2]!, xa[3]!, xa[4]!]
-  let (ms, _, _) ← forallMetaTelescopeReducing (← inferType pf0) (some 2)
-  goal.assign (mkAppN pf0 ms)
-  let mut out := []
-  for m in ms do
-    m.mvarId!.setKind .syntheticOpaque
-    let (_, m') ← m.mvarId!.intro `hbed
-    out := out ++ [← m'.replaceTargetDefEq (← instantiateMVars (← m'.getType)).headBeta]
-  return out
-
-open Lean Meta in
-/-- The value of a `Decidable` instance, if the kernel computes it. -/
-meta def entschieden? (inst : Lean.Expr) : MetaM (Option Bool) := do
-  match Kernel.whnf (← getEnv) (← getLCtx) inst with
-  | .ok i =>
-    if i.isAppOf ``Decidable.isTrue then return some true
-    if i.isAppOf ``Decidable.isFalse then return some false
-    if i.isAppOf ``Decidable.intro && i.getAppNumArgs ≥ 2 then
-      match Kernel.whnf (← getEnv) (← getLCtx) (i.getArg! 1) with
-      | .ok b =>
-        if b.isConstOf ``Bool.true then return some true
-        if b.isConstOf ``Bool.false then return some false
-        return none
-      | .error _ => return none
-    return none
-  | .error _ => return none
-
-open Lean Meta in
-/-- **A branch** `ite`/`dite` at the top of a goal: taken when the kernel decides its condition (a
-    `dite` branch gets the proof `of_decide_eq_true rfl`, checked by the kernel), otherwise split into
-    both branches, each under its condition (`ite_faelle`, `dite_faelle`). -/
-meta def verzweigung (goal : MVarId) (t : Lean.Expr) : MetaM (List MVarId) := do
-  let xa := t.getAppArgs
-  let abh := t.isAppOf ``dite
-  match ← entschieden? xa[2]! with
-  | some b =>
-    let zweig := if b then xa[3]! else xa[4]!
-    if abh then
-      let rT ← mkEqRefl (mkConst ``Bool.true)
-      let rF ← mkEqRefl (mkConst ``Bool.false)
-      let pc := if b then mkApp3 (mkConst ``of_decide_eq_true) xa[1]! xa[2]! rT
-        else mkApp3 (mkConst ``of_decide_eq_false) xa[1]! xa[2]! rF
-      return [← goal.replaceTargetDefEq (mkApp zweig pc).headBeta]
-    return [← goal.replaceTargetDefEq zweig]
-  | none =>
-    if abh then
-      let G ← withLocalDeclD `p xa[0]! fun p => mkLambdaFVars #[p] p
-      let u ← getLevel xa[0]!
-      let pf0 := mkAppN (mkConst ``Gabbro.Bruecke.dite_faelle [u]) #[xa[0]!, G, xa[1]!, xa[2]!, xa[3]!, xa[4]!]
-      let (ms, _, _) ← forallMetaTelescopeReducing (← inferType pf0) (some 2)
-      goal.assign (mkAppN pf0 ms)
-      let mut out := []
-      for m in ms do
-        m.mvarId!.setKind .syntheticOpaque
-        let (_, m') ← m.mvarId!.intro `hbed
-        out := out ++ [← m'.replaceTargetDefEq (← instantiateMVars (← m'.getType)).headBeta]
-      return out
-    iteTeilen goal t
-
 /-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
     equivalence. Fails when no rule applies. -/
 syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
@@ -139,6 +74,13 @@ open Lean Elab Tactic Meta in
     -- a branch whose condition the kernel decides: its weak head normal form is the branch taken
     if t.isAppOfArity ``ite 5 || t.isAppOfArity ``dite 5 then
       replaceMainGoal (← verzweigung goal t)
+    -- a match at a symbolic value: its cases
+    else if t.isAppOf ``Gabbro.Bruecke.wpArmsA && t.getAppNumArgs ≥ 4 then
+      replaceMainGoal (← summeTeilen goal t.getAppArgs[t.getAppNumArgs - 4]!)
+    else if t.isAppOf ``Gabbro.Bruecke.wpGrundA && t.getAppNumArgs ≥ 4 then
+      replaceMainGoal (← finTeilen goal t.getAppArgs[t.getAppNumArgs - 4]!)
+    else if let some g ← freiLesen? goal then replaceMainGoal [g]
+    else if let some gs ← iteHeben? goal then replaceMainGoal gs
     else
       let t2 := t.headBeta.cleanupAnnotations
       throwError m!"gabbrov_schritt: no rule for this goal: {t2.getAppFn} / {t2.getAppNumArgs} / {(t2.getAppArgs.back?.map (·.getAppFn))}"

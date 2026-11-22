@@ -26,20 +26,25 @@ meta def geradeStmts : List Lean.Name :=
    ``Gabbro.Grammatik.Stmt.retires, ``Gabbro.Grammatik.Stmt.regWrite, ``Gabbro.Grammatik.Stmt.transition,
    ``Gabbro.Grammatik.Stmt.retWhy, ``Gabbro.Grammatik.Stmt.leave, ``Gabbro.Grammatik.Stmt.next]
 
+/-- The end blocks that end in one outcome without a case split. -/
+meta def geradeEnden : List Lean.Name :=
+  [``Gabbro.Grammatik.Endblock.retWhy, ``Gabbro.Grammatik.Endblock.leave, ``Gabbro.Grammatik.Endblock.next]
+
 open Lean Meta in
 /-- A straight statement (`geradeStmts`): `wpSA s Q σ ρ` is by definition `Q (execStmtHA s σ ρ)`;
     the execution is put into the kernel's weak head normal form, which must be an outcome. -/
 meta def gerade? (goal : MVarId) (t : Lean.Expr) : MetaM (Option MVarId) := do
-  unless t.isAppOf ``Gabbro.Grammatik.WP.wpSA && t.getAppNumArgs ≥ 4 do return none
+  unless (t.isAppOf ``Gabbro.Grammatik.WP.wpSA || t.isAppOf ``Gabbro.Grammatik.WP.wpEA) && t.getAppNumArgs ≥ 4 do
+    return none
   let args := t.getAppArgs
   let some k := args[args.size - 4]!.getAppFn.constName? | return none
-  unless geradeStmts.contains k do return none
+  unless geradeStmts.contains k || geradeEnden.contains k do return none
   let some e ← delta? t | return none
-  let e := e.headBeta
   unless e.isApp do return none
   match Kernel.whnf (← getEnv) (← getLCtx) e.appArg! with
   | .ok x =>
-    unless x.getAppFn.constName?.any (·.getPrefix == ``Gabbro.Grammatik.Ausgang) do return none
+    unless x.getAppFn.constName?.any (fun c => c.getPrefix == ``Gabbro.Grammatik.Ausgang ||
+        c.getPrefix == ``Gabbro.Grammatik.EndAusgang) do return none
     return some (← goal.replaceTargetDefEq (mkApp e.appFn! x).headBeta)
   | .error _ => return none
 
