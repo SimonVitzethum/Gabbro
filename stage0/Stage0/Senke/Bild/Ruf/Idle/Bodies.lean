@@ -12,8 +12,6 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {V : Vertrag D}
 
-attribute [local reducible] Ty.mapNumbers Ty.mapCases Ty.mapFields Deklaration.mitRuhe
-
 private theorem lowS_resources (passes : Nat) (A : D.Fn → Nat) (L : Lay D)
     (frame : FrameLayout) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int)
     {l : Bool} {Γ : Ctx} {Λ Λ₁ Λ₂ : List (Res D)} (same : Λ₁ = Λ₂)
@@ -106,7 +104,14 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       slotA_withIdle, putBytesL_withIdle, putBytesWideL_withIdle,
       locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, Ty.mapCases_length, vertragR,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, *]
-    try simp only [shifted, callC_withIdle]
+    try erw [lowS_resources, lowS]
+    try repeat' first
+      | erw [lowE_withIdle]
+      | erw [lowA_withIdle]
+      | erw [lowErg_withIdle]
+      | erw [lowInd_withIdle]
+      | erw [lowIndElse_withIdle]
+    try simp only [shifted, callC_withIdle, putBytesL_withIdle, putBytesWideL_withIdle]
     try rfl
 
 end Gabbro.Stage0.Senke
