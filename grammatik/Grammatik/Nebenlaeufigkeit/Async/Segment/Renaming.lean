@@ -92,7 +92,6 @@ public theorem Expr.ren_sound {Γ Γ' : Ctx} {τ : Ty}
   | .strGet a b
   | .strEq a b
   | .strLt a b
-  | .eng a _ _ b
   | .intBuiltin2 _ a b
   | .prodSet a _ b => by
     have aSound := Expr.ren_sound a rename
@@ -103,6 +102,17 @@ public theorem Expr.ren_sound {Γ Γ' : Ctx} {τ : Ty}
     · intro entry world original renamed agrees
       simp only [Expr.ren, eval, aSound.2.2 entry world original renamed agrees,
         bSound.2.2 entry world original renamed agrees] <;> rfl
+  | .eng a lower upper fallback => by
+    have argument := Expr.ren_sound a rename
+    have alternative := Expr.ren_sound fallback rename
+    refine ⟨?_, ?_, ?_⟩
+    · simp only [Expr.ren, Expr.orte, argument.1, alternative.1]
+    · simp only [Expr.ren, kostenExpr, argument.2.1, alternative.2.1]
+    · intro entry world original renamed agrees
+      simp only [Expr.ren, eval]
+      exact congrArg₂ (fun selected otherwise =>
+        if within : lower ≤ selected.n ∧ selected.n ≤ upper then ⟨selected.n, within.1, within.2⟩ else otherwise)
+        (argument.2.2 entry world original renamed agrees) (alternative.2.2 entry world original renamed agrees)
   | .arrSet a b c
   | .wenn a b c => by
     have aSound := Expr.ren_sound a rename
@@ -134,9 +144,11 @@ public theorem Expr.ren_sound {Γ Γ' : Ctx} {τ : Ty}
     · simp only [Expr.ren, Expr.orte, sound.1]
     · simp only [Expr.ren, kostenExpr, sound.2.1]
     · intro entry world original renamed agrees
-      simp only [Expr.ren, eval,
-        fun value => sound.2.2 entry world (.cons value original) (.cons value renamed)
-          (Env.AgreesUnder.binder agrees value)] <;> rfl
+      simp only [Expr.ren, eval]
+      congr 1
+      funext value
+      exact congrArg wahr? (sound.2.2 entry world (.cons value original) (.cons value renamed)
+        (Env.AgreesUnder.binder agrees value))
 termination_by structural expression
 
 public theorem NutzlastExpr.ren_sound {Γ Γ' : Ctx} {c : Option Ty}
