@@ -15,7 +15,7 @@ lean_lib Stage0
 
 /-- Explicit review modules for bounded importer checks. -/
 lean_lib Stage0Review where
-  roots := #[`Nachpruefung.Teil1, `Nachpruefung.Teil2, `Nachpruefung.SlicesAsync]
+  roots := #[`Nachpruefung.Teil1, `Nachpruefung.Teil2, `Stage0Review.SlicesAsync]
 
 @[default_target]
 lean_exe stage0 where

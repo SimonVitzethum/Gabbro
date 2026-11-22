@@ -23,7 +23,7 @@ theorem mergedView_unbuffered (state : TSt) (footprint : Nat → W → Prop) (by
 /-- Reassigning view ownership is silent as soon as both descriptions
     retain the exclusive owner of each still-pending store. This applies
     when a lock grants a carrier and when a drained carrier is released. -/
-theorem projectSCState_reassign {layout : Lay} {state : (TSO layout).St}
+theorem projectSCState_reassign {layout : Runner.Beweis.Lay} {state : (TSO layout).St}
     {before after : Nat → W → Prop}
     (old : PrivateBuffers before state.1) (new : PrivateBuffers after state.1) :
     projectSCState after state = projectSCState before state := by

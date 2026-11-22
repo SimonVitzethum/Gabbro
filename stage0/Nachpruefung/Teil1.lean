@@ -3,7 +3,7 @@ module
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Stage0
 import Grammatik.Bausteine.Arena.BlockScope
-import Nachpruefung.SlicesAsync
+import Stage0Review.SlicesAsync
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Grammatik.Niedrig.Konstrukte.SliceCheck
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Slices
