@@ -67,14 +67,16 @@ public theorem joinActiveBlock_exec (types : TypeResolution) (path : List Nat) (
   intro initial
   let collect : Stmt D V l (JoinCtx types path left right Γ) Λ Λ :=
     collectJoin types path left right (.there .here) .here (.there (.there (.there out)))
-  have lastStep (final : World D) (context : Env D (JoinCtx types path left right Γ)) :
-      execBlock oracle passes calls (.cons collect .nil) final context =
-        execStmt oracle passes calls collect final context := by
-    simp only [execBlock]
-    cases execStmt oracle passes calls collect final context <;> rfl
   change ((execBlock oracle passes calls (.cons first (.cons second (.cons collect .nil)))
     world initial).schrumpf).schrumpf = _
-  simp only [lastStep, execBlock]
+  simp only [execBlock]
+  cases execStmt oracle passes calls first world initial with
+  | ok middle leftDone =>
+    cases execStmt oracle passes calls second middle leftDone with
+    | ok final rightDone =>
+      cases execStmt oracle passes calls collect final rightDone <;> rfl
+    | _ => rfl
+  | _ => rfl
 
 /-- The semantic poll event determines the physical tag. A Ready tag
     additionally carries the result of the exact typed projection. -/
@@ -211,6 +213,7 @@ public theorem joinTaskStmt_simulates {types : TypeResolution} {f : AsyncFn}
         obtain ⟨value, collected, successorRep⟩ := collectJoin_exec (V := V) (l := l) (Λ := Λ) path left right
           (.there .here) .here (.there (.there (.there out))) oracle passes calls final finalEnv
           aNextRep bNextRep lpRep rpRep
+        dsimp only
         erw [collected]
         cases lp <;> cases rp <;> exact ⟨value, rfl, successorRep⟩
 
