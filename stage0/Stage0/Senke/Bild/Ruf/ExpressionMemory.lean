@@ -19,7 +19,7 @@ private theorem expression_frame_byte {memory : Mem} {fp : W} {K index offset : 
 
 /-- A restricted expression memory retains the exact code and lexical
     environment. The read region covers the code bytes and its frame. -/
-theorem expression_pre_mask {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx}
+theorem expression_pre_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx}
     {memory : Mem} {fp pc : W} {K d reserved : Nat} {env : Env D Γ} {code : List II}
     {reads : W → Prop} (frameReads : ∀ byte, inSlots fp 0 K byte → reads byte)
     (codeReads : ∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * code.length → reads byte)
@@ -80,7 +80,7 @@ theorem expression_pre_mask {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx}
       Mem.le_congr (fun j inside => (sameWord j inside).1)]
     exact stored.2 word present
 
-private theorem expression_mask_value {D : Deklaration} {L : Senke.Lay D}
+private theorem expression_mask_value [Kern] {D : Deklaration} {L : Senke.Lay D}
     {memory : Mem} {reads writes : W → Prop} {address : Nat} {ty : Ty} {value : Wert D ty}
     (writeReads : ∀ byte, writes byte → reads byte)
     (bound : address + 8 * Senke.valueWords ty < 2 ^ 64)
@@ -92,7 +92,7 @@ private theorem expression_mask_value {D : Deklaration} {L : Senke.Lay D}
 
 /-- A physical read region containing the authorized carriers
     preserves their complete value representations in the proof memory. -/
-theorem expression_world_mask {D : Deklaration} {L : Senke.Lay D} {memory : Mem}
+theorem expression_world_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {memory : Mem}
     {reads writes : W → Prop} {world : World D} {resources : List (Res D)}
     (writeReads : ∀ byte, writes byte → reads byte) (layout : Senke.LayIn L)
     (authorized : ∀ cell : Senke.Zelle D, cell.da L →
