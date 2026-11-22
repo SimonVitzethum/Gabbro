@@ -38,6 +38,8 @@ section
 variable (original relocated : Lay D)
 variable (first : ∀ fn, original.fa fn < 2 ^ 31) (second : ∀ fn, relocated.fa fn < 2 ^ 31)
 
+include first second
+
 mutual
 /-- Relocation can change a reference word inside any encoded value.
     It cannot change the instruction budget for materializing that value. -/
@@ -52,7 +54,7 @@ theorem encodeWords_immediateShape :
     simp only [encodeWords]
     split
     · rfl
-    · have payload := encodeSumPayload_immediateShape original relocated first second cases value.1 value.2
+    · have payload := encodeSumPayload_immediateShape cases value.1 value.2
       have width : (encodeSumPayload original cases value.1 value.2).length =
           (encodeSumPayload relocated cases value.1 value.2).length := by
         simpa only [List.length_map] using congrArg List.length payload
@@ -61,13 +63,13 @@ theorem encodeWords_immediateShape :
     simp only [encodeWords]
     split
     · rfl
-    · exact encodeProductFields_immediateShape original relocated first second fields value
+    · exact encodeProductFields_immediateShape fields value
   | .arr element length, value => by
     simp only [encodeWords]
     split
     · rfl
     · exact elementImmediateShape length _ _ (fun i =>
-        encodeWords_immediateShape original relocated first second element (value i))
+        encodeWords_immediateShape element (value i))
   | .int .., _ | .bool, _ | .opt .., _ | .why .., _ | .ref .., _ | .str .., _ | .fl .., _ | .ptr .., _ => by
     simp only [encodeWords]
   | .never, value => nomatch value
@@ -80,9 +82,9 @@ private theorem encodeSumPayload_immediateShape : (cases : List (Option Ty)) →
   | [], tag, _ => Fin.elim0 tag
   | none :: _, ⟨0, _⟩, _ => rfl
   | some type :: _, ⟨0, _⟩, value =>
-    encodeWords_immediateShape original relocated first second type value
+    encodeWords_immediateShape type value
   | _ :: tail, ⟨index + 1, bound⟩, value =>
-    encodeSumPayload_immediateShape original relocated first second tail
+    encodeSumPayload_immediateShape tail
       ⟨index, Nat.lt_of_succ_lt_succ bound⟩ value
 termination_by structural cases => cases
 
@@ -93,8 +95,8 @@ private theorem encodeProductFields_immediateShape : (fields : List Ty) →
   | [], _ => rfl
   | type :: fields, value => by
     simp only [encodeProductFields, List.map_append,
-      encodeWords_immediateShape original relocated first second type (ProdVal.hd value),
-      encodeProductFields_immediateShape original relocated first second fields (ProdVal.tl value)]
+      encodeWords_immediateShape type (ProdVal.hd value),
+      encodeProductFields_immediateShape fields (ProdVal.tl value)]
 termination_by structural fields => fields
 end
 
