@@ -88,8 +88,10 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
   | _, _, _, .intBuiltin2 op a b, dest => by
     have left := lowE_withIdle L reserve currentOld a
     have right := lowE_withIdle L reserve currentOld b
-    have mapped := (congrArg (fun code => intBuiltin2L op dest code _) (funext left)).trans
-      (congrArg (intBuiltin2L op dest _) (funext right))
+    let before := fun d => lowE L.withIdle (ruE b) d reserve currentOld
+    let after := fun d => lowE L a d reserve currentOld
+    have mapped := (congrArg (fun code => intBuiltin2L op dest code before) (funext left)).trans
+      (congrArg (intBuiltin2L op dest after) (funext right))
     simp only [lowE, ruE, lowEWith, binary_withIdle]
     with_unfolding_all exact mapped
   | _, _, _, .slot _ _ index _, _ | _, _, _, .thru _ _ _ _ index _, _
@@ -137,10 +139,10 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     split
     · next present =>
       have same : storedExpr a = true := by exact stored.symm.trans present
-      rw [if_pos same]
+      rw [ite_eq_left same]
     · next absent =>
       have same : ¬ storedExpr a = true := fun yes => absent (stored.trans yes)
-      rw [if_neg same]
+      rw [ite_eq_right same]
   | _, _, _, .arrSet a i v, _ => by
     have array := lowE_withIdle L reserve currentOld a
     have index := lowE_withIdle L reserve currentOld i
@@ -221,7 +223,11 @@ private theorem lowN_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have mapped := lowE_withIdle L reserve currentOld value dst
     simp only [lowE, tyR, Ty.mapNumbers] at mapped
     cases τ <;> simp only [lowN, ruN, lowNWith, Option.map_some, tyR, Ty.mapNumbers, mapped]
-    with_unfolding_all exact (congrArg (fun code => do let child ← code; pure (packSum dst _ tag child)) mapped)
+    case int lo _ =>
+      let pack (code : Option (List II × Nat)) := do
+        let child ← code
+        pure (packSum dst lo tag child)
+      with_unfolding_all exact (congrArg pack mapped)
 termination_by structural _ _ _ p _ _ => p
 
 private theorem lowProdArgs_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
