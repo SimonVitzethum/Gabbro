@@ -269,9 +269,9 @@ private theorem phaseDrop_exec {f : AsyncFn} {phase : Phase} {Γ : Ctx} {l : Boo
   cases represented with
   | cancelled | completed => exact ⟨.ok world, rfl, rfl⟩
   | running =>
-    exact ⟨.ok world, by simp only [PhaseDropPlan.run, ite_eq_left rfl], rfl⟩
+    exact ⟨.ok world, by simp only [PhaseDropPlan.run, if_true], rfl⟩
   | waiting tag future frame task saved child _ childRep =>
-    simpa only [PhaseDropPlan.run, PhaseDropPlan.lower, ite_eq_left rfl] using
+    simpa only [PhaseDropPlan.run, PhaseDropPlan.lower, if_true] using
       (TaskDropPlan.waitingBlock_simulates plan f tag (l := l) oracle passes calls world env saved childRep)
 
 @[expose] public def resolveDropTable (f : AsyncFn)
