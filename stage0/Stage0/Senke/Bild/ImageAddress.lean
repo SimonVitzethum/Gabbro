@@ -430,8 +430,8 @@ theorem Emitted.root_call_depth [Kern] (output : Emitted src K options)
   have subtract : (fun a b : W => some (a - b)) (BitVec.ofNat 64 (output.image.depth + 1)) 1 =
       some (BitVec.ofNat 64 output.image.depth) := by
     change some (BitVec.ofNat 64 (output.image.depth + 1) - BitVec.ofNat 64 1) = _
-    rw [← BitVec.ofNat_sub_ofNat_of_le (w := 64) (output.image.depth + 1) 1 (by decide) (by omega)]
-    simp only [Nat.add_sub_cancel]
+    rw [BitVec.ofNat_sub_ofNat_of_le (w := 64) (output.image.depth + 1) 1 (by decide) (by omega),
+      Nat.add_sub_cancel]
   obtain ⟨after, run, shared, view, others⟩ := tso_binary_prefix
     (before := imageToTSO before) (compute := fun a b => some (a - b)) rfl (by decide)
     running instruction (by rw [lhs]; exact depth) (by rw [rhs]; exact one) subtract writable
