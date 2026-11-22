@@ -110,7 +110,9 @@ theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
   have far1 := codeFar_tail far
   have code1 := codeAt_right loaded
   have requiresWorld : WorldOnAt m Y
-      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) (· ∈ (P.requires f).orte) := readable
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) (· ∈ (P.requires f).orte) :=
+    ⟨fun t access field index valid => readable.table t access field index valid,
+      fun g access => readable.global g access⟩
   have captures : EntrySnapshots.Inputs Y
       (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) m (oldCells (P.ensures f)) := by
     intro cell present

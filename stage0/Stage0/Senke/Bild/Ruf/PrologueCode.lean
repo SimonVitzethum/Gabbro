@@ -202,6 +202,34 @@ theorem IRContinuation.noHost [Kern] {target : T} {memory finish : Mem} {request
   | ask impossible _ => cases impossible
   | sys impossible _ => exact impossible
 
+/-- A restricted continuation certifies its next request from the Lean IR
+    semantics and the permissions of its reference memory. -/
+theorem IRContinuation.request_scope [Kern] {target : T} {memory finish : Mem}
+    {request : Op} {resume : Ans → Res T} {reads writes : W → Prop}
+    (continuation : IRContinuation target finish (.ask request resume) memory)
+    (blind : Blind (.ask request resume))
+    (readable : ∀ byte, memory.rd byte = true → reads byte)
+    (writable : ∀ byte, memory.wr byte = true → reads byte ∧ writes byte) :
+    HostFreeControl reads writes (.ask request resume) := by
+  have noHost (call : Req) (same : request = .sys call) : False := by
+    subst request
+    exact IRContinuation.noHost continuation
+  obtain ⟨_, _, _, instruction, _⟩ := continuation
+  cases instruction with
+  | ask answered rest =>
+    rename_i answer
+    cases answer with
+    | none =>
+      rw [blind.missing] at rest
+      cases rest
+    | some words =>
+      obtain ⟨readScope, writeScope⟩ := memAns_confined readable writable answered
+      exact ⟨noHost, readScope, writeScope⟩
+  | sys impossible _ => exact False.elim impossible
+  | fp =>
+    exact ⟨fun _ impossible => by cases impossible,
+      fun _ touched => by cases touched, fun writesMemory => by cases writesMemory⟩
+
 /-- Decoding the next instruction either opens the remaining reference
     or identifies the exact boundary where the region has finished. -/
 theorem IRContinuation.decode [Kern] {target pointer : T} {memory finish : Mem}
