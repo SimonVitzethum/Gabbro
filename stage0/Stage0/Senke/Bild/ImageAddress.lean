@@ -370,9 +370,9 @@ theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
         simp only [memAns_rd, rdAntwort, rdN, Option.map_map, Function.comp_def]
     rw [equal]
     have continued := runP_snoc part memRead
-    cases rdN equivalent width address with
-    | none => exact continued
-    | some word => simpa only [Option.map_some, ignores word extra] using continued
+    cases received : rdN equivalent width address with
+    | none => simpa only [received, Option.map_none] using continued
+    | some word => simpa only [received, Option.map_some, ignores word extra] using continued
   rcases phase with impossible | pending | ⟨id, extra, called, pending⟩
   · cases impossible
   · exact .inr (.inl (appendRead (blind_step _) pending))

@@ -12,6 +12,54 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
+/-- A startup store within its own frame cannot alter the code or the
+    declared arguments. Its actual TSO answer advances to the exact
+    generated continuation under the same root relation. -/
+theorem ImageRootPhase.store [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {before after : imageTSO.St} {thread index : Nat}
+    {history : List Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {next : T} {word : W} {answer : Ans}
+    (declared : thread ≤ output.starts.length) (inside : index < output.image.Ks)
+    (successor : ImageRootInstruction output thread next)
+    (apart : ∀ start, E.starts[thread]? = some start →
+      ∀ i, i < (encodeEnv output.image.Y start.2).length → index ≠ FB + FB + i) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+    let address := slot fp (BitVec.ofNat 64 index)
+    ImageRootPhase output E history (before.1.view thread) thread (wr64 address word next) state →
+    imageTSO.ans before thread (.wr address word) answer after →
+    answer = some (0, 0) ∧ ImageRootPhase output E history (after.1.view thread) thread (.next next) state ∧
+      ∀ other, other ≠ thread → after.1.view other = before.1.view other := by
+  intro fp address phase answered
+  obtain ⟨_, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, _⟩ := phase
+  · cases loader
+  have writable : Mem.all before.1.m.wr address 8 = true := by
+    rw [← Runner.Beweis.foldl_wr (before.1.buf thread) before.1.m]
+    exact frame.wr index inside
+  have success : answer = some (0, 0) := by
+    rcases answered.1 with ⟨refused, _, _⟩ | ⟨_, accepted, _⟩
+    · rw [writable] at refused
+      cases refused
+    · exact accepted
+  rcases tso_store_updates_view answered.1 with ⟨refused, _⟩ | ⟨_, written, others⟩
+  · rw [success] at refused
+    cases refused
+  refine ⟨success, ?_, others⟩
+  rw [written]
+  refine .inr ⟨start, chosen, head, ?_, ?_, fits, ?_, next, successor, .inl rfl⟩
+  · apply output.code_survives_writes (write_nurIn _ address word.toNat) _ code
+    intro byte touched
+    have owned := imageStackFootprint_slot (output := output) declared inside touched
+    exact (Nat.le_add_right _ _).trans owned.2.1
+  · exact frame.agree (agree_write frame.room (Nat.zero_le _) inside word.toNat)
+  · intro i present
+    have actual : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+        BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) + 8 * (FB + FB + i)) := by
+      change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) +
+        BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+      rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+    rw [← actual, Mem.rd64_write_far (slot_far frame.room inside (by omega) (apart start chosen i present)), actual]
+    exact args i present
+
 /-- The main start stub follows exactly the emitted clone sites. The
     serialized depth and private frame limits are shared with child starts. -/
 theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {memory : Mem}
