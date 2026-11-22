@@ -199,12 +199,9 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
   have preserved := tso_flush_preserves_views (layout := L0) flushed (imageRootReads output) (by
     intro i store pending j different address readable written
     have privateByte := (buffers i store pending address written).1
-    have placedByte := placed i address privateByte
     rcases readable with own | code
-    · rcases placedByte with stack | ⟨lo, _⟩
-      · exact different (imageStackFootprint_disjoint own stack)
-      · exact (Nat.not_le_of_lt (imageStackFootprint_before_world own)) lo
-    · rcases placedByte with stack | ⟨lo, _⟩
+    · exact different (imageStackFootprint_owner placed own privateByte).symm
+    · rcases placed i address privateByte with stack | ⟨lo, _⟩
       · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans stack.2.1)
       · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans lo))
   refine ⟨step, ⟨body, buffers', length, ?_, ?_⟩, registry'⟩

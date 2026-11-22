@@ -180,8 +180,12 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before : Cfg imageTSO (Res T)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {memory : imageTSO.St}
-    {body : List (Option (Res T))} {i index : Nat} {next : T} {word : W} {answer : Ans}
-    (partition : ImageRuntimePartition (imageStackFootprint output) output E O history before state body)
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    {i index : Nat} {next : T} {word : W} {answer : Ans}
+    (partition : ImageRuntimePartition footprint output E O history before state body)
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (ownsStack : ∀ byte, imageStackFootprint output i byte → footprint i byte)
     (pending : body[i]? = some none)
     (declared : i ≤ output.starts.length) (inside : index < output.image.Ks)
     (successor : ImageRootInstruction output i next)
@@ -194,23 +198,23 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
     imageTSO.ans before.ms i (.wr address word) answer memory →
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set i (some (.next next))⟩
     ProcessStep imageTSO actI before [] after ∧
-      ImageRuntimePartition (imageStackFootprint output) output E O history after state body := by
+      ImageRuntimePartition footprint output E O history after state body := by
   intro fp address running answered after
   have atRoot := pending_root_phase partition pending running
   obtain ⟨success, phase, views⟩ :=
     ImageRootPhase.store declared inside successor apart atRoot answered
   subst answer
   have owns (byte : W) (written : fenster address byte) :
-      imageStackFootprint output i byte ∧ ∀ j, imageStackFootprint output j byte → j = i := by
+      footprint i byte ∧ ∀ j, footprint j byte → j = i := by
     have available := imageStackFootprint_slot (output := output) declared inside written
-    exact ⟨available, fun j own => imageStackFootprint_disjoint own available⟩
+    exact ⟨ownsStack byte available, fun _ own => imageStackFootprint_owner placed available own⟩
   have buffered := PrivateBuffers.answer partition.1 (request := .wr address word) rfl answered.1 (by
     intro _ _ store byte changed
     cases store
     exact owns byte changed)
-  have written := projectSCState_store answered.1 (imageStackFootprint output) owns
-  have bytes : (projectSCState (imageStackFootprint output) memory).1 =
-      Mem.write (projectSCState (imageStackFootprint output) before.ms).1 address 8 word.toNat := by
+  have written := projectSCState_store answered.1 footprint owns
+  have bytes : (projectSCState footprint memory).1 =
+      Mem.write (projectSCState footprint before.ms).1 address 8 word.toNat := by
     rcases written with ⟨_, refused, _⟩ | ⟨m, placed, _, exactMemory⟩
     · cases refused
     · rw [wr64_eq] at placed
