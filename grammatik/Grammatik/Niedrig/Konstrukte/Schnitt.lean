@@ -113,7 +113,11 @@ def ArraySliceView.check (capacity : Nat) (first last : Int) : Option (ArraySlic
 theorem ArraySliceView.check_exact (capacity : Nat) (first last : Int) :
     (ArraySliceView.check capacity first last).isSome = true ↔ SignedSliceOk capacity first last := by
   unfold ArraySliceView.check
-  split <;> simp_all
+  split
+  · rename_i valid
+    exact ⟨fun _ => valid, fun _ => rfl⟩
+  · rename_i invalid
+    simp only [Option.isSome_none, Bool.false_eq_true, false_iff, invalid]
 
 theorem ArraySliceView.check_result {capacity : Nat} {first last : Int} {view : ArraySliceView capacity}
     (checked : ArraySliceView.check capacity first last = some view) :
