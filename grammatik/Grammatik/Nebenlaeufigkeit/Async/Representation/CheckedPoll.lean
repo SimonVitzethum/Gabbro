@@ -164,12 +164,12 @@ private theorem checkedRetry_refines {elaboration : Elaboration D V Λ types f}
       cases failure with
       | inl failure =>
         change step world env = .logik failure at matched
+        change retryLauf step _ exhausted (fuel + 1) world env = .logik failure
         simp only [retryLauf, unfinished, Bool.false_eq_true, if_false, matched]
-        rfl
       | inr failure =>
         change step world env = .hardware failure at matched
+        change retryLauf step _ exhausted (fuel + 1) world env = .hardware failure
         simp only [retryLauf, unfinished, Bool.false_eq_true, if_false, matched]
-        rfl
     | ok answer =>
       obtain ⟨event, target, after, cost⟩ := answer
       rw [answered] at matched
