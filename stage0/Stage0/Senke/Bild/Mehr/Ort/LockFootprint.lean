@@ -237,4 +237,68 @@ theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options :
   rw [projection]
   exact projectSCState_cas_shared answered.1 _ shared
 
+/-- A release at the actual serving-word CAS publishes the old
+    holder's buffered changes before removing its source authority.
+    This is one native process request, one GX scoped release, and one
+    update to the common lock registry. -/
+theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {source : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {lock : (declOf output.compiled.unit).Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
+    {ticket expected : Nat}
+    (locks : ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m states)
+    (buffers : PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1)
+    (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
+    (order : output.image.Y.lo ≤ output.image.Y.hi) (limit : N ≤ 2147483647)
+    (saved : (states lock).pc thread = .gibC ticket expected)
+    (writable : Mem.all machine.ms.1.m.wr (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) 8 = true)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8))
+        (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8))
+        (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply memory)
+    (live : source.lebt thread.val = true) (ready : source.wartet thread.val = [])
+    {l : Bool} {Γ : Ctx} {Λ : List (Res (declOf output.compiled.unit).mitRuhe)}
+    (k : GRest _ (vertragVon _ (source.m.faeden thread.val).kopf.f) l Γ Λ)
+    (env : Env _ Γ)
+    (head : (source.m.faeden thread.val).kopf.rest = ⟨l, Γ, Res.held lock :: Λ, env, .frei lock k⟩)
+    (unique : (offen (source.m.faeden thread.val).spur).Nodup) :
+    let after := Cfg.mk memory (machine.ths.set thread.val (some (resume reply)))
+    let prior := states lock
+    let released : Zustand N :=
+      ⟨⟨prior.w.next, prior.w.serv + 1, prior.w.wait⟩, upd prior.pc thread .gibW, prior.q.tail⟩
+    ProcessStep imageTSO actI machine [] after ∧ reply = some (BitVec.ofNat 64 expected, 0) ∧
+      machine.ms.1.buf thread.val = [] ∧
+      ∃ next, FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
+          (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) source next ∧
+        next.m.speicher = source.m.speicher ∧
+        ImageTicketStates output.image.Y.withIdle memory.1.m next.m
+          (fun other => if other = lock then released else states other) ∧
+        PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
+        (SC L0).ans (projectSCState (imageProtectedFootprint output source.m) machine.ms) thread.val
+          (.cas (BitVec.ofNat 64 (output.image.Y.lk lock + 8))
+            (BitVec.ofNat 64 expected) (BitVec.ofNat 64 (expected + 1))) reply
+          (projectSCState (imageProtectedFootprint output next.m) memory) := by
+  intro after prior released
+  have fits := (synchronized.1 lock).2.trans bound
+  obtain ⟨step, result, written, lockWords, valid, next, advanced, store, owners, others⟩ :=
+    image_ticket_release_GX (P := E.P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
+      (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      output.image.Y.withIdle (locks.owners lock) limit (locks.protocol lock) saved fits
+      (locks.words lock) writable waiting answered live ready k env head unique
+  have stable : GleichAuf (fun byte => ¬ LockBytes output.image.Y.withIdle lock byte)
+      memory.1.m machine.ms.1.m := by
+    rw [written]
+    intro byte outside
+    exact (write_nurIn _ _ _).gleichAt
+      (fun hit => outside (lockWord_in_bytes fits (by decide) hit))
+  have registered := locks.update synchronized bound stable others lockWords valid owners
+  obtain ⟨privatelyOwned, projected⟩ := image_release_projected answered buffers registered
+    (locks.owners lock) owners rfl others inLayout cells synchronized bound order
+  exact ⟨step, result, answered.1.1, next, advanced, store, registered, privatelyOwned, projected⟩
+
 end Gabbro.Stage0.Senke.Faeden
