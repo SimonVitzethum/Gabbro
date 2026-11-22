@@ -126,6 +126,69 @@ theorem maskMemory_agreement (reads writes : W → Prop) (memory : Mem)
     have write : writes byte := of_decide_eq_true (Bool.and_eq_true_iff.mp granted).2
     exact ⟨within byte write, write⟩
 
+private theorem replay_memory_request {reads writes : W → Prop}
+    {reference actual finish : Mem} {op : Op} {answer : W × W}
+    (readable : ∀ byte, reference.rd byte = true → reads byte)
+    (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
+    (agrees : MaskedAgreement reads writes reference actual)
+    (answered : memAns reference op = some (some answer, finish)) :
+    ∃ next, memAns actual op = some (some answer, next) ∧
+      MaskedAgreement reads writes finish next ∧
+      (∀ byte, fussOp op byte → reads byte) ∧
+      (schreibtOp op = true → ∀ byte, fussOp op byte → writes byte) := by
+  have confined := memAns_confined readable writable answered
+  obtain ⟨next, sameAnswer, sameTouched⟩ :=
+    memAns_replay (fun byte touched =>
+      ⟨(agrees.1 byte (confined.1 byte touched)).1, (agrees.1 byte (confined.1 byte touched)).2,
+        fun writesRequest => agrees.2 byte (confined.2 writesRequest byte touched)⟩) answered
+  have referenceStable := memAns_nurIn answered
+  have actualStable := memAns_nurIn sameAnswer
+  refine ⟨next, sameAnswer, ⟨?_, ?_⟩, confined⟩
+  · intro byte included
+    by_cases touched : fussOp op byte
+    · exact sameTouched byte touched
+    · have b := (referenceStable.gleichAt touched).1
+      exact ⟨b.trans ((agrees.1 byte included).1.trans (actualStable.gleichAt touched).1.symm),
+        (congrFun referenceStable.rd byte).trans
+          ((agrees.1 byte included).2.trans (congrFun actualStable.rd byte).symm)⟩
+  · intro byte included
+    exact (congrFun referenceStable.wr byte).trans
+      ((agrees.2 byte included).trans (congrFun actualStable.wr byte).symm)
+
+/-- An actual memory prefix sees the same responses as the restricted
+    reference until an external effect boundary. The reference can
+    contain a floating operation or a host response beyond that prefix. -/
+theorem RunP.align_reference {start current : Res T} {actual now : Mem}
+    {reads writes : W → Prop} (taken : RunP start actual current now) :
+    ∀ {reference finish : Mem} {target : T},
+      Run start reference target finish → Blind start →
+      (∀ byte, reference.rd byte = true → reads byte) →
+      (∀ byte, reference.wr byte = true → reads byte ∧ writes byte) →
+      MaskedAgreement reads writes reference actual →
+      ∃ cut, RunP start reference current cut ∧ MaskedAgreement reads writes cut now := by
+  induction taken with
+  | refl => exact fun _ _ _ _ proof => ⟨_, .refl _ _, proof⟩
+  | ask actualAnswer _ ih =>
+    intro reference finish target success tree readable writable agrees
+    cases success with
+    | ask answered rest =>
+      rename_i referenceAnswer
+      cases referenceAnswer with
+      | none =>
+        rw [tree.missing] at rest
+        cases rest
+      | some words =>
+        obtain ⟨advanced, same, agreement, _, _⟩ :=
+          replay_memory_request readable writable agrees answered
+        rw [same] at actualAnswer
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj actualAnswer)
+        have permissions := memAns_nurIn answered
+        obtain ⟨cut, remaining, exactMemory⟩ := ih rest (tree.weiter _)
+          (fun byte permission => readable byte (by simpa only [permissions.rd] using permission))
+          (fun byte permission => writable byte (by simpa only [permissions.wr] using permission)) agreement
+        exact ⟨cut, .ask answered remaining, exactMemory⟩
+    | sys | fp => cases actualAnswer
+
 /-- A successful reference instruction in memory restricted to the
     declared regions determines every actual request of that instruction.
     Memory outside its write region is preserved. -/
@@ -152,34 +215,18 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
       rw [tree.missing] at rest
       cases rest
     | some words =>
-      have confined := memAns_confined readable writable answered
-      obtain ⟨advanced, sameAnswer, sameTouched⟩ :=
-        memAns_replay (fun byte touched =>
-          ⟨(agrees.1 byte (confined.1 byte touched)).1, (agrees.1 byte (confined.1 byte touched)).2,
-            fun writesRequest => agrees.2 byte (confined.2 writesRequest byte touched)⟩) answered
+      obtain ⟨advanced, sameAnswer, sameRegion, included, written⟩ :=
+        replay_memory_request readable writable agrees answered
       have referenceStable := memAns_nurIn answered
-      have actualStable := memAns_nurIn sameAnswer
-      have sameRegion : MaskedAgreement reads writes middle advanced := by
-        refine ⟨?_, ?_⟩
-        · intro byte included
-          by_cases touched : fussOp op byte
-          · exact sameTouched byte touched
-          · have b := (referenceStable.gleichAt touched).1
-            exact ⟨b.trans ((agrees.1 byte included).1.trans (actualStable.gleichAt touched).1.symm),
-              (congrFun referenceStable.rd byte).trans
-                ((agrees.1 byte included).2.trans (congrFun actualStable.rd byte).symm)⟩
-        · intro byte included
-          exact (congrFun referenceStable.wr byte).trans
-            ((agrees.2 byte included).trans (congrFun actualStable.wr byte).symm)
       obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _)
         (fun byte permission => readable byte (by simpa only [referenceStable.rd] using permission))
         (fun byte permission => writable byte (by simpa only [referenceStable.wr] using permission)) sameRegion
       refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
       · intro byte outside
-        exact (otherBytes byte outside).trans (memAns_aussen sameAnswer confined.2 byte outside)
+        exact (otherBytes byte outside).trans (memAns_aussen sameAnswer written byte outside)
       · intro current request resume partialRun
         cases partialRun with
-        | refl => exact confined
+        | refl => exact ⟨included, written⟩
         | ask wasAnswered leftover =>
           rw [sameAnswer] at wasAnswered
           simp only [Option.some.injEq, Prod.mk.injEq] at wasAnswered
