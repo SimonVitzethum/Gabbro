@@ -99,6 +99,39 @@ def ArraySliceView.ofEndpoints {capacity : Nat} (first last : Nat)
     (bounds : SliceOk capacity first last) : ArraySliceView capacity :=
   ⟨first, last - first, by have low := bounds.1; have high := bounds.2; omega⟩
 
+/-- Check signed source endpoints before their conversion to positions. -/
+abbrev SignedSliceOk (length : Nat) (first last : Int) : Prop :=
+  0 ≤ first ∧ first ≤ last ∧ last ≤ length
+
+def ArraySliceView.check (capacity : Nat) (first last : Int) : Option (ArraySliceView capacity) :=
+  if valid : SignedSliceOk capacity first last then
+    some (ArraySliceView.ofEndpoints first.toNat last.toNat (by
+      obtain ⟨_, _, _⟩ := valid
+      exact ⟨by omega, by omega⟩))
+  else none
+
+theorem ArraySliceView.check_exact (capacity : Nat) (first last : Int) :
+    (ArraySliceView.check capacity first last).isSome = true ↔ SignedSliceOk capacity first last := by
+  unfold ArraySliceView.check
+  split <;> simp_all
+
+theorem ArraySliceView.check_result {capacity : Nat} {first last : Int} {view : ArraySliceView capacity}
+    (checked : ArraySliceView.check capacity first last = some view) :
+    ∃ valid : SliceOk capacity first.toNat last.toNat,
+      SignedSliceOk capacity first last ∧ view = ArraySliceView.ofEndpoints first.toNat last.toNat valid ∧
+      (view.offset : Int) = first ∧ (view.length : Int) = last - first := by
+  unfold ArraySliceView.check at checked
+  split at checked
+  · rename_i valid
+    obtain rfl := Option.some.inj checked
+    obtain ⟨nonnegative, ordered, within⟩ := valid
+    refine ⟨⟨by omega, by omega⟩, ⟨nonnegative, ordered, within⟩, rfl, ?_, ?_⟩
+    · change (first.toNat : Int) = first
+      omega
+    · change ((last.toNat - first.toNat : Nat) : Int) = last - first
+      omega
+  · cases checked
+
 def ArraySliceView.read {α : Type} {capacity : Nat} (view : ArraySliceView capacity)
     (array : Fin capacity → α) (index : Fin view.length) : α :=
   array ⟨view.offset + index.val, by have valid := index.isLt; have fits := view.fits; omega⟩
@@ -210,7 +243,7 @@ def strBoundedSliceValue {maximum : Nat} (value : Wert D (.str maximum))
     positions. The upper bound is the actual length of the string. -/
 def checkStringSlice {maximum : Nat} (value : Wert D (.str maximum)) (first last : Int) :
     Option (Wert D (.str maximum)) :=
-  if valid : 0 ≤ first ∧ first ≤ last ∧ last ≤ value.1.length then
+  if valid : SignedSliceOk value.1.length first last then
     some (strBoundedSliceValue value first.toNat last.toNat ⟨by omega, by omega⟩)
   else none
 

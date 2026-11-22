@@ -26,6 +26,20 @@ theorem ValueAt.slice_view {D : Deklaration} {layout : Lay D} {memory : Runner.M
     SliceAt (τ := τ) layout memory frame (base + view.offset * valueWords τ) (view.value value) :=
   fun index => array.slice_element view index
 
+/-- A successful signed endpoint check selects a span of the existing
+    array. It represents the exact value and needs no new element storage. -/
+theorem ValueAt.checked_slice_view {D : Deklaration} {layout : Lay D} {memory : Runner.Mem}
+    {frame : Runner.W} {base capacity : Nat} {τ : Ty} {value : Wert D (.arr τ capacity)}
+    (array : ValueAt layout memory frame base (.arr τ capacity) value)
+    {first last : Int} {view : ArraySliceView capacity}
+    (checked : ArraySliceView.check capacity first last = some view) :
+    ∃ valid : SliceOk capacity first.toNat last.toNat,
+      (view.length : Int) = last - first ∧
+      SliceAt (τ := τ) layout memory frame (base + first.toNat * valueWords τ)
+        (BoundedSlice.ofArray value first.toNat last.toNat valid) := by
+  obtain ⟨valid, _, rfl, _, length⟩ := ArraySliceView.check_result checked
+  exact ⟨valid, length, array.slice_view _⟩
+
 /-- The representation of an existing slice can be narrowed by moving
     the base. All observed bytes and their layout obligations are inherited. -/
 theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
