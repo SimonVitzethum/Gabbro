@@ -4,7 +4,7 @@ public import Stage0.Senke.Images.ModelExport
 public import Stage0.Senke.Bild.Mehr.BootClone
 public import Stage0.Senke.Images.GateAnswers
 public import Runner.IR.Futex
-import Grammatik.Zielsatz.Faeden.EntryPrefix
+public import Grammatik.Zielsatz.Faeden.EntryPrefix
 
 @[expose] public section
 
