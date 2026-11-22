@@ -64,7 +64,8 @@ def stufe_sorry():
 def stufe_gabbrov():
     if not B.is_dir():
         print("  3 gabbrov:   NICHT GEMESSEN (programmlogik/bruecke/ fehlt)"); return None
-    p = subprocess.run(["lake", "build"], cwd=B, env=ENV, capture_output=True, text=True, timeout=3600)
+    p = subprocess.run(["lake", "build", "Bruecke", "gabbrov"], cwd=B, env=ENV, capture_output=True, text=True,
+                       timeout=3600)
     aus = p.stdout + p.stderr
     jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", aus)
     saetze = re.findall(r"Bruecke/\S+: '([^']+)' depends on axioms: \[([^\]]*)\]", aus)
