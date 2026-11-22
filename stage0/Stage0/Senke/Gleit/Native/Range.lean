@@ -92,7 +92,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       have finite := finite_mask original
       rw [decoded] at finite
       rw [show gleitEndlich x = x.hwIsFinite from rfl, finite, Bool.not_not])
-    rfl (by decide : 14 < 256)
+    (o := 14) rfl (by decide)
   have inverted := binary equal one (g := fun a b => some (a ^^^ b))
     (P := fun w => w = Runner.IR.bool (gleitEndlich x))
     (fun a b ha hb => ⟨_, rfl, by

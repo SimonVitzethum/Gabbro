@@ -129,7 +129,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       refine f1_run (t := ⟨pc, fp⟩) ins' ?_
       rw [sx_lit hk, sx_nat (by omega)]
       exact run_wr64 hw
-    · rw [rd j hj]; simp only [aluStep, aluVal, ci, Int.toNat_natCast, ite_true]
+    · rw [rd j hj]; simp only [aluStep, aluVal, ci, II.o, Int.toNat_natCast, ite_true]
   | mov a b h1 h2 h3 =>
     have ins' : InsAt m pc 2 (II.f a) (II.f b) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (s b) h1 h2 (fun j hj _ => hs j hj)
@@ -156,9 +156,9 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       · simpa only [sx_nat (by omega : c < 2 ^ 31)] using hs c h4
       · simpa only [sx_nat (by omega : a < 2 ^ 31)] using hw
     · rw [rd j hj]
-      have : o ≠ 1 ∧ o ≠ 2 := by
-        constructor <;> (intro h; subst h; simp [aluFn] at hf)
-      simp only [aluStep, aluVal, ci, Int.toNat_natCast, hf, this.1, this.2, ite_false]
+      have distinct : o.val ≠ 1 ∧ o.val ≠ 2 := by
+        constructor <;> (intro same; rw [same] at hf; cases hf)
+      simp only [aluStep, aluVal, ci, II.o, Int.toNat_natCast, hf, distinct.1, distinct.2, ite_false]
 
 /-- Admitted straight-line code runs to its end; every frame slot then holds `aluRun`. -/
 theorem alu_run {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {code : List II}
