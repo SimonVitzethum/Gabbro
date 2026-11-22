@@ -1,8 +1,8 @@
 module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Goal
-public import Grammatik.Logik.Fortschritt.KostenG
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Faeden.Verbund.T1
 
 @[expose] public section
 
@@ -16,23 +16,36 @@ variable {D : Deklaration}
 def oneShotEntryB [DecidableEq D.Fn] (E : Einheit D) (functions : List D.Fn) (entry : D.Fn) : Bool :=
   E.starts.head?.any (fun root => decide (root.1 = entry)) &&
   (E.starts.drop 1 ++ E.gestartet).all (fun root => decide (root.1 ≠ entry)) &&
-  functions.all (fun fn =>
-    rufeE (fun callee => decide (callee ≠ entry)) (fun signature => !(D.passt entry signature))
-      true (E.P.rumpf fn))
+  functions.all (fun fn => !(ruftB E.P fn entry))
 
 theorem oneShotEntry_parts [DecidableEq D.Fn] {E : Einheit D} {functions : List D.Fn} {entry : D.Fn}
     (checked : oneShotEntryB E functions entry = true) :
     (∃ root, E.starts.head? = some root ∧ root.1 = entry) ∧
     (∀ root ∈ E.starts.drop 1 ++ E.gestartet, root.1 ≠ entry) ∧
-    (∀ fn ∈ functions, rufeE (fun callee => decide (callee ≠ entry))
-      (fun signature => !(D.passt entry signature)) true (E.P.rumpf fn) = true) := by
+    (∀ fn ∈ functions, ruftB E.P fn entry = false) := by
   obtain ⟨top, calls⟩ := Bool.and_eq_true_iff.mp checked
   obtain ⟨head, other⟩ := Bool.and_eq_true_iff.mp top
   refine ⟨?_, fun root member => of_decide_eq_true (List.all_eq_true.mp other root member),
-    fun fn member => List.all_eq_true.mp calls fn member⟩
+    fun fn member => Bool.not_eq_true.mp (List.all_eq_true.mp calls fn member)⟩
   cases found : E.starts.head? with
   | none => simp only [found, Option.any, Bool.false_eq_true] at head
   | some root => exact ⟨root, rfl, of_decide_eq_true (by simpa only [found, Option.any] using head)⟩
+
+/-- The checked startup cannot be reached through any call chain from a
+    different function. The canonical graph includes indirect signatures. -/
+theorem oneShotEntry_unreachable [DecidableEq D.Fn] {E : Einheit D} {functions : List D.Fn}
+    {entry caller : D.Fn} (checked : oneShotEntryB E functions entry = true)
+    (complete : ∀ fn, fn ∈ functions) (different : caller ≠ entry) :
+    reachB E.P functions caller entry = false := by
+  have calls := (oneShotEntry_parts checked).2.2
+  apply Bool.eq_false_iff.mpr
+  intro found
+  have closed (current target : D.Fn) (_ : current ≠ entry)
+      (edge : ruftB E.P current target = true) : target ≠ entry := by
+    rintro rfl
+    rw [calls current (complete current)] at edge
+    cases edge
+  exact reachB_in E.P functions different closed entry found rfl
 
 /-- The startup thread receives the declared initial memory. Every
     worker has a prepared frame and remains dormant. -/
