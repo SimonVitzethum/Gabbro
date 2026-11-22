@@ -414,8 +414,8 @@ public theorem MarksRep.nodup {inventory : Inventory D} {phase : Phase}
       intro duplicate
       obtain ⟨other, present, same⟩ := List.mem_map.mp duplicate
       exact fresh (inventory.injective other mark same ▸ present)
-  rw [represented, ← List.map_map]
-  exact injectiveMap _ (inventory.unique phase)
+  rw [represented]
+  simpa only [List.map_map, Function.comp_def] using injectiveMap _ (inventory.unique phase)
 
 public theorem inventory_no_locks (inventory : Inventory D) (phase : Phase) (lock : D.Lock) :
     Res.held lock ∉ inventory.resources phase := by
