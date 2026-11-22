@@ -9,6 +9,7 @@ namespace Gabbro.Stage0
 
 open Runner Runner.Beweis Runner.IR Runner.Mach Runner.Prog Gabbro.Grammatik
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Stage0.Senke
+  Gabbro.Stage0.Senke.BildMehr
 
 variable [Kern]
 
@@ -323,6 +324,34 @@ theorem MappedImage.idle_buffers {src : String} {reserve : Nat} {options : Profi
     {output : Emitted src reserve options} {start : Cfg imageTSO Runner.X86.X}
     (mapped : MappedImage output start) : ImageIdleBuffers start :=
   fun i _ => mapped.emptyBuffers i
+
+/-- An asynchronous flush can write only to the active issuer's private
+    stack. The complete bytes and permissions of a future root's frame
+    therefore agree with the memory before the actual flush. -/
+theorem ImageIdleBuffers.flush_preserves_unallocated_frame
+    {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {θ : Type} {before : Cfg imageTSO θ}
+    {after : imageTSO.St} {future : Nat}
+    (empty : ImageIdleBuffers before)
+    (privateStores : PrivateBuffers (imageStackFootprint output) before.ms.1)
+    (unallocated : before.ths.length ≤ future) (flush : imageTSO.tau before.ms after) :
+    GleichAuf (imageStackFootprint output future) before.ms.1.m after.1.m := by
+  obtain ⟨owner, address, value, rest, queued, updated⟩ := flush
+  have live : owner < before.ths.length := by
+    apply Nat.lt_of_not_ge
+    intro missing
+    rw [empty owner missing] at queued
+    cases queued
+  have active : (address, value) ∈ before.ms.1.buf owner := by
+    rw [queued]
+    exact List.mem_cons_self
+  rw [updated]
+  intro byte belongs
+  apply GleichAt.symm
+  apply (write_nurIn before.ms.1.m address value.toNat).gleichAt
+  intro affected
+  have same := (privateStores owner (address, value) active byte affected).2 future belongs
+  exact Nat.not_lt_of_ge unallocated (same.symm ▸ live)
 
 /-- The next allocated slot sees exactly the shared memory, without
     forwarding writes from another thread's buffer. -/
