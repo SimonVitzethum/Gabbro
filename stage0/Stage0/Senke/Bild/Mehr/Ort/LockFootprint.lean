@@ -11,10 +11,6 @@ namespace Gabbro.Stage0.Senke.Faeden
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis
 
-def Zelle.carrier {D : Deklaration} : Senke.Zelle D → D.Tab ⊕ D.Glob
-  | .glob global => .inr global
-  | .elem table .. => .inl table
-
 /-- A protected cell is private only to a thread holding all the
     guards required by its carrier. A cell with no guard is not
     assigned on the basis of the lock state. -/

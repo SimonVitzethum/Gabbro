@@ -1,7 +1,6 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.Segment
-public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section

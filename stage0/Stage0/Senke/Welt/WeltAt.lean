@@ -21,6 +21,11 @@ inductive Zelle (D : Deklaration) where
   | glob (g : D.Glob)
   | elem (t : D.Tab) (f : D.Feld t) (k : Nat)
 
+/-- The logical carrier containing a physical cell. -/
+def Zelle.carrier : Zelle D → D.Tab ⊕ D.Glob
+  | .glob g => .inr g
+  | .elem t .. => .inl t
+
 /-- The address of a cell. -/
 def Zelle.adr (L : Lay D) : Zelle D → Nat
   | .glob g => L.ga g
