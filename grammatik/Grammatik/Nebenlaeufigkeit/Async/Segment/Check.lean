@@ -25,7 +25,7 @@ variable {D : Deklaration} {V : Vertrag D} {Λ : List (Res D)} {types : TypeReso
   | some expression, some sourceType => decide (expression.result = types.ordinary sourceType)
   | _, _ => false
 
-private theorem bindingType_sound (resolve : Parser.SExpr → Option (BoundExpression D Λ))
+public theorem bindingType_sound (resolve : Parser.SExpr → Option (BoundExpression D Λ))
     (types : TypeResolution) (f : AsyncFn) (name : String) (source : Parser.SExpr)
     (accepted : bindingType resolve types f name source = true) :
     ∃ expression sourceType, resolve source = some expression ∧
@@ -48,7 +48,7 @@ private theorem bindingType_sound (resolve : Parser.SExpr → Option (BoundExpre
     | _, _ => false
   | .join .. => true
 
-private theorem callsType_sound (resolve : Parser.SExpr → Option (BoundExpression D Λ))
+public theorem callsType_sound (resolve : Parser.SExpr → Option (BoundExpression D Λ))
     (callee : (name : String) → Option (AwaitedCall D V Λ types name))
     (name : String) (args : List Parser.SExpr) (accepted : callsType resolve callee (.call name args) = true) :
     ∃ declaration expressions, callee name = some declaration ∧
@@ -71,7 +71,7 @@ private theorem callsType_sound (resolve : Parser.SExpr → Option (BoundExpress
     | none => false
   | _ => true
 
-private theorem awaitResultType_sound (types : TypeResolution) (f : AsyncFn)
+public theorem awaitResultType_sound (types : TypeResolution) (f : AsyncFn)
     (tag : Nat) (name : String) (future : FutureExpr) (boundary : Boundary) (rest : List Command)
     (atTag : f.body.drop tag = .await name future boundary :: rest)
     (accepted : awaitResultType types f tag = true) :
