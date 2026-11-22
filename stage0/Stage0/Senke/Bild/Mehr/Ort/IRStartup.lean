@@ -217,7 +217,7 @@ theorem Emitted.SpawnPrefix.silent_step {index : Nat} (declared : index < output
       | ask request resume =>
         cases asked
         cases advanced
-        have permitted : BildMehr.istSpeicherOp request = true := by
+        have permitted : BildMehr.istSpeicherOp operation = true := by
           obtain ⟨_, _, table, code, frame, path, _⟩ := phase
           obtain ⟨_, _, _, _, classify⟩ := output.workerReference table code frame declared
           rcases classify path with access | clone
@@ -248,7 +248,9 @@ theorem Emitted.SpawnPrefix.follow_silent {index : Nat} (declared : index < outp
     from follow path rfl (.nil start) running phase
   intro before after events steps execution
   induction execution with
-  | nil => exact fun _ _ active activePhase => ⟨_, active, activePhase⟩
+  | nil =>
+    intro _ _ _ _ active activePhase
+    exact ⟨_, active, activePhase⟩
   | cons step _ ih =>
     intro quiet prior current earlier active activePhase
     obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet
