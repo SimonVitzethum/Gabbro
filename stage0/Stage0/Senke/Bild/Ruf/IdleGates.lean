@@ -16,15 +16,12 @@ private theorem ptrParam_tyR (types : List Ty) :
     ptrParam (types.map tyR) = ptrParam types := by
   have same : (isPtr ∘ tyR) = isPtr := by
     funext ty
-    cases ty <;> try rfl
-    case ptr p =>
-      rcases p with ⟨_, _, ⟨_⟩⟩
-      rfl
+    cases ty <;> rfl
   simp only [ptrParam, List.findIdx?_map, same]
   cases types.findIdx? isPtr with
   | none => rfl
   | some i =>
-    rw [List.getElem?_map]
+    simp only [List.getElem?_map]
     cases types[i]? with
     | none => rfl
     | some ty =>
@@ -48,7 +45,8 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
     TorOK L.withIdle O.mitRuhe := by
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro a b bound admitted scalar world args q m number registers unused stored
-    rw [← worldR_worldZ world, ← envR_envZ (Γ := D.aparams a) args] at registers stored ⊢
+    rw [← worldR_worldZ world] at stored ⊢
+    rw [← envR_envZ (Γ := D.aparams a) args] at registers ⊢
     rw [wirkt_mitRuhe]
     have scalar' : ptrParam (D.aparams a) = none := (ptrParam_tyR _).symm.trans scalar
     obtain ⟨w, x, after, answer, effects, represented, raw⟩ :=
@@ -59,7 +57,8 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
     exact ⟨w, x, after, answer, effects, WeltAt.withIdle_iff.mpr represented, raw⟩
   · intro a b bound admitted j n write table field buffer tableNumber byteField byteType
       world args q m number registers unused stored packed
-    rw [← worldR_worldZ world, ← envR_envZ (Γ := D.aparams a) args] at registers stored ⊢
+    rw [← worldR_worldZ world] at stored ⊢
+    rw [← envR_envZ (Γ := D.aparams a) args] at registers ⊢
     rw [wirkt_mitRuhe]
     have buffer' : ptrParam (D.aparams a) = some (j, n, write) :=
       (ptrParam_tyR _).symm.trans buffer
@@ -97,7 +96,8 @@ theorem TorOK.withIdle [Kern] {L : Lay D} {O : Orakel D} (contract : TorOK L O) 
       number registers destination unused stored
     have present : (D.aerg a).map tyR = some ty := typed
     obtain ⟨result, sourceResult, rfl⟩ := Option.map_eq_some_iff.mp present
-    rw [← worldR_worldZ world, ← envR_envZ (Γ := D.aparams a) args] at registers stored ⊢
+    rw [← worldR_worldZ world] at stored ⊢
+    rw [← envR_envZ (Γ := D.aparams a) args] at registers ⊢
     have extent : base + valueWords result ≤ K := by
       simpa only [tyR, valueWords_mapNumbers] using fits
     have originalLayout : LayIn L := by
