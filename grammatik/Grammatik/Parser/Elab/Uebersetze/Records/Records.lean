@@ -151,6 +151,37 @@ theorem uRecordOf_mem (records : List URecord) (ty : Ty)
     · cases h; exact List.mem_cons_self
     · exact List.mem_cons_of_mem _ (ih schema h)
 
+theorem uRecordOf_complete {records : List URecord} {schema : URecord}
+    (member : schema ∈ records) :
+    ∃ result, uRecordOf records schema.ty = .ok result := by
+  induction records with
+  | nil => cases member
+  | cons head rest ih =>
+    by_cases equal : head.ty = schema.ty
+    · exact ⟨⟨head, equal⟩, by rw [uRecordOf, dite_eq_left equal]⟩
+    · rw [uRecordOf, dite_eq_right equal]
+      rcases List.mem_cons.mp member with same | tail
+      · exact (equal (congrArg URecord.ty same.symm)).elim
+      · exact ih tail
+
+theorem uRecordConstructor_mem {ctx : UCtx} {name : String} {schema : URecord}
+    (selected : uRecordConstructor ctx name = some schema) : schema ∈ ctx.records := by
+  unfold uRecordConstructor at selected
+  cases direct : ctx.records.find? (fun record => strEq record.name name) with
+  | some record =>
+    simp only [direct, Option.orElse_some] at selected
+    cases selected
+    exact List.mem_of_find?_eq_some direct
+  | none =>
+    simp only [direct, Option.orElse_none] at selected
+    split at selected
+    · cases selected
+    · cases alias : ctx.namedTypes.find? (fun entry => strEq entry.1 name) with
+      | none => simp only [alias, Option.bind_eq_bind, Option.bind_none] at selected
+      | some entry =>
+        simp only [alias, Option.bind_eq_bind, Option.bind_some] at selected
+        exact List.mem_of_find?_eq_some selected
+
 /-- Arrange already elaborated values in schema order. Source expressions are elaborated before this step. -/
 def uRecordValues (schema : URecord) (values : List (String × USide)) : Except String USide := do
   if values.length != schema.fields.length ||

@@ -14,11 +14,33 @@ def uSpecValuePath : SExpr → Bool
   | .field base _ => uSpecValuePath base
   | _ => false
 
+/-- A literal field is checked against the constructor's declared type
+    before substitution, including integer ranges and UTF-8 capacity. -/
+def specLiteralFieldFits : Ty → USide → Bool
+  | .int lo hi, .lit value => decide (lo ≤ value ∧ value ≤ hi)
+  | .bool, .truth _ => true
+  | .str capacity, .text bytes =>
+    match bytesZahl bytes with
+    | some decoded => decide (decoded.length ≤ capacity)
+    | none => false
+  | _, _ => false
+
+/-- Check the nominal schema and each already ordered field returned
+    by the ordinary constructor reader. Unused arguments are checked too. -/
+def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
+    (fields : List (Ty × USide)) : Option Ty := do
+  let schema ← uRecordConstructor ctx name
+  if schema.ty = .prod identity (fields.map Prod.fst) ∧
+    fields.all (fun field => specLiteralFieldFits field.1 field.2) = true then
+    some schema.ty
+  else none
+
 /-- Before substitution, read the exact type of each supported value.
     Strings use decoded byte lengths, checked literal slice ranges,
     declared path bounds and the ordinary G rule for concatenation.
     An array slice uses the element type and extent of its checked base. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
+  | .call name _, .product identity _ fields => uSpecLiteralRecordType ctx name identity fields
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
   | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
     let decoded ← bytesZahl bytes
@@ -66,6 +88,19 @@ theorem specValueArgument_erfuellbar (ctx : UCtx) (name : String) (expected : Ty
     uSpecValueArgument ctx expected (.variable name) = .ok () := by
   simp [uSpecValueArgument, uSpecValueType, uSpecValuePath, read, typeMatches,
     bind, Except.bind, pure, Except.pure]
+
+/-- The premises hold for any parsed constructor and every list of
+    jointly well-typed literal fields in its nominal schema. -/
+theorem specLiteralRecordArgument_erfuellbar (ctx : UCtx) (name : String) (args : List SExpr)
+    (schema : URecord) (fields : List (Ty × USide)) (reordered : Bool)
+    (selected : uRecordConstructor ctx name = some schema)
+    (read : uWertBody ctx (.call name args) = .ok (.product schema.identity reordered fields))
+    (shape : schema.ty = .prod schema.identity (fields.map Prod.fst))
+    (valid : fields.all (fun field => specLiteralFieldFits field.1 field.2) = true) :
+    uSpecValueArgument ctx schema.ty (.call name args) = .ok () := by
+  simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, uSpecLiteralRecordType,
+    selected, Option.bind_eq_bind, Option.bind_some, shape, valid, true_and, ite_true,
+    pure, Except.pure]
 
 /-- The literal lane accepts exactly the type of the checked byte list. -/
 theorem specTextArgument_erfuellbar (ctx : UCtx) (text : String) :

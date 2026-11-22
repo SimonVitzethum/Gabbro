@@ -34,6 +34,88 @@ theorem lowProductArgs_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) 
       pure (.cons head tail)) := by
   rw [lowProductArgs]
 
+/-- Every literal field admitted by the predicate argument reader is
+    accepted by the ordinary checking-mode expression elaborator. -/
+theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ty : Ty) (side : USide) (valid : specLiteralFieldFits ty side = true) :
+    ∃ expression, lowWertAtE u Γ Λ fn er ty side = .ok expression := by
+  unfold specLiteralFieldFits at valid
+  split at valid
+  · rename_i lo hi value
+    obtain ⟨loFits, hiFits⟩ := of_decide_eq_true valid
+    by_cases same : Ty.int value value = .int lo hi
+    · refine ⟨same ▸ Expr.lit value, ?_⟩
+      simp only [lowWertAtE, lowWertE, LowSide.wert, fitW, dite_eq_left same]
+    · refine ⟨Expr.widen loFits hiFits (Expr.lit value), ?_⟩
+      simp only [lowWertAtE, lowWertE, LowSide.wert, fitW, dite_eq_right same,
+        dite_eq_left loFits, dite_eq_left hiFits]
+  · rename_i value
+    cases value
+    · exact ⟨Expr.fls, by simp only [lowWertAtE, lowWertE, fitW, dite_true]⟩
+    · exact ⟨Expr.tru, by simp only [lowWertAtE, lowWertE, fitW, dite_true]⟩
+  · rename_i capacity bytes
+    cases decoded : bytesZahl bytes with
+    | none => simp only [decoded, Bool.false_eq_true] at valid
+    | some words =>
+      have fits : words.length ≤ capacity := of_decide_eq_true (by simpa only [decoded] using valid)
+      let literal : Expr (declOf u) Γ Λ (.str words.length) := .strLit words (Nat.le_refl _)
+      by_cases same : Ty.str words.length = .str capacity
+      · refine ⟨same ▸ literal, ?_⟩
+        simp only [lowWertAtE, lowWertE, lowText, decoded, fitW, dite_eq_left same, literal]
+      · refine ⟨Expr.strWeit capacity literal, ?_⟩
+        simp only [lowWertAtE, lowWertE, lowText, decoded, fitW, dite_eq_right same, literal,
+          ite_eq_left fits]
+  · cases valid
+
+theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (fields : List (Ty × USide))
+    (valid : fields.all (fun field => specLiteralFieldFits field.1 field.2) = true) :
+    ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
+  induction fields with
+  | nil => exact ⟨.nil, lowProductArgs_nil u Γ Λ fn er⟩
+  | cons field rest ih =>
+    obtain ⟨head, tail⟩ := Bool.and_eq_true_iff.mp valid
+    obtain ⟨value, lowValue⟩ := specLiteralField_lower u Γ Λ fn er field.1 field.2 head
+    obtain ⟨args, lowArgs⟩ := ih tail
+    cases field
+    exact ⟨.cons value args, by
+      simp only [lowProductArgs, lowValue, lowArgs, bind, Except.bind, pure, Except.pure]⟩
+
+/-- Bind the successful source argument to the ordinary G nominal
+    constructor. Every field passed checking mode at the declared type. -/
+theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ctx : UCtx) (name : String) (source : List SExpr)
+    (identity : Nat) (reordered : Bool) (fields : List (Ty × USide)) (result : Ty)
+    (read : uWertBody ctx (.call name source) = .ok (.product identity reordered fields))
+    (accepted : uSpecValueArgument ctx result (.call name source) = .ok ())
+    (gate : u.exportGate = .ok ())
+    (scope : u.records = ctx.records) :
+    ∃ (args : Args (declOf u) Γ Λ (fields.map Prod.fst)),
+      result = .prod identity (fields.map Prod.fst) ∧
+      lowWertE u Γ Λ fn er (.product identity reordered fields) =
+        .ok ⟨.prod identity (fields.map Prod.fst), Expr.prod identity args⟩ := by
+  obtain ⟨parsed, sourceRead, typeRead⟩ := uSpecValueArgument_exact accepted
+  have exactSide := Except.ok.inj (read.symm.trans sourceRead)
+  subst parsed
+  change uSpecLiteralRecordType ctx name identity fields = some result at typeRead
+  unfold uSpecLiteralRecordType at typeRead
+  cases selected : uRecordConstructor ctx name with
+  | none => simp only [selected, Option.bind_eq_bind, Option.bind_none] at typeRead
+  | some schema =>
+    simp only [selected, Option.bind_eq_bind, Option.bind_some] at typeRead
+    split at typeRead
+    · rename_i checked
+      have resultType : schema.ty = result := Option.some.inj typeRead
+      have member : schema ∈ u.records := scope.symm ▸ uRecordConstructor_mem selected
+      have schemaExists (type : Ty) (same : schema.ty = type) :
+          ∃ hit, uRecordOf u.records type = .ok hit :=
+        same ▸ uRecordOf_complete member
+      obtain ⟨hit, exactSchema⟩ := schemaExists _ checked.1
+      obtain ⟨args, lowered⟩ := specLiteralFields_lower u Γ Λ fn er fields checked.2
+      exact ⟨args, resultType.symm.trans checked.1,
+        record_lower u Γ Λ fn er identity reordered fields args gate lowered _ exactSchema⟩
+    · cases typeRead
+
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (raw : USide) :

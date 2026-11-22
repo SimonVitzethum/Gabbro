@@ -20,6 +20,7 @@ import Grammatik.Niedrig.Konstrukte.SliceCheck
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Carriers
 import Grammatik.Nebenlaeufigkeit.Async.Creation
 import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
+import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array
@@ -183,6 +184,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 #print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.other
 #print axioms Gabbro.Stage0.Senke.runtimeArraySliceCarrier_ok
 #print axioms Gabbro.Stage0.Senke.runtimeStringSliceCarrier_ok
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specLiteralRecordArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_lower
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh
 #print axioms Gabbro.Grammatik.Async.Representation.checkedRetryStmt_cost

@@ -229,6 +229,7 @@ public import Grammatik.Parser.Round.RundlaufProgramm
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautLesen
 public import Grammatik.Parser.Elab.UebersetzeAllg.WidthSources
+public import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
