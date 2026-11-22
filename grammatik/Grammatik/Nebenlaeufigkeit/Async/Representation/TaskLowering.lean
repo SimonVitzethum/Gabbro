@@ -61,7 +61,7 @@ public def TaskStepRep (types : TypeResolution) (path : List Nat) (future : Futu
   | .ok (_, successor, after, _) =>
     ∃ value, output = .ok after (env.set slot value) ∧ TaskRep D types path future successor value
 
-private theorem setCurrent {D : Deklaration} {Γ : Ctx} {τ : Ty}
+public theorem setCurrent {D : Deklaration} {Γ : Ctx} {τ : Ty}
     (slot : Var Γ τ) (env : Env D Γ) : env.set slot (env.get slot) = env := by
   induction slot with
   | here => cases env; rfl

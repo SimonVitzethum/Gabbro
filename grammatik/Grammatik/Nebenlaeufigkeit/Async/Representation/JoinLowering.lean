@@ -67,9 +67,6 @@ public theorem joinActiveBlock_exec (types : TypeResolution) (path : List Nat) (
   intro initial
   simp only [joinActiveBlock, execBlock, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append,
     eval, Env.get, prodGetW]
-  change (((match execStmt oracle passes calls first world initial with
-    | .ok middle leftDone => _
-    | failure => _).schrumpf).schrumpf = _
   cases execStmt oracle passes calls first world initial with
   | ok middle leftDone =>
     cases execStmt oracle passes calls second middle leftDone with
@@ -146,5 +143,75 @@ public theorem collectJoin_exec {types : TypeResolution} (path : List Nat) (left
         some (aResult, bResult, ())
       simp only [taskResultType, valueAt, aTyped, bTyped, Option.bind_eq_bind, Option.bind_some,
         Option.pure_def] <;> rfl
+
+/-- Compositional simulation of a join. Left failure suppresses the
+    right statement, while right failure suppresses record reconstruction. -/
+public theorem joinTaskStmt_simulates {types : TypeResolution} {f : AsyncFn}
+    (elaboration : Elaboration D V Λ types f) (path : List Nat) (left right : FutureExpr)
+    (leftResolved : ResolvedFuture elaboration left) (rightResolved : ResolvedFuture elaboration right)
+    (out : Var Γ (taskStorageType types path (.join left right)))
+    (first second : Stmt D V l (JoinCtx types path left right Γ) Λ Λ)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (firstCorrect : ∀ world (env : Env D (JoinCtx types path left right Γ)) task,
+      TaskRep D types (0 :: path) left task (env.get (.there .here)) →
+      TaskStepRep types (0 :: path) left (.there .here) env
+        (execStmt oracle passes calls first world env) (runTaskPoll elaboration calls prices task world))
+    (secondCorrect : ∀ world (env : Env D (JoinCtx types path left right Γ)) task,
+      TaskRep D types (1 :: path) right task (env.get .here) →
+      TaskStepRep types (1 :: path) right .here env
+        (execStmt oracle passes calls second world env) (runTaskPoll elaboration calls prices task world))
+    (world : World D) (env : Env D Γ) (task : Task (Value D) (Child D types))
+    (represented : TaskRep D types path (.join left right) task (env.get out)) :
+    TaskStepRep types path (.join left right) out env
+      (execStmt oracle passes calls (joinTaskStmt types path left right out first second) world env)
+      (runTaskPoll elaboration calls prices task world) := by
+  generalize same : env.get out = record at represented
+  cases represented with
+  | joinReady typed =>
+    unfold joinTaskStmt
+    erw [storedTag_cached oracle passes calls out (joinActiveBlock types path left right out first second) .nil
+      world env _ same]
+    simp only [runTaskPoll, pollTaskWith, pure, Except.pure, TaskStepRep]
+    refine ⟨_, ?_, .joinReady (by assumption)⟩
+    rw [← same, setCurrent]
+    rfl
+  | @joinActive _ _ a aValue b bValue aRep bRep =>
+    unfold joinTaskStmt
+    erw [storedTag_active oracle passes calls out (joinActiveBlock types path left right out first second) .nil
+      world env (aValue, bValue, ()) same]
+    rw [joinActiveBlock_exec, runTaskPoll_join]
+    let initial : Env D (JoinCtx types path left right Γ) := .cons bValue (.cons aValue (.cons (aValue, bValue, ()) env))
+    have ranLeft := firstCorrect world initial a aRep
+    cases leftOutcome : runTaskPoll elaboration calls prices a world with
+    | error cause =>
+      cases cause <;> simp only [leftOutcome, TaskStepRep, bind, Except.bind] at ranLeft ⊢ <;>
+        erw [ranLeft] <;> rfl
+    | ok leftAnswer =>
+      obtain ⟨lp, aNext, middle, lc⟩ := leftAnswer
+      simp only [leftOutcome, TaskStepRep] at ranLeft
+      obtain ⟨aUpdated, firstRan, aNextRep⟩ := ranLeft
+      let middleEnv := initial.set (.there .here) aUpdated
+      have ranRight := secondCorrect middle middleEnv b bRep
+      simp only [leftOutcome, bind, Except.bind]
+      erw [firstRan]
+      cases rightOutcome : runTaskPoll elaboration calls prices b middle with
+      | error cause =>
+        cases cause <;> simp only [rightOutcome, TaskStepRep, Except.bind] at ranRight ⊢ <;>
+          erw [ranRight] <;> rfl
+      | ok rightAnswer =>
+        obtain ⟨rp, bNext, final, rc⟩ := rightAnswer
+        simp only [rightOutcome, TaskStepRep] at ranRight
+        obtain ⟨bUpdated, secondRan, bNextRep⟩ := ranRight
+        simp only [rightOutcome, Except.bind]
+        erw [secondRan]
+        let finalEnv := middleEnv.set .here bUpdated
+        have lpRep := runTaskPoll_rep elaboration calls prices aRep leftResolved leftOutcome
+        have rpRep := runTaskPoll_rep elaboration calls prices bRep rightResolved rightOutcome
+        obtain ⟨value, collected, successorRep⟩ := collectJoin_exec (V := V) (l := l) (Λ := Λ) path left right
+          (.there .here) .here (.there (.there (.there out))) oracle passes calls final finalEnv
+          aNextRep bNextRep lpRep rpRep
+        erw [collected]
+        cases lp <;> cases rp <;> exact ⟨value, rfl, successorRep⟩
 
 end Gabbro.Grammatik.Async.Representation
