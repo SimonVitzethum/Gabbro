@@ -197,7 +197,7 @@ theorem MTRel.enter_pending_root {P : Programm D} {O : Orakel D} {passes : Nat} 
     · subst j
       exact ⟨added, setzeS_self _ _ _⟩
     · change (c.ths.set i (some (.next entry.start)))[j]? = some (some r) at found
-      rw [List.getElem?_set_ne same.symm] at found
+      rw [List.getElem?_set_ne (Ne.symm same)] at found
       obtain ⟨s, previous⟩ := related.lebend j r found
       exact ⟨s, (setzeS_ne S added same).trans previous⟩
   · intro j s known byte read
