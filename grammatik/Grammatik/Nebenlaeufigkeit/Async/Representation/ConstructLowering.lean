@@ -337,7 +337,7 @@ public theorem beginAwaitBlock_simulates {elaboration : Elaboration D V Λ types
       Var Δ (taskStorageType types [tag] future) → Block D V l Δ Λ Λ := fun extend task =>
     constructBlock (extend state)
       (waitingExpr types f tag command (trimFrameExpr types f (liveAt f (.waiting tag future)) (extend saved)) (.var task))
-  let effect := fun child next => (waitingValue D types f tag command trimmed child, next)
+  let effect := fun child (next : World D) => (waitingValue D types f tag command trimmed child, next)
   have correct {Δ : Ctx} (extend : ∀ {type : Ty}, Var Γ type → Var Δ type)
       (slot : Var Δ (taskStorageType types [tag] future)) (scope : Env D Δ) (now : World D)
       (inherited : env.AgreesUnder scope extend) :
