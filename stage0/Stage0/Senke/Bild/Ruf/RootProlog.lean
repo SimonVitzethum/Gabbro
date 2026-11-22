@@ -14,32 +14,6 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
-/-- The main start stub follows exactly the emitted clone sites. The
-    serialized depth and private frame limits are shared with child starts. -/
-theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {memory : Mem}
-    (loaded : BytesAt memory codeBase (output.image.code.flatMap encII)) :
-    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length))
-    CodeAt memory pc (startC output.image.A output.compiled.main output.image.depth 231 true) ∧
-      2 < output.image.Ks ∧ output.image.depth + 1 < 2 ^ 31 := by
-  intro pc
-  obtain ⟨_, lowered, spawnSites, layout, serialized, _, _, _⟩ :=
-    bild_lage output.emission output.funktionen_voll
-      (fun base bound => layU_in output.compiled.unit output.tor base bound)
-      (fun base => layU_dis output.compiled.unit output.tor base)
-      (fun base => by simp only [layU]; omega)
-      (fun base => layU_sync output.compiled.unit output.tor base)
-  have actual := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
-  have main := codeAt_right (a := spawnC (startScratch output.compiled.main) spawnSites) (by
-    simpa only [Emitted.starts, List.append_assoc] using actual :
-      CodeAt memory (BitVec.ofNat 64 codeBase)
-        (spawnC (startScratch output.compiled.main) spawnSites ++
-          (startC output.image.A output.compiled.main output.image.depth 231 true ++
-            (rootsC output.image.A output.image.depth (output.starts.map (·.1)) ++ lowered))))
-  have sites : (spawnC (startScratch output.compiled.main) spawnSites).length = 10 * output.starts.length := by
-    simp only [spawnC_len, layout.hsp, List.length_map, List.length_range, Emitted.starts]
-  rw [sites, ofNat_add64] at main
-  exact ⟨codeAt_left main, layout.startLimits.1, layout.startLimits.2.1⟩
-
 /-- Main enters the same depth initialization protocol through its
     own boot frame after the emitted clone sites. -/
 theorem Emitted.main_depth_start [Kern] (output : Emitted src reserve options)
@@ -56,7 +30,7 @@ theorem Emitted.main_depth_start [Kern] (output : Emitted src reserve options)
         (slot pointer.fp (BitVec.ofNat 64 2)) 8 (output.image.depth + 1) ∧
       ∀ other, other ≠ 0 → after.1.view other = before.ms.1.view other := by
   intro pointer running frame
-  obtain ⟨stub, header, depth⟩ := output.main_stub_code loaded
+  obtain ⟨stub, header, depth, _, _⟩ := output.main_stub_code loaded
   exact image_depth_setup (before := before) stub header depth running frame
 
 private theorem function_depth_guard [Kern] (output : Emitted src reserve options)

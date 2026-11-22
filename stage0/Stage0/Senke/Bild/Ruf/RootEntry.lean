@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.ImageAddress
+public import Stage0.Senke.Bild.Ruf.StartSite
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -249,8 +249,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   have onThread (control : Res T) : (before.ths.set (index + 1) (some control))[index + 1]? = some (some control) :=
     List.getElem?_set_self inside
   obtain ⟨second, operandRun, shared₂, write₂, others₂⟩ :=
-    output.root_call_decrement_operand (before := ⟨first, before.ths.set (index + 1) (some (.next (nxt entry)))⟩)
-      declared code₁ (onThread (.next (nxt entry))) frame₁
+    (output.childStartSite declared).call_decrement_operand (before := ⟨first, before.ths.set (index + 1) (some (.next (nxt entry)))⟩)
+      code₁ (onThread (.next (nxt entry))) frame₁
   have preserved₂ := child_store_preserves output (value := 1)
     declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
   rw [← write₂] at preserved₂
@@ -268,8 +268,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     exact rd64_write_same (w := 1) (frame₁.rd scratch scratchRoom)
   simp only [List.set_set] at operandRun
   obtain ⟨third, subRun, shared₃, write₃, others₃⟩ :=
-    output.root_call_depth (before := ⟨second, before.ths.set (index + 1) (some (.next (nxt (nxt entry))))⟩)
-      declared code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
+    (output.childStartSite declared).call_depth (before := ⟨second, before.ths.set (index + 1) (some (.next (nxt (nxt entry))))⟩)
+      code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
   simp only [List.set_set] at subRun
   have preserved₃ := child_store_preserves output (value := output.image.depth) declaredThread calleeRoom fits
     (Or.inl (by simp only [FB]; decide)) code₂ frame₂ args₂

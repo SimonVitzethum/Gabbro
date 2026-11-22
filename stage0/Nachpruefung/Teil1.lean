@@ -231,8 +231,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.main_depth_start
 #print axioms Gabbro.Stage0.Emitted.root_depth_preserves_frame
 #print axioms Gabbro.Stage0.Emitted.root_depth_phase
-#print axioms Gabbro.Stage0.Emitted.root_call_decrement_operand
-#print axioms Gabbro.Stage0.Emitted.root_call_depth
+#print axioms Gabbro.Stage0.ImageStartSite.call_decrement_operand
+#print axioms Gabbro.Stage0.ImageStartSite.call_depth
 #print axioms Gabbro.Stage0.Emitted.relocated_function_code
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_call_prefix
 #print axioms Gabbro.Stage0.Senke.BildMehr.RunP.remaining
