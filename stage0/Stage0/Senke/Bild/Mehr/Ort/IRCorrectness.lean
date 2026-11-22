@@ -140,7 +140,7 @@ theorem ImageSlotsMatch.follow_silent {history : List Ev}
       · subst thread
         rw [List.getElem?_set_self (List.getElem?_eq_some_iff.mp active).1] at retired
         cases retired
-      · rwa [List.getElem?_set_ne owns.symm] at retired
+      · rwa [List.getElem?_set_ne (Ne.symm owns)] at retired
     have noRetire {a b : Cfg imageTSO (Res T)} {events : List Ev}
         (step : ProcessStep imageTSO actI a events b) (quiet : events = [])
         (retired : b.ths[thread]? = some none) : a.ths[thread]? = some none := by
@@ -148,12 +148,16 @@ theorem ImageSlotsMatch.follow_silent {history : List Ev}
       | tau => exact retired
       | priv active _ | ask active _ _ _ _ => exact setPreserves active retired
       | exit | cloneNo | clone => cases quiet
-    generalize quiet : ([] : List Ev) = events at execution
-    induction execution with
-    | nil => exact id
-    | cons step _ ih =>
-      obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet.symm
-      exact fun retired => noRetire step first (ih rest.symm retired)
+    have follow {a b : Cfg imageTSO (Res T)} {events : List Ev} {steps : Nat}
+        (path : ProcessPrefix imageTSO actI a events steps b) :
+        events = [] → b.ths[thread]? = some none → a.ths[thread]? = some none := by
+      induction path with
+      | nil => exact fun _ retired => retired
+      | cons step _ ih =>
+        intro quiet retired
+        obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet
+        exact noRetire step first (ih rest retired)
+    exact follow execution rfl
   refine ⟨fun thread => by rw [execution.silent_slots rfl, live]; exact slots.1 thread, ?_⟩
   intro thread retired
   have beforeSlot := retired_unchanged thread retired
