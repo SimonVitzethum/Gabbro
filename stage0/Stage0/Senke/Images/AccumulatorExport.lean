@@ -44,6 +44,19 @@ theorem imageNamedIndex_sound {α : Type} {entries : List α} {name : α → Str
       List.find?_some (p := fun index => name (entries.get index) == expected) result
     exact beq_iff_eq.mp sameName
 
+theorem imageNamedIndex_complete {α : Type} {entries : List α} {name : α → String}
+    {expected : String} (declared : ∃ entry ∈ entries, name entry = expected) :
+    ∃ position, imageNamedIndex entries name expected = .ok position := by
+  obtain ⟨entry, listed, named⟩ := declared
+  obtain ⟨index, inRange, exactEntry⟩ := List.mem_iff_getElem.mp listed
+  let position : Fin entries.length := ⟨index, inRange⟩
+  have equal : name (entries.get position) = expected := (congrArg name exactEntry).trans named
+  unfold imageNamedIndex
+  cases found : (List.finRange entries.length).find? (fun index => name (entries.get index) == expected) with
+  | some selected => exact ⟨selected, rfl⟩
+  | none =>
+    exact False.elim ((List.find?_eq_none.mp found position (List.mem_finRange position)) (beq_iff_eq.mpr equal))
+
 def imageAccumulatorMembers (output : Emitted src reserve options) (name : String)
     (k : Nat) : Except String (Fin k → (declOf output.compiled.unit).Glob) :=
   sammle k _ (fun i => imageNamedIndex output.compiled.unit.globs UGlob.name (name ++ "#zelle" ++ toString i.val))
