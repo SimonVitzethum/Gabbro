@@ -152,6 +152,33 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     sourceHead threads otherViews buffers reads (imageStackFootprint output i) (fun _ proof => .inl proof)
     accessible ownsStack atReads (imageProjection_agree shared otherViews issuerView)
 
+/-- At an already reached body address, registration changes only the
+    proof's partition of the running slots. -/
+theorem ImageRuntimePartition.register_at_boundary [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {machine : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    {i : Nat} {entry : MLage (declOf output.compiled.unit).mitRuhe} {pending : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition footprint output E O history machine state body pending)
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (ownsStack : ∀ byte, imageStackFootprint output i byte → footprint i byte)
+    (empty : body[i]? = some none) (entryOK : entry.Ok)
+    (exactProgram : entry.B.P = E.P.mitRuhe ∧ entry.B.O = O.mitRuhe ∧
+      entry.B.passes = output.image.passes ∧ entry.B.L = output.image.Y.withIdle)
+    (thread : entry.thr = i) (alive : state.lebt i = true) (waiting : state.wartet i = [])
+    (sourceHead : state.m.faeden i = entry.M.faeden i)
+    (atBody : machine.ths[i]? = some (some (.next entry.start)))
+    (entryMemory : entry.mb = machine.ms.1.view i) :
+    ImageRuntimeMatchesAt footprint output E O history machine state pending := by
+  obtain ⟨present, control⟩ := List.getElem?_eq_some_iff.mp atBody
+  have threads : machine.ths = machine.ths.set i (some (.next entry.start)) := by
+    rw [← control, List.set_getElem_self present]
+  exact ImageRuntimeMatches.register_private_body partition placed ownsStack empty entryOK exactProgram
+    thread alive waiting sourceHead threads entryMemory rfl (fun _ _ => rfl)
+    (fun byte _ => GleichAt.refl _ byte) partition.1
+
 theorem ImageRootPhase.advance_source [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {memory : Mem} {history extension : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
