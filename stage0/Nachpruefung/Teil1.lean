@@ -285,6 +285,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.lowerAwaitConstruction_rep
 #print axioms Gabbro.Grammatik.Async.Representation.activeChildExpr_rep
 #print axioms Gabbro.Grammatik.Async.Representation.joinChildrenExpr_rep
+#print axioms Gabbro.Grammatik.Async.Representation.lowerAwaitLeaf_rep
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep

@@ -44,7 +44,7 @@ public theorem activeChildExpr_rep (elaboration : Elaboration D V Λ types f) (p
   rw [computed]
   simp only [activeChildExpr, evaluateExpression, Expr.orte, NutzlastExpr.orte, preserved.1,
     eval, evalNutz, exactStorage, kostenExpr, kostenNutz, preserved.2.1]
-  exact ⟨.callActive path name args _, rfl, rfl⟩
+  refine ⟨.callActive path name args _, ?_, ?_⟩ <;> first | trivial | rfl
 
 /-- Combine the two typed child slots of a generated join in source order. -/
 @[expose] public def joinChildrenExpr (types : TypeResolution) (path : List Nat) (left right : FutureExpr)
@@ -126,5 +126,37 @@ public theorem lowerAwaitConstruction_rep (inventory : Inventory D) (tag : Nat)
     waitingExpr_eval types f tag command storage (.var .here) answer.2.1 answer.2.1 extended
   rw [exactValue] at execution
   exact ⟨value, execution, invariant, inv_encoded f types inventory _ value invariant⟩
+
+/-- Once arguments have been evaluated, a leaf await uses its resolved
+    lazy constructor and enters the model's Waiting state in one G block. -/
+public theorem lowerAwaitLeaf_rep (elaboration : Elaboration D V Λ types f) (inventory : Inventory D)
+    (tag : Nat) (destination name : String) (args : List Parser.SExpr) (boundary : Boundary) (rest : List Command)
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (arguments : List (Value D)) (parameters : Env D callee.parameters)
+    (typed : argumentsEnv D callee.parameters arguments = some parameters)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f))
+    (world : World D) (env : Env D Γ) (rename : ∀ {τ : Ty}, Var callee.parameters τ → Var Γ τ)
+    (agrees : parameters.AgreesUnder env rename) (frame : Frame (Value D))
+    (represented : FrameRep D types f (.running tag) frame (env.get saved))
+    (current : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.waiting tag (.call name args)) = inventory.owned (.running tag))
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) :
+    let model := constructChild elaboration name arguments world
+    let target := State.waiting (Value := Value D) tag frame (Task.leaf model.1)
+    ∃ value, execBlock oracle passes calls
+        (lowerAwaitConstruction (V := V) (l := l) types f tag command saved state (activeChildExpr callee [tag] args rename))
+          world env = .ok model.2.1 (env.set state value) ∧
+      Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro model target
+  let construct := activeChildExpr callee [tag] args rename
+  obtain ⟨child, sameWorld, _⟩ := activeChildExpr_rep elaboration [tag] name args callee known arguments parameters
+    typed world env rename agrees
+  obtain ⟨value, executed, invariant, encoded⟩ := lowerAwaitConstruction_rep (V := V) (l := l)
+    inventory tag command saved state construct oracle passes calls world env frame (.leaf model.1) represented
+    current sameInventory child
+  change (evaluateExpression construct world env).2.1 = model.2.1 at sameWorld
+  rw [sameWorld] at executed
+  exact ⟨value, executed, invariant, encoded⟩
 
 end Gabbro.Grammatik.Async.Representation
