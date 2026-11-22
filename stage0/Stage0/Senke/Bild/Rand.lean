@@ -79,7 +79,7 @@ end Dekoder
 /-- **The fixed data of one lowered function body**: what `lowEnd_ok` keeps from the first statement of the body of
     `f` to its last — the world layout `L`, the oracle and pass budget, the call handler `R` of the function
     simulations, the code addresses `A` and codes `C`, the frame at `fp` with `K` slots (`Ks` its own), the
-    return target, the entry world and environment, the ensures code, the preservedWords slots, the loop targets, the
+    return target, the entry world and environment, the ensures code, the protected slots, the loop targets, the
     held locks `H` and the pending releases `sc`. -/
 structure BodyFrame (D : Deklaration) where
   L : Lay D
@@ -196,7 +196,7 @@ theorem BodyFrame.finishBind {B : BodyFrame D} (frame : B.Ok)
   simp only [List.length_append] at codeFits
   have fit := lowE_top e _ _ _ lowered
   have inner := frame.win.ks
-  have agree := changed.widen inner
+  have agree := Agree.widen changed inner
   have worldAfter : WeltAt after B.L σ := weltAt_stab frame.win.lay (by have := frame.win.lo; omega)
     before after world (changed.mono (Nat.zero_le _))
   have separated := codeFar_right (n := code.length) (k := tail.length) (by simpa using pre.far)
