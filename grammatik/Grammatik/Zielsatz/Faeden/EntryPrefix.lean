@@ -92,6 +92,50 @@ theorem activateBootWorker_step {P : Programm D} {O : Orakel D} {passes : Nat}
     FadenSchrittX P O passes Tg before (activateBootWorker before worker) :=
   .kind before 0 worker live ready dormant
 
+/-- Boot creates worker slots one at a time in the order of the image's
+    start list. Each activation keeps the store and all prepared frames. -/
+def activateBootWorkers (before : FadenMaschine D) (workers : List Faden) : FadenMaschine D :=
+  workers.foldl activateBootWorker before
+
+theorem activateBootWorkers_fields (before : FadenMaschine D) (workers : List Faden) :
+    let after := activateBootWorkers before workers
+    after.m = before.m ∧ after.wartet = before.wartet ∧
+      ∀ thread, after.lebt thread = true ↔ thread ∈ workers ∨ before.lebt thread = true := by
+  induction workers generalizing before with
+  | nil =>
+    intro after
+    exact ⟨rfl, rfl, fun thread => by simp [after, activateBootWorkers]⟩
+  | cons worker rest ih =>
+    obtain ⟨memory, waiting, live⟩ := ih (activateBootWorker before worker)
+    refine ⟨memory, waiting, fun thread => ?_⟩
+    change (activateBootWorkers (activateBootWorker before worker) rest).lebt thread = true ↔ _
+    rw [live, List.mem_cons]
+    by_cases same : thread = worker
+    · simp only [activateBootWorker, same, ite_true, or_true, true_or]
+    · simp only [activateBootWorker, same, ite_false, false_or]
+
+/-- Every startup activation is an actual GX transition, even when
+    multiple occurrences of the same function have distinct arguments. -/
+theorem activateBootWorkers_reachable {P : Programm D} {O : Orakel D} {passes : Nat}
+    {Tg : D.Tab ⊕ D.Glob → Prop} {start before : FadenMaschine D} (workers : List Faden)
+    (reached : FadenErreichbarX P O passes Tg start before)
+    (entry : before.lebt 0 = true) (waiting : before.wartet 0 = [])
+    (unique : workers.Nodup) (dormant : ∀ thread ∈ workers, before.lebt thread = false) :
+    FadenErreichbarX P O passes Tg start (activateBootWorkers before workers) := by
+  induction workers generalizing before with
+  | nil => exact reached
+  | cons worker rest ih =>
+    obtain ⟨absent, remaining⟩ := List.nodup_cons.mp unique
+    have head := dormant worker List.mem_cons_self
+    have step := activateBootWorker_step (P := P) (O := O) (passes := passes) (Tg := Tg)
+      entry waiting head
+    change FadenErreichbarX P O passes Tg start (activateBootWorkers (activateBootWorker before worker) rest)
+    apply ih (.schritt _ _ reached step) _ waiting remaining
+    · simp only [activateBootWorker, entry, ite_self]
+    · intro thread member
+      have different : thread ≠ worker := fun equal => absent (equal ▸ member)
+      simpa only [activateBootWorker, different, ite_false] using dormant thread (List.mem_cons_of_mem _ member)
+
 /-- When the once-only entry returns, the first worker activates in
     the store it left. Its code and initial arguments are still the
     declared ones, and the complete startup prefix is a GX execution. -/
@@ -112,6 +156,47 @@ theorem EntryPrefix.activate_after_return [DecidableEq D.Fn] {E : Einheit D} {O 
     returned, ?_, rfl, run.dormant_thread different, ?_⟩
   · simp only [after, activateBootWorker, ite_true]
   · simp only [initRuhe, declared]
+
+/-- Startup can activate the complete ordered worker list after return.
+    It consumes the same entry prefix and preserves each worker's own
+    declared frame, even when several roots name the same function. -/
+theorem EntryPrefix.activate_declared_workers [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D} {passes : Nat}
+    {before : FadenMaschine D.mitRuhe} (run : EntryPrefix E O passes before)
+    (returned : FertigG before.m 0) :
+    let workers := (List.range (E.starts.length - 1)).map Nat.succ
+    let after := activateBootWorkers before workers
+    FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
+      (entryStart E) after ∧
+    FertigG after.m 0 ∧ after.m.speicher = before.m.speicher ∧
+    ∀ thread, thread ∈ workers ↔
+      thread ≠ 0 ∧ after.lebt thread = true ∧
+        after.m.faeden thread = (entryStart E).m.faeden thread ∧
+        ∃ root, E.starts[thread]? = some root ∧ initRuhe E.starts thread = ⟨some root.1, envR root.2⟩ := by
+  intro workers after
+  have only := run.only_entry
+  have positive (thread : Faden) (member : thread ∈ workers) : thread ≠ 0 := by
+    obtain ⟨index, _, rfl⟩ := List.mem_map.mp member
+    exact Nat.succ_ne_zero index
+  have distinct : workers.Nodup :=
+    List.Nodup.map Nat.succ_injective List.nodup_range
+  have dormant (thread : Faden) (member : thread ∈ workers) : before.lebt thread = false :=
+    Bool.eq_false_iff.mpr (fun live => positive thread member ((only.1 thread).mp live))
+  obtain ⟨machine, _, live⟩ := activateBootWorkers_fields before workers
+  refine ⟨activateBootWorkers_reachable workers run.reachable ((only.1 0).mpr rfl) (only.2 0) distinct dormant,
+    machine.symm ▸ returned, congrArg RufMaschineG.speicher machine, fun thread => ?_⟩
+  constructor
+  · intro member
+    have different := positive thread member
+    obtain ⟨index, inside, equal⟩ := List.mem_map.mp member
+    have declared : thread < E.starts.length := by
+      have bound := List.mem_range.mp inside
+      omega
+    have found := List.getElem?_eq_getElem declared
+    exact ⟨different, (live thread).mpr (.inl member),
+      machine.symm ▸ run.dormant_thread different,
+      E.starts[thread], found, by simp only [initRuhe, found]⟩
+  · rintro ⟨different, started, _, _⟩
+    exact ((live thread).mp started).resolve_right (fun old => different ((only.1 thread).mp old))
 
 /-- The whole goal applies throughout the actual model prefix, starting
     from the declared store, before any cloned worker can take a step. -/

@@ -119,6 +119,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.BildMehr.StarM.sc_reference
 #print axioms Gabbro.Stage0.MappedImage.no_early_silent_terminal
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_after_return
+#print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_declared_workers
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
