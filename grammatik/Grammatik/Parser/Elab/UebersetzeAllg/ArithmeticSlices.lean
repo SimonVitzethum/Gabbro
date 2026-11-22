@@ -44,11 +44,13 @@ theorem arithmeticSliceObservations_erfuellbar (element : Ty) (capacity : Nat)
   have noFirstConstant : uSchranke (uSliceConstants scope) first = none := rfl
   have noLastConstant : uSchranke (uSliceConstants scope) last = none := rfl
   have begin : uSliceInteger scope (uWertBlatt scope) first = some (1, 2, .add (.param "i") (.lit 1)) := by
-    simp only [first, uSliceInteger, show uSchranke (uSliceConstants scope) (.bin "+" (.variable "i") (.lit 1)) =
+    simp only [first, uSliceInteger, uSliceIntegerConstant,
+      show uSchranke (uSliceConstants scope) (.bin "+" (.variable "i") (.lit 1)) =
       none from noFirstConstant, Option.map_none, Option.isSome_none, Bool.false_eq_true, ite_false,
       firstType, firstRead, ite_true, uSchranke, Option.map_some, show strEq "+" "+" = true from rfl] <;> rfl
   have finish : uSliceInteger scope (uWertBlatt scope) last = some (4, 5, .sub (.param "j") (.lit 1)) := by
-    simp only [last, uSliceInteger, show uSchranke (uSliceConstants scope) (.bin "-" (.variable "j") (.lit 1)) =
+    simp only [last, uSliceInteger, uSliceIntegerConstant,
+      show uSchranke (uSliceConstants scope) (.bin "-" (.variable "j") (.lit 1)) =
       none from noLastConstant, Option.map_none, Option.isSome_none, Bool.false_eq_true, ite_false,
       lastType, lastRead, ite_true, uSchranke, Option.map_some, show strEq "-" "+" = false from rfl,
       show strEq "-" "-" = true from rfl] <;> rfl
@@ -61,6 +63,6 @@ theorem arithmeticSliceObservations_erfuellbar (element : Ty) (capacity : Nat)
   · change uWertBody scope (.index slice (.lit 0)) = _
     simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, index, and_self, bind, Option.bind,
-      uSliceInteger, uSchranke, Option.map_some] <;> rfl
+      uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some] <;> rfl
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

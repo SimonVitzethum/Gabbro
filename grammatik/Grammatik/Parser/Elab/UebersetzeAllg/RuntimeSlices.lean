@@ -325,7 +325,7 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
   have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < Int.ofNat 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
     simp only [uWertBody, uRechne, uLocalArraySliceObservation, uFixedLocalArrayExtent, uSliceInteger,
-      uSchranke, Option.map_some, bind, Option.bind,
+      uSliceIntegerConstant, uSchranke, Option.map_some, bind, Option.bind,
       arrayType, firstType, arrayRead, firstRead, bounds, position, and_self, ite_true]
 
 /-- A fixed length with a varying start lowers its observations directly,
@@ -373,7 +373,7 @@ theorem fixedSpanObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 6 
       show (Int.ofNat 2).toNat = 2 by decide]
   have position : uSliceInteger scope (uWertBlatt scope) (.lit 1) =
       some (Int.ofNat 1, Int.ofNat 1, .lit (Int.ofNat 1)) := by
-    simp only [uSliceInteger, uSchranke, Option.map_some]
+    simp only [uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some]
   exact ⟨scope, fixedSpanObservations_source scope (uWertBlatt scope) "a" τ capacity 2
     (.variable "i") (.bin "+" (.variable "i") (.lit 2)) (.lit 1) (.param "i") (.lit (Int.ofNat 1))
     (Int.ofNat 1) (Int.ofNat 1) arrayType arrayRead extent position (by decide)⟩
