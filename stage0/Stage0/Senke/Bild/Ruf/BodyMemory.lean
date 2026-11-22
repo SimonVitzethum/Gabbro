@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
+public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 
 @[expose] public section
 
@@ -222,6 +223,57 @@ theorem image_body_memory_segment [Kern] {src : String} {reserve : Nat} {options
   obtain ⟨thread, owned⟩ := indices i first present
   exact ⟨thread, ⟨fun byte read => owned.read byte (reads ▸ read),
     fun byte write => owned.write byte (writes ▸ write)⟩⟩
+
+/-- A completed segment of a registered body advances the common GX
+    machine. Its next phase is anchored in the same actual IR endpoint
+    while every other body keeps its current phase. -/
+theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
+    {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem}
+    {thread : Nat} {snapshot : Solo} {pc : W}
+    {carriers : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob → Prop}
+    (buffers : PrivateBuffers footprint after.ms.1)
+    (matched : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState footprint after.ms).1, after.ths⟩ state snapshots positions committed)
+    (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
+    (registered : snapshots thread = some snapshot)
+    (quiet : let x := positions thread
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+    (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
+    (boundary : let x := positions thread
+      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+    (agree : let x := positions thread
+      OrtGleich carriers x.σ (state.m.speicher.welt x.σ.spur))
+    (free : FreiA (positions thread).Agl state.m (positions thread).thr)
+    (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
+    (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
+    (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr)
+    (continue : ∀ machine world,
+      let x := positions thread
+      Senke.BildLauf.RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl x.ebe machine world x.ρe →
+      ∃ next : MLage (declOf output.compiled.unit).mitRuhe, next.Ok ∧
+        (next.B.P = E.P.mitRuhe ∧ next.B.O = O.mitRuhe ∧
+          next.B.passes = output.image.passes ∧ next.B.L = output.image.Y.withIdle) ∧
+        next.thr = x.thr ∧ machine.faeden next.thr = next.M.faeden next.thr ∧
+        snapshot.r = .next next.start ∧ snapshot.m = next.mb) :
+    ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next := by
+  obtain ⟨machine, world, reaches, _, sourceBoundary, _, _, _, _, restart⟩ :=
+    matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      quiet control boundary agree free inside separated covers permissions
+  obtain ⟨next, valid, program, threadEq, head, entry, memory⟩ := continue machine world sourceBoundary
+  have related := restart next valid program threadEq head entry memory
+  refine ⟨{ state with m := machine }, reaches, after.ths, buffers, rfl,
+    .inr ⟨snapshots, _, _, related, ?_⟩, fun _ => .inl rfl⟩
+  intro i s found
+  obtain ⟨identity, owned⟩ := indices i s found
+  refine ⟨?_, owned⟩
+  by_cases current : i = thread
+  · subst i
+    simpa only [ite_true] using threadEq.trans identity
+  · simpa only [ite_eq_right current] using identity
 
 /-- The current carrier ownership can change at a lock boundary without
     modifying the runner or the committed GX memory. Each executing
