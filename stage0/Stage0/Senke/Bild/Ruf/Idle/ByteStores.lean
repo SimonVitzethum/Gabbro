@@ -22,7 +22,7 @@ theorem putBytesL_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
         putBytesL L (Γ := Γ) (Λ := Λ) table field a b H lower reserved n j upper
   | 0, _, _ => by simp only [putBytesL, frei_withIdle]
   | n + 1, j, upper => by
-    have word := byteIndex (Γ := Γ) (Λ := Λ) table a b H j lower (by omega)
+    let word := byteIndex (Γ := Γ) (Λ := Λ) table a b H j lower (by omega)
     have mapped := lowE_withIdle L reserved true word (frei Γ reserved + 3)
     have indexCode : lowE L.withIdle
         (byteIndex (Γ := Γ.map tyR) (Λ := Λ.map resR) table a b H j lower

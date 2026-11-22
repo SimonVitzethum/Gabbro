@@ -81,7 +81,7 @@ decreasing_by
 
 /-- A shared start makes the variable extent available even when the
     independently checked endpoint intervals overlap. -/
-theorem relativeSliceWithLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+theorem relativeSliceWithLength_exact (ctx : UCtx) (blatt : SExpr → Except String USide)
     (name : String) (amount : SExpr) (capacity firstLo firstHi countLo countHi : Int)
     (offset extent : USide)
     (first : uSliceInteger ctx blatt (.variable name) = some (firstLo, firstHi, offset))
@@ -92,6 +92,46 @@ theorem relativeSliceWithLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Excep
   have same : strEq name name = true := by simp [strEq]
   simp only [uRelativeSliceWithLength, show strEq "+" "+" = true from rfl, same, Bool.and_self,
     ite_true, bind, Option.bind, first, count, ite_eq_left bounds]
+
+/-- The production observer admits an overlapping endpoint interval
+    and a genuinely variable count at every capacity that contains both. -/
+theorem relativeSliceWithLength_erfuellbar (element : Ty) (capacity : Nat) (fits : 7 ≤ capacity) :
+    ∃ ctx : UCtx,
+      let slice := SExpr.built "#slice"
+        [.variable "a", .variable "i", .bin "+" (.variable "i") (.variable "n")]
+      uWertBody ctx (.built "lenof" [slice]) = .ok (.param "n") ∧
+        uWertBody ctx (.index slice (.lit 1)) =
+          .ok (.idx (.param "a") (.add (.param "i") (.lit 1))) := by
+  let ctx : UCtx := {
+    names := ["a", "i", "n"], kinds := [.wert, .int, .int]
+    types := [.arr element capacity, .int 0 4, .int 2 3]
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have declared : uSliceLocalType ctx "a" = some (.arr element capacity) := rfl
+  have readArray : uWertBlatt ctx (.variable "a") = .ok (.param "a") := rfl
+  have readFirst : uSliceInteger ctx (uWertBlatt ctx) (.variable "i") = some (0, 4, .param "i") := by
+    rw [uSliceInteger]
+    rfl
+  have readCount : uSliceInteger ctx (uWertBlatt ctx) (.variable "n") = some (2, 3, .param "n") := by
+    rw [uSliceInteger]
+    rfl
+  have readIndex : uSliceInteger ctx (uWertBlatt ctx) (.lit 1) = some (1, 1, .lit 1) := by
+    rw [uSliceInteger]
+    rfl
+  have readLast : uSliceInteger ctx (uWertBlatt ctx) (.bin "+" (.variable "i") (.variable "n")) =
+      some (2, 7, .add (.param "i") (.param "n")) := by
+    rw [uSliceInteger, readFirst, readCount]
+    rfl
+  have ordinary : uRelativeSlice ctx (uWertBlatt ctx) capacity (.variable "i")
+      (.bin "+" (.variable "i") (.variable "n")) = none := by
+    simp only [uRelativeSlice, readFirst, readLast, bind, Option.bind]
+    rfl
+  have noConstant : uFixedLocalArrayExtent ctx (uWertBlatt ctx) (.param "a") (.variable "i")
+      (.bin "+" (.variable "i") (.variable "n")) = none := rfl
+  have checked := relativeSliceWithLength_exact ctx (uWertBlatt ctx) "i" (.variable "n") capacity
+    0 4 2 3 (.param "i") (.param "n") readFirst readCount (by omega)
+  refine ⟨ctx, ?_, ?_⟩ <;>
+    simp only [uWertBody, uRechne, uSliceObservation, uSliceView, readArray, declared, ite_true,
+      bind, Option.bind, noConstant, uSliceExtent, ordinary, Option.orElse_none, checked, readIndex] <;> rfl
 
 /-- The correlated lowering retains precisely the model's dynamic
     length and shifts every observation once into the original array. -/

@@ -278,7 +278,7 @@ theorem ImageProloguePhase.entry_header [Kern] {output : Emitted src reserve opt
     memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
       phase.header index := by
   have fits : index.val < output.image.Ks - FB := by
-    have prefix := index.isLt
+    have withinHeader := index.isLt
     have room := phase.entryFits
     unfold frei at room
     omega
