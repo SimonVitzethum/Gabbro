@@ -155,7 +155,7 @@ theorem resultFieldProjection_erfuellbar {name : Nat} {fields : List Ty} {part :
     (field : FieldAt fields part) :
     let source : Expr D (.prod name fields :: params) [] part := .prodGet (.var .here) field
     (checkResultOnly source).toOption.map (·.term) = some (.prodGet (.var .here) field) := by
-  rfl
+  simp only [checkResultOnly, bind, Except.bind, pure, Except.pure, Except.toOption, Option.map_some]
 
 /-- A parameterless post in the current-world fragment already has the
     required result context. The old world is irrelevant by the expression

@@ -45,7 +45,7 @@ theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem
 
 /-- A substring of a long string reads its exact byte at the translated
     position in the existing storage, after the source length word. -/
-theorem ValueAt.string_slice_byte {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
+theorem ValueAt.string_slice_byte [Kern] {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
     {base capacity : Nat} {value : Wert D (.str capacity)} (long : 2 ≤ capacity)
     (input : ValueAt layout memory frame base (.str capacity) value)
     (first last : Nat) (bounds : SliceOk value.1.length first last) (index : Fin (last - first)) :
