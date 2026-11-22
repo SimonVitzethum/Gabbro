@@ -46,17 +46,22 @@ theorem ImageModelUnit.postDeckt {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E) : PostDeckt E :=
   fun item _ old arguments world value post => (unit.summary item world value).mpr ⟨old, arguments, post⟩
 
-/-- Export the exact checked descriptors of a unit whose declaration
-    table contains no arena. -/
-theorem Emitted.image_model_without_arenas (output : Emitted src reserve options)
+/-- Export the exact checked descriptors, including the arena footprint
+    selected by the finite, typed declaration reader. -/
+theorem Emitted.image_model (output : Emitted src reserve options)
     (Q : AxEns (declOf output.compiled.unit))
     (sources : Option (Vertraege.Pruefer.AxiomSources Q))
     (summary : ∀ item world value, Q item world value = true ↔
       ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
-    (noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true)
+    (arenas : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit)))
+    (coverage : ∀ t : (declOf output.compiled.unit).Tab, (tabAt output.compiled.unit t).arena = true ↔
+      ∃ arena ∈ arenas, arena.A.tab = t)
+    (origin : ∀ arena ∈ arenas,
+      ∃ storage : ResolvedArenaStorage output.compiled.unit arena.A.tab,
+        resolveArenaStorage output.compiled.unit arena.A.tab = .ok storage ∧ storage.shape = arena.A)
     (acc : List (Kernzelle.AccumulatorDecl (declOf output.compiled.unit)))
     (accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) acc) :
-    ImageModelUnit output { output.goalUnit Q with axiomSources := sources, akku := acc } := by
+    ImageModelUnit output { output.goalUnit Q with axiomSources := sources, arenen := arenas, akku := acc } := by
   refine {
     program := rfl
     locks := rfl
@@ -68,14 +73,25 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
     pointerSignatures := rfl
     runtimeRoots := OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots
     runtimeParams := ?_
-    arenaTables := ?_
-    arenaStorage := ?_
+    arenaTables := coverage
+    arenaStorage := origin
     accumulators := accumulators
     summary := summary
   }
   · intro root member
     change root ∈ ([] : List _) at member
     cases member
+
+theorem Emitted.image_model_without_arenas (output : Emitted src reserve options)
+    (Q : AxEns (declOf output.compiled.unit))
+    (sources : Option (Vertraege.Pruefer.AxiomSources Q))
+    (summary : ∀ item world value, Q item world value = true ↔
+      ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
+    (noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true)
+    (acc : List (Kernzelle.AccumulatorDecl (declOf output.compiled.unit)))
+    (accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) acc) :
+    ImageModelUnit output { output.goalUnit Q with axiomSources := sources, akku := acc } := by
+  apply output.image_model Q sources summary [] _ _ acc accumulators
   · intro t
     have marked := List.all_eq_true.mp noArenas _ (List.get_mem output.compiled.unit.tabs t)
     have closed : (output.compiled.unit.tabs.get t).arena = false := by
@@ -87,7 +103,6 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
     change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
     simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
   · intro arena present
-    change arena ∈ ([] : List _) at present
     cases present
 
 private theorem Emitted.image_model_empty_accumulators (output : Emitted src reserve options)
@@ -187,7 +202,24 @@ def Emitted.checkImageUnit (output : Emitted src reserve options) :
       output.finishImageUnit { initial with akku := acc.val }
         (output.image_model_without_arenas _ initial.axiomSources certificate.summary.exactPost
           noArenas acc.val acc.property)
-  else throw "ir: arena declarations have no checked image export"
+  else
+    let storage ← collectArenaStorage output.compiled.unit
+    let acc ← collectImageAccumulators output (imageAccumulatorItems output)
+    let arenas := storage.localInterfaces
+    let covered := storage.localInterfaces_coverage
+    let origin := storage.localInterfaces_exact
+    if noAxioms : output.compiled.unit.axs.length = 0 then
+      let initial := output.goalUnit (axWahr _)
+      output.finishImageUnit { initial with arenen := arenas, akku := acc.val }
+        (output.image_model _ initial.axiomSources
+          (fun item _ _ => False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt)))
+          arenas covered origin acc.val acc.property)
+    else
+      let certificate ← output.foreignLogic
+      let initial := withForeignSummary (output.goalUnit (axWahr _)) certificate.summary
+      output.finishImageUnit { initial with arenen := arenas, akku := acc.val }
+        (output.image_model _ initial.axiomSources certificate.summary.exactPost
+          arenas covered origin acc.val acc.property)
 
 /-- The deployed checker already certifies every emitted axiom-free
     unit in the complete no-ownership fragment. Running the exact

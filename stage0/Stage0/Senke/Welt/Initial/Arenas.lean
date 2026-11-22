@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 
 @[expose] public section
@@ -9,7 +10,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
-  Gabbro.Grammatik.ArenaOwnership.Machine
+  Gabbro.Grammatik.ArenaOwnership Gabbro.Grammatik.ArenaOwnership.Machine
 
 /-- The storage for an arena is selected in the actual declaration
     table. Every metadata word has the same range as its arena capacity,
@@ -100,6 +101,60 @@ def collectArenaStorage (u : UProg) : Except String (ArenaStorageExport u) :=
           cases same
           rfl }
   else .error "ir: a declared arena has unresolved ownership storage"
+
+/-- Boundary modes for a local arena. The ordinary ownership checker
+    still has to prove that no caller or return transfers an allocation. -/
+def localArenaModes : (parameters : Ctx) → Source.Modes parameters
+  | [] => .nil
+  | _ :: rest => .cons none (localArenaModes rest)
+
+theorem localArenaModes_valid {D : Deklaration} (shape : FreiForm D) (parameters : Ctx) :
+    Source.Flow.validParameters shape (localArenaModes parameters) = true := by
+  induction parameters with
+  | nil => rfl
+  | cons first rest ih => simpa only [localArenaModes, Source.Flow.validParameters, Option.isSome_none,
+      Bool.not_false, Bool.true_or, Bool.true_and] using ih
+
+def localArenaInterface {D : Deklaration} (shape : FreiForm D) : Body.ArenaIface D :=
+  ⟨shape, fun fn => ⟨localArenaModes (D.params fn), localArenaModes_valid shape _, .plain⟩⟩
+
+def ArenaStorageExport.localInterfaces {u : UProg} (storage : ArenaStorageExport u) :
+    List (Body.ArenaIface (declOf u)) :=
+  (List.finRange u.tabs.length).filterMap fun table =>
+    (storage.entry table).map (fun entry => localArenaInterface entry.shape)
+
+theorem ArenaStorageExport.localInterfaces_exact {u : UProg} (storage : ArenaStorageExport u)
+    (arena : Body.ArenaIface (declOf u)) (present : arena ∈ storage.localInterfaces) :
+    ∃ entry : ResolvedArenaStorage u arena.A.tab,
+      resolveArenaStorage u arena.A.tab = .ok entry ∧ entry.shape = arena.A := by
+  obtain ⟨table, _, selected⟩ := List.mem_filterMap.mp present
+  cases found : storage.entry table with
+  | none =>
+    simp only [found, Option.map_none] at selected
+    cases selected
+  | some entry =>
+    simp only [found, Option.map_some] at selected
+    obtain rfl := Option.some.inj selected
+    have atTable : ∃ resolved : ResolvedArenaStorage u table,
+        resolveArenaStorage u table = .ok resolved ∧ resolved.shape = entry.shape :=
+      ⟨entry, storage.resolved table entry found, rfl⟩
+    exact entry.tableExact.symm ▸ atTable
+
+theorem ArenaStorageExport.localInterfaces_coverage {u : UProg} (storage : ArenaStorageExport u)
+    (table : (declOf u).Tab) : (tabAt u table).arena = true ↔
+      ∃ arena ∈ storage.localInterfaces, arena.A.tab = table := by
+  constructor
+  · intro marked
+    have covered := (storage.coverage table).mpr marked
+    cases found : storage.entry table with
+    | none =>
+      simp only [found, Option.isSome_none, Bool.false_eq_true] at covered
+    | some entry =>
+      refine ⟨localArenaInterface entry.shape, ?_, entry.tableExact⟩
+      exact List.mem_filterMap.mpr ⟨table, List.mem_finRange table, by rw [found, Option.map_some]⟩
+  · rintro ⟨arena, present, rfl⟩
+    obtain ⟨entry, _, _⟩ := storage.localInterfaces_exact arena present
+    exact entry.marked
 
 /-- Ownership starts in the same store as the emitted image. Its used
     counter is zero and its free head is the model's empty marker. -/
