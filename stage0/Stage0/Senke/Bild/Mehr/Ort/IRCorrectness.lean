@@ -67,15 +67,15 @@ theorem ImageIRRefinement.terminal (refinement : ImageIRRefinement output E O me
     (run : Tr imageTSO actI (output.irEntry memory) events ending count) (stopped : ending ≠ .lauf) :
     ∃ earlier last state, events = earlier ++ last ∧
       ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending := by
-  obtain ⟨_, earlier, last, _, prefix, finish, eventsEq, _⟩ := run.split_stop stopped
-  obtain ⟨_, matched, reached⟩ := refinement.follow prefix refinement.initial
+  obtain ⟨_, earlier, last, _, path, finish, eventsEq, _⟩ := run.split_stop stopped
+  obtain ⟨_, matched, reached⟩ := refinement.follow path refinement.initial
   obtain ⟨next, advanced, exactStop⟩ := refinement.stop matched finish stopped
   exact ⟨earlier, last, next, eventsEq, imageReach_trans reached advanced, exactStop⟩
 
 /-- Every successful production compilation exports the model unit
     accepted by the checker and refines every execution of its exact IR.
     The conclusion contains the full GX goal on every matched endpoint. -/
-def Stage0Correct [Kern] : Prop :=
+def Stage0Correct : Prop :=
   ∀ (source : String) (reserve : Nat) (options : Profil.Options) (bytes : List B),
     irBild source reserve options = .ok bytes →
     ∃ (output : Emitted source reserve options) (E : Einheit (declOf output.compiled.unit)),
@@ -100,7 +100,7 @@ def Stage0Correct [Kern] : Prop :=
 /-- The production checker and canonical AST discharge the source side.
     A segment proof over the Lean IR supplies the execution side for the
     same model unit and initialized image. -/
-theorem stage0_correct_of_ir_refinement [Kern]
+theorem stage0_correct_of_ir_refinement
     (refineIR : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
       (output : Emitted source reserve options), emit source reserve options = .ok output →
       let E := output.checkedUnit.unit

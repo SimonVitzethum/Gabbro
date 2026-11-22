@@ -8243,13 +8243,20 @@ spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
 
 ## 208. Production Stage 0 image correctness statement
 
-`Stage0Correct` states B6 for the production emitter at the mapped-image
-boundary. The returned CLI bytes, canonical source, exported model unit
-and checker verdict are part of the conclusion. The simulation follows
-the x86 and IR histories and matches their endpoints to reachable GX
-states. The statement includes the entire `ZielFX`, rules out machine
-faults and unknown instructions, and matches terminal process observations
-at the last runner step.
+`Stage0Correct` connects the production emitter to the Lean IR
+semantics. The returned CLI bytes, canonical source, exported model unit
+and checker verdict are part of the conclusion. Every IR prefix ends at
+a configuration related to a reachable GX state satisfying the entire
+`ZielFX`. Terminal observations must match a source outcome or a named
+host outcome, and machine faults and unknown instructions are excluded.
+`LoadedIRImage.source_start` derives the initial relation from the
+serialized image and empty store buffers. `stage0_correct_of_ir_refinement`
+combines the checked unit with an IR segment refinement. A segment can
+span any number of internal IR instructions and up to one host event.
+The segment proof for all admitted programs and schedules remains open.
+
+`Stage0RunnerCorrect` additionally connects the mapped x86 execution to
+the same IR history and remains a subsequent proof obligation.
 An explicit non-returning process-exit gate is matched to its typed
 source call and actual request separately from the entry's implicit exit.
 Each named hardware exit must carry the status for the exact cause at the
@@ -8264,7 +8271,7 @@ prefix through loader dispatch to the initial GX state and derives the
 full goal at that state. `ImageSimulation.follow`, `ImageSimulation.goal` and
 `ImageSimulation.terminal` lift single-step and terminal correspondence
 to full prefixes and apply `gabbro_ziel` to the matched state.
-`stage0_correct_of_export_simulation` assembles the production statement
+`stage0_runner_correct_of_simulation` assembles the runner statement
 from the checked source-unit export and the concrete simulation. The
 checker supplies the unit duties and the exported summary supplies
 `PostDeckt`.
@@ -8289,12 +8296,10 @@ directions between the host-restricted memory model and TSO.
 `image_memory_prefix_projects` needs request classification only at
 states reachable in the actual image model.
 
-The production statement still needs the full unit export and an
-image simulation for arbitrary schedules. In particular, the world and
-thread relation must survive the full body execution, including shared
-memory and foreign calls. Terminal cases must obtain their exact source
-cause from that relation. The loader starts at the specified mapping
-boundary under the named environment contract.
+The checker exports the full unit on every successful production
+compilation. The IR world and thread relation must still survive arbitrary
+schedules, including shared memory and foreign calls. Terminal cases must
+obtain their exact source cause from that relation.
 `Emitted.image_declared_clone_goal` follows the actual prepared startup
 clone through the host-restricted IR memory model, activates the same slot
 in GX, and applies the entire goal to the resulting GX state. The earlier
