@@ -224,6 +224,9 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
       (functionFrame output.compiled.program root.1).bodyReserved ≤ output.image.Ks - FB)
     (ownsWrites : ∀ byte, inSlots (imagePrologueFrame output thread) 0 (output.image.Ks - FB) byte →
       imageStackFootprint output thread byte)
+    (keptHeader : ∀ index : Fin FB, after.rd64
+      (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
+      memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)))
     (continuation : @IRReference kernel.withoutSyscalls count
       (compiled.entry (imagePrologueFrame output thread))
       (maskMemory (imagePrologueReads output thread root.1)
@@ -235,6 +238,7 @@ noncomputable def ImageProloguePhase.enter [kernel : Kern] {output : Emitted src
   let scope := maskMemory_agreement reads writes memory (fun byte hit => Or.inl (ownsWrites byte hit))
   ⟨root, declared, alive, unentered, writes, fun _ inside => inside, ownsWrites, maskMemory reads writes memory,
     after, compiled, entryWorld, values, entryFrame, entryFits,
+    (fun index => memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val))), keptHeader,
     ⟨count, continuation⟩, .next _, scope.2.1, scope.2.2, scope.1⟩
 
 /-- At the exact relocated entry, the serialized root arguments and
@@ -258,7 +262,9 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       some (BitVec.ofNat 64 output.image.depth)) :
     ∃ phase : ImageProloguePhase output E thread
         (.next ⟨BitVec.ofNat 64 (output.image.A root.1), imagePrologueFrame output thread⟩) memory state,
-      phase.root = root ∧ phase.reads = imagePrologueReads output thread root.1 := by
+      phase.root = root ∧ phase.reads = imagePrologueReads output thread root.1 ∧
+        phase.header = (fun index => memory.rd64
+          (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val))) := by
   have declaredStack : thread ≤ output.starts.length := by
     have present := (List.getElem?_eq_some_iff.mp declared).1
     rw [unit.starts, List.length_cons] at present
@@ -306,16 +312,24 @@ theorem Emitted.enter_prologue [Kern] (output : Emitted src reserve options)
       (last : byte.toNat < cell.adr output.image.Y + 8 * valueWords cell.ty) : reads byte := by
     have valid := (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1
     exact .inr (.inr ⟨cell, valid, .inr member, first, by cases cell <;> exact last⟩)
-  obtain ⟨count, finished, reference, _, installed, bodyFrame, values⟩ :=
+  obtain ⟨count, finished, reference, unchanged, installed, bodyFrame, values⟩ :=
     compiled.scoped_reference O exactCode ⟨top, lowered, topFits⟩ (by omega)
       (by rw [depthEq]; omega) capacity layout small frame room far (depthEq.symm ▸ depthWord)
       environment stored
       (fun cell member => snapshots cell member (EntrySnapshots.capture_bounds _ _ compiled.captureLowered cell member).1)
       requires reads frameReads codeReads requiresReads snapshotReads
   let finishedCode := compiled.withCode installed
+  have headerFits : FB ≤ slots := by
+    change frei ((declOf output.compiled.unit).params root.1) _ ≤ slots at bodyFits
+    unfold frei at bodyFits
+    omega
+  have keptHeader (index : Fin FB) :=
+    (agree_rd_low unchanged frame.room index.isLt headerFits).trans
+      (frame_word_agrees frame (index.isLt.trans_le headerFits) (fun byte inside =>
+        (maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads).1.1 byte (frameReads byte inside)))
   exact ⟨ImageProloguePhase.enter root declared alive unentered finishedCode _ values
-    bodyFrame bodyFits ownsWrites reference,
-    rfl, rfl⟩
+    bodyFrame bodyFits ownsWrites keptHeader reference,
+    rfl, rfl, rfl⟩
 
 /-- The scheduled runtime partition supplies the prologue's exact world
     inputs at the issuing thread's actual memory view. -/
@@ -340,13 +354,15 @@ theorem ImageRuntimePartition.at_prologue_entry [Kern] {output : Emitted src res
     FrameOK memory frame (output.image.Ks - FB) →
     EnvAt output.image.Y memory frame root.2 →
     memory.rd64 (slot frame (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 output.image.depth) →
-    Nonempty (ImageProloguePhase output E thread
-      (.next ⟨BitVec.ofNat 64 (output.image.A root.1), frame⟩) memory state) := by
+    ∃ phase : ImageProloguePhase output E thread
+        (.next ⟨BitVec.ofNat 64 (output.image.A root.1), frame⟩) memory state,
+      phase.root = root ∧ phase.header =
+        (fun index => memory.rd64 (slot frame (BitVec.ofNat 64 index.val))) := by
   intro memory frame loaded requires frameOK environment depthWord
   obtain ⟨committed, world, agrees⟩ := partition.prologue_world unit hardware accepted duties pending declared
   obtain ⟨inputs, snapshots⟩ := output.prologue_sources world agrees
-  obtain ⟨phase, _, _⟩ := output.enter_prologue unit O root declared alive unentered
+  obtain ⟨phase, selected, _, header⟩ := output.enter_prologue unit O root declared alive unentered
     (Emitted.function_semantics_at loaded) inputs snapshots requires frameOK environment depthWord
-  exact ⟨phase⟩
+  exact ⟨phase, selected, header⟩
 
 end Gabbro.Stage0

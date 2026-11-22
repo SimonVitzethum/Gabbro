@@ -220,6 +220,9 @@ structure ImageProloguePhase [Kern] (output : Emitted src reserve options)
   entryFrame : FrameOK finish (imagePrologueFrame output thread) (output.image.Ks - FB)
   entryFits : frei ((declOf output.compiled.unit).params root.1)
     (functionFrame output.compiled.program root.1).bodyReserved ≤ output.image.Ks - FB
+  header : Fin FB → Option W
+  headerStored : ∀ index : Fin FB, finish.rd64
+    (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) = header index
   running : IRContinuation (lowered.bodyEntry (imagePrologueFrame output thread)) finish control reference
   blind : Blind control
   readable : ∀ byte, reference.rd byte = true → imagePrologueReads output thread root.1 byte
@@ -265,6 +268,25 @@ theorem ImageProloguePhase.entry_frame [Kern] {output : Emitted src reserve opti
     rw [Mem.all_congr (fun offset inside => (same index fits offset inside).2)]
     exact phase.entryFrame.wr index fits
 
+/-- The actual body sees the return, caller-frame and depth words
+    that the startup stub installed before the prologue. -/
+theorem ImageProloguePhase.entry_header [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {thread : Nat} {control : Res T}
+    {memory : Mem} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (phase : ImageProloguePhase output E thread control memory state)
+    (reached : MaskedAgreement phase.reads phase.writes phase.finish memory) (index : Fin FB) :
+    memory.rd64 (slot (imagePrologueFrame output thread) (BitVec.ofNat 64 index.val)) =
+      phase.header index := by
+  have fits : index.val < output.image.Ks - FB := by
+    have prefix := index.isLt
+    have room := phase.entryFits
+    unfold frei at room
+    omega
+  rw [frame_word_agrees phase.entryFrame fits (fun byte inside =>
+    let same := reached.1 byte (.inl (phase.privateWrites byte (phase.frameWritable byte inside)))
+    ⟨same.1.symm, same.2.symm⟩)]
+  exact phase.headerStored index
+
 /-- A scheduler change outside the retained reference's read scope
     preserves the active function prologue and its exact destination. -/
 def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
@@ -278,7 +300,8 @@ def ImageProloguePhase.transport [Kern] {output : Emitted src reserve options}
     ImageProloguePhase output E thread control nextMemory nextState :=
   ⟨phase.root, phase.declared, alive, sameHead.trans phase.unentered,
     phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
-    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.running, phase.blind,
+    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored,
+    phase.running, phase.blind,
     phase.readable, phase.writable, ⟨fun byte inside =>
       ⟨(phase.agrees.1 byte inside).1.trans (sameReads byte inside).1.symm,
         (phase.agrees.1 byte inside).2.trans (sameReads byte inside).2.symm⟩,
@@ -298,7 +321,7 @@ theorem ImageProloguePhase.decode [Kern] {output : Emitted src reserve options}
   · exact .inl ⟨boundary, reference ▸ phase.agrees⟩
   · exact .inr ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
       phase.writes, phase.frameWritable, phase.privateWrites, phase.reference, phase.finish, phase.lowered,
-      phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, progress,
+      phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored, progress,
       blind_step pointer, phase.readable, phase.writable, phase.agrees⟩⟩
 
 theorem ImageProloguePhase.request_scope [Kern] {output : Emitted src reserve options}
@@ -324,7 +347,8 @@ theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
     IRContinuation.answer phase.running phase.blind phase.readable phase.writable phase.agrees nativeUnique response
   exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered,
     phase.writes, phase.frameWritable, phase.privateWrites, updated, phase.finish, phase.lowered,
-    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, progress, phase.blind.weiter answer,
+    phase.entryWorld, phase.entryValues, phase.entryFrame, phase.entryFits, phase.header, phase.headerStored,
+    progress, phase.blind.weiter answer,
     fun byte permit => phase.readable byte (by simpa only [readMap] using permit),
     fun byte permit => phase.writable byte (by simpa only [writeMap] using permit), kept⟩⟩
 
