@@ -133,6 +133,46 @@ public theorem join_poll_rep {path : List Nat} {left right : FutureExpr}
           Option.bind_some, Option.pure_def] <;> rfl
       exact .ready typed (.joinReady typed)
 
+/-- Every actual successful task poll preserves the generated record
+    representation. Nested joins use the returned worlds of their
+    actual calls, and cached Ready records never need another call. -/
+public theorem runTaskPoll_rep (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat)
+    {path : List Nat} {future : FutureExpr} {task : Task (Value D) (Child D types)}
+    {record : Wert D (taskStorageType types path future)}
+    (represented : TaskRep D types path future task record) (resolved : ResolvedFuture elaboration future)
+    {world after : World D} {event : Poll (Value D)} {successor : Task (Value D) (Child D types)} {cost : Nat}
+    (successful : runTaskPoll elaboration calls prices task world = .ok (event, successor, after, cost)) :
+    PollRep D types path future event successor := by
+  induction represented generalizing world after event successor cost with
+  | callActive path name args storage =>
+    obtain ⟨callee, known⟩ := resolved
+    exact runTaskPoll_leaf_rep elaboration calls prices path name args callee known storage world successful
+  | callReady path name args typed =>
+    simp only [runTaskPoll, pollTaskWith, pure, Except.pure] at successful
+    cases successful
+    exact .ready typed (.callReady path name args typed)
+  | joinReady typed =>
+    simp only [runTaskPoll, pollTaskWith, pure, Except.pure] at successful
+    cases successful
+    exact .ready typed (.joinReady typed)
+  | @joinActive _ _ leftTask _ _ rightTask _ _ _ leftIH rightIH =>
+    rw [runTaskPoll_join] at successful
+    cases first : runTaskPoll elaboration calls prices leftTask world with
+    | error _ => simp only [first, bind, Except.bind, reduceCtorEq] at successful
+    | ok answer =>
+      obtain ⟨lp, leftNext, middle, lc⟩ := answer
+      have leftStored := leftIH resolved.1 first
+      simp only [first, bind, Except.bind] at successful
+      cases second : runTaskPoll elaboration calls prices rightTask middle with
+      | error _ => simp only [second, Except.bind, reduceCtorEq] at successful
+      | ok answer =>
+        obtain ⟨rp, rightNext, final, rc⟩ := answer
+        have rightStored := rightIH resolved.2 second
+        simp only [second, Except.bind] at successful
+        cases lp <;> cases rp <;> cases successful <;> exact join_poll_rep leftStored rightStored
+
 public theorem pollTask_rep (elaboration : Elaboration D V Λ types f)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)

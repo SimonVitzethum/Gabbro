@@ -113,6 +113,16 @@ public theorem childPollBlock_reports_failure {l : Bool} {Γ : Ctx} {name : Stri
         | some callee => runChildPoll callee calls prices storage world)
     Value.pair
 
+public theorem runTaskPoll_join (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (left right : Task (Value D) (Child D types)) (world : World D) :
+    runTaskPoll elaboration calls prices (.join left right) world = (do
+      let (lp, l, middle, lc) ← runTaskPoll elaboration calls prices left world
+      let (rp, r, after, rc) ← runTaskPoll elaboration calls prices right middle
+      match lp, rp with
+      | .ready a, .ready b => pure (.ready (.pair a b), .ready (.pair a b), after, lc + rc + 1)
+      | _, _ => pure (.pending, .join l r, after, lc + rc + 1)) := rfl
+
 /-- Left failure stops the join before a right poll can change the world. -/
 public theorem runTaskPoll_join_left_failure (elaboration : Elaboration D V Λ types f)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
@@ -120,8 +130,7 @@ public theorem runTaskPoll_join_left_failure (elaboration : Elaboration D V Λ t
     (failure : Logik D ⊕ Hardware D)
     (failed : runTaskPoll elaboration calls prices left world = .error failure) :
     runTaskPoll elaboration calls prices (.join left right) world = .error failure := by
-  unfold runTaskPoll at failed ⊢
-  simp only [pollTaskWith, failed, bind, Except.bind]
+  simp only [runTaskPoll_join, failed, bind, Except.bind]
 
 /-- A right failure is observed in the actual successor world of the
     left poll, even if that left answer was Pending. -/
@@ -133,8 +142,7 @@ public theorem runTaskPoll_join_right_failure (elaboration : Elaboration D V Λ 
     (first : runTaskPoll elaboration calls prices left world = .ok (event, successor, middle, cost))
     (second : runTaskPoll elaboration calls prices right middle = .error failure) :
     runTaskPoll elaboration calls prices (.join left right) world = .error failure := by
-  unfold runTaskPoll at first second ⊢
-  simp only [pollTaskWith, first, second, bind, Except.bind]
+  simp only [runTaskPoll_join, first, second, bind, Except.bind]
 
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage
