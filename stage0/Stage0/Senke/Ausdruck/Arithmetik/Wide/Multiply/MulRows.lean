@@ -43,12 +43,12 @@ theorem mulRowC_value (n X Y R c t : Nat) (s : Nat → Runner.W)
   have run : aluRun (mulRowC n X Y R c t) s = aluRun (mulRow n X Y R c t) s0 := by
     simp only [mulRowC, aluRun_cons, aluRun_nil, hs0]
   have vc : s0 c = 0 := by
-    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
       slotUpd_same, slotUpd_other, ite_true]
     decide
   have vo : ∀ j, j ≠ c → s0 j = s j := by
     intro j hj
-    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
       slotUpd_same, slotUpd_other]
   obtain ⟨r1, r2, r3⟩ := mulChain_run n X Y R c t s0 h1 h2 h3 h4
   have hx : ∀ u, u < n → xd s0 R u = xd s R u := fun u hu => by simp only [xd]; rw [vo _ (by omega)]

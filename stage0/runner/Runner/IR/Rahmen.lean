@@ -16,6 +16,8 @@ open Runner.Mem
 /-- The opcode is exactly the one byte occupied by the IR encoding. -/
 abbrev Opcode := Fin 256
 
+theorem Opcode.literal_value (value : Nat) : ((OfNat.ofNat value : Opcode) : Nat) = value % 256 := rfl
+
 /-- A lowered instruction: opcode and three fields. -/
 structure II where
   opcode : Opcode

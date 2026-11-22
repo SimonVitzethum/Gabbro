@@ -58,7 +58,7 @@ theorem addLimb_run (s : Nat → Runner.W) (A B m c t : Nat)
       Runner.IR.bool ((s A + (s B ^^^ s m)).ult (s A)) |||
         Runner.IR.bool (((s A + (s B ^^^ s m)) + s c).ult (s A + (s B ^^^ s m))) ∧
     ∀ j, j ≠ A → j ≠ c → (j < t ∨ t + 4 < j) → aluRun (addLimbC A B m c t) s j = s j := by
-  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
     ite_true, ite_false, Nat.reduceEqDiff, OfNat.ofNat_ne_one, OfNat.ofNat_ne_zero, ne_eq,
     Nat.succ_ne_self, not_false_eq_true, ↓reduceIte]
   refine ⟨?_, ?_, ?_⟩

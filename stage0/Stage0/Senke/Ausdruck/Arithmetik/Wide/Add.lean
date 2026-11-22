@@ -119,14 +119,14 @@ theorem wideAddC_value (k a : Nat) (mask carry : Int) (hcar : carry = 0 ∨ carr
       aluRun (addChain k a (a + k) (a + 2 * k) (a + 2 * k + 1) (a + 2 * k + 2)) s0 := by
     simp only [wideAddC, aluRun_append, hs0]
   have vm : s0 (a + 2 * k) = BitVec.ofInt 64 mask := by
-    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
       slotUpd_same, slotUpd_other, ite_true]
   have vc : s0 (a + 2 * k + 1) = BitVec.ofInt 64 carry := by
-    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
       slotUpd_same, slotUpd_other, ite_true]
   have vo : ∀ j, j ≠ a + 2 * k → j ≠ a + 2 * k + 1 → s0 j = s j := by
     intro j h1 h2
-    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast,
+    simp (disch := omega) only [hs0, aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast,
       slotUpd_same, slotUpd_other]
   have c1 : (s0 (a + 2 * k + 1)).toNat ≤ 1 := by
     rw [vc]; rcases hcar with rfl | rfl <;> decide

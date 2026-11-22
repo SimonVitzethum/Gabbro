@@ -30,7 +30,7 @@ theorem bitChain_value (o : Opcode) (f : Runner.W → Runner.W → Runner.W) (hf
     have sa : aluStep (cn o A A B) s A = f (s A) (s B) := by
       show slotUpd s A (aluVal (cn o A A B) s) A = _
       rw [slotUpd_same]
-      simp only [aluVal, cn, ci, II.o, Fin.val_ofNat, Nat.reduceMod, Int.toNat_natCast, hf, ho1, ho2, ite_false]
+      simp only [aluVal, cn, ci, II.o, Opcode.literal_value, Nat.reduceMod, Int.toNat_natCast, hf, ho1, ho2, ite_false]
     refine ⟨fun j hj => ?_, fun j hj => ?_⟩
     · simp only [bitChain, aluRun_cons]
       cases j with

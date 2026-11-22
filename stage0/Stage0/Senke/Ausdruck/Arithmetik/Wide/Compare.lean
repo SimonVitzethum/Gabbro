@@ -66,7 +66,7 @@ theorem wideLt_value (n a : Nat) (s : Nat → Runner.W) (x y : Int)
   have top := v1 n (by omega)
   simp only [wideLtC, aluRun_append]
   generalize aluRun (wideAddC (n + 1) a (-1) 1) s = s1 at top ⊢
-  simp (disch := omega) only [signTail, aluRun_cons, aluRun_nil, aluStep, aluVal, cn, ci, II.o, Fin.val_ofNat, Nat.reduceMod, aluFn,
+  simp (disch := omega) only [signTail, aluRun_cons, aluRun_nil, aluStep, aluVal, cn, ci, II.o, Opcode.literal_value, Nat.reduceMod, aluFn,
     Int.toNat_natCast, slotUpd_same, slotUpd_other, ite_true, ite_false, OfNat.ofNat_ne_one,
     Nat.reduceEqDiff, ne_eq, not_false_eq_true]
   rw [top, sign_limb n (x - y) hr1 hr2]
@@ -85,7 +85,7 @@ theorem orChain_value (a : Nat) : ∀ (n j : Nat) (s : Nat → Runner.W), 1 ≤ 
   | n + 1, j, s, hj => by
     obtain ⟨ih1, ih2⟩ := orChain_value a n (j + 1) (slotUpd s a (s a ||| s (a + j))) (by omega)
     have step : aluRun (orChain (n + 1) a j) s = aluRun (orChain n a (j + 1)) (slotUpd s a (s a ||| s (a + j))) := by
-      simp only [orChain, aluRun_cons, aluStep, aluVal, cn, ci, II.o, Fin.val_ofNat, Nat.reduceMod, aluFn, Int.toNat_natCast]
+      simp only [orChain, aluRun_cons, aluStep, aluVal, cn, ci, II.o, Opcode.literal_value, Nat.reduceMod, aluFn, Int.toNat_natCast]
       rfl
     rw [step]
     refine ⟨?_, fun i hi => (ih2 i hi).trans (slotUpd_other _ _ hi)⟩
@@ -168,7 +168,7 @@ theorem wideEq_value (n a : Nat) (s : Nat → Runner.W) (x y : Int)
       refine ⟨z0, fun i hi1 hi2 => ?_⟩
       rw [v1 i (by omega)]
       exact all0 i (by omega)
-  simp (disch := omega) only [eqTail, aluRun_cons, aluRun_nil, aluStep, aluVal, cn, ci, II.o, Fin.val_ofNat, Nat.reduceMod, aluFn,
+  simp (disch := omega) only [eqTail, aluRun_cons, aluRun_nil, aluStep, aluVal, cn, ci, II.o, Opcode.literal_value, Nat.reduceMod, aluFn,
     Int.toNat_natCast, slotUpd_same, slotUpd_other, ite_true, ite_false, OfNat.ofNat_ne_one,
     Nat.reduceEqDiff, ne_eq, not_false_eq_true]
   have h0 : BitVec.ofInt 64 0 = 0 := BitVec.eq_of_toNat_eq (by simp)
