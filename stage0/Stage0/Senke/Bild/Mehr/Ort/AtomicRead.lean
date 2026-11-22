@@ -60,10 +60,9 @@ theorem image_awaits_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
     ∃ next, FadenSchrittX P O passes shared source next ∧ next.m.speicher = source.m.speicher ∧
       next.m.lauf = source.m.lauf ++
         rufEigenG thread (leseEv question Λ [.inr global] ++ [.fremd (.inr (.inr global))]) ∧
-      HEq (next.m.faeden thread).kopf.rest
-        (⟨l, D.gtyp global :: Γ, Λ, .cons (input.globs global) env, .dann body (.schrumpf tail)⟩ :
-          Σ linear : Bool, Σ types : Ctx, Σ resources : List (Res D),
-            Env D types × GRest D (vertragVon D (source.m.faeden thread).kopf.f) linear types resources) := by
+      (next.m.faeden thread).kopf =
+        ⟨(source.m.faeden thread).kopf.f, (source.m.faeden thread).kopf.rho, (source.m.faeden thread).kopf.s0,
+          ⟨l, D.gtyp global :: Γ, Λ, .cons (input.globs global) env, .dann body (.schrumpf tail)⟩⟩ := by
   intro input question
   let address := BitVec.ofNat 64 (layout.ga global)
   obtain ⟨word, read, encoded⟩ := ValueAt.cellWord (aggregateFits_compat single) (represented.2.1 global)
