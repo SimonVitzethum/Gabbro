@@ -80,8 +80,42 @@ def baum (verbinde : String → String → String) (leer : String) : Nat → Lis
 def balanciert (op leer : String) (fuel : Nat) (ns : List String) : String :=
   baum (fun a b => "(" ++ a ++ " " ++ op ++ " " ++ b ++ ")") leer fuel ns
 
-def kopf (modul : String) (imports : List String) (doc : String) : String :=
+/-- The string modules whose bodies the kernel unfolds when it evaluates the lowering. -/
+def stringModule : List String :=
+  ["Init.Data.String.Basic",
+   "Init.Data.String.Bootstrap",
+   "Init.Data.String.Decode",
+   "Init.Data.String.Defs",
+   "Init.Data.String.Extra",
+   "Init.Data.String.FindPos",
+   "Init.Data.String.Hashable",
+   "Init.Data.String.Iter",
+   "Init.Data.String.Iter.Basic",
+   "Init.Data.String.Iter.Intercalate",
+   "Init.Data.String.Iterate",
+   "Init.Data.String.Iterator",
+   "Init.Data.String.Legacy",
+   "Init.Data.String.Length",
+   "Init.Data.String.Modify",
+   "Init.Data.String.OrderInstances",
+   "Init.Data.String.Pattern",
+   "Init.Data.String.Pattern.Basic",
+   "Init.Data.String.Pattern.Char",
+   "Init.Data.String.Pattern.Pred",
+   "Init.Data.String.Pattern.String",
+   "Init.Data.String.PosRaw",
+   "Init.Data.String.Search",
+   "Init.Data.String.Slice",
+   "Init.Data.String.Stream",
+   "Init.Data.String.Subslice",
+   "Init.Data.String.Substring",
+   "Init.Data.String.TakeDrop",
+   "Init.Data.String.Termination",
+   "Init.Data.String.ToSlice"]
+
+def kopf (modul : String) (imports : List String) (doc : String) (alle : List String := []) : String :=
   "module\n" ++ String.join (imports.map fun i => "public import " ++ i ++ "\n") ++
+  String.join (alle.map fun i => "import all " ++ i ++ "\n") ++
   "@[expose] public section\n\n" ++ "/-! " ++ doc ++ " -/\n\n" ++
   "namespace " ++ modul ++ "\n\n" ++
   "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
@@ -152,13 +186,10 @@ def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
   { pfad := (beweisModul modul i).replace "." "/"
     ersetzen := false
     text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
-        "`. `gabbrov` writes this file once and never replaces it.") ++
+        "`. `gabbrov` writes this file once and never replaces it.") stringModule ++
       "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
-      "  apply pflicht_oeffnen\n" ++
-      "  intro P v hv hens hrumpf Q sp main args roots gestartet checks\n" ++
-      "  -- the body is `v.2.1` (`hrumpf`), the postcondition `v.1` (`hens`); after `rw [hrumpf]`,\n" ++
-      "  -- `gabbrov_wp` applies the weakest-precondition rules of the model\n" ++
-      "  refine logikFn_aus ?_ ?_ ?_\n  all_goals exact?\n\n" ++ fuss modul }
+      "  gabbrov_beweis\n" ++
+      "  -- what remains here is your program's own logic\n\n" ++ fuss modul }
 
 def sammlungModul (modul : String) (k : Nat) : String := modul ++ ".Sammlung.S" ++ toString k
 

@@ -72,8 +72,9 @@ meta partial def kernNormal (e : Lean.Expr) : MetaM Lean.Expr := do
 
 open Lean in
 /-- The rule of the model for the outermost constructor of the body in a `wpEA`/`wpBA`/`wpSA` goal. -/
-meta def wpRegel? (t : Lean.Expr) : Option Name :=
-  let args := t.getAppArgs
+meta def wpRegel? (t0 : Lean.Expr) : Option Name :=
+  let t := t0.headBeta.cleanupAnnotations
+  let args := t.getAppArgs.map (·.headBeta.cleanupAnnotations)
   if args.size < 5 then none else
   -- the index of a value `⟨⟨k, h⟩, _⟩` or `⟨k, h⟩` as a literal, if it is one
   let index? (w : Lean.Expr) : Option Nat :=
@@ -89,6 +90,10 @@ meta def wpRegel? (t : Lean.Expr) : Option Name :=
   | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some 0 => some ``Gabbro.Bruecke.wpGrundA_null
   | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some (_ + 1) => some ``Gabbro.Bruecke.wpGrundA_succ
   | _, _, _ =>
+  match t.getAppFn.constName?, args[args.size - 1]!.getAppFn.constName? with
+  | some ``Gabbro.Grammatik.WP.RueckPost, some ``Gabbro.Grammatik.EndAusgang.zurueck => some ``Gabbro.Bruecke.rueckPost_zurueck
+  | some ``Gabbro.Grammatik.WP.RueckPost, some ``Gabbro.Grammatik.EndAusgang.why => some ``Gabbro.Bruecke.rueckPost_why
+  | _, _ =>
   match t.getAppFn.constName?, args[args.size - 4]!.getAppFn.constName? with
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.ret => some ``Gabbro.Grammatik.WP.wpEA_ret
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.cons => some ``Gabbro.Grammatik.WP.wpEA_cons
@@ -202,14 +207,28 @@ open Lean Elab Tactic Meta in
   | some regel => replaceMainGoal [← wendeAn goal regel]
   | none =>
     -- a branch whose condition the kernel decides: its weak head normal form is the branch taken
-    if t.isAppOf ``ite || t.isAppOf ``dite then
-      match Kernel.whnf (← getEnv) (← getLCtx) t with
-      | .ok t' =>
-        if t'.isAppOf ``ite || t'.isAppOf ``dite || t' == t then
-          throwError "gabbrov_schritt: the condition is not decided"
-        replaceMainGoal [← goal.replaceTargetDefEq t']
+    if t.isAppOfArity ``ite 5 then
+      -- decide the condition by its `Decidable` instance only; the goal becomes the branch taken
+      match Kernel.whnf (← getEnv) (← getLCtx) (t.getArg! 2) with
+      | .ok inst =>
+        -- `Decidable` is a structure over its Boolean: read that Boolean
+        let b? : Option Bool ←
+          if inst.isAppOf ``Decidable.isTrue then pure (some true)
+          else if inst.isAppOf ``Decidable.isFalse then pure (some false)
+          else if inst.isAppOf ``Decidable.intro && inst.getAppNumArgs ≥ 2 then
+            match Kernel.whnf (← getEnv) (← getLCtx) (inst.getArg! 1) with
+            | .ok b => pure (if b.isConstOf ``Bool.true then some true
+                else if b.isConstOf ``Bool.false then some false else none)
+            | .error _ => pure none
+          else pure none
+        match b? with
+        | some true => replaceMainGoal [← goal.replaceTargetDefEq (t.getArg! 3)]
+        | some false => replaceMainGoal [← goal.replaceTargetDefEq (t.getArg! 4)]
+        | none => throwError "gabbrov_schritt: the condition is not decided"
       | .error _ => throwError "gabbrov_schritt: the condition is not decided"
-    else throwError "gabbrov_schritt: no rule for this goal"
+    else
+      let t2 := t.headBeta.cleanupAnnotations
+      throwError m!"gabbrov_schritt: no rule for this goal: {t2.getAppFn} / {t2.getAppNumArgs} / {(t2.getAppArgs.back?.map (·.getAppFn))}"
 
 
 /-- Close an equation `a = b` that the kernel's definitional equality decides (fast where the
@@ -227,13 +246,113 @@ open Lean Elab Tactic Meta in
     replaceMainGoal []
   | _ => throwError "gabbrov_rfl: the kernel does not decide the equation"
 
+/-- Put the body of a `wpEA` goal into the kernel's normal form (as `gabbrov_senke` on that body). -/
+syntax (name := gabbrovRumpf) "gabbrov_rumpf" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovRumpf] meta def evalGabbrovRumpf : Tactic := fun _ => withMainContext do
+  let goal ← getMainGoal
+  let t ← instantiateMVars (← goal.getType)
+  unless t.isAppOf ``Gabbro.Grammatik.WP.wpEA && t.getAppNumArgs ≥ 4 do
+    throwError "gabbrov_rumpf: not a weakest-precondition goal of a body"
+  let args := t.getAppArgs
+  let b' ← kernNormal args[args.size - 4]!
+  replaceMainGoal [← goal.replaceTargetDefEq (mkAppN t.getAppFn (args.set! (args.size - 4) b'))]
+
+/-- **Close the return obligation** left by `gabbrov_wp`, without elaborator unification over the large
+    terms (the kernel checks every step): conjunctions are split; a return or reason exit is not a logic
+    stop (`zurueck_ne_logik`, `why_ne_logik`); without declared invariants nothing is owed
+    (`invAmRueck_leer`, the kernel decides `D.invs = []`); the return check is read over the function's
+    own postcondition `hens : P.ensures f = e` (`ensAmRueck_von`) and closed when the kernel decides it.
+    What is left is the program's logic. -/
+syntax (name := gabbrovFertig) "gabbrov_fertig " term : tactic
+
+open Lean Meta in
+meta def fertigSchritt (hens : Lean.Expr) (goal : MVarId) : MetaM (Option (List MVarId)) := goal.withContext do
+  let t := (← instantiateMVars (← goal.getType)).cleanupAnnotations
+  let kern (a b : Lean.Expr) : MetaM Bool := do
+    match Kernel.isDefEq (← getEnv) (← getLCtx) a b with
+    | .ok r => pure r
+    | .error _ => pure false
+  -- a ∧ b
+  if t.isAppOfArity ``And 2 then
+    let a ← mkFreshExprSyntheticOpaqueMVar (t.getArg! 0) (← goal.getTag)
+    let b ← mkFreshExprSyntheticOpaqueMVar (t.getArg! 1) (← goal.getTag)
+    goal.assign (mkApp4 (mkConst ``And.intro) (t.getArg! 0) (t.getArg! 1) a b)
+    return some [a.mvarId!, b.mvarId!]
+  -- ∀ x, …: introduce
+  if t.isForall && !(t.isArrow && t.bindingBody!.isConstOf ``False) then
+    let (_, g) ← goal.intro1
+    return some [g]
+  -- a ≠ b, a = b → False: an exit is not a logic stop
+  let ne? : Option (Lean.Expr × Lean.Expr) :=
+    if t.isAppOfArity ``Ne 3 then some (t.getArg! 1, t.getArg! 2)
+    else if t.isAppOfArity ``Not 1 && (t.getArg! 0).isAppOfArity ``Eq 3 then
+      some ((t.getArg! 0).getArg! 1, (t.getArg! 0).getArg! 2)
+    else none
+  if let some (a, b) := ne? then
+    let a := a.cleanupAnnotations
+    let b := b.cleanupAnnotations
+    if b.isAppOf ``Gabbro.Grammatik.EndAusgang.logik && b.getAppNumArgs = 5 && a.getAppNumArgs = 6 then
+      let satz? := if a.isAppOf ``Gabbro.Grammatik.EndAusgang.zurueck then some ``Gabbro.Bruecke.zurueck_ne_logik
+        else if a.isAppOf ``Gabbro.Grammatik.EndAusgang.why then some ``Gabbro.Bruecke.why_ne_logik else none
+      if let some l := satz? then
+        goal.assign (mkAppN (mkConst l) (a.getAppArgs ++ #[b.getArg! 4]))
+        return some []
+  -- InvAmRueck without declared invariants
+  if t.isAppOf ``Gabbro.Grammatik.InvAmRueck && t.getAppNumArgs = 4 then
+    let d := t.getArg! 0
+    let invs := mkApp (mkConst ``Gabbro.Grammatik.Deklaration.invs) d
+    let ty ← inferType invs
+    if ty.isAppOfArity ``List 1 then
+      let nil := mkApp (mkConst ``List.nil [Level.zero]) (ty.getArg! 0)
+      if ← kern invs nil then
+        let h ← mkExpectedTypeHint (← mkEqRefl invs) (← mkEq invs nil)
+        goal.assign (mkAppN (mkConst ``Gabbro.Bruecke.invAmRueck_leer) (t.getAppArgs ++ #[h]))
+        return some []
+  -- EnsAmRueck over the function's own postcondition
+  if t.isAppOf ``Gabbro.Grammatik.EnsAmRueck && t.getAppNumArgs = 7 then
+    let hty ← instantiateMVars (← inferType hens)
+    if let some (_, lhs, e) := hty.eq? then
+      let lhs := lhs.cleanupAnnotations
+      if lhs.isAppOf ``Gabbro.Grammatik.Programm.ensures && lhs.getAppNumArgs = 3 then
+        let args := t.getAppArgs
+        let h := mkAppN (mkConst ``Gabbro.Bruecke.ensAmRueck_von)
+          #[lhs.getArg! 0, lhs.getArg! 1, lhs.getArg! 2, e, hens, args[3]!, args[4]!, args[5]!, args[6]!]
+        let some (_, rhs) := (← instantiateMVars (← inferType h)).iff? | return none
+        if (← kern (rhs.getArg! 1) (rhs.getArg! 2)) then
+          let prf ← mkExpectedTypeHint (← mkEqRefl (rhs.getArg! 1)) rhs
+          goal.assign (mkApp4 (mkConst ``Iff.mpr) t rhs h prf)
+          return some []
+        let neu ← mkFreshExprSyntheticOpaqueMVar rhs (← goal.getTag)
+        goal.assign (mkApp4 (mkConst ``Iff.mpr) t rhs h neu)
+        return some [neu.mvarId!]
+  return none
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovFertig] meta def evalGabbrovFertig : Tactic := fun stx => withMainContext do
+  let hens ← elabTerm stx[1] none
+  let mut offen := [← getMainGoal]
+  let mut rest : List MVarId := []
+  let mut fuel := 10000
+  while !offen.isEmpty && fuel > 0 do
+    fuel := fuel - 1
+    let g := offen.head!
+    offen := offen.tail!
+    match ← fertigSchritt hens g with
+    | some gs => offen := gs ++ offen
+    | none => rest := rest ++ [g]
+  replaceMainGoal rest
+
 /-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
     and reduce the continuations `weiterEA`/`weiterBA` at a known outcome: symbolic execution of a
     lowered body in constructor form by the model's own rules. Every rule is an equivalence, so the
     remaining goals say exactly what the program owes. -/
 macro "gabbrov_wp" : tactic => `(tactic| repeat (first
   | gabbrov_schritt
-  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])))
+  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])
+  | (dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
+      Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang])))
 
 /-- **Compute a term and put its normal form into the goal**: `gabbrov_senke t` reduces `t` (all
     definitions unfolded, proofs and types kept) and rewrites `t` to the result. The rewrite is `rfl`, checked
@@ -256,5 +375,20 @@ open Lean Elab Tactic Meta in
 
 
 #print axioms pflicht_oeffnen
+
+
+/-- **The duty of one function, as far as the language carries it**: open the duty at the function's
+    own lowering (`pflicht_oeffnen`), put the lowered body into normal form, execute it symbolically by
+    the model's exact rules (`gabbrov_wp`) and close the return obligation (`gabbrov_fertig`). Every
+    step is checked by the kernel. What remains is the program's own logic. -/
+macro "gabbrov_beweis" : tactic => `(tactic| (
+  apply Gabbro.Bruecke.pflicht_oeffnen
+  intro P v hv hens hrumpf Q sp main args roots gestartet checks
+  rw [← Gabbro.Bruecke.lowerAtPair_von _ ⟨v, hv⟩ hv] at hens hrumpf
+  refine Gabbro.Bruecke.logikFn_aus (fun passes => ?_) (fun passes => ?_) (fun passes => ?_) <;>
+    intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
+    show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
+    rw [hrumpf] <;> gabbrov_rumpf <;> gabbrov_wp
+  all_goals gabbrov_fertig hens))
 
 end Gabbro.Bruecke

@@ -96,6 +96,35 @@ theorem wpGrundA_succ {Λ Λ' : List (Res D)} {n : Nat} (b : Block D V l Γ Λ �
 
 end HA
 
+/-! ## The return obligation at a known outcome -/
+
+theorem rueckPost_zurueck (P : Programm D) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f))
+    (σ' : World D) (v : ErgVal D (D.erg f)) :
+    RueckPost P f σ ρ (.zurueck σ' v) ↔ EnsAmRueck P f σ σ' ρ v ∧ InvAmRueck P f σ' :=
+  ⟨fun h => h.1 σ' v rfl, fun h => ⟨fun _ _ e => (by cases e; exact h), fun _ _ e => (by cases e)⟩⟩
+
+theorem rueckPost_why (P : Programm D) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f))
+    (σ' : World D) (r : Fin (D.gruende f)) :
+    RueckPost P f σ ρ (.why σ' r) ↔ InvAmRueck P f σ' :=
+  ⟨fun h => h.2 σ' r rfl, fun h => ⟨fun _ _ e => (by cases e), fun _ _ e => (by cases e; exact h)⟩⟩
+
+theorem zurueck_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {v : ErgVal D V.erg} {e : Logik D} :
+    (EndAusgang.zurueck σ v : EndAusgang V l Γ) ≠ EndAusgang.logik e := nofun
+
+theorem why_ne_logik {l : Bool} {Γ : Ctx} {σ : World D} {r : Fin V.gruende} {e : Logik D} :
+    (EndAusgang.why σ r : EndAusgang V l Γ) ≠ EndAusgang.logik e := nofun
+
+/-- No declared invariant: nothing is owed at a return. -/
+theorem invAmRueck_leer {P : Programm D} {f : D.Fn} {σ : World D} (h : D.invs = []) : InvAmRueck P f σ :=
+  fun i hi => by rw [h] at hi; cases hi
+
+/-- The return check over the function's own postcondition `e` (`P.ensures f = e`). -/
+theorem ensAmRueck_von {P : Programm D} {f : D.Fn} {e : Expr D (ErgCtx (D.params f) (D.erg f)) (vertragVon D f).ende .bool}
+    (h : P.ensures f = e) (σ σ' : World D) (ρ : Env D (D.params f)) (v : ErgVal D (D.erg f)) :
+    EnsAmRueck P f σ σ' ρ v ↔ wahr? (eval σ e σ' (ergEnv (D.erg f) v ρ)) = true := by
+  unfold EnsAmRueck
+  rw [h]
+
 /-! ## The evaluation that chooses an arm -/
 
 theorem eval_var_here {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (σ₀ σ : World D) (x : Wert D τ) (ρ : Env D Γ) :
