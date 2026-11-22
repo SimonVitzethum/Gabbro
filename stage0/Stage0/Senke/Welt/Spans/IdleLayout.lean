@@ -134,7 +134,8 @@ private theorem idleCell_surjective : Function.Surjective (Zelle.withIdle (D := 
 theorem LayIn.withIdle {layout : Lay D} (inside : LayIn layout) : LayIn layout.withIdle := by
   refine ⟨?_, ?_, inside.2.2⟩
   · intro table field index present
-    simpa only [Lay.withIdle_elem, Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using
+    rw [Lay.withIdle_elem]
+    simpa only [Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using
       inside.1 table field index present
   · intro global
     simpa only [Lay.withIdle, Deklaration.mitRuhe, tyR, valueWords_mapNumbers] using inside.2.1 global
