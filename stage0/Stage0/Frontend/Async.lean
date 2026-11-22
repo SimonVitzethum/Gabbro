@@ -3,10 +3,13 @@ module
 public import Grammatik.Parser.Async.Elaboration
 public import Grammatik.Nebenlaeufigkeit.Async.Layout
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
+public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Elaboration
 
 namespace Gabbro.Stage0.Frontend.Async
 open Gabbro.Grammatik Gabbro.Grammatik.Async
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Async.Segment
 
 /-- The declaration used to generate a layout comes from this position in the
     canonical outer parse. The complete ordinary signature stays attached. -/
@@ -73,5 +76,78 @@ public theorem LayoutResolution.frameField {function : AsyncFn} {scope : UTypeSc
     uRecordFeldTyp scope aliases tables owner spaces type = .ok (resolution.types.ordinary type) :=
   resolution.resolved type (List.mem_cons_of_mem _
     (List.mem_map.mpr ⟨(name, type), used, rfl⟩))
+
+/-- Only referenced names from the function's declared frame participate
+    in the expression scope. Other names use the ordinary unit scope. -/
+@[expose] public def expressionBindings (function : AsyncFn) (source : SExpr) :
+    List (String × STyp) :=
+  (function.params ++ function.fields).filter (fun entry => (expressionNames source).contains entry.1)
+
+@[expose] public def expressionParameters (ctx : UCtx) (function : AsyncFn) (source : SExpr) :
+    Except String (List (String × Ty × UParamArt)) :=
+  (expressionBindings function source).mapM
+    (uParam ctx.alias ctx.tabs ctx.sums ctx.whys ctx.zeiger ctx.zeigerBasis ctx.spaces ctx.namedTypes ctx.eigner)
+
+@[expose] public def FrameLocals (parameters : List (String × Ty × UParamArt)) : List (String × Ty) :=
+  parameters.map fun parameter => (parameter.1, parameter.2.1)
+
+@[expose] public def expressionContext (ctx : UCtx) (function : AsyncFn) (source : SExpr)
+    (parameters : List (String × Ty × UParamArt)) : UCtx :=
+  { ctx with names := parameters.map Prod.fst
+             kinds := parameters.map (·.2.2)
+             types := parameters.map (·.2.1)
+             bits := (expressionBindings function source).map (fun binding => uBindingBreite ctx binding.2)
+             fname := function.name
+             muts := []
+             unknownRanges := []
+             lookupMemo := ULookupMemo.empty }
+
+@[expose] public def expressionFunction (fn : UFn)
+    (parameters : List (String × Ty × UParamArt)) : UFn :=
+  { fn with params := FrameLocals parameters, kinds := parameters.map (·.2.2) }
+
+/-- A resolved segment expression records the actual two ordinary
+    elaboration steps on its original syntax and its exact frame locals. -/
+public structure CanonicalExpression (u : UProg) (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn)
+    (function : AsyncFn) (source : SExpr) where
+  parameters : List (String × Ty × UParamArt)
+  side : USide
+  value : LowWert u ((FrameLocals parameters).map Prod.snd) Λ
+  resolved : expressionParameters ctx function source = .ok parameters
+  read : uWertBody (expressionContext ctx function source parameters) source = .ok side
+  lowered : lowWertE u ((FrameLocals parameters).map Prod.snd) Λ
+    (expressionFunction fn parameters) none side = .ok value
+
+@[expose] public def resolveExpression (u : UProg) (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn)
+    (function : AsyncFn) (source : SExpr) : Except String (CanonicalExpression u Λ ctx fn function source) :=
+  match resolved : expressionParameters ctx function source with
+  | .error failure => .error failure
+  | .ok parameters =>
+    match read : uWertBody (expressionContext ctx function source parameters) source with
+    | .error failure => .error failure
+    | .ok side =>
+      match lowered : lowWertE u ((FrameLocals parameters).map Prod.snd) Λ
+          (expressionFunction fn parameters) none side with
+      | .error failure => .error failure
+      | .ok value => .ok ⟨parameters, side, value, resolved, read, lowered⟩
+
+@[expose] public def CanonicalExpression.bound {u : UProg} {Λ : List (Res (declOf u))}
+    {ctx : UCtx} {fn : UFn} {function : AsyncFn} {source : SExpr}
+    (resolved : CanonicalExpression u Λ ctx fn function source) : BoundExpression (declOf u) Λ :=
+  BoundExpression.ofExpr (FrameLocals resolved.parameters) resolved.value.term
+
+/-- Literal return expressions need no incoming frame slot. This
+    inhabits the ordinary source-to-segment elaboration premises. -/
+public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res (declOf u)))
+    (ctx : UCtx) (fn : UFn) (function : AsyncFn) (value : Int) :
+    ∃ resolved : CanonicalExpression u Λ ctx fn function (.lit value),
+      resolveExpression u Λ ctx fn function (.lit value) = .ok resolved ∧
+      resolved.bound.locals = [] ∧ resolved.bound.result = .int value value := by
+  have noBindings : expressionBindings function (.lit value) = [] := by
+    simp only [expressionBindings, expressionNames, List.contains_nil, List.filter_false]
+  simp only [resolveExpression, expressionParameters, noBindings, List.mapM_nil, pure, Except.pure]
+  simp only [uWertBody, uRechne, uWertBlatt, lowWertE, LowSide.wert, FrameLocals, List.map_nil,
+    CanonicalExpression.bound, BoundExpression.ofExpr]
+  exact ⟨_, rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Frontend.Async
