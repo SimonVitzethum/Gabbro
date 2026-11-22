@@ -1,6 +1,8 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Stage0.Senke.Welt.Spans.IdleValue
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T2
 import Mathlib.Data.List.Forall2
 
 @[expose] public section
@@ -99,6 +101,20 @@ theorem Senke.ArgsW.withIdle_words {D : Deklaration} {L : Senke.Lay D} :
     refine ⟨?_, ArgsW.withIdle_words rest restTypes encoded.2⟩
     cases τ <;> first | exact encoded.1 | cases wordType
 
+private theorem image_host_answer [Kern] {before : Cfg imageTSO (Res T)} {after : imageTSO.St}
+    {thread : Nat} {req : Req} {answer : Ans} (ordinary : (Op.sys req).special = false)
+    (answered : imageTSO.ans before.ms thread (.sys req) answer after) :
+    Kern.ans req (before.ms.1.view thread) answer (after.1.view thread) := by
+  have notClone : req ≠ cloneReq := by
+    rintro rfl
+    exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
+  have external := answered.2
+  change (if req = cloneReq then _ else
+    Kern.ans req (before.ms.1.view thread) answer (after.1.view thread) ∧
+      after.1.buf = before.ms.1.buf) at external
+  rw [if_neg notClone] at external
+  exact external.1
+
 /-- A real response to a returning scalar gate supplies the observed
     word and the model answer on the exact issuing thread and call. -/
 theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
@@ -132,17 +148,9 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
       KernW output.image.Y (before.ms.1.view thread) (after.ms.1.view thread) ∧
       WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 := by
   intro after
-  have otherRequest : req ≠ cloneReq := by
-    rintro rfl
-    exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
-  have external := answered.2
-  change (if req = cloneReq then _ else
-    Kern.ans req (before.ms.1.view thread) answer (memory.1.view thread) ∧
-      memory.1.buf = before.ms.1.buf) at external
-  rw [if_neg otherRequest] at external
   obtain ⟨word, extra, response, frame, nextWorld, outcome⟩ :=
     answers.plain routine gate selected transport scalar world args req (before.ms.1.view thread)
-      number registers unused represented answer (memory.1.view thread) external.1
+      number registers unused represented answer (memory.1.view thread) (image_host_answer ordinary answered)
   have noArea : gate.resultArea = none := by
     have checked := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
     exact Option.isNone_iff_eq_none.mp checked
@@ -151,5 +159,95 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
     carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
   rw [wirkt_mitRuhe O]
   exact outcome
+
+private theorem foreignDecode_withIdle {D : Deklaration} (O : Orakel D) (routine : D.Ax) (raw : Int) :
+    foreignDecode O.mitRuhe routine raw =
+      (foreignDecode O routine raw).map (Sum.map (ergR (D.aerg routine)) id) := by
+  unfold foreignDecode
+  change (if D.agruende routine = 0 then _ else _) = (if D.agruende routine = 0 then _ else _).map _
+  split
+  · rw [einpassenErg_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+    cases einpassenErg O.zeiger (D.aerg routine) raw <;> rfl
+  · exact sonstPasst_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O) (D.aerg routine) (D.agruende routine) raw
+
+private theorem ergWert_withIdle {D : Deklaration} {τ : Ty} {e : Option Ty}
+    (typed : e = some τ) (value : ErgVal D e) :
+    ergWert (congrArg (Option.map tyR) typed) (ergR e value) = valR τ (ergWert typed value) := by
+  cases typed
+  rfl
+
+/-- The idle extension retains the exact result bytes or failure tag of
+    a caller-owned result area, including aggregate and function values. -/
+theorem Senke.AreaReply.withIdle {D : Deklaration} {L : Senke.Lay D} {O : Orakel D}
+    {routine : D.Ax} {gate : TorB} {τ : Ty} {typed : D.aerg routine = some τ}
+    {world : World D} {args : Env D (D.aparams routine)} {memory : Mem} {fp tag : W} {base : Nat}
+    (reply : AreaReply L O routine gate τ typed world args memory fp base tag) :
+    AreaReply L.withIdle O.mitRuhe routine gate (tyR τ) (congrArg (Option.map tyR) typed)
+      (worldR world) (envR args) memory fp base tag := by
+  unfold AreaReply at reply ⊢
+  rw [wirkt_mitRuhe O, foreignDecode_withIdle]
+  rcases reply with ⟨value, decoded, classified, bytes⟩ | ⟨reason, errno, decoded, classified⟩ |
+    ⟨invalid, nonzero, unknown, fallible⟩
+  · refine .inl ⟨ergR (D.aerg routine) value, ?_, classified, ?_⟩
+    · rw [decoded]
+      rfl
+    · rw [ergWert_withIdle]
+      exact bytes.withIdle
+  · refine .inr (.inl ⟨reason, errno, ?_, classified⟩)
+    rw [decoded]
+    rfl
+  · refine .inr (.inr ⟨?_, nonzero, unknown, fallible⟩)
+    rw [invalid]
+    rfl
+
+/-- A running gate with a hidden result register delivers the exact
+    source value or error tag in the actual caller-owned memory. -/
+theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (answers : ImageGateAnswers output.image.Y O)
+    {before : Cfg imageTSO (Res T)} {memory : imageTSO.St} {thread : Nat}
+    {req : Req} {resume : Ans → Res T} {answer : Ans}
+    (waiting : before.ths[thread]? = some (some (.ask (.sys req) resume)))
+    (ordinary : (Op.sys req).special = false)
+    (answered : imageTSO.ans before.ms thread (.sys req) answer memory)
+    (routine : (declOf output.compiled.unit).Ax) (gate : TorB)
+    (τ : Ty) (typed : (declOf output.compiled.unit).aerg routine = some τ) (slotIndex : Nat)
+    (selected : output.image.Y.tor routine = some gate)
+    (transport : areaGut gate ((declOf output.compiled.unit).aparams routine).length slotIndex = true)
+    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
+    (world : World (declOf output.compiled.unit))
+    (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
+    (fp : W) (base capacity : Nat)
+    (frame : FrameOK (before.ms.1.view thread) fp capacity) (fits : base + valueWords τ ≤ capacity)
+    (layout : LayIn output.image.Y) (belowWorld : fp.toNat + 8 * capacity ≤ output.image.Y.lo)
+    (number : req.nr = BitVec.ofNat 64 gate.nr) (registers : ArgsW output.image.Y (reqArg req) args)
+    (destination : reqArg req slotIndex = slot fp (BitVec.ofNat 64 base))
+    (unused : ∀ i, ((declOf output.compiled.unit).aparams routine).length ≤ i → i < 6 →
+      i ≠ slotIndex → reqArg req i = 0)
+    (represented : WeltAt (before.ms.1.view thread) output.image.Y world)
+    {first site last : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (atCall : ImageReach output E O first site) (afterCall : ImageReach output E O site last)
+    (alive : site.lebt thread = true) (sourceMemory : Speicher (declOf output.compiled.unit).mitRuhe)
+    (key : (mitSpeicher site.m sourceMemory).foreignCallKey thread = some ⟨routine, worldR world, envR args⟩)
+    (carriers : ∀ carrier, ¬ GeteiltV (D := declOf output.compiled.unit) E.P E.ws carrier →
+      TraegerGleich sourceMemory site.m.speicher carrier)
+    (observed : imageSourceForeignEvents last.m.lauf = imageSourceForeignEvents first.m.lauf ++ [(thread, routine)]) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
+      ImageGateEvent output E O first last after (thread, req, answer) ∧
+      AgreeW output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
+      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 := by
+  intro after
+  obtain ⟨tag, extra, response, retained, nextWorld, reply⟩ :=
+    answers.area routine gate τ typed slotIndex selected transport world args req (before.ms.1.view thread)
+      fp base capacity frame fits layout belowWorld number registers destination unused represented
+      answer (memory.1.view thread) (image_host_answer ordinary answered)
+  have hasArea : gate.resultArea = some slotIndex :=
+    of_decide_eq_true (Bool.and_eq_true_iff.mp transport).2
+  exact ⟨.ask waiting rfl ordinary answered rfl,
+    ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed, carriers,
+      gate, tag, extra, selected, number, ArgsW.withIdle_words args types registers, response,
+      .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
+    retained, nextWorld⟩
 
 end Gabbro.Stage0
