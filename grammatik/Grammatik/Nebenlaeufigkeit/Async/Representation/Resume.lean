@@ -141,7 +141,6 @@ public theorem await_ready_resumes {V : Vertrag D} {Λ : List (Res D)}
   have successful : runTaskPoll elaboration calls prices task world =
       .ok (.ready value, answer.2.1, answer.2.2.1, answer.2.2.2) := by
     rw [runTaskPoll_agrees_with_inducedModel elaboration calls prices normal task world, ← ready]
-    rfl
   refine ⟨?_, (await_runTaskPoll_ready_frame elaboration calls prices tag destination future boundary
     rest command slots represented successful).2⟩
   simp only [machineStep, table_drop, command, List.map_cons, compileCommand]
