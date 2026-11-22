@@ -69,11 +69,15 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
       BildMehr.SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] ∧
-      ∀ {seen : Req} {resume : Ans → Res T} {actual : Mem},
+      (∀ {seen : Req} {resume : Ans → Res T} {actual : Mem},
         BildMehr.SoloLauf ⟨pc, parent.fp⟩ view (.ask (.sys seen) resume) actual →
         (.ask (.sys seen) resume : Res T) = .ask (.sys cloneReq) (fun answer =>
           opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) ∧
-        actual = expected.ms.1 := by
+        actual = expected.ms.1) ∧
+      ∀ {control : Res T} {actual : Mem}, BildMehr.SoloLauf ⟨pc, parent.fp⟩ view control actual →
+        BildMehr.HostFreeControl (imageRootReads output 0) (imageStackFootprint output 0) control ∨
+          control = .ask (.sys cloneReq) (fun answer =>
+            opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) := by
   intro pc parent child
   let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)
   let stack := output.image.fp0 + 8 * (output.image.Ks * (j + 1))
@@ -113,9 +117,24 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     apply codeFar_nat _ room
     simp only [headLen, startLen] at frameStart
     omega
-  obtain ⟨count, prepared, preserved, ran, unique⟩ :=
+  obtain ⟨count, prepared, preserved, ran, unique, confined⟩ :=
     BildMehr.spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
-  exact ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl, fun actual => unique actual⟩
+  have fpValue : (BitVec.ofNat 64 output.image.fp0).toNat = output.image.fp0 := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by dsimp only [stack] at stackFits; omega)]
+  have ownFrame : inSlots parent.fp 0 output.image.Ks = imageStackFootprint output 0 := by
+    funext byte
+    apply propext
+    simp only [parent, inSlots, fpValue, imageStackFootprint, Nat.zero_le, true_and,
+      Nat.mul_zero, Nat.zero_add, Nat.zero_add, Nat.mul_one]
+  have readFrame : ∀ byte, inSlots parent.fp 0 output.image.Ks byte → imageRootReads output 0 byte :=
+    fun byte inside => .inl (ownFrame ▸ inside)
+  have readCode : ∀ byte : W, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * 10 →
+      imageRootReads output 0 byte := by
+    intro byte _ last
+    exact .inr (last.trans_le (fpValue ▸ far.2.2))
+  refine ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl, fun actual => unique actual, ?_⟩
+  intro control actual solo
+  simpa only [ownFrame] using confined (imageRootReads output 0) readFrame readCode solo
 
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
@@ -138,7 +157,7 @@ private theorem LoadedIRImage.firstWorkerReference
     exact congrArg (fun state : (SC L0).St =>
       ⟨state, (output.irEntry memory).ths⟩ : (SC L0).St → Cfg (SC L0) (Res T))
       (Subtype.ext startMemory)
-  obtain ⟨count, expected, reference, waiting, _⟩ :=
+  obtain ⟨count, expected, reference, waiting, _, _⟩ :=
     output.workerReference memory.2.1 (output.loaded_code loaded.payload) firstFrame workers
   refine ⟨count, expected, ?_, ?_⟩
   · rw [exactStart]

@@ -187,6 +187,15 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
           fun byte outside => (untouched byte outside).trans (memAns_aussen same written byte outside)⟩
     | sys | fp => cases actualAnswer
 
+/-- Inside a host-free IR region, memory remains in scope. A native
+    floating answer uses the CPU relation, and terminal faults are excluded. -/
+def HostFreeControl (reads writes : W → Prop) : Res T → Prop
+  | .next _ => True
+  | .ask request _ =>
+    (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
+      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte)
+  | .fault | .unk => False
+
 /-- A restricted reference ending at a memory-independent boundary
     determines every request before that boundary in the actual memory.
     The endpoint can be the next instruction or a pending host answer. -/
@@ -200,16 +209,14 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
     {actual : Mem} (agrees : MaskedAgreement reads writes reference actual) :
     ∃ result, RunP r actual target result ∧ MaskedAgreement reads writes finish result ∧
       (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
-      ∀ {current : Mem} {request : Op} {resume : Ans → Res T},
-        RunP r actual (.ask request resume) current → (.ask request resume : Res T) ≠ target →
-          (∀ byte, fussOp request byte → reads byte) ∧
-          (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+      ∀ {current : Mem} {control : Res T}, RunP r actual control current →
+        control = target ∨ HostFreeControl reads writes control := by
   induction ran generalizing actual with
   | refl =>
     refine ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
-    intro current request resume partialRun prior
+    intro current control partialRun
     cases partialRun with
-    | refl => exact (prior rfl).elim
+    | refl => exact .inl rfl
     | ask answered _ =>
       rw [blocked _ _ rfl] at answered
       cases answered
@@ -229,14 +236,18 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
       refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
       · intro byte outside
         exact (otherBytes byte outside).trans (memAns_aussen sameAnswer written byte outside)
-      · intro current request resume partialRun prior
+      · intro current control partialRun
         cases partialRun with
-        | refl => exact ⟨included, written⟩
+        | refl =>
+          have noHost (call : Req) : op ≠ .sys call := by
+            rintro rfl
+            cases answered
+          exact .inr ⟨noHost, included, written⟩
         | ask wasAnswered leftover =>
           rw [sameAnswer] at wasAnswered
           simp only [Option.some.injEq, Prod.mk.injEq] at wasAnswered
           obtain ⟨rfl, rfl⟩ := wasAnswered
-          exact pending leftover prior
+          exact pending leftover
 
 /-- A partial execution of a proved memory-only instruction can wait
     only on a memory request, or be at the exact next instruction. -/
@@ -359,11 +370,10 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
     ∃ result, StarM count start actual target result ∧ MaskedAgreement reads writes finish result ∧
       (∀ byte, ¬ writes byte → GleichAt result actual byte) ∧
       ∀ {taken : Nat} {instruction : T} {atInstruction current : Mem}
-        {request : Op} {resume : Ans → Res T},
+        {control : Res T},
         StarM taken start actual instruction atInstruction → taken < count →
-        RunP (step instruction) atInstruction (.ask request resume) current →
-        (∀ byte, fussOp request byte → reads byte) ∧
-        (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+        RunP (step instruction) atInstruction control current →
+        HostFreeControl reads writes control := by
   induction ran generalizing actual with
   | refl =>
     exact ⟨actual, .refl _ _, agrees, fun byte _ => GleichAt.refl _ byte,
@@ -379,9 +389,12 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
       (fun byte granted => writable byte (by simpa only [wr] using granted)) reached
     refine ⟨result, .next replayedInstruction ran, agreement,
       fun byte outside => (laterBytes byte outside).trans (otherBytes byte outside), ?_⟩
-    intro taken instruction atInstruction current request resume complete within pending
+    intro taken instruction atInstruction current control complete within pending
     cases complete with
-    | refl => exact requests pending (by intro same; cases same)
+    | refl =>
+      rcases requests pending with rfl | scoped
+      · trivial
+      · exact scoped
     | next moved remaining =>
       obtain ⟨rfl, rfl⟩ := replayedInstruction.det moved.run
       exact laterRequests remaining (Nat.lt_of_succ_lt_succ within) pending
@@ -422,15 +435,6 @@ theorem SoloLauf.starM {tb t : T} {mb m : Mem} (h : SoloLauf tb mb (.next t) m) 
   · cases e
     exact ⟨n, hs⟩
   · exact ⟨n + 1, starM_snoc hs (runP_runM hp rfl)⟩
-
-/-- Inside a host-free IR region, memory remains in scope. A native
-    floating answer uses the CPU relation, and terminal faults are excluded. -/
-def HostFreeControl (reads writes : W → Prop) : Res T → Prop
-  | .next _ => True
-  | .ask request _ =>
-    (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
-      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte)
-  | .fault | .unk => False
 
 /-- A proof over restricted memory determines every actual memory
     prefix before the region ends. A completed prefix agrees with the

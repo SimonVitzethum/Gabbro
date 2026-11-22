@@ -10,24 +10,17 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Mem Runner.Beweis Runner.Mach BildLauf
 
-/-- The emitted startup prefix supplies one SC reference ending exactly
-    at the clone request, with both relocated child operands. -/
-theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
+private theorem spawnSite_memory [Kern]
     {memory : Mem} {pc fp : W} {slots scratch entry stack : Nat}
-    (table : TabInv layout memory)
     (code : CodeAt memory pc (spawnOne scratch entry stack))
     (frame : FrameOK memory fp slots) (far : CodeFar pc 10 fp slots)
     (scratchFits : scratch + 2 ≤ slots) (slotsFit : slots < 2 ^ 31)
     (entryFits : entry < 2 ^ 31) (stackFits : stack < 2 ^ 31) :
     let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
     let child : T := ⟨BitVec.ofNat 64 entry, BitVec.ofNat 64 stack⟩
-    ∃ (count : Nat) (prepared : Mem) (invariant : TabInv layout prepared),
-      SCMemoryPrefix layout ⟨⟨memory, table⟩, [some (.next ⟨pc, fp⟩)]⟩ count
-        ⟨⟨prepared, invariant⟩, [some (.ask (.sys cloneReq) fun answer =>
-          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)]⟩ ∧
-      ∀ {seen : Req} {resume : Ans → Res T} {actual}, SoloLauf ⟨pc, fp⟩ memory (.ask (.sys seen) resume) actual →
-        (.ask (.sys seen) resume : Res T) = .ask (.sys cloneReq) (fun answer =>
-          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) ∧ actual = prepared := by
+    ∃ prepared, StarM 2 ⟨pc, fp⟩ memory parent prepared ∧
+      RunP (step parent) prepared (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) prepared := by
   intro parent child
   let initial : T := ⟨pc, fp⟩
   let middle : T := ⟨pc + 16, fp⟩
@@ -73,8 +66,43 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     exact rd64_wr64 (wr64_some (next.wr (scratch + 1) (by omega))) (next.rd (scratch + 1) (by omega))
   have initialBlock : StarM 2 initial memory parent prepared :=
     .next wroteFirst (.next wroteSecond (.refl _ _))
-  have request := spawnInstruction_reference decoded childEntry childFrame
+  exact ⟨prepared, initialBlock, spawnInstruction_reference decoded childEntry childFrame⟩
+
+/-- The emitted startup code reaches the exact clone request. Every
+    partial execution either stays within the installed code and frame
+    or reaches that request with the same relocated operands. -/
+theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
+    {memory : Mem} {pc fp : W} {slots scratch entry stack : Nat}
+    (table : TabInv layout memory) (code : CodeAt memory pc (spawnOne scratch entry stack))
+    (frame : FrameOK memory fp slots) (far : CodeFar pc 10 fp slots)
+    (scratchFits : scratch + 2 ≤ slots) (slotsFit : slots < 2 ^ 31)
+    (entryFits : entry < 2 ^ 31) (stackFits : stack < 2 ^ 31) :
+    let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+    let child : T := ⟨BitVec.ofNat 64 entry, BitVec.ofNat 64 stack⟩
+    let pending := Res.ask (.sys cloneReq) (fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)
+    ∃ (count : Nat) (prepared : Mem) (invariant : TabInv layout prepared),
+      SCMemoryPrefix layout ⟨⟨memory, table⟩, [some (.next ⟨pc, fp⟩)]⟩ count
+        ⟨⟨prepared, invariant⟩, [some pending]⟩ ∧
+      (∀ {seen : Req} {resume : Ans → Res T} {actual}, SoloLauf ⟨pc, fp⟩ memory (.ask (.sys seen) resume) actual →
+        (.ask (.sys seen) resume : Res T) = pending ∧ actual = prepared) ∧
+      ∀ (reads : W → Prop), (∀ byte, inSlots fp 0 slots byte → reads byte) →
+        (∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * 10 → reads byte) →
+        ∀ {control actual}, SoloLauf ⟨pc, fp⟩ memory control actual →
+          HostFreeControl reads (inSlots fp 0 slots) control ∨ control = pending := by
+  intro parent child pending
+  obtain ⟨prepared, initialBlock, request⟩ := spawnSite_memory code frame far scratchFits slotsFit entryFits stackFits
   obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock request table
-  exact ⟨count, prepared, invariant, reference, fun ran => SoloLauf.host_unique initialBlock request ran⟩
+  refine ⟨count, prepared, invariant, reference, fun ran => SoloLauf.host_unique initialBlock request ran, ?_⟩
+  intro reads frameReads codeReads
+  have nowrap : pc.toNat + 16 * (spawnOne scratch entry stack).length < 2 ^ 64 := by
+    simpa only [spawnOne_len] using far.1
+  have covered : ∀ byte, pc.toNat ≤ byte.toNat →
+      byte.toNat < pc.toNat + 16 * (spawnOne scratch entry stack).length → reads byte := by
+    simpa only [spawnOne_len] using codeReads
+  obtain ⟨maskedFrame, maskedCode⟩ := maskMemory_code_frame code frame nowrap frameReads covered
+  obtain ⟨_, reference, request⟩ := spawnSite_memory maskedCode maskedFrame far scratchFits slotsFit entryFits stackFits
+  obtain ⟨agrees, readable, writable⟩ := maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads
+  exact reference.scoped_until_host request readable writable agrees
 
 end Gabbro.Stage0.Senke.BildMehr

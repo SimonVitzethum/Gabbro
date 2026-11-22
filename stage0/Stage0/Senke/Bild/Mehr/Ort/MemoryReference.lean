@@ -116,6 +116,50 @@ theorem SoloLauf.host_unique [Kern] {start boundary : T} {before middle after : 
       obtain ⟨rfl, rfl⟩ := first.det executed.run
       exact ih tail ⟨_, _, _, later, Or.inr pending⟩
 
+private theorem StarM.after_reference [Kern] {count used : Nat} {start boundary pointer : T}
+    {before atBoundary actual : Mem} (reference : StarM count start before boundary atBoundary)
+    (executedPrefix : StarM used start before pointer actual) (reached : count ≤ used) :
+    StarM (used - count) boundary atBoundary pointer actual := by
+  induction reference generalizing used pointer actual with
+  | refl => simpa only [Nat.sub_zero] using executedPrefix
+  | next first _ ih =>
+    cases executedPrefix with
+    | refl => exact (Nat.not_succ_le_zero _ reached).elim
+    | next executed tail =>
+      obtain ⟨rfl, rfl⟩ := first.det executed.run
+      simpa only [Nat.succ_sub_succ_eq_sub] using ih tail (Nat.le_of_succ_le_succ reached)
+
+/-- One confined reference through ordinary memory instructions and
+    into a host request determines every partial IR control. This
+    allows scheduling at any point in the middle of the reference. -/
+theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
+    {restricted atBoundary final actual : Mem} {reads writes : W → Prop} {call : Req} {resume : Ans → Res T}
+    (reference : StarM count start restricted boundary atBoundary)
+    (request : RunP (step boundary) atBoundary (.ask (.sys call) resume) final)
+    (readable : ∀ byte, restricted.rd byte = true → reads byte)
+    (writable : ∀ byte, restricted.wr byte = true → reads byte ∧ writes byte)
+    (agreement : MaskedAgreement reads writes restricted actual) :
+    ∀ {control memory}, SoloLauf start actual control memory →
+      HostFreeControl reads writes control ∨ control = .ask (.sys call) resume := by
+  obtain ⟨expected, replay, atRequest, _, prefixScoped⟩ := reference.replay_on readable writable agreement
+  obtain ⟨readMap, writeMap⟩ := reference.permissions
+  obtain ⟨finished, reached, _, _, requestScoped⟩ := request.replay_on (blind_step _)
+    (by intro same; cases same) (by intro op continuation same memory; cases same; rfl)
+    (fun byte allowed => readable byte (by simpa only [readMap] using allowed))
+    (fun byte allowed => writable byte (by simpa only [writeMap] using allowed)) atRequest
+  intro control memory solo
+  obtain ⟨used, pointer, atPointer, complete, residual⟩ := solo
+  rcases residual with ⟨rfl, _⟩ | residual
+  · exact .inl trivial
+  rcases Nat.lt_or_ge used count with inside | outside
+  · exact .inl (prefixScoped complete inside residual)
+  · have remaining := replay.after_reference complete outside
+    cases remaining with
+    | refl => exact (requestScoped residual).symm
+    | next first _ =>
+      cases reached.remaining first with
+      | ask answer _ => cases answer
+
 /-- A memory-only execution of an instruction tree supplies the SC
     reference up to its residual control, including pending host calls. -/
 theorem RunP.sc_reference {layout : Runner.Beweis.Lay}
