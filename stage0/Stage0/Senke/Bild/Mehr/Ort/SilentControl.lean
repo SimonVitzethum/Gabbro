@@ -322,6 +322,19 @@ theorem StarM.sc_reference {layout : Runner.Beweis.Lay}
     obtain ⟨rest, finalTable, tail⟩ := ih middleTable
     exact ⟨rest + first + 1, finalTable, .cons (.priv rfl) (requests.trans tail)⟩
 
+/-- A whole generated block and its final partial instruction give one
+    memory reference, ending at the control selected by the IR tree. -/
+theorem StarM.sc_reference_through {layout : Runner.Beweis.Lay}
+    {initial boundary : T} {before middle after : Mem} {instructions : Nat} {residual : Res T}
+    (ran : StarM instructions initial before boundary middle)
+    (tail : RunP (step boundary) middle residual after) (table : TabInv layout before) :
+    ∃ (count : Nat) (preserved : TabInv layout after),
+      SCMemoryPrefix layout ⟨⟨before, table⟩, [some (.next initial)]⟩ count
+        ⟨⟨after, preserved⟩, [some residual]⟩ := by
+  obtain ⟨prefixCount, middleTable, prefix⟩ := ran.sc_reference table
+  obtain ⟨tailCount, finalTable, suffix⟩ := tail.sc_reference middleTable (blind_step _)
+  exact ⟨tailCount + 1 + prefixCount, finalTable, prefix.trans (.cons (.priv rfl) suffix)⟩
+
 /-- Before issuing a syscall or creating another thread, a terminal IR
     observation is the same terminal control in its SC projection. -/
 private theorem image_silent_terminal_sc [Kern]
