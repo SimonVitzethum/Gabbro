@@ -321,6 +321,23 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
 
 /-- A fixed length with a varying start lowers its observations directly,
     even when the endpoint intervals overlap. -/
+theorem fixedSpanObservations_source (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array : String) (τ : Ty) (capacity count : Nat) (first last index : SExpr)
+    (begin offset : USide) (lo hi : Int)
+    (arrayType : uSliceLocalType ctx array = some (.arr τ capacity))
+    (arrayRead : blatt (.variable array) = .ok (.param array))
+    (extent : uFixedLocalArrayExtent ctx blatt (.param array) first last = some (τ, count, begin))
+    (position : uSliceInteger ctx blatt index = some (lo, hi, offset))
+    (bounds : 0 ≤ lo ∧ hi < count) :
+    let span := SExpr.built "#slice" [.variable array, first, last]
+    uRechne ctx blatt (.built "lenof" [span]) = .ok (.lit (Int.ofNat count)) ∧
+      uRechne ctx blatt (.index span index) = .ok (.idx (.param array) (.add begin offset)) := by
+  dsimp only
+  constructor <;> rw [uRechne] <;>
+    simp only [uLocalArraySliceObservation, arrayType, arrayRead, extent, position, bounds, and_self,
+      bind, Option.bind, ite_true]
+
+/-- The range premises allow more than one start and an index within the slice. -/
 theorem fixedSpanObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 6 ≤ capacity) :
     ∃ scope : UCtx,
       let span := SExpr.built "#slice" [.variable "a", .variable "i", .bin "+" (.variable "i") (.lit 2)]
@@ -345,10 +362,12 @@ theorem fixedSpanObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 6 
     simp only [uFixedLocalArrayExtent, sameName, Bool.not_true, Bool.false_eq_true, ite_false,
       arrayType, firstType, uSchranke, fits, and_self, ite_true, firstRead,
       show (Int.ofNat 2).toNat = 2 by decide]
-  have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < (2 : Nat) := by decide
-  refine ⟨scope, ?_, ?_⟩ <;>
-    simp only [uWertBody, uRechne, uLocalArraySliceObservation, extent, uSliceInteger, uSchranke,
-      Option.map_some, bind, Option.bind, arrayType, arrayRead, position, and_self, ite_true]
+  have position : uSliceInteger scope (uWertBlatt scope) (.lit 1) =
+      some (Int.ofNat 1, Int.ofNat 1, .lit (Int.ofNat 1)) := by
+    simp only [uSliceInteger, uSchranke, Option.map_some]
+  exact ⟨scope, fixedSpanObservations_source scope (uWertBlatt scope) "a" τ capacity 2
+    (.variable "i") (.bin "+" (.variable "i") (.lit 2)) (.lit 1) (.param "i") (.lit (Int.ofNat 1))
+    (Int.ofNat 1) (Int.ofNat 1) arrayType arrayRead extent position (by decide)⟩
 
 /-- A static literal substring admitted as a predicate argument lowers
     to the exact model subsequence at the checked byte bound. -/
