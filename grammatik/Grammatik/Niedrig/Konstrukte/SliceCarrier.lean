@@ -135,9 +135,10 @@ theorem rangeArrayCarrierExpr_erfuellbar (identity : Nat) {capacity : Nat} {τ :
     ∃ valid : SliceOk capacity first.n.toNat last.n.toNat,
       decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
         (eval entry carrier world env) = some (BoundedSlice.ofArray array _ _ valid) := by
+  intro context env source carrier
   exact rangeArrayCarrierExpr_exact identity (capacity := capacity)
-    (firstLo := 0) (firstHi := 1) (lastLo := 3) (lastHi := 4) .here (.there .here) _
-    ⟨by decide, by decide, by decide, by omega⟩ entry world _
+    (firstLo := 0) (firstHi := 1) (lastLo := 3) (lastHi := 4) .here (.there .here) source
+    ⟨by decide, by decide, by decide, by omega⟩ entry world env
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/

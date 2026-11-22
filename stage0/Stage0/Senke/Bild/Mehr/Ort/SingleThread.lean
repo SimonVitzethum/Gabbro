@@ -56,7 +56,7 @@ private theorem silent_step_one {layout : Runner.Beweis.Lay} {act : θ → Res �
     exact .nil _
   | priv ready move =>
     exact ⟨buffers, 1, by decide, .ofStep (.priv ready move)⟩
-  | @ask c i t t' op resume response ms ready asked ordinary answered resumed =>
+  | @ask i t t' op resume response ms ready asked ordinary answered resumed =>
     have live := List.getElem?_eq_some_iff.mp ready
     have first : i = 0 := by have lt := live.1; omega
     subst i
