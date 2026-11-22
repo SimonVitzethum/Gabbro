@@ -66,7 +66,7 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
     ∃ (count : Nat) (expected : Cfg (SC L0) (Res T)),
-      SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
+      BildMehr.SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
   intro pc parent child
@@ -88,7 +88,8 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
   have worldStart := layout.hyord
   have worldEnd := layout.hyhi
   have stackFits : stack < 2 ^ 31 := by
-    have used := Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ declared.le)
+    have used : output.image.Ks * (j + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
+      Nat.mul_le_mul_left _ (Nat.add_le_add_right declared.le 1)
     dsimp only [stack]
     omega
   have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
@@ -99,7 +100,8 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     omega
   have scratchFits : scratch + 8 ≤ output.image.Ks := layout.hex _ List.mem_cons_self
   have far : CodeFar pc 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
-    have singleStack := Nat.le_mul_of_pos_right output.image.Ks (Nat.succ_pos j)
+    have singleStack : output.image.Ks ≤ output.image.Ks * (j + 1) :=
+      Nat.le_mul_of_pos_right _ (Nat.succ_pos j)
     have room : output.image.fp0 + 8 * output.image.Ks < 2 ^ 64 := by
       dsimp only [stack] at stackFits
       omega
@@ -107,7 +109,7 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     simp only [headLen, startLen] at frameStart
     omega
   obtain ⟨count, prepared, preserved, ran⟩ :=
-    spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
+    BildMehr.spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
   exact ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl⟩
 
 private theorem LoadedIRImage.firstWorkerReference
@@ -136,7 +138,7 @@ private theorem LoadedIRImage.firstWorkerReference
   refine ⟨count, expected, ?_, ?_⟩
   · rw [exactStart]
     simpa only [Nat.mul_zero, Nat.add_zero] using reference
-  · simpa only [Nat.mul_zero, Nat.add_zero, Nat.mul_one] using waiting
+  · simpa only [Nat.mul_zero, Nat.add_zero, Nat.zero_add, Nat.mul_one] using waiting
 
 /-- Before the first worker launch, the loaded IR cannot stop silently.
     Any first visible transition is at the generated clone request,
