@@ -39,7 +39,8 @@ theorem guardedCarrierExpr_exact (identity : Nat) (source : Var Γ backing)
   have lengthFits : 0 ≤ (env.get last).n - (env.get first).n ∧
       (env.get last).n - (env.get first).n ≤ (capacity : Int) := ⟨by omega, by omega⟩
   rw [guardedCarrierExpr, sliceCarrierExpr_eval]
-  simp only [eval, Zahl.sub, dite_eq_left firstFits, dite_eq_left lengthFits]
+  simp only [eval, Zahl.sub]
+  rw [dite_eq_left firstFits, dite_eq_left lengthFits]
   apply Prod.ext
   · apply zahl_ext
     exact offset.symm
@@ -84,7 +85,7 @@ theorem withGuardedSlice_exec (identity : Nat) (source : Var Γ backing) (length
   have typed := (eval observed length observed env).le_hi
   have capacityBound : available ≤ capacity := by change (eval observed length observed env).n.toNat ≤ _; omega
   have inCapacity : SignedSliceOk capacity (env.get first).n (env.get last).n :=
-    ⟨valid.1, valid.2.1, valid.2.2.trans (Int.ofNat_le.mpr capacityBound)⟩
+    ⟨valid.1, valid.2.1, Int.le_trans valid.2.2 (Int.ofNat_le.mpr capacityBound)⟩
   have decision := (ArraySliceView.check_exact capacity (env.get first).n (env.get last).n).mpr inCapacity
   cases checked : ArraySliceView.check capacity (env.get first).n (env.get last).n with
   | none => simp only [checked, Option.isSome_none, Bool.false_eq_true] at decision
