@@ -76,7 +76,7 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
   · simpa only [updated, after, List.length_set] using length
   · intro j s known
     rcases setzeS_fall known with ⟨rfl, rfl⟩ | ⟨_, previous⟩
-    · obtain ⟨sameThread, owned⟩ := indices i solo present
+    · obtain ⟨sameThread, owned⟩ := indices j solo present
       exact ⟨sameThread, ⟨fun byte read => owned.read byte (sameRead ▸ read),
         fun byte write => owned.write byte (sameWrite ▸ write)⟩⟩
     · exact indices j s previous
