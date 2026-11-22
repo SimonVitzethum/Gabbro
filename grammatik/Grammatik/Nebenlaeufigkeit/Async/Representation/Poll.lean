@@ -35,6 +35,41 @@ public theorem PollRep.storage {path : List Nat} {future : FutureExpr}
   | pending stored => exact ⟨_, stored⟩
   | ready _ stored => exact ⟨_, stored⟩
 
+/-- A real successful leaf poll supplies the typed representation of
+    its exact successor. This proof needs only the call just executed. -/
+public theorem runTaskPoll_leaf_rep (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (path : List Nat) (name : String) (args : List Parser.SExpr)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (storage : Wert D (types.childState name)) (world : World D)
+    {event : Poll (Value D)} {successor : Task (Value D) (Child D types)} {after : World D} {cost : Nat}
+    (successful : runTaskPoll elaboration calls prices (.leaf (.active name storage)) world =
+      .ok (event, successor, after, cost)) :
+    PollRep D types path (.call name args) event successor := by
+  cases observed : calls callee.poll world (pollEnvironment callee storage) with
+  | why _ reason => exact keinGrund callee.pollInfallible reason
+  | logik _ | hardware _ =>
+    simp only [runTaskPoll, pollTaskWith, known, runChildPoll, observed, decodeChildOutcome,
+      bind, Except.bind, reduceCtorEq] at successful
+  | ok final raw =>
+    simp only [runTaskPoll, pollTaskWith, known, runChildPoll, observed, decodeChildOutcome] at successful
+    generalize ergWert callee.pollResult raw = answer at successful
+    obtain ⟨⟨tag, bound⟩, payload⟩ := answer
+    cases tag with
+    | zero =>
+      simp only [decodePollAnswer, bind, Except.bind, pure, Except.pure] at successful
+      cases successful
+      exact .ready (valueAt_typed D _ payload) (.callReady _ _ _ (valueAt_typed D _ payload))
+    | succ tag =>
+      cases tag with
+      | zero =>
+        simp only [decodePollAnswer, bind, Except.bind, pure, Except.pure] at successful
+        cases successful
+        exact .pending (.callActive _ _ _ payload)
+      | succ tag =>
+        have invalid : tag + 2 < 2 := bound
+        omega
+
 /-- A leaf polls the resolved ordinary function. Its finite answer either
     updates the child record or caches the very result returned by G. -/
 public theorem leaf_poll_rep (elaboration : Elaboration D V Λ types f)
