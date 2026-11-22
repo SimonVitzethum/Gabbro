@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Bild.Ruf.RootEntry
 import Stage0.Senke.Bild.Mehr.Ort.Ort
 import Stage0.Senke.Bild.Ruf.RootExit
+import Stage0.Senke.Bild.Ruf.IdleLowering
 import Stage0.Senke.Images.CheckSpawn
 import Stage0.Senke.Bild.StartG
 import Lean.Elab.Tactic.Omega
@@ -42,33 +43,46 @@ theorem Emitted.initial_root_head (output : Emitted src reserve options)
   rw [unit.program, unit.memory]
   exact output.startRequires root listed
 
-/-- A startup requirement reads only carriers separated from the other
-    declared roots. Its checked initial values remain available when
-    the host schedules the root's prologue after another thread runs. -/
-theorem Emitted.root_requires_local (output : Emitted src reserve options)
+/-- The checked requires and entry snapshot readers of a root access
+    carriers separated from the other declared roots. -/
+theorem Emitted.root_contract_local (output : Emitted src reserve options)
     {E : Einheit (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
     (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
     {root : (declOf output.compiled.unit).Fn} (declared : root ∈ E.ws)
     {carrier : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob}
-    (reads : carrier ∈ (E.P.requires root).orte) : Getrennt E.P output.fsA.1 E.ws carrier := by
+    (reads : carrier ∈ (E.P.requires root).orte ∨ carrier ∈ (E.P.ensures root).orte) :
+    Getrennt E.P output.fsA.1 E.ws carrier := by
   have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware accepted).1
   have lockless := (valid.wurzeln root declared).1
   have unguarded (lock : (declOf output.compiled.unit).Lock) (guard : Bewacht carrier lock) : False := by
-    have allowed := (E.P.requires root).orte_darf carrier reads
-    have held : Res.held lock ∈ Signatur.anfang _ ((declOf output.compiled.unit).signatur root) := by
-      cases carrier with
-      | inl table => exact allowed (.inl lock) guard
-      | inr global => exact allowed (.inl lock) guard
-    have signed := (held_anfang _ lock).mp held
+    have signed : lock ∈ (declOf output.compiled.unit).haelt root := by
+      rcases reads with requires | ensures
+      · apply (held_anfang _ lock).mp
+        have allowed := (E.P.requires root).orte_darf carrier requires
+        cases carrier <;> exact allowed (.inl lock) guard
+      · apply (held_ende _ lock).mp
+        have allowed := (E.P.ensures root).orte_darf carrier ensures
+        cases carrier <;> exact allowed (.inl lock) guard
     rw [show ((declOf output.compiled.unit).signatur root).haelt = [] from lockless] at signed
     exact List.not_mem_nil signed
-  rcases (valid.fuss root).1 carrier (fuss_req E.P root reads) with localOrGuard | ⟨lock, guarded, _⟩ | shared
+  have footprint : carrier ∈ fussOrte E.P root := reads.elim (fuss_req E.P root) (fuss_ens E.P root)
+  rcases (valid.fuss root).1 carrier footprint with localOrGuard | ⟨lock, guarded, _⟩ | shared
   · rcases Bool.or_eq_true_iff.mp localOrGuard with signature | localRead
     · obtain ⟨lock, guard, _⟩ := sigB_ok signature
       exact (unguarded lock guard).elim
     · exact @of_decide_eq_true _ (Classical.propDecidable _) localRead
   · exact (unguarded lock guarded).elim
-  · exact ((shared.2.1 root).1 reads).elim
+  · exact (reads.elim (shared.2.1 root).1 (shared.2.1 root).2.1).elim
+
+/-- Every cell physically copied into the root's entry frame comes
+    from a carrier no other root can change. -/
+theorem Emitted.root_snapshot_local (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    {root : (declOf output.compiled.unit).Fn} (declared : root ∈ E.ws)
+    {cell : Zelle (declOf output.compiled.unit)} (captured : cell ∈ oldCells (E.P.ensures root)) :
+    Getrennt E.P output.fsA.1 E.ws cell.carrier :=
+  output.root_contract_local hardware accepted declared (.inr (oldCells_carrier _ cell captured))
 
 /-- A scheduled GX step of another thread leaves the root's entry
     requirement unchanged, even when it presents shared atomic values. -/
@@ -113,7 +127,7 @@ theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
   have agreement (carrier : _) (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte) :
       TraegerGleich after.speicher before.speicher carrier := by
     have original : carrier ∈ (E.P.requires root.1).orte := (requires_mitRuhe_orte E.P root.1) ▸ read
-    have localRead := output.root_requires_local hardware.2.2.2 accepted listed original
+    have localRead := output.root_contract_local hardware.2.2.2 accepted listed (.inl original)
     have apart := getrenntK_of starts (getrennt_mitRuhe E.P output.fsA.2 valid.abg localRead)
     have noWrite := apart thread issuer different (some root.1) rootInGraph
       (List.mem_append_left _ (fuss_req E.P.mitRuhe (some root.1) read))
