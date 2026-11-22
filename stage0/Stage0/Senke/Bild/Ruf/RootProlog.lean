@@ -60,12 +60,13 @@ theorem Emitted.root_contract_local (output : Emitted src reserve options)
       · apply (held_anfang _ lock).mp
         have allowed := (E.P.requires root).orte_darf carrier requires
         cases carrier <;> exact allowed (.inl lock) guard
-      · apply (held_ende _ lock).mp
+      · apply (held_ende (vertragVon (declOf output.compiled.unit) root) lock).mp
         have allowed := (E.P.ensures root).orte_darf carrier ensures
         cases carrier <;> exact allowed (.inl lock) guard
-    rw [show ((declOf output.compiled.unit).signatur root).haelt = [] from lockless] at signed
+    rw [lockless] at signed
     exact List.not_mem_nil signed
-  have footprint : carrier ∈ fussOrte E.P root := reads.elim (fuss_req E.P root) (fuss_ens E.P root)
+  have footprint : carrier ∈ fussOrte E.P root :=
+    reads.elim (fun h => fuss_req E.P root h) (fun h => fuss_ens E.P root h)
   rcases (valid.fuss root).1 carrier footprint with localOrGuard | ⟨lock, guarded, _⟩ | shared
   · rcases Bool.or_eq_true_iff.mp localOrGuard with signature | localRead
     · obtain ⟨lock, guard, _⟩ := sigB_ok signature
