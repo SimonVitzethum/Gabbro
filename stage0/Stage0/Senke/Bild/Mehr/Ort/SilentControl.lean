@@ -280,17 +280,17 @@ theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
   | nil => exact b
   | cons step _ ih => exact .cons step (ih b)
 
-/-- The sequential correctness proof supplies a memory reference for
-    the SC runner, one decoded request at a time. -/
-theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
-    {control : Res T} {before after : Mem} {next : T}
-    (ran : RunM control before next after) (table : TabInv layout before)
+/-- A memory-only execution of an instruction tree supplies the SC
+    reference up to its residual control, including pending host calls. -/
+theorem RunP.sc_reference {layout : Runner.Beweis.Lay}
+    {control residual : Res T} {before after : Mem}
+    (ran : RunP control before residual after) (table : TabInv layout before)
     (blind : Blind control) :
     ∃ (count : Nat) (final : TabInv layout after),
-      SCMemoryPrefix layout ⟨⟨before, table⟩, [some control]⟩ count ⟨⟨after, final⟩, [some (.next next)]⟩ := by
+      SCMemoryPrefix layout ⟨⟨before, table⟩, [some control]⟩ count ⟨⟨after, final⟩, [some residual]⟩ := by
   induction ran with
-  | next => exact ⟨0, table, .nil _⟩
-  | @ask request resume before middle after reply next answered _ ih =>
+  | refl => exact ⟨0, table, .nil _⟩
+  | @ask request resume before middle after reply residual answered _ ih =>
     have kind : istSpeicherOp request = true := by
       cases request <;> first | rfl | cases answered
     have widths (n : Nat) (address : W) (read : request = .rd n address) :
@@ -300,6 +300,12 @@ theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
     have first : SCSchritt layout 0 ⟨⟨before, table⟩, [some (.ask request resume)]⟩
         ⟨⟨middle, preserved⟩, [some (resume reply)]⟩ := .ask rfl kind answer
     exact ⟨count + 1, final, .cons first reference⟩
+
+private theorem RunM.partial {control : Res T} {before after : Mem} {next : T}
+    (ran : RunM control before next after) : RunP control before (.next next) after := by
+  induction ran with
+  | next => exact .refl _ _
+  | ask answered _ ih => exact .ask answered ih
 
 /-- A sequence of whole proved memory instructions gives the counted
     reference used to cover all actual one-thread silent prefixes. -/
@@ -312,7 +318,7 @@ theorem StarM.sc_reference {layout : Runner.Beweis.Lay}
   induction ran with
   | refl => exact ⟨0, table, .nil _⟩
   | next instruction _ ih =>
-    obtain ⟨first, middleTable, requests⟩ := RunM.sc_reference instruction table (blind_step _)
+    obtain ⟨first, middleTable, requests⟩ := RunP.sc_reference (RunM.partial instruction) table (blind_step _)
     obtain ⟨rest, finalTable, tail⟩ := ih middleTable
     exact ⟨rest + first + 1, finalTable, .cons (.priv rfl) (requests.trans tail)⟩
 
