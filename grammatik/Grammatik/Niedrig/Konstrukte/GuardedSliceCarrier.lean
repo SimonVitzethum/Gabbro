@@ -40,14 +40,13 @@ theorem guardedCarrierExpr_exact (identity : Nat) (source : Var Γ backing)
       (env.get last).n - (env.get first).n ≤ (capacity : Int) := ⟨by omega, by omega⟩
   rw [guardedCarrierExpr, sliceCarrierExpr_eval]
   simp only [eval, Zahl.sub]
-  rw [dite_eq_left firstFits, dite_eq_left lengthFits]
-  apply Prod.ext
-  · apply zahl_ext
-    exact offset.symm
-  · apply Prod.ext
-    · apply zahl_ext
-      exact length.symm
-    · rfl
+  split
+  · split
+    · exact Prod.ext (zahl_ext offset.symm) (Prod.ext (zahl_ext length.symm) rfl)
+    · rename_i outside
+      exact (outside lengthFits).elim
+  · rename_i outside
+    exact (outside firstFits).elim
 
 /-- Both endpoint checks run before the ordinary binding of a slice
     descriptor. Invalid signed endpoints take the supplied refusal. -/
