@@ -16,9 +16,10 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR
 
-/-- The eight bytes from `a` (with wrap-around): the bytes a request at `a` may touch. -/
+/-- A byte range starting at `a`, using the IR's modular word addresses. -/
 def byteWindow (size : Nat) (a y : W) : Prop := (y - a).toNat < size
 
+/-- The eight bytes of a word store or compare-and-swap. -/
 def fenster (a y : W) : Prop := (y - a).toNat < 8
 
 /-- The byte width of the existing IR memory read. The sequential
@@ -180,6 +181,55 @@ theorem cas_eq (m : Mem) (x e n : W) :
       some (BitVec.ofNat 64 (Mem.le m x 8),
         if BitVec.ofNat 64 (Mem.le m x 8) = e then Mem.write m x 8 n.toNat else m)
     else none := rfl
+
+private theorem granted_window {p : W → Bool} {width : Nat} {base byte : W}
+    (allowed : Mem.all p base width = true) (touched : byteWindow width base byte) :
+    p byte = true := by
+  have permission := Mem.all_spec allowed (j := (byte - base).toNat) touched
+  rw [BitVec.ofNat_toNat, BitVec.add_comm base, BitVec.sub_add_cancel] at permission
+  exact permission
+
+private theorem read_granted (m : Mem) (base : W) : ∀ (width : Nat),
+    (rdAntwort width (m.rd8 base) (m.rd32 base) (m.rd64 base)).isSome = true →
+      Mem.all m.rd base (readWidth width) = true
+  | 1, success => by
+    simpa [rdAntwort, readWidth, Mem.rd8, Mem.all] using success
+  | 4, success => by simpa [rdAntwort, readWidth, Mem.rd32] using success
+  | 0, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | 2, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | 3, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | _ + 5, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+
+/-- A successful memory request is confined to its memory's granted
+    read and write regions. The permission mask can be chosen once for
+    an entire local execution and stays in force throughout that run. -/
+theorem memAns_confined {m next : Mem} {request : Op} {answer : W × W}
+    {reads writes : W → Prop}
+    (readable : ∀ byte, m.rd byte = true → reads byte)
+    (writable : ∀ byte, m.wr byte = true → reads byte ∧ writes byte)
+    (answered : memAns m request = some (some answer, next)) :
+    (∀ byte, fussOp request byte → reads byte) ∧
+      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+  cases request with
+  | rd width base =>
+    rw [memAns_rd] at answered
+    have result := (Prod.mk.inj (Option.some.inj answered)).1
+    have allowed := read_granted m base width (by rw [result]; rfl)
+    exact ⟨fun byte touched => readable byte (granted_window allowed touched), by simp [schreibtOp]⟩
+  | wr base value =>
+    rw [memAns_wr, wr64_eq] at answered
+    by_cases allowed : Mem.all m.wr base 8 = true
+    · exact ⟨fun byte touched => (writable byte (granted_window allowed touched)).1,
+        fun _ byte touched => (writable byte (granted_window allowed touched)).2⟩
+    · simp only [ite_eq_right allowed, Option.some.injEq, Prod.mk.injEq, reduceCtorEq, false_and] at answered
+  | cas base expected value =>
+    rw [memAns_cas, cas_eq] at answered
+    by_cases allowed : (Mem.all m.rd base 8 && Mem.all m.wr base 8) = true
+    · obtain ⟨read, write⟩ := Bool.and_eq_true_iff.mp allowed
+      exact ⟨fun byte touched => readable byte (granted_window read touched),
+        fun _ byte touched => (writable byte (granted_window write touched)).2⟩
+    · simp only [ite_eq_right allowed, Option.some.injEq, Prod.mk.injEq, reduceCtorEq, false_and] at answered
+  | sys | fp => cases answered
 
 /-! ## Locality -/
 
