@@ -151,20 +151,20 @@ private theorem savedFutex (environment : LE baseline pc fp scratch base code)
     (tso_sys_prefix (before := imageToTSO machine) (t := pointer) (nr := 202)
       (a1 := BitVec.ofNat 64 (base + 8)) (a2 := mode) (a3 := value) (a4 := 0) (a5 := 0) (a6 := 0)
       running instruction ?_ ?_ ?_ ?_ ?_ ?_ ?_) rfl
-  all_goals simp only [ci, pointer, argsSlot]
+  all_goals simp only [ci, pointer, argsSlot, imageToTSO]
   · simpa only [number] using slots.sl 10 (by decide)
   · rw [show (8 : W) = BitVec.ofNat 64 (8 * 1) from rfl, slot_plus]
-    simpa only [address, Nat.add_assoc] using slots.sl 11 (by decide)
+    simpa only [address, Nat.add_assoc, Nat.reduceAdd] using slots.sl 11 (by decide)
   · rw [show (16 : W) = BitVec.ofNat 64 (8 * 2) from rfl, slot_plus]
-    simpa only [operation, Nat.add_assoc] using slots.sl 12 (by decide)
+    simpa only [operation, Nat.add_assoc, Nat.reduceAdd] using slots.sl 12 (by decide)
   · rw [show (24 : W) = BitVec.ofNat 64 (8 * 3) from rfl, slot_plus]
-    simpa only [argument, Nat.add_assoc] using slots.sl 13 (by decide)
+    simpa only [argument, Nat.add_assoc, Nat.reduceAdd] using slots.sl 13 (by decide)
   · rw [show (32 : W) = BitVec.ofNat 64 (8 * 4) from rfl, slot_plus]
-    simpa only [fourth, Nat.add_assoc] using slots.sl 14 (by decide)
+    simpa only [fourth, Nat.add_assoc, Nat.reduceAdd] using slots.sl 14 (by decide)
   · rw [show (40 : W) = BitVec.ofNat 64 (8 * 5) from rfl, slot_plus]
-    simpa only [fifth, Nat.add_assoc] using slots.sl 15 (by decide)
+    simpa only [fifth, Nat.add_assoc, Nat.reduceAdd] using slots.sl 15 (by decide)
   · rw [show (48 : W) = BitVec.ofNat 64 (8 * 6) from rfl, slot_plus]
-    simpa only [sixth, Nat.add_assoc] using slots.sl 16 (by decide)
+    simpa only [sixth, Nat.add_assoc, Nat.reduceAdd] using slots.sl 16 (by decide)
 
 /-- The relocated contended acquisition code issues WAIT with the saved serving sample. -/
 theorem image_ticket_wait_prefix {position sampled : Nat}
