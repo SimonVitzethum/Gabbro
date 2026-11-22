@@ -319,7 +319,7 @@ public structure NamedPoll (u : UProg) (ctx : UCtx) (function : AsyncFn) (types 
     (resolved : NamedPoll u ctx function types children) (program : Programm (declOf u)) :
     Programm (declOf u) :=
   { program with rumpf := fun fn =>
-      if equal : fn = resolved.poll then equal.symm ▸ resolved.body
+      if equal : (fn : Fin u.fns.length) = resolved.poll then equal.symm ▸ resolved.body
       else program.rumpf fn }
 
 public theorem NamedPoll.install_body {u : UProg} {ctx : UCtx} {function : AsyncFn} {types : TypeResolution}
@@ -354,6 +354,15 @@ private theorem pollCallContext {D : Deklaration} {fn : D.Fn} {Γ Δ : Ctx} {Λ 
   cases context
   rfl
 
+private theorem rufRumpf_pollOutcome {D : Deklaration} (program : Programm D) (oracle : Orakel D)
+    (passes depth : Nat) (fn : D.Fn) (world : World D) (args : Env D (D.params fn)) :
+    rufRumpf program oracle passes (depth + 1) fn world args =
+      pollCallOutcome fn (execEnd oracle passes (rufRumpf program oracle passes depth) (program.rumpf fn) world args) := by
+  rw [rufRumpf]
+  cases execEnd oracle passes (rufRumpf program oracle passes depth) (program.rumpf fn) world args with
+  | leave impossible | next impossible => cases impossible
+  | zurueck | why | logik | hardware => rfl
+
 /-- Running the installed declaration through G's actual call handler
     has the same world and exact Ready/Pending or failure result.
     Child calls are evaluated by that very program at the smaller depth. -/
@@ -379,7 +388,7 @@ public theorem NamedPoll.call_refines {u : UProg} {ctx : UCtx}
   refine ⟨?_, pollFunction_refines resolved.expanded.phases inventory fixed resolved.result resolved.inventory
     oracle passes calls prices source world record represented⟩
   have installedBody : installed.rumpf resolved.poll = resolved.body := resolved.install_body program
-  rw [rufRumpf, installedBody]
+  rw [rufRumpf_pollOutcome, installedBody]
   change pollCallOutcome resolved.poll (execEnd oracle passes calls
       (resolved.input.symm ▸ pollFunction resolved.expanded.phases resolved.result resolved.inventory)
       world (resolved.input.symm ▸ Env.cons record .nil)) = _
