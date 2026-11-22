@@ -160,7 +160,7 @@ private theorem clone_control
   | @ask _ _ _ request _ _ _ _ _ ordinary _ _ =>
     cases request with
     | sys call =>
-      simp only [lbl, List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
+      simp only [Mach.lbl, List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
       obtain ⟨_, rfl, _⟩ := logged
       exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
     | rd | wr | cas | fp => cases logged
