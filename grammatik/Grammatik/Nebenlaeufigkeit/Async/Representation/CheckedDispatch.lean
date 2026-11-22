@@ -5,6 +5,7 @@ public import Grammatik.Nebenlaeufigkeit.Async.Representation.BindLowering
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 public import Grammatik.Kern.Semantik.Evaluation.Aggregates.Locals
+import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 import Grammatik.Parser.Elab.Uebersetze.Kontext.SyntaxEquality
 
 namespace Gabbro.Grammatik.Async.Representation
@@ -271,24 +272,27 @@ public theorem PhasePlan.exec_refines {elaboration : Elaboration D V Λ types f}
     | running tag frame value slots =>
       obtain ⟨record, ran, inv, _⟩ := checked.block_rep inventory frame world (.cons value env) .here
         (.there state) slots owned (fixed.bind checked.command) oracle passes calls (l := l)
-      simp only [runActivation, checked.command, PhasePlan.block, ran]
-      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _ rfl
+      simp only [runActivation, checked.command, PhasePlan.block]
+      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _
+        (congrArg Ausgang.schrumpf ran)
   | start checked =>
     cases selected with
     | running tag frame value slots =>
       obtain ⟨record, ran, inv, _⟩ := checked.start_simulates inventory .here (.there state)
         oracle passes calls world (.cons value env) frame slots owned (fixed.start checked.command) (l := l)
-      simp only [runActivation, checked.command, PhasePlan.block, ran]
-      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _ rfl
+      simp only [runActivation, checked.command, PhasePlan.block]
+      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _
+        (congrArg Ausgang.schrumpf ran)
   | final checked =>
     cases selected with
     | running _ frame value slots =>
       obtain ⟨record, ran, inv, _⟩ := checked.block_simulates inventory fixed.completed .here (.there state)
         (.there finished) oracle passes calls world (.cons value env) frame slots (l := l)
-      simp only [runActivation, List.drop_length, PhasePlan.block, ran]
-      apply refineStop inventory state finished separate (env.set state record) _ _ _ _ _ rfl _ rfl
-      rw [Env.get_set_same]
-      exact inv
+      simp only [runActivation, List.drop_length, PhasePlan.block]
+      exact refineStop inventory state finished separate (env.set state record) _
+        (Env.get_set_same env state record ▸ inv) _ _
+        (.ready (evaluateBound elaboration f.result frame world).1 frame.marks) rfl _
+        (congrArg Ausgang.schrumpf ran)
   | poll checked =>
     cases selected with
     | waiting tag future frame task frameValue taskValue slots child =>
@@ -308,9 +312,8 @@ public theorem PhasePlan.exec_refines {elaboration : Elaboration D V Λ types f}
           simp only [runWaitingPoll, answer, waitingReply] at ran ⊢
           obtain ⟨record, executed, inv, _⟩ := ran
           rw [executed]
-          apply refineStop inventory state finished separate (env.set state record) _ _ _ _ _ rfl _ rfl
-          rw [Env.get_set_same]
-          exact inv
+          exact refineStop inventory state finished separate (env.set state record) _
+            (Env.get_set_same env state record ▸ inv) _ _ .pending rfl _ rfl
         | ready result =>
           simp only [runWaitingPoll, answer, waitingReply] at ran ⊢
           obtain ⟨record, executed, inv, _⟩ := ran
