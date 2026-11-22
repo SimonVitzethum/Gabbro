@@ -32,6 +32,7 @@ public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.ImageAddress
 public import Stage0.Senke.Bild.Ruf.RootEntry
 public import Stage0.Senke.Bild.Ruf.RootProlog
+public import Stage0.Senke.Bild.Ruf.IdleLowering
 public import Stage0.Senke.Bild.Ruf.RootExit
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Ruf.BodyMemory
