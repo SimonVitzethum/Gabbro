@@ -293,6 +293,86 @@ public theorem ConstructPlan.lower_assign {elaboration : Elaboration D V Λ type
     rw [ran]
     simp only [firstEffect, secondEffect]
     erw [encoded]
-    rfl
+
+/-- The Running await arm evaluates the actual argument tree and saves
+    the constructed task together with only the live continuation slots. -/
+@[expose] public def beginAwaitBlock {elaboration : Elaboration D V Λ types f}
+    (tag : Nat) {destination : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (plan : ConstructPlan elaboration tag future)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f)) :
+    Block D V l Γ Λ Λ :=
+  plan.lower [tag] saved (fun extend task =>
+    constructBlock (extend state)
+      (waitingExpr types f tag command (trimFrameExpr types f (liveAt f (.waiting tag future)) (extend saved)) (.var task)))
+
+/-- Execution of the generated starting arm produces the precise canonical
+    Waiting record. The first poll is a separate ordinary G segment. -/
+public theorem beginAwaitBlock_simulates {elaboration : Elaboration D V Λ types f}
+    (inventory : Inventory D) (tag : Nat) {destination : String} {future : FutureExpr} {boundary : Boundary}
+    {rest : List Command} (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (plan : ConstructPlan elaboration tag future)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f))
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (represented : FrameRep D types f (.running tag) frame (env.get saved))
+    (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
+    (sameInventory : inventory.owned (.waiting tag future) = inventory.owned (.running tag)) :
+    let built := makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame future world
+    let target := State.waiting tag frame built.1
+    ∃ value, execBlock oracle passes calls (beginAwaitBlock (l := l) tag command plan saved state) world env =
+        .ok built.2.1 (env.set state value) ∧
+      Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro built target
+  have retained : liveAt f (.waiting tag future) ⊆ liveAt f (.running tag) := by
+    simp only [liveAt, command, liveBefore]
+    intro name member
+    exact List.mem_append_right _ member
+  let trimmed := eval world (trimFrameExpr (Λ := Λ) types f (liveAt f (.waiting tag future)) saved) world env
+  have trimmedSlots := (trimFrameExpr_rep (Λ := Λ) saved retained world world env represented.slots).2
+  have trimmedFrame : FrameRep D types f (.waiting tag future) frame trimmed :=
+    ⟨trimmedSlots, fun name member => represented.declared name (retained member), represented.unique⟩
+  let body : ∀ {Δ : Ctx}, (∀ {type : Ty}, Var Γ type → Var Δ type) →
+      Var Δ (taskStorageType types [tag] future) → Block D V l Δ Λ Λ := fun extend task =>
+    constructBlock (extend state)
+      (waitingExpr types f tag command (trimFrameExpr types f (liveAt f (.waiting tag future)) (extend saved)) (.var task))
+  let effect := fun child next => (waitingValue D types f tag command trimmed child, next)
+  have correct {Δ : Ctx} (extend : ∀ {type : Ty}, Var Γ type → Var Δ type)
+      (slot : Var Δ (taskStorageType types [tag] future)) (scope : Env D Δ) (now : World D)
+      (inherited : env.AgreesUnder scope extend) :
+      execBlock oracle passes calls (body extend slot) now scope =
+        .ok (effect (scope.get slot) now).2 (scope.set (extend state) (effect (scope.get slot) now).1) := by
+    have previous : FrameRep D types f (.running tag) frame (scope.get (extend saved)) := by
+      rw [inherited saved]
+      exact represented
+    let scan : Expr D Δ Λ (frameType types f) :=
+      trimFrameExpr types f (liveAt f (.waiting tag future)) (extend saved)
+    obtain ⟨silent, slots⟩ := trimFrameExpr_rep (Λ := Λ) (extend saved) retained now now scope previous.slots
+    have sameFrame : FrameRep D types f (.waiting tag future) frame (eval now scan now scope) :=
+      ⟨slots, trimmedFrame.declared, trimmedFrame.unique⟩
+    have exactFrame : eval now scan now scope = trimmed := Option.some.inj
+      ((frameRep_encoded types f (.waiting tag future) frame _ sameFrame).symm.trans
+        (frameRep_encoded types f (.waiting tag future) frame trimmed trimmedFrame))
+    let store := waitingExpr types f tag command scan (.var slot)
+    have noReads : store.orte = [] := by
+      unfold store
+      rw [waitingExpr_reads, silent]
+      rfl
+    have noRead : now.lese Λ [] = now := rfl
+    have execution := constructBlock_exec (V := V) (l := l) oracle passes calls (extend state) store now scope
+    simp only [noReads, noRead] at execution
+    have content := waitingExpr_eval types f tag command scan (.var slot) now now scope
+    rw [exactFrame] at content
+    erw [content] at execution
+    exact execution
+  obtain ⟨taskValue, taskRep, executed⟩ := plan.lower_assign [tag] state saved body oracle passes calls effect
+    frame world env represented correct
+  let value := waitingValue D types f tag command trimmed taskValue
+  have owned : MarksRep inventory (.waiting tag future) target := by
+    simpa only [target, MarksRep, State.marks, sameInventory] using marks
+  have invariant : Inv f types inventory target value :=
+    waitingValue_inv types f inventory tag command frame _ trimmed taskValue trimmedFrame taskRep owned
+  exact ⟨value, executed, invariant, inv_encoded f types inventory target value invariant⟩
 
 end Gabbro.Grammatik.Async.Representation
