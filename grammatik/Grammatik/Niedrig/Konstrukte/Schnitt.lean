@@ -226,6 +226,19 @@ theorem strBoundedSliceValue_exact {maximum : Nat} (value : Wert D (.str maximum
       (strBoundedSliceValue value first last bounds).1.length = last - first :=
   ⟨rfl, sliceValue_length value.1 first last bounds⟩
 
+theorem checkStringSlice_result {maximum : Nat} (value result : Wert D (.str maximum)) (first last : Int)
+    (checked : checkStringSlice value first last = some result) :
+    (0 ≤ first ∧ first ≤ last ∧ last ≤ value.1.length) ∧
+      result.1 = sliceValue value.1 first.toNat last.toNat ∧
+      (result.1.length : Int) = last - first := by
+  unfold checkStringSlice at checked
+  split at checked
+  · rename_i valid
+    obtain rfl := Option.some.inj checked
+    have exactValue := strBoundedSliceValue_exact value first.toNat last.toNat ⟨by omega, by omega⟩
+    exact ⟨valid, exactValue.1, by rw [exactValue.2]; omega⟩
+  · cases checked
+
 /-- A substring descriptor selects the same byte as the canonical
     string value. The index bound is over the actual substring length. -/
 theorem strBoundedSliceValue_byte {maximum : Nat} (value : Wert D (.str maximum))
