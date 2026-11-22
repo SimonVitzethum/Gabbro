@@ -57,6 +57,7 @@ omit [Kern] in
 theorem BildLage.startLimits (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
     2 < Ks ∧ n + 1 < 2 ^ 31 ∧ Ks < 2 ^ 31 := by
   have reserved := Nat.le_mul_of_pos_right Ks (Nat.succ_pos roots.length)
+  simp only [Nat.succ_eq_add_one] at reserved
   have first := h.hylo
   have world := h.hyord
   have last := h.hyhi
