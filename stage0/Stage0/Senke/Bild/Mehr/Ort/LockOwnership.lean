@@ -6,7 +6,8 @@ public import Stage0.Senke.Sperre.Bindung.ImageFutex
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
 
 /-- A ticket lock and the source traces name the same owner. Source
     slots outside the fixed image's reservations hold no lock. -/
@@ -15,6 +16,38 @@ structure TicketOwnership {D : Deklaration} {N : Nat}
   inside : ∀ thread : Fin N, (state.pc thread).haelt = true ↔
     lock ∈ offen (source.faeden thread.val).spur
   outside : ∀ thread, N ≤ thread → lock ∉ offen (source.faeden thread).spur
+
+/-- The actual loaded lock words, the checked source startup and every
+    reserved thread agree before the image executes its first instruction. -/
+theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketOwnership [Kern]
+    {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) {E : Einheit (declOf output.compiled.unit)}
+    {memory : Mem} (loaded : BytesAt memory Runner.Prog.IMG output.bytes)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (lock : (declOf output.compiled.unit).Lock) :
+    let initial := start (output.starts.length + 1)
+    TicketWordsAt memory (output.image.Y.lk lock) initial ∧ Inv (output.starts.length + 1) initial ∧
+      TicketOwnership (imageSourceStart E).m lock initial := by
+  intro initial
+  obtain ⟨words, invariant⟩ := output.loaded_ticketWords (output.starts.length + 1) loaded lock
+  have checked := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA inferInstance accepted).1
+  have noLocks (thread : Nat) : lock ∉ offen ((imageSourceStart E).m.faeden thread).spur := by
+    change lock ∉ offen (startSpur (initRuhe E.starts thread).1)
+    rw [offen_startSpur]
+    unfold initRuhe
+    cases found : E.starts[thread]? with
+    | none => exact List.not_mem_nil
+    | some root =>
+      have declared : root.1 ∈ E.ws := by
+        exact List.mem_map_of_mem (List.mem_append_left _ (List.mem_of_getElem? found))
+      have empty := (checked.wurzeln root.1 declared).1
+      change lock ∉ (declOf output.compiled.unit).haelt root.1
+      rw [empty]
+      exact List.not_mem_nil
+  exact ⟨words, invariant, ⟨
+    fun thread => Iff.intro (fun impossible => Bool.noConfusion impossible)
+      (fun held => (noLocks thread.val held).elim),
+    fun thread _ => noLocks thread⟩⟩
 
 /-- Physical admission establishes the scheduler side of the source
     lock rule even when other threads are queued. -/
