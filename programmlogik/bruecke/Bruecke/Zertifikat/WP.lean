@@ -1,7 +1,7 @@
 module
 public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Programm
-public import Bruecke.Zertifikat.Teilen
+public import Bruecke.Zertifikat.Generisch
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -114,15 +114,60 @@ open Lean Elab Tactic Meta in
   let b' ← kernNormal args[args.size - 4]!
   replaceMainGoal [← goal.replaceTargetDefEq (mkAppN t.getAppFn (args.set! (args.size - 4) b'))]
 
+/-- Run a tactic with a fresh heartbeat budget; on any failure (a timeout too) the goals stay as they
+    were. -/
+syntax (name := gabbrovSicher) "gabbrov_sicher " tactic : tactic
+
+open Lean Elab Tactic in
+@[tactic gabbrovSicher] meta def evalGabbrovSicher : Tactic := fun stx => do
+  let s ← saveState
+  tryCatchRuntimeEx (withCurrHeartbeats (evalTactic stx[1])) (fun _ => s.restore)
+
+/-- The generic steps (`Generisch.lean`), tried only where no rule and no simple reduction applies:
+    refold an execution, unfold a dispatch helper, split or reduce a `match`, one equation step. -/
+syntax (name := gabbrovGenerisch) "gabbrov_generisch" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovGenerisch] meta def evalGabbrovGenerisch : Tactic := fun _ => withMainContext do
+  let goal ← getMainGoal
+  let t ← instantiateMVars (← goal.getType)
+  if let some g ← zurueckfalten? goal then replaceMainGoal [g]
+  else if let some g ← hilfeEntfalten? goal then replaceMainGoal [g]
+  else if let some gs ← matchTeilen? goal then replaceMainGoal gs
+  else if let some g ← entfalten? goal t then replaceMainGoal [g]
+  else throwError "gabbrov_generisch: no generic step applies"
+
 /-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
-    and reduce the continuations `weiterEA`/`weiterBA` at a known outcome: symbolic execution of a
-    lowered body in constructor form by the model's own rules. Every rule is an equivalence, so the
-    remaining goals say exactly what the program owes. -/
-macro "gabbrov_wp" : tactic => `(tactic| repeat' (first
-  | gabbrov_schritt
-  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])
-  | (dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
-      Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang])))
+    to every goal (symbolic execution of a lowered body by the model's own rules), within a budget of
+    `n` steps (default 20000): a goal on which no step applies stays as it is. -/
+syntax (name := gabbrovWp) "gabbrov_wp" (num)? : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovWp] meta def evalGabbrovWp : Tactic := fun stx => do
+  let budget := if stx[1].isNone then 20000 else stx[1][0].isNatLit?.getD 20000
+  let mut fuel := budget
+  let mut offen ← getGoals
+  let mut stehen : List MVarId := []
+  while fuel > 0 && !offen.isEmpty do
+    fuel := fuel - 1
+    let g := offen.head!
+    offen := offen.tail!
+    if ← g.isAssigned then continue
+    setGoals [g]
+    let s ← saveState
+    let ok ← tryCatchRuntimeEx (withCurrHeartbeats do
+        evalTactic (← `(tactic| first
+          | gabbrov_schritt
+          | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])
+          | (dsimp only [Gabbro.Grammatik.EndAusgang.schrumpf, Gabbro.Grammatik.Ausgang.schrumpf,
+              Gabbro.Grammatik.Ausgang.schrumpfArm, Gabbro.Grammatik.EndAusgang.zuAusgang])
+          | gabbrov_generisch))
+        pure true)
+      (fun _ => do s.restore; pure false)
+    if ok then offen := (← getGoals) ++ offen
+    else stehen := stehen ++ [g]
+  setGoals (offen ++ stehen)
+  if fuel == 0 then logInfo m!"gabbrov_wp: step budget {budget} exhausted"
 
 /-- **Compute a term and put its normal form into the goal**: `gabbrov_senke t` reduces `t` (all
     definitions unfolded, proofs and types kept) and rewrites `t` to the result. The rewrite is `rfl`, checked
@@ -159,7 +204,7 @@ macro "gabbrov_beweis" : tactic => `(tactic| (
     intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
     show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
     rw [hrumpf] <;> gabbrov_rumpf <;> gabbrov_wp
-  all_goals gabbrov_fertig hens
-  all_goals try gabbrov_arith))
+  all_goals gabbrov_sicher gabbrov_fertig hens
+  all_goals gabbrov_sicher gabbrov_arith))
 
 end Gabbro.Bruecke

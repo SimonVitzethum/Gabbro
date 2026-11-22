@@ -109,7 +109,22 @@ meta partial def tBool (s0 s : Lean.Expr) (e ρ : Lean.Expr) : StateRefT (Array 
   | some `Gabbro.Grammatik.Expr.or => do
       pure (mkApp2 (mkConst ``or) (← tBool s0 s a[n-2]! ρ) (← tBool s0 s a[n-1]! ρ))
   | some `Gabbro.Grammatik.Expr.not => do pure (mkApp (mkConst ``not) (← tBool s0 s a[n-1]! ρ))
+  -- a quantifier over a table of fixed size: one conjunct (disjunct) per index
+  | some `Gabbro.Grammatik.Expr.forallSlots => quantor true a[n-3]! a[n-2]!
+  | some `Gabbro.Grammatik.Expr.existsSlots => quantor false a[n-3]! a[n-2]!
   | _ => mkAppM `Gabbro.Grammatik.eval #[s0, e, s, ρ]
+where
+  quantor (alle : Bool) (t body : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM Lean.Expr := do
+    let wty ← kw (← inferType s)
+    unless wty.isAppOfArity `Gabbro.Grammatik.World 1 do throwError "gabbrov_arith: no world"
+    let d := wty.getArg! 0
+    let idx ← kernNormal (← mkAppM `Gabbro.Grammatik.alleIndizes #[mkApp2 (mkConst `Gabbro.Grammatik.Deklaration.count) d t])
+    let some ks := idx.listLit? | throwError "gabbrov_arith: the indices are not a list"
+    let mut acc := mkConst (if alle then ``Bool.true else ``Bool.false)
+    for k in ks.2.reverse do
+      let b ← tBool s0 s body (← mkAppM `Gabbro.Grammatik.Env.cons #[k, ρ])
+      acc := mkApp2 (mkConst (if alle then ``and else ``or)) b acc
+    return acc
 
 /-- The Boolean a term `wahr? (eval σ₀ e σ ρ)` (or `eval σ₀ e σ ρ`) stands for, if it is one. -/
 meta def tBedingung? (b : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option Lean.Expr) := do
@@ -139,7 +154,36 @@ meta def tAussage? (p : Lean.Expr) : StateRefT (Array Lean.Expr) MetaM (Option L
 /-- **Translate the conditions over symbolic values into integer arithmetic and try `omega`.** -/
 syntax (name := gabbrovArith) "gabbrov_arith" : tactic
 
+/-- The entry precondition `ReqAmEintritt P f σ ρ` of the opened duty, read at the function's own
+    lowering (`requires_eq`), as a further hypothesis. -/
+meta def reqLesen (goal : MVarId) : MetaM MVarId := goal.withContext do
+  let some hlow ← findeLow? | return goal
+  let mut g := goal
+  for d in ← getLCtx do
+    if LocalDecl.isImplementationDetail d then continue
+    let ty ← instantiateMVars (LocalDecl.type d)
+    unless ty.isAppOf ``Gabbro.Grammatik.ReqAmEintritt && ty.getAppNumArgs ≥ 4 do continue
+    let f := ty.getAppArgs[ty.getAppNumArgs - 3]!
+    let some body ← delta? ty | continue
+    let some (_, lhs, _) := body.eq? | continue
+    -- lhs = wahr? (eval σ X σ ρ)
+    let ev := lhs.appArg!
+    unless ev.isAppOf ``Gabbro.Grammatik.eval && ev.getAppNumArgs ≥ 4 do continue
+    let X := ev.getAppArgs[ev.getAppNumArgs - 3]!
+    let some eq ← (try some <$> mkAppM ``Gabbro.Bruecke.requires_eq #[hlow, f] catch _ => pure none) | continue
+    let some (_, _, rhs) := (← inferType eq).eq? | continue
+    let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
+    let motiv := mkLambda `r .default (← inferType X) motivRumpf
+    let neu := (mkApp motiv rhs).headBeta
+    let pf ← mkEqMP (← mkCongrArg motiv eq) d.toExpr
+    g ← g.assert `hreq neu pf
+    let (_, g') ← g.intro1
+    g := g'
+  return g
+
 @[tactic gabbrovArith] meta def evalGabbrovArith : Tactic := fun _ => withMainContext do
+  replaceMainGoal [← reqLesen (← getMainGoal)]
+  withMainContext do
   let goal ← getMainGoal
   let (r, atome) ← (do
     let mut goal := goal
