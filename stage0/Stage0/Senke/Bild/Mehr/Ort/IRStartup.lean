@@ -74,48 +74,11 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
           control = .ask (.sys cloneReq) (fun answer =>
             opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) := by
   intro pc parent child
-  let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)
-  let stack := output.image.fp0 + 8 * (output.image.Ks * (j + 1))
-  let scratch := startScratch output.compiled.main
-  have start := List.getElem?_eq_getElem (l := output.starts) declared
-  obtain ⟨decoded, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q code start
-  have placed : CodeAt view pc (spawnOne scratch entry stack) := by
-    simpa only [pc, BitVec.ofNat_add] using decoded
-  obtain ⟨_, body, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
-    (fun base bound => layU_in output.compiled.unit output.tor base bound)
-    (fun base => layU_dis output.compiled.unit output.tor base)
-    (fun base => by simp only [layU]; omega)
-    (fun base => layU_sync output.compiled.unit output.tor base)
-  have totalStack : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
-    simpa only [Emitted.starts, List.length_map] using layout.hylo
-  have imageEnd := layout.hfit
-  have worldStart := layout.hyord
-  have worldEnd := layout.hyhi
-  have stackFits : stack < 2 ^ 31 := by
-    have used : output.image.Ks * (j + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
-      Nat.mul_le_mul_left _ (Nat.add_le_add_right declared.le 1)
-    dsimp only [stack]
-    omega
-  have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
-    simpa only [Emitted.starts, List.length_map] using layout.hfp
-  have entryFits : entry < 2 ^ 31 := by
-    dsimp only [entry]
-    simp only [headLen, startLen] at frameStart ⊢
-    omega
-  have scratchFits : scratch + 8 ≤ output.image.Ks := layout.hex _ List.mem_cons_self
-  have far : CodeFar pc 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
-    have singleStack : output.image.Ks ≤ output.image.Ks * (j + 1) :=
-      Nat.le_mul_of_pos_right _ (Nat.succ_pos j)
-    have room : output.image.fp0 + 8 * output.image.Ks < 2 ^ 64 := by
-      dsimp only [stack] at stackFits
-      omega
-    apply codeFar_nat _ room
-    simp only [headLen, startLen] at frameStart
-    omega
+  obtain ⟨placed, far, scratchFits, slotsFit, entryFits, stackFits⟩ := output.loaded_spawn_site code declared
   obtain ⟨count, prepared, preserved, ran, confined⟩ :=
-    BildMehr.spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
+    BildMehr.spawnSite_reference table placed frame far (by omega) slotsFit entryFits stackFits
   have fpValue : (BitVec.ofNat 64 output.image.fp0).toNat = output.image.fp0 := by
-    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by dsimp only [stack] at stackFits; omega)]
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   have ownFrame : inSlots parent.fp 0 output.image.Ks = imageStackFootprint output 0 := by
     funext byte
     apply propext

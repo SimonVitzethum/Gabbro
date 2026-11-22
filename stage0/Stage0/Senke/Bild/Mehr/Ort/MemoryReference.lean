@@ -304,6 +304,19 @@ private theorem RunP.read64 {before after : Mem} {address word : W}
     RunP (rd64 address resume) before finish after := by
   exact .ask (a := some (word, 0)) (m' := before) (by simp [memAns, read]) tail
 
+/-- A result continuation decodes its ordinary destination operand and
+    writes exactly the received word. This is shared by returning host
+    calls, atomic responses, and the instructions using the same tree. -/
+theorem resultStore_reference {pointer : T} {memory : Mem} {dest : BitVec 32} {value : W}
+    (destination : memory.rd32 (pointer.pc + 4) = some dest)
+    (writable : Mem.all memory.wr (slot pointer.fp (sx dest)) 8 = true) :
+    RunP (ret1 pointer value) memory (.next (nxt pointer))
+      (Mem.write memory (slot pointer.fp (sx dest)) 8 value.toNat) := by
+  unfold ret1 f1
+  apply RunP.read32 destination
+  refine .ask (a := some (0, 0)) (by rw [memAns_wr, Mem.wr64_some writable]) ?_
+  exact .refl _ _
+
 /-- The immediate instruction selects its operand and writes one word
     using only the IR memory semantics. -/
 theorem constantInstruction_memory [Kern] {pointer : T} {memory : Mem} {dest value pad : BitVec 32}
@@ -317,10 +330,7 @@ theorem constantInstruction_memory [Kern] {pointer : T} {memory : Mem} {dest val
   change RunP (op 1 pointer) _ _ _
   simp only [op]
   apply RunP.read32 instruction.f2
-  simp only [ret1]
-  apply RunP.read32 instruction.f1
-  refine .ask (a := some (0, 0)) (by rw [memAns_wr, Mem.wr64_some writable]) ?_
-  exact .refl _ _
+  exact resultStore_reference instruction.f1 writable
 
 /-- The IR instruction tree reaches the host with the continuation
     selected by the operands that it read from the issuing frame. -/
