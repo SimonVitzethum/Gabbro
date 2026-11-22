@@ -9,14 +9,18 @@ open Segment
 variable {D : Deklaration} {types : TypeResolution} {f : AsyncFn}
   {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
+@[expose] public def activeLeafExpr (types : TypeResolution) (path : List Nat)
+    (name : String) (args : List Parser.SExpr) (storage : Expr D Γ Λ (types.childState name)) :
+    Expr D Γ Λ (taskStorageType types path (.call name args)) :=
+  .case [some (types.childState name), some (types.childResult name)] ⟨0, Nat.zero_lt_succ 1⟩ (.val storage)
+
 /-- Generate the active child case from the resolved constructor. The
     constructor receives just its already evaluated argument bindings. -/
 @[expose] public def activeChildExpr {name : String}
     (callee : AwaitedCall D V Λ types name) (path : List Nat) (args : List Parser.SExpr)
     (rename : ∀ {τ : Ty}, Var callee.parameters τ → Var Γ τ) :
     Expr D Γ Λ (taskStorageType types path (.call name args)) :=
-  .case [some (types.childState name), some (types.childResult name)] ⟨0, Nat.zero_lt_succ 1⟩
-    (.val (callee.construct.ren rename))
+  activeLeafExpr types path name args (callee.construct.ren rename)
 
 /-- The emitted leaf constructor produces the exact lazy child in the
     world reached by the semantic constructor on the typed arguments. -/
@@ -42,7 +46,7 @@ public theorem activeChildExpr_rep (elaboration : Elaboration D V Λ types f) (p
     (evaluateExpression (activeChildExpr callee path args rename) world env).2.2 =
       1 + (constructChild elaboration name arguments world).2.2
   rw [computed]
-  simp only [activeChildExpr, evaluateExpression, Expr.orte, NutzlastExpr.orte, preserved.1,
+  simp only [activeChildExpr, activeLeafExpr, evaluateExpression, Expr.orte, NutzlastExpr.orte, preserved.1,
     eval, evalNutz, exactStorage, kostenExpr, kostenNutz, preserved.2.1]
   refine ⟨.callActive path name args _, ?_, ?_⟩ <;> first | trivial | rfl
 
@@ -158,5 +162,96 @@ public theorem lowerAwaitLeaf_rep (elaboration : Elaboration D V Λ types f) (in
   change (evaluateExpression construct world env).2.1 = model.2.1 at sameWorld
   rw [sameWorld] at executed
   exact ⟨value, executed, invariant, encoded⟩
+
+@[expose] public def leafPollArguments {name : String} (callee : AwaitedCall D V Λ types name)
+    (child : Var Γ (types.childState name)) : Args D Γ Λ (D.params callee.poll) :=
+  callee.pollParams.symm ▸ Args.cons (.var child) Args.nil
+
+public theorem leafPollArguments_eval {name : String} (callee : AwaitedCall D V Λ types name)
+    (child : Var Γ (types.childState name)) (entry world : World D) (env : Env D Γ) :
+    (leafPollArguments callee child).orte = [] ∧
+      evalArgs entry (leafPollArguments callee child) world env = pollEnvironment callee (env.get child) := by
+  have lift {params params' : Ctx} (same : params = params') (args : Args D Γ Λ params) :
+      (same ▸ args : Args D Γ Λ params').orte = args.orte ∧
+      evalArgs entry (same ▸ args) world env = (same ▸ evalArgs entry args world env) := by
+    cases same
+    exact ⟨rfl, rfl⟩
+  exact lift callee.pollParams.symm (.cons (.var child) .nil)
+
+/-- The Pending branch keeps the old continuation frame and saves the
+    actual child returned by the poll, rather than the old child input. -/
+@[expose] public def leafPendingExpr (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {destination name : String} {args : List Parser.SExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (saved : Var Γ (frameType types f)) :
+    Expr D (types.childState name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ (stateType types f) :=
+  waitingExpr types f tag command (.var (.there (.there saved)))
+    (activeLeafExpr types [tag] name args (.var .here))
+
+@[expose] public def lowerLeafPoll (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    {destination name : String} {args : List Parser.SExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (callee : AwaitedCall D V Λ types name) (child : Var Γ (types.childState name)) (saved : Var Γ (frameType types f))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (ready : Expr D (types.childResult name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ (stateType types f)) : Block D V l Γ Λ Λ :=
+  childPollBlock callee (leafPollArguments callee child)
+    (pollAnswerArms state finished ready (leafPendingExpr types f tag command saved))
+
+/-- In the Pending branch both the ordinary G poll and the semantic
+    await keep the exact updated child and the same owned resources. -/
+public theorem lowerLeafPoll_pending (elaboration : Elaboration D V Λ types f) (inventory : Inventory D)
+    (tag : Nat) {destination name : String} {args : List Parser.SExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (child : Var Γ (types.childState name)) (saved : Var Γ (frameType types f))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (ready : Expr D (types.childResult name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ (stateType types f)) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (world after : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (stored : FrameRep D types f (.waiting tag (.call name args)) frame (env.get saved))
+    (owned : MarksRep inventory (.waiting tag (.call name args)) (.waiting tag frame (.leaf (.active name (env.get child)))))
+    (answer : ErgVal D (D.erg callee.poll)) (updated : Wert D (types.childState name))
+    (returned : calls callee.poll world (pollEnvironment callee (env.get child)) = .ok after answer)
+    (pending : ergWert callee.pollResult answer = pendingAnswer D (types.childResult name) (types.childState name) updated) :
+    let target := State.waiting (Value := Value D) tag frame (.leaf (.active name updated))
+    runWaitingPoll elaboration calls prices tag destination frame (.leaf (.active name (env.get child))) world =
+        .ok (.pending, target, after, prices callee.poll + 1) ∧
+    ∃ value, execBlock oracle passes calls (lowerLeafPoll (V := V) (l := l) types f tag command
+        callee child saved state finished ready) world env = .ok after ((env.set state value).set finished true) ∧
+      Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro target
+  constructor
+  · simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
+      pending, decodePollAnswer, pendingAnswer, bind, Except.bind, Except.pure, pure, waitingReply] <;> rfl
+  let arguments := leafPollArguments callee child
+  let arm := leafPendingExpr types f tag command saved
+  obtain ⟨silentArgs, exactArgs⟩ := leafPollArguments_eval callee child world world env
+  have noRead (current : World D) : current.lese Λ [] = current := rfl
+  have called : calls callee.poll (world.lese Λ arguments.orte)
+      (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) env) = .ok after answer := by
+    simp only [arguments, silentArgs, noRead, exactArgs]
+    exact returned
+  have executed := childPollBlock_exec_return callee arguments
+    (pollAnswerArms (V := V) (l := l) state finished ready arm) oracle passes calls world after env answer called
+  dsimp only at executed
+  rw [pending, pollAnswerArms_pending] at executed
+  have silent : arm.orte = [] := by
+    simp only [arm, leafPendingExpr, waitingExpr_reads, activeLeafExpr, Expr.orte, NutzlastExpr.orte, List.nil_append]
+  simp only [silent, noRead] at executed
+  let current : Wert D (taskStorageType types [tag] (.call name args)) :=
+    readyAnswer D (types.childState name) (types.childResult name) updated
+  let value := waitingValue D types f tag command (env.get saved) current
+  have content := waitingExpr_eval (Λ := Λ) types f tag command (.var (.there (.there saved)))
+    (activeLeafExpr types [tag] name args (.var .here)) after after
+    (.cons updated (.cons (pendingAnswer D (types.childResult name) (types.childState name) updated) env))
+  change eval after arm after (.cons updated (.cons
+    (pendingAnswer D (types.childResult name) (types.childState name) updated) env)) = value at content
+  rw [content] at executed
+  have invariant : Inv f types inventory target value := waitingValue_inv types f inventory tag command frame _ _ current
+    stored (.callActive [tag] name args updated) owned
+  exact ⟨value, executed, invariant, inv_encoded f types inventory _ value invariant⟩
 
 end Gabbro.Grammatik.Async.Representation
