@@ -42,7 +42,7 @@ exec(open(ROOT / 'instrumente' / 'teile' / 'lean-layout-rules.py').read())
 
 # Lean projects: folders from the project root down to a folder holding Lean files are counted.
 # Nested projects (a package inside another package's folder) come first: the longest prefix decides.
-PROJECTS = ['grammatik/nativefloat', 'grammatik', 'programmlogik/bruecke', 'programmlogik/passlogik', 'programmlogik',
+PROJECTS = ['grammatik/nativefloat', 'grammatik', 'programmlogik/bruecke', 'programmlogik/passlogik',
             'stage0/runner', 'stage0']
 TEXT_TREES = ['crates', 'instrumente', 'dokumente', 'examples', 'bibliothek', 'laufzeit',
               'programmlogik', 'beweise', 'README.md', 'DIRECT-COMPILER-DESIGN.md',

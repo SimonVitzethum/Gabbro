@@ -74,10 +74,6 @@ rules('grammatik/Grammatik/Speichermodell', [
     (r'^(DRF|GXMaschine|MaschineW|RMW|Sicht|Zaehler|ZaehlerW|SperreSemA|Zeuge)$', 'Maschine'),
 ])
 
-rules('programmlogik/bruecke/Bruecke', [
-    (r'^Instanz\d+$', 'Instanzen'),
-])
-
 rules('grammatik/Grammatik/Zertifikat', [
     (r'^G\d{1,2}_', 'Reihe00'),
     (r'^G1\d\d_', 'Reihe01'),
