@@ -147,8 +147,6 @@ private theorem clone_control
     (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
     (positive : 0 < id.toInt) :
     after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ := by
-  let pending : Res T := .ask (.sys cloneReq) fun answer =>
-    opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1
   have nonzero : id ≠ 0 := by
     rintro rfl
     exact (by decide : ¬ (0 < (0 : W).toInt)) positive
@@ -159,7 +157,7 @@ private theorem clone_control
   intro labels transition logged
   cases transition with
   | tau | priv => cases logged
-  | @ask _ _ _ _ request _ _ _ _ _ ordinary _ _ =>
+  | @ask _ _ _ request _ _ _ _ _ ordinary _ _ =>
     cases request with
     | sys call =>
       simp only [lbl, List.cons.injEq, Prod.mk.injEq, true_and, and_true] at logged
@@ -182,7 +180,7 @@ private theorem clone_control
     change (if cloneReq = cloneReq then _ else _) at sameMemory
     rw [ite_eq_left rfl] at sameMemory
     obtain ⟨rfl, _⟩ := sameMemory
-    simp only [pending, opt_some, ite_eq_right nonzero, ite_eq_left rfl, Res.next.injEq] at resumed spawned
+    simp only [opt_some, ite_eq_right nonzero, Res.next.injEq] at resumed spawned
     subst_vars
     rfl
 
