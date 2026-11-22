@@ -79,7 +79,7 @@ def imageProtectedFootprint {src : String} {reserve : Nat} {options : Profil.Opt
   imageStackFootprint output thread address ∨
     protectedCellFootprint output.image.Y.withIdle source thread address
 
-theorem imageProtectedFootprint_exclusive {src : String} {reserve : Nat} {options : Profil.Options}
+theorem imageProtectedFootprint_exclusive [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {N : Nat} {memory : Mem} {states : _ → Zustand N}
     (locks : ImageTicketStates output.image.Y.withIdle memory source states)
@@ -95,18 +95,18 @@ theorem imageProtectedFootprint_exclusive {src : String} {reserve : Nat} {option
       (protectedCellFootprint_bounds inLayout left).1).elim
   · exact locks.protected_exclusive cells left right
 
-theorem imageProtectedFootprint_lock_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
+theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {thread : Nat} {address : W} {lock : (declOf output.compiled.unit).Lock}
     (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
     (order : output.image.Y.lo ≤ output.image.Y.hi)
     (owned : imageProtectedFootprint output source thread address) :
     ¬ LockBytes output.image.Y.withIdle lock address := by
-  rcases owned with stack | protected
+  rcases owned with stack | data
   · intro lockByte
     have below := imageStackFootprint_before_world stack
     exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
-  · exact protectedCellFootprint_lock_disjoint inLayout synchronized protected
+  · exact protectedCellFootprint_lock_disjoint inLayout synchronized data
 
 /-- Changing the current source trace of the CAS issuer leaves every
     pending store assigned to the same owning thread. The actual TSO
@@ -130,7 +130,8 @@ theorem privateBuffers_after_release [Kern] {src : String} {reserve : Nat} {opti
   have buffers : after.1.buf = before.1.buf := by
     rcases answered.1.2 with ⟨_, _, same⟩ | ⟨_, _, _, _, changed⟩
     · rw [same]
-    · exact congrArg TSt.buf changed
+    · have bufferEq := congrArg TSt.buf changed
+      exact bufferEq
   have oldAfter : PrivateBuffers (imageProtectedFootprint output source) after.1 := by
     intro issuer store pending byte hit
     rw [buffers] at pending
@@ -164,7 +165,8 @@ theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options :
     (old : PrivateBuffers (imageProtectedFootprint output source) before.1)
     (locks : ImageTicketStates output.image.Y.withIdle after.1.m target states)
     (prior : TicketOwnership source lock start) (next : TicketOwnership target lock released)
-    (releasedPC : released.pc = upd start.pc thread .gibW) (otherLocks : OtherLockOwners lock source target)
+    (releasedPC : released.pc = upd start.pc thread .gibW)
+    (otherLocks : OtherLockOwners (D := (declOf output.compiled.unit).mitRuhe) lock source target)
     (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
     (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (order : output.image.Y.lo ≤ output.image.Y.hi) :
@@ -187,6 +189,8 @@ theorem image_release_projected [Kern] {src : String} {reserve : Nat} {options :
     have fits : output.image.Y.withIdle.lk lock + 24 ≤ 2 ^ 64 := (synchronized.1 lock).2.trans bound
     exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
       (lockWord_in_bytes fits (by decide) hit)
-  exact ⟨pending, projection.symm ▸ projectSCState_cas_shared answered.1 _ shared⟩
+  refine ⟨pending, ?_⟩
+  rw [projection]
+  exact projectSCState_cas_shared answered.1 _ shared
 
 end Gabbro.Stage0.Senke.Faeden

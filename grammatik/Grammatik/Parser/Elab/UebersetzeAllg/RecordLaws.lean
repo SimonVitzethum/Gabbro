@@ -134,7 +134,7 @@ theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
   have read : uWertBody ctx argument = .ok (.product identity false fields) := by
     cases value <;>
       simp [argument, fields, uWertBody, uRechne, chosen, uRecordSides, uRecordSide, uRecordValues,
-        schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure]
+        schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure] <;> rfl
   exact ⟨read, specLiteralRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl rfl⟩
 
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
