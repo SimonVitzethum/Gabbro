@@ -240,8 +240,8 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
       fun _ impossible _ => (Nat.not_lt_zero _ impossible).elim⟩
   | next head _ ih =>
     obtain ⟨middle, executed, reached, otherBytes, requests⟩ :=
-      head.replay_on (blind_step _) readable writable agrees
-    obtain ⟨rd, wr⟩ := head.permissions
+      RunM.replay_on head (blind_step _) readable writable agrees
+    obtain ⟨rd, wr⟩ := RunM.permissions head
     obtain ⟨result, ran, agreement, laterBytes, laterRequests⟩ := ih
       (fun byte granted => readable byte (by simpa only [rd] using granted))
       (fun byte granted => writable byte (by simpa only [wr] using granted)) reached
