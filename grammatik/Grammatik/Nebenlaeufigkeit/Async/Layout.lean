@@ -121,6 +121,56 @@ public inductive Phase where
       exact next.property.trans (congrArg Phase.running tag)⟩
 termination_by structural body _ _ => body
 
+/-- Earlier dispatch slots cannot name the same running command. They
+    either belong to an earlier command or are its Waiting case. -/
+public theorem commandRunningIndex_first (base : Nat) (body : List Command) (offset : Nat)
+    (within : offset ≤ body.length) (before : Fin (commandPhases base body).length)
+    (earlier : before.val < (commandRunningIndex base body offset within).val.val) :
+    (commandPhases base body).get before ≠ .running (base + offset) := by
+  induction body generalizing base offset with
+  | nil =>
+    have empty : offset = 0 := Nat.eq_zero_of_le_zero within
+    subst offset
+    exact (Nat.not_lt_zero _ earlier).elim
+  | cons command rest ih =>
+    cases offset with
+    | zero =>
+      cases command <;> exact (Nat.not_lt_zero _ earlier).elim
+    | succ offset =>
+      have smaller := Nat.le_of_succ_le_succ within
+      have tag : base + 1 + offset = base + (offset + 1) := by omega
+      have head : Phase.running base ≠ .running (base + (offset + 1)) := by
+        intro same
+        injection same with equal
+        omega
+      cases command with
+      | bind =>
+        obtain ⟨position, valid⟩ := before
+        cases position with
+        | zero => exact head
+        | succ position =>
+          let next : Fin (commandPhases (base + 1) rest).length := ⟨position, Nat.lt_of_succ_lt_succ valid⟩
+          have bound : next.val < (commandRunningIndex (base + 1) rest offset smaller).val.val :=
+            Nat.lt_of_succ_lt_succ earlier
+          have different := ih (base + 1) offset smaller next bound
+          change (commandPhases (base + 1) rest).get next ≠ .running (base + (offset + 1))
+          rwa [← tag]
+      | await =>
+        obtain ⟨position, valid⟩ := before
+        cases position with
+        | zero => exact head
+        | succ position =>
+          cases position with
+          | zero => intro equal; cases equal
+          | succ position =>
+            let next : Fin (commandPhases (base + 1) rest).length :=
+              ⟨position, Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ valid)⟩
+            have bound : next.val < (commandRunningIndex (base + 1) rest offset smaller).val.val :=
+              Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ earlier)
+            have different := ih (base + 1) offset smaller next bound
+            change (commandPhases (base + 1) rest).get next ≠ .running (base + (offset + 1))
+            rwa [← tag]
+
 @[expose] public def runningCase (types : TypeResolution) (f : AsyncFn)
     (tag : Nat) (within : tag ≤ f.body.length) :
     {index : Fin (stateCases types f).length // (stateCases types f).get index = some (frameType types f)} :=

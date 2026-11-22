@@ -222,7 +222,7 @@ public theorem runningExpr_eval {Γ : Ctx} {Λ : List (Res D)}
     (expression : Expr D Γ Λ (frameType types f)) (entry world : World D) (env : Env D Γ) :
     eval entry (runningExpr types f tag within expression) world env =
       runningValue D types f tag within (eval entry expression world env) := by
-  simp only [runningExpr, stateExpr, runningValue, eval, evalProd, evalNutz_cast, evalNutz]
+  simp only [runningExpr, stateExpr, runningValue, eval, evalProd, evalNutz_cast, evalNutz] <;> rfl
 
 /-- Change the dispatch tag after the next frame has been constructed.
     Both the frame input and the state destination are ordinary locals. -/
@@ -237,7 +237,7 @@ public theorem resumeBlock_exec {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
     (world : World D) (env : Env D Γ) :
-    execBlock oracle passes calls (resumeBlock (V := V) (l := l) types f tag within saved state) world env =
+    execBlock oracle passes calls (resumeBlock (V := V) (l := l) (Λ := Λ) types f tag within saved state) world env =
       .ok world (env.set state (runningValue D types f tag within (env.get saved))) := by
   let successor : Expr D Γ Λ (stateType types f) := runningExpr types f tag within (.var saved)
   have reads : successor.orte = [] := runningExpr_reads types f tag within (.var saved)
