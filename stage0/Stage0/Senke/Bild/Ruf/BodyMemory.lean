@@ -219,17 +219,17 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     @Senke.ValueOk D kernel.withoutSyscalls L (maskMemory (fun _ => True) (inSlots fp 0 K) memory) pc fp K d code τ
       (eval initial expression world env) := by
   classical
-  let scoped := maskMemory (fun _ => True) (inSlots fp 0 K) memory
-  have readSame : scoped.rd = memory.rd := by
+  let restricted := maskMemory (fun _ => True) (inSlots fp 0 K) memory
+  have readSame : restricted.rd = memory.rd := by
     funext byte
-    simp only [scoped, maskMemory, decide_true, Bool.and_true]
-  have exactMemory : scoped = { memory with wr := scoped.wr } := by
+    simp only [restricted, maskMemory, decide_true, Bool.and_true]
+  have exactMemory : restricted = { memory with wr := restricted.wr } := by
     cases memory
-    simp only [scoped, maskMemory, decide_true, Bool.and_true]
-  have original : Senke.WeltAt scoped L world false := by
+    simp only [restricted, maskMemory, decide_true, Bool.and_true]
+  have original : Senke.WeltAt restricted L world false := by
     rw [exactMemory]
     exact valueMemory.withWriteMap _
-  have frames : FrameOK scoped fp K := by
+  have frames : FrameOK restricted fp K := by
     refine ⟨pre.frame.lt, fun index bound => ?_, fun index bound => ?_⟩
     · rw [readSame]
       exact pre.frame.rd index bound
@@ -241,8 +241,8 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
         rw [Nat.mod_eq_of_lt (a := offset) (by omega), Nat.mod_eq_of_lt (by have := pre.frame.lt; omega)]
         omega
       have allowed := Mem.all_spec (pre.frame.wr index bound) fitsWord
-      simpa only [scoped, maskMemory, inside, decide_true, Bool.and_true] using allowed
-  have prepared : Senke.Pre L scoped pc fp K d code env (fun m => Senke.WeltAt m L world false) reserved := by
+      simpa only [restricted, maskMemory, inside, decide_true, Bool.and_true] using allowed
+  have prepared : Senke.Pre L restricted pc fp K d code env (fun m => Senke.WeltAt m L world false) reserved := by
     refine ⟨pre.ctx, pre.small, frames, ?_, pre.far, ?_, original,
       Senke.weltAt_stab (requireWrites := false) layout separated⟩
     · rw [exactMemory]
@@ -250,7 +250,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     · rw [exactMemory]
       exact pre.env
   letI : Kern := kernel.withoutSyscalls
-  exact Senke.lowE_ok (same := entry) initial world (fun _ h => h) layout expression d code top lowered fits scoped pc env prepared
+  exact Senke.lowE_ok (same := entry) initial world (fun _ h => h) layout expression d code top lowered fits restricted pc env prepared
 
 /-- A whole private memory segment may run on several threads before
     the next source boundary. The generic IR memory semantics preserves
