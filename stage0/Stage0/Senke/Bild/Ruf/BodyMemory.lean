@@ -6,6 +6,7 @@ public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 public import Stage0.Senke.Bild.Ruf.PrologueCode
+import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
 import Stage0.Senke.Bild.ImageAddress
 import Lean.Elab.Tactic.Omega
 
@@ -219,7 +220,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     rcases roots thread with same | ⟨control, absent, live, phase⟩
     · exact .inl same
     · refine .inr ⟨control, absent, live, ?_⟩
-      rcases phase with stub | ⟨prologue⟩
+      rcases phase with stub | runningPrologue
       · have declared : thread ≤ output.starts.length := by
           have present := (List.getElem?_eq_some_iff.mp live).1
           omega
@@ -230,7 +231,8 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
           · exact .inl entry
         exact .inl (ImageRootPhase.transport stub running declared
           (fun address visible => (preserved thread address visible).symm))
-      · let scope := fun owner byte => owner = thread ∧ (prologue.reads byte ∨ prologue.writes byte)
+      · obtain ⟨prologue⟩ := runningPrologue
+        let scope := fun owner byte => owner = thread ∧ (prologue.reads byte ∨ prologue.writes byte)
         have stable := tso_flush_preserves_views (layout := L0) flushed scope (by
           intro writer store buffered owner different byte visible written
           obtain ⟨rfl, read | write⟩ := visible
