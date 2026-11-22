@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
+import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -273,7 +274,7 @@ public theorem lowerRunningBinding_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
   let value := runningValue D types f (tag + 1) within record
   have invariant : Inv f types inventory resumed value :=
     runningValue_inv types f inventory (tag + 1) within _ record stored stillOwned
-  refine ⟨value, ?_, invariant, inv_encoded types f inventory resumed value invariant⟩
+  refine ⟨value, ?_, invariant, inv_encoded f types inventory resumed value invariant⟩
   let successor := runningExpr types f (tag + 1) within update
   have successorReads : successor.orte = [] := (runningExpr_reads types f (tag + 1) within update).trans reads
   have executed := evaluateBlock_exec (V := V) (l := l) oracle passes calls expression state successor world env
