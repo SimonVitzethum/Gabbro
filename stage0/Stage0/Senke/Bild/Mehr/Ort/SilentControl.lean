@@ -249,6 +249,41 @@ private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
   | askStop _ asked _ _ stopped => exact (actI_ask_no_terminal asked stopped).elim
   | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
 
+private theorem sc_waiting_host_empty_terminal {layout : Runner.Beweis.Lay}
+    {state : Cfg (SC layout) (Res T)} {request : Req} {resume : Ans → Res T}
+    {ending : Ende} {events : List Ev}
+    (waiting : state.ths = [some (.ask (.sys request) resume)])
+    (step : Tr (SC layout) actI state events ending 1) (quiet : events = []) : ending = .lauf := by
+  cases step with
+  | tau impossible _ => cases impossible
+  | priv _ _ tail | ask _ _ _ _ _ tail => cases tail; rfl
+  | stop ready stopped =>
+    have one : state.ths.length = 1 := by simp only [waiting, List.length_cons, List.length_nil]
+    rw [onlySlot one ready, waiting] at ready
+    have control := (Option.some.inj (Option.some.inj ready)).symm
+    cases control
+    cases stopped
+  | askStop _ asks _ _ stopped => exact (actI_ask_no_terminal asks stopped).elim
+  | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
+
+/-- A one-thread memory reference ending at a host request excludes
+    every terminal observation before the host is reached. -/
+theorem SCMemoryPrefix.no_silent_stop_until_host {layout : Runner.Beweis.Lay}
+    {before expected : Cfg (SC layout) (Res T)} {available taken : Nat}
+    {request : Req} {resume : Ans → Res T} {ending : Ende}
+    (reference : SCMemoryPrefix layout before available expected)
+    (waiting : expected.ths = [some (.ask (.sys request) resume)])
+    (actual : Tr (SC layout) actI before [] ending taken)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths) : ending = .lauf := by
+  by_contra stopped
+  obtain ⟨_, earlier, last, _, path, terminal, events, _⟩ := actual.split_stop stopped
+  obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
+  obtain ⟨_, remaining⟩ := reference.consume_until_host waiting path one blind
+  cases remaining with
+  | nil => exact stopped (sc_waiting_host_empty_terminal waiting terminal rfl)
+  | cons next _ =>
+    exact stopped (sc_memory_step_continues next (path.silent_slots rfl |>.trans one) terminal rfl)
+
 /-- An actual silent SC run cannot stop while its certified memory
     reference has a next step. This excludes both machine faults and
     unknown instructions before the reference boundary. -/
