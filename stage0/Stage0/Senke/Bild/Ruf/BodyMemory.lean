@@ -282,6 +282,21 @@ theorem image_body_memory_segment [Kern] {src : String} {reserve : Nat} {options
   exact ⟨thread, ⟨fun byte read => owned.read byte (reads ▸ read),
     fun byte write => owned.write byte (writes ▸ write)⟩⟩
 
+private theorem privateTrace_foreign {D : Deklaration} {before after : Lauf D}
+    (trace : PrivateSourceTrace before after) : imageSourceForeignEvents after = imageSourceForeignEvents before := by
+  obtain ⟨suffix, rfl, quiet⟩ := trace
+  have projected : imageSourceForeignEvents suffix = [] := by
+    apply List.filterMap_eq_nil_iff.mpr
+    intro step member
+    cases event : step.ereignis with
+    | fremd foreign =>
+      cases foreign with
+      | inl called => exact (quiet step member called event).elim
+      | inr _ => rfl
+    | nimmt | gibt | zugriff | gzugriff => rfl
+  unfold imageSourceForeignEvents at projected ⊢
+  rw [List.filterMap_append, projected, List.append_nil]
+
 /-- A completed segment of a registered body advances the common GX
     machine. Its next phase is anchored in the same actual IR endpoint
     while every other body keeps its current phase. -/
@@ -320,12 +335,13 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
     (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
     ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next ∧
+      imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf ∧
       ∀ issuer, offen (next.m.faeden issuer).spur = offen (state.m.faeden issuer).spur := by
-  obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, holdings, _, _, threadEq, related⟩ :=
+  obtain ⟨machine, _, next, reaches, atBody, _, _, otherHeads, holdings, trace, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
   refine ⟨{ state with m := machine }, reaches, ⟨body, buffers, length,
-    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, holdings⟩
+    .inr ⟨snapshots, _, _, related, ?_⟩, ?_⟩, privateTrace_foreign trace, holdings⟩
   · intro i s found
     obtain ⟨identity, owned⟩ := indices i s found
     refine ⟨?_, owned⟩

@@ -75,6 +75,7 @@ private theorem read_trace (world : World D) (held : List (Res D)) (carriers : L
     apply List.filterMap_eq_nil_iff.mpr
     intro carrier _
     cases carrier <;> rfl
+  change carriers.filterMap (axiomOfEvent ∘ readEvent) ++ _ = _
   rw [silent, List.nil_append]
 
 private theorem write_bytes_trace (table : D.Tab) (field : D.Feld table) (byteType : D.typ table field = .int 0 255)
@@ -112,6 +113,75 @@ private theorem OrtPrem.foreign_trace {V : Vertrag D} {l : Bool} {Γ : Ctx}
     obtain ⟨rfl, _⟩ := executed
     exact read_trace _ _ _
 
+/-- The exact suffix introduced by a private source segment. -/
+def PrivateSourceTrace (before after : Lauf D) : Prop :=
+  ∃ suffix, after = before ++ suffix ∧
+    ∀ item ∈ suffix, ∀ called : D.Ax, item.ereignis ≠ .fremd (.inl called)
+
+private theorem PrivateSourceTrace.trans {start middle finish : Lauf D}
+    (left : PrivateSourceTrace start middle) (right : PrivateSourceTrace middle finish) :
+    PrivateSourceTrace start finish := by
+  obtain ⟨first, before, quietFirst⟩ := left
+  obtain ⟨last, after, quietLast⟩ := right
+  refine ⟨first ++ last, by rw [after, before, List.append_assoc], ?_⟩
+  intro item member
+  rcases List.mem_append.mp member with here | there
+  · exact quietFirst item here
+  · exact quietLast item there
+
+private theorem privateTrace_append (run : Lauf D) (thread : Faden) {events : List (Ereignis D)}
+    (quiet : events.filterMap axiomOfEvent = []) : PrivateSourceTrace run (run ++ rufEigenG thread events) := by
+  refine ⟨_, rfl, ?_⟩
+  intro item member called reported
+  obtain ⟨event, found, rfl⟩ := List.mem_map.mp member
+  have silent := List.filterMap_eq_nil_iff.mp quiet event (List.mem_reverse.mp found)
+  change event = .fremd (.inl called) at reported
+  rw [reported] at silent
+  cases silent
+
+private theorem privateLeafStep {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {thread : Faden} {head : RufFadenG D}
+    (frame : M.faeden thread = head) {l : Bool} {Γ : Ctx} {Λ out : List (Res D)}
+    {C : D.Tab ⊕ D.Glob → Prop} {statement : Stmt D (vertragVon D head.kopf.f) l Γ Λ out}
+    {rest : Endblock D (vertragVon D head.kopf.f) l Γ out} {locals updated : Env D Γ}
+    {world : World D} (admitted : OrtPrem C statement)
+    (ready : head.kopf.rest = ⟨l, Γ, Λ, locals, .ende (.cons statement rest)⟩)
+    (held : HeldIn Λ (offen head.spur))
+    (executed : execStmt O passes keinRuf statement (M.weltVon thread) locals = .ok world updated) :
+    ∃ next, RufSchrittG P O passes M thread next ∧
+      ZustandG next thread head.stapel head.kopf.f head.kopf.rho head.kopf.s0 head.log updated (.ende rest) world ∧
+      PrivateSourceTrace M.lauf next.lauf := by
+  subst head
+  have leaf := admitted.blatt
+  obtain ⟨events, added, accesses⟩ := leaf.erw O passes keinRuf _ _ _ _ executed
+  have trace := admitted.foreign_trace O passes keinRuf executed
+  rw [added, List.filterMap_append] at trace
+  have quiet : events.filterMap axiomOfEvent = [] :=
+    List.append_cancel_right (trace.trans (List.nil_append _).symm)
+  exact ⟨_, .blatt M thread l Γ Λ out statement rest locals leaf.istBlatt ready held world updated events
+    executed added (kein_nimmt accesses), zustandG_neu rfl rfl, privateTrace_append M.lauf thread quiet⟩
+
+private theorem privateBindStep {P : Programm D} {O : Orakel D} {passes : Nat}
+    {M : RufMaschineG D} {thread : Faden} {head : RufFadenG D}
+    (frame : M.faeden thread = head) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {expr : Expr D Γ Λ τ} {rest : Endblock D (vertragVon D head.kopf.f) l (τ :: Γ) Λ} {locals : Env D Γ}
+    (ready : head.kopf.rest = ⟨l, Γ, Λ, locals, .ende (.bind expr rest)⟩)
+    (held : HeldIn Λ (offen head.spur)) :
+    let world := (M.weltVon thread).lese Λ expr.orte
+    ∃ next, RufSchrittG P O passes M thread next ∧
+      ZustandG next thread head.stapel head.kopf.f head.kopf.rho head.kopf.s0 head.log
+        (.cons (eval world expr world locals) locals) (.ende rest) world ∧
+      PrivateSourceTrace M.lauf next.lauf := by
+  intro world
+  subst head
+  obtain ⟨events, added, _⟩ := Erw.lese (M.weltVon thread) Λ expr.orte
+  have trace := read_trace (M.weltVon thread) Λ expr.orte
+  rw [added, List.filterMap_append] at trace
+  have quiet : events.filterMap axiomOfEvent = [] :=
+    List.append_cancel_right (trace.trans (List.nil_append _).symm)
+  exact ⟨_, .endeBind M thread l Γ Λ τ expr rest locals ready world rfl events added held,
+    zustandG_neu rfl rfl, privateTrace_append M.lauf thread quiet⟩
+
 /-- Internal memory segments preserve the exact set of held locks.
     Bindings record reads and the ordinary statement theorem covers
     each admitted memory effect. -/
@@ -133,38 +203,58 @@ theorem Segment.holdings {O : Orakel D} {passes : Nat}
 theorem randG_segment {P : Programm D} {O : Orakel D} {passes : Nat}
     {R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g} {Cg : D.Fn → Prop} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
-    (hRuf : RufOk P O passes thr Agl R Cg) {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
+    {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
     {Λ Λe : List (Res D)} {eb : Endblock D (vertragVon D f) l Γ Λ} {ebe : Endblock D (vertragVon D f) l Γe Λe}
     {σ σe : World D} {ρ : Env D Γ} {ρe : Env D Γe} (hk : Segment O passes R Agl Cg C eb σ ρ ebe σe ρe) :
     ∀ {N : RufMaschineG D} {σ' : World D}, RandG thr stapel f rho s0 Agl eb N σ' ρ → OrtGleich C σ σ' →
       ∃ (N' : RufMaschineG D) (σe' : World D), RufLaufG P O passes thr N N' ∧
         RandG thr stapel f rho s0 Agl ebe N' σe' ρe ∧ OrtGleich C σe σe' ∧
+        PrivateSourceTrace N.lauf N'.lauf ∧
         ∀ c, ¬ C c → TraegerGleich σe'.speicher σ'.speicher c := by
   induction hk with
   | halt eb σ ρ =>
     intro N σ' h hσ
-    exact ⟨N, σ', .refl N, h, hσ, fun c _ => traegerGleich_refl _ c⟩
-  | schritt s rest ebe σ σ1 σe ρ ρ1 ρe hs hC hex _ ih =>
+    exact ⟨N, σ', .refl N, h, hσ, ⟨[], (List.append_nil _).symm, fun _ h => (List.not_mem_nil h).elim⟩,
+      fun c _ => traegerGleich_refl _ c⟩
+  | schritt s rest ebe σ σ1 σe ρ ρ1 ρe _ hC hex _ ih =>
     intro N σ' h hσ
     obtain ⟨σ1', hex', hσ1⟩ := ort_stmt_ok O passes R hC hσ hex
-    obtain ⟨N1, hl1, hR1⟩ := randG_schritt hRuf hs hex' h
-    obtain ⟨N', σe', hl2, hR2, hσe, hfr⟩ := ih hR1 hσ1
-    exact ⟨N', σe', hl1.trans hl2, hR2, hσe,
+    obtain ⟨⟨log, located⟩, held, free⟩ := h
+    have leaf := hC.blatt
+    have actual : execStmt O passes keinRuf s (N.weltVon thr) ρ = .ok σ1' ρ1 := by
+      rw [located.welt, ← leaf.exec_R O passes R]
+      exact hex'
+    obtain ⟨N1, stepped, atRest, quiet⟩ := privateLeafStep (P := P) located.1 (rest := rest) hC rfl held.heldIn actual
+    have one := RufLaufG.einzeln stepped
+    have holding := (leaf.erw O passes R _ _ _ _ hex').offen
+    have hR1 : RandG thr stapel f rho s0 Agl rest N1 σ1' ρ1 := by
+      refine ⟨⟨log, atRest⟩, ?_, free.lauf one⟩
+      rw [holding]
+      exact heldB_iff (fun lock => s.held_iff lock) held
+    obtain ⟨N', σe', hl2, hR2, hσe, trace, hfr⟩ := ih hR1 hσ1
+    exact ⟨N', σe', one.trans hl2, hR2, hσe, PrivateSourceTrace.trans quiet trace,
       fun c hc => traegerGleich_trans (hfr c hc) (ort_rahmen O passes R s hC hex' c hc)⟩
   | @bind _ _ Λ _ _ e rest ebe σ σe ρ ρe hC _ ih =>
     intro N σ' h hσ
-    obtain ⟨N1, hl1, hR1⟩ := randG_bind (P := P) (O := O) (passes := passes) h
+    obtain ⟨⟨log, located⟩, held, free⟩ := h
+    obtain ⟨N1, stepped, atRest, quiet⟩ := privateBindStep (P := P) (O := O) (passes := passes)
+      located.1 (expr := e) (rest := rest) (locals := ρ) rfl held.heldIn
     have he := (hσ.lese Λ e.orte).wert e hC ρ
-    rw [← he] at hR1
-    obtain ⟨N', σe', hl2, hR2, hσe, hfr⟩ := ih hR1 (hσ.lese _ e.orte)
-    exact ⟨N', σe', hl1.trans hl2, hR2, hσe, fun c hc => traegerGleich_trans (hfr c hc) (traeger_lese σ' _ _ c)⟩
+    rw [located.welt, ← he] at atRest
+    have one := RufLaufG.einzeln stepped
+    have hR1 : RandG thr stapel f rho s0 Agl rest N1 (σ'.lese Λ e.orte)
+        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
+      ⟨⟨log, atRest⟩, heldB_lese e.orte held, free.lauf one⟩
+    obtain ⟨N', σe', hl2, hR2, hσe, trace, hfr⟩ := ih hR1 (hσ.lese _ e.orte)
+    exact ⟨N', σe', one.trans hl2, hR2, hσe, PrivateSourceTrace.trans quiet trace,
+      fun c hc => traegerGleich_trans (hfr c hc) (traeger_lese σ' _ _ c)⟩
 
 /-- **The commit of a segment from the chain's view machine**: the current machine holds the thread's frame, a
     world agreeing on `C`, and no other holder of a lock the body may take. -/
 theorem randG_segment_ein {P : Programm D} {O : Orakel D} {passes : Nat}
     {R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g} {Cg : D.Fn → Prop} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
-    (hRuf : RufOk P O passes thr Agl R Cg) {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
+    {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
     {Λ Λe : List (Res D)} {eb : Endblock D (vertragVon D f) l Γ Λ} {ebe : Endblock D (vertragVon D f) l Γe Λe}
     {σ σe σ' : World D} {ρ : Env D Γ} {ρe : Env D Γe} {M N : RufMaschineG D}
     (hk : Segment O passes R Agl Cg C eb σ ρ ebe σe ρe) (h : RandG thr stapel f rho s0 Agl eb M σ ρ)
@@ -172,14 +262,15 @@ theorem randG_segment_ein {P : Programm D} {O : Orakel D} {passes : Nat}
     (hA : FreiA Agl N thr) :
     ∃ (N' : RufMaschineG D) (σe' : World D), RufLaufG P O passes thr N N' ∧
       RandG thr stapel f rho s0 Agl ebe N' σe' ρe ∧ OrtGleich C σe σe' ∧
+      PrivateSourceTrace N.lauf N'.lauf ∧
       ∀ c, ¬ C c → TraegerGleich σe'.speicher σ'.speicher c :=
-  randG_segment hRuf hk (randG_umsetzen h hσ.spur hf hsp hA) hσ
+  randG_segment (P := P) hk (randG_umsetzen h hσ.spur hf hsp hA) hσ
 
 /-- **The commit of a segment on the thread machine over GX.** -/
 theorem fadenX_segment {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Tab ⊕ D.Glob → Prop}
     {R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g} {Cg : D.Fn → Prop} {thr : Faden}
     {stapel : List (RufRahmenG D)} {f : D.Fn} {rho : Env D (D.params f)} {s0 : World D} {Agl : D.Lock → Prop}
-    (hRuf : RufOk P O passes thr Agl R Cg) {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
+    {C : D.Tab ⊕ D.Glob → Prop} {l : Bool} {Γ Γe : Ctx}
     {Λ Λe : List (Res D)} {eb : Endblock D (vertragVon D f) l Γ Λ} {ebe : Endblock D (vertragVon D f) l Γe Λe}
     {σ σe σ' : World D} {ρ : Env D Γ} {ρe : Env D Γe} {M : RufMaschineG D} {K0 K : FadenMaschine D}
     (hk : Segment O passes R Agl Cg C eb σ ρ ebe σe ρe) (h : RandG thr stapel f rho s0 Agl eb M σ ρ)
@@ -190,9 +281,10 @@ theorem fadenX_segment {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D.Ta
       FadenErreichbarX P O passes Tg K0 ⟨N', K.lebt, K.wartet, K.rang, K.uhr⟩ ∧
       RandG thr stapel f rho s0 Agl ebe N' σe' ρe ∧ OrtGleich C σe σe' ∧
       (∀ j, j ≠ thr → N'.faeden j = K.m.faeden j) ∧
+      PrivateSourceTrace K.m.lauf N'.lauf ∧
       ∀ c, ¬ C c → TraegerGleich σe'.speicher σ'.speicher c := by
-  obtain ⟨N', σe', hl', hR, hσe, hfr⟩ := randG_segment_ein hRuf hk h hσ hf hsp hA
-  exact ⟨N', σe', fadenErreichbarX_lauf' hl' hl hw hK, hR, hσe, rufLaufG_fremd hl', hfr⟩
+  obtain ⟨N', σe', hl', hR, hσe, quiet, hfr⟩ := randG_segment_ein (P := P) hk h hσ hf hsp hA
+  exact ⟨N', σe', fadenErreichbarX_lauf' hl' hl hw hK, hR, hσe, rufLaufG_fremd hl', quiet, hfr⟩
 
 /-- Commit a complete private segment from a registered IR thread to
     the current GX machine. Its saved view supplies the same typed
@@ -225,23 +317,21 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
       OrtGleich carriers world finalWorld ∧
       (∀ other, other ≠ x.thr → machine.faeden other = source.m.faeden other) ∧
       (∀ thread, offen (machine.faeden thread).spur = offen (source.m.faeden thread).spur) ∧
+      PrivateSourceTrace source.m.lauf machine.lauf ∧
       ∀ cell, ¬ carriers cell → TraegerGleich finalWorld.speicher source.m.speicher cell := by
   intro x
-  obtain ⟨sameProgram, sameOracle, samePasses, _⟩ := matched.prog thread snapshot registered
+  obtain ⟨_, sameOracle, samePasses, _⟩ := matched.prog thread snapshot registered
   have position := matched.lage thread snapshot registered
-  have calls : RufOk P O passes x.thr x.Agl x.B.R x.Cg := by
-    rw [← sameProgram, ← sameOracle, ← samePasses]
-    exact position.ruf
   have semantics : Segment O passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ rest world env := by
     rw [← sameOracle, ← samePasses]
     exact quiet
   have storage : source.m.speicher = (source.m.speicher.welt x.σ.spur).speicher :=
     (speicher_welt_speicher _ _).symm
   obtain ⟨alive, waiting⟩ := matched.lebtG thread snapshot registered
-  obtain ⟨machine, finalWorld, reached, sourceBoundary, sameWorld, otherThreads, otherCarriers⟩ :=
-    fadenX_segment (Tg := shared) calls semantics position.rand.2 agree .start alive waiting
+  obtain ⟨machine, finalWorld, reached, sourceBoundary, sameWorld, otherThreads, quietTrace, otherCarriers⟩ :=
+    fadenX_segment (Tg := shared) semantics position.rand.2 agree .start alive waiting
       (matched.amRand thread snapshot registered) storage free
-  refine ⟨machine, finalWorld, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_, ?_⟩
+  refine ⟨machine, finalWorld, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_, quietTrace, ?_⟩
   · exact (matched.zustand thread snapshot registered).trans (by rw [control])
   · intro issuer
     by_cases current : issuer = x.thr
