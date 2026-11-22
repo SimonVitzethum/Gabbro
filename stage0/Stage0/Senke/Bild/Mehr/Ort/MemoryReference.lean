@@ -70,11 +70,11 @@ theorem tso_memory_response_matches {layout : Runner.Beweis.Lay} {before after :
           (.inr ⟨allowed, rfl, enqueued⟩)).resolve_left (fun refused => by cases refused.1)
         rw [memAns_wr, wr64_eq, viewPermissions, ite_eq_left allowed, update.2.1]
     obtain ⟨_, result, retained⟩ := memAns_preserves_agreement agrees within physical
-    exact ⟨updated, answer, result, rfl, retained⟩
+    exact ⟨_, answer, result, rfl, retained⟩
   | cas address expected value =>
     obtain ⟨_, result, retained⟩ :=
       memAns_preserves_agreement agrees within (tso_cas_updates_view answered).2
-    exact ⟨updated, answer, result, rfl, retained⟩
+    exact ⟨_, answer, result, rfl, retained⟩
   | sys | fp => cases memory
 
 /-- The actual TSO answer advances a solo proof of a scoped IR region.

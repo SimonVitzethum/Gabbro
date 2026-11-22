@@ -163,12 +163,61 @@ theorem image_private_continuation [Kern] {before after : imageTSO.St} {thread :
       tso_memory_response_matches blind agreement scope.2.1 memory replied.1
     rw [expected] at exactAnswer
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj exactAnswer)
-    exact ⟨updated, continued.symm ▸ rest, same⟩
+    exact ⟨_, continued.symm ▸ rest, same⟩
   | sys _ _ => exact (scope.1 _ rfl).elim
   | fp expected rest =>
     obtain ⟨rfl, word, rfl, observed⟩ := replied.1
     have same := nativeUnique _ _ _ _ _ rfl expected observed
     cases same
     exact ⟨localMemory, rest, agreement⟩
+
+/-- The remaining instructions of an established IR region. Its current
+    instruction may be between requests, and the last full instruction
+    ends at the same fixed boundary in every case. -/
+def IRContinuation [Kern] (target : T) (finish : Mem) (control : Res T) (memory : Mem) : Prop :=
+  match control with
+  | .next pointer => ∃ count, IRReference count pointer memory target finish
+  | .ask .. => ∃ next middle count,
+      Run control memory next middle ∧ IRReference count next middle target finish
+  | .fault | .unk => False
+
+private theorem IRContinuation.ofRun [Kern] {target next : T} {memory middle finish : Mem}
+    {control : Res T} {count : Nat} (step : Run control memory next middle)
+    (remaining : IRReference count next middle target finish) :
+    IRContinuation target finish control memory := by
+  cases control with
+  | next pointer =>
+    cases step
+    exact ⟨count, remaining⟩
+  | ask request resume => exact ⟨next, middle, count, step, remaining⟩
+  | fault | unk => cases step
+
+/-- Decoding the next instruction either opens the remaining reference
+    or identifies the exact boundary where the region has finished. -/
+theorem IRContinuation.decode [Kern] {target pointer : T} {memory finish : Mem}
+    (continuation : IRContinuation target finish (.next pointer) memory) :
+    (pointer = target ∧ memory = finish) ∨ IRContinuation target finish (IR.step pointer) memory := by
+  obtain ⟨_, code⟩ := continuation
+  cases code with
+  | start => exact .inl ⟨rfl, rfl⟩
+  | extend current remaining => exact .inr (.ofRun current remaining)
+
+/-- A scheduled private response retains the original boundary and advances
+    exactly the instruction fragment that the Lean IR was waiting on. -/
+theorem IRContinuation.answer [Kern] {before after : imageTSO.St} {thread : Nat}
+    {reads writes : W → Prop} {reference finish : Mem} {target : T}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    (continuation : IRContinuation target finish (.ask request resume) reference)
+    (blind : Blind (.ask request resume)) (scope : HostFreeControl reads writes (.ask request resume))
+    (agreement : GleichAuf reads (before.1.view thread) reference)
+    (nativeUnique : ∀ kind a b first second, request = .fp kind a b →
+      NativeFPEval kind a b first → NativeFPEval kind a b second → first = second)
+    (replied : imageTSO.ans before thread request answer after) :
+    ∃ updated, IRContinuation target finish (resume answer) updated ∧
+      GleichAuf reads (after.1.view thread) updated := by
+  obtain ⟨_, _, _, current, rest⟩ := continuation
+  obtain ⟨updated, continued, kept⟩ :=
+    image_private_continuation current blind scope agreement nativeUnique replied
+  exact ⟨updated, .ofRun continued rest, kept⟩
 
 end Gabbro.Stage0
