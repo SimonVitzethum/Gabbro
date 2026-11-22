@@ -7,7 +7,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0.Senke.BildMehr
 
-open Gabbro.Grammatik Gabbro.Stage0.Senke Runner Runner.IR
+open Gabbro.Grammatik Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildLauf Runner Runner.IR
 
 variable {D : Deklaration}
 
