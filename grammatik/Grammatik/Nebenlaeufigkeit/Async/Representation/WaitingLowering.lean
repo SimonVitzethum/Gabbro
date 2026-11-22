@@ -395,7 +395,7 @@ public theorem lowerLeafPoll_simulates (elaboration : Elaboration D V Λ types f
       change world.lese Λ (leafPollArguments callee child).orte = world
       rw [silent]
       rfl
-    exact childPollBlock_reports_failure oracle passes calls prices callee arguments
+    cases cause <;> exact childPollBlock_reports_failure oracle passes calls prices callee arguments
       (pollAnswerArms state finished ready (leafPendingExpr types f tag command saved)) world env (env.get child)
       (by simpa only [evaluated, arguments] using argsEval) (by simpa only [evaluated] using failed)
   cases returned : calls callee.poll world (pollEnvironment callee (env.get child)) with
@@ -403,11 +403,11 @@ public theorem lowerLeafPoll_simulates (elaboration : Elaboration D V Λ types f
   | logik logic =>
     simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
       bind, Except.bind]
-    exact fails (by simp only [runChildPoll, returned, decodeChildOutcome])
+    exact fails (cause := .inl logic) (by simp only [runChildPoll, returned, decodeChildOutcome])
   | hardware hardware =>
     simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
       bind, Except.bind]
-    exact fails (by simp only [runChildPoll, returned, decodeChildOutcome])
+    exact fails (cause := .inr hardware) (by simp only [runChildPoll, returned, decodeChildOutcome])
   | ok after answer =>
     generalize converted : ergWert callee.pollResult answer = reply
     obtain ⟨⟨caseTag, bound⟩, payload⟩ := reply
