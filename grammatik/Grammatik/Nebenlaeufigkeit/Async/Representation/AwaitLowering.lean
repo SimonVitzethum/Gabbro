@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.JoinLowering
-import Grammatik.Kern.Semantik.Evaluation.Aggregates.Locals
+public import Grammatik.Kern.Semantik.Evaluation.Aggregates.Locals
 import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 
 namespace Gabbro.Grammatik.Async.Representation
@@ -114,7 +114,8 @@ public theorem lowerAwaitPoll_simulates (elaboration : Elaboration D V Λ types 
           .ok after ((current.set state record).set finished true) := by
         unfold arms awaitPollArms
         erw [storedTag_active oracle passes calls slot _ _ after current payload (getSlot.trans shape)]
-        simp only [execBlock, execStmt, silent, noReads, value]
+        simp only [execBlock, execStmt]
+        erw [silent, noReads, value]
         rfl
       have marks : MarksRep inventory (.waiting tag future) (.waiting tag frame successor) := owned
       have invariant := waitingValue_inv types f inventory tag command frame successor (env.get saved) updated
@@ -138,7 +139,8 @@ public theorem lowerAwaitPoll_simulates (elaboration : Elaboration D V Λ types 
           .ok after (current.set state record) := by
         unfold arms awaitPollArms
         erw [storedTag_cached oracle passes calls slot _ _ after current result (getSlot.trans shape)]
-        simp only [execBlock, execStmt, silent, noReads, value]
+        simp only [execBlock, execStmt]
+        erw [silent, noReads, value]
         rfl
       have marks : MarksRep inventory (.running (tag + 1)) (.running (Child := Child D types) (tag + 1)
           (save frame destination source)) := by
