@@ -119,4 +119,62 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
       rw [value]
       exact beforeWorld.2.1 global
 
+/-- The source commit and the byte-level commit agree on the same
+    reachable GX machine. The committed memory takes the selected bytes
+    from the actual IR projection and preserves all other bytes. -/
+theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
+    {passes : Nat} {layout : Lay D} {program : PCfg} {source : FadenMaschine D}
+    {snapshots : Nat → Option Solo} {positions : Nat → MLage D} {committed : Mem}
+    {thread : Nat} {snapshot : Solo}
+    (matched : MTRel P O passes layout program source snapshots positions committed)
+    (registered : snapshots thread = some snapshot)
+    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : W}
+    (quiet : let x := positions thread
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+    (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
+    (boundary : let x := positions thread
+      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+    (agree : let x := positions thread
+      OrtGleich carriers x.σ (source.m.speicher.welt x.σ.spur))
+    (free : FreiA (positions thread).Agl source.m (positions thread).thr)
+    (inside : LayIn layout) (separated : LayDis layout)
+    (covers : ∀ byte, carrierFootprint layout carriers byte → snapshot.F byte)
+    (permissions : snapshot.m.rd = committed.rd ∧ snapshot.m.wr = committed.wr) :
+    let position := positions thread
+    let selected := carrierFootprint layout carriers
+    let published := commitBytes committed snapshot.m selected
+    ∃ machine world,
+      FadenErreichbarX P O passes shared source
+        ⟨machine, source.lebt, source.wartet, source.rang, source.uhr⟩ ∧
+      program.ths[thread]? = some (some (.next ⟨pc, position.B.fp⟩)) ∧
+      RandG position.thr position.stapel position.B.f position.rho position.s0 position.Agl
+        position.ebe machine world position.ρe ∧
+      WeltAt published layout (machine.speicher.welt []) ∧
+      (∀ other, other ≠ position.thr → machine.faeden other = source.m.faeden other) ∧
+      (∀ byte, selected byte → GleichAt published program.m byte) ∧
+      ∀ byte, ¬ selected byte → GleichAt published committed byte := by
+  intro position selected published
+  obtain ⟨machine, world, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
+    matched.commit_segment registered (shared := shared) quiet control boundary agree free
+  have exactLayout := (matched.prog thread snapshot registered).2.2.2
+  have afterWorld : WeltAt snapshot.m layout position.σe := by
+    obtain ⟨_, _, _, _, _, _, _, _, _, memory, _⟩ := boundary
+    rwa [exactLayout] at memory
+  have bytes : WeltAt published layout world := weltAt_commitBytes inside separated matched.welt afterWorld
+    permissions.1 changes (by intro cell outside; simpa only [speicher_welt_speicher] using others cell outside)
+  have store : machine.speicher = world.speicher := by
+    obtain ⟨⟨_, state⟩, _, _⟩ := sourceBoundary
+    exact state.2
+  have exactBytes : WeltAt published layout (machine.speicher.welt []) := by
+    rw [store]
+    cases world
+    exact bytes
+  refine ⟨machine, world, reached, pointer, sourceBoundary, exactBytes, preserved, ?_, ?_⟩
+  · intro byte chosen
+    obtain ⟨value, read, write⟩ := matched.mem.gleich thread snapshot registered byte (covers byte chosen)
+    exact ⟨by simpa only [published, commitBytes, ite_eq_left chosen] using value.symm,
+      (congrFun permissions.1.symm byte).trans read.symm, (congrFun permissions.2.symm byte).trans write.symm⟩
+  · intro byte excluded
+    exact ⟨by simp only [published, commitBytes, ite_eq_right excluded], rfl, rfl⟩
+
 end Gabbro.Stage0.Senke.BildMehr
