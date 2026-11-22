@@ -8,6 +8,56 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Beweis Runner.Mach BildLauf
 
+theorem frame_slot_byte {memory : Mem} {fp : W} {K index offset : Nat}
+    (frame : FrameOK memory fp K) (slotFits : index < K) (inWord : offset < 8) :
+    inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) := by
+  have address := slot_toNat frame.room slotFits
+  simp only [inSlots, Nat.mul_zero, Nat.add_zero, BitVec.toNat_add, BitVec.toNat_ofNat, address]
+  rw [Nat.mod_eq_of_lt (a := offset) (by omega), Nat.mod_eq_of_lt (by have := frame.lt; omega)]
+  omega
+
+/-- Restricting the permitted data accesses preserves decoding of an
+    installed code region and access to every word of its private frame. -/
+theorem maskMemory_code_frame {memory : Mem} {pc fp : W} {slots : Nat}
+    {code : List II} {reads : W → Prop} (decoded : CodeAt memory pc code)
+    (frame : FrameOK memory fp slots) (nowrap : pc.toNat + 16 * code.length < 2 ^ 64)
+    (frameReads : ∀ byte, inSlots fp 0 slots byte → reads byte)
+    (codeReads : ∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * code.length → reads byte) :
+    let restricted := maskMemory reads (inSlots fp 0 slots) memory
+    FrameOK restricted fp slots ∧ CodeAt restricted pc code := by
+  intro restricted
+  have agree := (maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads).1
+  refine ⟨⟨frame.lt, fun index present => ?_, fun index present => ?_⟩, ?_⟩
+  · rw [Mem.all_congr (fun offset valid => (agree.1 _ (frameReads _ (frame_slot_byte frame present valid))).2)]
+    exact frame.rd index present
+  · rw [Mem.all_congr (fun offset valid => agree.2 _ (frame_slot_byte frame present valid))]
+    exact frame.wr index present
+  · intro index present
+    let atInstruction := pc + BitVec.ofNat 64 (16 * index)
+    have address (offset : Nat) (inside : offset < 16) :
+        reads (atInstruction + BitVec.ofNat 64 offset) := by
+      have natural : (atInstruction + BitVec.ofNat 64 offset).toNat = pc.toNat + 16 * index + offset := by
+        simp only [atInstruction, BitVec.add_assoc, ← BitVec.ofNat_add, BitVec.toNat_add, BitVec.toNat_ofNat]
+        rw [Nat.mod_eq_of_lt (a := 16 * index + offset) (by omega), Nat.mod_eq_of_lt (by omega)]
+        omega
+      apply codeReads <;> rw [natural] <;> omega
+    have opcode : restricted.rd8 atInstruction = memory.rd8 atInstruction := by
+      have pair := agree.1 atInstruction (by simpa using address 0 (by decide))
+      simp only [Mem.rd8, pair.1, pair.2]
+    have operand (offset : Nat) (fits : offset + 4 ≤ 16) :
+        restricted.rd32 (atInstruction + BitVec.ofNat 64 offset) =
+          memory.rd32 (atInstruction + BitVec.ofNat 64 offset) := by
+      have input (j : Nat) (inside : j < 4) :
+          reads (atInstruction + BitVec.ofNat 64 offset + BitVec.ofNat 64 j) := by
+        rw [BitVec.add_assoc, ← BitVec.ofNat_add]
+        exact address (offset + j) (by omega)
+      simp only [Mem.rd32,
+        Mem.all_congr (fun j inside => (agree.1 _ (input j inside)).2),
+        Mem.le_congr (fun j inside => (agree.1 _ (input j inside)).1)]
+    have original := decoded index present
+    exact ⟨opcode.trans original.op, (operand 4 (by decide)).trans original.f1,
+      (operand 8 (by decide)).trans original.f2, (operand 12 (by decide)).trans original.f3⟩
+
 private theorem RunP.host_unique {initial residual : Res T} {before after : Mem}
     {call : Req} {resume : Ans → Res T}
     (reference : RunP initial before residual after)

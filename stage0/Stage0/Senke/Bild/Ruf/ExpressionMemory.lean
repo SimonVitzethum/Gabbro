@@ -1,7 +1,7 @@
 module
 
 public import Stage0.Senke.Ausdruck.Satz
-public import Stage0.Senke.Bild.Mehr.Solo
+public import Stage0.Senke.Bild.Mehr.Ort.MemoryReference
 public import Stage0.Senke.Bild.Rand
 
 @[expose] public section
@@ -9,14 +9,6 @@ public import Stage0.Senke.Bild.Rand
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.BildLauf Runner Runner.IR
-
-private theorem expression_frame_byte {memory : Mem} {fp : W} {K index offset : Nat}
-    (frame : FrameOK memory fp K) (slotFits : index < K) (inWord : offset < 8) :
-    inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) := by
-  have address := slot_toNat frame.room slotFits
-  simp only [inSlots, Nat.mul_zero, Nat.add_zero, BitVec.toNat_add, BitVec.toNat_ofNat, address]
-  rw [Nat.mod_eq_of_lt (a := offset) (by omega), Nat.mod_eq_of_lt (by have := frame.lt; omega)]
-  omega
 
 /-- A restricted expression memory retains the exact code and lexical
     environment. The read region covers the code bytes and its frame. -/
@@ -31,40 +23,9 @@ theorem expression_pre_mask [Kern] {D : Deklaration} {L : Senke.Lay D} {Γ : Ctx
     (maskMemory_agreement reads (inSlots fp 0 K) memory frameReads).1
   have withinFrame (index : Nat) (present : index < K) (offset : Nat) (inWord : offset < 8) :
       inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) :=
-    expression_frame_byte pre.frame present inWord
-  have frames : FrameOK restricted fp K := by
-    refine ⟨pre.frame.lt, fun index present => ?_, fun index present => ?_⟩
-    · rw [Mem.all_congr (fun offset valid => (agree.1 _ (frameReads _ (withinFrame index present offset valid))).2)]
-      exact pre.frame.rd index present
-    · rw [Mem.all_congr (fun offset valid => agree.2 _ (withinFrame index present offset valid))]
-      exact pre.frame.wr index present
-  refine ⟨pre.ctx, pre.small, frames, ?_, pre.far, ?_, trivial, Senke.wstab_true _ _⟩
-  · intro index present
-    let atInstruction := pc + BitVec.ofNat 64 (16 * index)
-    have address (offset : Nat) (inside : offset < 16) :
-        reads (atInstruction + BitVec.ofNat 64 offset) := by
-      have bound := pre.far.1
-      have natural : (atInstruction + BitVec.ofNat 64 offset).toNat = pc.toNat + 16 * index + offset := by
-        simp only [atInstruction, BitVec.add_assoc, ← BitVec.ofNat_add, BitVec.toNat_add, BitVec.toNat_ofNat]
-        rw [Nat.mod_eq_of_lt (a := 16 * index + offset) (by omega), Nat.mod_eq_of_lt (by omega)]
-        omega
-      apply codeReads <;> rw [natural] <;> omega
-    have opcode : restricted.rd8 atInstruction = memory.rd8 atInstruction := by
-      have pair := agree.1 atInstruction (by simpa using address 0 (by decide))
-      simp only [Mem.rd8, pair.1, pair.2]
-    have operand (offset : Nat) (fits : offset + 4 ≤ 16) :
-        restricted.rd32 (atInstruction + BitVec.ofNat 64 offset) =
-          memory.rd32 (atInstruction + BitVec.ofNat 64 offset) := by
-      have input (j : Nat) (inside : j < 4) :
-          reads (atInstruction + BitVec.ofNat 64 offset + BitVec.ofNat 64 j) := by
-        rw [BitVec.add_assoc, ← BitVec.ofNat_add]
-        exact address (offset + j) (by omega)
-      simp only [Mem.rd32,
-        Mem.all_congr (fun j inside => (agree.1 _ (input j inside)).2),
-        Mem.le_congr (fun j inside => (agree.1 _ (input j inside)).1)]
-    have original := pre.code index present
-    exact ⟨opcode.trans original.op, (operand 4 (by decide)).trans original.f1,
-      (operand 8 (by decide)).trans original.f2, (operand 12 (by decide)).trans original.f3⟩
+    frame_slot_byte pre.frame present inWord
+  obtain ⟨frames, code⟩ := maskMemory_code_frame pre.code pre.frame pre.far.1 frameReads codeReads
+  refine ⟨pre.ctx, pre.small, frames, code, pre.far, ?_, trivial, Senke.wstab_true _ _⟩
   · intro ty variableAt
     have stored := pre.env ty variableAt
     refine ⟨stored.1, fun word present => ?_⟩
@@ -169,7 +130,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     · intro index present
       have indexFits : index < Senke.valueWords τ := by simpa only [Senke.encodeWords_length] using present
       have agreeWord (offset : Nat) (inWord : offset < 8) :=
-        memoryEq.1 _ (frameReads _ (expression_frame_byte pre.frame (by omega : d + index < K) inWord))
+        memoryEq.1 _ (frameReads _ (frame_slot_byte pre.frame (by omega : d + index < K) inWord))
       have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
           finish.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
         simp only [Mem.rd64, Mem.all_congr (fun offset valid => (agreeWord offset valid).2.symm),
