@@ -76,7 +76,8 @@ public theorem trimSlotArgs_reads {Γ : Ctx} {Λ : List (Res D)} (types : TypeRe
     have tail := ih (fun field => project (.tail field)) (fun field => localRead (.tail field))
     by_cases live : name ∈ keep
     · simp only [trimSlotArgs, live, ite_true, Args.orte]
-      rw [localRead .head, tail, List.nil_append]
+      rw [localRead .head, List.nil_append]
+      exact tail
     · simp only [trimSlotArgs, live, ite_false, Args.orte, Expr.orte, NutzlastExpr.orte, List.nil_append]
       exact tail
 
