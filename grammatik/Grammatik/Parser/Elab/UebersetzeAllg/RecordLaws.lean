@@ -248,7 +248,7 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
                 Ty.prod schema.val.identity (schema.val.fields.map (·.2)) := schema.property.symm
             refine ⟨Expr.prodGet (cast (congrArg (Expr (declOf u) Γ Λ) schemaType) parent) fieldAt, ?_⟩
             simp only [lowWertAtE, lowWertE, gate, lowered, nominal, selected,
-              bind, Except.bind, pure, Except.pure] <;> rfl
+              bind, Except.bind, pure, Except.pure, fitW, dite_true]
           · cases accepted
         · cases accepted
       · cases accepted

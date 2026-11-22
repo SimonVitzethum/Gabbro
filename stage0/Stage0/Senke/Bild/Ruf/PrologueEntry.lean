@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.PrologueCode
 public import Stage0.Senke.Bild.Prolog
+import Stage0.Senke.Bild.Mehr.ImageTransition
 
 @[expose] public section
 
@@ -12,6 +13,48 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
   Runner Runner.IR
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
+
+/-- The root enters at the emitted callee frame. Its lowered writes
+    fit in that thread's reservation and the world is above every frame. -/
+theorem Emitted.prologue_geometry [Kern] (output : Emitted src reserve options) {thread : Nat}
+    (declared : thread ≤ output.starts.length) :
+    let fp := imagePrologueFrame output thread
+    let slots := output.image.Ks - FB
+    WIn output.image.Y fp slots slots ∧ slots < 2 ^ 31 ∧
+      0 < output.image.depth ∧ output.image.depth + 1 < 2 ^ 31 ∧
+      output.image.fp0 ≤ fp.toNat ∧
+      ∀ byte, inSlots fp 0 slots byte → imageStackFootprint output thread byte := by
+  intro fp slots
+  obtain ⟨functions, _, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  let base := output.image.fp0 + 8 * (output.image.Ks * thread)
+  let start := BitVec.ofNat 64 base
+  have root : WIn output.image.Y start output.image.Ks output.image.Ks :=
+    layout.win (by simpa only [Emitted.starts, List.length_map] using declared)
+  have reserve := layout.hroom
+  have positive := maxTop_pos functions
+  have header : FB < output.image.Ks := by omega
+  have beforeLimit := output.stackReservation_bounds
+  have top : start.toNat + 8 * output.image.Ks < 2 ^ 64 := root.top.trans_lt beforeLimit.2
+  have exactBase : start.toNat = base := by
+    have inside := Nat.mul_le_mul_left output.image.Ks (declared.trans (Nat.le_succ _))
+    change (BitVec.ofNat 64 base).toNat = base
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by dsimp [base]; omega)]
+  have frameOffset : fp.toNat = base + 8 * FB := by
+    change (slot start (BitVec.ofNat 64 FB)).toNat = _
+    rw [slot_toNat top.le header, exactBase]
+  refine ⟨root.sub header.le top, by have := layout.startLimits.2.2; dsimp [slots]; omega,
+    layout.depth_pos, layout.startLimits.2.1, by rw [frameOffset]; dsimp [base]; omega, ?_⟩
+  intro byte inside
+  have bounds := inside
+  simp only [inSlots, Nat.mul_zero, Nat.add_zero, frameOffset] at bounds
+  refine ⟨declared, by dsimp [base] at *; omega, ?_⟩
+  rw [Nat.mul_succ]
+  dsimp [base, slots] at bounds
+  omega
 
 /-- The exact loaded prologue prepares its typed frame at the beginning
     of the installed body. The reference uses only the Lean IR's private

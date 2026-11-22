@@ -79,7 +79,7 @@ theorem tso_memory_response_matches {layout : Runner.Beweis.Lay} {before after :
 
 /-- A TSO memory answer advances a restricted IR reference. Only its read
     bytes and its private writable bytes need agree with the physical view. -/
-theorem tso_scoped_memory_response {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+theorem tso_scoped_memory_response [Kern] {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
     {thread : Nat} {reference finish : Mem} {reads writes : W → Prop}
     {request : Op} {resume : Ans → Res T} {answer : Ans} {expected : W × W}
     (tree : Blind (.ask request resume))
