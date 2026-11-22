@@ -208,24 +208,6 @@ def ImageSlotsMatch [Kern] (output : Emitted src reserve options)
       state.m.faeden i = atExit.m.faeden i ∧ ImageNeverRequest output O atExit i req ∧
       req.nr.toNat = NR_EXIT ∧ history.filter (fun event => event.1 == i) = earlier ++ [(i, req, none)])
 
-def imageExternalEvent (event : Ev) : Bool :=
-  let request := event.2.1
-  !(decide (request = cloneReq ∨ request.nr.toNat = NR_EXIT ∨ request.nr.toNat = NR_EXIT_GROUP ∨
-    request = futexReq request.a1 128 request.a3 ∨ request = futexReq request.a1 129 request.a3))
-
-def imageSourceForeignEvents {D : Deklaration} (run : Lauf D) : List (Faden × D.Ax) :=
-  run.filterMap fun step => match step.ereignis with
-    | .fremd (.inl routine) => some (step.faden, routine)
-    | _ => none
-
-/-- The typed program and runner agree on the global order of foreign calls. -/
-def ImageForeignTrace (output : Emitted src reserve options)
-    (history : List Ev) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
-    event.1 = typed.1 ∧ ∃ gate, output.image.Y.tor typed.2 = some gate ∧
-      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent)
-      (imageSourceForeignEvents (D := (declOf output.compiled.unit).mitRuhe) state.m.lauf)
-
 /-- The actual mapped output and empty initial buffers establish the
     initial phase, exact source memory and empty observation history. -/
 theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
@@ -342,6 +324,16 @@ def ImageGateEvent [Kern] (output : Emitted src reserve options)
             gate.resultArea = some j ∧ reqArg request j = slot fp (BitVec.ofNat 64 base) ∧
             AreaReply layout O.mitRuhe routine gate τ typed world args (returned.ms.1.view event.1) fp base word)
 
+/-- An observed host effect either comes from the exact typed call or
+    leaves the source's foreign history unchanged. -/
+def ImageObservation [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    (before after : FadenMaschine (declOf output.compiled.unit).mitRuhe)
+    (returned : Cfg imageTSO (Res T)) (event : Ev) : Prop :=
+  ImageGateEvent output E O before after returned event ∨
+    (imageCanBeInternal event = true ∧
+      imageSourceForeignEvents after.m.lauf = imageSourceForeignEvents before.m.lauf)
+
 /-- One simulation carries the same IR endpoint and runner history through
     the entire execution. Its source steps must construct a reachable GX
     execution, including all intervening steps. -/
@@ -359,7 +351,7 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
     ProcessStep imageTSO (actX L0) before events after →
     ∃ ir' count next, ProcessPrefix imageTSO actI ir events count ir' ∧
       related (history ++ events) after ir' next ∧ ImageReach output E O state next ∧
-      ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next ir' event
+      ∀ event ∈ events, ImageObservation output E O state next ir' event
   stop : ∀ earlier before ir state last ending, related earlier before ir state →
     Tr imageTSO (actX L0) before last ending 1 → ending ≠ .lauf →
     ∃ next, ImageReach output E O state next ∧ ImageStopMatches output O next earlier last ending

@@ -28,7 +28,7 @@ structure ImageIRSimulation (output : Emitted src reserve options)
     ProcessStep imageTSO actI before events after →
     ∃ next, related (history ++ events) after next ∧ ImageReach output E O state next ∧
       (events = [] → imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf) ∧
-      ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next after event
+      ∀ event ∈ events, ImageObservation output E O state next after event
   stop : ∀ history before state last ending, related history before state →
     Tr imageTSO actI before last ending 1 → ending ≠ .lauf →
     ∃ next, ImageReach output E O state next ∧ ImageStopMatches output O next history last ending
@@ -85,7 +85,10 @@ theorem ImageIRSimulation.toRunner (sim : ImageIRSimulation output E O start)
       rw [List.append_nil] at related
       obtain ⟨next, final, advanced, _, observed⟩ := sim.step _ _ _ _ _ related last
       exact ⟨ir', steps, next, trace, ⟨same, final⟩, imageReach_trans reached advanced,
-        fun event occurs external => (observed event occurs external).after_silent reached (unchanged rfl)⟩
+        fun event occurs =>
+          (observed event occurs).elim
+            (fun gate => .inl (gate.after_silent reached (unchanged rfl)))
+            (fun internal => .inr ⟨internal.1, internal.2.trans (unchanged rfl)⟩)⟩
   · intro history native ir state events ending matching terminal stopped
     obtain ⟨_, _, projected⟩ := runner_mt imageTSO_fixed cinv_L0 1 matching.1 terminal
     obtain ⟨boundary, earlier, last, _, segment, tail, exactEvents, _⟩ := projected.split_stop stopped

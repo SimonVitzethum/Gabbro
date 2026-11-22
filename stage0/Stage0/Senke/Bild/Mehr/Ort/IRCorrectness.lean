@@ -99,7 +99,8 @@ structure ImageIRRefinement (output : Emitted src reserve options)
   segment : ∀ {history before state events after}, related history before state →
     ImageIRSegment before events after →
     ∃ next, related (history ++ events) after next ∧ ImageReach output E O state next ∧
-      ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next after event
+      (events = [] → imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf) ∧
+      ∀ event ∈ events, ImageObservation output E O state next after event
   stop : ∀ {history before state last ending}, related history before state →
     Tr imageTSO actI before last ending 1 → ending ≠ .lauf →
     ∃ next, ImageReach output E O state next ∧ ImageStopMatches output O next history last ending
@@ -141,7 +142,7 @@ theorem ImageIRRefinement.follow (refinement : ImageIRRefinement output E O memo
   induction path with
   | nil =>
     intro anchor silentSteps previous origin silent matched
-    obtain ⟨next, endpoint, reached, _⟩ := refinement.segment matched (.silent silent)
+    obtain ⟨next, endpoint, reached, _, _⟩ := refinement.segment matched (.silent silent)
     exact ⟨next, endpoint, reached⟩
   | cons step _ tail =>
     intro anchor silentSteps previous origin silent matched
@@ -149,7 +150,7 @@ theorem ImageIRRefinement.follow (refinement : ImageIRRefinement output E O memo
     · subst_vars
       exact tail (silent.trans (.ofStep step)) matched
     · subst_vars
-      obtain ⟨middle, advanced, first, _⟩ := refinement.segment matched (.observed silent step)
+      obtain ⟨middle, advanced, first, _, _⟩ := refinement.segment matched (.observed silent step)
       obtain ⟨next, endpoint, rest⟩ := tail (.nil _) advanced
       exact ⟨next, by simpa only [List.append_assoc] using endpoint, imageReach_trans first rest⟩
 

@@ -57,8 +57,8 @@ theorem ImageForeignTrace.retire {src : String} {reserve : Nat} {options : Profi
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {i : Nat} {req : Req}
     (matched : ImageForeignTrace output history state) (exit : req.nr.toNat = NR_EXIT) :
     ImageForeignTrace output (history ++ [(i, req, none)]) state := by
-  have internal : imageExternalEvent (i, req, none) = false := by
-    simp only [imageExternalEvent, exit, true_or, or_true, decide_true, Bool.not_true]
+  have internal : imageCanBeInternal (i, req, none) = true := by
+    simp only [imageCanBeInternal, exit, true_or, or_true, decide_true]
   exact matched.appendInternal (by intro event member; simpa only [List.mem_singleton.mp member] using internal) rfl
 
 private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}

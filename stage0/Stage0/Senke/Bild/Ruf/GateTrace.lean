@@ -66,12 +66,18 @@ theorem imageSourceForeignEvents_call {D : Deklaration} {O : Orakel D} (oracle :
 theorem ImageForeignTrace.appendInternal {output : Emitted src reserve options}
     {history events : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (matched : ImageForeignTrace output history before)
-    (internal : ∀ event ∈ events, imageExternalEvent event = false)
+    (internal : ∀ event ∈ events, imageCanBeInternal event = true)
     (silent : imageSourceForeignEvents after.m.lauf = imageSourceForeignEvents before.m.lauf) :
     ImageForeignTrace output (history ++ events) after := by
-  have noExternal : events.filter imageExternalEvent = [] :=
-    List.filter_eq_nil_iff.mpr (fun event member => by rw [internal event member]; decide)
-  simpa only [ImageForeignTrace, List.filter_append, noExternal, List.append_nil, silent] using matched
+  have noCalls : ImageForeignTraceAlignment output events [] := by
+    induction events with
+    | nil => exact .nil
+    | cons event rest ih =>
+      exact .internal (internal event List.mem_cons_self)
+        (ih (fun later member => internal later (List.mem_cons_of_mem _ member)))
+  unfold ImageForeignTrace at matched ⊢
+  rw [silent, ← List.append_nil (imageSourceForeignEvents before.m.lauf)]
+  exact matched.append noCalls
 
 /-- A matched host response extends the global trace by the call taken
     by the actual issuing GX thread. -/
@@ -79,14 +85,13 @@ theorem ImageForeignTrace.appendGate [Kern] {output : Emitted src reserve option
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     {history : List Ev} {event : Ev} {returned : Cfg imageTSO (Res T)}
     {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    (matched : ImageForeignTrace output history before) (external : imageExternalEvent event = true)
+    (matched : ImageForeignTrace output history before)
     (call : ImageGateEvent output E O before after returned event) :
     ImageForeignTrace output (history ++ [event]) after := by
   obtain ⟨_, _, routine, _, _, _, _, _, _, log, _, gate, _, _, present, number, _⟩ := call
   unfold ImageForeignTrace at matched ⊢
-  rw [log, List.filter_append]
-  simp only [List.filter_cons, external, ite_true, List.filter_nil]
-  exact List.rel_append matched (.cons ⟨rfl, gate, present, number⟩ .nil)
+  rw [log]
+  exact matched.append (.gate rfl present number .nil)
 
 /-- Reading a syscall's register arguments is unaffected by adding the
     purely logical idle function. The transport uses only word parameters. -/
