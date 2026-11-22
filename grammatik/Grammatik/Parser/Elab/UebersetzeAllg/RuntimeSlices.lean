@@ -245,9 +245,9 @@ theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
       (uSchranke (uSliceConstants ctx) expression).map (fun value => (value, value, USide.lit value)) ≠
         some (lo, hi, USide.param name) := by
     cases uSchranke (uSliceConstants ctx) expression <;>
-      simp only [Option.map_none, Option.map_some, reduceCtorEq, Prod.mk.injEq, and_false]
+      simp only [Option.map_none, Option.map_some, ne_eq, reduceCtorEq, Prod.mk.injEq, and_false, not_false_eq_true]
   cases source
-  case variable current =>
+  case «variable» current =>
     simp only [uSliceInteger] at recognized
     split at recognized
     · rename_i lower upper resolved
