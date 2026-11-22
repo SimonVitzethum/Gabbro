@@ -89,7 +89,7 @@ theorem blind_op (o : Nat) (t : T) : Blind (op o t) := by
     intro _
     apply blind_f2
     intro _
-    apply blind_wr
+    apply blind_wr rfl
     intro r
     apply blind_opt
     intro _
@@ -136,7 +136,7 @@ theorem blind_op (o : Nat) (t : T) : Blind (op o t) := by
     intro _
     apply blind_rd64
     intro _
-    apply blind_sys
+    apply blind_sys rfl
     intro r
     apply blind_opt
     intro _
@@ -149,7 +149,7 @@ theorem blind_op (o : Nat) (t : T) : Blind (op o t) := by
     intro _
     apply blind_rd64
     intro _
-    apply blind_sys
+    apply blind_sys rfl
     intro r
     apply blind_opt
     intro _
