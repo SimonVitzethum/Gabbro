@@ -59,7 +59,7 @@ theorem bild_auto_depth {D : Deklaration} {passes : Nat} {P : Programm D}
       · next accepted =>
         simp only [Except.ok.injEq] at emitted
         subst image
-        rcases accepted.2.2 with nonzero | enough
+        rcases accepted.2 with nonzero | enough
         · exact False.elim (nonzero rfl)
         · exact enough
       · exfalso

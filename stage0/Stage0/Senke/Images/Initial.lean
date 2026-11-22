@@ -41,21 +41,10 @@ theorem initialLayout_bild {u : UProg} {P : Programm (declOf u)} {passes : Nat}
         subst b
         refine ⟨fun _ => rfl, fun _ _ => rfl, rfl, fun t => ?_⟩
         simp only [Lay.count, layU, ite_self, Int.natCast_zero, Int.add_zero]
-      · split at emitted
-        · cases emitted
-        · split at emitted
-          · cases emitted
-          · split at emitted
-            · cases emitted
-            · split at emitted
-              · cases emitted
-              · split at emitted
-                · cases emitted
-                · split at emitted
-                  · cases emitted
-                  · split at emitted
-                    · cases emitted
-                    · cases emitted
+      · exfalso
+        revert emitted
+        repeat' split
+        all_goals intro emitted; cases emitted
 
 /-- Bounds are inherited from the actual image layout check; initialization changes
     neither image size nor its permitted address range. -/

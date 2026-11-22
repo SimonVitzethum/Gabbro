@@ -132,7 +132,7 @@ theorem bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {o : Opcode} {ca 
 /-- One instruction that writes slot `d` from a step `ret1 t v`. -/
 theorem one_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II} {Γ : Ctx} {ρ : Env D Γ} {v : Runner.W}
     {W : Runner.Mem → Prop}
-    {P : Runner.W → Prop} (h : Pre L m pc fp K d [i] ρ W reserved) (ho : i.o.val < 256) (hd : d < K) (hv : P v)
+    {P : Runner.W → Prop} (h : Pre L m pc fp K d [i] ρ W reserved) (ho : i.o < 256) (hd : d < K) (hv : P v)
     (hr : ∀ m', m.wr64 (slot fp (BitVec.ofNat 64 d)) v = some m' → Run (op i.o ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m') :
     Ok m pc fp K d [i] P := by
   obtain ⟨hw, hrd, a3⟩ := wr_slot h.frame hd v

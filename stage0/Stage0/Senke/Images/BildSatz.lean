@@ -30,7 +30,10 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
-        obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hYlo, hYhi, hYsye⟩, hfp, _⟩ := hg
+        obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hYlo, hYhi, hYsye⟩, _⟩ := hg
+        have hfp : codeBase + 16 * (headLen (starts.map (·.1)).length + (cs0.map (·.1.length)).sum) =
+            codeBase + 16 * (headLen (starts.map (·.1)).length + (cs.flatMap (·.1)).length) := by
+          rw [List.length_flatMap, hlens]
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
         refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens]; simp, hcl, hcs, hfs,
           by simp only [List.length_map], ?_, hwhy, hrwhy,

@@ -224,7 +224,6 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       let sp := (List.range k).map fun j => (codeBase + 16 * (10 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
       if BildGut D main roots lens cs fp0 Ks K Yb ∧
-          fp0 = codeBase + 16 * (headLen k + body.length) ∧
           (requested ≠ 0 ∨ stackReserveDepth ≤ n) then
         .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ,
           starts.map (fun start => encodeEnv Yb start.2), req⟩
