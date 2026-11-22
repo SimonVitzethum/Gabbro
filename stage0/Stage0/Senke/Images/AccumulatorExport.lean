@@ -8,14 +8,14 @@ import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
-  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+  Gabbro.Grammatik.Parser.UebersetzeAllg
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
-/-- These are the original accumulator declarations selected by this
-    exact compilation. Generated cells never add another declaration. -/
+/-- Take the declarations from the expansion retained by this compilation.
+    This includes instantiated modules under their canonical resolved names. -/
 def imageAccumulatorItems (output : Emitted src reserve options) : List SItemTief :=
-  (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).filter fun item =>
+  (uMembers output.compiled.expanded).filter fun item =>
     match item with
     | .accT .. => true
     | _ => false
@@ -27,6 +27,20 @@ def imageNamedIndex {α : Type} (entries : List α) (name : α → String) (expe
   match (List.finRange entries.length).find? (fun index => name (entries.get index) == expected) with
   | some position => .ok position
   | none => .error ("ir: generated declaration missing: " ++ expected)
+
+/-- A successful lookup refers to the exact named declaration in the
+    canonical table, even when its position changes during expansion. -/
+theorem imageNamedIndex_sound {α : Type} {entries : List α} {name : α → String}
+    {expected : String} {position : Fin entries.length}
+    (found : imageNamedIndex entries name expected = .ok position) :
+    name (entries.get position) = expected := by
+  unfold imageNamedIndex at found
+  cases result : (List.finRange entries.length).find? (fun index => name (entries.get index) == expected) with
+  | none => rw [result] at found; cases found
+  | some selected =>
+    rw [result] at found
+    cases found
+    exact beq_iff_eq.mp (List.find?_some result)
 
 def imageAccumulatorMembers (output : Emitted src reserve options) (name : String)
     (k : Nat) : Except String (Fin k → (declOf output.compiled.unit).Glob) :=
@@ -49,8 +63,8 @@ def lowerImageAccumulator (output : Emitted src reserve options) (item : SItemTi
   uAkkuDeclWith scopes.values scopes.types item
     (imageAccumulatorMembers output name) (imageAccumulatorLocks output name) query update fold
 
-/-- Each descriptor is exactly the result of the exporter for its original
-    source item, including the generated declarations in the compiled unit. -/
+/-- Each descriptor comes from its expanded source declaration and the
+    corresponding generated entries in the compiled unit. -/
 def ImageAccumulator (output : Emitted src reserve options) (item : SItemTief)
     (acc : Kernzelle.AccumulatorDecl (declOf output.compiled.unit)) : Prop :=
   lowerImageAccumulator output item = .ok acc
