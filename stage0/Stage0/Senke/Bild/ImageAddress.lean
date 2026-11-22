@@ -109,6 +109,39 @@ theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
   intro byte hit
   exact (Nat.le_add_right _ _).trans (stores issuer (address, value) member byte hit).1.2.1
 
+/-- A running root stub decodes an actual emitted instruction within
+    the startup header. This applies to the entry stub and all clone
+    and child stubs at their relocated addresses. -/
+theorem Emitted.root_instruction_decodes [Kern] (output : Emitted src K options)
+    {memory : Runner.Mem} (loaded : BytesAt memory codeBase (output.image.code.flatMap encII))
+    {thread : Nat} (declared : thread ≤ output.starts.length) {pointer : T}
+    (instruction : ImageRootInstruction output thread pointer) :
+    ∃ index, ∃ inside : index < output.image.code.length,
+      pointer.pc = BitVec.ofNat 64 (codeBase + 16 * index) ∧
+      InsAt memory pointer.pc output.image.code[index].o
+        (II.f output.image.code[index].a) (II.f output.image.code[index].b) (II.f output.image.code[index].c) := by
+  obtain ⟨_, index, _, rootBound, address⟩ := instruction
+  obtain ⟨_, _, _, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have header : headLen output.starts.length ≤ output.image.code.length := by
+    rw [serialized, List.length_append, layout.head, List.length_map]
+    exact Nat.le_add_right _ _
+  have inHeader : index < headLen output.starts.length := by
+    unfold headLen
+    by_cases entry : thread = 0
+    · simp only [entry, ite_true, Nat.zero_add, startLen] at rootBound ⊢
+      omega
+    · simp only [entry, ite_false, startLen] at rootBound ⊢
+      omega
+  have inside := inHeader.trans_le header
+  have decoded := codeAt_bytes _ codeBase (serialized.symm ▸ layout.hops) loaded
+  refine ⟨index, inside, address, ?_⟩
+  rw [address, ← ofNat_add64]
+  exact decoded index inside
+
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
 theorem Emitted.layout_checked (output : Emitted src K options) :
