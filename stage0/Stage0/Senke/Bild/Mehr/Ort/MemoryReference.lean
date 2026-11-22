@@ -29,6 +29,63 @@ theorem tso_read_matches {layout : Runner.Beweis.Lay}
     | none => rfl
     | some word => exact ignores word extra
 
+private theorem memAns_preserves_agreement {region : W → Prop} {before after localMemory : Mem}
+    {request : Op} {answer : Ans} (kept : GleichAuf region before localMemory)
+    (within : ∀ byte, fussOp request byte → region byte)
+    (answered : memAns before request = some (answer, after)) :
+    ∃ updated, memAns localMemory request = some (answer, updated) ∧ GleichAuf region after updated := by
+  obtain ⟨updated, matched, touched⟩ := memAns_gleich (fun byte hit => kept byte (within byte hit)) answered
+  refine ⟨updated, matched, ?_⟩
+  intro byte present
+  by_cases hit : fussOp request byte
+  · exact touched byte hit
+  · exact ((memAns_nurIn answered).gleichAt hit).trans
+      ((kept byte present).trans ((memAns_nurIn matched).gleichAt hit).symm)
+
+/-- The actual TSO answer advances a solo proof of a scoped IR region.
+    The proof memory agrees with exactly the requested byte region,
+    even when the issuing view contains unrelated concurrent effects. -/
+theorem SoloLauf.answer_tso [Kern] {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+    {thread : Nat} {region : W → Prop} {start : T} {initial localMemory : Mem}
+    {request : Op} {resume : Ans → Res T} {answer : Ans}
+    (run : SoloLauf start initial (.ask request resume) localMemory)
+    (agrees : GleichAuf region (before.1.view thread) localMemory)
+    (within : ∀ byte, fussOp request byte → region byte)
+    (memory : istSpeicherOp request = true)
+    (answered : (TSO layout).ans before thread request answer after) :
+    ∃ updated, SoloLauf start initial (resume answer) updated ∧
+      GleichAuf region (after.1.view thread) updated := by
+  have finish {actual reply : Ans} {changed : Mem}
+      (continued : resume actual = resume reply)
+      (answerLocal : memAns localMemory request = some (reply, changed))
+      (views : GleichAuf region (after.1.view thread) changed) :
+      ∃ updated, SoloLauf start initial (resume actual) updated ∧
+        GleichAuf region (after.1.view thread) updated :=
+    ⟨changed, continued.symm ▸ run.ask answerLocal, views⟩
+  cases request with
+  | rd width address =>
+    have tree : Blind (.ask (.rd width address) resume) := by
+      obtain ⟨_, _, _, _, finished | pending⟩ := run
+      · cases finished.1
+      · exact pending.blind (blind_step _)
+    obtain ⟨rfl, _, read, continued⟩ := tso_read_matches tree (fun byte touched => agrees byte (within byte touched)) answered
+    exact finish continued read agrees
+  | wr address value =>
+    have physical : memAns (before.1.view thread) (.wr address value) = some (answer, after.1.view thread) := by
+      have viewPermissions : (before.1.view thread).wr = before.1.m.wr := foldl_wr _ _
+      rcases answered with ⟨denied, rfl, rfl⟩ | ⟨allowed, rfl, enqueued⟩
+      · rw [memAns_wr, wr64_eq, viewPermissions, ite_eq_right (Bool.eq_false_iff.mp denied)]
+      · have update := (tso_store_updates_view (layout := layout) (.inr ⟨allowed, rfl, enqueued⟩)).resolve_left
+          (fun refused => Option.noConfusion refused.1)
+        rw [memAns_wr, wr64_eq, viewPermissions, ite_eq_left allowed, update.2.1]
+    obtain ⟨_, result, retained⟩ := memAns_preserves_agreement agrees within physical
+    exact finish rfl result retained
+  | cas address expected value =>
+    obtain ⟨_, result, retained⟩ :=
+      memAns_preserves_agreement agrees within (tso_cas_updates_view answered).2
+    exact finish rfl result retained
+  | sys | fp => cases memory
+
 theorem frame_slot_byte {memory : Mem} {fp : W} {K index offset : Nat}
     (frame : FrameOK memory fp K) (slotFits : index < K) (inWord : offset < 8) :
     inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) := by
