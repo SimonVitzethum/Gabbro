@@ -61,6 +61,18 @@ theorem RunP.remaining {start current : Res T} {before now : Mem}
       obtain ⟨rfl, rfl⟩ := same
       exact ih later
 
+/-- A partial execution of a proved memory-only instruction can wait
+    only on a memory request, or be at the exact next instruction. -/
+theorem RunP.control_of_runM {start current : Res T} {before now after : Mem} {next : T}
+    (part : RunP start before current now) (whole : RunM start before next after) :
+    (current = .next next ∧ now = after) ∨
+      ∃ request resume, current = .ask request resume ∧ request.special = false := by
+  cases part.remaining whole with
+  | next => exact Or.inl ⟨rfl, rfl⟩
+  | @ask request resume _ _ _ _ _ answered _ =>
+    refine Or.inr ⟨request, resume, rfl, ?_⟩
+    cases request <;> first | rfl | cases answered
+
 /-- A partial run that has reached the end of the tree is a memory-only step. -/
 theorem runP_runM {r r' : Res T} {m m1 : Mem} (h : RunP r m r' m1) : ∀ {t : T}, r' = .next t → RunM r m t m1 := by
   induction h with
