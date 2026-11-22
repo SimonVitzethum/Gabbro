@@ -1,6 +1,8 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.Idle.Lowering
+public import Stage0.Senke.Rueckkehr.Entry
+import Stage0.Senke.Welt.Spans.IdleValue
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 @[expose] public section
@@ -148,5 +150,14 @@ theorem functionFrame_offsets_withIdle (P : Programm D) (L : Lay D) (f : D.Fn) :
     FrameLayout.canonicalResult, FrameLayout.internalResult, FrameLayout.ensParams,
     FrameLayout.internalStatus, FrameLayout.bodyReserved, functionFrame, tyR,
     contextWords_mapNumbers, returnWords_mapNumbers, and_self]
+
+/-- The source body in GX uses the same restored arguments and old values. -/
+theorem EntryFrameValues.withIdle {L : Lay D} {P : Programm D} {f : D.Fn}
+    {memory : Runner.Mem} {fp : Runner.W} {world : World D} {args : Env D (D.params f)}
+    (stored : EntryFrameValues L P f memory fp world args) :
+    EntryFrameValues L.withIdle P.mitRuhe (some f) memory fp (worldR world) (envR args) := by
+  obtain ⟨_, _, original, _, _, _, lexical⟩ := functionFrame_offsets_withIdle P L f
+  exact ⟨original.symm ▸ stored.original.withIdle, lexical.symm ▸ stored.lexical.withIdle,
+    (postCells_withIdle P f).symm ▸ stored.snapshots.withIdle⟩
 
 end Gabbro.Stage0.Senke
