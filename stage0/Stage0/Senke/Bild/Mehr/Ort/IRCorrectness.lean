@@ -89,7 +89,8 @@ theorem LoadedIRImage.firstWorkerBoundary
     simpa only [Emitted.starts, List.length_map] using layout.hylo
   have worldStart := layout.hyord
   have worldEnd := layout.hyhi
-  have singleStack := Nat.le_mul_of_pos_right output.image.Ks (Nat.succ_pos output.starts.length)
+  have singleStack : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
+    Nat.le_mul_of_pos_right _ (Nat.succ_pos _)
   have stackFits : stack < 2 ^ 31 := by dsimp only [stack]; omega
   have slotsFit : output.image.Ks < 2 ^ 31 := by dsimp only [stack] at stackFits; omega
   have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
@@ -103,13 +104,13 @@ theorem LoadedIRImage.firstWorkerBoundary
     apply codeFar_nat _ (Nat.lt_trans stackFits (by decide))
     simp only [headLen, startLen] at frameStart
     omega
-  obtain ⟨steps, _, _, _, startMemory, _, covers⟩ := loaded.silentEntry quiet
+  obtain ⟨_, _, _, _, startMemory, _, covers⟩ := loaded.silentEntry quiet
   have exactStart : BildMehr.singleThreadSC (imageToTSO (output.irEntry memory)) =
       (⟨⟨memory.1.m, memory.2.1⟩, [some (.next
         ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ : Cfg (SC L0) (Res T)) := by
-    unfold BildMehr.singleThreadSC
-    rw [Cfg.mk.injEq]
-    exact ⟨Subtype.ext startMemory, rfl⟩
+    exact congrArg (fun state : (SC L0).St =>
+      ⟨state, (output.irEntry memory).ths⟩ : (SC L0).St → Cfg (SC L0) (Res T))
+      (Subtype.ext startMemory)
   obtain ⟨referenceSteps, prepared, invariant, reference⟩ := BildMehr.spawnSite_reference (layout := L0)
     memory.2.1 code firstFrame far (by omega) slotsFit entryFits stackFits
   rw [← exactStart] at reference
