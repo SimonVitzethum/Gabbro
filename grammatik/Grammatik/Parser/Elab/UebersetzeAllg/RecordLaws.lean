@@ -225,6 +225,64 @@ theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (
   have same : entry.val = (Ty.bool, USide.truth value) := List.mem_singleton.mp entry.property
   simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
 
+private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
+    (read : (source : SExpr) → sizeOf source < sizeOf (values.map (fun n => if n then .tru else .fls)) →
+      Except String USide) :
+    uArraySides ctx (values.map (fun n => if n then .tru else .fls)) read =
+      .ok (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil) := by
+  induction values with
+  | nil => rfl
+  | cons value rest ih =>
+    cases value <;>
+      simp only [List.map_cons, List.foldr_cons, uArraySides, uRecordSide, Bool.false_eq_true, ite_false,
+        ite_true, ih, bind, Except.bind, pure, Except.pure]
+
+/-- The literal array accepted at a predicate parameter retains its
+    declared type after substitution, including at array length zero. -/
+theorem specArrayLiteral_erfuellbar (ctx : UCtx) (values : List Bool)
+    (specIndex argumentIndex : Nat) (name : String) (parameters : List STyp) (annotation : STyp)
+    (specFound : ctx.specTypen[specIndex]? = some (name, parameters))
+    (argFound : parameters[argumentIndex]? = some annotation)
+    (typed : uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner annotation =
+      .ok (.arr .bool values.length)) :
+    let array := SExpr.ext .array [] (values.map (fun value => if value then .tru else .fls))
+    let literal := values.foldr (fun value rest => USide.arrCons (.truth value) rest) USide.arrNil
+    uSpecArrayArgument ctx (.arr .bool values.length) array = .ok () ∧
+      uWertBody ctx (.built "#spec-array" [.lit specIndex, .lit argumentIndex, array]) =
+        .ok (.typed (.arr .bool values.length) literal) := by
+  intro array literal
+  have read : uRechne ctx (uWertBlatt ctx) array = .ok literal := by
+    simp only [array, uRechne, uArraySides_booleans, literal]
+  refine ⟨?_, ?_⟩
+  · simp only [uSpecArrayArgument, uWertBody, read, literal, specLiteralArrayField_erfuellbar,
+      bind, Except.bind, ite_true, pure, Except.pure]
+  · simp only [uWertBody, uRechne, specFound, argFound, typed, read,
+      bind, Except.bind, pure, Except.pure]
+
+/-- The canonical literal reader of the actual typed substitution
+    accepts the same array and retains its exact type. -/
+theorem specArrayLiteral_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (fn : UFn) (er : Option Ty) (values : List Bool) :
+    let literal := values.foldr (fun value rest => USide.arrCons (.truth value) rest) USide.arrNil
+    ∃ value : Expr (declOf u) Γ Λ (.arr .bool values.length),
+      lowWertE u Γ Λ fn er (.typed (.arr .bool values.length) literal) =
+        .ok ⟨.arr .bool values.length, value⟩ := by
+  have lowered : ∀ values : List Bool, ∃ expression : Expr (declOf u) Γ Λ (.arr .bool values.length),
+      lowLit (.arr .bool values.length)
+        (values.foldr (fun value rest => USide.arrCons (.truth value) rest) USide.arrNil) = .ok expression := by
+    intro values
+    induction values with
+    | nil => exact ⟨.arrNil, by simp only [List.length_nil, List.foldr_nil, lowLit]⟩
+    | cons head rest ih =>
+      obtain ⟨tail, readTail⟩ := ih
+      cases head
+      · refine ⟨.arrCons .fls tail, ?_⟩
+        simp only [List.length_cons, List.foldr_cons, lowLit, readTail]
+      · refine ⟨.arrCons .tru tail, ?_⟩
+        simp only [List.length_cons, List.foldr_cons, lowLit, readTail]
+  obtain ⟨value, read⟩ := lowered values
+  exact ⟨value, by simp only [lowWertE, read, Except.map]⟩
+
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ty : Ty) (raw : USide) :

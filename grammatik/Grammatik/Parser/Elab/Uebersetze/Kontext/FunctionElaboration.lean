@@ -46,7 +46,7 @@ set_option maxRecDepth 100000
     `maintains` documents (the owed invariants are derived from `effects`), `by induction over` names a scheme
     and carries no term. Without `spec fn`s the clauses stay as they are. -/
 def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Except String (List SKlausel) :=
-  let ein := uSpecEin ctx.specs 1000
+  let ein := uSpecEinTyped ctx 1000
   ks.foldr (fun k acc => match acc with
     | .error e => .error e
     | .ok r =>

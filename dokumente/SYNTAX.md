@@ -1231,7 +1231,8 @@ parameters accept named values and record field paths whose elaborated type equa
 type. A record parameter also accepts its nominal constructor with Boolean, integer, string,
 array and record literals as fields. Nested array literals must match their declared lengths and
 element types. Nested records must match the declared nominal schema. Each field is checked
-recursively before substitution.
+recursively before substitution. An array literal passed directly to a predicate takes the
+parameter's declared element type and length, including an empty literal at length zero.
 A string literal also fits a string parameter whose declared bound equals its UTF-8 byte
 length. Concatenating supported string arguments adds their byte bounds before the parameter
 type is checked. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`

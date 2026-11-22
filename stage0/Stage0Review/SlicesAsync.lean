@@ -26,6 +26,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralNestedRecord_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_low
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowerSlice_array

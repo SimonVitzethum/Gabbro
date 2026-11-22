@@ -66,27 +66,31 @@ termination_by structural fuel => fuel
 /-- Inline a `spec fn` only when substitution cannot capture argument names.
     A clashing call remains for the ordinary predicate reader to refuse.
     This shared gate also applies to `Spec.predicates`. Structural in a fuel. -/
-def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr
+def uSpecEinUsing (specs : List (String × List String × SExpr))
+    (ascribe : String → List SExpr → List SExpr) : Nat → SExpr → SExpr
   | 0, e => e
   | n + 1, e =>
     match e with
     | .call f as =>
-      let as' := as.map (uSpecEin specs n)
+      let as' := as.map (uSpecEinUsing specs ascribe n)
       match specs.find? (fun p => strEq p.1 f) with
       | some (_, ps, body) =>
         if ps.length == as'.length && !(as'.any (specArgumentCaptures body)) then
-          uSpecEin specs n (sErsetze (ps.zip as') 1000 body)
+          uSpecEinUsing specs ascribe n (sErsetze (ps.zip (ascribe f as')) 1000 body)
         else .call f as'
       | none => .call f as'
-    | .field a f => .field (uSpecEin specs n a) f
-    | .index a i => .index (uSpecEin specs n a) (uSpecEin specs n i)
-    | .arrow a f => .arrow (uSpecEin specs n a) f
-    | .un o a => .un o (uSpecEin specs n a)
-    | .bin o a b => .bin o (uSpecEin specs n a) (uSpecEin specs n b)
-    | .built f as => .built f (as.map (uSpecEin specs n))
-    | .old a => .old (uSpecEin specs n a)
-    | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
+    | .field a f => .field (uSpecEinUsing specs ascribe n a) f
+    | .index a i => .index (uSpecEinUsing specs ascribe n a) (uSpecEinUsing specs ascribe n i)
+    | .arrow a f => .arrow (uSpecEinUsing specs ascribe n a) f
+    | .un o a => .un o (uSpecEinUsing specs ascribe n a)
+    | .bin o a b => .bin o (uSpecEinUsing specs ascribe n a) (uSpecEinUsing specs ascribe n b)
+    | .built f as => .built f (as.map (uSpecEinUsing specs ascribe n))
+    | .old a => .old (uSpecEinUsing specs ascribe n a)
+    | .ext k ns xs => .ext k ns (xs.map (uSpecEinUsing specs ascribe n))
     | e => e
 termination_by structural fuel => fuel
+
+def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr :=
+  uSpecEinUsing specs (fun _ args => args)
 
 end Gabbro.Grammatik.Parser.Uebersetze

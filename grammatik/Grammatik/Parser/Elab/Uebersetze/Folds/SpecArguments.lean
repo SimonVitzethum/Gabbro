@@ -64,6 +64,8 @@ def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
     declared path bounds and the ordinary G rule for concatenation.
     An array slice uses the element type and extent of its checked base. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
+  | .built "#spec-array" [_, _, _], .typed type literal =>
+    if specLiteralFieldFits ctx.records literal type then some type else none
   | .call name _, .product identity _ fields => uSpecLiteralRecordType ctx name identity fields
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
   | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
@@ -305,6 +307,13 @@ theorem specIndexedFieldArgument_erfuellbar (field : String) (target : Ty)
     simp only [uWertBody, uRechne, baseRead] <;> rfl
   exact ⟨ctx, read, specFieldArgument_of_checked ctx base field read typed nominal selected⟩
 
+/-- An explicit array literal gets the declared element type even when
+    it is empty or its elements are independently narrower. -/
+def uSpecArrayArgument (ctx : UCtx) (expected : Ty) (argument : SExpr) : Except String Unit := do
+  let value ← uWertBody ctx argument
+  if specLiteralFieldFits ctx.records value expected then pure ()
+  else throw "spec array literal does not fit its declared element type or length"
+
 /-- Reuse annotated local elaboration and the existing integer interval calculation.
     Structured and floating values must match the declared type exactly. -/
 def uSpecArgument (ctx : UCtx) (g : String) (i : Nat) (ty : STyp) (arg : SExpr) :
@@ -323,13 +332,32 @@ def uSpecArgument (ctx : UCtx) (g : String) (i : Nat) (ty : STyp) (arg : SExpr) 
         | throw "spec argument interval is unresolved"
       if lo ≤ range.1 ∧ range.2 ≤ hi then pure ()
       else throw "spec argument is outside its annotated range"
-    | .prod .. | .arr .. | .str .. | .fl .. =>
+    | .arr .. =>
+      match arg with
+      | .ext .array [] _ => uSpecArrayArgument ctx expected arg
+      | _ => uSpecValueArgument ctx expected arg
+    | .prod .. | .str .. | .fl .. =>
       uSpecValueArgument ctx expected arg
     | _ => throw "spec parameter type is unsupported"
   match checked with
   | .ok () => .ok ()
   | .error _ => .error ("spec " ++ g ++ ": argument " ++ toString i ++
       " does not fit its parameter type")
+
+/-- Retain the index of the caller-checked array type in the original
+    declaration catalog. Neither this marker nor its numeric indices
+    introduce a name that could be captured by substitution. -/
+def uSpecAscribeArrays (ctx : UCtx) (name : String) (args : List SExpr) : List SExpr :=
+  match ctx.specTypen.findIdx? (fun entry => strEq entry.1 name) with
+  | none => args
+  | some specIndex =>
+    args.zipIdx.map fun (argument, index) =>
+      match argument with
+      | .ext .array [] _ => .built "#spec-array" [.lit specIndex, .lit index, argument]
+      | _ => argument
+
+def uSpecEinTyped (ctx : UCtx) : Nat → SExpr → SExpr :=
+  uSpecEinUsing ctx.specs (uSpecAscribeArrays ctx)
 
 /-- Check every original call before inlining, including calls brought by a helper's body.
     Argument expressions use the caller's scope; quantifiers extend it with their real domain.
@@ -343,7 +371,7 @@ def uSpecArgs : Nat → UCtx → SExpr → Except String Unit
       match ctx.specs.find? (fun p => strEq p.1 g) with
       | some (_, _, body) =>
         for (arg, i) in args.zipIdx do
-          if specArgumentCaptures body (uSpecEin ctx.specs n arg) then
+          if specArgumentCaptures body (uSpecEinTyped ctx n arg) then
             throw ("spec " ++ g ++ ": argument " ++ toString (i + 1) ++
               " names a binder of the predicate")
       | none => pure ()
@@ -353,12 +381,12 @@ def uSpecArgs : Nat → UCtx → SExpr → Except String Unit
           throw ("spec " ++ g ++ ": argument " ++ toString (min args.length types.length + 1) ++
             " does not fit its parameter type")
         for ((ty, arg), i) in (types.zip args).zipIdx do
-          uSpecArgument ctx g (i + 1) ty (uSpecEin ctx.specs n arg)
+          uSpecArgument ctx g (i + 1) ty (uSpecEinTyped ctx n arg)
       | none => pure ()
       match ctx.specs.find? (fun p => strEq p.1 g) with
       | some (_, names, body) =>
         if names.length == args.length then
-          uSpecArgs n ctx (sErsetze (names.zip args) 1000 body)
+          uSpecArgs n ctx (sErsetze (names.zip (uSpecAscribeArrays ctx g args)) 1000 body)
         else throw ("spec " ++ g ++ ": argument count does not fit its parameter type")
       | none => pure ()
     | .field a _ | .arrow a _ | .un _ a | .old a => uSpecArgs n ctx a

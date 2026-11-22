@@ -221,6 +221,12 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
             | some w => .ok (.ib2 bi w x y)
             | none => .error "builtin of unknown width"
       | none => blatt (.call f [a, b])
+  | .built "#spec-array" [.lit specIndex, .lit argumentIndex, source] => do
+    let some (_, parameters) := ctx.specTypen[specIndex]? | throw "spec: array type source is unresolved"
+    let some annotation := parameters[argumentIndex]? | throw "spec: array parameter is unresolved"
+    let target ← uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner annotation
+    let .arr .. := target | throw "spec: an array literal requires an array parameter"
+    return .typed target (← uRechne ctx blatt source)
   | .built "#slice" [base, first, last] => do
     let operand ← uRechne ctx blatt base
     if let some span := uFixedLocalArraySlice ctx blatt operand first last then return span
