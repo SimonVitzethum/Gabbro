@@ -318,6 +318,7 @@ public import Grammatik.Niedrig.Konstrukte.Adresse
 public import Grammatik.Niedrig.Konstrukte.Schnitt
 public import Grammatik.Niedrig.Konstrukte.SliceCarrier
 public import Grammatik.Niedrig.Konstrukte.SliceCheck
+public import Grammatik.Niedrig.Konstrukte.GuardedSliceCarrier
 public import Grammatik.Niedrig.Konstrukte.SichtTypen
 public import Grammatik.Niedrig.Konstrukte.Sicht
 public import Grammatik.Niedrig.Konstrukte.SichtScope

@@ -19,6 +19,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Grammatik.Niedrig.Konstrukte.SliceCheck
+import Grammatik.Niedrig.Konstrukte.GuardedSliceCarrier
 import Stage0.Senke.Ausdruck.Aggregat.Stored.Carriers
 import Grammatik.Nebenlaeufigkeit.Async.Creation
 import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
@@ -86,6 +87,9 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeArrayCarrierExpr_exact
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeArrayCarrierExpr_erfuellbar
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeStringCarrierExpr_exact
+#print axioms Gabbro.Grammatik.LowLevel.Construct.withGuardedSlice_exec
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.draw
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_draw_prefix
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
