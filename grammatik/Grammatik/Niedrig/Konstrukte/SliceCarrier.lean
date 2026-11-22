@@ -40,6 +40,51 @@ def packSliceCarrier (identity : Nat) {capacity : Nat} {backing : Ty}
   (⟨view.offset, Int.natCast_nonneg _, by have fits := view.fits; omega⟩,
     ⟨view.length, Int.natCast_nonneg _, by have fits := view.fits; omega⟩, source, ())
 
+/-- Pack the exact runtime endpoints in the ordinary G product. The
+    endpoints are already local and the backing is evaluated once. -/
+def rangeCarrierExpr (identity : Nat) {capacity : Nat} {backing : Ty}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity) :
+    Expr D Γ Λ (sliceCarrierType identity capacity backing) :=
+  sliceCarrierExpr identity
+    (.widen bounds.1 (by omega) (.var first))
+    (.widen (by omega) (by omega) (.sub (.var last) (.var first))) source
+
+theorem rangeCarrierExpr_reads (identity : Nat) {capacity : Nat} {backing : Ty}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity) :
+    (rangeCarrierExpr identity first last source bounds).orte = source.orte := by
+  simp only [rangeCarrierExpr, sliceCarrierExpr_reads, Expr.orte, List.nil_append]
+
+theorem rangeCarrierExpr_eval (identity : Nat) {capacity : Nat} {backing : Ty}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (source : Expr D Γ Λ backing) (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (entry world : World D) (env : Env D Γ) :
+    ∃ exact : SliceOk capacity (env.get first).n.toNat (env.get last).n.toNat,
+      eval entry (rangeCarrierExpr identity first last source bounds) world env =
+        packSliceCarrier identity (ArraySliceView.ofEndpoints _ _ exact) (eval entry source world env) := by
+  have firstLow := (env.get first).lo_le
+  have firstHigh := (env.get first).le_hi
+  have lastLow := (env.get last).lo_le
+  have lastHigh := (env.get last).le_hi
+  let exactBounds : SliceOk capacity (env.get first).n.toNat (env.get last).n.toNat :=
+    ⟨by omega, by omega⟩
+  refine ⟨exactBounds, ?_⟩
+  rw [rangeCarrierExpr, sliceCarrierExpr_eval]
+  apply Prod.ext
+  · apply zahl_ext
+    change (env.get first).n = ↑(env.get first).n.toNat
+    omega
+  · apply Prod.ext
+    · apply zahl_ext
+      change (env.get last).n - (env.get first).n =
+        ↑((env.get last).n.toNat - (env.get first).n.toNat)
+      omega
+    · rfl
+
 def decodeArrayCarrier {identity capacity : Nat} {τ : Ty}
     (stored : Wert D (sliceCarrierType identity capacity (.arr τ capacity))) :
     Option (BoundedSlice (Wert D τ) capacity) :=
@@ -56,6 +101,22 @@ theorem decodeArrayCarrier_pack (identity : Nat) {capacity : Nat} {τ : Ty}
   change (if fits : view.offset + view.length ≤ capacity then
     some ((ArraySliceView.mk view.offset view.length fits).value source) else none) = _
   rw [dite_eq_left view.fits]
+
+/-- The typed G construction decodes directly to the bounded array
+    value at the exact two runtime endpoints. -/
+theorem rangeArrayCarrierExpr_exact (identity : Nat) {capacity : Nat} {τ : Ty}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (array : Expr D Γ Λ (.arr τ capacity))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (entry world : World D) (env : Env D Γ) :
+    ∃ exact : SliceOk capacity (env.get first).n.toNat (env.get last).n.toNat,
+      decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
+        (eval entry (rangeCarrierExpr identity first last array bounds) world env) =
+      some (BoundedSlice.ofArray (eval entry array world env) _ _ exact) := by
+  obtain ⟨valid, packed⟩ := rangeCarrierExpr_eval identity first last array bounds entry world env
+  refine ⟨valid, ?_⟩
+  rw [packed, decodeArrayCarrier_pack, ArraySliceView.value_ofEndpoints]
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/
@@ -80,6 +141,38 @@ theorem decodeStringCarrier_pack (identity : Nat) {capacity : Nat}
     some (strBoundedSliceValue source view.offset (view.offset + view.length)
       ⟨Nat.le_add_right _ _, fits⟩) else none) = _
   rw [dite_eq_left present]
+
+/-- A checked typed string carrier denotes the precise substring of the
+    evaluated backing value. Its maximum capacity alone cannot justify
+    either endpoint. -/
+theorem rangeStringCarrierExpr_exact (identity : Nat) {capacity : Nat}
+    {firstLo firstHi lastLo lastHi : Int}
+    (first : Var Γ (.int firstLo firstHi)) (last : Var Γ (.int lastLo lastHi))
+    (string : Expr D Γ Λ (.str capacity))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    (entry world : World D) (env : Env D Γ)
+    (present : (env.get last).n ≤ (eval entry string world env).1.length) :
+    checkStringSlice (eval entry string world env) (env.get first).n (env.get last).n =
+      decodeStringCarrier (D := D) (identity := identity) (capacity := capacity)
+        (eval entry (rangeCarrierExpr identity first last string bounds) world env) := by
+  obtain ⟨valid, packed⟩ := rangeCarrierExpr_eval identity first last string bounds entry world env
+  have low := (env.get first).lo_le
+  have high := (env.get first).le_hi
+  have next := (env.get last).lo_le
+  have accepted : SignedSliceOk (eval entry string world env).1.length
+      (env.get first).n (env.get last).n := ⟨by omega, by omega, present⟩
+  have endPosition : (env.get first).n.toNat +
+      ((env.get last).n.toNat - (env.get first).n.toNat) = (env.get last).n.toNat := by
+    have ordered := valid.1
+    omega
+  rw [packed, decodeStringCarrier_pack identity _ _ (by
+    change (env.get first).n.toNat + ((env.get last).n.toNat - (env.get first).n.toNat) ≤ _
+    rw [endPosition]
+    omega)]
+  simp only [checkStringSlice, dite_eq_left accepted]
+  apply congrArg some
+  apply Subtype.ext
+  simp only [strBoundedSliceValue, strSliceValue, ArraySliceView.ofEndpoints, endPosition]
 
 theorem decodeStringCarrier_isSome {identity capacity : Nat}
     (stored : Wert D (sliceCarrierType identity capacity (.str capacity))) :
