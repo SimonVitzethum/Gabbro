@@ -311,39 +311,12 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
   intro pc fp child running threads
   have inside := (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨site, _, logical⟩ := output.loaded_boot_site Q loaded declared
-  obtain ⟨_, body, _, placed, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
-    (fun base bound => layU_in output.compiled.unit output.tor base bound)
-    (fun base => layU_dis output.compiled.unit output.tor base)
-    (fun base => by simp only [layU]; omega)
-    (fun base => layU_sync output.compiled.unit output.tor base)
-  have frameAddress : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
-    simpa only [Emitted.starts, List.length_map] using placed.hfp
-  have enough : startScratch output.compiled.main + 8 ≤ output.image.Ks :=
-    placed.hex _ (List.mem_cons_self ..)
-  have storage : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
-    simpa only [Emitted.starts, List.length_map] using placed.hylo
-  have fit := placed.hfit
-  have worldOrder := placed.hyord
-  have upper := placed.hyhi
-  have childIndex : output.image.Ks * (j + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
-    Nat.mul_le_mul_left _ (by omega)
-  have oneFrame : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
-    Nat.le_mul_of_pos_right _ (Nat.succ_pos _)
-  have frameBound : output.image.fp0 + 8 * output.image.Ks < 2 ^ 31 := by omega
-  have childFrame : output.image.fp0 + 8 * (output.image.Ks * (j + 1)) < 2 ^ 31 := by omega
-  have childCode : codeBase + 16 * (10 * output.starts.length + startLen + startLen * j) < 2 ^ 31 := by
-    simp only [headLen, startLen] at frameAddress ⊢
-    omega
-  have far : CodeFar pc 10 fp output.image.Ks := by
-    change CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j))) 10
-      (BitVec.ofNat 64 output.image.fp0) output.image.Ks
-    rw [ofNat_add64]
-    apply codeFar_nat _ (Nat.lt_trans frameBound (by decide))
-    simp only [headLen, startLen] at frameAddress
-    omega
+  obtain ⟨_, far, enough, slotsFit, childCode, childFrame⟩ := output.loaded_spawn_site loaded inside
+  have siteFar : CodeFar pc 10 fp output.image.Ks := by
+    simpa only [pc, fp, ← BitVec.ofNat_add] using far
   obtain ⟨after, run, appended, same, own, response, others⟩ :=
-    bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
-      (by omega) childCode childFrame positive
+    bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame siteFar (by omega)
+      slotsFit childCode childFrame positive
   have codeEnd := output.code_end
   have codeKept : BytesAt (after.1.view 0) codeBase (output.image.code.flatMap encII) := by
     intro byte bound

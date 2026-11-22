@@ -35,7 +35,7 @@ theorem rd32_bytes {m : Runner.Mem} {p : Nat} {v : BitVec 32} (h : BytesAt m p (
   omega
 
 /-- One instruction from its 16 bytes. -/
-theorem insAt_bytes {m : Runner.Mem} {p : Nat} {i : II} (ho : i.o < 256)
+theorem insAt_bytes {m : Runner.Mem} {p : Nat} {i : II}
     (h : BytesAt m p (Runner.Prog.insB i.o i.a i.b i.c)) :
     InsAt m (BitVec.ofNat 64 p) i.o (II.f i.a) (II.f i.b) (II.f i.c) := by
   simp only [Runner.Prog.insB, Runner.Prog.i32] at h
@@ -60,14 +60,13 @@ theorem flatMap_enc_len : (is : List II) → (is.flatMap encII).length = 16 * is
     omega
 
 /-- A list of instructions from its bytes. -/
-theorem codeAt_bytes {m : Runner.Mem} : (is : List II) → (p : Nat) → is.all (fun i => decide (i.o < 256)) = true →
+theorem codeAt_bytes {m : Runner.Mem} : (is : List II) → (p : Nat) →
     BytesAt m p (is.flatMap encII) → CodeAt m (BitVec.ofNat 64 p) is
-  | [], _, _, _ => fun k hk => absurd hk (by simp)
-  | i :: is, p, ho, h => by
-    simp only [List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at ho
+  | [], _, _ => fun k hk => absurd hk (by simp)
+  | i :: is, p, h => by
     simp only [List.flatMap_cons] at h
-    have hi := insAt_bytes ho.1 h.left
-    have hr := codeAt_bytes is (p + 16) ho.2 (by have := h.right; rwa [encII_len] at this)
+    have hi := insAt_bytes h.left
+    have hr := codeAt_bytes is (p + 16) (by have := h.right; rwa [encII_len] at this)
     intro k hk
     cases k with
     | zero => simpa using hi
@@ -121,6 +120,26 @@ theorem lowAll_ok {P : Programm D} {name : D.Fn → String} {A : D.Fn → Nat} :
         | zero => simpa using hg
         | succ i => simpa using hall i (by simpa using hi) (by simpa using hc)
 
+/-- The function table inherits one relocation invariant from its body
+    lowering. Order, instruction counts, and frame use are all preserved. -/
+theorem lowAll_measure {P : Programm D} {L R : Lay D} {A B : D.Fn → Nat}
+    {name : D.Fn → String} {fs : List D.Fn} {first relocated : List (List II × Nat)}
+    (measured : ∀ fn code moved, lowFun passes P A L fn = some code →
+      lowFun passes P B R fn = some moved → codeMeasure code = codeMeasure moved)
+    (initial : lowAll passes P L name A fs = .ok first)
+    (final : lowAll passes P R name B fs = .ok relocated) :
+    first.map codeMeasure = relocated.map codeMeasure := by
+  obtain ⟨firstLength, firstBody⟩ := lowAll_ok fs first initial
+  obtain ⟨finalLength, finalBody⟩ := lowAll_ok fs relocated final
+  apply List.ext_getElem
+  · simp only [List.length_map, firstLength, finalLength]
+  · intro index before after
+    have indexFirst : index < first.length := by simpa only [List.length_map] using before
+    have indexFinal : index < relocated.length := by simpa only [List.length_map] using after
+    have indexSource : index < fs.length := firstLength ▸ indexFirst
+    simp only [List.getElem_map]
+    exact measured fs[index] _ _ (firstBody index indexSource indexFirst) (finalBody index indexSource indexFinal)
+
 theorem foldl_max_ge : (cs : List (List II × Nat)) → ∀ a, a ≤ cs.foldl (fun a c => max a c.2) a ∧
     ∀ c ∈ cs, c.2 ≤ cs.foldl (fun a c => max a c.2) a
   | [], a => by simp
@@ -145,6 +164,20 @@ theorem addrs_getD : (ls : List Nat) → (b i : Nat) → i < ls.length →
     simp only [addrs, List.getD_cons_succ, List.take_succ_cons, List.sum_cons]
     rw [addrs_getD ls (b + 16 * l) i (by simpa using h)]
     omega
+
+/-- The size plan bounds every resolved code address before emitting the
+    final bodies. A missing index uses zero, the addressing default. -/
+theorem addrs_getD_bound (sizes : List Nat) (base index : Nat) :
+    (addrs base sizes).getD index 0 ≤ base + 16 * sizes.sum := by
+  induction sizes generalizing base index with
+  | nil => simp [addrs]
+  | cons size sizes ih =>
+    cases index with
+    | zero => simp [addrs]
+    | succ index =>
+      simp only [addrs, List.getD_cons_succ, List.sum_cons]
+      have remainder := ih (base + 16 * size) index
+      omega
 
 theorem flat_split : (cs : List (List II × Nat)) → (i : Nat) → (hi : i < cs.length) →
     cs.flatMap (·.1) = (cs.take i).flatMap (·.1) ++ (cs[i].1 ++ (cs.drop (i + 1)).flatMap (·.1))

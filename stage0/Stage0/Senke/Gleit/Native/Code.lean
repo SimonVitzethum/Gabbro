@@ -6,11 +6,14 @@ public import Stage0.Senke.Ausdruck.Aggregat.Hilfena
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
+def nativeFPOpcode (kind : Runner.NativeFPOp) : Opcode :=
+  ⟨kind.code, Nat.lt_trans kind.code_bounds.2 (by decide)⟩
+
 /-- Both source operands are evaluated in order, then the actual FP opcode reads
     their slots. The temporary ceiling includes both physical reads. -/
 def nativeFPWordL (kind : Runner.NativeFPOp) (d : Nat)
     (a b : Option (List II × Nat)) : Option (List II × Nat) :=
-  wordL kind.code d a b
+  wordL (nativeFPOpcode kind) d a b
 
 def nativeArithmeticOp : GleitOp → Runner.NativeFPOp
   | .add => .add .f64

@@ -1,8 +1,10 @@
 module
 
 public import Stage0.Senke.Images.Correctness
+import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Welt.Spans.IdleValue
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T2
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1
 import Mathlib.Data.List.Forall2
 
 @[expose] public section
@@ -11,6 +13,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
+open Gabbro.Stage0.Senke.BildMehr
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
@@ -66,12 +69,18 @@ theorem imageSourceForeignEvents_call {D : Deklaration} {O : Orakel D} (oracle :
 theorem ImageForeignTrace.appendInternal {output : Emitted src reserve options}
     {history events : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (matched : ImageForeignTrace output history before)
-    (internal : ∀ event ∈ events, imageExternalEvent event = false)
+    (internal : ∀ event ∈ events, imageCanBeInternal event = true)
     (silent : imageSourceForeignEvents after.m.lauf = imageSourceForeignEvents before.m.lauf) :
     ImageForeignTrace output (history ++ events) after := by
-  have noExternal : events.filter imageExternalEvent = [] :=
-    List.filter_eq_nil_iff.mpr (fun event member => by rw [internal event member]; decide)
-  simpa only [ImageForeignTrace, List.filter_append, noExternal, List.append_nil, silent] using matched
+  have noCalls : ImageForeignTraceAlignment output events [] := by
+    induction events with
+    | nil => exact .nil
+    | cons event rest ih =>
+      exact .internal (internal event List.mem_cons_self)
+        (ih (fun later member => internal later (List.mem_cons_of_mem _ member)))
+  unfold ImageForeignTrace at matched ⊢
+  rw [silent, ← List.append_nil (imageSourceForeignEvents before.m.lauf)]
+  exact matched.append noCalls
 
 /-- A matched host response extends the global trace by the call taken
     by the actual issuing GX thread. -/
@@ -79,32 +88,38 @@ theorem ImageForeignTrace.appendGate [Kern] {output : Emitted src reserve option
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     {history : List Ev} {event : Ev} {returned : Cfg imageTSO (Res T)}
     {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    (matched : ImageForeignTrace output history before) (external : imageExternalEvent event = true)
+    (matched : ImageForeignTrace output history before)
     (call : ImageGateEvent output E O before after returned event) :
     ImageForeignTrace output (history ++ [event]) after := by
   obtain ⟨_, _, routine, _, _, _, _, _, _, log, _, gate, _, _, present, number, _⟩ := call
   unfold ImageForeignTrace at matched ⊢
-  rw [log, List.filter_append]
-  simp only [List.filter_cons, external, ite_true, List.filter_nil]
-  exact List.rel_append matched (.cons ⟨rfl, gate, present, number⟩ .nil)
+  rw [log]
+  exact matched.append (.gate rfl present number .nil)
 
-/-- Reading a syscall's register arguments is unaffected by adding the
-    purely logical idle function. The transport uses only word parameters. -/
-theorem Senke.ArgsW.withIdle_words {D : Deklaration} {L : Senke.Lay D} :
-    {types : List Ty} → (args : Env D types) → ∀ {registers : Nat → W},
-      types.all wortTy = true → ArgsW L registers args →
-        ArgsW L.withIdle registers (envR args)
-  | [], .nil, _, _, _ => trivial
-  | τ :: _, .cons value rest, registers, types, encoded => by
-    obtain ⟨wordType, restTypes⟩ := Bool.and_eq_true_iff.mp types
-    change ((if isPtr (tyR τ) then True else Enc L.withIdle (tyR τ) (valR τ value) (registers 0)) ∧ _)
-    refine ⟨?_, ArgsW.withIdle_words rest restTypes encoded.2⟩
-    cases τ <;> first | exact encoded.1 | cases wordType
+private theorem isPtr_tyR (type : Ty) : isPtr (tyR type) = isPtr type := by
+  cases type <;> rfl
+
+/-- The same physical register arguments represent the source call
+    and its renumbered version in GX. -/
+theorem Senke.ArgsW.withIdle_iff {D : Deklaration} {L : Senke.Lay D} :
+    {types : List Ty} → (args : Env D types) → ∀ (registers : Nat → W),
+      ArgsW L.withIdle registers (envR args) ↔ ArgsW L registers args
+  | [], .nil, _ => Iff.rfl
+  | τ :: _, .cons value rest, registers => by
+    simp only [envR, ArgsW, isPtr_tyR]
+    refine and_congr ?_ (ArgsW.withIdle_iff rest _)
+    split
+    · exact Iff.rfl
+    · exact Enc.withIdle_iff L (registers 0) τ value
+
+theorem Senke.SichtOK.withIdle {D : Deklaration} {O : Orakel D} (visible : SichtOK O) :
+    SichtOK O.mitRuhe :=
+  ⟨fun global world => (sichtbar_mitRuhe_welt O global world).trans (visible.sicht global (worldZ world))⟩
 
 private theorem image_host_answer [Kern] {before : Cfg imageTSO (Res T)} {after : imageTSO.St}
     {thread : Nat} {req : Req} {answer : Ans} (ordinary : (Op.sys req).special = false)
     (answered : imageTSO.ans before.ms thread (.sys req) answer after) :
-    Kern.ans req (before.ms.1.view thread) answer (after.1.view thread) := by
+    Kern.ans req (before.ms.1.view thread) answer (after.1.view thread) ∧ after.1.buf = before.ms.1.buf := by
   have notClone : req ≠ cloneReq := by
     rintro rfl
     exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
@@ -113,7 +128,23 @@ private theorem image_host_answer [Kern] {before : Cfg imageTSO (Res T)} {after 
     Kern.ans req (before.ms.1.view thread) answer (after.1.view thread) ∧
       after.1.buf = before.ms.1.buf) at external
   rw [if_neg notClone] at external
-  exact external.1
+  exact external
+
+/-- A host response preserving the buffer and the issuer's view also
+    preserves committed bytes that the issuer does not forward. -/
+private theorem image_gate_committed {before after : TSt} {footprint : Nat → W → Prop}
+    {thread : Nat} {byte : W} (buffers : PrivateBuffers footprint before)
+    (sameBuffers : after.buf = before.buf) (outside : ¬ footprint thread byte)
+    (sameView : GleichAt (before.view thread) (after.view thread) byte) :
+    GleichAt before.m after.m byte := by
+  have untouched (store : W × W) (queued : store ∈ before.buf thread) : ¬ fenster store.1 byte :=
+    fun touched => outside (buffers thread store queued byte touched).1
+  have current : GleichAt (after.view thread) after.m byte := by
+    apply view_agrees_at
+    intro store queued
+    rw [sameBuffers] at queued
+    exact untouched store queued
+  exact (view_agrees_at untouched).symm.trans (sameView.trans current)
 
 /-- A real response to a returning scalar gate supplies the observed
     word and the model answer on the exact issuing thread and call. -/
@@ -129,7 +160,6 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
     (selected : output.image.Y.tor routine = some gate)
     (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
     (scalar : ptrParam ((declOf output.compiled.unit).aparams routine) = none)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (world : World (declOf output.compiled.unit))
     (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
     (number : req.nr = BitVec.ofNat 64 gate.nr) (registers : ArgsW output.image.Y (reqArg req) args)
@@ -146,19 +176,26 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
     ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
       ImageGateEvent output E O first last after (thread, req, answer) ∧
       KernW output.image.Y (before.ms.1.view thread) (after.ms.1.view thread) ∧
-      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 := by
+      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 ∧
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧ ¬ InWelt output.image.Y byte) before.ms.1.m after.ms.1.m := by
   intro after
+  obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨word, extra, response, frame, nextWorld, outcome⟩ :=
     answers.plain routine gate selected transport scalar world args req (before.ms.1.view thread)
-      number registers unused represented answer (memory.1.view thread) (image_host_answer ordinary answered)
+      number registers unused represented answer (memory.1.view thread) answeredByHost
   have noArea : gate.resultArea = none := by
     have checked := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
     exact Option.isNone_iff_eq_none.mp checked
-  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, frame, nextWorld⟩
-  refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
-    carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
-  rw [wirkt_mitRuhe O]
-  exact outcome
+  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, frame, nextWorld, ?_⟩
+  · refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
+      carriers, gate, word, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response, .inl ⟨noArea, ?_⟩⟩
+    rw [wirkt_mitRuhe O]
+    exact outcome
+  · intro footprint buffers byte outside
+    apply image_gate_committed buffers sameBuffers outside.1
+    exact ⟨(frame.2.2 byte outside.2).symm,
+      congrFun frame.1.symm byte, congrFun frame.2.1.symm byte⟩
 
 private theorem foreignDecode_withIdle {D : Deklaration} (O : Orakel D) (routine : D.Ax) (raw : Int) :
     foreignDecode O.mitRuhe routine raw =
@@ -215,7 +252,6 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
     (τ : Ty) (typed : (declOf output.compiled.unit).aerg routine = some τ) (slotIndex : Nat)
     (selected : output.image.Y.tor routine = some gate)
     (transport : areaGut gate ((declOf output.compiled.unit).aparams routine).length slotIndex = true)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (world : World (declOf output.compiled.unit))
     (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
     (fp : W) (base capacity : Nat)
@@ -236,20 +272,28 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
     ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
       ImageGateEvent output E O first last after (thread, req, answer) ∧
-      AgreeW output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
-      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 := by
+      AreaFrame output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
+      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 ∧
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧
+          ¬ inSlots fp base (base + valueWords τ) byte ∧ ¬ InWelt output.image.Y byte) before.ms.1.m after.ms.1.m := by
   intro after
+  obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨tag, extra, response, retained, nextWorld, reply⟩ :=
     answers.area routine gate τ typed slotIndex selected transport world args req (before.ms.1.view thread)
       fp base capacity frame fits layout belowWorld number registers destination unused represented
-      answer (memory.1.view thread) (image_host_answer ordinary answered)
+      answer (memory.1.view thread) answeredByHost
   have hasArea : gate.resultArea = some slotIndex :=
     of_decide_eq_true (Bool.and_eq_true_iff.mp transport).2
-  exact ⟨.ask waiting rfl ordinary answered rfl,
+  refine ⟨.ask waiting rfl ordinary answered rfl,
     ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed, carriers,
-      gate, tag, extra, selected, number, ArgsW.withIdle_words args types registers, response,
+      gate, tag, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response,
       .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
-    retained, nextWorld⟩
+    retained, nextWorld, ?_⟩
+  intro footprint buffers byte outside
+  apply image_gate_committed buffers sameBuffers outside.1
+  exact ⟨(retained.b byte outside.2.1 outside.2.2).symm,
+    congrFun retained.rd.symm byte, congrFun retained.wr.symm byte⟩
 
 /-- A pointer-buffer gate reports its actual scalar result and leaves the
     table update encoded in just the caller's reserved scratch bytes.
@@ -265,7 +309,6 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
     (routine : (declOf output.compiled.unit).Ax) (gate : TorB)
     (selected : output.image.Y.tor routine = some gate)
     (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (pointer tableNumber : Nat) (writable : Bool) (table : (declOf output.compiled.unit).Tab)
     (field : (declOf output.compiled.unit).Feld table)
     (parameter : ptrParam ((declOf output.compiled.unit).aparams routine) = some (pointer, tableNumber, writable))
@@ -297,20 +340,29 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
         y.toNat < (reqArg req pointer).toNat + 8 * pufW ((declOf output.compiled.unit).count table).toNat) →
         current.b y = prior.b y) ∧
       WeltOhne prior output.image.Y (O.wirkt routine world args).1 table field ∧
-      ∀ k, k < ((declOf output.compiled.unit).count table).toNat →
+      (∀ k, k < ((declOf output.compiled.unit).count table).toNat →
         Enc output.image.Y ((declOf output.compiled.unit).typ table field) ((O.wirkt routine world args).1.slots table k field)
-          (if writable then byteOf current (reqArg req pointer) k else wAt prior (output.image.Y.elem table field k)) := by
+          (if writable then byteOf current (reqArg req pointer) k else wAt prior (output.image.Y.elem table field k))) ∧
+      ∀ footprint, PrivateBuffers footprint before.ms.1 →
+        GleichAuf (fun byte => ¬ footprint thread byte ∧ ¬ ((reqArg req pointer).toNat ≤ byte.toNat ∧
+          byte.toNat < (reqArg req pointer).toNat + 8 * pufW ((declOf output.compiled.unit).count table).toNat))
+          before.ms.1.m after.ms.1.m := by
   intro prior current after
+  obtain ⟨answeredByHost, sameBuffers⟩ := image_host_answer ordinary answered
   obtain ⟨word, extra, response, readable, writableMap, outside, remaining, cells, outcome⟩ :=
     answers.buffer routine gate selected transport pointer tableNumber writable table field
       parameter identified bytes byteType world args req prior number registers unused represented packed
-      answer current (image_host_answer ordinary answered)
+      answer current answeredByHost
   have noArea : gate.resultArea = none :=
     Option.isNone_iff_eq_none.mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
-  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, readable, writableMap, outside, remaining, cells⟩
-  refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
-    carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
-  rw [wirkt_mitRuhe O]
-  exact outcome
+  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, readable, writableMap, outside, remaining, cells, ?_⟩
+  · refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
+      carriers, gate, word, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response, .inl ⟨noArea, ?_⟩⟩
+    rw [wirkt_mitRuhe O]
+    exact outcome
+  · intro footprint buffers byte untouched
+    apply image_gate_committed buffers sameBuffers untouched.1
+    exact ⟨(outside byte untouched.2).symm,
+      congrFun readable.symm byte, congrFun writableMap.symm byte⟩
 
 end Gabbro.Stage0

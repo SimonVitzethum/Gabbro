@@ -102,7 +102,7 @@ theorem quant_mov [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst src : Nat} {
     (hc : CodeAt m pc [ci 2 dst src 0]) (hr : m.rd64 (slot fp (BitVec.ofNat 64 src)) = some v) :
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 dst)) 8 v.toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   apply Star.one
   apply run_step (t := ⟨pc, fp⟩) hi (by decide)
   simp only [op]

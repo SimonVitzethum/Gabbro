@@ -29,7 +29,7 @@ theorem ls_const (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d : 
     Next1 m0 m pc fp s a i d f o c w (BitVec.ofInt 64 k) := by
   subst hD
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hF := E.frameK h.ag
   refine ⟨_, ls_star hI (by decide) ?_, h.slot E hd _⟩
@@ -46,7 +46,7 @@ theorem ls_mov (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e : 
     (hd : d < 18) (he : e < 18) : Next1 m0 m pc fp s a i d f o c w (f e) := by
   subst hD hA
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hF := E.frameK h.ag
   refine ⟨_, ls_star hI (by decide) ?_, h.slot E hd _⟩
@@ -61,14 +61,14 @@ theorem ls_mov (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e : 
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr _ (by omega)))
 
-theorem ls_bin (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e g' : Nat} {D A B : Int} {op' : Nat}
-    {g : W → W → Option W} {r : W} (hi : code[i]? = some (ci op' D A B)) (hop : op op' = bin g) (ho : op' < 256)
+theorem ls_bin (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e g' : Nat} {D A B : Int} {op' : Opcode}
+    {g : W → W → Option W} {r : W} (hi : code[i]? = some (ci op' D A B)) (hop : op op' = bin g) (ho : op'.val < 256)
     (hD : D = ((s + d : Nat) : Int)) (hA : A = ((s + e : Nat) : Int)) (hB : B = ((s + g' : Nat) : Int))
     (hd : d < 18) (he : e < 18) (hg' : g' < 18) (hr : g (f e) (f g') = some r) :
     Next1 m0 m pc fp s a i d f o c w r := by
   subst hD hA hB
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hF := E.frameK h.ag
   refine ⟨_, ls_star hI ho ?_, h.slot E hd _⟩
@@ -88,7 +88,7 @@ theorem ls_lea (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d : Na
     Next1 m0 m pc fp s a i d f o c w fp := by
   subst hD
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hF := E.frameK h.ag
   have e0 : slot fp (BitVec.ofNat 64 0) = fp := by simp [slot]
@@ -109,7 +109,7 @@ theorem ls_ld (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e : N
     (hd : d < 18) (he : e < 18) (hv : m.rd64 (f e) = some v) : Next1 m0 m pc fp s a i d f o c w v := by
   subst hD hA
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hF := E.frameK h.ag
   refine ⟨_, ls_star hI (by decide) ?_, h.slot E hd _⟩
@@ -128,7 +128,7 @@ theorem ls_brz_zero (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i e
     Star ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (i + k)), fp⟩ m := by
   subst hA hL
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   refine ls_star hI (by decide) ?_
   have hra := h.sl e he
@@ -142,7 +142,7 @@ theorem ls_brz_ne (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i e :
     Star ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (i + 1)), fp⟩ m := by
   subst hA
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   refine ls_star hI (by decide) ?_
   have hra := h.sl e he
@@ -156,7 +156,7 @@ theorem ls_jmp (E : LE m0 pc fp s a code) (h : AgreeK fp s a m0 m) {i k : Nat} {
     Star ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (i + k)), fp⟩ m := by
   subst hL
   have hI := E.ins h hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   refine ls_star hI (by decide) ?_
   simp only [op]
   refine f1_run hI ?_
@@ -196,7 +196,7 @@ theorem ls_cas (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e x 
       LS m0 m' fp s a (upd f d o) (if o = f x then f (x + 1) else o) c w := by
   subst hD hA hX
   have hI := E.ins h.ag hi
-  simp only [ci] at hI
+  simp only [ci, II.o] at hI
   have hs := E.small
   have hcas := cas_spec (e := f x) (n := f (x + 1)) h.o (by rw [h.ag.wr]; exact E.wr0)
   have hL1 : LS m0 (if o = f x then write m (BitVec.ofNat 64 a) 8 (f (x + 1)).toNat else m) fp s a f
@@ -222,7 +222,7 @@ theorem ls_cas (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w) {i d e x 
   refine .ask (a := some (o, 0)) (m' := m1) (by simp only [memAns, hcas]) ?_
   simp only [opt_some, ret1]
   have hI1 := E.ins hL1.ag hi
-  simp only [ci] at hI1
+  simp only [ci, II.o] at hI1
   refine f1_run hI1 ?_
   rw [sx_nat (d := s + d) (by omega)]
   exact run_wr64 (wr64_some (hF.wr _ (by omega)))

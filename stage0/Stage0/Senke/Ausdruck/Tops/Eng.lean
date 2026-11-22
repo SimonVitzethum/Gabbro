@@ -64,7 +64,7 @@ theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
     subst w2
     have h2 := h1.next (a2.mono (by omega : d ≤ d + 1)) (Nat.le_refl _) (by omega)
     have hi := h2.code 0 (by simp)
-    simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+    simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
     rw [← sx_nat (d := d + 1) (by have := hp.small; omega)] at r2
     by_cases hin : lo' ≤ (eval σ₀ e σ ρ).n ∧ (eval σ₀ e σ ρ).n ≤ hi'
     · have hz : Runner.IR.bool (decide (¬ (lo' ≤ (eval σ₀ e σ ρ).n ∧

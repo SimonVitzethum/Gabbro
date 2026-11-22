@@ -222,7 +222,7 @@ theorem jmp_counted_reach {Γ : Ctx} {m : Mem} {pc fp : W}
     CountedReach 1 L fp lo K pr ⟨pc, fp⟩ m
       (pc + 16 + BitVec.ofInt 64 x) σ ρ reserved := by
   have ins := code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ins
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ins
   have run := Counted.next (run_step (t := ⟨pc, fp⟩) ins (by decide)
     (run_jmp (t := ⟨pc, fp⟩) ins)) (Counted.refl _ _)
   refine ⟨m, ?_, AgreeW.refl _ _ _ _ _, env, world, Keeps.refl _ _ _⟩

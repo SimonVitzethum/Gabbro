@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.Mehr.Ort.MemoryReference
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -61,10 +62,48 @@ theorem Emitted.world_survives_stack [Kern] (output : Emitted src K options)
     omega
   exact weltAt_stab output.layout_checked.1 frameEnds _ _ stored writes
 
+/-- The reserved frames are disjoint from all other frames and the
+    entire typed world, independently of who owns its carriers. -/
+theorem imageStackFootprint_owner [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {footprint : Nat → W → Prop} {issuer other : Nat} {byte : W}
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (stack : imageStackFootprint output issuer byte) (owned : footprint other byte) : other = issuer := by
+  rcases placed other byte owned with theirs | ⟨world, _⟩
+  · exact imageStackFootprint_disjoint theirs stack
+  · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack)) world).elim
+
+theorem imageFootprint_after_code [Kern] {output : Emitted src K options} {footprint : Nat → W → Prop}
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    {thread : Nat} {byte : W} (owned : footprint thread byte) :
+    output.image.fp0 ≤ byte.toNat := by
+  rcases placed thread byte owned with stack | ⟨world, _⟩
+  · exact (Nat.le_add_right _ _).trans stack.2.1
+  · exact (Nat.le_add_right _ _).trans (output.stackReservation_bounds.1.trans world)
+
+theorem imageStackFootprint_agree [Kern] {output : Emitted src K options} {thread : Nat}
+    {before after : Runner.Mem} (declared : thread ≤ output.starts.length)
+    (agreement : Agree (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
+      0 output.image.Ks before after) :
+    GleichAuf (fun byte => ¬ imageStackFootprint output thread byte) after before := by
+  obtain ⟨reserved, addressBound⟩ := output.stackReservation_bounds
+  have ordered := Nat.mul_le_mul_left output.image.Ks (declared.trans (Nat.le_succ _))
+  have fits := (((Nat.add_le_add_left (Nat.mul_le_mul_left 8 ordered) output.image.fp0).trans
+    reserved).trans_lt addressBound)
+  intro byte outside
+  refine ⟨agreement.b byte ?_, congrFun agreement.rd byte, congrFun agreement.wr byte⟩
+  intro touched
+  apply outside
+  simp only [inSlots, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits, Nat.mul_zero, Nat.add_zero] at touched
+  refine ⟨declared, touched.1, ?_⟩
+  simpa only [Nat.mul_add, Nat.mul_one, Nat.add_assoc] using touched.2
+
 /-- Pending private stores are outside the emitted instruction extent,
     so an issuing thread fetches the same code as shared memory holds. -/
 theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
-    (state : Runner.Beweis.TSt) (stores : PrivateBuffers (imageStackFootprint output) state)
+    {footprint : Nat → W → Prop} (state : Runner.Beweis.TSt) (stores : PrivateBuffers footprint state)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (thread : Nat) :
     BytesAt (state.view thread) codeBase (output.image.code.flatMap encII) ↔
       BytesAt state.m codeBase (output.image.code.flatMap encII) := by
@@ -75,8 +114,7 @@ theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
       intro store queued offset inside overlap
       have touched : fenster store.1 address := overlap.symm ▸ fenster_add _ inside
       have privateByte := (stores thread store queued address touched).1
-      have above := (Nat.le_add_right _ _).trans privateByte.2.1
-      exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) above)
+      exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) (afterCode thread address privateByte))
     exact ⟨unchanged.1, unchanged.2, congrFun (Runner.Beweis.foldl_wr _ _) address⟩
   constructor
   · intro code index inCode
@@ -91,7 +129,8 @@ theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
     also keeps it in shared memory. The actual syscall keeps the buffers. -/
 theorem Emitted.code_after_host_answer [Kern] (output : Emitted src K options)
     {before after : imageTSO.St} {issuer : Nat} {req : Req} {answer : Ans}
-    (stores : PrivateBuffers (imageStackFootprint output) before.1)
+    {footprint : Nat → W → Prop} (stores : PrivateBuffers footprint before.1)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (code : BytesAt before.1.m codeBase (output.image.code.flatMap encII))
     (step : imageTSO.ans before issuer (.sys req) answer after)
     (keeps : req ≠ cloneReq → Kern.ans req (before.1.view issuer) answer (after.1.view issuer) →
@@ -106,17 +145,18 @@ theorem Emitted.code_after_host_answer [Kern] (output : Emitted src K options)
   · rw [host.1]
     exact code
   · rename_i ordinary
-    have retained : PrivateBuffers (imageStackFootprint output) after.1 := by
+    have retained : PrivateBuffers footprint after.1 := by
       intro i store pending byte touched
       rw [host.2] at pending
       exact stores i store pending byte touched
-    exact (output.code_in_private_view _ retained issuer).mp
-      (keeps ordinary host.1 ((output.code_in_private_view _ stores issuer).mpr code))
+    exact (output.code_in_private_view _ retained afterCode issuer).mp
+      (keeps ordinary host.1 ((output.code_in_private_view _ stores afterCode issuer).mpr code))
 
-/-- A real asynchronous flush writes only within its own emitted
-    stack reservation and preserves the shared instruction bytes. -/
+/-- A real asynchronous flush confined to storage preserves the
+    shared instruction bytes. -/
 theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
-    {state after : imageTSO.St} (stores : PrivateBuffers (imageStackFootprint output) state.1)
+    {state after : imageTSO.St} {footprint : Nat → W → Prop} (stores : PrivateBuffers footprint state.1)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (code : BytesAt state.1.m codeBase (output.image.code.flatMap encII))
     (flushed : imageTSO.tau state after) :
     BytesAt after.1.m codeBase (output.image.code.flatMap encII) := by
@@ -127,7 +167,7 @@ theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
   rw [updated]
   apply output.code_survives_writes (write_nurIn state.1.m address value.toNat) _ code
   intro byte hit
-  exact (Nat.le_add_right _ _).trans (stores issuer (address, value) member byte hit).1.2.1
+  exact afterCode issuer byte (stores issuer (address, value) member byte hit).1
 
 /-- A running root stub decodes an actual emitted instruction within
     the startup header. This applies to the entry stub and all clone
@@ -157,7 +197,7 @@ theorem Emitted.root_instruction_decodes [Kern] (output : Emitted src K options)
     · simp only [entry, ite_false, startLen] at rootBound ⊢
       omega
   have inside := inHeader.trans_le header
-  have decoded := codeAt_bytes _ codeBase (serialized.symm ▸ layout.hops) loaded
+  have decoded := codeAt_bytes _ codeBase loaded
   refine ⟨index, inside, address, ?_⟩
   rw [address, ← ofNat_add64]
   exact decoded index inside
@@ -184,7 +224,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
   have selected : roots[index] = root.1 := by
     change (output.starts.map (·.1))[index] = root.1
     rw [List.getElem_map, exactRoot]
-  have allCode := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
+  have allCode := codeAt_bytes _ codeBase (serialized ▸ loaded)
   have header := codeAt_left (b := body) allCode
   have spawns : (spawnC (startScratch output.compiled.main) sites).length = 10 * output.starts.length := by
     simp only [spawnC_len, layout.hsp, List.length_map, List.length_range, Emitted.starts]
@@ -221,7 +261,7 @@ theorem image_depth_setup [Kern] {D : Deklaration}
   have instruction : InsAt (before.ms.1.view thread) pointer.pc 1
       (II.f 2) (II.f ((depth + 1 : Nat) : Int)) (II.f 0) := by
     simpa only [startC, List.singleton_append, List.cons_append, List.getElem_cons_zero,
-      Nat.mul_zero, BitVec.add_zero, ci] using first
+      Nat.mul_zero, BitVec.add_zero, ci, II.o, show (1 : Opcode).val = 1 from rfl] using first
   have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
   have depthWord : sx (II.f ((depth + 1 : Nat) : Int)) =
       BitVec.ofNat 64 (depth + 1) := sx_nat depthFits
@@ -275,7 +315,7 @@ theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
       FrameOK memory fp output.image.Ks ∧
       WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
   intro fp
-  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, _, code, frame, _, args, _⟩ := phase
   · exact (pastLoader.elim (· firstThread) (· loader)).elim
   have same := Option.some.inj (chosen.symm.trans declared)
   subst start
@@ -288,6 +328,86 @@ theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
   rw [address]
   exact args i present
+
+/-- A startup phase past the loader depends only on immutable code
+    and its own stack. The same pending instruction survives writes
+    by other threads outside these regions. -/
+theorem ImageRootPhase.transport [Kern] {output : Emitted src K options}
+    {E : Einheit (declOf output.compiled.unit)} {memory next : Mem} {thread : Nat}
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {control : Res T} (phase : ImageRootPhase output E history memory thread control state)
+    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4)
+    (declared : thread ≤ output.starts.length)
+    (same : GleichAuf (imageRootReads output thread) memory next) :
+    ImageRootPhase output E history next thread control state := by
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
+  · exact (pastLoader.elim (· firstThread) (· loader)).elim
+  let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+  have stack (i : Nat) (inside : i < output.image.Ks) :
+      GleichAuf (fenster (slot fp (BitVec.ofNat 64 i))) memory next :=
+    fun byte touched => same byte (.inl (imageStackFootprint_slot declared inside touched))
+  refine .inr ⟨start, chosen, head, ?_, ?_, fits, ?_, pointer, site, ?_⟩
+  · intro index present
+    obtain ⟨value, readable, writable⟩ :=
+      same _ (.inr (output.code_byte_before_stacks present))
+    rw [← value, ← readable, ← writable]
+    exact code index present
+  · refine ⟨frame.lt, ?_, ?_⟩
+    · intro index inside
+      rw [← Mem.all_congr (fun offset valid => (stack index inside _ (fenster_add _ valid)).2.1)]
+      exact frame.rd index inside
+    · intro index inside
+      rw [← Mem.all_congr (fun offset valid => (stack index inside _ (fenster_add _ valid)).2.2)]
+      exact frame.wr index inside
+  · intro i inside
+    have address : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+        BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) + 8 * (FB + FB + i)) := by
+      change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) +
+        BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+      rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+    rw [← address, ← gleich_rd64 (stack (FB + FB + i) (by omega)), address]
+    exact args i inside
+  · rcases phase with done | pending | clone
+    · exact .inl done
+    · exact .inr (.inl (fun equivalent agrees =>
+        pending equivalent (fun byte present => (same byte present).trans (agrees byte present))))
+    · obtain ⟨id, extra, observed, pending⟩ := clone
+      exact .inr (.inr ⟨id, extra, observed, fun equivalent agrees =>
+        pending equivalent (fun byte present => (same byte present).trans (agrees byte present))⟩)
+
+/-- Reads advance any pending startup tree, including the destination
+    read after a real clone. All replays use the same scoped bytes and
+    discard the irrelevant second word carried by the scheduler. -/
+theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
+    {E : Einheit (declOf output.compiled.unit)} {before after : imageTSO.St} {thread width : Nat}
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {address : W} {resume : Ans → Res T} {answer : Ans}
+    (phase : ImageRootPhase output E history (before.1.view thread) thread (.ask (.rd width address) resume) state)
+    (pastLoader : thread ≠ 0 ∨ Res.ask (.rd width address) resume ≠ Runner.Beweis.t4)
+    (scope : ∀ byte, byteWindow (readWidth width) address byte → imageRootReads output thread byte)
+    (answered : imageTSO.ans before thread (.rd width address) answer after) :
+    after = before ∧ ImageRootPhase output E history (after.1.view thread) thread (resume answer) state := by
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
+  · exact (pastLoader.elim (· firstThread) (· loader)).elim
+  have unchanged := answered.1.1
+  subst after
+  refine ⟨rfl, .inr ⟨start, chosen, head, code, frame, fits, args, pointer, site, ?_⟩⟩
+  have appendRead {entry : Res T}
+      (blind : Blind entry)
+      (pending : ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
+        RunP entry equivalent (.ask (.rd width address) resume) equivalent) :
+      ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
+        RunP entry equivalent (resume answer) equivalent := by
+    intro equivalent agrees
+    have part := pending equivalent agrees
+    obtain ⟨_, _, read, continued⟩ := tso_read_matches (part.blind blind)
+      (fun byte needed => agrees byte (scope byte needed)) answered.1
+    rw [continued]
+    exact runP_snoc part read
+  rcases phase with impossible | pending | ⟨id, extra, called, pending⟩
+  · cases impossible
+  · exact .inr (.inl (appendRead (blind_step _) pending))
+  · exact .inr (.inr ⟨id, extra, called, appendRead (blind_ret1 _ _) pending⟩)
 
 /-- The root phase exposes a child's arguments in declared start order. -/
 theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)

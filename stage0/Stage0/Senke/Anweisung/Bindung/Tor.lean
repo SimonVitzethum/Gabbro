@@ -153,7 +153,7 @@ theorem sys_step {m m' : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {q : Runner.
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 23 s s 0].length), fp⟩
       (write m' (slot fp (BitVec.ofNat 64 s)) 8 w.toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have e : ∀ i, i < 6 → slot fp (BitVec.ofNat 64 s) + BitVec.ofNat 64 (8 * (i + 1)) =
       slot fp (BitVec.ofNat 64 (s + 1 + i)) := fun i _ => by
     rw [slot_succ]; congr 2; omega
@@ -163,8 +163,8 @@ theorem sys_step {m m' : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {q : Runner.
   have r4 := hr 3 (by decide); rw [← e 3 (by decide)] at r4
   have r5 := hr 4 (by decide); rw [← e 4 (by decide)] at r5
   have r6 := hr 5 (by decide); rw [← e 5 (by decide)] at r6
-  refine star_ins hc (by simp [ci]) ?_
-  simp only [ci, op]
+  refine star_ins hc (by simp [ci, II.o]) ?_
+  simp only [ci, II.o, op]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]

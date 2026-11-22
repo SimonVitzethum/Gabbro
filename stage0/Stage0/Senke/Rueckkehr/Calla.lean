@@ -128,7 +128,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
   -- 2: sub (F+2) 2 T
   have s2 : Star ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 := by
     refine Star.one ?_
-    have r := run_step (t := ⟨_, fp⟩) j1 (by decide) (run_bin (t := ⟨_, fp⟩) j1 (m1 := m2) (va := dv + 1)
+    have r := run_step (t := ⟨_, fp⟩) j1 ((4 : Opcode).isLt) (run_bin (t := ⟨_, fp⟩) j1 (m1 := m2) (va := dv + 1)
       (vb := BitVec.ofInt 64 1) (g := fun a b => some (a - b)) ?_ ?_
       (by show some (dv + 1 - BitVec.ofInt 64 1) = some dv
           rw [show BitVec.ofInt 64 1 = 1 by decide, BitVec.add_sub_cancel]) ?_)
@@ -150,7 +150,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
         refine f1_run (t := ⟨_, fp⟩) j2 ?_
         rw [hsT, sx_lit (n := ((A f : Nat) : Int)) (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)]
         exact run_wr64 (wr64_some (hF2.wr _ (by omega)))
-      have r2 := run_step (t := ⟨_, fp⟩) j2 (by decide) r
+      have r2 := run_step (t := ⟨_, fp⟩) j2 ((1 : Opcode).isLt) r
       simp only [nxt] at r2; rw [e16] at r2; exact r2
     | true =>
       simp only [↓reduceIte] at j2
@@ -162,7 +162,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
         intro k hk
         have : k = 0 := by simp only [List.length_singleton] at hk; omega
         subst k
-        simpa only [ci, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
+        simpa only [ci, II.o, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
       have st := mov_to hc2 hF2 (j := T) (s := F) (by omega) (by omega) hK hread
       simpa only [List.length_singleton, show BitVec.ofNat 64 (16 * 1) = (16 : Runner.W) by decide, e16] using st
   -- 4: call T F
@@ -174,7 +174,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
       (by rw [hsF, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]
           exact wr64_some (hF4.wr _ (by omega)))
     rw [hsF, show BitVec.ofInt 64 (A f : Int) = BitVec.ofNat 64 (A f) by simp] at this
-    exact run_step (t := ⟨_, fp⟩) j3 (by decide) this
+    exact run_step (t := ⟨_, fp⟩) j3 ((20 : Opcode).isLt) this
   -- the callee's frame
   have hFF : F ≤ K := by omega
   have g0 : m5.rd64 (slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 0)) =

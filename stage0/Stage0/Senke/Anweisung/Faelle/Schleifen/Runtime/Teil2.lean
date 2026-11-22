@@ -152,9 +152,9 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock} {sc
         intro k hk
         have : k = 0 := by simpa using hk
         subst k
-        simpa [II.f] using edge
+        simpa [II.f, II.o, show (18 : Opcode).val = 18 from rfl] using edge
       have h := (codeAt_agreeWIn hW frame hc backFar) 0 (by simp)
-      simpa [II.f] using h
+      simpa [II.f, II.o, show (18 : Opcode).val = 18 from rfl] using h
     have again : ∀ σ' ρ',
         (∃ m', Star ⟨pc + 32, fp⟩ m1 ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m1 m' ∧
           EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧
@@ -176,9 +176,9 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D} {H : List D.Lock} {sc
           intro k hk
           have : k = 0 := by simpa using hk
           subst k
-          simpa [II.f] using edge1
+          simpa [II.f, II.o, show (18 : Opcode).val = 18 from rfl] using edge1
         have h := (codeAt_agreeWIn hW frame2 hc backFar) 0 (by simp)
-        simpa [II.f] using h
+        simpa [II.f, II.o, show (18 : Opcode).val = 18 from rfl] using h
       have one2 : m2.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1 := by
         rw [keeps2 one (by simp), keeps one (by simp)]
         exact readOne

@@ -167,22 +167,71 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
       apply specPrimitiveLiteralField_lower u Γ Λ fn er
       simpa only [specLiteralFieldFits] using accepted
 
-theorem specLiteralFields_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
-    (er : Option Ty) (fields : List (Ty × USide)) (gate : u.exportGate = .ok ())
-    (valid : fields.all (fun field => specLiteralFieldFits u.records field.2 field.1) = true) :
-    ∃ args, lowProductArgs u Γ Λ fn er fields = .ok args := by
-  exact lowProductArgs_of_fields u Γ Λ fn er fields (fun field present =>
-    (specLiteralField_lower u Γ Λ fn er field.1 field.2 gate (List.all_eq_true.mp valid field present)).1)
+/-- The ordinary typed constructor traversal checks arrays and records
+    with the same lexical environment at every depth. -/
+theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (fn : UFn) (er : Option Ty) (ctx : UCtx) (type : Ty) (raw : USide) (gate : u.exportGate = .ok ())
+    (scope : ctx.records = u.records)
+    (lexical : ∀ name type, specCompositeArgumentFits ctx (.param name) type = true →
+      ∃ slot : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var slot))
+    (valid : specCompositeArgumentFits ctx raw type = true) :
+    ∃ term : Expr (declOf u) Γ Λ type, lowWertAtE u Γ Λ fn er type raw = .ok term := by
+  suffices lowers : ∀ (fuel : Nat) (source : USide), sizeOf source = fuel →
+      ∀ (target : Ty), specCompositeArgumentFits ctx source target = true →
+        ∃ term : Expr (declOf u) Γ Λ target, lowWertAtE u Γ Λ fn er target source = .ok term from
+    lowers _ raw rfl type valid
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind fuel smaller =>
+    intro source size target accepted
+    cases source
+    case param name =>
+      obtain ⟨slot, read⟩ := lexical name target accepted
+      exact ⟨.var slot, read⟩
+    case arrCons head tail =>
+      cases target <;> try (simp only [specCompositeArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted)
+      case arr element count =>
+        cases count with
+        | zero => simp only [specCompositeArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted
+        | succ count =>
+          have fields : (specCompositeArgumentFits ctx head element &&
+              specCompositeArgumentFits ctx tail (.arr element count)) = true := by
+            simpa only [specCompositeArgumentFits] using accepted
+          obtain ⟨firstOk, restOk⟩ := Bool.and_eq_true_iff.mp fields
+          have extent : 1 + sizeOf head + sizeOf tail = fuel := size
+          obtain ⟨first, readFirst⟩ := smaller (sizeOf head) (by omega) head rfl element firstOk
+          obtain ⟨rest, readRest⟩ := smaller (sizeOf tail) (by omega) tail rfl (.arr element count) restOk
+          exact ⟨.arrCons first rest, by simp only [lowWertAtE, readFirst, readRest]⟩
+    case product identity reordered fields =>
+      simp only [specCompositeArgumentFits, Bool.and_eq_true_iff, decide_eq_true_eq] at accepted
+      obtain ⟨⟨rfl, declared⟩, checked⟩ := accepted
+      rw [scope] at declared
+      cases named : uRecordOf u.records (.prod identity (fields.map Prod.fst)) with
+      | error e => simp only [named, Except.isOk, Except.toBool, Bool.false_eq_true] at declared
+      | ok schema =>
+        have extent : sizeOf fields < fuel := by rw [← size]; simp +arith
+        obtain ⟨args, lowered⟩ := lowProductArgs_of_fields u Γ Λ fn er fields
+          (fun field present => by
+            have valid := List.all_eq_true.mp checked ⟨field, present⟩ (List.mem_attach _ _)
+            have smallerField := recordField_sizeOf_lt fields field present
+            exact smaller (sizeOf field.2) (by omega) field.2 rfl field.1 valid)
+        have built := record_lower u Γ Λ fn er identity reordered fields args gate lowered schema named
+        exact ⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩
+    all_goals
+      apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
+      simpa only [specCompositeArgumentFits, scope] using accepted
 
 /-- Bind the successful source argument to the ordinary G nominal
     constructor. Every field passed checking mode at the declared type. -/
-theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+theorem specRecordArgument_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     (er : Option Ty) (ctx : UCtx) (name : String) (source : List SExpr)
     (identity : Nat) (reordered : Bool) (fields : List (Ty × USide)) (result : Ty)
     (read : uWertBody ctx (.call name source) = .ok (.product identity reordered fields))
     (accepted : uSpecValueArgument ctx result (.call name source) = .ok ())
     (gate : u.exportGate = .ok ())
-    (scope : u.records = ctx.records) :
+    (scope : u.records = ctx.records)
+    (lexical : ∀ name type, specCompositeArgumentFits ctx (.param name) type = true →
+      ∃ slot : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var slot)) :
     ∃ (args : Args (declOf u) Γ Λ (fields.map Prod.fst)),
       result = .prod identity (fields.map Prod.fst) ∧
       lowWertE u Γ Λ fn er (.product identity reordered fields) =
@@ -190,8 +239,8 @@ theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
   obtain ⟨parsed, sourceRead, typeRead⟩ := uSpecValueArgument_exact accepted
   have exactSide := Except.ok.inj (read.symm.trans sourceRead)
   subst parsed
-  change uSpecLiteralRecordType ctx name identity fields = some result at typeRead
-  unfold uSpecLiteralRecordType at typeRead
+  change uSpecRecordType ctx name identity fields = some result at typeRead
+  unfold uSpecRecordType at typeRead
   cases selected : uRecordConstructor ctx name with
   | none =>
     simp only [selected, Option.bind_eq_bind, Option.bind_none] at typeRead
@@ -206,9 +255,9 @@ theorem specLiteralRecord_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
           ∃ hit, uRecordOf u.records type = .ok hit :=
         same ▸ uRecordOf_complete member
       obtain ⟨hit, exactSchema⟩ := schemaExists _ checked.1
-      have valid : fields.all (fun field => specLiteralFieldFits u.records field.2 field.1) = true :=
-        scope.symm ▸ checked.2
-      obtain ⟨args, lowered⟩ := specLiteralFields_lower u Γ Λ fn er fields gate valid
+      obtain ⟨args, lowered⟩ := lowProductArgs_of_fields u Γ Λ fn er fields (fun field present =>
+        specCompositeArgument_lower fn er ctx _ _ gate scope.symm lexical
+          (List.all_eq_true.mp checked.2 field present))
       exact ⟨args, resultType.symm.trans checked.1,
         record_lower u Γ Λ fn er identity reordered fields args gate lowered _ exactSchema⟩
     · cases typeRead
@@ -230,8 +279,35 @@ theorem specLiteralRecord_source_erfuellbar (base : UCtx) (name label : String)
     cases value <;>
       simp [argument, fields, uWertBody, uRechne, chosen, uRecordSides, uRecordSide, uRecordValues,
         schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure] <;> rfl
-  refine ⟨read, specLiteralRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl ?_⟩
-  simp only [fields, List.all_cons, List.all_nil, specLiteralFieldFits, specPrimitiveLiteralFieldFits, Bool.and_self]
+  refine ⟨read, specRecordArgument_erfuellbar ctx name _ schema fields false chosen read rfl ?_⟩
+  simp only [fields, List.all_cons, List.all_nil, specCompositeArgumentFits, specLiteralFieldFits,
+    specPrimitiveLiteralFieldFits, Bool.and_self]
+
+/-- A record passed to a predicate can take its field from the lexical
+    scope. The constructor reader keeps that field as a typed name. -/
+theorem specRecordLocal_erfuellbar (base : UCtx) (name label localName : String) (identity : Nat) :
+    let schema : URecord := { name, identity, fields := [(label, .bool)] }
+    let ctx := { base with
+      records := schema :: base.records
+      names := [localName]
+      kinds := [.bool]
+      types := [.bool]
+      unknownRanges := [] }
+    let args := [SExpr.ext .label [label] [.variable localName]]
+    let fields := [(.bool, USide.param localName)]
+    uWertBody ctx (.call name args) = .ok (.product identity false fields) ∧
+      uSpecValueArgument ctx schema.ty (.call name args) = .ok () := by
+  intro schema ctx args fields
+  have chosen : uRecordConstructor ctx name = some schema := by
+    simp [uRecordConstructor, ctx, schema, strEq_apply_eq_decide]
+  have read : uWertBody ctx (.call name args) = .ok (.product identity false fields) := by
+    simp [args, fields, ctx, uWertBody, uRechne, chosen, uRecordSides, uRecordSide, uRecordValues,
+      uParamNr, uParamNrAux, schema, uSuch, strEq_apply_eq_decide, bind, Except.bind, pure, Except.pure] <;> rfl
+  refine ⟨read, specRecordArgument_erfuellbar ctx name args schema fields false chosen read rfl ?_⟩
+  have same : strEq localName localName = true := by simp only [strEq, BEq.rfl]
+  simp only [fields, List.all_cons, List.all_nil, specCompositeArgumentFits, ctx, List.contains_nil,
+    Bool.not_false, uValueType, List.findIdx?_cons, same, ite_true, Option.bind_some, List.getElem?_cons_zero,
+    decide_true, Bool.and_self]
 
 /-- Arbitrary Boolean arrays satisfy all the recursive literal field
     checks at their exact declared length. -/
@@ -244,12 +320,12 @@ theorem specLiteralArrayField_erfuellbar (records : List URecord) (values : List
     simp only [List.length_cons, List.foldr_cons, specLiteralFieldFits, specPrimitiveLiteralFieldFits, ih, Bool.and_self]
 
 private theorem specBooleanArrayFits (ctx : UCtx) (values : List Bool) :
-    specArrayArgumentFits ctx (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
+    specCompositeArgumentFits ctx (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil)
       (.arr .bool values.length) = true := by
   induction values with
-  | nil => simp only [List.foldr_nil, List.length_nil, specArrayArgumentFits, specLiteralFieldFits]
+  | nil => simp only [List.foldr_nil, List.length_nil, specCompositeArgumentFits, specLiteralFieldFits]
   | cons value rest ih =>
-    simp only [List.length_cons, List.foldr_cons, specArrayArgumentFits, specLiteralFieldFits,
+    simp only [List.length_cons, List.foldr_cons, specCompositeArgumentFits, specLiteralFieldFits,
       specPrimitiveLiteralFieldFits, ih, Bool.and_self]
 
 theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (value : Bool)
@@ -325,45 +401,6 @@ theorem specTypedArray_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
   | ok value => exact ⟨value, by simp only [lowWertE, literal]⟩
   | error diagnostic => exact ⟨term, by simp only [lowWertE, literal, checked, Except.map]⟩
 
-/-- Resolved lexical elements and checked literals keep their declared
-    element types through each ordinary dependent array constructor. -/
-theorem specArrayArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
-    (fn : UFn) (er : Option Ty) (ctx : UCtx) (type : Ty) (raw : USide) (gate : u.exportGate = .ok ())
-    (scope : ctx.records = u.records)
-    (lexical : ∀ name type, specArrayArgumentFits ctx (.param name) type = true →
-      ∃ slot : Var Γ type, lowWertAtE u Γ Λ fn er type (.param name) = .ok (.var slot))
-    (valid : specArrayArgumentFits ctx raw type = true) :
-    ∃ term : Expr (declOf u) Γ Λ type, lowWertAtE u Γ Λ fn er type raw = .ok term := by
-  suffices lowers : ∀ (fuel : Nat) (source : USide), sizeOf source = fuel →
-      ∀ (target : Ty), specArrayArgumentFits ctx source target = true →
-        ∃ term : Expr (declOf u) Γ Λ target, lowWertAtE u Γ Λ fn er target source = .ok term from
-    lowers _ raw rfl type valid
-  intro fuel
-  induction fuel using Nat.strongRecOn with
-  | ind fuel smaller =>
-    intro source size target accepted
-    cases source
-    case param name =>
-      obtain ⟨slot, read⟩ := lexical name target accepted
-      exact ⟨.var slot, read⟩
-    case arrCons head tail =>
-      cases target <;> try (simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted)
-      case arr element count =>
-        cases count with
-        | zero => simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at accepted
-        | succ count =>
-          have fields : (specArrayArgumentFits ctx head element &&
-              specArrayArgumentFits ctx tail (.arr element count)) = true := by
-            simpa only [specArrayArgumentFits] using accepted
-          obtain ⟨firstOk, restOk⟩ := Bool.and_eq_true_iff.mp fields
-          have extent : 1 + sizeOf head + sizeOf tail = fuel := size
-          obtain ⟨first, readFirst⟩ := smaller (sizeOf head) (by omega) head rfl element firstOk
-          obtain ⟨rest, readRest⟩ := smaller (sizeOf tail) (by omega) tail rfl (.arr element count) restOk
-          exact ⟨.arrCons first rest, by simp only [lowWertAtE, readFirst, readRest]⟩
-    all_goals
-      apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
-      simpa only [specArrayArgumentFits, scope] using accepted
-
 /-- A source array literal can mix a run-time Boolean and a literal
     without losing either type. The actual canonical array retains the
     variable, rather than folding the argument at the caller. -/
@@ -381,7 +418,7 @@ theorem specArrayLocal_erfuellbar (ctx : UCtx) (name : String)
     simp [scope, raw, uWertBody, uRechne, uArraySides, uRecordSide,
       uParamNr, uParamNrAux, same, bind, Except.bind, pure, Except.pure] <;> rfl
   constructor
-  · simp only [uSpecArrayArgument, source, bind, Except.bind, specArrayArgumentFits, raw,
+  · simp only [uSpecArrayArgument, source, bind, Except.bind, specCompositeArgumentFits, raw,
       specLiteralFieldFits, specPrimitiveLiteralFieldFits, scope, List.contains_nil, Bool.not_false,
       uValueType, List.findIdx?_cons, same, ite_true, Option.bind_some, List.getElem?_cons_zero,
       decide_true, Bool.and_self, pure, Except.pure]

@@ -58,14 +58,21 @@ theorem addLimb_run (s : Nat → Runner.W) (A B m c t : Nat)
       Runner.IR.bool ((s A + (s B ^^^ s m)).ult (s A)) |||
         Runner.IR.bool (((s A + (s B ^^^ s m)) + s c).ult (s A + (s B ^^^ s m))) ∧
     ∀ j, j ≠ A → j ≠ c → (j < t ∨ t + 4 < j) → aluRun (addLimbC A B m c t) s j = s j := by
-  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, Int.toNat_natCast,
+  have outside (j k : Nat) (bound : k ≤ 4) (position : j < t ∨ t + 4 < j) : j ≠ t + k := by
+    omega
+  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast,
     ite_true, ite_false, Nat.reduceEqDiff, OfNat.ofNat_ne_one, OfNat.ofNat_ne_zero, ne_eq,
     Nat.succ_ne_self, not_false_eq_true, ↓reduceIte]
   refine ⟨?_, ?_, ?_⟩
   · simp (disch := omega) only [slotUpd_same, slotUpd_other]
   · simp (disch := omega) only [slotUpd_same, slotUpd_other]
   · intro j h1 h2 h3
-    simp (disch := omega) only [slotUpd_same, slotUpd_other]
+    rw [slotUpd_other _ _ h2, slotUpd_other _ _ h1,
+      slotUpd_other _ _ (outside j 4 (by decide) h3),
+      slotUpd_other _ _ (outside j 3 (by decide) h3),
+      slotUpd_other _ _ (outside j 2 (by decide) h3),
+      slotUpd_other _ _ (outside j 1 (by decide) h3)]
+    exact slotUpd_other _ _ (by simpa only [Nat.add_zero] using outside j 0 (by decide) h3)
 
 /-! ## The chain -/
 

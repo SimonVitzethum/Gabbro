@@ -12,6 +12,54 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
+/-- A startup store within its own frame cannot alter the code or the
+    declared arguments. Its actual TSO answer advances to the exact
+    generated continuation under the same root relation. -/
+theorem ImageRootPhase.store [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {before after : imageTSO.St} {thread index : Nat}
+    {history : List Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {next : T} {word : W} {answer : Ans}
+    (declared : thread ≤ output.starts.length) (inside : index < output.image.Ks)
+    (successor : ImageRootInstruction output thread next)
+    (apart : ∀ start, E.starts[thread]? = some start →
+      ∀ i, i < (encodeEnv output.image.Y start.2).length → index ≠ FB + FB + i) :
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+    let address := slot fp (BitVec.ofNat 64 index)
+    ImageRootPhase output E history (before.1.view thread) thread (wr64 address word next) state →
+    imageTSO.ans before thread (.wr address word) answer after →
+    answer = some (0, 0) ∧ ImageRootPhase output E history (after.1.view thread) thread (.next next) state ∧
+      ∀ other, other ≠ thread → after.1.view other = before.1.view other := by
+  intro fp address phase answered
+  obtain ⟨_, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, _⟩ := phase
+  · cases loader
+  have writable : Mem.all before.1.m.wr address 8 = true := by
+    rw [← Runner.Beweis.foldl_wr (before.1.buf thread) before.1.m]
+    exact frame.wr index inside
+  have success : answer = some (0, 0) := by
+    rcases answered.1 with ⟨refused, _, _⟩ | ⟨_, accepted, _⟩
+    · rw [writable] at refused
+      cases refused
+    · exact accepted
+  rcases tso_store_updates_view answered.1 with ⟨refused, _⟩ | ⟨_, written, others⟩
+  · rw [success] at refused
+    cases refused
+  refine ⟨success, ?_, others⟩
+  rw [written]
+  refine .inr ⟨start, chosen, head, ?_, ?_, fits, ?_, next, successor, .inl rfl⟩
+  · apply output.code_survives_writes (write_nurIn _ address word.toNat) _ code
+    intro byte touched
+    have owned := imageStackFootprint_slot (output := output) declared inside touched
+    exact (Nat.le_add_right _ _).trans owned.2.1
+  · exact frame.agree (agree_write frame.room (Nat.zero_le _) inside word.toNat)
+  · intro i present
+    have actual : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+        BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) + 8 * (FB + FB + i)) := by
+      change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) +
+        BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+      rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+    rw [← actual, Mem.rd64_write_far (slot_far frame.room inside (by omega) (apart start chosen i present)), actual]
+    exact args i present
+
 /-- The main start stub follows exactly the emitted clone sites. The
     serialized depth and private frame limits are shared with child starts. -/
 theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {memory : Mem}
@@ -27,7 +75,7 @@ theorem Emitted.main_stub_code [Kern] (output : Emitted src reserve options) {me
       (fun base => layU_dis output.compiled.unit output.tor base)
       (fun base => by simp only [layU]; omega)
       (fun base => layU_sync output.compiled.unit output.tor base)
-  have actual := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
+  have actual := codeAt_bytes _ codeBase (serialized ▸ loaded)
   have main := codeAt_right (a := spawnC (startScratch output.compiled.main) spawnSites) (by
     simpa only [Emitted.starts, List.append_assoc] using actual :
       CodeAt memory (BitVec.ofNat 64 codeBase)
@@ -85,10 +133,12 @@ def Emitted.childStartSite [Kern] (output : Emitted src reserve options)
     disjointness of all queued stores, including existing ones. -/
 theorem ImageStartSite.queued_stores_private [Kern] {output : Emitted src reserve options}
     (site : ImageStartSite output) {before after : TSt} {stores : List (W × W)}
+    {footprint : Nat → W → Prop}
     (queue : QueuedStores before after site.thread stores)
     (within : ∀ store ∈ stores, ∀ byte, fenster store.1 byte → imageStackFootprint output site.thread byte)
-    (privateBefore : PrivateBuffers (imageStackFootprint output) before) :
-    PrivateBuffers (imageStackFootprint output) after := by
+    (owns : ∀ byte, imageStackFootprint output site.thread byte →
+      footprint site.thread byte ∧ ∀ other, footprint other byte → other = site.thread)
+    (privateBefore : PrivateBuffers footprint before) : PrivateBuffers footprint after := by
   intro thread store pending byte touched
   rw [queue thread] at pending
   rcases List.mem_append.mp pending with prior | new
@@ -96,8 +146,7 @@ theorem ImageStartSite.queued_stores_private [Kern] {output : Emitted src reserv
   · by_cases writer : thread = site.thread
     · subst thread
       rw [ite_eq_left rfl] at new
-      have slot := within store new byte touched
-      exact ⟨slot, fun _ other => imageStackFootprint_disjoint other slot⟩
+      exact owns byte (within store new byte touched)
     · simp only [ite_eq_right writer, List.not_mem_nil] at new
 
 /-- The first call-tail instruction writes the decrement operand in the
@@ -128,7 +177,8 @@ theorem ImageStartSite.call_decrement_operand [Kern] {output : Emitted src reser
       (II.f (scratch : Int)) (II.f 1) (II.f 0) := by
     have first := stub 1 (by rw [startC_len]; decide)
     change InsAt _ (entry.pc + BitVec.ofNat 64 (16 * 1)) 1 (II.f (scratch : Int)) (II.f 1) (II.f 0)
-    simpa only [scratch, entry, ImageStartSite.entry, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [scratch, entry, ImageStartSite.entry, startC, callTail, callTailN, ci, II.o,
+      show (1 : Opcode).val = 1 from rfl, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using first
   have destination : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
   have operand : (sx (II.f 1)).toNat = 1 := by decide
@@ -181,7 +231,8 @@ theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
       change entry.pc + 16 + 16 = _
       rw [BitVec.add_assoc]
       rfl]
-    simpa only [entry, ImageStartSite.entry, scratch, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    simpa only [entry, ImageStartSite.entry, scratch, startC, callTail, callTailN, ci, II.o,
+      show (4 : Opcode).val = 4 from rfl, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using subtract
   have out : sx (II.f ((FB + 2 : Nat) : Int)) = BitVec.ofNat 64 (FB + 2) := sx_nat (calleeRoom.trans signed)
   have lhs : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
@@ -282,7 +333,8 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src reserve options)
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
   obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _, _⟩ :=
     (output.childStartSite declared).depth_preserves_frame code running frame fits args
-  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
+  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, fits, ?_, ?_⟩,
+    shared, others, depth⟩
   · intro i present
     rw [← address i]
     exact words i present

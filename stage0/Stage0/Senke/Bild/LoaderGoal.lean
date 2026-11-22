@@ -174,6 +174,53 @@ private theorem codeAt_spawn_site [Kern] {m : Mem} {scratch : Nat} :
       have offset : 16 * (10 * (j + 1)) = 16 * 10 + 16 * (10 * j) := by omega
       simpa only [offset] using siteCode
 
+/-- The loaded spawn site and the through-site frame bounds come from
+    one image layout. Relocation preserves both signed immediates. -/
+theorem Emitted.loaded_spawn_site [Kern] (output : Emitted src K options)
+    {m : Mem} (loaded : BytesAt m codeBase (output.image.code.flatMap encII)) {j : Nat}
+    (inside : j < output.starts.length) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * j))
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)
+    let stack := output.image.fp0 + 8 * (output.image.Ks * (j + 1))
+    CodeAt m pc (spawnOne (startScratch output.compiled.main) entry stack) ∧
+      CodeFar pc 10 fp output.image.Ks ∧
+      startScratch output.compiled.main + 8 ≤ output.image.Ks ∧ output.image.Ks < 2 ^ 31 ∧
+      entry < 2 ^ 31 ∧ stack < 2 ^ 31 := by
+  intro pc fp entry stack
+  obtain ⟨_, body, _, placed, code, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  rw [code] at loaded
+  have instructions := codeAt_bytes _ codeBase loaded
+  have ready := codeAt_left (codeAt_left (codeAt_left instructions))
+  have site := placed.spawn_entry j (by rw [List.length_map]; exact inside)
+  have relocated : CodeAt m pc (spawnOne (startScratch output.compiled.main) entry stack) := by
+    rw [show pc = BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (10 * j)) by simp only [pc, BitVec.ofNat_add]]
+    exact codeAt_spawn_site ready (by simpa only [List.length_map] using site)
+  have frameAddress : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
+    simpa only [Emitted.starts, List.length_map] using placed.hfp
+  have totalStack : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
+    simpa only [Emitted.starts, List.length_map] using placed.hylo
+  have worldStart := placed.hyord
+  have worldEnd := placed.hyhi
+  have imageEnd := placed.hfit
+  have used := Nat.mul_le_mul_left output.image.Ks (Nat.add_le_add_right inside.le 1)
+  have oneFrame : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
+    Nat.le_mul_of_pos_right _ (Nat.succ_pos output.starts.length)
+  have stackFits : stack < 2 ^ 31 := by dsimp only [stack]; omega
+  have entryFits : entry < 2 ^ 31 := by
+    dsimp only [entry]
+    simp only [headLen, startLen] at frameAddress ⊢
+    omega
+  have far : CodeFar pc 10 fp output.image.Ks := by
+    apply codeFar_nat _ (by omega)
+    simp only [headLen, startLen] at frameAddress
+    omega
+  exact ⟨relocated, far, placed.hex _ List.mem_cons_self, placed.startLimits.2.2, entryFits, stackFits⟩
+
 /-- The loaded clone site for boot root `j` contains the instructions for
     its own relocated entry and frame. Logical thread `j + 1` carries the
     same root and arguments at the model's initial memory. -/
@@ -190,18 +237,10 @@ theorem Emitted.loaded_boot_site [Kern] (output : Emitted src K options)
           (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))) ∧
       (output.bootStart Q).lebt (j + 1) = true ∧
       initRuhe (output.goalUnit Q).starts (j + 1) = ⟨some start.1, envR start.2⟩ := by
-  obtain ⟨_, _, sites, placed, code, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
-    (fun base bound => layU_in output.compiled.unit output.tor base bound)
-    (fun base => layU_dis output.compiled.unit output.tor base)
-    (fun base => by simp only [layU]; omega)
-    (fun base => layU_sync output.compiled.unit output.tor base)
-  rw [code] at loaded
-  have instructions := codeAt_bytes _ codeBase placed.hops loaded
-  have ready := codeAt_left (codeAt_left (codeAt_left instructions))
   have inside := (List.getElem?_eq_some_iff.mp declared).1
-  have site := placed.spawn_entry j (by rw [List.length_map]; exact inside)
+  have geometry := output.loaded_spawn_site loaded inside
   have positioned : (⟨output.compiled.main, output.args⟩ :: output.starts)[j + 1]? = some start := declared
-  exact ⟨codeAt_spawn_site ready (by simpa only [List.length_map] using site),
+  exact ⟨by simpa only [← BitVec.ofNat_add] using geometry.1,
     (output.bootStart_frame Q (j + 1) start positioned).1,
     output.goalStart_argument Q (j + 1) start positioned⟩
 

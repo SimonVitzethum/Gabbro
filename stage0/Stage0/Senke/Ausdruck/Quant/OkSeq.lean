@@ -41,10 +41,10 @@ theorem ok_nil {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {w : Runner.W}
   ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, w, hr, rfl⟩
 
 /-- `d := g (slot d) k`: the constant into `d+1`, then the instruction `o`. -/
-theorem binK_ok {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {k : Int} {Γ : Ctx} {ρ : Env D Γ}
+theorem binK_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {o : Opcode} {k : Int} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {w r : Runner.W} {g : Runner.W → Runner.W → Option Runner.W}
     (h : Pre L m pc fp K d [ci 1 (d + 1) k 0, ci o d d (d + 1)] ρ W reserved)
-    (hr : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some w) (hk : lit32 k = true) (hop : op o = bin g) (ho : o < 256)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some w) (hk : lit32 k = true) (hop : op o = bin g) (ho : o.val < 256)
     (hg : g w (BitVec.ofInt 64 k) = some r) (hK : d + 1 < K) :
     Ok m pc fp K d [ci 1 (d + 1) k 0, ci o d d (d + 1)] (· = r) := by
   have h' : Pre L m pc fp K d ([] ++ [ci 1 (d + 1) k 0] ++ [ci o d d (d + 1)]) ρ W reserved := by simpa using h

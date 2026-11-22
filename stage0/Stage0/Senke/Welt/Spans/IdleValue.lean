@@ -99,6 +99,21 @@ theorem idleCase (L : Lay D) : ∀ (cs : List (Option Ty)) (v : Wert D (.sum cs)
 termination_by structural cs => cs
 end
 
+/-- Scalar ABI arguments keep their exact word and validity after renumbering. -/
+theorem Enc.withIdle_iff (L : Lay D) (word : Runner.W) :
+    ∀ (τ : Ty) (v : Wert D τ), Enc L.withIdle (tyR τ) (valR τ v) word ↔ Enc L τ v word
+  | .arr τ 0, _ => Iff.rfl
+  | .arr τ 1, v => Enc.withIdle_iff L word τ (v ⟨0, by decide⟩)
+  | .arr τ (_ + 2), _ => Iff.rfl
+  | .sum cases, v => by
+    have ⟨tag, offset, _, _⟩ := idleCase L cases v
+    simp only [tyR, Ty.mapNumbers, Enc, sumFits_mapNumbers, sumN, tag, offset]
+  | .ptr ⟨_, _, .table _⟩, _
+  | .int .., _ | .bool, _ | .opt .., _ | .why .., _ | .fl .., _
+  | .fnptr .., _ | .ref .., _ | .str .., _ | .prod .., _ => Iff.rfl
+  | .never, v => nomatch v
+termination_by structural τ => τ
+
 /-- The stack encoding is unchanged for an environment in the idle extension. -/
 theorem encodeEnv_withIdle (L : Lay D) {Γ : Ctx} (env : Env D Γ) :
     encodeEnv L.withIdle (envR env) = encodeEnv L env := by
@@ -113,16 +128,55 @@ theorem ValueAt.withIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : Na
   obtain ⟨words, valid⟩ := idleValue L τ v
   exact ⟨valid.mpr stored.1, words.symm ▸ stored.2⟩
 
+theorem ValueAt.ofWithIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {base : Nat}
+    {τ : Ty} {v : Wert D τ} (stored : ValueAt L.withIdle m fp base (tyR τ) (valR τ v)) :
+    ValueAt L m fp base τ v := by
+  obtain ⟨words, valid⟩ := idleValue L τ v
+  exact ⟨valid.mp stored.1, words ▸ stored.2⟩
+
+/-- Variables in the extended environment use the same canonical frame offsets. -/
+theorem EnvAt.withIdle {L : Lay D} {m : Runner.Mem} {fp : Runner.W} {reserved : Nat}
+    {Γ : Ctx} {env : Env D Γ} (stored : EnvAt L m fp env reserved) :
+    EnvAt L.withIdle m fp (envR env) reserved := by
+  induction env with
+  | nil => intro _ var; exact nomatch var
+  | @cons τ Γ head tail ih =>
+    intro ty var
+    cases var with
+    | here =>
+      have cell := (stored τ .here).withIdle
+      rw [← vslot_varR (Var.here (τ := τ) (Γ := Γ)) reserved] at cell
+      exact cell
+    | there var =>
+      exact ih (fun σ x => stored σ (.there x)) ty var
+
+/-- Both machines give the same representation to every allocated world
+    cell, including any worlds reached after entry. -/
+theorem WeltAt.withIdle_iff {L : Lay D} {m : Runner.Mem} {world : World D}
+    {requireWrites : Bool} :
+    WeltAt m L.withIdle (worldR world) requireWrites ↔ WeltAt m L world requireWrites := by
+  constructor
+  · intro stored
+    refine ⟨?_, ?_, stored.2.2⟩
+    · intro t field i bound
+      have cell := stored.1 t field i bound
+      rw [Lay.withIdle_elem] at cell
+      exact cell.ofWithIdle
+    · intro g
+      exact (stored.2.1 g).ofWithIdle
+  · intro stored
+    refine ⟨?_, ?_, stored.2.2⟩
+    · intro t field i bound
+      rw [Lay.withIdle_elem]
+      exact (stored.1 t field i bound).withIdle
+    · intro g
+      exact (stored.2.1 g).withIdle
+
 /-- Loading bytes for the ordinary source memory also loads the same
     memory of the goal machine, including all nested pointer values. -/
 theorem WeltAt.withIdle {L : Lay D} {m : Runner.Mem} {s : Speicher D}
     (stored : WeltAt m L (s.welt [])) :
     WeltAt m L.withIdle ((speicherR s).welt []) := by
-  refine ⟨?_, ?_, stored.2.2⟩
-  · intro t field i bound
-    rw [Lay.withIdle_elem]
-    exact (stored.1 t field i bound).withIdle
-  · intro g
-    exact (stored.2.1 g).withIdle
+  exact WeltAt.withIdle_iff.mpr stored
 
 end Gabbro.Stage0.Senke

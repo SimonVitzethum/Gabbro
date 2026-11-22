@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootEntry
+import Stage0.Senke.Bild.Mehr.Ort.Ort
 import Stage0.Senke.Bild.Ruf.RootExit
 import Stage0.Senke.Images.CheckSpawn
 import Stage0.Senke.Bild.StartG
@@ -40,6 +41,92 @@ theorem Emitted.initial_root_head (output : Emitted src reserve options)
   rw [unit.starts] at listed
   rw [unit.program, unit.memory]
   exact output.startRequires root listed
+
+/-- A startup requirement reads only carriers separated from the other
+    declared roots. Its checked initial values remain available when
+    the host schedules the root's prologue after another thread runs. -/
+theorem Emitted.root_requires_local (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    {root : (declOf output.compiled.unit).Fn} (declared : root ∈ E.ws)
+    {carrier : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob}
+    (reads : carrier ∈ (E.P.requires root).orte) : Getrennt E.P output.fsA.1 E.ws carrier := by
+  have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware accepted).1
+  have lockless := (valid.wurzeln root declared).1
+  have unguarded (lock : (declOf output.compiled.unit).Lock) (guard : Bewacht carrier lock) : False := by
+    have allowed := (E.P.requires root).orte_darf carrier reads
+    have held : Res.held lock ∈ Signatur.anfang _ ((declOf output.compiled.unit).signatur root) := by
+      cases carrier with
+      | inl table => exact allowed (.inl lock) guard
+      | inr global => exact allowed (.inl lock) guard
+    have signed := (held_anfang _ lock).mp held
+    rw [show ((declOf output.compiled.unit).signatur root).haelt = [] from lockless] at signed
+    exact List.not_mem_nil signed
+  rcases (valid.fuss root).1 carrier (fuss_req E.P root reads) with localOrGuard | ⟨lock, guarded, _⟩ | shared
+  · rcases Bool.or_eq_true_iff.mp localOrGuard with signature | localRead
+    · obtain ⟨lock, guard, _⟩ := sigB_ok signature
+      exact (unguarded lock guard).elim
+    · exact @of_decide_eq_true _ (Classical.propDecidable _) localRead
+  · exact (unguarded lock guarded).elim
+  · exact ((shared.2.1 root).1 reads).elim
+
+/-- A scheduled GX step of another thread leaves the root's entry
+    requirement unchanged, even when it presents shared atomic values. -/
+theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (hardware : HardwareAnnahmenHw O E.Q)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread issuer : Nat} (different : thread ≠ issuer)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root)
+    {before after : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m before)
+    (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after) :
+    ReqAmEintritt E.P.mitRuhe (some root.1) (after.speicher.welt []) (envR root.2) ↔
+      ReqAmEintritt E.P.mitRuhe (some root.1) (before.speicher.welt []) (envR root.2) := by
+  let fs := fsRuhe output.fsA.1
+  let init := initRuhe E.starts
+  let graph := kVon E.P.mitRuhe fs init
+  have valid := (akzeptiertX_pruefer.korrekt E output.fsA output.lsA output.csA hardware.2.2.2 accepted).1
+  have transferred := akzeptiertSpecX_mitRuhe E.P output.fsA.2 valid
+  have starts := startZulaessig_aus E output.fsA.1 duties (laufzeit_initRuhe E)
+  have noLocks (i : Nat) : (declOf output.compiled.unit).mitRuhe.haelt (init i).1 = [] := by
+    rcases starts.wurzel i with listed | idle
+    · exact (transferred.wurzeln _ listed).1
+    · exact idle.1
+  have good := gutO_mitRuhe hardware.1
+  have facts := fadenFakten_GX (K := graph) (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+    good (fsRuhe_voll output.fsA.2)
+    (fun _ shared => shared.1.1) (speicherR E.sp0) init (startExklusiv_ohne_haelt init noLocks)
+    (fun i => transferred.abg (init i).1) (fun i => reachB_wurzel E.P.mitRuhe fs (init i).1) reached
+  have listed : root.1 ∈ E.ws := by
+    unfold Einheit.ws
+    exact List.mem_map_of_mem (List.mem_append_left _ (List.mem_append_left _ (List.mem_of_getElem? declared)))
+  have entry : (init thread).1 = some root.1 := by
+    change (initRuhe E.starts thread).1 = _
+    rw [initRuhe, declared]
+  have rootInGraph : graph thread (some root.1) = true := by
+    rw [← entry]
+    exact reachB_wurzel E.P.mitRuhe fs (init thread).1
+  have agreement (carrier : _) (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte) :
+      TraegerGleich after.speicher before.speicher carrier := by
+    have original : carrier ∈ (E.P.requires root.1).orte := (requires_mitRuhe_orte E.P root.1) ▸ read
+    have localRead := output.root_requires_local hardware.2.2.2 accepted listed original
+    have apart := getrenntK_of starts (getrennt_mitRuhe E.P output.fsA.2 valid.abg localRead)
+    have noWrite := apart thread issuer different (some root.1) rootInGraph
+      (List.mem_append_left _ (fuss_req E.P.mitRuhe (some root.1) read))
+      (before.faeden issuer).kopf.f (facts.graph issuer _ List.mem_cons_self)
+    have notShared : ¬ GeteiltV E.P E.ws carrier := fun shared => (shared.2.1 root.1).1 original
+    obtain ⟨view, middle, step, presents, changed, kept, _, _, _⟩ := stepped
+    exact traegerGleich_trans (gx_aussen presents changed kept carrier notShared)
+      (traegerGleich_trans (schritt_traeger good step carrier (.inr noWrite)) (presents carrier notShared))
+  have worlds : OrtGleich (fun carrier => carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte)
+      (after.speicher.welt []) (before.speicher.welt []) :=
+    ⟨rfl, fun table => agreement (.inl table), fun global => agreement (.inr global)⟩
+  unfold ReqAmEintritt
+  rw [worlds.wert _ (fun _ read => read) (envR root.2)]
 
 /-- Main enters the same depth initialization protocol through its
     own boot frame after the emitted clone sites. -/
@@ -221,13 +308,19 @@ theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve optio
         ⟨after, before.ths.set (index + 1) (some (.next ⟨prologue, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      GleichAuf (fun byte => ¬ imageStackFootprint output (index + 1) byte)
+        (after.1.view (index + 1)) (before.ms.1.view (index + 1)) ∧
       (∀ world, WeltAt (before.ms.1.view (index + 1)) output.image.Y world →
         WeltAt (after.1.view (index + 1)) output.image.Y world) ∧
       FrameOK (after.1.view (index + 1)) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view (index + 1)) frame root.2 ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output (index + 1) byte →
+          footprint (index + 1) byte ∧ ∀ other, footprint other byte → other = index + 1) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       CodeAt (after.1.view (index + 1)) prologue rest := by
   intro entry target frame prologue running phase
-  obtain ⟨after, call, shared, otherViews, world, permissions, environment, _, _, depth, loaded, _⟩ :=
+  obtain ⟨after, call, shared, otherViews, agreement, world, permissions, environment, _, _, depth, loaded, buffers, _⟩ :=
     output.child_body_from_root_phase unit declared running phase
   have inside := (List.getElem?_eq_some_iff.mp running).1
   let entered : Cfg imageTSO (Res T) :=
@@ -235,7 +328,7 @@ theorem Emitted.child_prologue_prefix [Kern] (output : Emitted src reserve optio
   have ready : entered.ths[index + 1]? = some (some (.next ⟨target, frame⟩)) :=
     List.getElem?_set_self inside
   obtain ⟨rest, passed, code⟩ := output.root_depth_guard_pass (before := entered) root.1 loaded ready depth
-  refine ⟨after, rest, ?_, shared, otherViews, world, permissions, environment, code⟩
+  refine ⟨after, rest, ?_, shared, otherViews, agreement, world, permissions, environment, buffers, code⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 
 /-- Once startup has reached the emitted main stub, that thread enters
@@ -257,11 +350,15 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
         ⟨after, before.ths.set 0 (some (.next ⟨prologue, frame⟩))⟩ ∧
       after.1.m = before.ms.1.m ∧
       (∀ other, other ≠ 0 → after.1.view other = before.ms.1.view other) ∧
+      GleichAuf (fun byte => ¬ imageStackFootprint output 0 byte)
+        (after.1.view 0) (before.ms.1.view 0) ∧
       (∀ world, WeltAt (before.ms.1.view 0) output.image.Y world → WeltAt (after.1.view 0) output.image.Y world) ∧
       FrameOK (after.1.view 0) frame (output.image.Ks - FB) ∧
       EnvAt output.image.Y (after.1.view 0) frame output.args ∧
-      (PrivateBuffers (imageStackFootprint output) before.ms.1 →
-        PrivateBuffers (imageStackFootprint output) after.1) ∧
+      (∀ footprint : Nat → W → Prop,
+        (∀ byte, imageStackFootprint output 0 byte →
+          footprint 0 byte ∧ ∀ other, footprint other byte → other = 0) →
+        PrivateBuffers footprint before.ms.1 → PrivateBuffers footprint after.1) ∧
       CodeAt (after.1.view 0) prologue rest := by
   intro site entry target frame prologue running phase
   have declared : E.starts[0]? = some ⟨output.compiled.main, output.args⟩ := by
@@ -280,7 +377,8 @@ theorem Emitted.main_prologue_prefix [Kern] (output : Emitted src reserve option
   have ready : entered.ths[0]? = some (some (.next ⟨target, frame⟩)) := List.getElem?_set_self inside
   obtain ⟨rest, passed, decoded⟩ :=
     output.root_depth_guard_pass (before := entered) (thread := 0) output.compiled.main code ready depth
-  refine ⟨after, rest, ?_, shared, views, fun _ stored => output.world_survives_stack site.bounded stored writes,
+  refine ⟨after, rest, ?_, shared, views, imageStackFootprint_agree site.bounded writes,
+    fun _ stored => output.world_survives_stack site.bounded stored writes,
     newFrame, environment, buffers, decoded⟩
   simpa only [entered, List.set_set, List.nil_append] using call.trans passed
 

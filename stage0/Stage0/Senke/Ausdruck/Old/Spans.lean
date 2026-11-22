@@ -224,7 +224,7 @@ theorem capture_ok [Kern] {L : Lay D} {world : World D} {fp : Runner.W} {K : Nat
 
 /-- The shared world relation already carries the whole canonical storage value. -/
 theorem Inputs.of_world {world : World D} {m : Runner.Mem} {cells : List (Zelle D)}
-    (stored : WeltAt m L world) (valid : ∀ cell ∈ cells, cell.da L) : Inputs L world m cells := by
+    (stored : WeltAt m L world requireWrites) (valid : ∀ cell ∈ cells, cell.da L) : Inputs L world m cells := by
   intro cell hc
   cases cell with
   | glob g => exact stored.2.1 g
@@ -248,7 +248,7 @@ theorem capture_world_ok [Kern] {world : World D} {m : Runner.Mem} {fp pc : Runn
     (emitted : capture L cells base = some code)
     (frame : FrameOK m fp K) (small : K < 2 ^ 31) (capacity : base + words cells ≤ K)
     (atCode : CodeAt m pc code) (far : CodeFar pc code.length fp K)
-    (stored : WeltAt m L world) (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
+    (stored : WeltAt m L world requireWrites) (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
       Agree fp base (base + words cells) m m' ∧ At L world m' fp cells base := by
   have bounds := capture_bounds cells base emitted

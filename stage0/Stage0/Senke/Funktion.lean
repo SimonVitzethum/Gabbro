@@ -52,4 +52,30 @@ def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D
       guardC layout.canonicalResult 101 layout.canonicalResult ++ original ++ snap ++ lexical ++ body.1,
       max (retTop layout) (max req.2 (max (layout.bodyParams + layout.parameterWords) body.2)))
 
+/-- Function placement depends only on the measured requirement and
+    body. The originals, snapshots and ABI scaffolding have fixed sizes. -/
+theorem lowFun_measure {passes : Nat} {P : Programm D} {A B : D.Fn → Nat} {L R : Lay D} {f : D.Fn}
+    {original relocated : List II × Nat}
+    (requiresMeasure : (lowE L (P.requires f) (functionFrame P f).canonicalResult).map codeMeasure =
+      (lowE R (P.requires f) (functionFrame P f).canonicalResult).map codeMeasure)
+    (bodyMeasure : let frame := functionFrame P f
+      ∀ leftPost rightPost leftBody rightBody,
+        lowPost L frame P f frame.internalStatus = some leftPost →
+        lowPost R frame P f frame.internalStatus = some rightPost →
+        lowEnd (reserved := frame.bodyReserved) passes A L frame leftPost [] (0, 0) (P.rumpf f) = some leftBody →
+        lowEnd (reserved := frame.bodyReserved) passes B R frame rightPost [] (0, 0) (P.rumpf f) = some rightBody →
+        codeMeasure leftBody = codeMeasure rightBody)
+    (first : lowFun passes P A L f = some original)
+    (second : lowFun passes P B R f = some relocated) :
+    codeMeasure original = codeMeasure relocated := by
+  simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at first second
+  obtain ⟨leftRequires, requiresLeft, leftPost, postLeft, leftBody, bodyLeft, leftSnap, snapLeft, rfl⟩ := first
+  obtain ⟨rightRequires, requiresRight, rightPost, postRight, rightBody, bodyRight, rightSnap, snapRight, rfl⟩ := second
+  rw [requiresLeft, requiresRight, Option.map_some, Option.map_some, Option.some.injEq] at requiresMeasure
+  obtain ⟨reqSize, reqTop⟩ := Prod.mk.inj requiresMeasure
+  obtain ⟨bodySize, bodyTop⟩ := Prod.mk.inj (bodyMeasure _ _ _ _ postLeft postRight bodyLeft bodyRight)
+  have snapSize : leftSnap.length = rightSnap.length :=
+    (EntrySnapshots.capture_length _ _ snapLeft).trans (EntrySnapshots.capture_length _ _ snapRight).symm
+  simp only [codeMeasure, List.length_append, reqSize, reqTop, snapSize, bodySize, bodyTop]
+
 end Gabbro.Stage0.Senke

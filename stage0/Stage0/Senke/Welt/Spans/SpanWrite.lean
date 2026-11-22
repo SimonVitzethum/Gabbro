@@ -102,7 +102,7 @@ theorem span_store_step [Kern] {m m' : Runner.Mem} {pc fp va vb : Runner.W} {K t
     (writable : m.wr64 va vb = some m') :
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' := by
   have hi := code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   apply Star.one
   apply run_step (t := ⟨pc, fp⟩) hi (by decide)
   apply run_st hi

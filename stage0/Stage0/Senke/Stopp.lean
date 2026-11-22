@@ -58,7 +58,7 @@ theorem const_instruction {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : I
     (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K) (hK : K < 2 ^ 31) (hk : lit32 k = true) :
     Run (step ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   refine run_step (t := ⟨pc, fp⟩) hi (by decide) ?_
   simp only [op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
@@ -110,7 +110,7 @@ theorem sys_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt
   have hF2 := hF1.agree a2
   -- the request
   have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
   have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (nr : Int)) := by
     simp only [m2]

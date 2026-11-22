@@ -18,24 +18,24 @@ theorem globalValueC_top {L : Lay D} {g : D.Glob} {dst top : Nat} {code : List I
 /-- Real emitted global loads, with all inherited expression-frame contracts. -/
 theorem globalValueC_ok [Kern] {L : Lay D} {g : D.Glob} {dst top K reserved : Nat}
     {code : List II} {m : Runner.Mem} {pc fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ}
-    {σ : World D} {W : Runner.Mem → Prop}
+    {value : Wert D (D.gtyp g)} {W : Runner.Mem → Prop}
     (made : globalValueC L g dst = some (code, top)) (room : top ≤ K)
-    (world : ∀ m, W m → WeltAt m L σ)
+    (source : ∀ m, W m → ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) value)
     (pre : Pre L m pc fp K dst code ρ W reserved) :
-    ValueOk L m pc fp K dst code (D.gtyp g) (σ.globs g) := by
+    ValueOk L m pc fp K dst code (D.gtyp g) value := by
   unfold globalValueC at made
   split at made
   · next bound =>
     cases made
     obtain ⟨m', steps, changed, output⟩ := loadSpan_stable_run
-      (encodeWords L (D.gtyp g) (σ.globs g)) pre.frame pre.small
+      (encodeWords L (D.gtyp g) value) pre.frame pre.small
       (by simpa only [encodeWords_length] using room)
       (by simpa only [encodeWords_length] using bound)
       (by simpa only [encodeWords_length] using pre.code)
       (by simpa only [encodeWords_length, loadSpan_length] using pre.far)
-      pre.wstab pre.welt (fun m hm => (world m hm).2.1 g |>.2)
+      pre.wstab pre.welt (fun m hm => (source m hm).2)
     refine ⟨m', ?_, Agree.widen (by simpa only [encodeWords_length] using changed) room,
-      (world m pre.welt).2.1 g |>.1, output⟩
+      (source m pre.welt).1, output⟩
     simpa [encodeWords_length, loadSpan_length, ← Nat.mul_assoc] using steps
   · cases made
 

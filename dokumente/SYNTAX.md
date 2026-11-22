@@ -1234,12 +1234,12 @@ For example, `spec fn small(x : u32 in 0 .. 100) -> bool = x < 10;` checks each 
 that parameter type before inlining. Integer argument intervals must be contained in the declared
 range and Boolean parameters require Boolean arguments. Record, array, string and floating-point
 parameters accept named values and record field paths whose elaborated type equals the declared
-type. A record parameter also accepts its nominal constructor with Boolean, integer, string,
-array and record literals as fields. Nested array literals must match their declared lengths and
-element types. Nested records must match the declared nominal schema. Each field is checked
-recursively before substitution. An array literal passed directly to a predicate takes the
-parameter's declared element type and length, including an empty literal at length zero.
-Its elements may also read locals of the exact declared element type.
+type. A record parameter accepts its nominal constructor, including Boolean, integer, string,
+array and record literals as fields. Record fields and array elements can also read locals of the
+exact declared type at any nesting depth. Each array retains its declared length and element
+type, and each record retains its nominal schema. The checker visits all fields and elements
+before substitution. An array literal passed directly to a predicate takes its declared element
+type and length from the parameter, including an empty literal at length zero.
 A string literal also fits a string parameter whose declared bound equals its UTF-8 byte
 length. Concatenating supported string arguments adds their byte bounds before the parameter
 type is checked. An arity mismatch or unresolved argument type refuses. An argument with range `0 .. 9`

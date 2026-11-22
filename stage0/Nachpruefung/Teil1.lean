@@ -77,6 +77,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.goalUnit_refuses_nonempty_axioms
 #print axioms Gabbro.Stage0.MappedImage.source_start
 #print axioms Gabbro.Grammatik.Zielsatz.oneShotEntry_parts
+#print axioms Gabbro.Grammatik.Zielsatz.oneShotEntry_unreachable
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.goal
 #print axioms Gabbro.Stage0.MappedImage.runner_prefix
 #print axioms Gabbro.Stage0.MappedImage.no_unknown_instruction
@@ -150,7 +151,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageIdleBuffers.follow
 #print axioms Gabbro.Stage0.imageStackStore_projected
 #print axioms Gabbro.Stage0.image_memory_prefix_projects
-#print axioms Gabbro.Stage0.stage0_correct_of_simulation
+#print axioms Gabbro.Stage0.stage0_runner_correct_of_simulation
 #print axioms Gabbro.Stage0.Emitted.changedCell_in_image
 #print axioms Gabbro.Stage0.column_addresses_exclude_row_layout
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_read_shared
@@ -181,7 +182,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.image_stack_frame_preserved
 #print axioms Gabbro.Stage0.Emitted.loaded_root_frame
 #print axioms Gabbro.Stage0.Emitted.fresh_root_phase
-#print axioms Gabbro.Stage0.MappedImage.future_root_phase
+#print axioms Gabbro.Stage0.LoadedIRImage.future_root_phase
 #print axioms Gabbro.Stage0.Emitted.code_end
 #print axioms Gabbro.Stage0.Emitted.code_survives_writes
 #print axioms Gabbro.Stage0.Emitted.code_in_private_view
@@ -200,7 +201,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.relocated_function_code
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_call_prefix
 #print axioms Gabbro.Stage0.Senke.BildMehr.RunP.remaining
-#print axioms Gabbro.Stage0.Senke.BildMehr.RunP.control_of_runM
+#print axioms Gabbro.Stage0.Emitted.SpawnPrefix.follow_silent
 #print axioms Gabbro.Stage0.ImageStartSite.call_target
 #print axioms Gabbro.Stage0.ImageStartSite.call_enter
 #print axioms Gabbro.Stage0.ImageStartSite.body_prefix
@@ -279,6 +280,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.lowB_ok
 #print axioms Gabbro.Stage0.Senke.lowEnd_ok
 #print axioms Gabbro.Stage0.Senke.lowE_ok
+#print axioms Gabbro.Stage0.Senke.lowE_ok_scoped
 #print axioms Gabbro.Stage0.Senke.wideBinary_ok
 #print axioms Gabbro.Stage0.Senke.wideUnary_ok
 #print axioms Gabbro.Stage0.Senke.wideAdd_ok

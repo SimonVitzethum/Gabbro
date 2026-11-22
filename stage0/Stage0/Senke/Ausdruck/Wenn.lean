@@ -39,7 +39,7 @@ theorem wenn_taken_entry {m : Runner.Mem} {pc fp : Runner.W}
   subst w
   have h1 := h'.next a1 (Nat.le_refl _) (by omega)
   have hi := h1.code 0 (by simp)
-  simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero,
+  simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero,
     Nat.mul_zero, BitVec.add_zero] at hi
   have rr := r
   rw [← sx_nat (d := d) (by have := hp.small; omega)] at rr
@@ -63,7 +63,7 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
   obtain ⟨m1, s1, a1, w, r, hw⟩ := hc h'.left
   have h1 := h'.next a1 (Nat.le_refl _) (by omega)
   have hi := h1.code 0 (by simp)
-  simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   rw [← sx_nat (d := d) (by omega)] at r
   have hlen' : (wennC d cc ca cb).length = cc.length + 1 + ca.length + 1 + cb.length := by
     simp [wennC]; omega
@@ -76,7 +76,7 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
     obtain ⟨m2, s2, a2, post⟩ := ha rfl _ _ h2.left
     have h3 := h2.next a2 (Nat.le_refl _) (by omega)
     have hj := h3.code 0 (by simp)
-    simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
+    simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
     have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp hj))
     refine ⟨m2, s1.trans (star_cast sb rfl ?_ |>.trans (s2.trans (star_cast sj rfl ?_))), a1.trans a2, post⟩
     · simp only [nxt, T.mk.injEq, and_true]

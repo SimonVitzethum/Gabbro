@@ -17,7 +17,7 @@ namespace Gabbro.Stage0.Senke
 open Runner.IR
 
 /-- Instructions over natural slot numbers. -/
-abbrev cn (o a b c : Nat) : II := ci o a b c
+abbrev cn (o : Opcode) (a b c : Nat) : II := ci o a b c
 
 /-- One limb: `tb := B ^ m`, `A := A + tb + c`, the new carry from both partial additions. -/
 def addLimbC (A B m c t : Nat) : List II :=
@@ -33,11 +33,11 @@ def wideAddC (k a : Nat) (mask carry : Int) : List II :=
   [ci 1 (a + 2 * k : Nat) mask 0, ci 1 (a + 2 * k + 1 : Nat) carry 0] ++
     addChain k a (a + k) (a + 2 * k) (a + 2 * k + 1) (a + 2 * k + 2)
 
-def bitChain (o : Nat) : Nat → Nat → Nat → List II
+def bitChain (o : Opcode) : Nat → Nat → Nat → List II
   | 0, _, _ => []
   | n + 1, A, B => cn o A A B :: bitChain o n (A + 1) (B + 1)
 
-def wideBitC (o k a : Nat) : List II := bitChain o k a (a + k)
+def wideBitC (o : Opcode) (k a : Nat) : List II := bitChain o k a (a + k)
 
 /-- Read the sign bit of the top limb into slot `a`. -/
 def signTail (n a : Nat) : List II :=
@@ -68,7 +68,7 @@ def seqC (P : Nat → List II) : List Nat → List II
 def selSeq (R T MS TA n : Nat) : List II :=
   seqC (fun j => selP (T + j) MS TA R j) (List.range n).reverse
 
-def bitP (oM oX src Rr O W T T2 a j : Nat) : List II :=
+def bitP (oM oX : Opcode) (src Rr O W T T2 a j : Nat) : List II :=
   [cn oM T (a + j) Rr, cn oX T2 src O, cn oX T2 T2 W, cn 9 (a + j) T T2]
 
 def shl1P (p O W TB TA TB2 j : Nat) : List II :=
@@ -164,7 +164,7 @@ def wideMulC (k a : Nat) : List II :=
 def wideNegC (k a : Nat) : List II :=
   copyWords k (a + k) a ++ zeroSlotsC k a ++ wideAddC k a (-1) 1
 
-def bitC (k a oM oX : Nat) (srcB : Nat → Nat) (l : List Nat) : List II :=
+def bitC (k a : Nat) (oM oX : Opcode) (srcB : Nat → Nat) (l : List Nat) : List II :=
   seqC (fun j => bitP oM oX (srcB j) (a + k + 2) (a + k + 4) (a + k + 3) (a + k + 7) (a + k + 8) a j) l
 
 def shPre (k a : Nat) : List II :=

@@ -64,7 +64,7 @@ theorem futex_entry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
     (hf : FutexArgs f addr op v) :
     StopAt ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m (futexReq addr op v) := by
   have ins := E.ins h.ag hi
-  simp only [ci] at ins
+  simp only [ci, II.o] at ins
   have hs := E.small
   obtain ⟨h0, h1, h2, h3, h4, h5, h6⟩ := hf
   apply runTo_sys ins
@@ -96,7 +96,7 @@ theorem futex_return (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
         ⟨pc + BitVec.ofNat 64 (16 * (i + 1)), fp⟩ m' ∧
       LS m0 m' fp s a (upd f 17 r) o' c' w' := by
   have ins := E.ins h.ag hi
-  simp only [ci] at ins
+  simp only [ci, II.o] at ins
   have hs := E.small
   obtain ⟨h0, h1, h2, h3, h4, h5, h6⟩ := hf
   refine ⟨_, ls_star ins (by decide) ?_, resume.slot E (by omega) r⟩

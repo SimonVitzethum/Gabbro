@@ -53,9 +53,9 @@ theorem glob_word {m : Runner.Mem} {pc fp : Runner.W} {K d ga : Nat} {w0 : Runne
   generalize write m (slot fp (BitVec.ofNat 64 d)) 8 (BitVec.ofNat 64 ga).toNat = m1 at s1 a1 hF1 hc2 hr1 hv a2 hr2 hw
   generalize write m1 (slot fp (BitVec.ofNat 64 d)) 8 w0.toNat = m2 at a2 hr2 hw
   have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   rw [← sx_nat (d := d) (by omega)] at hr1 hw
-  have s2 := star_ins (fp := fp) hc2 (by simp [ci]) (run_ld (t := ⟨_, fp⟩) hi hr1 hv hw)
+  have s2 := star_ins (fp := fp) hc2 (by simp [ci, II.o]) (run_ld (t := ⟨_, fp⟩) hi hr1 hv hw)
   refine ⟨m2, s1.trans (star_cast s2 rfl ?_), a1.trans (a2.mono (Nat.le_refl _)), hr2⟩
   simp only [List.length_singleton, T.mk.injEq, and_true]
   rw [pc_add16 pc 1]
@@ -118,7 +118,7 @@ theorem ex_tail {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} 
   have hcf3 := codeFar_right (n := 1) (k := 2) hcf2
   have hc3 := codeAt_agreeW a2 (by omega) hhi (by have := hgin; omega) (codeAt_right hc2) hcf3
   have hi2 := hc2 0 (by simp)
-  simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi2
+  simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi2
   have run2 : Run (op 22 ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩) m1 ⟨pc + BitVec.ofNat 64 (16 * 1) + 16, fp⟩
       (write (write m1 (BitVec.ofNat 64 (L.ga g)) 8 new.toNat) (slot fp (BitVec.ofNat 64 (s + 3))) 8 old.toNat) := by
     simp only [op]
@@ -136,7 +136,7 @@ theorem ex_tail {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} 
     simp only [Runner.opt_some, ret1]
     have hc2' := codeAt_agreeW a2 (by omega) hhi (by omega) hc2 hcf2
     have hi2b := hc2' 0 (by simp)
-    simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, List.length_singleton] at hi2b
+    simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, List.length_singleton] at hi2b
     refine f1_run hi2b ?_
     rw [sx_nat (d := s + 3) (by omega)]
     exact run_wr64 hw3.1
@@ -174,7 +174,7 @@ theorem ex_tail {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} 
   generalize write m3 (slot fp (BitVec.ofNat 64 (s + 3))) 8 (1 : Runner.W).toNat = m4 at s3 a4 r44 hc5 hW4 r40
   -- brz, not taken
   have hi5 := hc5 0 (by simp)
-  simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi5
+  simp only [ci, II.o, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi5
   rw [← sx_nat (d := s + 3) (by omega)] at r44
   have s4 := Star.one (run_step (t := ⟨_, fp⟩) hi5 (by decide) (run_brz_ne hi5 r44 (by decide)))
   have s3' : Star ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m3 ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m4 :=

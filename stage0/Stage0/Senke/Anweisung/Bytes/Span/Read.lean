@@ -14,7 +14,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {currentOld : Boo
 theorem readBytesWords_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
     {σ₀ σ : World D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} {ρ : Env D Γ}
-    (world : ∀ m, W m → WeltAt m L σ) (lower : 0 ≤ a)
+    (world : ∀ m, W m → ColumnAt m L σ t f) (lower : 0 ≤ a)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
     ∀ (words n j d : Nat) (c : List II) (top : Nat), b + j + n ≤ D.count t → j + n < 2 ^ 31 →
@@ -69,7 +69,7 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (n : Nat) (lower : 0 ≤ a) (upper : b + n ≤ D.count t) (access : darf D t Λ)
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
-    (world : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
+    (world : ∀ m, W m → ColumnAt m L σ t f) (layout : LayIn L)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ)))
     (made : readBytesWideL L t f (lowE (currentOld := currentOld) L i (reserved := reserved)) n d = some (c, top))
@@ -168,7 +168,7 @@ theorem getBytes_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (n : Nat) (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (access : darf D t Λ)
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
-    (hWL : ∀ m, W m → WeltAt m L σ) (layout : LayIn L)
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (layout : LayIn L)
     (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
       Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ)))
     (h : lowE (currentOld := currentOld) L (reserved := reserved) (.getBytes t f hf n i hlo hhi access) d = some (c, top))

@@ -108,19 +108,19 @@ theorem read_agree {d cell : Nat} {v : W} (a : Agree x.fp d x.K m m')
   exact read
 
 /-- A binary instruction with its exact destination write. -/
-theorem binary_to {m : Mem} {pc fp : W} {K cell a b o : Nat} {va vb value : W}
+theorem binary_to {m : Mem} {pc fp : W} {K cell a b : Nat} {o : Opcode} {va vb value : W}
     {g : W → W → Option W} (code : CodeAt m pc [ci o cell a b])
     (frame : FrameOK m fp K) (small : K < 2 ^ 31)
     (cellBound : cell < K) (aBound : a < K) (bBound : b < K)
     (ra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va)
     (rb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
-    (opEq : op o = bin g) (opBound : o < 256) (valueEq : g va vb = some value) :
+    (opEq : op o = bin g) (opBound : o.val < 256) (valueEq : g va vb = some value) :
     Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
       (write m (slot fp (BitVec.ofNat 64 cell)) 8 value.toNat) := by
   have hi := code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  apply star_ins code (by simpa only [ci] using opBound)
-  simp only [ci, opEq]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  apply star_ins code (by simpa only [ci, II.o] using opBound)
+  simp only [ci, II.o, opEq]
   apply run_bin hi
   · simpa only [sx_nat (d := a) (by omega)] using ra
   · simpa only [sx_nat (d := b) (by omega)] using rb

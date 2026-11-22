@@ -29,7 +29,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLiteral_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralTyped_low
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayLocal_erfuellbar
-#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specArrayArgument_lower
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specCompositeArgument_lower
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTypedArray_low
 
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_slice
@@ -121,10 +121,26 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_after_return
 #print axioms Gabbro.Grammatik.Zielsatz.EntryPrefix.activate_declared_workers
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
-#print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
+#print axioms Gabbro.Stage0.stage0_runner_correct_of_ir_simulation
+#print axioms Gabbro.Stage0.stage0_correct_of_ir_refinement
+#print axioms Gabbro.Stage0.LoadedIRImage.source_start
+#print axioms Gabbro.Stage0.LoadedIRImage.workerStartup
+#print axioms Gabbro.Stage0.LoadedIRImage.firstWorkerActivation
+#print axioms Gabbro.Stage0.LoadedIRImage.activate_worker
+#print axioms Gabbro.Stage0.ImageSlotsMatch.observed_clone
+#print axioms Gabbro.Stage0.LoadedIRImage.function_semantics
+#print axioms Gabbro.Stage0.irBild_function_semantics
+#print axioms Gabbro.Stage0.image_body_memory_segment
+#print axioms Gabbro.Stage0.image_body_publish
+#print axioms Gabbro.Stage0.image_body_float
+#print axioms Gabbro.Stage0.lowE_frameMemory
+#print axioms Gabbro.Stage0.Senke.BildLauf.BodyFrame.bind_reference
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
 #print axioms Gabbro.Grammatik.Async.inferredBoundary_erfuellbar
+#print axioms Gabbro.Grammatik.Async.asyncOrder_sound
+#print axioms Gabbro.Grammatik.Async.OrderedAsync.wellFounded
+#print axioms Gabbro.Grammatik.Async.arrangeAsync_complete
 #print axioms Gabbro.Grammatik.Async.requiredSaved_exact
 #print axioms Gabbro.Grammatik.Async.ReificationDuty.cancel_releases
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceLocalType_unknown
@@ -139,6 +155,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.SliceAt.agree_visible
 #print axioms Gabbro.Stage0.Senke.SliceAt.subslice
 #print axioms Gabbro.Stage0.Senke.SliceAt.write_slot
+#print axioms Gabbro.Stage0.Senke.lowE_arrayUpdate_retainsSlices
 #print axioms Gabbro.Stage0.Senke.ValueAt.string_slice_byte
 #print axioms Gabbro.Stage0.Senke.lowE_runtimeSliceIndex_ok
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.elaborated_refines
@@ -237,8 +254,9 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Frontend.Async.LinkedPolls.other
 #print axioms Gabbro.Stage0.Senke.runtimeArraySliceCarrier_ok
 #print axioms Gabbro.Stage0.Senke.runtimeStringSliceCarrier_ok
-#print axioms Gabbro.Grammatik.Parser.Uebersetze.specLiteralRecordArgument_erfuellbar
-#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_lower
+#print axioms Gabbro.Grammatik.Parser.Uebersetze.specRecordArgument_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specRecordArgument_lower
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specRecordLocal_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specLiteralRecord_source_erfuellbar
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_exact
 #print axioms Gabbro.Stage0.Frontend.Async.generatedRecordName_fresh

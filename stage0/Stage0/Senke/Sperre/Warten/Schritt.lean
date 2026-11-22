@@ -28,7 +28,7 @@ theorem ls_brz_back (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f n u w)
       ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m := by
   subst hA hL
   have ins := E.ins h.ag hi
-  simp only [ci] at ins
+  simp only [ci, II.o] at ins
   have hs := E.small
   refine ls_star ins (by decide) ?_
   have read := h.sl e he
@@ -43,7 +43,7 @@ theorem ls_jmp_back (E : LE m0 pc fp s a code) (h : AgreeK fp s a m0 m)
       ⟨pc + BitVec.ofNat 64 (16 * i), fp⟩ m := by
   subst hL
   have ins := E.ins h hi
-  simp only [ci] at ins
+  simp only [ci, II.o] at ins
   refine ls_star ins (by decide) ?_
   have run := run_jmp (t := ⟨pc + BitVec.ofNat 64 (16 * (i + k)), fp⟩) ins
   rwa [sx_lit hk, pc_back] at run

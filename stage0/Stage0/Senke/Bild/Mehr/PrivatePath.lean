@@ -115,13 +115,13 @@ theorem projectSCState_read_accessible {layout : Runner.Beweis.Lay} {before afte
     {i width : Nat} {address : W} {answer : Ans}
     (read : (TSO layout).ans before i (.rd width address) answer after)
     (footprint : Nat → W → Prop)
-    (accessible : ∀ y, fenster address y → ∀ thread, footprint thread y → thread = i)
+    (accessible : ∀ y, byteWindow (readWidth width) address y → ∀ thread, footprint thread y → thread = i)
     (owns : ∀ thread store, store ∈ before.1.buf thread →
       ∀ y, fenster store.1 y → footprint thread y) :
     (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
       (projectSCState footprint after) := by
   obtain ⟨same, extra, result⟩ := read
-  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) :=
+  have agree : GleichAuf (byteWindow (readWidth width) address) (before.1.view i) (mergedView before.1 footprint) :=
     fun y touched => (mergedView_accessible_at before.1 footprint i y owns (accessible y touched)).symm
   exact ⟨congrArg (projectSCState footprint) same, extra,
     result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))⟩
@@ -144,7 +144,7 @@ private theorem privateBuffers_set {footprint : Nat → W → Prop} {state : TSt
     exact owns store (by simpa only [TSt.setBuf, if_pos rfl, ↓reduceIte] using pending)
   · exact before j store (by simpa only [TSt.setBuf, if_neg same] using pending)
 
-private theorem privateBuffers_answer {layout : Runner.Beweis.Lay}
+theorem PrivateBuffers.answer {layout : Runner.Beweis.Lay}
     {before after : (TSO layout).St} {i : Nat} {request : Op} {answer : Ans}
     {footprint : Nat → W → Prop} (buffers : PrivateBuffers footprint before.1)
     (memory : istSpeicherOp request = true) (step : (TSO layout).ans before i request answer after)
@@ -197,7 +197,7 @@ theorem SoloFootprint.project_answer {layout : Runner.Beweis.Lay}
   have owns : schreibtOp request = true → ∀ byte, fussOp request byte →
       footprint i byte ∧ ∀ j, footprint j byte → j = i := fun stores byte touched =>
     ⟨locality.write byte (writing stores byte touched), locality.read byte (reading byte touched)⟩
-  refine ⟨privateBuffers_answer buffers memory step ?_, ?_⟩
+  refine ⟨PrivateBuffers.answer buffers memory step ?_, ?_⟩
   · rintro _ _ rfl byte touched
     exact owns rfl byte touched
   · cases request with
@@ -247,7 +247,7 @@ theorem tso_private_projects {layout : Runner.Beweis.Lay} {footprint : Nat → W
   | priv _ ready ih =>
     exact ⟨ih.1, .schritt ih.2 (.priv ready)⟩
   | ask _ ready memory answer within exclusive ih =>
-    refine ⟨privateBuffers_answer ih.1 memory answer ?_,
+    refine ⟨PrivateBuffers.answer ih.1 memory answer ?_,
       .schritt ih.2 (.ask ready memory
         (project_private_request memory answer footprint within exclusive ih.1.disjoint))⟩
     rintro _ _ rfl address touched
@@ -381,7 +381,7 @@ inductive ProjectedRequest (footprint : Nat → W → Prop) (thread : Nat) : Op 
       (schreibtOp request = true → ∀ y, fussOp request y → ∀ j, footprint j y → j = thread) →
       ProjectedRequest footprint thread request
   | sharedRead {width : Nat} {address : W} :
-      (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
+      (∀ y, byteWindow (readWidth width) address y → ∀ j, ¬ footprint j y) →
       ProjectedRequest footprint thread (.rd width address)
   | sharedCAS {address expected value : W} :
       (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
@@ -395,16 +395,16 @@ theorem ProjectedRequest.projects {layout : Runner.Beweis.Lay} {footprint : Nat 
       (SC layout).ans (projectSCState footprint before) i request response (projectSCState footprint after) := by
   cases accepted with
   | owned memory within exclusive =>
-    refine ⟨privateBuffers_answer buffers memory answered ?_, memory,
+    refine ⟨PrivateBuffers.answer buffers memory answered ?_, memory,
       project_private_request memory answered footprint within exclusive buffers.disjoint⟩
     rintro _ _ rfl address touched
     exact ⟨within address touched, exclusive rfl address touched⟩
   | sharedRead outside =>
-    refine ⟨privateBuffers_answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl, ?_⟩
+    refine ⟨PrivateBuffers.answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl, ?_⟩
     exact projectSCState_read_shared answered footprint outside
       (fun thread store pending y touched => (buffers thread store pending y touched).1)
   | sharedCAS outside =>
-    exact ⟨privateBuffers_answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl,
+    exact ⟨PrivateBuffers.answer buffers rfl answered (by intro _ _ wrong; cases wrong), rfl,
       projectSCState_cas_shared answered footprint outside⟩
 
 /-- Every actual silent TSO prefix with classified memory requests projects

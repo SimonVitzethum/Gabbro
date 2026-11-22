@@ -34,7 +34,7 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
     (hA : ∀ g, A g = (addrs (codeBase + 16 * hd.length) (cs.map (·.1.length))).getD (pos g) 0)
     (hcl : cs.length = fs.length)
     (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun passes P A Yb fs[i] = some cs[i])
-    (hfs : ∀ g, fs[pos g]? = some g) (hops : (hd ++ body).all (fun i => decide (i.o < 256)) = true)
+    (hfs : ∀ g, fs[pos g]? = some g)
     {m : Runner.Mem} (hcode : BytesAt m codeBase ((hd ++ body).flatMap encII)) :
     (∀ g, ∃ top, lowFun passes P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
     (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
@@ -43,7 +43,6 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
   have hSb := hcode.left
   have hBb := hcode.right
   rw [flatMap_enc_len] at hBb
-  rw [List.all_append, Bool.and_eq_true] at hops
   have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun passes P A Yb g = some cs[pos g] ∧ C g = cs[pos g].1 := by
     intro g
     obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp (hfs g)
@@ -51,8 +50,7 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
     refine ⟨hc, ?_, ?_⟩
     · have := hcs (pos g) h1 hc; rwa [h2] at this
     · simp only [hC, List.getElem?_eq_getElem hc, Option.map_some, Option.getD_some]
-  have hseg : ∀ g, BytesAt m (A g) ((C g).flatMap encII) ∧ A g + 16 * (C g).length ≤ fp0 ∧
-      (C g).all (fun i => decide (i.o < 256)) = true := by
+  have hseg : ∀ g, BytesAt m (A g) ((C g).flatMap encII) ∧ A g + 16 * (C g).length ≤ fp0 := by
     intro g
     obtain ⟨hc, _, hCg⟩ := hpos g
     rw [hCg]
@@ -61,16 +59,14 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
     have hAg : A g = codeBase + 16 * hd.length + 16 * ((cs.map (·.1.length)).take (pos g)).sum := by
       rw [hA g, addrs_getD _ _ _ (by simpa using hc)]
     have hBb' := hBb
-    have hops' := hops.2
     have hfp' := hfp
-    rw [hbody, hsp] at hBb' hops' hfp'
+    rw [hbody, hsp] at hBb' hfp'
     simp only [List.flatMap_append, List.length_append] at hBb' hfp'
-    simp only [List.all_append, Bool.and_eq_true] at hops'
     have hb := hBb'.right.left
     rw [flatMap_enc_len, htl] at hb
-    refine ⟨by rw [hAg]; exact hb, by rw [hAg, ← htl]; omega, hops'.2.1⟩
-  refine ⟨fun g => ?_, fun g => ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, (hseg g).2.1⟩,
-    codeAt_bytes hd codeBase hops.1 hSb⟩
+    refine ⟨by rw [hAg]; exact hb, by rw [hAg, ← htl]; omega⟩
+  refine ⟨fun g => ?_, fun g => ⟨codeAt_bytes (C g) (A g) (hseg g).1, (hseg g).2⟩,
+    codeAt_bytes hd codeBase hSb⟩
   obtain ⟨hc, hl, hCg⟩ := hpos g
   exact ⟨cs[pos g].2, by rw [hl, hCg], maxTop_ge hc⟩
 

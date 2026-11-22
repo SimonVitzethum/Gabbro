@@ -16,6 +16,23 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+/-- Normalize the instruction byte without unfolding literals in operands or slot bounds. -/
+theorem aluOpcodeLiterals :
+    (1 : Opcode).val = 1 ∧
+    (2 : Opcode).val = 2 ∧
+    (3 : Opcode).val = 3 ∧
+    (4 : Opcode).val = 4 ∧
+    (5 : Opcode).val = 5 ∧
+    (8 : Opcode).val = 8 ∧
+    (9 : Opcode).val = 9 ∧
+    (10 : Opcode).val = 10 ∧
+    (11 : Opcode).val = 11 ∧
+    (12 : Opcode).val = 12 ∧
+    (13 : Opcode).val = 13 ∧
+    (14 : Opcode).val = 14 ∧
+    (27 : Opcode).val = 27 :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 /-- The word function of every total binary ALU opcode used by limb arithmetic. -/
 def aluFn : Nat → Option (Runner.W → Runner.W → Runner.W)
   | 3 => some (fun a b => a + b)
@@ -46,7 +63,7 @@ theorem aluFn_lt {o : Nat} {f : Runner.W → Runner.W → Runner.W} (h : aluFn o
 inductive AluIns (K d : Nat) : II → Prop
   | const (a : Nat) (k : Int) : d ≤ a → a < K → lit32 k = true → AluIns K d (ci 1 a k 0)
   | mov (a b : Nat) : d ≤ a → a < K → b < K → AluIns K d (ci 2 a b 0)
-  | bin (o a b c : Nat) (f : Runner.W → Runner.W → Runner.W) : aluFn o = some f →
+  | bin (o : Opcode) (a b c : Nat) (f : Runner.W → Runner.W → Runner.W) : aluFn o = some f →
       d ≤ a → a < K → b < K → c < K → AluIns K d (ci o a b c)
 
 /-- The slot valuation with slot `a` replaced. -/
@@ -87,7 +104,7 @@ theorem aluRun_append (a b : List II) (s : Nat → Runner.W) :
 /-- Slots below the destination bound are never written by admitted code. -/
 theorem aluStep_low {K d : Nat} {i : II} (h : AluIns K d i) (s : Nat → Runner.W) {j : Nat}
     (hj : j < d) : aluStep i s j = s j := by
-  cases h <;> (apply slotUpd_other; simp only [ci, Int.toNat_natCast]; omega)
+  cases h <;> (apply slotUpd_other; simp only [ci, II.o, Int.toNat_natCast]; omega)
 
 theorem aluRun_low {K d : Nat} {code : List II} (h : ∀ i ∈ code, AluIns K d i)
     (s : Nat → Runner.W) {j : Nat} (hj : j < d) : aluRun code s j = s j := by
@@ -121,7 +138,7 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
   | const a k h1 h2 hk =>
     have ins' : InsAt m pc 1 (II.f a) (II.f k) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (BitVec.ofInt 64 k) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simp [ci]) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simp [ci, II.o]) ?_, ag, fun j hj => ?_⟩
     · show Run (op 1 ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       simp only [op]
       refine f2_run (t := ⟨pc, fp⟩) ins' ?_
@@ -129,11 +146,12 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       refine f1_run (t := ⟨pc, fp⟩) ins' ?_
       rw [sx_lit hk, sx_nat (by omega)]
       exact run_wr64 hw
-    · rw [rd j hj]; simp only [aluStep, aluVal, ci, Int.toNat_natCast, ite_true]
+    · rw [rd j hj]
+      rfl
   | mov a b h1 h2 h3 =>
     have ins' : InsAt m pc 2 (II.f a) (II.f b) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (s b) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simp [ci]) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simp [ci, II.o]) ?_, ag, fun j hj => ?_⟩
     · show Run (op 2 ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       simp only [op]
       refine f2_run (t := ⟨pc, fp⟩) ins' ?_
@@ -144,11 +162,11 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       refine f1_run (t := ⟨pc, fp⟩) ins' ?_
       rw [sx_nat (by omega)]
       exact run_wr64 hw
-    · rw [rd j hj]; simp only [aluStep, aluVal, ci, Int.toNat_natCast]; rfl
+    · rw [rd j hj]; simp only [aluStep, aluVal, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast]; rfl
   | bin o a b c f hf h1 h2 h3 h4 =>
     have ins' : InsAt m pc o (II.f a) (II.f b) (II.f c) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (f (s b) (s c)) h1 h2 (fun j hj _ => hs j hj)
-    refine ⟨m1, star_ins hc (by simpa [ci] using aluFn_lt hf) ?_, ag, fun j hj => ?_⟩
+    refine ⟨m1, star_ins hc (by simpa [ci, II.o] using aluFn_lt hf) ?_, ag, fun j hj => ?_⟩
     · show Run (op o ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m1
       rw [aluFn_op hf]
       refine run_bin (t := ⟨pc, fp⟩) (m1 := m1) ins' (va := s b) (vb := s c) ?_ ?_ rfl ?_
@@ -156,9 +174,9 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       · simpa only [sx_nat (by omega : c < 2 ^ 31)] using hs c h4
       · simpa only [sx_nat (by omega : a < 2 ^ 31)] using hw
     · rw [rd j hj]
-      have : o ≠ 1 ∧ o ≠ 2 := by
-        constructor <;> (intro h; subst h; simp [aluFn] at hf)
-      simp only [aluStep, aluVal, ci, Int.toNat_natCast, hf, this.1, this.2, ite_false]
+      have distinct : o.val ≠ 1 ∧ o.val ≠ 2 := by
+        constructor <;> (intro same; rw [same] at hf; cases hf)
+      simp only [aluStep, aluVal, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, hf, distinct.1, distinct.2, ite_false]
 
 /-- Admitted straight-line code runs to its end; every frame slot then holds `aluRun`. -/
 theorem alu_run {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {code : List II}

@@ -59,7 +59,7 @@ theorem strLtSpan_ok {n q : Nat} (vs : Wert D (.str n)) (vt : Wert D (.str q))
     have sa0 := StringSlots.low ai ha vals vs.1 sa
     have sb0 := StringSlots.low ai hb vals vt.1 sb
     have zero : vals0 acc = Runner.IR.bool false := by
-      simp [vals0, init, aluRun, aluStep, aluVal, ci, slotUpd, Runner.IR.bool]
+      simp [vals0, init, aluRun, aluStep, aluVal, ci, II.o, aluOpcodeLiterals, slotUpd, Runner.IR.bool]
     have result := stringScan_value bounds.1 bounds.2 ha hb need vs.1 vt.1
       (Nat.le_trans vs.2 (stringCapacity_bound n)) (Nat.le_trans vt.2 (stringCapacity_bound q))
       count vals0 false sa0 sb0 zero
@@ -67,7 +67,7 @@ theorem strLtSpan_ok {n q : Nat} (vs : Wert D (.str n)) (vt : Wert D (.str q))
       (Nat.le_trans vs.2 (Nat.le_trans (stringCapacity_bound n) (Nat.le_max_left _ _)))
       (Nat.le_trans vt.2 (Nat.le_trans (stringCapacity_bound q) (Nat.le_max_right _ _)))
     have move (state : Nat → Runner.W) : aluRun [ci 2 d acc 0] state d = state acc := by
-      simp only [aluRun_cons, aluRun_nil, aluStep, aluVal, ci, Int.toNat_natCast,
+      simp only [aluRun_cons, aluRun_nil, aluStep, aluVal, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast,
         slotUpd_same, Nat.reduceEqDiff, ite_false, ite_true]
     have value : aluRun tail vals d = Runner.IR.bool (strLtW vs vt) := by
       calc

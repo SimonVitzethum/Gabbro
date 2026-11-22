@@ -22,7 +22,7 @@ theorem runtimeArraySliceCarrier_ok [Kern] {D : Deklaration} {layout : Lay D}
     (valid : SignedSliceOk capacity (env.get first).n (env.get last).n)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d base top reserved : Nat} {code : List II} (array : Wert D (.arr τ capacity))
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (backing : ValueAt layout m fp base (.arr τ capacity) array)
     (below : base + valueWords (.arr τ capacity) ≤ d)
     (made : lowE (currentOld := true) layout (reserved := reserved)
@@ -58,7 +58,7 @@ theorem runtimeStringSliceCarrier_ok [Kern] {D : Deklaration} {layout : Lay D}
     (valid : SignedSliceOk source.1.length (env.get first).n (env.get last).n)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d base top reserved : Nat} {code : List II}
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (backing : ValueAt layout m fp base (.str capacity) source)
     (below : base + valueWords (.str capacity) ≤ d)
     (made : lowE (currentOld := true) layout (reserved := reserved)

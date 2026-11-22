@@ -17,25 +17,30 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR
 
-/-- **A read-blind request tree.** -/
+/-- An IR request tree ignores extra read words and faults on a missing answer. -/
 inductive Blind : Res T → Prop
   | next (t : T) : Blind (.next t)
   | fault : Blind .fault
   | unk : Blind .unk
-  | ask {o : Op} {k : Ans → Res T} (hk : ∀ a, Blind (k a))
+  | ask {o : Op} {k : Ans → Res T} (hk : ∀ a, Blind (k a)) (missing : k none = .fault)
       (hrd : ∀ n x, o = .rd n x → (n = 1 ∨ n = 4 ∨ n = 8) ∧ ∀ v w, k (some (v, w)) = k (some (v, 0))) :
       Blind (.ask o k)
 
 /-- Every rest of a read-blind tree is read-blind. -/
 theorem Blind.weiter {o : Op} {k : Ans → Res T} (h : Blind (.ask o k)) (a : Ans) : Blind (k a) := by
   cases h with
-  | ask hk _ => exact hk a
+  | ask hk _ _ => exact hk a
+
+theorem Blind.missing {o : Op} {k : Ans → Res T} (h : Blind (.ask o k)) :
+    k none = .fault := by
+  cases h with
+  | ask _ missing _ => exact missing
 
 /-- A read of a read-blind tree has width one, four or eight and ignores the second word. -/
 theorem Blind.lesen {o : Op} {k : Ans → Res T} (h : Blind (.ask o k)) {n : Nat} {x : W} (e : o = .rd n x) :
     (n = 1 ∨ n = 4 ∨ n = 8) ∧ ∀ v w, k (some (v, w)) = k (some (v, 0)) := by
   cases h with
-  | ask _ hrd => exact hrd n x e
+  | ask _ _ hrd => exact hrd n x e
 
 /-! ## The building blocks of the requests -/
 
@@ -45,15 +50,18 @@ theorem blind_opt {α : Type} (o : Option α) {f : α → Res T} (h : ∀ a, Bli
   | some a => exact h a
 
 /-- A request that is not a read: only its rests matter. -/
-theorem blind_ohneLesen {o : Op} {k : Ans → Res T} (ho : ∀ n x, o ≠ .rd n x) (hk : ∀ a, Blind (k a)) :
+theorem blind_ohneLesen {o : Op} {k : Ans → Res T} (ho : ∀ n x, o ≠ .rd n x)
+    (missing : k none = .fault) (hk : ∀ a, Blind (k a)) :
     Blind (.ask o k) :=
-  .ask hk fun n x e => absurd e (ho n x)
+  .ask hk missing fun n x e => absurd e (ho n x)
 
-theorem blind_wr {a v : W} {k : Ans → Res T} (hk : ∀ r, Blind (k r)) : Blind (.ask (.wr a v) k) :=
-  blind_ohneLesen (fun _ _ hE => by cases hE) hk
+theorem blind_wr {a v : W} {k : Ans → Res T} (missing : k none = .fault)
+    (hk : ∀ r, Blind (k r)) : Blind (.ask (.wr a v) k) :=
+  blind_ohneLesen (fun _ _ hE => by cases hE) missing hk
 
-theorem blind_sys {q : Req} {k : Ans → Res T} (hk : ∀ r, Blind (k r)) : Blind (.ask (.sys q) k) :=
-  blind_ohneLesen (fun _ _ hE => by cases hE) hk
+theorem blind_sys {q : Req} {k : Ans → Res T} (missing : k none = .fault)
+    (hk : ∀ r, Blind (k r)) : Blind (.ask (.sys q) k) :=
+  blind_ohneLesen (fun _ _ hE => by cases hE) missing hk
 
 theorem blind_ite {c : Prop} [Decidable c] {a b : Res T} (ha : Blind a) (hb : Blind b) :
     Blind (if c then a else b) := by
@@ -65,38 +73,38 @@ theorem blind_ite {c : Prop} [Decidable c] {a b : Res T} (ha : Blind a) (hb : Bl
 
 theorem blind_rd8 (a : W) {f : W → Res T} (h : ∀ v, Blind (f v)) : Blind (rd8 a f) := by
   unfold rd8
-  refine .ask (fun r => blind_opt r fun _ => h _) ?_
+  refine .ask (fun r => blind_opt r fun _ => h _) rfl ?_
   intro n x e
   cases e
   exact ⟨Or.inl rfl, fun _ _ => rfl⟩
 
 theorem blind_rd32 (a : W) {f : BitVec 32 → Res T} (h : ∀ v, Blind (f v)) : Blind (rd32 a f) := by
   unfold rd32
-  refine .ask (fun r => blind_opt r fun _ => h _) ?_
+  refine .ask (fun r => blind_opt r fun _ => h _) rfl ?_
   intro n x e
   cases e
   exact ⟨Or.inr (Or.inl rfl), fun _ _ => rfl⟩
 
 theorem blind_rd64 (a : W) {f : W → Res T} (h : ∀ v, Blind (f v)) : Blind (rd64 a f) := by
   unfold rd64
-  refine .ask (fun r => blind_opt r fun _ => h _) ?_
+  refine .ask (fun r => blind_opt r fun _ => h _) rfl ?_
   intro n x e
   cases e
   exact ⟨Or.inr (Or.inr rfl), fun _ _ => rfl⟩
 
 theorem blind_wr64 (a v : W) (s : T) : Blind (wr64 a v s) := by
   unfold wr64
-  exact blind_wr fun r => blind_opt r fun _ => .next s
+  exact blind_wr rfl fun r => blind_opt r fun _ => .next s
 
 theorem blind_cas (a e n : W) {f : W → Res T} (h : ∀ v, Blind (f v)) : Blind (Runner.cas a e n f) := by
   unfold Runner.cas
-  exact blind_ohneLesen (fun _ _ hE => by cases hE) fun r => blind_opt r fun _ => h _
+  exact blind_ohneLesen (fun _ _ hE => by cases hE) rfl fun r => blind_opt r fun _ => h _
 
 /-- A native floating request is not a read. -/
 theorem blind_fpR (kind : NativeFPOp) (a b : W) {f : W → Res T} (h : ∀ v, Blind (f v)) :
     Blind (Runner.fp kind a b f) := by
   unfold Runner.fp
-  exact blind_ohneLesen (fun _ _ hE => by cases hE) fun r => blind_opt r fun _ => h _
+  exact blind_ohneLesen (fun _ _ hE => by cases hE) rfl fun r => blind_opt r fun _ => h _
 
 theorem blind_fromU (format : FPFormat) (v : W) {f : W → Res T} (h : ∀ v, Blind (f v)) :
     Blind (fpFromUInt64 format v f) := by

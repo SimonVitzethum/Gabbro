@@ -59,7 +59,7 @@ theorem blockAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
       have hc3 := codeAt_agreeWIn hW a3 (codeAt_right hq.left.code)
         (codeFar_right (n := cr.length) (k := 1) (by simpa using hq.left.far))
       have hj := hc3 0 (by simp)
-      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
+      simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
       have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp (t := ⟨_, fp⟩) hj))
       have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
         have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this

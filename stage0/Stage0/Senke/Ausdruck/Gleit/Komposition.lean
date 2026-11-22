@@ -62,10 +62,10 @@ theorem slotContinuation {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   exact runSuffix
 
 theorem WordCode.bin {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Nat}
+    {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Opcode}
     {g : Runner.W → Runner.W → Option Runner.W}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a va) (hb : WordCode (L := L) (reserved := reserved) ρ W b vb)
-    (hg : g va vb = some v) (hop : op o = bin g) (ho : o < 256) :
+    (hg : g va vb = some v) (hop : op o = bin g) (ho : o.val < 256) :
     WordCode (L := L) (reserved := reserved) ρ W (fun d => wordL o d (a d) (b (d + 1))) v := by
   intro fp K d c top h hK m pc hp
   exact wordL_ok h hK (fun _ _ he ht => ha he ht) (fun _ _ he ht => hb he ht)

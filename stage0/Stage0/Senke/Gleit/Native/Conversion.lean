@@ -99,24 +99,24 @@ theorem nativeFloatScaleL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
       (BitVec.ofNat 64 i - BitVec.ofInt 64 55) :=
     WordCode.bin (L := L) (reserved := reserved) hi
       (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 55 (by decide))
-      (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+      (g := fun a b => some (a - b)) (o := 4) rfl rfl (by decide)
   have exponent : WordCode (L := L) (reserved := reserved) ρ W
       (fun d => wordK 11 d (wordK 4 d (index d) 55) 52)
       ((BitVec.ofNat 64 i - BitVec.ofInt 64 55) <<< (52 : Nat)) :=
     WordCode.bin (L := L) (reserved := reserved) offset
       (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 52 (by decide))
-      (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
+      (g := fun a b => some (a <<< (b.toNat % 64))) (o := 11) rfl rfl (by decide)
   have polarity : WordCode (L := L) (reserved := reserved) ρ W
       (fun d => wordK 11 d (sign d) 63) (Runner.IR.bool s <<< (63 : Nat)) :=
     WordCode.bin (L := L) (reserved := reserved) hs
       (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 63 (by decide))
-      (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
+      (g := fun a b => some (a <<< (b.toNat % 64))) (o := 11) rfl rfl (by decide)
   have combined : WordCode (L := L) (reserved := reserved) ρ W
       (fun d => nativeFloatScaleL d sign index)
       (((BitVec.ofNat 64 i - BitVec.ofInt 64 55) <<< (52 : Nat)) |||
         (Runner.IR.bool s <<< (63 : Nat))) :=
     WordCode.bin (L := L) (reserved := reserved) exponent polarity
-      (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
+      (g := fun a b => some (a ||| b)) (o := 9) rfl rfl (by decide)
   intro fp K d c top emitted fits m pc pre
   have run := combined (fp := fp) (K := K) (d := d) (c := c) (top := top)
     emitted fits m pc pre

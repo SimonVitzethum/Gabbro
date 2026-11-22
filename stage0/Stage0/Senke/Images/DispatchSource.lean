@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Images.Correctness
+public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
 import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Bild.RunnerFile
 import Lean.Elab.Tactic.Omega
@@ -126,7 +126,7 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
   have declaredThread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨fits, setup, typed⟩ := output.loaded_root_frame loaded declared
   obtain ⟨frame, words⟩ := image_stack_frame_preserved declaredThread preserved fits setup typed
-  refine Or.inr ⟨root, ?_, Or.inl head, code, frame, ?_,
+  refine Or.inr ⟨root, ?_, Or.inl head, code, frame, fits, ?_,
     ⟨⟨pc, fp⟩, ?_, Or.inl rfl⟩⟩
   · rw [unit.starts]
     exact declared
@@ -136,18 +136,18 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
   · refine ⟨rfl, 10 * output.starts.length + startLen + startLen * index, ?_, ?_, rfl⟩
     all_goals simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
 
-/-- Starting from the actual loader, a root that has not yet been
+/-- Starting from the loaded IR, a root that has not yet been
     allocated sees its preserved argument bytes in its own TSO view.
     The explicit per-step classification connects writes to their
     footprint, including through interleavings of earlier roots. -/
-theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve options}
-    {E : Einheit (declOf output.compiled.unit)} {mappedAt : Cfg imageTSO Runner.X86.X}
-    (mapped : MappedImage output mappedAt) (unit : ImageModelUnit output E)
+theorem LoadedIRImage.future_root_phase [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {initial : imageTSO.St}
+    (loaded : LoadedIRImage output initial) (unit : ImageModelUnit output E)
     {current : Cfg imageTSO (Res T)} {history : List Ev} {count index : Nat}
-    (path : ProcessPrefix imageTSO actI ⟨mappedAt.ms, [some t4]⟩ history count current)
+    (path : ProcessPrefix imageTSO actI (output.irEntry initial) history count current)
     (unused : current.ths.length ≤ index + 1)
     (classify : ∀ {before after : Cfg imageTSO (Res T)} {earlier events : List Ev} {steps : Nat},
-      ProcessPrefix imageTSO actI ⟨mappedAt.ms, [some t4]⟩ earlier steps before →
+      ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps before →
       ProcessStep imageTSO actI before events after → after.ths.length ≤ index + 1 →
       GleichAuf (imageStackFootprint output (index + 1)) before.ms.1.m after.ms.1.m)
     {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
@@ -159,8 +159,7 @@ theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve optio
     let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index))
     let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
     ImageRootPhase output E history (current.ms.1.view (index + 1)) (index + 1) (.next ⟨pc, fp⟩) state := by
-  have empty : ImageIdleBuffers (⟨mappedAt.ms, [some t4]⟩ : Cfg imageTSO (Res T)) :=
-    fun i _ => mapped.emptyBuffers i
+  have empty : ImageIdleBuffers (output.irEntry initial) := fun i _ => loaded.emptyBuffers i
   have buffers := empty.follow path
   have view : current.ms.1.view (index + 1) = current.ms.1.m := by
     simp only [TSt.view, buffers _ unused, List.foldl_nil]
@@ -169,7 +168,7 @@ theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve optio
   have head := (fadenInvX_erreichbar reached).schlaeft _ dormant
   have preserved := image_future_frame_of_prefix (output := output) (final := current) path unused classify
   rw [view]
-  exact output.fresh_root_phase unit mapped.bytes declared preserved code head
+  exact output.fresh_root_phase unit loaded.payload declared preserved code head
 
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
@@ -196,20 +195,19 @@ theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve op
   | zero => exact seg5 (by rw [address]; exact suffix) base
   | succ i => trivial
 
-/-- Every continuing step of the mapped loader establishes the precise
-    entry stub, including its typed arguments at the serialized frame
-    offsets. It takes no step of the source program. -/
-theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve options}
-    {E : Einheit (declOf output.compiled.unit)} {machine : Cfg imageTSO Runner.X86.X}
-    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+/-- The actual serialized IR establishes the initial refinement state
+    with its declared store, typed arguments, and exact entry address. -/
+theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {memory : imageTSO.St}
+    (loaded : LoadedIRImage output memory) (unit : ImageModelUnit output E)
     (O : Orakel (declOf output.compiled.unit))
-    {after : Cfg imageTSO (Res T)} {events : List Ev}
-    (step : ProcessStep imageTSO actI ⟨machine.ms, [some t4]⟩ events after) :
-    events = [] ∧ ImageSlotsMatch output E O [] after (imageSourceStart E) ∧
-      ImageRuntimeMatches output E O [] after (imageSourceStart E) := by
-  obtain ⟨quiet, rfl⟩ := mapped.dispatch_step step
+    (footprint : Nat → W → Prop := imageStackFootprint output) :
+    ImageSlotsMatch output E O [] (output.irEntry memory) (imageSourceStart E) ∧
+      ImageForeignTrace output [] (imageSourceStart E) ∧
+      ImageRuntimeMatchesAt footprint output E O [] (output.irEntry memory)
+        (imageSourceStart E) := by
   obtain ⟨_, _, _, bytes, packed, _, _, _, stackMemory⟩ :=
-    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll mapped.bytes
+    bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded.payload
   obtain ⟨_, _, _, _, _, _, entryWords, _⟩ :=
     bild_lage output.emission output.funktionen_voll
       (fun base bound => layU_in output.compiled.unit output.tor base bound)
@@ -220,35 +218,53 @@ theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve optio
     startStackBytes_frame packed output.image.fp0 stackMemory 0 (Nat.zero_lt_succ _)
   simp only [List.getElem_cons_zero, Nat.mul_zero, Nat.add_zero, entryWords] at entryFrame entryLoaded
   have initialFrame := bild_initialized_frames_u output.initialValid output.emission
-    output.funktionen_voll mapped.bytes 0 (Nat.zero_le _)
-  have view : machine.ms.1.view 0 = machine.ms.1.m := by
-    simp only [TSt.view, mapped.emptyBuffers 0, List.foldl_nil]
-  have entered : ImageRootPhase output E [] (machine.ms.1.view 0) 0
+    output.funktionen_voll loaded.payload 0 (Nat.zero_le _)
+  have view : memory.1.view 0 = memory.1.m := by
+    simp only [TSt.view, loaded.emptyBuffers 0, List.foldl_nil]
+  have entered : ImageRootPhase output E [] (memory.1.view 0) 0
       (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩) (imageSourceStart E) := by
     rw [view]
     refine Or.inr ⟨⟨output.compiled.main, output.args⟩, by rw [unit.starts]; rfl,
-      Or.inl rfl, output.loaded_code mapped.bytes, initialFrame, ?_, ?_⟩
+      Or.inl rfl, output.loaded_code loaded.payload, initialFrame, ?_, ?_, ?_⟩
+    · unfold startFrameBytes at entryFrame
+      split at entryFrame
+      · assumption
+      · cases entryFrame
     · simpa only [Nat.mul_zero, Nat.add_zero] using startFrameBytes_read entryFrame entryLoaded
     · refine ⟨⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩, ?_, Or.inl rfl⟩
       refine ⟨rfl, 0, Nat.zero_le _, ?_, rfl⟩
       simp only [ite_true, Nat.zero_add, startLen]
       omega
-  refine ⟨quiet, ⟨?_, ?_⟩, ?_⟩
+  refine ⟨⟨?_, ?_⟩, .nil, ?_⟩
   · intro i
-    cases i <;> simp [imageSourceStart, FadenStart]
+    cases i <;> simp [Emitted.irEntry, imageSourceStart, FadenStart]
   · intro i retired
-    cases i <;> simp at retired
-  · refine ⟨imageStackFootprint output, [none], privateBuffers_empty mapped.emptyBuffers, rfl,
+    cases i <;> simp [Emitted.irEntry] at retired
+  · refine ⟨[none], privateBuffers_empty loaded.emptyBuffers, rfl,
       Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp
-    · change WeltAt (mergedView machine.ms.1 (imageStackFootprint output)) _ ((speicherR E.sp0).welt [])
-      rw [mergedView_empty _ _ mapped.emptyBuffers, unit.memory]
-      exact (output.loaded_initial_world mapped.bytes).withIdle
+    · change WeltAt (mergedView memory.1 footprint) _ ((speicherR E.sp0).welt [])
+      rw [mergedView_empty _ _ loaded.emptyBuffers, unit.memory]
+      exact (output.loaded_initial_world loaded.payload).withIdle
     · intro i
       cases i with
       | zero => exact Or.inr ⟨_, rfl, rfl, entered⟩
       | succ i => exact Or.inl rfl
+
+/-- The mapped loader reaches the same initial IR state. -/
+theorem MappedImage.dispatched_source [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {machine : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+    (O : Orakel (declOf output.compiled.unit))
+    {after : Cfg imageTSO (Res T)} {events : List Ev}
+    (step : ProcessStep imageTSO actI ⟨machine.ms, [some t4]⟩ events after) :
+    events = [] ∧ ImageSlotsMatch output E O [] after (imageSourceStart E) ∧
+      ImageRuntimeMatches output E O [] after (imageSourceStart E) := by
+  obtain ⟨quiet, rfl⟩ := mapped.dispatch_step step
+  obtain ⟨slots, _, runtime⟩ :=
+    LoadedIRImage.source_start ⟨mapped.bytes, mapped.emptyBuffers⟩ unit O
+  exact ⟨quiet, slots, imageStackFootprint output, runtime⟩
 
 /-- The loader part of the runner refinement is concrete: every
     matched IR prefix through dispatch keeps the declared initial GX

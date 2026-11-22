@@ -86,39 +86,135 @@ private theorem SCSchritt.slots {layout : Runner.Beweis.Lay} {i : Nat}
     after.ths.length = before.ths.length := by
   cases step <;> exact List.length_set
 
-/-- Every silent one-thread execution that stays within the length of
-    a memory reference is a prefix of that same reference. The endpoint
-    and its remaining memory operations are fixed by the executable
-    instruction tree, regardless of the unused read answer word. -/
+private theorem SCMemoryPrefix.consume_to_boundary {layout : Runner.Beweis.Lay}
+    {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
+    (reference : SCMemoryPrefix layout before available expected)
+    (actual : ProcessPrefix (SC layout) actI before [] taken after)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths)
+    (bound : taken ≤ available ∨ ∀ next, ¬ ProcessStep (SC layout) actI expected [] next) :
+    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected := by
+  suffices consume : ∀ {before after : Cfg (SC layout) (Res T)} {events taken},
+      ProcessPrefix (SC layout) actI before events taken after →
+      events = [] → before.ths.length = 1 → AlleBlind before.ths →
+      ∀ {expected available}, SCMemoryPrefix layout before available expected →
+        (taken ≤ available ∨ ∀ next, ¬ ProcessStep (SC layout) actI expected [] next) →
+        taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected from
+    consume actual rfl one blind reference bound
+  intro initial final events taken run
+  induction run with
+  | nil =>
+    intro _ _ _ target available reference _
+    exact ⟨Nat.zero_le _, by simpa only [Nat.sub_zero] using reference⟩
+  | cons step _ ih =>
+    intro quiet one blind target available reference bound
+    obtain ⟨first, remaining⟩ := List.append_eq_nil_iff.mp quiet
+    cases reference with
+    | nil =>
+      rcases bound with within | blocked
+      · omega
+      · exact (blocked _ (first ▸ step)).elim
+    | cons head tail =>
+      have same := sc_memory_step_exact one blind head step first
+      cases same
+      have room := bound.imp Nat.le_of_succ_le_succ id
+      obtain ⟨within, rest⟩ := ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
+      exact ⟨Nat.succ_le_succ within, by simpa only [Nat.succ_sub_succ_eq_sub] using rest⟩
+
+/-- A silent one-thread execution within the reference length is a
+    prefix of that reference, with a uniquely determined remainder. -/
 theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
     {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
     (reference : SCMemoryPrefix layout before available expected)
     (actual : ProcessPrefix (SC layout) actI before [] taken after)
     (one : before.ths.length = 1) (blind : AlleBlind before.ths)
     (within : taken ≤ available) :
-    SCMemoryPrefix layout after (available - taken) expected := by
-  suffices consume : ∀ {before after : Cfg (SC layout) (Res T)} {events taken},
-      ProcessPrefix (SC layout) actI before events taken after →
-      events = [] → before.ths.length = 1 → AlleBlind before.ths →
-      ∀ {expected available}, SCMemoryPrefix layout before available expected → taken ≤ available →
-        SCMemoryPrefix layout after (available - taken) expected from
-    consume actual rfl one blind reference within
-  intro initial final events taken run
-  induction run with
-  | nil =>
-    intro _ _ _ target available reference _
-    simpa only [Nat.sub_zero] using reference
-  | cons step _ ih =>
-    intro quiet one blind target available reference within
-    cases reference with
-    | nil => omega
-    | cons head tail =>
-      obtain ⟨first, remaining⟩ := List.append_eq_nil_iff.mp quiet
-      have same := sc_memory_step_exact one blind head step first
-      cases same
-      have room : _ ≤ _ := Nat.le_of_succ_le_succ within
-      simpa only [Nat.succ_sub_succ_eq_sub] using
-        ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
+    SCMemoryPrefix layout after (available - taken) expected :=
+  (reference.consume_to_boundary actual one blind (.inl within)).2
+
+private theorem sc_waiting_host_no_silent {layout : Runner.Beweis.Lay}
+    {before after : Cfg (SC layout) (Res T)} {events : List Ev}
+    {request : Req} {resume : Ans → Res T}
+    (waiting : before.ths = [some (.ask (.sys request) resume)])
+    (step : ProcessStep (SC layout) actI before events after) (quiet : events = []) : False := by
+  have one : before.ths.length = 1 := by simp only [waiting, List.length_cons, List.length_nil]
+  have issuer {i : Nat} {r : Res T} (ready : before.ths[i]? = some (some r)) :
+      r = .ask (.sys request) resume := by
+    rw [onlySlot one ready, waiting] at ready
+    exact (Option.some.inj (Option.some.inj ready)).symm
+  cases step with
+  | tau impossible => cases impossible
+  | priv ready moved =>
+    have ready := issuer ready
+    cases ready
+    cases moved
+  | ask ready asked _ _ _ =>
+    have ready := issuer ready
+    cases ready
+    cases asked
+    cases quiet
+  | exit | cloneNo | clone => cases quiet
+
+/-- A generated memory segment ends at its host request. Every silent
+    one-thread execution is within the proved segment, including when
+    the scheduler has already reached the host request and cannot
+    advance it silently. -/
+theorem SCMemoryPrefix.consume_until_host {layout : Runner.Beweis.Lay}
+    {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
+    {request : Req} {resume : Ans → Res T}
+    (reference : SCMemoryPrefix layout before available expected)
+    (waiting : expected.ths = [some (.ask (.sys request) resume)])
+    (actual : ProcessPrefix (SC layout) actI before [] taken after)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths) :
+    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected :=
+  reference.consume_to_boundary actual one blind (.inr fun _ step => sc_waiting_host_no_silent waiting step rfl)
+
+private theorem SCSchritt.no_host_request {layout : Runner.Beweis.Lay}
+    {before after : Cfg (SC layout) (Res T)} {i : Nat}
+    (step : SCSchritt layout i before after) {control : Res T} {request : Req}
+    {resume : Ans → Res (Res T)} (position : before.ths[i]? = some (some control))
+    (asks : actI control = .ask (.sys request) resume) : False := by
+  cases step with
+  | priv ready =>
+    rw [ready] at position
+    have same := (Option.some.inj (Option.some.inj position)).symm
+    subst control
+    cases asks
+  | ask ready memory =>
+    rw [ready] at position
+    have same := (Option.some.inj (Option.some.inj position)).symm
+    subst control
+    have operation := (Res.ask.inj asks).1
+    rw [operation] at memory
+    cases memory
+
+/-- An observed event from the only running slot occurs at the end of
+    its memory reference. The actual observation can use any memory
+    system with the same thread controls at that boundary. -/
+theorem SCMemoryPrefix.at_observation {layout : Runner.Beweis.Lay} {M : MemSys}
+    {start expected : Cfg (SC layout) (Res T)} {before after : Cfg M (Res T)}
+    {remaining : Nat} {events : List Ev}
+    (reference : SCMemoryPrefix layout start remaining expected)
+    (threads : start.ths = before.ths) (one : before.ths.length = 1)
+    (observed : ProcessStep M actI before events after) (visible : events ≠ []) :
+    remaining = 0 ∧ start = expected := by
+  cases reference with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons first _ =>
+    exfalso
+    have impossible {i : Nat} {control : Res T} {request : Req} {resume : Ans → Res (Res T)}
+        (ready : before.ths[i]? = some (some control))
+        (asks : actI control = .ask (.sys request) resume) : False := by
+      have index := onlySlot one ready
+      subst i
+      exact first.no_host_request (threads.symm ▸ ready) asks
+    cases observed with
+    | tau | priv => exact visible rfl
+    | @ask _ _ _ operation _ _ _ ready asked _ _ _ =>
+      cases operation with
+      | rd | wr | cas | fp => exact visible rfl
+      | sys => exact impossible ready asked
+    | exit ready asked _ | cloneNo ready asked _ _ _ | clone ready asked _ _ _ _ =>
+      exact impossible ready asked
 
 private theorem actI_ask_no_terminal {control : Res T}
     {request : Op} {resume : Ans → Res (Res T)} {reply : Ans} {ending : Ende}
@@ -153,6 +249,42 @@ private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
   | askStop _ asked _ _ stopped => exact (actI_ask_no_terminal asked stopped).elim
   | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
 
+private theorem sc_waiting_host_empty_terminal {layout : Runner.Beweis.Lay}
+    {state : Cfg (SC layout) (Res T)} {request : Req} {resume : Ans → Res T}
+    {ending : Ende} {events : List Ev}
+    (waiting : state.ths = [some (.ask (.sys request) resume)])
+    (step : Tr (SC layout) actI state events ending 1) (quiet : events = []) : ending = .lauf := by
+  cases step with
+  | tau impossible _ => cases impossible
+  | priv _ _ tail | ask _ _ _ _ _ tail => cases tail; rfl
+  | stop ready stopped =>
+    have one : state.ths.length = 1 := by simp only [waiting, List.length_cons, List.length_nil]
+    rw [onlySlot one ready, waiting] at ready
+    have control := (Option.some.inj (Option.some.inj ready)).symm
+    cases control
+    cases stopped
+  | askStop _ asks _ _ stopped => exact (actI_ask_no_terminal asks stopped).elim
+  | exit | exitGroup | cloneNo | cloneNoStop | clone => cases quiet
+
+/-- A one-thread memory reference ending at a host request excludes
+    every terminal observation before the host is reached. -/
+theorem SCMemoryPrefix.no_silent_stop_until_host {layout : Runner.Beweis.Lay}
+    {before expected : Cfg (SC layout) (Res T)} {available taken : Nat}
+    {request : Req} {resume : Ans → Res T} {ending : Ende}
+    (reference : SCMemoryPrefix layout before available expected)
+    (waiting : expected.ths = [some (.ask (.sys request) resume)])
+    (actual : Tr (SC layout) actI before [] ending taken)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths) : ending = .lauf := by
+  by_contra stopped
+  obtain ⟨_, earlier, last, steps, path, terminal, events, _⟩ := actual.split_stop stopped
+  obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
+  obtain ⟨_, remaining⟩ := reference.consume_until_host waiting path one blind
+  generalize available - steps = budget at remaining
+  cases remaining with
+  | nil => exact stopped (sc_waiting_host_empty_terminal waiting terminal rfl)
+  | cons next _ =>
+    exact stopped (sc_memory_step_continues next (path.silent_slots rfl |>.trans one) terminal rfl)
+
 /-- An actual silent SC run cannot stop while its certified memory
     reference has a next step. This excludes both machine faults and
     unknown instructions before the reference boundary. -/
@@ -183,42 +315,6 @@ theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
   induction a with
   | nil => exact b
   | cons step _ ih => exact .cons step (ih b)
-
-/-- The sequential correctness proof supplies a memory reference for
-    the SC runner, one decoded request at a time. -/
-theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
-    {control : Res T} {before after : Mem} {next : T}
-    (ran : RunM control before next after) (table : TabInv layout before)
-    (blind : Blind control) :
-    ∃ (count : Nat) (final : TabInv layout after),
-      SCMemoryPrefix layout ⟨⟨before, table⟩, [some control]⟩ count ⟨⟨after, final⟩, [some (.next next)]⟩ := by
-  induction ran with
-  | next => exact ⟨0, table, .nil _⟩
-  | @ask request resume before middle after reply next answered _ ih =>
-    have kind : istSpeicherOp request = true := by
-      cases request <;> first | rfl | cases answered
-    have widths (n : Nat) (address : W) (read : request = .rd n address) :
-        n = 1 ∨ n = 4 ∨ n = 8 := (blind.lesen read).1
-    obtain ⟨preserved, answer⟩ := memAns_sc (L := layout) (s := ⟨before, table⟩) (i := 0) widths answered
-    obtain ⟨count, final, reference⟩ := ih preserved (blind.weiter reply)
-    have first : SCSchritt layout 0 ⟨⟨before, table⟩, [some (.ask request resume)]⟩
-        ⟨⟨middle, preserved⟩, [some (resume reply)]⟩ := .ask rfl kind answer
-    exact ⟨count + 1, final, .cons first reference⟩
-
-/-- A sequence of whole proved memory instructions gives the counted
-    reference used to cover all actual one-thread silent prefixes. -/
-theorem StarM.sc_reference {layout : Runner.Beweis.Lay}
-    {initial final : T} {before after : Mem} {instructions : Nat}
-    (ran : StarM instructions initial before final after) (table : TabInv layout before) :
-    ∃ (count : Nat) (preserved : TabInv layout after),
-      SCMemoryPrefix layout ⟨⟨before, table⟩, [some (.next initial)]⟩ count
-        ⟨⟨after, preserved⟩, [some (.next final)]⟩ := by
-  induction ran with
-  | refl => exact ⟨0, table, .nil _⟩
-  | next instruction _ ih =>
-    obtain ⟨first, middleTable, requests⟩ := RunM.sc_reference instruction table (blind_step _)
-    obtain ⟨rest, finalTable, tail⟩ := ih middleTable
-    exact ⟨rest + first + 1, finalTable, .cons (.priv rfl) (requests.trans tail)⟩
 
 /-- Before issuing a syscall or creating another thread, a terminal IR
     observation is the same terminal control in its SC projection. -/

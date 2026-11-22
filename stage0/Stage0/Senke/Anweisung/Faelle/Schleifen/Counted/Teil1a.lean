@@ -120,7 +120,7 @@ theorem sys_counted_frame {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (
   have hF2 := hF1.agree a2
   -- the request
   have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
   have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (nr : Int)) := by
     simp only [m2]

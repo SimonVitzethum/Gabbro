@@ -22,15 +22,17 @@ theorem slotValueC_top {t : D.Tab} {f : D.Feld t} {d : Nat} {index : List II × 
   omega
 
 /-- A complete cell read: the whole `ValueAt` span of the addressed cell is produced. -/
-theorem slotValueC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {σ : World D} {idx : Nat} {d K reserved top : Nat}
+theorem slotValueC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {value : Wert D (D.typ t f)}
+    {idx : Nat} {d K reserved top : Nat}
     {code : List II} {index : List II × Nat} {m : Runner.Mem} {pc fp : Runner.W} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     (made : slotValueC L t f d index = some (code, top)) (room : top ≤ K)
     (cell : (idx : Int) < L.count t) (layout : LayIn L)
     (ih : ∀ m pc, Pre L m pc fp K (d + valueWords (D.typ t f)) index.1 ρ W reserved →
       Ok m pc fp K (d + valueWords (D.typ t f)) index.1 (· = BitVec.ofNat 64 idx))
-    (world : ∀ m, W m → WeltAt m L σ) (pre : Pre L m pc fp K d code ρ W reserved) :
-    ValueOk L m pc fp K d code (D.typ t f) (σ.slots t idx f) := by
+    (source : ∀ m, W m → ValueAt L m (BitVec.ofNat 64 (L.elem t f idx)) 0 (D.typ t f) value)
+    (pre : Pre L m pc fp K d code ρ W reserved) :
+    ValueOk L m pc fp K d code (D.typ t f) value := by
   have tops := slotValueC_top made
   have hin := layout.1 t f idx cell
   have top31 := layout.2.2
@@ -39,7 +41,7 @@ theorem slotValueC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {σ : World D} {idx 
   obtain ⟨⟨ca, ta⟩, hca, rfl, rfl⟩ := made
   exact pointerWorldValue_ok (a := BitVec.ofNat 64 (L.elem t f idx)) (by omega) (by omega) pre
     (fun m pc hp => cellAddressC_ok hca (by have := cellAddressC_top hca; omega) ih hp)
-    (fun m hm => (world m hm).1 t f idx cell)
+    source
 
 theorem slotStoreC_top {t : D.Tab} {f : D.Feld t} {d : Nat} {child index : List II × Nat}
     {code : List II} {top : Nat} (made : slotStoreC L t f d child index = some (code, top)) :

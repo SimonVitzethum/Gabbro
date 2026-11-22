@@ -68,7 +68,7 @@ theorem resizeIntegerL_top {lo hi lo' hi' : Int} {d top : Nat}
     omega
 
 /-- The code of a binary operation stops above `d` once its first operand does. -/
-theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
+theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d : Nat} {o : Opcode}
     {c : List II} {top : Nat} (ht : ∀ c t, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (c, t) → d < t)
     (h : (do let ca ← lowE (currentOld := currentOld) L (reserved := reserved) a d; let cb ← lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) : d < top := by
   simp only [bind, Option.bind_eq_some_iff] at h
@@ -124,7 +124,7 @@ theorem reachL_top {d top : Nat} {L : Lay D} {t : D.Tab} {f : D.Feld t} {c : Lis
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
 
-theorem wordL_top {o d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+theorem wordL_top {d top : Nat} {o : Opcode} {a b : Option (List II × Nat)} {c : List II}
     (h : wordL o d a b = some (c, top)) : d < top := by
   simp only [wordL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨ca, _, cb, _, h⟩ := h

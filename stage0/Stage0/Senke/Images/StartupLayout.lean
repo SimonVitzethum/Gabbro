@@ -42,8 +42,6 @@ structure BildLage (passes : Nat) (P : Programm D) (fs : List D.Fn) (pos : D.Fn 
   hst : Yb.st = 8 * Ks
   hsync : LaySync Yb
   hysye : Yb.sye ≤ fp0 + 8 * K
-  hops : (spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).all
-    (fun i => decide (i.o < 256)) = true
 
 omit [Kern] in
 theorem BildLage.head (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
@@ -118,7 +116,7 @@ theorem BildLage.code (h : BildLage passes P fs pos main roots K Ks Yb A cs body
   intro C
   have hl := h.head
   obtain ⟨c1, c2, c3⟩ := bild_code (C := C) (fp0 := fp0) (fun _ => rfl) h.hbody (by rw [hl]; exact h.hfp)
-    (by rw [hl]; exact h.haddr) h.hlen h.hlow h.hpos h.hops hm.left
+    (by rw [hl]; exact h.haddr) h.hlen h.hlow h.hpos hm.left
   have hz := hm.right
   rw [flatMap_enc_len, List.length_append, hl] at hz
   rw [show codeBase + 16 * (headLen roots.length + body.length) = fp0 from h.hfp.symm] at hz

@@ -15,14 +15,14 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Seq
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem aluStep_cn {o a b c : Nat} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
-    (ho1 : o ≠ 1) (ho2 : o ≠ 2) (s : Nat → Runner.W) :
+theorem aluStep_cn {a b c : Nat} {o : Opcode} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
+    (ho1 : o.val ≠ 1) (ho2 : o.val ≠ 2) (s : Nat → Runner.W) :
     aluStep (cn o a b c) s = slotUpd s a (f (s b) (s c)) := by
-  simp only [aluStep, aluVal, cn, ci, Int.toNat_natCast, hf, ho1, ho2, ite_false]
+  simp only [aluStep, aluVal, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, hf, ho1, ho2, ite_false]
 
 theorem aluStep_const (a : Nat) (k : Int) (s : Nat → Runner.W) :
     aluStep (ci 1 a k 0) s = slotUpd s a (BitVec.ofInt 64 k) := by
-  simp only [aluStep, aluVal, ci, Int.toNat_natCast, ite_true]
+  simp only [aluStep, aluVal, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true]
 
 theorem aluStep_xor (a b c : Nat) (s : Nat → Runner.W) :
     aluStep (cn 10 a b c) s = slotUpd s a (s b ^^^ s c) := aluStep_cn (f := fun a b => a ^^^ b) rfl (by decide) (by decide) s
@@ -63,11 +63,11 @@ theorem selP_run (src M T a j : Nat) (h1 : T ≠ a + j) (h3 : T ≠ M) (s : Nat 
 
 /-! ## Bit shift with carry from a neighbour -/
 
-@[simp] theorem bitP_length (oM oX src Rr O W T T2 a j : Nat) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
+@[simp] theorem bitP_length (oM oX : Opcode) (src Rr O W T T2 a j : Nat) : (bitP oM oX src Rr O W T T2 a j).length = 4 := by rfl
 
-theorem bitP_run (oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
-    (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (hM1 : oM ≠ 1) (hM2 : oM ≠ 2)
-    (hX1 : oX ≠ 1) (hX2 : oX ≠ 2) (src Rr O W T T2 a j : Nat)
+theorem bitP_run (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
+    (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (hM1 : oM.val ≠ 1) (hM2 : oM.val ≠ 2)
+    (hX1 : oX.val ≠ 1) (hX2 : oX.val ≠ 2) (src Rr O W T T2 a j : Nat)
     (hT : T ≠ a + j) (hT2 : T2 ≠ a + j) (hTT : T ≠ T2) (hs : T ≠ src ∧ T2 ≠ src)
     (hr : T ≠ Rr ∧ T2 ≠ Rr) (ho : T ≠ O ∧ T2 ≠ O) (hw : T ≠ W ∧ T2 ≠ W) (s : Nat → Runner.W) :
     aluRun (bitP oM oX src Rr O W T T2 a j) s (a + j) =

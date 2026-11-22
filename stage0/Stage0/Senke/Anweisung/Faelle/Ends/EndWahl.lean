@@ -50,7 +50,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
   have hu1 := hu.agree a1 hp.frame (by omega)
   have hk1 := hk.agree a1 hp.frame (by omega)
   have hbrz := h1.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
+  simp only [ci, II.o, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
   have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
     (by omega)
   have hd0 : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) := sx_nat (by omega)
@@ -60,8 +60,8 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     have hw1 : w = 1 := by
       simp only [Enc] at hen
       rw [hen, if_pos hb]
-    have sb := star_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
-      (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact hw) (by rw [hw1]; decide))
+    have sb := star_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci, II.o])
+      (by simp only [ci, II.o]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact hw) (by rw [hw1]; decide))
     have ih := ihT (ex := exPlus ex ce.length) ct
       tt hct (by omega) (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hu1 hk1 hWa1 hpr
     refine Ret.prefix (by omega) (s1.trans sb) (a1.mono (by omega)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Ret.cast ih rfl ?_ ?_)

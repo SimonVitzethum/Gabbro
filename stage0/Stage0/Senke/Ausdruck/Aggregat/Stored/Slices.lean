@@ -138,7 +138,7 @@ theorem lowE_slice_descriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
     (sized : (capacity : Int) < 2 ^ 63)
     {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc fp : Runner.W} {K d base top reserved : Nat} {code : List II}
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (backing : ValueAt layout m fp base (.arr τ capacity) array) (below : base + valueWords (.arr τ capacity) ≤ d)
     (made : lowE (currentOld := true) layout (reserved := reserved) (sliceDescriptorExpr begin finish bounds) d =
       some (code, top)) (fits : top ≤ K) (pre : Pre layout m pc fp K d code env W reserved) :
@@ -174,6 +174,34 @@ theorem lowE_slice_descriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
   have preserved := backing.agree_low confined pre.frame.room below inFrame
   have descriptor : WordsAt after fp d (sliceDescriptorWords view) := encoding ▸ stored.2
   exact ⟨ordered, after, run, confined, preserved.decode_slice_descriptor view capacityFits descriptor⟩
+
+/-- Updating an array into a fresh frame location preserves every
+    previously formed slice of the old array. Slice creation shares the
+    original storage. The ordinary array update produces the new value
+    in its own frame range, including for aggregate elements. -/
+theorem lowE_arrayUpdate_retainsSlices [Kern] {D : Deklaration} {layout : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {capacity : Nat}
+    (array : Expr D Γ Λ (.arr τ capacity)) (index : Expr D Γ Λ (.index capacity))
+    (replacement : Expr D Γ Λ τ)
+    {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K destination backing top reserved : Nat} {code : List II}
+    (worldAt : ∀ memory, W memory → WeltAt memory layout world requireWrites) (layoutIn : LayIn layout)
+    (saved : ValueAt layout m fp backing (.arr τ capacity) (eval world array world env))
+    (disjoint : backing + valueWords (.arr τ capacity) ≤ destination)
+    (lowered : lowE (currentOld := true) layout (reserved := reserved) (.arrSet array index replacement)
+      destination = some (code, top)) (fits : top ≤ K)
+    (pre : Pre layout m pc fp K destination code env W reserved) :
+    Executes m pc fp K destination code (fun after =>
+      ValueAt layout after fp destination (.arr τ capacity) (eval world (.arrSet array index replacement) world env) ∧
+      ∀ view : ArraySliceView capacity,
+        SliceAt (τ := τ) layout after fp (backing + view.offset * valueWords τ)
+          (view.value (eval world array world env))) := by
+  let operation := Expr.arrSet array index replacement
+  have within : destination ≤ K := (lowE_top operation destination code top lowered).le.trans fits
+  obtain ⟨after, run, changed, updated⟩ :=
+    lowE_ok (same := fun _ => rfl) world world worldAt layoutIn operation destination code top lowered fits m pc env pre
+  have original := saved.agree_low changed pre.frame.room disjoint within
+  exact ⟨after, run, changed, updated, fun view => original.slice_view view⟩
 
 /-- The representation of an existing slice can be narrowed by moving
     the base. All observed bytes and their layout obligations are inherited. -/
@@ -264,7 +292,7 @@ theorem lowE_runtimeSliceLength_ok [Kern] {D : Deklaration} {L : Lay D}
     (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
     {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
-    (memory : ∀ m, W m → WeltAt m L world) (layout : LayIn L)
+    (memory : ∀ m, W m → WeltAt m L world requireWrites) (layout : LayIn L)
     (made : lowE (currentOld := true) L (reserved := reserved) (.sub finish begin) d = some (code, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d code env W reserved) :
     let first := eval world begin world env
@@ -288,7 +316,7 @@ theorem lowE_runtimeSliceIndex_ok [Kern] {D : Deklaration} {L : Lay D}
     (indexBounds : 0 ≤ indexLo ∧ indexHi < lastLo - firstHi)
     {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
-    (memory : ∀ m, W m → WeltAt m L world) (layout : LayIn L)
+    (memory : ∀ m, W m → WeltAt m L world requireWrites) (layout : LayIn L)
     (made : lowE (currentOld := true) L (reserved := reserved)
       (.arrGet base (.widen (by omega) (by
         have low := (eval world finish world env).lo_le
@@ -330,7 +358,7 @@ theorem runtimeSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
     (valid : SignedSliceOk length (env.get first).n (env.get last).n)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d top reserved : Nat} {code : List II}
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (made : lowE (currentOld := true) layout (reserved := reserved)
       (runtimeSliceDescriptor (Λ := Λ) first last) d = some (code, top))
     (fits : top ≤ K) (pre : Pre layout m pc fp K d code env W reserved) :
@@ -377,7 +405,7 @@ theorem runtimeSliceElement_ok [Kern] {D : Deklaration} {layout : Lay D}
     (checked : eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d base top reserved : Nat} {indexCode : List II} {array : Wert D (.arr τ capacity)}
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (backing : ValueAt layout m fp base (.arr τ capacity) array)
     (apart : base + capacity * valueWords τ ≤ d)
     (scratch : d + valueWords τ + 1 < K) (width : 8 * valueWords τ < 2 ^ 31)
@@ -481,7 +509,7 @@ theorem runtimeStringSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D
     (valid : SignedSliceOk value.1.length (env.get first).n (env.get last).n)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d base top reserved : Nat} {code : List II}
-    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (worldAt : ∀ m, W m → WeltAt m layout world requireWrites) (layoutIn : LayIn layout)
     (backing : ValueAt layout m fp base (.str capacity) value) (below : base + valueWords (.str capacity) ≤ d)
     (made : lowE (currentOld := true) layout (reserved := reserved)
       (runtimeSliceDescriptor (Λ := Λ) first last) d = some (code, top))

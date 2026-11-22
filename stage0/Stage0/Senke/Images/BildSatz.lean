@@ -24,34 +24,41 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
   · cases hb
   · next cs0 h0 =>
     split at hb
-    · cases hb
-    · next cs h1 =>
+    · next placement =>
       split at hb
-      · next hg =>
-        simp only [Except.ok.injEq] at hb
-        subst hb
-        obtain ⟨⟨hwhy, hrwhy, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp, _⟩ := hg
-        obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
-        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens]; simp, hcl, hcs, hfs,
-          by simp only [List.length_map], ?_, hwhy, hrwhy,
-          hfit, hroomK, fun f hf => by simpa using List.all_eq_true.mp hexK f hf, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
-          ⟨(hYdis _).spans, (hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye, hops⟩, rfl, rfl, rfl, rfl⟩
-        intro words member
-        obtain ⟨start, startMem, encoded⟩ := List.mem_map.mp member
-        have fits : startScratch start.1 + 8 ≤ stackReserve Ks (maxTop cs0)
-            ((main :: starts.map (·.1)).foldl (fun top f => max top (startScratch f + 8)) 0) := by
-          simpa using List.all_eq_true.mp hexK start.1
-            (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, startMem, rfl⟩))
-        have above : FB + FB + contextWords (D.params start.1) + 1 ≤ startScratch start.1 := by
-          rw [startScratch_eq]
+      · cases hb
+      · next cs h1 =>
+        split at hb
+        · next hg =>
+          simp only [Except.ok.injEq] at hb
+          subst hb
+          obtain ⟨⟨hwhy, hrwhy, hlens, hroomK, hexK⟩, _⟩ := hg
+          obtain ⟨hfit, hYlo, hYhi, hYsye⟩ := placement
+          have hfp : codeBase + 16 * (headLen (starts.map (·.1)).length + (cs0.map (·.1.length)).sum) =
+              codeBase + 16 * (headLen (starts.map (·.1)).length + (cs.flatMap (·.1)).length) := by
+            rw [List.length_flatMap, hlens]
+          obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
+          refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens]; simp, hcl, hcs, hfs,
+            by simp only [List.length_map], ?_, hwhy, hrwhy,
+            hfit, hroomK, fun f hf => by simpa using List.all_eq_true.mp hexK f hf, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
+            ⟨(hYdis _).spans, (hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye⟩, rfl, rfl, rfl, rfl⟩
+          intro words member
+          obtain ⟨start, startMem, encoded⟩ := List.mem_map.mp member
+          have fits : startScratch start.1 + 8 ≤ stackReserve Ks (maxTop cs0)
+              ((main :: starts.map (·.1)).foldl (fun top f => max top (startScratch f + 8)) 0) := by
+            simpa using List.all_eq_true.mp hexK start.1
+              (List.mem_cons_of_mem _ (List.mem_map.mpr ⟨start, startMem, rfl⟩))
+          have above : FB + FB + contextWords (D.params start.1) + 1 ≤ startScratch start.1 := by
+            rw [startScratch_eq]
+            omega
+          rw [← encoded, encodeEnv_length]
+          dsimp only at fits above ⊢
           omega
-        rw [← encoded, encodeEnv_length]
-        dsimp only at fits above ⊢
-        omega
-      · exfalso
-        revert hb
-        repeat' split
-        all_goals intro hb; cases hb
+        · exfalso
+          revert hb
+          repeat' split
+          all_goals intro hb; cases hb
+    · split at hb <;> cases hb
 
 theorem bild_bytes {b : Bild D} {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) :
     BytesAt m codeBase (b.code.flatMap encII ++

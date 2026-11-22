@@ -52,10 +52,10 @@ theorem storeFrameWords_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr t
       (· = slot fp (BitVec.ofNat 64 base)) := by
     have p : Pre L m2 _ fp K tmp [ci 17 tmp base 0] ρ W reserved :=
       { p2.left with ctx := by have := pre.ctx; omega }
-    refine one_ok p (by simp [ci]) ht rfl fun m' write => ?_
+    refine one_ok p (by simp [ci, II.o]) ht rfl fun m' write => ?_
     have instruction := p.code 0 (by simp)
-    simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
-    simp only [ci, op]
+    simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
+    simp only [ci, II.o, op]
     refine f2_run (t := ⟨_, fp⟩) instruction ?_
     simp only [ret1]
     refine f1_run (t := ⟨_, fp⟩) instruction ?_

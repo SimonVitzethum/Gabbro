@@ -173,6 +173,32 @@ theorem MTRel.append_pending_root {P : Programm D} {O : Orakel D} {passes : Nat}
   · rw [machine]
     exact related.welt
 
+/-- A store outside every admitted body's read set leaves its snapshot
+    valid. Publishing the same bytes in the committed memory preserves
+    the relation when the typed world stays unchanged. -/
+theorem MTRel.commit_disjoint_store {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D}
+    {c : PCfg} {state : FadenMaschine D} {S : Nat → Option Solo} {X : Nat → MLage D}
+    {committed : Runner.Mem} {address : Runner.W} {value : Nat}
+    (related : MTRel P O passes L c state S X committed)
+    (outside : ∀ i s, S i = some s → ∀ byte, fenster address byte → ¬ s.F byte)
+    (world : WeltAt (Runner.Mem.write committed address 8 value) L (state.m.speicher.welt [])) :
+    MTRel P O passes L ⟨Runner.Mem.write c.m address 8 value, c.ths⟩ state S X
+      (Runner.Mem.write committed address 8 value) := by
+  refine { related with
+    mem := { related.mem with gleich := ?_ }
+    welt := world
+    aussen := ?_ }
+  · intro i s present byte readable
+    exact ((write_nurIn c.m address value).gleichAt
+      (fun touched => outside i s present byte touched readable)).trans
+      (related.mem.gleich i s present byte readable)
+  · intro byte untouched
+    by_cases inside : fenster address byte
+    · exact gleich_write (fun current touched => related.aussen current (fun i s present writable =>
+        outside i s present current touched (related.mem.wrF i s present current writable))) value byte inside
+    · exact ((write_nurIn c.m address value).gleichAt inside).trans
+        ((related.aussen byte untouched).trans ((write_nurIn committed address value).gleichAt inside).symm)
+
 /-- Once startup enters a lowered body, replace its empty slot by the
     exact source position. Existing threads and the committed GX world
     retain their relation through the startup's private writes. -/

@@ -369,22 +369,25 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
   · cases hb
   · next cs0 h0 =>
     split at hb
-    · cases hb
-    · next cs h1 =>
+    · next _placement =>
       split at hb
-      · next hg =>
-        simp only [Except.ok.injEq] at hb
-        have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ bimg.Y.lo := by
-          rw [← hb]
-          exact Nat.dvd_trans hdvd (Senke.alignUp_dvd _ _ hreq)
-        subst hb
-        dsimp only at hbase ⊢
-        exact ⟨Senke.layU_ga_aligned _ _ _ _ hpos hbase,
-          Senke.layU_ga_word_aligned _ _ _ _ hpos hbase⟩
-      · exfalso
-        revert hb
-        repeat' split
-        all_goals intro hb; cases hb
+      · cases hb
+      · next cs h1 =>
+        split at hb
+        · next hg =>
+          simp only [Except.ok.injEq] at hb
+          have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ bimg.Y.lo := by
+            rw [← hb]
+            exact Nat.dvd_trans hdvd (Senke.alignUp_dvd _ _ hreq)
+          subst hb
+          dsimp only at hbase ⊢
+          exact ⟨Senke.layU_ga_aligned _ _ _ _ hpos hbase,
+            Senke.layU_ga_word_aligned _ _ _ _ hpos hbase⟩
+        · exfalso
+          revert hb
+          repeat' split
+          all_goals intro hb; cases hb
+    · split at hb <;> cases hb
 
 /-- The actual CLI payload retains the original canonical source, initialized main/root
     execution certificate and alignment guarantees under the inherited runner contracts. -/

@@ -67,12 +67,12 @@ theorem Pre.next {m m' : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {a b : Li
    envAt_agree h.env ha h.frame h.ctx hK, h.wstab m m' h.welt (ha.mono (Nat.zero_le _)), h.wstab⟩
 
 /-- A binary operation whose first part has run (`hA` for this memory). -/
-theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {o : Opcode} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : Ok m pc fp K d ca Pa)
     (hB : ∀ m' pc, Agree fp d K m m' → Pre L m' pc fp K (d + 1) cb ρ W reserved → Ok m' pc fp K (d + 1) cb Pb)
-    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
+    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o.val < 256)
     (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
   have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W reserved := by simpa using h
@@ -90,15 +90,15 @@ theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : L
   have hs1 : sx (II.f ((d : Int) + 1)) = BitVec.ofNat 64 (d + 1) := by
     have := sx_nat (d := d + 1) (by omega); simpa using this
   have hi := h2.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.ofNat_eq_ofNat, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.ofNat_eq_ofNat, BitVec.add_zero] at hi
   have s3 := star_ins (fp := fp) (m' := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) h2.code ho (by
-    simp only [ci]
+    simp only [ci, II.o]
     rw [hop]
     refine run_bin (t := ⟨_, fp⟩) (m1 := write m2 (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) hi (va := wa)
       (vb := wb) ?_ ?_ hr ?_
-    · simpa [ci, hs] using ra2
-    · simpa [ci, hs1] using rb
-    · simpa [ci, hs] using hw)
+    · simpa [ci, II.o, hs] using ra2
+    · simpa [ci, II.o, hs1] using rb
+    · simpa [ci, II.o, hs] using hw)
   refine ⟨_, (s1.trans s2).trans ?_, (a1.trans (a2.mono (Nat.le_succ d))).trans a3, r, hrd, pr⟩
   have e : pc + BitVec.ofNat 64 (16 * (ca ++ cb ++ [ci o d d (d + 1)]).length) =
       pc + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * cb.length) +
@@ -108,22 +108,22 @@ theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : L
   exact s3
 
 /-- A binary operation with a memory-independent proof for its second operand. -/
-theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {o : Opcode} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : Ok m pc fp K d ca Pa)
     (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb Pb)
-    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
+    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o.val < 256)
     (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P :=
   bin_ok_keep hA (fun m pc _ hp => hB m pc hp) hg hop ho hK h
 
 /-- A binary operation: `a` into `d`, `b` into `d+1`, then the instruction `o` (whose step is `bin g`). -/
-theorem bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+theorem bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {o : Opcode} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : ∀ m pc, Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca Pa)
     (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb Pb)
-    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
+    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o.val < 256)
     (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
   have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W reserved := by simpa using h
@@ -143,10 +143,10 @@ theorem const_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {k : Int} {Γ :
     (h : Pre L m pc fp K d [ci 1 d k 0] ρ W reserved) (hk : lit32 k = true) (hd : d < K) :
     Ok m pc fp K d [ci 1 d k 0] (· = BitVec.ofInt 64 k) := by
   have := h.small
-  refine one_ok h (by simp [ci]) hd rfl fun m' hw => ?_
+  refine one_ok h (by simp [ci, II.o]) hd rfl fun m' hw => ?_
   have hi := h.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   simp only [ret1]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
@@ -159,10 +159,10 @@ theorem mov_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {Γ : Ctx} {ρ 
     (hv : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some v) :
     Ok m pc fp K d [ci 2 d s 0] (· = v) := by
   have := h.small
-  refine one_ok h (by simp [ci]) hd rfl fun m' hw => ?_
+  refine one_ok h (by simp [ci, II.o]) hd rfl fun m' hw => ?_
   have hi := h.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
   refine run_rd64 hv ?_

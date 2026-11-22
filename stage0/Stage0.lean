@@ -32,6 +32,11 @@ public import Stage0.Senke.Bild.ImageGoal
 public import Stage0.Senke.Bild.ImageAddress
 public import Stage0.Senke.Bild.Ruf.RootEntry
 public import Stage0.Senke.Bild.Ruf.RootProlog
+public import Stage0.Senke.Bild.Ruf.IdleLowering
+public import Stage0.Senke.Bild.Ruf.IdleGates
+public import Stage0.Senke.Bild.Ruf.IdleCounters
+public import Stage0.Senke.Bild.Ruf.IdleOperands
+public import Stage0.Senke.Bild.Ruf.IdleExpression
 public import Stage0.Senke.Bild.Ruf.RootExit
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Ruf.BodyMemory
@@ -44,6 +49,9 @@ public import Stage0.Senke.Bild.Mehr.ImageTransition
 public import Stage0.Senke.Bild.Mehr.Ort.SingleThread
 public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
 public import Stage0.Senke.Bild.Mehr.Ort.Simulation
+public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
+public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Relocation
 public import Stage0.Senke.Bild.Mehr.Ort.LockReads
 public import Stage0.Senke.Bild.Mehr.Ort.AtomicExchange
 public import Stage0.Senke.Bild.Mehr.Ort.AtomicRead

@@ -26,7 +26,7 @@ theorem snapshot_copy {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 
 theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
     {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ0 σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L)
+    (σ0 σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L)
     {Φ Γ : Ctx} (full : Env D Φ) (ρ : Env D Γ)
     (paramsOfFull : ∀ {m}, EnvAt L m fp full → EnvAt L m fp ρ layout.ensReserved)
     (context : frei Γ layout.ensReserved ≤ frei Φ) :
@@ -296,7 +296,7 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
 /-- This is the postcondition contract consumed by the actual return proof. -/
 theorem lowEns_ok (layout : FrameLayout) {Λ : List (Res D)} {fp : Runner.W}
     {K : Nat} {W : Runner.Mem → Prop}
-    (σ0 σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L)
+    (σ0 σ : World D) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hLay : LayIn L)
     {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (code : List II) (top : Nat)
     (lower : lowEns L layout e d = some (code, top)) (fits : top ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ)

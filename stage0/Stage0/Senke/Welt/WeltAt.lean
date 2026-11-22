@@ -16,10 +16,44 @@ def LayIn (L : Lay D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < L.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 * valueWords (D.typ t f) ≤ L.hi) ∧
   (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 * valueWords (D.gtyp g) ≤ L.hi) ∧ L.hi < 2 ^ 31
 
+/-- A typed value depends on the readable bytes of its complete span. -/
+theorem ValueAt.congr_read_bytes {layout : Lay D} {before after : Runner.Mem}
+    {address : Nat} {ty : Ty} {value : Wert D ty}
+    (bound : address + 8 * valueWords ty < 2 ^ 64)
+    (agrees : ∀ byte, address ≤ byte.toNat → byte.toNat < address + 8 * valueWords ty →
+      after.b byte = before.b byte ∧ after.rd byte = before.rd byte)
+    (encoded : ValueAt layout before (BitVec.ofNat 64 address) 0 ty value) :
+    ValueAt layout after (BitVec.ofNat 64 address) 0 ty value := by
+  refine ⟨encoded.1, fun index present => ?_⟩
+  have indexFits : index < valueWords ty := by simpa only [encodeWords_length] using present
+  have slotAddress : slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + index)) =
+      BitVec.ofNat 64 (address + 8 * index) := by
+    simp only [Nat.zero_add, slot]
+    change BitVec.ofNat 64 address + BitVec.ofNat 64 index * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+    congr 1
+    omega
+  have byteEq (offset : Nat) (inside : offset < 8) :=
+    agrees (BitVec.ofNat 64 (address + 8 * index) + BitVec.ofNat 64 offset)
+      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
+      (by rw [← BitVec.ofNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]; omega)
+  have same : after.rd64 (BitVec.ofNat 64 (address + 8 * index)) =
+      before.rd64 (BitVec.ofNat 64 (address + 8 * index)) := by
+    simp only [Runner.Mem.rd64, Runner.Mem.all_congr (fun j hj => (byteEq j hj).2),
+      Runner.Mem.le_congr (fun j hj => (byteEq j hj).1)]
+  rw [slotAddress, same]
+  have old := encoded.2 index present
+  rwa [slotAddress] at old
+
 /-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
 inductive Zelle (D : Deklaration) where
   | glob (g : D.Glob)
   | elem (t : D.Tab) (f : D.Feld t) (k : Nat)
+
+/-- The logical carrier containing a physical cell. -/
+def Zelle.carrier : Zelle D → D.Tab ⊕ D.Glob
+  | .glob g => .inr g
+  | .elem t .. => .inl t
 
 /-- The address of a cell. -/
 def Zelle.adr (L : Lay D) : Zelle D → Nat
@@ -55,11 +89,36 @@ theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da L) (hc
 def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
   ∀ x : Nat, L.lo ≤ x → x < L.hi → m.wr (BitVec.ofNat 64 x) = true
 
-def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
+/-- The typed values of a world, with an optional writable backing.
+    A value reader needs only the representation of the cells. -/
+def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) (requireWrites : Bool := true) : Prop :=
   (∀ t f (k : Nat), (k : Int) < L.count t →
     ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)) ∧
   (∀ g, ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)) ∧
-  WeltWr m L
+  (if requireWrites then WeltWr m L else True)
+
+theorem WeltAt.withWriteMap {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
+    (world : WeltAt m L σ requireWrites) (writeMap : Runner.W → Bool) :
+    WeltAt { m with wr := writeMap } L σ false :=
+  ⟨world.1, world.2.1, trivial⟩
+
+/-- The complete representation of the allocated cells of one column. -/
+def ColumnAt (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
+  ∀ k : Nat, (k : Int) < L.count t →
+    ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)
+
+/-- A typed expression can read the world carriers authorized by its
+    resource context. Representation of other threads' carriers is
+    independent of this local read obligation. -/
+structure ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop where
+  table : ∀ t, darf D t resources → ∀ f, ColumnAt m L σ t f
+  global : ∀ g, gdarf D g resources →
+    ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)
+
+theorem WeltAt.reads {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
+    (world : WeltAt m L σ requireWrites) (resources : List (Res D)) :
+    ReadWorldAt m L σ resources :=
+  ⟨fun t _ f k valid => world.1 t f k valid, fun g _ => world.2.1 g⟩
 
 /-- A word of the world may be written. -/
 theorem WeltWr.word {m : Runner.Mem} {L : Lay D} (h : WeltWr m L) {a : Nat} (h1 : L.lo ≤ a) (h2 : a + 8 ≤ L.hi)
@@ -100,15 +159,34 @@ theorem valueAt_world_stab {m m' : Runner.Mem} {fp : Runner.W} {K address : Nat}
   have h := input.2 i hi
   rwa [addr] at h
 
-theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : LayIn L)
-    (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ) fp K := by
+theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
+    {requireWrites : Bool} (hl : LayIn L)
+    (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ requireWrites) fp K := by
   intro m m' hm ha
   obtain ⟨hs, hg, hwr⟩ := hm
-  refine ⟨fun t f k hk => ?_, fun g => ?_, hwr.keep ha.wr⟩
+  refine ⟨fun t f k hk => ?_, fun g => ?_, ?_⟩
   · have hin := hl.1 t f k hk
     exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hs t f k hk)
   · have hin := hl.2.1 g
     exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hg g)
+  · cases requireWrites
+    · trivial
+    · exact WeltWr.keep hwr ha.wr
+
+/-- Frame writes leave the authorized world representation intact. -/
+theorem readWorldAt_stab {L : Lay D} {σ : World D} {resources : List (Res D)} {fp : Runner.W} {K : Nat}
+    (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
+    WStab (fun m => ReadWorldAt m L σ resources) fp K := by
+  intro before after stored writes
+  refine ⟨?_, ?_⟩
+  · intro table access field index bound
+    have inside := layout.1 table field index bound
+    exact valueAt_world_stab writes (by omega) (by have := layout.2.2; omega)
+      (stored.table table access field index bound)
+  · intro global access
+    have inside := layout.2.1 global
+    exact valueAt_world_stab writes (by omega) (by have := layout.2.2; omega)
+      (stored.global global access)
 
 /-! ## What a statement changes: its frame's slots from `lo` and the world -/
 

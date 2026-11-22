@@ -400,6 +400,23 @@ public structure Inventory (D : Deklaration) where
     (state : State (Value D) (Child D types)) : Prop :=
   state.marks = (inventory.owned phase).map (fun owner => inventory.number owner.1)
 
+public theorem MarksRep.nodup {inventory : Inventory D} {phase : Phase}
+    {state : State (Value D) (Child D types)} (represented : MarksRep inventory phase state) :
+    state.marks.Nodup := by
+  have injectiveMap (marks : List D.Marke) (unique : marks.Nodup) :
+      (marks.map inventory.number).Nodup := by
+    induction marks with
+    | nil => exact List.nodup_nil
+    | cons mark rest ih =>
+      obtain ⟨fresh, tail⟩ := List.nodup_cons.mp unique
+      apply List.nodup_cons.mpr
+      refine ⟨?_, ih tail⟩
+      intro duplicate
+      obtain ⟨other, present, same⟩ := List.mem_map.mp duplicate
+      exact fresh (inventory.injective other mark same ▸ present)
+  rw [represented]
+  simpa only [List.map_map, Function.comp_def] using injectiveMap _ (inventory.unique phase)
+
 public theorem inventory_no_locks (inventory : Inventory D) (phase : Phase) (lock : D.Lock) :
     Res.held lock ∉ inventory.resources phase := by
   rw [inventory.exact phase]

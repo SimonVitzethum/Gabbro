@@ -49,23 +49,37 @@ decreasing_by
       omega
     | omega
 
-/-- An array constructor can also read immutable or mutable lexical
-    values of the declared element type. Each nested array preserves
-    its own length and type, including empty tails. -/
-def specArrayArgumentFits (ctx : UCtx) : USide → Ty → Bool
-  | .arrCons head tail, .arr element (length + 1) =>
-    specArrayArgumentFits ctx head element && specArrayArgumentFits ctx tail (.arr element length)
+/-- Array elements and nominal record fields admit lexical values at
+    the declared type, including when the two constructors are nested. -/
+def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
+  | .arrCons head tail, expected =>
+    match expected with
+    | .arr element (length + 1) =>
+      specCompositeArgumentFits ctx head element && specCompositeArgumentFits ctx tail (.arr element length)
+    | _ => false
+  | .product identity _ fields, expected =>
+    decide (expected = .prod identity (fields.map Prod.fst)) &&
+      (uRecordOf ctx.records expected).isOk &&
+      fields.attach.all (fun field => specCompositeArgumentFits ctx field.val.2 field.val.1)
   | .param name, expected =>
     !ctx.unknownRanges.contains name && decide (uValueType ctx (.param name) = some expected)
   | value, expected => specLiteralFieldFits ctx.records value expected
+termination_by value _ => sizeOf value
+decreasing_by
+  all_goals
+    simp_wf
+    first
+    | have smaller := recordField_sizeOf_lt fields field.val field.property
+      omega
+    | omega
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
-def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
+def uSpecRecordType (ctx : UCtx) (name : String) (identity : Nat)
     (fields : List (Ty × USide)) : Option Ty := do
   let schema ← uRecordConstructor ctx name
   if schema.ty = .prod identity (fields.map Prod.fst) ∧
-    fields.all (fun field => specLiteralFieldFits ctx.records field.2 field.1) = true then
+    fields.all (fun field => specCompositeArgumentFits ctx field.2 field.1) = true then
     some schema.ty
   else none
 
@@ -75,8 +89,8 @@ def uSpecLiteralRecordType (ctx : UCtx) (name : String) (identity : Nat)
     An array slice uses the element type and extent of its checked base. -/
 def uSpecValueType (ctx : UCtx) : SExpr → USide → Option Ty
   | .built "#spec-array" [_, _, _], .typed type literal =>
-    if specArrayArgumentFits ctx literal type then some type else none
-  | .call name _, .product identity _ fields => uSpecLiteralRecordType ctx name identity fields
+    if specCompositeArgumentFits ctx literal type then some type else none
+  | .call name _, .product identity _ fields => uSpecRecordType ctx name identity fields
   | .ext .text [_] [], .text bytes => (bytesZahl bytes).map fun decoded => Ty.str decoded.length
   | .built "#slice" [.ext .text [_] [], _, _], .slice (.text bytes) first last => do
     let decoded ← bytesZahl bytes
@@ -125,16 +139,16 @@ theorem specValueArgument_erfuellbar (ctx : UCtx) (name : String) (expected : Ty
   simp [uSpecValueArgument, uSpecValueType, uSpecValuePath, read, typeMatches,
     bind, Except.bind, pure, Except.pure]
 
-/-- The premises hold for any parsed constructor and every list of
-    jointly well-typed literal fields in its nominal schema. -/
-theorem specLiteralRecordArgument_erfuellbar (ctx : UCtx) (name : String) (args : List SExpr)
+/-- The premises hold for any parsed constructor and its jointly
+    checked fields in the nominal schema. -/
+theorem specRecordArgument_erfuellbar (ctx : UCtx) (name : String) (args : List SExpr)
     (schema : URecord) (fields : List (Ty × USide)) (reordered : Bool)
     (selected : uRecordConstructor ctx name = some schema)
     (read : uWertBody ctx (.call name args) = .ok (.product schema.identity reordered fields))
     (shape : schema.ty = .prod schema.identity (fields.map Prod.fst))
-    (valid : fields.all (fun field => specLiteralFieldFits ctx.records field.2 field.1) = true) :
+    (valid : fields.all (fun field => specCompositeArgumentFits ctx field.2 field.1) = true) :
     uSpecValueArgument ctx schema.ty (.call name args) = .ok () := by
-  simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, uSpecLiteralRecordType,
+  simp only [uSpecValueArgument, bind, Except.bind, read, uSpecValueType, uSpecRecordType,
     selected, Option.bind_eq_bind, Option.bind_some, shape, valid, true_and, ite_true,
     pure, Except.pure]
 
@@ -321,7 +335,7 @@ theorem specIndexedFieldArgument_erfuellbar (field : String) (target : Ty)
     it is empty or its elements are independently narrower. -/
 def uSpecArrayArgument (ctx : UCtx) (expected : Ty) (argument : SExpr) : Except String Unit := do
   let value ← uWertBody ctx argument
-  if specArrayArgumentFits ctx value expected then pure ()
+  if specCompositeArgumentFits ctx value expected then pure ()
   else throw "spec array literal does not fit its declared element type or length"
 
 /-- Reuse annotated local elaboration and the existing integer interval calculation.

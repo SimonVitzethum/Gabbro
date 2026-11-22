@@ -57,8 +57,8 @@ theorem ImageForeignTrace.retire {src : String} {reserve : Nat} {options : Profi
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {i : Nat} {req : Req}
     (matched : ImageForeignTrace output history state) (exit : req.nr.toNat = NR_EXIT) :
     ImageForeignTrace output (history ++ [(i, req, none)]) state := by
-  have internal : imageExternalEvent (i, req, none) = false := by
-    simp only [imageExternalEvent, exit, true_or, or_true, decide_true, Bool.not_true]
+  have internal : imageCanBeInternal (i, req, none) = true := by
+    simp only [imageCanBeInternal, exit, true_or, or_true, decide_true]
   exact matched.appendInternal (by intro event member; simpa only [List.mem_singleton.mp member] using internal) rfl
 
 private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
@@ -74,7 +74,8 @@ private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat
         (BitVec.ofNat 64 value).toNat := by
   have first := code 0 (by simp)
   have instruction : InsAt (before.ms.1.view i) pointer.pc 1 (II.f destination) (II.f value) (II.f 0) := by
-    simpa only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] using first
+    simpa only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci, II.o,
+      show (1 : Opcode).val = 1 from rfl] using first
   have address : sx (II.f destination) = BitVec.ofNat 64 destination := sx_nat (inside.trans slotFits)
   have writable : Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f destination))) 8 = true := by
     rw [address, ← foldl_wr (before.ms.1.buf i) before.ms.1.m]
@@ -132,7 +133,8 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
   have codeSys : CodeAt (second.1.view i) sys.pc call := (codeAt_right remain).agree write2 farSys
   have instruction : InsAt (second.1.view i) sys.pc 23 (II.f ((scratch + 7 : Nat) : Int)) (II.f scratch) (II.f 0) := by
     have decoded := codeSys 0 (by simp only [call, List.length_singleton]; decide)
-    simpa only [call, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] using decoded
+    simpa only [call, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci, II.o,
+      show (23 : Opcode).val = 23 from rfl] using decoded
   have address : sx (II.f scratch) = BitVec.ofNat 64 scratch := sx_nat (by omega)
   have numberRead : (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 scratch)) = some (231 : W) := by
     have disjoint := slot_far frame.room (i := scratch + 1) (j := scratch) (by omega) (by omega) (by omega)

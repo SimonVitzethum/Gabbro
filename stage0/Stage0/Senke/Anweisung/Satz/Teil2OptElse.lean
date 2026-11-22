@@ -118,7 +118,7 @@ theorem lowB_ok_bindAxiomOptElse_some {O : Orakel D} [TorOK L O] [SichtOK O] {pa
       have code := codeAt_agreeWIn hW bodyChanged (codeAt_right next.left.code)
         (codeFar_right (n := cr.length) (k := 1) (by simpa using next.left.far))
       have instruction := code 0 (by simp)
-      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
+      simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at instruction
       have jump := Star.one (run_step (t := ⟨_, fp⟩) instruction (by decide)
         (run_jmp (t := ⟨_, fp⟩) instruction))
       have offset : sx (II.f (16 * ((ce.length : Int) + 1))) =

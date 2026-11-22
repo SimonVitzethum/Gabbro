@@ -22,7 +22,7 @@ theorem selP_aluIns {K a : Nat} (src M T j : Nat) (hj : a + j < K) (hT : a ≤ T
   · exact AluIns.bin 8 T T M _ rfl hT hTK hTK hM
   · exact AluIns.bin 10 (a + j) (a + j) T _ rfl (by omega) hj hj hTK
 
-theorem bitP_aluIns {K a : Nat} (oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
+theorem bitP_aluIns {K a : Nat} (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
     (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (src Rr O W T T2 j : Nat) (hj : a + j < K)
     (hT : a ≤ T) (hTK : T < K) (hT2 : a ≤ T2) (hT2K : T2 < K) (hs : src < K) (hr : Rr < K) (ho : O < K)
     (hw : W < K) : ∀ i ∈ bitP oM oX src Rr O W T T2 a j, AluIns K a i := by
@@ -59,7 +59,7 @@ theorem stagesC_aluIns {K : Nat} (k a : Nat) (src : Nat → Nat → Nat) (l : Li
     · exact stagesC_aluIns k a src l hK hlk hsrc S (by omega) i hi
     · exact stgC_aluIns k a S (src (2 ^ S)) l hK (by omega) hlk (hsrc _) i hi
 
-theorem bitC_aluIns {K : Nat} (k a oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
+theorem bitC_aluIns {K : Nat} (k a : Nat) (oM oX : Opcode) (fM fX : Runner.W → Runner.W → Runner.W)
     (hM : aluFn oM = some fM) (hX : aluFn oX = some fX) (srcB : Nat → Nat) (l : List Nat)
     (hK : a + k + 10 ≤ K) (hlk : ∀ j ∈ l, j < k) (hsrc : ∀ j, j < k → srcB j < a + k ∨ srcB j = a + k + 5) :
     ∀ i ∈ bitC k a oM oX srcB l, AluIns K a i := by

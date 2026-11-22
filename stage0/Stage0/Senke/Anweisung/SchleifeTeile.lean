@@ -81,7 +81,7 @@ theorem brz_go {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {J : Int}
     (hc : CodeAt m pc [ci 19 j J 0]) (hj : j < K) (hK : K < 2 ^ 31) (hJ : lit32 J = true)
     (hr : m.rd64 (slot fp (BitVec.ofNat 64 j)) = some 0) : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofInt 64 J, fp⟩ m := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have r := run_step (t := ⟨pc, fp⟩) hi (by decide)
     (run_brz_zero (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact hr))
   rw [sx_lit hJ] at r
@@ -93,15 +93,15 @@ theorem brz_stay {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {J : Int} {w : 
     (hr : m.rd64 (slot fp (BitVec.ofNat 64 j)) = some w) (hw : w ≠ 0) :
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  exact star_ins (m' := m) hc (by simp [ci])
-    (by simp only [ci]; exact run_brz_ne (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact hr) hw)
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  exact star_ins (m' := m) hc (by simp [ci, II.o])
+    (by simp only [ci, II.o]; exact run_brz_ne (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact hr) hw)
 
 /-- `jmp J`: on at `pc + J`. -/
 theorem jmp_go {m : Runner.Mem} {pc fp : Runner.W} {J : Int} (hc : CodeAt m pc [ci 18 J 0 0]) (hJ : lit32 J = true) :
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofInt 64 J, fp⟩ m := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have r := run_step (t := ⟨pc, fp⟩) hi (by decide) (run_jmp (t := ⟨pc, fp⟩) hi)
   rw [sx_lit hJ] at r
   exact Star.one r

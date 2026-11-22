@@ -74,7 +74,8 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       rw [← heq]
       exact slotC_ok hr (by omega)
         (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay i _ ci' ti hi
-          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp |>.word trivial) (fun _ h => h) hp
+          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp |>.word trivial)
+        (fun _ h => h.1 t field) hp
     have htest : Ok m pc fp Ks (frei Γ reserved) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
       refine bin_ok hread (fun m pc hp => wordConstant_ok (by omega) hp)
         (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hpw

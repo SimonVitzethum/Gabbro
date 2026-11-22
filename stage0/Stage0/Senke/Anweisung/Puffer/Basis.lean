@@ -22,17 +22,17 @@ variable {reserved : Nat}
 variable {D : Deklaration} {L : Lay D}
 
 /-- `d := g a b` in one step. -/
-theorem bin_star {m : Runner.Mem} {pc fp : Runner.W} {K o d a b : Nat} {g : Runner.W → Runner.W → Option Runner.W}
-    {va vb r : Runner.W} (hc : CodeAt m pc [ci o d a b]) (hop : op o = bin g) (ho : o < 256) (hF : FrameOK m fp K)
+theorem bin_star {m : Runner.Mem} {pc fp : Runner.W} {K d a b : Nat} {o : Opcode} {g : Runner.W → Runner.W → Option Runner.W}
+    {va vb r : Runner.W} (hc : CodeAt m pc [ci o d a b]) (hop : op o = bin g) (ho : o.val < 256) (hF : FrameOK m fp K)
     (hd : d < K) (ha : a < K) (hb : b < K) (hK : K < 2 ^ 31)
     (hra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va) (hrb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
     (hg : g va vb = some r) :
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci o d a b].length), fp⟩
       (write m (slot fp (BitVec.ofNat 64 d)) 8 r.toNat) := by
   have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine star_ins hc (by simpa [ci] using ho) ?_
-  simp only [ci]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  refine star_ins hc (by simpa [ci, II.o] using ho) ?_
+  simp only [ci, II.o]
   rw [hop]
   rw [← sx_nat (d := a) (by omega)] at hra
   rw [← sx_nat (d := b) (by omega)] at hrb
@@ -198,7 +198,7 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ 
     have := (codeAt_right hn.code).agree a2 (by simpa using codeFar_right (n := 1) (k := 1) hn.far)
     simpa [List.length_append] using this
   have hi := hc3 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have hra : m2.rd64 (slot fp (BitVec.ofNat 64 (u + 1))) = some (BitVec.ofNat 64 adr) := by
     rw [← BitVec.ofInt_natCast]; exact rd64_write_same (hn.frame.rd _ (by omega))
   have hrb : m2.rd64 (slot fp (BitVec.ofNat 64 u)) = some ((bw >>> (8 * (k % 8))) &&& 255) := by
@@ -207,8 +207,8 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ 
   have hwr : all m2.wr (BitVec.ofNat 64 adr) 8 = true := by
     rw [a12.wr]; exact hwr0
   have s3 := star_ins (fp := fp) (m' := write m2 (BitVec.ofNat 64 adr) 8 ((bw >>> (8 * (k % 8))) &&& 255).toNat) hc3
-    (by simp [ci]) (by
-      simp only [ci, op]
+    (by simp [ci, II.o]) (by
+      simp only [ci, II.o, op]
       refine f1_run (t := ⟨_, fp⟩) hi ?_
       rw [sx_nat (by omega)]
       refine run_rd64 hra ?_

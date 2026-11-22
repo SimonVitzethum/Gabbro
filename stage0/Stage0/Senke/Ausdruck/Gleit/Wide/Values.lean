@@ -141,7 +141,7 @@ variable [Kern] {L : Lay D}
     narrowing fields are proved total above, including their actual fallbacks. -/
 theorem word {a b : Int} (t : Expr D Γ Λ (.int a b)) (word : valueWords (.int a b) = 1)
     (lay : LayIn L) (same : σ₀ = σ) {W : Runner.Mem → Prop}
-    (world : ∀ m, W m → WeltAt m L σ) (reserved : Nat) :
+    (world : ∀ m, W m → WeltAt m L σ requireWrites) (reserved : Nat) :
     WordCode (L := L) ρ W (fun d => lowE L t d reserved)
       (BitVec.ofInt 64 (eval σ₀ t σ ρ).n) reserved := by
   intro fp K d c top emitted fits m pc pre
@@ -149,7 +149,7 @@ theorem word {a b : Int} (t : Expr D Γ Λ (.int a b)) (word : valueWords (.int 
     emitted fits m pc ρ pre).word (by trivial)
 
 theorem boolean (t : Expr D Γ Λ .bool) (lay : LayIn L) (same : σ₀ = σ)
-    {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ) (reserved : Nat) :
+    {W : Runner.Mem → Prop} (world : ∀ m, W m → WeltAt m L σ requireWrites) (reserved : Nat) :
     WordCode (L := L) ρ W (fun d => lowE L t d reserved)
       (Runner.IR.bool (wahr? (eval σ₀ t σ ρ))) reserved := by
   intro fp K d c top emitted fits m pc pre

@@ -60,10 +60,10 @@ theorem ld_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : E
     (ha : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some a) (hv : m.rd64 a = some v) :
     Ok m pc fp K d [ci 15 d d 0] (· = v) := by
   have := h.small
-  refine one_ok h (by simp [ci]) hd rfl fun m' hw => ?_
+  refine one_ok h (by simp [ci, II.o]) hd rfl fun m' hw => ?_
   have hi := h.code 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  simp only [ci, op]
+  simp only [ci, II.o, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  simp only [ci, II.o, op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
   refine run_rd64 ha ?_
@@ -92,7 +92,7 @@ theorem ValueAt.ofCellWord {D : Deklaration} {L : Lay D} {m : Runner.Mem} {a : N
 /-- A global of a word-compatible type: its address, the word there. -/
 theorem glob_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {L : Lay D} {σ : World D} {g : D.Glob} (hl : lit32 (L.ga g) = true) (hc : WordCompatible (D.gtyp g))
-    (h : Pre L m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] ρ W reserved) (hWL : ∀ m, W m → WeltAt m L σ) (hd : d < K) :
+    (h : Pre L m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] ρ W reserved) (hWL : ∀ m, W m → WeltAt m L σ requireWrites) (hd : d < K) :
     Ok m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] (Enc L (D.gtyp g) (σ.globs g)) := by
   have h' : Pre L m pc fp K d ([ci 1 d (L.ga g) 0] ++ [ci 15 d d 0]) ρ W reserved := h
   refine ok_seq h' (const_ok h'.left hl hd) (fun m' w hp' hr hw => ?_) (by omega)
@@ -163,7 +163,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) k))
-    (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t k.n f)) := by
   have hs0 := hs
   simp only [slotC] at hs
@@ -178,7 +178,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
     refine ok_seq hp (slotA_value_ok k.lo_le (slotC_width hs0) ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
     obtain ⟨v, hv, he⟩ := ValueAt.word _ _ (aggregateFits_compat (slotC_fits hs0))
-      ((hWL m3 hp3.welt).1 t f _ (L.bounded hkc))
+      (hWL m3 hp3.welt _ (L.bounded hkc))
     rw [slot_zero] at hv
     rw [e3] at r3
     rw [hkn] at he
@@ -190,7 +190,7 @@ theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : 
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotC L t f d ci' = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W reserved → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) (eval σ₀ i σ ρ)))
-    (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
+    (hWL : ∀ m, W m → ColumnAt m L σ t f) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t (eval σ₀ i σ ρ).n f)) :=
   slotC_value_ok hs hK ih hWL hp
 

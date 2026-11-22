@@ -16,12 +16,26 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR
 
-/-- The eight bytes from `a` (with wrap-around): the bytes a request at `a` may touch. -/
+/-- A byte range starting at `a`, using the IR's modular word addresses. -/
+def byteWindow (size : Nat) (a y : W) : Prop := (y - a).toNat < size
+
+/-- The eight bytes of a word store or compare-and-swap. -/
 def fenster (a y : W) : Prop := (y - a).toNat < 8
+
+/-- The byte width of the existing IR memory read. The sequential
+    memory model uses a full word in its default case. -/
+def readWidth : Nat → Nat
+  | 1 => 1
+  | 4 => 4
+  | _ => 8
+
+theorem readWidth_le (n : Nat) : readWidth n ≤ 8 := by
+  unfold readWidth
+  split <;> decide
 
 /-- The bytes a request may touch; a system call and a floating request touch none. -/
 def fussOp : Op → W → Prop
-  | .rd _ a => fenster a
+  | .rd width a => byteWindow (readWidth width) a
   | .wr a _ => fenster a
   | .cas a _ _ => fenster a
   | .sys _ => fun _ => False
@@ -62,24 +76,35 @@ theorem NurIn.gleichAt {F : W → Prop} {m m' : Mem} (h : NurIn F m m') {y : W} 
 
 /-! ## The window -/
 
-theorem fenster_add (a : W) {j : Nat} (hj : j < 8) : fenster a (a + BitVec.ofNat 64 j) := by
+theorem fenster_add_width (a : W) {width j : Nat} (widthFits : width ≤ 8) (hj : j < width) :
+    byteWindow width a (a + BitVec.ofNat 64 j) := by
   have := a.isLt
-  simp only [fenster, BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat]
+  simp only [byteWindow, BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat]
   omega
+
+theorem fenster_add (a : W) {j : Nat} (hj : j < 8) : fenster a (a + BitVec.ofNat 64 j) :=
+  fenster_add_width a (Nat.le_refl 8) hj
 
 theorem fenster_self (a : W) : fenster a a := by
   have := a.isLt
   simp only [fenster, BitVec.toNat_sub]
   omega
 
-theorem gleich_rd8 {m m' : Mem} {a : W} (h : GleichAuf (fenster a) m m') : m.rd8 a = m'.rd8 a := by
-  obtain ⟨hb, hr, _⟩ := h a (fenster_self a)
+theorem gleich_rd8 {m m' : Mem} {a : W} (h : GleichAuf (byteWindow 1 a) m m') :
+    m.rd8 a = m'.rd8 a := by
+  have first : byteWindow 1 a a := by
+    have := a.isLt
+    simp only [byteWindow, BitVec.toNat_sub]
+    omega
+  obtain ⟨hb, hr, _⟩ := h a first
   simp only [Mem.rd8, hb, hr]
 
-theorem gleich_rd32 {m m' : Mem} {a : W} (h : GleichAuf (fenster a) m m') : m.rd32 a = m'.rd32 a := by
-  have hb : Mem.le m a 4 = Mem.le m' a 4 := Mem.le_congr fun j hj => (h _ (fenster_add a (by omega))).1
+theorem gleich_rd32 {m m' : Mem} {a : W} (h : GleichAuf (byteWindow 4 a) m m') :
+    m.rd32 a = m'.rd32 a := by
+  have hb : Mem.le m a 4 = Mem.le m' a 4 :=
+    Mem.le_congr fun j hj => (h _ (fenster_add_width a (by decide) hj)).1
   have hr : Mem.all m.rd a 4 = Mem.all m'.rd a 4 :=
-    Mem.all_congr fun j hj => (h _ (fenster_add a (by omega))).2.1
+    Mem.all_congr fun j hj => (h _ (fenster_add_width a (by decide) hj)).2.1
   simp only [Mem.rd32, hb, hr]
 
 theorem gleich_rd64 {m m' : Mem} {a : W} (h : GleichAuf (fenster a) m m') : m.rd64 a = m'.rd64 a := by
@@ -130,6 +155,17 @@ theorem memAns_rd (m : Mem) : ∀ (n : Nat) (x : W),
   | 4, _ => by first | rfl | simp [memAns, rdAntwort]
   | _ + 5, _ => by first | rfl | simp [memAns, rdAntwort]
 
+private theorem rdAntwort_agrees {m m' : Mem} {address : W} :
+    ∀ (width : Nat), GleichAuf (byteWindow (readWidth width) address) m m' →
+      rdAntwort width (m.rd8 address) (m.rd32 address) (m.rd64 address) =
+        rdAntwort width (m'.rd8 address) (m'.rd32 address) (m'.rd64 address)
+  | 0, agree => by simp only [rdAntwort, gleich_rd64 agree]
+  | 1, agree => by simp only [rdAntwort, gleich_rd8 agree]
+  | 2, agree => by simp only [rdAntwort, gleich_rd64 agree]
+  | 3, agree => by simp only [rdAntwort, gleich_rd64 agree]
+  | 4, agree => by simp only [rdAntwort, gleich_rd32 agree]
+  | _ + 5, agree => by simp only [rdAntwort, gleich_rd64 agree]
+
 theorem memAns_wr (m : Mem) (x v : W) :
     memAns m (.wr x v) = some (match m.wr64 x v with | some m' => (some (0, 0), m') | none => (none, m)) := rfl
 
@@ -145,6 +181,55 @@ theorem cas_eq (m : Mem) (x e n : W) :
       some (BitVec.ofNat 64 (Mem.le m x 8),
         if BitVec.ofNat 64 (Mem.le m x 8) = e then Mem.write m x 8 n.toNat else m)
     else none := rfl
+
+private theorem granted_window {p : W → Bool} {width : Nat} {base byte : W}
+    (allowed : Mem.all p base width = true) (touched : byteWindow width base byte) :
+    p byte = true := by
+  have permission := Mem.all_spec allowed (j := (byte - base).toNat) touched
+  rw [BitVec.ofNat_toNat, BitVec.setWidth_eq, BitVec.add_comm base, BitVec.sub_add_cancel] at permission
+  exact permission
+
+private theorem read_granted (m : Mem) (base : W) : ∀ (width : Nat),
+    (rdAntwort width (m.rd8 base) (m.rd32 base) (m.rd64 base)).isSome = true →
+      Mem.all m.rd base (readWidth width) = true
+  | 1, success => by
+    simpa [rdAntwort, readWidth, Mem.rd8, Mem.all] using success
+  | 4, success => by simpa [rdAntwort, readWidth, Mem.rd32] using success
+  | 0, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | 2, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | 3, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+  | _ + 5, success => by simpa [rdAntwort, readWidth, Mem.rd64] using success
+
+/-- A successful memory request is confined to its memory's granted
+    read and write regions. The permission mask can be chosen once for
+    an entire local execution and stays in force throughout that run. -/
+theorem memAns_confined {m next : Mem} {request : Op} {answer : W × W}
+    {reads writes : W → Prop}
+    (readable : ∀ byte, m.rd byte = true → reads byte)
+    (writable : ∀ byte, m.wr byte = true → reads byte ∧ writes byte)
+    (answered : memAns m request = some (some answer, next)) :
+    (∀ byte, fussOp request byte → reads byte) ∧
+      (schreibtOp request = true → ∀ byte, fussOp request byte → writes byte) := by
+  cases request with
+  | rd width base =>
+    rw [memAns_rd] at answered
+    have result := (Prod.mk.inj (Option.some.inj answered)).1
+    have allowed := read_granted m base width (by rw [result]; rfl)
+    exact ⟨fun byte touched => readable byte (granted_window allowed touched), by simp [schreibtOp]⟩
+  | wr base value =>
+    rw [memAns_wr, wr64_eq] at answered
+    by_cases allowed : Mem.all m.wr base 8 = true
+    · exact ⟨fun byte touched => (writable byte (granted_window allowed touched)).1,
+        fun _ byte touched => (writable byte (granted_window allowed touched)).2⟩
+    · simp only [ite_eq_right allowed, Option.some.injEq, Prod.mk.injEq, reduceCtorEq, false_and] at answered
+  | cas base expected value =>
+    rw [memAns_cas, cas_eq] at answered
+    by_cases allowed : (Mem.all m.rd base 8 && Mem.all m.wr base 8) = true
+    · obtain ⟨read, write⟩ := Bool.and_eq_true_iff.mp allowed
+      exact ⟨fun byte touched => readable byte (granted_window read touched),
+        fun _ byte touched => (writable byte (granted_window write touched)).2⟩
+    · simp only [ite_eq_right allowed, Option.some.injEq, Prod.mk.injEq, reduceCtorEq, false_and] at answered
+  | sys | fp => cases answered
 
 /-! ## Locality -/
 
@@ -214,12 +299,11 @@ theorem memAns_gleich {m1 m2 m1' : Mem} {o : Op} {a : Ans} (hg : GleichAuf (fuss
     (h : memAns m1 o = some (a, m1')) : ∃ m2', memAns m2 o = some (a, m2') ∧ GleichAuf (fussOp o) m1' m2' := by
   cases o with
   | rd n x =>
-    have hg' : GleichAuf (fenster x) m1 m2 := hg
     rw [memAns_rd] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨m2, ?_, hg⟩
-    rw [memAns_rd, gleich_rd8 hg', gleich_rd32 hg', gleich_rd64 hg']
+    rw [memAns_rd, rdAntwort_agrees n hg]
   | wr x v =>
     have hg' : GleichAuf (fenster x) m1 m2 := hg
     rw [memAns_wr, wr64_eq] at h
@@ -254,5 +338,36 @@ theorem memAns_gleich {m1 m2 m1' : Mem} {o : Op} {a : Ans} (hg : GleichAuf (fuss
       exact ⟨m2, rfl, hg⟩
   | sys q => simp only [memAns, reduceCtorEq] at h
   | fp kind x y => simp only [memAns, reduceCtorEq] at h
+
+/-- Replay needs write permission agreement only for requests that
+    may write. In particular, reads can share bytes whose write
+    permission is masked in the reference execution. -/
+theorem memAns_replay {before actual after : Mem} {request : Op} {answer : Ans}
+    (agree : ∀ byte, fussOp request byte →
+      before.b byte = actual.b byte ∧ before.rd byte = actual.rd byte ∧
+        (schreibtOp request = true → before.wr byte = actual.wr byte))
+    (step : memAns before request = some (answer, after)) :
+    ∃ updated, memAns actual request = some (answer, updated) ∧
+      ∀ byte, fussOp request byte → after.b byte = updated.b byte ∧ after.rd byte = updated.rd byte := by
+  by_cases writes : schreibtOp request = true
+  · obtain ⟨updated, answered, contents⟩ :=
+      memAns_gleich (fun byte included => by
+        obtain ⟨data, read, write⟩ := agree byte included
+        exact ⟨data, read, write writes⟩) step
+    exact ⟨updated, answered, fun byte included =>
+      ⟨(contents byte included).1, (contents byte included).2.1⟩⟩
+  · cases request with
+    | rd width base =>
+      let view : Mem := { actual with wr := before.wr }
+      have same : GleichAuf (fussOp (.rd width base)) before view :=
+        fun byte read => ⟨(agree byte read).1, (agree byte read).2.1, rfl⟩
+      rw [memAns_rd] at step
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj step)
+      have result := rdAntwort_agrees width same
+      refine ⟨actual, ?_, fun byte read => ⟨(agree byte read).1, (agree byte read).2.1⟩⟩
+      rw [memAns_rd, result]
+      rfl
+    | wr | cas => exact (writes rfl).elim
+    | sys | fp => cases step
 
 end Gabbro.Stage0.Senke.BildMehr
