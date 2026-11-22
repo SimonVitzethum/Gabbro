@@ -251,7 +251,7 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
   have position : (0 : Int) ≤ 1 ∧ (1 : Int) < 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
     simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, bind, Option.bind,
-      arrayType, firstType, arrayRead, firstRead, bounds, position, ite_true]
+      arrayType, firstType, arrayRead, firstRead, bounds, position, and_self, ite_true]
 
 /-- A static literal substring admitted as a predicate argument lowers
     to the exact model subsequence at the checked byte bound. -/

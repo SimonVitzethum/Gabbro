@@ -329,7 +329,7 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
   simp only [uLocalArraySliceObservation, uSliceInteger, arrayType, firstType, lastType, bounds,
-    locals, locals.1, locals.2.1, locals.2.2, bind, Option.bind, ite_true]
+    locals, and_self, bind, Option.bind, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
