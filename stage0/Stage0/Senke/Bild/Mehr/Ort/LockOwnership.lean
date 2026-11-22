@@ -39,7 +39,8 @@ theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketOwnership [Kern]
     | none => exact List.not_mem_nil
     | some root =>
       have declared : root.1 ∈ E.ws := by
-        exact List.mem_map_of_mem (List.mem_append_left _ (List.mem_of_getElem? found))
+        have member : root ∈ E.starts := List.mem_of_getElem? found
+        exact List.mem_map_of_mem (List.mem_append_left _ (List.mem_append_left _ member))
       have empty := (checked.wurzeln root.1 declared).1
       change lock ∉ (declOf output.compiled.unit).haelt root.1
       rw [empty]
