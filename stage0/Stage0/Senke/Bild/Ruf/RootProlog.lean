@@ -63,7 +63,7 @@ theorem Emitted.root_requires_local (output : Emitted src reserve options)
     rw [show ((declOf output.compiled.unit).signatur root).haelt = [] from lockless] at signed
     exact List.not_mem_nil signed
   rcases (valid.fuss root).1 carrier (fuss_req E.P root reads) with localOrGuard | ⟨lock, guarded, _⟩ | shared
-  · rcases Bool.or_eq_true.mp localOrGuard with signature | localRead
+  · rcases Bool.or_eq_true_iff.mp localOrGuard with signature | localRead
     · obtain ⟨lock, guard, _⟩ := sigB_ok signature
       exact (unguarded lock guard).elim
     · exact @of_decide_eq_true _ (Classical.propDecidable _) localRead

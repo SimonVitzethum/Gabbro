@@ -201,9 +201,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     have privateByte := (buffers i store pending address written).1
     rcases readable with own | code
     · exact different (imageStackFootprint_owner placed own privateByte).symm
-    · rcases placed i address privateByte with stack | ⟨lo, _⟩
-      · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans stack.2.1)
-      · exact (Nat.not_le_of_lt code) ((Nat.le_trans (Nat.le_add_right _ _) output.stackReservation_bounds.1).trans lo))
+    · exact (Nat.not_le_of_lt code) (imageFootprint_after_code placed privateByte))
   refine ⟨step, ⟨body, buffers', length, ?_, ?_⟩, registry'⟩
   · change _ ∨ ∃ snapshots positions committed,
       MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle

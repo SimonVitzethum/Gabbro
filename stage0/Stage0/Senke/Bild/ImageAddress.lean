@@ -64,7 +64,7 @@ theorem Emitted.world_survives_stack [Kern] (output : Emitted src K options)
 
 /-- The reserved frames are disjoint from all other frames and the
     entire typed world, independently of who owns its carriers. -/
-theorem imageStackFootprint_owner {src : String} {reserve : Nat} {options : Profil.Options}
+theorem imageStackFootprint_owner [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {footprint : Nat → W → Prop} {issuer other : Nat} {byte : W}
     (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
       output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
@@ -73,7 +73,16 @@ theorem imageStackFootprint_owner {src : String} {reserve : Nat} {options : Prof
   · exact imageStackFootprint_disjoint theirs stack
   · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack)) world).elim
 
-theorem imageStackFootprint_agree {output : Emitted src K options} {thread : Nat}
+theorem imageFootprint_after_code [Kern] {output : Emitted src K options} {footprint : Nat → W → Prop}
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    {thread : Nat} {byte : W} (owned : footprint thread byte) :
+    output.image.fp0 ≤ byte.toNat := by
+  rcases placed thread byte owned with stack | ⟨world, _⟩
+  · exact (Nat.le_add_right _ _).trans stack.2.1
+  · exact (Nat.le_add_right _ _).trans (output.stackReservation_bounds.1.trans world)
+
+theorem imageStackFootprint_agree [Kern] {output : Emitted src K options} {thread : Nat}
     {before after : Runner.Mem} (declared : thread ≤ output.starts.length)
     (agreement : Agree (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)))
       0 output.image.Ks before after) :
@@ -93,7 +102,8 @@ theorem imageStackFootprint_agree {output : Emitted src K options} {thread : Nat
 /-- Pending private stores are outside the emitted instruction extent,
     so an issuing thread fetches the same code as shared memory holds. -/
 theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
-    (state : Runner.Beweis.TSt) (stores : PrivateBuffers (imageStackFootprint output) state)
+    {footprint : Nat → W → Prop} (state : Runner.Beweis.TSt) (stores : PrivateBuffers footprint state)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (thread : Nat) :
     BytesAt (state.view thread) codeBase (output.image.code.flatMap encII) ↔
       BytesAt state.m codeBase (output.image.code.flatMap encII) := by
@@ -104,8 +114,7 @@ theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
       intro store queued offset inside overlap
       have touched : fenster store.1 address := overlap.symm ▸ fenster_add _ inside
       have privateByte := (stores thread store queued address touched).1
-      have above := (Nat.le_add_right _ _).trans privateByte.2.1
-      exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) above)
+      exact (Nat.not_le_of_lt (output.code_byte_before_stacks inCode)) (afterCode thread address privateByte))
     exact ⟨unchanged.1, unchanged.2, congrFun (Runner.Beweis.foldl_wr _ _) address⟩
   constructor
   · intro code index inCode
@@ -120,7 +129,8 @@ theorem Emitted.code_in_private_view [Kern] (output : Emitted src K options)
     also keeps it in shared memory. The actual syscall keeps the buffers. -/
 theorem Emitted.code_after_host_answer [Kern] (output : Emitted src K options)
     {before after : imageTSO.St} {issuer : Nat} {req : Req} {answer : Ans}
-    (stores : PrivateBuffers (imageStackFootprint output) before.1)
+    {footprint : Nat → W → Prop} (stores : PrivateBuffers footprint before.1)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (code : BytesAt before.1.m codeBase (output.image.code.flatMap encII))
     (step : imageTSO.ans before issuer (.sys req) answer after)
     (keeps : req ≠ cloneReq → Kern.ans req (before.1.view issuer) answer (after.1.view issuer) →
@@ -135,17 +145,18 @@ theorem Emitted.code_after_host_answer [Kern] (output : Emitted src K options)
   · rw [host.1]
     exact code
   · rename_i ordinary
-    have retained : PrivateBuffers (imageStackFootprint output) after.1 := by
+    have retained : PrivateBuffers footprint after.1 := by
       intro i store pending byte touched
       rw [host.2] at pending
       exact stores i store pending byte touched
-    exact (output.code_in_private_view _ retained issuer).mp
-      (keeps ordinary host.1 ((output.code_in_private_view _ stores issuer).mpr code))
+    exact (output.code_in_private_view _ retained afterCode issuer).mp
+      (keeps ordinary host.1 ((output.code_in_private_view _ stores afterCode issuer).mpr code))
 
-/-- A real asynchronous flush writes only within its own emitted
-    stack reservation and preserves the shared instruction bytes. -/
+/-- A real asynchronous flush confined to storage preserves the
+    shared instruction bytes. -/
 theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
-    {state after : imageTSO.St} (stores : PrivateBuffers (imageStackFootprint output) state.1)
+    {state after : imageTSO.St} {footprint : Nat → W → Prop} (stores : PrivateBuffers footprint state.1)
+    (afterCode : ∀ issuer byte, footprint issuer byte → output.image.fp0 ≤ byte.toNat)
     (code : BytesAt state.1.m codeBase (output.image.code.flatMap encII))
     (flushed : imageTSO.tau state after) :
     BytesAt after.1.m codeBase (output.image.code.flatMap encII) := by
@@ -156,7 +167,7 @@ theorem Emitted.code_after_private_flush [Kern] (output : Emitted src K options)
   rw [updated]
   apply output.code_survives_writes (write_nurIn state.1.m address value.toNat) _ code
   intro byte hit
-  exact (Nat.le_add_right _ _).trans (stores issuer (address, value) member byte hit).1.2.1
+  exact afterCode issuer byte (stores issuer (address, value) member byte hit).1
 
 /-- A running root stub decodes an actual emitted instruction within
     the startup header. This applies to the entry stub and all clone

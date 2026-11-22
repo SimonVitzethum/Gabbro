@@ -165,7 +165,7 @@ theorem imageProtectedFootprint_exclusive [Kern] {src : String} {reserve : Nat} 
       (protectedCellFootprint_bounds inLayout left).1).elim
   · exact locks.protected_exclusive cells left right
 
-theorem imageRuntimeFootprint_lock_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
+theorem imageRuntimeFootprint_lock_disjoint [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     {thread : Nat} {address : W} {lock : (declOf output.compiled.unit).Lock}

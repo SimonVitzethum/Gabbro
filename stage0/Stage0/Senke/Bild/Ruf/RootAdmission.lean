@@ -141,10 +141,7 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
   have accessible (byte : W) (among : reads byte) (j : Nat) (other : footprint j byte) : j = i := by
     rcases among with own | shared
     · exact imageStackFootprint_owner placed own other
-    · rcases placed j byte other with theirs | ⟨world, _⟩
-      · exact ((Nat.not_le_of_lt shared) ((Nat.le_add_right _ _).trans theirs.2.1)).elim
-      · exact ((Nat.not_le_of_lt shared)
-          ((Nat.le_add_right _ _).trans (output.stackReservation_bounds.1.trans world))).elim
+    · exact ((Nat.not_le_of_lt shared) (imageFootprint_after_code placed other)).elim
   have atReads : GleichAuf reads
       (projectSCState footprint after.ms).1 entry.mb := by
     rw [entryMemory]
