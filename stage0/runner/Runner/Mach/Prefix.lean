@@ -65,11 +65,14 @@ theorem ProcessPrefix.silent_slots {before after : Cfg M θ} {events : List Ev} 
 theorem Tr.events_le_steps {before : Cfg M θ} {events : List Ev} {ending : Ende} {count : Nat}
     (run : Tr M act before events ending count) : events.length ≤ count := by
   have labelCount (i : Nat) (op : Op) (answer : Ans) : (lbl i op answer).length ≤ 1 := by
-    cases op <;> decide
+    cases op with
+    | sys => exact Nat.le_refl 1
+    | rd | wr | cas | fp => exact Nat.zero_le 1
   induction run with
   | nil => exact Nat.le_refl _
   | tau _ _ ih | priv _ _ _ ih => exact Nat.le_trans ih (Nat.le_succ _)
-  | stop | exitGroup | cloneNoStop => decide
+  | stop => exact Nat.zero_le 1
+  | exitGroup | cloneNoStop => exact Nat.le_refl 1
   | ask _ _ _ _ _ _ ih =>
     rw [List.length_append, Nat.add_comm]
     exact Nat.add_le_add ih (labelCount _ _ _)

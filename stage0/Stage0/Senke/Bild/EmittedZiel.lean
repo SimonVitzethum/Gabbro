@@ -35,8 +35,7 @@ abbrev Emitted.lsA (output : Emitted src K options) : Aufzaehlung (declOf output
 /-- The complete carrier list of the unit. -/
 abbrev Emitted.csA (output : Emitted src K options) :
     Aufzaehlung ((declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob) :=
-  ⟨(List.finRange output.compiled.unit.tabs.length).map Sum.inl ++
-      (List.finRange output.compiled.unit.globs.length).map Sum.inr, fun c => by
+  ⟨imageCheckCarriers output.compiled.unit, fun c => by
     cases c with
     | inl t => exact List.mem_append_left _ (List.mem_map_of_mem (List.mem_finRange t))
     | inr g => exact List.mem_append_right _ (List.mem_map_of_mem (List.mem_finRange g))⟩

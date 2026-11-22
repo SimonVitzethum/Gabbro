@@ -471,14 +471,12 @@ def Stage0Correct [Kern] : Prop :=
               ∃ earlier last state, events = earlier ++ last ∧
                 ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending))
 
-/-- The two remaining compiler obligations are the checked unit export
-    and construction of the simulation for each actual mapped image. The
-    production path supplies the bytes and the canonical source directly. -/
-theorem stage0_correct_of_export_simulation [Kern]
-    (checkedExport : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
+/-- The emitted bytes already carry a checker verdict on their exact
+    model. The remaining obligation is the execution simulation. -/
+theorem stage0_correct_of_simulation [Kern]
+    (simulate : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
         (output : Emitted source reserve options), emit source reserve options = .ok output →
-        ∃ E : Einheit (declOf output.compiled.unit), ImageModelUnit output E ∧
-          akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+        let E := output.checkedUnit.unit
           ∀ (O : Orakel (declOf output.compiled.unit)),
             CallSitePflicht E → ForeignVertrag E O →
             HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
@@ -487,13 +485,11 @@ theorem stage0_correct_of_export_simulation [Kern]
               Nonempty (ImageSimulation output E O start)) :
     Stage0Correct := by
   intro source reserve options bytes wrote
-  obtain ⟨output, emitted, payload⟩ := irBild_emitted source reserve bytes wrote
-  obtain ⟨E, unit, accepted, simulation⟩ := checkedExport source reserve options output emitted
-  refine ⟨output, E, emitted, payload, compile_source_program source output.compiled, unit, accepted, ?_⟩
+  obtain ⟨output, emitted, payload, sourceModel, unit, accepted, posts, duties⟩ := irBild_checkImageUnit wrote
+  refine ⟨output, output.checkedUnit.unit, emitted, payload, sourceModel, unit, accepted, ?_⟩
   intro O calls binding hardware gate answers futex visibility start mapped
-  obtain ⟨sim⟩ := simulation O calls binding hardware gate answers futex visibility start mapped
-  have duties := nutzerPflicht_of_akzeptiert output.fsA output.lsA accepted
-  exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls unit.postDeckt binding hardware run,
+  obtain ⟨sim⟩ := simulate source reserve options output emitted O calls binding hardware gate answers futex visibility start mapped
+  exact ⟨sim, fun _ _ _ run => sim.goal accepted duties calls posts binding hardware run,
     fun _ _ _ run => ⟨(sim.no_machine_error run).1, (sim.no_machine_error run).2, sim.terminal run⟩⟩
 
 end Gabbro.Stage0

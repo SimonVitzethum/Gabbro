@@ -448,7 +448,7 @@ theorem irBild_checked_loader_prefix [Kern] {bytes : List B}
     ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
       output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
       (output.compiled.unit.axs.length = 0 →
-        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output = [] →
+        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output.compiled = [] →
         let E := output.goalUnit (axWahr _)
         ImageModelUnit output E ∧
         akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧

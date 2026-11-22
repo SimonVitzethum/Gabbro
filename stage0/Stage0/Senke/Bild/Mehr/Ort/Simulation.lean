@@ -104,13 +104,12 @@ theorem ImageIRSimulation.toRunner (sim : ImageIRSimulation output E O start)
       (show ∃ next, ImageReach output E O state next ∧ ImageStopMatches output O next (history ++ []) last ending from
         ⟨next, imageReach_trans first continued, matched⟩)
 
-/-- After constructing the checked semantic export and the IR simulation,
-    the goal theorem applies to all native runs of the emitted bytes. -/
+/-- The exact IR simulation supplies the execution leg of the native goal
+    for every image whose unit passed the production model checker. -/
 theorem stage0_correct_of_ir_simulation
-    (prepare : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
+    (simulate : ∀ (source : String) (reserve : Nat) (options : Profil.Options)
         (output : Emitted source reserve options), emit source reserve options = .ok output →
-        ∃ E : Einheit (declOf output.compiled.unit), ImageModelUnit output E ∧
-          akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+        let E := output.checkedUnit.unit
           ∀ (O : Orakel (declOf output.compiled.unit)),
             CallSitePflicht E → ForeignVertrag E O →
             HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
@@ -118,12 +117,9 @@ theorem stage0_correct_of_ir_simulation
             ∀ (start : Cfg imageTSO X86.X), MappedImage output start →
               Nonempty (ImageIRSimulation output E O start)) :
     Stage0Correct := by
-  apply stage0_correct_of_export_simulation
-  intro source reserve options output emitted
-  obtain ⟨E, model, accepted, simulate⟩ := prepare source reserve options output emitted
-  refine ⟨E, model, accepted, ?_⟩
-  intro O calls foreign hardware gate answers futex visibility start mapped
-  obtain ⟨ir⟩ := simulate O calls foreign hardware gate answers futex visibility start mapped
+  apply stage0_correct_of_simulation
+  intro source reserve options output emitted O calls foreign hardware gate answers futex visibility start mapped
+  obtain ⟨ir⟩ := simulate source reserve options output emitted O calls foreign hardware gate answers futex visibility start mapped
   exact ir.toRunner mapped
 
 end Gabbro.Stage0

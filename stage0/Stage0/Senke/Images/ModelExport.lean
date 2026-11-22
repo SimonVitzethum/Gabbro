@@ -36,7 +36,7 @@ structure ImageModelUnit (output : Emitted src reserve options)
   arenaStorage : ∀ arena ∈ E.arenen,
     ∃ storage : ResolvedArenaStorage output.compiled.unit arena.A.tab,
       resolveArenaStorage output.compiled.unit arena.A.tab = .ok storage ∧ storage.shape = arena.A
-  accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) E.akku
+  accumulators : List.Forall₂ (ImageAccumulator output.compiled) (imageAccumulatorItems output.compiled) E.akku
   summary : ∀ item world value, E.Q item world value = true ↔
     ∃ old arguments, AxNach E.P.axVertrag item old arguments world value
 
@@ -60,7 +60,7 @@ theorem Emitted.image_model (output : Emitted src reserve options)
       ∃ storage : ResolvedArenaStorage output.compiled.unit arena.A.tab,
         resolveArenaStorage output.compiled.unit arena.A.tab = .ok storage ∧ storage.shape = arena.A)
     (acc : List (Kernzelle.AccumulatorDecl (declOf output.compiled.unit)))
-    (accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) acc) :
+    (accumulators : List.Forall₂ (ImageAccumulator output.compiled) (imageAccumulatorItems output.compiled) acc) :
     ImageModelUnit output { output.goalUnit Q with axiomSources := sources, arenen := arenas, akku := acc } := by
   refine {
     program := rfl
@@ -89,7 +89,7 @@ theorem Emitted.image_model_without_arenas (output : Emitted src reserve options
       ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
     (noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true)
     (acc : List (Kernzelle.AccumulatorDecl (declOf output.compiled.unit)))
-    (accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) acc) :
+    (accumulators : List.Forall₂ (ImageAccumulator output.compiled) (imageAccumulatorItems output.compiled) acc) :
     ImageModelUnit output { output.goalUnit Q with axiomSources := sources, akku := acc } := by
   apply output.image_model Q sources summary [] _ _ acc accumulators
   · intro t
@@ -112,7 +112,7 @@ private theorem Emitted.image_model_empty_accumulators (output : Emitted src res
     (summary : ∀ item world value, Q item world value = true ↔
       ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
     (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
+    (noAccumulators : imageAccumulatorItems output.compiled = []) :
     ImageModelUnit output { output.goalUnit Q with axiomSources := sources } :=
   output.image_model_without_arenas Q sources summary (OldSource.zertifizierbar_teile noOwnership).1
     [] (by rw [noAccumulators]; exact .nil)
@@ -123,7 +123,7 @@ private theorem Emitted.image_model_empty_accumulators (output : Emitted src res
 theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
     (noAxioms : output.compiled.unit.axs.length = 0)
     (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
+    (noAccumulators : imageAccumulatorItems output.compiled = []) :
     let E := output.goalUnit (axWahr _)
     ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true := by
@@ -137,7 +137,7 @@ theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
 theorem Emitted.checked_image_model_foreign (output : Emitted src reserve options)
     {checked : output.CheckedForeign} (produced : output.foreignLogic = .ok checked)
     (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
+    (noAccumulators : imageAccumulatorItems output.compiled = []) :
     let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
     ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true :=
@@ -152,7 +152,7 @@ theorem irBild_checked_foreign_unit {bytes : List Runner.B}
     ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
       output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
       ∀ {checked : output.CheckedForeign}, output.foreignLogic = .ok checked →
-        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output = [] →
+        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output.compiled = [] →
         let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
         ImageModelUnit output E ∧
           akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧ PostDeckt E := by
@@ -169,115 +169,28 @@ structure CheckedImageUnit (output : Emitted src reserve options) where
   exactModel : ImageModelUnit output unit
   accepted : akzeptiertX_pruefer.akzeptiert unit output.fsA.1 output.lsA.1 output.csA.1 = true
 
-/-- Retain the exact model and the verdict computed on that model. -/
-def Emitted.finishImageUnit (output : Emitted src reserve options)
-    (unit : Einheit (declOf output.compiled.unit)) (exactModel : ImageModelUnit output unit) :
-    Except String (CheckedImageUnit output) :=
-  if accepted : checkAkzeptiertX unit output.fsA.1 output.lsA.1 output.csA.1 = true then
-    .ok ⟨unit, exactModel, (akzeptiertX_pruefer_decision unit _ _ _).trans accepted⟩
-  else .error "ir: model checker refused the exported image unit"
+/-- Read the model checked before the actual image was emitted. Its
+    program, owned memory, starts and foreign logic come from that emission. -/
+def Emitted.checkedUnit (output : Emitted src reserve options) : CheckedImageUnit output :=
+  let plan := output.checkedImage.plan
+  ⟨plan.unit output.sp0 (⟨output.compiled.main, output.args⟩ :: output.starts),
+    output.image_model plan.post plan.axiomSources plan.postExact plan.arenas.localInterfaces
+      plan.arenas.localInterfaces_coverage plan.arenas.localInterfaces_exact
+      plan.accumulators.val plan.accumulators.property,
+    output.checkedImage.accepted⟩
 
-theorem Emitted.finishImageUnit_ok (output : Emitted src reserve options)
-    (unit : Einheit (declOf output.compiled.unit)) (exactModel : ImageModelUnit output unit)
-    (accepted : akzeptiertX_pruefer.akzeptiert unit output.fsA.1 output.lsA.1 output.csA.1 = true) :
-    output.finishImageUnit unit exactModel = .ok ⟨unit, exactModel, accepted⟩ := by
-  have verdict := (akzeptiertX_pruefer_decision unit output.fsA.1 output.lsA.1 output.csA.1).symm.trans accepted
-  simp only [finishImageUnit, dif_pos verdict]
-
-/-- Resolve the logic decision on the actual emitted unit. Both the
-    axiom-free and foreign branches produce the same checked interface.
-    A missing arena export or refused model check returns a diagnostic. -/
-def Emitted.checkImageUnit (output : Emitted src reserve options) :
-    Except String (CheckedImageUnit output) := do
-  if noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true then
-    let acc ← collectImageAccumulators output (imageAccumulatorItems output)
-    if noAxioms : output.compiled.unit.axs.length = 0 then
-      let initial := output.goalUnit (axWahr _)
-      output.finishImageUnit { initial with akku := acc.val }
-        (output.image_model_without_arenas _ initial.axiomSources
-          (fun item _ _ => False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt)))
-          noArenas acc.val acc.property)
-    else
-      let certificate ← output.foreignLogic
-      let initial := withForeignSummary (output.goalUnit (axWahr _)) certificate.summary
-      output.finishImageUnit { initial with akku := acc.val }
-        (output.image_model_without_arenas _ initial.axiomSources certificate.summary.exactPost
-          noArenas acc.val acc.property)
-  else
-    let storage ← collectArenaStorage output.compiled.unit
-    let acc ← collectImageAccumulators output (imageAccumulatorItems output)
-    let arenas := storage.localInterfaces
-    let covered := storage.localInterfaces_coverage
-    let origin := storage.localInterfaces_exact
-    if noAxioms : output.compiled.unit.axs.length = 0 then
-      let initial := output.goalUnit (axWahr _)
-      output.finishImageUnit { initial with arenen := arenas, akku := acc.val }
-        (output.image_model _ initial.axiomSources
-          (fun item _ _ => False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt)))
-          arenas covered origin acc.val acc.property)
-    else
-      let certificate ← output.foreignLogic
-      let initial := withForeignSummary (output.goalUnit (axWahr _)) certificate.summary
-      output.finishImageUnit { initial with arenen := arenas, akku := acc.val }
-        (output.image_model _ initial.axiomSources certificate.summary.exactPost
-          arenas covered origin acc.val acc.property)
-
-/-- The deployed checker already certifies every emitted axiom-free
-    unit in the complete no-ownership fragment. Running the exact
-    exporter on it yields precisely that verdict on the same unit. -/
-theorem Emitted.checkImageUnit_axiomFree (output : Emitted src reserve options)
-    (noAxioms : output.compiled.unit.axs.length = 0)
-    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
-    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked ∧
-      checked.unit = output.goalUnit (axWahr _) := by
-  obtain ⟨model, accepted⟩ := output.checked_image_model_empty noAxioms noOwnership noAccumulators
-  have noArenas := (OldSource.zertifizierbar_teile noOwnership).1
-  refine ⟨⟨output.goalUnit (axWahr _), model, accepted⟩, ?_, rfl⟩
-  simp only [checkImageUnit, dif_pos noArenas, collectImageAccumulators_empty output noAccumulators,
-    bind, Except.bind, dif_pos noAxioms]
-  exact output.finishImageUnit_ok _ model accepted
-
-/-- A retained, successful foreign certificate yields the exact checked
-    unit when the source has ordinary carriers and no accumulators. -/
-theorem Emitted.checkImageUnit_foreign (output : Emitted src reserve options)
-    {certificate : output.CheckedForeign} (produced : output.foreignLogic = .ok certificate)
-    (foreign : output.compiled.unit.axs.length ≠ 0)
-    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
-    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked ∧
-      checked.unit = withForeignSummary (output.goalUnit (axWahr _)) certificate.summary := by
-  obtain ⟨model, accepted⟩ := output.checked_image_model_foreign produced noOwnership noAccumulators
-  have noArenas := (OldSource.zertifizierbar_teile noOwnership).1
-  refine ⟨⟨_, model, accepted⟩, ?_, rfl⟩
-  simp only [checkImageUnit, dif_pos noArenas, collectImageAccumulators_empty output noAccumulators,
-    bind, Except.bind, dif_neg foreign, produced]
-  exact output.finishImageUnit_ok _ model accepted
-
-/-- Every ordinary emitted unit without accumulators has a successful
-    export to the full checker. Foreign logic was already checked at
-    the same serialized entry and root arguments. -/
-theorem Emitted.checkImageUnit_ordinary (output : Emitted src reserve options)
-    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
-    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked := by
-  by_cases noForeign : output.compiled.unit.axs.length = 0
-  · obtain ⟨checked, accepted, _⟩ := output.checkImageUnit_axiomFree noForeign noOwnership noAccumulators
-    exact ⟨checked, accepted⟩
-  · obtain ⟨certificate, verified⟩ := output.foreignLogicChecked noForeign
-    obtain ⟨checked, accepted, _⟩ := output.checkImageUnit_foreign verified noForeign noOwnership noAccumulators
-    exact ⟨checked, accepted⟩
-
-/-- The returned bytes and the complete checker verdict on their exact
-    model can be obtained from one canonical emission and one export. -/
+/-- Every set of bytes returned by the CLI already has the complete
+    model verdict, with the exact canonical program and declared duties. -/
 theorem irBild_checkImageUnit {bytes : List Runner.B} (wrote : irBild src reserve options = .ok bytes) :
     ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
       output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
-      ∀ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked →
-        PostDeckt checked.unit ∧ NutzerPflichtA checked.unit := by
+      ImageModelUnit output output.checkedUnit.unit ∧
+      akzeptiertX_pruefer.akzeptiert output.checkedUnit.unit output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+      PostDeckt output.checkedUnit.unit ∧ NutzerPflichtA output.checkedUnit.unit := by
   obtain ⟨output, emitted, payload⟩ := irBild_emitted src reserve bytes wrote
-  exact ⟨output, emitted, payload, compile_source_program src output.compiled,
-    fun checked _ => ⟨checked.exactModel.postDeckt,
-      nutzerPflicht_of_akzeptiert output.fsA output.lsA checked.accepted⟩⟩
+  let checked := output.checkedUnit
+  exact ⟨output, emitted, payload, compile_source_program src output.compiled, checked.exactModel,
+    checked.accepted, checked.exactModel.postDeckt,
+    nutzerPflicht_of_akzeptiert output.fsA output.lsA checked.accepted⟩
 
 end Gabbro.Stage0

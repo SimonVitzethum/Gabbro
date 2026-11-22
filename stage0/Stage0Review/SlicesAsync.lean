@@ -87,6 +87,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeArrayCarrierExpr_erfuellbar
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeStringCarrierExpr_exact
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
+#print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
+#print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.tagFuture_names
 #print axioms Gabbro.Grammatik.Async.ReificationDuty.cancel_releases
