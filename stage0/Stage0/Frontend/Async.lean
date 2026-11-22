@@ -178,8 +178,8 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
       · rename_i error impossible
         change lowWertE u [] Λ (expressionFunction fn []) none (.lit (Int.ofNat value)) =
           .error error at impossible
-        rw [lowered] at impossible
-        cases impossible
+        have mismatch := lowered.symm.trans impossible
+        cases mismatch
       · rename_i actual found
         change lowWertE u [] Λ (expressionFunction fn []) none (.lit (Int.ofNat value)) =
           .ok actual at found

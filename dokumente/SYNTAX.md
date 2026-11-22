@@ -859,6 +859,11 @@ The endpoint ranges must imply `0 <= first <= last <= lenof(array)`.
 The index range must imply `0 <= index < last - first`. The numeric locals
 must have resolved intervals. These forms compute the length or read the
 original array directly.
+Successive slices of the same local array can be observed together. In
+`lenof(a[i .. j][k .. l])` and `a[i .. j][k .. l][n]`, the inner endpoint
+ranges must fit within the minimum length of the outer slice. The resulting
+length is `l - k`. The element is read once at `i + k + n` in the original
+array.
 
 
 
