@@ -12,6 +12,7 @@
 module
 public import Stage0.Senke.Bild.Lauf
 public import Stage0.Senke.Bild.Mehr.Lokal
+public import Runner.Mach.Maschine
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BildMehr
@@ -71,7 +72,12 @@ theorem RunP.control_of_runM {start current : Res T} {before now after : Mem} {n
   | next => exact Or.inl ⟨rfl, rfl⟩
   | @ask request resume _ _ _ _ _ answered _ =>
     refine Or.inr ⟨request, resume, rfl, ?_⟩
-    cases request <;> first | rfl | cases answered
+    cases request with
+    | rd => rfl
+    | wr => rfl
+    | cas => rfl
+    | sys => cases answered
+    | fp => cases answered
 
 /-- A partial run that has reached the end of the tree is a memory-only step. -/
 theorem runP_runM {r r' : Res T} {m m1 : Mem} (h : RunP r m r' m1) : ∀ {t : T}, r' = .next t → RunM r m t m1 := by
