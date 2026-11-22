@@ -52,6 +52,27 @@ theorem BildLage.head (h : BildLage passes P fs pos main roots K Ks Yb A cs body
   simp only [List.length_append, spawnC_len, List.length_map, List.length_range, startC_len, rootsC_len, headLen]
 
 omit [Kern] in
+/-- Every emitted start shares the same representable depth word and
+    a frame with room for the entire fixed header. -/
+theorem BildLage.startLimits (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
+    2 < Ks ∧ n + 1 < 2 ^ 31 ∧ Ks < 2 ^ 31 := by
+  have reserved := Nat.le_mul_of_pos_right Ks (Nat.succ_pos roots.length)
+  have first := h.hylo
+  have world := h.hyord
+  have last := h.hyhi
+  have imageFits := h.hfit
+  have frameRoom := h.hroom
+  have frameSize : Ks < 2 ^ 31 := by omega
+  have depth : n + 1 ≤ Ks := by
+    rw [h.hdepth]
+    have divided := Nat.div_le_self (Ks - FB) (maxTop cs)
+    simp only [depthOf, FB] at divided frameRoom ⊢
+    omega
+  refine ⟨?_, depth.trans_lt frameSize, frameSize⟩
+  simp only [FB] at frameRoom
+  omega
+
+omit [Kern] in
 /-- Every admitted start serializes successfully; the complete stack band has exactly
     the byte length reserved by the source-independent image geometry. -/
 theorem BildLage.stacks (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :

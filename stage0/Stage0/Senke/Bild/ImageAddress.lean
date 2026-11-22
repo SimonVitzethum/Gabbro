@@ -172,39 +172,47 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
       startC output.image.A output.compiled.main output.image.depth 231 true) header
   rw [ofNat_add64, List.length_append, spawns, startC_len] at rootCode
   have code := rootsC_at output.image.A output.image.depth roots _ index listed rootCode
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  obtain ⟨headerFits, depthFits, slotsFit⟩ := layout.startLimits
+  refine ⟨?_, headerFits, depthFits, ?_, slotsFit⟩
   · simpa only [selected, Nat.mul_add, Nat.add_assoc] using code
-  · have room := layout.hroom
-    simp only [FB] at room
-    omega
-  · have depthBound : output.image.depth + 1 ≤ output.image.Ks := by
-      rw [layout.hdepth]
-      have quotient := Nat.div_le_self (output.image.Ks - FB) (maxTop functions)
-      have room := layout.hroom
-      simp only [depthOf, FB] at quotient room ⊢
-      omega
-    have allocation := layout.hylo
-    have order := layout.hyord
-    have last := layout.hyhi
-    have limit := layout.hfit
-    have reserved := Nat.le_mul_of_pos_right output.image.Ks
-      (Nat.succ_pos ((output.starts.map (·.1)).length))
-    simp only [List.length_map, Emitted.starts, Nat.succ_eq_add_one] at allocation reserved
-    omega
   · exact layout.hex root.1 (List.mem_cons_of_mem _ (List.mem_map.mpr
       ⟨root, List.mem_of_getElem? declared, rfl⟩))
-  · have allocation := layout.hylo
-    have order := layout.hyord
-    have last := layout.hyhi
-    have limit := layout.hfit
-    have reserved := Nat.le_mul_of_pos_right output.image.Ks
-      (Nat.succ_pos ((output.starts.map (·.1)).length))
-    simp only [List.length_map, Emitted.starts, Nat.succ_eq_add_one] at allocation reserved
-    omega
 
-/-- The first instruction of a declared child actually writes the image's
-    depth word to its own slot 2, advances its PC and preserves all other
-    thread views. The shared memory has not flushed that store. -/
+/-- The first instruction of any emitted start writes its depth word
+    to slot 2 in the issuing view and advances its program counter. -/
+theorem image_depth_setup [Kern] {D : Deklaration}
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {thread slots depth exit : Nat} {pointer : T}
+    {addresses : D.Fn → Nat} {fn : D.Fn} {keep : Bool}
+    (stub : CodeAt (before.ms.1.view thread) pointer.pc (startC addresses fn depth exit keep))
+    (enough : 2 < slots) (depthFits : depth + 1 < 2 ^ 31)
+    (running : before.ths[thread]? = some (some (.next pointer)))
+    (frame : FrameOK (before.ms.1.view thread) pointer.fp slots) :
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
+        ⟨after, before.ths.set thread (some (.next (nxt pointer)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      after.1.view thread = Runner.Mem.write (before.ms.1.view thread)
+        (slot pointer.fp (BitVec.ofNat 64 2)) 8 (depth + 1) ∧
+      ∀ other, other ≠ thread → after.1.view other = before.ms.1.view other := by
+  have first := stub 0 (by rw [startC_len]; decide)
+  have instruction : InsAt (before.ms.1.view thread) pointer.pc 1
+      (II.f 2) (II.f ((depth + 1 : Nat) : Int)) (II.f 0) := by
+    simpa only [startC, List.singleton_append, List.cons_append, List.getElem_cons_zero,
+      Nat.mul_zero, BitVec.add_zero, ci] using first
+  have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
+  have depthWord : sx (II.f ((depth + 1 : Nat) : Int)) =
+      BitVec.ofNat 64 (depth + 1) := sx_nat depthFits
+  have writable : Runner.Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f 2))) 8 = true := by
+    rw [slotNumber, ← Runner.Beweis.foldl_wr (before.ms.1.buf thread) before.ms.1.m]
+    exact frame.wr 2 enough
+  obtain ⟨after, run, memory, view, others⟩ :=
+    tso_const_prefix (before := imageToTSO before) running instruction writable
+  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
+  rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] <;> rfl
+
+/-- The first instruction of a declared child initializes only that
+    child's private depth slot. -/
 theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
     {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
     {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
@@ -223,22 +231,7 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
       ∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other := by
   intro pointer running frame
   obtain ⟨stub, enough, depthFits, _, _⟩ := output.root_stub_code loaded declared
-  have first := stub 0 (by rw [startC_len]; decide)
-  have instruction : InsAt (before.ms.1.view (index + 1)) pointer.pc 1
-      (II.f 2) (II.f ((output.image.depth + 1 : Nat) : Int)) (II.f 0) := by
-    simpa only [startC, List.singleton_append, List.cons_append, List.getElem_cons_zero,
-      Nat.mul_zero, BitVec.add_zero, ci, pointer] using first
-  have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
-  have depthWord : sx (II.f ((output.image.depth + 1 : Nat) : Int)) =
-      BitVec.ofNat 64 (output.image.depth + 1) := sx_nat depthFits
-  have writable : Runner.Mem.all before.ms.1.m.wr (slot pointer.fp (sx (II.f 2))) 8 = true := by
-    rw [slotNumber, ← Runner.Beweis.foldl_wr (before.ms.1.buf (index + 1)) before.ms.1.m]
-    exact frame.wr 2 enough
-  obtain ⟨after, run, memory, view, others⟩ :=
-    tso_const_prefix (before := imageToTSO before) running instruction writable
-  refine ⟨after, tso_silent_prefix_image run rfl, memory, ?_, others⟩
-  rw [view, slotNumber, depthWord, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] <;> rfl
+  exact image_depth_setup (before := before) stub enough depthFits running frame
 
 /-- The first child instruction leaves its exact arguments, frame
     permissions and code intact. The issuing view holds the depth word
