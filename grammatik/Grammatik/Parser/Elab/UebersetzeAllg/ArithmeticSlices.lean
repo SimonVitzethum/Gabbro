@@ -115,8 +115,7 @@ theorem relativeSliceWithLength_erfuellbar (element : Ty) (capacity : Nat) (fits
     rw [uSliceInteger]
     rfl
   have readIndex : uSliceInteger ctx (uWertBlatt ctx) (.lit 1) = some (1, 1, .lit 1) := by
-    rw [uSliceInteger]
-    rfl
+    simp only [uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some]
   have readLast : uSliceInteger ctx (uWertBlatt ctx) (.bin "+" (.variable "i") (.variable "n")) =
       some (2, 7, .add (.param "i") (.param "n")) := by
     rw [uSliceInteger, readFirst, readCount]
