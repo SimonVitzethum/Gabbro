@@ -8,7 +8,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
-  Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 

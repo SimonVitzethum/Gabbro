@@ -42,14 +42,15 @@ theorem ImageModelUnit.postDeckt {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E) : PostDeckt E :=
   fun item _ old arguments world value post => (unit.summary item world value).mpr ⟨old, arguments, post⟩
 
-private theorem Emitted.image_model_without_ownership (output : Emitted src reserve options)
+private theorem Emitted.image_model_without_arenas (output : Emitted src reserve options)
     (Q : AxEns (declOf output.compiled.unit))
     (sources : Option (Vertraege.Pruefer.AxiomSources Q))
     (summary : ∀ item world value, Q item world value = true ↔
       ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
-    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
-    (noAccumulators : imageAccumulatorItems output = []) :
-    ImageModelUnit output { output.goalUnit Q with axiomSources := sources } := by
+    (noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true)
+    (acc : List (Kernzelle.AccumulatorDecl (declOf output.compiled.unit)))
+    (accumulators : List.Forall₂ (ImageAccumulator output) (imageAccumulatorItems output) acc) :
+    ImageModelUnit output { output.goalUnit Q with axiomSources := sources, akku := acc } := by
   refine {
     program := rfl
     locks := rfl
@@ -62,19 +63,33 @@ private theorem Emitted.image_model_without_ownership (output : Emitted src rese
     runtimeRoots := OldSource.gestartet_leer _ output.compiled.hostedStarts.noDynamicRoots
     runtimeParams := ?_
     arenaTables := ?_
-    accumulators := ?_
+    accumulators := accumulators
     summary := summary
   }
   · intro root member
     change root ∈ ([] : List _) at member
     cases member
   · intro t
-    have closed := OldSource.zertifizierbar_ohne_arena _ noOwnership (output.compiled.unit.tabs.get t)
-      (List.get_mem _ _)
+    have marked := List.all_eq_true.mp noArenas _ (List.get_mem output.compiled.unit.tabs t)
+    have closed : (output.compiled.unit.tabs.get t).arena = false := by
+      cases ht : (output.compiled.unit.tabs.get t).arena with
+      | false => rfl
+      | true =>
+        rw [ht, Bool.not_true] at marked
+        cases marked
     change _ ↔ ∃ arena ∈ ([] : List (ArenaOwnership.Body.ArenaIface (declOf output.compiled.unit))), arena.A.tab = t
     simp only [closed, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false]
-  · rw [noAccumulators]
-    exact .nil
+
+private theorem Emitted.image_model_empty_accumulators (output : Emitted src reserve options)
+    (Q : AxEns (declOf output.compiled.unit))
+    (sources : Option (Vertraege.Pruefer.AxiomSources Q))
+    (summary : ∀ item world value, Q item world value = true ↔
+      ∃ old arguments, AxNach output.compiled.program.axVertrag item old arguments world value)
+    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
+    (noAccumulators : imageAccumulatorItems output = []) :
+    ImageModelUnit output { output.goalUnit Q with axiomSources := sources } :=
+  output.image_model_without_arenas Q sources summary (OldSource.zertifizierbar_teile noOwnership).1
+    [] (noAccumulators ▸ .nil)
 
 /-- For the part of the current emitter with no foreign or ownership
     declarations, the checked output supplies the specified source unit
@@ -86,7 +101,7 @@ theorem Emitted.checked_image_model_empty (output : Emitted src reserve options)
     let E := output.goalUnit (axWahr _)
     ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true := by
-  refine ⟨output.image_model_without_ownership _ _ ?_ noOwnership noAccumulators,
+  refine ⟨output.image_model_empty_accumulators _ _ ?_ noOwnership noAccumulators,
     output.goal_checker_concurrent _ (output.goal_axiomFree _ noAxioms)⟩
   intro item _ _
   exact False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt))
@@ -100,7 +115,7 @@ theorem Emitted.checked_image_model_foreign (output : Emitted src reserve option
     let E := withForeignSummary (output.goalUnit (axWahr _)) checked.summary
     ImageModelUnit output E ∧
       akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true :=
-  ⟨output.image_model_without_ownership _ _ checked.summary.exactPost noOwnership noAccumulators,
+  ⟨output.image_model_empty_accumulators _ _ checked.summary.exactPost noOwnership noAccumulators,
     output.foreign_goal_checker produced⟩
 
 /-- The actual returned payload determines the canonical program once.
@@ -128,25 +143,34 @@ structure CheckedImageUnit (output : Emitted src reserve options) where
   exactModel : ImageModelUnit output unit
   accepted : akzeptiertX_pruefer.akzeptiert unit output.fsA.1 output.lsA.1 output.csA.1 = true
 
+/-- Retain the exact model and the verdict computed on that model. -/
+def Emitted.finishImageUnit (output : Emitted src reserve options)
+    (unit : Einheit (declOf output.compiled.unit)) (exactModel : ImageModelUnit output unit) :
+    Except String (CheckedImageUnit output) :=
+  if accepted : checkAkzeptiertX unit output.fsA.1 output.lsA.1 output.csA.1 = true then
+    .ok ⟨unit, exactModel, (akzeptiertX_pruefer_decision unit _ _ _).trans accepted⟩
+  else .error "ir: model checker refused the exported image unit"
+
 /-- Resolve the logic decision on the actual emitted unit. Both the
     axiom-free and foreign branches produce the same checked interface.
-    A missing ownership export or refused foreign check returns a diagnostic. -/
+    A missing arena export or refused model check returns a diagnostic. -/
 def Emitted.checkImageUnit (output : Emitted src reserve options) :
     Except String (CheckedImageUnit output) := do
-  if noOwnership : OldSource.zertifizierbar output.compiled.unit = true then
-    if empty : (imageAccumulatorItems output).isEmpty = true then
-      have noAccumulators := List.isEmpty_iff.mp empty
-      if noAxioms : output.compiled.unit.axs.length = 0 then
-        have found := output.checked_image_model_empty noAxioms noOwnership noAccumulators
-        return ⟨output.goalUnit (axWahr _), found.1, found.2⟩
-      else
-        match result : output.foreignLogic with
-        | .error diagnostic => throw diagnostic
-        | .ok certificate =>
-          have found := output.checked_image_model_foreign result noOwnership noAccumulators
-          return ⟨withForeignSummary (output.goalUnit (axWahr _)) certificate.summary, found.1, found.2⟩
-    else throw "ir: accumulator declarations have no checked image export"
-  else throw "ir: ownership declarations have no checked image export"
+  if noArenas : (output.compiled.unit.tabs.all fun t => !t.arena) = true then
+    let acc ← collectImageAccumulators output (imageAccumulatorItems output)
+    if noAxioms : output.compiled.unit.axs.length = 0 then
+      let initial := output.goalUnit (axWahr _)
+      output.finishImageUnit { initial with akku := acc.val }
+        (output.image_model_without_arenas _ initial.axiomSources
+          (fun item _ _ => False.elim ((Nat.not_lt_zero item.val) (noAxioms ▸ item.isLt)))
+          noArenas acc.val acc.property)
+    else
+      let certificate ← output.foreignLogic
+      let initial := withForeignSummary (output.goalUnit (axWahr _)) certificate.summary
+      output.finishImageUnit { initial with akku := acc.val }
+        (output.image_model_without_arenas _ initial.axiomSources certificate.summary.exactPost
+          noArenas acc.val acc.property)
+  else throw "ir: arena declarations have no checked image export"
 
 /-- The returned bytes and the complete checker verdict on their exact
     model can be obtained from one canonical emission and one export. -/

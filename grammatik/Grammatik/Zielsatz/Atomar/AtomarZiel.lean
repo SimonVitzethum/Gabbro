@@ -236,18 +236,25 @@ theorem besitzB_leer {E : Einheit D} {fs : List D.Fn} (hB : E.arenen = []) : bes
 
 end Besitz
 
+/-- Executable decision of the complete unit checker using the
+    declaration's finite identifier comparisons. -/
+def checkAkzeptiertX {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax]
+    (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) : Bool :=
+  AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints
+    E.pointerSignatures && besitzB E fs && Kernzelle.akkuStartB E E.akku &&
+    invariantenGeprueftB E fs ls && nutzerPflichtGeprueftB E fs ls
+
 /-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. The Bool runs
     on the unit's declared checks (`E.pruefungen`). -/
 noncomputable def akzeptiertX_pruefer : PrueferX where
   akzeptiert := fun {D} _ E fs ls cs =>
     haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
-    AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen [] [] E.lockFormulas E.loopHints
-      E.pointerSignatures && besitzB E fs &&
-      Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
-      nutzerPflichtGeprueftB E fs ls
+    checkAkzeptiertX E fs ls cs
   korrekt := fun {D} _ E fs ls cs hardware h => by
     letI : RootNativeFloat.Hardware := hardware
     letI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    change checkAkzeptiertX E fs.1 ls.1 cs.1 = true at h
+    unfold checkAkzeptiertX at h
     have h := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
     have h := (Bool.and_eq_true_iff).mp h
     obtain ⟨hX, hStart⟩ := h
@@ -272,6 +279,11 @@ theorem akzeptiertX_pruefer_eq {D : Deklaration} [fnEq : DecidableEq D.Fn] [axEq
       besitzB E fs && Kernzelle.akkuStartB E E.akku && invariantenGeprueftB E fs ls &&
         nutzerPflichtGeprueftB E fs ls)
     (Subsingleton.elim (fun x y => Classical.propDecidable (x = y)) axEq)
+
+theorem akzeptiertX_pruefer_decision {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax]
+    (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob)) :
+    akzeptiertX_pruefer.akzeptiert E fs ls cs = checkAkzeptiertX E fs ls cs :=
+  akzeptiertX_pruefer_eq E fs ls cs
 
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
     (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
