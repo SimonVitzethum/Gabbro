@@ -32,6 +32,63 @@ public abbrev PollRuns (elaboration : Elaboration D V Λ types f)
       (Nat.not_lt_zero n
         (Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ impossible))).elim
 
+/-- Poll a resolved child through the ordinary G call interface. A
+    hardware or logic outcome is retained even when there is no
+    Ready/Pending answer and no global success hypothesis. -/
+@[expose] public def runChildPoll {name : String} (callee : AwaitedCall D V Λ types name)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (storage : Wert D (types.childState name)) (world : World D) :
+    Except (Logik D ⊕ Hardware D) (Poll (Value D) × Child D types × World D × Nat) :=
+  match calls callee.poll world (pollEnvironment callee storage) with
+  | .ok after answer =>
+    let (event, next) := decodePollAnswer D types name storage (ergWert callee.pollResult answer)
+    .ok (event, next, after, prices callee.poll)
+  | .why _ reason => keinGrund callee.pollInfallible reason
+  | .logik failure => .error (.inl failure)
+  | .hardware failure => .error (.inr failure)
+
+/-- On an ordinary success, the outcome-aware call uses the exact same
+    answer, successor storage, world and cost as the total poll model. -/
+public theorem runChildPoll_normal (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls) (name : String)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (storage : Wert D (types.childState name)) (world : World D) :
+    runChildPoll callee calls prices storage world =
+      (let answer := normal name callee known world storage
+       let (event, next) := decodePollAnswer D types name storage (ergWert callee.pollResult answer.val.2)
+       .ok (event, next, answer.val.1, prices callee.poll)) := by
+  unfold runChildPoll
+  rw [(normal name callee known world storage).property]
+
+/-- A failed outcome of the resolved poll is also the outcome of the
+    generated waiting block with its actual argument evaluation. -/
+public theorem childPollBlock_reports_failure {l : Bool} {Γ : Ctx} {name : String}
+    (O : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (callee : AwaitedCall D V Λ types name)
+    (arguments : Args D Γ Λ (D.params callee.poll))
+    (arms : Arms D V l (Ty.sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ Λ [some (types.childResult name), some (types.childState name)])
+    (world : World D) (environment : Env D Γ) (storage : Wert D (types.childState name))
+    (matches : evalArgs (world.lese Λ arguments.orte) arguments
+      (world.lese Λ arguments.orte) environment = pollEnvironment callee storage)
+    {failure : Logik D ⊕ Hardware D}
+    (failed : runChildPoll callee calls prices storage (world.lese Λ arguments.orte) = .error failure) :
+    execBlock O passes calls (childPollBlock callee arguments arms) world environment =
+      match failure with
+      | .inl logic => .logik logic
+      | .inr hardware => .hardware hardware := by
+  rw [childPollBlock, waitingBlock_exec_outcome, matches]
+  unfold runChildPoll at failed
+  cases calls callee.poll (world.lese Λ arguments.orte) (pollEnvironment callee storage) with
+  | ok after value =>
+    obtain ⟨event, stored⟩ := decodePollAnswer D types name storage (ergWert callee.pollResult value)
+    cases failed
+  | why _ reason => exact keinGrund callee.pollInfallible reason
+  | logik cause => cases failed; rfl
+  | hardware cause => cases failed; rfl
+
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage
     invariant excludes; it never fabricates an inhabitant of a source type. -/
