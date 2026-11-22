@@ -115,13 +115,13 @@ theorem projectSCState_read_accessible {layout : Runner.Beweis.Lay} {before afte
     {i width : Nat} {address : W} {answer : Ans}
     (read : (TSO layout).ans before i (.rd width address) answer after)
     (footprint : Nat → W → Prop)
-    (accessible : ∀ y, fenster address y → ∀ thread, footprint thread y → thread = i)
+    (accessible : ∀ y, byteWindow (readWidth width) address y → ∀ thread, footprint thread y → thread = i)
     (owns : ∀ thread store, store ∈ before.1.buf thread →
       ∀ y, fenster store.1 y → footprint thread y) :
     (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
       (projectSCState footprint after) := by
   obtain ⟨same, extra, result⟩ := read
-  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) :=
+  have agree : GleichAuf (byteWindow (readWidth width) address) (before.1.view i) (mergedView before.1 footprint) :=
     fun y touched => (mergedView_accessible_at before.1 footprint i y owns (accessible y touched)).symm
   exact ⟨congrArg (projectSCState footprint) same, extra,
     result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))⟩
@@ -381,7 +381,7 @@ inductive ProjectedRequest (footprint : Nat → W → Prop) (thread : Nat) : Op 
       (schreibtOp request = true → ∀ y, fussOp request y → ∀ j, footprint j y → j = thread) →
       ProjectedRequest footprint thread request
   | sharedRead {width : Nat} {address : W} :
-      (∀ y, fenster address y → ∀ j, ¬ footprint j y) →
+      (∀ y, byteWindow (readWidth width) address y → ∀ j, ¬ footprint j y) →
       ProjectedRequest footprint thread (.rd width address)
   | sharedCAS {address expected value : W} :
       (∀ y, fenster address y → ∀ j, ¬ footprint j y) →

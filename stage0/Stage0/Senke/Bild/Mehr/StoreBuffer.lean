@@ -75,13 +75,13 @@ theorem tso_store_updates_view {layout : Lay} {before after : (TSO layout).St}
       simp only [TSt.view, TSt.setBuf, if_neg different]
 
 theorem rdN_agrees {before after : Mem} {address : W} (width : Nat)
-    (agree : GleichAuf (fenster address) before after) :
+    (agree : GleichAuf (byteWindow (readWidth width) address) before after) :
     rdN before width address = rdN after width address := by
   unfold rdN
   split
-  · rw [gleich_rd8 agree]
-  · rw [gleich_rd32 agree]
-  · exact gleich_rd64 agree
+  · rw [gleich_rd8 (by simpa only [readWidth] using agree)]
+  · rw [gleich_rd32 (by simpa only [readWidth] using agree)]
+  · exact gleich_rd64 (by simpa only [readWidth] using agree)
   · rfl
 
 /-- At a private read, interpreting the request on the local memory view
@@ -95,7 +95,7 @@ theorem tso_private_read {layout : Lay} {before after : (TSO layout).St}
     after = before ∧ resume answer = resume ((rdN localView width address).map (·, 0)) := by
   obtain ⟨same, extra, rfl⟩ := step
   refine ⟨same, ?_⟩
-  rw [rdN_agrees width agree]
+  rw [rdN_agrees width (fun y read => agree y (Nat.lt_of_lt_of_le read (readWidth_le width)))]
   cases rdN localView width address with
   | none => rfl
   | some value => exact blind value extra
@@ -236,13 +236,13 @@ theorem projectSCState_read {layout : Lay} {before after : (TSO layout).St}
     {i width : Nat} {address : W} {answer : Ans}
     (read : (TSO layout).ans before i (.rd width address) answer after)
     (footprint : Nat → W → Prop)
-    (inside : ∀ y, fenster address y → footprint i y)
+    (inside : ∀ y, byteWindow (readWidth width) address y → footprint i y)
     (disjoint : ∀ thread store, store ∈ before.1.buf thread →
       ∀ other, other ≠ thread → ∀ y, footprint other y → ¬ fenster store.1 y) :
     (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
       (projectSCState footprint after) := by
   obtain ⟨same, extra, result⟩ := read
-  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) :=
+  have agree : GleichAuf (byteWindow (readWidth width) address) (before.1.view i) (mergedView before.1 footprint) :=
     fun y member => (tso_views_merge before.1 footprint disjoint i y (inside y member)).symm
   refine ⟨congrArg (projectSCState footprint) same, extra, ?_⟩
   exact result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))
@@ -434,13 +434,13 @@ theorem projectSCState_read_shared {layout : Lay} {before after : (TSO layout).S
     {i width : Nat} {address : W} {answer : Ans}
     (read : (TSO layout).ans before i (.rd width address) answer after)
     (footprint : Nat → W → Prop)
-    (shared : ∀ y, fenster address y → ∀ j, ¬ footprint j y)
+    (shared : ∀ y, byteWindow (readWidth width) address y → ∀ j, ¬ footprint j y)
     (owns : ∀ j store, store ∈ before.1.buf j →
       ∀ y, fenster store.1 y → footprint j y) :
     (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
       (projectSCState footprint after) := by
   obtain ⟨same, extra, result⟩ := read
-  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) := by
+  have agree : GleichAuf (byteWindow (readWidth width) address) (before.1.view i) (mergedView before.1 footprint) := by
     intro y touched
     have noForward (store : W × W) (pending : store ∈ before.1.buf i) :
         ¬ fenster store.1 y :=
