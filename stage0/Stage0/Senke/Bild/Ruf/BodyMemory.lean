@@ -317,21 +317,11 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     (free : FreiA (positions thread).Agl state.m (positions thread).thr)
     (inside : Senke.LayIn output.image.Y.withIdle) (separated : Senke.LayDis output.image.Y.withIdle)
     (covers : ∀ byte, carrierFootprint output.image.Y.withIdle carriers byte → snapshot.F byte)
-    (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr)
-    (continuation : ∀ machine world,
-      let x := positions thread
-      Senke.BildLauf.RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl x.ebe machine world x.ρe →
-      ∃ next : MLage (declOf output.compiled.unit).mitRuhe, next.Ok ∧
-        (next.B.P = E.P.mitRuhe ∧ next.B.O = O.mitRuhe ∧
-          next.B.passes = output.image.passes ∧ next.B.L = output.image.Y.withIdle) ∧
-        next.thr = x.thr ∧ machine.faeden next.thr = next.M.faeden next.thr ∧
-        snapshot.r = .next next.start ∧ snapshot.m = next.mb) :
+    (permissions : (positions thread).mb.rd = committed.rd ∧ (positions thread).mb.wr = committed.wr) :
     ∃ next, ImageReach output E O state next ∧ ImageRuntimeMatchesAt footprint output E O history after next := by
-  obtain ⟨machine, world, reaches, _, sourceBoundary, _, _, _, _, restart⟩ :=
+  obtain ⟨machine, _, next, reaches, _, _, _, _, _, _, threadEq, related⟩ :=
     matched.commit_world registered (shared := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       quiet control boundary agree free inside separated covers permissions
-  obtain ⟨next, valid, program, threadEq, head, entry, memory⟩ := continuation machine world sourceBoundary
-  have related := restart next valid program threadEq head entry memory
   refine ⟨{ state with m := machine }, reaches, after.ths, buffers, rfl,
     .inr ⟨snapshots, _, _, related, ?_⟩, fun _ => .inl rfl⟩
   intro i s found
