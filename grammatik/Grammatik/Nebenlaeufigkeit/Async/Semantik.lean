@@ -67,10 +67,28 @@ public structure Model (Value Child W : Type) where
       let value := pair a b
       pure (.ready value, .ready value, world'', lc + rc + 1)
     | _, _ => pure (.pending, .join l r, world'', lc + rc + 1)
+termination_by structural task _ => task
 
 @[expose] public def pollTask (model : Model Value Child W) :
     Task Value Child → W → Poll Value × Task Value Child × W × Nat :=
   pollTaskWith (M := Id) model.pollChild model.pair
+
+public theorem pollTask_leaf (model : Model Value Child W) (child : Child) (world : W) :
+    pollTask model (.leaf child) world =
+      (let (result, next, after, cost) := model.pollChild child world
+       match result with
+       | .ready value => (.ready value, .ready value, after, cost)
+       | .pending => (.pending, .leaf next, after, cost)) := rfl
+
+public theorem pollTask_join (model : Model Value Child W) (left right : Task Value Child) (world : W) :
+    pollTask model (.join left right) world =
+      (let (lp, l, middle, lc) := pollTask model left world
+       let (rp, r, after, rc) := pollTask model right middle
+       match lp, rp with
+       | .ready a, .ready b =>
+         let value := model.pair a b
+         (.ready value, .ready value, after, lc + rc + 1)
+       | _, _ => (.pending, .join l r, after, lc + rc + 1)) := rfl
 
 public inductive Event (Value : Type) where
   | next
