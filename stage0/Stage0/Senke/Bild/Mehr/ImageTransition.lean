@@ -359,9 +359,9 @@ theorem ImageSlotsMatch.activate_clone {src : String} {reserve : Nat} {options :
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    {parent child : T} {id extra : W}
+    {parent child : T} {control : Res T} {id extra : W}
     (slots : ImageSlotsMatch output E O history before state)
-    (entry : before.ths[0]? = some (some (.next parent)))
+    (entry : before.ths[0]? = some (some control))
     (waiting : state.wartet 0 = [])
     (declared : before.ths.length < E.starts.length) :
     let i := before.ths.length
@@ -478,7 +478,7 @@ theorem Emitted.image_declared_clone_goal {src : String} {reserve : Nat} {option
     exact declared
   have bound : before.ths.length < E.starts.length := position ▸ (List.getElem?_eq_some_iff.mp head).1
   obtain ⟨next, _, _, stepped, matched, unchanged, _⟩ :=
-    slots.activate_clone (child := child) (id := id) (extra := extra) running waiting bound
+    slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra) running waiting bound
   have dormant : state.lebt (j + 1) = false :=
     Bool.eq_false_iff.mpr (fun live => Nat.lt_irrefl _ (position ▸ (slots.1 _).mp live))
   have nextReached : ImageReach output E O (imageSourceStart E) next := .schritt state next reached stepped
