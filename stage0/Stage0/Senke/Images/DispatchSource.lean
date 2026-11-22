@@ -86,7 +86,9 @@ theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
       (fun base => by simp only [layU]; omega)
       (fun base => layU_sync output.compiled.unit output.tor base)
   have chosen : (output.image.args :: output.image.rootArgs)[index + 1]? = some words := by
-    simp only [List.getElem?_cons_succ, rootWords, List.getElem?_map, declared, Option.map_some, words]
+    simp only [List.getElem?_cons_succ, rootWords, List.getElem?_map]
+    change Option.map (fun start => encodeEnv output.image.Y start.2) output.starts[index]? = some words
+    simp only [declared, Option.map_some, words]
   obtain ⟨within, exactWords⟩ := List.getElem?_eq_some_iff.mp chosen
   obtain ⟨_, frameMade, frameBytes⟩ := startStackBytes_frame packed output.image.fp0 stackMemory (index + 1) within
   rw [exactWords] at frameMade
@@ -131,7 +133,7 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
     have read := words position present
     simpa only [fp, serializedRoot_slot] using read
   · refine ⟨rfl, 10 * output.starts.length + startLen + startLen * index, ?_, ?_, rfl⟩
-    all_goals simp only [Nat.succ_ne_zero, ite_false, startLen] <;> omega
+    all_goals simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
 
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
