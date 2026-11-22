@@ -224,7 +224,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     let position := positions thread
     let selected := carrierFootprint layout carriers
     let published := commitBytes committed snapshot.m selected
-    ∃ machine world (next : MLage D),
+    ∃ (machine : RufMaschineG D) (world : World D) (next : MLage D),
       FadenErreichbarX P O passes shared source
         ⟨machine, source.lebt, source.wartet, source.rang, source.uhr⟩ ∧
       program.ths[thread]? = some (some (.next ⟨pc, position.B.fp⟩)) ∧
