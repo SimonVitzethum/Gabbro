@@ -246,11 +246,11 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
     simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
   have firstRead : uWertBlatt scope (.variable "i") = .ok (.param "i") := by
     simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
-  have bounds : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ 4 ∧ (4 : Int) ≤ capacity :=
+  have bounds : (0 : Int) ≤ 0 ∧ (1 : Int) ≤ Int.ofNat 4 ∧ Int.ofNat 4 ≤ capacity :=
     ⟨by decide, by decide, by omega⟩
-  have position : (0 : Int) ≤ 1 ∧ (1 : Int) < 4 - 1 := by decide
+  have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < Int.ofNat 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
-    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, bind, Option.bind,
+    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, Option.map_some, bind, Option.bind,
       arrayType, firstType, arrayRead, firstRead, bounds, position, and_self, ite_true]
 
 /-- A static literal substring admitted as a predicate argument lowers

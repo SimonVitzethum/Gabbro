@@ -245,13 +245,16 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
     binding. Reading either operand cannot observe the world. -/
 def uSliceInteger (ctx : UCtx) (blatt : SExpr → Except String USide) :
     SExpr → Option (Int × Int × USide)
-  | .variable name => do
-    let some (.int lo hi) := uSliceLocalType ctx name | none
-    if blatt (.variable name) = .ok (.param name) then some (lo, hi, .param name)
-    else none
-  | source => do
-    let value ← uSchranke (uSliceConstants ctx) source
-    some (value, value, .lit value)
+  | source =>
+    let constant := (uSchranke (uSliceConstants ctx) source).map (fun value => (value, value, .lit value))
+    match source with
+    | .variable name =>
+      match uSliceLocalType ctx name with
+      | some (.int lo hi) =>
+        if blatt (.variable name) = .ok (.param name) then some (lo, hi, .param name)
+        else none
+      | _ => if ctx.unknownRanges.contains name then none else constant
+    | _ => constant
 
 /-- Observe a local array slice by translating its verified static
     and local integer operands to ordinary length and index operations. -/
