@@ -106,6 +106,35 @@ theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
   rw [address]
   exact startFrameBytes_read frameMade frameBytes position present
 
+/-- The serialized frame, preserved up to allocation, establishes the
+    exact root-stub phase at the child's emitted entry address. -/
+theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {original memory : Mem} (loaded : BytesAt original Runner.Prog.IMG output.bytes)
+    {index : Nat} {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (preserved : GleichAuf (imageStackFootprint output (index + 1)) original memory)
+    (code : BytesAt memory codeBase (output.image.code.flatMap encII))
+    {history : List Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (head : state.m.faeden (index + 1) = (imageSourceStart E).m.faeden (index + 1)) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index))
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
+    ImageRootPhase output E history memory (index + 1) (.next ⟨pc, fp⟩) state := by
+  intro pc fp
+  have declaredThread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
+  obtain ⟨fits, setup, typed⟩ := output.loaded_root_frame loaded declared
+  obtain ⟨frame, words⟩ := image_stack_frame_preserved declaredThread preserved fits setup typed
+  refine Or.inr ⟨root, ?_, Or.inl head, code, frame, ?_,
+    ⟨⟨pc, fp⟩, ?_, Or.inl rfl⟩⟩
+  · rw [unit.starts]
+    exact declared
+  · intro position present
+    have read := words position present
+    simpa only [fp, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add,
+      Nat.mul_comm (FB + FB + position) 8] using read
+  · refine ⟨rfl, 10 * output.starts.length + startLen + startLen * index, ?_, ?_, rfl⟩
+    all_goals simp only [Nat.succ_ne_zero, ite_false, startLen] <;> omega
+
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
 theorem MappedImage.of_mmap_continuation [Kern] {output : Emitted src reserve options}
