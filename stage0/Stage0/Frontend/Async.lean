@@ -176,9 +176,13 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
       subst actual
       split
       · rename_i error impossible
+        change lowWertE u [] Λ (expressionFunction fn []) none (.lit (Int.ofNat value)) =
+          .error error at impossible
         rw [lowered] at impossible
         cases impossible
       · rename_i actual found
+        change lowWertE u [] Λ (expressionFunction fn []) none (.lit (Int.ofNat value)) =
+          .ok actual at found
         have same := Except.ok.inj (found.symm.trans lowered)
         subst actual
         rfl

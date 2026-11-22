@@ -66,7 +66,6 @@ variable {D : Deklaration} {Λ : List (Res D)}
           (evalProd world code world env)}
   | [] => .ok ⟨.nil, rfl, fun _ _ => .nil⟩
   | (name, type) :: fields => do
-    letI : DecidableEq Parser.STyp := Parser.STyp.decEq
     let tail ← initialSlotArgs types f inventory fields
     if used : name ∈ liveAt f (.running 0) then
       if found : f.params.lookup name = some type then
