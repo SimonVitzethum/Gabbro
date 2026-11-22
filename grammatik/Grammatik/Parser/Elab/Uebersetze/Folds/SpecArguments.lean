@@ -306,7 +306,7 @@ theorem specArrayIndexArgument_of_local (ctx : UCtx) (name : String) (element : 
   intro argument
   have parsed : uWertBody ctx argument = .ok (.idx (.param name) (.lit index)) := by
     change uRechne ctx (uWertBlatt ctx) (.variable name) = _ at read
-    simp only [argument, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, array, Bool.false_eq_true, ite_false, read] <;> rfl
+    simp only [argument, uWertBody, uRechne, uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, array, Bool.false_eq_true, ite_false, read] <;> rfl
   have valid : (0 : Int) ≤ index ∧ (index : Int) < capacity := ⟨Int.ofNat_zero_le _, Int.ofNat_lt.mpr inside⟩
   exact ⟨parsed, by
     simp only [uSpecValueArgument, parsed, bind, Except.bind, argument, uSpecValueType, uSpecValuePath, baseType,

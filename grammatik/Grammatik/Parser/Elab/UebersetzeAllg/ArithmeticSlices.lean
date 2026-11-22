@@ -79,6 +79,43 @@ decreasing_by
   all_goals rw [classified]
   all_goals simp_wf <;> omega
 
+/-- A shared start makes the variable extent available even when the
+    independently checked endpoint intervals overlap. -/
+theorem relativeSliceWithLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (name : String) (amount : SExpr) (capacity firstLo firstHi countLo countHi : Int)
+    (offset extent : USide)
+    (first : uSliceInteger ctx blatt (.variable name) = some (firstLo, firstHi, offset))
+    (count : uSliceInteger ctx blatt amount = some (countLo, countHi, extent))
+    (bounds : 0 ≤ firstLo ∧ 0 ≤ countLo ∧ firstHi + countHi ≤ capacity) :
+    uRelativeSliceWithLength ctx blatt capacity (.variable name) (.bin "+" (.variable name) amount) =
+      some (offset, extent, countLo) := by
+  have same : strEq name name = true := by simp [strEq]
+  simp only [uRelativeSliceWithLength, show strEq "+" "+" = true from rfl, same, Bool.and_self,
+    ite_true, bind, Option.bind, first, count, bounds]
+
+/-- The correlated lowering retains precisely the model's dynamic
+    length and shifts every observation once into the original array. -/
+theorem relativeSliceWithLength_refines {α : Type} {capacity : Nat} (array : Fin capacity → α)
+    {firstLo firstHi countLo countHi : Int}
+    (offset : Zahl firstLo firstHi) (extent : Zahl countLo countHi)
+    (bounds : 0 ≤ firstLo ∧ 0 ≤ countLo ∧ firstHi + countHi ≤ (capacity : Int)) :
+    ∃ ok : SliceOk capacity offset.n.toNat (offset.n + extent.n).toNat,
+      let view := BoundedSlice.ofArray array offset.n.toNat (offset.n + extent.n).toNat ok
+      view.length = extent.n.toNat ∧
+        ∀ i : Fin view.length, view.get i = array ⟨offset.n.toNat + i.val, by
+          have inside := i.isLt
+          have upper := ok.2
+          change i.val < (offset.n + extent.n).toNat - offset.n.toNat at inside
+          omega⟩ := by
+  have firstLower := offset.lo_le
+  have firstUpper := offset.le_hi
+  have countLower := extent.lo_le
+  have countUpper := extent.le_hi
+  obtain ⟨first, count, upper⟩ := bounds
+  have ok : SliceOk capacity offset.n.toNat (offset.n + extent.n).toNat := ⟨by omega, by omega⟩
+  exact ⟨ok, by change (offset.n + extent.n).toNat - offset.n.toNat = extent.n.toNat; omega,
+    fun _ => rfl⟩
+
 /-- Independent runtime bounds can be arithmetic expressions. The
     source length is their difference and a projected element stays a
     single read of the original array. -/
@@ -128,10 +165,10 @@ theorem arithmeticSliceObservations_erfuellbar (element : Ty) (capacity : Nat)
   have index : (0 : Int) ≤ Int.ofNat 0 ∧ Int.ofNat 0 < 4 - 2 := by decide
   refine ⟨scope, ?_, ?_⟩
   · change uWertBody scope (.built "lenof" [slice]) = _
-    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, and_self, bind, Option.bind] <;> rfl
   · change uWertBody scope (.index slice (.lit 0)) = _
-    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, index, and_self, bind, Option.bind,
       uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some] <;> rfl
 
@@ -156,7 +193,7 @@ theorem nestedLocalArraySlice_observations (ctx : UCtx) (blatt : SExpr → Excep
   dsimp only
   constructor <;> rw [uRechne] <;>
     simp only [uSliceObservation, uSliceView, arrayType, arrayRead, independent,
-      outerBounds, innerBounds, position, indexBounds, and_self, bind, Option.bind, ite_true]
+      uSliceExtent, Option.orElse_some, outerBounds, innerBounds, position, indexBounds, and_self, bind, Option.bind, ite_true]
 
 /-- Both observations are accepted for a dynamically sized outer slice
     and a proper inner slice. The premise admits every array capacity above the endpoints. -/

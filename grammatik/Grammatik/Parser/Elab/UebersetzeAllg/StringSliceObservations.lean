@@ -27,7 +27,7 @@ theorem textSliceObservations_source (ctx : UCtx) (blatt : SExpr → Except Stri
   obtain ⟨nonnegative, ordered, upper⟩ := bounds
   obtain ⟨indexNonnegative, indexUpper⟩ := inside
   constructor <;> rw [uRechne] <;>
-    simp only [uSliceObservation, uSliceView, uRelativeSlice, readFirst, readLast, readIndex,
+    simp only [uSliceObservation, uSliceView, uSliceExtent, Option.orElse_some, uRelativeSlice, readFirst, readLast, readIndex,
       nonnegative, ordered, upper, indexNonnegative, indexUpper, and_self, bind, Option.bind, ite_true]
 
 /-- The actual body elaborator admits both observations with genuinely
