@@ -188,7 +188,7 @@ theorem Emitted.clone_reply_boundary [kernel : Kern] {src : String} {reserve : N
   intro pc fp parent address actual
   obtain ⟨code, far, room, small, _, _⟩ := output.loaded_spawn_site loaded declared
   obtain ⟨expected, _, _, refused⟩ := spawnResult_reference (id := id) code frame far room small
-  obtain ⟨samePointer, sameMemory⟩ := (runP_runM actual rfl).det (runP_runM expected rfl).run
+  obtain ⟨samePointer, sameMemory⟩ := (runP_runM expected rfl).det (runP_runM actual rfl).run
   refine ⟨samePointer, sameMemory, ?_⟩
   rw [samePointer, sameMemory]
   exact refused
