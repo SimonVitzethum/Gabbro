@@ -436,4 +436,34 @@ theorem ImageRuntimePartition.prologue_read_answer [Kern] {output : Emitted src 
     partition.1 id (fun related _ => ⟨_, related⟩)⟩
   exact silent ▸ ProcessStep.ask running rfl ordinary response rfl
 
+/-- The actual prologue's frame store advances its reference without
+    changing the source state or any other live stack. -/
+theorem ImageRuntimePartition.prologue_store [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {before : Cfg imageTSO (Res T)} {memory : imageTSO.St}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))} {thread : Nat}
+    {address word : W} {resume : Ans → Res T} {answer : Ans}
+    (partition : ImageRuntimePartition footprint output E O history before state body
+      (ImagePendingRoot output E history state))
+    (placed : ∀ owner byte, footprint owner byte → imageStackFootprint output owner byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (owns : ∀ byte, imageStackFootprint output thread byte → footprint thread byte)
+    (pending : body[thread]? = some none)
+    (running : before.ths[thread]? = some (some (.ask (.wr address word) resume)))
+    (phase : ImageProloguePhase output E thread (.ask (.wr address word) resume) (before.ms.1.view thread) state)
+    (answered : imageTSO.ans before.ms thread (.wr address word) answer memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO actI before [] after ∧
+      ImageRuntimePartition footprint output E O history after state body (ImagePendingRoot output E history state) := by
+  obtain ⟨continued⟩ := phase.answer (fun _ _ _ _ _ incompatible => by cases incompatible) answered
+  have success : answer = some (0, 0) := by
+    rcases answered.1 with ⟨_, denied, _⟩ | ⟨_, accepted, _⟩
+    · have impossible := continued.running
+      rw [denied, phase.blind.missing] at impossible
+      exact False.elim impossible
+    · exact accepted
+  subst answer
+  exact partition.pending_store placed owns pending (phase.request_scope.2.2 rfl) running answered (.inr ⟨continued⟩)
+
 end Gabbro.Stage0
