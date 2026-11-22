@@ -318,7 +318,8 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
     output.root_depth_preserves_frame declared code running frame fits arguments
   refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
   · intro i present
-    simpa only [address] using words i present
+    rw [← address i]
+    exact words i present
   · refine ⟨nxt pointer, ⟨rfl, 10 * output.starts.length + startLen + startLen * index + 1, ?_, ?_, ?_⟩, Or.inl rfl⟩
     · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
     · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
@@ -326,7 +327,6 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
           BitVec.ofNat 64 16 = _
       rw [← BitVec.ofNat_add]
       congr 1
-      omega
 
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
