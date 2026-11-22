@@ -54,7 +54,10 @@ theorem decodeArrayCarrier_pack (identity : Nat) {capacity : Nat} {τ : Ty}
     decodeArrayCarrier (D := D) (identity := identity) (τ := τ) (capacity := capacity)
       (packSliceCarrier identity view source) = some (view.value source) := by
   simp only [decodeArrayCarrier, packSliceCarrier, Int.toNat_natCast]
-  rw [dif_pos view.fits]
+  split
+  · rfl
+  · rename_i outside
+    exact (outside view.fits).elim
 
 /-- String offsets use byte coordinates. The actual backing length
     still controls admission even when its capacity is larger. -/
@@ -76,7 +79,10 @@ theorem decodeStringCarrier_pack (identity : Nat) {capacity : Nat}
         some (strBoundedSliceValue source view.offset (view.offset + view.length)
           ⟨Nat.le_add_right _ _, present⟩) := by
   simp only [decodeStringCarrier, packSliceCarrier, Int.toNat_natCast]
-  rw [dif_pos present]
+  split
+  · rfl
+  · rename_i outside
+    exact (outside present).elim
 
 theorem decodeStringCarrier_isSome {identity capacity : Nat}
     (stored : Wert D (sliceCarrierType identity capacity (.str capacity))) :
@@ -88,7 +94,7 @@ theorem decodeStringCarrier_isSome {identity capacity : Nat}
   · rw [dif_pos fits, Option.isSome_some]
     exact ⟨fun _ => fits, fun _ => rfl⟩
   · rw [dif_neg fits, Option.isSome_none]
-    exact ⟨by decide, fun yes => (fits yes).elim⟩
+    exact ⟨fun impossible => nomatch impossible, fun yes => (fits yes).elim⟩
 
 /-- The concrete carrier premises hold for every array and every
     half-open range, including an empty range at the end. -/
