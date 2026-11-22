@@ -38,7 +38,7 @@ theorem image_future_frame_of_prefix [Kern] {output : Emitted src reserve option
 
 /-- Agreement on a startup reservation transports both the frame
     permissions and every serialized argument word to the new memory. -/
-theorem image_stack_frame_preserved {output : Emitted src reserve options} {thread base : Nat}
+theorem image_stack_frame_preserved [Kern] {output : Emitted src reserve options} {thread base : Nat}
     {saved current : Mem} {words : List W} (declared : thread ≤ output.starts.length)
     (equal : GleichAuf (imageStackFootprint output thread) saved current)
     (fits : base + words.length ≤ output.image.Ks) :
@@ -61,6 +61,11 @@ theorem image_stack_frame_preserved {output : Emitted src reserve options} {thre
     rw [← gleich_rd64 (slotAgreement (base + index) within)]
     exact arguments index inside
 
+private theorem serializedRoot_slot (start offset : Nat) :
+    slot (BitVec.ofNat 64 start) (BitVec.ofNat 64 offset) = BitVec.ofNat 64 (start + 8 * offset) := by
+  change BitVec.ofNat 64 start + BitVec.ofNat 64 offset * BitVec.ofNat 64 8 = _
+  rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm offset 8]
+
 /-- Every serialized root in the actual image has its declared typed
     arguments at the final frame address assigned to that thread. -/
 theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
@@ -72,7 +77,7 @@ theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
     (FB + FB + words.length ≤ output.image.Ks) ∧
       FrameOK memory fp output.image.Ks ∧ WordsAt memory fp (FB + FB) words := by
   intro fp words
-  obtain ⟨_, _, _, _, packed, _, _, _, stacks⟩ :=
+  obtain ⟨_, _, _, _, packed, _, _, _, stackMemory⟩ :=
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
   obtain ⟨_, _, _, _, _, roots, _, rootWords⟩ :=
     bild_lage output.emission output.funktionen_voll
@@ -83,7 +88,7 @@ theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
   have chosen : (output.image.args :: output.image.rootArgs)[index + 1]? = some words := by
     simp only [List.getElem?_cons_succ, rootWords, List.getElem?_map, declared, Option.map_some, words]
   obtain ⟨within, exactWords⟩ := List.getElem?_eq_some_iff.mp chosen
-  obtain ⟨_, frameMade, frameBytes⟩ := startStackBytes_frame packed output.image.fp0 stacks (index + 1) within
+  obtain ⟨_, frameMade, frameBytes⟩ := startStackBytes_frame packed output.image.fp0 stackMemory (index + 1) within
   rw [exactWords] at frameMade
   have fits : FB + FB + words.length ≤ output.image.Ks := by
     unfold startFrameBytes at frameMade
@@ -97,14 +102,8 @@ theorem Emitted.loaded_root_frame [Kern] (output : Emitted src reserve options)
     output.funktionen_voll loaded (index + 1) bound
   refine ⟨fits, frame, ?_⟩
   intro position present
-  have address : slot fp (BitVec.ofNat 64 (FB + FB + position)) =
-      BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks * (index + 1) +
-        8 * (FB + FB + position)) := by
-    change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1))) +
-      BitVec.ofNat 64 (FB + FB + position) * BitVec.ofNat 64 8 = _
-    simp only [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_assoc, Nat.mul_comm (FB + FB + position) 8]
-  rw [address]
-  exact startFrameBytes_read frameMade frameBytes position present
+  simpa only [fp, serializedRoot_slot, Nat.mul_assoc] using
+    startFrameBytes_read frameMade frameBytes position present
 
 /-- The serialized frame, preserved up to allocation, establishes the
     exact root-stub phase at the child's emitted entry address. -/
@@ -130,8 +129,7 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
     exact declared
   · intro position present
     have read := words position present
-    simpa only [fp, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add,
-      Nat.mul_comm (FB + FB + position) 8] using read
+    simpa only [fp, serializedRoot_slot] using read
   · refine ⟨rfl, 10 * output.starts.length + startLen + startLen * index, ?_, ?_, rfl⟩
     all_goals simp only [Nat.succ_ne_zero, ite_false, startLen] <;> omega
 
