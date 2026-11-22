@@ -308,12 +308,12 @@ private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {
     rw [updated]
     exact ((write_nurIn _ address value.toNat).gleichAt untouched).symm
   | priv | exit => exact fun byte _ => GleichAt.refl _ byte
-  | @ask _ control _ _ _ _ _ running offered _ answered _ =>
+  | @ask _ control _ operation _ _ _ running offered _ answered _ =>
     cases control with
     | next | fault | unk => cases offered
     | ask request resume =>
       cases offered
-      cases request with
+      cases operation with
       | cas | sys => exact directEffects running trivial answered
       | rd | fp =>
         rw [answered.1.1]
@@ -381,7 +381,7 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
   have empty : ImageIdleBuffers (output.irEntry initial) := fun i _ => loaded.emptyBuffers i
   have childPhase := loaded.future_root_phase unit path order.le
     (fun prior step bound =>
-      have length := processStep_threadSlots step
+      have length := processPrefix_threadSlots (ProcessPrefix.ofStep step)
       have unused := (Nat.le_add_right _ _).trans (length ▸ bound)
       future_stack_step (empty.follow prior) (buffers prior) (effects prior unused) step bound)
     declared code slots reached
