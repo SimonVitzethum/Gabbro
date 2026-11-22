@@ -230,6 +230,18 @@ theorem Inputs.of_world {world : World D} {m : Runner.Mem} {cells : List (Zelle 
   | glob g => exact stored.2.1 g
   | elem t f k => exact stored.1 t f k (valid _ hc)
 
+/-- Checked snapshot sources are beyond the end of a separated frame. -/
+theorem capture_separated {cells : List (Zelle D)} {base : Nat} {code : List II}
+    (emitted : capture L cells base = some code) (layout : LayIn L) {endOfFrame : Nat}
+    (separated : endOfFrame ≤ L.lo) :
+    ∀ cell ∈ cells, endOfFrame ≤ cell.adr L := by
+  intro cell member
+  have valid := (capture_bounds _ _ emitted cell member).1
+  apply Nat.le_trans separated
+  cases cell with
+  | glob g => exact (layout.2.1 g).1
+  | elem t f k => exact (layout.1 t f k valid).1
+
 /-- The source's read bookkeeping changes no captured cell value. -/
 theorem At.lese {world : World D} {m : Runner.Mem} {fp : Runner.W}
     {cells : List (Zelle D)} {base : Nat} (saved : At L world m fp cells base)
@@ -252,14 +264,8 @@ theorem capture_world_ok [Kern] {world : World D} {m : Runner.Mem} {fp pc : Runn
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
       Agree fp base (base + words cells) m m' ∧ At L world m' fp cells base := by
   have bounds := capture_bounds cells base emitted
-  apply capture_ok cells base emitted m pc frame small capacity ?_ atCode far
+  exact capture_ok cells base emitted m pc frame small capacity (capture_separated emitted layout separated) atCode far
     (Inputs.of_world stored (fun cell hc => (bounds cell hc).1))
-  intro cell hc
-  apply Nat.le_trans separated
-  have valid := (bounds cell hc).1
-  cases cell with
-  | glob g => exact (layout.2.1 g).1
-  | elem t f k => exact (layout.1 t f k valid).1
 
 end EntrySnapshots
 end Gabbro.Stage0.Senke

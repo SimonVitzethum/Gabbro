@@ -132,6 +132,17 @@ theorem IRReference.of_star {entry finish : T} {before after : Mem}
     obtain ⟨count, tail⟩ := ih
     exact ⟨count + 1, .extend first tail⟩
 
+/-- Consecutive verified regions compose at their exact instruction
+    pointer and memory, including internal native answers. -/
+theorem IRReference.append {first second : Nat} {entry middle target : T} {before atMiddle finish : Mem}
+    (initial : IRReference first entry before middle atMiddle)
+    (suffix : IRReference second middle atMiddle target finish) :
+    IRReference (first + second) entry before target finish := by
+  induction initial with
+  | start => simpa only [Nat.zero_add] using suffix
+  | extend instruction _ ih =>
+    simpa only [Nat.succ_add] using IRReference.extend instruction (ih suffix)
+
 /-- An arbitrary memory-only prefix consumes that many reference
     instructions with identical intermediate memories. The remaining
     reference is valid even if it is about to ask for a floating answer. -/

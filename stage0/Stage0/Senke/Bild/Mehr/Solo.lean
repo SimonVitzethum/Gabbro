@@ -123,7 +123,8 @@ theorem maskMemory_agreement (reads writes : W → Prop) (memory : Mem)
     have write : writes byte := of_decide_eq_true (Bool.and_eq_true_iff.mp granted).2
     exact ⟨within byte write, write⟩
 
-private theorem replay_memory_request {reads writes : W → Prop}
+/-- A successful memory answer depends only on the read and write permissions it uses. -/
+theorem memAns_replay_scoped {reads writes : W → Prop}
     {reference actual finish : Mem} {op : Op} {answer : W × W}
     (readable : ∀ byte, reference.rd byte = true → reads byte)
     (writable : ∀ byte, reference.wr byte = true → reads byte ∧ writes byte)
@@ -177,7 +178,7 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
         cases rest
       | some words =>
         obtain ⟨advanced, same, agreement, _, written⟩ :=
-          replay_memory_request readable writable agrees answered
+          memAns_replay_scoped readable writable agrees answered
         rw [same] at actualAnswer
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj actualAnswer)
         have permissions := memAns_nurIn answered
@@ -235,7 +236,7 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
       | refl => exact (safe rfl).elim
     | some words =>
       obtain ⟨advanced, sameAnswer, sameRegion, included, written⟩ :=
-        replay_memory_request readable writable agrees answered
+        memAns_replay_scoped readable writable agrees answered
       have referenceStable := memAns_nurIn answered
       obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _) safe blocked
         (fun byte permission => readable byte (by simpa only [referenceStable.rd] using permission))

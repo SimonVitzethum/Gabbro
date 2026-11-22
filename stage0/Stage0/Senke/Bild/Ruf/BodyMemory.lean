@@ -5,6 +5,8 @@ public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
+public import Stage0.Senke.Bild.Ruf.PrologueCode
+import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
 import Stage0.Senke.Bild.ImageAddress
 import Lean.Elab.Tactic.Omega
 
@@ -169,13 +171,15 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
     admitted bodies, and ticket registry for the same GX state. -/
 theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    (unit : ImageModelUnit output E)
+    (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E)
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {memory : imageTSO.St} {N : Nat} {tickets : _ → Senke.Faeden.Zustand N}
-    {footprint : Nat → W → Prop}
-    (matched : ImageRuntimeMatchesAt footprint output E O history before state)
-    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
-      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (matched : ImageRuntimeMatchesAt (Senke.Faeden.imageRuntimeFootprint output E state.m)
+      output E O history before state (ImagePendingRoot output E history state))
     (registry : Senke.Faeden.ImageTicketStates output.image.Y.withIdle before.ms.1.m state.m tickets)
     (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
     (allocated : before.ths.length ≤ output.starts.length + 1)
@@ -183,10 +187,14 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     (flushed : imageTSO.tau before.ms memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths⟩
     ProcessStep imageTSO actI before [] after ∧
-      ImageRuntimeMatchesAt footprint output E O history after state ∧
+      ImageRuntimeMatchesAt (Senke.Faeden.imageRuntimeFootprint output E state.m)
+        output E O history after state (ImagePendingRoot output E history state) ∧
       Senke.Faeden.ImageTicketStates output.image.Y.withIdle memory.1.m state.m tickets := by
   intro after
   obtain ⟨body, buffers, length, registered, roots⟩ := matched
+  let footprint := Senke.Faeden.imageRuntimeFootprint output E state.m
+  have placed (thread : Nat) (byte : W) (owned : footprint thread byte) :=
+    Senke.Faeden.imageRuntimeFootprint_placed output.layout_checked.1.withIdle owned
   have synchronized := output.layout_checked.2.2.withIdle
   have belowLocks : ∀ thread byte, footprint thread byte → byte.toNat < output.image.Y.hi := by
     intro thread byte owned
@@ -211,16 +219,30 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
   · intro thread
     rcases roots thread with same | ⟨control, absent, live, phase⟩
     · exact .inl same
-    · have declared : thread ≤ output.starts.length := by
-        have present := (List.getElem?_eq_some_iff.mp live).1
-        omega
-      have running : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4 := by
-        by_cases entry : thread = 0
-        · subst thread
-          exact .inr (fun loader => pastLoader (loader ▸ live))
-        · exact .inl entry
-      exact .inr ⟨control, absent, live, ImageRootPhase.transport phase running declared (fun address visible =>
-        (preserved thread address visible).symm)⟩
+    · refine .inr ⟨control, absent, live, ?_⟩
+      rcases phase with stub | runningPrologue
+      · have declared : thread ≤ output.starts.length := by
+          have present := (List.getElem?_eq_some_iff.mp live).1
+          omega
+        have running : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4 := by
+          by_cases entry : thread = 0
+          · subst thread
+            exact .inr (fun loader => pastLoader (loader ▸ live))
+          · exact .inl entry
+        exact .inl (ImageRootPhase.transport stub running declared
+          (fun address visible => (preserved thread address visible).symm))
+      · obtain ⟨prologue⟩ := runningPrologue
+        let scope := fun owner byte => owner = thread ∧ (prologue.reads byte ∨ prologue.writes byte)
+        have stable := tso_flush_preserves_views (layout := L0) flushed scope (by
+          intro writer store buffered owner different byte visible written
+          obtain ⟨rfl, read | write⟩ := visible
+          · exact different (output.prologue_read_owner unit hardware accepted duties prologue.declared
+              read (buffers writer store buffered byte written).1).symm
+          · exact different (imageStackFootprint_owner placed (prologue.privateWrites byte write)
+              (buffers writer store buffered byte written).1).symm)
+        exact .inr ⟨prologue.transport
+          (fun byte read => ⟨(stable thread byte ⟨rfl, .inl read⟩).1, (stable thread byte ⟨rfl, .inl read⟩).2.1⟩)
+          (fun byte write => (stable thread byte ⟨rfl, .inr write⟩).2.2) prologue.alive rfl⟩
 
 /-- A floating answer is an internal IR observation of the issuing
     thread. It changes neither committed memory nor pending stores, and

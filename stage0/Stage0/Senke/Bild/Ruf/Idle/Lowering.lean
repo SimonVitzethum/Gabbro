@@ -31,7 +31,7 @@ theorem PCode.withIdle {m : Runner.Mem} {layout : Lay D} {code : D.Fn → List I
         BitVec.toNat_ofNat, Nat.zero_mod, Nat.add_zero, Nat.zero_le, and_true, frame]
       decide
 
-private theorem entryIndex_ruE :
+theorem entryIndex_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
       entryIndex (ruE expr) = entryIndex expr
   | _, _, _, .widen _ _ expr => entryIndex_ruE expr
@@ -79,7 +79,7 @@ private theorem idleColumn (table : D.Tab) (field : D.Feld table) (first count :
   | zero => rfl
   | succ count ih => simp only [EntrySnapshots.column, List.map_cons, Zelle.withIdle, ih]
 
-private theorem idleColumnFits (table : D.Tab) (field : D.Feld table) :
+theorem idleColumnFits (table : D.Tab) (field : D.Feld table) :
     EntrySnapshots.columnFits (D := D.mitRuhe) table field = EntrySnapshots.columnFits (D := D) table field := by
   simp only [EntrySnapshots.columnFits, tyR, valueWords_mapNumbers]
 
@@ -174,5 +174,69 @@ theorem postSnapshots_withIdle (P : Programm D) (layout : Lay D) (f : D.Fn) (bas
       ((oldCells_holdings _ _).trans (oldCells_ruE (P.ensures f))))
   simp only [cells]
   exact EntrySnapshots.withIdle layout (oldCells (P.ensures f)) base
+
+private theorem column_carrier (table : D.Tab) (field : D.Feld table) :
+    ∀ (count start : Nat) (cell : Zelle D), cell ∈ EntrySnapshots.column table field start count →
+      cell.carrier = .inl table
+  | 0, _, _, member => List.not_mem_nil member |>.elim
+  | count + 1, start, cell, member =>
+    (List.mem_cons.mp member).elim (fun same => same.symm ▸ rfl)
+      (column_carrier table field count (start + 1) cell)
+
+/-- The snapshot emitter reads only carriers already named by the checked
+    contract, even when a dynamic old index requires a whole column. -/
+theorem oldCells_carrier :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ)
+      (cell : Zelle D), cell ∈ oldCells expr → cell.carrier ∈ expr.orte
+  | _, _, _, .oldG g _, cell, member => by
+    have same : cell = .glob g := List.mem_singleton.mp member
+    subst cell
+    exact List.mem_cons_self
+  | _, _, _, .oldS table field index _, cell, member => by
+    simp only [oldCells] at member
+    cases selected : entryIndex index with
+    | some offset =>
+      rw [selected] at member
+      have same : cell = .elem table field offset.toNat := List.mem_singleton.mp member
+      subst cell
+      exact List.mem_cons_self
+    | none =>
+      rw [selected] at member
+      by_cases fits : EntrySnapshots.columnFits (D := D) table field = true
+      · rw [ite_eq_left fits] at member
+        rcases List.mem_append.mp member with nested | fromColumn
+        · exact List.mem_cons_of_mem _ (oldCells_carrier index cell nested)
+        · have same := column_carrier table field _ 0 cell fromColumn
+          exact List.mem_cons.mpr (.inl same)
+      · rw [ite_eq_right fits] at member
+        exact (List.not_mem_nil member).elim
+  | _, _, _, .widen _ _ e, cell, member | _, _, _, .not e, cell, member
+  | _, _, _, .neg e, cell, member | _, _, _, .intBuiltin1 _ e, cell, member =>
+    oldCells_carrier e cell member
+  | _, _, _, .add a b, cell, member | _, _, _, .sub a b, cell, member | _, _, _, .mul a b, cell, member
+  | _, _, _, .eq a b, cell, member | _, _, _, .lt a b, cell, member | _, _, _, .le a b, cell, member
+  | _, _, _, .and a b, cell, member | _, _, _, .or a b, cell, member
+  | _, _, _, .intBuiltin2 _ a b, cell, member =>
+    (List.mem_append.mp member).elim
+      (fun first => List.mem_append_left _ (oldCells_carrier a cell first))
+      (fun second => List.mem_append_right _ (oldCells_carrier b cell second))
+  | _, _, _, .lit .., _, member | _, _, _, .tru .., _, member | _, _, _, .fls .., _, member
+  | _, _, _, .var .., _, member | _, _, _, .glob .., _, member | _, _, _, .slot .., _, member
+  | _, _, _, .thru .., _, member | _, _, _, .thruOwn .., _, member | _, _, _, .ptrOf .., _, member
+  | _, _, _, .fnref .., _, member | _, _, _, .refEq .., _, member | _, _, _, .slotRef .., _, member
+  | _, _, _, .div .., _, member | _, _, _, .rem .., _, member | _, _, _, .sdiv .., _, member
+  | _, _, _, .srem .., _, member | _, _, _, .getBytes .., _, member | _, _, _, .band .., _, member
+  | _, _, _, .bor .., _, member | _, _, _, .bxor .., _, member | _, _, _, .shl .., _, member
+  | _, _, _, .shr .., _, member | _, _, _, .fllt .., _, member | _, _, _, .flle .., _, member
+  | _, _, _, .none .., _, member | _, _, _, .some .., _, member | _, _, _, .istSome .., _, member
+  | _, _, _, .case .., _, member | _, _, _, .why .., _, member | _, _, _, .forallSlots .., _, member
+  | _, _, _, .existsSlots .., _, member | _, _, _, .reaches .., _, member | _, _, _, .arrNil .., _, member
+  | _, _, _, .arrCons .., _, member | _, _, _, .arrGet .., _, member | _, _, _, .arrSet .., _, member
+  | _, _, _, .strLit .., _, member | _, _, _, .strLen .., _, member | _, _, _, .strCat .., _, member
+  | _, _, _, .strGet .., _, member | _, _, _, .strEq .., _, member | _, _, _, .strLt .., _, member
+  | _, _, _, .strWeit .., _, member | _, _, _, .wenn .., _, member | _, _, _, .eng .., _, member
+  | _, _, _, .count .., _, member | _, _, _, .prod .., _, member | _, _, _, .prodGet .., _, member
+  | _, _, _, .prodSet .., _, member => List.not_mem_nil member |>.elim
+termination_by structural _ _ _ expr _ _ => expr
 
 end Gabbro.Stage0.Senke

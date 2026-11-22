@@ -171,13 +171,16 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
         have statusBound : layout.internalResult ≤ layout.internalStatus := by
           simp only [FrameLayout.internalStatus]; omega
         omega
-      obtain ⟨mR, entryRun, entryChanged, original, lexical, saved, worldR⟩ :=
+      obtain ⟨mR, entryRun, entryChanged, original, lexical, saved⟩ :=
         entryFrame_run P f hsnap frame1 hK entryFits
           (codeAt_left code3) (codeFar_left (n := entry.length) (k := cb.length)
             (by simpa only [List.length_append] using far3))
-          params1 world1 hW.lay hW.top
+          params1 (EntrySnapshots.Inputs.of_world world1 (fun cell member =>
+            (EntrySnapshots.capture_bounds _ _ hsnap cell member).1))
+          (EntrySnapshots.capture_separated hsnap hW.lay hW.top)
       have low : FB ≤ q := by simp only [q, FrameLayout.canonicalResult]; omega
       have allChanged : Agree fp FB K m mR := (first.mono low).trans entryChanged
+      have worldR := weltAt_stab hW.lay hW.top m1 mR world1 (entryChanged.mono (Nat.zero_le _))
       have frameR := hF.agree allChanged
       have farR := codeFar_tail (a := entry) far3
       have codeR := (codeAt_right code3).agree entryChanged farR

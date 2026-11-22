@@ -22,8 +22,8 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))}
-    {i : Nat} {entry : MLage (declOf output.compiled.unit).mitRuhe}
-    (partition : ImageRuntimePartition footprint output E O history before state body)
+    {i : Nat} {entry : MLage (declOf output.compiled.unit).mitRuhe} {pending : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition footprint output E O history before state body pending)
     (empty : body[i]? = some none) (entryOK : entry.Ok)
     (exactProgram : entry.B.P = E.P.mitRuhe ∧ entry.B.O = O.mitRuhe ∧
       entry.B.passes = output.image.passes ∧ entry.B.L = output.image.Y.withIdle)
@@ -38,7 +38,7 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
     (atFrame : GleichAuf reads (projectSCState footprint after.ms).1 entry.mb)
     (unchanged : ∀ byte, ¬ writes byte →
       GleichAt (projectSCState footprint after.ms).1 (projectSCState footprint before.ms).1 byte) :
-    ImageRuntimeMatchesAt footprint output E O history after state := by
+    ImageRuntimeMatchesAt footprint output E O history after state pending := by
   obtain ⟨_, length, active, roots⟩ := partition
   let program : PCfg := ⟨(projectSCState footprint before.ms).1, body⟩
   have registered : ∃ snapshots positions committed,

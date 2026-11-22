@@ -116,14 +116,15 @@ theorem image_refused_worker_terminal [kernel : Kern] {src : String} {reserve : 
   exact ⟨.exitGroup running rfl exits, 0, request, rfl, exits, rfl,
     .inr (.inr (.inr (.inl ⟨rfl, status, prior, id, extra, previous, refused⟩)))⟩
 
-private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+theorem ImageRuntimePartition.advance_pending [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))} {i : Nat} {r : Res T}
-    (partition : ImageRuntimePartition footprint output E O history before state body)
+    {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition footprint output E O history before state body pendingPhase)
     (pending : body[i]? = some none) (threads : after.ths = before.ths.set i (some r))
-    (phase : ImageRootPhase output E history (after.ms.1.view i) i r state)
+    (phase : pendingPhase (after.ms.1.view i) i r)
     (views : ∀ j, j ≠ i → after.ms.1.view j = before.ms.1.view j)
     (buffers : PrivateBuffers footprint after.ms.1)
     (preserveWorld : WeltAt (projectSCState footprint before.ms).1 output.image.Y.withIdle (state.m.speicher.welt []) →
@@ -134,7 +135,7 @@ private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {opt
       (∀ j s, snapshots j = some s → SoloFootprint footprint j s) →
       ∃ updated, MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
         ⟨(projectSCState footprint after.ms).1, body⟩ state snapshots positions updated) :
-    ImageRuntimePartition footprint output E O history after state body := by
+    ImageRuntimePartition footprint output E O history after state body pendingPhase := by
   obtain ⟨_, length, admitted, roots⟩ := partition
   refine ⟨buffers, by rw [threads, List.length_set, length], ?_, ?_⟩
   · rcases admitted with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, indices⟩
@@ -170,12 +171,84 @@ theorem image_pending_root_begin [Kern] {src : String} {reserve : Nat} {options 
     · cases loader
     exact .inr ⟨start, declared, head, code, frame, fits, args, pointer, site,
       .inr (.inl (fun _ _ => RunP.refl _ _))⟩
-  exact ⟨.priv running rfl, pending_root_progress partition pending rfl continued
+  exact ⟨.priv running rfl, ImageRuntimePartition.advance_pending partition pending rfl continued
     (fun _ _ => rfl) partition.1 (fun world => world) (fun related _ => ⟨_, related⟩)⟩
 
-/-- A real scoped startup store advances the pending root in the shared
-    runtime partition. Its byte effect is retained in the IR view and
-    stays disjoint from all admitted bodies and the source world. -/
+/-- A pending root can enqueue a store anywhere inside its private stack.
+    This preserves the source world's bytes and every admitted body. -/
+theorem ImageRuntimePartition.pending_store [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {memory : imageTSO.St}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))} {pendingPhase : Mem → Nat → Res T → Prop}
+    {i : Nat} {address word : W} {resume : Ans → Res T}
+    (partition : ImageRuntimePartition footprint output E O history before state body pendingPhase)
+    (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
+      output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
+    (ownsStack : ∀ byte, imageStackFootprint output i byte → footprint i byte)
+    (pending : body[i]? = some none)
+    (within : ∀ byte, fenster address byte → imageStackFootprint output i byte)
+    (running : before.ths[i]? = some (some (.ask (.wr address word) resume)))
+    (answered : imageTSO.ans before.ms i (.wr address word) (some (0, 0)) memory)
+    (phase : pendingPhase (memory.1.view i) i (resume (some (0, 0)))) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set i (some (resume (some (0, 0))))⟩
+    ProcessStep imageTSO actI before [] after ∧
+      ImageRuntimePartition footprint output E O history after state body pendingPhase := by
+  intro after
+  obtain ⟨_, _, views⟩ := (tso_store_updates_view answered.1).resolve_left (fun denied => by cases denied.1)
+  have owns (byte : W) (written : fenster address byte) :
+      footprint i byte ∧ ∀ j, footprint j byte → j = i := by
+    have available := within byte written
+    exact ⟨ownsStack byte available, fun _ own => imageStackFootprint_owner placed available own⟩
+  have buffered := PrivateBuffers.answer partition.1 (request := .wr address word) rfl answered.1 (by
+    intro _ _ store byte changed
+    cases store
+    exact owns byte changed)
+  have written := projectSCState_store answered.1 footprint owns
+  have bytes : (projectSCState footprint memory).1 =
+      Mem.write (projectSCState footprint before.ms).1 address 8 word.toNat := by
+    rcases written with ⟨_, refused, _⟩ | ⟨m, placed, _, exactMemory⟩
+    · cases refused
+    · rw [wr64_eq] at placed
+      split at placed
+      · exact exactMemory.trans (Option.some.inj placed).symm
+      · cases placed
+  have preserve {m : Mem} (world : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
+      WeltAt (Mem.write m address 8 word.toNat) output.image.Y.withIdle (state.m.speicher.welt []) := by
+    have writes := write_nurIn m address word.toNat
+    have layout := output.layout_checked.1.withIdle
+    have stable (byte : W) (worldByte : output.image.Y.withIdle.lo ≤ byte.toNat) :
+        (Mem.write m address 8 word.toNat).b byte = m.b byte ∧
+          (Mem.write m address 8 word.toNat).rd byte = m.rd byte := by
+      have outside : ¬ fenster address byte :=
+        fun hit => (Nat.not_le_of_lt (imageStackFootprint_before_world (within byte hit))) worldByte
+      exact ⟨(writes.gleichAt outside).1, (writes.gleichAt outside).2.1⟩
+    refine ⟨?_, ?_, WeltWr.keep world.2.2 writes.wr⟩
+    · intro table field index valid
+      obtain ⟨first, last⟩ := layout.1 table field index valid
+      exact ValueAt.congr_read_bytes (last.trans_lt (layout.2.2.trans (by decide)))
+        (fun byte lower _ => stable byte (first.trans lower)) (world.1 table field index valid)
+    · intro global
+      obtain ⟨first, last⟩ := layout.2.1 global
+      exact ValueAt.congr_read_bytes (last.trans_lt (layout.2.2.trans (by decide)))
+        (fun byte lower _ => stable byte (first.trans lower)) (world.2.1 global)
+  refine ⟨.ask running rfl rfl answered rfl, ImageRuntimePartition.advance_pending partition pending rfl phase views buffered ?_ ?_⟩
+  · rw [show after.ms = memory from rfl, bytes]
+    exact preserve
+  · intro snapshots positions committed related indices
+    have disjoint (j : Nat) (s : Solo) (known : snapshots j = some s) (byte : W)
+        (written : fenster address byte) (readable : s.F byte) : False := by
+      have same := (indices j s known).read byte readable i (owns byte written).1
+      subst j
+      have live := related.zustand i s known
+      change body[i]? = some (some s.r) at live
+      rw [pending] at live
+      cases live
+    refine ⟨Mem.write committed address 8 word.toNat, ?_⟩
+    rw [show after.ms = memory from rfl, bytes]
+    exact related.commit_disjoint_store disjoint (preserve related.welt)
+
+/-- The emitted startup stores instantiate the private pending-root transition. -/
 theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before : Cfg imageTSO (Res T)}
@@ -198,57 +271,11 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set i (some (.next next))⟩
     ProcessStep imageTSO actI before [] after ∧
       ImageRuntimePartition footprint output E O history after state body := by
-  intro fp address running answered after
-  have atRoot := pending_root_phase partition pending running
-  obtain ⟨success, phase, views⟩ :=
-    ImageRootPhase.store declared inside successor apart atRoot answered
-  subst answer
-  have owns (byte : W) (written : fenster address byte) :
-      footprint i byte ∧ ∀ j, footprint j byte → j = i := by
-    have available := imageStackFootprint_slot (output := output) declared inside written
-    exact ⟨ownsStack byte available, fun _ own => imageStackFootprint_owner placed available own⟩
-  have buffered := PrivateBuffers.answer partition.1 (request := .wr address word) rfl answered.1 (by
-    intro _ _ store byte changed
-    cases store
-    exact owns byte changed)
-  have written := projectSCState_store answered.1 footprint owns
-  have bytes : (projectSCState footprint memory).1 =
-      Mem.write (projectSCState footprint before.ms).1 address 8 word.toNat := by
-    rcases written with ⟨_, refused, _⟩ | ⟨m, placed, _, exactMemory⟩
-    · cases refused
-    · rw [wr64_eq] at placed
-      split at placed
-      · exact exactMemory.trans (Option.some.inj placed).symm
-      · cases placed
-  have room : fp.toNat + 8 * output.image.Ks ≤ output.image.Y.withIdle.lo := by
-    have fits : output.image.Ks * (i + 1) ≤ output.image.Ks * (output.starts.length + 1) :=
-      Nat.mul_le_mul_left _ (Nat.add_le_add_right declared 1)
-    have start : fp.toNat ≤ output.image.fp0 + 8 * (output.image.Ks * i) := by
-      exact Nat.mod_le _ _
-    have above := output.stackReservation_bounds.1
-    rw [Nat.mul_add, Nat.mul_one] at fits
-    change fp.toNat + 8 * output.image.Ks ≤ output.image.Y.lo
-    omega
-  have bound : fp.toNat + 8 * output.image.Ks ≤ 2 ^ 64 :=
-    room.trans output.stackReservation_bounds.2.le
-  have preserve {m : Mem} (world : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
-      WeltAt (Mem.write m address 8 word.toNat) output.image.Y.withIdle (state.m.speicher.welt []) :=
-    weltAt_stab output.layout_checked.1.withIdle room _ _ world (agree_write bound (Nat.zero_le _) inside _)
-  refine ⟨.ask running rfl rfl answered rfl, pending_root_progress partition pending rfl phase views buffered ?_ ?_⟩
-  · rw [show after.ms = memory from rfl, bytes]
-    exact preserve
-  · intro snapshots positions committed related indices
-    have disjoint (j : Nat) (s : Solo) (known : snapshots j = some s) (byte : W)
-        (written : fenster address byte) (readable : s.F byte) : False := by
-      have same := (indices j s known).read byte readable i (owns byte written).1
-      subst j
-      have live := related.zustand i s known
-      change body[i]? = some (some s.r) at live
-      rw [pending] at live
-      cases live
-    refine ⟨Mem.write committed address 8 word.toNat, ?_⟩
-    rw [show after.ms = memory from rfl, bytes]
-    exact related.commit_disjoint_store disjoint (preserve related.welt)
+  intro fp address running answered
+  obtain ⟨rfl, phase, _⟩ := ImageRootPhase.store declared inside successor apart
+    (pending_root_phase partition pending running) answered
+  exact partition.pending_store placed ownsStack pending
+    (fun _ written => imageStackFootprint_slot declared inside written) running answered phase
 
 /-- A scoped startup read advances only the pending root, using the
     actual TSO response and leaving every body snapshot intact. -/
@@ -269,7 +296,7 @@ theorem image_pending_root_read [Kern] {src : String} {reserve : Nat} {options :
   intro after
   obtain ⟨unchanged, phase⟩ := ImageRootPhase.read (pending_root_phase partition pending running)
     pastLoader scope answered
-  refine ⟨.ask running rfl rfl answered rfl, pending_root_progress partition pending rfl phase ?_ ?_ ?_ ?_⟩
+  refine ⟨.ask running rfl rfl answered rfl, ImageRuntimePartition.advance_pending partition pending rfl phase ?_ ?_ ?_ ?_⟩
   · intro j _
     rw [show after.ms = memory from rfl, unchanged]
   · rw [show after.ms = memory from rfl, unchanged]

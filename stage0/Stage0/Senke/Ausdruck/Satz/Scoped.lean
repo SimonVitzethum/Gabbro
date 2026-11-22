@@ -1,78 +1,79 @@
 module
 public import Stage0.Senke.Ausdruck.Satz.Imports
 @[expose] public section
-variable {currentOld : Bool}
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {currentOld : Bool}
+local macro "inherit_reads" parent:ident : term => `(by
+  intro carrier member
+  refine ($parent:ident) carrier ?_
+  simp only [Expr.orte, Args.orte, NutzlastExpr.orte, List.mem_append, List.mem_cons]
+  solve_by_elim only [member, Or.inl, Or.inr])
 mutual
-/-- Ordinary lowering proves `eval σ e σ ρ`; the equality premise states that choice
-    explicitly. The ensures fallback disables current-old reads and retains the generic
-    theorem with an independent entry world, without assuming entry equals exit. -/
 theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
-    (hWL : ∀ m, W m → ReadWorldAt m L σ Λ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
-    {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
+    {reads : D.Tab ⊕ D.Glob → Prop} (hWL : ∀ m, W m → WorldOnAt m L σ reads) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (∀ carrier ∈ e.orte, reads carrier) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre L m pc fp K d c ρ W reserved → ValueOk L m pc fp K d c τ (eval σ₀ e σ ρ)
-  | _, _, .refEq a b, d, c, top, h, hK, m, pc, ρ, hp =>
-    (refEq_ok a b (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) ca ta ha hta m pc ρ hp).word trivial) h hK hp).value rfl
-  | _, _, .slotRef r t ht _ f access, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .refEq a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    (refEq_ok a b (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp).word trivial)
+      (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) ca ta ha hta m pc ρ hp).word trivial) h hK hp).value rfl
+  | _, _, .slotRef r t ht _ f access, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cr, tr⟩, hr, hs⟩ := h
     have tops := slotValueC_top hs
     have trK : tr ≤ K := by have := tops.1; simp only at this; omega
     have refWord : ∀ m pc, Pre L m pc fp K (d + valueWords (D.typ t f)) cr ρ W reserved →
         Ok m pc fp K (d + valueWords (D.typ t f)) cr (Enc L _ (eval σ₀ r σ ρ)) :=
-      fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay r _ cr tr hr trK m pc ρ hp).word trivial
+      fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay r (inherit_reads hRead) _ cr tr hr trK m pc ρ hp).word trivial
     obtain ⟨_, _, _, _, _, hv⟩ := refWord m pc (slotValueC_index_pre hs hp)
     obtain ⟨_, _, t', ht', _, hk⟩ := hv
     have same : t' = t := Option.some.inj (ht'.symm.trans ht)
     subst same
     exact slotValueC_ok hs hK hk hLay (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
-      (fun m stored => (hWL m stored).table _ access f _ hk) hp
-  | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
-  | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
-    arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay rest _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .arrGet a i, d, c, top, h, hK, m, pc, ρ, hp =>
-    arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowStorage_ok (same := same) σ₀ σ hWL hLay a _ ca ta ha hta m pc ρ hp)
-      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i q ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
-    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v _ ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strLit bs hb, d, c, top, h, hK, m, pc, ρ, hp => strLit_ok bs hb h hK hp
-  | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
-    strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strCat s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCatExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strWeit q s, d, c, top, h, hK, m, pc, ρ, hp =>
-    strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
-    strGet_ok s i (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strEq s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strEq_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strLtExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s _ ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .widen lower upper e, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun m stored => (hWL m stored).table _ (hRead _ (by simp [Expr.orte])) f _ hk) hp
+  | _, _, .arrNil, hRead, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
+  | _, _, .arrCons a rest, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay rest (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrGet a i, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowStorage_ok (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) q ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrSet a i v, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLit bs hb, hRead, d, c, top, h, hK, m, pc, ρ, hp => strLit_ok bs hb h hK hp
+  | _, _, .strLen s, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strCat s t, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCatExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strWeit q s, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strGet s i, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strGet_ok s i (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strEq s t, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strEq_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) (d + 1) ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLt s t, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    strLtExpr_ok s t (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) (d + 1) ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay s (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay t (inherit_reads hRead) _ ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .widen lower upper e, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     resizeIntegerL_ok (eval σ₀ e σ ρ) (Zahl.weiter lower upper (eval σ₀ e σ ρ)) rfl
-      (fun cc tt hc ht hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d cc tt hc ht m pc ρ hp) h hK hp
-  | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
+      (fun cc tt hc ht hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d cc tt hc ht m pc ρ hp) h hK hp
+  | _, _, .lit n, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next small =>
@@ -82,78 +83,78 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact (const_ok hp small (by omega)).mono fun _ same => same
     · exact constValue_ok (L := L) (τ := .int n n) ⟨n, by omega, by omega⟩ trivial h hK hp
-  | _, _, .fnref f n hf, d, c, top, h, hK, m, pc, ρ, hp => (fnref_ok σ₀ σ h hK hp).value rfl
-  | _, _, .tru, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .fnref f n hf, hRead, d, c, top, h, hK, m, pc, ρ, hp => (fnref_ok σ₀ σ h hK hp).value rfl
+  | _, _, .tru, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
-  | _, _, .fls, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .fls, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
-  | _, τ, .var x, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, τ, .var x, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     exact var_value_ok x h hK hp
-  | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .add a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next width =>
       refine Ok.value ?_ width
       obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
       have := lowE_top b (d + 1) cb tb hb
-      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
-        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
+      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
+        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
         (g := fun x y => some (x + y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_add]; rfl⟩
     · exact wideAdd_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .sub a b, d, c, top, h, hK, m, pc, ρ, hp => by
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) _ cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .sub a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next width =>
       refine Ok.value ?_ width
       obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
       have := lowE_top b (d + 1) cb tb hb
-      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
-        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
+      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
+        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
         (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← ofInt_sub']; rfl⟩
     · exact wideSub_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .mul a b, d, c, top, h, hK, m, pc, ρ, hp => by
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) _ cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .mul a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next width =>
       refine Ok.value ?_ width
       obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
       have := lowE_top b (d + 1) cb tb hb
-      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
-        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
+      refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
+        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
         (g := fun x y => some (x * y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_mul]; rfl⟩
     · exact wideMul_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .fllt a b, d, c, top, h, hK, m, pc, ρ, hp =>
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) _ cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .fllt a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     (floatExprE_ok σ₀ σ false a b
-      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d c top h hK m pc ρ hp).word trivial)
-      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d c top h hK m pc ρ hp).word trivial) h hK hp).value rfl
-  | _, _, .flle a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d c top h hK m pc ρ hp).word trivial)
+      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d c top h hK m pc ρ hp).word trivial) h hK hp).value rfl
+  | _, _, .flle a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     (floatExprE_ok σ₀ σ true b a
-      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d c top h hK m pc ρ hp).word trivial)
-      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d c top h hK m pc ρ hp).word trivial) h hK hp).value rfl
-  | _, _, .and a b, d, c, top, h, hK, m, pc, ρ, hp => by
+      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d c top h hK m pc ρ hp).word trivial)
+      (fun d c top h hK m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d c top h hK m pc ρ hp).word trivial) h hK hp).value rfl
+  | _, _, .and a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
-      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
+    refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
+      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
       (g := fun x y => some (x &&& y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
@@ -161,12 +162,12 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     rw [pa, pb]
     simp only [wahr?]
     exact and_word _ _
-  | _, _, .or a b, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .or a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
-      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
+    refine bin_ok (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
+      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb (by omega) m pc ρ hp).word trivial)
       (g := fun x y => some (x ||| y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
@@ -174,7 +175,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     rw [pa, pb]
     simp only [wahr?]
     exact or_word _ _
-  | _, _, .neg a, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .neg a, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next width =>
@@ -185,7 +186,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       obtain ⟨rfl, rfl⟩ := he
       have := lowE_top a (d + 1) ca ta ha
       refine bin_ok (ca := [ci 1 d 0 0]) (fun m pc hp => const_ok hp (by decide) (by omega))
-        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (d + 1) ca ta ha (by omega) m pc ρ hp).word trivial)
+        (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) (d + 1) ca ta ha (by omega) m pc ρ hp).word trivial)
         (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       refine ⟨_, rfl, ?_⟩
@@ -193,15 +194,15 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       rw [pa, pb]
       simp [eval, Zahl.neg, BitVec.ofInt_neg]
     · exact wideNeg_ok (eval σ₀ a σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp) h hK hp
-  | _, _, .not a, d, c, top, h, hK, m, pc, ρ, hp => by
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .not a, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     obtain ⟨rfl, rfl⟩ := he
     have := lowE_top a d ca ta ha
-    refine bin_ok (cb := [ci 1 (d + 1) 1 0]) (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp).word trivial)
+    refine bin_ok (cb := [ci 1 (d + 1) 1 0]) (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp).word trivial)
       (fun m pc hp => const_ok hp (by decide) (by omega))
       (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
@@ -210,7 +211,7 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
     rw [pa, pb]
     simp only [wahr?]
     exact not_word _
-  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · refine Ok.value ?_ rfl
@@ -224,8 +225,8 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
           (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
           (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
           (fun cb tb hb => lowE_top a (d + 1) cb tb hb)
-          (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d ca ta ha fits m pc ρ pre).word trivial)
-          (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+          (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d ca ta ha fits m pc ρ pre).word trivial)
+          (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) (d + 1) cb tb hb fits m pc ρ pre).word trivial)
           hc (by omega) hp)
         (fun m pc hp => const_ok hp (by decide) (by omega))
         (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
@@ -239,9 +240,9 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       · have hn : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
         simp [hl, hn, wahr?]
     · exact wideLe_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a _ ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · refine Ok.value ?_ rfl
@@ -249,16 +250,16 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
         (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
         (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
         (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
-        (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
-        (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+        (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha fits m pc ρ pre).word trivial)
+        (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb fits m pc ρ pre).word trivial)
         h hK hp
       exact run.mono (fun w value => by
         by_cases comparison : (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n <;>
           simpa [Enc, eval, bool_word, wahr?, comparison] using value)
     · exact wideLt_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) _ cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · refine Ok.value ?_ rfl
@@ -266,83 +267,83 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
         (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
         (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
         (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
-        (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
-        (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+        (fun ca ta ha fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha fits m pc ρ pre).word trivial)
+        (fun cb tb hb fits m pc pre => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb fits m pc ρ pre).word trivial)
         h hK hp
       exact run.mono (fun w value => by
         by_cases comparison : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n <;>
           simpa [Enc, eval, bool_word, wahr?, comparison] using value)
     · exact wideEq_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+        (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) _ cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .div h0 h1' a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     div_ok h0 h1' a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .rem h0 h1' a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     rem_ok h0 h1' a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .sdiv hb a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     sdiv_ok hb a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .srem hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .srem hb a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     srem_ok hb a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .band h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .band h0 h0' a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     band_ok h0 h0' a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .bor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .bor w h0 h0' hw1 hw2 a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     bor_ok w h0 h0' hw1 hw2 a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .bxor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .bxor w h0 h0' hw1 hw2 a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     bxor_ok w h0 h0' hw1 hw2 a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .shl w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .shl w hw1 hw2 h0 h0' a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     shl_ok w hw1 hw2 h0 h0' a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .shr w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .shr w hw1 hw2 h0 h0' a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     shr_ok w hw1 hw2 h0 h0' a b
-      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
-      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .none n, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun d' ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d' cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .none n, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     constValue_ok (L := L) (τ := .opt n) none trivial h hK hp
-  | _, _, .ptrOf .., d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .ptrOf .., hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun _ equal => equal
-  | _, _, .why n r, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .why n r, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     exact constValue_ok (L := L) (τ := .why n) r trivial h hK hp
-  | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
-    some_ok e (fun d ca ta ha ht m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d ca ta ha ht m pc ρ hp) h hK hp
-  | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp =>
-    istSome_ok e (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp) h hK hp
-  | _, _, .glob g access, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .some e, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    some_ok e (fun d ca ta ha ht m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ca ta ha ht m pc ρ hp) h hK hp
+  | _, _, .istSome e, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    istSome_ok e (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te he hte m pc ρ hp) h hK hp
+  | _, _, .glob g access, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
-    exact globalValueC_ok h hK (fun m stored => (hWL m stored).global g access) hp
-  | _, _, .slot t f i access, d, c, top, h, hK, m, pc, ρ, hp
-  | _, _, .thru _ t _ f i access, d, c, top, h, hK, m, pc, ρ, hp
-  | _, _, .thruOwn _ t _ f i _ _ _ _ _ access, d, c, top, h, hK, m, pc, ρ, hp => by
+    exact globalValueC_ok h hK (fun m stored => (hWL m stored).global g (hRead _ (by simp [Expr.orte]))) hp
+  | _, _, .slot t f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp
+  | _, _, .thru _ t _ f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp
+  | _, _, .thruOwn _ t _ f i _ _ _ _ _ access, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have tops := slotValueC_top hs
     have tiK : ti ≤ K := by have := tops.1; simp only at this; omega
-    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay (fun m stored => (hWL m stored).table t access f)
-      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i _ ci1 ti hci tiK m pc ρ hp).word trivial) hp
-  | _, _, .case cs i nutz, d, c, top, h, hK, m, pc, ρ, hp => by
+    exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f)
+      (fun m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ci1 ti hci tiK m pc ρ hp).word trivial) hp
+  | _, _, .case cs i nutz, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     exact case_value_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) cs i nutz
       (fun tagBound ca ta made fits m pc pre =>
-        lowN_ok (same := same) σ₀ σ hWL hLay i.val tagBound nutz d ca ta made fits m pc ρ pre)
+        lowN_ok (same := same) σ₀ σ hWL hLay i.val tagBound nutz (inherit_reads hRead) d ca ta made fits m pc ρ pre)
       (fun ca ta made fits m pc pre =>
-        lowPayload_ok (same := same) σ₀ σ hWL hLay nutz _ ca ta made fits m pc ρ pre) h hK hp
-  | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
+        lowPayload_ok (same := same) σ₀ σ hWL hLay nutz (inherit_reads hRead) _ ca ta made fits m pc ρ pre) h hK hp
+  | _, _, .wenn cond a b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
     split at h
@@ -351,149 +352,148 @@ theorem lowE_ok_scoped {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner
       obtain ⟨rfl, rfl⟩ := h
       have := lowE_top cond d cc tc hc
       refine wenn_ok (bc := wahr? (eval σ₀ cond σ ρ)) hp hlen (by omega)
-        (fun hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay cond d cc tc hc (by omega) m pc ρ hp).word trivial) ?_ ?_
+        (fun hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay cond (inherit_reads hRead) d cc tc hc (by omega) m pc ρ hp).word trivial) ?_ ?_
       · intro hcond m pc hp
-        exact Executes.mono (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha (by omega) m pc ρ hp) fun m' hw => by
+        exact Executes.mono (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha (by omega) m pc ρ hp) fun m' hw => by
           simpa only [eval, hcond, ↓reduceIte] using hw
       · intro hcond m pc hp
-        exact Executes.mono (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d cb tb hb (by omega) m pc ρ hp) fun m' hw => by
+        exact Executes.mono (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d cb tb hb (by omega) m pc ρ hp) fun m' hw => by
           simpa only [eval, hcond, Bool.false_eq_true, ↓reduceIte] using hw
     · cases h
-  | _, _, .eng e lo' hi' b, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .eng e lo' hi' b, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · exact (eng_ok h hK
-        (fun ce te he hte m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp).word trivial) hp).value
+        (fun ce te he hte m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te he hte m pc ρ hp).word trivial)
+        (fun cb tb hb htb m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d cb tb hb htb m pc ρ hp).word trivial) hp).value
         (eng_width h)
     · exact wideEng_ok (eval σ₀ e σ ρ) (eval σ₀ b σ ρ) (eval σ₀ (.eng e lo' hi' b) σ ρ)
         (fun hin => by simp [eval, hin] <;> rfl) (fun hin => by simp [eval, hin] <;> rfl)
         (fe := lowE (currentOld := currentOld) L (reserved := reserved) e) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
-        (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .getBytes t f hf n i hlo hhi access, d, c, top, h, hK, m, pc, ρ, hp =>
-    getBytes_ok i hf n hlo hhi access (fun m stored => (hWL m stored).table t access f) hLay
-      (fun d ci ti hi ht m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
+        (fun ce te he hte m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te he hte m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) d cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .getBytes t f hf n i hlo hhi access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    getBytes_ok i hf n hlo hhi access (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) hLay
+      (fun d ci ti hi ht m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) d ci ti hi ht m pc ρ hp).word trivial)
       h hK hp
-  | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
+  | _, _, .forallSlots t body _, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     (quantL_ok true (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
-      (fun cb tb hb htb k m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
-  | _, _, .existsSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun cb tb hb htb k m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (inherit_reads hRead) (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
+  | _, _, .existsSlots t body _, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     (quantL_ok false (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
-      (fun cb tb hb htb k m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
-  | _, _, .reaches t f hf a b access, d, c, top, h, hK, m, pc, ρ, hp =>
-    (reachesL_ok hf (fun m stored => (hWL m stored).table t access f) (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
-      (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) hp).value rfl
-  | _, _, .count n body, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun cb tb hb htb k m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (inherit_reads hRead) (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
+  | _, _, .reaches t f hf a b access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    (reachesL_ok hf (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
+      (fun ca ta ha hta m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) (d + 1) cb tb hb htb m pc ρ hp).word trivial) hp).value rfl
+  | _, _, .count n body, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     countL_ok n (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
       (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp =>
-        (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp
-  | _, _, .prod name args, d, c, top, h, hK, m, pc, ρ, hp => by
-    exact prod_ok args (lowE_ok_args (same := same) σ₀ σ hWL hLay args ρ)
+        (lowE_ok_scoped (same := same) σ₀ σ hWL hLay body (inherit_reads hRead) (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp
+  | _, _, .prod name args, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
+    exact prod_ok args (lowE_ok_args (same := same) σ₀ σ hWL hLay args (inherit_reads hRead) ρ)
       (by simpa only [lowE_prod] using h) hK hp
-  | _, _, .prodGet v i, d, c, top, h, hK, m, pc, ρ, hp =>
+  | _, _, .prodGet v i, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     prodGet_ok i v
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
       h hK hp
-  | _, _, .prodSet v i e, d, c, top, h, hK, m, pc, ρ, hp =>
+  | _, _, .prodSet v i e, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     prodSet_ok i v e
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay v (inherit_reads hRead) d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) _ ca ta ha hta m pc ρ hp)
       h hK hp
-  | _, _, .intBuiltin2 op a b, d, c, top, h, hK, m, pc, ρ, hp =>
+  | _, _, .intBuiltin2 op a b, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
-      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
-      (fun q cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b q cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .intBuiltin1 op a, d, c, top, h, hK, m, pc, ρ, hp =>
+      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) q ca ta ha hta m pc ρ hp)
+      (fun q cb tb hb htb m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay b (inherit_reads hRead) q cb tb hb htb m pc ρ hp) h hK hp
+  | _, _, .intBuiltin1 op a, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     BitBuiltin.unary_ok op (eval σ₀ a σ ρ)
-      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
+      (fun q ca ta ha hta m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay a (inherit_reads hRead) q ca ta ha hta m pc ρ hp)
       d c top h hK m pc hp
-  | _, _, .oldG g access, d, c, top, h, hK, m, pc, ρ, hp =>
-    oldGlobal_ok σ₀ σ hWL g access same h hK hp
-  | _, _, .oldS t f i access, d, c, top, h, hK, m, pc, ρ, hp =>
-    oldSlot_ok σ₀ σ hWL hLay t f i access same
-      (fun ci ti lower fits m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i _ ci ti lower fits m pc ρ hp) h hK hp
-termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
-/-- Storage-address induction shares the exact expression induction; table row
-    indices are compiled and proved by lowE_ok_scoped before their address is formed. -/
+  | _, _, .oldG g access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    oldGlobal_ok σ₀ σ g access (fun m stored => (hWL m stored).global g (hRead _ (by simp [Expr.orte]))) same h hK hp
+  | _, _, .oldS t f i access, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    oldSlot_ok σ₀ σ hLay t f i access
+      (fun m stored => (hWL m stored).table t (hRead _ (by simp [Expr.orte])) f) same
+      (fun ci ti lower fits m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) _ ci ti lower fits m pc ρ hp) h hK hp
+termination_by structural _ _ e _ _ _ _ _ _ _ _ _ _ => e
 theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → ReadWorldAt m L σ Λ) (hLay : LayIn L)
+    (σ₀ σ : World D) {reads : D.Tab ⊕ D.Glob → Prop} (hWL : ∀ m, W m → WorldOnAt m L σ reads) (hLay : LayIn L)
     {same : currentOld = true → σ₀ = σ} :
-    {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
+    {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (∀ carrier ∈ e.orte, reads carrier) → (d : Nat) → (c : List II) → (top : Nat) →
     lowStorage (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → top ≤ K →
     ∀ m pc (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
       StoredOk (L := L) m pc fp K d c ρ W reserved τ (eval σ₀ e σ ρ)
-  | _, _, .slot _ _ i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ _ _ _ i _, d, c, top, h, hK, m, pc, ρ, hp
-  | _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _
-      (fun q cc tt hc ht mm pp pre => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i q cc tt hc ht mm pp ρ pre)
+  | _, _, .slot _ _ i _, hRead, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ _ _ _ i _, hRead, d, c, top, h, hK, m, pc, ρ, hp
+  | _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ hRead
+      (fun q cc tt hc ht mm pp pre => lowE_ok_scoped (same := same) σ₀ σ hWL hLay i (inherit_reads hRead) q cc tt hc ht mm pp ρ pre)
       h hK hp
-  | _, _, .slotRef r _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _
-      (fun q cc tt hc ht mm pp pre => lowE_ok_scoped (same := same) σ₀ σ hWL hLay r q cc tt hc ht mm pp ρ pre)
+  | _, _, .slotRef r _ _ _ _ _, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
+    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ hRead
+      (fun q cc tt hc ht mm pp pre => lowE_ok_scoped (same := same) σ₀ σ hWL hLay r (inherit_reads hRead) q cc tt hc ht mm pp ρ pre)
       h hK hp
-  | _, _, .lit .., _, _, _, h, hK, _, _, _, hp | _, _, .tru .., _, _, _, h, hK, _, _, _, hp | _, _, .fls .., _, _, _, h, hK, _, _, _, hp | _, _, .var .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .glob .., _, _, _, h, hK, _, _, _, hp | _, _, .ptrOf .., _, _, _, h, hK, _, _, _, hp | _, _, .fnref .., _, _, _, h, hK, _, _, _, hp | _, _, .oldG .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .none .., _, _, _, h, hK, _, _, _, hp | _, _, .why .., _, _, _, h, hK, _, _, _, hp | _, _, .forallSlots .., _, _, _, h, hK, _, _, _, hp | _, _, .existsSlots .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .arrNil .., _, _, _, h, hK, _, _, _, hp | _, _, .strLit .., _, _, _, h, hK, _, _, _, hp | _, _, .oldS .., _, _, _, h, hK, _, _, _, hp | _, _, .widen .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .neg .., _, _, _, h, hK, _, _, _, hp | _, _, .not .., _, _, _, h, hK, _, _, _, hp | _, _, .some .., _, _, _, h, hK, _, _, _, hp | _, _, .istSome .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .strLen .., _, _, _, h, hK, _, _, _, hp | _, _, .strWeit .., _, _, _, h, hK, _, _, _, hp | _, _, .prodGet .., _, _, _, h, hK, _, _, _, hp | _, _, .refEq .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .add .., _, _, _, h, hK, _, _, _, hp | _, _, .sub .., _, _, _, h, hK, _, _, _, hp | _, _, .mul .., _, _, _, h, hK, _, _, _, hp | _, _, .div .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .rem .., _, _, _, h, hK, _, _, _, hp | _, _, .sdiv .., _, _, _, h, hK, _, _, _, hp | _, _, .srem .., _, _, _, h, hK, _, _, _, hp | _, _, .band .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .bor .., _, _, _, h, hK, _, _, _, hp | _, _, .bxor .., _, _, _, h, hK, _, _, _, hp | _, _, .shl .., _, _, _, h, hK, _, _, _, hp | _, _, .shr .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .lt .., _, _, _, h, hK, _, _, _, hp | _, _, .le .., _, _, _, h, hK, _, _, _, hp | _, _, .eq .., _, _, _, h, hK, _, _, _, hp | _, _, .fllt .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .flle .., _, _, _, h, hK, _, _, _, hp | _, _, .and .., _, _, _, h, hK, _, _, _, hp | _, _, .or .., _, _, _, h, hK, _, _, _, hp | _, _, .reaches .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .arrCons .., _, _, _, h, hK, _, _, _, hp | _, _, .arrGet .., _, _, _, h, hK, _, _, _, hp | _, _, .strCat .., _, _, _, h, hK, _, _, _, hp | _, _, .strGet .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .strEq .., _, _, _, h, hK, _, _, _, hp | _, _, .strLt .., _, _, _, h, hK, _, _, _, hp | _, _, .eng .., _, _, _, h, hK, _, _, _, hp | _, _, .prodSet .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .getBytes .., _, _, _, h, hK, _, _, _, hp | _, _, .case .., _, _, _, h, hK, _, _, _, hp | _, _, .arrSet .., _, _, _, h, hK, _, _, _, hp | _, _, .wenn .., _, _, _, h, hK, _, _, _, hp
-  | _, _, .intBuiltin1 .., _, _, _, h, hK, _, _, _, hp | _, _, .intBuiltin2 .., _, _, _, h, hK, _, _, _, hp | _, _, .count .., _, _, _, h, hK, _, _, _, hp | _, _, .prod .., _, _, _, h, hK, _, _, _, hp =>
-    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ trivial h hK hp
-termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
+  | _, _, .lit .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .tru .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .fls .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .var .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .glob .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .ptrOf .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .fnref .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .oldG .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .none .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .why .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .forallSlots .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .existsSlots .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .arrNil .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strLit .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .oldS .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .widen .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .neg .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .not .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .some .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .istSome .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .strLen .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strWeit .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prodGet .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .refEq .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .add .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .sub .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .mul .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .div .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .rem .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .sdiv .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .srem .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .band .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .bor .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .bxor .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .shl .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .shr .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .lt .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .le .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .eq .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .fllt .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .flle .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .and .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .or .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .reaches .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .arrCons .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .arrGet .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strCat .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strGet .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .strEq .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strLt .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .eng .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prodSet .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .getBytes .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .case .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .arrSet .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .wenn .., hRead, _, _, _, h, hK, _, _, _, hp
+  | _, _, .intBuiltin1 .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .intBuiltin2 .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .count .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prod .., hRead, _, _, _, h, hK, _, _, _, hp =>
+    lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ hRead trivial h hK hp
+termination_by structural _ _ e _ _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → ReadWorldAt m L σ Λ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
-    {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (ρ : Env D Γ) →
+    (σ₀ σ : World D) {reads : D.Tab ⊕ D.Glob → Prop} (hWL : ∀ m, W m → WorldOnAt m L σ reads) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (∀ carrier ∈ args.orte, reads carrier) → (ρ : Env D Γ) →
       ProdFieldsOk (currentOld := currentOld) L σ₀ σ fp K reserved W ρ args
-  | _, _, .nil, _ => trivial
-  | _, _, .cons e rest, ρ =>
-    ⟨(fun d c top h hK m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
-      lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
-termination_by structural _ _ args _ => args
+  | _, _, .nil, _, _ => trivial
+  | _, _, .cons e rest, hRead, ρ =>
+    ⟨(fun d c top h hK m pc hp => lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d c top h hK m pc ρ hp),
+      lowE_ok_args (same := same) σ₀ σ hWL hLay rest (inherit_reads hRead) ρ⟩
+termination_by structural _ _ args _ _ => args
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → ReadWorldAt m L σ Λ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
-    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
+    (σ₀ σ : World D) {reads : D.Tab ⊕ D.Glob → Prop} (hWL : ∀ m, W m → WorldOnAt m L σ reads) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
+    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (∀ carrier ∈ nutz.orte, reads carrier) → (d : Nat) →
     (c : List II) → (top : Nat) → lowN (currentOld := currentOld) L (reserved := reserved) tag nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
-  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => lowN_empty_ok tag htag h hK hp
-  | _, some (.int lo hi), .val e, d, c, top, h, hK, m, pc, ρ, hp =>
+  | _, _, .empty, hRead, d, c, top, h, hK, m, pc, ρ, hp => lowN_empty_ok tag htag h hK hp
+  | _, some (.int lo hi), .val e, hRead, d, c, top, h, hK, m, pc, ρ, hp =>
     lowN_int_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) e tag htag
       (fun ce te made fits m pc pre =>
-        lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d ce te made fits m pc ρ pre) h hK hp
-  | _, some .bool, .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.opt _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.sum _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.why _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some .never, .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.fl _ _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.fnptr _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.ptr _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.ref _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.arr _ _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.prod _ _), .val _, _, _, _, h, _, _, _, _, _
-  | _, some (.str _), .val _, _, _, _, h, _, _, _, _, _ => by cases h
-termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ => nutz
+        lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d ce te made fits m pc ρ pre) h hK hp
+  | _, some .bool, .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.opt _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.sum _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.why _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some .never, .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.fl _ _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.fnptr _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.ptr _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.ref _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.arr _ _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.prod _ _), .val _, hRead, _, _, _, h, _, _, _, _, _
+  | _, some (.str _), .val _, hRead, _, _, _, h, _, _, _, _, _ => by cases h
+termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ _ => nutz
 theorem lowPayload_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
-    (σ₀ σ : World D) (hWL : ∀ m, W m → ReadWorldAt m L σ Λ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
-    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
+    (σ₀ σ : World D) {reads : D.Tab ⊕ D.Glob → Prop} (hWL : ∀ m, W m → WorldOnAt m L σ reads) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (∀ carrier ∈ nutz.orte, reads carrier) → (d : Nat) →
     (c : List II) → (top : Nat) → lowPayload (currentOld := currentOld) L (reserved := reserved) nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Executes m pc fp K d c (fun m' => PayloadAt L m' fp d a (evalNutz σ₀ nutz σ ρ))
-  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => lowPayload_empty_ok h hK hp
-  | _, _, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .empty, hRead, d, c, top, h, hK, m, pc, ρ, hp => lowPayload_empty_ok h hK hp
+  | _, _, .val e, hRead, d, c, top, h, hK, m, pc, ρ, hp => by
     rw [lowPayload_val] at h
-    exact lowE_ok_scoped (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp
-termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ => nutz
+    exact lowE_ok_scoped (same := same) σ₀ σ hWL hLay e (inherit_reads hRead) d c top h hK m pc ρ hp
+termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ _ => nutz
 end
 end Gabbro.Stage0.Senke

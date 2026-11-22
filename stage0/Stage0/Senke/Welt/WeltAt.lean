@@ -45,6 +45,84 @@ theorem ValueAt.congr_read_bytes {layout : Lay D} {before after : Runner.Mem}
   have old := encoded.2 index present
   rwa [slotAddress] at old
 
+private theorem littleEndian_bound (memory : Runner.Mem) (base : Runner.W) :
+    ∀ count, memory.le base count < 256 ^ count
+  | 0 => by change 0 < 1; exact Nat.zero_lt_one
+  | count + 1 => by
+    let byte := (memory.b (base + BitVec.ofNat 64 count)).toNat
+    have bound : byte < 256 := BitVec.isLt _
+    rw [Runner.Mem.le, Nat.pow_succ, Nat.mul_comm (256 ^ count) 256]
+    change memory.le base count + byte * 256 ^ count < 256 * 256 ^ count
+    calc
+      _ < 256 ^ count + byte * 256 ^ count :=
+        Nat.add_lt_add_right (littleEndian_bound memory base count) _
+      _ = (byte + 1) * 256 ^ count := by rw [Nat.add_mul, Nat.one_mul, Nat.add_comm]
+      _ ≤ 256 * 256 ^ count := Nat.mul_le_mul_right _ (by omega)
+
+private theorem littleEndian_byte {before after : Runner.Mem} {base : Runner.W} :
+    ∀ {count offset}, before.le base count = after.le base count → offset < count →
+      before.b (base + BitVec.ofNat 64 offset) = after.b (base + BitVec.ofNat 64 offset)
+  | 0, _, _, inside => (Nat.not_lt_zero _ inside).elim
+  | count + 1, offset, words, inside => by
+    rw [Runner.Mem.le, Runner.Mem.le] at words
+    have lowerWords := congrArg (· % (256 ^ count)) words
+    rw [Nat.add_mul_mod_self_right, Nat.add_mul_mod_self_right,
+      Nat.mod_eq_of_lt (littleEndian_bound before base count),
+      Nat.mod_eq_of_lt (littleEndian_bound after base count)] at lowerWords
+    rcases Nat.lt_succ_iff_lt_or_eq.mp inside with lower | rfl
+    · exact littleEndian_byte lowerWords lower
+    · rw [lowerWords] at words
+      apply BitVec.eq_of_toNat_eq
+      exact Nat.eq_of_mul_eq_mul_right (Nat.pow_pos (by decide))
+        (Nat.add_left_cancel words)
+
+private theorem wordRead_agree {before after : Runner.Mem} {base value : Runner.W}
+    (left : before.rd64 base = some value) (right : after.rd64 base = some value)
+    {offset : Nat} (inside : offset < 8) :
+    before.b (base + BitVec.ofNat 64 offset) = after.b (base + BitVec.ofNat 64 offset) ∧
+      before.rd (base + BitVec.ofNat 64 offset) = after.rd (base + BitVec.ofNat 64 offset) := by
+  have read (m : Runner.Mem) (result : m.rd64 base = some value) :
+      all m.rd base 8 = true ∧ m.le base 8 = value.toNat := by
+    unfold Runner.Mem.rd64 at result
+    split at result
+    · next permitted =>
+      refine ⟨permitted, ?_⟩
+      have words := congrArg BitVec.toNat (Option.some.inj result)
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (littleEndian_bound m base 8)] at words
+      exact words
+    · cases result
+  obtain ⟨beforeRead, beforeWord⟩ := read before left
+  obtain ⟨afterRead, afterWord⟩ := read after right
+  exact ⟨littleEndian_byte (beforeWord.trans afterWord.symm) inside,
+    (all_spec beforeRead inside).trans (all_spec afterRead inside).symm⟩
+
+/-- Equal typed values have equal readable bytes across their entire canonical span. -/
+theorem ValueAt.same_read_bytes {layout : Lay D} {before after : Runner.Mem}
+    {address : Nat} {ty : Ty} {value : Wert D ty}
+    (left : ValueAt layout before (BitVec.ofNat 64 address) 0 ty value)
+    (right : ValueAt layout after (BitVec.ofNat 64 address) 0 ty value)
+    {byte : Runner.W} (first : address ≤ byte.toNat) (last : byte.toNat < address + 8 * valueWords ty) :
+    before.b byte = after.b byte ∧ before.rd byte = after.rd byte := by
+  let word := (byte.toNat - address) / 8
+  let offset := (byte.toNat - address) % 8
+  have index : word < (encodeWords layout ty value).length := by
+    rw [encodeWords_length]
+    dsimp [word]
+    omega
+  have inside : offset < 8 := Nat.mod_lt _ (by decide)
+  have byteAddress :
+      slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + word)) + BitVec.ofNat 64 offset = byte := by
+    simp only [Nat.zero_add, slot]
+    change BitVec.ofNat 64 address + BitVec.ofNat 64 word * BitVec.ofNat 64 8 +
+      BitVec.ofNat 64 offset = byte
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, ← BitVec.ofNat_add]
+    have addressEq : address + word * 8 + offset = byte.toNat := by
+      dsimp [word, offset]
+      omega
+    rw [addressEq, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  rw [← byteAddress]
+  exact wordRead_agree (left.2 word index) (right.2 word index) inside
+
 /-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
 inductive Zelle (D : Deklaration) where
   | glob (g : D.Glob)
@@ -107,13 +185,16 @@ def ColumnAt (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld
   ∀ k : Nat, (k : Int) < L.count t →
     ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)
 
-/-- A typed expression can read the world carriers authorized by its
-    resource context. Representation of other threads' carriers is
-    independent of this local read obligation. -/
-structure ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop where
-  table : ∀ t, darf D t resources → ∀ f, ColumnAt m L σ t f
-  global : ∀ g, gdarf D g resources →
+/-- Canonical memory representation restricted to a chosen footprint. -/
+structure WorldOnAt (m : Runner.Mem) (L : Lay D) (σ : World D)
+    (reads : D.Tab ⊕ D.Glob → Prop) : Prop where
+  table : ∀ t, reads (.inl t) → ∀ f, ColumnAt m L σ t f
+  global : ∀ g, reads (.inr g) →
     ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)
+
+/-- Representation of every carrier authorized by the resource context. -/
+abbrev ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop :=
+  WorldOnAt m L σ (Sum.elim (fun table => darf D table resources) (fun global => gdarf D global resources))
 
 theorem WeltAt.reads {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
     (world : WeltAt m L σ requireWrites) (resources : List (Res D)) :
@@ -173,10 +254,10 @@ theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
     · trivial
     · exact WeltWr.keep hwr ha.wr
 
-/-- Frame writes leave the authorized world representation intact. -/
-theorem readWorldAt_stab {L : Lay D} {σ : World D} {resources : List (Res D)} {fp : Runner.W} {K : Nat}
+/-- Frame writes leave every represented world carrier intact. -/
+theorem worldOnAt_stab {L : Lay D} {σ : World D} {reads : D.Tab ⊕ D.Glob → Prop} {fp : Runner.W} {K : Nat}
     (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
-    WStab (fun m => ReadWorldAt m L σ resources) fp K := by
+    WStab (fun m => WorldOnAt m L σ reads) fp K := by
   intro before after stored writes
   refine ⟨?_, ?_⟩
   · intro table access field index bound

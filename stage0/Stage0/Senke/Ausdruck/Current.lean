@@ -39,7 +39,8 @@ theorem slotValueC_index_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t}
 /-- Raw G admits old in ordinary expressions. Its snapshot equals the current world there;
     it is not the distinct function-entry snapshot used by ensures. -/
 theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
-    (world : ∀ m, W m → ReadWorldAt m L σ Λ) (g : D.Glob) (access : gdarf D g Λ)
+    (g : D.Glob) (access : gdarf D g Λ)
+    (source : ∀ m, W m → ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g))
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {m : Runner.Mem} {ρ : Env D Γ}
     (same : currentOld = true → σ₀ = σ)
     (made : lowE (Γ := Γ) (currentOld := currentOld) L (.oldG (Γ := Γ) g access) d reserved = some (code, top))
@@ -50,13 +51,14 @@ theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
   · next enabled =>
     have equal := same enabled
     subst σ₀
-    exact globalValueC_ok made fits (fun m stored => (world m stored).global g access) pre
+    exact globalValueC_ok made fits source pre
   · cases made
 
 /-- An old slot read evaluates its index in the same current world as every ordinary slot read. -/
 theorem oldSlot_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
-    (world : ∀ m, W m → ReadWorldAt m L σ Λ) (layout : LayIn L)
+    (layout : LayIn L)
     (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (access : darf D t Λ)
+    (source : ∀ m, W m → ColumnAt m L σ t f)
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {m : Runner.Mem} {ρ : Env D Γ}
     (same : currentOld = true → σ₀ = σ)
     (ih : ∀ ci ti, lowE (currentOld := currentOld) L i
@@ -74,7 +76,7 @@ theorem oldSlot_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
     simp only [bind, Option.bind_eq_some_iff] at made
     obtain ⟨⟨ci, ti⟩, lower, made⟩ := made
     have tops := slotValueC_top made
-    exact slotValueC_index_ok (eval σ i σ ρ) made fits layout (fun m stored => (world m stored).table t access f)
+    exact slotValueC_index_ok (eval σ i σ ρ) made fits layout source
       (fun m pc hp => (ih ci ti lower (by have := tops.1; omega) m pc hp).word trivial) pre
   · cases made
 

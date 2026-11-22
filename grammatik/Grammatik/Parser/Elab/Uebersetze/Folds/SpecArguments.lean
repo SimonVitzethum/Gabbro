@@ -61,6 +61,17 @@ def specCompositeArgumentFits (ctx : UCtx) : USide → Ty → Bool
     decide (expected = .prod identity (fields.map Prod.fst)) &&
       (uRecordOf ctx.records expected).isOk &&
       fields.attach.all (fun field => specCompositeArgumentFits ctx field.val.2 field.val.1)
+  | .field base name, expected =>
+    match uValueType ctx base with
+    | some (.prod identity fields) =>
+      match uRecordOf ctx.records (.prod identity fields) with
+      | .ok schema =>
+        match uRecordPosition schema.val.fields name with
+        | .ok selected =>
+          decide (selected.1 = expected) && specCompositeArgumentFits ctx base (.prod identity fields)
+        | .error _ => false
+      | .error _ => false
+    | _ => false
   | .param name, expected =>
     !ctx.unknownRanges.contains name && decide (uValueType ctx (.param name) = some expected)
   | value, expected => specLiteralFieldFits ctx.records value expected
@@ -72,6 +83,18 @@ decreasing_by
     | have smaller := recordField_sizeOf_lt fields field.val field.property
       omega
     | omega
+
+/-- A checked nominal projection can be used inside any composite argument. -/
+theorem specCompositeField_erfuellbar (ctx : UCtx) (base : USide) (name : String)
+    (identity : Nat) (fields : List Ty) (target : Ty)
+    (read : uValueType ctx base = some (.prod identity fields))
+    (schema : { s : URecord // s.ty = .prod identity fields })
+    (nominal : uRecordOf ctx.records (.prod identity fields) = .ok schema)
+    (position : FieldAt (schema.val.fields.map (·.2)) target)
+    (selected : uRecordPosition schema.val.fields name = .ok ⟨target, position⟩)
+    (checked : specCompositeArgumentFits ctx base (.prod identity fields) = true) :
+    specCompositeArgumentFits ctx (.field base name) target = true := by
+  simp only [specCompositeArgumentFits, read, nominal, selected, decide_true, checked, Bool.and_self]
 
 /-- Check the nominal schema and each already ordered field returned
     by the ordinary constructor reader. Unused arguments are checked too. -/
