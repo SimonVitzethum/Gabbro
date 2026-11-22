@@ -10,8 +10,8 @@ namespace Gabbro.Bruecke.Vorlage
 /-- `gabbrov MODULE FILE.gab OUTDIR`: write the duty modules of the unit of `FILE.gab` under the
     module prefix `MODULE` (for example `Proofs.Lexer`) below `OUTDIR`. Generated files are
     replaced on every run; your proof files `MODULE/Beweis/F<i>.lean` are written once and never
-    replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 1: the files name at
-    least one refusal; 2: wrong arguments, unreadable file, or Stage 0 refuses the source. -/
+    replaced. Exit 0: premise (b) is stated (prove the `beweis<i>` goals); 1: premise (b) is not
+    stated (see the top file); 2: wrong arguments, unreadable file, or Stage 0 refuses the source. -/
 def haupt (args : List String) : IO UInt32 := do
   let [modul, pfad, ziel] := args | do
     IO.eprintln "usage: gabbrov MODULE FILE.gab OUTDIR"
@@ -37,7 +37,7 @@ def haupt (args : List String) : IO UInt32 := do
     let abgelehnt := ds.any fun d => (d.text.splitOn "REFUSED").length > 1
     IO.println s!"gabbrov: {neu} files written, {behalten} proof files kept, under {ziel}/{modul.replace "." "/"}"
     if abgelehnt then
-      IO.println s!"gabbrov: REFUSED -- see {modul.replace "." "/"}.lean for the forms and checks outside the bridge"
+      IO.println s!"gabbrov: REFUSED -- see {modul.replace "." "/"}.lean"
       return 1
     return 0
 
