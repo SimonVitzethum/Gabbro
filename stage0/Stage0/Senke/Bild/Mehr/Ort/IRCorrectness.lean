@@ -72,9 +72,10 @@ theorem LoadedIRImage.firstWorkerBoundary
   let stack := output.image.fp0 + 8 * output.image.Ks
   let scratch := startScratch output.compiled.main
   have firstDeclared : output.starts[0]? = some output.starts[0] := List.getElem?_eq_getElem workers
-  obtain ⟨code, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q
+  obtain ⟨decoded, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q
     (output.loaded_code loaded.payload) firstDeclared
-  change CodeAt memory.1.m (BitVec.ofNat 64 codeBase) (spawnOne scratch entry stack) at code
+  have code : CodeAt memory.1.m (BitVec.ofNat 64 codeBase) (spawnOne scratch entry stack) := by
+    simpa [scratch, entry, stack] using decoded
   obtain ⟨_, body, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
@@ -104,12 +105,13 @@ theorem LoadedIRImage.firstWorkerBoundary
     omega
   obtain ⟨steps, _, _, _, startMemory, _, covers⟩ := loaded.silentEntry quiet
   have exactStart : BildMehr.singleThreadSC (imageToTSO (output.irEntry memory)) =
-      (⟨⟨memory.1.m, memory.2⟩, [some (.next
+      (⟨⟨memory.1.m, memory.2.1⟩, [some (.next
         ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ : Cfg (SC L0) (Res T)) := by
-    have mem := Subtype.ext startMemory
-    exact Cfg.ext mem rfl
+    unfold BildMehr.singleThreadSC
+    rw [Cfg.mk.injEq]
+    exact ⟨Subtype.ext startMemory, rfl⟩
   obtain ⟨referenceSteps, prepared, invariant, reference⟩ := BildMehr.spawnSite_reference (layout := L0)
-    memory.2 code firstFrame far (by omega) slotsFit entryFits stackFits
+    memory.2.1 code firstFrame far (by omega) slotsFit entryFits stackFits
   rw [← exactStart] at reference
   obtain ⟨_, _, atHost⟩ := covers _ referenceSteps cloneReq _ reference rfl
   obtain ⟨_, same⟩ := atHost observed (by simp)
