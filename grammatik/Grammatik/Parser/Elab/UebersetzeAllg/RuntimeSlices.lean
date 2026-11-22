@@ -246,9 +246,8 @@ theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
         some (lo, hi, USide.param name) := by
     cases uSchranke (uSliceConstants ctx) expression <;>
       simp only [Option.map_none, Option.map_some, reduceCtorEq, Prod.mk.injEq, and_false]
-  cases source <;> first
-  | exact (notLiteral _ recognized).elim
-  | rename_i current
+  cases source
+  case variable current =>
     simp only [uSliceInteger] at recognized
     split at recognized
     · rename_i lower upper resolved
@@ -261,6 +260,9 @@ theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
     · split at recognized
       · cases recognized
       · exact (notLiteral _ recognized).elim
+  all_goals
+    simp only [uSliceInteger] at recognized
+    exact (notLiteral _ recognized).elim
 
 /-- A varying local endpoint and static upper endpoint and index
     satisfy the productive slice checks together. -/
