@@ -185,6 +185,27 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
   exact ⟨.tau flushed, footprint, before.ths, buffers.flush flushed, rfl,
     .inr ⟨snapshots, positions, committed, stable, indices⟩, fun _ => .inl rfl⟩
 
+/-- A floating answer is an internal IR observation of the issuing
+    thread. It changes neither committed memory nor pending stores, and
+    the sequential IR semantics can use the exact observed word. -/
+theorem image_body_float [Kern] {before : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {thread : Nat} {kind : NativeFPOp} {a b : W}
+    {answer : Ans} {resume : Ans → Res T}
+    (ready : before.ths[thread]? = some (some (.ask (.fp kind a b) resume)))
+    (answered : imageTSO.ans before.ms thread (.fp kind a b) answer memory) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO actI before [] after ∧ memory = before.ms ∧
+      ∃ word, answer = some (word, 0) ∧ NativeFPEval kind a b word ∧
+        ∀ {finish : T} {last : Mem},
+          Run (resume answer) (before.ms.1.view thread) finish last →
+          Run (.ask (.fp kind a b) resume) (before.ms.1.view thread) finish last := by
+  intro after
+  obtain ⟨unchanged, word, exactAnswer, valid⟩ := answered.1
+  refine ⟨.ask ready rfl rfl answered rfl, unchanged, word, exactAnswer, valid, ?_⟩
+  intro finish last later
+  rw [exactAnswer] at later
+  exact .fp valid later
+
 /-- A whole private memory segment may run on several threads before
     the next source boundary. The generic IR memory semantics preserves
     the committed GX state and every thread's footprint throughout it. -/
