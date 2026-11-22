@@ -21,7 +21,8 @@ theorem image_atomic_word_CAS [Kern] {D : Deklaration} {layout : Senke.Lay D}
     (single : aggregateFits (D.gtyp global) = true)
     (represented : WeltAt (projectSCState footprint machine.ms).1 layout world)
     (geometry : LayIn layout) (separate : LayDis layout)
-    (encoded : Enc layout (D.gtyp global) value replacement)
+    (encoded : Enc layout (D.gtyp global) (world.globs global) expected →
+      Enc layout (D.gtyp global) value replacement)
     (buffers : PrivateBuffers footprint machine.ms.1)
     (outside : ∀ byte, fenster (BitVec.ofNat 64 (layout.ga global)) byte → ∀ owner, ¬ footprint owner byte)
     (writable : Mem.all machine.ms.1.m.wr (BitVec.ofNat 64 (layout.ga global)) 8 = true)
@@ -45,7 +46,7 @@ theorem image_atomic_word_CAS [Kern] {D : Deklaration} {layout : Senke.Lay D}
   have committed : machine.ms.1.m.rd64 address = some observed :=
     (gleich_rd64 agreement).symm.trans read
   obtain ⟨step, returned, written⟩ := image_CAS_reply committed writable waiting answered
-  have pending : memory.1.buf = machine.ms.1.buf := congrArg TSt.buf written
+  have pending : memory.1.buf = machine.ms.1.buf := by rw [written]
   have retained : PrivateBuffers footprint memory.1 := by
     intro owner store member byte hit
     rw [pending] at member
@@ -61,12 +62,75 @@ theorem image_atomic_word_CAS [Kern] {D : Deklaration} {layout : Senke.Lay D}
     (congrArg Prod.snd (Option.some.inj actual)).symm
   refine ⟨step, retained, answered.1.1, observed, returned, view, ?_, ?_⟩
   · intro equal
-    rw [if_pos equal] at changed
+    rw [ite_eq_left equal] at changed
     change WeltAt after.1 layout (world.storeGlob global value)
     rw [changed]
-    exact weltAt_globWord (aggregateFits_width single) represented geometry separate encoded
+    exact weltAt_globWord (aggregateFits_width single) represented geometry separate (encoded (equal ▸ view))
   · intro different
-    rw [if_neg different] at changed
+    rw [ite_eq_right different] at changed
     exact Subtype.ext changed
+
+/-- A winning physical CAS commits the checked exchange at the exact GX
+    head. A stale expected value leaves GX at that head and supplies the
+    changed actual word for retry. -/
+theorem image_exchange_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
+    {P : Programm D} {O : Orakel D} {passes : Nat} {shared : D.Tab ⊕ D.Glob → Prop}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Nat} {global : D.Glob} {source : FadenMaschine D}
+    {expected replacement : W} {footprint : Nat → W → Prop}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {l : Bool}
+    (expression : Expr D (D.gtyp global :: Γ) Λ (D.gtyp global))
+    (write : (vertragVon D (source.m.faeden thread).kopf.f).gschreibt global = true)
+    (allowed : gdarf D global Λ)
+    (body : Block D (vertragVon D (source.m.faeden thread).kopf.f) l (D.gtyp global :: Γ) Λ Λ')
+    (tail : GRest D (vertragVon D (source.m.faeden thread).kopf.f) l Γ Λ')
+    (env : Env D Γ)
+    (head : (source.m.faeden thread).kopf.rest =
+      ⟨l, Γ, Λ, env, .dann (.exchange global expression write allowed body) tail⟩)
+    (live : source.lebt thread = true) (ready : source.wartet thread = [])
+    (held : HeldIn Λ (offen (source.m.faeden thread).spur))
+    (single : aggregateFits (D.gtyp global) = true)
+    (represented : WeltAt (projectSCState footprint machine.ms).1 layout (source.m.weltVon thread))
+    (geometry : LayIn layout) (separate : LayDis layout)
+    (computed :
+      let input := source.m.weltVon thread
+      let observed := input.lese Λ (.inr global :: expression.orte)
+      Enc layout (D.gtyp global) (input.globs global) expected →
+      Enc layout (D.gtyp global)
+        (eval observed expression observed (.cons (observed.globs global) env)) replacement)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (outside : ∀ byte, fenster (BitVec.ofNat 64 (layout.ga global)) byte → ∀ owner, ¬ footprint owner byte)
+    (writable : Mem.all machine.ms.1.m.wr (BitVec.ofNat 64 (layout.ga global)) 8 = true)
+    (waiting : machine.ths[thread]? = some (some (.ask (.cas (BitVec.ofNat 64 (layout.ga global))
+      expected replacement) resume)))
+    (answered : imageTSO.ans machine.ms thread
+      (.cas (BitVec.ofNat 64 (layout.ga global)) expected replacement) reply memory) :
+    let input := source.m.weltVon thread
+    let read := input.lese Λ (.inr global :: expression.orte)
+    let published := read.schreibGlob global Λ (eval read expression read (.cons (read.globs global) env))
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths.set thread (some (resume reply))⟩ ∧
+    PrivateBuffers footprint memory.1 ∧
+    ∃ observed, reply = some (observed, 0) ∧
+      (observed = expected → ∃ next, FadenSchrittX P O passes shared source next ∧
+        next.m.speicher = published.speicher ∧
+        next.m.lauf = source.m.lauf ++ rufEigenG thread
+          ([Ereignis.gzugriff global true Λ read.haelt] ++ leseEv input Λ (.inr global :: expression.orte)) ∧
+        WeltAt (projectSCState footprint memory).1 layout published) ∧
+      (observed ≠ expected → projectSCState footprint memory = projectSCState footprint machine.ms) := by
+  intro input read published
+  obtain ⟨ran, buffered, _, observed, returned, _, success, stale⟩ :=
+    image_atomic_word_CAS single represented geometry separate computed buffers outside writable waiting answered
+  refine ⟨ran, buffered, observed, returned, ?_, stale⟩
+  intro equal
+  let appended := [Ereignis.gzugriff global true Λ read.haelt] ++ leseEv input Λ (.inr global :: expression.orte)
+  have trace : published.spur = appended ++ (source.m.faeden thread).spur := by
+    change [Ereignis.gzugriff global true Λ read.haelt] ++ read.spur = _
+    rw [show read.spur = leseEv input Λ (.inr global :: expression.orte) ++ input.spur from rfl]
+    rw [List.append_assoc]
+    rfl
+  have step := RufSchrittG5.dannExchange (P := P) (O := O) (passes := passes)
+    source.m thread l Γ Λ Λ' global expression write allowed body tail env head read rfl published rfl appended trace held
+  have bytes : WeltAt (projectSCState footprint memory).1 layout published := success equal
+  exact ⟨_, .lauf source thread _ live ready (gx_aus_g (.g5 step)), rfl, rfl, bytes⟩
 
 end Gabbro.Stage0.Senke.BildMehr

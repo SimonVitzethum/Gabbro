@@ -230,7 +230,7 @@ theorem image_ticket_waiter_CAS_prefix {position expected : Nat} (mode : WaitAdj
     savedCAS environment slots (address := 7) (expected := 8) (dest := 11)
       (by decide) (by decide) cell running
 
-def CounterLoad.code {D : Deklaration} (load : CounterLoad) (layout : Senke.Lay D)
+def CounterLoad.emitted {D : Deklaration} (load : CounterLoad) (layout : Senke.Lay D)
     (base scratch : Nat) : List II :=
   match load with
   | .release _ | .wake => gibT layout base scratch
@@ -254,7 +254,7 @@ private theorem CounterLoad.addressSlot_fits (load : CounterLoad) : load.address
 theorem image_ticket_counter_load_prefix {position : Nat} (load : CounterLoad)
     (environment : LE baseline pc fp scratch base code)
     (slots : LS baseline (machine.ms.1.view thread) fp scratch base registers old serving waiting)
-    (atCode : At code position (load.code layout base scratch)) (hosted : layout.lockWait = .futex)
+    (atCode : At code position (load.emitted layout base scratch)) (hosted : layout.lockWait = .futex)
     (address : registers load.addressSlot = BitVec.ofNat 64 (base + load.offset))
     (running : machine.ths[thread]? =
       some (some (.next ⟨pc + BitVec.ofNat 64 (16 * (position + load.cellIndex)), fp⟩))) :

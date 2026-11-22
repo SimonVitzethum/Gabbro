@@ -104,6 +104,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_counter_load_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.readCounter
 #print axioms Gabbro.Stage0.Senke.BildMehr.image_atomic_word_CAS
+#print axioms Gabbro.Stage0.Senke.BildMehr.image_exchange_GX
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.adjustWaiters
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.retryServing
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.flush
