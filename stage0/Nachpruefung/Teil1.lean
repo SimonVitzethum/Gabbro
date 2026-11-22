@@ -168,6 +168,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.runtimeSliceObservations_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceLocalType_unknown
 #print axioms Gabbro.Stage0.Senke.ValueAt.slice_element
+#print axioms Gabbro.Stage0.Senke.ValueAt.slice_view
+#print axioms Gabbro.Stage0.Senke.SliceAt.subslice
 #print axioms Gabbro.Stage0.Senke.lowE_runtimeSliceIndex_ok
 #print axioms Gabbro.Stage0.ImageIdleBuffers.flush_preserves_unallocated_frame
 #print axioms Gabbro.Stage0.image_host_preserves_future_frame

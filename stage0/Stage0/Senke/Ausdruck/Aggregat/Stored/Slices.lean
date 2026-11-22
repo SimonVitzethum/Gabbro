@@ -10,6 +10,38 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg LowLevel.Construct
 open Runner.IR
 
+/-- The physical span for a slice represents exactly its visible elements.
+    Its base points at the first element in the existing storage. -/
+def SliceAt {D : Deklaration} (layout : Lay D) (memory : Runner.Mem) (frame : Runner.W) (base : Nat)
+    {τ : Ty} {capacity : Nat} (slice : BoundedSlice (Wert D τ) capacity) : Prop :=
+  ∀ index, ValueAt layout memory frame (base + index.val * valueWords τ) τ (slice.get index)
+
+/-- An array's existing representation supplies a zero-copy slice span.
+    The result refers to the same memory and Frame pointer. -/
+theorem ValueAt.slice_view {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
+    {base capacity : Nat} {τ : Ty} {value : Wert D (.arr τ capacity)}
+    (array : ValueAt layout memory frame base (.arr τ capacity) value)
+    (view : ArraySliceView capacity) :
+    SliceAt (τ := τ) layout memory frame (base + view.offset * valueWords τ) (view.value value) :=
+  fun index => array.slice_element view index
+
+/-- The representation of an existing slice can be narrowed by moving
+    the base. All observed bytes and their layout obligations are inherited. -/
+theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
+    {base capacity : Nat} {τ : Ty} {value : BoundedSlice (Wert D τ) capacity}
+    (slice : SliceAt (τ := τ) layout memory frame base value)
+    (first last : Nat) (bounds : SliceOk value.length first last) :
+    SliceAt (τ := τ) layout memory frame (base + first * valueWords τ) (value.subslice first last bounds) := by
+  intro index
+  have seen : first + index.val < value.length := by
+    have within := index.isLt
+    have ordered := bounds.1
+    have high := bounds.2
+    change index.val < last - first at within
+    omega
+  have stored := slice ⟨first + index.val, seen⟩
+  simpa only [BoundedSlice.subslice, arrSliceValue, Nat.add_mul, Nat.add_assoc] using stored
+
 /-- Stage 0's actual expression code returns the selected element of the
     runtime slice. The generated term accesses the original array through
     the already verified array indexing path. -/
