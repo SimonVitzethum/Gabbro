@@ -276,6 +276,7 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
       ∃ next, FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
           (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) source next ∧
         next.m.speicher = source.m.speicher ∧
+        imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf ∧
         ImageTicketStates output.image.Y.withIdle memory.1.m next.m
           (fun other => if other = lock then released else states other) ∧
         PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
@@ -285,7 +286,7 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
           (projectSCState (imageProtectedFootprint output next.m) memory) := by
   intro after prior released
   have fits := (synchronized.1 lock).2.trans bound
-  obtain ⟨step, result, written, lockWords, valid, next, advanced, store, owners, others⟩ :=
+  obtain ⟨step, result, written, lockWords, valid, next, advanced, store, trace, owners, others⟩ :=
     image_ticket_release_GX (P := E.P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
       (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       output.image.Y.withIdle (locks.owners lock) limit (locks.protocol lock) saved fits
@@ -299,7 +300,11 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
   have registered := locks.update synchronized bound stable others lockWords valid owners
   obtain ⟨privatelyOwned, projected⟩ := image_release_projected answered buffers registered
     (locks.owners lock) owners rfl others inLayout cells synchronized bound order
-  exact ⟨step, result, answered.1.1, next, advanced, store, registered, privatelyOwned, projected⟩
+  have quiet : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf := by
+    rw [trace]
+    simp only [imageSourceForeignEvents, List.filterMap_append, rufEigenG, List.reverse_singleton,
+      List.map_cons, List.map_nil, List.filterMap_cons_none, List.filterMap_nil, List.append_nil]
+  exact ⟨step, result, answered.1.1, next, advanced, store, quiet, registered, privatelyOwned, projected⟩
 
 /-- A successful serving read acquires the guard in GX and grants its
     carriers to the same physical thread. No previously buffered store
@@ -342,6 +347,7 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
       ∃ next, FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
           (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) source next ∧
         next.m.speicher = source.m.speicher ∧
+        imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf ∧
         ImageTicketStates output.image.Y.withIdle memory.1.m next.m
           (fun other => if other = lock then admitted else states other) ∧
         PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
@@ -355,7 +361,7 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
     intro owner owned
     exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
       (lockWord_in_bytes fits (by decide) hit)
-  obtain ⟨step, unchanged, _, words, valid, next, advanced, store, owners, others⟩ :=
+  obtain ⟨step, unchanged, _, words, valid, next, advanced, store, trace, owners, others⟩ :=
     image_ticket_admit_GX (P := E.P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
       (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
       output.image.Y.withIdle (locks.owners lock) output.image.Y.lockWait spins limit (locks.protocol lock)
@@ -388,7 +394,11 @@ theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profi
       · exact .inl stack
       · exact .inr ⟨cell, present, low, high, guarded, fun guard protects => retained owner guard (held guard protects)⟩
     exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive registered inLayout cells assigned current⟩
-  refine ⟨step, unchanged, next, advanced, store, registered, nextBuffers, ?_⟩
+  have quiet : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents source.m.lauf := by
+    rw [trace]
+    simp only [imageSourceForeignEvents, List.filterMap_append, rufEigenG, List.reverse_singleton,
+      List.map_cons, List.map_nil, List.filterMap_cons_none, List.filterMap_nil, List.append_nil]
+  refine ⟨step, unchanged, next, advanced, store, quiet, registered, nextBuffers, ?_⟩
   rw [projectSCState_reassign oldAtAnswer nextBuffers]
   exact projectSCState_read_shared answered.1 _ shared (fun owner pending member byte hit =>
     (buffers owner pending member byte hit).1)
