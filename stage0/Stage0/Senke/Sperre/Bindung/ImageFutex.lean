@@ -3,12 +3,40 @@ module
 public import Stage0.Senke.Sperre.Bindung.ImageCAS
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Mathlib.Logic.Relation
+import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.Mehr.StartupOperands
 
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.Faeden
 
 open Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis
+
+/-- The fields of an emitted futex call determine the actual syscall
+    request. Its complete read prefix is silent in the image runner. -/
+theorem image_futex_at [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat} {pointer : T}
+    {base : W} {code : List II} {index : Nat} {dest arguments : Int} {address mode value : W}
+    (running : before.ths[thread]? = some (some (.next pointer)))
+    (encoded : CodeAt (before.ms.1.view thread) base code)
+    (location : pointer.pc = base + BitVec.ofNat 64 (16 * index))
+    (cell : code[index]? = some (ci 23 dest arguments 0))
+    (number : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments))) = some 202)
+    (first : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 8) = some address)
+    (second : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 16) = some mode)
+    (third : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 24) = some value)
+    (fourth : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 32) = some 0)
+    (fifth : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 40) = some 0)
+    (sixth : (before.ms.1.view thread).rd64 (slot pointer.fp (sx (II.f arguments)) + 48) = some 0) :
+    let resume : Ans → Res T :=
+      fun reply => opt reply fun pair => wr64 (slot pointer.fp (sx (II.f dest))) pair.1 (nxt pointer)
+    ProcessPrefix imageTSO actI before [] 11
+      ⟨before.ms, before.ths.set thread (some (.ask (.sys (futexReq address mode value)) resume))⟩ := by
+  obtain ⟨inside, opcode⟩ := List.getElem?_eq_some_iff.mp cell
+  have instruction := encoded index inside
+  rw [opcode, ← location] at instruction
+  have run := tso_sys_prefix (before := imageToTSO before) running instruction number first second third
+    fourth fifth sixth
+  exact tso_silent_prefix_image run rfl
 
 /-- A real WAIT or WAKE completion retains the projected image memory,
     even if its issuer still has private pending stores. -/

@@ -103,6 +103,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_serving_read
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_issuerView
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wait_reply
+#print axioms Gabbro.Stage0.Senke.Faeden.image_futex_at
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_reply
 #print axioms Gabbro.Stage0.Senke.Faeden.TicketOwnership.enter
 #print axioms Gabbro.Stage0.Senke.Faeden.TicketOwnership.leave
