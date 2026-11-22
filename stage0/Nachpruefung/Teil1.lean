@@ -234,6 +234,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.child_prologue_prefix
 #print axioms Gabbro.Stage0.Emitted.depth_guard_exits
 #print axioms Gabbro.Stage0.Senke.BildMehr.MTRel.enter_pending_root
+#print axioms Gabbro.Stage0.ImageRuntimeMatches.register_body
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.resultFieldProjection_erfuellbar
 #print axioms Gabbro.Stage0.checkResultSummary
