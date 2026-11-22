@@ -1,6 +1,8 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.JoinLowering
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
+public import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -217,5 +219,89 @@ public theorem TaskDropPlan.waitingBlock_simulates {future : FutureExpr} (plan :
   cases outcome with
   | ok => rfl
   | error failure => cases failure <;> rfl
+
+@[expose] public def TaskDropPlan.resolve
+    (resolve : (name : String) → Except String (ChildDisposer D types V Λ name)) :
+    (future : FutureExpr) → Except String (TaskDropPlan D types V Λ future)
+  | .call name args => .call name args <$> resolve name
+  | .join first second => do
+    pure (.join (← TaskDropPlan.resolve resolve first) (← TaskDropPlan.resolve resolve second))
+
+@[expose] public def PhaseDropPlan (D : Deklaration) (types : TypeResolution)
+    (V : Vertrag D) (Λ : List (Res D)) : Phase → Type
+  | .waiting _ future => TaskDropPlan D types V Λ future
+  | _ => Unit
+
+@[expose] public def PhaseDropPlan.resolve
+    (resolve : (name : String) → Except String (ChildDisposer D types V Λ name)) :
+    (phase : Phase) → Except String (PhaseDropPlan D types V Λ phase)
+  | .waiting _ future => TaskDropPlan.resolve resolve future
+  | .cancelled | .completed | .running _ => pure ()
+
+@[expose] public def PhaseDropPlan.lower (f : AsyncFn) {Γ : Ctx} {l : Bool} :
+    {phase : Phase} → PhaseDropPlan D types V Λ phase →
+      Block D V l (phaseType types f phase :: Γ) Λ Λ
+  | .waiting tag _, plan => plan.waitingBlock f tag
+  | .cancelled, _ | .completed, _ | .running _, _ => .nil
+
+@[expose] public def PhaseDropPlan.run
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) :
+    {phase : Phase} → PhaseDropPlan D types V Λ phase →
+      State (Value D) (Child D types) → World D → Option (Except (Logik D ⊕ Hardware D) (World D))
+  | .waiting tag _, plan, .waiting position _ task, world =>
+    if position = tag then plan.run calls task world else none
+  | .waiting .., _, _, _ => none
+  | .cancelled, _, .cancelled, world | .completed, _, .completed .., world => some (.ok world)
+  | .running tag, _, .running position _, world =>
+    if position = tag then some (.ok world) else none
+  | _, _, _, _ => none
+
+private theorem phaseDrop_exec {f : AsyncFn} {phase : Phase} {Γ : Ctx} {l : Bool}
+    (plan : PhaseDropPlan D types V Λ phase) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ)
+    {source : State (Value D) (Child D types)} {value : Wert D (phaseType types f phase)}
+    (represented : PhaseRep D types f phase source value) :
+    ∃ outcome, plan.run calls source world = some outcome ∧
+      (execBlock oracle passes calls (plan.lower f (l := l)) world (.cons value env)).schrumpf =
+        dropOutcome env outcome := by
+  cases represented with
+  | cancelled | completed => exact ⟨.ok world, rfl, rfl⟩
+  | running =>
+    exact ⟨.ok world, by simp only [PhaseDropPlan.run, if_pos rfl], rfl⟩
+  | waiting tag future frame task saved child _ childRep =>
+    simpa only [PhaseDropPlan.run, PhaseDropPlan.lower, if_pos rfl] using
+      (TaskDropPlan.waitingBlock_simulates plan f tag (l := l) oracle passes calls world env saved childRep)
+
+@[expose] public def resolveDropTable (f : AsyncFn)
+    (resolve : (name : String) → Except String (ChildDisposer D types V Λ name)) :
+    Except String ((i : Fin (phases f).length) → PhaseDropPlan D types V Λ ((phases f).get i)) :=
+  Parser.sammle (phases f).length (fun i => PhaseDropPlan D types V Λ ((phases f).get i))
+    (fun i => PhaseDropPlan.resolve resolve ((phases f).get i))
+
+@[expose] public def dropChildren {f : AsyncFn} {Γ : Ctx} {l : Bool}
+    (table : (i : Fin (phases f).length) → PhaseDropPlan D types V Λ ((phases f).get i))
+    (state : Var Γ (stateType types f)) : Stmt D V l Γ Λ Λ :=
+  phaseDispatch types f state (fun i => (table i).lower f)
+
+/-- A cancellation dispatch reads the actual encoded state and runs only
+    the cleanup of that phase. This covers all await sites and join trees. -/
+public theorem dropChildren_simulates {f : AsyncFn} {Γ : Ctx} {l : Bool}
+    (table : (i : Fin (phases f).length) → PhaseDropPlan D types V Λ ((phases f).get i))
+    (inventory : Inventory D) (state : Var Γ (stateType types f))
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (source : State (Value D) (Child D types))
+    (represented : Inv f types inventory source (env.get state)) :
+    ∃ (index : Fin (phases f).length) (value : Wert D (phaseType types f ((phases f).get index))) outcome,
+      PhaseRep D types f ((phases f).get index) source value ∧
+      MarksRep inventory ((phases f).get index) source ∧
+      (table index).run calls source world = some outcome ∧
+      execStmt oracle passes calls (dropChildren (l := l) table state) world env = dropOutcome env outcome := by
+  obtain ⟨index, value, exactPhase, owners, selected⟩ :=
+    phaseDispatch_selects types f inventory state (fun i => (table i).lower f (l := l))
+      oracle passes calls world env source represented
+  obtain ⟨outcome, ran, executed⟩ := phaseDrop_exec (table index) oracle passes calls world env exactPhase
+  exact ⟨index, value, outcome, exactPhase, owners, ran, selected.trans executed⟩
 
 end Gabbro.Grammatik.Async.Representation
