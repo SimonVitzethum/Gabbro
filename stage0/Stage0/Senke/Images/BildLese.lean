@@ -120,6 +120,26 @@ theorem lowAll_ok {P : Programm D} {name : D.Fn → String} {A : D.Fn → Nat} :
         | zero => simpa using hg
         | succ i => simpa using hall i (by simpa using hi) (by simpa using hc)
 
+/-- The function table inherits one relocation invariant from its body
+    lowering. Order, instruction counts, and frame use are all preserved. -/
+theorem lowAll_measure {P : Programm D} {L R : Lay D} {A B : D.Fn → Nat}
+    {name : D.Fn → String} {fs : List D.Fn} {first relocated : List (List II × Nat)}
+    (measured : ∀ fn code moved, lowFun passes P A L fn = some code →
+      lowFun passes P B R fn = some moved → codeMeasure code = codeMeasure moved)
+    (initial : lowAll passes P L name A fs = .ok first)
+    (final : lowAll passes P R name B fs = .ok relocated) :
+    first.map codeMeasure = relocated.map codeMeasure := by
+  obtain ⟨firstLength, firstBody⟩ := lowAll_ok fs first initial
+  obtain ⟨finalLength, finalBody⟩ := lowAll_ok fs relocated final
+  apply List.ext_getElem
+  · simp only [List.length_map, firstLength, finalLength]
+  · intro index before after
+    have indexFirst : index < first.length := by simpa only [List.length_map] using before
+    have indexFinal : index < relocated.length := by simpa only [List.length_map] using after
+    have indexSource : index < fs.length := firstLength ▸ indexFirst
+    simp only [List.getElem_map]
+    exact measured fs[index] _ _ (firstBody index indexSource indexFirst) (finalBody index indexSource indexFinal)
+
 theorem foldl_max_ge : (cs : List (List II × Nat)) → ∀ a, a ≤ cs.foldl (fun a c => max a c.2) a ∧
     ∀ c ∈ cs, c.2 ≤ cs.foldl (fun a c => max a c.2) a
   | [], a => by simp
