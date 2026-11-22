@@ -219,12 +219,11 @@ theorem RunP.replay_on {r target : Res T} {reference finish : Mem}
       rw [tree.missing] at rest
       cases rest with
       | refl => exact (safe rfl).elim
-      | ask => contradiction
     | some words =>
       obtain ⟨advanced, sameAnswer, sameRegion, included, written⟩ :=
         replay_memory_request readable writable agrees answered
       have referenceStable := memAns_nurIn answered
-      obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _)
+      obtain ⟨result, replay, sameResult, otherBytes, pending⟩ := ih (tree.weiter _) safe blocked
         (fun byte permission => readable byte (by simpa only [referenceStable.rd] using permission))
         (fun byte permission => writable byte (by simpa only [referenceStable.wr] using permission)) sameRegion
       refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
@@ -373,18 +372,18 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
     obtain ⟨middle, executed, reached, otherBytes, requests⟩ :=
       (RunM.toPrefix head).replay_on (blind_step _) (by intro same; cases same)
         (by intro op resume same; cases same) readable writable agrees
-    have instruction := runP_runM executed rfl
+    have replayedInstruction := runP_runM executed rfl
     obtain ⟨rd, wr⟩ := RunM.permissions head
     obtain ⟨result, ran, agreement, laterBytes, laterRequests⟩ := ih
       (fun byte granted => readable byte (by simpa only [rd] using granted))
       (fun byte granted => writable byte (by simpa only [wr] using granted)) reached
-    refine ⟨result, .next instruction ran, agreement,
+    refine ⟨result, .next replayedInstruction ran, agreement,
       fun byte outside => (laterBytes byte outside).trans (otherBytes byte outside), ?_⟩
     intro taken instruction atInstruction current request resume complete within pending
     cases complete with
     | refl => exact requests pending (by intro same; cases same)
     | next moved remaining =>
-      obtain ⟨rfl, rfl⟩ := instruction.det moved.run
+      obtain ⟨rfl, rfl⟩ := replayedInstruction.det moved.run
       exact laterRequests remaining (Nat.lt_of_succ_lt_succ within) pending
 
 /-- The common memory permissions stay fixed through complete and
