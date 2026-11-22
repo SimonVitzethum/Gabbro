@@ -16,12 +16,13 @@ private theorem entryIndex_ruE :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (expr : Expr D Γ Λ τ),
       entryIndex (ruE expr) = entryIndex expr
   | _, _, _, .widen _ _ expr => entryIndex_ruE expr
-  | _, _, _, .neg expr => by
-    simp only [ruE, entryIndex]
-    rw [entryIndex_ruE expr]
-  | _, _, _, .add left right | _, _, _, .sub left right | _, _, _, .mul left right => by
-    simp only [ruE, entryIndex]
-    rw [entryIndex_ruE left, entryIndex_ruE right]
+  | _, _, _, .neg expr => congrArg (fun i => i.map Int.neg) (entryIndex_ruE expr)
+  | _, _, _, .add left right =>
+    kongr₂ (fun a b => a.bind (fun i => b.map (i + ·))) (entryIndex_ruE left) (entryIndex_ruE right)
+  | _, _, _, .sub left right =>
+    kongr₂ (fun a b => a.bind (fun i => b.map (i - ·))) (entryIndex_ruE left) (entryIndex_ruE right)
+  | _, _, _, .mul left right =>
+    kongr₂ (fun a b => a.bind (fun i => b.map (i * ·))) (entryIndex_ruE left) (entryIndex_ruE right)
   | _, _, _, .lit .. | _, _, _, .tru .. | _, _, _, .fls ..
   | _, _, _, .var .. | _, _, _, .glob .. | _, _, _, .slot ..
   | _, _, _, .thru .. | _, _, _, .thruOwn .. | _, _, _, .ptrOf ..
@@ -62,20 +63,20 @@ theorem oldCells_ruE :
       oldCells (ruE expr) = (oldCells expr).map Zelle.withIdle
   | _, _, _, .oldS table field index _ => by
     simp only [ruE, oldCells]
-    rw [entryIndex_ruE index]
+    with_unfolding_all rw [entryIndex_ruE index]
     cases entryIndex index with
     | some _ => rfl
     | none =>
       rw [idleColumnFits (D := D) table field]
-      rw [oldCells_ruE index, idleColumn (D := D) table field 0 (D.count table).toNat]
+      with_unfolding_all rw [oldCells_ruE index, idleColumn (D := D) table field 0 (D.count table).toNat]
       split <;> simp only [List.map_append, List.map_nil]
   | _, _, _, .widen _ _ expr | _, _, _, .not expr | _, _, _, .neg expr | _, _, _, .intBuiltin1 _ expr =>
     oldCells_ruE expr
   | _, _, _, .add left right | _, _, _, .sub left right | _, _, _, .mul left right
   | _, _, _, .eq left right | _, _, _, .lt left right | _, _, _, .le left right
   | _, _, _, .and left right | _, _, _, .or left right | _, _, _, .intBuiltin2 _ left right => by
-    simp only [ruE, oldCells, List.map_append]
-    rw [oldCells_ruE left, oldCells_ruE right]
+    simpa only [ruE, oldCells, List.map_append] using
+      kongr₂ (· ++ ·) (oldCells_ruE left) (oldCells_ruE right)
   | _, _, _, .lit .. | _, _, _, .tru .. | _, _, _, .fls ..
   | _, _, _, .var .. | _, _, _, .glob .. | _, _, _, .slot ..
   | _, _, _, .thru .. | _, _, _, .thruOwn .. | _, _, _, .ptrOf ..
