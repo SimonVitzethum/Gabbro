@@ -141,9 +141,25 @@ public structure LinkedPolls (u : UProg) (base : Programm (declOf u))
   installed : program = installPollEntries base entries
   distinct : (entries.map PollEntry.slot).Nodup
 
-public def linkPolls {u : UProg} (base : Programm (declOf u)) (entries : List (PollEntry u))
-    (distinct : (entries.map PollEntry.sourceName).Nodup) : LinkedPolls u base entries :=
-  ⟨installPollEntries base entries, rfl, pollSlots_distinct distinct⟩
+private def lowerPollEntries {u : UProg}
+    (lower : (function : AsyncFn) → Except String { entry : PollEntry u // entry.sourceName = function.name }) :
+    (functions : List AsyncFn) → Except String
+      { entries : List (PollEntry u) // entries.map PollEntry.sourceName = functions.map AsyncFn.name }
+  | [] => .ok ⟨[], rfl⟩
+  | function :: rest => do
+    let entry ← lower function
+    let tail ← lowerPollEntries lower rest
+    pure ⟨entry.val :: tail.val, by simp only [List.map_cons, entry.property, tail.property]⟩
+
+/-- Lower the checked order, retaining its exact declaration names.
+    Slot uniqueness follows from canonical resolution of those names. -/
+public def linkPolls {u : UProg} {functions : List AsyncFn}
+    (base : Programm (declOf u)) (order : OrderedAsync functions)
+    (lower : (function : AsyncFn) → Except String { entry : PollEntry u // entry.sourceName = function.name }) :
+    Except String (Σ entries : List (PollEntry u), LinkedPolls u base entries) := do
+  let ⟨entries, names⟩ ← lowerPollEntries lower order.declarations
+  have distinct : (entries.map PollEntry.sourceName).Nodup := names.symm ▸ (asyncOrder_sound order.checked).1
+  pure ⟨entries, ⟨installPollEntries base entries, rfl, pollSlots_distinct distinct⟩⟩
 
 public theorem LinkedPolls.body {u : UProg} {base : Programm (declOf u)} {entries : List (PollEntry u)}
     (linked : LinkedPolls u base entries) (entry : PollEntry u) (present : entry ∈ entries) :
