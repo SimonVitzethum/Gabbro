@@ -172,9 +172,15 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
         exact ⟨represented.next, represented.serving, represented.waiters⟩
       · change (upd before.pc thread (.incL ticket before.w.serv) thread).haelt = true ↔ _
         rw [upd_self]
-        exact ⟨fun impossible => by cases impossible, fun equal => (admitted equal).elim⟩
+        constructor
+        · intro impossible
+          cases impossible
+        · exact fun equal => (admitted equal).elim
     · refine ⟨before, .inr ⟨ticket, saved, admitted, rfl⟩, memorySame.symm ▸ represented, ?_⟩
       rw [saved]
-      exact ⟨fun impossible => by cases impossible, fun equal => (admitted equal).elim⟩
+      constructor
+      · intro impossible
+        cases impossible
+      · exact fun equal => (admitted equal).elim
 
 end Gabbro.Stage0.Senke.Faeden
