@@ -53,19 +53,22 @@ theorem bild_auto_depth {D : Deklaration} {passes : Nat} {P : Programm D}
   · cases emitted
   · next preliminary firstPass =>
     split at emitted
-    · cases emitted
-    · next relocated secondPass =>
+    · next placement =>
       split at emitted
-      · next accepted =>
-        simp only [Except.ok.injEq] at emitted
-        subst image
-        rcases accepted.2 with nonzero | enough
-        · exact False.elim (nonzero rfl)
-        · exact enough
-      · exfalso
-        revert emitted
-        repeat' split
-        all_goals intro emitted; cases emitted
+      · cases emitted
+      · next relocated secondPass =>
+        split at emitted
+        · next accepted =>
+          simp only [Except.ok.injEq] at emitted
+          subst image
+          rcases accepted.2 with nonzero | enough
+          · exact False.elim (nonzero rfl)
+          · exact enough
+        · exfalso
+          revert emitted
+          repeat' split
+          all_goals intro emitted; cases emitted
+    · split at emitted <;> cases emitted
 
 private theorem depthLookup_ofFn {functions : Nat} (f : Fin functions → Bool) (fn : Fin functions) :
     (Array.ofFn f)[fn.val]?.getD false = f fn := by

@@ -19,16 +19,20 @@ theorem bild_lockWait {D : Deklaration} {P : Programm D} {passes : Nat}
   simp only [bild] at emitted
   split at emitted
   · cases emitted
-  · split at emitted
-    · cases emitted
-    · split at emitted
-      · simp only [Except.ok.injEq] at emitted
-        subst b
-        exact binding _
-      · exfalso
-        revert emitted
-        repeat' split
-        all_goals intro emitted; cases emitted
+  · next preliminary firstPass =>
+    split at emitted
+    · next placement =>
+      split at emitted
+      · cases emitted
+      · split at emitted
+        · simp only [Except.ok.injEq] at emitted
+          subst b
+          exact binding _
+        · exfalso
+          revert emitted
+          repeat' split
+          all_goals intro emitted; cases emitted
+    · split at emitted <;> cases emitted
 
 private theorem spinOpcodeLiterals :
     (3 : Opcode).val = 3 ∧ (14 : Opcode).val = 14 ∧ (15 : Opcode).val = 15 ∧ (18 : Opcode).val = 18 ∧ (19 : Opcode).val = 19 ∧ (22 : Opcode).val = 22 :=
