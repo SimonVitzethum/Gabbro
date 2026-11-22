@@ -152,7 +152,8 @@ theorem withGuardedTextSlice_exec (identity : Nat) (source : Var Γ (.str capaci
       rw [decoded, checkStringSlice, dite_eq_left valid]
       apply congrArg some
       apply Subtype.ext
-      simp only [strBoundedSliceValue, strSliceValue, start, lastByte]
+      simp only [strBoundedSliceValue, strSliceValue]
+      rw [lastByte, start]
     · simp only [selected, checkStringSlice, dite_eq_right valid] at chosen
       cases chosen
   · intro rejected

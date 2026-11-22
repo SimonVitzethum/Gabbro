@@ -258,20 +258,19 @@ theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (
   simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
 
 private theorem uArraySides_booleans (ctx : UCtx) (values : List Bool)
-    (read : (source : SExpr) →
-      sizeOf source < sizeOf (values.map (fun n => if n then SExpr.tru else SExpr.fls)) →
-      Except String USide) :
-    uArraySides ctx (values.map (fun n => if n then .tru else .fls)) read =
+    (sources : List SExpr) (same : sources = values.map (fun n => if n then SExpr.tru else SExpr.fls))
+    (read : (source : SExpr) → sizeOf source < sizeOf sources → Except String USide) :
+    uArraySides ctx sources read =
       .ok (values.foldr (fun value rest => .arrCons (.truth value) rest) .arrNil) := by
-  induction values with
-  | nil => rfl
+  induction values generalizing sources with
+  | nil => subst sources; rfl
   | cons value rest ih =>
-    change uArraySides ctx
-      ((if value then SExpr.tru else SExpr.fls) :: rest.map (fun n => if n then SExpr.tru else SExpr.fls)) read = _
+    simp only [List.map_cons] at same
+    subst sources
     simp only [uArraySides, List.foldr_cons]
     cases value <;>
-      simp only [uRecordSide, Bool.false_eq_true, ite_false,
-        ite_true, ih, bind, Except.bind, pure, Except.pure]
+      simp only [uRecordSide, Bool.false_eq_true, ite_false, ite_true, ih _ rfl,
+        bind, Except.bind, pure, Except.pure]
 
 /-- The literal array accepted at a predicate parameter retains its
     declared type after substitution, including at array length zero. -/
@@ -288,7 +287,7 @@ theorem specArrayLiteral_erfuellbar (ctx : UCtx) (values : List Bool)
         .ok (.typed (.arr .bool values.length) literal) := by
   intro array literal
   have read : uRechne ctx (uWertBlatt ctx) array = .ok literal := by
-    simp only [array, uRechne, uArraySides_booleans, literal]
+    simp only [array, uRechne, uArraySides_booleans ctx values _ rfl, literal]
   refine ⟨?_, ?_⟩
   · simp only [uSpecArrayArgument, uWertBody, read, literal, specLiteralArrayField_erfuellbar,
       bind, Except.bind, ite_true, pure, Except.pure]

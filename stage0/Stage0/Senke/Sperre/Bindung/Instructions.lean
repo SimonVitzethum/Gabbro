@@ -147,36 +147,24 @@ private theorem savedFutex (environment : LE baseline pc fp scratch base code)
   have instruction := environment.ins slots.ag cell
   have small := environment.small
   have argsSlot := sx_nat (d := scratch + 10) (by omega)
-  have saved (offset : Nat) (fits : offset < 7) :
-      (machine.ms.1.view thread).rd64
-        (slot fp (sx (II.f (scratch + 10 : Nat))) + BitVec.ofNat 64 (8 * offset)) =
-        some (registers (10 + offset)) := by
-    rw [argsSlot, slot_plus, Nat.add_assoc]
-    exact slots.sl (10 + offset) (by omega)
-  have nr := saved 0 (by decide)
-  have arg1 := saved 1 (by decide)
-  have arg2 := saved 2 (by decide)
-  have arg3 := saved 3 (by decide)
-  have arg4 := saved 4 (by decide)
-  have arg5 := saved 5 (by decide)
-  have arg6 := saved 6 (by decide)
-  change _ = some (registers 10) at nr
-  simp only [number, BitVec.add_zero] at nr
-  change _ = some (registers 11) at arg1
-  change _ = some (registers 12) at arg2
-  change _ = some (registers 13) at arg3
-  change _ = some (registers 14) at arg4
-  change _ = some (registers 15) at arg5
-  change _ = some (registers 16) at arg6
-  rw [address] at arg1
-  rw [operation] at arg2
-  rw [argument] at arg3
-  rw [fourth] at arg4
-  rw [fifth] at arg5
-  rw [sixth] at arg6
-  exact tso_silent_prefix_image
-    (tso_sys_prefix (before := imageToTSO machine) (t := pointer)
-      running instruction nr arg1 arg2 arg3 arg4 arg5 arg6) rfl
+  refine tso_silent_prefix_image
+    (tso_sys_prefix (before := imageToTSO machine) (t := pointer) (nr := 202)
+      (a1 := BitVec.ofNat 64 (base + 8)) (a2 := mode) (a3 := value) (a4 := 0) (a5 := 0) (a6 := 0)
+      running instruction ?_ ?_ ?_ ?_ ?_ ?_ ?_) rfl
+  all_goals rw [argsSlot]
+  · simpa only [number] using slots.sl 10 (by decide)
+  · rw [show (8 : W) = BitVec.ofNat 64 (8 * 1) from rfl, slot_plus]
+    simpa only [address, Nat.add_assoc] using slots.sl 11 (by decide)
+  · rw [show (16 : W) = BitVec.ofNat 64 (8 * 2) from rfl, slot_plus]
+    simpa only [operation, Nat.add_assoc] using slots.sl 12 (by decide)
+  · rw [show (24 : W) = BitVec.ofNat 64 (8 * 3) from rfl, slot_plus]
+    simpa only [argument, Nat.add_assoc] using slots.sl 13 (by decide)
+  · rw [show (32 : W) = BitVec.ofNat 64 (8 * 4) from rfl, slot_plus]
+    simpa only [fourth, Nat.add_assoc] using slots.sl 14 (by decide)
+  · rw [show (40 : W) = BitVec.ofNat 64 (8 * 5) from rfl, slot_plus]
+    simpa only [fifth, Nat.add_assoc] using slots.sl 15 (by decide)
+  · rw [show (48 : W) = BitVec.ofNat 64 (8 * 6) from rfl, slot_plus]
+    simpa only [sixth, Nat.add_assoc] using slots.sl 16 (by decide)
 
 /-- The relocated contended acquisition code issues WAIT with the saved serving sample. -/
 theorem image_ticket_wait_prefix {position sampled : Nat}

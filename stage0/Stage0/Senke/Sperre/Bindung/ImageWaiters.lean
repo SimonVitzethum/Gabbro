@@ -1,13 +1,14 @@
 module
 
 public import Stage0.Senke.Sperre.Bindung.ImageCAS
+public import Stage0.Senke.Bild.Mehr.Lokal
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
+open Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis Runner.Mem
 
 /-- The two waiter-counter CAS loops share their physical representation
     and vary only in the saved position and updated word. -/
