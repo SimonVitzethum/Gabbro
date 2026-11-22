@@ -247,7 +247,7 @@ def CounterLoad.addressSlot : CounterLoad → Nat
   | _ => 1
 
 private theorem CounterLoad.addressSlot_fits (load : CounterLoad) : load.addressSlot < 18 := by
-  cases load <;> decide
+  cases load <;> simp only [CounterLoad.addressSlot] <;> decide
 
 /-- The current program counter and the relocated emitted cell select
     the same shared word as the ticket protocol's pending read. -/

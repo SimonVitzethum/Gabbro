@@ -45,7 +45,7 @@ def CounterLoad.after (load : CounterLoad) (words : Wort) : Ort :=
   | .wake => if words.wait = 0 then .frei else .weck
 
 private theorem CounterLoad.inside (load : CounterLoad) : load.offset ≤ 16 := by
-  cases load <;> decide
+  cases load <;> simp only [CounterLoad.offset] <;> decide
 
 private theorem CounterLoad.read {N : Nat} {memory : Mem} {base : Nat} {current : Zustand N}
     (load : CounterLoad) (words : TicketWordsAt memory base current) :
@@ -65,13 +65,16 @@ private theorem CounterLoad.step {N : Nat} {current : Zustand N} {thread : Fin N
   | release => exact .liestGib saved
   | wake =>
     by_cases empty : current.w.wait = 0
-    · simpa only [CounterLoad.after, if_pos empty] using Schritt.keinWarter saved empty
-    · simpa only [CounterLoad.after, if_neg empty] using Schritt.warter saved empty
+    · simpa only [CounterLoad.after, ite_eq_left empty] using Schritt.keinWarter saved empty
+    · simpa only [CounterLoad.after, ite_eq_right empty] using Schritt.warter saved empty
 
 private theorem CounterLoad.sameOwner (load : CounterLoad) (words : Wort) :
     (load.after words).haelt = load.before.haelt := by
   cases load <;> try rfl
-  case wake => unfold CounterLoad.after; split <;> rfl
+  case wake =>
+    by_cases empty : words.wait = 0
+    · simp only [CounterLoad.after, CounterLoad.before, ite_eq_left empty, Ort.haelt]
+    · simp only [CounterLoad.after, CounterLoad.before, ite_eq_right empty, Ort.haelt]
 
 /-- Real shared reads at the draw, waiter and release phases perform
     the corresponding protocol step, retain the complete lock registry
