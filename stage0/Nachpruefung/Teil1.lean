@@ -90,6 +90,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire
 #print axioms Gabbro.Stage0.ImageForeignTrace.retire
 #print axioms Gabbro.Stage0.image_hardware_exit
+#print axioms Gabbro.Stage0.image_emitted_hardware_exit
 #print axioms Gabbro.Stage0.ImageSlotsMatch.activate_clone
 #print axioms Gabbro.Stage0.Emitted.image_declared_clone_goal
 #print axioms Gabbro.Stage0.image_bootClone_refused
