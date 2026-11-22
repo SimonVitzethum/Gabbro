@@ -83,8 +83,8 @@ theorem image_ticket_waiter_CAS [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
   have bufferEq := congrArg TSt.buf memoryEq
   refine ⟨process, returned, bufferEq, ?_⟩
   by_cases same : before.w.wait = expected
-  · have matches : old = requested := congrArg (BitVec.ofNat 64) same
-    rw [ite_eq_left matches] at memoryEq
+  · have wordMatches : old = requested := congrArg (BitVec.ofNat 64) same
+    rw [ite_eq_left wordMatches] at memoryEq
     let next : Zustand N := ⟨⟨before.w.next, before.w.serv, mode.count expected⟩,
       upd before.pc thread (mode.commitPlace ticket sampled), before.q⟩
     have stepping : Schritt before thread next := WaitAdjustment.commit saved same
