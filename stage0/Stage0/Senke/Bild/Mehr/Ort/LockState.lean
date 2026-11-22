@@ -9,7 +9,7 @@ namespace Gabbro.Stage0.Senke.Faeden
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
   Gabbro.Stage0.Senke.BildMehr
-  Runner Runner.IR Runner.Beweis Runner.Mem
+  Runner Runner.IR Runner.Beweis Runner.Mem Runner.Mach
 
 /-- The three consecutive machine words reserved for one declared lock. -/
 def LockBytes {D : Deklaration} (layout : Lay D) (lock : D.Lock) (byte : W) : Prop :=
