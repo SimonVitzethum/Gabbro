@@ -441,38 +441,45 @@ theorem MappedImage.loader_prefix_goal [Kern] {output : Emitted src reserve opti
   exact ⟨ir, steps, trace, related, quiet, slots, runtime,
     MappedImage.source_start_goal accepted duties calls posts binding hardware⟩
 
-/-- On the domain with a complete current unit export, the actual CLI bytes
-    determine the source, checker verdict and full goal through dispatch. -/
+/-- The exact returned bytes carry the complete checker verdict and
+    satisfy the full source goal through the actual native loader. -/
 theorem irBild_checked_loader_prefix [Kern] {bytes : List B}
     (emitted : irBild src reserve options = .ok bytes) :
     ∃ output : Emitted src reserve options, emit src reserve options = .ok output ∧
       output.bytes = bytes ∧ CanonicalSourceProgram output.compiled ∧
-      (output.compiled.unit.axs.length = 0 →
-        OldSource.zertifizierbar output.compiled.unit = true → imageAccumulatorItems output.compiled = [] →
-        let E := output.goalUnit (axWahr _)
-        ImageModelUnit output E ∧
-        akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
-        ∀ (O : Orakel (declOf output.compiled.unit)), HardwareAnnahmenHw O E.Q →
-          ∀ {machine finish : Cfg imageTSO Runner.X86.X} {events : List Ev} {count : Nat},
-            MappedImage output machine → ProcessPrefix imageTSO (actX L0) machine events count finish →
-            (∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
-              Rel L0 ir finish → steps ≤ 1) →
-            ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧
-              Rel L0 ir finish ∧ events = [] ∧ ImageSlotsMatch output E O events ir (imageSourceStart E) ∧
-              ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
-              ImageGoalAt output E O (imageSourceStart E)) := by
-  obtain ⟨output, wrote, payload⟩ := irBild_emitted src reserve bytes emitted
-  refine ⟨output, wrote, payload, compile_source_program src output.compiled, ?_⟩
-  intro noAxioms noOwnership noAccumulators
-  obtain ⟨unit, accepted⟩ := output.checked_image_model_empty noAxioms noOwnership noAccumulators
-  refine ⟨unit, accepted, ?_⟩
-  intro O hardware machine finish events count mapped run inLoader
-  have absent (a : (declOf output.compiled.unit).Ax) :
-      (declOf output.compiled.unit).axHerkunft a ≠ some AxOrigin.software :=
-    False.elim ((Nat.not_lt_zero a.val) (noAxioms ▸ a.isLt))
-  have duties := nutzerPflicht_of_geprueft output.fsA.2 output.lsA.2
-    (Bool.and_eq_true_iff.mp (output.goal_axiomFree (axWahr _) noAxioms)).2
-  exact mapped.loader_prefix_goal unit accepted duties (callSitePflicht_ohne _ absent) unit.postDeckt
-    (foreignVertrag_ohne _ O absent) hardware run inLoader
+      let E := output.checkedUnit.unit
+      ImageModelUnit output E ∧
+      akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true ∧
+      ∀ (O : Orakel (declOf output.compiled.unit)),
+        CallSitePflicht E → ForeignVertrag E O → HardwareAnnahmenHw O E.Q →
+        ∀ {machine finish : Cfg imageTSO Runner.X86.X} {events : List Ev} {count : Nat},
+          MappedImage output machine → ProcessPrefix imageTSO (actX L0) machine events count finish →
+          (∀ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir →
+            Rel L0 ir finish → steps ≤ 1) →
+          ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧
+            Rel L0 ir finish ∧ events = [] ∧ ImageSlotsMatch output E O events ir (imageSourceStart E) ∧
+            ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
+            ImageGoalAt output E O (imageSourceStart E) := by
+  obtain ⟨output, wrote, payload, canonical, model, accepted, posts, duties⟩ := irBild_checkImageUnit emitted
+  refine ⟨output, wrote, payload, canonical, model, accepted, ?_⟩
+  intro O calls foreign hardware machine finish events count mapped run inLoader
+  exact mapped.loader_prefix_goal model accepted duties calls posts foreign hardware run inLoader
+
+/-- Every first continuing native step of a returned image has the full
+    goal, without a bound on or a choice of the corresponding IR prefix. -/
+theorem Emitted.checked_first_step [Kern] (output : Emitted src reserve options)
+    {O : Orakel (declOf output.compiled.unit)} {machine finish : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) {events : List Ev}
+    (step : ProcessStep imageTSO (actX L0) machine events finish)
+    (calls : CallSitePflicht output.checkedUnit.unit) (binding : ForeignVertrag output.checkedUnit.unit O)
+    (hardware : HardwareAnnahmenHw O output.checkedUnit.unit.Q) :
+    let E := output.checkedUnit.unit
+    ∃ ir steps, ProcessPrefix imageTSO actI ⟨machine.ms, [some t4]⟩ events steps ir ∧ Rel L0 ir finish ∧
+      events = [] ∧ ImageSlotsMatch output E O events ir (imageSourceStart E) ∧
+      ImageRuntimeMatches output E O events ir (imageSourceStart E) ∧
+      ImageGoalAt output E O (imageSourceStart E) :=
+  mapped.first_step_goal output.checkedUnit.exactModel output.checkedUnit.accepted
+    (nutzerPflicht_of_akzeptiert output.fsA output.lsA output.checkedUnit.accepted)
+    calls output.checkedUnit.exactModel.postDeckt binding hardware step
 
 end Gabbro.Stage0
