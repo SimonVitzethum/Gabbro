@@ -273,30 +273,54 @@ def uSliceInteger (ctx : UCtx) (blatt : SExpr → Except String USide) :
 termination_by source => sizeOf source
 decreasing_by all_goals simp_wf <;> omega
 
-/-- Observe a local array slice by translating its verified static
-    and local integer operands to ordinary length and index operations. -/
-def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
-    (index : Option SExpr) : SExpr → Option USide
+/-- Independently ranged endpoints must fit within the guaranteed
+    current length. Their difference gives the next length interval. -/
+def uRelativeSlice (ctx : UCtx) (blatt : SExpr → Except String USide) (minimum : Int)
+    (first last : SExpr) : Option (USide × USide × Int) := do
+  let (firstLo, firstHi, begin) ← uSliceInteger ctx blatt first
+  let (lastLo, lastHi, finish) ← uSliceInteger ctx blatt last
+  if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ minimum then
+    some (begin, .sub finish begin, lastLo - firstHi)
+  else none
+
+/-- The offset is always relative to the original lexical array.
+    A subslice only adds to this offset and replaces its visible length. -/
+structure ULocalArrayView where
+  array : String
+  offset : USide
+  length : USide
+  minimum : Int
+
+def uLocalArrayView (ctx : UCtx) (blatt : SExpr → Except String USide) :
+    SExpr → Option ULocalArrayView
   | .built "#slice" [.variable array, first, last] => do
     let some (.arr _ capacity) := uSliceLocalType ctx array | none
     if blatt (.variable array) = .ok (.param array) then
       let (begin, length, minimum) ←
         match uFixedLocalArrayExtent ctx blatt (.param array) first last with
         | some (_, count, start) => some (start, .lit (Int.ofNat count), (count : Int))
-        | none => do
-          let (firstLo, firstHi, begin) ← uSliceInteger ctx blatt first
-          let (lastLo, lastHi, finish) ← uSliceInteger ctx blatt last
-          if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
-            some (begin, .sub finish begin, lastLo - firstHi)
-          else none
-      match index with
-      | none => some length
-      | some atIndex => do
-        let (lo, hi, offset) ← uSliceInteger ctx blatt atIndex
-        if 0 ≤ lo ∧ hi < minimum then
-          some (.idx (.param array) (.add begin offset))
-        else none
+        | none => uRelativeSlice ctx blatt capacity first last
+      some ⟨array, begin, length, minimum⟩
     else none
+  | .built "#slice" [base, first, last] => do
+    let view ← uLocalArrayView ctx blatt base
+    let (begin, length, minimum) ← uRelativeSlice ctx blatt view.minimum first last
+    some ⟨view.array, .add view.offset begin, length, minimum⟩
   | _ => none
+termination_by source => sizeOf source
+decreasing_by all_goals simp_wf <;> omega
+
+/-- A slice projection performs one read of the original array, even
+    when the source contains several consecutive slice operations. -/
+def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (index : Option SExpr) (source : SExpr) : Option USide := do
+  let view ← uLocalArrayView ctx blatt source
+  match index with
+  | none => some view.length
+  | some atIndex => do
+    let (lo, hi, offset) ← uSliceInteger ctx blatt atIndex
+    if 0 ≤ lo ∧ hi < view.minimum then
+      some (.idx (.param view.array) (.add view.offset offset))
+    else none
 
 end Gabbro.Grammatik.Parser.Uebersetze

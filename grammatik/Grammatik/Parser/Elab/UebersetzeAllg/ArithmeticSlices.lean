@@ -127,11 +127,77 @@ theorem arithmeticSliceObservations_erfuellbar (element : Ty) (capacity : Nat)
   have index : (0 : Int) ≤ Int.ofNat 0 ∧ Int.ofNat 0 < 4 - 2 := by decide
   refine ⟨scope, ?_, ?_⟩
   · change uWertBody scope (.built "lenof" [slice]) = _
-    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, and_self, bind, Option.bind] <;> rfl
   · change uWertBody scope (.index slice (.lit 0)) = _
-    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, index, and_self, bind, Option.bind,
       uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some] <;> rfl
+
+/-- The productive observer composes two checked relative ranges into
+    one original-array index. Both relative lower bounds are retained. -/
+theorem nestedLocalArraySlice_observations (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array : String) (τ : Ty) (capacity : Nat) (first last innerFirst innerLast index : SExpr)
+    (begin length innerBegin innerLength offset : USide) (minimum innerMinimum lo hi : Int)
+    (arrayType : uSliceLocalType ctx array = some (.arr τ capacity))
+    (arrayRead : blatt (.variable array) = .ok (.param array))
+    (independent : uFixedLocalArrayExtent ctx blatt (.param array) first last = none)
+    (outerBounds : uRelativeSlice ctx blatt capacity first last = some (begin, length, minimum))
+    (innerBounds : uRelativeSlice ctx blatt minimum innerFirst innerLast =
+      some (innerBegin, innerLength, innerMinimum))
+    (position : uSliceInteger ctx blatt index = some (lo, hi, offset))
+    (indexBounds : 0 ≤ lo ∧ hi < innerMinimum) :
+    let slice := SExpr.built "#slice" [.variable array, first, last]
+    let nested := SExpr.built "#slice" [slice, innerFirst, innerLast]
+    uRechne ctx blatt (.built "lenof" [nested]) = .ok innerLength ∧
+      uRechne ctx blatt (.index nested index) =
+        .ok (.idx (.param array) (.add (.add begin innerBegin) offset)) := by
+  dsimp only
+  constructor <;> rw [uRechne] <;>
+    simp only [uLocalArraySliceObservation, uLocalArrayView, arrayType, arrayRead, independent,
+      outerBounds, innerBounds, position, indexBounds, bind, Option.bind, ite_true]
+
+/-- Reading the composed index in G returns the exact element of the
+    nested value slice. The typed term has one array operand. -/
+theorem eval_nestedLocalArraySliceIndex {D : Deklaration} {τ : Ty} {capacity : Nat} {Γ : Ctx}
+    {Λ : List (Res D)} {a b c d e f g h i j : Int}
+    (array : Expr D Γ Λ (.arr τ capacity)) (begin : Expr D Γ Λ (.int a b)) (finish : Expr D Γ Λ (.int c d))
+    (innerBegin : Expr D Γ Λ (.int e f)) (innerFinish : Expr D Γ Λ (.int g h))
+    (index : Expr D Γ Λ (.int i j))
+    (outer : 0 ≤ a ∧ b ≤ c ∧ d ≤ capacity)
+    (inner : 0 ≤ e ∧ f ≤ g ∧ h ≤ c - b)
+    (position : 0 ≤ i ∧ j < g - f)
+    (entry world : World D) (env : Env D Γ) :
+    let first := eval entry begin world env
+    let last := eval entry finish world env
+    let cutFirst := eval entry innerBegin world env
+    let cutLast := eval entry innerFinish world env
+    let atIndex := eval entry index world env
+    ∃ outerFit : SliceOk capacity first.n.toNat last.n.toNat,
+      ∃ innerFit : SliceOk (last.n.toNat - first.n.toNat) cutFirst.n.toNat cutLast.n.toNat,
+        ∃ indexFit : atIndex.n.toNat < cutLast.n.toNat - cutFirst.n.toNat,
+          eval entry (.arrGet array (.widen (by omega)
+            (by have := last.lo_le; have := last.le_hi
+                have := cutLast.lo_le; have := cutLast.le_hi
+                omega) (.add (.add begin innerBegin) index))) world env =
+            ((BoundedSlice.ofArray (eval entry array world env) first.n.toNat last.n.toNat outerFit).subslice
+              cutFirst.n.toNat cutLast.n.toNat innerFit).get ⟨atIndex.n.toNat, indexFit⟩ := by
+  dsimp only
+  have aLow := (eval entry begin world env).lo_le
+  have aHigh := (eval entry begin world env).le_hi
+  have bLow := (eval entry finish world env).lo_le
+  have bHigh := (eval entry finish world env).le_hi
+  have cLow := (eval entry innerBegin world env).lo_le
+  have cHigh := (eval entry innerBegin world env).le_hi
+  have dLow := (eval entry innerFinish world env).lo_le
+  have dHigh := (eval entry innerFinish world env).le_hi
+  have indexLow := (eval entry index world env).lo_le
+  have indexHigh := (eval entry index world env).le_hi
+  refine ⟨⟨by omega, by omega⟩, ⟨by omega, by omega⟩, by omega, ?_⟩
+  simp only [eval, BoundedSlice.ofArray, BoundedSlice.subslice, arrSliceValue]
+  apply congrArg (eval entry array world env)
+  apply Fin.ext
+  simp only [Zahl.fin, Zahl.weiter, Zahl.add]
+  omega
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
