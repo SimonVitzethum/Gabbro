@@ -154,7 +154,7 @@ def beweisDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
     text := kopf modul [pflichtModul modul i] ("Your proof of the duty of `" ++ f.name ++
         "`. `gabbrov` writes this file once and never replaces it.") ++
       "theorem beweis" ++ si ++ " : ziel" ++ si ++ " := by\n" ++
-      "  apply zielF_aus\n" ++
+      "  apply pflicht_oeffnen\n" ++
       "  intro P v hv hens hrumpf Q sp main args roots gestartet checks\n" ++
       "  -- the body is `v.2.1` (`hrumpf`), the postcondition `v.1` (`hens`); after `rw [hrumpf]`,\n" ++
       "  -- `gabbrov_wp` applies the weakest-precondition rules of the model\n" ++
