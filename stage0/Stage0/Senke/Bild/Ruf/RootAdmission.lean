@@ -1,7 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
-import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+import Stage0.Senke.Images.DispatchSource
 import Stage0.Senke.Bild.Ruf.GateTrace
 import Lean.Elab.Tactic.Omega
 
@@ -176,7 +176,7 @@ private theorem root_after_activation [Kern] {src : String} {reserve : Nat} {opt
 /-- The real successful worker launch preserves the runtime partition.
     The parent stays in its startup stub until it has stored the host
     reply, and the new child's exact prepared frame enters the next slot. -/
-theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {id extra : W} {parent child : T}
@@ -195,6 +195,7 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
     let events : List Ev := [(0, cloneReq, some (id, extra))]
     ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O (history ++ events) after next ∧
       ImageForeignTrace output (history ++ events) next ∧
+      ImageObservation output E O state next after (0, cloneReq, some (id, extra)) ∧
       ImageRuntimePartition footprint output E O (history ++ events) after next (body ++ [none]) := by
   intro events
   obtain ⟨buffers, length, admitted, roots⟩ := partition
@@ -219,14 +220,16 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
     refine .inr ⟨start, selected, by simpa only [machine] using head, code, frame, fits, args,
       parent, site, .inr (.inr ⟨id, extra, List.mem_append_right _ List.mem_cons_self, ?_⟩)⟩
     exact fun _ _ => RunP.refl _ _
+  have internal : imageCanBeInternal (0, cloneReq, some (id, extra)) = true := by
+    simp only [imageCanBeInternal, true_or, decide_true]
+  have sameHistory : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf := by
+    rw [machine]
   have foreign : ImageForeignTrace output (history ++ events) next := by
     apply trace.appendInternal
     · intro event inside
-      have equal : event = (0, cloneReq, some (id, extra)) := List.mem_singleton.mp inside
-      subst event
-      simp only [imageCanBeInternal, true_or, decide_true]
-    · rw [machine]
-  refine ⟨next, reached, slots, foreign, ?_⟩
+      exact (List.mem_singleton.mp inside).symm ▸ internal
+    · exact sameHistory
+  refine ⟨next, reached, slots, foreign, .inr ⟨internal, sameHistory⟩, ?_⟩
   rw [exactAfter]
   refine ⟨buffers, ?_, ?_, ?_⟩
   · simp only [List.length_append, List.length_singleton, List.length_set, length]
@@ -269,5 +272,53 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
         simpa only [List.length_append, List.length_singleton, size, Nat.succ_eq_add_one] using
           Nat.succ_le_of_lt absent
       rw [List.getElem?_eq_none_iff.mpr beyondBody, List.getElem?_eq_none_iff.mpr beyondThreads]
+
+/-- A successful clone in a prefix of the actual loaded IR activates
+    the declared worker occurring at this site. The unallocated stack's
+    representation comes from the original serialized arguments. -/
+theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {initial : imageTSO.St} (loaded : LoadedIRImage output initial)
+    (unit : ImageModelUnit output E) {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {count index : Nat} {before after : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {id extra : W}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    {start : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some start)
+    (order : before.ths.length = index + 1)
+    (path : ProcessPrefix imageTSO actI (output.irEntry initial) history count before)
+    (reached : ImageReach output E O (imageSourceStart E) state)
+    (classify : ∀ {first last : Cfg imageTSO (Res T)} {earlier events : List Ev} {steps : Nat},
+      ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps first →
+      ProcessStep imageTSO actI first events last → last.ths.length ≤ index + 1 →
+      GleichAuf (imageStackFootprint output (index + 1)) first.ms.1.m last.ms.1.m)
+    (code : BytesAt before.ms.1.m codeBase (output.image.code.flatMap encII))
+    (partition : ImageRuntimePartition footprint output E O history before state body)
+    (slots : ImageSlotsMatch output E O history before state)
+    (trace : ImageForeignTrace output history state) (entrySlot : body[0]? = some none)
+    (parentReady : state.wartet 0 = [])
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
+    (positive : 0 < id.toInt) :
+    let parent : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index + 2)), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)) →
+    let events : List Ev := [(0, cloneReq, some (id, extra))]
+    ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O (history ++ events) after next ∧
+      ImageForeignTrace output (history ++ events) next ∧
+      ImageObservation output E O state next after (0, cloneReq, some (id, extra)) ∧
+      ImageRuntimePartition footprint output E O (history ++ events) after next (body ++ [none]) := by
+  intro parent child waiting events
+  have within := (List.getElem?_eq_some_iff.mp declared).1
+  have inside : before.ths.length < E.starts.length := by
+    rw [order, unit.starts, List.length_cons]
+    exact Nat.succ_lt_succ within
+  have parentSite : ImageRootInstruction output 0 parent := by
+    refine ⟨by simp only [parent, Nat.mul_zero, Nat.add_zero], 10 * index + 2, ?_, ?_, rfl⟩
+    all_goals simp only [ite_true, startLen, Nat.zero_add]; omega
+  have childPhase := loaded.future_root_phase unit path order.le classify declared code slots reached
+  exact image_worker_activation partition slots trace entrySlot waiting parentSite parentReady inside
+    (by simpa only [order] using childPhase) observed positive
 
 end Gabbro.Stage0

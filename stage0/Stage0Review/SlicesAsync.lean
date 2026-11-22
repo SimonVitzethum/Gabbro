@@ -126,6 +126,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.LoadedIRImage.source_start
 #print axioms Gabbro.Stage0.LoadedIRImage.workerStartup
 #print axioms Gabbro.Stage0.LoadedIRImage.firstWorkerActivation
+#print axioms Gabbro.Stage0.LoadedIRImage.activate_worker
 #print axioms Gabbro.Stage0.ImageSlotsMatch.observed_clone
 #print axioms Gabbro.Stage0.LoadedIRImage.function_semantics
 #print axioms Gabbro.Stage0.irBild_function_semantics
