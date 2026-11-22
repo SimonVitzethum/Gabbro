@@ -168,7 +168,7 @@ theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : N
     exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
   · exact protectedCellFootprint_lock_disjoint inLayout synchronized data
 
-theorem imageProtectedFootprint_stack_owner {src : String} {reserve : Nat} {options : Profil.Options}
+theorem imageProtectedFootprint_stack_owner [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     (layout : LayIn output.image.Y.withIdle) {owner thread : Nat} {byte : W}
     (covered : imageProtectedFootprint output source owner byte)
