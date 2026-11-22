@@ -39,10 +39,13 @@ theorem image_futex_reply [Kern] {machine : Cfg imageTSO (Res T)} {memory : imag
   refine ⟨.ask waiting rfl valid answered rfl, result, external.2, same, ?_⟩
   intro byte unowned
   have unassigned : ¬ ∃ thread, footprint thread byte := fun ⟨other, owner⟩ => unowned other owner
-  have agrees : GleichAt (mergedView memory.1 footprint) (mergedView machine.ms.1 footprint) byte :=
-    congrArg Subtype.val same ▸ GleichAt.refl _ _
+  have merged : mergedView memory.1 footprint = mergedView machine.ms.1 footprint :=
+    congrArg Subtype.val same
+  have agrees : GleichAt (mergedView memory.1 footprint) (mergedView machine.ms.1 footprint) byte := by
+    rw [merged]
+    exact .refl _ _
   change GleichAt (viewAt memory.1 footprint byte) (viewAt machine.ms.1 footprint byte) byte at agrees
-  simpa only [viewAt, dif_neg unassigned] using agrees
+  simpa only [viewAt, dite_eq_right unassigned] using agrees
 
 /-- The returned WAIT advances the same thread to its waiter decrement.
     If the lower 32-bit word matched, the abstract execution may block
