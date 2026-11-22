@@ -158,9 +158,9 @@ public theorem collectStored_rightActive {la lr ra rr : Ty}
     execStmt oracle passes calls (collectStored left right leftActive rightActive bothCached) world env =
       ((execBlock oracle passes calls rightActive world (.cons second (.cons first env))).schrumpf).schrumpf := by
   unfold collectStored
-  rw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
+  erw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
   simp only [execBlock]
-  rw [storedTag_active oracle passes calls (.there right) rightActive bothCached world
+  erw [storedTag_active oracle passes calls (.there right) rightActive bothCached world
     (.cons first env) second secondStored]
   cases execBlock oracle passes calls rightActive world (.cons second (.cons first env)) <;> rfl
 
@@ -177,9 +177,9 @@ public theorem collectStored_bothCached {la lr ra rr : Ty}
     execStmt oracle passes calls (collectStored left right leftActive rightActive bothCached) world env =
       ((execBlock oracle passes calls bothCached world (.cons second (.cons first env))).schrumpf).schrumpf := by
   unfold collectStored
-  rw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
+  erw [storedTag_cached oracle passes calls left leftActive _ world env first firstStored]
   simp only [execBlock]
-  rw [storedTag_cached oracle passes calls (.there right) rightActive bothCached world
+  erw [storedTag_cached oracle passes calls (.there right) rightActive bothCached world
     (.cons first env) second secondStored]
   cases execBlock oracle passes calls bothCached world (.cons second (.cons first env)) <;> rfl
 
