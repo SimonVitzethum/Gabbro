@@ -331,9 +331,9 @@ theorem StarM.sc_reference_through {layout : Runner.Beweis.Lay}
     ∃ (count : Nat) (preserved : TabInv layout after),
       SCMemoryPrefix layout ⟨⟨before, table⟩, [some (.next initial)]⟩ count
         ⟨⟨after, preserved⟩, [some residual]⟩ := by
-  obtain ⟨prefixCount, middleTable, prefix⟩ := ran.sc_reference table
+  obtain ⟨prefixCount, middleTable, initialRun⟩ := ran.sc_reference table
   obtain ⟨tailCount, finalTable, suffix⟩ := tail.sc_reference middleTable (blind_step _)
-  exact ⟨tailCount + 1 + prefixCount, finalTable, prefix.trans (.cons (.priv rfl) suffix)⟩
+  exact ⟨tailCount + 1 + prefixCount, finalTable, initialRun.trans (.cons (.priv rfl) suffix)⟩
 
 /-- Before issuing a syscall or creating another thread, a terminal IR
     observation is the same terminal control in its SC projection. -/
