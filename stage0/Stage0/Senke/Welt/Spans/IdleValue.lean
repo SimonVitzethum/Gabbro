@@ -99,6 +99,21 @@ theorem idleCase (L : Lay D) : ∀ (cs : List (Option Ty)) (v : Wert D (.sum cs)
 termination_by structural cs => cs
 end
 
+/-- Scalar ABI arguments keep their exact word and validity after renumbering. -/
+theorem Enc.withIdle_iff (L : Lay D) (word : Runner.W) :
+    ∀ (τ : Ty) (v : Wert D τ), Enc L.withIdle (tyR τ) (valR τ v) word ↔ Enc L τ v word
+  | .arr τ 0, _ => Iff.rfl
+  | .arr τ 1, v => Enc.withIdle_iff L word τ (v ⟨0, by decide⟩)
+  | .arr τ (_ + 2), _ => Iff.rfl
+  | .sum cases, v => by
+    have ⟨tag, offset, _, _⟩ := idleCase L cases v
+    simp only [tyR, Ty.mapNumbers, Enc, sumFits_mapNumbers, sumN, tag, offset]
+  | .ptr ⟨_, _, .table _⟩, _
+  | .int .., _ | .bool, _ | .opt .., _ | .why .., _ | .fl .., _
+  | .fnptr .., _ | .ref .., _ | .str .., _ | .prod .., _ => Iff.rfl
+  | .never, v => nomatch v
+termination_by structural τ => τ
+
 /-- The stack encoding is unchanged for an environment in the idle extension. -/
 theorem encodeEnv_withIdle (L : Lay D) {Γ : Ctx} (env : Env D Γ) :
     encodeEnv L.withIdle (envR env) = encodeEnv L env := by

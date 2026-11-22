@@ -4,6 +4,7 @@ public import Stage0.Senke.Images.Correctness
 import Stage0.Senke.Bild.Mehr.ImageTransition
 import Stage0.Senke.Welt.Spans.IdleValue
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T2
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1
 import Mathlib.Data.List.Forall2
 
 @[expose] public section
@@ -95,18 +96,25 @@ theorem ImageForeignTrace.appendGate [Kern] {output : Emitted src reserve option
   rw [log]
   exact matched.append (.gate rfl present number .nil)
 
-/-- Reading a syscall's register arguments is unaffected by adding the
-    purely logical idle function. The transport uses only word parameters. -/
-theorem Senke.ArgsW.withIdle_words {D : Deklaration} {L : Senke.Lay D} :
-    {types : List Ty} → (args : Env D types) → ∀ {registers : Nat → W},
-      types.all wortTy = true → ArgsW L registers args →
-        ArgsW L.withIdle registers (envR args)
-  | [], .nil, _, _, _ => trivial
-  | τ :: _, .cons value rest, registers, types, encoded => by
-    obtain ⟨wordType, restTypes⟩ := Bool.and_eq_true_iff.mp types
-    change ((if isPtr (tyR τ) then True else Enc L.withIdle (tyR τ) (valR τ value) (registers 0)) ∧ _)
-    refine ⟨?_, ArgsW.withIdle_words rest restTypes encoded.2⟩
-    cases τ <;> first | exact encoded.1 | cases wordType
+private theorem isPtr_tyR (type : Ty) : isPtr (tyR type) = isPtr type := by
+  cases type <;> rfl
+
+/-- The same physical register arguments represent the source call
+    and its renumbered version in GX. -/
+theorem Senke.ArgsW.withIdle_iff {D : Deklaration} {L : Senke.Lay D} :
+    {types : List Ty} → (args : Env D types) → ∀ (registers : Nat → W),
+      ArgsW L.withIdle registers (envR args) ↔ ArgsW L registers args
+  | [], .nil, _ => Iff.rfl
+  | τ :: _, .cons value rest, registers => by
+    simp only [envR, ArgsW, isPtr_tyR]
+    refine and_congr ?_ (ArgsW.withIdle_iff rest _)
+    split
+    · exact Iff.rfl
+    · exact Enc.withIdle_iff L (registers 0) τ value
+
+theorem Senke.SichtOK.withIdle {D : Deklaration} {O : Orakel D} (visible : SichtOK O) :
+    SichtOK O.mitRuhe :=
+  ⟨fun global world => (sichtbar_mitRuhe_welt O global world).trans (visible.sicht global (worldZ world))⟩
 
 private theorem image_host_answer [Kern] {before : Cfg imageTSO (Res T)} {after : imageTSO.St}
     {thread : Nat} {req : Req} {answer : Ans} (ordinary : (Op.sys req).special = false)
@@ -152,7 +160,6 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
     (selected : output.image.Y.tor routine = some gate)
     (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
     (scalar : ptrParam ((declOf output.compiled.unit).aparams routine) = none)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (world : World (declOf output.compiled.unit))
     (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
     (number : req.nr = BitVec.ofNat 64 gate.nr) (registers : ArgsW output.image.Y (reqArg req) args)
@@ -182,7 +189,7 @@ theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
     exact Option.isNone_iff_eq_none.mp checked
   refine ⟨.ask waiting rfl ordinary answered rfl, ?_, frame, nextWorld, ?_⟩
   · refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
-      carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
+      carriers, gate, word, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response, .inl ⟨noArea, ?_⟩⟩
     rw [wirkt_mitRuhe O]
     exact outcome
   · intro footprint buffers byte outside
@@ -245,7 +252,6 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
     (τ : Ty) (typed : (declOf output.compiled.unit).aerg routine = some τ) (slotIndex : Nat)
     (selected : output.image.Y.tor routine = some gate)
     (transport : areaGut gate ((declOf output.compiled.unit).aparams routine).length slotIndex = true)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (world : World (declOf output.compiled.unit))
     (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
     (fp : W) (base capacity : Nat)
@@ -281,7 +287,7 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
     of_decide_eq_true (Bool.and_eq_true_iff.mp transport).2
   refine ⟨.ask waiting rfl ordinary answered rfl,
     ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed, carriers,
-      gate, tag, extra, selected, number, ArgsW.withIdle_words args types registers, response,
+      gate, tag, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response,
       .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
     retained, nextWorld, ?_⟩
   intro footprint buffers byte outside
@@ -303,7 +309,6 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
     (routine : (declOf output.compiled.unit).Ax) (gate : TorB)
     (selected : output.image.Y.tor routine = some gate)
     (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
-    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
     (pointer tableNumber : Nat) (writable : Bool) (table : (declOf output.compiled.unit).Tab)
     (field : (declOf output.compiled.unit).Feld table)
     (parameter : ptrParam ((declOf output.compiled.unit).aparams routine) = some (pointer, tableNumber, writable))
@@ -352,7 +357,7 @@ theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
     Option.isNone_iff_eq_none.mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
   refine ⟨.ask waiting rfl ordinary answered rfl, ?_, readable, writableMap, outside, remaining, cells, ?_⟩
   · refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
-      carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
+      carriers, gate, word, extra, selected, number, (ArgsW.withIdle_iff args _).mpr registers, response, .inl ⟨noArea, ?_⟩⟩
     rw [wirkt_mitRuhe O]
     exact outcome
   · intro footprint buffers byte untouched

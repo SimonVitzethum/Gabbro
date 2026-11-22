@@ -169,7 +169,9 @@ theorem postSnapshots_withIdle (P : Programm D) (layout : Lay D) (f : D.Fn) (bas
     EntrySnapshots.words shifted = EntrySnapshots.words cells ∧
       EntrySnapshots.capture layout.withIdle shifted base = EntrySnapshots.capture layout cells base := by
   have cells : oldCells (P.mitRuhe.ensures (some f)) = (oldCells (P.ensures f)).map Zelle.withIdle := by
-    simp only [Programm.mitRuhe, oldCells_context, oldCells_holdings, oldCells_ruE]
+    simp only [Programm.mitRuhe]
+    with_unfolding_all exact ((oldCells_context _ _).trans
+      ((oldCells_holdings _ _).trans (oldCells_ruE (P.ensures f))))
   simp only [cells]
   exact EntrySnapshots.withIdle layout (oldCells (P.ensures f)) base
 
