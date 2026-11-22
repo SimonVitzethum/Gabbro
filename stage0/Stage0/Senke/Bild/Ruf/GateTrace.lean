@@ -8,7 +8,7 @@ import Mathlib.Data.List.Forall2
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
-  Gabbro.Grammatik.Parser.UebersetzeAllg Runner Runner.IR Runner.Beweis Runner.Mach
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
@@ -85,5 +85,71 @@ theorem ImageForeignTrace.appendGate [Kern] {output : Emitted src reserve option
   rw [log, List.filter_append]
   simp only [List.filter_cons, external, ite_true, List.filter_nil]
   exact List.rel_append matched (.cons ⟨rfl, gate, present, number⟩ .nil)
+
+/-- Reading a syscall's register arguments is unaffected by adding the
+    purely logical idle function. The transport uses only word parameters. -/
+theorem Senke.ArgsW.withIdle_words {D : Deklaration} {L : Senke.Lay D} :
+    {types : List Ty} → (args : Env D types) → ∀ {registers : Nat → W},
+      types.all wortTy = true → ArgsW L registers args →
+        ArgsW L.withIdle registers (envR args)
+  | [], .nil, _, _, _ => trivial
+  | τ :: _, .cons value rest, registers, types, encoded => by
+    obtain ⟨wordType, restTypes⟩ := Bool.and_eq_true_iff.mp types
+    change ((if isPtr (tyR τ) then True else Enc L.withIdle (tyR τ) (valR τ value) (registers 0)) ∧ _)
+    refine ⟨?_, ArgsW.withIdle_words rest restTypes encoded.2⟩
+    cases τ <;> first | exact encoded.1 | cases wordType
+
+/-- A real response to a returning scalar gate supplies the observed
+    word and the model answer on the exact issuing thread and call. -/
+theorem image_plain_gate_answer [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (answers : ImageGateAnswers output.image.Y O)
+    {before : Cfg imageTSO (Res T)} {memory : imageTSO.St} {thread : Nat}
+    {req : Req} {resume : Ans → Res T} {answer : Ans}
+    (waiting : before.ths[thread]? = some (some (.ask (.sys req) resume)))
+    (ordinary : (Op.sys req).special = false)
+    (answered : imageTSO.ans before.ms thread (.sys req) answer memory)
+    (routine : (declOf output.compiled.unit).Ax) (gate : TorB)
+    (selected : output.image.Y.tor routine = some gate)
+    (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
+    (scalar : ptrParam ((declOf output.compiled.unit).aparams routine) = none)
+    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
+    (world : World (declOf output.compiled.unit))
+    (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
+    (number : req.nr = BitVec.ofNat 64 gate.nr) (registers : ArgsW output.image.Y (reqArg req) args)
+    (unused : ∀ i, ((declOf output.compiled.unit).aparams routine).length ≤ i → i < 6 → reqArg req i = 0)
+    (represented : WeltAt (before.ms.1.view thread) output.image.Y world)
+    {first site last : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (atCall : ImageReach output E O first site) (afterCall : ImageReach output E O site last)
+    (alive : site.lebt thread = true) (sourceMemory : Speicher (declOf output.compiled.unit).mitRuhe)
+    (key : (mitSpeicher site.m sourceMemory).foreignCallKey thread = some ⟨routine, worldR world, envR args⟩)
+    (carriers : ∀ carrier, ¬ GeteiltV (D := declOf output.compiled.unit) E.P E.ws carrier →
+      TraegerGleich sourceMemory site.m.speicher carrier)
+    (observed : imageSourceForeignEvents last.m.lauf = imageSourceForeignEvents first.m.lauf ++ [(thread, routine)]) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
+      ImageGateEvent output E O first last after (thread, req, answer) ∧
+      KernW output.image.Y (before.ms.1.view thread) (after.ms.1.view thread) ∧
+      WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 := by
+  intro after
+  have otherRequest : req ≠ cloneReq := by
+    rintro rfl
+    exact (by decide : ¬ (Op.sys cloneReq).special = false) ordinary
+  have external := answered.2
+  change (if req = cloneReq then _ else
+    Kern.ans req (before.ms.1.view thread) answer (memory.1.view thread) ∧
+      memory.1.buf = before.ms.1.buf) at external
+  rw [if_neg otherRequest] at external
+  obtain ⟨word, extra, response, frame, nextWorld, outcome⟩ :=
+    answers.plain routine gate selected transport scalar world args req (before.ms.1.view thread)
+      number registers unused represented answer (memory.1.view thread) external.1
+  have noArea : gate.resultArea = none := by
+    have checked := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
+    exact Option.isNone_iff_eq_none.mp checked
+  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, frame, nextWorld⟩
+  refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
+    carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
+  rw [wirkt_mitRuhe O]
+  exact outcome
 
 end Gabbro.Stage0
