@@ -101,6 +101,6 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
   obtain ⟨maskedFrame, maskedCode⟩ := maskMemory_code_frame code frame nowrap frameReads covered
   obtain ⟨_, reference, request⟩ := spawnSite_memory maskedCode maskedFrame far scratchFits slotsFit entryFits stackFits
   obtain ⟨agrees, readable, writable⟩ := maskMemory_agreement reads (inSlots fp 0 slots) memory frameReads
-  exact reference.scoped_until_host request readable writable agrees
+  exact StarM.scoped_until_host reference request readable writable agrees
 
 end Gabbro.Stage0.Senke.BildMehr

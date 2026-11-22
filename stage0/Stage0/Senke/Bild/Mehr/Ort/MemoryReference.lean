@@ -84,9 +84,9 @@ theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
     (agreement : MaskedAgreement reads writes restricted actual) :
     ∀ {control memory}, SoloLauf start actual control memory →
       HostFreeControl reads writes control ∨ control = .ask (.sys call) resume := by
-  obtain ⟨expected, replay, atRequest, _, prefixScoped⟩ := reference.replay_on readable writable agreement
-  obtain ⟨readMap, writeMap⟩ := reference.permissions
-  obtain ⟨finished, reached, _, _, requestScoped⟩ := request.replay_on (blind_step _)
+  obtain ⟨_, replay, atRequest, _, prefixScoped⟩ := StarM.replay_on reference readable writable agreement
+  obtain ⟨readMap, writeMap⟩ := StarM.permissions reference
+  obtain ⟨_, reached, _, _, requestScoped⟩ := request.replay_on (blind_step _)
     (by intro same; cases same) (by intro op continuation same memory; cases same; rfl)
     (fun byte allowed => readable byte (by simpa only [readMap] using allowed))
     (fun byte allowed => writable byte (by simpa only [writeMap] using allowed)) atRequest
@@ -96,7 +96,7 @@ theorem StarM.scoped_until_host [Kern] {count : Nat} {start boundary : T}
   · exact .inl trivial
   rcases Nat.lt_or_ge used count with inside | outside
   · exact .inl (prefixScoped complete inside residual)
-  · have remaining := replay.after_reference complete outside
+  · have remaining := StarM.after_reference replay complete outside
     cases remaining with
     | refl => exact (requestScoped residual).symm
     | next first _ =>
