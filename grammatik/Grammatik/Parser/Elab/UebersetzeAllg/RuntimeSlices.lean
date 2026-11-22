@@ -432,9 +432,9 @@ theorem specArrayIndexArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declO
   obtain ⟨_, accepted⟩ := specArrayIndexArgument_of_local ctx name element capacity index.val index.isLt read baseType array
   refine ⟨accepted, ?_, ?_⟩
   · rw [lowWertE]
-    simp only [typed, lowWertE, LowSide.wert, zahlVon, idxW, dite_eq_left (Int.ofNat_zero_le index.val),
+    simp only [typed, lowWertE, LowSide.wert, zahlVon, LowWert.zahl, idxW, dite_eq_left (Int.ofNat_zero_le index.val),
       dite_eq_left high] <;> rfl
   · intro entry world env
-    simp only [eval, position, Zahl.fin, Zahl.weiter, Int.toNat_ofNat] <;> rfl
+    simp only [eval, position, Zahl.fin, Zahl.weiter, Int.toNat_natCast] <;> rfl
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
