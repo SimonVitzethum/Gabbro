@@ -7,7 +7,7 @@ public import Stage0.Senke.Bild.Mehr.ImageTransition
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
-  Gabbro.Grammatik.Parser.UebersetzeAllg Runner Runner.IR Runner.Beweis Runner.Mach
+  Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke Runner Runner.IR Runner.Beweis Runner.Mach
 
 /-- The actual thread exit retires one allocated slot. A completed call
     keeps its finished source head, and a declared non-returning call
