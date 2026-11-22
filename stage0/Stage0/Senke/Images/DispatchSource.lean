@@ -126,7 +126,7 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
   have declaredThread := Nat.succ_le_of_lt (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨fits, setup, typed⟩ := output.loaded_root_frame loaded declared
   obtain ⟨frame, words⟩ := image_stack_frame_preserved declaredThread preserved fits setup typed
-  refine Or.inr ⟨root, ?_, Or.inl head, code, frame, ?_,
+  refine Or.inr ⟨root, ?_, Or.inl head, code, frame, fits, ?_,
     ⟨⟨pc, fp⟩, ?_, Or.inl rfl⟩⟩
   · rw [unit.starts]
     exact declared
@@ -224,7 +224,11 @@ theorem LoadedIRImage.source_start [Kern] {output : Emitted src reserve options}
       (.next ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩) (imageSourceStart E) := by
     rw [view]
     refine Or.inr ⟨⟨output.compiled.main, output.args⟩, by rw [unit.starts]; rfl,
-      Or.inl rfl, output.loaded_code loaded.payload, initialFrame, ?_, ?_⟩
+      Or.inl rfl, output.loaded_code loaded.payload, initialFrame, ?_, ?_, ?_⟩
+    · unfold startFrameBytes at entryFrame
+      split at entryFrame
+      · assumption
+      · cases entryFrame
     · simpa only [Nat.mul_zero, Nat.add_zero] using startFrameBytes_read entryFrame entryLoaded
     · refine ⟨⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩, ?_, Or.inl rfl⟩
       refine ⟨rfl, 0, Nat.zero_le _, ?_, rfl⟩

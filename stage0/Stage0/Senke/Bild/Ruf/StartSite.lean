@@ -284,7 +284,8 @@ theorem Emitted.root_depth_phase [Kern] (output : Emitted src reserve options)
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
   obtain ⟨after, run, shared, others, loaded, permissions, words, depth, _, _⟩ :=
     (output.childStartSite declared).depth_preserves_frame code running frame fits args
-  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
+  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, fits, ?_, ?_⟩,
+    shared, others, depth⟩
   · intro i present
     rw [← address i]
     exact words i present

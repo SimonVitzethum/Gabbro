@@ -275,7 +275,7 @@ theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
       FrameOK memory fp output.image.Ks ∧
       WordsAt memory fp (FB + FB) (encodeEnv output.image.Y root.2) := by
   intro fp
-  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, _, code, frame, _, args, _⟩ := phase
   · exact (pastLoader.elim (· firstThread) (· loader)).elim
   have same := Option.some.inj (chosen.symm.trans declared)
   subst start
@@ -288,6 +288,50 @@ theorem ImageRootPhase.payload [Kern] {output : Emitted src K options}
     rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
   rw [address]
   exact args i present
+
+/-- A startup phase past the loader depends only on immutable code
+    and its own stack. The same pending instruction survives writes
+    by other threads outside these regions. -/
+theorem ImageRootPhase.transport [Kern] {output : Emitted src K options}
+    {E : Einheit (declOf output.compiled.unit)} {memory next : Mem} {thread : Nat}
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {control : Res T} (phase : ImageRootPhase output E history memory thread control state)
+    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4)
+    (declared : thread ≤ output.starts.length)
+    (same : GleichAuf (imageRootReads output thread) memory next) :
+    ImageRootPhase output E history next thread control state := by
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
+  · exact (pastLoader.elim (· firstThread) (· loader)).elim
+  let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))
+  have stack (i : Nat) (inside : i < output.image.Ks) :
+      GleichAuf (fenster (slot fp (BitVec.ofNat 64 i))) memory next :=
+    fun byte touched => same byte (.inl (imageStackFootprint_slot declared inside touched))
+  refine .inr ⟨start, chosen, head, ?_, ?_, fits, ?_, pointer, site, ?_⟩
+  · intro index present
+    obtain ⟨value, readable, writable⟩ :=
+      same _ (.inr (output.code_byte_before_stacks present))
+    rw [← value, ← readable, ← writable]
+    exact code index present
+  · refine ⟨frame.lt, ?_, ?_⟩
+    · intro index inside
+      rw [← Mem.all_congr (fun offset valid => (stack index inside _ (fenster_add _ valid)).2.1)]
+      exact frame.rd index inside
+    · intro index inside
+      rw [← Mem.all_congr (fun offset valid => (stack index inside _ (fenster_add _ valid)).2.2)]
+      exact frame.wr index inside
+  · intro i inside
+    have address : slot fp (BitVec.ofNat 64 (FB + FB + i)) =
+        BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) + 8 * (FB + FB + i)) := by
+      change BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread)) +
+        BitVec.ofNat 64 (FB + FB + i) * BitVec.ofNat 64 8 = _
+      rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+    rw [← address, ← gleich_rd64 (stack (FB + FB + i) (by omega)), address]
+    exact args i inside
+  · rcases phase with done | pending | clone
+    · exact .inl done
+    · exact .inr (.inl (fun equivalent agrees =>
+        pending equivalent (fun byte present => (same byte present).trans (agrees byte present))))
+    · exact .inr (.inr clone)
 
 /-- The root phase exposes a child's arguments in declared start order. -/
 theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)

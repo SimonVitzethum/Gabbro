@@ -140,6 +140,11 @@ def ImageRootInstruction (output : Emitted src reserve options) (thread : Nat) (
   ∃ instruction, base ≤ instruction ∧ instruction < base + size ∧
     pointer.pc = BitVec.ofNat 64 (codeBase + 16 * instruction)
 
+/-- Before entering a body, a startup thread reads its own argument
+    frame and instruction bytes preceding the stack reservations. -/
+def imageRootReads (output : Emitted src reserve options) (thread : Nat) (address : W) : Prop :=
+  imageStackFootprint output thread address ∨ address.toNat < output.image.fp0
+
 /-- A thread outside the lowered body is at the mapped loader, its
     own root stub, or the pending clone continuation of that stub. -/
 def ImageRootPhase [Kern] (output : Emitted src reserve options)
@@ -152,11 +157,14 @@ def ImageRootPhase [Kern] (output : Emitted src reserve options)
     (state.m.faeden thread = (imageSourceStart E).m.faeden thread ∨ FertigG state.m thread) ∧
     BytesAt memory codeBase (output.image.code.flatMap encII) ∧
     FrameOK memory (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread))) output.image.Ks ∧
+    FB + FB + (encodeEnv output.image.Y start.2).length ≤ output.image.Ks ∧
     (∀ i (inside : i < (encodeEnv output.image.Y start.2).length),
       memory.rd64 (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) +
         8 * (FB + FB + i))) = some (encodeEnv output.image.Y start.2)[i]) ∧
     ∃ t : T, ImageRootInstruction output thread t ∧
-      (control = .next t ∨ RunP (IR.step t) memory control memory ∨
+      (control = .next t ∨
+        (∀ equivalent, GleichAuf (imageRootReads output thread) memory equivalent →
+          RunP (IR.step t) equivalent control equivalent) ∨
         ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ control = ret1 t id)
 
 /-- Each live slot is at a body position, its root stub or the loader. -/

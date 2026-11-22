@@ -4,6 +4,7 @@ public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -162,29 +163,50 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
     exact (Option.some.inj (Option.some.inj atSlot)) ▸ blind)
   exact ⟨step, image_body_local_change length related indices roots present covers buffers' otherViews relatedStep⟩
 
-/-- Once every live slot has a body relation, an actual buffer drain
-    preserves all body states and the exact committed GX world. -/
+/-- A flush is silent even while other roots are entering. Removing a
+    pending private stack store preserves the SC projection and each
+    root's code, arguments, and exact pending control. -/
 theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
-    {footprint : Nat → W → Prop} {snapshots : Nat → Option Solo}
-    {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem} {memory : imageTSO.St}
-    (buffers : PrivateBuffers footprint before.ms.1)
-    (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint before.ms).1, before.ths⟩ state snapshots positions committed)
-    (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
+    {memory : imageTSO.St}
+    (matched : ImageRuntimeMatchesAt (imageStackFootprint output) output E O history before state)
+    (allocated : before.ths.length ≤ output.starts.length + 1)
+    (pastLoader : before.ths[0]? ≠ some (some Runner.Beweis.t4))
     (flushed : imageTSO.tau before.ms memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths⟩
-    ProcessStep imageTSO actI before [] after ∧ ImageRuntimeMatches output E O history after state := by
-  have same := projectSCState_flush (layout := L0) flushed footprint
+    ProcessStep imageTSO actI before [] after ∧
+      ImageRuntimeMatchesAt (imageStackFootprint output) output E O history after state := by
+  intro after
+  obtain ⟨body, buffers, length, registered, roots⟩ := matched
+  have projection := projectSCState_flush (layout := L0) flushed (imageStackFootprint output)
     (fun i store pending byte hit => (buffers i store pending byte hit).1) buffers.disjoint
-  have stable : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
-      ⟨(projectSCState footprint memory).1, before.ths⟩ state snapshots positions committed := by
-    rw [same]
-    exact related
-  exact ⟨.tau flushed, footprint, before.ths, buffers.flush flushed, rfl,
-    .inr ⟨snapshots, positions, committed, stable, indices⟩, fun _ => .inl rfl⟩
+  have preserved := tso_flush_preserves_views (layout := L0) flushed (imageRootReads output) (by
+    intro i store pending j different address readable written
+    have privateByte := (buffers i store pending address written).1
+    rcases readable with own | code
+    · exact different (imageStackFootprint_disjoint own privateByte)
+    · exact (Nat.not_le_of_lt code) ((Nat.le_add_right _ _).trans privateByte.2.1))
+  refine ⟨.tau flushed, body, buffers.flush flushed, length, ?_, ?_⟩
+  · change _ ∨ ∃ snapshots positions committed,
+      MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+        ⟨(projectSCState (imageStackFootprint output) memory).1, body⟩ state snapshots positions committed ∧ _
+    rw [projection]
+    exact registered
+  · intro thread
+    rcases roots thread with same | ⟨control, absent, live, phase⟩
+    · exact .inl same
+    · have declared : thread ≤ output.starts.length := by
+        have present := (List.getElem?_eq_some_iff.mp live).1
+        omega
+      have running : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4 := by
+        by_cases entry : thread = 0
+        · subst thread
+          exact .inr (fun loader => pastLoader (loader ▸ live))
+        · exact .inl entry
+      exact .inr ⟨control, absent, live, phase.transport running declared (fun address visible =>
+        (preserved thread address visible).symm)⟩
 
 /-- A floating answer is an internal IR observation of the issuing
     thread. It changes neither committed memory nor pending stores, and
