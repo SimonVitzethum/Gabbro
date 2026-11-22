@@ -22,6 +22,49 @@ mutual
   | value :: rest => hasAwait value || argumentsAwait rest
 end
 
+/-- Generated operands carry their source occurrence. The parser cannot
+    construct these reserved builtin names from a source identifier. -/
+@[expose] public def segmentValue (position : Nat) (source : SExpr) : SExpr :=
+  .built "#async-value" [.lit position, source]
+
+@[expose] public def segmentArgument (position : Nat) (callee : String) (index : Nat)
+    (source : SExpr) : SExpr :=
+  .built "#async-argument" [.lit position, .lit index, .call callee [source]]
+
+@[expose] public def segmentValueSource : SExpr → SExpr
+  | .built "#async-value" [.lit _, source] => source
+  | source => source
+
+public theorem segmentValue_names (position : Nat) (source : SExpr) :
+    expressionNames (segmentValue position source) = expressionNames source := by
+  simp only [segmentValue, expressionNames, argumentNames, List.nil_append, List.append_nil]
+
+public theorem segmentArgument_names (position : Nat) (callee : String) (index : Nat) (source : SExpr) :
+    expressionNames (segmentArgument position callee index source) = expressionNames source := by
+  simp only [segmentArgument, expressionNames, argumentNames, List.nil_append, List.append_nil]
+
+@[expose] public def tagArguments (position : Nat) (callee : String) : Nat → List SExpr → List SExpr
+  | _, [] => []
+  | index, source :: rest =>
+    segmentArgument position callee index source :: tagArguments position callee (index + 1) rest
+
+@[expose] public def tagFuture (position : Nat) : FutureExpr → FutureExpr
+  | .call name args => .call name (tagArguments position name 0 args)
+  | .join left right => .join (tagFuture position left) (tagFuture position right)
+
+public theorem tagArguments_names (position : Nat) (callee : String) (index : Nat) (args : List SExpr) :
+    argumentNames (tagArguments position callee index args) = argumentNames args := by
+  induction args generalizing index with
+  | nil => rfl
+  | cons source rest ih =>
+    simp only [tagArguments, argumentNames, segmentArgument_names, ih]
+
+public theorem tagFuture_names (position : Nat) (future : FutureExpr) :
+    futureNames (tagFuture position future) = futureNames future := by
+  induction future with
+  | call name args => exact tagArguments_names position name 0 args
+  | join left right ihLeft ihRight => simp only [tagFuture, futureNames, ihLeft, ihRight]
+
 /-- `async::join(a(), b())` owns two lazy children. Ordinary calls keep
     their nominal declaration identity. Nested suspension in arguments is
     refused rather than being evaluated as an ordinary record projection. -/
@@ -51,10 +94,10 @@ public structure Analysis where
     let command ← match value with
       | .field future "await" => do
         let future ← elaborateFuture future
-        pure (.await name future (analysis.boundary position))
+        pure (.await name (tagFuture position future) (analysis.boundary position))
       | _ =>
         if hasAwait value then throw "async: nested await needs control-flow expansion"
-        else pure (.bind name value (analysis.cost value))
+        else pure (.bind name (segmentValue position value) (analysis.cost value))
     pure ((name, type), command)
   | .bind _ _ none _ => .error "async: local result type must be explicit"
   | .bind true _ _ _ => .error "async: mutable local needs control-flow expansion"
@@ -91,7 +134,7 @@ public structure Analysis where
     | _ => (statements, result)
   if hasAwait result then throw "async: bind the awaited result before returning"
   let (fields, commands) ← elaborateCommands analysis 0 statements
-  pure (fields, commands, result)
+  pure (fields, commands, segmentValue commands.length result)
 
 /-- A checked outer AST retains the complete source signature and its exact body derivation. -/
 public structure Elaborated (analysis : Analysis) (source : Function) where
@@ -122,7 +165,7 @@ public structure Elaborated (analysis : Analysis) (source : Function) where
         fields := fields
         body := commands
         result := result
-        returnCostBound := analysis.cost result }
+        returnCostBound := analysis.cost (segmentValueSource result) }
       if checked : asyncCheck function = true then
         .ok ⟨function, checked, rfl, rfl, resultType, body⟩
       else .error "async: duplicate storage, missing saved local, held lock or ownership mismatch"

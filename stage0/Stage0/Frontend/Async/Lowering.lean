@@ -174,34 +174,40 @@ public theorem generatedRecordName_fresh {source : UTypeScope} {record : URecord
     (parameters : List (String × Ty × UParamArt)) : UFn :=
   { fn with params := FrameLocals parameters, kinds := parameters.map (·.2.2) }
 
+@[expose] public def lowerExpression (u : UProg) (Λ : List (Res (declOf u))) (fn : UFn)
+    (parameters : List (String × Ty × UParamArt)) (expected : Option Ty) (side : USide) :
+    Except String (LowWert u ((FrameLocals parameters).map Prod.snd) Λ) :=
+  match expected with
+  | none => lowWertE u _ Λ (expressionFunction fn parameters) none side
+  | some type => (lowWertAtE u _ Λ (expressionFunction fn parameters) none type side).map (LowWert.mk type)
+
 /-- A resolved segment expression records the actual two ordinary
     elaboration steps on its original syntax and its exact frame locals. -/
 public structure CanonicalExpression (u : UProg) (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn)
-    (function : AsyncFn) (source : SExpr) where
+    (function : AsyncFn) (source : SExpr) (expected : Option Ty := none) where
   parameters : List (String × Ty × UParamArt)
   side : USide
   value : LowWert u ((FrameLocals parameters).map Prod.snd) Λ
   resolved : expressionParameters ctx function source = .ok parameters
   read : uWertBody (expressionContext ctx function source parameters) source = .ok side
-  lowered : lowWertE u ((FrameLocals parameters).map Prod.snd) Λ
-    (expressionFunction fn parameters) none side = .ok value
+  lowered : lowerExpression u Λ fn parameters expected side = .ok value
 
 @[expose] public def resolveExpression (u : UProg) (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn)
-    (function : AsyncFn) (source : SExpr) : Except String (CanonicalExpression u Λ ctx fn function source) :=
+    (function : AsyncFn) (source : SExpr) (expected : Option Ty := none) :
+    Except String (CanonicalExpression u Λ ctx fn function source expected) :=
   match resolved : expressionParameters ctx function source with
   | .error failure => .error failure
   | .ok parameters =>
     match read : uWertBody (expressionContext ctx function source parameters) source with
     | .error failure => .error failure
     | .ok side =>
-      match lowered : lowWertE u ((FrameLocals parameters).map Prod.snd) Λ
-          (expressionFunction fn parameters) none side with
+      match lowered : lowerExpression u Λ fn parameters expected side with
       | .error failure => .error failure
       | .ok value => .ok ⟨parameters, side, value, resolved, read, lowered⟩
 
 @[expose] public def CanonicalExpression.bound {u : UProg} {Λ : List (Res (declOf u))}
-    {ctx : UCtx} {fn : UFn} {function : AsyncFn} {source : SExpr}
-    (resolved : CanonicalExpression u Λ ctx fn function source) : BoundExpression (declOf u) Λ :=
+    {ctx : UCtx} {fn : UFn} {function : AsyncFn} {source : SExpr} {expected : Option Ty}
+    (resolved : CanonicalExpression u Λ ctx fn function source expected) : BoundExpression (declOf u) Λ :=
   BoundExpression.ofExpr (FrameLocals resolved.parameters) resolved.value.term
 
 /-- Literal return expressions need no incoming frame slot. This
@@ -220,8 +226,8 @@ public theorem resolveExpression_literal_erfuellbar (u : UProg) (Λ : List (Res 
       .ok (.lit (Int.ofNat value)) := by
     simp only [uWertBody, uRechne, uWertBlatt]
   let term : LowWert u [] Λ := ⟨.int value value, .lit value⟩
-  have lowered : lowWertE u [] Λ (expressionFunction fn []) none (.lit value) = .ok term := by
-    simp only [lowWertE, LowSide.wert, term]
+  have lowered : lowerExpression u Λ fn [] none (.lit value) = .ok term := by
+    simp only [lowerExpression, lowWertE, LowSide.wert, term]
   let resolved : CanonicalExpression u Λ ctx fn function (.lit value) :=
     ⟨[], .lit value, term, parameters, read, lowered⟩
   refine ⟨resolved, ?_, rfl, rfl⟩
@@ -299,13 +305,36 @@ public structure ResolvedPoll (u : UProg) (V : Vertrag (declOf u)) (Λ : List (R
   else .error "async: selected child layout does not match its constructor"
 
 /-- Check every declaration in the original body using the ordinary
-    expression reader and the actual named child-poll resolver. -/
+    expression reader and the actual named child-poll resolver.
+    A generated occurrence sees only preceding bindings and is checked
+    in the type of its declared destination. -/
+@[expose] public def expressionAtSite (u : UProg) (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn)
+    (function : AsyncFn) (types : TypeResolution)
+    (arguments : String → Option (List Ty)) : SExpr → Option (BoundExpression (declOf u) Λ)
+  | .built "#async-value" [.lit position, source] => do
+    let sourceType ← if position = function.body.length then
+      some function.resultType
+    else do
+      let some (.bind name _ _) := function.body[position]? | none
+      function.fields.lookup name
+    let visible := { function with fields := function.fields.take position }
+    let typed ← (resolveExpression u Λ ctx fn visible source (some (types.ordinary sourceType))).toOption
+    some typed.bound
+  | .built "#async-argument" [.lit position, .lit index, .call callee [source]] => do
+    let some (.await ..) := function.body[position]? | none
+    let types ← arguments callee
+    let expected ← types[index]?
+    let visible := { function with fields := function.fields.take position }
+    let typed ← (resolveExpression u Λ ctx fn visible source (some expected)).toOption
+    some typed.bound
+  | source => (resolveExpression u Λ ctx fn function source).toOption.map CanonicalExpression.bound
+
 @[expose] public def checkFunctionElaboration (u : UProg) (V : Vertrag (declOf u))
     (Λ : List (Res (declOf u))) (ctx : UCtx) (fn : UFn) (function : AsyncFn) (types : TypeResolution)
     (children : (name : String) → Option (ResolvedPoll u V Λ types name)) :
     Except String (Elaboration (declOf u) V Λ types function) :=
   checkElaboration types function
-    (fun source => (resolveExpression u Λ ctx fn function source).toOption.map CanonicalExpression.bound)
+    (expressionAtSite u Λ ctx fn function types (fun name => (children name).map (·.callee.parameters)))
     (fun name => (children name).map ResolvedPoll.callee)
 
 /-- This connects the actual source declaration and its canonical typed
