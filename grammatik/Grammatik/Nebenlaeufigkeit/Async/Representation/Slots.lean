@@ -79,6 +79,61 @@ public inductive NamedFrameSlot (types : TypeResolution) (name : String) (source
         (by simpa only [List.lookup_cons, beq_eq_false_iff_ne.mpr same, Bool.false_eq_true, ite_false] using present)
       ⟨.tail selected.val, .tail (Ne.symm same) selected.property⟩
 
+private theorem SlotsRep.save_other_fields {oldLive nextLive : List String} {frame : Frame (Value D)}
+    {fields : List (String × Parser.STyp)} {record : ProdVal D.Fn D.passt (slotTypes types fields)}
+    (represented : SlotsRep D types oldLive frame fields record)
+    (name : String) (value : Value D)
+    (absent : name ∉ fields.map Prod.fst)
+    (retained : ∀ label, label ≠ name → (label ∈ oldLive ↔ label ∈ nextLive)) :
+    SlotsRep D types nextLive (save frame name value) fields record := by
+  induction represented with
+  | nil => exact .nil
+  | @dead label fields rest sourceType unused tail ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at absent
+    exact .dead (fun live => unused ((retained label (Ne.symm absent.1)).mpr live)) (ih absent.2)
+  | @live label old sourceType ordinary fields rest used found typed tail ih =>
+    simp only [List.map_cons, List.mem_cons, not_or] at absent
+    have other := Ne.symm absent.1
+    exact .live ((retained label other).mp used)
+      (by simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr other] using found)
+      typed (ih absent.2)
+
+/-- Writing the computed named slot preserves the frame relation. The
+    other fields retain their previous values and canonical absent tags. -/
+public theorem NamedFrameSlot.save_rep {name : String} {sourceType : Parser.STyp}
+    {fields : List (String × Parser.STyp)}
+    {destination : FieldAt (slotTypes types fields) (.sum [none, some (types.ordinary sourceType)])}
+    (named : NamedFrameSlot types name sourceType fields destination)
+    {oldLive nextLive : List String} {frame : Frame (Value D)} {value : Value D}
+    {ordinary : Wert D (types.ordinary sourceType)}
+    (typed : valueAt D (types.ordinary sourceType) value = some ordinary)
+    (needed : name ∈ nextLive)
+    (retained : ∀ label, label ≠ name → (label ∈ oldLive ↔ label ∈ nextLive))
+    (unique : (fields.map Prod.fst).Nodup) :
+    ∀ {record : ProdVal D.Fn D.passt (slotTypes types fields)},
+      SlotsRep D types oldLive frame fields record →
+      SlotsRep D types nextLive (save frame name value) fields
+        (prodSetW (F := D.Fn) (passt := D.passt) destination record
+          (presentValue D (types.ordinary sourceType) ordinary)) := by
+  induction named with
+  | head =>
+    intro record represented
+    simp only [List.map_cons, List.nodup_cons] at unique
+    cases represented with
+    | dead _ tail =>
+      exact .live needed List.lookup_cons_self typed (tail.save_other_fields name value unique.1 retained)
+    | live _ _ _ tail =>
+      exact .live needed List.lookup_cons_self typed (tail.save_other_fields name value unique.1 retained)
+  | tail other slot ih =>
+    intro record represented
+    simp only [List.map_cons, List.nodup_cons] at unique
+    cases represented with
+    | dead unused tail => exact .dead (fun live => unused ((retained _ other).mpr live)) (ih unique.2 tail)
+    | live used found previous tail =>
+      exact .live ((retained _ other).mp used)
+        (by simpa only [save, List.lookup_cons, beq_eq_false_iff_ne.mpr other] using found)
+        previous (ih unique.2 tail)
+
 /-- Generate the ordinary product arguments for the smaller live set.
     Retained slots are projected at their declared types. Dead slots
     use the absent tag, which has no source payload. -/
@@ -228,6 +283,57 @@ public theorem frameRep_encoded (types : TypeResolution) (f : AsyncFn)
     (represented : FrameRep D types f phase frame value) :
     encodeFrame D types f phase frame = some value :=
   slotsRep_encoded types (liveAt f phase) frame (f.params ++ f.fields) value represented.slots
+
+/-- The actual binding segment constructs the canonical successor frame
+    from the declaration's live set and the name resolved by elaboration. -/
+public theorem bindFrameBlock_rep {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {f : AsyncFn} {before next : Phase} (destination : String) (sourceType : Parser.STyp)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (needed : destination ∈ liveAt f next)
+    (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
+    (saved : Var Γ (frameType types f)) (expression : Expr D Γ Λ (types.ordinary sourceType))
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (represented : FrameRep D types f before frame (env.get saved)) :
+    let keep := without destination (liveAt f next)
+    let slot := (frameSlot types destination sourceType (f.params ++ f.fields) binding).val
+    let answer := evaluateExpression expression world env
+    let result := Value.typed (types.ordinary sourceType) answer.1
+    ∃ record, execBlock oracle passes calls
+        (bindFrameBlock (V := V) (l := l) types f keep saved slot expression) world env =
+        .ok answer.2.1 (env.set saved record) ∧
+      FrameRep D types f next (save frame destination result) record := by
+  intro keep slot answer result
+  have kept (name : String) (member : name ∈ keep) : name ∈ liveAt f before := by
+    have present := List.mem_filter.mp (show name ∈ (liveAt f next).filter
+      (fun candidate => !(candidate == destination)) from member)
+    have distinct : name ≠ destination := by
+      intro equal
+      subst name
+      simpa only [beq_self_eq_true, Bool.not_true] using present.2
+    exact retained name present.1 distinct
+  have stable (name : String) (other : name ≠ destination) : name ∈ keep ↔ name ∈ liveAt f next := by
+    simp only [keep, without, List.mem_filter, beq_eq_false_iff_ne.mpr other, Bool.not_false,
+      Bool.true_eq_true, and_true]
+  let extended : Env D (types.ordinary sourceType :: Γ) := .cons answer.1 env
+  have old : SlotsRep D types (liveAt f before) frame (f.params ++ f.fields)
+      (extended.get (.there saved)) := represented.slots
+  have trimmed := (trimFrameExpr_rep (Λ := Λ) (.there saved) kept answer.2.1 answer.2.1 extended old).2
+  have named : NamedFrameSlot types destination sourceType (f.params ++ f.fields) slot :=
+    (frameSlot types destination sourceType (f.params ++ f.fields) binding).property
+  have typed : valueAt D (types.ordinary sourceType) result = some answer.1 := valueAt_typed D _ _
+  have stored := named.save_rep typed needed stable represented.unique trimmed
+  refine ⟨_, bindFrameBlock_exec types f keep saved slot expression oracle passes calls world env,
+    ⟨stored, ?_, represented.unique⟩⟩
+  intro name live
+  by_cases same : name = destination
+  · subst name
+    obtain ⟨earlier, later, fieldsEq, _⟩ := List.lookup_eq_some_iff.mp binding
+    apply List.mem_map_of_mem
+    rw [fieldsEq]
+    exact List.mem_append_right _ List.mem_cons_self
+  · exact represented.declared name (retained name live same)
 
 /-- Authority is the ordinary resource inventory, separate from by-value
     storage. The injective declaration numbering cannot alias two owners. -/

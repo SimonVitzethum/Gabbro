@@ -264,6 +264,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.bind_resume_frame
 #print axioms Gabbro.Grammatik.Async.Representation.trimFrameExpr_rep
 #print axioms Gabbro.Grammatik.Async.Representation.bindFrameBlock_exec
+#print axioms Gabbro.Grammatik.Async.Representation.bindFrameBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.frameSlot
 #print axioms Gabbro.Grammatik.Async.Representation.evaluateBind_preserves
 #print axioms Gabbro.Grammatik.Async.Representation.await_runTaskPoll_ready_frame
