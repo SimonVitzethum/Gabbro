@@ -259,16 +259,122 @@ public theorem pollAnswer_waiting (inventory : Inventory D) (state : Var Γ (sta
   exact ran.trans (pollAnswerArm_waiting (l := l) state result exit oracle passes calls
     world env ((phases f).get i) tag frame task payload selected)
 
+@[expose] public def pollFunctionRest {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (result : V.erg = some (pollResultType types f)) (exit : Λ.Perm V.ende) :
+    Endblock D V false [.bool, stateType types f] Λ :=
+  .cons (pollGuard types f (.there .here))
+    (.cons (checkedRetryStmt table (.there .here) .here (rejectBlock _ _ _ _ _))
+      (.cons (pollAnswer (.there .here) result exit)
+        (.ret (resultExpr result (pendingReply (.there .here))) exit)))
+
 /-- Generate an ordinary private G function. The single input is the
     future state, and its normal result is the canonical Ready/Pending sum. -/
 @[expose] public def pollFunction {elaboration : Elaboration D V Λ types f}
     (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
     (result : V.erg = some (pollResultType types f)) (exit : Λ.Perm V.ende) :
     Endblock D V false [stateType types f] Λ :=
-  .bind .fls
-    (.cons (pollGuard types f (.there .here))
-      (.cons (checkedRetryStmt table (.there .here) .here (rejectBlock _ _ _ _ _))
-        (.cons (pollAnswer (.there .here) result exit)
-          (.ret (resultExpr result (pendingReply (.there .here))) exit))))
+  .bind .fls (pollFunctionRest table result exit)
+
+@[expose] public def PollFunctionRefines (inventory : Inventory D)
+    (result : V.erg = some (pollResultType types f)) (returned : EndAusgang V false [stateType types f]) :
+    Except (Logik D ⊕ Hardware D) (Event (Value D) × State (Value D) (Child D types) × World D × Nat) → Prop
+  | .error (.inl failure) => returned = .logik failure
+  | .error (.inr failure) => returned = .hardware failure
+  | .ok (.refused, _, _, _) => returned = .logik .kapazitaet
+  | .ok (.next, _, _, _) => False
+  | .ok (.ready value _, _, after, _) =>
+    ∃ typed, valueAt D (types.ordinary f.resultType) value = some typed ∧
+      returned = .zurueck after (resultValue result
+        (⟨⟨0, Nat.zero_lt_succ 1⟩, typed⟩ : Wert D (pollResultType types f)))
+  | .ok (.pending, target, after, _) =>
+    ∃ record, Inv f types inventory target record ∧ encode D types f target = some record ∧
+      returned = .zurueck after (resultValue result
+        (⟨⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ 0)⟩, record⟩ : Wert D (pollResultType types f)))
+
+/-- Executing the emitted G function produces the exact source poll reply
+    or the same failure. Pending returns the whole updated child record.
+    A terminal input refuses before any child call. -/
+public theorem pollFunction_refines {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (inventory : Inventory D) (fixed : FixedActivationInventory (f := f) inventory)
+    (result : V.erg = some (pollResultType types f)) (exit : Λ.Perm V.ende)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (source : State (Value D) (Child D types)) (world : World D)
+    (record : Wert D (stateType types f)) (represented : Inv f types inventory source record) :
+    PollFunctionRefines inventory result
+      (execEnd oracle passes calls (pollFunction table result exit) world (.cons record .nil))
+      (resolvedPoll elaboration calls prices source world) := by
+  let context := [.bool, stateType types f]
+  let state : Var context (stateType types f) := .there .here
+  let finished : Var context .bool := .here
+  let env : Env D context := .cons false (.cons record .nil)
+  have start : execEnd oracle passes calls (pollFunction table result exit) world (.cons record .nil) =
+      (execEnd oracle passes calls (pollFunctionRest table result exit) world env).schrumpf := rfl
+  rw [start]
+  have guard := pollGuard_exec types f inventory state oracle passes calls world env source represented
+    (V := V) (Λ := Λ) (l := false)
+  by_cases active : Pollable source
+  · have accepted : pollGuardResult (V := V) (l := false) world env source = .ok world env := by
+      cases source <;> first | rfl | exact active.elim
+    have passed : execStmt oracle passes calls (pollGuard (V := V) (Λ := Λ) (l := false) types f state) world env =
+        .ok world env := guard.trans accepted
+    let overflow := rejectBlock D V false context Λ
+    have loop := checkedRetryStmt_refines table inventory fixed state finished Nat.one_ne_zero oracle passes calls
+      prices overflow source world env rfl represented
+    change PollFunctionRefines inventory result
+      ((execEnd oracle passes calls (.cons (pollGuard types f state)
+        (.cons (checkedRetryStmt table state finished overflow)
+          (.cons (pollAnswer state result exit) (.ret (resultExpr result (pendingReply state)) exit))))
+        world env).schrumpf) _
+    simp only [execEnd, passed]
+    cases answered : resolvedPoll elaboration calls prices source world with
+    | error failure =>
+      rw [answered] at loop
+      cases failure with
+      | inl failure =>
+        change execStmt oracle passes calls (checkedRetryStmt table state finished overflow) world env =
+          .logik failure at loop
+        rw [loop]
+        rfl
+      | inr failure =>
+        change execStmt oracle passes calls (checkedRetryStmt table state finished overflow) world env =
+          .hardware failure at loop
+        rw [loop]
+        rfl
+    | ok outcome =>
+      obtain ⟨event, target, after, cost⟩ := outcome
+      have shape := resolvedPoll_result_shape elaboration calls prices source target world after event cost
+        (checkedTable_storageValid table inventory source record represented) answered
+      rw [answered] at loop
+      obtain ⟨updated, executed, invariant, _⟩ := loop
+      change execStmt oracle passes calls (checkedRetryStmt table state finished overflow) world env =
+        .ok after updated at executed
+      rw [executed]
+      cases event with
+      | next => exact shape.elim
+      | refused => exact (shape active).elim
+      | pending =>
+        obtain ⟨tag, frame, task, rfl⟩ := shape
+        have reply := pollAnswer_waiting (l := false) inventory state result exit oracle passes calls
+          after updated tag frame task invariant
+        rw [reply]
+        exact ⟨updated.get state, invariant, inv_encoded f types inventory _ _ invariant, rfl⟩
+      | ready value marks =>
+        change target = .completed value ⟨[], []⟩ at shape
+        subst target
+        obtain ⟨typed, known, reply⟩ := pollAnswer_completed (l := false) inventory state result exit oracle passes calls
+          after updated value invariant
+        rw [reply]
+        exact ⟨typed, known, rfl⟩
+  · have refused : pollGuardResult (V := V) (l := false) world env source = .logik .kapazitaet := by
+      cases source <;> first | rfl | exact (active trivial).elim
+    have stopped : execStmt oracle passes calls (pollGuard (V := V) (Λ := Λ) (l := false) types f state) world env =
+        .logik .kapazitaet := guard.trans refused
+    have terminal : runActivation elaboration calls prices source world = .ok (.refused, source, world, 0) := by
+      cases source <;> first | rfl | exact (active trivial).elim
+    have answered : resolvedPoll elaboration calls prices source world = .ok (.refused, source, world, 0) := by
+      rw [resolvedPoll, terminal]
+    simp only [pollFunctionRest, execEnd, stopped, EndAusgang.schrumpf, answered, PollFunctionRefines]
 
 end Gabbro.Grammatik.Async.Representation
