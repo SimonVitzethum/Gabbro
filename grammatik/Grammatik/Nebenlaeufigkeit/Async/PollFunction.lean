@@ -39,6 +39,11 @@ public theorem resultExpr_eval {declared : Option Ty} (result : declared = some 
   | .running .. | .waiting .. => True
   | .completed .. | .cancelled => False
 
+@[expose] public def pollGuardResult (world : World D) (env : Env D Γ) :
+    State (Value D) (Child D types) → Ausgang V l Γ
+  | .running .. | .waiting .. => .ok world env
+  | .completed .. | .cancelled => .logik .kapazitaet
+
 @[expose] public def pollGuardArm (types : TypeResolution) (f : AsyncFn) :
     (phase : Phase) → Block D V l (phaseType types f phase :: Γ) Λ Λ
   | .completed | .cancelled => rejectBlock _ _ _ _ _
@@ -56,10 +61,7 @@ private theorem pollGuardArm_exec (types : TypeResolution) (f : AsyncFn)
     (source : State (Value D) (Child D types)) (value : Wert D (phaseType types f phase))
     (payload : PhaseRep D types f phase source value) :
     (execBlock oracle passes calls (pollGuardArm (V := V) (Λ := Λ) (l := l) types f phase)
-      world (.cons value env)).schrumpf =
-      match source with
-      | .running .. | .waiting .. => .ok world env
-      | .completed .. | .cancelled => .logik .kapazitaet := by
+      world (.cons value env)).schrumpf = pollGuardResult world env source := by
   cases payload with
   | running | waiting => rfl
   | cancelled | completed =>
@@ -72,9 +74,7 @@ public theorem pollGuard_exec (types : TypeResolution) (f : AsyncFn)
     (world : World D) (env : Env D Γ) (source : State (Value D) (Child D types))
     (represented : Inv f types inventory source (env.get state)) :
     execStmt oracle passes calls (pollGuard (V := V) (Λ := Λ) (l := l) types f state) world env =
-      match source with
-      | .running .. | .waiting .. => .ok world env
-      | .completed .. | .cancelled => .logik .kapazitaet := by
+      pollGuardResult world env source := by
   obtain ⟨i, value, payload, _, ran⟩ := phaseDispatch_selects types f inventory state
     (fun i => pollGuardArm (V := V) (Λ := Λ) (l := l) types f ((phases f).get i)) oracle passes calls
     world env source represented
@@ -128,6 +128,42 @@ public theorem pollAnswer_completed (inventory : Inventory D) (state : Var Γ (s
   obtain ⟨typed, known, returned⟩ := pollAnswerArm_completed (l := l) state result exit oracle passes calls
     world env ((phases f).get i) value payload selected
   exact ⟨typed, known, ran.trans returned⟩
+
+private theorem pollAnswerArm_waiting (state : Var Γ (stateType types f))
+    (result : V.erg = some (pollResultType types f)) (exit : Λ.Perm V.ende)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (phase : Phase) (tag : Nat) (frame : Frame (Value D))
+    (task : Task (Value D) (Child D types)) (payload : Wert D (phaseType types f phase))
+    (selected : PhaseRep D types f phase (.waiting tag frame task) payload) :
+    (execBlock oracle passes calls (pollAnswerArm (l := l) state result exit phase)
+      world (.cons payload env)).schrumpf = .zurueck world
+        (resultValue result (⟨⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ 0)⟩, env.get state⟩ :
+          Wert D (pollResultType types f))) := by
+  cases selected with
+  | waiting _ future _ _ saved storage _ _ =>
+    let value : Expr D (phaseType types f (.waiting tag future) :: Γ) Λ (pollResultType types f) :=
+      pendingReply (.there state)
+    let entered : Env D (phaseType types f (.waiting tag future) :: Γ) := .cons (saved, storage, ()) env
+    have observed := resultExpr_eval result value world entered
+    have localReads : (resultExpr result value).orte = [] := observed.1
+    change Ausgang.zurueck (world.lese Λ (resultExpr result value).orte)
+      (evalErg (world.lese Λ (resultExpr result value).orte) (resultExpr result value)
+        (world.lese Λ (resultExpr result value).orte) entered) = _
+    rw [localReads, show world.lese Λ [] = world from rfl, observed.2]
+    rfl
+
+public theorem pollAnswer_waiting (inventory : Inventory D) (state : Var Γ (stateType types f))
+    (result : V.erg = some (pollResultType types f)) (exit : Λ.Perm V.ende)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) (tag : Nat) (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (represented : Inv f types inventory (.waiting tag frame task) (env.get state)) :
+    execStmt oracle passes calls (pollAnswer (l := l) state result exit) world env = .zurueck world
+      (resultValue result (⟨⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ 0)⟩, env.get state⟩ :
+        Wert D (pollResultType types f))) := by
+  obtain ⟨i, payload, selected, _, ran⟩ := phaseDispatch_selects types f inventory state
+    (fun i => pollAnswerArm (l := l) state result exit ((phases f).get i)) oracle passes calls world env _ represented
+  exact ran.trans (pollAnswerArm_waiting (l := l) state result exit oracle passes calls
+    world env ((phases f).get i) tag frame task payload selected)
 
 /-- Generate an ordinary private G function. The single input is the
     future state, and its normal result is the canonical Ready/Pending sum. -/
