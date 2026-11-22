@@ -87,8 +87,10 @@ public theorem CheckedFinal.inner_exec {elaboration : Elaboration D V Λ types f
   rw [reads, show world.lese Λ term.orte = read from rfl, value]
   change Ausgang.ok read (((appendLocals locals outer).set (prependLocal state scope) completed).set
     (prependLocal finished scope) true) = _
-  rw [set_prependLocal, set_prependLocal]
-  rfl
+  have setState := set_prependLocal state outer completed locals
+  have setFinished := set_prependLocal finished (outer.set state completed) true locals
+  exact congrArg (Ausgang.ok read)
+    ((congrArg (fun environment => environment.set (prependLocal finished scope) true) setState).trans setFinished)
 
 /-- The actual final arm restores the source locals, observes its
     precise read trace and publishes the completed record and stop flag. -/
