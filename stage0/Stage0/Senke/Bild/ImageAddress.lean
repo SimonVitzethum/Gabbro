@@ -367,7 +367,8 @@ theorem Emitted.root_call_decrement_operand [Kern] (output : Emitted src K optio
   have instruction : InsAt (before.ms.1.view (index + 1)) (nxt entry).pc 1
       (II.f (scratch : Int)) (II.f 1) (II.f 0) := by
     have first := stub 1 (by rw [startC_len]; decide)
-    simpa only [scratch, entry, nxt, Nat.mul_one, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
+    change InsAt _ (entry.pc + BitVec.ofNat 64 (16 * 1)) 1 (II.f (scratch : Int)) (II.f 1) (II.f 0)
+    simpa only [scratch, entry, startC, callTail, callTailN, ci, List.singleton_append, List.cons_append,
       List.nil_append, List.getElem_cons_succ, List.getElem_cons_zero] using first
   have destination : sx (II.f (scratch : Int)) = BitVec.ofNat 64 scratch := sx_nat (callRoom.trans signed)
   have operand : (sx (II.f 1)).toNat = 1 := by decide

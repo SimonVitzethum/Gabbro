@@ -179,7 +179,7 @@ theorem tso_binary_prefix {layout : Runner.Beweis.Lay}
       (onThread (ret1 parent value)) := by
     have read := tso_read_step before inside (width := 8) (address := slot parent.fp (sx rhs))
       (fun answer => opt answer fun pair => result a pair.1) right
-    simpa only [result, computed, opt_some] using read
+    simpa only [onThread, readRight, ld, rd64, result, computed, opt_some] using read
   have read : ProcessPrefix (TSO layout) actI before [] 6 (onThread (ret1 parent value)) :=
     .cons started (.cons (fetch before inside opcode parent instruction.op range) (.cons firstIndex
       (.cons firstRead (.cons secondIndex (.cons secondRead (.nil _))))))
