@@ -2,7 +2,7 @@ module
 
 public import Stage0.Senke.Images.Correctness
 public import Stage0.Senke.Bild.Emitted
-public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
+public import Stage0.Senke.Bild.Mehr.Ort.SpawnReference
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -53,6 +53,67 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
   intro next events observed visible
   obtain ⟨empty, same⟩ := rest.at_observation (M := imageTSO) (before := finish) rfl one observed visible
   exact ⟨by omega, same⟩
+
+/-- When the image has workers, every possible first observable event
+    comes from the first generated clone instruction. Its continuation
+    uses the actual relocated worker entry and stack. -/
+theorem LoadedIRImage.firstWorkerBoundary
+    {before after : Cfg imageTSO (Res T)} {event : Ev} {count : Nat}
+    (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length)
+    (quiet : ProcessPrefix imageTSO actI (output.irEntry memory) [] count before)
+    (observed : ProcessStep imageTSO actI before [event] after) :
+    let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * output.image.Ks)⟩
+    before.ths = [some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
+  intro parent child
+  let entry := codeBase + 16 * (10 * output.starts.length + startLen)
+  let stack := output.image.fp0 + 8 * output.image.Ks
+  let scratch := startScratch output.compiled.main
+  have firstDeclared : output.starts[0]? = some output.starts[0] := List.getElem?_eq_getElem workers
+  obtain ⟨code, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q
+    (output.loaded_code loaded.payload) firstDeclared
+  change CodeAt memory.1.m (BitVec.ofNat 64 codeBase) (spawnOne scratch entry stack) at code
+  obtain ⟨_, body, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have firstFrame := bild_initialized_frames_u output.initialValid output.emission output.funktionen_voll
+    loaded.payload 0 (Nat.zero_le _)
+  simp only [Nat.mul_zero, Nat.add_zero] at firstFrame
+  have imageEnd : output.image.fp0 + 8 * output.image.K < 2 ^ 31 := layout.hfit
+  have totalStack : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
+    simpa only [Emitted.starts, List.length_map] using layout.hylo
+  have worldStart := layout.hyord
+  have worldEnd := layout.hyhi
+  have singleStack := Nat.le_mul_of_pos_right output.image.Ks (Nat.succ_pos output.starts.length)
+  have stackFits : stack < 2 ^ 31 := by dsimp only [stack]; omega
+  have slotsFit : output.image.Ks < 2 ^ 31 := by dsimp only [stack] at stackFits; omega
+  have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
+    simpa only [Emitted.starts, List.length_map] using layout.hfp
+  have entryFits : entry < 2 ^ 31 := by
+    dsimp only [entry]
+    simp only [headLen, startLen] at frameStart ⊢
+    omega
+  have scratchFits : scratch + 8 ≤ output.image.Ks := layout.hex _ (List.mem_cons_self ..)
+  have far : CodeFar (BitVec.ofNat 64 codeBase) 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
+    apply codeFar_nat _ (Nat.lt_trans stackFits (by decide))
+    simp only [headLen, startLen] at frameStart
+    omega
+  obtain ⟨steps, _, _, _, startMemory, _, covers⟩ := loaded.silentEntry quiet
+  have exactStart : BildMehr.singleThreadSC (imageToTSO (output.irEntry memory)) =
+      (⟨⟨memory.1.m, memory.2⟩, [some (.next
+        ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 output.image.fp0⟩)]⟩ : Cfg (SC L0) (Res T)) := by
+    have mem := Subtype.ext startMemory
+    exact Cfg.ext mem rfl
+  obtain ⟨referenceSteps, prepared, invariant, reference⟩ := BildMehr.spawnSite_reference (layout := L0)
+    memory.2 code firstFrame far (by omega) slotsFit entryFits stackFits
+  rw [← exactStart] at reference
+  obtain ⟨_, _, atHost⟩ := covers _ referenceSteps cloneReq _ reference rfl
+  obtain ⟨_, same⟩ := atHost observed (by simp)
+  exact congrArg Cfg.ths same
 
 /-- Every function in the actual payload has the ordinary IR semantics
     of its typed model body at every representable depth. The same code
