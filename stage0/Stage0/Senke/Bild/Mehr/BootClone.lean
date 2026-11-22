@@ -344,8 +344,7 @@ theorem Emitted.boot_site_prefix [Kern] (output : Emitted src K options)
   obtain ⟨after, run, appended, same, own, response, others⟩ :=
     bootSpawn_run (before := before) (i := 0) (extra := extra) running site frame far (by omega)
       (by omega) childCode childFrame positive
-  have codeEnd : codeBase + (output.image.code.flatMap encII).length = output.image.fp0 := by
-    rw [flatMap_enc_len, serialized, List.length_append, placed.head, placed.hfp]
+  have codeEnd := output.code_end
   have codeKept : BytesAt (after.1.view 0) codeBase (output.image.code.flatMap encII) := by
     intro byte bound
     have decoded : (BitVec.ofNat 64 (codeBase + byte)).toNat = codeBase + byte := by

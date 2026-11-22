@@ -138,6 +138,18 @@ theorem Emitted.loaded_code [Kern] (output : Emitted src K options)
     bild_initialized_loaded_u output.initialValid output.emission output.funktionen_voll loaded
   exact codeAndStacks.left
 
+/-- In the actual image the code ends exactly where the stack
+    reservations begin. This uses the serialized instruction width. -/
+theorem Emitted.code_end [Kern] (output : Emitted src K options) :
+    codeBase + (output.image.code.flatMap encII).length = output.image.fp0 := by
+  obtain ⟨_, _, _, placed, serialized, _, _, _⟩ :=
+    bild_lage output.emission output.funktionen_voll
+      (fun base bound => layU_in output.compiled.unit output.tor base bound)
+      (fun base => layU_dis output.compiled.unit output.tor base)
+      (fun base => by simp only [layU]; omega)
+      (fun base => layU_sync output.compiled.unit output.tor base)
+  rw [flatMap_enc_len, serialized, List.length_append, placed.head, placed.hfp]
+
 private theorem codeAt_spawn_site [Kern] {m : Mem} {scratch : Nat} :
     ∀ {sites : List (Nat × Nat)} {pc : W} {j : Nat} {site : Nat × Nat},
       CodeAt m pc (spawnC scratch sites) → sites[j]? = some site →
