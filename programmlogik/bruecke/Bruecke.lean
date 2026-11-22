@@ -4,6 +4,7 @@ public import Bruecke.Zertifikat.Programm
 public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Regeln
 public import Bruecke.Zertifikat.Aufrufe
+public import Bruecke.Zertifikat.Vertrag
 public import Bruecke.Zertifikat.Schleifen
 public import Bruecke.Zertifikat.Formen
 public import Bruecke.Zertifikat.Abgleich

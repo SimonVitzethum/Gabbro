@@ -186,7 +186,8 @@ meta def vertragOffen? (hlow t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.E
   let ev := lhs.appArg!
   unless ev.isAppOf ``Gabbro.Grammatik.eval && ev.getAppNumArgs ≥ 4 do return none
   let X := ev.getAppArgs[ev.getAppNumArgs - 3]!
-  let some eqX ← (try some <$> mkAppM satz #[hlow, f] catch _ => pure none) | return none
+  let _ := (satz, hlow)
+  let some eqX ← (try vertragsGleichung? f (satz == ``Gabbro.Bruecke.ensures_eq) catch _ => pure none) | return none
   let some (_, _, rhs) := (← inferType eqX).eq? | return none
   let motivRumpf := body.replace fun e => if e == X then some (mkBVar 0) else none
   let motiv := mkLambda `r .default (← inferType X) motivRumpf

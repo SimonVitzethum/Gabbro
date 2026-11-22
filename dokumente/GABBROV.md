@@ -46,6 +46,8 @@ replaced), `Sammlung/S<k>`, `Lexer.lean` with `nutzerBild` (exactly the image th
 `Pruefung`. Exit 0: (b) is stated; 1: a named refusal (a postcondition reading `old` of a static); 2:
 wrong arguments, or Stage 0 refuses the source or its lowering.
 
+**One function, one duty, independently.** Every body is its own module `Rumpf/F<i>` with the definitions `rumpf<i>`/`rueck<i>` NOT exposed; the unit `u` (`Daten`) refers to them by name. The contracts of callees are read off their contract lowering alone (`requires_vertrag`, `ensures_vertrag` in `Zertifikat/Vertrag.lean`), so the duty of a function needs no other body; `Logik/F<i>` alone reads its own body (`import all`). A change of one body changes only the private part of its `Rumpf` module: every other module keeps its interface, and Lake checks only that function's duty again. A duty that needed another body would not reduce in the kernel and fail, visibly.
+
 **The logic is output.** For every function `gabbrov` writes `Logik/F<i>` with the command
 `gabbrov_logik logik<i> : ziel<i>`, which is regenerated on every run. The command runs the
 automation below on the duty and states what it leaves: each remaining goal, closed over the variables

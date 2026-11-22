@@ -84,6 +84,66 @@ meta def findeHyp? (n : Lean.Name) (R? : Option Lean.Expr := none) : MetaM (Opti
   return none
 
 open Lean Meta in
+/-- The hypothesis `lowerAllg u = .ok (P, fs)` of the opened duty. -/
+meta def findeLow? : MetaM (Option Lean.Expr) := do
+  for d in ← getLCtx do
+    if d.isImplementationDetail then continue
+    let ty ← instantiateMVars d.type
+    if let some (_, l, _) := ty.eq? then
+      if l.isAppOf ``Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg then return some d.toExpr
+  return none
+
+open Lean Meta in
+/-- **The callee's contract without its body**: the equation `P.requires g = …` (`ens = false`) or
+    `P.ensures g = …` (`ens = true`) by `requires_vertrag`/`ensures_vertrag`, their side conditions computed
+    by the kernel (checked again when the proof is added); for a generated transition function the
+    equation of its whole lowering (`requires_eq`/`ensures_eq`). -/
+meta def vertragsGleichung? (g : Lean.Expr) (ens : Bool) : MetaM (Option Lean.Expr) := do
+  let some hlow ← findeLow? | return none
+  let hty ← instantiateMVars (← inferType hlow)
+  let some (_, l, r) := hty.eq? | return none
+  let u := l.appArg!
+  let pair := r.appArg!
+  unless pair.isAppOfArity ``Prod.mk 4 do return none
+  let P := pair.getArg! 2
+  let fs := pair.getArg! 3
+  let satz := if ens then ``Gabbro.Bruecke.ensures_vertrag else ``Gabbro.Bruecke.requires_vertrag
+  let c ← mkConstWithFreshMVarLevels satz
+  let (ms, _, _) ← forallMetaTelescopeReducing (← inferType c)
+  -- {u} {P} {fs} (h) (c) (ht) (hname) {r0} (hr) {e0} (he)
+  unless ms.size == 11 do return none
+  ms[0]!.mvarId!.assign u
+  ms[1]!.mvarId!.assign P
+  ms[2]!.mvarId!.assign fs
+  ms[3]!.mvarId!.assign hlow
+  ms[4]!.mvarId!.assign g
+  let rechne (m : Lean.Expr) : MetaM (Option Lean.Expr) := do
+    let some (_, lhs, _) := (← instantiateMVars (← inferType m)).eq? | return none
+    return some (← kernNormal lhs)
+  -- the side conditions, by the kernel's evaluation
+  let some tn ← rechne ms[5]! | return none
+  unless tn.isAppOf ``Option.none do return fallback u P fs hlow ens g
+  ms[5]!.mvarId!.assign (← mkEqRefl tn)
+  let some nm ← rechne ms[6]! | return none
+  unless nm.isConstOf ``Bool.false do return fallback u P fs hlow ens g
+  ms[6]!.mvarId!.assign (← mkEqRefl nm)
+  let some rr ← rechne ms[8]! | return none
+  unless rr.isAppOfArity ``Except.ok 3 do return none
+  ms[7]!.mvarId!.assign rr.appArg!
+  ms[8]!.mvarId!.assign (← mkEqRefl rr)
+  let some ee ← rechne ms[10]! | return none
+  unless ee.isAppOfArity ``Except.ok 3 do return none
+  ms[9]!.mvarId!.assign ee.appArg!
+  ms[10]!.mvarId!.assign (← mkEqRefl ee)
+  let pf ← instantiateMVars (mkAppN c ms)
+  if pf.hasExprMVar then return none
+  return some pf
+where
+  fallback (u P fs hlow : Lean.Expr) (ens : Bool) (g : Lean.Expr) : Option Lean.Expr :=
+    some (mkAppN (mkConst (if ens then ``Gabbro.Bruecke.ensures_eq else ``Gabbro.Bruecke.requires_eq))
+      #[u, P, fs, hlow, g])
+
+open Lean Meta in
 /-- After a call `R g σ ρ = .ok σ' v` (`hruf`): the hypothesis
     `hvertrag : ReqAmEintritt P g σ ρ → EnsAmRueck P g σ σ' ρ v` from the certificate's
     `RespektiertRahmen P R`. Without that hypothesis in context the goal stays as it is. -/
@@ -104,15 +164,6 @@ meta def vertragsHyp (goal : MVarId) (R x hruf σ' v : Lean.Expr) : MetaM MVarId
   let (_, g'') ← g'.intro1P
   return g''
 
-open Lean Meta in
-/-- The hypothesis `lowerAllg u = .ok (P, fs)` of the opened duty. -/
-meta def findeLow? : MetaM (Option Lean.Expr) := do
-  for d in ← getLCtx do
-    if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
-    if let some (_, l, _) := ty.eq? then
-      if l.isAppOf ``Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg then return some d.toExpr
-  return none
 
 open Lean Meta in
 /-- **A call**: the gated call is read at the callee's own precondition (`torRuf_von`), a branch the
@@ -155,7 +206,9 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
   if x.isAppOf ``Gabbro.Grammatik.torRuf && x.getAppNumArgs ≥ 6 then
     let xa := x.getAppArgs
     let some hlow ← findeLow? | return none
-    let eq ← mkAppM ``Gabbro.Bruecke.torRuf_von #[hlow, xa[2]!, xa[3]!, xa[4]!, xa[5]!]
+    let _ := hlow
+    let some hreq ← vertragsGleichung? xa[3]! false | return none
+    let eq ← mkAppM ``Gabbro.Bruecke.torRuf_gleich #[hreq, xa[2]!, xa[4]!, xa[5]!]
     let some (_, _, rhs) := (← inferType eq).eq? | return none
     let g' ← neu (mkApp G rhs)
     goal.assign (← mkEqMPR (← mkCongrArg G eq) g')

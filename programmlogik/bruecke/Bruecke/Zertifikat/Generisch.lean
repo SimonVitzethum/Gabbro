@@ -113,7 +113,9 @@ meta def wertTeilen (goal : MVarId) (x : Lean.Expr) : MetaM (Option (List MVarId
   if x.isAppOf ``Gabbro.Grammatik.torRuf && x.getAppNumArgs ≥ 6 then
     let xa := x.getAppArgs
     let some hlow ← findeLow? | return none
-    let eq ← mkAppM ``Gabbro.Bruecke.torRuf_von #[hlow, xa[2]!, xa[3]!, xa[4]!, xa[5]!]
+    let _ := hlow
+    let some hreq ← vertragsGleichung? xa[3]! false | return none
+    let eq ← mkAppM ``Gabbro.Bruecke.torRuf_gleich #[hreq, xa[2]!, xa[4]!, xa[5]!]
     let some (_, _, rhs) := (← inferType eq).eq? | return none
     let (G, _) ← motivVon goal x
     let g' ← mkFreshExprSyntheticOpaqueMVar (mkApp G rhs).headBeta (← goal.getTag)

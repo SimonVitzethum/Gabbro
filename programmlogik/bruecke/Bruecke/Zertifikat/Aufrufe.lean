@@ -1,6 +1,7 @@
 module
 public import Bruecke.Zertifikat.Regeln
 public import Bruecke.Zertifikat.Programm
+public import Bruecke.Zertifikat.Vertrag
 import all Grammatik.Speichermodell.Atomar.AtomarSem.Teil1
 @[expose] public section
 
@@ -196,6 +197,14 @@ theorem torRuf_von {u : UProg} {P : Programm (declOf u)} {fs : List (declOf u).F
       then R g σ ρ else RufAusgang.logik (Logik.vorbedingung g) := by
   unfold torRuf
   rw [requires_eq h g]
+
+/-- The gated call at any reading `X` of the callee's precondition. -/
+theorem torRuf_gleich {D : Deklaration} {P : Programm D} {g : D.Fn} {X : Expr D (D.params g) _ .bool}
+    (hreq : P.requires g = X) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D (D.params g)) :
+    torRuf P R g σ ρ = if wahr? (eval σ X σ ρ) = true then R g σ ρ else RufAusgang.logik (Logik.vorbedingung g) := by
+  unfold torRuf
+  rw [hreq]
 
 /-- A handler without `logik` outcomes never answers `logik`. -/
 theorem logik_ohne {D : Deklaration} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}

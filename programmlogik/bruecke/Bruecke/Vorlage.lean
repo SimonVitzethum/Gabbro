@@ -120,10 +120,11 @@ def einDatei (modul : String) (ds : List Datei) : Datei :=
   let basis := modul.replace "." "/"
   let rang (d : Datei) : Option Nat :=
     if d.pfad == basis ++ "/Quelle" then some 0
-    else if (d.pfad.splitOn (basis ++ "/Daten/S")).length > 1 then some 1
-    else if d.pfad == basis ++ "/Daten" then some 2
-    else if (d.pfad.splitOn (basis ++ "/Pflicht/F")).length > 1 then some 3
-    else if (d.pfad.splitOn (basis ++ "/Logik/F")).length > 1 then some 4
+    else if (d.pfad.splitOn (basis ++ "/Rumpf/F")).length > 1 then some 1
+    else if (d.pfad.splitOn (basis ++ "/Daten/S")).length > 1 then some 2
+    else if d.pfad == basis ++ "/Daten" then some 3
+    else if (d.pfad.splitOn (basis ++ "/Pflicht/F")).length > 1 then some 4
+    else if (d.pfad.splitOn (basis ++ "/Logik/F")).length > 1 then some 5
     else none
   let rumpf (d : Datei) : String :=
     let nachKopf := match d.text.splitOn "set_option maxRecDepth 100000\n\n" with
@@ -132,7 +133,7 @@ def einDatei (modul : String) (ds : List Datei) : Datei :=
     match nachKopf.splitOn ("end " ++ modul ++ "\n") with
     | teile@(_ :: _ :: _) => "".intercalate teile.dropLast
     | _ => nachKopf
-  let teile := (List.range 5).flatMap fun k => (ds.filter (rang · == some k)).map rumpf
+  let teile := (List.range 6).flatMap fun k => (ds.filter (rang · == some k)).map rumpf
   { pfad := basis ++ "/Ein"
     text := "module\npublic import Bruecke.Zertifikat.WP\npublic import Bruecke.Zertifikat.Logik\n" ++
       String.join (stringModule.map fun i => "import all " ++ i ++ "\n") ++
@@ -171,12 +172,32 @@ def fnName (i : Nat) : String := "f" ++ toString i
 
 def stueckModul (modul : String) (k : Nat) : String := modul ++ ".Daten.S" ++ toString k
 
+def rumpfModul (modul : String) (i : Nat) : String := modul ++ ".Rumpf.F" ++ toString i
+
+/-- The body of function `i` (`rumpf<i>`, `rueck<i>`), NOT exposed: the unit `u` refers to it by name, so a
+    change of this body leaves the interface of every other module unchanged, and only the duty of `i`
+    (which reads it with `import all`) is checked again. A duty that needed another function's body would
+    not reduce in the kernel and fail, visibly. -/
+def rumpfDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
+  let si := toString i
+  { pfad := (rumpfModul modul i).replace "." "/"
+    text := "module\npublic import Bruecke.Zertifikat.WP\npublic section\n\n" ++
+      "/-! The body of `" ++ f.name ++ "` (written by `gabbrov`; not exposed). -/\n\n" ++
+      "namespace " ++ modul ++ "\n\n" ++
+      "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
+      "open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Bruecke\n\n" ++
+      "set_option maxRecDepth 100000\n\n" ++
+      "def rumpf" ++ si ++ " : List UStmt :=\n  " ++ breit (repr f.body) ++ "\n\n" ++
+      "def rueck" ++ si ++ " : URet :=\n  " ++ breit (repr f.ret) ++ "\n\n" ++ fuss modul }
+
 def datenStueck (modul : String) (k : Nat) (fs : List (Nat × UFn)) : Datei :=
   { pfad := (stueckModul modul k).replace "." "/"
-    text := kopf modul ["Bruecke.Zertifikat.WP"]
-        ("The elaborated functions of chunk " ++ toString k ++ " (written by `gabbrov`).") ++
+    text := kopf modul ("Bruecke.Zertifikat.WP" :: fs.map fun (i, _) => rumpfModul modul i)
+        ("The elaborated functions of chunk " ++ toString k ++ " (written by `gabbrov`; the bodies by name).") ++
       String.join (fs.map fun (i, f) =>
-        "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  " ++ breit (repr f) ++ "\n\n") ++
+        "/-- `" ++ f.name ++ "` -/\ndef " ++ fnName i ++ " : UFn :=\n  { ((" ++
+          breit (repr { f with body := [], ret := .empty }) ++ ") : UFn)\n    with body := rumpf" ++ toString i ++
+          ", ret := rueck" ++ toString i ++ " }\n\n") ++
       "def stueck" ++ toString k ++ " : List UFn := [" ++
         String.intercalate ", " (fs.map fun (i, _) => fnName i) ++ "]\n\n" ++ fuss modul }
 
@@ -217,7 +238,8 @@ def logikDatei (modul : String) (i : Nat) (f : UFn) : Datei :=
   { pfad := (logikModul modul i).replace "." "/"
     text := kopf modul [pflichtModul modul i, "Bruecke.Zertifikat.Logik"]
         ("The program's logic owed by `" ++ f.name ++ "`: what the language's proof of its duty leaves " ++
-         "(written by `gabbrov`; regenerated on every run). `True` when nothing remains.") stringModule ++
+         "(written by `gabbrov`; regenerated on every run). `True` when nothing remains.")
+        (stringModule ++ [rumpfModul modul i]) ++
       "gabbrov_logik logik" ++ si ++ " : ziel" ++ si ++ "\n\n" ++ fuss modul }
 
 /-- The user's proof file: written once, never replaced. -/
@@ -302,7 +324,8 @@ def dateien (modul src : String) : Except String (List Datei) := do
   | .ok _ => pure ()
   let fs := u.fns.zipIdx.map fun (f, i) => (i, f)
   let stuecke := teile stueckGroesse fs
-  let pflichten := fs.map fun (i, f) => [pflichtDatei modul i f, logikDatei modul i f, beweisDatei modul i f]
+  let pflichten := fs.map fun (i, f) =>
+    [rumpfDatei modul i f, pflichtDatei modul i f, logikDatei modul i f, beweisDatei modul i f]
   let sammlungen := stuecke.zipIdx.map fun (st, k) => sammlungDatei modul k (st.map (·.1))
   pure ([quelleDatei modul src, wurzelDatei modul u (stuecke.map (·.map (·.1))) (stufe0AltFreiB src),
       datenDatei modul u stuecke.length, pruefungDatei modul] ++
