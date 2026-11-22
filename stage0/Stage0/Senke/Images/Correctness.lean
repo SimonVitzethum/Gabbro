@@ -362,9 +362,9 @@ structure ImageSimulation [Kern] (output : Emitted src reserve options)
       ∀ event ∈ events, imageExternalEvent event = true → ImageGateEvent output E O state next ir' event
   stop : ∀ earlier before ir state last ending, related earlier before ir state →
     Tr imageTSO (actX L0) before last ending 1 → ending ≠ .lauf →
-    ImageStopMatches output O state earlier last ending
+    ∃ next, ImageReach output E O state next ∧ ImageStopMatches output O next earlier last ending
 
-private theorem imageReach_trans {output : Emitted src reserve options}
+theorem imageReach_trans {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     {start middle last : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     (first : ImageReach output E O start middle) (second : ImageReach output E O middle last) :
@@ -411,8 +411,7 @@ theorem ImageSimulation.goal [Kern] {output : Emitted src reserve options}
   exact gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts O binding
     hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ reached
 
-/-- A terminal observation is explained at its actual last runner step.
-    The continuing prefix determines the corresponding source state. -/
+/-- The last runner step may advance to the matching source stop. -/
 theorem ImageSimulation.terminal [Kern] {output : Emitted src reserve options}
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     {start : Cfg imageTSO Runner.X86.X} (sim : ImageSimulation output E O start)
@@ -422,7 +421,8 @@ theorem ImageSimulation.terminal [Kern] {output : Emitted src reserve options}
       ImageReach output E O (imageSourceStart E) state ∧ ImageStopMatches output O state earlier last ending := by
   obtain ⟨boundary, earlier, last, steps, trace, finish, eventsEq, _⟩ := run.split_stop stopped
   obtain ⟨ir, _, state, _, endpoint, reached⟩ := sim.follow trace sim.initial
-  exact ⟨earlier, last, state, eventsEq, reached, sim.stop earlier boundary ir state last ending endpoint finish stopped⟩
+  obtain ⟨next, moved, matched⟩ := sim.stop earlier boundary ir state last ending endpoint finish stopped
+  exact ⟨earlier, last, next, eventsEq, imageReach_trans reached moved, matched⟩
 
 /-- No actual execution of a simulated image ends in a machine fault
     or an unknown instruction. Every terminal step must have a matching

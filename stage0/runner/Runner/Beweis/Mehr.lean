@@ -240,33 +240,36 @@ theorem invK_ende {L : Lay} {r : Res IR.T} {rx : Res X} {e : Ende} (h : MatchK L
 theorem lbl_rd (i n : Nat) (a : W) (b : Ans) : lbl i (.rd n a) b = [] := by rfl
 
 /-- Every continuing x86 step preserves the process relation with an
-    IR prefix of the same observation. Runner bookkeeping may stutter. -/
+    IR prefix of the same observation. Runner bookkeeping may stutter,
+    and any observed event occurs at the last IR transition. -/
 theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : CInv L)
     {cI : Cfg M (Res IR.T)} {before after : Cfg M X} {events : List Ev}
     (related : Rel L cI before) (step : ProcessStep M (actX L) before events after) :
-    ∃ final count, ProcessPrefix M actI cI events count final ∧ Rel L final after := by
+    ∃ final count, ProcessPrefix M actI cI events count final ∧ Rel L final after ∧
+      (events = [] ∨ ∃ cut silent, ProcessPrefix M actI cI [] silent cut ∧ ProcessStep M actI cut events final) := by
   cases step with
   | tau moved =>
-    exact ⟨_, 1, ProcessPrefix.ofStep (.tau (related.ms ▸ moved)), ⟨rfl, related.th⟩⟩
+    exact ⟨_, 1, ProcessPrefix.ofStep (.tau (related.ms ▸ moved)), ⟨rfl, related.th⟩, .inl rfl⟩
   | @priv j x x' found executed =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
-    exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready (inv_next matched executed notNext)⟩⟩
+    exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready (inv_next matched executed notNext)⟩, .inl rfl⟩
   | @ask j x x' o k a ms found asked ordinary answered continued =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨op, valid, rfl, resumes⟩ | ⟨resume, rfl, resumes⟩
     · obtain ⟨rfl, word, rfl⟩ := fixed _ _ _ _ _ valid answered
       have matched' := invK_next (continued ▸ resumes word)
-      exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready matched'⟩⟩
+      exact ⟨_, _, path, ⟨rel.ms, relT_setX rel.th ready matched'⟩, .inl rfl⟩
     · have matched' := invK_next (continued ▸ resumes a)
       have move := ProcessStep.ask (act := actI) ready rfl ordinary (rel.ms ▸ answered) rfl
       exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
-        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
+        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩, .inr ⟨_, _, path, move⟩⟩
   | @exit j x q k found asked number =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨_, rfl, _⟩
     · cases impossible
-    · exact ⟨_, _, path.trans (ProcessPrefix.ofStep (.exit ready rfl number)),
-        ⟨rel.ms, relT_set rel.th (vI := none) (vX := none) trivial⟩⟩
+    · have move := ProcessStep.exit (act := actI) ready rfl number
+      exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
+        ⟨rel.ms, relT_set rel.th (vI := none) (vX := none) trivial⟩, .inr ⟨_, _, path, move⟩⟩
   | @cloneNo j x x' k a ms found asked answered failed continued =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
@@ -274,7 +277,7 @@ theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : C
     · have matched' := invK_next (continued ▸ resumes a)
       have move := ProcessStep.cloneNo (act := actI) ready rfl (rel.ms ▸ answered) failed rfl
       exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
-        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩⟩
+        ⟨rfl, relT_set rel.th (vI := some (resume a)) (vX := some x') matched'⟩, .inr ⟨_, _, path, move⟩⟩
   | @clone j x x' child k r w ms found asked answered created continued started =>
     obtain ⟨_, _, rel, ready, matched, notNext, _, path⟩ := norm_prefix code related found
     rcases inv_ask matched asked notNext with ⟨_, _, impossible, _⟩ | ⟨resume, rfl, resumes⟩
@@ -284,7 +287,7 @@ theorem runner_process_step {L : Lay} {M : MemSys} (fixed : Fixed M L) (code : C
       have move := ProcessStep.clone (act := actI) ready rfl (rel.ms ▸ answered) created rfl rfl
       exact ⟨_, _, path.trans (ProcessPrefix.ofStep move),
         ⟨rfl, relT_push (relT_set rel.th (vI := some (resume (some (r, w)))) (vX := some x') parentMatch)
-          (vI := some (resume (some (0, w)))) (vX := some child) childMatch⟩⟩
+          (vI := some (resume (some (0, w)))) (vX := some child) childMatch⟩, .inr ⟨_, _, path, move⟩⟩
 
 /-- Every reachable x86 configuration has a related reachable IR
     configuration, including its current memory and all live threads. -/
@@ -295,7 +298,7 @@ theorem runner_process_prefix {L : Lay} {M : MemSys} (fixed : Fixed M L) (code :
   induction path generalizing cI with
   | nil => exact ⟨_, 0, .nil _, related⟩
   | cons step _ ih =>
-    obtain ⟨_, _, path', rel⟩ := runner_process_step fixed code related step
+    obtain ⟨_, _, path', rel, _⟩ := runner_process_step fixed code related step
     obtain ⟨_, _, suffix, rel'⟩ := ih rel
     exact ⟨_, _, path'.trans suffix, rel'⟩
 
