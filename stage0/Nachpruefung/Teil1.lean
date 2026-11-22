@@ -182,7 +182,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.image_stack_frame_preserved
 #print axioms Gabbro.Stage0.Emitted.loaded_root_frame
 #print axioms Gabbro.Stage0.Emitted.fresh_root_phase
-#print axioms Gabbro.Stage0.MappedImage.future_root_phase
+#print axioms Gabbro.Stage0.LoadedIRImage.future_root_phase
 #print axioms Gabbro.Stage0.Emitted.code_end
 #print axioms Gabbro.Stage0.Emitted.code_survives_writes
 #print axioms Gabbro.Stage0.Emitted.code_in_private_view

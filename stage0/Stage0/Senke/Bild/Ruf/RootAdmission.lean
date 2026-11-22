@@ -1,6 +1,9 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.Mehr.Ort.IRStartup
+import Stage0.Senke.Bild.Ruf.GateTrace
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -154,5 +157,115 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
   · intro j s found address write current
     have owner := (indices j s found).2.write address write
     exact different j s found (accessible address current j owner)
+
+private theorem root_after_activation [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {memory : Mem} {history extension : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {thread : Nat} {control : Res T}
+    (phase : ImageRootPhase output E history memory thread control before)
+    (pastLoader : thread ≠ 0 ∨ control ≠ Runner.Beweis.t4) (machine : after.m = before.m) :
+    ImageRootPhase output E (history ++ extension) memory thread control after := by
+  obtain ⟨entry, loader, _⟩ | ⟨root, declared, head, code, frame, fits, args, pointer, site, phase⟩ := phase
+  · exact (pastLoader.elim (· entry) (· loader)).elim
+  refine .inr ⟨root, declared, by simpa only [machine] using head, code, frame, fits, args, pointer, site, ?_⟩
+  rcases phase with advanced | pending | ⟨id, extra, event, pending⟩
+  · exact .inl advanced
+  · exact .inr (.inl pending)
+  · exact .inr (.inr ⟨id, extra, List.mem_append_left _ event, pending⟩)
+
+/-- The real successful worker launch preserves the runtime partition.
+    The parent stays in its startup stub until it has stored the host
+    reply, and the new child's exact prepared frame enters the next slot. -/
+theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {id extra : W} {parent child : T}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    (partition : ImageRuntimePartition footprint output E O history before state body)
+    (slots : ImageSlotsMatch output E O history before state)
+    (trace : ImageForeignTrace output history state) (entrySlot : body[0]? = some none)
+    (waiting : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
+    (site : ImageRootInstruction output 0 parent)
+    (parentReady : state.wartet 0 = []) (declared : before.ths.length < E.starts.length)
+    (prepared : ImageRootPhase output E history (before.ms.1.view before.ths.length)
+      before.ths.length (.next child) state)
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after)
+    (positive : 0 < id.toInt) :
+    let events : List Ev := [(0, cloneReq, some (id, extra))]
+    ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O (history ++ events) after next ∧
+      ImageForeignTrace output (history ++ events) next ∧
+      ImageRuntimePartition footprint output E O (history ++ events) after next (body ++ [none]) := by
+  intro events
+  obtain ⟨buffers, length, admitted, roots⟩ := partition
+  obtain ⟨next, _, _, reached, slots, machine, exactAfter, attach⟩ :=
+    slots.observed_clone waiting parentReady declared observed positive
+  have parentInside : 0 < before.ths.length := (List.getElem?_eq_some_iff.mp waiting).1
+  have spawned : before.ths.length ≠ 0 := Nat.ne_of_gt parentInside
+  let threads := before.ths.set 0 (some (ret1 parent id))
+  have size : threads.length = before.ths.length := List.length_set
+  have root : ImageRootPhase output E history (before.ms.1.view 0) 0
+      (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) state := by
+    rcases roots 0 with same | ⟨control, _, ready, phase⟩
+    · rw [waiting, entrySlot] at same
+      cases same
+    · rw [waiting] at ready
+      cases ready
+      exact phase
+  have afterRoot : ImageRootPhase output E (history ++ events) (before.ms.1.view 0) 0 (ret1 parent id) next := by
+    obtain ⟨_, loader, _⟩ | ⟨start, selected, head, code, frame, fits, args, _⟩ := root
+    · cases loader
+    refine .inr ⟨start, selected, by simpa only [machine] using head, code, frame, fits, args,
+      parent, site, .inr (.inr ⟨id, extra, List.mem_append_right _ List.mem_cons_self, ?_⟩)⟩
+    exact fun _ _ => RunP.refl _ _
+  have foreign : ImageForeignTrace output (history ++ events) next := by
+    apply trace.appendInternal
+    · intro event inside
+      have equal : event = (0, cloneReq, some (id, extra)) := List.mem_singleton.mp inside
+      subst event
+      simp only [imageCanBeInternal, true_or, decide_true]
+    · rw [machine]
+  refine ⟨next, reached, slots, foreign, ?_⟩
+  rw [exactAfter]
+  refine ⟨buffers, ?_, ?_, ?_⟩
+  · simp only [List.length_append, List.length_singleton, List.length_set, length]
+  · rcases admitted with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, scoped⟩
+    · refine .inl ⟨?_, by simpa only [machine] using world⟩
+      intro i control found
+      by_cases inside : i < body.length
+      · rw [List.getElem?_append_left inside] at found
+        exact empty i control found
+      · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
+        cases i - body.length <;> cases found
+    · exact .inr ⟨snapshots, positions, committed, attach related, scoped⟩
+  · intro i
+    rcases Nat.lt_trichotomy i before.ths.length with beforeSpawn | isChild | absent
+    · have inBody : i < body.length := length.symm ▸ beforeSpawn
+      have inThreads : i < threads.length := size.symm ▸ beforeSpawn
+      rw [List.getElem?_append_left inBody]
+      change _ ∨ ∃ r, _ ∧ (threads ++ [some (.next child)])[i]? = some (some r) ∧ _
+      rw [List.getElem?_append_left inThreads]
+      by_cases first : i = 0
+      · subst i
+        exact .inr ⟨ret1 parent id, entrySlot, List.getElem?_set_self parentInside, afterRoot⟩
+      · have unchanged : threads[i]? = before.ths[i]? := List.getElem?_set_ne (Ne.symm first)
+        rcases roots i with same | ⟨control, pending, live, phase⟩
+        · exact .inl (same.trans unchanged.symm)
+        · exact .inr ⟨control, pending, unchanged.trans live, root_after_activation phase (.inl first) machine⟩
+    · subst i
+      have newBody : (body ++ [none])[before.ths.length]? = some none := by
+        rw [List.getElem?_append_right length.le, length, Nat.sub_self]
+        rfl
+      have newSlot : (threads ++ [some (.next child)])[before.ths.length]? = some (some (.next child)) := by
+        rw [List.getElem?_append_right size.le, size, Nat.sub_self]
+        rfl
+      exact .inr ⟨.next child, newBody, newSlot, root_after_activation prepared (.inl spawned) machine⟩
+    · left
+      have beyondBody : (body ++ [none]).length ≤ i := by
+        simpa only [List.length_append, List.length_singleton, length] using absent
+      have beyondThreads : (threads ++ [some (.next child)]).length ≤ i := by
+        simpa only [List.length_append, List.length_singleton, size] using absent
+      rw [List.getElem?_eq_none_iff.mpr beyondBody, List.getElem?_eq_none_iff.mpr beyondThreads]
 
 end Gabbro.Stage0

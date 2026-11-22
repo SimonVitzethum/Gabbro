@@ -227,12 +227,18 @@ theorem ImageSlotsMatch.observed_clone {history : List Ev}
     (positive : 0 < id.toInt) :
     ∃ next actualStart, E.starts[before.ths.length]? = some actualStart ∧
       ImageReach output E O state next ∧
-      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧ next.m = state.m := by
-  obtain ⟨next, actualStart, start, step, matched, unchanged, _⟩ :=
+      ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧ next.m = state.m ∧
+      after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ ∧
+      ∀ {body : PCfg} {snapshots positions committed},
+        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+          body state snapshots positions committed →
+        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+          ⟨body.m, body.ths ++ [none]⟩ next snapshots positions committed := by
+  obtain ⟨next, actualStart, start, step, matched, unchanged, append⟩ :=
     slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
       waiting notWaiting declared
-  exact ⟨next, actualStart, start, .schritt _ _ .start step,
-    (clone_control waiting observed positive).symm ▸ matched, unchanged⟩
+  have control := clone_control waiting observed positive
+  exact ⟨next, actualStart, start, .schritt _ _ .start step, control.symm ▸ matched, unchanged, control, append⟩
 
 /-- The first successful worker activation in the actual Lean IR agrees
     with the declared GX activation, including the source thread's
@@ -265,7 +271,7 @@ theorem LoadedIRImage.firstWorkerActivation
   have declared : before.ths.length < E.starts.length := by
     rw [pending, unit.starts, List.length_cons, List.length_cons, List.length_nil]
     omega
-  obtain ⟨next, _, _, reached, matched, unchanged⟩ :=
+  obtain ⟨next, _, _, reached, matched, unchanged, _, _⟩ :=
     slots.observed_clone ready rfl declared observed positive
   refine ⟨next, matched, reached, unchanged, ?_⟩
   rw [unit.starts]
