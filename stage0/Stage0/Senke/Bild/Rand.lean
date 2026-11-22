@@ -174,6 +174,46 @@ theorem BodyFrame.randIR_schritt {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O]
     hu.agreeW hB.win a1 (by omega), hk.agreeW hB.win a1 (by omega), hw1, hpr, HeldIn.stmt s hH⟩
 
 
+/-- The typed expression result and its preserved frame establish the
+    exact remaining body at the new instruction pointer. -/
+theorem BodyFrame.finishBind {B : BodyFrame D} (frame : B.Ok)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {e : Expr D Γ Λ τ}
+    {rest : Endblock D (vertragVon D B.f) l (τ :: Γ) Λ} {pc : Runner.W}
+    {before after : Runner.Mem} {σ : World D} {ρ : Env D Γ} {code : List II} {top : Nat}
+    (start : B.RandIR (.bind e rest) pc before σ ρ)
+    (lowered : lowE (reserved := B.reserved) B.L e (frei Γ B.reserved) = some (code, top))
+    (changed : Agree B.fp (frei Γ B.reserved) B.Ks before after)
+    (value : ValueAt B.L after B.fp (frei Γ B.reserved) τ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)) :
+    AgreeW B.L B.fp B.lo B.K before after ∧
+      B.RandIR rest (pc + BitVec.ofNat 64 (16 * code.length)) after (σ.lese Λ e.orte)
+        (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := by
+  obtain ⟨all, largest, built, stack, codeFits, pre, low, view, locks, world, protected, held⟩ := start
+  simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at built
+  obtain ⟨⟨ce, te⟩, expression, ⟨tail, tailTop⟩, body, combined⟩ := built
+  rw [lowered] at expression
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj expression)
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj combined
+  simp only [List.length_append] at codeFits
+  have fit := lowE_top e _ _ _ lowered
+  have inner := frame.win.ks
+  have agree := changed.widen inner
+  have worldAfter : WeltAt after B.L σ := weltAt_stab frame.win.lay (by have := frame.win.lo; omega)
+    before after world (changed.mono (Nat.zero_le _))
+  have separated := codeFar_right (n := code.length) (k := tail.length) (by simpa using pre.far)
+  have prepared : PreS B.L after (pc + BitVec.ofNat 64 (16 * code.length)) B.fp B.K (frei (τ :: Γ) B.reserved)
+      tail (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) B.reserved :=
+    ⟨by simp only [frei, contextWords_cons]; omega, pre.small, pre.frame.agree agree,
+      (codeAt_right pre.code).agree agree separated, separated,
+      envAt_cons (envAt_agree pre.env agree pre.frame (Nat.le_refl _) (by omega)) value, trivial, wstab_true _ _⟩
+  have lowNext : B.lo ≤ frei (τ :: Γ) B.reserved := by
+    simp only [frei, contextWords_cons] at low ⊢; omega
+  have protectedNext : ∀ j ∈ B.pr, j < frei (τ :: Γ) B.reserved := fun j used => by
+    have original := protected j used
+    simp only [frei, contextWords_cons] at original ⊢
+    omega
+  exact ⟨agreeW_of (agree.mono low), tail, tailTop, body, by omega, by omega, prepared, lowNext,
+    view.agree agree pre.frame (by omega), locks.agree agree pre.frame (by omega), worldAfter, protectedNext, held⟩
+
 /-- **One binding, the image side**: from the boundary in front of `let x = e; rest`, the image runs the code of `e`
     (its lowering `ce`, which leaves the value in the next free slot of the frame) and stands at the boundary of
     `rest`, with the environment extended by the value of `e` and the world after the reads of `e`, as machine G's
@@ -187,34 +227,18 @@ theorem BodyFrame.randIR_bind {B : BodyFrame D} [TorOK B.L B.O] [SichtOK B.O] (h
       AgreeW B.L B.fp B.lo B.K m m1 ∧
       B.RandIR rest (pc + BitVec.ofNat 64 (16 * ce.length)) m1 (σ.lese Λ e.orte)
         (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := by
-  obtain ⟨c, top, hl, hK, hs, hp, hlo, hu, hk, hWa, hpr, hH⟩ := h
+  have original := h
+  obtain ⟨c, top, hl, hK, _, hp, _, _, _, hWa, _, _⟩ := h
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hl
   obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := hl
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
-  simp only [List.length_append] at hs
-  have hFB3 : FB = 4 := rfl
-  have hFramePrefix := functionFrame_prefix B.P B.f
-  have hlo0 := hB.lo0
   have hW := hB.win
-  have htop := lowE_top e _ _ _ he
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, value⟩ :=
     lowE_ok (same := by intro _; rfl) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he
       (by omega) m pc ρ hpw
-  have a1 := Agree.widen a1s hks
-  have hWa1 : WeltAt m1 B.L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
-  have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
-  have hp1 : PreS B.L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) B.fp B.K (frei (τ :: Γ) B.reserved) cr
-      (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) B.reserved :=
-    ⟨by simp only [frei, contextWords_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf,
-      hf, envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) value, trivial, wstab_true _ _⟩
-  have hlo1 : B.lo ≤ frei (τ :: Γ) B.reserved := by
-    simp only [frei, contextWords_cons] at hlo ⊢; omega
-  have hpr1 : ∀ j ∈ B.pr, j < frei (τ :: Γ) B.reserved := fun j hj => by
-    have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
-  exact ⟨ce, m1, s1, agreeW_of (a1.mono hlo), cr, tr, hr, by omega, by omega, hp1, hlo1,
-    hu.agree a1 hp.frame (by omega), hk.agree a1 hp.frame (by omega), hWa1, hpr1, hH⟩
+  exact ⟨ce, m1, s1, hB.finishBind original he a1s value⟩
 
 end Gabbro.Stage0.Senke.BildLauf

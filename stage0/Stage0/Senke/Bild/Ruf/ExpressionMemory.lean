@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Ausdruck.Satz
 public import Stage0.Senke.Bild.Mehr.Solo
+public import Stage0.Senke.Bild.Rand
 
 @[expose] public section
 
@@ -218,5 +219,53 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
                 answered
           | sys unavailable _ => exact unavailable.elim
           | fp _ _ => exact ⟨fun _ => False.elim, fun refused => by cases refused⟩
+
+/-- A body can advance its source binding at the exact completed IR
+    boundary. Prefixes inside the bound expression supply the same
+    footprint obligation for every typed expression. -/
+theorem BodyFrame.bind_reference [kernel : Kern] {D : Deklaration} {B : BodyFrame D}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {bound : Expr D Γ Λ τ}
+    {rest : Endblock D (vertragVon D B.f) l (τ :: Γ) Λ}
+    {pc : W} {memory : Mem} {σ : World D} {env : Env D Γ} {code : List II} {top : Nat}
+    (frame : B.Ok) (atStart : B.RandIR (.bind bound rest) pc memory σ env)
+    (lowered : Senke.lowE (reserved := B.reserved) B.L bound (Senke.frei Γ B.reserved) = some (code, top))
+    (resultFits : Senke.frei Γ B.reserved + Senke.valueWords τ ≤ B.Ks)
+    (reads : W → Prop) (frameReads : ∀ byte, inSlots B.fp 0 B.Ks byte → reads byte)
+    (codeReads : ∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * code.length → reads byte)
+    (worldReads : ∀ cell : Senke.Zelle D, cell.da B.L →
+      Sum.elim (fun table => darf D table Λ) (fun global => gdarf D global Λ) cell.carrier →
+      ∀ byte : W, cell.adr B.L ≤ byte.toNat → byte.toNat < cell.adr B.L + cell.bytes → reads byte) :
+    let target := pc + BitVec.ofNat 64 (16 * code.length)
+    let observed := σ.lese Λ bound.orte
+    ∃ count, ∀ {taken : Nat} {pointer : T} {current : Mem},
+      StarM taken ⟨pc, B.fp⟩ memory pointer current → taken ≤ count →
+      (taken = count → pointer = ⟨target, B.fp⟩ ∧ Senke.AgreeW B.L B.fp B.lo B.K memory current ∧
+        B.RandIR rest target current observed (.cons (eval observed bound observed env) env)) ∧
+      (taken < count → ∀ {request : Op} {resume : Ans → Res T} {atRequest : Mem},
+        RunP (step pointer) current (.ask request resume) atRequest →
+        (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
+        (schreibtOp request = true → ∀ byte, fussOp request byte → inSlots B.fp 0 B.Ks byte)) := by
+  intro target observed
+  have original := atStart
+  obtain ⟨all, largest, compiled, room, _, pre, _, _, _, stored, _, _⟩ := atStart
+  simp only [Senke.lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at compiled
+  obtain ⟨⟨ce, te⟩, expression, ⟨tail, tailTop⟩, body, merged⟩ := compiled
+  rw [lowered] at expression
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj expression)
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj merged
+  have floor := frame.win.lo
+  have fits := frame.win.ks
+  have evaluated := Senke.PreS.welt pre.left fits stored frame.win.lay (by omega)
+  have ready : Senke.PreS B.L memory pc B.fp B.Ks (Senke.frei Γ B.reserved) code env B.reserved :=
+    ⟨evaluated.ctx, evaluated.small, evaluated.frame, evaluated.code, evaluated.far, evaluated.env,
+      trivial, Senke.wstab_true _ _⟩
+  obtain ⟨count, _, _, prefixCorrect⟩ :=
+    lowE_frameMemory reads frameReads codeReads bound lowered (by omega) resultFits ready
+      (Senke.WeltAt.reads stored Λ) worldReads frame.win.lay (by omega) (fun _ => rfl)
+  refine ⟨count, fun ran within => ?_⟩
+  obtain ⟨completed, requests⟩ := prefixCorrect ran within
+  exact ⟨fun atEnd => by
+    obtain ⟨pointer, memoryEffect, value⟩ := completed atEnd
+    exact ⟨pointer, BodyFrame.finishBind frame original lowered memoryEffect value⟩, requests⟩
 
 end Gabbro.Stage0
