@@ -220,6 +220,16 @@ public structure FixedActivationInventory (inventory : Inventory D) : Prop where
   resume : ∀ {tag name future boundary rest}, f.body.drop tag = Command.await name future boundary :: rest →
     inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future)
   completed : inventory.owned .completed = []
+  final : inventory.owned (.running f.body.length) = []
+
+/-- Resource-free futures satisfy every fixed-index edge simultaneously. -/
+public theorem fixedActivationInventory_erfuellbar (f : AsyncFn)
+    (number : D.Marke → Nat) (unique : ∀ a b, number a = number b → a = b) :
+    ∃ inventory : Inventory D,
+      (∀ phase, inventory.owned phase = []) ∧ FixedActivationInventory (f := f) inventory := by
+  let inventory : Inventory D :=
+    ⟨number, unique, fun _ => [], fun _ => List.nodup_nil, fun _ => [], fun _ => rfl⟩
+  exact ⟨inventory, fun _ => rfl, ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl, rfl, rfl⟩⟩
 
 private theorem refineNext (inventory : Inventory D)
     (state : Var Γ (stateType types f)) (finished : Var Γ .bool)

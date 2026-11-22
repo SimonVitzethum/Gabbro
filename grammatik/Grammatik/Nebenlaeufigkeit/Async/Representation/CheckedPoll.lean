@@ -86,6 +86,44 @@ public theorem activationFuel_decreases (elaboration : Elaboration D V Λ types 
 termination_by activationFuel f source
 decreasing_by exact activationFuel_decreases elaboration calls prices source target before after cost advanced
 
+/-- The successful generated poll implements the existing async machine
+    on the fragment where the ordinary calls have total normal results. -/
+public theorem resolvedPoll_machinePoll (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (normal : PollRuns elaboration calls) (source target : State (Value D) (Child D types))
+    (before after : World D) (event : Event (Value D)) (cost : Nat)
+    (polled : resolvedPoll elaboration calls prices source before = .ok (event, target, after, cost)) :
+    let model := inducedModel elaboration calls prices normal
+    MachinePoll model (asyncExpand model f) source before event target after cost := by
+  let model := inducedModel elaboration calls prices normal
+  have agrees := runActivation_agrees_with_inducedModel elaboration calls prices normal source before
+  cases activated : runActivation elaboration calls prices source before with
+  | error failure => rw [activated] at agrees; cases agrees
+  | ok outcome =>
+    rw [activated] at agrees
+    have actual : machineStep model (asyncExpand model f) source before = outcome :=
+      (Except.ok.inj agrees).symm
+    rcases outcome with ⟨observed, middle, between, work⟩
+    rw [resolvedPoll, activated] at polled
+    cases observed with
+    | next =>
+      have decreases := activationFuel_decreases elaboration calls prices source middle before between work activated
+      cases rest : resolvedPoll elaboration calls prices middle between with
+      | error failure =>
+        simp only [rest, Except.map, reduceCtorEq] at polled
+      | ok answer =>
+        rcases answer with ⟨observed, final, world, remaining⟩
+        have tail := resolvedPoll_machinePoll elaboration calls prices normal middle final between world observed
+          remaining rest
+        simp only [rest, Except.map, Except.ok.injEq, Prod.mk.injEq] at polled
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := polled
+        exact .next actual tail
+    | pending | ready | refused =>
+      simp only [Except.ok.injEq, Prod.mk.injEq] at polled
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := polled
+      exact .stop actual (by intro impossible; cases impossible)
+termination_by activationFuel f source
+
 /-- The emitted loop resets its flag for each poll and retains the ordinary
     G overflow branch. Its proof discharges that branch on represented inputs. -/
 @[expose] public def checkedPoll {elaboration : Elaboration D V Λ types f}

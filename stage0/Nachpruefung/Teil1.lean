@@ -15,6 +15,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ArgumentLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ConstructLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedAwait
+import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Poll
 import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
 import Grammatik.Niedrig.Konstrukte.SliceCheck
@@ -322,6 +323,12 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Representation.beginAwaitBlock_simulates
 #print axioms Gabbro.Grammatik.Async.Representation.CheckedAwait.start_simulates
 #print axioms Gabbro.Grammatik.Async.Representation.CheckedAwait.poll_simulates
+#print axioms Gabbro.Grammatik.Async.Segment.runActivation_agrees_with_inducedModel
+#print axioms Gabbro.Grammatik.Async.Representation.CheckedFinal.block_simulates
+#print axioms Gabbro.Grammatik.Async.Representation.fixedActivationInventory_erfuellbar
+#print axioms Gabbro.Grammatik.Async.Representation.checkedDispatch_refines
+#print axioms Gabbro.Grammatik.Async.Representation.resolvedPoll_machinePoll
+#print axioms Gabbro.Grammatik.Async.Representation.checkedPoll_refines
 #print axioms Gabbro.Grammatik.Async.Representation.lowerRunningBinding_rep
 #print axioms Gabbro.Grammatik.Async.Representation.resolvedBindingBlock_rep
 #print axioms Gabbro.Grammatik.Async.Representation.restoreFrameBlock_rep
