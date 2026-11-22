@@ -347,4 +347,28 @@ public theorem checkedDispatch_refines {elaboration : Elaboration D V Λ types f
   exact (table index).exec_refines inventory fixed state finished separate oracle passes calls prices world env
     unfinished source value selected owned represented
 
+private theorem PhasePlan.storageValid {elaboration : Elaboration D V Λ types f}
+    {phase : Phase} (plan : PhasePlan elaboration phase) (source : State (Value D) (Child D types))
+    (payload : Wert D (phaseType types f phase)) (selected : PhaseRep D types f phase source payload) :
+    StorageValid f source := by
+  cases plan
+  case cancelled => cases selected; trivial
+  case completed => cases selected; rfl
+  case bind checked => cases selected; exact Nat.le_trans (Nat.le_succ _) checked.within
+  case start checked => cases selected; exact Nat.le_trans (Nat.le_succ _) checked.within
+  case final => cases selected; exact Nat.le_refl _
+  case poll checked =>
+    cases selected
+    exact ⟨checked.destination, checked.future, checked.boundary, checked.rest, checked.command⟩
+
+/-- A represented state and the checked table determine a real source
+    command at every live tag, including a genuine await at each wait tag. -/
+public theorem checkedTable_storageValid {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (inventory : Inventory D) (source : State (Value D) (Child D types))
+    (value : Wert D (stateType types f)) (represented : Inv f types inventory source value) :
+    StorageValid f source := by
+  obtain ⟨index, payload, _, selected, _⟩ := PhaseListRep.locate represented
+  exact (table index).storageValid source payload selected
+
 end Gabbro.Grammatik.Async.Representation

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedPoll
+import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Grammatik.Async.Representation
 
@@ -38,6 +39,99 @@ public theorem resultExpr_eval {declared : Option Ty} (result : declared = some 
 @[expose] public def Pollable : State (Value D) (Child D types) → Prop
   | .running .. | .waiting .. => True
   | .completed .. | .cancelled => False
+
+@[expose] public def PollResultShape (source target : State (Value D) (Child D types)) :
+    Event (Value D) → Prop
+  | .next => False
+  | .pending => ∃ tag frame task, target = .waiting tag frame task
+  | .ready value _ => target = .completed value ⟨[], []⟩
+  | .refused => ¬ Pollable source
+
+private theorem activation_result_shape (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (source target : State (Value D) (Child D types)) (before after : World D) (event : Event (Value D)) (cost : Nat)
+    (valid : StorageValid f source)
+    (answered : runActivation elaboration calls prices source before = .ok (event, target, after, cost)) :
+    match event with
+    | .next => Pollable target ∧ StorageValid f target
+    | _ => PollResultShape source target event := by
+  cases source with
+  | cancelled | completed =>
+    simp only [runActivation, Except.ok.injEq, Prod.mk.injEq] at answered
+    obtain ⟨rfl, rfl, _, _⟩ := answered
+    exact fun active => active
+  | running tag frame =>
+    cases position : f.body.drop tag with
+    | nil =>
+      simp only [runActivation, position, Except.ok.injEq, Prod.mk.injEq] at answered
+      obtain ⟨rfl, rfl, _, _⟩ := answered
+      rfl
+    | cons command rest =>
+      have size := congrArg List.length position
+      simp only [List.length_drop, List.length_cons] at size
+      cases command with
+      | bind name source bound =>
+        simp only [runActivation, position, Except.ok.injEq, Prod.mk.injEq] at answered
+        obtain ⟨rfl, rfl, _, _⟩ := answered
+        exact ⟨trivial, by change tag + 1 ≤ f.body.length; omega⟩
+      | await name future boundary =>
+        simp only [runActivation, position, Except.ok.injEq, Prod.mk.injEq] at answered
+        obtain ⟨rfl, rfl, _, _⟩ := answered
+        exact ⟨trivial, ⟨name, future, boundary, rest, position⟩⟩
+  | waiting tag frame task =>
+    obtain ⟨name, future, boundary, rest, position⟩ := valid
+    have size := congrArg List.length position
+    simp only [List.length_drop, List.length_cons] at size
+    cases polled : runTaskPoll elaboration calls prices task before with
+    | error failure =>
+      simp only [runActivation, position, runWaitingPoll, polled, reduceCtorEq] at answered
+    | ok outcome =>
+      obtain ⟨reply, successor, world, work⟩ := outcome
+      cases reply with
+      | pending =>
+        simp only [runActivation, position, runWaitingPoll, polled, waitingReply,
+          Except.ok.injEq, Prod.mk.injEq] at answered
+        obtain ⟨rfl, rfl, _, _⟩ := answered
+        exact ⟨tag, frame, successor, rfl⟩
+      | ready value =>
+        simp only [runActivation, position, runWaitingPoll, polled, waitingReply,
+          Except.ok.injEq, Prod.mk.injEq] at answered
+        obtain ⟨rfl, rfl, _, _⟩ := answered
+        exact ⟨trivial, by change tag + 1 ≤ f.body.length; omega⟩
+
+/-- Successful source polls have exactly the state required by their
+    returned tag, and refusal is possible only at a terminal input. -/
+public theorem resolvedPoll_result_shape (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (source target : State (Value D) (Child D types)) (before after : World D) (event : Event (Value D)) (cost : Nat)
+    (valid : StorageValid f source)
+    (answered : resolvedPoll elaboration calls prices source before = .ok (event, target, after, cost)) :
+    PollResultShape source target event := by
+  rw [resolvedPoll] at answered
+  cases step : runActivation elaboration calls prices source before with
+  | error failure => rw [step] at answered; cases answered
+  | ok outcome =>
+    obtain ⟨observed, middle, between, work⟩ := outcome
+    have shape := activation_result_shape elaboration calls prices source middle before between observed work valid step
+    rw [step] at answered
+    cases observed with
+    | pending | ready | refused =>
+      cases answered
+      exact shape
+    | next =>
+      have decreases := activationFuel_decreases elaboration calls prices source middle before between work step
+      cases rest : resolvedPoll elaboration calls prices middle between with
+      | error failure => simp only [rest, Except.map, reduceCtorEq] at answered
+      | ok outcome =>
+        obtain ⟨observed, final, world, remaining⟩ := outcome
+        have tail := resolvedPoll_result_shape elaboration calls prices middle final between world observed remaining
+          shape.2 rest
+        simp only [rest, Except.map, Except.ok.injEq, Prod.mk.injEq] at answered
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := answered
+        cases observed with
+        | next | pending | ready => exact tail
+        | refused => exact (tail shape.1).elim
+termination_by activationFuel f source
 
 @[expose] public def pollGuardResult (world : World D) (env : Env D Γ) :
     State (Value D) (Child D types) → Ausgang V l Γ
