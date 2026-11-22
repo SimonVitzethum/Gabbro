@@ -85,13 +85,15 @@ public theorem leafTaskStmt_simulates (elaboration : Elaboration D V Λ types f)
   generalize same : env.get slot = storage at represented
   cases represented with
   | callReady typed =>
-    rw [leafTaskStmt, storedTag_cached (V := V) (l := l) (Λ := Λ) oracle passes calls slot _ _ world env _ same]
+    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval, same,
+      pendingAnswer, readyAnswer, execArms]
     simp only [runTaskPoll, pollTaskWith, pure, Except.pure, TaskStepRep]
     refine ⟨_, ?_, .callReady path name args typed⟩
     rw [← same, setCurrent]
     rfl
   | callActive _ _ _ payload =>
-    rw [leafTaskStmt, storedTag_active (V := V) (l := l) (Λ := Λ) oracle passes calls slot _ _ world env _ same]
+    simp only [leafTaskStmt, execStmt, Expr.orte, World.lese, World.merke, List.map_nil, List.nil_append, eval, same,
+      pendingAnswer, readyAnswer, execArms]
     rw [childPollBlock, waitingBlock_exec_outcome]
     obtain ⟨silent, evaluated⟩ := leafPollArguments_eval callee .here world world (.cons payload env)
     have noRead : world.lese Λ [] = world := rfl
