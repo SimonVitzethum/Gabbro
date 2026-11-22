@@ -73,6 +73,17 @@ theorem BildLage.startLimits (h : BildLage passes P fs pos main roots K Ks Yb A 
   omega
 
 omit [Kern] in
+/-- The checked reserve leaves positive call depth at every original
+    entry, so its first depth guard starts with a nonzero word. -/
+theorem BildLage.depth_pos (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :
+    0 < n := by
+  have positive := maxTop_pos cs
+  have reserve := h.hroom
+  have quotient : 2 ≤ (Ks - FB) / maxTop cs := (Nat.le_div_iff_mul_le (by omega)).mpr (by omega)
+  rw [h.hdepth, depthOf]
+  omega
+
+omit [Kern] in
 /-- Every admitted start serializes successfully; the complete stack band has exactly
     the byte length reserved by the source-independent image geometry. -/
 theorem BildLage.stacks (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρ rootArgs) :

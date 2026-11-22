@@ -222,6 +222,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.child_body_prefix
 #print axioms Gabbro.Stage0.Emitted.child_body_from_root_phase
 #print axioms Gabbro.Stage0.Emitted.depth_guard_zero
+#print axioms Gabbro.Stage0.Emitted.root_depth_guard_pass
 #print axioms Gabbro.Stage0.Senke.BildMehr.MTRel.enter_pending_root
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.resultFieldProjection_erfuellbar

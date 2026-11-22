@@ -406,6 +406,20 @@ theorem Emitted.child_body_from_root_phase [Kern] (output : Emitted src reserve 
   exact ⟨after, executed, shared, others, fun _ stored => output.world_survives_stack thread stored writes,
     frameOK, environment, returnPC, callerFrame, depth, body⟩
 
+private theorem function_depth_guard [Kern] (output : Emitted src reserve options)
+    {memory : Mem} (loaded : BytesAt memory codeBase (output.image.code.flatMap encII))
+    (fn : (declOf output.compiled.unit).Fn) :
+    let pc := BitVec.ofNat 64 (output.image.A fn)
+    let scratch := (functionFrame output.compiled.program fn).canonicalResult
+    ∃ rest, CodeAt memory pc (guardC 2 105 scratch ++ rest) := by
+  intro pc scratch
+  obtain ⟨code, top, lowered, decoded, _, _⟩ := output.relocated_function_code loaded fn
+  simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
+  obtain ⟨req, _, ensures, _, body, _, snapshot, _, shape, _⟩ := lowered
+  rw [← shape] at decoded
+  refine ⟨_, ?_⟩
+  simpa only [List.append_assoc, scratch] using decoded
+
 /-- A zero depth word at an emitted function entry branches directly
     to the stop for that function's model depth exhaustion. -/
 theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
@@ -422,12 +436,9 @@ theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
     CodeAt (before.ms.1.view thread) (pc + 32) (stopC (logikCode (.abstieg fn)) scratch) ∧
     rufRumpf output.compiled.program oracle output.image.passes 0 fn world arguments = .logik (.abstieg fn) := by
   intro pc scratch running zero
-  obtain ⟨code, top, lowered, decoded, _, _⟩ := output.relocated_function_code loaded fn
-  simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
-  obtain ⟨req, _, ensures, _, body, _, snapshot, _, shape, _⟩ := lowered
-  rw [← shape] at decoded
+  obtain ⟨_, decoded⟩ := function_depth_guard output loaded fn
   have guard : CodeAt (before.ms.1.view thread) pc (guardC 2 105 scratch) :=
-    codeAt_left (by simpa only [List.append_assoc, scratch] using decoded)
+    codeAt_left decoded
   have branch := tso_guard_fail (before := imageToTSO before) running guard
     (by rw [show sx (II.f (Int.ofNat 2)) = BitVec.ofNat 64 2 by decide]; exact zero)
   refine ⟨tso_silent_prefix_image branch rfl, ?_, ?_⟩
@@ -436,5 +447,34 @@ theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
         ([ci 19 (Int.ofNat 2) 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
     exact tail
   · simp only [rufRumpf]
+
+/-- At an original root's depth the actual emitted guard reaches the
+    precondition code without going through the depth-exhaustion stop. -/
+theorem Emitted.root_depth_guard_pass [Kern] (output : Emitted src reserve options)
+    {before : Cfg imageTSO (Res T)} {thread : Nat} {fp : W} (fn : (declOf output.compiled.unit).Fn)
+    (loaded : BytesAt (before.ms.1.view thread) codeBase (output.image.code.flatMap encII)) :
+    let pc := BitVec.ofNat 64 (output.image.A fn)
+    before.ths[thread]? = some (some (.next ⟨pc, fp⟩)) →
+    (before.ms.1.view thread).rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 output.image.depth) →
+    ∃ rest,
+      ProcessPrefix imageTSO actI before [] 7
+        ⟨before.ms, before.ths.set thread (some (.next ⟨pc + BitVec.ofNat 64 (16 * 5), fp⟩))⟩ ∧
+      CodeAt (before.ms.1.view thread) (pc + BitVec.ofNat 64 (16 * 5)) rest := by
+  intro pc running word
+  obtain ⟨rest, decoded⟩ := function_depth_guard output loaded fn
+  obtain ⟨_, _, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have fits := (Nat.lt_succ_self _).trans (layout.startLimits.2.1.trans (by decide : 2 ^ 31 < 2 ^ 64))
+  have nonzero : BitVec.ofNat 64 output.image.depth ≠ 0 := by
+    intro zero
+    have equal := congrArg BitVec.toNat zero
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits] at equal
+    exact (Nat.ne_of_gt layout.depth_pos) equal
+  have stepped := tso_guard_pass (before := imageToTSO before) running (codeAt_left decoded)
+    (by rw [show sx (II.f (Int.ofNat 2)) = BitVec.ofNat 64 2 by decide]; exact word) nonzero
+  exact ⟨rest, tso_silent_prefix_image stepped rfl, codeAt_right decoded⟩
 
 end Gabbro.Stage0
