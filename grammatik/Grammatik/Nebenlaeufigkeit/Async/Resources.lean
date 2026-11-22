@@ -114,12 +114,7 @@ public theorem cancelBody_exec (types : TypeResolution) (f : AsyncFn)
     execBlock oracle passes calls (cancelBody types f state children release) world env =
       match child with
       | .ok after updated => execBlock oracle passes calls (cancelEpilogue types f state release) after updated
-      | .zurueck after result => .zurueck after result
-      | .why after reason => .why after reason
-      | .leave loop after updated => .leave loop after updated
-      | .next loop after updated => .next loop after updated
-      | .logik failure => .logik failure
-      | .hardware failure => .hardware failure := by
+      | result => result := by
   intro stored child
   have selected : execStmt oracle passes calls
       (dispatch (stateCases types f) (stateDiscriminant types f (.var state)) children) world env =
