@@ -275,14 +275,31 @@ private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {o
           Nat.succ_le_of_lt absent
       rw [List.getElem?_eq_none_iff.mpr beyondBody, List.getElem?_eq_none_iff.mpr beyondThreads]
 
+/-- A drained compare-and-swap changes committed memory exactly as the
+    atomic memory operation of Lean IR, with no buffered effect. -/
+private theorem tso_cas_committed {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+    {i : Nat} {address expected replacement : W} {answer : Ans}
+    (step : (TSO layout).ans before i (.cas address expected replacement) answer after) :
+    IR.memAns before.1.m (.cas address expected replacement) = some (answer, after.1.m) := by
+  obtain ⟨drained, observed⟩ := tso_cas_updates_view step
+  have stillDrained : after.1.buf i = [] := by
+    rcases step.2 with ⟨_, _, same⟩ | ⟨_, _, _, _, updated⟩
+    · rw [same]
+      exact drained
+    · rw [updated]
+      exact drained
+  simpa only [TSt.view, drained, stillDrained, List.foldl_nil] using observed
+
 private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {before after : Cfg imageTSO (Res T)} {events : List Ev}
     (idle : ImageIdleBuffers before) (privateWrites : PrivateBuffers (imageStackFootprint output) before.ms.1)
     (directEffects : ∀ {thread request resume reply memory},
       before.ths[thread]? = some (some (.ask request resume)) →
-      (match request with | .sys .. | .cas .. => True | _ => False) →
       imageTSO.ans before.ms thread request reply memory →
-      GleichAuf (imageStackFootprint output future) before.ms.1.m memory.1.m)
+      match request with
+      | .sys _ => GleichAuf (imageStackFootprint output future) before.ms.1.m memory.1.m
+      | .cas address .. => ∀ byte, imageStackFootprint output future byte → ¬ fenster address byte
+      | _ => True)
     (step : ProcessStep imageTSO actI before events after) (outside : after.ths.length ≤ future) :
     GleichAuf (imageStackFootprint output future) before.ms.1.m after.ms.1.m := by
   have cloneKeeps {state : imageTSO.St} {thread : Nat} {reply : Ans}
@@ -314,7 +331,11 @@ private theorem future_stack_step [Kern] {src : String} {reserve future : Nat} {
     | ask request resume =>
       cases offered
       cases operation with
-      | cas | sys => exact directEffects running trivial answered
+      | sys => exact directEffects running answered
+      | cas address _ _ =>
+        intro byte reserved
+        exact ((memAns_nurIn (tso_cas_committed answered.1)).gleichAt
+          (directEffects running answered byte reserved)).symm
       | rd | fp =>
         rw [answered.1.1]
         exact fun byte _ => GleichAt.refl _ byte
@@ -350,9 +371,11 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
       ProcessPrefix imageTSO actI (output.irEntry initial) earlier steps first →
       first.ths.length ≤ index + 1 →
       ∀ {thread request resume reply memory}, first.ths[thread]? = some (some (.ask request resume)) →
-      (match request with | .sys .. | .cas .. => True | _ => False) →
       imageTSO.ans first.ms thread request reply memory →
-      GleichAuf (imageStackFootprint output (index + 1)) first.ms.1.m memory.1.m)
+      match request with
+      | .sys _ => GleichAuf (imageStackFootprint output (index + 1)) first.ms.1.m memory.1.m
+      | .cas address .. => ∀ byte, imageStackFootprint output (index + 1) byte → ¬ fenster address byte
+      | _ => True)
     (code : BytesAt before.ms.1.m codeBase (output.image.code.flatMap encII))
     (partition : ImageRuntimePartition footprint output E O history before state body)
     (slots : ImageSlotsMatch output E O history before state)

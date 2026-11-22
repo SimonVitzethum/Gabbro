@@ -296,7 +296,7 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
       answer (memory.1.view thread) answeredByHost
   have hasArea : gate.resultArea = some slotIndex :=
     of_decide_eq_true (Bool.and_eq_true_iff.mp transport).2
-  exact ⟨.ask waiting rfl ordinary answered rfl,
+  refine ⟨.ask waiting rfl ordinary answered rfl,
     ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed, carriers,
       gate, tag, extra, selected, number, ArgsW.withIdle_words args types registers, response,
       .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
