@@ -219,7 +219,8 @@ def ImageForeignTrace (output : Emitted src reserve options)
     (history : List Ev) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
   List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
     event.1 = typed.1 ∧ ∃ gate, output.tor typed.2 = some gate ∧
-      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent) (imageSourceForeignEvents state.m.lauf)
+      event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent)
+      (imageSourceForeignEvents (D := (declOf output.compiled.unit).mitRuhe) state.m.lauf)
 
 /-- The actual mapped output and empty initial buffers establish the
     initial phase, exact source memory and empty observation history. -/
