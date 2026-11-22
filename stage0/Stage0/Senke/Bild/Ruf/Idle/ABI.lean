@@ -126,7 +126,7 @@ theorem areaC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (result : Ty) (dest reserved : Nat) :
     areaC L.withIdle a (ruA args) (tyR result) dest reserved = areaC L a args result dest reserved := by
   have binding : L.withIdle.tor a = L.tor a := rfl
-  have width : (D.mitRuhe.aparams a).length = (D.aparams a).length := List.length_map
+  have width : (D.mitRuhe.aparams a).length = (D.aparams a).length := List.length_map tyR
   have types : (D.mitRuhe.aparams a).all (fun ty => wortTy ty && !isPtr ty) =
       (D.aparams a).all (fun ty => wortTy ty && !isPtr ty) := by
     change ((D.aparams a).map tyR).all _ = _

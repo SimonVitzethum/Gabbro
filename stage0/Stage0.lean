@@ -42,6 +42,7 @@ public import Stage0.Senke.Bild.Ruf.Idle.Expression
 public import Stage0.Senke.Bild.Ruf.Idle.Contracts
 public import Stage0.Senke.Bild.Ruf.Idle.CallOperands
 public import Stage0.Senke.Bild.Ruf.Idle.ABI
+public import Stage0.Senke.Bild.Ruf.Idle.Foreign
 public import Stage0.Senke.Bild.Ruf.RootExit
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Ruf.BodyMemory
