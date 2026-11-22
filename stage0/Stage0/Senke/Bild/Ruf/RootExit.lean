@@ -104,6 +104,7 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
   have parts : CodeAt m pc (header ++ (statusCode ++ call)) := code
   have headerCode := codeAt_left parts
   obtain ⟨first, wroteNumber, view1⟩ := image_stop_const running headerCode frame (by omega) slotsFit (by decide)
+  change first.1.view i = Mem.write m (slot fp (BitVec.ofNat 64 scratch)) 8 231 at view1
   let next := nxt pointer
   let middle : Cfg imageTSO (Res T) := ⟨first, before.ths.set i (some (.next next))⟩
   have iWithin := (List.getElem?_eq_some_iff.mp running).1
@@ -116,6 +117,8 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
     (codeAt_right parts).agree write1 (codeFar_right (n := 1) (k := 2) far)
   obtain ⟨second, wroteStatus, view2⟩ := image_stop_const nextReady (codeAt_left remain) frame1
     (by omega) slotsFit statusFit
+  change second.1.view i = Mem.write (first.1.view i) (slot fp (BitVec.ofNat 64 (scratch + 1))) 8
+    (BitVec.ofNat 64 status).toNat at view2
   let sys := nxt next
   let decoded : Cfg imageTSO (Res T) := ⟨second, before.ths.set i (some (.next sys))⟩
   have atSys : decoded.ths[i]? = some (some (.next sys)) := List.getElem?_set_self iWithin
@@ -133,7 +136,8 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
     simpa only [call, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] using decoded
   have address : sx (II.f scratch) = BitVec.ofNat 64 scratch := sx_nat (by omega)
   have numberRead : (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 scratch)) = some (231 : W) := by
-    rw [view2, rd64_write_far (slot_far frame.room (by omega) (by omega) (by omega)), view1]
+    have disjoint := slot_far frame.room (i := scratch + 1) (j := scratch) (by omega) (by omega) (by omega)
+    rw [view2, rd64_write_far disjoint, view1]
     exact rd64_wr64 (wr64_some (frame.wr scratch (by omega))) (frame.rd scratch (by omega))
   have statusRead : (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + 1))) =
       some (BitVec.ofNat 64 status) := by
@@ -141,7 +145,9 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
     exact rd64_wr64 (wr64_some (frame1.wr _ (by omega))) (frame1.rd _ (by omega))
   have arg (offset : Nat) (inside : offset < 7) : ∃ word,
       (second.1.view i).rd64 (slot fp (BitVec.ofNat 64 (scratch + offset))) = some word := by
-    exact ⟨_, by simp only [Mem.rd64, frame2.rd (scratch + offset) (by omega), ite_true]; rfl⟩
+    have readable : Mem.all (second.1.view i).rd (slot fp (BitVec.ofNat 64 (scratch + offset))) 8 = true :=
+      frame2.rd (scratch + offset) (by omega)
+    exact ⟨_, by simp only [Mem.rd64, readable, ite_true]⟩
   obtain ⟨a2, read2⟩ := arg 2 (by decide)
   obtain ⟨a3, read3⟩ := arg 3 (by decide)
   obtain ⟨a4, read4⟩ := arg 4 (by decide)
@@ -162,7 +168,10 @@ theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {poi
   have numberThenStatus : ProcessPrefix imageTSO actI before [] 10 decoded := by
     simpa only [middle, decoded, List.set_set, List.nil_append] using wroteNumber.trans wroteStatus
   have silent : ProcessPrefix imageTSO actI decoded [] 11 armed := by
-    simpa only [decoded, armed, req, resume, List.set_set] using tso_silent_prefix_image request rfl
+    have projected := tso_silent_prefix_image request rfl
+    change ProcessPrefix imageTSO actI decoded [] 11
+      ⟨second, (before.ths.set i (some (.next sys))).set i (some (.ask (.sys req) resume))⟩ at projected
+    simpa only [List.set_set] using projected
   exact ⟨armed, req, resume, numberThenStatus.trans silent, ready, rfl, rfl⟩
 
 /-- A reached hardware failure explains the real process exit with its

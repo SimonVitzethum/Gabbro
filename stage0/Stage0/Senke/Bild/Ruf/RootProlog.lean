@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootEntry
+import Stage0.Senke.Bild.Ruf.RootExit
 import Stage0.Senke.Images.CheckSpawn
 import Lean.Elab.Tactic.Omega
 
@@ -102,6 +103,37 @@ theorem Emitted.depth_guard_zero [Kern] (output : Emitted src reserve options)
         ([ci 19 ((2 : Nat) : Int) 32 0, ci 18 64 0 0] ++ stopC 105 scratch))
     exact tail
   · simp only [rufRumpf]
+
+/-- The emitted guard and its emitted exit sequence report exactly the
+    bounded call semantics' depth exhaustion. -/
+theorem Emitted.depth_guard_exits [Kern] (output : Emitted src reserve options)
+    {before : Cfg imageTSO (Res T)} {thread slots : Nat} {fp : W} (fn : (declOf output.compiled.unit).Fn)
+    (loaded : BytesAt (before.ms.1.view thread) codeBase (output.image.code.flatMap encII))
+    (oracle : Orakel (declOf output.compiled.unit)) (world : World (declOf output.compiled.unit))
+    (arguments : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params fn)) :
+    let pc := BitVec.ofNat 64 (output.image.A fn)
+    let scratch := (functionFrame output.compiled.program fn).canonicalResult
+    before.ths[thread]? = some (some (.next ⟨pc, fp⟩)) →
+    (before.ms.1.view thread).rd64 (slot fp (BitVec.ofNat 64 2)) = some 0 →
+    CodeFar (pc + 32) 3 fp slots → FrameOK (before.ms.1.view thread) fp slots →
+    scratch + 8 ≤ slots → slots < 2 ^ 31 →
+    ∃ req, Tr imageTSO actI before [(thread, req, none)]
+        (.exit (BitVec.ofNat 64 (logikCode (.abstieg fn)))) 27 ∧
+      req.nr.toNat = NR_EXIT_GROUP ∧ req.a1 = BitVec.ofNat 64 (logikCode (.abstieg fn)) ∧
+      rufRumpf output.compiled.program oracle output.image.passes 0 fn world arguments = .logik (.abstieg fn) := by
+  intro pc scratch running zero far frame room fit
+  obtain ⟨guard, code, semantic⟩ := output.depth_guard_zero fn loaded oracle world arguments running zero
+  let failed : Cfg imageTSO (Res T) :=
+    ⟨before.ms, before.ths.set thread (some (.next ⟨pc + 32, fp⟩))⟩
+  have atStop : failed.ths[thread]? = some (some (.next ⟨pc + 32, fp⟩)) :=
+    List.getElem?_set_self (List.getElem?_eq_some_iff.mp running).1
+  have statusFit : logikCode (.abstieg fn) < 2 ^ 31 := by simp only [logikCode]; decide
+  obtain ⟨armed, req, resume, setup, ready, number, status⟩ :=
+    image_emitted_stop (before := failed) atStop code far frame room fit statusFit
+  have terminal : Tr imageTSO actI armed [(thread, req, none)] (.exit req.a1) 1 := .exitGroup ready rfl number
+  have quiet : ProcessPrefix imageTSO actI before [] 26 armed := guard.trans setup
+  refine ⟨req, ?_, number, status, semantic⟩
+  simpa only [List.nil_append, status] using quiet.prepend terminal
 
 /-- At an original root's depth the actual emitted guard reaches the
     precondition code without going through the depth-exhaustion stop. -/
