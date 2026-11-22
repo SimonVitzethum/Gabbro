@@ -255,7 +255,8 @@ theorem ImageTicketStates.retryServing [Kern] {D : Deklaration} [DecidableEq D.L
       · by_cases issuer : other = thread
         · subst other
           simp only [Zustand.mit, upd_self, saved, Ort.haelt]
-        · rw [Zustand.mit, upd_ne _ _ issuer]
+        · change (upd (states lock).pc thread (.incL ticket (states lock).w.serv) other).haelt = _
+          rw [upd_ne _ _ issuer]
       · rfl
     rw [unchangedOwner]
     exact (current.owners lock).inside other
@@ -263,6 +264,43 @@ theorem ImageTicketStates.retryServing [Kern] {D : Deklaration} [DecidableEq D.L
     rw [unchanged]
     exact fun byte _ => GleichAt.refl _ byte
   exact ⟨step, unchanged, binding, current.update geometry bound stable (fun _ _ _ => Iff.rfl) words valid sameOwners⟩
+
+/-- A buffer drain may publish private writes, but cannot alter any
+    of the shared ticket words or the source lock ownership. -/
+theorem ImageTicketStates.flush [Kern] {D : Deklaration} {N : Nat} {layout : Lay D}
+    {source : RufMaschineG D} {states : D.Lock → Zustand N}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {footprint : Nat → W → Prop}
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (outside : ∀ lock byte, LockBytes layout lock byte → ∀ issuer, ¬ footprint issuer byte)
+    (flushed : imageTSO.tau machine.ms memory) :
+    ProcessStep imageTSO actI machine [] ⟨memory, machine.ths⟩ ∧
+      PrivateBuffers footprint memory.1 ∧ projectSCState footprint memory = projectSCState footprint machine.ms ∧
+      ImageTicketStates layout memory.1.m source states := by
+  refine ⟨.tau flushed, buffers.flush flushed, projectSCState_flush flushed footprint
+    (fun issuer store pending byte hit => (buffers issuer store pending byte hit).1) buffers.disjoint, ?_⟩
+  have stable (lock : D.Lock) : GleichAuf (LockBytes layout lock) memory.1.m machine.ms.1.m := by
+    obtain ⟨issuer, address, value, tail, head, changed⟩ := flushed
+    intro byte protected
+    have pending : (address, value) ∈ machine.ms.1.buf issuer := by
+      rw [head]
+      exact List.mem_cons_self
+    rw [changed]
+    exact (write_nurIn _ _ _).gleichAt (fun hit =>
+      outside lock byte protected issuer (buffers issuer (address, value) pending byte hit).1)
+  refine ⟨?_, current.protocol, current.owners⟩
+  intro lock
+  have fits := (geometry.1 lock).2.trans bound
+  have read (offset : Nat) (within : offset ≤ 16) :
+      memory.1.m.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) =
+        machine.ms.1.m.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) :=
+    gleich_rd64 fun byte hit => stable lock byte (lockWord_in_bytes fits within hit)
+  have first := read 0 (by decide)
+  rw [Nat.add_zero] at first
+  exact ⟨first.trans (current.words lock).next,
+    (read 8 (by decide)).trans (current.words lock).serving,
+    (read 16 (by decide)).trans (current.words lock).waiters⟩
 
 /-- A control-only lock transition can change the entire waiter queue.
     Only its ownership bits and the three physical counters must stay
