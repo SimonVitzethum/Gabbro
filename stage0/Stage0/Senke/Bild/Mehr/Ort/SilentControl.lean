@@ -335,6 +335,43 @@ theorem StarM.sc_reference_through {layout : Runner.Beweis.Lay}
   obtain ⟨tailCount, finalTable, suffix⟩ := tail.sc_reference middleTable (blind_step _)
   exact ⟨tailCount + 1 + prefixCount, finalTable, initialRun.trans (.cons (.priv rfl) suffix)⟩
 
+private theorem RunP.read8 {before after : Mem} {address : W} {byte : B}
+    {resume : W → Res T} {finish : Res T} (read : before.rd8 address = some byte)
+    (tail : RunP (resume (byte.setWidth 64)) before finish after) :
+    RunP (rd8 address resume) before finish after := by
+  refine .ask (a := some (byte.setWidth 64, 0)) (m' := before) (by simp [memAns, read]) ?_
+  simpa only [opt_some] using tail
+
+private theorem RunP.read32 {before after : Mem} {address : W} {word : BitVec 32}
+    {resume : BitVec 32 → Res T} {finish : Res T} (read : before.rd32 address = some word)
+    (tail : RunP (resume word) before finish after) :
+    RunP (rd32 address resume) before finish after := by
+  refine .ask (a := some (word.setWidth 64, 0)) (m' := before) (by simp [memAns, read]) ?_
+  simpa only [opt_some, BitVec.setWidth_setWidth_of_le (by decide : 32 ≤ 64)] using tail
+
+private theorem RunP.read64 {before after : Mem} {address word : W}
+    {resume : W → Res T} {finish : Res T} (read : before.rd64 address = some word)
+    (tail : RunP (resume word) before finish after) :
+    RunP (rd64 address resume) before finish after := by
+  exact .ask (a := some (word, 0)) (m' := before) (by simp [memAns, read]) tail
+
+/-- The IR instruction tree reaches the host with the continuation
+    selected by the operands that it read from the issuing frame. -/
+theorem spawnInstruction_reference {parent child : T} {memory : Mem} {dest index pad : BitVec 32}
+    (instruction : InsAt memory parent.pc 24 dest index pad)
+    (entry : memory.rd64 (slot parent.fp (sx index)) = some child.pc)
+    (frame : memory.rd64 (slot parent.fp (sx index) + 8) = some child.fp) :
+    RunP (step parent) memory
+      (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) memory := by
+  unfold step
+  refine RunP.read8 instruction.op ?_
+  change RunP (op 24 parent) _ _ _
+  simp only [op]
+  apply RunP.read32 instruction.f2
+  simp only [ld]
+  exact RunP.read64 entry (RunP.read64 frame (.refl _ _))
+
 /-- Before issuing a syscall or creating another thread, a terminal IR
     observation is the same terminal control in its SC projection. -/
 private theorem image_silent_terminal_sc [Kern]
