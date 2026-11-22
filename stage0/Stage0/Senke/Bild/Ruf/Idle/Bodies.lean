@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.Idle.Foreign
 public import Stage0.Senke.Bild.Ruf.Idle.Counters
+public import Stage0.Senke.Bild.Ruf.Idle.ByteStores
 
 @[expose] public section
 
@@ -102,6 +103,7 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       lowRetScoped, lowRetWhyScoped, retScopedC_withIdle, retWhyScopedC_withIdle, retTop_withIdle,
       signatur_some, sigNrM, receiveC_withIdle, receiveTop_withIdle, elseC_withIdle,
       elseTop_withIdle, elseTopInd_withIdle, callC_withIdle, slotC_withIdle,
+      slotA_withIdle, putBytesL_withIdle, putBytesWideL_withIdle,
       locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, Ty.mapCases_length, vertragR,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, *]
     try simp only [shifted, callC_withIdle]
