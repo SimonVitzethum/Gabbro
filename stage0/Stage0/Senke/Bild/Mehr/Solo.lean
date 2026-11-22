@@ -81,8 +81,8 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
   induction ran generalizing actual with
   | next =>
     refine ⟨actual, .next, agrees, fun byte _ => GleichAt.refl _ byte, ?_⟩
-    intro current request resume prefix
-    cases prefix
+    intro current request resume partialRun
+    cases partialRun
   | @ask op k before middle after answer dest answered rest ih =>
     cases answer with
     | none =>
@@ -106,8 +106,8 @@ theorem RunM.replay_on {r : Res T} {reference finish : Mem} {target : T}
       refine ⟨result, .ask sameAnswer replay, sameResult, ?_, ?_⟩
       · intro byte outside
         exact (otherBytes byte outside).trans (memAns_aussen sameAnswer confined.2 byte outside)
-      · intro current request resume prefix
-        cases prefix with
+      · intro current request resume partialRun
+        cases partialRun with
         | refl => exact confined
         | ask wasAnswered leftover =>
           rw [sameAnswer] at wasAnswered
