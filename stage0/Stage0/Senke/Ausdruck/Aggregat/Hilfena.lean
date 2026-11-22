@@ -121,15 +121,25 @@ private theorem konstWL_measure (chunks first second destination : Nat) :
     obtain ⟨length, frame⟩ := Prod.mk.inj lower
     simp only [konstWL, bin2, codeMeasure, List.length_append, List.length_singleton, length, frame]
 
-set_option maxRecDepth 4096 in
+private theorem choiceMeasure {small₁ small₂ large₁ large₂ : List II × Nat} {first second : Bool}
+    (same : first = second) (small : codeMeasure small₁ = codeMeasure small₂)
+    (large : codeMeasure large₁ = codeMeasure large₂) :
+    codeMeasure (if first then small₁ else large₁) =
+      codeMeasure (if second then small₂ else large₂) := by
+  subst second
+  cases first
+  · exact large
+  · exact small
+
+private theorem immediateMeasure (first second : Int) (destination : Nat) :
+    codeMeasure ([ci 1 destination first 0], destination + 1) =
+      codeMeasure ([ci 1 destination second 0], destination + 1) := rfl
+
 private theorem wordConst_measure (first second : Runner.W) (destination : Nat)
     (same : lit32 first.toInt = lit32 second.toInt) :
-    codeMeasure (wordConst first destination) = codeMeasure (wordConst second destination) := by
-  by_cases small : lit32 second.toInt = true
-  · rw [wordConst, wordConst, same, if_pos small, if_pos small]
-    rfl
-  · rw [wordConst, wordConst, same, if_neg small, if_neg small]
-    exact konstWL_measure 4 first.toNat second.toNat destination
+    codeMeasure (wordConst first destination) = codeMeasure (wordConst second destination) :=
+  choiceMeasure same (immediateMeasure first.toInt second.toInt destination)
+    (konstWL_measure 4 first.toNat second.toNat destination)
 
 private theorem codeMeasure_concat (head tail : List II × Nat) :
     codeMeasure (head.1 ++ tail.1, max head.2 tail.2) =
