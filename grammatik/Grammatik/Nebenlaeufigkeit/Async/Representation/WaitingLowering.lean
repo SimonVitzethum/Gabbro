@@ -227,7 +227,7 @@ public theorem lowerLeafPoll_pending (elaboration : Elaboration D V Λ types f) 
   · simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
       pending, decodePollAnswer, pendingAnswer, bind, Except.bind, Except.pure, pure, waitingReply] <;> rfl
   let arguments := leafPollArguments callee child
-  let arm := leafPendingExpr types f tag command saved
+  let arm := leafPendingExpr (Λ := Λ) types f tag command saved
   obtain ⟨silentArgs, exactArgs⟩ := leafPollArguments_eval callee child world world env
   have noRead (current : World D) : current.lese Λ [] = current := rfl
   have called : calls callee.poll (world.lese Λ arguments.orte)
@@ -252,6 +252,104 @@ public theorem lowerLeafPoll_pending (elaboration : Elaboration D V Λ types f) 
   rw [content] at executed
   have invariant : Inv f types inventory target value := waitingValue_inv types f inventory tag command frame _ _ current
     stored (.callActive [tag] name args updated) owned
+  exact ⟨value, executed, invariant, inv_encoded f types inventory _ value invariant⟩
+
+@[expose] public def readyBindingFrame (types : TypeResolution) (f : AsyncFn) (next : Phase)
+    (destination : String) (sourceType : Parser.STyp) {actual : Ty} (same : actual = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType) (saved : Var Γ (frameType types f)) :
+    Expr D (actual :: Γ) Λ (frameType types f) :=
+  Eq.mp (congrArg (fun ty => Expr D (ty :: Γ) Λ (frameType types f)) same.symm)
+    (bindingFrameExpr types f next destination sourceType binding saved)
+
+public theorem readyBindingFrame_rep {before next : Phase} (destination : String) (sourceType : Parser.STyp)
+    {actual : Ty} (same : actual = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (retained : ∀ name ∈ liveAt f next, name ≠ destination → name ∈ liveAt f before)
+    (saved : Var Γ (frameType types f)) (world : World D) (env : Env D Γ) (result : Wert D actual)
+    (frame : Frame (Value D)) (represented : FrameRep D types f before frame (env.get saved)) :
+    let expression : Expr D (actual :: Γ) Λ (frameType types f) :=
+      readyBindingFrame types f next destination sourceType same binding saved
+    expression.orte = [] ∧ FrameRep D types f next (save frame destination (Value.typed actual result))
+      (eval world expression world (.cons result env)) := by
+  subst actual
+  exact ⟨bindingFrameExpr_reads types f next destination sourceType binding saved,
+    bindingFrameExpr_rep (Λ := Λ) destination sourceType binding retained saved world world
+      (.cons result env) frame represented⟩
+
+/-- The Ready arm saves its typed result, clears dead slots and advances
+    to the selected Running case. -/
+@[expose] public def leafReadyExpr (types : TypeResolution) (f : AsyncFn) (tag : Nat)
+    (within : tag + 1 ≤ f.body.length) (destination name : String) (sourceType : Parser.STyp)
+    (same : types.childResult name = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType) (saved : Var Γ (frameType types f)) :
+    Expr D (types.childResult name :: .sum [some (types.childResult name), some (types.childState name)] :: Γ)
+      Λ (stateType types f) :=
+  runningExpr types f (tag + 1) within
+    (readyBindingFrame types f (.running (tag + 1)) destination sourceType same binding (.there saved))
+
+/-- The real Ready result is the value in the semantic successor and
+    in its generated frame. The ordinary call's returned world is kept. -/
+public theorem lowerLeafPoll_ready (elaboration : Elaboration D V Λ types f) (inventory : Inventory D)
+    (tag : Nat) (within : tag + 1 ≤ f.body.length) (destination name : String)
+    {args : List Parser.SExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination (.call name args) boundary :: rest)
+    (sourceType : Parser.STyp) (same : types.childResult name = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (callee : AwaitedCall D V Λ types name) (known : elaboration.callee name = some callee)
+    (child : Var Γ (types.childState name)) (saved : Var Γ (frameType types f))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool) (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (world after : World D) (env : Env D Γ) (frame : Frame (Value D))
+    (stored : FrameRep D types f (.waiting tag (.call name args)) frame (env.get saved))
+    (owned : MarksRep inventory (.waiting tag (.call name args)) (.waiting tag frame (.leaf (.active name (env.get child)))))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag (.call name args)))
+    (answer : ErgVal D (D.erg callee.poll)) (result : Wert D (types.childResult name))
+    (returned : calls callee.poll world (pollEnvironment callee (env.get child)) = .ok after answer)
+    (completed : ergWert callee.pollResult answer = readyAnswer D (types.childResult name) (types.childState name) result) :
+    let target := State.running (Child := Child D types) (tag + 1)
+      (save frame destination (Value.typed (types.childResult name) result))
+    runWaitingPoll elaboration calls prices tag destination frame (.leaf (.active name (env.get child))) world =
+        .ok (.next, target, after, prices callee.poll + 1) ∧
+    ∃ value, execBlock oracle passes calls (lowerLeafPoll (V := V) (l := l) types f tag command callee child saved
+        state finished (leafReadyExpr types f tag within destination name sourceType same binding saved)) world env =
+          .ok after (env.set state value) ∧
+      Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro target
+  constructor
+  · simp only [runWaitingPoll, runTaskPoll, pollTaskWith, known, runChildPoll, returned, decodeChildOutcome,
+      completed, decodePollAnswer, readyAnswer, bind, Except.bind, Except.pure, pure, waitingReply] <;> rfl
+  let arguments := leafPollArguments callee child
+  let ready := leafReadyExpr (Λ := Λ) types f tag within destination name sourceType same binding saved
+  let pending := leafPendingExpr (Λ := Λ) types f tag command saved
+  let reply := readyAnswer D (types.childResult name) (types.childState name) result
+  obtain ⟨silentArgs, exactArgs⟩ := leafPollArguments_eval callee child world world env
+  have noRead (current : World D) : current.lese Λ [] = current := rfl
+  have called : calls callee.poll (world.lese Λ arguments.orte)
+      (evalArgs (world.lese Λ arguments.orte) arguments (world.lese Λ arguments.orte) env) = .ok after answer := by
+    simp only [arguments, silentArgs, noRead, exactArgs]
+    exact returned
+  have executed := childPollBlock_exec_return callee arguments
+    (pollAnswerArms (V := V) (l := l) state finished ready pending) oracle passes calls world after env answer called
+  dsimp only at executed
+  rw [completed, pollAnswerArms_ready] at executed
+  let extended := Env.cons result (.cons reply env)
+  let storage := readyBindingFrame (Λ := Λ) types f (.running (tag + 1)) destination sourceType same binding (.there saved)
+  obtain ⟨silentFrame, frameRep⟩ := readyBindingFrame_rep (Λ := Λ) destination sourceType same binding
+    (await_retains_live tag destination (.call name args) boundary rest command) (.there saved) after
+    (.cons reply env) result frame stored
+  have silent : ready.orte = [] := (runningExpr_reads types f (tag + 1) within storage).trans silentFrame
+  simp only [silent, noRead] at executed
+  let nextFrame := eval after storage after extended
+  let value := runningValue D types f (tag + 1) within nextFrame
+  have content : eval after ready after extended = value :=
+    runningExpr_eval types f (tag + 1) within storage after after extended
+  change execBlock oracle passes calls (lowerLeafPoll (V := V) (l := l) types f tag command callee child saved
+    state finished ready) world env = .ok after (env.set state (eval after ready after extended)) at executed
+  rw [content] at executed
+  have marks : MarksRep inventory (.running (tag + 1)) target :=
+    by simpa only [MarksRep, target, State.marks, sameInventory, save] using owned
+  have invariant : Inv f types inventory target value :=
+    runningValue_inv types f inventory (tag + 1) within _ nextFrame frameRep marks
   exact ⟨value, executed, invariant, inv_encoded f types inventory _ value invariant⟩
 
 end Gabbro.Grammatik.Async.Representation
