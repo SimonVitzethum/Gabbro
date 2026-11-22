@@ -850,6 +850,8 @@ An array local also supports `array[start .. start + N]` for an integer
 local `start` and a compile-time count `N`. The complete interval of
 `start` must be nonnegative and fit with `N` inside the array length.
 The result is a value of array type with length `N`.
+Its length and element observations also lower directly. The length is
+`N`, and indexing reads the original array at `start + index`.
 Stage 0 also supports `lenof(array[first .. last])` and
 `array[first .. last][index]` for a local array. Each integer operand can
 be a local with a resolved interval or a static expression.

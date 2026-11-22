@@ -8421,6 +8421,9 @@ the actual loaded arguments and the reachable dormant GX head.
 to preserve its byte representation under confined writes.
 `Emitted.root_call_enter` executes the emitted child's call under TSO.
 It reaches the relocated body with its exact typed arguments and depth.
+`Emitted.child_prologue_prefix` composes the original child stub and
+the function's depth check. It preserves the typed world and every other
+thread's view throughout the prefix.
 
 ## 214. Runtime slice values and direct observations
 
