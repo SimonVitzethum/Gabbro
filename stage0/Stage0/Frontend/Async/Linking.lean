@@ -112,7 +112,7 @@ private theorem fnIdx_name {functions : List UFn} {name : String} {index : Fin f
         simp only [fnIdx, named, ite_false, found] at selected
         cases selected
       | ok next =>
-        simp only [fnIdx, named, ite_false, found, Except.ok.injEq] at selected
+        simp only [fnIdx, named, Bool.false_eq_true, ite_false, found, Except.ok.injEq] at selected
         subst index
         exact ih found
 
