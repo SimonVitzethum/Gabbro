@@ -168,6 +168,56 @@ theorem tso_fetch_opcode {layout : Runner.Beweis.Lay}
     tso_read_step before inside (fun answer => opt answer fun pair =>
       op (pair.1.setWidth 8 |>.setWidth 64).toNat t) loaded
 
+/-- Decode an actual syscall instruction through the issuing thread's TSO
+    view. Its argument loads finish before the host request is visible. -/
+theorem tso_sys_prefix {layout : Runner.Beweis.Lay}
+    {before : Cfg (TSO layout) (Res T)} {i : Nat} {t : T} {dest args pad : BitVec 32}
+    (running : before.ths[i]? = some (some (.next t)))
+    (instruction : InsAt (before.ms.1.view i) t.pc 23 dest args pad)
+    {nr a1 a2 a3 a4 a5 a6 : W}
+    (number : (before.ms.1.view i).rd64 (slot t.fp (sx args)) = some nr)
+    (first : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 8) = some a1)
+    (second : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 16) = some a2)
+    (third : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 24) = some a3)
+    (fourth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 32) = some a4)
+    (fifth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 40) = some a5)
+    (sixth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 48) = some a6) :
+    let continue : Ans → Res T := fun reply => opt reply fun pair => wr64 (slot t.fp (sx dest)) pair.1 (nxt t)
+    ProcessPrefix (TSO layout) actI before [] 11
+      ⟨before.ms, before.ths.set i (some (.ask (.sys ⟨nr, a1, a2, a3, a4, a5, a6⟩) continue))⟩ := by
+  intro continue
+  let onThread (r : Res T) : Cfg (TSO layout) (Res T) := ⟨before.ms, before.ths.set i (some r)⟩
+  have inside := (List.getElem?_eq_some_iff.mp running).1
+  have load32 {address : W} {value : BitVec 32} (next : BitVec 32 → Res T)
+      (read : (before.ms.1.view i).rd32 address = some value) :
+      ProcessStep (TSO layout) actI (onThread (rd32 address next)) [] (onThread (next value)) := by
+    have loaded : rdN (before.ms.1.view i) 4 address = some (value.setWidth 64) := by
+      simp only [rdN, read, Option.map_some]
+    simpa [onThread, rd32] using tso_read_step before inside
+      (fun answer => opt answer fun pair => next (pair.1.setWidth 32)) loaded
+  have load64 {address value : W} (next : W → Res T)
+      (read : (before.ms.1.view i).rd64 address = some value) :
+      ProcessStep (TSO layout) actI (onThread (rd64 address next)) [] (onThread (next value)) := by
+    simpa only [onThread, rd64, opt_some] using tso_read_step before inside
+      (fun answer => opt answer fun pair => next pair.1) (show rdN (before.ms.1.view i) 8 address = some value from read)
+  let request (d n b1 b2 b3 b4 b5 b6 : W) : Res T :=
+    .ask (.sys ⟨n, b1, b2, b3, b4, b5, b6⟩) fun reply => opt reply fun pair => wr64 (slot t.fp d) pair.1 (nxt t)
+  let fetchArgs (d a : W) : Res T :=
+    rd64 (slot t.fp a) fun n => rd64 (slot t.fp a + 8) fun b1 =>
+      rd64 (slot t.fp a + 16) fun b2 => rd64 (slot t.fp a + 24) fun b3 =>
+      rd64 (slot t.fp a + 32) fun b4 => rd64 (slot t.fp a + 40) fun b5 =>
+      rd64 (slot t.fp a + 48) fun b6 => request d n b1 b2 b3 b4 b5 b6
+  have operand1 : ProcessStep (TSO layout) actI (onThread (op 23 t)) []
+      (onThread (f2 t (fetchArgs (sx dest)))) :=
+    load32 (fun d => f2 t (fetchArgs (sx d))) instruction.f1
+  have operand2 : ProcessStep (TSO layout) actI (onThread (f2 t (fetchArgs (sx dest)))) []
+      (onThread (fetchArgs (sx dest) (sx args))) :=
+    load32 (fun a => fetchArgs (sx dest) (sx a)) instruction.f2
+  refine .cons (.priv running rfl) (.cons (tso_fetch_opcode before inside instruction.op (by decide))
+    (.cons operand1 (.cons operand2 (.cons (load64 _ number) (.cons (load64 _ first)
+      (.cons (load64 _ second) (.cons (load64 _ third) (.cons (load64 _ fourth)
+        (.cons (load64 _ fifth) (.cons (load64 _ sixth) (.nil _))))))))))
+
 /-- A successful binary instruction reads both slots from the issuing
     view and buffers its exact result at the decoded destination. -/
 theorem tso_binary_prefix {layout : Runner.Beweis.Lay}

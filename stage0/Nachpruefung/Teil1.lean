@@ -93,6 +93,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.image_declared_clone_goal
 #print axioms Gabbro.Stage0.image_bootClone_refused
 #print axioms Gabbro.Stage0.image_exit_group_boundary
+#print axioms Gabbro.Stage0.Senke.BildMehr.tso_sys_prefix
 #print axioms Gabbro.Stage0.image_clone_refusal_stop
 #print axioms Gabbro.Stage0.ImageStopMatches.no_depth_guard
 #print axioms Gabbro.Stage0.ImageFileStable.silent_prefix
