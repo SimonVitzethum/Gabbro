@@ -129,7 +129,8 @@ theorem alu_step {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II}
       refine f1_run (t := ⟨pc, fp⟩) ins' ?_
       rw [sx_lit hk, sx_nat (by omega)]
       exact run_wr64 hw
-    · rw [rd j hj]; simp only [aluStep, aluVal, ci, II.o, Int.toNat_natCast, ite_true]
+    · rw [rd j hj]
+      rfl
   | mov a b h1 h2 h3 =>
     have ins' : InsAt m pc 2 (II.f a) (II.f b) (II.f 0) := ins
     obtain ⟨m1, hw, ag, rd⟩ := finish a (s b) h1 h2 (fun j hj _ => hs j hj)

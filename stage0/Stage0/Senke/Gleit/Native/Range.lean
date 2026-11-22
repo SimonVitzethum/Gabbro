@@ -82,7 +82,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       (fun w => ∃ original, Runner.readFloat original = x ∧
         w = original &&& 0x7ff0000000000000) :=
     binary source mask (g := fun a b => some (a &&& b))
-      (fun a b ha hb => ⟨_, rfl, a, ha, by rw [hb]⟩) rfl (by decide : 8 < 256)
+      (fun a b ha hb => ⟨_, rfl, a, ha, by rw [hb]⟩) (o := 8) rfl (by decide)
   have equal := binary masked mask (g := fun a b => some (Runner.IR.bool (a == b)))
     (P := fun w => w = Runner.IR.bool (!gleitEndlich x))
     (fun a b ha hb => by
@@ -98,7 +98,7 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     (fun a b ha hb => ⟨_, rfl, by
       rw [ha, hb]
       cases gleitEndlich x <;> rfl⟩)
-    rfl (by decide : 10 < 256)
+    (o := 10) rfl (by decide)
   have finite : proves (fun j => nativeFloatFiniteL j producer)
       (fun w => w = Runner.IR.bool (gleitEndlich x)) := inverted
   have lower := le (constant (bruch lo)) source
@@ -106,19 +106,19 @@ theorem nativeFloatRangeL_at_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
   have bounds := binary lower upper (g := fun a b => some (a &&& b))
     (P := fun w => w = Runner.IR.bool (gleitLe (bruch lo) x && gleitLe x (bruch hi)))
     (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, bool_word, bool_word, and_word, ← bool_word]⟩)
-    rfl (by decide : 8 < 256)
+    (o := 8) rfl (by decide)
   have valid := binary finite bounds (g := fun a b => some (a &&& b))
     (P := fun w => w = Runner.IR.bool
       (gleitEndlich x && (gleitLe (bruch lo) x && gleitLe x (bruch hi))))
     (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, bool_word, bool_word, and_word, ← bool_word]⟩)
-    rfl (by decide : 8 < 256)
+    (o := 8) rfl (by decide)
   have rejected := binary valid one (g := fun a b => some (a ^^^ b))
     (P := fun w => w = Runner.IR.bool (floatRangeReject lo hi x))
     (fun a b ha hb => ⟨_, rfl, by
       rw [ha, hb]
       unfold floatRangeReject
       cases gleitEndlich x && (gleitLe (bruch lo) x && gleitLe x (bruch hi)) <;> rfl⟩)
-    rfl (by decide : 10 < 256)
+    (o := 10) rfl (by decide)
   simp only [floatRangeL, Option.map_eq_some_iff] at emitted
   obtain ⟨⟨body, ceiling⟩, hb, he⟩ := emitted
   cases he
