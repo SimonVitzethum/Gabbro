@@ -70,13 +70,11 @@ public theorem joinActiveBlock_exec (types : TypeResolution) (path : List Nat) (
   change ((execBlock oracle passes calls (.cons first (.cons second (.cons collect .nil)))
     world initial).schrumpf).schrumpf = _
   simp only [execBlock]
-  cases execStmt oracle passes calls first world initial with
-  | ok middle leftDone =>
-    cases execStmt oracle passes calls second middle leftDone with
-    | ok final rightDone =>
+  cases execStmt oracle passes calls first world initial <;> dsimp only
+  case ok middle leftDone =>
+    cases execStmt oracle passes calls second middle leftDone <;> dsimp only
+    case ok final rightDone =>
       cases execStmt oracle passes calls collect final rightDone <;> rfl
-    | _ => rfl
-  | _ => rfl
 
 /-- The semantic poll event determines the physical tag. A Ready tag
     additionally carries the result of the exact typed projection. -/
