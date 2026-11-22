@@ -10,7 +10,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Async.Representation
 
 public structure PollEntry (u : UProg) where
+  sourceName : String
   slot : (declOf u).Fn
+  selected : fnNr u (pollName sourceName) = .ok slot
   body : Endblock (declOf u) (vertragVon (declOf u) slot) false
     ((declOf u).params slot) (Signatur.anfang (declOf u) ((declOf u).signatur slot))
 
@@ -18,7 +20,7 @@ public structure PollEntry (u : UProg) where
     {children : (fn : (declOf u).Fn) → (name : String) →
       Option (ResolvedPoll u (verOf u fn) (resOf u fn) types name)}
     (resolved : NamedPoll u ctx function types children) : PollEntry u :=
-  ⟨resolved.poll, resolved.body⟩
+  ⟨function.name, resolved.poll, resolved.selected, resolved.body⟩
 
 /-- Install a body at its dependent function slot. Every ordinary body
     outside that slot is preserved. -/
@@ -96,20 +98,52 @@ public theorem installPollEntries_body {u : UProg} (program : Programm (declOf u
       rw [installPollEntries, first.install_other _ entry.slot other]
       exact found tail later
 
-/-- One linked program for all generated declarations. The finite
-    duplicate check makes every installed body available simultaneously. -/
+private theorem fnIdx_name {functions : List UFn} {name : String} {index : Fin functions.length}
+    (selected : fnIdx functions name = .ok index) : (functions.get index).name = name := by
+  induction functions with
+  | nil => exact index.elim0
+  | cons first rest ih =>
+    by_cases matches : (first.name == name) = true
+    · simp only [fnIdx, matches, ite_true, Except.ok.injEq] at selected
+      subst index
+      exact eq_of_beq matches
+    · cases found : fnIdx rest name with
+      | error failure =>
+        simp only [fnIdx, matches, ite_false, found] at selected
+        cases selected
+      | ok next =>
+        simp only [fnIdx, matches, ite_false, found, Except.ok.injEq] at selected
+        subst index
+        exact ih found
+
+private theorem PollEntry.name_of_same_slot {u : UProg} {left right : PollEntry u}
+    (same : left.slot = right.slot) : left.sourceName = right.sourceName := by
+  have names := (fnIdx_name left.selected).symm.trans (same.symm ▸ fnIdx_name right.selected)
+  exact (String.append_right_inj "$async$poll$").mp names
+
+private theorem pollSlots_distinct {u : UProg} {entries : List (PollEntry u)}
+    (names : (entries.map PollEntry.sourceName).Nodup) : (entries.map PollEntry.slot).Nodup := by
+  induction entries with
+  | nil => exact List.nodup_nil
+  | cons first rest ih =>
+    obtain ⟨fresh, tail⟩ := List.nodup_cons.mp names
+    apply List.nodup_cons.mpr
+    refine ⟨?_, ih tail⟩
+    rintro member
+    obtain ⟨other, present, same⟩ := List.mem_map.mp member
+    exact fresh (List.mem_map.mpr ⟨other, present, PollEntry.name_of_same_slot same⟩)
+
+/-- Distinct source declarations place every generated body in its own
+    slot. The linked program is constructed directly from that property. -/
 public structure LinkedPolls (u : UProg) (base : Programm (declOf u))
     (entries : List (PollEntry u)) where
   program : Programm (declOf u)
   installed : program = installPollEntries base entries
   distinct : (entries.map PollEntry.slot).Nodup
 
-@[expose] public def linkPolls {u : UProg} (base : Programm (declOf u)) (entries : List (PollEntry u)) :
-    Except String (LinkedPolls u base entries) :=
-  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
-  if distinct : (entries.map PollEntry.slot).Nodup then
-    .ok ⟨installPollEntries base entries, rfl, distinct⟩
-  else .error "async: two generated declarations select the same poll slot"
+@[expose] public def linkPolls {u : UProg} (base : Programm (declOf u)) (entries : List (PollEntry u))
+    (distinct : (entries.map PollEntry.sourceName).Nodup) : LinkedPolls u base entries :=
+  ⟨installPollEntries base entries, rfl, pollSlots_distinct distinct⟩
 
 public theorem LinkedPolls.body {u : UProg} {base : Programm (declOf u)} {entries : List (PollEntry u)}
     (linked : LinkedPolls u base entries) (entry : PollEntry u) (present : entry ∈ entries) :
