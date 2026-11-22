@@ -92,10 +92,11 @@ theorem image_ticket_wait_reply [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
     ProcessStep imageTSO actI machine [(thread.val, request, reply)] after ∧ reply.isSome = true ∧
       projectSCState footprint memory = projectSCState footprint machine.ms ∧
       Relation.ReflTransGen (fun current next => Schritt current thread next)
-        before (before.mit thread (.decL ticket sampled)) := by
+        before (before.mit thread (.decL ticket sampled)) ∧
+      ∀ byte, (∀ owner, ¬ footprint owner byte) → GleichAt memory.1.m machine.ms.1.m byte := by
   intro request after
-  obtain ⟨process, returned, _, same, _⟩ := image_futex_reply host (.inl rfl) waiting answered footprint buffers
-  refine ⟨process, returned, same, ?_⟩
+  obtain ⟨process, returned, _, same, preserve⟩ := image_futex_reply host (.inl rfl) waiting answered footprint buffers
+  refine ⟨process, returned, same, ?_, preserve⟩
   by_cases equal : before.w.serv % 4294967296 = sampled % 4294967296
   · let blocked := before.mit thread (.blockiert ticket sampled)
     have sleeping : Schritt before thread blocked := .schlaeft saved equal
@@ -133,7 +134,8 @@ theorem image_ticket_wake_reply [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
     let next : Zustand N := ⟨before.w, upd (wecke before.pc) thread .frei, before.q⟩
     ProcessStep imageTSO actI machine [(thread.val, request, reply)] after ∧ reply.isSome = true ∧
       projectSCState footprint memory = projectSCState footprint machine.ms ∧
-      Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next := by
+      Schritt before thread next ∧ TicketWordsAt memory.1.m base next ∧ Inv N next ∧
+      ∀ byte, (∀ owner, ¬ footprint owner byte) → GleichAt memory.1.m machine.ms.1.m byte := by
   intro request after next
   obtain ⟨process, returned, _, same, preserve⟩ :=
     image_futex_reply host (.inr rfl) waiting answered footprint buffers
@@ -142,7 +144,7 @@ theorem image_ticket_wake_reply [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
       memory.1.m.rd64 (BitVec.ofNat 64 (base + offset)) =
         machine.ms.1.m.rd64 (BitVec.ofNat 64 (base + offset)) :=
     gleich_rd64 fun byte touched => preserve byte (shared offset inLock byte touched)
-  refine ⟨process, returned, same, wake, ⟨?_, ?_, ?_⟩, invariant.schritt limit wake⟩
+  refine ⟨process, returned, same, wake, ⟨?_, ?_, ?_⟩, invariant.schritt limit wake, preserve⟩
   · have first := word 0 (.inl rfl)
     simpa only [Nat.add_zero] using first.trans represented.next
   · exact (word 8 (.inr (.inl rfl))).trans represented.serving

@@ -168,4 +168,125 @@ theorem ImageTicketStates.draw [Kern] {D : Deklaration} [DecidableEq D.Lock] {N 
     current.update geometry bound otherBytes (fun _ _ _ => Iff.rfl) words
       ((current.protocol lock).schritt capacity transition) sameOwners⟩
 
+/-- A control-only lock transition can change the entire waiter queue.
+    Only its ownership bits and the three physical counters must stay
+    the same. Hosts can change hidden buffered bytes outside the locks. -/
+theorem ImageTicketStates.control_update {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N}
+    {memory nextMemory : Mem} {lock : D.Lock} {next : Zustand N}
+    (current : ImageTicketStates layout memory source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64)
+    (sameBytes : ∀ other byte, LockBytes layout other byte → GleichAt nextMemory memory byte)
+    (sameWords : next.w = (states lock).w)
+    (nextInv : Inv N next) (owners : ∀ t, (next.pc t).haelt = ((states lock).pc t).haelt) :
+    ImageTicketStates layout nextMemory source (fun other => if other = lock then next else states other) where
+  words other := by
+    have fits := (geometry.1 other).2.trans bound
+    have read (offset : Nat) (inside : offset ≤ 16) :
+        nextMemory.rd64 (BitVec.ofNat 64 (layout.lk other + offset)) =
+          memory.rd64 (BitVec.ofNat 64 (layout.lk other + offset)) :=
+      gleich_rd64 fun byte touched => sameBytes other byte (lockWord_in_bytes fits inside touched)
+    have first := read 0 (Nat.zero_le 16)
+    rw [Nat.add_zero] at first
+    obtain ⟨drawn, serving, waiters⟩ := current.words other
+    have w : (if other = lock then next else states other).w = (states other).w := by
+      split
+      · rename_i same
+        subst other
+        exact sameWords
+      · rfl
+    exact ⟨by rw [w]; exact first.trans drawn,
+      by rw [w]; exact (read 8 (by decide)).trans serving,
+      by rw [w]; exact (read 16 (by decide)).trans waiters⟩
+  protocol other := by
+    split
+    · exact nextInv
+    · exact current.protocol other
+  owners other := by
+    split
+    · rename_i same
+      subst other
+      refine ⟨?_, (current.owners lock).outside⟩
+      intro t
+      rw [owners t]
+      exact (current.owners lock).inside t
+    · exact current.owners other
+
+/-- A real returning WAIT keeps every lock word readable and exact.
+    Spurious resumption changes the ghost waiter phase in the same
+    scheduled thread, while the source owner and world stay unchanged. -/
+theorem ImageTicketStates.wait_reply [Kern] {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N} {lock : D.Lock}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Fin N} {ticket sampled : Nat} {footprint : Nat → W → Prop}
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64) (capacity : N ≤ 2147483647)
+    (host : ImageFutexAnswers) (saved : (states lock).pc thread = .futexW ticket sampled)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (outside : ∀ other byte, LockBytes layout other byte → ∀ i, ¬ footprint i byte)
+    (waiting : machine.ths[thread.val]? = some (some (.ask (.sys
+      (futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 128 (BitVec.ofNat 64 sampled))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.sys (futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 128 (BitVec.ofNat 64 sampled))) reply memory) :
+    let request := futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 128 (BitVec.ofNat 64 sampled)
+    let next := (states lock).mit thread (.decL ticket sampled)
+    ProcessStep imageTSO actI machine [(thread.val, request, reply)]
+      ⟨memory, machine.ths.set thread.val (some (resume reply))⟩ ∧
+    reply.isSome = true ∧ projectSCState footprint memory = projectSCState footprint machine.ms ∧
+    ImageTicketStates layout memory.1.m source (fun other => if other = lock then next else states other) := by
+  intro request next
+  obtain ⟨ran, returned, sameMemory, trace, committed⟩ :=
+    image_ticket_wait_reply host saved footprint buffers waiting answered
+  have nextInv : Inv N next := by
+    change Relation.ReflTransGen (fun current target => Schritt current thread target) (states lock) next at trace
+    induction trace with
+    | refl => exact current.protocol lock
+    | tail _ step ih => exact ih.schritt capacity step
+  have owns (t : Fin N) : (next.pc t).haelt = ((states lock).pc t).haelt := by
+    change (upd (states lock).pc thread (.decL ticket sampled) t).haelt = _
+    by_cases same : t = thread
+    · subst t
+      simp only [upd_self, saved, Ort.haelt]
+    · rw [upd_ne _ _ same]
+  exact ⟨ran, returned, sameMemory,
+    current.control_update geometry bound (fun other byte present => committed byte (outside other byte present))
+      rfl nextInv owns⟩
+
+/-- The real WAKE-all response updates every blocked position at this
+    lock and preserves the complete registry, including other locks. -/
+theorem ImageTicketStates.wake_reply [Kern] {D : Deklaration} [DecidableEq D.Lock] {N : Nat}
+    {layout : Lay D} {source : RufMaschineG D} {states : D.Lock → Zustand N} {lock : D.Lock}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {thread : Fin N} {footprint : Nat → W → Prop}
+    (current : ImageTicketStates layout machine.ms.1.m source states)
+    (geometry : LaySync layout) (bound : layout.sye ≤ 2 ^ 64) (capacity : N ≤ 2147483647)
+    (host : ImageFutexAnswers) (saved : (states lock).pc thread = .weck)
+    (buffers : PrivateBuffers footprint machine.ms.1)
+    (outside : ∀ other byte, LockBytes layout other byte → ∀ i, ¬ footprint i byte)
+    (waiting : machine.ths[thread.val]? = some (some (.ask (.sys
+      (futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 129 2147483647)) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.sys (futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 129 2147483647)) reply memory) :
+    let request := futexReq (BitVec.ofNat 64 (layout.lk lock + 8)) 129 2147483647
+    let next : Zustand N := ⟨(states lock).w, upd (wecke (states lock).pc) thread .frei, (states lock).q⟩
+    ProcessStep imageTSO actI machine [(thread.val, request, reply)]
+      ⟨memory, machine.ths.set thread.val (some (resume reply))⟩ ∧
+    reply.isSome = true ∧ projectSCState footprint memory = projectSCState footprint machine.ms ∧
+    Schritt (states lock) thread next ∧
+    ImageTicketStates layout memory.1.m source (fun other => if other = lock then next else states other) := by
+  intro request next
+  have fits := (geometry.1 lock).2.trans bound
+  obtain ⟨ran, returned, sameMemory, wake, _, nextInv, committed⟩ :=
+    image_ticket_wake_reply host capacity (current.protocol lock) saved (current.words lock) footprint buffers
+      (fun offset within byte touched => outside lock byte (lockWord_in_bytes fits (by omega) touched)) waiting answered
+  have owns (t : Fin N) : (next.pc t).haelt = ((states lock).pc t).haelt := by
+    change (upd (wecke (states lock).pc) thread .frei t).haelt = _
+    by_cases same : t = thread
+    · subst t
+      simp only [upd_self, saved, Ort.haelt]
+    · rw [upd_ne _ _ same, wecke_apply, geweckt_haelt]
+  exact ⟨ran, returned, sameMemory, wake,
+    current.control_update geometry bound (fun other byte present => committed byte (outside other byte present))
+      rfl nextInv owns⟩
+
 end Gabbro.Stage0.Senke.Faeden
