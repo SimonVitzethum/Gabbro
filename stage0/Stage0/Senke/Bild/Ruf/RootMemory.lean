@@ -91,22 +91,23 @@ theorem image_refused_worker_terminal [kernel : Kern] {src : String} {reserve : 
     {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {history : List Ev}
     {before : Cfg imageTSO (Res T)} {request : Req} {resume : Ans → Res T} {id extra : W}
-    {initial : Mem} {pc fp : W} {capacity scratch entry stack : Nat}
-    (code : CodeAt initial pc ((spawnOne scratch entry stack).drop 3))
-    (frame : FrameOK initial fp capacity) (far : CodeFar pc 7 fp capacity)
-    (room : scratch + 8 ≤ capacity) (small : capacity < 2 ^ 31)
-    (stored : initial.rd64 (slot fp (BitVec.ofNat 64 (scratch + 2))) = some id)
+    {index : Nat} {view savedView : Mem} {savedPointer : T}
+    (declared : index < output.starts.length)
+    (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
     (refused : id.toInt < 0)
     (last : (history.filter (fun event => event.1 == 0)).getLast? = some (0, cloneReq, some (id, extra)))
     (running : before.ths[0]? = some (some (.ask (.sys request) resume)))
-    (ran : SoloLauf ⟨pc, fp⟩ initial (.ask (.sys request) resume) (before.ms.1.view 0)) :
+    (ran : SoloLauf savedPointer savedView (.ask (.sys request) resume) (before.ms.1.view 0)) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+    RunP (ret1 parent id) view (.next savedPointer) savedView →
     let observed : List Ev := [(0, request, none)]
     Tr imageTSO actI before observed (.exit request.a1) 1 ∧
       ImageStopMatches output O state history observed (.exit request.a1) := by
-  intro observed
-  have stop : @Stops kernel.withoutSyscalls ⟨pc, fp⟩ initial cloneCode := by
-    letI : Kern := kernel.withoutSyscalls
-    exact (spawnCheck_ok code frame room small far stored).2 refused.le
+  intro pc fp parent stored observed
+  have stop := (output.clone_reply_boundary declared loaded frame stored).2.2 refused.le
   obtain ⟨number, status⟩ := SoloLauf.stop_matches (kernel := kernel) stop ran
   have exits : request.nr.toNat = NR_EXIT_GROUP := by
     rw [number]

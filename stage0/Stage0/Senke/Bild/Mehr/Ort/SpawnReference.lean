@@ -171,6 +171,28 @@ namespace Gabbro.Stage0
 
 open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR Runner.Beweis
 
+/-- The actual completed result-store tree fixes the guard's entry and
+    input bytes. A declined clone follows that guard to the named stop. -/
+theorem Emitted.clone_reply_boundary [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    (output : Emitted src reserve options) {index : Nat} {view after : Mem} {id : W} {pointer : T}
+    (declared : index < output.starts.length)
+    (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * index))
+    let fp := BitVec.ofNat 64 output.image.fp0
+    let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
+    let address := slot fp (BitVec.ofNat 64 (startScratch output.compiled.main + 2))
+    RunP (ret1 parent id) view (.next pointer) after →
+    pointer = nxt parent ∧ after = Mem.write view address 8 id.toNat ∧
+      (id.toInt ≤ 0 → @Stops kernel.withoutSyscalls pointer after cloneCode) := by
+  intro pc fp parent address actual
+  obtain ⟨code, far, room, small, _, _⟩ := output.loaded_spawn_site loaded declared
+  obtain ⟨expected, _, _, refused⟩ := spawnResult_reference (id := id) code frame far room small
+  obtain ⟨samePointer, sameMemory⟩ := (runP_runM actual rfl).det (runP_runM expected rfl).run
+  refine ⟨samePointer, sameMemory, ?_⟩
+  rw [samePointer, sameMemory]
+  exact refused
+
 /-- A positive reply selects the successor in the actual startup
     header. Every partial memory run stays in the same scope until its
     exact boundary, which still has the installed code and frame. -/
