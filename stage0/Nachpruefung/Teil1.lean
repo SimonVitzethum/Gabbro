@@ -109,6 +109,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_admit_GX
 #print axioms Gabbro.Stage0.Emitted.loaded_ticketOwnership
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_waiter_CAS
+#print axioms Gabbro.Stage0.Emitted.loaded_ticketStates
+#print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.update
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire
 #print axioms Gabbro.Stage0.ImageForeignTrace.retire
 #print axioms Gabbro.Stage0.image_hardware_exit
