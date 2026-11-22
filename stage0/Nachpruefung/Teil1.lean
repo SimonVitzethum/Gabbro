@@ -102,6 +102,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_serving_read
 #print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_issuerView
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wait_reply
+#print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_reply
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire
 #print axioms Gabbro.Stage0.ImageForeignTrace.retire
 #print axioms Gabbro.Stage0.image_hardware_exit
