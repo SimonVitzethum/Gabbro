@@ -3,7 +3,7 @@ module
 public import Stage0.Senke.Bild.Ruf.RootEntry
 import Stage0.Senke.Bild.Mehr.Ort.Ort
 import Stage0.Senke.Bild.Ruf.RootExit
-import Stage0.Senke.Bild.Ruf.IdleLowering
+import Stage0.Senke.Bild.Ruf.Idle.Lowering
 import Stage0.Senke.Images.CheckSpawn
 import Stage0.Senke.Bild.StartG
 import Lean.Elab.Tactic.Omega

@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Ruf.IdleLowering
+public import Stage0.Senke.Bild.Ruf.Idle.Lowering
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 @[expose] public section

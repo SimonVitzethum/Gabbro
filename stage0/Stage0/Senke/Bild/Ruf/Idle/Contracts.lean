@@ -1,7 +1,7 @@
 module
 
-public import Stage0.Senke.Bild.Ruf.IdleExpression
-public import Stage0.Senke.Bild.Ruf.IdleCounters
+public import Stage0.Senke.Bild.Ruf.Idle.Expression
+public import Stage0.Senke.Bild.Ruf.Idle.Counters
 import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 @[expose] public section
