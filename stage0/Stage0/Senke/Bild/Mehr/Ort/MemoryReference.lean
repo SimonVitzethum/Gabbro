@@ -18,7 +18,7 @@ theorem frame_slot_byte {memory : Mem} {fp : W} {K index offset : Nat}
 
 /-- Restricting the permitted data accesses preserves decoding of an
     installed code region and access to every word of its private frame. -/
-theorem maskMemory_code_frame {memory : Mem} {pc fp : W} {slots : Nat}
+theorem maskMemory_code_frame [Kern] {memory : Mem} {pc fp : W} {slots : Nat}
     {code : List II} {reads : W → Prop} (decoded : CodeAt memory pc code)
     (frame : FrameOK memory fp slots) (nowrap : pc.toNat + 16 * code.length < 2 ^ 64)
     (frameReads : ∀ byte, inSlots fp 0 slots byte → reads byte)
