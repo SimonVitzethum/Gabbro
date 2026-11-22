@@ -46,9 +46,9 @@ structure CheckedImagePlan (compiled : Compiled src options) (memory : Speicher 
     (List.finRange compiled.unit.fns.length) (List.finRange compiled.unit.locks.length)
     (imageCheckCarriers compiled.unit) = true
 
-private def finishImagePlan {compiled : Compiled src options}
-    (memory : Speicher (declOf compiled.unit)) (starts : ImageStarts compiled.unit)
-    (plan : ImageUnitPlan compiled) : Except String (CheckedImagePlan compiled memory starts) :=
+def ImageUnitPlan.check {compiled : Compiled src options} (plan : ImageUnitPlan compiled)
+    (memory : Speicher (declOf compiled.unit)) (starts : ImageStarts compiled.unit) :
+    Except String (CheckedImagePlan compiled memory starts) :=
   let model := plan.unit memory starts
   let functions := List.finRange compiled.unit.fns.length
   let locks := List.finRange compiled.unit.locks.length
@@ -68,12 +68,13 @@ def checkImagePlan (compiled : Compiled src options) (memory : Speicher (declOf 
   let accumulators ← collectImageAccumulators compiled (imageAccumulatorItems compiled)
   if empty : compiled.unit.axs.length = 0 then
     let initial := initialUnit compiled.unit compiled.program memory starts compiled.checkedDeclarations.val
-    finishImagePlan memory starts ⟨initial.Q, initial.axiomSources,
+    ImageUnitPlan.check ⟨initial.Q, initial.axiomSources,
       fun item _ _ => False.elim ((Nat.not_lt_zero item.val) (empty ▸ item.isLt)),
-      arenas, accumulators⟩
+      arenas, accumulators⟩ memory starts
   else
     let verified ← foreign
-    finishImagePlan memory starts
+    ImageUnitPlan.check
       ⟨verified.summary.predicates, some verified.summary.sources, verified.summary.exactPost, arenas, accumulators⟩
+      memory starts
 
 end Gabbro.Stage0
