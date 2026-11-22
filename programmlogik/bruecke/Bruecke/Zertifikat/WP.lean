@@ -1,6 +1,7 @@
 module
 public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Programm
+public import Bruecke.Zertifikat.Regeln
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -41,53 +42,6 @@ theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.
     (h3 : ∀ passes, PflichtKeinHalt E.P passes E.Q E.S (GeteiltA E.P E.ws) f) : LogikFn E f :=
   fun passes => ⟨h1 passes, h2 passes, h3 passes⟩
 
-open Lean in
-/-- The rule of the model for the outermost constructor of the body in a `wpEA`/`wpBA`/`wpSA` goal. -/
-meta def wpRegel? (t : Lean.Expr) : Option Name :=
-  let args := t.getAppArgs
-  if args.size < 4 then none else
-  match t.getAppFn.constName?, args[args.size - 4]!.getAppFn.constName? with
-  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.ret => some ``Gabbro.Grammatik.WP.wpEA_ret
-  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.cons => some ``Gabbro.Grammatik.WP.wpEA_cons
-  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bind => some ``Gabbro.Grammatik.WP.wpEA_bind
-  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.cons => some ``Gabbro.Grammatik.WP.wpBA_cons
-  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bind => some ``Gabbro.Grammatik.WP.wpBA_bind
-  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.nil => some ``Gabbro.Grammatik.WP.wpBA_nil
-  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.narrow => some ``Gabbro.Grammatik.WP.wpBA_narrow
-  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.check => some ``Gabbro.Grammatik.WP.wpBA_check
-  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ite => some ``Gabbro.Grammatik.WP.wpSA_ite
-  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ret => some ``Gabbro.Grammatik.WP.wpSA_ret
-  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.locks => some ``Gabbro.Grammatik.WP.wpSA_locks
-  | _, _ => none
-
-/-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
-    equivalence. Fails when no rule applies. -/
-syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
-
-open Lean Elab Tactic Meta in
-@[tactic gabbrovSchritt] meta def evalGabbrovSchritt : Tactic := fun _ => withMainContext do
-  let t ← instantiateMVars (← getMainTarget)
-  match wpRegel? t with
-  | some regel => evalTactic (← `(tactic| refine ($(mkIdent regel) ..).mpr ?_))
-  | none => throwError "gabbrov_schritt: no rule for this goal"
-
-
-/-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
-    and reduce the continuations `weiterEA`/`weiterBA` at a known outcome: symbolic execution of a
-    lowered body in constructor form by the model's own rules. Every rule is an equivalence, so the
-    remaining goals say exactly what the program owes. -/
-macro "gabbrov_wp" : tactic => `(tactic| repeat (first
-  | gabbrov_schritt
-  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])))
-
-/-- **Compute a term and put its normal form into the goal**: `gabbrov_senke t` reduces `t` (all
-    definitions unfolded, proofs and types kept) and rewrites `t` to the result. The rewrite is `rfl`, checked
-    by the kernel, so nothing is trusted: typically `t` is a function's lowered body
-    `(lowerAtPair u f w).2.1`, which then stands in constructor form for `gabbrov_wp`. A module that uses it
-    on source names needs the string definitions (`import all Init.Data.String.*`, as the generated proof
-    files have). -/
-syntax (name := gabbrovSenke) "gabbrov_senke " term : tactic
-
 open Lean Meta in
 /-- The normal form of `e` computed by the KERNEL's reduction (fast where the elaborator's is slow):
     weak head normal form, then the same in every explicit argument of a constructor that is neither a
@@ -113,6 +67,64 @@ meta partial def kernNormal (e : Lean.Expr) : MetaM Lean.Expr := do
       return mkAppN f args'
     | _ => return e'
   | _ => return e'
+
+open Lean in
+/-- The rule of the model for the outermost constructor of the body in a `wpEA`/`wpBA`/`wpSA` goal. -/
+meta def wpRegel? (t : Lean.Expr) : Option Name :=
+  let args := t.getAppArgs
+  if args.size < 5 then none else
+  -- the index of a value `⟨⟨k, h⟩, _⟩` or `⟨k, h⟩` as a literal, if it is one
+  let index? (w : Lean.Expr) : Option Nat :=
+    let fin := if w.isAppOfArity ``Sigma.mk 4 then w.getArg! 2 else w
+    if fin.isAppOfArity ``Fin.mk 3 then (fin.getArg! 1).rawNatLit? <|> (fin.getArg! 1).nat? else none
+  match t.getAppFn.constName?, args[args.size - 5]!.getAppFn.constName?, index? args[args.size - 4]! with
+  | some ``Gabbro.Bruecke.wpArmsA, some ``Gabbro.Grammatik.Arms.cons, some 0 => some ``Gabbro.Bruecke.wpArmsA_null
+  | some ``Gabbro.Bruecke.wpArmsA, some ``Gabbro.Grammatik.Arms.cons, some (_ + 1) => some ``Gabbro.Bruecke.wpArmsA_succ
+  | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some 0 => some ``Gabbro.Bruecke.wpGrundA_null
+  | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some (_ + 1) => some ``Gabbro.Bruecke.wpGrundA_succ
+  | _, _, _ =>
+  match t.getAppFn.constName?, args[args.size - 4]!.getAppFn.constName? with
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.ret => some ``Gabbro.Grammatik.WP.wpEA_ret
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.cons => some ``Gabbro.Grammatik.WP.wpEA_cons
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bind => some ``Gabbro.Grammatik.WP.wpEA_bind
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.cons => some ``Gabbro.Grammatik.WP.wpBA_cons
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bind => some ``Gabbro.Grammatik.WP.wpBA_bind
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.nil => some ``Gabbro.Grammatik.WP.wpBA_nil
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.narrow => some ``Gabbro.Grammatik.WP.wpBA_narrow
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.check => some ``Gabbro.Grammatik.WP.wpBA_check
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ite => some ``Gabbro.Grammatik.WP.wpSA_ite
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ret => some ``Gabbro.Grammatik.WP.wpSA_ret
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.locks => some ``Gabbro.Grammatik.WP.wpSA_locks
+  | _, _ => none
+
+/-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
+    equivalence. Fails when no rule applies. -/
+syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovSchritt] meta def evalGabbrovSchritt : Tactic := fun _ => withMainContext do
+  let t ← instantiateMVars (← getMainTarget)
+  match wpRegel? t with
+  | some regel =>
+    evalTactic (← `(tactic| refine ($(mkIdent regel) ..).mpr ?_))
+  | none => throwError "gabbrov_schritt: no rule for this goal"
+
+
+/-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
+    and reduce the continuations `weiterEA`/`weiterBA` at a known outcome: symbolic execution of a
+    lowered body in constructor form by the model's own rules. Every rule is an equivalence, so the
+    remaining goals say exactly what the program owes. -/
+macro "gabbrov_wp" : tactic => `(tactic| repeat (first
+  | gabbrov_schritt
+  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])))
+
+/-- **Compute a term and put its normal form into the goal**: `gabbrov_senke t` reduces `t` (all
+    definitions unfolded, proofs and types kept) and rewrites `t` to the result. The rewrite is `rfl`, checked
+    by the kernel, so nothing is trusted: typically `t` is a function's lowered body
+    `(lowerAtPair u f w).2.1`, which then stands in constructor form for `gabbrov_wp`. A module that uses it
+    on source names needs the string definitions (`import all Init.Data.String.*`, as the generated proof
+    files have). -/
+syntax (name := gabbrovSenke) "gabbrov_senke " term : tactic
 
 open Lean Elab Tactic Meta in
 @[tactic gabbrovSenke] meta def evalGabbrovSenke : Tactic := fun stx => withMainContext do
