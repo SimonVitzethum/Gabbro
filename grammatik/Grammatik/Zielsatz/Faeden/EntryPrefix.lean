@@ -25,11 +25,12 @@ theorem oneShotEntry_parts [DecidableEq D.Fn] {E : Einheit D} {functions : List 
     (∀ fn ∈ functions, ruftB E.P fn entry = false) := by
   obtain ⟨top, calls⟩ := Bool.and_eq_true_iff.mp checked
   obtain ⟨head, other⟩ := Bool.and_eq_true_iff.mp top
-  refine ⟨?_, fun root member => of_decide_eq_true (List.all_eq_true.mp other root member),
-    fun fn member => Bool.not_eq_true.mp (List.all_eq_true.mp calls fn member)⟩
-  cases found : E.starts.head? with
-  | none => simp only [found, Option.any, Bool.false_eq_true] at head
-  | some root => exact ⟨root, rfl, of_decide_eq_true (by simpa only [found, Option.any] using head)⟩
+  refine ⟨?_, fun root member => of_decide_eq_true (List.all_eq_true.mp other root member), ?_⟩
+  · cases found : E.starts.head? with
+    | none => simp only [found, Option.any, Bool.false_eq_true] at head
+    | some root => exact ⟨root, rfl, of_decide_eq_true (by simpa only [found, Option.any] using head)⟩
+  · intro fn member
+    simpa only [Bool.not_eq_true'] using List.all_eq_true.mp calls fn member
 
 /-- The checked startup cannot be reached through any call chain from a
     different function. The canonical graph includes indirect signatures. -/
@@ -45,7 +46,7 @@ theorem oneShotEntry_unreachable [DecidableEq D.Fn] {E : Einheit D} {functions :
     rintro rfl
     rw [calls current (complete current)] at edge
     cases edge
-  exact reachB_in E.P functions different closed entry found rfl
+  exact reachB_in E.P functions (Z := fun fn => fn ≠ entry) different closed entry found rfl
 
 /-- The startup thread receives the declared initial memory. Every
     worker has a prepared frame and remains dormant. -/
