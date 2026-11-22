@@ -1,6 +1,7 @@
 /- The expression theorem specialized to a complete typed world. -/
 module
 public import Stage0.Senke.Ausdruck.Satz.Scoped
+import Grammatik.Kern.Syntax.Satz.T2.Teil1a
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
