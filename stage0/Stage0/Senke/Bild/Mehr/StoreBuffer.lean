@@ -179,7 +179,7 @@ theorem mergedView_table {layout : Lay} (state : (TSO layout).St)
   · rw [show viewAt state.1 footprint address = state.1.m from dif_neg visible]
     exact state.2.1 row rowBound offset offsetBound
 
-private theorem mem_eq_of_agreement {before after : Mem}
+theorem mem_eq_of_agreement {before after : Mem}
     (same : ∀ address, GleichAt before after address) : before = after := by
   have bytes := funext (fun address => (same address).1)
   have readable := funext (fun address => (same address).2.1)

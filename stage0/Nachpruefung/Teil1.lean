@@ -92,6 +92,10 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.AreaReply.withIdle
 #print axioms Gabbro.Stage0.image_area_gate_answer
 #print axioms Gabbro.Stage0.image_buffer_gate_answer
+#print axioms Gabbro.Stage0.Senke.BildMehr.projectSCState_reassign
+#print axioms Gabbro.Stage0.Senke.BildMehr.PrivateBuffers.claimRegion
+#print axioms Gabbro.Stage0.Senke.BildMehr.PrivateBuffers.releaseRegion
+#print axioms Gabbro.Stage0.image_body_reassign_region
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire
 #print axioms Gabbro.Stage0.ImageForeignTrace.retire
 #print axioms Gabbro.Stage0.image_hardware_exit

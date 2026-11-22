@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootAdmission
+public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 
 @[expose] public section
 
@@ -182,5 +183,28 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
     exact related
   exact ⟨.tau flushed, footprint, before.ths, buffers.flush flushed, rfl,
     .inr ⟨snapshots, positions, committed, stable, indices⟩, fun _ => .inl rfl⟩
+
+/-- The current carrier ownership can change at a lock boundary without
+    modifying the runner or the committed GX memory. Each executing
+    segment must retain access to its remaining reads and writes. -/
+theorem image_body_reassign_region [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {machine : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {before after : Nat → W → Prop} {body : List (Option (Res T))}
+    {snapshots : Nat → Option Solo} {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe}
+    {committed : Mem}
+    (length : body.length = machine.ths.length)
+    (old : PrivateBuffers before machine.ms.1) (new : PrivateBuffers after machine.ms.1)
+    (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ⟨(projectSCState before machine.ms).1, body⟩ state snapshots positions committed)
+    (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint after i s)
+    (roots : ∀ i, body[i]? = machine.ths[i]? ∨
+      ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
+        ImageRootPhase output E history (machine.ms.1.view i) i r state) :
+    ImageRuntimeMatches output E O history machine state := by
+  refine ⟨after, body, new, length, .inr ⟨snapshots, positions, committed, ?_, indices⟩, roots⟩
+  rw [projectSCState_reassign old new]
+  exact related
 
 end Gabbro.Stage0
