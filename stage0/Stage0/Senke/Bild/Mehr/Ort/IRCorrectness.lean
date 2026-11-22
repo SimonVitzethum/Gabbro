@@ -41,8 +41,8 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
         expected.ths = [some (.ask (.sys request) resume)] →
         steps ≤ available ∧ BildMehr.SCMemoryPrefix L0 finishSC (available - steps) expected := by
   obtain ⟨owned, steps, bound, run⟩ := BildMehr.tso_silent_single_thread
-    (image_prefix_tso path) rfl rfl (privateBuffers_empty loaded.emptyBuffers)
-  exact ⟨steps, bound, path.silent_slots rfl, run, mergedView_empty _ _ loaded.emptyBuffers,
+    (image_prefix_tso path) rfl rfl (BildMehr.privateBuffers_empty loaded.emptyBuffers)
+  exact ⟨steps, bound, path.silent_slots rfl, run, BildMehr.mergedView_empty _ _ loaded.emptyBuffers,
     BildMehr.singleThreadView _ owned, fun _ _ _ _ reference waiting =>
       reference.consume_until_host waiting run rfl (BildMehr.alleBlind_start _)⟩
 

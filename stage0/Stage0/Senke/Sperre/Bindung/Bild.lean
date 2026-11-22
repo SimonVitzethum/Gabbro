@@ -35,7 +35,7 @@ theorem bild_lockWait {D : Deklaration} {P : Programm D} {passes : Nat}
 theorem ticket_spin_no_syscall {D : Deklaration} (L : Lay D) (a s : Nat)
     (binding : L.lockWait = .spin) :
     ((nimmT L a s ++ gibT L a s).all fun i => i.o != 23) = true := by
-  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci]
+  simp [nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci, II.o]
 
 /-- The scoped lock and all three release paths add no syscall to a
     syscall-free body in a freestanding image. -/
@@ -43,7 +43,7 @@ theorem locksCodeT_spin_no_syscall {D : Deklaration} (L : Lay D) (a s : Nat)
     (cb : List II) (x y : Int) (binding : L.lockWait = .spin)
     (body : (cb.all fun i => i.o != 23) = true) :
     ((locksCodeT L a s cb x y).all fun i => i.o != 23) = true := by
-  simp [locksCodeT, nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci, body]
+  simp [locksCodeT, nimmT, gibT, binding, waitEntry, ticketWaitC, ticketWakeC, bindingCell, futexC, addC, ci, II.o, body]
 
 /-- Linux retains WAIT on contention and WAKE-all on release, at the same
     offsets as the existing sequential and cross-thread theorems. -/

@@ -137,7 +137,7 @@ private theorem sc_waiting_host_no_silent {layout : Runner.Beweis.Lay}
     (waiting : before.ths = [some (.ask (.sys request) resume)])
     (step : ProcessStep (SC layout) actI before events after) (quiet : events = []) : False := by
   have one : before.ths.length = 1 := by simp only [waiting, List.length_cons, List.length_nil]
-  have issuer {i r} (ready : before.ths[i]? = some (some r)) :
+  have issuer {i : Nat} {r : Res T} (ready : before.ths[i]? = some (some r)) :
       r = .ask (.sys request) resume := by
     rw [onlySlot one ready, waiting] at ready
     exact (Option.some.inj (Option.some.inj ready)).symm

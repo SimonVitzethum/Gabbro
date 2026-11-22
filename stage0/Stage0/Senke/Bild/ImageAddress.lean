@@ -221,7 +221,7 @@ theorem image_depth_setup [Kern] {D : Deklaration}
   have instruction : InsAt (before.ms.1.view thread) pointer.pc 1
       (II.f 2) (II.f ((depth + 1 : Nat) : Int)) (II.f 0) := by
     simpa only [startC, List.singleton_append, List.cons_append, List.getElem_cons_zero,
-      Nat.mul_zero, BitVec.add_zero, ci] using first
+      Nat.mul_zero, BitVec.add_zero, ci, II.o, show (1 : Opcode).val = 1 from rfl] using first
   have slotNumber : sx (II.f 2) = BitVec.ofNat 64 2 := by decide
   have depthWord : sx (II.f ((depth + 1 : Nat) : Int)) =
       BitVec.ofNat 64 (depth + 1) := sx_nat depthFits
