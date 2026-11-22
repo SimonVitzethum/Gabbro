@@ -102,9 +102,10 @@ theorem image_ticket_waiter_CAS [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)
       have second : base + offset < 2 ^ 64 := by omega
       simp only [Far, address, BitVec.toNat_ofNat, Nat.mod_eq_of_lt first, Nat.mod_eq_of_lt second]
       omega
-    have first := rd64_write_far (apart 0 (Nat.zero_le 8))
+    have first := apart 0 (Nat.zero_le 8)
     rw [Nat.add_zero] at first
-    exact ⟨first.trans represented.next, (rd64_write_far (apart 8 (Nat.le_refl _))).trans represented.serving,
+    exact ⟨(rd64_write_far first).trans represented.next,
+      (rd64_write_far (apart 8 (Nat.le_refl _))).trans represented.serving,
       rd64_write_same (w := update) readable⟩
   · have waitBound := List.countP_le_length (p := fun t => (before.pc t).gezaehlt) (l := before.q)
     have bounded : before.w.wait < 2 ^ 64 := by
