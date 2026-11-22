@@ -136,7 +136,7 @@ public import Stage0.Senke.Sperre.Bindung.Schritt
 public import Stage0.Senke.Sperre.Bindung.Simulation
 public import Stage0.Senke.Sperre.Bindung.Bild
 public import Stage0.Senke.Sperre.Bindung.ImageCAS
-public import Stage0.Senke.Bild.Mehr.Ort.LockState
+public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 public import Stage0.Senke.Sperre.Bindung.ImageWaiters
 public import Stage0.Senke.Ausdruck.Old.Pruefer
 public import Stage0.Senke.Ausdruck.Old.JudgedUnit
