@@ -63,6 +63,23 @@ theorem RunP.remaining {start current : Res T} {before now : Mem}
       obtain ⟨rfl, rfl⟩ := same
       exact ih later
 
+/-- A memory prefix cannot consume a host or floating operation. It
+    preserves the exact remaining reference, even if the next request
+    belongs to one of those boundaries. -/
+theorem RunP.remaining_run {start current : Res T} {before now : Mem}
+    (part : RunP start before current now) :
+    ∀ {next : T} {after : Mem}, Run start before next after → Run current now next after := by
+  induction part with
+  | refl => exact fun whole => whole
+  | ask answered _ ih =>
+    intro next after whole
+    cases whole with
+    | ask same later =>
+      rw [answered] at same
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj same)
+      exact ih later
+    | sys | fp => cases answered
+
 /-- A reference can mask writes to shared read-only bytes. It agrees
     with the actual memory on the permissions that can affect it. -/
 def MaskedAgreement (reads writes : W → Prop) (reference actual : Mem) : Prop :=
