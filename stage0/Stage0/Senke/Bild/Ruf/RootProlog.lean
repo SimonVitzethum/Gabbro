@@ -111,6 +111,31 @@ theorem Emitted.depth_guard_exits [Kern] (output : Emitted src reserve options)
   refine ⟨req, ?_, number, status, semantic⟩
   simpa only [List.nil_append, status] using quiet.prepend terminal
 
+/-- The emitted depth guard at the matched callee is a named image
+    resource stop, justified by the exact number of suspended callers. -/
+theorem Emitted.depth_guard_named [Kern] (output : Emitted src reserve options)
+    {before : Cfg imageTSO (Res T)} {thread slots : Nat} {fp : W}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {history : List Ev}
+    (fn : (declOf output.compiled.unit).Fn)
+    (exhausted : ImageDepthCause output state thread fn)
+    (loaded : BytesAt (before.ms.1.view thread) codeBase (output.image.code.flatMap encII))
+    (oracle : Orakel (declOf output.compiled.unit)) (world : World (declOf output.compiled.unit))
+    (arguments : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params fn)) :
+    let pc := BitVec.ofNat 64 (output.image.A fn)
+    let scratch := (functionFrame output.compiled.program fn).canonicalResult
+    before.ths[thread]? = some (some (.next ⟨pc, fp⟩)) →
+    (before.ms.1.view thread).rd64 (slot fp (BitVec.ofNat 64 2)) = some 0 →
+    CodeFar (pc + 32) 3 fp slots → FrameOK (before.ms.1.view thread) fp slots →
+    scratch + 8 ≤ slots → slots < 2 ^ 31 →
+    ∃ req, Tr imageTSO actI before [(thread, req, none)] (.exit (BitVec.ofNat 64 105)) 27 ∧
+      ImageStopMatches output oracle state history [(thread, req, none)] (.exit (BitVec.ofNat 64 105)) := by
+  intro pc scratch running zero far frame room fit
+  obtain ⟨req, run, number, status, _⟩ :=
+    output.depth_guard_exits fn loaded oracle world arguments running zero far frame room fit
+  have code : req.a1 = BitVec.ofNat 64 105 := status
+  exact ⟨req, run, thread, req, rfl, number, congrArg Ende.exit code.symm,
+    Or.inr (Or.inr (Or.inr (Or.inr ⟨fn, exhausted, code⟩)))⟩
+
 /-- At an original root's depth the actual emitted guard reaches the
     precondition code without going through the depth-exhaustion stop. -/
 theorem Emitted.root_depth_guard_pass [Kern] (output : Emitted src reserve options)

@@ -272,9 +272,20 @@ theorem ImageHardwareCause.named {D : Deklaration} {O : Orakel D} {passes : Nat}
   obtain ⟨l, Γ, Λ, env, rest, head, stopped, _⟩ := matched
   exact ⟨l, Γ, Λ, env, rest, head, stopped⟩
 
+/-- The bounded image cannot enter another emitted frame. The unbounded
+    source machine stands at the actual callee's first instruction, with
+    exactly the image's capacity in suspended callers. -/
+def ImageDepthCause (output : Emitted src reserve options)
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) (i : Faden)
+    (fn : (declOf output.compiled.unit).Fn) : Prop :=
+  let function := (state.m.faeden i).kopf
+  state.lebt i = true ∧ (state.m.faeden i).stapel.length = output.image.depth ∧
+  function.f = some fn ∧
+  function.rest = ⟨false, _, _, function.rho, .ende (output.compiled.program.mitRuhe.rumpf function.f)⟩
+
 /-- Match a process exit to its exact source return, declared non-returning
-    gate, named hardware condition, or refused host clone at the boundary
-    preceding the terminal operation. -/
+    gate, named hardware condition, refused host clone or exhausted
+    stack reserve at the boundary preceding the terminal operation. -/
 def ImageStopMatches (output : Emitted src reserve options)
     (O : Orakel (declOf output.compiled.unit)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
     (earlier last : List Ev) (ending : Ende) : Prop :=
@@ -291,7 +302,8 @@ def ImageStopMatches (output : Emitted src reserve options)
         req.a1 = BitVec.ofNat 64 (hwCode cause)) ∨
       (i = 0 ∧ req.a1 = BitVec.ofNat 64 cloneCode ∧
         ∃ prior id extra, earlier.filter (fun event => event.1 == i) =
-          prior ++ [(i, cloneReq, some (id, extra))] ∧ id.toInt < 0))
+          prior ++ [(i, cloneReq, some (id, extra))] ∧ id.toInt < 0) ∨
+      (∃ fn, ImageDepthCause output state i fn ∧ req.a1 = BitVec.ofNat 64 105))
 
 abbrev ImageGoalAt (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit)) :=
