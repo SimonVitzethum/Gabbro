@@ -182,10 +182,10 @@ theorem tso_sys_prefix {layout : Runner.Beweis.Lay}
     (fourth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 32) = some a4)
     (fifth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 40) = some a5)
     (sixth : (before.ms.1.view i).rd64 (slot t.fp (sx args) + 48) = some a6) :
-    let continue : Ans → Res T := fun reply => opt reply fun pair => wr64 (slot t.fp (sx dest)) pair.1 (nxt t)
+    let resume : Ans → Res T := fun reply => opt reply fun pair => wr64 (slot t.fp (sx dest)) pair.1 (nxt t)
     ProcessPrefix (TSO layout) actI before [] 11
-      ⟨before.ms, before.ths.set i (some (.ask (.sys ⟨nr, a1, a2, a3, a4, a5, a6⟩) continue))⟩ := by
-  intro continue
+      ⟨before.ms, before.ths.set i (some (.ask (.sys ⟨nr, a1, a2, a3, a4, a5, a6⟩) resume))⟩ := by
+  intro resume
   let onThread (r : Res T) : Cfg (TSO layout) (Res T) := ⟨before.ms, before.ths.set i (some r)⟩
   have inside := (List.getElem?_eq_some_iff.mp running).1
   have load32 {address : W} {value : BitVec 32} (next : BitVec 32 → Res T)

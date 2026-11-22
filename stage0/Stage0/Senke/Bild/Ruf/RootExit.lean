@@ -59,4 +59,21 @@ theorem ImageForeignTrace.retire {src : String} {reserve : Nat} {options : Profi
   simpa only [List.filter_append, List.filter_cons, internal, Bool.false_eq_true, ite_false,
     List.filter_nil, List.append_nil] using matched
 
+/-- A reached hardware failure explains the real process exit with its
+    exact request and status. All prior microsteps are silent. -/
+theorem image_hardware_exit [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {O : Orakel (declOf output.compiled.unit)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {history : List Ev}
+    {before armed : Cfg imageTSO (Res T)} {steps i : Nat} {req : Req} {resume : Ans → Res T}
+    {cause : Hardware (declOf output.compiled.unit).mitRuhe}
+    (prefix : ProcessPrefix imageTSO actI before [] steps armed)
+    (ready : armed.ths[i]? = some (some (.ask (.sys req) resume)))
+    (number : req.nr.toNat = NR_EXIT_GROUP) (status : req.a1 = BitVec.ofNat 64 (hwCode cause))
+    (alive : state.lebt i = true) (matched : ImageHardwareCause O.mitRuhe output.image.passes state.m i cause) :
+    Tr imageTSO actI before [(i, req, none)] (.exit req.a1) (steps + 1) ∧
+      ImageStopMatches output O state history [(i, req, none)] (.exit req.a1) := by
+  have stop : Tr imageTSO actI armed [(i, req, none)] (.exit req.a1) 1 := .exitGroup ready rfl number
+  exact ⟨by simpa only [List.nil_append, Nat.add_comm] using prefix.prepend stop,
+    ⟨i, req, rfl, number, rfl, .inr (.inr (.inl ⟨alive, cause, matched, status⟩))⟩⟩
+
 end Gabbro.Stage0
