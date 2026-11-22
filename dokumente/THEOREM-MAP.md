@@ -8173,9 +8173,9 @@ spawn and join. `Frontend.checkHostedStarts_iff` states the precise guard.
 
 `Stage0Correct` connects the production emitter to the Lean IR
 semantics. The returned CLI bytes, canonical source, exported model unit
-and checker verdict are part of the conclusion. Every IR prefix ends at
-a configuration related to a reachable GX state satisfying the entire
-`ZielFX`. Terminal observations must match a source outcome or a named
+and checker verdict are part of the conclusion. Every IR prefix matches
+the slots, foreign trace and runtime representation of a reachable GX
+state satisfying the entire `ZielFX`. Terminal observations must match a source outcome or a named
 host outcome, and machine faults and unknown instructions are excluded.
 `LoadedIRImage.source_start` derives the initial relation from the
 serialized image and empty store buffers. `stage0_correct_of_ir_refinement`

@@ -180,10 +180,11 @@ def Stage0Correct : Prop :=
         HardwareAnnahmenHw O E.Q → TorOK output.image.Y O → ImageGateAnswers output.image.Y O →
         ImageFutexAnswers → SichtOK O →
         ∀ (memory : imageTSO.St), LoadedIRImage output memory →
-        output.IRFunctionSemantics memory.1.m ∧ ∃ refinement : ImageIRRefinement output E O memory,
+        output.IRFunctionSemantics memory.1.m ∧
           (∀ finish events count, ProcessPrefix imageTSO actI (output.irEntry memory) events count finish →
-            ∃ state, refinement.related events finish state ∧
-              ImageReach output E O (imageSourceStart E) state ∧ ImageGoalAt output E O state) ∧
+            ∃ state, ImageReach output E O (imageSourceStart E) state ∧
+              ImageSlotsMatch output E O events finish state ∧ ImageForeignTrace output events state ∧
+              ImageRuntimeMatches output E O events finish state ∧ ImageGoalAt output E O state) ∧
           (∀ events ending count, Tr imageTSO actI (output.irEntry memory) events ending count →
             ending ≠ .fault ∧ ending ≠ .unk ∧
             (ending ≠ .lauf → ∃ earlier last state, events = earlier ++ last ∧
@@ -215,10 +216,11 @@ theorem stage0_correct_of_ir_refinement
       (reached : ImageReach output E oracle (imageSourceStart E) state) : ImageGoalAt output E oracle state :=
     gabbro_ziel akzeptiertX_pruefer _ E output.fsA output.lsA output.csA accepted duties calls posts oracle
       foreign hardware output.image.passes _ _ (laufzeit_initRuhe E) _ _ reached
-  refine ⟨loaded.function_semantics, refinement, ?_, ?_⟩
+  refine ⟨loaded.function_semantics, ?_, ?_⟩
   · intro finish events count run
     obtain ⟨state, matched, reached⟩ := refinement.follow run refinement.initial
-    exact ⟨state, matched, reached, goal reached⟩
+    obtain ⟨slots, observations, runtime⟩ := refinement.consistent events finish state matched
+    exact ⟨state, reached, slots, observations, runtime, goal reached⟩
   · intro events ending count run
     have stops (stopped : ending ≠ .lauf) := refinement.terminal run stopped
     refine ⟨?_, ?_, ?_⟩
