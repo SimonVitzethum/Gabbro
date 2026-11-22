@@ -181,6 +181,22 @@ theorem ImageRootPhase.advance_source [Kern] {src : String} {reserve : Nat} {opt
   · exact .inr (.inl pending)
   · exact .inr (.inr ⟨id, extra, List.mem_append_left _ event, pending⟩)
 
+/-- Both clone outcomes continue with the same result-store tree. The
+    existing root frame and its source head are kept. -/
+theorem ImageRootPhase.resume_clone [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {memory : Mem} {history : List Ev} {before after : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {parent child : T} {id extra : W}
+    (root : ImageRootPhase output E history memory 0
+      (.ask (.sys cloneReq) fun answer => opt answer fun pair =>
+        if pair.1 = 0 then .next child else ret1 parent pair.1) before)
+    (site : ImageRootInstruction output 0 parent) (machine : after.m = before.m) :
+    ImageRootPhase output E (history ++ [(0, cloneReq, some (id, extra))]) memory 0 (ret1 parent id) after := by
+  obtain ⟨_, loader, _⟩ | ⟨start, selected, head, code, frame, fits, args, _⟩ := root
+  · cases loader
+  exact .inr ⟨start, selected, by simpa only [machine] using head, code, frame, fits, args,
+    parent, site, .inr (.inr ⟨id, extra, List.mem_append_right _ List.mem_cons_self, fun _ _ => RunP.refl _ _⟩)⟩
+
 /-- The real successful worker launch preserves the runtime partition.
     The parent stays in its startup stub until it has stored the host
     reply, and the new child's exact prepared frame enters the next slot. -/
@@ -222,12 +238,8 @@ private theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {o
     · rw [waiting] at ready
       cases ready
       exact phase
-  have afterRoot : ImageRootPhase output E (history ++ events) (before.ms.1.view 0) 0 (ret1 parent id) next := by
-    obtain ⟨_, loader, _⟩ | ⟨start, selected, head, code, frame, fits, args, _⟩ := root
-    · cases loader
-    refine .inr ⟨start, selected, by simpa only [machine] using head, code, frame, fits, args,
-      parent, site, .inr (.inr ⟨id, extra, List.mem_append_right _ List.mem_cons_self, ?_⟩)⟩
-    exact fun _ _ => RunP.refl _ _
+  have afterRoot : ImageRootPhase output E (history ++ events) (before.ms.1.view 0) 0 (ret1 parent id) next :=
+    root.resume_clone site machine
   have internal : imageCanBeInternal (0, cloneReq, some (id, extra)) = true := by
     simp only [imageCanBeInternal, true_or, decide_true]
   have sameHistory : imageSourceForeignEvents next.m.lauf = imageSourceForeignEvents state.m.lauf := by

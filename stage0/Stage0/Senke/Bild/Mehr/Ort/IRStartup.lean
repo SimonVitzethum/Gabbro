@@ -368,7 +368,7 @@ theorem image_clone_response
     obtain ⟨rfl, nonzero⟩ := responseState response
     simp only [opt_some, ite_eq_right nonzero, Res.next.injEq] at resumed spawned
     subst_vars
-    exact ⟨nonzero, by rw [if_pos positive]⟩
+    exact ⟨nonzero, by simp only [ite_eq_left positive, ite_true]⟩
 
 /-- Every actual successful startup clone activates the next declared GX
     slot with its exact arguments, even when earlier children have

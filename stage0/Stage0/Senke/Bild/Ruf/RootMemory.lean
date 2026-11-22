@@ -1,6 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootAdmission
+import Stage0.Senke.Bild.Ruf.GateTrace
 import Stage0.Senke.Bild.Ruf.StartSite
 import Lean.Elab.Tactic.Omega
 
@@ -25,6 +26,64 @@ private theorem pending_root_phase [Kern] {src : String} {reserve : Nat} {option
   · rw [running] at live
     cases live
     exact phase
+
+/-- The actual refusal keeps the source and its slot partition at the
+    same boundary. The parent continues in the emitted result store
+    with the negative return word recorded in the host trace. -/
+theorem image_refused_worker [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))}
+    {parent child : T} {id extra : W}
+    (partition : ImageRuntimePartition footprint output E O history before state body)
+    (slots : ImageSlotsMatch output E O history before state)
+    (trace : ImageForeignTrace output history state)
+    (pending : body[0]? = some none) (site : ImageRootInstruction output 0 parent)
+    (waiting : before.ths[0]? = some (some (.ask (.sys cloneReq) fun answer =>
+      opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)))
+    (refused : id.toInt < 0)
+    (observed : ProcessStep imageTSO actI before [(0, cloneReq, some (id, extra))] after) :
+    let event : Ev := (0, cloneReq, some (id, extra))
+    ImageSlotsMatch output E O (history ++ [event]) after state ∧
+      ImageForeignTrace output (history ++ [event]) state ∧ ImageObservation output E O state state after event ∧
+      ImageRuntimePartition footprint output E O (history ++ [event]) after state body := by
+  intro event
+  have exactAfter : after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id))⟩ := by
+    simpa only [ite_eq_right (not_lt_of_ge refused.le), List.append_nil] using (image_clone_response waiting observed).2
+  have root := (pending_root_phase partition pending waiting).resume_clone
+    (id := id) (extra := extra) site (after := state) rfl
+  have internal : imageCanBeInternal event = true := by
+    simp only [event, imageCanBeInternal, true_or, decide_true]
+  have trace' := trace.appendInternal (events := [event])
+    (fun name found => (List.mem_singleton.mp found).symm ▸ internal) rfl
+  rw [exactAfter]
+  have parentPresent := (List.getElem?_eq_some_iff.mp waiting).1
+  obtain ⟨buffers, length, bodies, roots⟩ := partition
+  refine ⟨⟨?_, ?_⟩, trace', .inr ⟨internal, rfl⟩, buffers, by simpa only [List.length_set] using length,
+    bodies, ?_⟩
+  · intro thread
+    simpa only [List.length_set] using slots.1 thread
+  · intro thread retired
+    have other : thread ≠ 0 := by
+      rintro rfl
+      rw [List.getElem?_set_self parentPresent] at retired
+      cases retired
+    rw [List.getElem?_set_ne (Ne.symm other)] at retired
+    rcases slots.2 thread retired with finished | ⟨atExit, req, prior, reached, since, head, binding, kind, last⟩
+    · exact .inl finished
+    · refine .inr ⟨atExit, req, prior, reached, since, head, binding, kind, ?_⟩
+      simp only [event, List.filter_append, List.filter_cons, beq_eq_false_iff_ne.mpr (Ne.symm other),
+        Bool.false_eq_true, ite_false, List.filter_nil, List.append_nil, last]
+  · intro thread
+    by_cases own : thread = 0
+    · subst thread
+      exact .inr ⟨_, pending, List.getElem?_set_self parentPresent, root⟩
+    · have same : (before.ths.set 0 (some (ret1 parent id)))[thread]? = before.ths[thread]? :=
+        List.getElem?_set_ne (Ne.symm own)
+      rcases roots thread with identical | ⟨used, idle, running, active⟩
+      · exact .inl (identical.trans same.symm)
+      · exact .inr ⟨used, idle, same.trans running, active.advance_source (.inl own) rfl⟩
 
 private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
