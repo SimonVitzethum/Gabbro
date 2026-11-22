@@ -413,7 +413,7 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
       Mem.write (projectSCState (imageStackFootprint output) before.ms).1 address 8 word.toNat := by
     rcases written with ⟨_, refused, _⟩ | ⟨m, placed, _, exactMemory⟩
     · cases refused
-    · rw [Mem.wr64_eq] at placed
+    · rw [wr64_eq] at placed
       split at placed
       · exact exactMemory.trans (Option.some.inj placed).symm
       · cases placed
