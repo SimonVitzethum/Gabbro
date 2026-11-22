@@ -146,7 +146,7 @@ private theorem privateLeafStep {P : Programm D} {O : Orakel D} {passes : Nat}
     {rest : Endblock D (vertragVon D head.kopf.f) l Γ out} {locals updated : Env D Γ}
     {world : World D} (admitted : OrtPrem C statement)
     (ready : head.kopf.rest = ⟨l, Γ, Λ, locals, .ende (.cons statement rest)⟩)
-    (held : HeldIn Λ (offen head.spur))
+    (held : Gabbro.Grammatik.HeldIn Λ (offen head.spur))
     (executed : execStmt O passes keinRuf statement (M.weltVon thread) locals = .ok world updated) :
     ∃ next, RufSchrittG P O passes M thread next ∧
       ZustandG next thread head.stapel head.kopf.f head.kopf.rho head.kopf.s0 head.log updated (.ende rest) world ∧
@@ -166,7 +166,7 @@ private theorem privateBindStep {P : Programm D} {O : Orakel D} {passes : Nat}
     (frame : M.faeden thread = head) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     {expr : Expr D Γ Λ τ} {rest : Endblock D (vertragVon D head.kopf.f) l (τ :: Γ) Λ} {locals : Env D Γ}
     (ready : head.kopf.rest = ⟨l, Γ, Λ, locals, .ende (.bind expr rest)⟩)
-    (held : HeldIn Λ (offen head.spur)) :
+    (held : Gabbro.Grammatik.HeldIn Λ (offen head.spur)) :
     let world := (M.weltVon thread).lese Λ expr.orte
     ∃ next, RufSchrittG P O passes M thread next ∧
       ZustandG next thread head.stapel head.kopf.f head.kopf.rho head.kopf.s0 head.log
