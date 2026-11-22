@@ -99,8 +99,8 @@ theorem imageProjection_agree_other [Kern] {before after : imageTSO.St}
       show viewAt before.1 footprint address = before.1.m from dif_neg assigned, committed]
     exact .refl _ _
 
-/-- Register the entered body with its writable stack and immutable
-    shared bytes, which include the emitted instructions. -/
+/-- Register the entered body with its writable stack and the shared
+    bytes below every stack reservation, including the emitted code. -/
 theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
@@ -134,12 +134,11 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     change body[i]? = some (some s.r) at located
     rw [empty] at located
     cases located
-  let reads : W → Prop := fun byte => imageStackFootprint output i byte ∨
-    ((∀ j, ¬ imageStackFootprint output j byte) ∧ after.ms.1.m.wr byte = false)
+  let reads : W → Prop := fun byte => imageStackFootprint output i byte ∨ byte.toNat < output.image.fp0
   have accessible (byte : W) (among : reads byte) (j : Nat) (other : imageStackFootprint output j byte) : j = i := by
-    rcases among with own | ⟨shared, _⟩
+    rcases among with own | shared
     · exact imageStackFootprint_disjoint other own
-    · exact (shared j other).elim
+    · exact ((Nat.not_lt_of_ge ((Nat.le_add_right _ _).trans other.2.1)) shared).elim
   have atReads : GleichAuf reads
       (projectSCState (imageStackFootprint output) after.ms).1 entry.mb := by
     rw [entryMemory]

@@ -57,7 +57,7 @@ theorem image_body_read_store [Kern] {src : String} {reserve : Nat} {options : P
         intro j _
         rfl
       · exact stable
-    | cas .. | sys .. | fp .. => cases ordinary
+    | cas | sys | fp => cases ordinary
   have step := ProcessStep.ask (M := imageTSO) (act := actI) actual rfl
     (special_speicherOp kind) answered rfl
   rw [quiet] at step
