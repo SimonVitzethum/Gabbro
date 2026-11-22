@@ -165,7 +165,7 @@ public theorem runWaitingPoll_error_iff (elaboration : Elaboration D V Λ types 
   unfold runWaitingPoll
   cases runTaskPoll elaboration calls prices task world with
   | ok => simp only [reduceCtorEq]
-  | error => rfl
+  | error => simp only [Except.error.injEq]
 
 /-- These semantics are computed from resolved G expressions. Missing
     resolution or an ill-typed frame produces Invalid, which the storage
