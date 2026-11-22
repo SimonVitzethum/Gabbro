@@ -62,8 +62,8 @@ theorem image_awaits_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
         rufEigenG thread (leseEv question Λ [.inr global] ++ [.fremd (.inr (.inr global))]) ∧
       HEq (next.m.faeden thread).kopf.rest
         (⟨l, D.gtyp global :: Γ, Λ, .cons (input.globs global) env, .dann body (.schrumpf tail)⟩ :
-          Σ local : Bool, Σ types : Ctx, Σ resources : List (Res D),
-            Env D types × GRest D (vertragVon D (source.m.faeden thread).kopf.f) local types resources) := by
+          Σ linear : Bool, Σ types : Ctx, Σ resources : List (Res D),
+            Env D types × GRest D (vertragVon D (source.m.faeden thread).kopf.f) linear types resources) := by
   intro input question
   let address := BitVec.ofNat 64 (layout.ga global)
   obtain ⟨word, read, encoded⟩ := ValueAt.cellWord (aggregateFits_compat single) (represented.2.1 global)
