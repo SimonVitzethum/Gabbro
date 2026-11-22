@@ -116,14 +116,15 @@ theorem image_refused_worker_terminal [kernel : Kern] {src : String} {reserve : 
   exact ⟨.exitGroup running rfl exits, 0, request, rfl, exits, rfl,
     .inr (.inr (.inr (.inl ⟨rfl, status, prior, id, extra, previous, refused⟩)))⟩
 
-private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+theorem ImageRuntimePartition.advance_pending [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev} {before after : Cfg imageTSO (Res T)}
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))} {i : Nat} {r : Res T}
-    (partition : ImageRuntimePartition footprint output E O history before state body)
+    {pendingPhase : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition footprint output E O history before state body pendingPhase)
     (pending : body[i]? = some none) (threads : after.ths = before.ths.set i (some r))
-    (phase : ImageRootPhase output E history (after.ms.1.view i) i r state)
+    (phase : pendingPhase (after.ms.1.view i) i r)
     (views : ∀ j, j ≠ i → after.ms.1.view j = before.ms.1.view j)
     (buffers : PrivateBuffers footprint after.ms.1)
     (preserveWorld : WeltAt (projectSCState footprint before.ms).1 output.image.Y.withIdle (state.m.speicher.welt []) →
@@ -134,7 +135,7 @@ private theorem pending_root_progress [Kern] {src : String} {reserve : Nat} {opt
       (∀ j s, snapshots j = some s → SoloFootprint footprint j s) →
       ∃ updated, MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
         ⟨(projectSCState footprint after.ms).1, body⟩ state snapshots positions updated) :
-    ImageRuntimePartition footprint output E O history after state body := by
+    ImageRuntimePartition footprint output E O history after state body pendingPhase := by
   obtain ⟨_, length, admitted, roots⟩ := partition
   refine ⟨buffers, by rw [threads, List.length_set, length], ?_, ?_⟩
   · rcases admitted with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, indices⟩
@@ -170,7 +171,7 @@ theorem image_pending_root_begin [Kern] {src : String} {reserve : Nat} {options 
     · cases loader
     exact .inr ⟨start, declared, head, code, frame, fits, args, pointer, site,
       .inr (.inl (fun _ _ => RunP.refl _ _))⟩
-  exact ⟨.priv running rfl, pending_root_progress partition pending rfl continued
+  exact ⟨.priv running rfl, ImageRuntimePartition.advance_pending partition pending rfl continued
     (fun _ _ => rfl) partition.1 (fun world => world) (fun related _ => ⟨_, related⟩)⟩
 
 /-- A real scoped startup store advances the pending root in the shared
@@ -234,7 +235,7 @@ theorem image_pending_root_store [Kern] {src : String} {reserve : Nat} {options 
   have preserve {m : Mem} (world : WeltAt m output.image.Y.withIdle (state.m.speicher.welt [])) :
       WeltAt (Mem.write m address 8 word.toNat) output.image.Y.withIdle (state.m.speicher.welt []) :=
     weltAt_stab output.layout_checked.1.withIdle room _ _ world (agree_write bound (Nat.zero_le _) inside _)
-  refine ⟨.ask running rfl rfl answered rfl, pending_root_progress partition pending rfl phase views buffered ?_ ?_⟩
+  refine ⟨.ask running rfl rfl answered rfl, ImageRuntimePartition.advance_pending partition pending rfl phase views buffered ?_ ?_⟩
   · rw [show after.ms = memory from rfl, bytes]
     exact preserve
   · intro snapshots positions committed related indices
@@ -269,7 +270,7 @@ theorem image_pending_root_read [Kern] {src : String} {reserve : Nat} {options :
   intro after
   obtain ⟨unchanged, phase⟩ := ImageRootPhase.read (pending_root_phase partition pending running)
     pastLoader scope answered
-  refine ⟨.ask running rfl rfl answered rfl, pending_root_progress partition pending rfl phase ?_ ?_ ?_ ?_⟩
+  refine ⟨.ask running rfl rfl answered rfl, ImageRuntimePartition.advance_pending partition pending rfl phase ?_ ?_ ?_ ?_⟩
   · intro j _
     rw [show after.ms = memory from rfl, unchanged]
   · rw [show after.ms = memory from rfl, unchanged]

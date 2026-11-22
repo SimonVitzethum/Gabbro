@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Mehr.Ort.IRCorrectness
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
+public import Stage0.Senke.Bild.Ruf.RootMemory
 
 @[expose] public section
 
@@ -9,7 +10,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Stage0.Senke
   Gabbro.Stage0.Senke.BildMehr Gabbro.Stage0.Senke.BildLauf
-  Runner Runner.IR
+  Runner Runner.IR Runner.Mach
 
 variable {src : String} {reserve : Nat} {options : Profil.Options}
 
@@ -311,5 +312,38 @@ theorem ImageProloguePhase.answer [Kern] {output : Emitted src reserve options}
     IRContinuation.answer phase.running phase.blind scope phase.agrees nativeUnique response
   exact ⟨⟨phase.root, phase.declared, phase.alive, phase.unentered, phase.reads,
     updated, phase.finish, phase.lowered, progress, phase.blind.weiter answer, kept⟩⟩
+
+/-- Before body admission a root can still be in its startup stub or
+    already running the actual lowered function prologue. -/
+def ImagePendingRoot [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (history : List Ev)
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) (memory : Mem) (thread : Nat)
+    (control : Res T) : Prop :=
+  ImageRootPhase output E history memory thread control state ∨
+    Nonempty (ImageProloguePhase output E thread control memory state)
+
+/-- A thread can decode its next prologue instruction while other body
+    and root slots retain their existing relations to the source machine. -/
+theorem ImageRuntimePartition.prologue_decode [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {history : List Ev} {before : Cfg imageTSO (Res T)}
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {footprint : Nat → W → Prop} {body : List (Option (Res T))} {thread : Nat} {pointer : T}
+    (partition : ImageRuntimePartition footprint output E O history before state body
+      (ImagePendingRoot output E history state))
+    (pending : body[thread]? = some none) (running : before.ths[thread]? = some (some (.next pointer)))
+    (phase : ImageProloguePhase output E thread (.next pointer) (before.ms.1.view thread) state) :
+    let boundary := phase.lowered.bodyEntry (imagePrologueFrame output thread)
+    let after : Cfg imageTSO (Res T) := ⟨before.ms, before.ths.set thread (some (IR.step pointer))⟩
+    (pointer = boundary ∧ GleichAuf phase.reads (before.ms.1.view thread) phase.finish) ∨
+      (ProcessStep imageTSO Runner.Beweis.actI before [] after ∧
+        ImageRuntimePartition footprint output E O history after state body
+          (ImagePendingRoot output E history state)) := by
+  intro boundary after
+  rcases phase.decode with atBody | progress
+  · exact .inl atBody
+  · refine .inr ⟨.priv running rfl, ?_⟩
+    exact partition.advance_pending pending rfl (.inr progress) (fun _ _ => rfl)
+      partition.1 id (fun _ related => ⟨_, related⟩)
 
 end Gabbro.Stage0

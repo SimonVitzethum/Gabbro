@@ -190,7 +190,8 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
   rw [hb] at compiled
   cases Option.some.inj compiled
   rw [← codes, List.length_append, Nat.add_sub_cancel]
-  simp only [entry, layout, q, List.length_append, Nat.mul_add, BitVec.ofNat_add, BitVec.add_assoc]
+  simp only [entry, layout, q, List.length_append, relocateC_length, FrameLayout.parameterWords,
+    Nat.two_mul, Nat.mul_add, BitVec.ofNat_add] <;> ac_rfl
 
 /-- The first body boundary with the standing call protocol. -/
 theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]

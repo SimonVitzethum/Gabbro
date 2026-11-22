@@ -167,11 +167,12 @@ def ImageRootPhase [Kern] (output : Emitted src reserve options)
       control = .next t ∨ pending (IR.step t) ∨
         ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ pending (ret1 t id)
 
-/-- Each live slot is at a body position, its root stub or the loader. -/
+/-- Each live slot is registered at a body position or awaits admission. -/
 def ImageRuntimePartition [Kern] (footprint : Nat → W → Prop) (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (history : List Ev) (machine : Cfg imageTSO (Res T)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
-    (body : List (Option (Res T))) : Prop :=
+    (body : List (Option (Res T))) (pending : Mem → Nat → Res T → Prop :=
+      fun memory thread control => ImageRootPhase output E history memory thread control state) : Prop :=
     PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
     (((∀ (i : Nat) (r : Res T), body[i]? ≠ some (some r)) ∧
       WeltAt (projectSCState footprint machine.ms).1 output.image.Y.withIdle (state.m.speicher.welt [])) ∨
@@ -180,14 +181,12 @@ def ImageRuntimePartition [Kern] (footprint : Nat → W → Prop) (output : Emit
           ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
         ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s) ∧
     ∀ i, body[i]? = machine.ths[i]? ∨
-      ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
-        ImageRootPhase output E history (machine.ms.1.view i) i r state
-
+      ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧ pending (machine.ms.1.view i) i r
 abbrev ImageRuntimeMatchesAt [Kern] (footprint : Nat → W → Prop) (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
-    (history : List Ev) (machine : Cfg imageTSO (Res T)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) :=
-  ∃ body, ImageRuntimePartition footprint output E O history machine state body
-
+    (history : List Ev) (machine : Cfg imageTSO (Res T)) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe)
+    (pending : Mem → Nat → Res T → Prop := fun memory thread control => ImageRootPhase output E history memory thread control state) :=
+  ∃ body, ImageRuntimePartition footprint output E O history machine state body pending
 abbrev ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (history : List Ev) (machine : Cfg imageTSO (Res T))
