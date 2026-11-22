@@ -119,8 +119,8 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
     {before after : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))}
-    {i : Nat} {entry : MLage (declOf output.compiled.unit).mitRuhe}
-    (partition : ImageRuntimePartition footprint output E O history before state body)
+    {i : Nat} {entry : MLage (declOf output.compiled.unit).mitRuhe} {pending : Mem → Nat → Res T → Prop}
+    (partition : ImageRuntimePartition footprint output E O history before state body pending)
     (placed : ∀ thread byte, footprint thread byte → imageStackFootprint output thread byte ∨
       output.image.Y.lo ≤ byte.toNat ∧ byte.toNat < output.image.Y.hi)
     (ownsStack : ∀ byte, imageStackFootprint output i byte → footprint i byte)
@@ -136,7 +136,7 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     (issuerView : GleichAuf (fun byte => ¬ imageStackFootprint output i byte)
       (after.ms.1.view i) (before.ms.1.view i))
     (buffers : PrivateBuffers footprint after.ms.1) :
-    ImageRuntimeMatchesAt footprint output E O history after state := by
+    ImageRuntimeMatchesAt footprint output E O history after state pending := by
   let reads : W → Prop := fun byte => imageStackFootprint output i byte ∨ byte.toNat < output.image.fp0
   have accessible (byte : W) (among : reads byte) (j : Nat) (other : footprint j byte) : j = i := by
     rcases among with own | shared
