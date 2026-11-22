@@ -42,6 +42,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.BindLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.WaitingLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.TaskLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.JoinLowering
+import Grammatik.Nebenlaeufigkeit.Async.CancelTask
 import Grammatik.Nebenlaeufigkeit.Async.Representation.AwaitLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ArgumentLowering
