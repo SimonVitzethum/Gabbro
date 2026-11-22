@@ -297,7 +297,8 @@ theorem fullLocalSlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String 
   have sameName : strEq name name = true := by simp [strEq]
   rcases aggregate with ⟨_, _, exactType⟩ | ⟨_, exactType⟩ <;>
     simp only [zero, localValue, bind, Except.bind, uFullLocalSlice, exactType,
-      sameName, beq_self_eq_true, Bool.true_and, ite_true, pure, Except.pure, uFixedLocalArraySlice]
+      sameName, beq_self_eq_true, Bool.true_and, ite_true, pure, Except.pure, uFixedLocalArraySlice,
+      uFixedLocalArrayExtent, Option.map_none]
 
 theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except String USide)
     (array start : String) (element : Ty) (length : Nat) (lo hi count : Int) (amount : SExpr)
@@ -312,7 +313,8 @@ theorem fixedLocalArraySlice_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
       .ok (uLocalArraySpan (.param array) (.param start) element 0 count.toNat) := by
   rw [uRechne]
   have sameName : strEq start start = true := by simp [strEq]
-  simp only [arrayRead, bind, Except.bind, uFixedLocalArraySlice, sameName, Bool.not_true,
+  simp only [arrayRead, bind, Except.bind, uFixedLocalArraySlice, uFixedLocalArrayExtent, Option.map_some,
+    sameName, Bool.not_true,
     Bool.false_eq_true, ite_false, arrayType, indexType, width, bounds, ite_true, indexRead,
     and_self, pure, Except.pure]
 
@@ -328,7 +330,7 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
     uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, uSliceInteger, arrayType, firstType, lastType, bounds,
+  simp only [uLocalArraySliceObservation, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, bounds,
     locals, and_self, bind, Option.bind, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/

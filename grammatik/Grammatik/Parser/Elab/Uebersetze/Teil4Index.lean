@@ -227,8 +227,8 @@ def uSliceLocalType (ctx : UCtx) (name : String) : Option Ty :=
 /-- The dynamic endpoint form `array[start .. start + N]` fixes the
     number of selected elements statically. The same lexical start
     must be used at both endpoints, and its complete interval must fit. -/
-def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
-    USide → SExpr → SExpr → Option USide
+def uFixedLocalArrayExtent (ctx : UCtx) (blatt : SExpr → Except String USide) :
+    USide → SExpr → SExpr → Option (Ty × Nat × USide)
   | .param array, .variable start, .bin "+" (.variable lastStart) amount => do
     if !strEq start lastStart then none else
       let some (.arr element length) := uSliceLocalType ctx array | none
@@ -236,10 +236,15 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide) :
       let some count := uSchranke (uSliceConstants ctx) amount | none
       if 0 ≤ count ∧ 0 ≤ lo ∧ hi + count ≤ length then
         if blatt (.variable start) = .ok (.param start) then
-          some (uLocalArraySpan (.param array) (.param start) element 0 count.toNat)
+          some (element, count.toNat, .param start)
         else none
       else none
   | _, _, _ => none
+
+def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide)
+    (array : USide) (first last : SExpr) : Option USide :=
+  (uFixedLocalArrayExtent ctx blatt array first last).map
+    (fun (element, count, start) => uLocalArraySpan array start element 0 count)
 
 /-- Use the exact interval of a static integer or a resolved lexical
     binding. Reading either operand cannot observe the world. -/
@@ -262,18 +267,23 @@ def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String US
     (index : Option SExpr) : SExpr → Option USide
   | .built "#slice" [.variable array, first, last] => do
     let some (.arr _ capacity) := uSliceLocalType ctx array | none
-    let (firstLo, firstHi, begin) ← uSliceInteger ctx blatt first
-    let (lastLo, lastHi, finish) ← uSliceInteger ctx blatt last
-    if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
-      if blatt (.variable array) = .ok (.param array) then
-        match index with
-        | none => some (.sub finish begin)
-        | some atIndex => do
-          let (lo, hi, offset) ← uSliceInteger ctx blatt atIndex
-          if 0 ≤ lo ∧ hi < lastLo - firstHi then
-            some (.idx (.param array) (.add begin offset))
+    if blatt (.variable array) = .ok (.param array) then
+      let (begin, length, minimum) ←
+        match uFixedLocalArrayExtent ctx blatt (.param array) first last with
+        | some (_, count, start) => some (start, .lit (Int.ofNat count), (count : Int))
+        | none => do
+          let (firstLo, firstHi, begin) ← uSliceInteger ctx blatt first
+          let (lastLo, lastHi, finish) ← uSliceInteger ctx blatt last
+          if 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity then
+            some (begin, .sub finish begin, lastLo - firstHi)
           else none
-      else none
+      match index with
+      | none => some length
+      | some atIndex => do
+        let (lo, hi, offset) ← uSliceInteger ctx blatt atIndex
+        if 0 ≤ lo ∧ hi < minimum then
+          some (.idx (.param array) (.add begin offset))
+        else none
     else none
   | _ => none
 

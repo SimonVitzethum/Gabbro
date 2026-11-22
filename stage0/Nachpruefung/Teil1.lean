@@ -168,6 +168,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.localArraySliceLength_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_arraySliceLength
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.mixedArraySliceObservations_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_localArraySpanIndex
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.fixedSpanObservations_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceInteger_unknown
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceInteger_param
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_localArraySliceLength

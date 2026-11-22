@@ -67,6 +67,29 @@ theorem eval_arraySpanFrom {τ : Ty} {length : Nat} {lo hi : Int}
       simp only
       omega
 
+/-- A known-length span at a varying start can be indexed without
+    materialising the span. The start and end may have overlapping
+    intervals because the end is defined from that same start. -/
+theorem eval_localArraySpanIndex {τ : Ty} {capacity count : Nat}
+    {lo hi indexLo indexHi : Int}
+    (array : Expr D Γ Λ (.arr τ capacity)) (start : Expr D Γ Λ (.int lo hi))
+    (index : Expr D Γ Λ (.int indexLo indexHi))
+    (lower : 0 ≤ lo) (within : hi + count ≤ capacity)
+    (position : 0 ≤ indexLo ∧ indexHi < count)
+    (initial world : World D) (env : Env D Γ) :
+    let k := eval initial index world env
+    eval initial (.arrGet array (.widen (by omega) (by omega) (.add start index))) world env =
+      eval initial (arraySpanFrom array start lower 0 count (by omega)) world env
+        ⟨k.n.toNat, by have high := k.le_hi; omega⟩ := by
+  dsimp only
+  rw [eval_arraySpanFrom array start lower initial world env 0 count (by omega)]
+  simp only [eval]
+  apply congrArg (eval initial array world env)
+  apply Fin.ext
+  simp only [Zahl.fin, Zahl.weiter, Zahl.add]
+  have nonnegative := (eval initial index world env).lo_le
+  omega
+
 /-- The actual source expansion lowers to the same typed core term.
     Each indexed read is performed by the ordinary dependent reader. -/
 theorem lowWertE_localArraySpan {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
@@ -139,7 +162,7 @@ theorem localArraySliceIndex_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
     uRechne ctx blatt (.index (.built "#slice" [.variable array, .variable first, .variable last])
       (.variable index)) = .ok (.idx (.param array) (.add (.param first) (.param index))) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, uSliceInteger, arrayType, firstType, lastType, indexType, bounds,
+  simp only [uLocalArraySliceObservation, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, indexType, bounds,
     locals.1, locals.2.1, locals.2.2, indexBounds.2.2, indexBounds.1, indexBounds.2.1,
     and_self, bind, Option.bind, ite_true]
 
@@ -292,8 +315,40 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
     ⟨by decide, by decide, Int.ofNat_le.mpr enough⟩
   have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < Int.ofNat 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
-    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uSliceInteger, uSchranke, Option.map_some, bind, Option.bind,
+    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uFixedLocalArrayExtent, uSliceInteger,
+      uSchranke, Option.map_some, bind, Option.bind,
       arrayType, firstType, arrayRead, firstRead, bounds, position, and_self, ite_true]
+
+/-- A fixed length with a varying start lowers its observations directly,
+    even when the endpoint intervals overlap. -/
+theorem fixedSpanObservations_erfuellbar (τ : Ty) (capacity : Nat) (enough : 6 ≤ capacity) :
+    ∃ scope : UCtx,
+      let span := SExpr.built "#slice" [.variable "a", .variable "i", .bin "+" (.variable "i") (.lit 2)]
+      uWertBody scope (.built "lenof" [span]) = .ok (.lit (Int.ofNat 2)) ∧
+      uWertBody scope (.index span (.lit 1)) = .ok (.idx (.param "a") (.add (.param "i") (.lit (Int.ofNat 1)))) := by
+  let scope : UCtx := {
+    names := ["a", "i"], kinds := [.wert, .int], types := [.arr τ capacity, .int 0 4],
+    tabs := [], locks := [], held := [], res := none, fname := "", alias := [], lits := [] }
+  have arrayType : uSliceLocalType scope "a" = some (.arr τ capacity) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have firstType : uSliceLocalType scope "i" = some (.int 0 4) := by
+    simp [scope, uSliceLocalType, uValueType, strEq_apply_eq_decide, List.findIdx?_cons]
+  have arrayRead : uWertBlatt scope (.variable "a") = .ok (.param "a") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have firstRead : uWertBlatt scope (.variable "i") = .ok (.param "i") := by
+    simp [scope, uWertBlatt, uParamNr, uParamNrAux, uArtBei, strEq_apply_eq_decide]
+  have sameName : strEq "i" "i" = true := by simp [strEq]
+  have fits : (0 : Int) ≤ Int.ofNat 2 ∧ (0 : Int) ≤ 0 ∧ 4 + Int.ofNat 2 ≤ capacity :=
+    ⟨by decide, by decide, Int.ofNat_le.mpr enough⟩
+  have extent : uFixedLocalArrayExtent scope (uWertBlatt scope) (.param "a") (.variable "i")
+      (.bin "+" (.variable "i") (.lit 2)) = some (τ, 2, .param "i") := by
+    simp only [uFixedLocalArrayExtent, sameName, Bool.not_true, Bool.false_eq_true, ite_false,
+      arrayType, firstType, uSchranke, fits, ite_true, firstRead,
+      show (Int.ofNat 2).toNat = 2 by decide]
+  have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < (2 : Nat) := by decide
+  refine ⟨scope, ?_, ?_⟩ <;>
+    simp only [uWertBody, uRechne, uLocalArraySliceObservation, extent, uSliceInteger, uSchranke,
+      Option.map_some, bind, Option.bind, arrayType, arrayRead, position, ite_true]
 
 /-- A static literal substring admitted as a predicate argument lowers
     to the exact model subsequence at the checked byte bound. -/

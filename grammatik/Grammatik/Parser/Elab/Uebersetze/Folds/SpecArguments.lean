@@ -77,7 +77,7 @@ theorem specTextSliceArgument_erfuellbar (ctx : UCtx) (text : String) (first las
   have nonnegative : ¬ (first : Int) < 0 := by omega
   have ordered : ¬ (last : Int) < first := by have low := bounds.1; omega
   have read : uWertBody ctx argument = .ok (.slice (.text bytes) first last) := by
-    simp [argument, bytes, uWertBody, uRechne, uFixedLocalArraySlice, uFullLocalSlice, uSchranke,
+    simp [argument, bytes, uWertBody, uRechne, uFixedLocalArraySlice, uFixedLocalArrayExtent, uFullLocalSlice, uSchranke,
       nonnegative, ordered, bind, Except.bind, pure, Except.pure]
   obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
   have length := bytesZahl_laenge _ decoded valid
