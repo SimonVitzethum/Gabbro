@@ -288,6 +288,15 @@ theorem uSliceInteger_param {ctx : UCtx} {blatt : SExpr → Except String USide}
     · split at recognized
       · cases recognized
       · exact (notLiteral _ recognized).elim
+  case bin operator left right =>
+    simp only [uSliceInteger] at recognized
+    split at recognized
+    · exact (notLiteral _ recognized).elim
+    · split at recognized
+      · split at recognized
+        · cases recognized
+        · split at recognized <;> cases recognized
+      · cases recognized
   all_goals
     simp only [uSliceInteger] at recognized
     exact (notLiteral _ recognized).elim

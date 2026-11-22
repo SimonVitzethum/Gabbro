@@ -246,8 +246,9 @@ def uFixedLocalArraySlice (ctx : UCtx) (blatt : SExpr → Except String USide)
   (uFixedLocalArrayExtent ctx blatt array first last).map
     (fun (element, count, start) => uLocalArraySpan array start element 0 count)
 
-/-- Use the exact interval of a static integer or a resolved lexical
-    binding. Reading either operand cannot observe the world. -/
+/-- Compute the interval of a constant or an expression of resolved
+    lexical integers. Addition and subtraction keep the ordinary G term
+    and observe no carrier. -/
 def uSliceInteger (ctx : UCtx) (blatt : SExpr → Except String USide) :
     SExpr → Option (Int × Int × USide)
   | source =>
@@ -259,6 +260,14 @@ def uSliceInteger (ctx : UCtx) (blatt : SExpr → Except String USide) :
         if blatt (.variable name) = .ok (.param name) then some (lo, hi, .param name)
         else none
       | _ => if ctx.unknownRanges.contains name then none else constant
+    | .bin op a b =>
+      if constant.isSome then constant else
+        match uSliceInteger ctx blatt a, uSliceInteger ctx blatt b with
+        | some (loA, hiA, left), some (loB, hiB, right) =>
+          if strEq op "+" then some (loA + loB, hiA + hiB, .add left right)
+          else if strEq op "-" then some (loA - hiB, hiA - loB, .sub left right)
+          else none
+        | _, _ => none
     | _ => constant
 
 /-- Observe a local array slice by translating its verified static

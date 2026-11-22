@@ -51,6 +51,7 @@ public import Grammatik.Kern.Semantik.Semantik.TransitionShift
 
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Guest.Connection
 public import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
+public import Grammatik.Parser.Elab.UebersetzeAllg.ArithmeticSlices
 
 public import Grammatik.Parser.Elab.Export.ExportMetadataBound
 public import Grammatik.Parser.Elab.Export.CostBinding
