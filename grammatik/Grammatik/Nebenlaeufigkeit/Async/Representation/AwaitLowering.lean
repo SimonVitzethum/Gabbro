@@ -149,4 +149,93 @@ public theorem lowerAwaitPoll_simulates (elaboration : Elaboration D V Λ types 
       simp only [runWaitingPoll, poll, waitingReply]
       exact ⟨updated, record, ranNext.trans writes, invariant, inv_encoded f types inventory _ record invariant⟩
 
+/-- A Waiting arm receives its frame and child only through the typed
+    payload of the state tag selected by the dispatcher. -/
+@[expose] public def waitingPhaseBlock (elaboration : Elaboration D V Λ types f)
+    (tag : Nat) (within : tag + 1 ≤ f.body.length) (destination : String) (future : FutureExpr) (sourceType : Parser.STyp)
+    {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (same : taskResultType types [tag] future = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (plan : PollPlan elaboration future)
+    (payload : Var Γ (phaseType types f (.waiting tag future)))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool) :
+    Block D V l Γ Λ Λ :=
+  .bind (.prodGet (.var payload) .head)
+    (.bind (.prodGet (.var (.there payload)) (.tail .head))
+      (lowerAwaitPoll elaboration tag within destination future sourceType command same binding plan
+        .here (.there .here) (.there (.there state)) (.there (.there finished))))
+
+/-- The same simulation holds when the poll takes its task and frame
+    from the selected record and discards the ephemeral bindings. -/
+public theorem waitingPhaseBlock_simulates (elaboration : Elaboration D V Λ types f) (inventory : Inventory D)
+    (tag : Nat) (within : tag + 1 ≤ f.body.length) (destination : String) (future : FutureExpr) (sourceType : Parser.STyp)
+    {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await destination future boundary :: rest)
+    (same : taskResultType types [tag] future = types.ordinary sourceType)
+    (binding : (f.params ++ f.fields).lookup destination = some sourceType)
+    (plan : PollPlan elaboration future)
+    (payload : Var Γ (phaseType types f (.waiting tag future)))
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) (prices : D.Fn → Nat)
+    (world : World D) (env : Env D Γ) (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (represented : PhaseRep D types f (.waiting tag future) (.waiting tag frame task) (env.get payload))
+    (owned : MarksRep inventory (.waiting tag future) (.waiting tag frame task))
+    (sameInventory : inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future)) :
+    let executed := execBlock oracle passes calls
+      (waitingPhaseBlock (l := l) elaboration tag within destination future sourceType command same binding
+        plan payload state finished) world env
+    match runWaitingPoll elaboration calls prices tag destination frame task world with
+    | .error (.inl failure) => executed = .logik failure
+    | .error (.inr failure) => executed = .hardware failure
+    | .ok (event, target, after, _) =>
+      ∃ value, executed = .ok after
+          (match event with
+           | .pending => (env.set state value).set finished true
+           | _ => env.set state value) ∧
+        Inv f types inventory target value ∧ encode D types f target = some value := by
+  intro executed
+  generalize loaded : env.get payload = record at represented
+  cases represented with
+  | waiting _ _ _ _ frameValue taskValue slots child =>
+    let extended : Env D (taskStorageType types [tag] future :: frameType types f :: Γ) :=
+      .cons taskValue (.cons frameValue env)
+    let inner := execBlock oracle passes calls
+      (lowerAwaitPoll (l := l) elaboration tag within destination future sourceType command same binding
+        plan .here (.there .here) (.there (.there state)) (.there (.there finished))) world extended
+    have runs : executed = inner.schrumpf.schrumpf := by
+      unfold executed waitingPhaseBlock inner
+      simp only [execBlock, Expr.orte, List.nil_append, eval, prodGetW, World.lese, World.merke, List.map_nil]
+      erw [loaded]
+      have right : (Env.cons frameValue env).get (.there payload) = (frameValue, taskValue, ()) := loaded
+      erw [right]
+    have distinct : (Var.here : Var (taskStorageType types [tag] future :: frameType types f :: Γ)
+        (taskStorageType types [tag] future)).position ≠
+      (Var.there Var.here : Var (taskStorageType types [tag] future :: frameType types f :: Γ)
+        (frameType types f)).position := Nat.zero_ne_one
+    have simulated := lowerAwaitPoll_simulates (l := l) elaboration inventory tag within destination future sourceType
+      command same binding plan .here (.there .here) (.there (.there state)) (.there (.there finished)) distinct
+      oracle passes calls prices world extended frame task slots child owned sameInventory
+    change (match runWaitingPoll elaboration calls prices tag destination frame task world with
+      | .error (.inl failure) => inner = .logik failure
+      | .error (.inr failure) => inner = .hardware failure
+      | .ok (event, target, after, _) =>
+        ∃ updated value, inner = .ok after
+          (match event with
+           | .pending => (((extended.set .here updated).set (.there (.there state)) value).set
+               (.there (.there finished)) true)
+           | _ => ((extended.set .here updated).set (.there (.there state)) value)) ∧
+          Inv f types inventory target value ∧ encode D types f target = some value) at simulated
+    cases result : runWaitingPoll elaboration calls prices tag destination frame task world with
+    | error failure =>
+      cases failure <;> simp only [result] at simulated <;> rw [runs, simulated] <;> rfl
+    | ok answer =>
+      obtain ⟨event, target, after, cost⟩ := answer
+      simp only [result] at simulated
+      obtain ⟨updated, value, correct, invariant, encoded⟩ := simulated
+      refine ⟨value, ?_, invariant, encoded⟩
+      rw [runs, correct]
+      cases event <;> rfl
+
 end Gabbro.Grammatik.Async.Representation
