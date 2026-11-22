@@ -144,7 +144,7 @@ theorem RunM.sc_reference {layout : Runner.Beweis.Lay}
       cases request <;> first | rfl | cases answered
     have widths (n : Nat) (address : W) (read : request = .rd n address) :
         n = 1 ∨ n = 4 ∨ n = 8 := (blind.lesen read).1
-    obtain ⟨preserved, answer⟩ := memAns_sc (L := layout) (i := 0) widths answered
+    obtain ⟨preserved, answer⟩ := memAns_sc (L := layout) (s := ⟨before, table⟩) (i := 0) widths answered
     obtain ⟨count, final, reference⟩ := ih preserved (blind.weiter reply)
     have first : SCSchritt layout 0 ⟨⟨before, table⟩, [some (.ask request resume)]⟩
         ⟨⟨middle, preserved⟩, [some (resume reply)]⟩ := .ask rfl kind answer

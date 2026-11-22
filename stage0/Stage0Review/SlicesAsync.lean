@@ -104,6 +104,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_release_scope
 #print axioms Gabbro.Stage0.Senke.Faeden.image_admit_scope
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
+#print axioms Gabbro.Stage0.Senke.BildMehr.SCMemoryPrefix.consume
+#print axioms Gabbro.Stage0.Senke.BildMehr.StarM.sc_reference
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation
 #print axioms Gabbro.Grammatik.Parser.AsyncSource.segmentValue_names
