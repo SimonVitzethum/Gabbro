@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Images.Correctness
 import Stage0.Senke.Bild.Mehr.ImageTransition
+import Stage0.Senke.Bild.RunnerFile
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -134,6 +135,34 @@ theorem Emitted.fresh_root_phase [Kern] (output : Emitted src reserve options)
     simpa only [fp, serializedRoot_slot] using read
   · refine ⟨rfl, 10 * output.starts.length + startLen + startLen * index, ?_, ?_, rfl⟩
     all_goals simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
+
+/-- Starting from the actual loader, a root that has not yet been
+    allocated sees its preserved argument bytes in its own TSO view.
+    The explicit per-step classification connects writes to their
+    footprint, including through interleavings of earlier roots. -/
+theorem MappedImage.future_root_phase [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {mappedAt : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output mappedAt) (unit : ImageModelUnit output E)
+    {current : Cfg imageTSO (Res T)} {history : List Ev} {count index : Nat}
+    (path : ProcessPrefix imageTSO actI ⟨mappedAt.ms, [some t4]⟩ history count current)
+    (unused : current.ths.length ≤ index + 1)
+    (classify : ∀ {before after : Cfg imageTSO (Res T)} {earlier events : List Ev} {steps : Nat},
+      ProcessPrefix imageTSO actI ⟨mappedAt.ms, [some t4]⟩ earlier steps before →
+      ProcessStep imageTSO actI before events after → after.ths.length ≤ index + 1 →
+      GleichAuf (imageStackFootprint output (index + 1)) before.ms.1.m after.ms.1.m)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    (code : BytesAt current.ms.1.m codeBase (output.image.code.flatMap encII))
+    {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (head : state.m.faeden (index + 1) = (imageSourceStart E).m.faeden (index + 1)) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index))
+    let fp := BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))
+    ImageRootPhase output E history (current.ms.1.view (index + 1)) (index + 1) (.next ⟨pc, fp⟩) state := by
+  have buffers := ImageIdleBuffers.follow (fun i _ => mapped.emptyBuffers i) path
+  have view : current.ms.1.view (index + 1) = current.ms.1.m := by
+    simp only [TSt.view, buffers _ unused, List.foldl_nil]
+  rw [view]
+  exact output.fresh_root_phase unit mapped.bytes declared (image_future_frame_of_prefix path unused classify) code head
 
 /-- The concrete successful mmap continuation establishes the runner
     relation from its instruction address and the mapped image base. -/
