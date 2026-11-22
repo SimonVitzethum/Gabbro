@@ -134,7 +134,6 @@ public theorem restoredBindingBlock_rep (elaboration : Elaboration D V Λ types 
     (plan : RestorePlan types f resolved.locals)
     (live : ∀ entry ∈ resolved.locals, entry.1 ∈ liveAt f (.running tag))
     (world : World D) (frame : Frame (Value D))
-    (locals : Env D (resolved.locals.map Prod.snd)) (restored : localsEnv D resolved.locals frame = some locals)
     (saved : Wert D (frameType types f)) (previous : Wert D (stateType types f))
     (represented : FrameRep D types f (.running tag) frame saved)
     (marks : MarksRep inventory (.running tag) (.running (Child := Child D types) tag frame))
@@ -147,6 +146,7 @@ public theorem restoredBindingBlock_rep (elaboration : Elaboration D V Λ types 
           world (.cons previous (.cons saved .nil)) = .ok result.2.1 (.cons value (.cons saved .nil)) ∧
       Inv f types inventory resumed value ∧ encode D types f resumed = some value := by
   intro result resumed
+  obtain ⟨locals, restored⟩ := plan.locals_defined (.running tag) frame saved represented live
   obtain ⟨value, evaluated, invariant, encoded⟩ := resolvedBindingBlock_rep (l := l) elaboration inventory tag within
     destination source cost rest command resolved known sourceType binding same world frame locals restored
     saved previous represented marks sameInventory oracle passes calls

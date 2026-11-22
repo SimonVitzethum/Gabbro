@@ -29,6 +29,37 @@ public inductive RestorePlan (types : TypeResolution) (f : AsyncFn) : List (Stri
         pure (by subst expected; exact .cons name sourceType found tail)
       else throw "async: saved local type differs from expression scope"
 
+public theorem restorePlanFor_complete (types : TypeResolution) (f : AsyncFn) (locals : List (String × Ty))
+    (declared : ∀ name type, (name, type) ∈ locals →
+      ∃ sourceType, (f.params ++ f.fields).lookup name = some sourceType ∧ types.ordinary sourceType = type) :
+    ∃ plan, restorePlanFor types f locals = .ok plan := by
+  induction locals with
+  | nil => exact ⟨.nil, rfl⟩
+  | cons head rest ih =>
+    obtain ⟨name, type⟩ := head
+    obtain ⟨sourceType, found, exactType⟩ := declared name type List.mem_cons_self
+    obtain ⟨tail, accepted⟩ := ih (fun name type member => declared name type (List.mem_cons_of_mem _ member))
+    subst type
+    exact ⟨.cons name sourceType found tail, by
+      simp only [restorePlanFor, found, dite_eq_left rfl, bind, Except.bind, accepted, pure, Except.pure]⟩
+
+/-- A checked restore plan over the current live set supplies every
+    local needed by the semantic evaluator. -/
+public theorem RestorePlan.locals_defined {locals : List (String × Ty)} (plan : RestorePlan types f locals)
+    (phase : Phase) (frame : Frame (Value D)) (record : Wert D (frameType types f))
+    (represented : FrameRep D types f phase frame record)
+    (live : ∀ entry ∈ locals, entry.1 ∈ liveAt f phase) :
+    ∃ scope, localsEnv D locals frame = some scope := by
+  induction plan with
+  | nil => exact ⟨.nil, rfl⟩
+  | @cons name sourceType rest found tail ih =>
+    let selected := frameSlot types name sourceType (f.params ++ f.fields) found
+    obtain ⟨value, ordinary, looked, typed, _⟩ :=
+      selected.property.read_live (live (name, types.ordinary sourceType) List.mem_cons_self) represented.slots
+    obtain ⟨scope, restored⟩ := ih (fun entry present => live entry (List.mem_cons_of_mem _ present))
+    exact ⟨.cons ordinary scope, by
+      simp only [localsEnv, looked, typed, restored, Option.bind_eq_bind, Option.bind_some, Option.pure_def]⟩
+
 @[expose] public def prependLocal {τ : Ty} (x : Var Γ τ) :
     (scope : Ctx) → Var (scope ++ Γ) τ
   | [] => x
