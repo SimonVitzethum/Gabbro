@@ -4,6 +4,7 @@ public import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedAwait
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.BindLowering
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Memo
+public import Grammatik.Kern.Semantik.Evaluation.Aggregates.Locals
 import Grammatik.Parser.Elab.Uebersetze.Kontext.SyntaxEquality
 
 namespace Gabbro.Grammatik.Async.Representation
@@ -192,5 +193,145 @@ public theorem checkedDispatch_selects {elaboration : Elaboration D V Λ types f
         (execBlock oracle passes calls ((table index).block state finished) world (.cons value env)).schrumpf :=
   phaseDispatch_selects types f inventory state (fun index => (table index).block state finished)
     oracle passes calls world env source represented
+
+@[expose] public def activationStops : Event (Value D) → Bool
+  | .next => false
+  | .pending | .ready .. | .refused => true
+
+/-- Every successful arm leaves the exact state represented in the state
+    local. The flag distinguishes internal progress from a poll answer. -/
+@[expose] public def ActivationRefines (inventory : Inventory D)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool) (observed : Ausgang V l Γ) :
+    Except (Logik D ⊕ Hardware D) (Event (Value D) × State (Value D) (Child D types) × World D × Nat) → Prop
+  | .error (.inl failure) => observed = .logik failure
+  | .error (.inr failure) => observed = .hardware failure
+  | .ok (event, target, after, _) =>
+    ∃ updated, observed = .ok after updated ∧ Inv f types inventory target (updated.get state) ∧
+      updated.get finished = activationStops event
+
+/-- The present arm family holds its ordinary resource index fixed. Each
+    edge needs the corresponding source-inventory equality. -/
+public structure FixedActivationInventory (inventory : Inventory D) : Prop where
+  bind : ∀ {tag name expr cost rest}, f.body.drop tag = Command.bind name expr cost :: rest →
+    inventory.owned (.running (tag + 1)) = inventory.owned (.running tag)
+  start : ∀ {tag name future boundary rest}, f.body.drop tag = Command.await name future boundary :: rest →
+    inventory.owned (.waiting tag future) = inventory.owned (.running tag)
+  resume : ∀ {tag name future boundary rest}, f.body.drop tag = Command.await name future boundary :: rest →
+    inventory.owned (.running (tag + 1)) = inventory.owned (.waiting tag future)
+  completed : inventory.owned .completed = []
+
+private theorem refineNext (inventory : Inventory D)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (separate : state.position ≠ finished.position) (env : Env D Γ) (unfinished : env.get finished = false)
+    (value : Wert D (stateType types f)) (target : State (Value D) (Child D types))
+    (invariant : Inv f types inventory target value) (after : World D) (cost : Nat)
+    (outcome : Ausgang V l Γ) (executed : outcome = .ok after (env.set state value)) :
+    ActivationRefines inventory state finished outcome (.ok (.next, target, after, cost)) := by
+  refine ⟨env.set state value, executed, ?_, ?_⟩
+  · rw [Env.get_set_same]
+    exact invariant
+  · exact (Env.get_set_other env state finished value separate).trans unfinished
+
+private theorem refineStop (inventory : Inventory D)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (separate : state.position ≠ finished.position) (env : Env D Γ)
+    (target : State (Value D) (Child D types)) (invariant : Inv f types inventory target (env.get state))
+    (after : World D) (cost : Nat) (event : Event (Value D)) (stops : activationStops event = true)
+    (outcome : Ausgang V l Γ) (executed : outcome = .ok after (env.set finished true)) :
+    ActivationRefines inventory state finished outcome (.ok (event, target, after, cost)) := by
+  refine ⟨env.set finished true, executed, ?_, ?_⟩
+  · rw [Env.get_set_other env finished state (true : Wert D .bool) (Ne.symm separate)]
+    exact invariant
+  · exact (Env.get_set_same env finished (true : Wert D .bool)).trans stops.symm
+
+/-- Execute the selected arm against the actual source activation.
+    A child failure propagates as the very same ordinary G failure. -/
+public theorem PhasePlan.exec_refines {elaboration : Elaboration D V Λ types f}
+    {phase : Phase} (plan : PhasePlan elaboration phase) (inventory : Inventory D)
+    (fixed : FixedActivationInventory (f := f) inventory)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (separate : state.position ≠ finished.position)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (world : World D) (env : Env D Γ) (unfinished : env.get finished = false)
+    (source : State (Value D) (Child D types)) (value : Wert D (phaseType types f phase))
+    (selected : PhaseRep D types f phase source value) (owned : MarksRep inventory phase source)
+    (represented : Inv f types inventory source (env.get state)) :
+    ActivationRefines inventory state finished
+      (execBlock oracle passes calls (plan.block (l := l) state finished) world (.cons value env)).schrumpf
+      (runActivation elaboration calls prices source world) := by
+  cases plan with
+  | cancelled =>
+    cases selected
+    exact refineStop inventory state finished separate env .cancelled represented world 0 .refused rfl _ rfl
+  | completed =>
+    cases selected
+    exact refineStop inventory state finished separate env _ represented world 0 .refused rfl _ rfl
+  | bind checked =>
+    cases selected with
+    | running tag frame value slots =>
+      obtain ⟨record, ran, inv, _⟩ := checked.block_rep inventory frame world (.cons value env) .here
+        (.there state) slots owned (fixed.bind checked.command) oracle passes calls (l := l)
+      simp only [runActivation, checked.command, PhasePlan.block, ran]
+      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _ rfl
+  | start checked =>
+    cases selected with
+    | running tag frame value slots =>
+      obtain ⟨record, ran, inv, _⟩ := checked.start_simulates inventory .here (.there state)
+        oracle passes calls world (.cons value env) frame slots owned (fixed.start checked.command) (l := l)
+      simp only [runActivation, checked.command, PhasePlan.block, ran]
+      exact refineNext inventory state finished separate env unfinished record _ inv _ _ _ rfl
+  | final checked =>
+    cases selected with
+    | running _ frame value slots =>
+      obtain ⟨record, ran, inv, _⟩ := checked.block_simulates inventory fixed.completed .here (.there state)
+        (.there finished) oracle passes calls world (.cons value env) frame slots (l := l)
+      simp only [runActivation, List.drop_length, PhasePlan.block, ran]
+      apply refineStop inventory state finished separate (env.set state record) _ _ _ _ _ rfl _ rfl
+      rw [Env.get_set_same]
+      exact inv
+  | poll checked =>
+    cases selected with
+    | waiting tag future frame task frameValue taskValue slots child =>
+      let payload := (frameValue, taskValue, ())
+      have ran := checked.poll_simulates inventory .here (.there state) (.there finished) oracle passes
+        calls prices world (.cons payload env) frame task (.waiting tag _ frame task frameValue taskValue slots child)
+        owned (fixed.resume checked.command) (l := l)
+      simp only [runActivation, checked.command, PhasePlan.block]
+      cases answer : runTaskPoll elaboration calls prices task world with
+      | error failure =>
+        cases failure <;> simp only [runWaitingPoll, answer] at ran ⊢
+        all_goals rw [ran] <;> rfl
+      | ok answerValue =>
+        rcases answerValue with ⟨event, successor, after, cost⟩
+        cases event with
+        | pending =>
+          simp only [runWaitingPoll, answer, waitingReply] at ran ⊢
+          obtain ⟨record, executed, inv, _⟩ := ran
+          rw [executed]
+          apply refineStop inventory state finished separate (env.set state record) _ _ _ _ _ rfl _ rfl
+          rw [Env.get_set_same]
+          exact inv
+        | ready result =>
+          simp only [runWaitingPoll, answer, waitingReply] at ran ⊢
+          obtain ⟨record, executed, inv, _⟩ := ran
+          rw [executed]
+          exact refineNext inventory state finished separate env unfinished record _ inv _ _ _ rfl
+
+public theorem checkedDispatch_refines {elaboration : Elaboration D V Λ types f}
+    (table : (index : Fin (phases f).length) → PhasePlan elaboration ((phases f).get index))
+    (inventory : Inventory D) (fixed : FixedActivationInventory (f := f) inventory)
+    (state : Var Γ (stateType types f)) (finished : Var Γ .bool)
+    (separate : state.position ≠ finished.position)
+    (oracle : Orakel D) (passes : Nat) (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (world : World D) (env : Env D Γ) (unfinished : env.get finished = false)
+    (source : State (Value D) (Child D types)) (represented : Inv f types inventory source (env.get state)) :
+    ActivationRefines inventory state finished
+      (execStmt oracle passes calls (checkedDispatch (l := l) table state finished) world env)
+      (runActivation elaboration calls prices source world) := by
+  obtain ⟨index, value, selected, owned, executed⟩ :=
+    checkedDispatch_selects table inventory state finished oracle passes calls world env source represented (l := l)
+  rw [executed]
+  exact (table index).exec_refines inventory fixed state finished separate oracle passes calls prices world env
+    unfinished source value selected owned represented
 
 end Gabbro.Grammatik.Async.Representation
