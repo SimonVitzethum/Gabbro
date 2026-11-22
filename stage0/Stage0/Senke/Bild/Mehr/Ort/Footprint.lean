@@ -42,6 +42,47 @@ theorem projectSCState_reassign {layout : Runner.Beweis.Lay} {state : (TSO layou
     exact (mergedView_unbuffered state.1 after byte unbuffered).trans
       (mergedView_unbuffered state.1 before byte unbuffered).symm
 
+/-- When a host operation preserves the issuing view and all buffers,
+    the merged image is unchanged. A difference in committed bytes
+    hidden by the issuer's buffer cannot affect any projected byte. -/
+theorem projectSCState_issuerView {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
+    {footprint : Nat → W → Prop} (issuer : Nat)
+    (owned : PrivateBuffers footprint before.1)
+    (buffers : after.1.buf = before.1.buf) (view : after.1.view issuer = before.1.view issuer) :
+    projectSCState footprint after = projectSCState footprint before := by
+  have ownedAfter : PrivateBuffers footprint after.1 := by
+    intro thread store pending byte hit
+    rw [buffers] at pending
+    exact owned thread store pending byte hit
+  apply Subtype.ext
+  apply mem_eq_of_agreement
+  intro byte
+  by_cases buffered : ∃ store ∈ before.1.buf issuer, fenster store.1 byte
+  · obtain ⟨store, pending, hit⟩ := buffered
+    have stillPending : store ∈ after.1.buf issuer := by rw [buffers]; exact pending
+    have old := mergedView_accessible_at before.1 footprint issuer byte
+      (fun i s found a touched => (owned i s found a touched).1) (owned issuer store pending byte hit).2
+    have new := mergedView_accessible_at after.1 footprint issuer byte
+      (fun i s found a touched => (ownedAfter i s found a touched).1) (ownedAfter issuer store stillPending byte hit).2
+    rw [view] at new
+    exact new.trans old.symm
+  · have outsideOld (store : W × W) (pending : store ∈ before.1.buf issuer) : ¬ fenster store.1 byte :=
+      fun hit => buffered ⟨store, pending, hit⟩
+    have outsideNew (store : W × W) (pending : store ∈ after.1.buf issuer) : ¬ fenster store.1 byte :=
+      outsideOld store (by simpa only [buffers] using pending)
+    have prior := view_agrees_at (state := before.1) outsideOld
+    have current := view_agrees_at (state := after.1) outsideNew
+    rw [view] at current
+    have committed := current.symm.trans prior
+    change GleichAt (viewAt after.1 footprint byte) (viewAt before.1 footprint byte) byte
+    by_cases assigned : ∃ i, footprint i byte
+    · rw [show viewAt after.1 footprint byte = after.1.view (Classical.choose assigned) from dif_pos assigned,
+        show viewAt before.1 footprint byte = before.1.view (Classical.choose assigned) from dif_pos assigned]
+      simp only [TSt.view, buffers]
+      exact buffers_agree (before.1.buf (Classical.choose assigned))
+        (region := (· = byte)) (fun _ exactByte => exactByte.symm ▸ committed) byte rfl
+    · simpa only [viewAt, dif_neg assigned] using committed
+
 /-- The selected thread can buffer stores to a freshly protected region
     in addition to the bytes it already owns. -/
 def claimRegion (footprint : Nat → W → Prop) (owner : Nat) (region : W → Prop) :

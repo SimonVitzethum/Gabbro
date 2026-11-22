@@ -146,7 +146,7 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
   by_cases admitted : before.w.serv % 2 ^ 64 = ticket % 2 ^ 64
   · let next := before.mit thread (.drin ticket)
     have stepped : Schritt before thread next := .tritt saved admitted
-    have matches : BindingStep strategy before thread next := by
+    have adopted : BindingStep strategy before thread next := by
       cases strategy
       · exact stepped
       · refine .inl ⟨stepped, spins rfl, ?_⟩
@@ -159,7 +159,7 @@ theorem image_ticket_serving_read [Kern] {N : Nat} {machine : Cfg imageTSO (Res 
         · change (upd before.pc thread (.drin ticket) other).spin
           rw [upd_ne _ _ same]
           exact spins rfl other
-    refine ⟨next, matches, ?_, ?_⟩
+    refine ⟨next, adopted, ?_, ?_⟩
     · rw [memorySame]
       exact ⟨represented.next, represented.serving, represented.waiters⟩
     · change (upd before.pc thread (.drin ticket) thread).haelt = true ↔ _

@@ -1,0 +1,76 @@
+module
+
+public import Stage0.Senke.Sperre.Bindung.ImageCAS
+public import Stage0.Senke.Bild.Mehr.Ort.Footprint
+public import Mathlib.Logic.Relation
+
+@[expose] public section
+
+namespace Gabbro.Stage0.Senke.Faeden
+
+open Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis
+
+/-- A real WAIT or WAKE completion retains the projected image memory,
+    even if its issuer still has private pending stores. -/
+theorem image_futex_reply [Kern] {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St}
+    {thread : Nat} {address mode value : W} {reply : Ans} {resume : Ans → Res T}
+    (host : ImageFutexAnswers) (recognized : mode = 128 ∨ mode = 129)
+    (waiting : machine.ths[thread]? = some (some (.ask (.sys (futexReq address mode value)) resume)))
+    (answered : imageTSO.ans machine.ms thread (.sys (futexReq address mode value)) reply memory)
+    (footprint : Nat → W → Prop) (buffered : PrivateBuffers footprint machine.ms.1) :
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread (some (resume reply))⟩
+    ProcessStep imageTSO actI machine [(thread, futexReq address mode value, reply)] after ∧
+      reply.isSome = true ∧ memory.1.buf = machine.ms.1.buf ∧
+      projectSCState footprint memory = projectSCState footprint machine.ms := by
+  intro after
+  let request := futexReq address mode value
+  have number : request.nr ≠ cloneReq.nr := by decide
+  have noClone : request ≠ cloneReq := fun equal => number (congrArg Req.nr equal)
+  have valid : (Op.sys request).special = false := rfl
+  have external := answered.2
+  change (if request = cloneReq then _ else Kern.ans request (machine.ms.1.view thread) reply (memory.1.view thread) ∧
+    memory.1.buf = machine.ms.1.buf) at external
+  rw [if_neg noClone] at external
+  obtain ⟨view, result⟩ := host.unchanged address mode value reply _ _ recognized external.1
+  exact ⟨.ask waiting rfl valid answered rfl, result, external.2,
+    projectSCState_issuerView thread buffered external.2 view⟩
+
+/-- The returned WAIT advances the same thread to its waiter decrement.
+    If the lower 32-bit word matched, the abstract execution may block
+    and immediately return spuriously. A mismatch returns in one step. -/
+theorem image_ticket_wait_reply [Kern] {N : Nat} {machine : Cfg imageTSO (Res T)}
+    {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T} {thread : Fin N}
+    {base ticket sampled : Nat} {before : Zustand N}
+    (host : ImageFutexAnswers) (saved : before.pc thread = .futexW ticket sampled)
+    (footprint : Nat → W → Prop) (buffers : PrivateBuffers footprint machine.ms.1)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.sys (futexReq (BitVec.ofNat 64 (base + 8)) 128 (BitVec.ofNat 64 sampled))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.sys (futexReq (BitVec.ofNat 64 (base + 8)) 128 (BitVec.ofNat 64 sampled))) reply memory) :
+    let request := futexReq (BitVec.ofNat 64 (base + 8)) 128 (BitVec.ofNat 64 sampled)
+    let after : Cfg imageTSO (Res T) := ⟨memory, machine.ths.set thread.val (some (resume reply))⟩
+    ProcessStep imageTSO actI machine [(thread.val, request, reply)] after ∧ reply.isSome = true ∧
+      projectSCState footprint memory = projectSCState footprint machine.ms ∧
+      Relation.ReflTransGen (fun current next => Schritt current thread next)
+        before (before.mit thread (.decL ticket sampled)) := by
+  intro request after
+  obtain ⟨process, returned, _, same⟩ := image_futex_reply host (.inl rfl) waiting answered footprint buffers
+  refine ⟨process, returned, same, ?_⟩
+  by_cases equal : before.w.serv % 4294967296 = sampled % 4294967296
+  · let blocked := before.mit thread (.blockiert ticket sampled)
+    have sleeping : Schritt before thread blocked := .schlaeft saved equal
+    have resumed : Schritt blocked thread (before.mit thread (.decL ticket sampled)) := by
+      have atWait : blocked.pc thread = .blockiert ticket sampled := upd_self _ _ _
+      have canonical := Schritt.scheinbar atWait
+      have overwritten : upd (upd before.pc thread (.blockiert ticket sampled)) thread (.decL ticket sampled) =
+          upd before.pc thread (.decL ticket sampled) := by
+        funext other
+        by_cases equal : other = thread
+        · subst other
+          rw [upd_self, upd_self]
+        · rw [upd_ne _ _ equal, upd_ne _ _ equal, upd_ne _ _ equal]
+      simpa only [blocked, Zustand.mit, overwritten] using canonical
+    exact (Relation.ReflTransGen.single sleeping).tail resumed
+  · exact Relation.ReflTransGen.single (.kehrtZurueck saved equal)
+
+end Gabbro.Stage0.Senke.Faeden
