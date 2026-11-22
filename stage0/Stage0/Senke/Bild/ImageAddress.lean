@@ -276,6 +276,55 @@ theorem Emitted.root_depth_preserves_frame [Kern] (output : Emitted src K option
     simpa only [BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
 
+/-- The concrete child startup prefix advances the IR counter within
+    the child's stub and retains the same dormant GX head. -/
+theorem Emitted.root_depth_phase [Kern] (output : Emitted src K options)
+    {E : Einheit (declOf output.compiled.unit)} (unit : ImageModelUnit output E)
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)} {index : Nat}
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root)
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (head : state.m.faeden (index + 1) = (imageSourceStart E).m.faeden (index + 1)) :
+    let pointer : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
+    let view := before.ms.1.view (index + 1)
+    before.ths[index + 1]? = some (some (.next pointer)) →
+    ImageRootPhase output E history view (index + 1) (.next pointer) state →
+    FB + FB + (encodeEnv output.image.Y root.2).length ≤ output.image.Ks →
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
+        ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
+      ImageRootPhase output E history (after.1.view (index + 1)) (index + 1) (.next (nxt pointer)) state ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ index + 1 → after.1.view other = before.ms.1.view other) ∧
+      (after.1.view (index + 1)).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
+        some (BitVec.ofNat 64 (output.image.depth + 1)) := by
+  intro pointer view running phase fits
+  have exported : E.starts[index + 1]? = some root := by rw [unit.starts]; exact declared
+  obtain ⟨firstThread, _⟩ | ⟨start, chosen, _, code, frame, args, _⟩ := phase
+  · exact (Nat.succ_ne_zero _ firstThread).elim
+  have same := Option.some.inj (chosen.symm.trans exported)
+  subst start
+  have arguments : WordsAt view pointer.fp (FB + FB) (encodeEnv output.image.Y root.2) := by
+    intro i present
+    change view.rd64 _ = _
+    rw [show slot pointer.fp (BitVec.ofNat 64 (FB + FB + i)) =
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)) + 8 * (FB + FB + i)) by
+        simp only [pointer, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]]
+    exact args i present
+  obtain ⟨after, run, shared, others, loaded, permissions, words, depth⟩ :=
+    output.root_depth_preserves_frame declared code running frame fits arguments
+  refine ⟨after, run, Or.inr ⟨root, exported, Or.inl head, loaded, permissions, ?_, ?_⟩, shared, others, depth⟩
+  · intro i present
+    simpa only [pointer, slot, ← BitVec.ofNat_mul, ← BitVec.ofNat_add, Nat.mul_comm (FB + FB + i) 8]
+      using words i present
+  · refine ⟨nxt pointer, ⟨rfl, 10 * output.starts.length + startLen + startLen * index + 1, ?_, ?_, ?_⟩, Or.inl rfl⟩
+    · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
+    · simp only [Nat.succ_ne_zero, ite_false, startLen]; omega
+    · simp only [nxt, pointer, ← BitVec.ofNat_add]
+      congr 1
+      omega
+
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
 theorem Emitted.layout_checked (output : Emitted src K options) :
