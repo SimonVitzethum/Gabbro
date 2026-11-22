@@ -106,6 +106,39 @@ theorem starM_snoc {n : Nat} {t t1 : T} {m m1 : Mem} (h : StarM n t m t1 m1) :
 def SoloLauf (tb : T) (mb : Mem) (r : Res T) (m : Mem) : Prop :=
   ∃ (n : Nat) (t0 : T) (m0 : Mem), StarM n tb mb t0 m0 ∧ ((r = .next t0 ∧ m = m0) ∨ RunP (step t0) m0 r m)
 
+private theorem RunM.permissions {r : Res T} {before after : Mem} {next : T}
+    (run : RunM r before next after) : after.rd = before.rd ∧ after.wr = before.wr := by
+  induction run with
+  | next => exact ⟨rfl, rfl⟩
+  | ask answered _ ih =>
+    have stable := memAns_nurIn answered
+    exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
+
+private theorem RunP.permissions {r r' : Res T} {before after : Mem}
+    (run : RunP r before r' after) : after.rd = before.rd ∧ after.wr = before.wr := by
+  induction run with
+  | refl => exact ⟨rfl, rfl⟩
+  | ask answered _ ih =>
+    have stable := memAns_nurIn answered
+    exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
+
+/-- The common memory permissions stay fixed through complete and
+    partially executed instructions, independently of their number. -/
+theorem SoloLauf.permissions {tb : T} {mb m : Mem} {r : Res T}
+    (run : SoloLauf tb mb r m) : m.rd = mb.rd ∧ m.wr = mb.wr := by
+  obtain ⟨_, _, _, complete, rest⟩ := run
+  have stable {n : Nat} {start finish : T} {before after : Mem}
+      (path : StarM n start before finish after) : after.rd = before.rd ∧ after.wr = before.wr := by
+    induction path with
+    | refl => exact ⟨rfl, rfl⟩
+    | next ran _ ih =>
+      obtain ⟨rd, wr⟩ := RunM.permissions ran
+      exact ⟨ih.1.trans rd, ih.2.trans wr⟩
+  obtain ⟨rd, wr⟩ := stable complete
+  rcases rest with ⟨_, rfl⟩ | partial
+  · exact ⟨rd, wr⟩
+  · exact ⟨partial.permissions.1.trans rd, partial.permissions.2.trans wr⟩
+
 theorem soloLauf_start (tb : T) (mb : Mem) : SoloLauf tb mb (.next tb) mb :=
   ⟨0, tb, mb, .refl _ _, Or.inl ⟨rfl, rfl⟩⟩
 

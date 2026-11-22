@@ -208,7 +208,8 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     (free : FreiA (positions thread).Agl source.m (positions thread).thr)
     (inside : LayIn layout) (separated : LayDis layout)
     (covers : ∀ byte, carrierFootprint layout carriers byte → snapshot.F byte)
-    (permissions : snapshot.m.rd = committed.rd ∧ snapshot.m.wr = committed.wr) :
+    (initialPermissions : (positions thread).mb.rd = committed.rd ∧
+      (positions thread).mb.wr = committed.wr) :
     let position := positions thread
     let selected := carrierFootprint layout carriers
     let published := commitBytes committed snapshot.m selected
@@ -233,11 +234,14 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
   obtain ⟨machine, world, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
     matched.commit_segment registered (shared := shared) quiet control boundary agree free
   have exactLayout := (matched.prog thread snapshot registered).2.2.2
+  obtain ⟨rd, wr⟩ := (matched.solo thread snapshot registered).permissions
+  have reads := rd.trans initialPermissions.1
+  have writes := wr.trans initialPermissions.2
   have afterWorld : WeltAt snapshot.m layout position.σe := by
     obtain ⟨_, _, _, _, _, _, _, _, _, memory, _⟩ := boundary
     rwa [exactLayout] at memory
   have bytes : WeltAt published layout world := weltAt_commitBytes inside separated matched.welt afterWorld
-    permissions.1 changes (by intro cell outside; simpa only [speicher_welt_speicher] using others cell outside)
+    reads changes (by intro cell outside; simpa only [speicher_welt_speicher] using others cell outside)
   have store : machine.speicher = world.speicher := by
     obtain ⟨⟨_, state⟩, _, _⟩ := sourceBoundary
     exact state.2
@@ -249,7 +253,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     intro byte chosen
     obtain ⟨value, read, write⟩ := matched.mem.gleich thread snapshot registered byte (covers byte chosen)
     exact ⟨by simpa only [published, commitBytes, ite_eq_left chosen] using value.symm,
-      (congrFun permissions.1.symm byte).trans read.symm, (congrFun permissions.2.symm byte).trans write.symm⟩
+      (congrFun reads.symm byte).trans read.symm, (congrFun writes.symm byte).trans write.symm⟩
   have unchanged : ∀ byte, ¬ selected byte → GleichAt published committed byte := fun byte excluded =>
     ⟨by simp only [published, commitBytes, ite_eq_right excluded], rfl, rfl⟩
   refine ⟨machine, world, reached, pointer, sourceBoundary, exactBytes, preserved, updated, unchanged, ?_⟩
