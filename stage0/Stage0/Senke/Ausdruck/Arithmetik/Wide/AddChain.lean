@@ -66,11 +66,11 @@ theorem addLimb_run (s : Nat → Runner.W) (A B m c t : Nat)
   · simp (disch := omega) only [slotUpd_same, slotUpd_other]
   · intro j h1 h2 h3
     rw [slotUpd_other _ _ h2, slotUpd_other _ _ h1,
-      slotUpd_other (a := t + 4) _ _ (by omega),
-      slotUpd_other (a := t + 3) _ _ (by omega),
-      slotUpd_other (a := t + 2) _ _ (by omega),
-      slotUpd_other (a := t + 1) _ _ (by omega),
-      slotUpd_other (a := t) _ _ (by omega)]
+      slotUpd_other (a := t + 4) (j := j) _ _ (by omega),
+      slotUpd_other (a := t + 3) (j := j) _ _ (by omega),
+      slotUpd_other (a := t + 2) (j := j) _ _ (by omega),
+      slotUpd_other (a := t + 1) (j := j) _ _ (by omega),
+      slotUpd_other (a := t) (j := j) _ _ (by omega)]
 
 /-! ## The chain -/
 
