@@ -61,6 +61,57 @@ private theorem OrtPrem.blatt {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (admitted : OrtPrem C s) : BlattG s := by
   cases s <;> first | exact False.elim admitted | constructor
 
+private def axiomOfEvent : Ereignis D → Option D.Ax
+  | .fremd (.inl called) => some called
+  | _ => none
+
+private theorem read_trace (world : World D) (held : List (Res D)) (carriers : List (D.Tab ⊕ D.Glob)) :
+    (world.lese held carriers).spur.filterMap axiomOfEvent = world.spur.filterMap axiomOfEvent := by
+  simp only [World.lese, World.merke, List.filterMap_append, List.filterMap_map]
+  let readEvent : D.Tab ⊕ D.Glob → Ereignis D := fun carrier => match carrier with
+    | .inl table => .zugriff table false held world.haelt
+    | .inr global => .gzugriff global false held world.haelt
+  have silent : carriers.filterMap (axiomOfEvent ∘ readEvent) = [] := by
+    apply List.filterMap_eq_nil_iff.mpr
+    intro carrier _
+    cases carrier <;> rfl
+  rw [silent, List.nil_append]
+
+private theorem write_bytes_trace (table : D.Tab) (field : D.Feld table) (byteType : D.typ table field = .int 0 255)
+    (held : List (Res D)) (data : List Byte) (world : World D) (index : Int) :
+    (world.schreibBytes table field byteType held index data).spur.filterMap axiomOfEvent =
+      world.spur.filterMap axiomOfEvent := by
+  induction data generalizing world index with
+  | nil => rfl
+  | cons byte tail ih =>
+    rw [World.schreibBytes, ih]
+    rfl
+
+private theorem OrtPrem.foreign_trace {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ out : List (Res D)} {C : D.Tab ⊕ D.Glob → Prop} {s : Stmt D V l Γ Λ out}
+    (admitted : OrtPrem C s) (O : Orakel D) (passes : Nat)
+    (R : (g : D.Fn) → World D → Env D (D.params g) → RufAusgang g)
+    {before after : World D} {locals updated : Env D Γ}
+    (executed : execStmt O passes R s before locals = .ok after updated) :
+    after.spur.filterMap axiomOfEvent = before.spur.filterMap axiomOfEvent := by
+  cases admitted.blatt with
+  | transition | regWrite | publish | advances | retires => cases admitted
+  | shift =>
+    simp only [execStmt] at executed
+    split at executed
+    · simp only [Ausgang.ok.injEq] at executed
+      obtain ⟨rfl, _⟩ := executed
+      exact read_trace _ _ _
+    · cases executed
+  | putBytes =>
+    simp only [execStmt, Ausgang.ok.injEq] at executed
+    obtain ⟨rfl, _⟩ := executed
+    rw [write_bytes_trace, read_trace]
+  | assignSlot | assignThru | assignThruOwn | assignSlotRef | assignGlob | assignVar =>
+    simp only [execStmt, Ausgang.ok.injEq] at executed
+    obtain ⟨rfl, _⟩ := executed
+    exact read_trace _ _ _
+
 /-- Internal memory segments preserve the exact set of held locks.
     Bindings record reads and the ordinary statement theorem covers
     each admitted memory effect. -/
