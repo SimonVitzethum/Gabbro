@@ -50,7 +50,7 @@ structure ImageGateAnswers [Kern] (L : Lay D) (O : Orakel D) : Prop where
     reqArg q j = slot fp (BitVec.ofNat 64 base) →
     (∀ i, (D.aparams a).length ≤ i → i < 6 → i ≠ j → reqArg q i = 0) → WeltAt m L σ →
     ∀ answer after, Kern.ans q m answer after →
-      ∃ tag extra, answer = some (tag, extra) ∧ AgreeW L fp base (base + valueWords τ) m after ∧
+      ∃ tag extra, answer = some (tag, extra) ∧ AreaFrame L fp base (base + valueWords τ) m after ∧
         WeltAt after L (O.wirkt a σ ρ).1 ∧ AreaReply L O a b τ he σ ρ after fp base tag
 
 end Gabbro.Stage0.Senke

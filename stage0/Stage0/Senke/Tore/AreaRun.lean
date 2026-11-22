@@ -137,7 +137,7 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
       List.length_singleton, zeroC_len, BitVec.ofInt_natCast, pc_add, addr_norm,
       Nat.mul_add, Nat.add_assoc] using combined
   · exact (agreeW_of (Agree.widen change14 ks)).trans
-      (((changed5.widen (by omega)).mono (by unfold foreignResultBase; omega)).trans
+      (((changed5.agreeW.widen (by omega)).mono (by unfold foreignResultBase; omega)).trans
         (agreeW_of (Agree.widen change6 ks)))
   · rcases reply5 with ⟨v, decoded, success, value⟩ | reason | invalid
     · exact .inl ⟨v, decoded, success, valueKept value⟩

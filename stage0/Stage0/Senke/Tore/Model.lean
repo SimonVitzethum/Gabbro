@@ -69,9 +69,20 @@ def AreaReply (L : Lay D) (O : Orakel D) (a : D.Ax) (b : TorB)
   (foreignDecode O a (O.wirkt a σ ρ).2 = none ∧ tag ≠ 0 ∧
     b.fehler.find? (fun entry => entry.1 == tag.toInt) = none ∧ D.agruende a ≠ 0)
 
-/-- Provider writes may change the declared source world and exactly the
-    caller-owned result span. All frame metadata, other locals, code, and
-    permission maps are retained by the existing byte-level frame relation. -/
+/-- A result-area provider changes only the world and the designated
+    result slots. The permission maps and exact synchronization bytes
+    are retained. -/
+structure AreaFrame (L : Lay D) (fp : Runner.W) (lo hi : Nat) (before after : Runner.Mem) : Prop where
+  rd : after.rd = before.rd
+  wr : after.wr = before.wr
+  b : ∀ byte, ¬ inSlots fp lo hi byte → ¬ InWelt L byte → after.b byte = before.b byte
+
+theorem AreaFrame.agreeW {L : Lay D} {fp : Runner.W} {lo hi : Nat} {before after : Runner.Mem}
+    (preserved : AreaFrame L fp lo hi before after) : AgreeW L fp lo hi before after :=
+  AgreeW.stark preserved.rd preserved.wr preserved.b
+
+/-- The provider returns an encoded result in the caller-owned span and
+    leaves all other bytes outside the declared source world intact. -/
 def AreaContract [Kern] (L : Lay D) (O : Orakel D) : Prop :=
   ∀ (a : D.Ax) (b : TorB) (τ : Ty) (he : D.aerg a = some τ) (j : Nat),
   L.tor a = some b → areaGut b (D.aparams a).length j = true →
@@ -84,7 +95,7 @@ def AreaContract [Kern] (L : Lay D) (O : Orakel D) : Prop :=
   (∀ i, (D.aparams a).length ≤ i → i < 6 → i ≠ j → reqArg q i = 0) →
   WeltAt m L σ →
   ∃ tag extra m', Kern.ans q m (some (tag, extra)) m' ∧
-    AgreeW L fp base (base + valueWords τ) m m' ∧
+    AreaFrame L fp base (base + valueWords τ) m m' ∧
     WeltAt m' L (O.wirkt a σ ρ).1 ∧ AreaReply L O a b τ he σ ρ m' fp base tag
 
 /-- Register-only profiles impose no result-area provider obligation. -/

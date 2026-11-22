@@ -283,7 +283,7 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
     ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
       ImageGateEvent output E O first last after (thread, req, answer) ∧
-      AgreeW output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
+      AreaFrame output.image.Y fp base (base + valueWords τ) (before.ms.1.view thread) (after.ms.1.view thread) ∧
       WeltAt (after.ms.1.view thread) output.image.Y (O.wirkt routine world args).1 ∧
       ∀ future, before.ths.length ≤ future → PrivateBuffers (imageStackFootprint output) before.ms.1 →
         (∀ byte, inSlots fp base (base + valueWords τ) byte → imageStackFootprint output thread byte) →
@@ -309,8 +309,8 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
   have outside : ¬ inSlots fp base (base + valueWords τ) byte :=
     fun hit => distinct (imageStackFootprint_disjoint (owned byte hit) reserved)
   have below := stack_byte_below_world reserved
-  refine ⟨(retained.b _ outside (fun hit => (Nat.not_le_of_lt below) hit.1)
-    (fun hit => (Nat.not_le_of_lt below) hit.1)).symm, congrFun retained.rd.symm byte, congrFun retained.wr.symm byte⟩
+  exact ⟨(retained.b _ outside (fun hit => (Nat.not_le_of_lt below) hit.1)).symm,
+    congrFun retained.rd.symm byte, congrFun retained.wr.symm byte⟩
 
 /-- A pointer-buffer gate reports its actual scalar result and leaves the
     table update encoded in just the caller's reserved scratch bytes.
