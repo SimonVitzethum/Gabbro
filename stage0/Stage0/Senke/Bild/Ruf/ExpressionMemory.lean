@@ -238,13 +238,15 @@ theorem BodyFrame.bind_reference [kernel : Kern] {D : Deklaration} {B : BodyFram
     let target := pc + BitVec.ofNat 64 (16 * code.length)
     let observed := σ.lese Λ bound.orte
     ∃ count, ∀ {taken : Nat} {pointer : T} {current : Mem},
-      StarM taken ⟨pc, B.fp⟩ memory pointer current → taken ≤ count →
-      (taken = count → pointer = ⟨target, B.fp⟩ ∧ Senke.AgreeW B.L B.fp B.lo B.K memory current ∧
-        B.RandIR rest target current observed (.cons (eval observed bound observed env) env)) ∧
-      (taken < count → ∀ {request : Op} {resume : Ans → Res T} {atRequest : Mem},
+      StarM taken ⟨pc, B.fp⟩ memory pointer current →
+      (taken < count ∧ ∀ {request : Op} {resume : Ans → Res T} {atRequest : Mem},
         RunP (step pointer) current (.ask request resume) atRequest →
         (∀ call, request ≠ .sys call) ∧ (∀ byte, fussOp request byte → reads byte) ∧
-        (schreibtOp request = true → ∀ byte, fussOp request byte → inSlots B.fp 0 B.Ks byte)) := by
+        (schreibtOp request = true → ∀ byte, fussOp request byte → inSlots B.fp 0 B.Ks byte)) ∨
+      ∃ boundary : Mem, StarM count ⟨pc, B.fp⟩ memory ⟨target, B.fp⟩ boundary ∧
+        StarM (taken - count) ⟨target, B.fp⟩ boundary pointer current ∧
+        Senke.AgreeW B.L B.fp B.lo B.K memory boundary ∧
+        B.RandIR rest target boundary observed (.cons (eval observed bound observed env) env) := by
   intro target observed
   have original := atStart
   obtain ⟨all, largest, compiled, room, _, pre, _, _, _, stored, _, _⟩ := atStart
@@ -262,10 +264,13 @@ theorem BodyFrame.bind_reference [kernel : Kern] {D : Deklaration} {B : BodyFram
   obtain ⟨count, _, _, prefixCorrect⟩ :=
     lowE_frameMemory reads frameReads codeReads bound lowered (by omega) resultFits ready
       (Senke.WeltAt.reads stored Λ) worldReads frame.win.lay (by omega) (fun _ => rfl)
-  refine ⟨count, fun ran within => ?_⟩
-  obtain ⟨completed, requests⟩ := prefixCorrect ran within
-  exact ⟨fun atEnd => by
-    obtain ⟨pointer, memoryEffect, value⟩ := completed atEnd
-    exact ⟨pointer, BodyFrame.finishBind frame original lowered memoryEffect value⟩, requests⟩
+  refine ⟨count, ?_⟩
+  intro taken pointer current ran
+  rcases Nat.lt_or_ge taken count with inside | finished
+  · exact .inl ⟨inside, (prefixCorrect ran inside.le).2 inside⟩
+  · obtain ⟨atBoundary, boundary, expressionRun, later⟩ := StarM.cut ran count finished
+    obtain ⟨pointerEq, memoryEffect, value⟩ := (prefixCorrect expressionRun (Nat.le_refl _)).1 rfl
+    subst atBoundary
+    exact .inr ⟨boundary, expressionRun, later, BodyFrame.finishBind frame original lowered memoryEffect value⟩
 
 end Gabbro.Stage0
