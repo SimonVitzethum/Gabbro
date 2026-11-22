@@ -9,6 +9,73 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Uebersetze
 
+variable {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+
+private theorem uSliceIntegerConstant_low (ctx : UCtx) (fn : UFn) (er : Option Ty)
+    (source : SExpr) {lo hi : Int} {side : USide}
+    (recognized : uSliceIntegerConstant ctx source = some (lo, hi, side)) :
+    ∃ term : Expr (declOf u) Γ Λ (.int lo hi),
+      lowWertE u Γ Λ fn er side = .ok ⟨.int lo hi, term⟩ ∧ term.orte = [] := by
+  unfold uSliceIntegerConstant at recognized
+  cases folded : uSchranke (uSliceConstants ctx) source with
+  | none => rw [folded] at recognized; cases recognized
+  | some value =>
+    rw [folded] at recognized
+    cases recognized
+    exact ⟨.lit value, by simp only [lowWertE, LowSide.wert], rfl⟩
+
+/-- Every recognized endpoint or index has precisely the interval used
+    by its surface bound check. The typed term reads lexical values only. -/
+theorem uSliceInteger_low (ctx : UCtx) (blatt : SExpr → Except String USide) (fn : UFn) (er : Option Ty)
+    (locals : ∀ name lo hi, uSliceLocalType ctx name = some (.int lo hi) →
+      ∃ term : Expr (declOf u) Γ Λ (.int lo hi),
+        lowWertE u Γ Λ fn er (.param name) = .ok ⟨.int lo hi, term⟩ ∧ term.orte = [])
+    (source : SExpr) {lo hi : Int} {side : USide}
+    (recognized : uSliceInteger ctx blatt source = some (lo, hi, side)) :
+    ∃ term : Expr (declOf u) Γ Λ (.int lo hi),
+      lowWertE u Γ Λ fn er side = .ok ⟨.int lo hi, term⟩ ∧ term.orte = [] := by
+  cases source
+  case «variable» name =>
+    simp only [uSliceInteger] at recognized
+    split at recognized
+    · next localLo localHi declared =>
+      split at recognized
+      · cases recognized
+        exact locals name localLo localHi declared
+      · cases recognized
+    · split at recognized
+      · cases recognized
+      · exact uSliceIntegerConstant_low ctx fn er _ recognized
+  case bin op left right =>
+    simp only [uSliceInteger] at recognized
+    split at recognized
+    · exact uSliceIntegerConstant_low ctx fn er _ recognized
+    · cases readLeft : uSliceInteger ctx blatt left with
+      | none => simp only [readLeft] at recognized; cases recognized
+      | some leftInfo =>
+        cases readRight : uSliceInteger ctx blatt right with
+        | none => simp only [readLeft, readRight] at recognized; cases recognized
+        | some rightInfo =>
+          obtain ⟨leftLo, leftHi, leftSide⟩ := leftInfo
+          obtain ⟨rightLo, rightHi, rightSide⟩ := rightInfo
+          simp only [readLeft, readRight] at recognized
+          obtain ⟨a, ha, aLocal⟩ := uSliceInteger_low ctx blatt fn er locals left readLeft
+          obtain ⟨b, hb, bLocal⟩ := uSliceInteger_low ctx blatt fn er locals right readRight
+          split at recognized
+          · cases recognized
+            refine ⟨.add a b, ?_, by simp only [Expr.orte, aLocal, bLocal, List.nil_append]⟩
+            simp only [lowWertE, ha, hb, zahlVon, LowSide.plus, LowSide.wert, LowWert.zahl]
+          · split at recognized
+            · cases recognized
+              refine ⟨.sub a b, ?_, by simp only [Expr.orte, aLocal, bLocal, List.nil_append]⟩
+              exact lowWertE_arraySliceLength hb ha
+            · cases recognized
+  all_goals
+    simp only [uSliceInteger] at recognized
+    exact uSliceIntegerConstant_low ctx fn er _ recognized
+termination_by sizeOf source
+decreasing_by all_goals simp_wf <;> omega
+
 /-- Independent runtime bounds can be arithmetic expressions. The
     source length is their difference and a projected element stays a
     single read of the original array. -/
