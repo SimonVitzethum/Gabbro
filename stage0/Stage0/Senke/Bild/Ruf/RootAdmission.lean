@@ -367,9 +367,6 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     {initial : imageTSO.St} (loaded : LoadedIRImage output initial)
     (unit : ImageModelUnit output E) {O : Orakel (declOf output.compiled.unit)}
     {history : List Ev} {count index : Nat} {before after : Cfg imageTSO (Res T)}
-    {spawnView : Mem} (spawnTable : TabInv L0 spawnView)
-    (spawnCode : BytesAt spawnView codeBase (output.image.code.flatMap encII))
-    (spawnFrame : FrameOK spawnView (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
     {state : FadenMaschine (declOf output.compiled.unit).mitRuhe} {id extra : W}
     {footprint : Nat → W → Prop} {body : List (Option (Res T))}
     {start : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
@@ -401,8 +398,7 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
     let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)),
       BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (index + 1)))⟩
     (∃ seen resume, before.ths[0]? = some (some (.ask (.sys seen) resume)) ∧
-      SoloLauf ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)), parent.fp⟩ spawnView
-        (.ask (.sys seen) resume) (before.ms.1.view 0)) →
+      output.SpawnPrefix index (.ask (.sys seen) resume) (before.ms.1.view 0)) →
     let events : List Ev := [(0, cloneReq, some (id, extra))]
     ∃ next, ImageReach output E O state next ∧ ImageSlotsMatch output E O (history ++ events) after next ∧
       ImageForeignTrace output (history ++ events) next ∧
@@ -410,7 +406,7 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
       ImageRuntimePartition footprint output E O (history ++ events) after next (body ++ [none]) := by
   intro parent child startup events
   have within := (List.getElem?_eq_some_iff.mp declared).1
-  obtain ⟨seen, resume, running, solo⟩ := startup
+  obtain ⟨seen, resume, running, _, _, spawnTable, spawnCode, spawnFrame, solo, _⟩ := startup
   obtain ⟨_, _, _, _, confined⟩ := output.workerReference spawnTable spawnCode spawnFrame within
   have control := (confined solo).resolve_left fun memoryOnly => memoryOnly.1 seen rfl
   have parentEq : (⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)) + BitVec.ofNat 64 (16 * 2),

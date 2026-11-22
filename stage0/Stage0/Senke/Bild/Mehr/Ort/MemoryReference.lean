@@ -75,8 +75,8 @@ theorem SoloLauf.answer_tso [Kern] {layout : Runner.Beweis.Lay} {before after : 
       have viewPermissions : (before.1.view thread).wr = before.1.m.wr := foldl_wr _ _
       rcases answered with ⟨denied, rfl, rfl⟩ | ⟨allowed, rfl, enqueued⟩
       · rw [memAns_wr, wr64_eq, viewPermissions, ite_eq_right (Bool.eq_false_iff.mp denied)]
-      · have update := (tso_store_updates_view (layout := layout) (.inr ⟨allowed, rfl, enqueued⟩)).resolve_left
-          (fun refused => Option.noConfusion refused.1)
+      · have update := (tso_store_updates_view (layout := layout) (answer := some (0, 0))
+          (.inr ⟨allowed, rfl, enqueued⟩)).resolve_left (fun refused => by cases refused.1)
         rw [memAns_wr, wr64_eq, viewPermissions, ite_eq_left allowed, update.2.1]
     obtain ⟨_, result, retained⟩ := memAns_preserves_agreement agrees within physical
     exact finish rfl result retained

@@ -134,6 +134,52 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
       ownFrame) inside)
   · exact .inr pending
 
+/-- The active spawn site retains one ordinary IR prefix and a proof
+    memory agreeing with the issuer on the code and private frame. -/
+def Emitted.SpawnPrefix (output : Emitted src reserve options) (index : Nat)
+    (control : Res T) (view : Mem) : Prop :=
+  ∃ initial localMemory, TabInv L0 initial ∧
+    BytesAt initial codeBase (output.image.code.flatMap encII) ∧
+    FrameOK initial (BitVec.ofNat 64 output.image.fp0) output.image.Ks ∧
+    BildMehr.SoloLauf ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)), BitVec.ofNat 64 output.image.fp0⟩
+      initial control localMemory ∧
+    BildMehr.GleichAuf (imageRootReads output 0) view localMemory
+
+theorem Emitted.SpawnPrefix.start {view : Mem} {index : Nat} (table : TabInv L0 view)
+    (code : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
+    output.SpawnPrefix index
+      (.next ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)), BitVec.ofNat 64 output.image.fp0⟩) view :=
+  ⟨view, view, table, code, frame, BildMehr.soloLauf_start _ _, fun byte _ => BildMehr.GleichAt.refl _ byte⟩
+
+theorem Emitted.SpawnPrefix.transport {index : Nat} {control : Res T} {view next : Mem}
+    (phase : output.SpawnPrefix index control view)
+    (unchanged : BildMehr.GleichAuf (imageRootReads output 0) next view) :
+    output.SpawnPrefix index control next := by
+  obtain ⟨initial, localMemory, table, code, frame, run, agrees⟩ := phase
+  exact ⟨initial, localMemory, table, code, frame, run,
+    fun byte used => (unchanged byte used).trans (agrees byte used)⟩
+
+theorem Emitted.SpawnPrefix.begin {index : Nat} {view : Mem} {pointer : T}
+    (phase : output.SpawnPrefix index (.next pointer) view) :
+    output.SpawnPrefix index (step pointer) view := by
+  obtain ⟨initial, localMemory, table, code, frame, run, agrees⟩ := phase
+  exact ⟨initial, localMemory, table, code, frame, run.priv, agrees⟩
+
+theorem Emitted.SpawnPrefix.answer_memory {index : Nat} (declared : index < output.starts.length)
+    {before after : imageTSO.St} {request : Op} {resume : Ans → Res T} {reply : Ans}
+    (phase : output.SpawnPrefix index (.ask request resume) (before.1.view 0))
+    (ordinary : istSpeicherOp request = true)
+    (answered : imageTSO.ans before 0 request reply after) :
+    output.SpawnPrefix index (resume reply) (after.1.view 0) := by
+  obtain ⟨initial, localMemory, table, code, frame, run, agrees⟩ := phase
+  obtain ⟨_, _, _, _, classify⟩ := output.workerReference table code frame declared
+  rcases classify run with access | clone
+  · obtain ⟨updated, continued, preserved⟩ := run.answer_tso agrees access.2.1 ordinary answered.1
+    exact ⟨initial, updated, table, code, frame, continued, preserved⟩
+  · cases clone
+    cases ordinary
+
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
     let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
