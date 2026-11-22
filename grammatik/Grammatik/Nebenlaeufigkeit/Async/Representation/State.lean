@@ -166,6 +166,29 @@ public theorem inv_encoded (f : AsyncFn) (types : TypeResolution) (inventory : I
   rw [encoded]
   rfl
 
+/-- Change the dispatch tag after the next frame has been constructed.
+    Both the frame input and the state destination are ordinary locals. -/
+@[expose] public def resumeBlock {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (tag : Nat) (within : tag ≤ f.body.length)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f)) : Block D V l Γ Λ Λ :=
+  constructBlock state (runningExpr types f tag within (.var saved))
+
+public theorem resumeBlock_exec {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (types : TypeResolution) (f : AsyncFn) (tag : Nat) (within : tag ≤ f.body.length)
+    (saved : Var Γ (frameType types f)) (state : Var Γ (stateType types f))
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (world : World D) (env : Env D Γ) :
+    let successor : Expr D Γ Λ (stateType types f) := runningExpr types f tag within (.var saved)
+    execBlock oracle passes calls (resumeBlock (V := V) (l := l) types f tag within saved state) world env =
+      .ok world (env.set state (eval world successor world env)) := by
+  intro successor
+  have reads : successor.orte = [] := runningExpr_reads types f tag within (.var saved)
+  have execution := constructBlock_exec (V := V) (l := l) oracle passes calls state successor world env
+  have noRead : world.lese Λ [] = world := rfl
+  simp only [reads, noRead] at execution
+  exact execution
+
 public theorem cancelled_encoded (types : TypeResolution) (f : AsyncFn) :
     encode D types f State.cancelled = some (cancelledValue types f D) := rfl
 
