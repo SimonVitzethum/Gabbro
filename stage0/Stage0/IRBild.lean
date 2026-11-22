@@ -61,6 +61,8 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
     (initialUnit compiled.unit compiled.program (sp0Of compiled.unit initialValid)
       (⟨compiled.main, args⟩ :: startPlan.starts (Senke.initialWorld compiled.unit initialValid))
       compiled.checkedDeclarations.val))
+  foreignLogicChecked : compiled.unit.axs.length ≠ 0 →
+    ∃ checked, foreignLogic = .ok checked
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
@@ -134,16 +136,22 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
       let axiomFreeLogic ← (checkAxiomFreeLogic u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
         compiled.checkedDeclarations.val).mapError
         (fun failure => "ir: unit logic: " ++ failure.message)
-      let foreignLogic := if u.axs.isEmpty then .error "unit has no foreign declarations" else
-        checkImageForeignLogic u (initialUnit u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
-          compiled.checkedDeclarations.val)
+      let logicUnit := initialUnit u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
+        compiled.checkedDeclarations.val
+      let foreignLogic : { result : Except String (CheckedForeignLogic u logicUnit) //
+          u.axs.length ≠ 0 → ∃ verified, result = .ok verified } ←
+        if empty : u.axs.length = 0 then
+          pure ⟨.error "unit has no foreign declarations", fun nonempty => (nonempty empty).elim⟩
+        else do
+          let verified ← (checkImageForeignLogic u logicUnit).mapError (fun e => "ir: " ++ e)
+          pure ⟨.ok verified, fun _ => ⟨verified, rfl⟩⟩
       match he : Senke.bild irDurchlaeufe P (Senke.layU (lockWait := (Profil.imageEnvironment options compiled.source.prepared.bindung).lockWait) u tor) (List.finRange u.fns.length) Fin.val
           (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args
           starts K
           (Senke.bodenAusrichtung u) with
       | .error e => throw e
       | .ok image => pure ⟨compiled, tor, gateTransports.down, startPlan, initialValid, initialInvariants.down, args, hp,
-          checked.down, axiomFreeLogic.down, foreignLogic, image, he⟩
+          checked.down, axiomFreeLogic.down, foreignLogic.val, foreignLogic.property, image, he⟩
   else throw "ir: canonical initial memory is outside its declared types"
 
 /-- The exact typed occurrences supplied to the image constructor. -/

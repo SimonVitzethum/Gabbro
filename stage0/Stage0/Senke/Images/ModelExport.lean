@@ -254,6 +254,20 @@ theorem Emitted.checkImageUnit_foreign (output : Emitted src reserve options)
     bind, Except.bind, dif_neg foreign, produced]
   exact output.finishImageUnit_ok _ model accepted
 
+/-- Every ordinary emitted unit without accumulators has a successful
+    export to the full checker. Foreign logic was already checked at
+    the same serialized entry and root arguments. -/
+theorem Emitted.checkImageUnit_ordinary (output : Emitted src reserve options)
+    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
+    (noAccumulators : imageAccumulatorItems output = []) :
+    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked := by
+  by_cases noForeign : output.compiled.unit.axs.length = 0
+  · obtain ⟨checked, accepted, _⟩ := output.checkImageUnit_axiomFree noForeign noOwnership noAccumulators
+    exact ⟨checked, accepted⟩
+  · obtain ⟨certificate, verified⟩ := output.foreignLogicChecked noForeign
+    obtain ⟨checked, accepted, _⟩ := output.checkImageUnit_foreign verified noForeign noOwnership noAccumulators
+    exact ⟨checked, accepted⟩
+
 /-- The returned bytes and the complete checker verdict on their exact
     model can be obtained from one canonical emission and one export. -/
 theorem irBild_checkImageUnit {bytes : List Runner.B} (wrote : irBild src reserve options = .ok bytes) :
