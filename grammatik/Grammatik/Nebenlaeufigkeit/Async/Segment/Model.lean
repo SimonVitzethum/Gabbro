@@ -84,7 +84,9 @@ public theorem childPollBlock_reports_failure {l : Bool} {Γ : Ctx} {name : Stri
       | .inr hardware => .hardware hardware := by
   rw [childPollBlock, waitingBlock_exec_outcome, argumentsAre]
   unfold runChildPoll decodeChildOutcome at failed
-  cases calls callee.poll (world.lese Λ arguments.orte) (pollEnvironment callee storage) with
+  generalize calls callee.poll (world.lese Λ arguments.orte) (pollEnvironment callee storage) = result
+    at failed ⊢
+  cases result with
   | ok after value =>
     cases decoded : decodePollAnswer D types name storage (ergWert callee.pollResult value)
     simp only [decoded, reduceCtorEq] at failed
