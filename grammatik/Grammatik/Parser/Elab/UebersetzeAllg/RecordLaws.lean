@@ -344,8 +344,10 @@ theorem specArrayArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u
       cases count with
       | zero => simp only [specArrayArgumentFits, specLiteralFieldFits, Bool.false_eq_true] at valid
       | succ count =>
-        have accepted := Bool.and_eq_true_iff.mp (show
-          (specArrayArgumentFits ctx head element && specArrayArgumentFits ctx tail (.arr element count)) = true from valid)
+        have fields : (specArrayArgumentFits ctx head element &&
+            specArrayArgumentFits ctx tail (.arr element count)) = true := by
+          simpa only [specArrayArgumentFits] using valid
+        have accepted := Bool.and_eq_true_iff.mp fields
         obtain ⟨first, readFirst⟩ :=
           specArrayArgument_lower fn er ctx element head gate scope lexical accepted.1
         obtain ⟨rest, readRest⟩ :=
