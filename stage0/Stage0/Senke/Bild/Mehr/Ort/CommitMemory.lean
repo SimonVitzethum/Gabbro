@@ -91,16 +91,23 @@ theorem weltAt_commitBytes {layout : Lay D} {before after : Mem}
       rw [value]
       exact beforeWorld.2.1 global
 
-private def endPosition (position : MLage D) (pc : W) (memory : Mem) (machine : RufMaschineG D) : MLage D :=
+private def endPosition (position : MLage D) (pc : W) (memory : Mem) (machine : RufMaschineG D)
+    {Γ : Ctx} {Λ : List (Res D)} (rest : Endblock D (vertragVon D position.B.f) position.l Γ Λ)
+    (world : World D) (env : Env D Γ) : MLage D :=
   { position with
-    Γ := position.Γe
-    Λ := position.Λe
-    eb := position.ebe
-    σ := position.σe
-    ρ := position.ρe
+    Γ := Γ
+    Λ := Λ
+    eb := rest
+    σ := world
+    ρ := env
+    Γe := Γ
+    Λe := Λ
+    ebe := rest
+    σe := world
+    ρe := env
     pc := pc
     mb := memory
-    M := mitSpeicher machine position.σe.speicher }
+    M := mitSpeicher machine world.speicher }
 
 private theorem reanchorCommitted [Kern] {P : Programm D} {O : Orakel D}
     {passes : Nat} {layout : Lay D} {program : PCfg} {source : FadenMaschine D}
@@ -180,12 +187,14 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     {thread : Nat} {snapshot : Solo}
     (matched : MTRel P O passes layout program source snapshots positions committed)
     (registered : snapshots thread = some snapshot)
-    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : W}
+    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : W} {Γ : Ctx} {Λ : List (Res D)}
+    {rest : Endblock D (vertragVon D (positions thread).B.f) (positions thread).l Γ Λ}
+    {world : World D} {env : Env D Γ}
     (quiet : let x := positions thread
-      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ rest world env)
     (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
     (boundary : let x := positions thread
-      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+      x.B.RandIR rest pc snapshot.m world env)
     (agree : let x := positions thread
       OrtGleich carriers x.σ (source.m.speicher.welt x.σ.spur))
     (free : FreiA (positions thread).Agl source.m (positions thread).thr)
@@ -201,7 +210,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
         ⟨machine, source.lebt, source.wartet, source.rang, source.uhr⟩ ∧
       program.ths[thread]? = some (some (.next ⟨pc, position.B.fp⟩)) ∧
       RandG position.thr position.stapel position.B.f position.rho position.s0 position.Agl
-        position.ebe machine world position.ρe ∧
+        rest machine world env ∧
       WeltAt published layout (machine.speicher.welt []) ∧
       (∀ other, other ≠ position.thr → machine.faeden other = source.m.faeden other) ∧
       (∀ byte, selected byte → GleichAt published program.m byte) ∧
@@ -211,23 +220,23 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
         (fun i => if i = thread then next else positions i) published := by
   classical
   intro position selected published
-  obtain ⟨machine, world, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
+  obtain ⟨machine, finalWorld, reached, pointer, _, sourceBoundary, changes, preserved, others⟩ :=
     matched.commit_segment registered (shared := shared) quiet control boundary agree free
   have exactLayout := (matched.prog thread snapshot registered).2.2.2
   obtain ⟨rd, wr⟩ := (matched.solo thread snapshot registered).permissions
   have reads := rd.trans initialPermissions.1
   have writes := wr.trans initialPermissions.2
-  have afterWorld : WeltAt snapshot.m layout position.σe := by
+  have afterWorld : WeltAt snapshot.m layout world := by
     obtain ⟨_, _, _, _, _, _, _, _, _, memory, _⟩ := boundary
     rwa [exactLayout] at memory
-  have bytes : WeltAt published layout world := weltAt_commitBytes inside separated matched.welt afterWorld
+  have bytes : WeltAt published layout finalWorld := weltAt_commitBytes inside separated matched.welt afterWorld
     reads changes (by intro cell outside; simpa only [speicher_welt_speicher] using others cell outside)
-  have store : machine.speicher = world.speicher := by
+  have store : machine.speicher = finalWorld.speicher := by
     obtain ⟨⟨_, state⟩, _, _⟩ := sourceBoundary
     exact state.2
   have exactBytes : WeltAt published layout (machine.speicher.welt []) := by
     rw [store]
-    cases world
+    cases finalWorld
     exact bytes
   have updated : ∀ byte, selected byte → GleichAt published program.m byte := by
     intro byte chosen
@@ -236,7 +245,7 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
       (congrFun reads.symm byte).trans read.symm, (congrFun writes.symm byte).trans write.symm⟩
   have unchanged : ∀ byte, ¬ selected byte → GleichAt published committed byte := fun byte excluded =>
     ⟨by simp only [published, commitBytes, ite_eq_right excluded], rfl, rfl⟩
-  let next := endPosition position pc snapshot.m machine
+  let next := endPosition position pc snapshot.m machine rest world env
   have held := (matched.lage thread snapshot registered)
   have valid : next.Ok := by
     refine ⟨held.tor, held.sicht, held.frame, held.ruf, .halt _ _ _, boundary, ?_⟩
@@ -248,6 +257,6 @@ theorem MTRel.commit_world [Kern] {P : Programm D} {O : Orakel D}
     · exact (matched.aussen byte unwritten).trans (unchanged byte chosen).symm
   have continued := reanchorCommitted matched registered preserved exactBytes outside valid
     (matched.prog thread snapshot registered) (show next.thr = position.thr from rfl) rfl control rfl
-  exact ⟨machine, world, next, reached, pointer, sourceBoundary, exactBytes, preserved, updated, unchanged, rfl, continued⟩
+  exact ⟨machine, finalWorld, next, reached, pointer, sourceBoundary, exactBytes, preserved, updated, unchanged, rfl, continued⟩
 
 end Gabbro.Stage0.Senke.BildMehr

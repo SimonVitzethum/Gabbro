@@ -131,12 +131,14 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
     {thread : Nat} {snapshot : Solo}
     (matched : MTRel P O passes layout program source snapshots positions committed)
     (registered : snapshots thread = some snapshot)
-    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : Runner.W}
+    {shared carriers : D.Tab ⊕ D.Glob → Prop} {pc : Runner.W} {Γ : Ctx} {Λ : List (Res D)}
+    {rest : Endblock D (vertragVon D (positions thread).B.f) (positions thread).l Γ Λ}
+    {world : World D} {env : Env D Γ}
     (quiet : let x := positions thread
-      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ rest world env)
     (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
     (boundary : let x := positions thread
-      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+      x.B.RandIR rest pc snapshot.m world env)
     (agree : let x := positions thread
       OrtGleich carriers x.σ (source.m.speicher.welt x.σ.spur))
     (free : FreiA (positions thread).Agl source.m (positions thread).thr) :
@@ -145,9 +147,9 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
       FadenErreichbarX P O passes shared source
         ⟨machine, source.lebt, source.wartet, source.rang, source.uhr⟩ ∧
       program.ths[thread]? = some (some (.next ⟨pc, x.B.fp⟩)) ∧
-      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe ∧
-      RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl x.ebe machine finalWorld x.ρe ∧
-      OrtGleich carriers x.σe finalWorld ∧
+      x.B.RandIR rest pc snapshot.m world env ∧
+      RandG x.thr x.stapel x.B.f x.rho x.s0 x.Agl rest machine finalWorld env ∧
+      OrtGleich carriers world finalWorld ∧
       (∀ other, other ≠ x.thr → machine.faeden other = source.m.faeden other) ∧
       ∀ cell, ¬ carriers cell → TraegerGleich finalWorld.speicher source.m.speicher cell := by
   intro x
@@ -156,16 +158,16 @@ theorem MTRel.commit_segment [Runner.IR.Kern] {P : Programm D} {O : Orakel D}
   have calls : RufOk P O passes x.thr x.Agl x.B.R x.Cg := by
     rw [← sameProgram, ← sameOracle, ← samePasses]
     exact position.ruf
-  have semantics : Segment O passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe := by
+  have semantics : Segment O passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ rest world env := by
     rw [← sameOracle, ← samePasses]
     exact quiet
   have storage : source.m.speicher = (source.m.speicher.welt x.σ.spur).speicher :=
     (speicher_welt_speicher _ _).symm
   obtain ⟨alive, waiting⟩ := matched.lebtG thread snapshot registered
-  obtain ⟨machine, world, reached, sourceBoundary, sameWorld, otherThreads, otherCarriers⟩ :=
+  obtain ⟨machine, finalWorld, reached, sourceBoundary, sameWorld, otherThreads, otherCarriers⟩ :=
     fadenX_segment (Tg := shared) calls semantics position.rand.2 agree .start alive waiting
       (matched.amRand thread snapshot registered) storage free
-  refine ⟨machine, world, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_⟩
+  refine ⟨machine, finalWorld, reached, ?_, boundary, sourceBoundary, sameWorld, otherThreads, ?_⟩
   · exact (matched.zustand thread snapshot registered).trans (by rw [control])
   · intro cell outside
     simpa only [speicher_welt_speicher] using otherCarriers cell outside

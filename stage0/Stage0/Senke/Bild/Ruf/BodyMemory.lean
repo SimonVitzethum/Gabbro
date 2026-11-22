@@ -257,16 +257,20 @@ theorem image_body_publish [Kern] {src : String} {reserve : Nat} {options : Prof
     {positions : Nat → MLage (declOf output.compiled.unit).mitRuhe} {committed : Mem}
     {thread : Nat} {snapshot : Solo} {pc : W}
     {carriers : (declOf output.compiled.unit).mitRuhe.Tab ⊕ (declOf output.compiled.unit).mitRuhe.Glob → Prop}
+    {Γ : Ctx} {Λ : List (Grammatik.Res (declOf output.compiled.unit).mitRuhe)}
+    {rest : Endblock (declOf output.compiled.unit).mitRuhe
+      (vertragVon _ (positions thread).B.f) (positions thread).l Γ Λ}
+    {world : World (declOf output.compiled.unit).mitRuhe} {env : Env _ Γ}
     (buffers : PrivateBuffers footprint after.ms.1)
     (matched : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState footprint after.ms).1, after.ths⟩ state snapshots positions committed)
     (indices : ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s)
     (registered : snapshots thread = some snapshot)
     (quiet : let x := positions thread
-      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ x.ebe x.σe x.ρe)
+      Segment x.B.O x.B.passes x.B.R x.Agl x.Cg carriers x.eb x.σ x.ρ rest world env)
     (control : snapshot.r = .next ⟨pc, (positions thread).B.fp⟩)
     (boundary : let x := positions thread
-      x.B.RandIR x.ebe pc snapshot.m x.σe x.ρe)
+      x.B.RandIR rest pc snapshot.m world env)
     (agree : let x := positions thread
       OrtGleich carriers x.σ (state.m.speicher.welt x.σ.spur))
     (free : FreiA (positions thread).Agl state.m (positions thread).thr)
