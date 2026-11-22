@@ -132,7 +132,7 @@ theorem sliceIndexGuard_exec {lo hi : Int} {view : ArraySliceView capacity}
   have noReads : (sliceIndexBoundsExpr (D := D) (Λ := Λ) length index).orte = [] := rfl
   rw [execBlock, noReads, show world.lese Λ [] = world from rfl]
   have branch := sliceIndexBounds_view (Λ := Λ) length index world world env saved
-  change (if eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true then _ else _) = _
+  change (if wahr? (eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env) = true then _ else _) = _
   by_cases inside : 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length
   · rw [if_pos (branch.mpr inside), if_pos inside]
   · rw [if_neg (fun accepted => inside (branch.mp accepted)), if_neg inside]

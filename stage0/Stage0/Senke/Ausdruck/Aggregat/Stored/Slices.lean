@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Ausdruck.Satz
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Span
 public import Grammatik.Parser.Elab.UebersetzeAllg.RuntimeSlices
+public import Grammatik.Niedrig.Konstrukte.SliceCheck
 import Stage0.Senke.Welt.Spans.Cell
 
 @[expose] public section
@@ -346,10 +347,12 @@ theorem runtimeSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
 theorem runtimeSliceElement_ok [Kern] {D : Deklaration} {layout : Lay D}
     {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {capacity : Nat} {view : ArraySliceView capacity}
     {offsetLo offsetHi indexLo indexHi : Int}
-    (offset : Var Γ (.int offsetLo offsetHi)) (index : Var Γ (.int indexLo indexHi))
+    (offset : Var Γ (.int offsetLo offsetHi)) (length : Var Γ (.int 0 capacity))
+    (index : Var Γ (.int indexLo indexHi))
     {world : World D} {env : Env D Γ}
     (offsetExact : (env.get offset).n = (view.offset : Int))
-    (inView : 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length)
+    (lengthExact : (env.get length).n = (view.length : Int))
+    (checked : eval world (sliceIndexBoundsExpr (Λ := Λ) length index) world env = true)
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
     {K d base top reserved : Nat} {indexCode : List II} {array : Wert D (.arr τ capacity)}
     (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
@@ -361,10 +364,11 @@ theorem runtimeSliceElement_ok [Kern] {D : Deklaration} {layout : Lay D}
     (fits : top ≤ K) :
     let ptr := d + valueWords τ
     let select := selectFrameSpan (valueWords τ) base d ptr (ptr + 1)
+    let inView := (sliceIndexBounds_view (view := view) length index world world env lengthExact).mp checked
     Pre layout m pc fp K ptr (indexCode ++ select) env W reserved →
       ValueOk layout m pc fp K d (indexCode ++ select) τ
         (view.read array ⟨(env.get index).n.toNat, inView.2⟩) := by
-  intro ptr select pre
+  intro ptr select inView pre
   let relative : Fin view.length := ⟨(env.get index).n.toNat, inView.2⟩
   let absolute := view.offset + relative.val
   have bound : absolute < capacity := by
@@ -379,11 +383,13 @@ theorem runtimeSliceElement_ok [Kern] {D : Deklaration} {layout : Lay D}
     simpa only [Nat.add_mul, Nat.one_mul, Nat.add_assoc] using within
   let value := view.read array relative
   have original : ValueAt layout m fp (base + absolute * valueWords τ) τ value := by
-    simpa only [absolute, value, Nat.add_mul, Nat.add_assoc] using backing.slice_element view relative
+    simpa only [absolute, value, ArraySliceView.value, Nat.add_mul, Nat.add_assoc] using
+      backing.slice_element view relative
   let expression : Expr D Γ Λ (.int (offsetLo + indexLo) (offsetHi + indexHi)) := .add (.var offset) (.var index)
   obtain ⟨middle, calculated, preserved, stored⟩ :=
     lowE_ok (same := fun _ => rfl) world world worldAt layoutIn expression ptr indexCode top made fits m pc env pre.left
-  obtain ⟨word, readWord, encoded⟩ := stored.word _ _ trivial
+  obtain ⟨word, readWord, encoded⟩ :=
+    stored.word (.int (offsetLo + indexLo) (offsetHi + indexHi)) (eval world expression world env) trivial
   change word = BitVec.ofInt 64 ((env.get offset).n + (env.get index).n) at encoded
   have exactIndex : (absolute : Int) = (env.get offset).n + (env.get index).n := by
     simp only [absolute, relative, Int.natCast_add, offsetExact, Int.toNat_of_nonneg inView.1]
