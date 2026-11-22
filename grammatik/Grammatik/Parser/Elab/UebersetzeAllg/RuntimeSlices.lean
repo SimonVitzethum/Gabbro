@@ -244,7 +244,7 @@ theorem specTextSliceArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf
   obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
   have length := bytesZahl_laenge _ decoded valid
   rw [List.length_map] at length
-  have inside : SliceOk decoded.length first last := ⟨bounds.1, length ▸ bounds.2⟩
+  have inside : SliceOk decoded.length first last := ⟨bounds.1, length.symm ▸ bounds.2⟩
   refine ⟨checked, decoded, valid, inside, ?_⟩
   simp only [lowWertE, lowText, bytes, valid, Except.bind, bind]
   exact lowerSlice_string decoded (Nat.le_refl _) first last inside

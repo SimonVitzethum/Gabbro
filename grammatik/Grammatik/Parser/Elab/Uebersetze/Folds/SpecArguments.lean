@@ -80,7 +80,7 @@ theorem specTextSliceArgument_erfuellbar (ctx : UCtx) (text : String) (first las
   obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
   have length := bytesZahl_laenge _ decoded valid
   rw [List.length_map] at length
-  have inside : first ≤ last ∧ last ≤ decoded.length := ⟨bounds.1, length ▸ bounds.2⟩
+  have inside : first ≤ last ∧ last ≤ decoded.length := ⟨bounds.1, length.symm ▸ bounds.2⟩
   refine ⟨read, ?_⟩
   simp only [uSpecValueArgument, read, bind, Except.bind, argument, uSpecValueType, bytes, valid,
     Option.bind_some, inside, ite_true, pure, Except.pure] <;> rfl
