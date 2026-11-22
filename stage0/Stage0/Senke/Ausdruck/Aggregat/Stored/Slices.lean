@@ -43,6 +43,29 @@ theorem SliceAt.subslice {D : Deklaration} {layout : Lay D} {memory : Runner.Mem
   have stored := slice ⟨first + index.val, seen⟩
   simpa only [BoundedSlice.subslice, arrSliceValue, Nat.add_mul, Nat.add_assoc] using stored
 
+/-- A write outside the visible span preserves the saved slice in its
+    original storage, including every word of aggregate elements. -/
+theorem SliceAt.write_slot [Kern] {D : Deklaration} {layout : Lay D}
+    {memory : Runner.Mem} {frame : Runner.W} {base capacity slots destination : Nat}
+    {τ : Ty} {value : BoundedSlice (Wert D τ) capacity}
+    (slice : SliceAt (τ := τ) layout memory frame base value)
+    (room : frame.toNat + 8 * slots ≤ 2 ^ 64)
+    (fits : base + value.length * valueWords τ ≤ slots)
+    (inside : destination < slots)
+    (apart : destination < base ∨ base + value.length * valueWords τ ≤ destination)
+    (word : Runner.W) :
+    SliceAt (τ := τ) layout
+      (Runner.Mem.write memory (slot frame (BitVec.ofNat 64 destination)) 8 word.toNat) frame base value := by
+  intro index
+  have elementEnd : base + index.val * valueWords τ + valueWords τ ≤ base + value.length * valueWords τ := by
+    have width := Nat.mul_le_mul_right (valueWords τ) (Nat.succ_le_of_lt index.isLt)
+    rw [Nat.succ_mul] at width
+    omega
+  apply (slice index).write_slot room (elementEnd.trans fits) inside _ word
+  rcases apart with before | after
+  · exact Or.inl (Nat.lt_of_lt_of_le before (Nat.le_add_right _ _))
+  · exact Or.inr (elementEnd.trans after)
+
 /-- A substring of a long string reads its exact byte at the translated
     position in the existing storage, after the source length word. -/
 theorem ValueAt.string_slice_byte [Kern] {D : Deklaration} {layout : Lay D} {memory : Runner.Mem} {frame : Runner.W}
