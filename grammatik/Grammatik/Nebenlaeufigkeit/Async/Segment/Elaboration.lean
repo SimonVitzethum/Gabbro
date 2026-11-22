@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Values
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Answers
-import Grammatik.Nebenlaeufigkeit.Async.Segment.Renaming
+public import Grammatik.Nebenlaeufigkeit.Async.Segment.Renaming
 
 namespace Gabbro.Grammatik.Async.Segment
 

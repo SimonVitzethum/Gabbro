@@ -1,7 +1,6 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Representation.Resume
-import Grammatik.Nebenlaeufigkeit.Async.Segment.Renaming
 
 namespace Gabbro.Grammatik.Async.Representation
 
