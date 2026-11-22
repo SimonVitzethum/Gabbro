@@ -191,6 +191,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Emitted.code_after_host_answer
 #print axioms Gabbro.Stage0.Emitted.code_after_private_flush
 #print axioms Gabbro.Stage0.Emitted.root_instruction_decodes
+#print axioms Gabbro.Stage0.Emitted.root_stub_code
 #print axioms Gabbro.Stage0.checkResultOnly
 #print axioms Gabbro.Stage0.resultFieldProjection_erfuellbar
 #print axioms Gabbro.Stage0.checkResultSummary

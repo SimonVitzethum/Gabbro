@@ -142,6 +142,41 @@ theorem Emitted.root_instruction_decodes [Kern] (output : Emitted src K options)
   rw [address, ← ofNat_add64]
   exact decoded index inside
 
+/-- The full start stub for a declared root is at its exact relocated
+    address in the production code. The root function is the same one
+    whose arguments were selected from the typed start table. -/
+theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
+    {memory : Runner.Mem} (loaded : BytesAt memory codeBase (output.image.code.flatMap encII))
+    {index : Nat} {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : output.starts[index]? = some root) :
+    CodeAt memory (BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)))
+      (startC output.image.A root.1 output.image.depth 60 false) ∧ 2 < output.image.Ks := by
+  obtain ⟨_, body, sites, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  obtain ⟨inside, exactRoot⟩ := List.getElem?_eq_some_iff.mp declared
+  let roots := output.starts.map (·.1)
+  have listed : index < roots.length := by simpa only [roots, List.length_map] using inside
+  have selected : roots[index] = root.1 := by
+    change (output.starts.map (·.1))[index] = root.1
+    rw [List.getElem_map, exactRoot]
+  have allCode := codeAt_bytes _ codeBase layout.hops (serialized ▸ loaded)
+  have header := codeAt_left (b := body) allCode
+  have spawns : (spawnC (startScratch output.compiled.main) sites).length = 10 * output.starts.length := by
+    rw [spawnC_len, layout.hsp, List.length_map, List.length_range, List.length_map]
+  have rootCode := codeAt_right
+    (a := spawnC (startScratch output.compiled.main) sites ++
+      startC output.image.A output.compiled.main output.image.depth 231 true) header
+  rw [ofNat_add64, List.length_append, spawns, startC_len] at rootCode
+  have code := rootsC_at output.image.A output.image.depth roots _ index listed rootCode
+  refine ⟨?_, ?_⟩
+  · simpa only [selected, Nat.mul_add, Nat.add_assoc] using code
+  · have room := layout.hroom
+    simp only [FB] at room
+    omega
+
 /-- The concrete builder bounds every typed cell and separates its bytes
     from other cells. This is a property of the relocated image's layout. -/
 theorem Emitted.layout_checked (output : Emitted src K options) :
