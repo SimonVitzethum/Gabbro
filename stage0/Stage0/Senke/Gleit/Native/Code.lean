@@ -7,7 +7,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
 def nativeFPOpcode (kind : Runner.NativeFPOp) : Opcode :=
-  ⟨kind.code, kind.code_bounds.2.trans (by decide)⟩
+  ⟨kind.code, Nat.lt_trans kind.code_bounds.2 (by decide)⟩
 
 /-- Both source operands are evaluated in order, then the actual FP opcode reads
     their slots. The temporary ceiling includes both physical reads. -/
