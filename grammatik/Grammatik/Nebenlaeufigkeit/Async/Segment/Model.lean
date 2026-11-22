@@ -121,7 +121,8 @@ public theorem runTaskPoll_join (elaboration : Elaboration D V Λ types f)
       let (rp, r, after, rc) ← runTaskPoll elaboration calls prices right middle
       match lp, rp with
       | .ready a, .ready b => pure (.ready (.pair a b), .ready (.pair a b), after, lc + rc + 1)
-      | _, _ => pure (.pending, .join l r, after, lc + rc + 1)) := rfl
+      | _, _ => pure (.pending, .join l r, after, lc + rc + 1)) := by
+  simp only [runTaskPoll, pollTaskWith]
 
 /-- Left failure stops the join before a right poll can change the world. -/
 public theorem runTaskPoll_join_left_failure (elaboration : Elaboration D V Λ types f)
@@ -214,10 +215,26 @@ public theorem runTaskPoll_agrees_with_inducedModel (elaboration : Elaboration D
   | invalid => rfl
   | active name storage =>
     cases selected : elaboration.callee name with
-    | none => simp only [inducedModel, pollChild, selected]
+    | none =>
+      simp only [inducedModel, pollChild, selected]
+      split
+      · rfl
+      · rename_i actual found
+        rw [selected] at found
+        cases found
     | some callee =>
       simp only [inducedModel, pollChild, selected]
-      exact runChildPoll_normal elaboration calls prices normal name callee selected storage before
+      split
+      · rename_i absent
+        rw [selected] at absent
+        cases absent
+      · rename_i actual found
+        have same := Option.some.inj (found.symm.trans selected)
+        subst actual
+        rw [runChildPoll_normal elaboration calls prices normal name callee selected storage before]
+        cases decodePollAnswer D types name storage
+          (ergWert callee.pollResult (normal name callee selected before storage).val.2)
+        rfl
 
 public theorem evaluateBound_resolved (elaboration : Elaboration D V Λ types f)
     (source : Parser.SExpr) (resolved : BoundExpression D Λ)
