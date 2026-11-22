@@ -105,6 +105,28 @@ theorem ValueAt.string_slice_view [Kern] {D : Deklaration} {layout : Lay D}
   have read := input.string_slice_byte long first last bounds ⟨i, valid⟩
   simpa only [Nat.add_assoc, List.getElem_map, result] using read
 
+/-- The emitted length observation yields the actual length of the
+    runtime slice, using the ordinary checked integer subtraction. -/
+theorem lowE_runtimeSliceLength_ok [Kern] {D : Deklaration} {L : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {capacity : Nat}
+    {firstLo firstHi lastLo lastHi : Int}
+    (array : Wert D (.arr τ capacity)) (begin : Expr D Γ Λ (.int firstLo firstHi))
+    (finish : Expr D Γ Λ (.int lastLo lastHi))
+    (bounds : 0 ≤ firstLo ∧ firstHi ≤ lastLo ∧ lastHi ≤ capacity)
+    {world : World D} {env : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
+    (memory : ∀ m, W m → WeltAt m L world) (layout : LayIn L)
+    (made : lowE (currentOld := true) L (reserved := reserved) (.sub finish begin) d = some (code, top))
+    (fits : top ≤ K) (pre : Pre L m pc fp K d code env W reserved) :
+    let first := eval world begin world env
+    let last := eval world finish world env
+    let result := eval world (.sub finish begin) world env
+    ∃ valid : SliceOk capacity first.n.toNat last.n.toNat,
+      result.n = ((BoundedSlice.ofArray array first.n.toNat last.n.toNat valid).length : Int) ∧
+        ValueOk L m pc fp K d code (.int (lastLo - firstHi) (lastHi - firstLo)) result := by
+  obtain ⟨valid, length⟩ := eval_localArraySliceLength array begin finish bounds world world env
+  exact ⟨valid, length, lowE_ok (same := fun _ => rfl) world world memory layout _ d code top made fits m pc env pre⟩
+
 /-- Stage 0's actual expression code returns the selected element of the
     runtime slice. The generated term accesses the original array through
     the already verified array indexing path. -/
