@@ -121,10 +121,22 @@ private theorem konstWL_measure (chunks first second destination : Nat) :
     obtain ⟨length, frame⟩ := Prod.mk.inj lower
     simp only [konstWL, bin2, codeMeasure, List.length_append, List.length_singleton, length, frame]
 
+private theorem wordConst_measure (first second : Runner.W) (destination : Nat)
+    (same : lit32 first.toInt = lit32 second.toInt) :
+    codeMeasure (wordConst first destination) = codeMeasure (wordConst second destination) := by
+  simp only [wordConst, same]
+  split
+  · rfl
+  · exact konstWL_measure 4 _ _ _
+
+private theorem codeMeasure_concat (head tail : List II × Nat) :
+    codeMeasure (head.1 ++ tail.1, max head.2 tail.2) =
+      ((codeMeasure head).1 + (codeMeasure tail).1, max (codeMeasure head).2 (codeMeasure tail).2) := by
+  simp only [codeMeasure, List.length_append]
+
 /-- Relocating encoded constants without changing which values fit in
     a single immediate preserves the dimensions of their emitted code.
     The actual words may differ arbitrarily within that partition. -/
-set_option maxRecDepth 4096 in
 theorem constWords_measure {first second : List Runner.W}
     (same : first.map (fun word => lit32 word.toInt) = second.map (fun word => lit32 word.toInt))
     (destination : Nat) :
@@ -133,21 +145,18 @@ theorem constWords_measure {first second : List Runner.W}
   | nil =>
     cases second with
     | nil => rfl
-    | cons word rest => simp only [List.map_nil, List.map_cons, List.nil_ne_cons] at same
+    | cons word rest =>
+      simp only [List.map_nil, List.map_cons] at same
+      exact List.noConfusion same
   | cons word rest ih =>
     cases second with
-    | nil => simp only [List.map_nil, List.map_cons, List.cons_ne_nil] at same
+    | nil =>
+      simp only [List.map_nil, List.map_cons] at same
+      exact List.noConfusion same
     | cons updated remaining =>
-      obtain ⟨head, tail⟩ := List.cons.inj (by simpa only [List.map_cons] using same)
-      have sameWord : codeMeasure (wordConst word destination) =
-          codeMeasure (wordConst updated destination) := by
-        simp only [wordConst, head]
-        split
-        · rfl
-        · exact konstWL_measure 4 _ _ _
-      have ⟨headLength, headFrame⟩ := Prod.mk.inj sameWord
-      have ⟨tailLength, tailFrame⟩ := Prod.mk.inj (ih tail (destination + 1))
-      simp only [constWords, codeMeasure, List.length_append, headLength, headFrame, tailLength, tailFrame]
+      simp only [List.map_cons, List.cons.injEq] at same
+      simp only [constWords, codeMeasure_concat,
+        wordConst_measure word updated destination same.1, ih same.2 (destination + 1)]
 
 theorem wordConst_top (w : Runner.W) (d : Nat) : d < (wordConst w d).2 := by
   unfold wordConst
