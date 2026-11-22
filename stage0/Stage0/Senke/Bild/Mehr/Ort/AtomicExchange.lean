@@ -2,6 +2,8 @@ module
 
 public import Stage0.Senke.Sperre.Bindung.ImageCAS
 public import Stage0.Senke.Welt.WordCell
+public import Stage0.Senke.Anweisung.Atomara
+import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -9,6 +11,42 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke.Faeden
   Runner Runner.IR Runner.Mem Runner.Mach Runner.Beweis
+
+/-- The winning or retrying CAS of the actual emitted exchange reads the
+    checked scratch values and addresses the declared shared global. -/
+theorem image_exchange_prefix [Kern]
+    {machine : Cfg imageTSO (Res T)} {code : List II} {base frame : W}
+    {thread position scratch address : Nat} {calculation : List II} {expected new : W}
+    (atCode : At code position (exC scratch address calculation))
+    (encoded : CodeAt (machine.ms.1.view thread) base code)
+    (sized : scratch + 3 < 2 ^ 31)
+    (old : (machine.ms.1.view thread).rd64 (slot frame (BitVec.ofNat 64 scratch)) = some expected)
+    (replacement : (machine.ms.1.view thread).rd64 (slot frame (BitVec.ofNat 64 (scratch + 1))) = some new)
+    (location : (machine.ms.1.view thread).rd64 (slot frame (BitVec.ofNat 64 (scratch + 2))) =
+      some (BitVec.ofNat 64 address))
+    (running : machine.ths[thread]? = some (some (.next
+      ⟨base + BitVec.ofNat 64 (16 * (position + (2 + calculation.length) + 1)), frame⟩))) :
+    let pointer := T.mk (base + BitVec.ofNat 64 (16 * (position + (2 + calculation.length) + 1))) frame
+    ProcessPrefix imageTSO actI machine [] 7
+      ⟨machine.ms, machine.ths.set thread (some (.ask (.cas (BitVec.ofNat 64 address) expected new)
+        (fun reply => opt reply fun pair => ret1 pointer pair.1)))⟩ := by
+  have casCell : code[position + (2 + calculation.length) + 1]? =
+      some (ci 22 ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int) scratch) := by
+    let front := [ci 1 scratch address 0, ci 15 scratch scratch 0] ++ calculation
+    let back := [ci 1 ((scratch + 2 : Nat) : Int) address 0,
+      ci 22 ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int) scratch,
+      ci 14 ((scratch + 3 : Nat) : Int) ((scratch + 3 : Nat) : Int) scratch,
+      ci 19 ((scratch + 3 : Nat) : Int) (-(16 * ((calculation.length + 5 : Nat) : Int))) 0]
+    have suffix := At.right (xs := front) (ys := back) atCode
+    have cell := suffix.get (j := 1) (x := ci 22 ((scratch + 3 : Nat) : Int) ((scratch + 2 : Nat) : Int) scratch) rfl
+    simpa only [front, List.length_append, List.length_cons, List.length_nil] using cell
+  refine image_cas_at running encoded rfl casCell ?_ ?_ ?_
+  · rw [sx_nat (by omega)]
+    exact location
+  · rw [sx_nat (by omega)]
+    exact old
+  · rw [sx_nat (by omega), slot_plus8]
+    exact replacement
 
 /-- The linearization point of an emitted atomic exchange is its real
     shared CAS. Failure returns the current word without publication.
@@ -88,7 +126,7 @@ theorem image_exchange_GX [Kern] {D : Deklaration} {layout : Senke.Lay D}
     (head : (source.m.faeden thread).kopf.rest =
       ⟨l, Γ, Λ, env, .dann (.exchange global expression write allowed body) tail⟩)
     (live : source.lebt thread = true) (ready : source.wartet thread = [])
-    (held : HeldIn Λ (offen (source.m.faeden thread).spur))
+    (held : Gabbro.Grammatik.HeldIn Λ (offen (source.m.faeden thread).spur))
     (single : aggregateFits (D.gtyp global) = true)
     (represented : WeltAt (projectSCState footprint machine.ms).1 layout (source.m.weltVon thread))
     (geometry : LayIn layout) (separate : LayDis layout)
