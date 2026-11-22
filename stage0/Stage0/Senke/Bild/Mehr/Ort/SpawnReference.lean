@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Bild.Mehr.Ort.SilentControl
+public import Stage0.Senke.Bild.Mehr.Ort.MemoryReference
 public import Stage0.Senke.Start
 import Lean.Elab.Tactic.Omega
 
