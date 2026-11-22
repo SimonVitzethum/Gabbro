@@ -378,8 +378,9 @@ public structure NamedPoll (u : UProg) (ctx : UCtx) (function : AsyncFn) (types 
       Option (ResolvedPoll u (verOf u fn) (resOf u fn) types name)}
     (resolved : NamedPoll u ctx function types children) (program : Programm (declOf u)) :
     Programm (declOf u) :=
+  letI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
   { program with rumpf := fun fn =>
-      if equal : (fn : Fin u.fns.length) = resolved.poll then equal.symm ▸ resolved.body
+      if equal : fn = resolved.poll then equal.symm ▸ resolved.body
       else program.rumpf fn }
 
 public theorem NamedPoll.install_body {u : UProg} {ctx : UCtx} {function : AsyncFn} {types : TypeResolution}
