@@ -74,16 +74,18 @@ theorem specTextSliceArgument_erfuellbar (ctx : UCtx) (text : String) (first las
     uWertBody ctx argument = .ok (.slice (.text bytes) first last) ∧
       uSpecValueArgument ctx (.str (last - first)) argument = .ok () := by
   intro argument bytes
+  have nonnegative : ¬ (first : Int) < 0 := by omega
   have ordered : ¬ (last : Int) < first := by have low := bounds.1; omega
   have read : uWertBody ctx argument = .ok (.slice (.text bytes) first last) := by
-    simp [argument, bytes, uWertBody, uRechne, uFixedLocalArraySlice, uFullLocalSlice, uSchranke, ordered]
+    simp [argument, bytes, uWertBody, uRechne, uFixedLocalArraySlice, uFullLocalSlice, uSchranke,
+      nonnegative, ordered, bind, Except.bind, pure, Except.pure]
   obtain ⟨decoded, valid⟩ := bytesZahl_uint8 text.toUTF8.toList
   have length := bytesZahl_laenge _ decoded valid
   rw [List.length_map] at length
   have inside : first ≤ last ∧ last ≤ decoded.length := ⟨bounds.1, length.symm ▸ bounds.2⟩
   refine ⟨read, ?_⟩
   simp only [uSpecValueArgument, read, bind, Except.bind, argument, uSpecValueType, bytes, valid,
-    Option.bind_some, inside, ite_true, pure, Except.pure] <;> rfl
+    Option.bind_some, inside, and_self, ite_true, pure, Except.pure] <;> rfl
 
 /-- The ordinary source reader keeps a concatenation of accepted
     arguments as the same pair of operands through the precheck. -/
