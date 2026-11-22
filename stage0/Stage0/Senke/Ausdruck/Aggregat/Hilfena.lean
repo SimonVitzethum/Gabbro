@@ -124,6 +124,7 @@ private theorem konstWL_measure (chunks first second destination : Nat) :
 /-- Relocating encoded constants without changing which values fit in
     a single immediate preserves the dimensions of their emitted code.
     The actual words may differ arbitrarily within that partition. -/
+set_option maxRecDepth 4096 in
 theorem constWords_measure {first second : List Runner.W}
     (same : first.map (fun word => lit32 word.toInt) = second.map (fun word => lit32 word.toInt))
     (destination : Nat) :
@@ -132,12 +133,12 @@ theorem constWords_measure {first second : List Runner.W}
   | nil =>
     cases second with
     | nil => rfl
-    | cons word rest => cases same
+    | cons word rest => simp only [List.map_nil, List.map_cons, List.nil_ne_cons] at same
   | cons word rest ih =>
     cases second with
-    | nil => cases same
+    | nil => simp only [List.map_nil, List.map_cons, List.cons_ne_nil] at same
     | cons updated remaining =>
-      have ⟨head, tail⟩ := List.cons.inj same
+      obtain ⟨head, tail⟩ := List.cons.inj (by simpa only [List.map_cons] using same)
       have sameWord : codeMeasure (wordConst word destination) =
           codeMeasure (wordConst updated destination) := by
         simp only [wordConst, head]
