@@ -9,6 +9,63 @@ open Segment
 variable {D : Deklaration} {types : TypeResolution} {f : AsyncFn}
   {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
+/-- Generate the active child case from the resolved constructor. The
+    constructor receives just its already evaluated argument bindings. -/
+@[expose] public def activeChildExpr {name : String}
+    (callee : AwaitedCall D V Λ types name) (path : List Nat) (args : List Parser.SExpr)
+    (rename : ∀ {τ : Ty}, Var callee.parameters τ → Var Γ τ) :
+    Expr D Γ Λ (taskStorageType types path (.call name args)) :=
+  .case [some (types.childState name), some (types.childResult name)] ⟨0, Nat.zero_lt_succ 1⟩
+    (.val (callee.construct.ren rename))
+
+/-- The emitted leaf constructor produces the exact lazy child in the
+    world reached by the semantic constructor on the typed arguments. -/
+public theorem activeChildExpr_rep (elaboration : Elaboration D V Λ types f) (path : List Nat)
+    (name : String) (args : List Parser.SExpr) (callee : AwaitedCall D V Λ types name)
+    (known : elaboration.callee name = some callee) (arguments : List (Value D))
+    (parameters : Env D callee.parameters) (typed : argumentsEnv D callee.parameters arguments = some parameters)
+    (world : World D) (env : Env D Γ) (rename : ∀ {τ : Ty}, Var callee.parameters τ → Var Γ τ)
+    (agrees : parameters.AgreesUnder env rename) :
+    let actual := evaluateExpression (activeChildExpr callee path args rename) world env
+    let model := constructChild elaboration name arguments world
+    TaskRep D types path (.call name args) (.leaf model.1) actual.1 ∧
+      actual.2.1 = model.2.1 ∧ actual.2.2 = 1 + model.2.2 := by
+  intro actual model
+  have preserved := callee.construct.ren_sound rename
+  have exactStorage := preserved.2.2 (world.lese Λ callee.construct.orte)
+    (world.lese Λ callee.construct.orte) parameters env agrees
+  have computed := constructChild_resolved elaboration name callee known arguments parameters typed world
+  change TaskRep D types path (.call name args) (.leaf (constructChild elaboration name arguments world).1)
+      (evaluateExpression (activeChildExpr callee path args rename) world env).1 ∧
+    (evaluateExpression (activeChildExpr callee path args rename) world env).2.1 =
+      (constructChild elaboration name arguments world).2.1 ∧
+    (evaluateExpression (activeChildExpr callee path args rename) world env).2.2 =
+      1 + (constructChild elaboration name arguments world).2.2
+  rw [computed]
+  simp only [activeChildExpr, evaluateExpression, Expr.orte, NutzlastExpr.orte, preserved.1,
+    eval, evalNutz, exactStorage, kostenExpr, kostenNutz, preserved.2.1]
+  exact ⟨.callActive path name args _, rfl, rfl⟩
+
+/-- Combine the two typed child slots of a generated join in source order. -/
+@[expose] public def joinChildrenExpr (types : TypeResolution) (path : List Nat) (left right : FutureExpr)
+    (first : Expr D Γ Λ (taskStorageType types (0 :: path) left))
+    (second : Expr D Γ Λ (taskStorageType types (1 :: path) right)) :
+    Expr D Γ Λ (taskStorageType types path (.join left right)) :=
+  let pair := Ty.prod (types.recordName (4 :: path))
+    [taskStorageType types (0 :: path) left, taskStorageType types (1 :: path) right]
+  .case [some pair, some (taskResultType types path (.join left right))] ⟨0, Nat.zero_lt_succ 1⟩
+    (.val (.prod (types.recordName (4 :: path)) (.cons first (.cons second .nil))))
+
+public theorem joinChildrenExpr_rep (types : TypeResolution) (path : List Nat) (left right : FutureExpr)
+    (first : Expr D Γ Λ (taskStorageType types (0 :: path) left))
+    (second : Expr D Γ Λ (taskStorageType types (1 :: path) right))
+    (entry world : World D) (env : Env D Γ) (l r : Task (Value D) (Child D types))
+    (leftRep : TaskRep D types (0 :: path) left l (eval entry first world env))
+    (rightRep : TaskRep D types (1 :: path) right r (eval entry second world env)) :
+    TaskRep D types path (.join left right) (.join l r)
+      (eval entry (joinChildrenExpr types path left right first second) world env) :=
+  .joinActive leftRep rightRep
+
 /-- Enter Waiting by evaluating the child constructor once and retaining
     just the live continuation frame. This block never polls the child. -/
 @[expose] public def lowerAwaitConstruction (types : TypeResolution) (f : AsyncFn) (tag : Nat)
