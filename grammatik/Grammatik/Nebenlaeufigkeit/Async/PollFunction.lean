@@ -314,19 +314,19 @@ public theorem pollFunction_refines {elaboration : Elaboration D V Λ types f}
   rw [start]
   have guard := pollGuard_exec types f inventory state oracle passes calls world env source represented
     (V := V) (Λ := Λ) (l := false)
+  let overflow := rejectBlock D V false context Λ
+  change PollFunctionRefines inventory result
+    ((execEnd oracle passes calls (.cons (pollGuard types f state)
+      (.cons (checkedRetryStmt table state finished overflow)
+        (.cons (pollAnswer state result exit) (.ret (resultExpr result (pendingReply state)) exit))))
+      world env).schrumpf) _
   by_cases active : Pollable source
   · have accepted : pollGuardResult (V := V) (l := false) world env source = .ok world env := by
       cases source <;> first | rfl | exact active.elim
     have passed : execStmt oracle passes calls (pollGuard (V := V) (Λ := Λ) (l := false) types f state) world env =
         .ok world env := guard.trans accepted
-    let overflow := rejectBlock D V false context Λ
     have loop := checkedRetryStmt_refines table inventory fixed state finished Nat.one_ne_zero oracle passes calls
       prices overflow source world env rfl represented
-    change PollFunctionRefines inventory result
-      ((execEnd oracle passes calls (.cons (pollGuard types f state)
-        (.cons (checkedRetryStmt table state finished overflow)
-          (.cons (pollAnswer state result exit) (.ret (resultExpr result (pendingReply state)) exit))))
-        world env).schrumpf) _
     simp only [execEnd, passed]
     cases answered : resolvedPoll elaboration calls prices source world with
     | error failure =>
@@ -350,7 +350,7 @@ public theorem pollFunction_refines {elaboration : Elaboration D V Λ types f}
       obtain ⟨updated, executed, invariant, _⟩ := loop
       change execStmt oracle passes calls (checkedRetryStmt table state finished overflow) world env =
         .ok after updated at executed
-      rw [executed]
+      simp only [executed]
       cases event with
       | next => exact shape.elim
       | refused => exact (shape active).elim
@@ -375,6 +375,6 @@ public theorem pollFunction_refines {elaboration : Elaboration D V Λ types f}
       cases source <;> first | rfl | exact (active trivial).elim
     have answered : resolvedPoll elaboration calls prices source world = .ok (.refused, source, world, 0) := by
       rw [resolvedPoll, terminal]
-    simp only [pollFunctionRest, execEnd, stopped, EndAusgang.schrumpf, answered, PollFunctionRefines]
+    simp only [execEnd, stopped, EndAusgang.schrumpf, answered, PollFunctionRefines]
 
 end Gabbro.Grammatik.Async.Representation
