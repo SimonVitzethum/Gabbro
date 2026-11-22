@@ -120,6 +120,50 @@ theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
       simpa only [Nat.succ_sub_succ_eq_sub] using
         ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
 
+private theorem sc_memory_step_continues {layout : Runner.Beweis.Lay}
+    {before expected : Cfg (SC layout) (Res T)} {ending : Ende}
+    (reference : SCSchritt layout 0 before expected) (one : before.ths.length = 1)
+    (actual : Tr (SC layout) actI before [] ending 1) :
+    ending = .lauf := by
+  cases actual with
+  | tau invalid _ => cases invalid
+  | priv _ _ tail | ask _ _ _ _ _ tail => cases tail; rfl
+  | stop found stopped =>
+    have issuer := onlySlot one found
+    subst issuer
+    cases reference with
+    | priv ready =>
+      rw [ready] at found
+      cases found
+      cases stopped
+    | ask ready _ _ =>
+      rw [ready] at found
+      cases found
+      cases stopped
+  | @askStop i control request resume answer memory found asked _ _ stopped =>
+    cases control <;> simp only [actI, reduceCtorEq, Res.ask.injEq] at asked
+    obtain ⟨_, rfl⟩ := asked
+    cases stopped
+
+/-- An actual silent SC run cannot stop while its certified memory
+    reference has a next step. This excludes both machine faults and
+    unknown instructions before the reference boundary. -/
+theorem SCMemoryPrefix.no_terminal {layout : Runner.Beweis.Lay}
+    {before expected : Cfg (SC layout) (Res T)} {available taken : Nat} {ending : Ende}
+    (reference : SCMemoryPrefix layout before available expected)
+    (actual : Tr (SC layout) actI before [] ending taken)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths)
+    (within : taken ≤ available) : ending = .lauf := by
+  by_contra stopped
+  obtain ⟨boundary, earlier, last, steps, prefix, terminal, events, rfl⟩ := actual.split_stop stopped
+  obtain ⟨rfl, rfl⟩ := List.append_eq_nil_iff.mp events.symm
+  have remaining := reference.consume prefix one blind (by omega)
+  have active : 0 < available - steps := by omega
+  cases remaining with
+  | nil => omega
+  | cons next _ =>
+    exact stopped (sc_memory_step_continues next (prefix.silent_slots rfl |>.trans one) terminal)
+
 theorem SCMemoryPrefix.trans {layout : Runner.Beweis.Lay}
     {before middle after : Cfg (SC layout) (Res T)} {first second : Nat}
     (a : SCMemoryPrefix layout before first middle)
