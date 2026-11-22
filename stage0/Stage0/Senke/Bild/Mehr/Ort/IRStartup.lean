@@ -180,6 +180,82 @@ theorem Emitted.SpawnPrefix.answer_memory {index : Nat} (declared : index < outp
   · cases clone
     cases ordinary
 
+/-- The active startup reference survives a silent process step.
+    Changes by another issuer need only preserve the startup read region. -/
+theorem Emitted.SpawnPrefix.silent_step {index : Nat} (declared : index < output.starts.length)
+    {before after : Cfg imageTSO (Res T)} {previous : Res T} {events : List Ev}
+    (phase : output.SpawnPrefix index previous (before.ms.1.view 0))
+    (active : before.ths[0]? = some (some previous))
+    (step : ProcessStep imageTSO actI before events after) (quiet : events = [])
+    (stable : after.ths[0]? = before.ths[0]? →
+      BildMehr.GleichAuf (imageRootReads output 0) (after.ms.1.view 0) (before.ms.1.view 0)) :
+    ∃ control, after.ths[0]? = some (some control) ∧ output.SpawnPrefix index control (after.ms.1.view 0) := by
+  have untouched (same : after.ths[0]? = before.ths[0]?) :
+      ∃ control, after.ths[0]? = some (some control) ∧ output.SpawnPrefix index control (after.ms.1.view 0) :=
+    ⟨previous, same.trans active, phase.transport (stable same)⟩
+  have indexPresent := (List.getElem?_eq_some_iff.mp active).1
+  cases step with
+  | tau => exact untouched rfl
+  | @priv issuer control _ found moved =>
+    by_cases own : issuer = 0
+    · subst issuer
+      have exactControl := Option.some.inj (Option.some.inj (found.symm.trans active))
+      subst control
+      cases previous with
+      | next pointer =>
+        cases moved
+        exact ⟨_, List.getElem?_set_self indexPresent, phase.begin⟩
+      | ask | fault | unk => cases moved
+    · exact untouched (List.getElem?_set_ne own)
+  | @ask issuer control _ operation continuation reply memory found asked ordinary answered advanced =>
+    by_cases own : issuer = 0
+    · subst issuer
+      have exactControl := Option.some.inj (Option.some.inj (found.symm.trans active))
+      subst control
+      cases previous with
+      | next | fault | unk => cases asked
+      | ask request resume =>
+        cases asked
+        cases advanced
+        have permitted : BildMehr.istSpeicherOp request = true := by
+          obtain ⟨_, _, table, code, frame, path, _⟩ := phase
+          obtain ⟨_, _, _, _, classify⟩ := output.workerReference table code frame declared
+          rcases classify path with access | clone
+          · exact access.1
+          · cases clone
+            exact ((by decide : ¬ (Op.sys cloneReq).special = false) ordinary).elim
+        exact ⟨_, List.getElem?_set_self indexPresent, phase.answer_memory declared permitted answered⟩
+    · exact untouched (List.getElem?_set_ne own)
+  | exit | cloneNo | clone => cases quiet
+
+/-- Select the main thread's actual local controls from an arbitrarily
+    interleaved silent path through a single installed spawn site. -/
+theorem Emitted.SpawnPrefix.follow_silent {index : Nat} (declared : index < output.starts.length)
+    {start finish : Cfg imageTSO (Res T)} {control : Res T} {count : Nat}
+    (path : ProcessPrefix imageTSO actI start [] count finish)
+    (running : start.ths[0]? = some (some control))
+    (phase : output.SpawnPrefix index control (start.ms.1.view 0))
+    (stable : ∀ {before after : Cfg imageTSO (Res T)} {steps : Nat},
+      ProcessPrefix imageTSO actI start [] steps before →
+      ProcessStep imageTSO actI before [] after → after.ths[0]? = before.ths[0]? →
+      BildMehr.GleichAuf (imageRootReads output 0) (after.ms.1.view 0) (before.ms.1.view 0)) :
+    ∃ residual, finish.ths[0]? = some (some residual) ∧ output.SpawnPrefix index residual (finish.ms.1.view 0) := by
+  suffices follow : ∀ {before after : Cfg imageTSO (Res T)} {events : List Ev} {steps : Nat},
+      ProcessPrefix imageTSO actI before events steps after → events = [] →
+      ∀ {prior current}, ProcessPrefix imageTSO actI start [] prior before →
+        before.ths[0]? = some (some current) → output.SpawnPrefix index current (before.ms.1.view 0) →
+        ∃ residual, after.ths[0]? = some (some residual) ∧ output.SpawnPrefix index residual (after.ms.1.view 0)
+    from follow path rfl (.nil start) running phase
+  intro before after events steps execution
+  induction execution with
+  | nil => exact fun _ _ active activePhase => ⟨_, active, activePhase⟩
+  | cons step _ ih =>
+    intro quiet prior current earlier active activePhase
+    obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet
+    have silent := first ▸ step
+    obtain ⟨residual, ready, remaining⟩ := activePhase.silent_step declared active step first (stable earlier silent)
+    exact ih rest (earlier.trans (.ofStep silent)) ready remaining
+
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
     let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
