@@ -46,6 +46,7 @@ import Grammatik.Nebenlaeufigkeit.Async.Representation.Dispatch
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ArgumentLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.ConstructLowering
 import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedAwait
+import Grammatik.Nebenlaeufigkeit.Async.Representation.CheckedDispatch
 import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 import Grammatik.Zielsatz.Atomar.CallSite.CallSiteGoalStep
 import Grammatik.Zielsatz.BeweisAtomar
