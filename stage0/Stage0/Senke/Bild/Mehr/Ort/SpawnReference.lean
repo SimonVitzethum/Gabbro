@@ -24,7 +24,10 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     ∃ (count : Nat) (prepared : Mem) (invariant : TabInv layout prepared),
       SCMemoryPrefix layout ⟨⟨memory, table⟩, [some (.next ⟨pc, fp⟩)]⟩ count
         ⟨⟨prepared, invariant⟩, [some (.ask (.sys cloneReq) fun answer =>
-          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)]⟩ := by
+          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)]⟩ ∧
+      ∀ {seen : Req} {resume : Ans → Res T} {actual}, SoloLauf ⟨pc, fp⟩ memory (.ask (.sys seen) resume) actual →
+        (.ask (.sys seen) resume : Res T) = .ask (.sys cloneReq) (fun answer =>
+          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) ∧ actual = prepared := by
   intro parent child
   let initial : T := ⟨pc, fp⟩
   let middle : T := ⟨pc + 16, fp⟩
@@ -70,8 +73,8 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     exact rd64_wr64 (wr64_some (next.wr (scratch + 1) (by omega))) (next.rd (scratch + 1) (by omega))
   have initialBlock : StarM 2 initial memory parent prepared :=
     .next wroteFirst (.next wroteSecond (.refl _ _))
-  obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock
-    (spawnInstruction_reference decoded childEntry childFrame) table
-  exact ⟨count, prepared, invariant, reference⟩
+  have request := spawnInstruction_reference decoded childEntry childFrame
+  obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock request table
+  exact ⟨count, prepared, invariant, reference, fun ran => SoloLauf.host_unique initialBlock request ran⟩
 
 end Gabbro.Stage0.Senke.BildMehr

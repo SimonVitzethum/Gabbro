@@ -68,7 +68,12 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     ∃ (count : Nat) (expected : Cfg (SC L0) (Res T)),
       BildMehr.SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
-        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] ∧
+      ∀ {seen : Req} {resume : Ans → Res T} {actual : Mem},
+        BildMehr.SoloLauf ⟨pc, parent.fp⟩ view (.ask (.sys seen) resume) actual →
+        (.ask (.sys seen) resume : Res T) = .ask (.sys cloneReq) (fun answer =>
+          opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1) ∧
+        actual = expected.ms.1 := by
   intro pc parent child
   let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)
   let stack := output.image.fp0 + 8 * (output.image.Ks * (j + 1))
@@ -108,9 +113,9 @@ theorem Emitted.workerReference (output : Emitted src reserve options)
     apply codeFar_nat _ room
     simp only [headLen, startLen] at frameStart
     omega
-  obtain ⟨count, prepared, preserved, ran⟩ :=
+  obtain ⟨count, prepared, preserved, ran, unique⟩ :=
     BildMehr.spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
-  exact ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl⟩
+  exact ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl, fun actual => unique actual⟩
 
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
@@ -133,7 +138,7 @@ private theorem LoadedIRImage.firstWorkerReference
     exact congrArg (fun state : (SC L0).St =>
       ⟨state, (output.irEntry memory).ths⟩ : (SC L0).St → Cfg (SC L0) (Res T))
       (Subtype.ext startMemory)
-  obtain ⟨count, expected, reference, waiting⟩ :=
+  obtain ⟨count, expected, reference, waiting, _⟩ :=
     output.workerReference memory.2.1 (output.loaded_code loaded.payload) firstFrame workers
   refine ⟨count, expected, ?_, ?_⟩
   · rw [exactStart]

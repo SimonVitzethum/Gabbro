@@ -8,6 +8,61 @@ namespace Gabbro.Stage0.Senke.BildMehr
 
 open Runner Runner.IR Runner.Beweis Runner.Mach BildLauf
 
+private theorem RunP.host_unique {initial : Res T} {before after : Mem}
+    {call : Req} {resume : Ans → Res T}
+    (reference : RunP initial before (.ask (.sys call) resume) after) :
+    ∀ {seen : Req} {k : Ans → Res T} {actual : Mem},
+      RunP initial before (.ask (.sys seen) k) actual →
+      (.ask (.sys seen) k : Res T) = .ask (.sys call) resume ∧ actual = after := by
+  induction reference with
+  | refl =>
+    intro seen k actual ran
+    cases ran with
+    | refl => exact ⟨rfl, rfl⟩
+    | ask answer _ => cases answer
+  | ask answer _ ih =>
+    intro seen k actual ran
+    cases ran with
+    | refl => cases answer
+    | ask observed rest =>
+      rw [answer] at observed
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj observed)
+      exact ih rest
+
+/-- A whole memory reference through the final request selects the same
+    host continuation for every solo run from its entry. The run may be
+    interleaved with other threads that preserve this memory view. -/
+theorem SoloLauf.host_unique {start boundary : T} {before middle after : Mem}
+    {count : Nat} {call : Req} {resume : Ans → Res T}
+    (reference : StarM count start before boundary middle)
+    (tail : RunP (step boundary) middle (.ask (.sys call) resume) after) :
+    ∀ {seen : Req} {k : Ans → Res T} {actual : Mem},
+      SoloLauf start before (.ask (.sys seen) k) actual →
+      (.ask (.sys seen) k : Res T) = .ask (.sys call) resume ∧ actual = after := by
+  induction reference with
+  | refl =>
+    intro seen k actual ran
+    obtain ⟨used, pointer, memory, complete, pending⟩ := ran
+    rcases pending with ⟨impossible, _⟩ | pending
+    · cases impossible
+    cases complete with
+    | refl => exact RunP.host_unique tail pending
+    | next first _ =>
+      cases tail.remaining first with
+      | ask answer _ => cases answer
+  | next first _ ih =>
+    intro seen k actual ran
+    obtain ⟨used, pointer, memory, complete, pending⟩ := ran
+    rcases pending with ⟨impossible, _⟩ | pending
+    · cases impossible
+    cases complete with
+    | refl =>
+      cases pending.remaining first with
+      | ask answer _ => cases answer
+    | next executed later =>
+      obtain ⟨rfl, rfl⟩ := first.det executed.run
+      exact ih ⟨_, _, _, later, Or.inr pending⟩
+
 /-- A memory-only execution of an instruction tree supplies the SC
     reference up to its residual control, including pending host calls. -/
 theorem RunP.sc_reference {layout : Runner.Beweis.Lay}
