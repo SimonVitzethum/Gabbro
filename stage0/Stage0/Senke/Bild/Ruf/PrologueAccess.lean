@@ -1,7 +1,7 @@
 module
 
 public import Stage0.Senke.Bild.Ruf.RootProlog
-import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
+public import Stage0.Senke.Bild.Mehr.Ort.LockFootprint
 import Stage0.Senke.Bild.Ruf.Idle.Lowering
 
 @[expose] public section
