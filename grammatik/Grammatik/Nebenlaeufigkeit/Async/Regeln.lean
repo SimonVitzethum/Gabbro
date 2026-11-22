@@ -72,7 +72,44 @@ public theorem asyncOrder_sound {functions : List AsyncFn} (ordered : asyncOrder
     exact ⟨List.contains_iff_mem.mp (Bool.and_eq_true_iff.mp valid).1,
       of_decide_eq_true (Bool.and_eq_true_iff.mp valid).2⟩
   exact ⟨of_decide_eq_true distinct, edge,
-    Subrelation.wf (fun h => (edge _ _ h).2) (measure_wf names.idxOf)⟩
+    Subrelation.wf (fun h => (edge _ _ h).2) (measure names.idxOf).wf⟩
+
+/-- Resolve ready declarations in batches and retain source order within
+    each batch. Permutation is proved in the recursion independently of
+    the check on the final result. -/
+@[expose] public def arrangeAsync : Nat → List String → (todo : List AsyncFn) →
+    Except String { ordered : List AsyncFn // ordered.Perm todo }
+  | _, _, [] => .ok ⟨[], .refl _⟩
+  | 0, _, _ :: _ => .error "async: exhausted declaration ordering"
+  | fuel + 1, defined, todo@(_ :: _) => do
+    let ready := fun function : AsyncFn => function.callees.all defined.contains
+    let available := todo.filter ready
+    if available.isEmpty then throw "async: unknown or recursive future dependency"
+    let ordered ← arrangeAsync fuel (defined ++ available.map AsyncFn.name)
+      (todo.filter fun function => !ready function)
+    return ⟨available ++ ordered.val,
+      (ordered.property.append_left available).trans (List.filter_append_perm ready todo)⟩
+
+public structure OrderedAsync (functions : List AsyncFn) where
+  declarations : List AsyncFn
+  permutation : declarations.Perm functions
+  checked : asyncOrderB declarations = true
+
+/-- Forward references are resolved before layout. Only the checked
+    order is passed on, so the implementation of the search is outside
+    the proof of closedness and acyclicity. -/
+@[expose] public def orderAsync (functions : List AsyncFn) :
+    Except String (OrderedAsync functions) := do
+  let ordered ← arrangeAsync functions.length [] functions
+  if valid : asyncOrderB ordered.val = true then
+    return ⟨ordered.val, ordered.property, valid⟩
+  else throw "async: duplicate declaration or inconsistent dependency order"
+
+public theorem OrderedAsync.wellFounded {functions : List AsyncFn} (order : OrderedAsync functions) :
+    WellFounded (AsyncDependency functions) := by
+  apply Subrelation.wf _ (asyncOrder_sound order.checked).2.2
+  rintro child caller ⟨function, member, named, depends⟩
+  exact ⟨function, order.permutation.mem_iff.mpr member, named, depends⟩
 
 @[expose] public def without (name : String) (names : List String) : List String :=
   names.filter (fun candidate => !(candidate == name))
