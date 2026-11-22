@@ -46,6 +46,24 @@ structure MTRel (P : Programm D) (O : Orakel D) (passes : Nat) (L : Lay D) (c : 
   welt : WeltAt mk L (K.m.speicher.welt [])
   aussen : ∀ y, (∀ i s, S i = some s → ¬ s.Wr y) → GleichAt c.m mk y
 
+/-- Startup can have allocated root slots before any lowered body is
+    registered. The committed view is already the exact source world. -/
+theorem MTRel.no_registered_threads {P : Programm D} {O : Orakel D} {passes : Nat} {L : Lay D}
+    {c : PCfg} {state : FadenMaschine D} (positions : Nat → MLage D)
+    (empty : ∀ i r, c.ths[i]? ≠ some (some r)) (world : WeltAt c.m L (state.m.speicher.welt [])) :
+    MTRel P O passes L c state (fun _ => none) positions c.m where
+  zustand := fun _ _ h => by cases h
+  lebend := fun i r h => (empty i r h).elim
+  mem := ⟨fun _ _ h => by cases h, fun _ _ h => by cases h, fun _ _ _ _ _ h => by cases h⟩
+  lage := fun _ _ h => by cases h
+  prog := fun _ _ h => by cases h
+  solo := fun _ _ h => by cases h
+  lebtG := fun _ _ h => by cases h
+  inj := fun _ _ _ _ h => by cases h
+  amRand := fun _ _ h => by cases h
+  welt := world
+  aussen := fun address _ => GleichAt.refl _ address
+
 /-- Whatever a field asks of every thread with a `Solo`, it asks after a replacement too. -/
 theorem setzeS_alt {S : Nat → Option Solo} {i j : Nat} {s s' u : Solo} (hi : S i = some s)
     (h : setzeS S i s' j = some u) : ∃ u0, S j = some u0 := by

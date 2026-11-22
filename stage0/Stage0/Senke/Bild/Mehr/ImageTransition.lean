@@ -14,6 +14,29 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Ueberset
 
 variable [Kern]
 
+/-- Once an entry position exists, the initial empty case has the same
+    body relation as a partially started image. The other root slots
+    retain their original phase. -/
+theorem ImageRuntimeMatches.body_relation {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
+    {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
+    {machine : Cfg imageTSO (Res T)} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (matched : ImageRuntimeMatches output E O history machine state)
+    (entry : MLage (declOf output.compiled.unit).mitRuhe) :
+    ∃ footprint body snapshots positions committed,
+      PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
+      MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+        ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
+      (∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
+      ∀ i, body[i]? = machine.ths[i]? ∨
+        ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
+          ImageRootPhase output E history (machine.ms.1.view i) i r state := by
+  obtain ⟨footprint, body, privateBuffers, length, relation, slots⟩ := matched
+  rcases relation with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, positionsMatch⟩
+  · exact ⟨footprint, body, fun _ => none, fun _ => entry, _, privateBuffers, length,
+      MTRel.no_registered_threads (fun _ => entry) empty world, fun _ _ absent => by cases absent, slots⟩
+  · exact ⟨footprint, body, snapshots, positions, committed, privateBuffers, length, related, positionsMatch, slots⟩
+
 private theorem exitGroup_request {M : MemSys} {θ : Type} {act : θ → Res θ} {before : Cfg M θ}
     {last : List Ev} {status : W} (terminal : Tr M act before last (.exit status) 1) :
     ∃ i t req k, before.ths[i]? = some (some t) ∧ act t = .ask (.sys req) k ∧
