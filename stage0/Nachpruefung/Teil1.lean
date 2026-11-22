@@ -216,6 +216,8 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Grammatik.Async.Segment.childPollBlock_reports_failure
 #print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_join_left_failure
 #print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_join_right_failure
+#print axioms Gabbro.Grammatik.Async.pollTaskWith_except_normal
+#print axioms Gabbro.Grammatik.Async.Segment.runTaskPoll_agrees_with_inducedModel
 #print axioms Gabbro.Grammatik.Async.Representation.await_construction_rep
 #print axioms Gabbro.Grammatik.Async.Representation.waiting_construction_inv
 #print axioms Gabbro.Grammatik.Async.Representation.await_construction_preserves

@@ -191,6 +191,26 @@ public theorem runTaskPoll_join_right_failure (elaboration : Elaboration D V Λ 
   pollChild := pollChild elaboration calls prices normal
   pair := Value.pair
 
+/-- The resource and state representation already proved for normal
+    polls uses this same task scheduler and these same leaf answers. -/
+public theorem runTaskPoll_agrees_with_inducedModel (elaboration : Elaboration D V Λ types f)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+    (task : Task (Value D) (Child D types)) (world : World D) :
+    runTaskPoll elaboration calls prices task world =
+      .ok (pollTask (inducedModel elaboration calls prices normal) task world) := by
+  unfold runTaskPoll
+  apply pollTaskWith_except_normal
+  intro child before
+  cases child with
+  | invalid => rfl
+  | active name storage =>
+    cases selected : elaboration.callee name with
+    | none => simp only [inducedModel, pollChild, selected]
+    | some callee =>
+      simp only [inducedModel, pollChild, selected]
+      exact runChildPoll_normal elaboration calls prices normal name callee selected storage before
+
 public theorem evaluateBound_resolved (elaboration : Elaboration D V Λ types f)
     (source : Parser.SExpr) (resolved : BoundExpression D Λ)
     (known : elaboration.expression source = some resolved)

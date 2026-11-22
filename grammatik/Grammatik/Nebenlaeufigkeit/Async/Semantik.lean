@@ -90,6 +90,29 @@ public theorem pollTask_join (model : Model Value Child W) (left right : Task Va
          (.ready value, .ready value, after, lc + rc + 1)
        | _, _ => (.pending, .join l r, after, lc + rc + 1)) := rfl
 
+/-- The outcome-aware task scheduler agrees with ordinary polling
+    whenever the leaf calls have the same normal answers. -/
+public theorem pollTaskWith_except_normal {Failure : Type} (model : Model Value Child W)
+    (poll : Child → W → Except Failure (Poll Value × Child × W × Nat))
+    (normal : ∀ child world, poll child world = .ok (model.pollChild child world)) :
+    ∀ task world, pollTaskWith poll model.pair task world = .ok (pollTask model task world)
+  | .ready _, _ => rfl
+  | .leaf child, world => by
+    rw [pollTaskWith, pollTask_leaf, normal]
+    generalize model.pollChild child world = answer
+    obtain ⟨event, next, after, cost⟩ := answer
+    cases event <;> rfl
+  | .join left right, world => by
+    rw [pollTaskWith, pollTask_join, pollTaskWith_except_normal model poll normal left world]
+    generalize pollTask model left world = first
+    obtain ⟨lp, l, middle, lc⟩ := first
+    simp only [bind, Except.bind]
+    rw [pollTaskWith_except_normal model poll normal right middle]
+    generalize pollTask model right middle = second
+    obtain ⟨rp, r, after, rc⟩ := second
+    cases lp <;> cases rp <;> rfl
+termination_by structural task _ => task
+
 public inductive Event (Value : Type) where
   | next
   | pending
