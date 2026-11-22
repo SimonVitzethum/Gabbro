@@ -71,6 +71,7 @@ def checkResultOnly {returnType ty : Ty} (source : Expr D (returnType :: params)
   | .fls => .ok ⟨.fls, fun _ _ _ _ => rfl⟩
   | .tru => .ok ⟨.tru, fun _ _ _ _ => rfl⟩
   | .glob g allowed => .ok ⟨.glob g allowed, fun _ _ _ _ => rfl⟩
+  | .strLit bytes fits => .ok ⟨.strLit bytes fits, fun _ _ _ _ => rfl⟩
   | .widen lo hi expr => do
     let pureExpr ← checkResultOnly expr
     return ⟨.widen lo hi pureExpr.term, fun old world value args => by
@@ -85,6 +86,15 @@ def checkResultOnly {returnType ty : Ty} (source : Expr D (returnType :: params)
     let b ← checkResultOnly rhs
     return ⟨.sub a.term b.term, fun old world value args => by
       simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
+  | .mul lhs rhs => do
+    let a ← checkResultOnly lhs
+    let b ← checkResultOnly rhs
+    return ⟨.mul a.term b.term, fun old world value args => by
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
+  | .neg operand => do
+    let projected ← checkResultOnly operand
+    return ⟨.neg projected.term, fun old world value args => by
+      simp only [eval, projected.exactValue old world value args] <;> rfl⟩
   | .lt lhs rhs => do
     let a ← checkResultOnly lhs
     let b ← checkResultOnly rhs
@@ -114,7 +124,38 @@ def checkResultOnly {returnType ty : Ty} (source : Expr D (returnType :: params)
     let pureExpr ← checkResultOnly expr
     return ⟨.not pureExpr.term, fun old world value args => by
       simp only [eval, pureExpr.exactValue old world value args] <;> rfl⟩
+  | .prodGet operand field => do
+    let projected ← checkResultOnly operand
+    return ⟨.prodGet projected.term field, fun old world value args => by
+      simp only [eval, projected.exactValue old world value args] <;> rfl⟩
+  | .arrGet operand index => do
+    let projected ← checkResultOnly operand
+    let selected ← checkResultOnly index
+    return ⟨.arrGet projected.term selected.term, fun old world value args => by
+      simp only [eval, projected.exactValue old world value args, selected.exactValue old world value args] <;> rfl⟩
+  | .strLen operand => do
+    let projected ← checkResultOnly operand
+    return ⟨.strLen projected.term, fun old world value args => by
+      simp only [eval, projected.exactValue old world value args] <;> rfl⟩
+  | .strGet operand index => do
+    let projected ← checkResultOnly operand
+    let selected ← checkResultOnly index
+    return ⟨.strGet projected.term selected.term, fun old world value args => by
+      simp only [eval, projected.exactValue old world value args, selected.exactValue old world value args] <;> rfl⟩
+  | .strEq lhs rhs => do
+    let a ← checkResultOnly lhs
+    let b ← checkResultOnly rhs
+    return ⟨.strEq a.term b.term, fun old world value args => by
+      simp only [eval, a.exactValue old world value args, b.exactValue old world value args] <;> rfl⟩
   | _ => .error "foreign post summary: unsupported operation, argument or entry-memory read"
+
+/-- A field of a result record is still the same typed field in the
+    projected contract. The proof covers every parameter context. -/
+theorem resultFieldProjection_erfuellbar {name : Nat} {fields : List Ty} {part : Ty}
+    (field : FieldAt fields part) :
+    let source : Expr D (.prod name fields :: params) [] part := .prodGet (.var .here) field
+    (checkResultOnly source).toOption.map (·.term) = some (.prodGet (.var .here) field) := by
+  rfl
 
 /-- A parameterless post in the current-world fragment already has the
     required result context. The old world is irrelevant by the expression
