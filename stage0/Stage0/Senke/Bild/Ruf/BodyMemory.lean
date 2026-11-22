@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
+public import Stage0.Senke.Bild.Ruf.ExpressionMemory
 
 @[expose] public section
 
@@ -205,54 +206,6 @@ theorem image_body_float [Kern] {before : Cfg imageTSO (Res T)}
   intro finish last later
   rw [exactAnswer] at later
   exact .fp valid later
-
-/-- The production expression proof works with write permission confined
-    to its frame. The memory restriction is used only in the proof. -/
-theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ : List (Res D)}
-    {Γ : Ctx} {τ : Ty} {memory : Mem} {pc fp : W} {K d reserved top : Nat}
-    {code : List II} {world initial : World D} {env : Env D Γ} {currentOld : Bool}
-    (expression : Expr D Γ Λ τ)
-    (lowered : Senke.lowE (reserved := reserved) (currentOld := currentOld) L expression d = some (code, top))
-    (fits : top ≤ K) (pre : Senke.PreS L memory pc fp K d code env reserved)
-    (valueMemory : Senke.WeltAt memory L world) (layout : Senke.LayIn L)
-    (separated : fp.toNat + 8 * K ≤ L.lo) (entry : currentOld = true → initial = world) :
-    @Senke.ValueOk D kernel.withoutSyscalls L (maskMemory (fun _ => True) (inSlots fp 0 K) memory) pc fp K d code τ
-      (eval initial expression world env) := by
-  classical
-  let restricted := maskMemory (fun _ => True) (inSlots fp 0 K) memory
-  have readSame : restricted.rd = memory.rd := by
-    funext byte
-    simp only [restricted, maskMemory, decide_true, Bool.and_true]
-  have exactMemory : restricted = { memory with wr := restricted.wr } := by
-    cases memory
-    simp only [restricted, maskMemory, decide_true, Bool.and_true]
-  have original : Senke.WeltAt restricted L world false := by
-    rw [exactMemory]
-    exact valueMemory.withWriteMap _
-  have frames : FrameOK restricted fp K := by
-    refine ⟨pre.frame.lt, fun index bound => ?_, fun index bound => ?_⟩
-    · rw [readSame]
-      exact pre.frame.rd index bound
-    · apply Mem.all_of
-      intro offset fitsWord
-      have addr := slot_toNat pre.frame.room bound
-      have inside : inSlots fp 0 K (slot fp (BitVec.ofNat 64 index) + BitVec.ofNat 64 offset) := by
-        simp only [inSlots, Nat.mul_zero, Nat.add_zero, BitVec.toNat_add, BitVec.toNat_ofNat, addr]
-        rw [Nat.mod_eq_of_lt (a := offset) (by omega), Nat.mod_eq_of_lt (by have := pre.frame.lt; omega)]
-        omega
-      have allowed := Mem.all_spec (pre.frame.wr index bound) fitsWord
-      simpa only [restricted, maskMemory, inside, decide_true, Bool.and_true] using allowed
-  have prepared : Senke.Pre L restricted pc fp K d code env (fun m => Senke.WeltAt m L world false) reserved := by
-    refine ⟨pre.ctx, pre.small, frames, ?_, pre.far, ?_, original,
-      Senke.weltAt_stab (requireWrites := false) layout separated⟩
-    · rw [exactMemory]
-      intro index present
-      obtain ⟨opcode, first, second, third⟩ := pre.code index present
-      exact ⟨opcode, first, second, third⟩
-    · rw [exactMemory]
-      exact pre.env
-  letI : Kern := kernel.withoutSyscalls
-  exact Senke.lowE_ok (same := entry) initial world (fun _ h => h) layout expression d code top lowered fits restricted pc env prepared
 
 /-- A whole private memory segment may run on several threads before
     the next source boundary. The generic IR memory semantics preserves
