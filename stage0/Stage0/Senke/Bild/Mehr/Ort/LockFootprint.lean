@@ -171,12 +171,34 @@ theorem imageProtectedFootprint_lock_disjoint [Kern] {src : String} {reserve : N
 theorem imageProtectedFootprint_stack_owner {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
     (layout : LayIn output.image.Y.withIdle) {owner thread : Nat} {byte : W}
-    (protected : imageProtectedFootprint output source owner byte)
+    (covered : imageProtectedFootprint output source owner byte)
     (stack : imageStackFootprint output thread byte) : owner = thread := by
-  rcases protected with owned | data
+  rcases covered with owned | data
   · exact imageStackFootprint_disjoint owned stack
   · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world stack))
       (protectedCellFootprint_bounds layout data).1).elim
+
+/-- Effects confined to the world and frames retain the registered
+    ticket words. The issuing thread's private stores cannot cover a
+    synchronization byte either. -/
+theorem ImageTicketStates.transport_image_effect [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {source nextSource : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {N thread : Nat} {before after : Mem} {states : _ → Zustand N} {writes : W → Prop}
+    (current : ImageTicketStates output.image.Y.withIdle before source states)
+    (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
+    (order : output.image.Y.lo ≤ output.image.Y.hi) (bound : output.image.Y.sye ≤ 2 ^ 64)
+    (belowLocks : ∀ byte, writes byte → byte.toNat < output.image.Y.hi)
+    (kept : GleichAuf (fun byte => ¬ imageProtectedFootprint output source thread byte ∧ ¬ writes byte) before after)
+    (owners : ∀ lock issuer, lock ∈ offen (source.faeden issuer).spur ↔
+      lock ∈ offen (nextSource.faeden issuer).spur) :
+    ImageTicketStates output.image.Y.withIdle after nextSource states := by
+  apply current.transport synchronized bound (owners := owners)
+  intro lock byte synchronizationByte
+  have aboveWorld : output.image.Y.hi ≤ byte.toNat :=
+    (synchronized.1 lock).1.trans synchronizationByte.1
+  exact (kept byte
+    ⟨fun owned => imageProtectedFootprint_lock_disjoint inLayout synchronized order owned synchronizationByte,
+      fun written => (Nat.not_le_of_lt (belowLocks byte written)) aboveWorld⟩).symm
 
 /-- Changing the current source trace of the CAS issuer leaves every
     pending store assigned to the same owning thread. The actual TSO

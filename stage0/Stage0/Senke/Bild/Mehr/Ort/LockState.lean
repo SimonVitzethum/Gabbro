@@ -66,6 +66,37 @@ theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketStates [Kern]
     fun lock => (output.loaded_ticketOwnership loaded accepted lock).2.1,
     fun lock => (output.loaded_ticketOwnership loaded accepted lock).2.2⟩
 
+private theorem TicketWordsAt.agree_lock {D : Deklaration} {N : Nat} {layout : Lay D}
+    {lock : D.Lock} {memory nextMemory : Mem} {state : Zustand N}
+    (current : TicketWordsAt memory (layout.lk lock) state)
+    (fits : layout.lk lock + 24 ≤ 2 ^ 64)
+    (kept : GleichAuf (LockBytes layout lock) nextMemory memory) :
+    TicketWordsAt nextMemory (layout.lk lock) state := by
+  have reads (offset : Nat) (inside : offset ≤ 16) :
+      nextMemory.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) =
+        memory.rd64 (BitVec.ofNat 64 (layout.lk lock + offset)) :=
+    gleich_rd64 fun byte hit => kept byte (lockWord_in_bytes fits inside hit)
+  obtain ⟨drawn, serving, waiters⟩ := current
+  have first := reads 0 (Nat.zero_le 16)
+  rw [Nat.add_zero] at first
+  exact ⟨first.trans drawn, (reads 8 (by decide)).trans serving, (reads 16 (by decide)).trans waiters⟩
+
+/-- Steps outside the lock protocol carry the exact registered tickets
+    and owners through any byte effects disjoint from the lock words. -/
+theorem ImageTicketStates.transport {D : Deklaration} {N : Nat}
+    {layout : Lay D} {memory nextMemory : Mem} {source nextSource : RufMaschineG D}
+    {states : D.Lock → Zustand N} (current : ImageTicketStates layout memory source states)
+    (separate : LaySync layout) (bound : layout.sye ≤ 2 ^ 64)
+    (words : ∀ lock, GleichAuf (LockBytes layout lock) nextMemory memory)
+    (owners : ∀ lock thread, lock ∈ offen (source.faeden thread).spur ↔
+      lock ∈ offen (nextSource.faeden thread).spur) :
+    ImageTicketStates layout nextMemory nextSource states := by
+  refine ⟨fun lock => TicketWordsAt.agree_lock (current.words lock) ((separate.1 lock).2.trans bound) (words lock),
+    current.protocol, ?_⟩
+  intro lock
+  exact ⟨fun thread => ((current.owners lock).inside thread).trans (owners lock thread.val).symm,
+    fun thread beyond held => (current.owners lock).outside thread beyond ((owners lock thread).mpr held)⟩
+
 /-- A transition at one lock preserves the entire collection. Machine
     memory outside its reservation and source ownership of other locks
     are transported independently. -/
@@ -84,16 +115,8 @@ theorem ImageTicketStates.update {D : Deklaration} [DecidableEq D.Lock] {N : Nat
     · subst other
       simpa only [ite_true] using words
     · rw [ite_eq_right same]
-      have fits := (separate.1 other).2.trans bound
-      have reads (offset : Nat) (inside : offset ≤ 16) :
-          nextMemory.rd64 (BitVec.ofNat 64 (layout.lk other + offset)) =
-            memory.rd64 (BitVec.ofNat 64 (layout.lk other + offset)) :=
-        gleich_rd64 fun byte hit => writes byte
-          (lockBytes_disjoint separate same (lockWord_in_bytes fits inside hit))
-      obtain ⟨drawn, serving, waiters⟩ := current.words other
-      have first := reads 0 (Nat.zero_le 16)
-      rw [Nat.add_zero] at first
-      exact ⟨first.trans drawn, (reads 8 (by decide)).trans serving, (reads 16 (by decide)).trans waiters⟩
+      exact TicketWordsAt.agree_lock (current.words other) ((separate.1 other).2.trans bound)
+        (fun byte hit => writes byte (lockBytes_disjoint separate same hit))
   protocol other := by
     by_cases same : other = lock
     · subst other
