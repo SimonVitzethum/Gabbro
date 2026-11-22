@@ -105,8 +105,8 @@ theorem mulHi_value (s : Nat → Runner.W) (X Y t : Nat)
     simp only [mulHiC, aluRun_cons, aluRun_nil, ← h1, ← h2, ← h3, ← h4, ← h5, ← h6, ← h7, ← h8, ← h9, ← h10, ← h11, ← h12, ← h13, ← h14, ← h15, ← h16, ← h17, ← h18, ← h19, ← h20, ← h21, ← h22, ← h23, ← h24]
   rw [run]
   refine ⟨?_, ?_, ?_⟩
-  · simp (disch := omega) only [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, aluVal, aluFn, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true]
-  · simp (disch := omega) only [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, aluVal, aluFn, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, ofInt_shift32, one_shl_sub, mulHiW]
+  · simp (disch := omega) only [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true]
+  · simp (disch := omega) only [d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, ofInt_shift32, one_shl_sub, mulHiW]
   · intro j hj
     simp (disch := omega) only [o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19, o20, o21, o22, o23, o24]
 
@@ -146,8 +146,8 @@ theorem mulLimb_value (s : Nat → Runner.W) (X Y R c t : Nat)
     rw [aluRun_append, hs1, aluRun_cons, ← ah1, aluRun_cons, ← ah2, aluRun_cons, ← ah3, aluRun_cons, ← ah4, aluRun_cons, ← ah5, aluRun_cons, ← ah6, aluRun_cons, ← ah7, aluRun_nil]
   rw [run]
   refine ⟨?_, ?_, ?_⟩
-  · simp (disch := omega) only [ad1, ad2, ad3, ad4, ad5, ad6, ad7, ao1, ao2, ao3, ao4, ao5, ao6, ao7, aluVal, aluFn, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, v0, v11, sR, sc, mulStepW]
-  · simp (disch := omega) only [ad1, ad2, ad3, ad4, ad5, ad6, ad7, ao1, ao2, ao3, ao4, ao5, ao6, ao7, aluVal, aluFn, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, v0, v11, sR, sc, mulStepW]
+  · simp (disch := omega) only [ad1, ad2, ad3, ad4, ad5, ad6, ad7, ao1, ao2, ao3, ao4, ao5, ao6, ao7, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, v0, v11, sR, sc, mulStepW]
+  · simp (disch := omega) only [ad1, ad2, ad3, ad4, ad5, ad6, ad7, ao1, ao2, ao3, ao4, ao5, ao6, ao7, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true, ite_false, OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true, v0, v11, sR, sc, mulStepW]
   · intro j h1 h2 h3
     simp (disch := omega) only [ao1, ao2, ao3, ao4, ao5, ao6, ao7, vf j h3]
 

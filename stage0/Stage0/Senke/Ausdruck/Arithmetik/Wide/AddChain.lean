@@ -60,7 +60,7 @@ theorem addLimb_run (s : Nat → Runner.W) (A B m c t : Nat)
     ∀ j, j ≠ A → j ≠ c → (j < t ∨ t + 4 < j) → aluRun (addLimbC A B m c t) s j = s j := by
   have outside (j k : Nat) (bound : k ≤ 4) (position : j < t ∨ t + 4 < j) : j ≠ t + k := by
     omega
-  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast,
+  simp only [addLimbC, aluRun_cons, aluRun_nil, aluStep, aluVal, aluFn, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast,
     ite_true, ite_false, Nat.reduceEqDiff, OfNat.ofNat_ne_one, OfNat.ofNat_ne_zero, ne_eq,
     Nat.succ_ne_self, not_false_eq_true, ↓reduceIte]
   refine ⟨?_, ?_, ?_⟩

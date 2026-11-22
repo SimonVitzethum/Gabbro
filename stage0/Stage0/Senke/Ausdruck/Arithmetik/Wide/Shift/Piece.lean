@@ -18,11 +18,11 @@ open Runner.IR
 theorem aluStep_cn {a b c : Nat} {o : Opcode} {f : Runner.W → Runner.W → Runner.W} (hf : aluFn o = some f)
     (ho1 : o.val ≠ 1) (ho2 : o.val ≠ 2) (s : Nat → Runner.W) :
     aluStep (cn o a b c) s = slotUpd s a (f (s b) (s c)) := by
-  simp only [aluStep, aluVal, cn, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, hf, ho1, ho2, ite_false]
+  simp only [aluStep, aluVal, cn, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, hf, ho1, ho2, ite_false]
 
 theorem aluStep_const (a : Nat) (k : Int) (s : Nat → Runner.W) :
     aluStep (ci 1 a k 0) s = slotUpd s a (BitVec.ofInt 64 k) := by
-  simp only [aluStep, aluVal, ci, II.o, OfNat.ofNat, Fin.ofNat, Nat.reduceMod, Int.toNat_natCast, ite_true]
+  simp only [aluStep, aluVal, ci, II.o, aluOpcodeLiterals, Int.toNat_natCast, ite_true]
 
 theorem aluStep_xor (a b c : Nat) (s : Nat → Runner.W) :
     aluStep (cn 10 a b c) s = slotUpd s a (s b ^^^ s c) := aluStep_cn (f := fun a b => a ^^^ b) rfl (by decide) (by decide) s
