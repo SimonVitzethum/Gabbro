@@ -340,6 +340,65 @@ theorem runtimeSliceDescriptor_ok [Kern] {D : Deklaration} {layout : Lay D}
     lowE_ok (same := fun _ => rfl) world world worldAt layoutIn expression d code top made fits m pc env pre
   exact ⟨bounds, after, run, confined, encoding ▸ stored.2⟩
 
+/-- Select one element of a checked runtime view. The address is computed
+    from the saved offset and the requested index in the original frame.
+    Only the selected element is loaded into the expression result. -/
+theorem runtimeSliceElement_ok [Kern] {D : Deklaration} {layout : Lay D}
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {capacity : Nat} {view : ArraySliceView capacity}
+    {offsetLo offsetHi indexLo indexHi : Int}
+    (offset : Var Γ (.int offsetLo offsetHi)) (index : Var Γ (.int indexLo indexHi))
+    {world : World D} {env : Env D Γ}
+    (offsetExact : (env.get offset).n = (view.offset : Int))
+    (inView : 0 ≤ (env.get index).n ∧ (env.get index).n.toNat < view.length)
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d base top reserved : Nat} {indexCode : List II} {array : Wert D (.arr τ capacity)}
+    (worldAt : ∀ m, W m → WeltAt m layout world) (layoutIn : LayIn layout)
+    (backing : ValueAt layout m fp base (.arr τ capacity) array)
+    (apart : base + capacity * valueWords τ ≤ d)
+    (scratch : d + valueWords τ + 1 < K) (width : 8 * valueWords τ < 2 ^ 31)
+    (made : lowE (currentOld := true) layout (reserved := reserved)
+      (.add (.var offset) (.var index) : Expr D Γ Λ _) (d + valueWords τ) = some (indexCode, top))
+    (fits : top ≤ K) :
+    let ptr := d + valueWords τ
+    let select := selectFrameSpan (valueWords τ) base d ptr (ptr + 1)
+    Pre layout m pc fp K ptr (indexCode ++ select) env W reserved →
+      ValueOk layout m pc fp K d (indexCode ++ select) τ
+        (view.read array ⟨(env.get index).n.toNat, inView.2⟩) := by
+  intro ptr select pre
+  let relative : Fin view.length := ⟨(env.get index).n.toNat, inView.2⟩
+  let absolute := view.offset + relative.val
+  have bound : absolute < capacity := by
+    have inside := relative.isLt
+    have available := view.fits
+    dsimp only [absolute]
+    omega
+  have within : base + (absolute + 1) * valueWords τ ≤ d := by
+    have indexFits : absolute + 1 ≤ capacity := bound
+    exact (Nat.add_le_add_left (Nat.mul_le_mul_right (valueWords τ) indexFits) base).trans apart
+  have withinWords : base + absolute * valueWords τ + valueWords τ ≤ d := by
+    simpa only [Nat.add_mul, Nat.one_mul, Nat.add_assoc] using within
+  let value := view.read array relative
+  have original : ValueAt layout m fp (base + absolute * valueWords τ) τ value := by
+    simpa only [absolute, value, Nat.add_mul, Nat.add_assoc] using backing.slice_element view relative
+  let expression : Expr D Γ Λ (.int (offsetLo + indexLo) (offsetHi + indexHi)) := .add (.var offset) (.var index)
+  obtain ⟨middle, calculated, preserved, stored⟩ :=
+    lowE_ok (same := fun _ => rfl) world world worldAt layoutIn expression ptr indexCode top made fits m pc env pre.left
+  obtain ⟨word, readWord, encoded⟩ := stored.word _ _ trivial
+  change word = BitVec.ofInt 64 ((env.get offset).n + (env.get index).n) at encoded
+  have exactIndex : (absolute : Int) = (env.get offset).n + (env.get index).n := by
+    simp only [absolute, relative, Int.natCast_add, offsetExact, Int.toNat_of_nonneg inView.1]
+  have indexWord : middle.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 absolute) := by
+    rwa [encoded, ← exactIndex, BitVec.ofInt_natCast] at readWord
+  have ptrFits : ptr ≤ K := by dsimp only [ptr]; omega
+  have source := original.agree_low preserved pre.frame.room (withinWords.trans (Nat.le_add_right _ _)) ptrFits
+  have tail := pre.next preserved (Nat.le_refl _) ptrFits
+  obtain ⟨final, loaded, changed, selected⟩ :=
+    selectFrameSpan_checked_ok (ptr := ptr) (tmp := ptr + 1) (dst := d) (index := absolute)
+      (within.trans (Nat.le_add_right _ _)) (.inr within) (Nat.le_refl _) (by omega) scratch width
+      indexWord source tail
+  refine ⟨final, ?_, (preserved.mono (Nat.le_add_right _ _)).trans changed, selected⟩
+  simpa only [List.length_append, pc_add] using calculated.trans loaded
+
 /-- The original encoding determines how to read a byte. The short case
     keeps its packed source word and never addresses an adjacent word. -/
 def readStringSliceByte (memory : Runner.Mem) (frame : Runner.W) (base capacity offset index : Nat) :
