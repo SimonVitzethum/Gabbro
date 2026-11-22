@@ -165,6 +165,20 @@ theorem addrs_getD : (ls : List Nat) → (b i : Nat) → i < ls.length →
     rw [addrs_getD ls (b + 16 * l) i (by simpa using h)]
     omega
 
+/-- The size plan bounds every resolved code address before emitting the
+    final bodies. A missing index uses zero, the addressing default. -/
+theorem addrs_getD_bound (sizes : List Nat) (base index : Nat) :
+    (addrs base sizes).getD index 0 ≤ base + 16 * sizes.sum := by
+  induction sizes generalizing base index with
+  | nil => simp [addrs]
+  | cons size sizes ih =>
+    cases index with
+    | zero => simp [addrs]
+    | succ index =>
+      simp only [addrs, List.getD_cons_succ, List.sum_cons]
+      have remainder := ih (base + 16 * size) index
+      omega
+
 theorem flat_split : (cs : List (List II × Nat)) → (i : Nat) → (hi : i < cs.length) →
     cs.flatMap (·.1) = (cs.take i).flatMap (·.1) ++ (cs[i].1 ++ (cs.drop (i + 1)).flatMap (·.1))
   | [], _, hi => absurd hi (by simp)
