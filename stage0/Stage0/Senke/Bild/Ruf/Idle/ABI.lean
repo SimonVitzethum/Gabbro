@@ -20,21 +20,33 @@ theorem FrameLayout.internalResult_withIdle (layout : FrameLayout) :
   simp only [FrameLayout.internalResult, FrameLayout.ensParams, FrameLayout.ensReserved,
     FrameLayout.parameterWords, FrameLayout.withIdle, tyR, contextWords_mapNumbers]
 
+private theorem FrameLayout.result_withIdle (layout : FrameLayout) :
+    layout.withIdle.result = layout.result.map tyR := rfl
+
+private theorem FrameLayout.canonicalResult_withIdle (layout : FrameLayout) :
+    layout.withIdle.canonicalResult = layout.canonicalResult := by
+  simp only [FrameLayout.canonicalResult, FrameLayout.parameterWords, FrameLayout.withIdle,
+    tyR, contextWords_mapNumbers]
+
+private theorem FrameLayout.returnSpan_withIdle (layout : FrameLayout) :
+    layout.withIdle.returnSpan = layout.returnSpan := by
+  simp only [FrameLayout.returnSpan, FrameLayout.withIdle, tyR, returnWords_mapNumbers]
+
 theorem retTop_withIdle (layout : FrameLayout) : retTop layout.withIdle = retTop layout := by
   simp only [retTop, FrameLayout.internalStatus, FrameLayout.internalResult_withIdle,
-    FrameLayout.returnSpan, FrameLayout.withIdle, tyR, returnWords_mapNumbers]
+    FrameLayout.returnSpan_withIdle]
 
 private theorem resultWords_tyR (result : Option Ty) : resultWords (result.map tyR) = resultWords result := by
   cases result <;> simp only [Option.map_none, Option.map_some, resultWords, tyR, valueWords_mapNumbers]
 
 private theorem publishC_withIdle (layout : FrameLayout) : publishC layout.withIdle = publishC layout := by
-  simp only [publishC, FrameLayout.canonicalStatus, FrameLayout.canonicalResult,
-    FrameLayout.internalResult_withIdle, FrameLayout.parameterWords, FrameLayout.returnSpan,
-    FrameLayout.withIdle, tyR, contextWords_mapNumbers, returnWords_mapNumbers, resultWords_tyR]
+  simp only [publishC, FrameLayout.canonicalStatus, FrameLayout.canonicalResult_withIdle,
+    FrameLayout.internalResult_withIdle, FrameLayout.returnSpan_withIdle, FrameLayout.result_withIdle,
+    resultWords_tyR]
 
 theorem retC_withIdle (layout : FrameLayout) (source : Nat) (ensures : List II) :
     retC layout.withIdle source ensures = retC layout source ensures := by
-  simp only [retC, FrameLayout.internalResult_withIdle, publishC_withIdle, FrameLayout.withIdle, resultWords_tyR]
+  simp only [retC, FrameLayout.internalResult_withIdle, publishC_withIdle, FrameLayout.result_withIdle, resultWords_tyR]
 
 theorem retWhyC_withIdle (layout : FrameLayout) (reason : Nat) :
     retWhyC layout.withIdle reason = retWhyC layout reason := by
@@ -53,7 +65,7 @@ theorem retScopedC_withIdle (L : Lay D) (layout : FrameLayout) (source : Nat)
     (ensures : List II) (locks : List D.Lock) :
     retScopedC L.withIdle layout.withIdle source ensures locks = retScopedC L layout source ensures locks := by
   simp only [retScopedC, FrameLayout.internalResult_withIdle, retTop_withIdle, gibTs_withIdle,
-    publishC_withIdle, FrameLayout.withIdle, resultWords_tyR]
+    publishC_withIdle, FrameLayout.result_withIdle, resultWords_tyR]
 
 theorem retWhyScopedC_withIdle (L : Lay D) (layout : FrameLayout) (reason : Nat) (locks : List D.Lock) :
     retWhyScopedC L.withIdle layout.withIdle reason locks = retWhyScopedC L layout reason locks := by
@@ -76,12 +88,18 @@ theorem elseC_withIdle (signature : Signatur D.Tab D.Glob D.Lock D.Marke) (frame
     (call success failure : List II) :
     elseC (D := D.mitRuhe) (sigR signature) frame call success failure =
       elseC (D := D) signature frame call success failure := by
-  simp only [elseC, receiveC_withIdle, sigR, tyR, contextWords_mapNumbers, returnWords_mapNumbers]
+  unfold elseC
+  rw [receiveC_withIdle (D := D)]
+  simp only [sigR, tyR, contextWords_mapNumbers, returnWords_mapNumbers]
 
 theorem elseTop_withIdle (f : D.Fn) (frame args success failure : Nat) :
     elseTop (D := D.mitRuhe) (some f) frame args success failure =
       elseTop f frame args success failure := by
-  simp only [elseTop, callTop_withIdle, Deklaration.mitRuhe, tyR, contextWords_mapNumbers, returnWords_mapNumbers]
+  have parameters : contextWords (D.mitRuhe.params (some f)) = contextWords (D.params f) :=
+    contextWords_mapNumbers (· + 1) id _
+  have result : returnWords (D.mitRuhe.erg (some f)) (D.mitRuhe.gruende (some f)) =
+      returnWords (D.erg f) (D.gruende f) := returnWords_mapNumbers (· + 1) id _ _
+  simp only [elseTop, callTop_withIdle, parameters, result]
 
 theorem elseTopInd_withIdle (index frame args success failure : Nat) :
     elseTopInd (D := D.mitRuhe) (index + 1) frame args success failure =
@@ -107,7 +125,13 @@ termination_by structural _ _ _ args _ => args
 theorem areaC_withIdle (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
     (args : Args D Γ Λ (D.aparams a)) (result : Ty) (dest reserved : Nat) :
     areaC L.withIdle a (ruA args) (tyR result) dest reserved = areaC L a args result dest reserved := by
-  simp only [areaC, Lay.withIdle, Deklaration.mitRuhe, List.length_map, List.all_map,
-    Function.comp_def, isPtr_tyR, wortTy_tyR, lowR_withIdle, tyR, valueWords_mapNumbers]
+  have binding : L.withIdle.tor a = L.tor a := rfl
+  have width : (D.mitRuhe.aparams a).length = (D.aparams a).length := List.length_map
+  have types : (D.mitRuhe.aparams a).all (fun ty => wortTy ty && !isPtr ty) =
+      (D.aparams a).all (fun ty => wortTy ty && !isPtr ty) := by
+    change ((D.aparams a).map tyR).all _ = _
+    simp only [List.all_map, Function.comp_def, wortTy_tyR, isPtr_tyR]
+  have resultWidth : valueWords (tyR result) = valueWords result := valueWords_mapNumbers (· + 1) id _
+  simp only [areaC, binding, width, types, lowR_withIdle, resultWidth]
 
 end Gabbro.Stage0.Senke
