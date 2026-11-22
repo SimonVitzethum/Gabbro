@@ -358,6 +358,36 @@ theorem resultStore_reference {pointer : T} {memory : Mem} {dest : BitVec 32} {v
   refine .ask (a := some (0, 0)) (by rw [memAns_wr, Mem.wr64_some writable]) ?_
   exact .refl _ _
 
+/-- A returning request may pause while decoding or writing its result.
+    The same result-store tree gives the request scope for any such pause. -/
+theorem resultStore_scope [Kern] {pointer : T} {memory : Mem} {dest : BitVec 32} {value : W}
+    {reads writes : W → Prop}
+    (destination : memory.rd32 (pointer.pc + 4) = some dest)
+    (writable : Mem.all memory.wr (slot pointer.fp (sx dest)) 8 = true)
+    (writeReads : ∀ byte, writes byte → reads byte)
+    (operand : ∀ offset, offset < 4 → reads (pointer.pc + 4 + BitVec.ofNat 64 offset))
+    (output : ∀ byte, fenster (slot pointer.fp (sx dest)) byte → writes byte)
+    {control : Res T} {actual : Mem} (prefixRun : RunP (ret1 pointer value) memory control actual) :
+    MemoryScopedControl reads writes control := by
+  let restricted := maskMemory reads writes memory
+  obtain ⟨agreement, readable, allowedWrite⟩ := maskMemory_agreement reads writes memory writeReads
+  have agrees : MaskedAgreement reads writes restricted memory := agreement
+  have operandBytes (offset : Nat) (inside : offset < 4) := agrees.1 _ (operand offset inside)
+  have sameOperand : restricted.rd32 (pointer.pc + 4) = memory.rd32 (pointer.pc + 4) := by
+    simp only [Mem.rd32,
+      Mem.all_congr (fun j inside => (operandBytes j inside).2),
+      Mem.le_congr (fun j inside => (operandBytes j inside).1)]
+  have saved : restricted.rd32 (pointer.pc + 4) = some dest := sameOperand.trans destination
+  have allowed : Mem.all restricted.wr (slot pointer.fp (sx dest)) 8 = true := by
+    rw [Mem.all_congr (fun offset inside => agrees.2 _ (output _ (fenster_add _ inside)))]
+    exact writable
+  have reference := resultStore_reference (value := value) saved allowed
+  obtain ⟨_, _, _, _, partialRun⟩ := reference.replay_on (blind_ret1 _ _)
+    (by intro equal; cases equal) (by intro _ _ equal; cases equal) readable allowedWrite agreement
+  rcases partialRun prefixRun with rfl | confined
+  · trivial
+  · exact confined
+
 /-- The immediate instruction selects its operand and writes one word
     using only the IR memory semantics. -/
 theorem constantInstruction_memory [Kern] {pointer : T} {memory : Mem} {dest value pad : BitVec 32}

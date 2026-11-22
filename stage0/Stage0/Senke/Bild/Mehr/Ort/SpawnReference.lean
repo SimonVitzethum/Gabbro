@@ -174,7 +174,7 @@ open Senke Senke.BildMehr Senke.BildLauf Runner Runner.IR Runner.Beweis
 /-- The actual completed result-store tree fixes the guard's entry and
     input bytes. A declined clone follows that guard to the named stop. -/
 theorem Emitted.clone_reply_boundary [kernel : Kern] {src : String} {reserve : Nat} {options : Profil.Options}
-    (output : Emitted src reserve options) {index : Nat} {view after : Mem} {id : W} {pointer : T}
+    (output : Emitted src reserve options) {index : Nat} {view : Mem} {id : W}
     (declared : index < output.starts.length)
     (loaded : BytesAt view codeBase (output.image.code.flatMap encII))
     (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks) :
@@ -182,16 +182,46 @@ theorem Emitted.clone_reply_boundary [kernel : Kern] {src : String} {reserve : N
     let fp := BitVec.ofNat 64 output.image.fp0
     let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩
     let address := slot fp (BitVec.ofNat 64 (startScratch output.compiled.main + 2))
-    RunP (ret1 parent id) view (.next pointer) after →
-    pointer = nxt parent ∧ after = Mem.write view address 8 id.toNat ∧
-      (id.toInt ≤ 0 → @Stops kernel.withoutSyscalls pointer after cloneCode) := by
-  intro pc fp parent address actual
-  obtain ⟨code, far, room, small, _, _⟩ := output.loaded_spawn_site loaded declared
-  obtain ⟨expected, _, _, refused⟩ := spawnResult_reference (id := id) code frame far room small
-  obtain ⟨samePointer, sameMemory⟩ := (runP_runM expected rfl).det (runP_runM actual rfl).run
-  refine ⟨samePointer, sameMemory, ?_⟩
-  rw [samePointer, sameMemory]
-  exact refused
+    (∀ {control current}, RunP (ret1 parent id) view control current →
+      MemoryScopedControl (imageRootReads output 0) (imageStackFootprint output 0) control) ∧
+    ∀ {pointer after}, RunP (ret1 parent id) view (.next pointer) after →
+      pointer = nxt parent ∧ after = Mem.write view address 8 id.toNat ∧
+        (id.toInt ≤ 0 → @Stops kernel.withoutSyscalls pointer after cloneCode) := by
+  intro pc fp parent address
+  obtain ⟨code, far, room, small, _, childFits⟩ := output.loaded_spawn_site loaded declared
+  refine ⟨?_, ?_⟩
+  · intro control current actual
+    let scratch := startScratch output.compiled.main
+    let dest := II.f ((scratch + 2 : Nat) : Int)
+    have inFrame : scratch + 2 < output.image.Ks := by dsimp only [scratch]; omega
+    have destination : view.rd32 (parent.pc + 4) = some dest :=
+      (code 2 (by rw [spawnOne_len]; decide)).f1
+    have operand : sx dest = BitVec.ofNat 64 (scratch + 2) := sx_nat (inFrame.trans small)
+    have allowed : Mem.all view.wr (slot parent.fp (sx dest)) 8 = true := by
+      rw [operand]
+      exact frame.wr _ inFrame
+    apply resultStore_scope destination allowed (fun _ covered => .inl covered) _ _ actual
+    · intro offset inside
+      have fits : pc.toNat + 16 * 10 < 2 ^ 64 := far.1
+      have exactAddress : (parent.pc + 4 + BitVec.ofNat 64 offset).toNat = pc.toNat + (36 + offset) := by
+        change (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 4 + BitVec.ofNat 64 offset).toNat = _
+        simp only [BitVec.add_assoc, ← BitVec.ofNat_add, BitVec.toNat_add, BitVec.toNat_ofNat]
+        rw [Nat.mod_eq_of_lt (a := 16 * 2 + (4 + offset)) (by omega), Nat.mod_eq_of_lt (by omega)]
+        omega
+      have fpValue : fp.toNat = output.image.fp0 := by
+        change (BitVec.ofNat 64 output.image.fp0).toNat = _
+        rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+      have beforeFrame : pc.toNat + 16 * 10 ≤ fp.toNat := far.2.2
+      exact .inr (by rw [exactAddress, ← fpValue]; omega)
+    · intro byte written
+      rw [operand] at written
+      exact imageStackFootprint_slot (output := output) (Nat.zero_le _) inFrame written
+  · intro pointer after actual
+    obtain ⟨expected, _, _, refused⟩ := spawnResult_reference (id := id) code frame far room small
+    obtain ⟨samePointer, sameMemory⟩ := (runP_runM expected rfl).det (runP_runM actual rfl).run
+    refine ⟨samePointer, sameMemory, ?_⟩
+    rw [samePointer, sameMemory]
+    exact refused
 
 /-- A positive reply selects the successor in the actual startup
     header. Every partial memory run stays in the same scope until its

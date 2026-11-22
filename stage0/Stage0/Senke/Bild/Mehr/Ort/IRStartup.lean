@@ -237,7 +237,7 @@ theorem Emitted.next_spawn_prefix {index : Nat} {view savedView : Mem} {savedPoi
       output.SpawnPrefix (index + 1) control current := by
   intro fp pc parent stored control current path
   have declared := Nat.lt_of_succ_lt nextDeclared
-  obtain ⟨pointer, bytes, _⟩ := output.clone_reply_boundary declared loaded frame stored
+  obtain ⟨pointer, bytes, _⟩ := (output.clone_reply_boundary (id := id) declared loaded frame).2 stored
   rw [pointer, bytes] at path
   rcases output.clone_guard_progress declared positive table loaded frame path with
     inside | ⟨boundary, continued, invariant, code, wholeFrame⟩

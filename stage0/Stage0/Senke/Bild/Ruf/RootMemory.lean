@@ -107,7 +107,7 @@ theorem image_refused_worker_terminal [kernel : Kern] {src : String} {reserve : 
     Tr imageTSO actI before observed (.exit request.a1) 1 ∧
       ImageStopMatches output O state history observed (.exit request.a1) := by
   intro pc fp parent stored observed
-  have stop := (output.clone_reply_boundary declared loaded frame stored).2.2 refused.le
+  have stop := ((output.clone_reply_boundary (id := id) declared loaded frame).2 stored).2.2 refused.le
   obtain ⟨number, status⟩ := SoloLauf.stop_matches (kernel := kernel) stop ran
   have exits : request.nr.toNat = NR_EXIT_GROUP := by
     rw [number]
