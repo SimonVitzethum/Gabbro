@@ -45,6 +45,22 @@ theorem runP_snoc {r : Res T} {m m1 : Mem} {o : Op} {k : Ans → Res T} (h : Run
     {m2 : Mem} (ho : memAns m1 o = some (a, m2)) : RunP r m (k a) m2 :=
   runP_snoc' h rfl ho
 
+/-- Every reachable point within a memory-only instruction can finish
+    at the same next pointer and memory as the whole instruction. -/
+theorem RunP.remaining {start current : Res T} {before now : Mem}
+    (part : RunP start before current now) :
+    ∀ {next : T} {after : Mem}, RunM start before next after → RunM current now next after := by
+  induction part with
+  | refl => exact fun whole => whole
+  | ask answered _ ih =>
+    intro next after whole
+    cases whole with
+    | ask same later =>
+      rw [answered] at same
+      simp only [Option.some.injEq, Prod.mk.injEq] at same
+      obtain ⟨rfl, rfl⟩ := same
+      exact ih later
+
 /-- A partial run that has reached the end of the tree is a memory-only step. -/
 theorem runP_runM {r r' : Res T} {m m1 : Mem} (h : RunP r m r' m1) : ∀ {t : T}, r' = .next t → RunM r m t m1 := by
   induction h with
