@@ -18,10 +18,10 @@ theorem singleThreadView (state : TSt) (buffers : PrivateBuffers singleThreadFoo
   intro address
   exact tso_views_merge state singleThreadFootprint buffers.disjoint 0 address rfl
 
-noncomputable def singleThreadSC {layout : Lay} (state : Cfg (TSO layout) θ) : Cfg (SC layout) θ :=
+noncomputable def singleThreadSC {layout : Runner.Beweis.Lay} (state : Cfg (TSO layout) θ) : Cfg (SC layout) θ :=
   ⟨projectSCState singleThreadFootprint state.ms, state.ths⟩
 
-private theorem silent_answer_one {layout : Lay} {before after : (TSO layout).St}
+private theorem silent_answer_one {layout : Runner.Beweis.Lay} {before after : (TSO layout).St}
     {request : Op} {response : Ans} (quiet : lbl 0 request response = [])
     (answered : (TSO layout).ans before 0 request response after)
     (buffers : PrivateBuffers singleThreadFootprint before.1) :
@@ -40,7 +40,7 @@ private theorem silent_answer_one {layout : Lay} {before after : (TSO layout).St
     exact ⟨buffers, rfl, unchanged⟩
   | sys => cases quiet
 
-private theorem silent_step_one {layout : Lay} {act : θ → Res θ}
+private theorem silent_step_one {layout : Runner.Beweis.Lay} {act : θ → Res θ}
     {before after : Cfg (TSO layout) θ} {events : List Ev}
     (step : ProcessStep (TSO layout) act before events after)
     (quiet : events = []) (one : before.ths.length = 1)
@@ -69,7 +69,7 @@ private theorem silent_step_one {layout : Lay} {act : θ → Res θ}
     instruction and answer history up to erased buffer flushes. No
     memory footprint classifier is needed, including for floating-point
     requests. -/
-theorem tso_silent_single_thread {layout : Lay} {act : θ → Res θ}
+theorem tso_silent_single_thread {layout : Runner.Beweis.Lay} {act : θ → Res θ}
     {before after : Cfg (TSO layout) θ} {events : List Ev} {count : Nat}
     (run : ProcessPrefix (TSO layout) act before events count after)
     (quiet : events = []) (one : before.ths.length = 1)
