@@ -229,10 +229,10 @@ theorem ImageSlotsMatch.observed_clone {history : List Ev}
       ImageReach output E O state next ∧
       ImageSlotsMatch output E O (history ++ [(0, cloneReq, some (id, extra))]) after next ∧ next.m = state.m ∧
       after = ⟨before.ms, before.ths.set 0 (some (ret1 parent id)) ++ [some (.next child)]⟩ ∧
-      ∀ {body : PCfg} {snapshots positions committed},
-        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+      ∀ {body : BildMehr.PCfg} {snapshots positions committed},
+        BildMehr.MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
           body state snapshots positions committed →
-        MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
+        BildMehr.MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
           ⟨body.m, body.ths ++ [none]⟩ next snapshots positions committed := by
   obtain ⟨next, actualStart, start, step, matched, unchanged, append⟩ :=
     slots.activate_clone (parent := parent) (child := child) (id := id) (extra := extra)
