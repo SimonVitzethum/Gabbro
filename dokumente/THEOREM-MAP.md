@@ -8281,15 +8281,20 @@ without ownership declarations. Reification currently covers parameterless
 current-world postconditions and true postconditions with a constructible
 argument environment.
 
-The remaining compiler obligation constructs the simulation and the
-complete unit export from an arbitrary successful emission. In particular,
-shared-memory transitions, the final cause of each hardware stop and the
-loader's external mapping contract still need their concrete bridges.
-`ImageSlotsMatch.retire_never` relates a declared non-returning Linux thread
-exit to its source head and preserves the other slots. Silent runner
-prefixes transfer in both directions between the host-restricted memory
-model and TSO. `image_memory_prefix_projects` now needs classification
-only at states reachable in the actual image model.
+`ImageSlotsMatch.retire` relates a returning or declared non-returning
+Linux thread exit to its source head and preserves the other slots.
+`ImageForeignTrace.retire` preserves the matched external call history
+at the same internal exit. Silent runner prefixes transfer in both
+directions between the host-restricted memory model and TSO.
+`image_memory_prefix_projects` needs request classification only at
+states reachable in the actual image model.
+
+The production statement still needs the full unit export and an
+image simulation for arbitrary schedules. In particular, the world and
+thread relation must survive the full body execution, including shared
+memory and foreign calls. Terminal cases must obtain their exact source
+cause from that relation. The loader starts at the specified mapping
+boundary under the named environment contract.
 `Emitted.image_declared_clone_goal` follows the actual prepared startup
 clone through the host-restricted IR memory model, activates the same slot
 in GX, and applies the entire goal to the resulting GX state. The earlier
