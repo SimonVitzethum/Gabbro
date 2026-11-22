@@ -170,14 +170,20 @@ theorem ImageRuntimePartition.register_at_boundary [Kern] {src : String} {reserv
     (thread : entry.thr = i) (alive : state.lebt i = true) (waiting : state.wartet i = [])
     (sourceHead : state.m.faeden i = entry.M.faeden i)
     (atBody : machine.ths[i]? = some (some (.next entry.start)))
-    (entryMemory : entry.mb = machine.ms.1.view i) :
+    (entryMemory : GleichAuf (fun byte => imageStackFootprint output i byte ∨ byte.toNat < output.image.fp0)
+      (projectSCState footprint machine.ms).1 entry.mb) :
     ImageRuntimeMatchesAt footprint output E O history machine state pending := by
   obtain ⟨present, control⟩ := List.getElem?_eq_some_iff.mp atBody
   have threads : machine.ths = machine.ths.set i (some (.next entry.start)) := by
     rw [← control, List.set_getElem_self present]
-  exact ImageRuntimeMatches.register_private_body partition placed ownsStack empty entryOK exactProgram
-    thread alive waiting sourceHead threads entryMemory rfl (fun _ _ => rfl)
-    (fun byte _ => GleichAt.refl _ byte) partition.1
+  let reads : W → Prop := fun byte => imageStackFootprint output i byte ∨ byte.toNat < output.image.fp0
+  have accessible (byte : W) (read : reads byte) (other : Nat) (owned : footprint other byte) : other = i := by
+    rcases read with stack | installed
+    · exact imageStackFootprint_owner placed stack owned
+    · exact ((Nat.not_le_of_lt installed) (imageFootprint_after_code placed owned)).elim
+  exact ImageRuntimeMatches.register_body partition empty entryOK exactProgram thread alive waiting
+    sourceHead threads (fun _ _ => rfl) partition.1 reads (imageStackFootprint output i)
+    (fun _ hit => .inl hit) accessible ownsStack entryMemory (fun byte _ => GleichAt.refl _ byte)
 
 theorem ImageRootPhase.advance_source [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
