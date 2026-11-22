@@ -33,6 +33,15 @@ private theorem lowProdArgs_types {Γ : Ctx} {Λ : List (Res D)} {fs fs' : List 
   cases h
   rfl
 
+private theorem unary_withIdle {a r : Ty} (op : IntBuiltin [a] r) (code : BitBuiltin.Emitter) :
+    BitBuiltin.unary (ibR op) code = BitBuiltin.unary op code := by
+  cases op <;> rfl
+
+private theorem binary_withIdle {a b r : Ty} (op : IntBuiltin [a, b] r) (dest : Nat)
+    (left right : BitBuiltin.Emitter) :
+    intBuiltin2L (ibR op) dest left right = intBuiltin2L op dest left right := by
+  cases op <;> rfl
+
 mutual
 
 /-- The typed expression traversal emits the same instructions and scratch
@@ -55,10 +64,11 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have mapped := lowE_withIdle L reserve currentOld e
     simp only [lowE, tyR, Ty.mapNumbers] at mapped
     simp only [lowE, ruE, lowEWith, tyR, Ty.mapNumbers, mapped, funext mapped]
-  | _, _, _, .intBuiltin1 op e, _ => by
-    have mapped := lowE_withIdle L reserve currentOld e
-    simp only [lowE, tyR, Ty.mapNumbers] at mapped
-    cases op <;> simp only [lowE, ruE, lowEWith, ibR, BitBuiltin.unary, tyR, Ty.mapNumbers, mapped, funext mapped]
+  | _, _, _, .intBuiltin1 op e, dest => by
+    have mapped := congrArg (fun code => BitBuiltin.unary op code dest)
+      (funext (lowE_withIdle L reserve currentOld e))
+    simp only [lowE, ruE, lowEWith, unary_withIdle]
+    with_unfolding_all exact mapped
   | _, _, _, .add a b, _ | _, _, _, .sub a b, _ | _, _, _, .mul a b, _
   | _, _, _, .lt a b, _ | _, _, _, .le a b, _ | _, _, _, .eq a b, _
   | _, _, _, .fllt a b, _ | _, _, _, .flle a b, _ | _, _, _, .and a b, _
@@ -73,12 +83,15 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have right := lowE_withIdle L reserve currentOld b
     simp only [lowE, tyR, Ty.mapNumbers] at left right
     simp only [lowE, ruE, lowEWith, inUE, inWE, nichtMin, lt64, Ty.mapNumbers,
-      valueWords_mapNumbers, left, right, funext left, funext right]
-  | _, _, _, .intBuiltin2 op a b, _ => by
+      valueWords, valueWords_mapNumbers, left, right, funext left, funext right] <;>
+      with_unfolding_all rfl
+  | _, _, _, .intBuiltin2 op a b, dest => by
     have left := lowE_withIdle L reserve currentOld a
     have right := lowE_withIdle L reserve currentOld b
-    simp only [lowE, tyR, Ty.mapNumbers] at left right
-    cases op <;> simp only [lowE, ruE, lowEWith, ibR, intBuiltin2L, tyR, Ty.mapNumbers, left, right, funext left, funext right]
+    have mapped := (congrArg (fun code => intBuiltin2L op dest code _) (funext left)).trans
+      (congrArg (intBuiltin2L op dest _) (funext right))
+    simp only [lowE, ruE, lowEWith, binary_withIdle]
+    with_unfolding_all exact mapped
   | _, _, _, .slot _ _ index _, _ | _, _, _, .thru _ _ _ _ index _, _
   | _, _, _, .thruOwn _ _ _ _ index _ _ _ _ _ _, _ | _, _, _, .slotRef index _ _ _ _ _, _
   | _, _, _, .oldS _ _ index _, _ => by
@@ -90,11 +103,18 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have mapped := lowE_withIdle L reserve currentOld index
     simp only [lowE, tyR, Ty.mapNumbers] at mapped
     simp only [lowE, ruE, lowEWith, readBytesWideL_withIdle, tyR, Ty.mapNumbers, funext mapped]
-  | _, _, _, .forallSlots _ body _, _ | _, _, _, .existsSlots _ body _, _
-  | _, _, _, .count _ body, _ => by
-    have mapped := lowE_withIdle L reserve currentOld body
-    simp only [lowE, tyR, Ty.mapNumbers] at mapped
-    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle, Deklaration.mitRuhe, tyR, Ty.mapNumbers, List.map_cons, mapped]
+  | Γ, _, _, .forallSlots t body _, dest => by
+    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle, Deklaration.mitRuhe]
+    with_unfolding_all exact (congrArg (quantL true (frei Γ reserve) dest (D.count t))
+      (lowE_withIdle L reserve currentOld body (dest + 3)))
+  | Γ, _, _, .existsSlots t body _, dest => by
+    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle, Deklaration.mitRuhe]
+    with_unfolding_all exact (congrArg (quantL false (frei Γ reserve) dest (D.count t))
+      (lowE_withIdle L reserve currentOld body (dest + 3)))
+  | Γ, _, _, .count n body, dest => by
+    simp only [lowE, ruE, lowEWith, specLookup, frei_withIdle]
+    with_unfolding_all exact (congrArg (countL (frei Γ reserve) dest n)
+      (lowE_withIdle L reserve currentOld body (dest + 3)))
   | _, _, _, .reaches _ _ _ a b _, _ => by
     have left := lowE_withIdle L reserve currentOld a
     have right := lowE_withIdle L reserve currentOld b
@@ -111,8 +131,16 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have array := lowE_withIdle L reserve currentOld a
     have index := lowE_withIdle L reserve currentOld i
     simp only [lowE, lowStorage, tyR, Ty.mapNumbers] at address array index
-    simp only [lowE, ruE, lowEWith, storedExpr_ru, arrReadL, arrGetL,
+    have stored := storedExpr_ru a
+    simp only [lowE, ruE, lowEWith, stored, arrReadL, arrGetL,
       tyR, Ty.mapNumbers, valueWords_mapNumbers, valueWords, address, array, index]
+    split
+    · next present =>
+      have same : storedExpr a = true := by exact stored.symm.trans present
+      rw [if_pos same]
+    · next absent =>
+      have same : ¬ storedExpr a = true := fun yes => absent (stored.trans yes)
+      rw [if_neg same]
   | _, _, _, .arrSet a i v, _ => by
     have array := lowE_withIdle L reserve currentOld a
     have index := lowE_withIdle L reserve currentOld i
@@ -134,7 +162,7 @@ theorem lowE_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have mapped := (lowProdArgs_types (Ty.map_eq_mapFields (· + 1) id _) (ruA args) L.withIdle dst reserve currentOld).trans
       (lowProdArgs_withIdle L reserve currentOld args dst)
     simp only [lowProdArgs] at mapped
-    simp only [lowE, ruE, lowEWith, tyR, Ty.mapNumbers, mapped, funext mapped]
+    simp only [lowE, ruE, lowEWith, mapped]
   | _, _, _, .case cases tag payload, dst => by
     let cast := (Ty.mapCases_get (· + 1) id cases tag).symm
     have compact := (lowN_kind cast (ruN payload) L.withIdle tag.val dst reserve currentOld).trans
@@ -193,6 +221,7 @@ private theorem lowN_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
     have mapped := lowE_withIdle L reserve currentOld value dst
     simp only [lowE, tyR, Ty.mapNumbers] at mapped
     cases τ <;> simp only [lowN, ruN, lowNWith, Option.map_some, tyR, Ty.mapNumbers, mapped]
+    with_unfolding_all exact (congrArg (fun code => do let child ← code; pure (packSum dst _ tag child)) mapped)
 termination_by structural _ _ _ p _ _ => p
 
 private theorem lowProdArgs_withIdle (L : Lay D) (reserve : Nat) (currentOld : Bool) :
