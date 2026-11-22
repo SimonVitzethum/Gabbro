@@ -85,9 +85,9 @@ theorem Emitted.root_snapshot_local (output : Emitted src reserve options)
     Getrennt E.P output.fsA.1 E.ws cell.carrier :=
   output.root_contract_local hardware accepted declared (.inr (oldCells_carrier _ cell captured))
 
-/-- A scheduled GX step of another thread leaves the root's entry
-    requirement unchanged, even when it presents shared atomic values. -/
-theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
+/-- A scheduled GX step of another thread retains every carrier read
+    by a root contract, even when it presents shared atomic values. -/
+theorem Emitted.root_contract_other_step (output : Emitted src reserve options)
     {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
     (hardware : HardwareAnnahmenHw O E.Q)
     (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
@@ -98,9 +98,11 @@ theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
     (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
       (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m before)
     (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
-      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after) :
-    ReqAmEintritt E.P.mitRuhe (some root.1) (after.speicher.welt []) (envR root.2) ↔
-      ReqAmEintritt E.P.mitRuhe (some root.1) (before.speicher.welt []) (envR root.2) := by
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after)
+    (carrier : (declOf output.compiled.unit).Tab ⊕ (declOf output.compiled.unit).Glob)
+    (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte ∨
+      carrier ∈ (E.P.mitRuhe.ensures (some root.1)).orte) :
+    TraegerGleich after.speicher before.speicher carrier := by
   let fs := fsRuhe output.fsA.1
   let init := initRuhe E.starts
   let graph := kVon E.P.mitRuhe fs init
@@ -125,18 +127,37 @@ theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
   have rootInGraph : graph thread (some root.1) = true := by
     rw [← entry]
     exact reachB_wurzel E.P.mitRuhe fs (init thread).1
-  have agreement (carrier : _) (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte) :
-      TraegerGleich after.speicher before.speicher carrier := by
-    have original : carrier ∈ (E.P.requires root.1).orte := (requires_mitRuhe_orte E.P root.1) ▸ read
-    have localRead := output.root_contract_local hardware.2.2.2 accepted listed (.inl original)
-    have apart := getrenntK_of starts (getrennt_mitRuhe E.P output.fsA.2 valid.abg localRead)
-    have noWrite := apart thread issuer different (some root.1) rootInGraph
-      (List.mem_append_left _ (fuss_req E.P.mitRuhe (some root.1) read))
-      (before.faeden issuer).kopf.f (facts.graph issuer _ List.mem_cons_self)
-    have notShared : ¬ GeteiltV E.P E.ws carrier := fun shared => (shared.2.1 root.1).1 original
-    obtain ⟨view, middle, step, presents, changed, kept, _, _, _⟩ := stepped
-    exact traegerGleich_trans (gx_aussen presents changed kept carrier notShared)
-      (traegerGleich_trans (schritt_traeger good step carrier (.inr noWrite)) (presents carrier notShared))
+  have original : carrier ∈ (E.P.requires root.1).orte ∨ carrier ∈ (E.P.ensures root.1).orte := by
+    simpa only [requires_mitRuhe_orte, ensures_mitRuhe_orte] using read
+  have localRead := output.root_contract_local hardware.2.2.2 accepted listed original
+  have apart := getrenntK_of starts (getrennt_mitRuhe E.P output.fsA.2 valid.abg localRead)
+  have footprint : carrier ∈ fussOrte E.P.mitRuhe (some root.1) :=
+    read.elim (fun h => fuss_req E.P.mitRuhe (some root.1) h) (fun h => fuss_ens E.P.mitRuhe (some root.1) h)
+  have noWrite := apart thread issuer different (some root.1) rootInGraph
+    (List.mem_append_left _ footprint) (before.faeden issuer).kopf.f (facts.graph issuer _ List.mem_cons_self)
+  have notShared : ¬ GeteiltV E.P E.ws carrier := fun shared =>
+    original.elim (shared.2.1 root.1).1 (shared.2.1 root.1).2.1
+  obtain ⟨view, middle, step, presents, changed, kept, _, _, _⟩ := stepped
+  exact traegerGleich_trans (gx_aussen presents changed kept carrier notShared)
+    (traegerGleich_trans (schritt_traeger good step carrier (.inr noWrite)) (presents carrier notShared))
+
+/-- The checked root requirement remains true while other threads run. -/
+theorem Emitted.root_requires_other_step (output : Emitted src reserve options)
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (hardware : HardwareAnnahmenHw O E.Q)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (duties : StartPflicht E) {thread issuer : Nat} (different : thread ≠ issuer)
+    {root : Σ f : (declOf output.compiled.unit).Fn, Env _ ((declOf output.compiled.unit).params f)}
+    (declared : E.starts[thread]? = some root)
+    {before after : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    (reached : RufErreichbarGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) (imageSourceStart E).m before)
+    (stepped : RufSchrittGX E.P.mitRuhe O.mitRuhe output.image.passes
+      (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) before issuer after) :
+    ReqAmEintritt E.P.mitRuhe (some root.1) (after.speicher.welt []) (envR root.2) ↔
+      ReqAmEintritt E.P.mitRuhe (some root.1) (before.speicher.welt []) (envR root.2) := by
+  have agreement (carrier : _) (read : carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte) :=
+    output.root_contract_other_step hardware accepted duties different declared reached stepped carrier (.inl read)
   have worlds : OrtGleich (fun carrier => carrier ∈ (E.P.mitRuhe.requires (some root.1)).orte)
       (after.speicher.welt []) (before.speicher.welt []) :=
     ⟨rfl, fun table => agreement (.inl table), fun global => agreement (.inr global)⟩
