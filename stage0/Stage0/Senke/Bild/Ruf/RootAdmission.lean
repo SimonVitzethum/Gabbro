@@ -21,7 +21,7 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
     (length : body.length = before.ths.length)
     (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState footprint before.ms).1, body⟩ state snapshots positions committed)
-    (indices : ∀ j s, snapshots j = some s → (positions j).thr = j ∧ footprint j = s.F)
+    (indices : ∀ j s, snapshots j = some s → (positions j).thr = j ∧ SoloFootprint footprint j s)
     (roots : ∀ j, body[j]? = before.ths[j]? ∨
       ∃ r, body[j]? = some none ∧ before.ths[j]? = some (some r) ∧
         ImageRootPhase output E history (before.ms.1.view j) j r state)
@@ -32,15 +32,17 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
     (sourceHead : state.m.faeden i = entry.M.faeden i)
     (threads : after.ths = before.ths.set i (some (.next entry.start)))
     (otherViews : ∀ j, j ≠ i → after.ms.1.view j = before.ms.1.view j)
-    (buffers : PrivateBuffers footprint after.ms.1) (writes : W → Prop)
-    (inside : ∀ byte, writes byte → footprint i byte)
-    (atFrame : GleichAuf (footprint i) (projectSCState footprint after.ms).1 entry.mb)
+    (buffers : PrivateBuffers footprint after.ms.1) (reads writes : W → Prop)
+    (inside : ∀ byte, writes byte → reads byte)
+    (accessible : ∀ byte, reads byte → ∀ j, footprint j byte → j = i)
+    (owned : ∀ byte, writes byte → footprint i byte)
+    (atFrame : GleichAuf reads (projectSCState footprint after.ms).1 entry.mb)
     (unchanged : ∀ byte, ¬ writes byte →
       GleichAt (projectSCState footprint after.ms).1 (projectSCState footprint before.ms).1 byte)
     (entryPrivate : ∀ j s, snapshots j = some s → ∀ byte, writes byte → ¬ s.F byte)
-    (existingPrivate : ∀ j s, snapshots j = some s → ∀ byte, s.Wr byte → ¬ footprint i byte) :
+    (existingPrivate : ∀ j s, snapshots j = some s → ∀ byte, s.Wr byte → ¬ reads byte) :
     ImageRuntimeMatches output E O history after state := by
-  let added : Solo := ⟨.next entry.start, entry.mb, footprint i, writes⟩
+  let added : Solo := ⟨.next entry.start, entry.mb, reads, writes⟩
   let registered := body.set i (some (.next entry.start))
   have fresh (j : Nat) (s : Solo) (found : snapshots j = some s) : (positions j).thr ≠ entry.thr := by
     rw [(indices j s found).1, thread]
@@ -51,13 +53,13 @@ theorem ImageRuntimeMatches.register_body [Kern] {src : String} {reserve : Nat} 
     rw [empty] at occupied
     cases occupied
   have entered := related.enter_pending_root empty entryOK exactProgram (thread.symm ▸ alive)
-    (thread.symm ▸ waiting) (thread.symm ▸ sourceHead) fresh (footprint i) writes
+    (thread.symm ▸ waiting) (thread.symm ▸ sourceHead) fresh reads writes
       inside atFrame unchanged entryPrivate existingPrivate
   refine ⟨footprint, registered, buffers, ?_, .inr ⟨setzeS snapshots i added, _, committed, entered, ?_⟩, ?_⟩
   · simp only [registered, threads, List.length_set, length]
   · intro j s found
     rcases setzeS_fall found with ⟨rfl, rfl⟩ | ⟨different, known⟩
-    · exact ⟨by simpa only [ite_true] using thread, rfl⟩
+    · exact ⟨by simpa only [ite_true] using thread, ⟨accessible, owned⟩⟩
     · simpa only [ite_eq_right different] using indices j s known
   · intro j
     by_cases same : j = i
@@ -97,9 +99,8 @@ theorem imageProjection_agree_other [Kern] {before after : imageTSO.St}
       show viewAt before.1 footprint address = before.1.m from dif_neg assigned, committed]
     exact .refl _ _
 
-/-- Register an entered root using its actual issuing view and the fixed
-    stack reservations. Disjointness and projected memory stability
-    follow from the emitted layout and the real prefix's view equalities. -/
+/-- Register the entered body with its writable stack and immutable
+    shared bytes, which include the emitted instructions. -/
 theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {E : Einheit (declOf output.compiled.unit)}
     {O : Orakel (declOf output.compiled.unit)} {history : List Ev}
@@ -110,7 +111,8 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     (length : body.length = before.ths.length)
     (related : MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
       ⟨(projectSCState (imageStackFootprint output) before.ms).1, body⟩ state snapshots positions committed)
-    (indices : ∀ j s, snapshots j = some s → (positions j).thr = j ∧ imageStackFootprint output j = s.F)
+    (indices : ∀ j s, snapshots j = some s →
+      (positions j).thr = j ∧ SoloFootprint (imageStackFootprint output) j s)
     (roots : ∀ j, body[j]? = before.ths[j]? ∨
       ∃ r, body[j]? = some none ∧ before.ths[j]? = some (some r) ∧
         ImageRootPhase output E history (before.ms.1.view j) j r state)
@@ -132,21 +134,26 @@ theorem ImageRuntimeMatches.register_private_body [Kern] {src : String} {reserve
     change body[i]? = some (some s.r) at located
     rw [empty] at located
     cases located
-  have atStack : GleichAuf (imageStackFootprint output i)
+  let reads : W → Prop := fun byte => imageStackFootprint output i byte ∨
+    ((∀ j, ¬ imageStackFootprint output j byte) ∧ after.ms.1.m.wr byte = false)
+  have accessible (byte : W) (among : reads byte) (j : Nat) (other : imageStackFootprint output j byte) : j = i := by
+    rcases among with own | ⟨shared, _⟩
+    · exact imageStackFootprint_disjoint other own
+    · exact (shared j other).elim
+  have atReads : GleichAuf reads
       (projectSCState (imageStackFootprint output) after.ms).1 entry.mb := by
     rw [entryMemory]
-    apply tso_views_merge
-    intro j store pending k distinct address inside touches
-    exact distinct (imageStackFootprint_disjoint inside (buffers j store pending address touches).1)
+    intro address inside
+    exact mergedView_accessible_at after.ms.1 (imageStackFootprint output) i address
+      (fun j store pending byte touches => (buffers j store pending byte touches).1) (accessible address inside)
   have outside := imageProjection_agree_other (footprint := imageStackFootprint output) shared otherViews
   refine ImageRuntimeMatches.register_body length related indices roots empty entryOK exactProgram thread alive waiting
-    sourceHead threads otherViews buffers (imageStackFootprint output i) (fun _ proof => proof) atStack outside ?_ ?_
+    sourceHead threads otherViews buffers reads (imageStackFootprint output i) (fun _ proof => .inl proof)
+    accessible (fun _ proof => proof) atReads outside ?_ ?_
   · intro j s found address write owns
-    rw [← (indices j s found).2] at owns
-    exact different j s found (imageStackFootprint_disjoint owns write)
+    exact different j s found (((indices j s found).2.read address owns i write).symm)
   · intro j s found address write current
-    have owner := related.mem.wrF j s found address write
-    rw [← (indices j s found).2] at owner
-    exact different j s found (imageStackFootprint_disjoint owner current)
+    have owner := (indices j s found).2.write address write
+    exact different j s found (accessible address current j owner)
 
 end Gabbro.Stage0

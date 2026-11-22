@@ -56,8 +56,8 @@ theorem imageSourceForeignEvents_call {D : Deklaration} {O : Orakel D} (oracle :
     simp only [List.reverse_append, List.filterMap_append, List.filterMap_reverse,
       readsSilent, writesSilent, List.reverse_nil, List.nil_append, List.append_nil]
     rfl
-  rw [logEq]
-  simpa only [imageSourceForeignEvents, rufEigenG, List.filterMap_map, Function.comp_apply] using projected
+  rw [logEq, imageSourceForeignEvents, rufEigenG, List.filterMap_map]
+  exact projected
 
 /-- Internal runner requests leave the foreign history intact when the
     corresponding GX segment adds no foreign event. -/

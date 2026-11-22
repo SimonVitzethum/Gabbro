@@ -173,7 +173,7 @@ def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
       ∃ snapshots positions committed,
         MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
           ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
-        ∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
+        ∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s) ∧
     ∀ i, body[i]? = machine.ths[i]? ∨
       ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
         ImageRootPhase output E history (machine.ms.1.view i) i r state
@@ -218,7 +218,7 @@ def imageSourceForeignEvents {D : Deklaration} (run : Lauf D) : List (Faden × D
 def ImageForeignTrace (output : Emitted src reserve options)
     (history : List Ev) (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
   List.Forall₂ (fun event (typed : Faden × (declOf output.compiled.unit).Ax) =>
-    event.1 = typed.1 ∧ ∃ gate, output.tor typed.2 = some gate ∧
+    event.1 = typed.1 ∧ ∃ gate, output.image.Y.tor typed.2 = some gate ∧
       event.2.1.nr = BitVec.ofNat 64 gate.nr) (history.filter imageExternalEvent)
       (imageSourceForeignEvents (D := (declOf output.compiled.unit).mitRuhe) state.m.lauf)
 

@@ -74,7 +74,7 @@ theorem tso_store_updates_view {layout : Lay} {before after : (TSO layout).St}
       rw [enqueued]
       simp only [TSt.view, TSt.setBuf, if_neg different]
 
-private theorem rdN_agrees {before after : Mem} {address : W} (width : Nat)
+theorem rdN_agrees {before after : Mem} {address : W} (width : Nat)
     (agree : GleichAuf (fenster address) before after) :
     rdN before width address = rdN after width address := by
   unfold rdN

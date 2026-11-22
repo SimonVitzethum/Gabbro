@@ -27,7 +27,7 @@ theorem ImageRuntimeMatches.body_relation {src : String} {reserve : Nat} {option
       PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
       MTRel E.P.mitRuhe O.mitRuhe output.image.passes output.image.Y.withIdle
         ⟨(projectSCState footprint machine.ms).1, body⟩ state snapshots positions committed ∧
-      (∀ i s, snapshots i = some s → (positions i).thr = i ∧ footprint i = s.F) ∧
+      (∀ i s, snapshots i = some s → (positions i).thr = i ∧ SoloFootprint footprint i s) ∧
       ∀ i, body[i]? = machine.ths[i]? ∨
         ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
           ImageRootPhase output E history (machine.ms.1.view i) i r state := by

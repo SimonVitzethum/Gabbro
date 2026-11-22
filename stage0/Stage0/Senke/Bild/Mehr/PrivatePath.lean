@@ -82,11 +82,49 @@ def PrivateBuffers (footprint : Nat → W → Prop) (state : TSt) : Prop :=
   ∀ i store, store ∈ state.buf i → ∀ address, fenster store.1 address →
     footprint i address ∧ ∀ j, footprint j address → j = i
 
+/-- A solo segment can read its own private bytes and shared bytes.
+    Any byte that it may write is owned by this thread's buffer. -/
+structure SoloFootprint (footprint : Nat → W → Prop) (i : Nat) (s : Solo) : Prop where
+  read : ∀ byte, s.F byte → ∀ j, footprint j byte → j = i
+  write : ∀ byte, s.Wr byte → footprint i byte
+
 theorem privateBuffers_empty {footprint : Nat → W → Prop} {state : TSt}
     (empty : ∀ i, state.buf i = []) : PrivateBuffers footprint state := by
   intro i store pending
   rw [empty i] at pending
   cases pending
+
+/-- An address can be read by its owner or from shared committed memory.
+    Both cases give the issuer exactly the byte used by the SC projection. -/
+theorem mergedView_accessible_at (state : TSt) (footprint : Nat → W → Prop) (issuer : Nat) (address : W)
+    (owns : ∀ thread store, store ∈ state.buf thread →
+      ∀ byte, fenster store.1 byte → footprint thread byte)
+    (accessible : ∀ thread, footprint thread address → thread = issuer) :
+    GleichAt (mergedView state footprint) (state.view issuer) address := by
+  by_cases present : ∃ thread, footprint thread address
+  · change GleichAt (viewAt state footprint address) (state.view issuer) address
+    rw [show viewAt state footprint address = state.view (Classical.choose present) from dif_pos present,
+      accessible _ (Classical.choose_spec present)]
+    exact .refl _ _
+  · exact (mergedView_committed_at state footprint address present).trans
+      (view_agrees_at (fun store pending touched => present ⟨issuer, owns issuer store pending address touched⟩)).symm
+
+/-- The bytes of a single load may lie both in the issuer's private
+    region and in committed memory. The entire observed word agrees. -/
+theorem projectSCState_read_accessible {layout : Lay} {before after : (TSO layout).St}
+    {i width : Nat} {address : W} {answer : Ans}
+    (read : (TSO layout).ans before i (.rd width address) answer after)
+    (footprint : Nat → W → Prop)
+    (accessible : ∀ y, fenster address y → ∀ thread, footprint thread y → thread = i)
+    (owns : ∀ thread store, store ∈ before.1.buf thread →
+      ∀ y, fenster store.1 y → footprint thread y) :
+    (SC layout).ans (projectSCState footprint before) i (.rd width address) answer
+      (projectSCState footprint after) := by
+  obtain ⟨same, extra, result⟩ := read
+  have agree : GleichAuf (fenster address) (before.1.view i) (mergedView before.1 footprint) :=
+    fun y touched => (mergedView_accessible_at before.1 footprint i y owns (accessible y touched)).symm
+  exact ⟨congrArg (projectSCState footprint) same, extra,
+    result.trans (congrArg (fun bytes : Option W => bytes.map (·, extra)) (rdN_agrees width agree))⟩
 
 private theorem PrivateBuffers.disjoint {footprint : Nat → W → Prop} {state : TSt}
     (owned : PrivateBuffers footprint state) :
