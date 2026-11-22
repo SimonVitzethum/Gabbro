@@ -26,20 +26,25 @@ meta def geradeStmts : List Lean.Name :=
    ``Gabbro.Grammatik.Stmt.retires, ``Gabbro.Grammatik.Stmt.regWrite, ``Gabbro.Grammatik.Stmt.transition,
    ``Gabbro.Grammatik.Stmt.retWhy, ``Gabbro.Grammatik.Stmt.leave, ``Gabbro.Grammatik.Stmt.next]
 
+/-- The end blocks that end in one outcome without a case split. -/
+meta def geradeEnden : List Lean.Name :=
+  [``Gabbro.Grammatik.Endblock.retWhy, ``Gabbro.Grammatik.Endblock.leave, ``Gabbro.Grammatik.Endblock.next]
+
 open Lean Meta in
 /-- A straight statement (`geradeStmts`): `wpSA s Q σ ρ` is by definition `Q (execStmtHA s σ ρ)`;
     the execution is put into the kernel's weak head normal form, which must be an outcome. -/
 meta def gerade? (goal : MVarId) (t : Lean.Expr) : MetaM (Option MVarId) := do
-  unless t.isAppOf ``Gabbro.Grammatik.WP.wpSA && t.getAppNumArgs ≥ 4 do return none
+  unless (t.isAppOf ``Gabbro.Grammatik.WP.wpSA || t.isAppOf ``Gabbro.Grammatik.WP.wpEA) && t.getAppNumArgs ≥ 4 do
+    return none
   let args := t.getAppArgs
   let some k := args[args.size - 4]!.getAppFn.constName? | return none
-  unless geradeStmts.contains k do return none
+  unless geradeStmts.contains k || geradeEnden.contains k do return none
   let some e ← delta? t | return none
-  let e := e.headBeta
   unless e.isApp do return none
   match Kernel.whnf (← getEnv) (← getLCtx) e.appArg! with
   | .ok x =>
-    unless x.getAppFn.constName?.any (·.getPrefix == ``Gabbro.Grammatik.Ausgang) do return none
+    unless x.getAppFn.constName?.any (fun c => c.getPrefix == ``Gabbro.Grammatik.Ausgang ||
+        c.getPrefix == ``Gabbro.Grammatik.EndAusgang) do return none
     return some (← goal.replaceTargetDefEq (mkApp e.appFn! x).headBeta)
   | .error _ => return none
 
@@ -52,7 +57,8 @@ meta def rufStelle? (t : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr)) :=
   if args.isEmpty then return none
   let last := args.back!
   let heads := [``Gabbro.Bruecke.bindRufEA, ``Gabbro.Grammatik.WP.bindRufBA, ``Gabbro.Bruecke.bindRufSonstEA,
-    ``Gabbro.Bruecke.bindRufSonstBA]
+    ``Gabbro.Bruecke.bindRufSonstBA, ``Gabbro.Bruecke.retryWeiter, ``Gabbro.Bruecke.travWeiter,
+    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA]
   let (x, bau) : Lean.Expr × (Lean.Expr → Lean.Expr) ←
     if heads.any t.isAppOf then pure (last, fun y => mkAppN t.getAppFn (args.set! (args.size - 1) y))
     else if last.isAppOf ``Gabbro.Grammatik.WP.rufZuAusgang && last.getAppNumArgs ≥ 1 then
@@ -95,10 +101,14 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
   let some (G, x) ← rufStelle? t | return none
   let x := x.headBeta
   -- a known outcome: read the continuation off its definition (delta, then the match)
-  if x.getAppFn.constName?.any (·.getPrefix == ``Gabbro.Grammatik.RufAusgang) then
+  let antwortBekannt := x.isAppOfArity ``Prod.mk 4 &&
+    ((x.getArg! 3).isAppOf ``Option.some || (x.getArg! 3).isAppOf ``Option.none)
+  if antwortBekannt || x.getAppFn.constName?.any (fun c => c.getPrefix == ``Gabbro.Grammatik.RufAusgang ||
+      c.getPrefix == ``Gabbro.Grammatik.Ausgang || c.getPrefix == ``Gabbro.Grammatik.EndAusgang) then
     let t := t.headBeta
     let heads := [``Gabbro.Bruecke.bindRufEA, ``Gabbro.Grammatik.WP.bindRufBA, ``Gabbro.Bruecke.bindRufSonstEA,
-      ``Gabbro.Bruecke.bindRufSonstBA]
+      ``Gabbro.Bruecke.bindRufSonstBA, ``Gabbro.Bruecke.retryWeiter, ``Gabbro.Bruecke.travWeiter,
+    ``Gabbro.Bruecke.axRufSA, ``Gabbro.Bruecke.axBindBA, ``Gabbro.Bruecke.axBindEA]
     if heads.any t.isAppOf then
       let some t' ← delta? t | return none
       return some [← goal.replaceTargetDefEq (← whnfCore t'.headBeta)]
@@ -145,6 +155,23 @@ meta def rufSchritt? (goal : MVarId) (t : Lean.Expr) : MetaM (Option (List MVarI
         let (_, m') ← m.mvarId!.intro `hbed
         out := out ++ [m']
       return some out
+  -- the oracle's answer to a foreign call
+  if x.isAppOf ``Gabbro.Grammatik.axiomAntwort then
+    let ty ← whnfR (← inferType x)
+    unless ty.isAppOfArity ``Prod 2 do return none
+    let wty ← whnfR (ty.getArg! 0)
+    let oty ← whnfR (ty.getArg! 1)
+    unless wty.isAppOfArity ``Gabbro.Grammatik.World 1 && oty.isAppOfArity ``Option 1 do return none
+    let pf0 := mkAppN (mkConst ``Gabbro.Bruecke.antwort_faelle) #[wty.getArg! 0, oty.getArg! 0, G, x]
+    let (ms, _, _) ← forallMetaTelescopeReducing (← inferType pf0) (some 2)
+    goal.assign (mkAppN pf0 ms)
+    let mut out := []
+    for (m, k) in ms.toList.zip [0, 1] do
+      m.mvarId!.setKind .syntheticOpaque
+      let namen := if k == 0 then [`σ', `v, `hax] else [`σ', `hax]
+      let (_, m') ← m.mvarId!.introN namen.length namen
+      out := out ++ [m']
+    return some out
   -- the handler's outcome
   if x.getAppFn.isFVar && x.getAppNumArgs == 3 then
     let ty ← whnfR (← inferType x)

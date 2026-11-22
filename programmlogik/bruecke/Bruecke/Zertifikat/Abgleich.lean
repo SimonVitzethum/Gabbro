@@ -3,6 +3,7 @@ public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Programm
 public import Bruecke.Zertifikat.Regeln
 public import Bruecke.Zertifikat.Aufrufe
+public import Bruecke.Zertifikat.Schleifen
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -68,6 +69,12 @@ meta def wpRegel? (t0 : Lean.Expr) : Option Name :=
   | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some 0 => some ``Gabbro.Bruecke.wpGrundA_null
   | some ``Gabbro.Bruecke.wpGrundA, some ``Gabbro.Grammatik.GrundArms.cons, some (_ + 1) => some ``Gabbro.Bruecke.wpGrundA_succ
   | _, _, _ =>
+  if t.isAppOf ``Gabbro.Bruecke.wpRetryA then
+    match args[args.size - 4]!.rawNatLit? with
+    | some 0 => some ``Gabbro.Bruecke.wpRetryA_null
+    | some _ => some ``Gabbro.Bruecke.wpRetryA_succ
+    | none => none
+  else
   match t.getAppFn.constName?, args[args.size - 1]!.getAppFn.constName? with
   | some ``Gabbro.Grammatik.WP.RueckPost, some ``Gabbro.Grammatik.EndAusgang.zurueck => some ``Gabbro.Bruecke.rueckPost_zurueck
   | some ``Gabbro.Grammatik.WP.RueckPost, some ``Gabbro.Grammatik.EndAusgang.why => some ``Gabbro.Bruecke.rueckPost_why
@@ -92,6 +99,16 @@ meta def wpRegel? (t0 : Lean.Expr) : Option Name :=
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.onOption => some ``Gabbro.Bruecke.wpSA_onOption
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindCall => some ``Gabbro.Grammatik.WP.wpBA_bindCall
   | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.breaking => some ``Gabbro.Bruecke.wpSA_breaking
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.retry => some ``Gabbro.Bruecke.wpSA_retry_lauf
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.axiomCall => some ``Gabbro.Bruecke.wpSA_axiomCall
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindAxiom => some ``Gabbro.Bruecke.wpBA_bindAxiom
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindAxiom => some ``Gabbro.Bruecke.wpEA_bindAxiom
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.narrowRequired => some ``Gabbro.Bruecke.wpBA_narrowRequired
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.narrow => some ``Gabbro.Bruecke.wpEA_narrow
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.narrowRequired => some ``Gabbro.Bruecke.wpEA_narrowRequired
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.traverse => some ``Gabbro.Bruecke.wpSA_traverse_lauf
+  | some ``Gabbro.Bruecke.wpTravA, some ``List.nil => some ``Gabbro.Bruecke.wpTravA_nil
+  | some ``Gabbro.Bruecke.wpTravA, some ``List.cons => some ``Gabbro.Bruecke.wpTravA_cons
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindCall => some ``Gabbro.Bruecke.wpEA_bindCall
   | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bindCallElse => some ``Gabbro.Bruecke.wpEA_bindCallElse
   | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bindCallElse => some ``Gabbro.Bruecke.wpBA_bindCallElse
@@ -126,7 +143,11 @@ meta partial def passe (p e : Lean.Expr) : MetaM Bool := do
       match e with
       | .app (.app (.app (.app (.app (.app (.const ``HAdd.hAdd _) _) _) _) _) a') b' =>
         return (← passe a a') && (← passe b b')
-      | _ => return false
+      | _ =>
+        -- a number the kernel computes (`D.gruende f`): its normal form, then again
+        match Kernel.whnf (← getEnv) (← getLCtx) e with
+        | .ok e' => if e' == e then return false else passe p e'
+        | .error _ => return false
   | .mdata _ p', _ => passe p' e
   | _, .mdata _ e' => passe p e'
   | .app _ _, _ =>

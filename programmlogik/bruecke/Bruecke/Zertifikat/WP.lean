@@ -1,7 +1,7 @@
 module
 public import Bruecke.Zertifikat.Satz
 public import Bruecke.Zertifikat.Programm
-public import Bruecke.Zertifikat.Fertig
+public import Bruecke.Zertifikat.Teilen
 public meta import Lean.Elab.Tactic
 @[expose] public section
 
@@ -58,6 +58,13 @@ open Lean Elab Tactic Meta in
       let w' ← kernNormal args[args.size - 4]!
       let t' := mkAppN t.getAppFn (args.set! (args.size - 4) w')
       pure (← goal.replaceTargetDefEq t', t')
+    else if (t.isAppOf ``Gabbro.Bruecke.wpRetryA || t.isAppOf ``Gabbro.Bruecke.wpTravA) && args.size ≥ 4 then
+      let w := args[args.size - 4]!
+      let fertig := w.rawNatLit?.isSome || w.isAppOf ``List.nil || w.isAppOf ``List.cons
+      if fertig then pure (goal, t) else
+      let w' ← kernNormal w
+      let t' := mkAppN t.getAppFn (args.set! (args.size - 4) w')
+      pure (← goal.replaceTargetDefEq t', t')
     else pure (goal, t)
   if let some g ← gerade? goal t then replaceMainGoal [g] else
   if let some gs ← rufSchritt? goal t then replaceMainGoal gs else
@@ -65,25 +72,15 @@ open Lean Elab Tactic Meta in
   | some regel => replaceMainGoal [← wendeAn goal regel]
   | none =>
     -- a branch whose condition the kernel decides: its weak head normal form is the branch taken
-    if t.isAppOfArity ``ite 5 then
-      -- decide the condition by its `Decidable` instance only; the goal becomes the branch taken
-      match Kernel.whnf (← getEnv) (← getLCtx) (t.getArg! 2) with
-      | .ok inst =>
-        -- `Decidable` is a structure over its Boolean: read that Boolean
-        let b? : Option Bool ←
-          if inst.isAppOf ``Decidable.isTrue then pure (some true)
-          else if inst.isAppOf ``Decidable.isFalse then pure (some false)
-          else if inst.isAppOf ``Decidable.intro && inst.getAppNumArgs ≥ 2 then
-            match Kernel.whnf (← getEnv) (← getLCtx) (inst.getArg! 1) with
-            | .ok b => pure (if b.isConstOf ``Bool.true then some true
-                else if b.isConstOf ``Bool.false then some false else none)
-            | .error _ => pure none
-          else pure none
-        match b? with
-        | some true => replaceMainGoal [← goal.replaceTargetDefEq (t.getArg! 3)]
-        | some false => replaceMainGoal [← goal.replaceTargetDefEq (t.getArg! 4)]
-        | none => throwError "gabbrov_schritt: the condition is not decided"
-      | .error _ => throwError "gabbrov_schritt: the condition is not decided"
+    if t.isAppOfArity ``ite 5 || t.isAppOfArity ``dite 5 then
+      replaceMainGoal (← verzweigung goal t)
+    -- a match at a symbolic value: its cases
+    else if t.isAppOf ``Gabbro.Bruecke.wpArmsA && t.getAppNumArgs ≥ 4 then
+      replaceMainGoal (← summeTeilen goal t.getAppArgs[t.getAppNumArgs - 4]!)
+    else if t.isAppOf ``Gabbro.Bruecke.wpGrundA && t.getAppNumArgs ≥ 4 then
+      replaceMainGoal (← finTeilen goal t.getAppArgs[t.getAppNumArgs - 4]!)
+    else if let some g ← freiLesen? goal then replaceMainGoal [g]
+    else if let some gs ← iteHeben? goal then replaceMainGoal gs
     else
       let t2 := t.headBeta.cleanupAnnotations
       throwError m!"gabbrov_schritt: no rule for this goal: {t2.getAppFn} / {t2.getAppNumArgs} / {(t2.getAppArgs.back?.map (·.getAppFn))}"
@@ -162,6 +159,7 @@ macro "gabbrov_beweis" : tactic => `(tactic| (
     intro O' _ _ _ U _ A _ R _ _ σ ρ _ <;>
     show Gabbro.Grammatik.WP.wpEA _ _ _ _ _ _ (P.rumpf _) _ σ ρ <;>
     rw [hrumpf] <;> gabbrov_rumpf <;> gabbrov_wp
-  all_goals gabbrov_fertig hens))
+  all_goals gabbrov_fertig hens
+  all_goals try gabbrov_arith))
 
 end Gabbro.Bruecke

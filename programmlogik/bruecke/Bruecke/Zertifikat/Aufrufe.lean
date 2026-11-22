@@ -99,10 +99,76 @@ theorem wpEA_ite {Λ : List (Res D)} (c : Expr D Γ Λ .bool) (t e : Endblock D 
   simp only [execEndHA]
   rw [apply_ite Q]
 
+/-- What follows a foreign call statement, by the oracle's answer. -/
+def axRufSA (a : D.Ax) {β : Type} (Q : Ausgang V l Γ → Prop) (ρ : Env D Γ) : World D × Option β → Prop
+  | (σ', Option.some _) => Q (.ok σ' ρ)
+  | (_, Option.none) => Q (.hardware (.annahme a))
+
+theorem wpSA_axiomCall {Λ : List (Res D)} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (h : D.aerg a = none)
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ) (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
+    wpSA S O U A passes R (.axiomCall a args h hw hg hd hgd) Q σ ρ ↔
+      axRufSA a Q ρ (axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)) := by
+  unfold wpSA
+  simp only [execStmtHA]
+  rcases axiomAntwort O a (leseA A σ Λ args.orte) (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)
+    with ⟨σ', _ | _⟩ <;> rfl
+
+/-- What follows a foreign call binding in a block, by the oracle's answer. -/
+def axBindBA {a : D.Ax} {τ : Ty} {Λ' Λ'' : List (Res D)} (he : D.aerg a = some τ)
+    (rest : Block D V l (τ :: Γ) Λ' Λ'') (Q : Ausgang V l Γ → Prop) (ρ : Env D Γ) :
+    World D × Option (ErgVal D (D.aerg a)) → Prop
+  | (σ', Option.some v) => wpBA S O U A passes R rest (fun o => Q o.schrumpf) σ' (.cons (ergWert he v) ρ)
+  | (_, Option.none) => Q (.hardware (.annahme a))
+
+theorem wpBA_bindAxiom {Λ Λ' : List (Res D)} {τ : Ty} (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+    (he : D.aerg a = some τ) (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ) (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Block D V l (τ :: Γ) Λ Λ') (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
+    wpBA S O U A passes R (.bindAxiom a args he hw hg hd hgd rest) Q σ ρ ↔
+      axBindBA S O U A passes R he rest Q ρ (axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)) := by
+  unfold wpBA
+  simp only [execBlockHA]
+  rcases axiomAntwort O a (leseA A σ Λ args.orte) (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)
+    with ⟨σ', _ | _⟩ <;> rfl
+
+/-- What follows a foreign call binding at the end of a body, by the oracle's answer. -/
+def axBindEA {a : D.Ax} {τ : Ty} {Λ' : List (Res D)} (he : D.aerg a = some τ)
+    (rest : Endblock D V l (τ :: Γ) Λ') (Q : EndAusgang V l Γ → Prop) (ρ : Env D Γ) :
+    World D × Option (ErgVal D (D.aerg a)) → Prop
+  | (σ', Option.some v) => wpEA S O U A passes R rest (fun o => Q o.schrumpf) σ' (.cons (ergWert he v) ρ)
+  | (_, Option.none) => Q (.hardware (.annahme a))
+
+theorem wpEA_bindAxiom {Λ : List (Res D)} {τ : Ty} (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+    (he : D.aerg a = some τ) (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ) (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Endblock D V l (τ :: Γ) Λ) (Q : EndAusgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
+    wpEA S O U A passes R (.bindAxiom a args he hw hg hd hgd rest) Q σ ρ ↔
+      axBindEA S O U A passes R he rest Q ρ (axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)) := by
+  unfold wpEA
+  simp only [execEndHA]
+  rcases axiomAntwort O a (leseA A σ Λ args.orte) (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ)
+    with ⟨σ', _ | _⟩ <;> rfl
+
 end HA
 
 
 /-! ## Splitting on the callee's outcome -/
+
+/-- **The two kinds of an oracle's answer**, each with the equation that names it. -/
+theorem antwort_faelle {D : Deklaration} {β : Type} {G : World D × Option β → Prop} (x : World D × Option β)
+    (hja : ∀ σ' v, x = (σ', Option.some v) → G (σ', Option.some v))
+    (hnein : ∀ σ', x = (σ', Option.none) → G (σ', Option.none)) : G x := by
+  rcases x with ⟨σ', _ | v⟩
+  · exact hnein σ' rfl
+  · exact hja σ' v rfl
 
 /-- **The four outcomes of a call**, each with the equation that names it. -/
 theorem ruf_faelle {D : Deklaration} {f : D.Fn} {G : RufAusgang f → Prop} (x : RufAusgang f)
