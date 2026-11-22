@@ -1,6 +1,8 @@
 module
 
 public import Stage0.Senke.Bild.Mehr.Ort.Segment
+import Grammatik.Zielsatz.Atomar.AtomarZiel
+import Grammatik.Zielsatz.Kern.Beweis
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -8,6 +10,7 @@ import Lean.Elab.Tactic.Omega
 namespace Gabbro.Stage0.Senke.BildMehr
 
 open Gabbro.Grammatik Gabbro.Stage0.Senke Gabbro.Stage0.Senke.BildLauf Runner Runner.IR
+open Gabbro.Grammatik.Zielsatz
 
 variable {D : Deklaration}
 
@@ -28,6 +31,40 @@ theorem carrierFootprint_iff {layout : Lay D} {carriers : D.Tab ⊕ D.Glob → P
     exact same.symm ▸ selected
   · intro selected
     exact ⟨cell, allocated, selected, first, last⟩
+
+/-- Unguarded plain cells are private to the declared root whose call
+    graph can write their carrier. The assignment is independent of the
+    current instruction, so it remains valid across delayed TSO flushes. -/
+def plainWriterFootprint [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn)
+    (layout : Lay D.mitRuhe) (thread : Faden) : W → Prop :=
+  carrierFootprint layout fun carrier =>
+    (∀ lock, ¬ Bewacht carrier lock) ∧ ¬ AtomarAusgenommen carrier ∧
+    ∃ fn, kVon E.P.mitRuhe (fsRuhe fs) (initRuhe E.starts) thread fn = true ∧
+      TraegerSchreibt fn carrier = true
+
+/-- The checker excludes access from every other root to a byte reserved
+    by a plain writer. This covers both writes and footprint reads, even
+    when two declared roots start the same function. -/
+theorem plainWriterFootprint_access [DecidableEq D.Fn] {E : Einheit D}
+    {fs : Aufzaehlung D.Fn} {ls : Aufzaehlung D.Lock} {cs : Aufzaehlung (D.Tab ⊕ D.Glob)}
+    {layout : Lay D.mitRuhe} (hardware : RootNativeFloat.Hardware)
+    (accepted : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true) (duties : StartPflicht E)
+    (separated : LayDis layout) {cell : Zelle D.mitRuhe} (allocated : cell.da layout)
+    {byte : W} (first : cell.adr layout ≤ byte.toNat) (last : byte.toNat < cell.adr layout + cell.bytes)
+    {writer accessor : Faden} (privateByte : plainWriterFootprint E fs.1 layout writer byte)
+    {fn : D.mitRuhe.Fn} (reached : kVon E.P.mitRuhe (fsRuhe fs.1) (initRuhe E.starts) accessor fn = true)
+    (access : Zelle.carrier cell ∈ fussOrteG E.P.mitRuhe fn ∨ TraegerSchreibt fn (Zelle.carrier cell) = true) :
+    writer = accessor := by
+  obtain ⟨unguarded, plain, writes, reachable, modifies⟩ :=
+    (carrierFootprint_iff separated allocated first last).mp privateByte
+  have valid := (akzeptiertX_pruefer.korrekt E fs ls cs hardware accepted).1
+  have start := startZulaessig_aus E fs.1 duties (laufzeit_initRuhe E)
+  have pool := einzelnPool_mitRuhe E.P fs.2 valid.abg valid.einzeln
+  have apart := schreibGetrennt_mitRuhe E.P fs.2 valid.abg (valid.renn _ unguarded plain)
+  have graphApart := schreibGetrenntK_of start pool unguarded plain apart
+  by_contra different
+  obtain ⟨noWrite, noRead⟩ := graphApart writer accessor different writes reachable modifies fn reached
+  exact access.elim noRead (fun write => Bool.noConfusion (noWrite.symm.trans write))
 
 /-- A commit publishes the selected bytes and keeps the existing
     access permissions and all bytes outside the chosen carriers. -/
