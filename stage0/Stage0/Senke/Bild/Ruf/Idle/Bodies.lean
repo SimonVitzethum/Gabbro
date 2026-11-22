@@ -98,12 +98,16 @@ theorem lowEnd_withIdle (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (frame : F
       receiveC_withIdle, receiveTop_withIdle, elseC_withIdle, elseTopInd_withIdle,
       slotStoreC_withIdle, globalStoreC_withIdle, plainForeignC_withIdle, fallibleForeignC_withIdle,
       torC_withIdle, torC0_withIdle, counterDepthB_ru, aggregateFits_tyR, valueWords_mapNumbers, *]
-    try simp only [expression, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
+    try simp (config := { index := false }) only
+      [expression, lowA_withIdle, lowErg_withIdle, lowInd_withIdle, lowIndElse_withIdle,
       lowRetScoped, lowRetWhyScoped, retScopedC_withIdle, retWhyScopedC_withIdle, retTop_withIdle,
       signatur_some, sigNrM, receiveC_withIdle, receiveTop_withIdle, elseC_withIdle,
-      elseTop_withIdle, elseTopInd_withIdle, callC_withIdle, shifted, slotC_withIdle,
+      elseTop_withIdle, elseTopInd_withIdle, callC_withIdle, slotC_withIdle,
       locksCodeT_withIdle, lockAddress_withIdle, sumFits_mapNumbers, Ty.mapCases_length,
       lowS_resources, lowB_resources, lowEnd_resources, frei_withIdle, *]
+    try simp (config := { index := false }) only
+      [ruS, ruB, ruEnd, ruArms, lowS, lowB, lowEnd, lowSumTags, lowTags,
+        lowS_resources, lowB_resources, lowEnd_resources, *]
     try rfl
 
 end Gabbro.Stage0.Senke
