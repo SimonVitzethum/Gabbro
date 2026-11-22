@@ -161,7 +161,7 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ht : tuplePatternNa
 def anwWortTafel : List (List Char) :=
   ["else", "let", "if", "match", "traverse", "retry", "forever", "breaking", "narrow", "locks", "observes",
    "leave", "next", "return", "reset", "grow", "free", "child", "transition", "advances", "retires",
-   "while", "for"].map
+   "while", "for", "check"].map
     String.toList
 
 /-- A statement head word (see `anwWortTafel`). -/
@@ -204,7 +204,7 @@ theorem parseStmt_ident (f : Nat) (a : String) (r : List Token)
             e "locks" rfl, e "observes" rfl, e "leave" rfl, e "next" rfl,
             e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl,
             e "child" rfl, e "transition" rfl, e "advances" rfl, e "retires" rfl,
-            e "while" rfl, e "for" rfl,
+            e "while" rfl, e "for" rfl, e "check" rfl,
             Bool.false_eq_true, ite_false] using placed
     · rename_i same
       cases same

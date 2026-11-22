@@ -81,6 +81,7 @@ private theorem word_dispatch (f : Nat) (word : String) (rest : List Token)
       else if strEq word "retires" then parseRetires rest
       else if strEq word "while" then parseSchleife f rest 3
       else if strEq word "for" then parseSchleife f rest 4
+      else if strEq word "check" then parseCheck f rest
       else parsePlatzStmt f (.wort word :: rest)) := by
   simp only [parseStmt]
   split

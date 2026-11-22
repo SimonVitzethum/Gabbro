@@ -676,8 +676,24 @@ fndecl = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
          [ "requires" predlist ] [ "ensures" predlist ] [ "maintains" identlist ]
          [ "effects" "{" efflist "}" ] [ "costs" "<=" expr "ops" ]
          [ "by" inductlist ] [ "section" string ] [ "arch" ident ]
+         { "checks" pred "else" path }
          ( block | "=" pred ";" | ";" )
 ```
+
+**A contract holds only where the checker proves it (owner, 2026-11-22).** `requires`, `ensures`
+and invariants are accepted only when the checker (`checkUnitLogic`) proves them, at every call,
+every return and every owed place; a contract it cannot prove is refused by name, never weakened to
+a warning and never left to the user. A condition the checker cannot prove is written as a
+**run-time check** instead:
+
+- `checks c else R` — the last clauses, before the body: the function checks `c` when it is
+  entered and ends with the reason `R` (of its `or` channel) where `c` fails. The caller owes
+  nothing; the body runs only where `c` holds, and the checker may assume `c` there.
+- `check c else { … }` — a statement (§8.4).
+
+Both are sugar over a branch whose else-block ends (`Block.check` / `Stmt.ite` of the model), so
+they add no semantics and no assumption. There is no run-time checked postcondition: a caller that
+needs a fact about a result the checker cannot prove checks it with `check`.
 
 Contracts stand **before** the body in this fixed order, so a tool that does not sort can say
 "`effects` is missing here".
@@ -837,6 +853,23 @@ wrong-but-existing invariant still passes: the rule checks that the name resolve
 invariant really rests here.
 
 ---
+
+### 8.4 `check` — a run-time check
+
+```text
+checkstmt = "check" expr "else" endblock ;
+```
+
+`check c else { … }` evaluates `c`; where it is false the else-block runs, and it must end (`return`,
+`leave`, `next`), so control never falls through. The statements after it run only where `c`
+holds, and range narrowing and the checker use `c` there. It is the written form of a condition
+the checker cannot prove (§7); it is unrelated to the `check` declaration of §13, which stands at
+item position.
+
+```gabbro
+let a = half(84) else (e) { return 1; };
+check a == 42 else { return 3; }
+```
 
 ## 9. Loops — three forms
 

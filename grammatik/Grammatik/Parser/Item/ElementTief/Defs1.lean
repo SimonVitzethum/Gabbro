@@ -103,6 +103,23 @@ def parseFnRest (f : Nat) (sig : FnSig) (toks : List Token) :
       | .error e => .error e
       | .ok (b, r) => .ok (.fnT sig b, r)
     | .zeichen ";" :: rest => .ok (.protoT sig, rest)
+    -- `checks c else R` (the last clauses, before the body): a run-time checked precondition. It is the
+    -- check `if !c { return R; }` at the start of the body; the caller owes nothing, the body continues
+    -- only where `c` holds. A precondition the checker cannot prove is written this way, never as
+    -- `requires`.
+    | .wort w :: rest =>
+      if strEq w "checks" then match parsePred f rest with
+        | .error e => .error e
+        | .ok (c, r1) => match nimmWort "else" r1 with
+          | .error e => .error e
+          | .ok r2 => match parseOr f r2 with
+            | .error e => .error e
+            | .ok (grund, r3) => match parseFnRest f sig r3 with
+              | .error e => .error e
+              | .ok (.fnT sig' (.block ss ende), r) =>
+                .ok (.fnT sig' (.block (.cond (.un "!" c) (schliesseBlock [.ret (some grund)]) [] none :: ss) ende), r)
+              | .ok _ => .error "checks: a function with a body is required"
+      else .error "fn without body"
     | .zeichen "=" :: rest => match rest with
       | .wort s :: rest' =>
         if strEq s "asm" then match fordereZeichen "{" rest' with

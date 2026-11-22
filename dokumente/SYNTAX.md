@@ -92,7 +92,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count backed mirrors from depends owner
              assume falsifier unfalsifiable axiom lock protects rank group concurrent rcu observes reclaims
-             check claim measures gates can_fail floor counterprobe expects
+             check checks claim measures gates can_fail floor counterprobe expects
              endian little big reserved
              library payload translator for
              profile rounding fp_contract memory_model interrupt_routing
@@ -1011,6 +1011,9 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "diverg
            (* «P6a»: only at an `impl fn`; the path names a declared `spec fn` (`M130`/`M131`). *)
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
+           (* owner 2026-11-22: `requires`/`ensures` are accepted only where the checker proves
+              them; a condition it cannot prove is a run-time check, `checks` below or
+              `checkstmt` (§7). *)
            [ "maintains" identlist ]
            (* CHANGED «SG-10»: SUGAR. The obligation is DERIVED from `effects`: a function
               that writes a carrier of `invariant I` owes `I` at every `return`, whether it
@@ -1031,6 +1034,9 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "diverg
             [ "decreases" expr ]                                 (* «K5.4» *)
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ buildgate ]
+           { "checks" pred "else" path }
+           (* owner 2026-11-22: a run-time checked precondition, the last clauses before the body:
+              `if !pred { return path; }` at the start of the body; the caller owes nothing. *)
            ( endblock | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
            (* CHANGED «SG-5»: the body of a `fn` is an `endblock` -- a block that does NOT fall
               off. A function with a return type ends in `return e;`, one without in `return;`
@@ -1386,7 +1392,10 @@ endstmt    = "return" [ expr ] ";" | "leave" ident ";" | "next" ident ";" ;
 stmt       = letstmt | allocstmt | resetstmt | growstmt | freestmt | childstmt | startstmt | assign | stateassign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
            | awaitload | exchstmt | advstmt | "return" [ expr ] ";" | exprstmt
-           | libcall ";" ;                                       (* lane E1: statement position *)
+           | libcall ";"                                         (* lane E1: statement position *)
+           | checkstmt ;
+checkstmt  = "check" expr "else" endblock ;   (* owner 2026-11-22: a run-time check; the statements
+   after it run where expr holds. Sugar over a branch on `!expr` (`Block.check`). *)
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
 advstmt    = "advances" ident "->" ident ";" ;                   (* NEW «SG-14» *)

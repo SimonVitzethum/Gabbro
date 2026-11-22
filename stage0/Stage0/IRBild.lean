@@ -136,7 +136,9 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
         (fun failure => "ir: entry precondition: " ++ failure.message)
       let axiomFreeLogic ← (checkAxiomFreeLogic u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
         compiled.checkedDeclarations.val).mapError
-        (fun failure => "ir: unit logic: " ++ failure.message)
+        (fun failure => "ir: unit logic: " ++ failure.message ++
+          " (a contract holds only where the checker proves it; write a condition it cannot prove as a" ++
+          " run-time check: `checks c else R` or `check c else { ... }`)")
       let logicUnit := initialUnit u P (sp0Of u initialValid) (⟨main, args⟩ :: starts)
         compiled.checkedDeclarations.val
       let foreignLogic := if u.axs.length = 0 then .error "unit has no foreign declarations"
