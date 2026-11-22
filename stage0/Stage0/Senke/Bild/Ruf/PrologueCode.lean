@@ -189,6 +189,11 @@ theorem IRContinuation.noHost [Kern] {target : T} {memory finish : Mem} {request
   | ask impossible _ => cases impossible
   | sys impossible _ => exact impossible
 
+theorem IRContinuation.not_fault [Kern] {target : T} {memory finish : Mem} {control : Res T}
+    (continuation : IRContinuation target finish control memory) : control ≠ .fault := by
+  rintro rfl
+  exact continuation
+
 /-- A restricted continuation certifies its next request from the Lean IR
     semantics and the permissions of its reference memory. -/
 theorem IRContinuation.request_scope [Kern] {target : T} {memory finish : Mem}
@@ -454,14 +459,12 @@ theorem ImageRuntimePartition.prologue_store [Kern] {output : Emitted src reserv
     (phase : ImageProloguePhase output E thread (.ask (.wr address word) resume) (before.ms.1.view thread) state)
     (answered : imageTSO.ans before.ms thread (.wr address word) answer memory) :
     let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
-    ProcessStep imageTSO actI before [] after ∧
+    ProcessStep imageTSO Runner.Beweis.actI before [] after ∧
       ImageRuntimePartition footprint output E O history after state body (ImagePendingRoot output E history state) := by
   obtain ⟨continued⟩ := phase.answer (fun _ _ _ _ _ incompatible => by cases incompatible) answered
   have success : answer = some (0, 0) := by
     rcases answered.1 with ⟨_, denied, _⟩ | ⟨_, accepted, _⟩
-    · have impossible := continued.running
-      rw [denied, phase.blind.missing] at impossible
-      exact False.elim impossible
+    · exact (continued.running.not_fault ((congrArg resume denied).trans phase.blind.missing)).elim
     · exact accepted
   subst answer
   exact partition.pending_store placed owns pending (phase.request_scope.2.2 rfl) running answered (.inr ⟨continued⟩)
