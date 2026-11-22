@@ -16,6 +16,7 @@ public import Grammatik.Parser.SourceFolds.HoistShape
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteConditionalBite
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSitePositiveFixture
 public import Grammatik.Zielsatz.Atomar.CallSite.CallSiteReplayBlocker
+public import Grammatik.Zielsatz.Faeden.EntryPrefix
 
 import Grammatik.Bausteine.Arena.Ownership.Body.Goal
 import Grammatik.Bausteine.Arena.Ownership.Source.Admission
