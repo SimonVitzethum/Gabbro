@@ -90,6 +90,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeArrayCarrierExpr_erfuellbar
 #print axioms Gabbro.Grammatik.LowLevel.Construct.rangeStringCarrierExpr_exact
 #print axioms Gabbro.Grammatik.LowLevel.Construct.withGuardedSlice_exec
+#print axioms Gabbro.Grammatik.LowLevel.Construct.withGuardedTextSlice_exec
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.draw
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.wait_reply
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.wake_reply
@@ -98,6 +99,8 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_wake_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.image_ticket_waiter_CAS_prefix
 #print axioms Gabbro.Stage0.Senke.Faeden.ImageTicketStates.adjustWaiters
+#print axioms Gabbro.Stage0.Senke.Faeden.image_release_scope
+#print axioms Gabbro.Stage0.Senke.Faeden.image_admit_scope
 #print axioms Gabbro.Stage0.MappedImage.single_thread_sc
 #print axioms Gabbro.Stage0.ImageIRSimulation.toRunner
 #print axioms Gabbro.Stage0.stage0_correct_of_ir_simulation

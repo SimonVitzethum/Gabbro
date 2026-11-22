@@ -301,4 +301,96 @@ theorem image_release_scope [Kern] {src : String} {reserve : Nat} {options : Pro
     (locks.owners lock) owners rfl others inLayout cells synchronized bound order
   exact ⟨step, result, answered.1.1, next, advanced, store, registered, privatelyOwned, projected⟩
 
+/-- A successful serving read acquires the guard in GX and grants its
+    carriers to the same physical thread. No previously buffered store
+    loses its owner, so the read still projects to the same SC answer. -/
+theorem image_admit_scope [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    {source : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {machine : Cfg imageTSO (Res T)} {memory : imageTSO.St} {reply : Ans} {resume : Ans → Res T}
+    {lock : (declOf output.compiled.unit).mitRuhe.Lock} {N : Nat} {thread : Fin N} {states : _ → Zustand N}
+    {ticket : Nat}
+    (locks : ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m states)
+    (buffers : PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1)
+    (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (synchronized : LaySync output.image.Y.withIdle) (bound : output.image.Y.sye ≤ 2 ^ 64)
+    (order : output.image.Y.lo ≤ output.image.Y.hi) (limit : N ≤ 2147483647)
+    (spins : output.image.Y.lockWait = .spin → SpinState (states lock))
+    (saved : (states lock).pc thread = .ladeS ticket)
+    (waiting : machine.ths[thread.val]? = some (some (.ask
+      (.rd 8 (BitVec.ofNat 64 (output.image.Y.lk lock + 8))) resume)))
+    (answered : imageTSO.ans machine.ms thread.val
+      (.rd 8 (BitVec.ofNat 64 (output.image.Y.lk lock + 8))) reply memory)
+    (matched : ∃ extra, reply = some (BitVec.ofNat 64 ticket, extra))
+    (live : source.lebt thread.val = true) (ready : source.wartet thread.val = [])
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res (declOf output.compiled.unit).mitRuhe)}
+    (ordered : ∀ M, Res.held M ∈ Λ → (declOf output.compiled.unit).mitRuhe.rang M <
+      (declOf output.compiled.unit).mitRuhe.rang lock)
+    (body : Block _ (vertragVon _ (source.m.faeden thread.val).kopf.f) l Γ
+      (Res.held lock :: Λ) (Res.held lock :: Λ))
+    (rest : Block _ (vertragVon _ (source.m.faeden thread.val).kopf.f) l Γ Λ Λ')
+    (k : GRest _ (vertragVon _ (source.m.faeden thread.val).kopf.f) l Γ Λ')
+    (env : Env _ Γ)
+    (head : (source.m.faeden thread.val).kopf.rest =
+      ⟨l, Γ, Λ, env, .dann (.cons (.locks lock ordered body) rest) k⟩)
+    (ranks : ∀ earlier ∈ offen (source.m.faeden thread.val).spur,
+      (declOf output.compiled.unit).mitRuhe.rang earlier < (declOf output.compiled.unit).mitRuhe.rang lock) :
+    let after := Cfg.mk memory (machine.ths.set thread.val (some (resume reply)))
+    let admitted := (states lock).mit thread (.drin ticket)
+    ProcessStep imageTSO actI machine [] after ∧ memory = machine.ms ∧
+      ∃ next, FadenSchrittX E.P.mitRuhe O.mitRuhe output.image.passes
+          (GeteiltV (D := declOf output.compiled.unit) E.P E.ws) source next ∧
+        next.m.speicher = source.m.speicher ∧
+        ImageTicketStates output.image.Y.withIdle memory.1.m next.m
+          (fun other => if other = lock then admitted else states other) ∧
+        PrivateBuffers (imageProtectedFootprint output next.m) memory.1 ∧
+        (SC L0).ans (projectSCState (imageProtectedFootprint output source.m) machine.ms) thread.val
+          (.rd 8 (BitVec.ofNat 64 (output.image.Y.lk lock + 8))) reply
+          (projectSCState (imageProtectedFootprint output next.m) memory) := by
+  intro after admitted
+  have fits := (synchronized.1 lock).2.trans bound
+  have shared (byte : W) (hit : fenster (BitVec.ofNat 64 (output.image.Y.lk lock + 8)) byte) :
+      ∀ owner, ¬ imageProtectedFootprint output source.m owner byte := by
+    intro owner owned
+    exact imageProtectedFootprint_lock_disjoint inLayout synchronized order owned
+      (lockWord_in_bytes fits (by decide) hit)
+  obtain ⟨step, unchanged, _, words, valid, next, advanced, store, owners, others⟩ :=
+    image_ticket_admit_GX (P := E.P.mitRuhe) (O := O.mitRuhe) (passes := output.image.passes)
+      (Tg := GeteiltV (D := declOf output.compiled.unit) E.P E.ws)
+      output.image.Y.withIdle (locks.owners lock) output.image.Y.lockWait spins limit (locks.protocol lock)
+      saved (locks.words lock) _ buffers shared waiting answered matched live ready ordered body rest k env head ranks
+  have untouched : GleichAuf (fun byte => ¬ LockBytes output.image.Y.withIdle lock byte)
+      memory.1.m machine.ms.1.m := by
+    rw [unchanged]
+    exact fun byte _ => GleichAt.refl _ byte
+  have registered := locks.update synchronized bound untouched others words valid owners
+  have retained (owner : Nat) (guard : (declOf output.compiled.unit).mitRuhe.Lock)
+      (held : guard ∈ offen (source.m.faeden owner).spur) :
+      guard ∈ offen (next.m.faeden owner).spur := by
+    by_cases selected : guard = lock
+    · subst guard
+      by_cases issuer : owner = thread.val
+      · subst owner
+        have occupied := ((locks.owners lock).inside thread).mpr held
+        rw [saved] at occupied
+        cases occupied
+      · apply ((locks.owners lock).thread_frame owners owner ?_).mp held
+        intro inside
+        exact upd_ne _ _ (fun same => issuer (congrArg Fin.val same))
+    · exact (others guard selected owner).mpr held
+  have oldAtAnswer : PrivateBuffers (imageProtectedFootprint output source.m) memory.1 := unchanged.symm ▸ buffers
+  have nextBuffers : PrivateBuffers (imageProtectedFootprint output next.m) memory.1 := by
+    intro owner pending member byte hit
+    have previous := (oldAtAnswer owner pending member byte hit).1
+    have current : imageProtectedFootprint output next.m owner byte := by
+      rcases previous with stack | ⟨cell, present, low, high, guarded, held⟩
+      · exact .inl stack
+      · exact .inr ⟨cell, present, low, high, guarded, fun guard protects => retained owner guard (held guard protects)⟩
+    exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive registered inLayout cells assigned current⟩
+  refine ⟨step, unchanged, next, advanced, store, registered, nextBuffers, ?_⟩
+  rw [projectSCState_reassign oldAtAnswer nextBuffers]
+  exact projectSCState_read_shared answered.1 _ shared (fun owner pending member byte hit =>
+    (buffers owner pending member byte hit).1)
+
 end Gabbro.Stage0.Senke.Faeden
