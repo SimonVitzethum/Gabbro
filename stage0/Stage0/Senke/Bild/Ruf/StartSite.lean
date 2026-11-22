@@ -177,4 +177,48 @@ theorem ImageStartSite.call_depth [Kern] {output : Emitted src reserve options}
   rw [view, out, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt ((Nat.lt_succ_self _).trans (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64)))] <;> rfl
 
+/-- The first stub instruction leaves its exact arguments, frame
+    permissions and code intact. The issuing view holds the depth word
+    before the store is flushed to shared memory. -/
+theorem ImageStartSite.depth_preserves_frame [Kern] {output : Emitted src reserve options}
+    {before : Runner.Mach.Cfg imageTSO (Runner.Res T)}
+    (site : ImageStartSite output)
+    (loaded : BytesAt (before.ms.1.view site.thread) codeBase (output.image.code.flatMap encII)) :
+    let pointer := site.entry
+    let words := encodeEnv output.image.Y site.args
+    before.ths[site.thread]? = some (some (.next pointer)) →
+    FrameOK (before.ms.1.view site.thread) pointer.fp output.image.Ks →
+    FB + FB + words.length ≤ output.image.Ks →
+    WordsAt (before.ms.1.view site.thread) pointer.fp (FB + FB) words →
+    ∃ after : imageTSO.St,
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
+        ⟨after, before.ths.set site.thread (some (.next (nxt pointer)))⟩ ∧
+      after.1.m = before.ms.1.m ∧
+      (∀ other, other ≠ site.thread → after.1.view other = before.ms.1.view other) ∧
+      BytesAt (after.1.view site.thread) codeBase (output.image.code.flatMap encII) ∧
+      FrameOK (after.1.view site.thread) pointer.fp output.image.Ks ∧
+      WordsAt (after.1.view site.thread) pointer.fp (FB + FB) words ∧
+      (after.1.view site.thread).rd64 (slot pointer.fp (BitVec.ofNat 64 2)) =
+        some (BitVec.ofNat 64 (output.image.depth + 1)) ∧
+      Agree pointer.fp 0 output.image.Ks (before.ms.1.view site.thread) (after.1.view site.thread) := by
+  intro pointer words running frame fits args
+  obtain ⟨stub, depthSlot, depthFits, _, _⟩ := site.stub loaded
+  obtain ⟨after, run, memory, wroteDepth, others⟩ := image_depth_setup stub depthSlot depthFits running frame
+  refine ⟨after, run, memory, others, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [wroteDepth]
+  · apply output.code_survives_writes (write_nurIn _ _ _) _ loaded
+    intro byte touched
+    have own := imageStackFootprint_slot (output := output) (i := site.thread)
+      (index := 2) site.bounded depthSlot touched
+    exact (Nat.le_add_right _ _).trans own.2.1
+  · exact ⟨frame.lt, frame.rd, frame.wr⟩
+  · intro i present
+    have within : FB + FB + i < output.image.Ks := by omega
+    have elsewhere : 2 ≠ FB + FB + i := by simp only [FB]; omega
+    rw [Mem.rd64_write_far (slot_far frame.room depthSlot within elsewhere)]
+    exact args i present
+  · have word := rd64_write_same (w := BitVec.ofNat 64 (output.image.depth + 1)) (frame.rd 2 depthSlot)
+    simpa only [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (depthFits.trans (by decide : 2 ^ 31 < 2 ^ 64))] using word
+  · exact agree_write frame.room (Nat.zero_le _) depthSlot _
+
 end Gabbro.Stage0

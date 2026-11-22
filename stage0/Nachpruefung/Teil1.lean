@@ -237,9 +237,9 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.BildMehr.tso_call_prefix
 #print axioms Gabbro.Stage0.Senke.BildMehr.RunP.remaining
 #print axioms Gabbro.Stage0.Senke.BildMehr.RunP.control_of_runM
-#print axioms Gabbro.Stage0.Emitted.root_call_target
-#print axioms Gabbro.Stage0.Emitted.root_call_enter
-#print axioms Gabbro.Stage0.Emitted.child_body_prefix
+#print axioms Gabbro.Stage0.ImageStartSite.call_target
+#print axioms Gabbro.Stage0.ImageStartSite.call_enter
+#print axioms Gabbro.Stage0.ImageStartSite.body_prefix
 #print axioms Gabbro.Stage0.Emitted.child_body_from_root_phase
 #print axioms Gabbro.Stage0.Emitted.depth_guard_zero
 #print axioms Gabbro.Stage0.Emitted.root_depth_guard_pass
