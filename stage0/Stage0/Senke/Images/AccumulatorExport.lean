@@ -83,4 +83,10 @@ def collectImageAccumulators (output : Emitted src reserve options) :
       let rest ← collectImageAccumulators output tail
       pure ⟨first :: rest.val, .cons lowered rest.property⟩
 
+theorem collectImageAccumulators_empty (output : Emitted src reserve options)
+    {items : List SItemTief} (empty : items = []) :
+    collectImageAccumulators output items = .ok ⟨[], by rw [empty]; exact .nil⟩ := by
+  subst items
+  rfl
+
 end Gabbro.Stage0

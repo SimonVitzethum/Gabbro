@@ -153,6 +153,13 @@ def Emitted.finishImageUnit (output : Emitted src reserve options)
     .ok ⟨unit, exactModel, (akzeptiertX_pruefer_decision unit _ _ _).trans accepted⟩
   else .error "ir: model checker refused the exported image unit"
 
+theorem Emitted.finishImageUnit_ok (output : Emitted src reserve options)
+    (unit : Einheit (declOf output.compiled.unit)) (exactModel : ImageModelUnit output unit)
+    (accepted : akzeptiertX_pruefer.akzeptiert unit output.fsA.1 output.lsA.1 output.csA.1 = true) :
+    output.finishImageUnit unit exactModel = .ok ⟨unit, exactModel, accepted⟩ := by
+  have verdict := (akzeptiertX_pruefer_decision unit output.fsA.1 output.lsA.1 output.csA.1).symm.trans accepted
+  simp only [finishImageUnit, dif_pos verdict]
+
 /-- Resolve the logic decision on the actual emitted unit. Both the
     axiom-free and foreign branches produce the same checked interface.
     A missing arena export or refused model check returns a diagnostic. -/
@@ -173,6 +180,38 @@ def Emitted.checkImageUnit (output : Emitted src reserve options) :
         (output.image_model_without_arenas _ initial.axiomSources certificate.summary.exactPost
           noArenas acc.val acc.property)
   else throw "ir: arena declarations have no checked image export"
+
+/-- The deployed checker already certifies every emitted axiom-free
+    unit in the complete no-ownership fragment. Running the exact
+    exporter on it yields precisely that verdict on the same unit. -/
+theorem Emitted.checkImageUnit_axiomFree (output : Emitted src reserve options)
+    (noAxioms : output.compiled.unit.axs.length = 0)
+    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
+    (noAccumulators : imageAccumulatorItems output = []) :
+    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked ∧
+      checked.unit = output.goalUnit (axWahr _) := by
+  obtain ⟨model, accepted⟩ := output.checked_image_model_empty noAxioms noOwnership noAccumulators
+  have noArenas := (OldSource.zertifizierbar_teile noOwnership).1
+  refine ⟨⟨output.goalUnit (axWahr _), model, accepted⟩, ?_, rfl⟩
+  simp only [checkImageUnit, dif_pos noArenas, collectImageAccumulators_empty output noAccumulators,
+    bind, Except.bind, dif_pos noAxioms]
+  exact output.finishImageUnit_ok _ model accepted
+
+/-- A retained, successful foreign certificate yields the exact checked
+    unit when the source has ordinary carriers and no accumulators. -/
+theorem Emitted.checkImageUnit_foreign (output : Emitted src reserve options)
+    {certificate : output.CheckedForeign} (produced : output.foreignLogic = .ok certificate)
+    (foreign : output.compiled.unit.axs.length ≠ 0)
+    (noOwnership : OldSource.zertifizierbar output.compiled.unit = true)
+    (noAccumulators : imageAccumulatorItems output = []) :
+    ∃ checked : CheckedImageUnit output, output.checkImageUnit = .ok checked ∧
+      checked.unit = withForeignSummary (output.goalUnit (axWahr _)) certificate.summary := by
+  obtain ⟨model, accepted⟩ := output.checked_image_model_foreign produced noOwnership noAccumulators
+  have noArenas := (OldSource.zertifizierbar_teile noOwnership).1
+  refine ⟨⟨_, model, accepted⟩, ?_, rfl⟩
+  simp only [checkImageUnit, dif_pos noArenas, collectImageAccumulators_empty output noAccumulators,
+    bind, Except.bind, dif_neg foreign, produced]
+  exact output.finishImageUnit_ok _ model accepted
 
 /-- The returned bytes and the complete checker verdict on their exact
     model can be obtained from one canonical emission and one export. -/
