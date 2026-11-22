@@ -125,7 +125,9 @@ theorem specLiteralField_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
           intro field present
           have checked := List.all_eq_true.mp good ⟨field, present⟩ (List.mem_attach _ _)
           have less := recordField_sizeOf_lt fields field present
-          have extent : 1 + sizeOf identity + sizeOf reordered + sizeOf fields = amount := measure
+          have extent : sizeOf fields < amount := by
+            rw [← measure]
+            simp +arith
           exact smaller (sizeOf field.2) (by omega) field.2 rfl field.1 checked)
         have built := record_lower u Γ Λ fn er identity reordered fields args gate lowered schema named
         exact ⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩
@@ -216,14 +218,12 @@ theorem specLiteralNestedRecord_erfuellbar (schema : URecord) (field : String) (
   have shape : schema.ty = .prod schema.identity [.bool] := by
     simp only [URecord.ty, booleanField, List.map_cons, List.map_nil, Ty.prodOf]
   obtain ⟨resolved, exactRecord⟩ := uRecordOf_complete declared
-  simp only [specLiteralFieldFits, shape, decide_true, Bool.true_and, Bool.and_eq_true_iff]
-  constructor
-  · rw [← shape, exactRecord]
-    rfl
-  · apply List.all_eq_true.mpr
-    intro field present
-    have same : field.val = (Ty.bool, USide.truth value) := List.mem_singleton.mp field.property
-    simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
+  simp only [specLiteralFieldFits, List.map_cons, List.map_nil, ← shape, decide_true, Bool.true_and,
+    exactRecord, Except.isOk, Except.toBool]
+  apply List.all_eq_true.mpr
+  intro entry _
+  have same : entry.val = (Ty.bool, USide.truth value) := List.mem_singleton.mp entry.property
+  simp only [same, specLiteralFieldFits, specPrimitiveLiteralFieldFits]
 
 /-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
 theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
