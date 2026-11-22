@@ -135,9 +135,9 @@ theorem SoloLauf.permissions {tb : T} {mb m : Mem} {r : Res T}
       obtain ⟨rd, wr⟩ := RunM.permissions ran
       exact ⟨ih.1.trans rd, ih.2.trans wr⟩
   obtain ⟨rd, wr⟩ := stable complete
-  rcases rest with ⟨_, rfl⟩ | partial
+  rcases rest with ⟨_, rfl⟩ | current
   · exact ⟨rd, wr⟩
-  · exact ⟨partial.permissions.1.trans rd, partial.permissions.2.trans wr⟩
+  · exact ⟨current.permissions.1.trans rd, current.permissions.2.trans wr⟩
 
 theorem soloLauf_start (tb : T) (mb : Mem) : SoloLauf tb mb (.next tb) mb :=
   ⟨0, tb, mb, .refl _ _, Or.inl ⟨rfl, rfl⟩⟩
