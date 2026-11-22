@@ -162,10 +162,10 @@ def ImageRootPhase [Kern] (output : Emitted src reserve options)
       memory.rd64 (BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * thread) +
         8 * (FB + FB + i))) = some (encodeEnv output.image.Y start.2)[i]) ∧
     ∃ t : T, ImageRootInstruction output thread t ∧
-      (control = .next t ∨
-        (∀ equivalent, GleichAuf (imageRootReads output thread) memory equivalent →
-          RunP (IR.step t) equivalent control equivalent) ∨
-        ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ control = ret1 t id)
+      let pending (tree : Res T) := ∀ equivalent, GleichAuf (imageRootReads output thread) memory equivalent →
+        RunP tree equivalent control equivalent
+      control = .next t ∨ pending (IR.step t) ∨
+        ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ pending (ret1 t id)
 
 /-- Each live slot is at a body position, its root stub or the loader. -/
 def ImageRuntimeMatchesAt [Kern] (footprint : Nat → W → Prop) (output : Emitted src reserve options)

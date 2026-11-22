@@ -331,7 +331,50 @@ theorem ImageRootPhase.transport [Kern] {output : Emitted src K options}
     · exact .inl done
     · exact .inr (.inl (fun equivalent agrees =>
         pending equivalent (fun byte present => (same byte present).trans (agrees byte present))))
-    · exact .inr (.inr clone)
+    · obtain ⟨id, extra, observed, pending⟩ := clone
+      exact .inr (.inr ⟨id, extra, observed, fun equivalent agrees =>
+        pending equivalent (fun byte present => (same byte present).trans (agrees byte present))⟩)
+
+/-- Reads advance any pending startup tree, including the destination
+    read after a real clone. All replays use the same scoped bytes and
+    discard the irrelevant second word carried by the scheduler. -/
+theorem ImageRootPhase.read [Kern] {output : Emitted src K options}
+    {E : Einheit (declOf output.compiled.unit)} {before after : imageTSO.St} {thread width : Nat}
+    {history : List Runner.Mach.Ev} {state : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    {address : W} {resume : Ans → Res T} {answer : Ans}
+    (phase : ImageRootPhase output E history (before.1.view thread) thread (.ask (.rd width address) resume) state)
+    (pastLoader : thread ≠ 0 ∨ Res.ask (.rd width address) resume ≠ Runner.Beweis.t4)
+    (scope : ∀ byte, byteWindow (readWidth width) address byte → imageRootReads output thread byte)
+    (answered : imageTSO.ans before thread (.rd width address) answer after) :
+    after = before ∧ ImageRootPhase output E history (after.1.view thread) thread (resume answer) state := by
+  obtain ⟨firstThread, loader, _⟩ | ⟨start, chosen, head, code, frame, fits, args, pointer, site, phase⟩ := phase
+  · exact (pastLoader.elim (· firstThread) (· loader)).elim
+  have read := answered.1
+  obtain ⟨rfl, extra, rfl⟩ := read
+  refine ⟨rfl, .inr ⟨start, chosen, head, code, frame, fits, args, pointer, site, ?_⟩⟩
+  have appendRead {entry : Res T}
+      (blind : Blind entry)
+      (pending : ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
+        RunP entry equivalent (.ask (.rd width address) resume) equivalent) :
+      ∀ equivalent, GleichAuf (imageRootReads output thread) (before.1.view thread) equivalent →
+        RunP entry equivalent (resume ((rdN (before.1.view thread) width address).map (·, extra))) equivalent := by
+    intro equivalent agrees
+    have part := pending equivalent agrees
+    obtain ⟨valid, ignores⟩ := (part.blind blind).lesen rfl
+    have equal := rdN_agrees width (fun byte needed => agrees byte (scope byte needed))
+    have memRead : memAns equivalent (.rd width address) =
+        some (((rdN equivalent width address).map (·, 0)), equivalent) := by
+      rcases valid with rfl | rfl | rfl <;>
+        simp only [memAns_rd, rdAntwort, rdN, Option.map_map, Function.comp_def]
+    rw [equal]
+    have continued := runP_snoc part memRead
+    cases rdN equivalent width address with
+    | none => exact continued
+    | some word => simpa only [Option.map_some, ignores word extra] using continued
+  rcases phase with impossible | pending | ⟨id, extra, called, pending⟩
+  · cases impossible
+  · exact .inr (.inl (appendRead (blind_step _) pending))
+  · exact .inr (.inr ⟨id, extra, called, appendRead (blind_ret1 _ _) pending⟩)
 
 /-- The root phase exposes a child's arguments in declared start order. -/
 theorem Emitted.child_phase_payload [Kern] (output : Emitted src K options)
