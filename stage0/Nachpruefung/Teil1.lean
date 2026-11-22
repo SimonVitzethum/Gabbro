@@ -115,6 +115,7 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.Faeden.imageProtectedFootprint_exclusive
 #print axioms Gabbro.Stage0.Senke.Faeden.privateBuffers_after_release
 #print axioms Gabbro.Stage0.Senke.Faeden.image_release_projected
+#print axioms Gabbro.Stage0.MappedImage.initial_lock_projection
 #print axioms Gabbro.Stage0.Senke.checkedArena_initial
 #print axioms Gabbro.Stage0.Senke.ArenaStorageExport.localInterfaces_exact
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire

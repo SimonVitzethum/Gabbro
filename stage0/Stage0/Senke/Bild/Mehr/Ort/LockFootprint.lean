@@ -8,7 +8,7 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.UebersetzeAllg
   Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis
 
 def Zelle.carrier {D : Deklaration} : Senke.Zelle D → D.Tab ⊕ D.Glob
@@ -78,6 +78,46 @@ def imageProtectedFootprint {src : String} {reserve : Nat} {options : Profil.Opt
     (thread : Nat) (address : W) : Prop :=
   imageStackFootprint output thread address ∨
     protectedCellFootprint output.image.Y.withIdle source thread address
+
+theorem imageProtectedFootprint_initial {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {N : Nat} {memory : Mem}
+    (locks : ImageTicketStates output.image.Y.withIdle memory source (fun _ => start N)) :
+    imageProtectedFootprint output source = imageStackFootprint output := by
+  funext thread address
+  apply propext
+  constructor
+  · rintro (stack | ⟨cell, _, _, _, ⟨guard, guards⟩, held⟩)
+    · exact stack
+    · have owns := held guard guards
+      by_cases inside : thread < N
+      · have impossible := ((locks.owners guard).inside ⟨thread, inside⟩).mpr owns
+        cases impossible
+      · exact ((locks.owners guard).outside thread (Nat.le_of_not_gt inside) owns).elim
+  · exact Or.inl
+
+/-- The mapped image and its accepted model share one initial projection.
+    No protected cell has an owner before the first image step. -/
+theorem _root_.Gabbro.Stage0.MappedImage.initial_lock_projection [Kern]
+    {src : String} {reserve : Nat} {options : Profil.Options} {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {machine : Cfg imageTSO Runner.X86.X}
+    (mapped : MappedImage output machine) (unit : ImageModelUnit output E)
+    (accepted : akzeptiertX_pruefer.akzeptiert E output.fsA.1 output.lsA.1 output.csA.1 = true)
+    (O : Orakel (declOf output.compiled.unit)) :
+    let ir : Cfg imageTSO (Res T) := ⟨machine.ms, [some t4]⟩
+    let source := imageSourceStart E
+    Rel L0 ir machine ∧ ImageSlotsMatch output E O [] ir source ∧
+      ImageForeignTrace output [] source ∧ ImageRuntimeMatches output E O [] ir source ∧
+      ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m
+        (fun _ => start (output.starts.length + 1)) ∧
+      PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1 ∧
+      (projectSCState (imageProtectedFootprint output source.m) machine.ms).1 = machine.ms.1.m := by
+  intro ir source
+  obtain ⟨runner, slots, events, runtime⟩ := mapped.source_start unit O
+  have locks := output.loaded_ticketStates mapped.bytes accepted
+  refine ⟨runner, slots, events, runtime, locks, privateBuffers_empty mapped.emptyBuffers, ?_⟩
+  change mergedView machine.ms.1 (imageProtectedFootprint output source.m) = machine.ms.1.m
+  rw [imageProtectedFootprint_initial locks, mergedView_empty _ _ mapped.emptyBuffers]
 
 theorem imageProtectedFootprint_exclusive [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
