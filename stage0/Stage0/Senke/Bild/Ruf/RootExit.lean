@@ -61,7 +61,7 @@ theorem ImageForeignTrace.retire {src : String} {reserve : Nat} {options : Profi
   simpa only [List.filter_append, List.filter_cons, internal, Bool.false_eq_true, ite_false,
     List.filter_nil, List.append_nil] using matched
 
-private theorem image_stop_const {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
+private theorem image_stop_const [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
     {slots destination value : Nat}
     (running : before.ths[i]? = some (some (.next pointer)))
     (code : CodeAt (before.ms.1.view i) pointer.pc [ci 1 destination value 0])
@@ -84,7 +84,7 @@ private theorem image_stop_const {before : Cfg imageTSO (Res T)} {i : Nat} {poin
 
 /-- The emitted stop sequence stores its request and then issues the exact
     process-wide exit. The actual runner reads the issuing TSO view. -/
-theorem image_emitted_stop {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
+theorem image_emitted_stop [Kern] {before : Cfg imageTSO (Res T)} {i : Nat} {pointer : T}
     {slots scratch status : Nat} (running : before.ths[i]? = some (some (.next pointer)))
     (code : CodeAt (before.ms.1.view i) pointer.pc (stopC status scratch))
     (far : CodeFar pointer.pc 3 pointer.fp slots)
@@ -195,7 +195,7 @@ theorem image_emitted_hardware_exit [Kern] {src : String} {reserve : Nat} {optio
     (alive : state.lebt i = true) (matched : ImageHardwareCause O.mitRuhe output.image.passes state.m i cause) :
     ∃ req, Tr imageTSO actI before [(i, req, none)] (.exit req.a1) 22 ∧
       ImageStopMatches output O state history [(i, req, none)] (.exit req.a1) := by
-  have statusFit : hwCode cause < 2 ^ 31 := by cases cause <;> decide
+  have statusFit : hwCode cause < 2 ^ 31 := by cases cause <;> simp only [hwCode] <;> decide
   obtain ⟨_, req, _, silent, ready, number, status⟩ :=
     image_emitted_stop running code far frame room slotsFit statusFit
   exact ⟨req, image_hardware_exit silent ready number status alive matched⟩
