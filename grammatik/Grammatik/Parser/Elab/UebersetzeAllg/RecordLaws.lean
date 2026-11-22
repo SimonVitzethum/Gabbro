@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.UebersetzeAllg.Teil5
+public import Grammatik.Parser.Elab.UebersetzeAllg.RecordLiteralLaws
 public import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 import Lean.Elab.Tactic.Omega
 
@@ -217,6 +217,38 @@ theorem specCompositeArgument_lower {u : UProg} {Γ : Ctx} {Λ : List (Res (decl
             exact smaller (sizeOf field.2) (by omega) field.2 rfl field.1 valid)
         have built := record_lower u Γ Λ fn er identity reordered fields args gate lowered schema named
         exact ⟨.prod identity args, by simp only [lowWertAtE, built, fitW, dite_true]⟩
+    case field base name =>
+      simp only [specCompositeArgumentFits] at accepted
+      split at accepted
+      · next identity fields typeRead =>
+        split at accepted
+        · next schema nominal =>
+          split at accepted
+          · next field selected =>
+            obtain ⟨rfl, baseAccepted⟩ := (Bool.and_eq_true_iff.mp accepted).imp
+              of_decide_eq_true id
+            have extent : sizeOf base < fuel := by rw [← size]; simp +arith
+            obtain ⟨_, fitted⟩ := smaller (sizeOf base) extent base rfl (.prod identity fields) baseAccepted
+            have lowered : ∃ parent, lowWertE u Γ Λ fn er base = .ok ⟨.prod identity fields, parent⟩ := by
+              cases read : lowWertE u Γ Λ fn er base with
+              | error diagnostic => simp only [lowWertAtE, read] at fitted
+              | ok value =>
+                obtain ⟨valueType, parent⟩ := value
+                simp only [lowWertAtE, read, fitW] at fitted
+                split at fitted
+                · next same =>
+                  change valueType = .prod identity fields at same
+                  subst valueType
+                  exact ⟨parent, rfl⟩
+                · cases valueType <;> cases fitted
+            obtain ⟨parent, lowered⟩ := lowered
+            rw [scope] at nominal
+            refine ⟨Expr.prodGet (cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) parent) field.2, ?_⟩
+            simp only [lowWertAtE, lowWertE, gate, lowered, nominal, selected,
+              bind, Except.bind, pure, Except.pure, fitW, dite_true]
+          · cases accepted
+        · cases accepted
+      · cases accepted
     all_goals
       apply (specLiteralField_lower u Γ Λ fn er _ _ gate ?_).1
       simpa only [specCompositeArgumentFits, scope] using accepted
@@ -429,54 +461,5 @@ theorem specArrayLocal_erfuellbar (ctx : UCtx) (name : String)
     have truth : lowWertAtE u [.bool] Λ declaration none .bool (.truth false) = .ok .fls := by
       simp only [lowWertAtE, lowWertE, fitW, dite_true] <;> rfl
     simp only [lowWertE, raw, lowLit, lowWertAtE, parameter, truth, Except.map]
-
-/-- Nominal literal construction retains every identity, schema and field-type check. -/
-theorem lowLit_product (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (identity actual : Nat) (fields : List Ty) (reordered : Bool) (values : List (Ty × USide)) :
-    lowLit (u := u) (Γ := Γ) (Λ := Λ) (.prod identity fields) (.product actual reordered values) = (do
-      if identity != actual then throw "source export: constant has a foreign record identity"
-      let _ ← uRecordOf u.records (.prod identity fields)
-      let args ← lowLitFields fields values
-      pure (.prod identity args)) := by
-  rw [lowLit]
-
-theorem lowLit_bool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (value : Bool) :
-    lowLit (u := u) (Γ := Γ) (Λ := Λ) .bool (.truth value) =
-      .ok (if value then Expr.tru else Expr.fls) := by
-  cases value <;> simp only [lowLit, Bool.false_eq_true, ↓reduceIte]
-
-/-- The literal field helper also checks the carried field type before its recursive step. -/
-theorem lowLitFields_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (ty actual : Ty) (fields : List Ty) (value : USide) (values : List (Ty × USide)) :
-    lowLitFields (u := u) (Γ := Γ) (Λ := Λ) (ty :: fields) ((actual, value) :: values) = (do
-      if ty != actual then throw "source export: constant record field has a foreign type"
-      let head ← lowLit ty value
-      let tail ← lowLitFields fields values
-      pure (.cons head tail)) := by
-  rw [lowLitFields]
-
-theorem lowLitFields_nil (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) :
-    lowLitFields (u := u) (Γ := Γ) (Λ := Λ) [] [] = .ok .nil := by
-  rw [lowLitFields]
-
-/-- Nested literal arrays recurse through the same product-aware literal producer. -/
-theorem lowLit_array_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (ty : Ty) (count : Nat) (head tail : USide) :
-    lowLit (u := u) (Γ := Γ) (Λ := Λ) (.arr ty (count + 1)) (.arrCons head tail) =
-      (match lowLit ty head, lowLit (.arr ty count) tail with
-       | .ok first, .ok rest => .ok (Expr.arrCons first rest)
-       | .error error, _ | _, .error error => .error error) := by
-  rw [lowLit]
-  cases lowLit (u := u) (Γ := Γ) (Λ := Λ) ty head <;>
-    cases lowLit (u := u) (Γ := Γ) (Λ := Λ) (.arr ty count) tail <;> rfl
-
-/-- Product projection and replacement use the canonical semantics, with the whole base footprint. -/
-theorem record_replace_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {identity : Nat}
-    {fs : List Ty} {field : Ty} (entry state : World D) (env : Env D Γ)
-    (value : Expr D Γ Λ (.prod identity fs)) (position : FieldAt fs field)
-    (replacement : Expr D Γ Λ field) :
-    eval entry (Expr.prodSet value position replacement) state env =
-      prodSetW position (eval entry value state env) (eval entry replacement state env) ∧
-    (Expr.prodSet value position replacement).orte = value.orte ++ replacement.orte := ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg
