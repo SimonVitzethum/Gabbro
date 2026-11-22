@@ -95,7 +95,7 @@ public theorem constructLeafBlock_assign (elaboration : Elaboration D V Λ types
   change execBlock oracle passes calls (checked.lower saved generated) world env =
     .ok (effect actual.1 built.2.1).2 (env.set destination (effect actual.1 built.2.1).1)
   rw [ran]
-  change _ = .ok (effect actual.1 (constructChild elaboration name evaluated.1 evaluated.2.1).2.1).2
+  change _ = Ausgang.ok (effect actual.1 (constructChild elaboration name evaluated.1 evaluated.2.1).2.1).2
     (env.set destination (effect actual.1 (constructChild elaboration name evaluated.1 evaluated.2.1).2.1).1)
   rw [← exactChild.2.1]
   rfl

@@ -68,23 +68,21 @@ public theorem checkAwaitInventory_sound (inventory : Inventory D) (tag : Nat) (
     argument environment. The successor world of each expression is the
     initial world of the next expression. -/
 private theorem evalArguments_typed (elaboration : Elaboration D V Λ types f)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
     (frame : Frame (Value D)) {args : List Parser.SExpr} {resolved : List (BoundExpression D Λ)}
     (expressions : ExpressionsResolved elaboration.expression args resolved)
     (restored : ∀ source ∈ args, ∀ expression, elaboration.expression source = some expression →
       ∃ environment, localsEnv D expression.locals frame = some environment) (world : World D) :
     ∃ environment, argumentsEnv D (resolved.map BoundExpression.result)
-      (evalArguments (inducedModel elaboration calls prices normal) frame args world).1 =
+      (evalArgumentsBy (evaluateBound elaboration) frame args world).1 =
         some environment := by
   induction expressions generalizing world with
   | nil => exact ⟨.nil, rfl⟩
   | @cons source expression sources expressions found _ ih =>
     obtain ⟨localEnvironment, localRestored⟩ := restored source List.mem_cons_self expression found
-    simp only [evalArguments, evalArgumentsBy]
+    simp only [evalArgumentsBy]
     change ∃ environment, argumentsEnv D (expression.result :: expressions.map BoundExpression.result)
       (let (value, middle, _) := evaluateBound elaboration source frame world
-       value :: (evalArguments (inducedModel elaboration calls prices normal) frame sources middle).1) =
+       value :: (evalArgumentsBy (evaluateBound elaboration) frame sources middle).1) =
       some environment
     rw [evaluateBound_resolved elaboration source expression found frame localEnvironment
       localRestored world]
@@ -96,9 +94,7 @@ private theorem evalArguments_typed (elaboration : Elaboration D V Λ types f)
 
 /-- Construction of a call/join tree produces its typed active storage.
     Only the arguments and constructor expressions execute in this step. -/
-private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
-    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (prices : D.Fn → Nat) (normal : PollRuns elaboration calls)
+public theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
     (frame : Frame (Value D)) (future : FutureExpr)
     (resolved : ∀ name args, FutureExpr.call name args ∈ callsIn future →
       ∃ callee expressions, elaboration.callee name = some callee ∧
@@ -109,18 +105,17 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       ∃ environment, localsEnv D expression.locals frame = some environment)
     (path : List Nat) (world : World D) :
     ∃ record, TaskRep D types path future
-      (makeTask (inducedModel elaboration calls prices normal) frame future world).1 record := by
+      (makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame future world).1 record := by
   induction future generalizing path world with
   | call name args =>
     obtain ⟨callee, expressions, known, arguments, parameterTypes⟩ :=
       resolved name args List.mem_cons_self
-    have typed := evalArguments_typed elaboration calls prices normal frame arguments
+    have typed := evalArguments_typed elaboration frame arguments
       (restored name args List.mem_cons_self) world
     rw [parameterTypes] at typed
     obtain ⟨environment, typed⟩ := typed
-    simp only [makeTask, makeTaskBy]
-    unfold evalArguments at typed
-    generalize evalArgumentsBy (inducedModel elaboration calls prices normal).evaluate frame args world =
+    simp only [makeTaskBy]
+    generalize evalArgumentsBy (evaluateBound elaboration) frame args world =
       evaluated at typed ⊢
     obtain ⟨values, middle, cost⟩ := evaluated
     change argumentsEnv D callee.parameters values = some environment at typed
@@ -134,19 +129,15 @@ private theorem makeTask_rep (elaboration : Elaboration D V Λ types f)
       (fun name args member => resolved name args (List.mem_append_left _ member))
       (fun name args member => restored name args (List.mem_append_left _ member))
       (0 :: path) world
-    simp only [makeTask, makeTaskBy]
-    unfold makeTask at leftRep
-    generalize makeTaskBy (inducedModel elaboration calls prices normal).evaluate
-      (inducedModel elaboration calls prices normal).newChild frame left world =
+    simp only [makeTaskBy]
+    generalize makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame left world =
       leftStep at leftRep ⊢
     obtain ⟨leftTask, middle, leftCost⟩ := leftStep
     obtain ⟨rightRecord, rightRep⟩ := rightIH
       (fun name args member => resolved name args (List.mem_append_right _ member))
       (fun name args member => restored name args (List.mem_append_right _ member))
       (1 :: path) middle
-    unfold makeTask at rightRep
-    generalize makeTaskBy (inducedModel elaboration calls prices normal).evaluate
-      (inducedModel elaboration calls prices normal).newChild frame right middle =
+    generalize makeTaskBy (evaluateBound elaboration) (constructChild elaboration) frame right middle =
       rightStep at rightRep ⊢
     obtain ⟨rightTask, after, rightCost⟩ := rightStep
     exact ⟨_, .joinActive leftRep rightRep⟩
@@ -231,7 +222,7 @@ public theorem await_construction_rep (elaboration : Elaboration D V Λ types f)
   have member : Command.await name future boundary ∈ f.body :=
     List.mem_of_mem_drop (by rw [command]; exact List.mem_cons_self)
   obtain ⟨record, represented⟩ :=
-    makeTask_rep elaboration calls prices normal frame future
+    makeTask_rep elaboration frame future
       (fun callee args leaf => elaboration.arguments callee args
         (List.mem_flatMap.mpr ⟨_, member, leaf⟩))
       (fun callee args leaf source argument expression known =>
