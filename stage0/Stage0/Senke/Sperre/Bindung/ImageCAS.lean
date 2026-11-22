@@ -73,9 +73,9 @@ theorem image_memory_result [Kern] {before : Cfg imageTSO (Res T)} {thread : Nat
       result.1.view thread = Mem.write (before.ms.1.view thread) (slot pointer.fp (sx dest)) 8 value.toNat ∧
       (∀ other, other ≠ thread → result.1.view other = before.ms.1.view other) ∧
       QueuedStores before.ms.1 result.1 thread [(slot pointer.fp (sx dest), value)] := by
-  obtain ⟨result, prefix, committed, localView, others, stores⟩ :=
+  obtain ⟨result, resultRun, committed, localView, others, stores⟩ :=
     tso_ret1_prefix (before := imageToTSO before) running destination writable
-  exact ⟨result, tso_silent_prefix_image prefix rfl, committed, localView, others, stores⟩
+  exact ⟨result, tso_silent_prefix_image resultRun rfl, committed, localView, others, stores⟩
 
 /-- A readable and writable CAS returns the actual committed word, even
     when the comparison fails. Both outcomes preserve every store buffer. -/
@@ -133,7 +133,7 @@ theorem image_CAS_result [Kern] {machine : Cfg imageTSO (Res T)} {thread : Nat} 
   have ready : middle.ths[thread]? = some (some (ret1 pointer old)) := List.getElem?_set_self inside
   obtain ⟨result, run, committed, _, _, stores⟩ := image_memory_result ready destination resultWritable
   refine ⟨result, ?_, ?_, stores⟩
-  · simpa only [middle, List.set_set] using ProcessPrefix.cons process' run
+  · simpa only [middle, List.set_set, List.nil_append, Nat.reduceAdd] using ProcessPrefix.cons process' run
   · rw [committed, memoryEq]
 
 theorem _root_.Gabbro.Stage0.Emitted.loaded_ticketWords [Kern] {src : String} {reserve : Nat}

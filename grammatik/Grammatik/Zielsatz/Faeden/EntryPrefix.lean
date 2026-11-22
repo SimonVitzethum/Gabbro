@@ -40,17 +40,17 @@ def entryStart (E : Einheit D) : FadenMaschine D.mitRuhe :=
 
 /-- A prefix before activating any worker consists of actual GX steps
     by the sole startup thread. It may call ordinary functions. -/
-inductive EntryPrefix (E : Einheit D) (O : Orakel D) (passes : Nat) : FadenMaschine D.mitRuhe → Prop
+inductive EntryPrefix [DecidableEq D.Fn] (E : Einheit D) (O : Orakel D) (passes : Nat) : FadenMaschine D.mitRuhe → Prop
   | start : EntryPrefix E O passes (entryStart E)
   | step {before : FadenMaschine D.mitRuhe} (after : RufMaschineG D.mitRuhe) :
       EntryPrefix E O passes before →
-      RufSchrittGX E.P.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws) before.m 0 after →
+      RufSchrittGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws) before.m 0 after →
       EntryPrefix E O passes { before with m := after }
 
-theorem EntryPrefix.only_entry {E : Einheit D} {O : Orakel D} {passes : Nat} {state : FadenMaschine D.mitRuhe}
-    (prefix : EntryPrefix E O passes state) :
+theorem EntryPrefix.only_entry [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D} {passes : Nat}
+    {state : FadenMaschine D.mitRuhe} (run : EntryPrefix E O passes state) :
     (∀ thread, state.lebt thread = true ↔ thread = 0) ∧ (∀ thread, state.wartet thread = []) := by
-  induction prefix with
+  induction run with
   | start =>
     refine ⟨?_, fun _ => rfl⟩
     intro thread
@@ -58,28 +58,28 @@ theorem EntryPrefix.only_entry {E : Einheit D} {O : Orakel D} {passes : Nat} {st
     exact decide_eq_true_eq
   | step _ _ _ prior => exact prior
 
-theorem EntryPrefix.reachable {E : Einheit D} {O : Orakel D} {passes : Nat} {state : FadenMaschine D.mitRuhe}
-    (prefix : EntryPrefix E O passes state) :
-    FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws) (entryStart E) state := by
-  induction prefix with
+theorem EntryPrefix.reachable [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D} {passes : Nat}
+    {state : FadenMaschine D.mitRuhe} (run : EntryPrefix E O passes state) :
+    FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws) (entryStart E) state := by
+  induction run with
   | start => exact .start
-  | @step before after prefix step reached =>
-    have only := prefix.only_entry
+  | @step before after earlier step reached =>
+    have only := earlier.only_entry
     exact .schritt _ _ reached (.lauf before 0 after ((only.1 0).mpr rfl) (only.2 0) step)
 
 /-- The whole goal applies throughout the actual model prefix, starting
     from the declared store, before any cloned worker can take a step. -/
 theorem EntryPrefix.goal [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D} {passes : Nat}
     {state : FadenMaschine D.mitRuhe}
-    (prefix : EntryPrefix E O passes state)
+    (run : EntryPrefix E O passes state)
     (functions : Aufzaehlung D.Fn) (locks : Aufzaehlung D.Lock) (carriers : Aufzaehlung (D.Tab ⊕ D.Glob))
     (accepted : akzeptiertX_pruefer.akzeptiert E functions.1 locks.1 carriers.1 = true)
     (calls : CallSitePflicht E) (posts : PostDeckt E) (foreign : ForeignVertrag E O)
     (hardware : HardwareAnnahmenHw O E.Q) :
-    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws) (entryStart E).m
+    ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws) (entryStart E).m
       (E.arenen.map (·.mitRuhe)) state := by
   exact gabbro_ziel akzeptiertX_pruefer _ E functions locks carriers accepted
     (nutzerPflicht_of_akzeptiert functions locks accepted) calls posts O foreign hardware
-    passes _ _ (laufzeit_initRuhe E) _ _ prefix.reachable
+    passes _ _ (laufzeit_initRuhe E) _ _ run.reachable
 
 end Gabbro.Grammatik.Zielsatz
