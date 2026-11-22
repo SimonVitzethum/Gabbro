@@ -173,9 +173,10 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
       (∀ byte, reference.rd byte = true → reads byte) →
       (∀ byte, reference.wr byte = true → reads byte ∧ writes byte) →
       MaskedAgreement reads writes reference actual →
-      ∃ cut, RunP start reference current cut ∧ MaskedAgreement reads writes cut now := by
+      ∃ cut, RunP start reference current cut ∧ MaskedAgreement reads writes cut now ∧
+        ∀ byte, ¬ writes byte → GleichAt now actual byte := by
   induction taken with
-  | refl => exact fun _ _ _ _ proof => ⟨_, .refl _ _, proof⟩
+  | refl => exact fun _ _ _ _ proof => ⟨_, .refl _ _, proof, fun byte _ => GleichAt.refl _ byte⟩
   | ask actualAnswer _ ih =>
     intro reference finish target success tree readable writable agrees
     cases success with
@@ -186,15 +187,16 @@ theorem RunP.align_reference {start current : Res T} {actual now : Mem}
         rw [tree.missing] at rest
         cases rest
       | some words =>
-        obtain ⟨advanced, same, agreement, _, _⟩ :=
+        obtain ⟨advanced, same, agreement, _, written⟩ :=
           replay_memory_request readable writable agrees answered
         rw [same] at actualAnswer
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj actualAnswer)
         have permissions := memAns_nurIn answered
-        obtain ⟨cut, remaining, exactMemory⟩ := ih rest (tree.weiter _)
+        obtain ⟨cut, remaining, exactMemory, untouched⟩ := ih rest (tree.weiter _)
           (fun byte permission => readable byte (by simpa only [permissions.rd] using permission))
           (fun byte permission => writable byte (by simpa only [permissions.wr] using permission)) agreement
-        exact ⟨cut, .ask answered remaining, exactMemory⟩
+        exact ⟨cut, .ask answered remaining, exactMemory,
+          fun byte outside => (untouched byte outside).trans (memAns_aussen same written byte outside)⟩
     | sys | fp => cases actualAnswer
 
 /-- A successful reference instruction in memory restricted to the
@@ -307,6 +309,15 @@ theorem RunP.permissions {r r' : Res T} {before after : Mem}
     have stable := memAns_nurIn answered
     exact ⟨ih.1.trans stable.rd, ih.2.trans stable.wr⟩
 
+/-- Complete memory instructions preserve the memory's permissions. -/
+theorem StarM.permissions {n : Nat} {start finish : T} {before after : Mem}
+    (path : StarM n start before finish after) : after.rd = before.rd ∧ after.wr = before.wr := by
+  induction path with
+  | refl => exact ⟨rfl, rfl⟩
+  | next ran _ ih =>
+    obtain ⟨rd, wr⟩ := RunM.permissions ran
+    exact ⟨ih.1.trans rd, ih.2.trans wr⟩
+
 /-- Any number of complete memory instructions in the actual IR
     consumes the corresponding restricted reference interval. Every
     effect still awaiting a response remains in the reference. -/
@@ -318,26 +329,28 @@ theorem StarM.align_reference {taken : Nat} {start current : T} {actual now : Me
       (∀ byte, reference.wr byte = true → reads byte ∧ writes byte) →
       MaskedAgreement reads writes reference actual →
       ∃ cut, IRReference (count - taken) current cut target finish ∧
-        MaskedAgreement reads writes cut now ∧ cut.rd = reference.rd ∧ cut.wr = reference.wr := by
+        MaskedAgreement reads writes cut now ∧ cut.rd = reference.rd ∧ cut.wr = reference.wr ∧
+        ∀ byte, ¬ writes byte → GleichAt now actual byte := by
   induction part with
   | refl =>
     intro count reference finish target ran _ _ _ agrees
-    exact ⟨reference, by simpa only [Nat.sub_zero] using ran, agrees, rfl, rfl⟩
+    exact ⟨reference, by simpa only [Nat.sub_zero] using ran, agrees, rfl, rfl,
+      fun byte _ => GleichAt.refl _ byte⟩
   | next executed _ tail =>
     intro count reference finish target ran within readable writable agrees
     cases ran with
     | start => exact (Nat.not_succ_le_zero _ within).elim
     | extend first remaining =>
-      obtain ⟨cut, aligned, stable⟩ := (RunM.toPrefix executed).align_reference first
+      obtain ⟨cut, aligned, stable, unaffected⟩ := (RunM.toPrefix executed).align_reference first
         (blind_step _) readable writable agrees
       have finished := aligned.remaining_run first
       cases finished
       obtain ⟨rd, wr⟩ := aligned.permissions
-      obtain ⟨endpoint, rest, memory, rd', wr'⟩ := tail remaining (Nat.le_of_succ_le_succ within)
+      obtain ⟨endpoint, rest, memory, rd', wr', later⟩ := tail remaining (Nat.le_of_succ_le_succ within)
         (fun byte permission => readable byte (by simpa only [rd] using permission))
         (fun byte permission => writable byte (by simpa only [wr] using permission)) stable
       exact ⟨endpoint, by simpa only [Nat.succ_sub_succ_eq_sub] using rest,
-        memory, rd'.trans rd, wr'.trans wr⟩
+        memory, rd'.trans rd, wr'.trans wr, fun byte outside => (later byte outside).trans (unaffected byte outside)⟩
 
 /-- One successful restricted run characterizes all memory requests of
     the actual IR up to the corresponding instruction boundary. The
@@ -381,14 +394,7 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
 theorem SoloLauf.permissions {tb : T} {mb m : Mem} {r : Res T}
     (run : SoloLauf tb mb r m) : m.rd = mb.rd ∧ m.wr = mb.wr := by
   obtain ⟨_, _, _, complete, rest⟩ := run
-  have stable {n : Nat} {start finish : T} {before after : Mem}
-      (path : StarM n start before finish after) : after.rd = before.rd ∧ after.wr = before.wr := by
-    induction path with
-    | refl => exact ⟨rfl, rfl⟩
-    | next ran _ ih =>
-      obtain ⟨rd, wr⟩ := RunM.permissions ran
-      exact ⟨ih.1.trans rd, ih.2.trans wr⟩
-  obtain ⟨rd, wr⟩ := stable complete
+  obtain ⟨rd, wr⟩ := StarM.permissions complete
   rcases rest with ⟨_, rfl⟩ | current
   · exact ⟨rd, wr⟩
   · exact ⟨current.permissions.1.trans rd, current.permissions.2.trans wr⟩

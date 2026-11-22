@@ -135,7 +135,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     ∃ count finish, @IRReference kernel.withoutSyscalls count start restricted target finish ∧
       ∀ {taken : Nat} {pointer : T} {actual : Mem},
         StarM taken start memory pointer actual → taken ≤ count →
-        (taken = count → pointer = target ∧
+        (taken = count → pointer = target ∧ Agree fp d K memory actual ∧
           Senke.ValueAt L actual fp d τ (eval initial expression world env)) ∧
         (taken < count → ∀ {request : Op} {resume : Ans → Res T} {atRequest : Mem},
           RunP (step pointer) actual (.ask request resume) atRequest →
@@ -148,7 +148,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
   have scope : Senke.Pre L restricted pc fp K d code env (fun m => Senke.ReadWorldAt m L world Λ) reserved :=
     ⟨masked.ctx, masked.small, masked.frame, masked.code, masked.far, masked.env,
       expression_world_mask frameReads layout worldReads valueMemory, Senke.readWorldAt_stab layout separated⟩
-  obtain ⟨finish, executed, _, value⟩ :=
+  obtain ⟨finish, executed, protected, value⟩ :=
     Senke.lowE_ok_scoped (same := entry) initial world (fun _ h => h) layout
       expression d code top lowered fits restricted pc env scope
   obtain ⟨count, reference⟩ := IRReference.of_star executed
@@ -156,7 +156,8 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
     maskMemory_agreement reads (inSlots fp 0 K) memory frameReads
   refine ⟨count, finish, reference, ?_⟩
   intro taken pointer actual ran within
-  obtain ⟨cut, remaining, memoryEq, rd, wr⟩ := StarM.align_reference ran reference within readable writable agree
+  obtain ⟨cut, remaining, memoryEq, rd, wr, unwritten⟩ :=
+    StarM.align_reference ran reference within readable writable agree
   constructor
   · intro completed
     subst taken
@@ -166,17 +167,24 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
       exact ⟨rfl, rfl⟩
     obtain ⟨rfl, exactMemory⟩ := endpoint
     subst cut
-    refine ⟨rfl, value.1, ?_⟩
-    intro index present
-    have indexFits : index < Senke.valueWords τ := by simpa only [Senke.encodeWords_length] using present
-    have agreeWord (offset : Nat) (inWord : offset < 8) :=
-      memoryEq.1 _ (frameReads _ (expression_frame_byte pre.frame (by omega : d + index < K) inWord))
-    have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
-        finish.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
-      simp only [Mem.rd64, Mem.all_congr (fun offset valid => (agreeWord offset valid).2.symm),
-        Mem.le_congr (fun offset valid => (agreeWord offset valid).1.symm)]
-    rw [sameRead]
-    exact value.2 index present
+    obtain ⟨rdActual, wrActual⟩ := StarM.permissions ran
+    refine ⟨rfl, ⟨rdActual, wrActual, ?_⟩, value.1, ?_⟩
+    · intro byte outside
+      by_cases inFrame : inSlots fp 0 K byte
+      · have covered := frameReads byte inFrame
+        exact (memoryEq.1 byte covered).1.symm.trans
+          ((protected.b byte outside).trans (agree.1 byte covered).1)
+      · exact (unwritten byte inFrame).1
+    · intro index present
+      have indexFits : index < Senke.valueWords τ := by simpa only [Senke.encodeWords_length] using present
+      have agreeWord (offset : Nat) (inWord : offset < 8) :=
+        memoryEq.1 _ (frameReads _ (expression_frame_byte pre.frame (by omega : d + index < K) inWord))
+      have sameRead : actual.rd64 (slot fp (BitVec.ofNat 64 (d + index))) =
+          finish.rd64 (slot fp (BitVec.ofNat 64 (d + index))) := by
+        simp only [Mem.rd64, Mem.all_congr (fun offset valid => (agreeWord offset valid).2.symm),
+          Mem.le_congr (fun offset valid => (agreeWord offset valid).1.symm)]
+      rw [sameRead]
+      exact value.2 index present
   · intro inside request resume atRequest waiting
     have left : 0 < count - taken := Nat.sub_pos_of_lt inside
     cases available : count - taken with
@@ -186,7 +194,7 @@ theorem lowE_frameMemory [kernel : Kern] {D : Deklaration} {L : Senke.Lay D} {Λ
         simpa only [available] using remaining
       cases restOfReference with
       | extend first rest =>
-        obtain ⟨_, aligned, _⟩ := waiting.align_reference first (blind_step _)
+        obtain ⟨_, aligned, _, _⟩ := waiting.align_reference first (blind_step _)
           (fun byte granted => readable byte (by simpa only [rd] using granted))
           (fun byte granted => writable byte (by simpa only [wr] using granted)) memoryEq
         constructor
