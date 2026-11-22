@@ -51,7 +51,7 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
   obtain ⟨within, rest⟩ := reference.consume_until_host waiting run rfl (BildMehr.alleBlind_start _)
   refine ⟨within, rest, ?_⟩
   intro next events observed visible
-  obtain ⟨empty, same⟩ := rest.at_observation rfl one observed visible
+  obtain ⟨empty, same⟩ := rest.at_observation (M := imageTSO) (before := finish) rfl one observed visible
   exact ⟨by omega, same⟩
 
 /-- Every function in the actual payload has the ordinary IR semantics
