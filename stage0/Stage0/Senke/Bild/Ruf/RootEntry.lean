@@ -225,7 +225,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
   have onThread (control : Res T) : (before.ths.set (index + 1) (some control))[index + 1]? = some (some control) :=
     List.getElem?_set_self inside
   obtain ⟨second, operandRun, shared₂, write₂, others₂⟩ :=
-    output.root_call_decrement_operand declared code₁ (onThread (.next (nxt entry))) frame₁
+    output.root_call_decrement_operand (before := ⟨first, before.ths.set (index + 1) (some (.next (nxt entry)))⟩)
+      declared code₁ (onThread (.next (nxt entry))) frame₁
   have preserved₂ := child_store_preserves output declaredThread scratchRoom fits (Or.inr wordCount.le) code₁ frame₁ args₁
   rw [← write₂] at preserved₂
   obtain ⟨code₂, frame₂, args₂⟩ := preserved₂
@@ -239,7 +240,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     exact rd64_write_same (w := 1) (frame₁.rd scratch scratchRoom)
   simp only [List.set_set] at operandRun
   obtain ⟨third, subRun, shared₃, write₃, others₃⟩ :=
-    output.root_call_depth declared code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
+    output.root_call_depth (before := ⟨second, before.ths.set (index + 1) (some (.next (nxt (nxt entry))))⟩)
+      declared code₂ (onThread (.next (nxt (nxt entry)))) frame₂ depth₂ one
   simp only [List.set_set] at subRun
   have preserved₃ := child_store_preserves output declaredThread calleeRoom fits
     (Or.inl (by simp only [FB]; decide)) code₂ frame₂ args₂
@@ -258,7 +260,8 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     rw [BitVec.add_assoc, BitVec.add_assoc] <;> rfl
   rw [samePC] at subRun
   obtain ⟨fourth, targetRun, shared₄, others₄, write₄, code₄, frame₄, targetWord⟩ :=
-    output.root_call_target declared code₃ (onThread (.next callConst)) frame₃
+    output.root_call_target (before := ⟨third, before.ths.set (index + 1) (some (.next callConst))⟩)
+      declared code₃ (onThread (.next callConst)) frame₃
   simp only [List.set_set] at targetRun
   have callPC : nxt callConst = ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩ := by
     change (⟨entry.pc + BitVec.ofNat 64 (16 * 3) + 16, entry.fp⟩ : T) = _
@@ -271,8 +274,10 @@ theorem Emitted.child_body_prefix [Kern] (output : Emitted src reserve options)
     have separate : scratch ≠ FB + 2 := by simp only [scratch, FB]; omega
     rw [write₄, Mem.rd64_write_far (slot_far frame₃.room scratchRoom calleeRoom separate)]
     exact depth₃
-  obtain ⟨after, callRun, shared₅, others₅, body⟩ := output.root_call_enter declared code₄
-    (onThread (.next ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩)) frame₄ targetWord depth₄ preserved₄.2.2
+  let call : T := ⟨entry.pc + BitVec.ofNat 64 (16 * 4), entry.fp⟩
+  obtain ⟨after, callRun, shared₅, others₅, body⟩ :=
+    output.root_call_enter (before := ⟨fourth, before.ths.set (index + 1) (some (.next call))⟩)
+      declared code₄ (onThread (.next call)) frame₄ targetWord depth₄ preserved₄.2.2
   simp only [List.set_set] at callRun
   refine ⟨after, ?_, shared₅.trans (shared₄.trans (shared₃.trans (shared₂.trans shared₁))), ?_, body⟩
   · simpa only [List.nil_append] using (((depthRun.trans operandRun).trans subRun).trans targetRun).trans callRun
