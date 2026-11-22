@@ -54,6 +54,62 @@ theorem LoadedIRImage.silentEntry {finish : Cfg imageTSO (Res T)} {count : Nat}
   obtain ⟨empty, same⟩ := rest.at_observation (M := imageTSO) (before := finish) rfl one observed visible
   exact ⟨by omega, same⟩
 
+/-- At any installed spawn site, the exact code and the startup stack
+    determine the next host request and both relocated child operands. -/
+theorem Emitted.workerReference (output : Emitted src reserve options)
+    {view : Mem} (table : TabInv L0 view)
+    (code : BytesAt view codeBase (output.image.code.flatMap encII))
+    (frame : FrameOK view (BitVec.ofNat 64 output.image.fp0) output.image.Ks)
+    {j : Nat} (declared : j < output.starts.length) :
+    let pc := BitVec.ofNat 64 (codeBase + 16 * (10 * j))
+    let parent : T := ⟨pc + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
+    let child : T := ⟨BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)),
+      BitVec.ofNat 64 (output.image.fp0 + 8 * (output.image.Ks * (j + 1)))⟩
+    ∃ count (expected : Cfg (SC L0) (Res T)),
+      SCMemoryPrefix L0 ⟨⟨view, table⟩, [some (.next ⟨pc, parent.fp⟩)]⟩ count expected ∧
+      expected.ths = [some (.ask (.sys cloneReq) fun answer =>
+        opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
+  intro pc parent child
+  let entry := codeBase + 16 * (10 * output.starts.length + startLen + startLen * j)
+  let stack := output.image.fp0 + 8 * (output.image.Ks * (j + 1))
+  let scratch := startScratch output.compiled.main
+  have start := List.getElem?_eq_getElem (l := output.starts) declared
+  obtain ⟨decoded, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q code start
+  have placed : CodeAt view pc (spawnOne scratch entry stack) := by
+    simpa only [pc, BitVec.ofNat_add] using decoded
+  obtain ⟨_, body, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+    (fun base bound => layU_in output.compiled.unit output.tor base bound)
+    (fun base => layU_dis output.compiled.unit output.tor base)
+    (fun base => by simp only [layU]; omega)
+    (fun base => layU_sync output.compiled.unit output.tor base)
+  have totalStack : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
+    simpa only [Emitted.starts, List.length_map] using layout.hylo
+  have imageEnd := layout.hfit
+  have worldStart := layout.hyord
+  have worldEnd := layout.hyhi
+  have stackFits : stack < 2 ^ 31 := by
+    have used := Nat.mul_le_mul_left output.image.Ks (Nat.succ_le_succ declared.le)
+    dsimp only [stack]
+    omega
+  have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
+    simpa only [Emitted.starts, List.length_map] using layout.hfp
+  have entryFits : entry < 2 ^ 31 := by
+    dsimp only [entry]
+    simp only [headLen, startLen] at frameStart ⊢
+    omega
+  have scratchFits : scratch + 8 ≤ output.image.Ks := layout.hex _ List.mem_cons_self
+  have far : CodeFar pc 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
+    have singleStack := Nat.le_mul_of_pos_right output.image.Ks (Nat.succ_pos j)
+    have room : output.image.fp0 + 8 * output.image.Ks < 2 ^ 64 := by
+      dsimp only [stack] at stackFits
+      omega
+    apply codeFar_nat _ room
+    simp only [headLen, startLen] at frameStart
+    omega
+  obtain ⟨count, prepared, preserved, ran⟩ :=
+    spawnSite_reference table placed frame far (by omega) layout.startLimits.2.2 entryFits stackFits
+  exact ⟨count, ⟨⟨prepared, preserved⟩, _⟩, ran, rfl⟩
+
 private theorem LoadedIRImage.firstWorkerReference
     (loaded : LoadedIRImage output memory) (workers : 0 < output.starts.length) :
     let parent : T := ⟨BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * 2), BitVec.ofNat 64 output.image.fp0⟩
@@ -64,42 +120,9 @@ private theorem LoadedIRImage.firstWorkerReference
       expected.ths = [some (.ask (.sys cloneReq) fun answer =>
         opt answer fun pair => if pair.1 = 0 then .next child else ret1 parent pair.1)] := by
   intro parent child initial
-  let entry := codeBase + 16 * (10 * output.starts.length + startLen)
-  let stack := output.image.fp0 + 8 * output.image.Ks
-  let scratch := startScratch output.compiled.main
-  have firstDeclared : output.starts[0]? = some output.starts[0] := List.getElem?_eq_getElem workers
-  obtain ⟨decoded, _, _⟩ := output.loaded_boot_site output.checkedUnit.unit.Q
-    (output.loaded_code loaded.payload) firstDeclared
-  have code : CodeAt memory.1.m (BitVec.ofNat 64 codeBase) (spawnOne scratch entry stack) := by
-    simpa [scratch, entry, stack] using decoded
-  obtain ⟨_, body, _, layout, _, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
-    (fun base bound => layU_in output.compiled.unit output.tor base bound)
-    (fun base => layU_dis output.compiled.unit output.tor base)
-    (fun base => by simp only [layU]; omega)
-    (fun base => layU_sync output.compiled.unit output.tor base)
   have firstFrame := bild_initialized_frames_u output.initialValid output.emission output.funktionen_voll
     loaded.payload 0 (Nat.zero_le _)
   simp only [Nat.mul_zero, Nat.add_zero] at firstFrame
-  have imageEnd : output.image.fp0 + 8 * output.image.K < 2 ^ 31 := layout.hfit
-  have totalStack : output.image.fp0 + 8 * (output.image.Ks * (output.starts.length + 1)) ≤ output.image.Y.lo := by
-    simpa only [Emitted.starts, List.length_map] using layout.hylo
-  have worldStart := layout.hyord
-  have worldEnd := layout.hyhi
-  have singleStack : output.image.Ks ≤ output.image.Ks * (output.starts.length + 1) :=
-    Nat.le_mul_of_pos_right _ (Nat.succ_pos _)
-  have stackFits : stack < 2 ^ 31 := by dsimp only [stack]; omega
-  have slotsFit : output.image.Ks < 2 ^ 31 := by dsimp only [stack] at stackFits; omega
-  have frameStart : output.image.fp0 = codeBase + 16 * (headLen output.starts.length + body.length) := by
-    simpa only [Emitted.starts, List.length_map] using layout.hfp
-  have entryFits : entry < 2 ^ 31 := by
-    dsimp only [entry]
-    simp only [headLen, startLen] at frameStart ⊢
-    omega
-  have scratchFits : scratch + 8 ≤ output.image.Ks := layout.hex _ (List.mem_cons_self ..)
-  have far : CodeFar (BitVec.ofNat 64 codeBase) 10 (BitVec.ofNat 64 output.image.fp0) output.image.Ks := by
-    apply codeFar_nat _ (Nat.lt_trans stackFits (by decide))
-    simp only [headLen, startLen] at frameStart
-    omega
   have startMemory : initial.ms.1 = memory.1.m :=
     BildMehr.mergedView_empty _ _ loaded.emptyBuffers
   have exactStart : initial =
@@ -108,9 +131,12 @@ private theorem LoadedIRImage.firstWorkerReference
     exact congrArg (fun state : (SC L0).St =>
       ⟨state, (output.irEntry memory).ths⟩ : (SC L0).St → Cfg (SC L0) (Res T))
       (Subtype.ext startMemory)
-  obtain ⟨referenceSteps, prepared, invariant, reference⟩ := BildMehr.spawnSite_reference (layout := L0)
-    memory.2.1 code firstFrame far (by omega) slotsFit entryFits stackFits
-  exact ⟨referenceSteps, _, exactStart.symm ▸ reference, rfl⟩
+  obtain ⟨count, expected, reference, waiting⟩ :=
+    output.workerReference memory.2.1 (output.loaded_code loaded.payload) firstFrame workers
+  refine ⟨count, expected, ?_, ?_⟩
+  · rw [exactStart]
+    simpa only [Nat.mul_zero, Nat.add_zero] using reference
+  · simpa only [Nat.mul_zero, Nat.add_zero, Nat.mul_one] using waiting
 
 /-- Before the first worker launch, the loaded IR cannot stop silently.
     Any first visible transition is at the generated clone request,
