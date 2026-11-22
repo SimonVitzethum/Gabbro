@@ -234,6 +234,60 @@ termination_by structural body _ _ => body
     change (commandPhases 0 f.body).get selected.val = .waiting tag future
     simpa only [Nat.zero_add] using selected.property)
 
+/-- The selected await has no earlier Waiting case with its tag. -/
+public theorem commandWaitingIndex_first (base : Nat) (body : List Command) (offset : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (found : body.drop offset = Command.await name future boundary :: rest)
+    (before : Fin (commandPhases base body).length)
+    (earlier : before.val < (commandWaitingIndex base body offset found).val.val) (other : FutureExpr) :
+    (commandPhases base body).get before ≠ .waiting (base + offset) other := by
+  induction body generalizing base offset with
+  | nil => simp only [List.drop_nil] at found; cases found
+  | cons command tail ih =>
+    cases offset with
+    | zero =>
+      cases command with
+      | bind => cases found
+      | await =>
+        obtain ⟨position, within⟩ := before
+        have zero : position = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ earlier)
+        subst position
+        intro same
+        cases same
+    | succ offset =>
+      have nextFound : tail.drop offset = Command.await name future boundary :: rest := found
+      have nextTag : base + 1 + offset = base + (offset + 1) := by omega
+      cases command with
+      | bind =>
+        obtain ⟨position, valid⟩ := before
+        cases position with
+        | zero => intro same; cases same
+        | succ position =>
+          let next : Fin (commandPhases (base + 1) tail).length := ⟨position, Nat.lt_of_succ_lt_succ valid⟩
+          have bound : next.val < (commandWaitingIndex (base + 1) tail offset nextFound).val.val :=
+            Nat.lt_of_succ_lt_succ earlier
+          have different := ih (base + 1) offset nextFound next bound
+          change (commandPhases (base + 1) tail).get next ≠ .waiting (base + (offset + 1)) other
+          rwa [← nextTag]
+      | await =>
+        obtain ⟨position, valid⟩ := before
+        cases position with
+        | zero => intro same; cases same
+        | succ position =>
+          cases position with
+          | zero =>
+            intro same
+            injection same with tag _
+            omega
+          | succ position =>
+            let next : Fin (commandPhases (base + 1) tail).length :=
+              ⟨position, Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ valid)⟩
+            have bound : next.val < (commandWaitingIndex (base + 1) tail offset nextFound).val.val :=
+              Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ earlier)
+            have different := ih (base + 1) offset nextFound next bound
+            change (commandPhases (base + 1) tail).get next ≠ .waiting (base + (offset + 1)) other
+            rwa [← nextTag]
+
 /-- The ordinary G constructor saves both the continuation frame and the
     child storage at the precise Waiting case selected by the command. -/
 @[expose] public def waitingExpr (types : TypeResolution) (f : AsyncFn)

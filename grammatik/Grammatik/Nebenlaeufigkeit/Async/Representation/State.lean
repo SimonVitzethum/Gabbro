@@ -341,6 +341,62 @@ public theorem waitingExpr_eval {Γ : Ctx} {Λ : List (Res D)} (types : TypeReso
       waitingValue D types f tag command (eval entry frame world env) (eval entry child world env) := by
   simp only [waitingExpr, stateExpr, waitingValue, eval, evalProd, evalNutz_cast, evalNutz] <;> rfl
 
+/-- The generated Waiting constructor uses its own command tag and the
+    precise frame, child storage and inventory of the modeled wait. -/
+public theorem waitingValue_inv (types : TypeResolution) (f : AsyncFn) (inventory : Inventory D) (tag : Nat)
+    {name : String} {future : FutureExpr} {boundary : Boundary} {rest : List Command}
+    (command : f.body.drop tag = Command.await name future boundary :: rest)
+    (frame : Frame (Value D)) (task : Task (Value D) (Child D types))
+    (saved : Wert D (frameType types f)) (child : Wert D (taskStorageType types [tag] future))
+    (slots : FrameRep D types f (.waiting tag future) frame saved)
+    (childRep : TaskRep D types [tag] future task child)
+    (marks : MarksRep inventory (.waiting tag future) (.waiting tag frame task)) :
+    Inv f types inventory (.waiting tag frame task) (waitingValue D types f tag command saved child) := by
+  let selected := commandWaitingIndex 0 f.body tag command
+  let index : Fin (phases f).length := selected.val.succ.succ
+  have active : (phases f).get index = .waiting tag future := by
+    change (commandPhases 0 f.body).get selected.val = .waiting tag future
+    simpa only [Nat.zero_add] using selected.property
+  have sameType : phaseType types f ((phases f).get index) = phaseType types f (.waiting tag future) :=
+    congrArg (phaseType types f) active
+  let fields : Wert D (phaseType types f (.waiting tag future)) := (saved, child, ())
+  have payload : PhaseRep D types f ((phases f).get index) (.waiting tag frame task) (sameType.symm ▸ fields) := by
+    have transport (phase : Phase) (same : phase = .waiting tag future) :
+        PhaseRep D types f phase (.waiting tag frame task) ((congrArg (phaseType types f) same).symm ▸ fields) := by
+      cases same
+      exact .waiting tag future frame task saved child slots childRep
+    exact transport _ active
+  have presentMarks : MarksRep inventory ((phases f).get index) (.waiting tag frame task) := active.symm ▸ marks
+  have absent (before : Fin (phases f).length) (earlier : before.val < index.val) :
+      encodePhase D types f ((phases f).get before) (.waiting tag frame task) = none := by
+    obtain ⟨position, inList⟩ := before
+    cases position with
+    | zero => rfl
+    | succ position =>
+      cases position with
+      | zero => rfl
+      | succ position =>
+        let previous : Fin (commandPhases 0 f.body).length :=
+          ⟨position, Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ inList)⟩
+        have closer : previous.val < selected.val.val := Nat.lt_of_succ_lt_succ (Nat.lt_of_succ_lt_succ earlier)
+        change encodePhase D types f ((commandPhases 0 f.body).get previous) (.waiting tag frame task) = none
+        cases atPhase : (commandPhases 0 f.body).get previous with
+        | cancelled => rfl
+        | completed => rfl
+        | running => rfl
+        | waiting current other =>
+          have different := commandWaitingIndex_first 0 f.body tag command previous closer other
+          simp only [Nat.zero_add] at different
+          have otherTag : tag ≠ current := fun equal =>
+            different (atPhase.trans (congrArg (fun tag => Phase.waiting tag other) equal.symm))
+          simp only [encodePhase, ite_eq_right otherTag]
+  have matched := phaseListRep_at types f inventory (.waiting tag frame task) (phases f) index _ payload presentMarks absent
+  have exactValue : phaseValueAt D types f (phases f) index (sameType.symm ▸ fields) =
+      (waitingValue D types f tag command saved child).1 :=
+    phaseValueAt_transport types f (phases f) index sameType fields
+  rw [exactValue] at matched
+  exact matched
+
 public theorem cancelled_encoded (types : TypeResolution) (f : AsyncFn) :
     encode D types f State.cancelled = some (cancelledValue types f D) := rfl
 
