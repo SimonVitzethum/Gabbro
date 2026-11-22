@@ -107,7 +107,8 @@ theorem _root_.Gabbro.Stage0.MappedImage.initial_lock_projection [Kern]
     let ir : Cfg imageTSO (Res T) := ⟨machine.ms, [some t4]⟩
     let source := imageSourceStart E
     Rel L0 ir machine ∧ ImageSlotsMatch output E O [] ir source ∧
-      ImageForeignTrace output [] source ∧ ImageRuntimeMatches output E O [] ir source ∧
+      ImageForeignTrace output [] source ∧
+      ImageRuntimeMatchesAt (imageProtectedFootprint output source.m) output E O [] ir source ∧
       ImageTicketStates output.image.Y.withIdle machine.ms.1.m source.m
         (fun _ => start (output.starts.length + 1)) ∧
       PrivateBuffers (imageProtectedFootprint output source.m) machine.ms.1 ∧
@@ -115,9 +116,12 @@ theorem _root_.Gabbro.Stage0.MappedImage.initial_lock_projection [Kern]
   intro ir source
   obtain ⟨runner, slots, events, runtime⟩ := mapped.source_start unit O
   have locks := output.loaded_ticketStates mapped.bytes accepted
-  refine ⟨runner, slots, events, runtime, locks, privateBuffers_empty mapped.emptyBuffers, ?_⟩
-  change mergedView machine.ms.1 (imageProtectedFootprint output source.m) = machine.ms.1.m
-  rw [imageProtectedFootprint_initial locks, mergedView_empty _ _ mapped.emptyBuffers]
+  have projection := imageProtectedFootprint_initial locks
+  refine ⟨runner, slots, events, ?_, locks, privateBuffers_empty mapped.emptyBuffers, ?_⟩
+  · rw [projection]
+    exact runtime
+  · change mergedView machine.ms.1 (imageProtectedFootprint output source.m) = machine.ms.1.m
+    rw [projection, mergedView_empty _ _ mapped.emptyBuffers]
 
 theorem imageProtectedFootprint_exclusive [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
     {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}

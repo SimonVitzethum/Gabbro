@@ -159,14 +159,12 @@ def ImageRootPhase [Kern] (output : Emitted src reserve options)
       (control = .next t ∨ RunP (IR.step t) memory control memory ∨
         ∃ id extra, (thread, cloneReq, some (id, extra)) ∈ history ∧ control = ret1 t id)
 
-/-- Startup and lowered body threads can coexist. Body positions use the
-    compiler's frame relation. Each omitted live slot is accounted for
-    by its exact root stub or by the loader. -/
-def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
+/-- Each live slot is at a body position, its root stub or the loader. -/
+def ImageRuntimeMatchesAt [Kern] (footprint : Nat → W → Prop) (output : Emitted src reserve options)
     (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
     (history : List Ev) (machine : Cfg imageTSO (Res T))
     (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
-  ∃ footprint body,
+  ∃ body,
     PrivateBuffers footprint machine.ms.1 ∧ body.length = machine.ths.length ∧
     (((∀ (i : Nat) (r : Res T), body[i]? ≠ some (some r)) ∧
       WeltAt (projectSCState footprint machine.ms).1 output.image.Y.withIdle (state.m.speicher.welt [])) ∨
@@ -177,6 +175,12 @@ def ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
     ∀ i, body[i]? = machine.ths[i]? ∨
       ∃ r, body[i]? = some none ∧ machine.ths[i]? = some (some r) ∧
         ImageRootPhase output E history (machine.ms.1.view i) i r state
+
+abbrev ImageRuntimeMatches [Kern] (output : Emitted src reserve options)
+    (E : Einheit (declOf output.compiled.unit)) (O : Orakel (declOf output.compiled.unit))
+    (history : List Ev) (machine : Cfg imageTSO (Res T))
+    (state : FadenMaschine (declOf output.compiled.unit).mitRuhe) : Prop :=
+  ∃ footprint, ImageRuntimeMatchesAt footprint output E O history machine state
 
 /-- The actual request of a non-returning gate at the issuing source thread. -/
 def ImageNeverRequest (output : Emitted src reserve options)
@@ -231,14 +235,14 @@ theorem MappedImage.source_start [Kern] {output : Emitted src reserve options}
     let ir : Cfg imageTSO (Res T) := ⟨machine.ms, [some t4]⟩
     Rel L0 ir machine ∧ ImageSlotsMatch output E O [] ir (imageSourceStart E) ∧
       ImageForeignTrace output [] (imageSourceStart E) ∧
-      ImageRuntimeMatches output E O [] ir (imageSourceStart E) := by
+      ImageRuntimeMatchesAt (imageStackFootprint output) output E O [] ir (imageSourceStart E) := by
   intro ir
   refine ⟨mapped.loader, ⟨?_, ?_⟩, .nil, ?_⟩
   · intro i
     cases i <;> simp [ir, imageSourceStart, FadenStart]
   · intro i retired
     cases i <;> simp [ir] at retired
-  · refine ⟨imageStackFootprint output, [none], privateBuffers_empty mapped.emptyBuffers, rfl,
+  · refine ⟨[none], privateBuffers_empty mapped.emptyBuffers, rfl,
       Or.inl ⟨?_, ?_⟩, ?_⟩
     · intro i r
       cases i <;> simp

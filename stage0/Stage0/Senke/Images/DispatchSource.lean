@@ -265,7 +265,7 @@ theorem MappedImage.loader_prefix_source [Kern] {output : Emitted src reserve op
   cases run with
   | nil =>
     obtain ⟨_, slots, _, runtime⟩ := mapped.source_start unit O
-    exact ⟨rfl, slots, runtime⟩
+    exact ⟨rfl, slots, imageStackFootprint output, runtime⟩
   | cons step rest =>
     cases rest with
     | nil =>
