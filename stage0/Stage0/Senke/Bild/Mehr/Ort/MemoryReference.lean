@@ -95,6 +95,28 @@ theorem frame_slot_byte {memory : Mem} {fp : W} {K index offset : Nat}
   rw [Nat.mod_eq_of_lt (a := offset) (by omega), Nat.mod_eq_of_lt (by have := frame.lt; omega)]
   omega
 
+/-- All solo prefixes of a region are either still inside its request
+    scope or pass through its proved instruction boundary. The suffix
+    continues from the exact memory delivered by that boundary. -/
+theorem SoloLauf.split_after [Kern] {count : Nat} {start finish : T}
+    {before current : Mem} {control : Res T} {valid : Mem → Prop} {allowed : Res T → Prop}
+    (atPointer : ∀ pointer, allowed (.next pointer))
+    (complete : ∀ {pointer memory}, StarM count start before pointer memory →
+      pointer = finish ∧ valid memory)
+    (partialRun : ∀ {used pointer memory residual after}, StarM used start before pointer memory →
+      used < count → RunP (step pointer) memory residual after → allowed residual)
+    (path : SoloLauf start before control current) :
+    allowed control ∨ ∃ boundary, StarM count start before finish boundary ∧
+      SoloLauf finish boundary control current ∧ valid boundary := by
+  obtain ⟨used, pointer, memory, advanced, pending⟩ := path
+  rcases Nat.lt_or_ge used count with within | completeCount
+  · rcases pending with ⟨rfl, _⟩ | tail
+    · exact .inl (atPointer _)
+    · exact .inl (partialRun advanced within tail)
+  · obtain ⟨boundary, atBoundary, first, tail⟩ := StarM.cut advanced count completeCount
+    obtain ⟨rfl, validAtBoundary⟩ := complete first
+    exact .inr ⟨atBoundary, first, ⟨used - count, pointer, memory, tail, pending⟩, validAtBoundary⟩
+
 /-- Restricting the permitted data accesses preserves decoding of an
     installed code region and access to every word of its private frame. -/
 theorem maskMemory_code_frame [Kern] {memory : Mem} {pc fp : W} {slots : Nat}

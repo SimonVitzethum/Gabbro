@@ -184,15 +184,9 @@ theorem _root_.Gabbro.Stage0.Senke.BildLauf.BodyFrame.bind_reference [kernel : K
       observedMemory worldReads frame.win.lay (by omega) (fun _ => rfl)
   refine ⟨count, ?_⟩
   intro control current solo
-  obtain ⟨taken, pointer, atPointer, ran, tail⟩ := solo
-  rcases Nat.lt_or_ge taken count with inside | finished
-  · rcases tail with ⟨rfl, rfl⟩ | part
-    · exact .inl trivial
-    · exact .inl ((prefixCorrect ran inside.le).2 inside part)
-  · obtain ⟨atBoundary, boundary, expressionRun, later⟩ := StarM.cut ran count finished
-    obtain ⟨pointerEq, memoryEffect, value⟩ := (prefixCorrect expressionRun (Nat.le_refl _)).1 rfl
-    subst atBoundary
-    exact .inr ⟨boundary, expressionRun, ⟨taken - count, pointer, atPointer, later, tail⟩,
-      BodyFrame.finishBind frame original lowered memoryEffect value⟩
+  exact SoloLauf.split_after (fun _ => trivial) (fun ran => by
+    obtain ⟨pointer, writes, value⟩ := (prefixCorrect ran (Nat.le_refl _)).1 rfl
+    exact ⟨pointer, BodyFrame.finishBind frame original lowered writes value⟩)
+    (fun ran inside part => (prefixCorrect ran inside.le).2 inside part) solo
 
 end Gabbro.Stage0
