@@ -448,7 +448,7 @@ theorem lowStorage_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
   | _, _, .arrCons .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .arrGet .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strCat .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strGet .., hRead, _, _, _, h, hK, _, _, _, hp
   | _, _, .strEq .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .strLt .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .eng .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prodSet .., hRead, _, _, _, h, hK, _, _, _, hp
   | _, _, .getBytes .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .case .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .arrSet .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .wenn .., hRead, _, _, _, h, hK, _, _, _, hp
-  | _, _, .intBuiltin1 .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .intBuiltin2 .., _, _, _, h, hK, _, _, _, hp | _, _, .count .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prod .., hRead, _, _, _, h, hK, _, _, _, hp =>
+  | _, _, .intBuiltin1 .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .intBuiltin2 .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .count .., hRead, _, _, _, h, hK, _, _, _, hp | _, _, .prod .., hRead, _, _, _, h, hK, _, _, _, hp =>
     lowStorage_sound (currentOld := currentOld) σ₀ σ hWL _ hRead trivial h hK hp
 termination_by structural _ _ e _ _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}

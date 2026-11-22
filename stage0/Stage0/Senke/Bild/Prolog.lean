@@ -38,21 +38,22 @@ abbrev rumpfRahmen (Y : Lay D) (O : Orakel D) (passes : Nat) (P : Programm D) (A
 
 variable [Kern]
 
-/-- From the actual entry of a function, the depth and requires guards
-    and the snapshot and parameter moves reach its first body boundary.
-    The setup stays within the function's frame and uses only its own code. -/
-theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
+/-- The guards and frame setup need only the world carriers of the
+    precondition and the entry snapshot cells. The complete body boundary
+    follows when the rest of the loaded machine state is supplied. -/
+theorem prolog_setup {Y : Lay D} {P : Programm D} {O : Orakel D}
     {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
     {f : D.Fn} {m : Runner.Mem} {fp : Runner.W} {K Ks : Nat} {rp cfp : Runner.W} {σ : World D}
     {ρ : Env D (D.params f)} {H : List D.Lock}
     (hC : ∃ top, lowFun passes P A Y f = some (C f, top) ∧ top ≤ Lm)
     (hlen : 16 * (C f).length < 2 ^ 31) {k : Nat} (hk : k + 1 < 2 ^ 64)
     (hc : (k + 1 + 1) * Lm ≤ Ks) (hW : WIn Y fp Ks K) (hK : K < 2 ^ 31) (hF : FrameOK m fp K)
-    (hP : PCode m A C fp K) (h0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp)
-    (h1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp)
+    (installed : CodeAt m (BitVec.ofNat 64 (A f)) (C f))
+    (codeFar : CodeFar (BitVec.ofNat 64 (A f)) (C f).length fp K)
     (h2 : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (k + 1)))
-    (hE : EnvAt Y m fp ρ) (hWa : WeltAt m Y σ) (hy : TicketSync m Y fp Ks H)
-    (hH : HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden)
+    (hE : EnvAt Y m fp ρ)
+    (readable : WorldOnAt m Y σ (· ∈ (P.requires f).orte))
+    (inputCells : EntrySnapshots.Inputs Y σ m (oldCells (P.ensures f)))
     (hreq : ReqAmEintritt P f σ ρ) :
     ∃ (ens : List II × Nat) (pc : Runner.W) (mR : Runner.Mem),
       Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨pc, fp⟩ mR ∧
@@ -61,9 +62,13 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
       (∀ body, lowEnd (reserved := (functionFrame P f).bodyReserved) passes A Y (functionFrame P f)
         ens [] (0, 0) (P.rumpf f) = some body →
         pc = BitVec.ofNat 64 (A f) + BitVec.ofNat 64 (16 * ((C f).length - body.1.length))) ∧
-      (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
+      (PCode m A C fp K → WeltAt m Y σ → TicketSync m Y fp Ks H →
+        m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp →
+        m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
+        HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden →
+        (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
         (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
-        (P.rumpf f) pc mR σ ρ := by
+        (P.rumpf f) pc mR σ ρ) := by
   have hks := hW.ks
   obtain ⟨top, lower, bound⟩ := hC
   simp only [lowFun] at lower
@@ -85,14 +90,12 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
   have guardFits : q + 8 ≤ Ks := by simp only [retTop] at ownBound; omega
   have loaded : CodeAt m (BitVec.ofNat 64 (A f))
       (guardC 2 105 q ++ (cq ++ (guardC q 101 q ++ (entry ++ cb)))) := by
-    have := (hP f).1
-    rw [← codes] at this
-    simpa only [entry, layout, q, List.append_assoc] using this
+    rw [← codes] at installed
+    simpa only [entry, layout, q, List.append_assoc] using installed
   have far : CodeFar (BitVec.ofNat 64 (A f))
       (guardC 2 105 q ++ (cq ++ (guardC q 101 q ++ (entry ++ cb)))).length fp K := by
-    have := (hP f).2
-    rw [← codes] at this
-    simpa only [entry, layout, q, List.append_assoc] using this
+    rw [← codes] at codeFar
+    simpa only [entry, layout, q, List.append_assoc] using codeFar
   have lengthBound : 16 * (entry ++ cb).length < 2 ^ 31 := by
     rw [← codes] at hlen
     simp only [entry, layout, q, List.length_append] at hlen ⊢
@@ -106,25 +109,31 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
   have depthRun := guard_pass (codeAt_left loaded) (by omega) h2 nonzero
   have far1 := codeFar_tail far
   have code1 := codeAt_right loaded
-  have requiresWorld : WeltAt m Y
-      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) := hWa
+  have requiresWorld : WorldOnAt m Y
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) (· ∈ (P.requires f).orte) := readable
+  have captures : EntrySnapshots.Inputs Y
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) m (oldCells (P.ensures f)) := by
+    intro cell present
+    cases cell <;> exact inputCells _ present
   have pass : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) (P.requires f)
       (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ) = true := by
     rw [req_lese]
     exact hreq
-  generalize hσR : σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR at requiresWorld pass ⊢
+  generalize hσR : σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR at requiresWorld captures pass ⊢
   have reqPre : PreS Y m _ fp K q cq ρ :=
     ⟨Nat.le_refl _, hK, hF, codeAt_left code1,
       codeFar_left (n := cq.length)
         (k := (guardC q 101 q ++ (entry ++ cb)).length)
         (by simpa only [List.length_append] using far1), hE, trivial, wstab_true _ _⟩
-  have reqWorldPre := PreS.welt reqPre hks requiresWorld hW.lay hW.lo
+  have reqWorldPre : Pre Y m _ fp Ks q cq ρ
+      (fun m => WorldOnAt m Y σR (· ∈ (P.requires f).orte)) 0 :=
+    ⟨reqPre.ctx, by omega, frameOK_sub reqPre.frame hks, reqPre.code,
+      codeFar_sub2 reqPre.far hks, reqPre.env, requiresWorld, worldOnAt_stab hW.lay hW.lo⟩
   obtain ⟨m1, reqRun, reqChanged, b, reqRead, reqValue⟩ :=
-    lowE_ok (same := by intro _; rfl) (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f)
-      q cq tq hq (by omega) m _ ρ reqWorldPre |>.word trivial
+    lowE_ok_scoped (same := by intro _; rfl) (fp := fp) (K := Ks) σR σR (fun _ h => h)
+      hW.lay (P.requires f) (fun _ member => member) q cq tq hq (by omega) m _ ρ reqWorldPre |>.word trivial
   have first := Agree.widen reqChanged hks
   have frame1 := hF.agree first
-  have world1 := reqWorldPre.wstab m m1 requiresWorld (reqChanged.mono (Nat.zero_le _))
   have far2 := codeFar_tail far1
   have code2 := (codeAt_right code1).agree first far2
   simp only [Enc] at reqValue
@@ -155,8 +164,8 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
     entryFrame_run P f hsnap frame1 hK entryFits
       (codeAt_left code3) (codeFar_left (n := entry.length) (k := cb.length)
         (by simpa only [List.length_append] using far3))
-      params1 (EntrySnapshots.Inputs.of_world world1 (fun cell member =>
-        (EntrySnapshots.capture_bounds _ _ hsnap cell member).1))
+      params1 (captures.agree first (EntrySnapshots.capture_separated hsnap hW.lay hW.top)
+        (fun cell member => (EntrySnapshots.capture_bounds _ _ hsnap cell member).2))
       (EntrySnapshots.capture_separated hsnap hW.lay hW.top)
   have low : FB ≤ q := by simp only [q, FrameLayout.canonicalResult]; omega
   have allChanged : Agree fp FB K m mR := (first.mono low).trans entryChanged
@@ -167,6 +176,15 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
     simp only [entry, List.length_append, relocateC_length, FrameLayout.parameterWords, layout, functionFrame]
     omega
   rw [entryLength] at codeR farR
+  have entryPrefix := depthRun.trans (reqRun.trans (requiresRun.trans entryRun))
+  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens, ?_, ?_⟩
+  · intro body compiled
+    rw [hb] at compiled
+    cases Option.some.inj compiled
+    rw [← codes, List.length_append, Nat.add_sub_cancel]
+    simp only [entry, layout, q, List.length_append, relocateC_length, FrameLayout.parameterWords,
+      Nat.two_mul, Nat.mul_add, BitVec.ofNat_add] <;> ac_rfl
+  intro hP hWa hy h0 h1 hH
   have surroundings : Umf Y A C (BitVec.ofNat 64 k) mR fp Ks K H :=
     ⟨pcode_agree hP allChanged, by
       rw [agree_rd_low allChanged hF.room (by decide) (by omega), h2, ofNat_succ], by omega,
@@ -179,22 +197,44 @@ theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
   have bodyPre : PreS Y mR _ fp K (frei (D.params f) layout.bodyReserved)
       cb ρ layout.bodyReserved :=
     ⟨Nat.le_refl _, hK, frameR, codeR, farR, lexical, trivial, wstab_true _ _⟩
-  have entryPrefix := depthRun.trans (reqRun.trans (requiresRun.trans entryRun))
-  -- the world the body starts in: the entry read only extends the trace (`WeltAt` reads slots and globals)
-  have worldσ : WeltAt mR Y σ := by
-    have worldR := weltAt_stab hW.lay hW.top m mR requiresWorld (allChanged.mono (Nat.zero_le _))
-    rw [← hσR] at worldR
-    exact worldR
+  have worldσ := weltAt_stab hW.lay hW.top m mR hWa (allChanged.mono (Nat.zero_le _))
   have room : tb + (k + 1) * Lm ≤ Ks := by omega
-  refine ⟨(cens, tens), _, mR, entryPrefix, allChanged, hens, ?_,
-    cb, tb, hb, room, by simp only [List.length_append] at lengthBound; omega, bodyPre, bodyFrontier,
+  exact ⟨cb, tb, hb, room, by simp only [List.length_append] at lengthBound; omega, bodyPre, bodyFrontier,
     surroundings, header, worldσ, (fun _ h => nomatch h), hH⟩
-  intro body compiled
-  rw [hb] at compiled
-  cases Option.some.inj compiled
-  rw [← codes, List.length_append, Nat.add_sub_cancel]
-  simp only [entry, layout, q, List.length_append, relocateC_length, FrameLayout.parameterWords,
-    Nat.two_mul, Nat.mul_add, BitVec.ofNat_add] <;> ac_rfl
+
+/-- The actual function prologue reaches a fully represented body. -/
+theorem prolog_randIR {Y : Lay D} {P : Programm D} {O : Orakel D}
+    {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {Lm : Nat}
+    {f : D.Fn} {m : Runner.Mem} {fp : Runner.W} {K Ks : Nat} {rp cfp : Runner.W} {σ : World D}
+    {ρ : Env D (D.params f)} {H : List D.Lock}
+    (hC : ∃ top, lowFun passes P A Y f = some (C f, top) ∧ top ≤ Lm)
+    (hlen : 16 * (C f).length < 2 ^ 31) {k : Nat} (hk : k + 1 < 2 ^ 64)
+    (hc : (k + 1 + 1) * Lm ≤ Ks) (hW : WIn Y fp Ks K) (hK : K < 2 ^ 31) (hF : FrameOK m fp K)
+    (hP : PCode m A C fp K) (h0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp)
+    (h1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp)
+    (h2 : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 (k + 1)))
+    (hE : EnvAt Y m fp ρ) (hWa : WeltAt m Y σ) (hy : TicketSync m Y fp Ks H)
+    (hH : HeldIn H (Signatur.anfang D (D.signatur f)) (D.signatur f).boden)
+    (hreq : ReqAmEintritt P f σ ρ) :
+    ∃ (ens : List II × Nat) (pc : Runner.W) (mR : Runner.Mem),
+      Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨pc, fp⟩ mR ∧ Agree fp FB K m mR ∧
+      lowPost Y (functionFrame P f) P f (functionFrame P f).internalStatus = some ens ∧
+      (∀ body, lowEnd (reserved := (functionFrame P f).bodyReserved) passes A Y (functionFrame P f)
+        ens [] (0, 0) (P.rumpf f) = some body →
+        pc = BitVec.ofNat 64 (A f) + BitVec.ofNat 64 (16 * ((C f).length - body.1.length))) ∧
+      (rumpfRahmen Y O passes P A C Lm k f fp K Ks rp cfp
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ H ens).RandIR
+        (P.rumpf f) pc mR σ ρ := by
+  have snapshots : EntrySnapshots.Inputs Y σ m (oldCells (P.ensures f)) := by
+    obtain ⟨top, lowered, fits⟩ := hC
+    simp only [lowFun, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lowered
+    obtain ⟨_, _, _, _, _, _, snap, capture, _, _⟩ := lowered
+    exact EntrySnapshots.Inputs.of_world hWa (fun cell member =>
+      (EntrySnapshots.capture_bounds _ _ capture cell member).1)
+  obtain ⟨ens, pc, after, run, changed, post, address, body⟩ :=
+    prolog_setup (O := O) hC hlen hk hc hW hK hF (hP f).1 (hP f).2 h2 hE
+      ⟨fun t _ f k hk => hWa.1 t f k hk, fun g _ => hWa.2.1 g⟩ snapshots hreq
+  exact ⟨ens, pc, after, run, changed, post, address, body hP hWa hy h0 h1 hH⟩
 
 /-- The first body boundary with the standing call protocol. -/
 theorem prolog_rand {Y : Lay D} {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
