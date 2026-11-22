@@ -33,11 +33,11 @@ private theorem lowProdArgs_types {Γ : Ctx} {Λ : List (Res D)} {fs fs' : List 
   cases h
   rfl
 
-private theorem unary_withIdle {a r : Ty} (op : IntBuiltin [a] r) (code : BitBuiltin.Emitter) :
+theorem unary_withIdle {a r : Ty} (op : IntBuiltin [a] r) (code : BitBuiltin.Emitter) :
     BitBuiltin.unary (ibR op) code = BitBuiltin.unary op code := by
   cases op <;> rfl
 
-private theorem binary_withIdle {a b r : Ty} (op : IntBuiltin [a, b] r) (dest : Nat)
+theorem binary_withIdle {a b r : Ty} (op : IntBuiltin [a, b] r) (dest : Nat)
     (left right : BitBuiltin.Emitter) :
     intBuiltin2L (ibR op) dest left right = intBuiltin2L op dest left right := by
   cases op <;> rfl

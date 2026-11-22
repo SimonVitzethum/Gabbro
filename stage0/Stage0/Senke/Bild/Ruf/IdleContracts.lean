@@ -2,6 +2,7 @@ module
 
 public import Stage0.Senke.Bild.Ruf.IdleExpression
 public import Stage0.Senke.Bild.Ruf.IdleCounters
+import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1.Teil1Basis
 
 @[expose] public section
 
@@ -36,29 +37,45 @@ private theorem lowEnsAt_withIdle (L : Lay D) (original shifted : FrameLayout)
   | _, _, _, .oldS table field index _, start, dest => by
     have selected := entryIndex_ruE index
     have words := words_ruE L index
-    have body := funext (lowEnsAt_withIdle L original shifted reserve index start)
+    have body := lowEnsAt_withIdle L original shifted reserve index start (dest + valueWords (D.typ table field))
     have width : valueWords (D.mitRuhe.typ table field) = valueWords (D.typ table field) :=
       valueWords_mapNumbers _ _ _
-    simp only [ruE, lowEnsAt, idleColumnFits (D := D), entryColumnL, width]
-    with_unfolding_all rw [selected, words, body]
+    let access (i : Option Int) (words : Nat) (code : Option (List II × Nat)) :=
+      match i with
+      | some _ => some (copyWords (valueWords (D.typ table field)) dest start, dest + valueWords (D.typ table field))
+      | none => if EntrySnapshots.columnFits table field then
+          entryColumnL (D.typ table field) (start + words) dest code else none
+    calc
+      _ = access (entryIndex (ruE index)) (EntrySnapshots.words (oldCells (ruE index)))
+          (lowEnsAt L.withIdle shifted start (ruE index) (dest + valueWords (D.typ table field))) := by
+        simp only [ruE, lowEnsAt, access, idleColumnFits (D := D), entryColumnL, width]
+        with_unfolding_all rfl
+      _ = access (entryIndex index) (EntrySnapshots.words (oldCells index))
+          (lowEnsAt L original start index (dest + valueWords (D.typ table field))) :=
+        congrFun (kongr₂ access selected words) _ |>.trans (congrArg (access _ _) body)
+      _ = _ := rfl
   | _, _, _, .widen _ _ e, start, _ | _, _, _, .not e, start, _ | _, _, _, .neg e, start, _ => by
-    have mapped := funext (lowEnsAt_withIdle L original shifted reserve e start)
-    simp only [ruE, lowEnsAt, mapped]
+    have mapped := lowEnsAt_withIdle L original shifted reserve e start
+    simp only [ruE, lowEnsAt, mapped, funext mapped]
   | _, _, _, .add a b, start, _ | _, _, _, .sub a b, start, _ | _, _, _, .mul a b, start, _
   | _, _, _, .eq a b, start, _ | _, _, _, .lt a b, start, _ | _, _, _, .le a b, start, _
   | _, _, _, .and a b, start, _ | _, _, _, .or a b, start, _ => by
-    have left := funext (lowEnsAt_withIdle L original shifted reserve a start)
-    have right := funext (lowEnsAt_withIdle L original shifted reserve b
-      (start + EntrySnapshots.words (oldCells a)))
-    simp only [ruE, lowEnsAt, words_ruE L, left, right]
+    have left := lowEnsAt_withIdle L original shifted reserve a start
+    have right : lowEnsAt L.withIdle shifted (start + EntrySnapshots.words (oldCells (ruE a))) (ruE b) =
+        lowEnsAt L original (start + EntrySnapshots.words (oldCells a)) b :=
+      (congrArg (fun n => lowEnsAt L.withIdle shifted (start + n) (ruE b)) (words_ruE L a)).trans
+        (funext (lowEnsAt_withIdle L original shifted reserve b (start + EntrySnapshots.words (oldCells a))))
+    simp only [ruE, lowEnsAt, funext left, right, left, congrFun right]
   | _, _, _, .intBuiltin1 op e, start, _ => by
     have mapped := funext (lowEnsAt_withIdle L original shifted reserve e start)
-    cases op <;> simp only [ruE, lowEnsAt, ibR, BitBuiltin.unary, mapped]
+    simp only [ruE, lowEnsAt, unary_withIdle, mapped]
   | _, _, _, .intBuiltin2 op a b, start, _ => by
     have left := funext (lowEnsAt_withIdle L original shifted reserve a start)
-    have right := funext (lowEnsAt_withIdle L original shifted reserve b
-      (start + EntrySnapshots.words (oldCells a)))
-    cases op <;> simp only [ruE, lowEnsAt, words_ruE L, ibR, intBuiltin2L, left, right]
+    have right : lowEnsAt L.withIdle shifted (start + EntrySnapshots.words (oldCells (ruE a))) (ruE b) =
+        lowEnsAt L original (start + EntrySnapshots.words (oldCells a)) b :=
+      (congrArg (fun n => lowEnsAt L.withIdle shifted (start + n) (ruE b)) (words_ruE L a)).trans
+        (funext (lowEnsAt_withIdle L original shifted reserve b (start + EntrySnapshots.words (oldCells a))))
+    simp only [ruE, lowEnsAt, binary_withIdle, left, right]
   | _, _, _, .lit .., _, dest | _, _, _, .tru .., _, dest | _, _, _, .fls .., _, dest
   | _, _, _, .var .., _, dest | _, _, _, .glob .., _, dest | _, _, _, .slot .., _, dest
   | _, _, _, .thru .., _, dest | _, _, _, .thruOwn .., _, dest | _, _, _, .ptrOf .., _, dest
@@ -76,8 +93,9 @@ private theorem lowEnsAt_withIdle (L : Lay D) (original shifted : FrameLayout)
   | _, _, _, .strWeit .., _, dest | _, _, _, .wenn .., _, dest | _, _, _, .eng .., _, dest
   | _, _, _, .count .., _, dest | _, _, _, .prod .., _, dest | _, _, _, .prodGet .., _, dest
   | _, _, _, .prodSet .., _, dest => by
+    simp only [ruE, lowEnsAt]
     rw [← reserve]
-    exact lowE_withIdle L shifted.ensReserved false _ dest
+    with_unfolding_all exact (lowE_withIdle L shifted.ensReserved false _ dest)
 termination_by structural _ _ _ expr _ _ => expr
 
 private theorem lowEns_context (L : Lay D) (frame : FrameLayout) {Γ Γ' : Ctx}
@@ -116,6 +134,7 @@ theorem lowPost_withIdle (L : Lay D) (P : Programm D) (f : D.Fn) (dest : Nat) :
       _ = lowEns L.withIdle shifted (ruE (P.ensures f)) dest :=
         (lowEns_context _ _ _ _ _).trans (lowEns_holdings _ _ _ _ _)
       _ = _ := lowEnsAt_withIdle L original shifted same (P.ensures f) FB dest
+  simp only [original, shifted] at ensures
   simp only [lowPost, ensures, lowInvs_withIdle]
 
 end Gabbro.Stage0.Senke
