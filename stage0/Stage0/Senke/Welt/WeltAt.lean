@@ -107,13 +107,16 @@ def ColumnAt (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld
   ∀ k : Nat, (k : Int) < L.count t →
     ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)
 
-/-- A typed expression can read the world carriers authorized by its
-    resource context. Representation of other threads' carriers is
-    independent of this local read obligation. -/
-structure ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop where
-  table : ∀ t, darf D t resources → ∀ f, ColumnAt m L σ t f
-  global : ∀ g, gdarf D g resources →
+/-- Canonical memory representation restricted to a chosen footprint. -/
+structure WorldOnAt (m : Runner.Mem) (L : Lay D) (σ : World D)
+    (reads : D.Tab ⊕ D.Glob → Prop) : Prop where
+  table : ∀ t, reads (.inl t) → ∀ f, ColumnAt m L σ t f
+  global : ∀ g, reads (.inr g) →
     ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)
+
+/-- Representation of every carrier authorized by the resource context. -/
+abbrev ReadWorldAt (m : Runner.Mem) (L : Lay D) (σ : World D) (resources : List (Res D)) : Prop :=
+  WorldOnAt m L σ (OrtDarf resources)
 
 theorem WeltAt.reads {m : Runner.Mem} {L : Lay D} {σ : World D} {requireWrites : Bool}
     (world : WeltAt m L σ requireWrites) (resources : List (Res D)) :
@@ -173,10 +176,10 @@ theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat}
     · trivial
     · exact WeltWr.keep hwr ha.wr
 
-/-- Frame writes leave the authorized world representation intact. -/
-theorem readWorldAt_stab {L : Lay D} {σ : World D} {resources : List (Res D)} {fp : Runner.W} {K : Nat}
+/-- Frame writes leave every represented world carrier intact. -/
+theorem worldOnAt_stab {L : Lay D} {σ : World D} {reads : D.Tab ⊕ D.Glob → Prop} {fp : Runner.W} {K : Nat}
     (layout : LayIn L) (separated : fp.toNat + 8 * K ≤ L.lo) :
-    WStab (fun m => ReadWorldAt m L σ resources) fp K := by
+    WStab (fun m => WorldOnAt m L σ reads) fp K := by
   intro before after stored writes
   refine ⟨?_, ?_⟩
   · intro table access field index bound

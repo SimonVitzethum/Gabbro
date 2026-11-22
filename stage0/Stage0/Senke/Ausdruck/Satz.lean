@@ -17,6 +17,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     (fits : top ≤ K) (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ)
     (pre : Pre L m pc fp K d c ρ W reserved) : ValueOk L m pc fp K d c τ (eval σ₀ e σ ρ) :=
   lowE_ok_scoped (same := same) σ₀ σ (fun m stored => (hWL m stored).reads Λ) hLay
-    e d c top lowered fits m pc ρ pre
+    e e.orte_darf d c top lowered fits m pc ρ pre
 
 end Gabbro.Stage0.Senke
