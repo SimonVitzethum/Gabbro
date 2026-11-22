@@ -120,6 +120,61 @@ theorem SCMemoryPrefix.consume {layout : Runner.Beweis.Lay}
       simpa only [Nat.succ_sub_succ_eq_sub] using
         ih remaining (head.slots.trans one) (alleBlind_schritt head blind) tail room
 
+private theorem sc_waiting_host_no_silent {layout : Runner.Beweis.Lay}
+    {before after : Cfg (SC layout) (Res T)} {events : List Ev}
+    {request : Req} {resume : Ans → Res T}
+    (waiting : before.ths = [some (.ask (.sys request) resume)])
+    (step : ProcessStep (SC layout) actI before events after) (quiet : events = []) : False := by
+  have one : before.ths.length = 1 := by simp only [waiting, List.length_cons, List.length_nil]
+  have issuer {i r} (ready : before.ths[i]? = some (some r)) :
+      r = .ask (.sys request) resume := by
+    rw [onlySlot one ready, waiting] at ready
+    exact (Option.some.inj (Option.some.inj ready)).symm
+  cases step with
+  | tau impossible => cases impossible
+  | priv ready moved =>
+    subst_vars
+    have ready := issuer ready
+    cases ready
+    cases moved
+  | ask ready asked _ _ _ =>
+    have ready := issuer ready
+    cases ready
+    cases asked
+    cases quiet
+  | exit | cloneNo | clone => cases quiet
+
+/-- A generated memory segment ends at its host request. Every silent
+    one-thread execution is within the proved segment, including when
+    the scheduler has already reached the host request and cannot
+    advance it silently. -/
+theorem SCMemoryPrefix.consume_until_host {layout : Runner.Beweis.Lay}
+    {before expected after : Cfg (SC layout) (Res T)} {taken available : Nat}
+    {request : Req} {resume : Ans → Res T}
+    (reference : SCMemoryPrefix layout before available expected)
+    (waiting : expected.ths = [some (.ask (.sys request) resume)])
+    (actual : ProcessPrefix (SC layout) actI before [] taken after)
+    (one : before.ths.length = 1) (blind : AlleBlind before.ths) :
+    taken ≤ available ∧ SCMemoryPrefix layout after (available - taken) expected := by
+  suffices bounded : ∀ {start finish : Cfg (SC layout) (Res T)} {events done},
+      ProcessPrefix (SC layout) actI start events done finish → events = [] →
+      start.ths.length = 1 → AlleBlind start.ths →
+      ∀ {budget}, SCMemoryPrefix layout start budget expected → done ≤ budget from
+    let within := bounded actual rfl one blind reference
+    ⟨within, reference.consume actual one blind within⟩
+  intro start finish events done run
+  induction run with
+  | nil => exact fun _ _ _ _ _ => Nat.zero_le _
+  | cons step _ ih =>
+    intro quiet one blind budget reference
+    obtain ⟨first, rest⟩ := List.append_eq_nil_iff.mp quiet
+    cases reference with
+    | nil => exact (sc_waiting_host_no_silent waiting step first).elim
+    | cons next reference =>
+      have same := sc_memory_step_exact one blind next step first
+      cases same
+      exact Nat.succ_le_succ (ih rest (next.slots.trans one) (alleBlind_schritt next blind) reference)
+
 private theorem actI_ask_no_terminal {control : Res T}
     {request : Op} {resume : Ans → Res (Res T)} {reply : Ans} {ending : Ende}
     (asked : actI control = .ask request resume) (stopped : Res.ende (resume reply) = some ending) : False := by
