@@ -230,7 +230,7 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
   rw [exactAfter]
   refine ⟨buffers, ?_, ?_, ?_⟩
   · simp only [List.length_append, List.length_singleton, List.length_set, length]
-  · rcases admitted with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, scoped⟩
+  · rcases admitted with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, indices⟩
     · refine .inl ⟨?_, by simpa only [machine] using world⟩
       intro i control found
       by_cases inside : i < body.length
@@ -238,7 +238,7 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
         exact empty i control found
       · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
         cases i - body.length <;> cases found
-    · exact .inr ⟨snapshots, positions, committed, attach related, scoped⟩
+    · exact .inr ⟨snapshots, positions, committed, attach related, indices⟩
   · intro i
     rcases Nat.lt_trichotomy i before.ths.length with beforeSpawn | isChild | absent
     · have inBody : i < body.length := length.symm ▸ beforeSpawn
