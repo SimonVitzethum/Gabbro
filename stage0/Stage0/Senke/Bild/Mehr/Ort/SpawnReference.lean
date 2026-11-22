@@ -84,8 +84,6 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
     ∃ (count : Nat) (prepared : Mem) (invariant : TabInv layout prepared),
       SCMemoryPrefix layout ⟨⟨memory, table⟩, [some (.next ⟨pc, fp⟩)]⟩ count
         ⟨⟨prepared, invariant⟩, [some pending]⟩ ∧
-      (∀ {seen : Req} {resume : Ans → Res T} {actual}, SoloLauf ⟨pc, fp⟩ memory (.ask (.sys seen) resume) actual →
-        (.ask (.sys seen) resume : Res T) = pending ∧ actual = prepared) ∧
       ∀ (reads : W → Prop), (∀ byte, inSlots fp 0 slots byte → reads byte) →
         (∀ byte, pc.toNat ≤ byte.toNat → byte.toNat < pc.toNat + 16 * 10 → reads byte) →
         ∀ {control actual}, SoloLauf ⟨pc, fp⟩ memory control actual →
@@ -93,7 +91,7 @@ theorem spawnSite_reference [Kern] {layout : Runner.Beweis.Lay}
   intro parent child pending
   obtain ⟨prepared, initialBlock, request⟩ := spawnSite_memory code frame far scratchFits slotsFit entryFits stackFits
   obtain ⟨count, invariant, reference⟩ := StarM.sc_reference_through initialBlock request table
-  refine ⟨count, prepared, invariant, reference, fun ran => SoloLauf.host_unique initialBlock request ran, ?_⟩
+  refine ⟨count, prepared, invariant, reference, ?_⟩
   intro reads frameReads codeReads
   have nowrap : pc.toNat + 16 * (spawnOne scratch entry stack).length < 2 ^ 64 := by
     simpa only [spawnOne_len] using far.1

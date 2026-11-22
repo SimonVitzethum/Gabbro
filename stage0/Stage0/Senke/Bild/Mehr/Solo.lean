@@ -392,9 +392,9 @@ theorem StarM.replay_on {count : Nat} {start target : T} {reference finish : Mem
     intro taken instruction atInstruction current control complete within pending
     cases complete with
     | refl =>
-      rcases requests pending with rfl | scoped
+      rcases requests pending with rfl | confined
       · trivial
-      · exact scoped
+      · exact confined
     | next moved remaining =>
       obtain ⟨rfl, rfl⟩ := replayedInstruction.det moved.run
       exact laterRequests remaining (Nat.lt_of_succ_lt_succ within) pending

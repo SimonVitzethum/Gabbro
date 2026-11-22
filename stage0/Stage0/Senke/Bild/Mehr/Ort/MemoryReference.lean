@@ -59,63 +59,6 @@ theorem maskMemory_code_frame [Kern] {memory : Mem} {pc fp : W} {slots : Nat}
     exact ⟨opcode.trans original.op, (operand 4 (by decide)).trans original.f1,
       (operand 8 (by decide)).trans original.f2, (operand 12 (by decide)).trans original.f3⟩
 
-private theorem RunP.host_unique {initial residual : Res T} {before after : Mem}
-    {call : Req} {resume : Ans → Res T}
-    (reference : RunP initial before residual after)
-    (atHost : residual = .ask (.sys call) resume) :
-    ∀ {seen : Req} {k : Ans → Res T} {actual : Mem},
-      RunP initial before (.ask (.sys seen) k) actual →
-      (.ask (.sys seen) k : Res T) = .ask (.sys call) resume ∧ actual = after := by
-  induction reference with
-  | refl =>
-    cases atHost
-    intro seen k actual ran
-    cases ran with
-    | refl => exact ⟨rfl, rfl⟩
-    | ask answer _ => cases answer
-  | ask answer _ ih =>
-    intro seen k actual ran
-    cases ran with
-    | refl => cases answer
-    | ask observed rest =>
-      rw [answer] at observed
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj observed)
-      exact ih atHost rest
-
-/-- A whole memory reference through the final request selects the same
-    host continuation for every solo run from its entry. The run may be
-    interleaved with other threads that preserve this memory view. -/
-theorem SoloLauf.host_unique [Kern] {start boundary : T} {before middle after : Mem}
-    {count : Nat} {call : Req} {resume : Ans → Res T}
-    (reference : StarM count start before boundary middle)
-    (tail : RunP (step boundary) middle (.ask (.sys call) resume) after) :
-    ∀ {seen : Req} {k : Ans → Res T} {actual : Mem},
-      SoloLauf start before (.ask (.sys seen) k) actual →
-      (.ask (.sys seen) k : Res T) = .ask (.sys call) resume ∧ actual = after := by
-  induction reference with
-  | refl =>
-    intro seen k actual ran
-    obtain ⟨used, pointer, memory, complete, pending⟩ := ran
-    rcases pending with ⟨impossible, _⟩ | pending
-    · cases impossible
-    cases complete with
-    | refl => exact RunP.host_unique tail rfl pending
-    | next first _ =>
-      cases tail.remaining first with
-      | ask answer _ => cases answer
-  | next first _ ih =>
-    intro seen k actual ran
-    obtain ⟨used, pointer, memory, complete, pending⟩ := ran
-    rcases pending with ⟨impossible, _⟩ | pending
-    · cases impossible
-    cases complete with
-    | refl =>
-      cases pending.remaining first with
-      | ask answer _ => cases answer
-    | next executed later =>
-      obtain ⟨rfl, rfl⟩ := first.det executed.run
-      exact ih tail ⟨_, _, _, later, Or.inr pending⟩
-
 private theorem StarM.after_reference [Kern] {count used : Nat} {start boundary pointer : T}
     {before atBoundary actual : Mem} (reference : StarM count start before boundary atBoundary)
     (executedPrefix : StarM used start before pointer actual) (reached : count ≤ used) :

@@ -411,8 +411,8 @@ theorem LoadedIRImage.activate_worker [Kern] {src : String} {reserve : Nat} {opt
   intro parent child startup events
   have within := (List.getElem?_eq_some_iff.mp declared).1
   obtain ⟨seen, resume, running, solo⟩ := startup
-  obtain ⟨_, _, _, _, unique, _⟩ := output.workerReference spawnTable spawnCode spawnFrame within
-  have control := (unique solo).1
+  obtain ⟨_, _, _, _, confined⟩ := output.workerReference spawnTable spawnCode spawnFrame within
+  have control := (confined solo).resolve_left fun memoryOnly => memoryOnly.1 seen rfl
   have parentEq : (⟨BitVec.ofNat 64 (codeBase + 16 * (10 * index)) + BitVec.ofNat 64 (16 * 2),
       BitVec.ofNat 64 output.image.fp0⟩ : T) = parent := by
     dsimp only [parent]
