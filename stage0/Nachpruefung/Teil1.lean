@@ -99,6 +99,12 @@ public import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.ImageSimulation.goal
 #print axioms Gabbro.Stage0.ImageSimulation.terminal
 #print axioms Gabbro.Stage0.ImageSimulation.no_machine_error
+#print axioms Gabbro.Stage0.imageSourceForeignEvents_call
+#print axioms Gabbro.Stage0.ImageForeignTrace.appendGate
+#print axioms Gabbro.Stage0.image_plain_gate_answer
+#print axioms Gabbro.Stage0.Senke.AreaReply.withIdle
+#print axioms Gabbro.Stage0.image_area_gate_answer
+#print axioms Gabbro.Stage0.image_buffer_gate_answer
 #print axioms Gabbro.Stage0.ImageSlotsMatch.retire
 #print axioms Gabbro.Stage0.ImageForeignTrace.retire
 #print axioms Gabbro.Stage0.image_hardware_exit

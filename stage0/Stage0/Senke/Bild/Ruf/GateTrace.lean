@@ -251,4 +251,66 @@ theorem image_area_gate_answer [Kern] {output : Emitted src reserve options}
       .inr ⟨slotIndex, tyR τ, congrArg (Option.map tyR) typed, fp, base, hasArea, destination, reply.withIdle⟩⟩,
     retained, nextWorld⟩
 
+/-- A pointer-buffer gate reports its actual scalar result and leaves the
+    table update encoded in just the caller's reserved scratch bytes.
+    The subsequent unpacking uses the proven per-cell encodings. -/
+theorem image_buffer_gate_answer [Kern] {output : Emitted src reserve options}
+    {E : Einheit (declOf output.compiled.unit)} {O : Orakel (declOf output.compiled.unit)}
+    (answers : ImageGateAnswers output.image.Y O)
+    {before : Cfg imageTSO (Res T)} {memory : imageTSO.St} {thread : Nat}
+    {req : Req} {resume : Ans → Res T} {answer : Ans}
+    (waiting : before.ths[thread]? = some (some (.ask (.sys req) resume)))
+    (ordinary : (Op.sys req).special = false)
+    (answered : imageTSO.ans before.ms thread (.sys req) answer memory)
+    (routine : (declOf output.compiled.unit).Ax) (gate : TorB)
+    (selected : output.image.Y.tor routine = some gate)
+    (transport : torGut gate ((declOf output.compiled.unit).aparams routine).length = true)
+    (types : ((declOf output.compiled.unit).aparams routine).all wortTy = true)
+    (pointer tableNumber : Nat) (writable : Bool) (table : (declOf output.compiled.unit).Tab)
+    (field : (declOf output.compiled.unit).Feld table)
+    (parameter : ptrParam ((declOf output.compiled.unit).aparams routine) = some (pointer, tableNumber, writable))
+    (identified : (declOf output.compiled.unit).tabNr tableNumber = some table)
+    (bytes : output.image.Y.byte table = some field) (byteType : (declOf output.compiled.unit).typ table field = .int 0 255)
+    (world : World (declOf output.compiled.unit))
+    (args : Env (declOf output.compiled.unit) ((declOf output.compiled.unit).aparams routine))
+    (number : req.nr = BitVec.ofNat 64 gate.nr) (registers : ArgsW output.image.Y (reqArg req) args)
+    (unused : ∀ i, ((declOf output.compiled.unit).aparams routine).length ≤ i → i < 6 → reqArg req i = 0)
+    (represented : WeltAt (before.ms.1.view thread) output.image.Y world)
+    (packed : ∀ i, i < pufW ((declOf output.compiled.unit).count table).toNat →
+      (before.ms.1.view thread).rd64 (reqArg req pointer + BitVec.ofNat 64 (8 * i)) =
+        some (packV (fun k => wAt (before.ms.1.view thread) (output.image.Y.elem table field k))
+          ((declOf output.compiled.unit).count table).toNat i 8))
+    {first site last : FadenMaschine (declOf output.compiled.unit).mitRuhe}
+    (atCall : ImageReach output E O first site) (afterCall : ImageReach output E O site last)
+    (alive : site.lebt thread = true) (sourceMemory : Speicher (declOf output.compiled.unit).mitRuhe)
+    (key : (mitSpeicher site.m sourceMemory).foreignCallKey thread = some ⟨routine, worldR world, envR args⟩)
+    (carriers : ∀ carrier, ¬ GeteiltV (D := declOf output.compiled.unit) E.P E.ws carrier →
+      TraegerGleich sourceMemory site.m.speicher carrier)
+    (observed : imageSourceForeignEvents last.m.lauf = imageSourceForeignEvents first.m.lauf ++ [(thread, routine)]) :
+    let prior := before.ms.1.view thread
+    let current := memory.1.view thread
+    let after : Cfg imageTSO (Res T) := ⟨memory, before.ths.set thread (some (resume answer))⟩
+    ProcessStep imageTSO actI before [(thread, req, answer)] after ∧
+      ImageGateEvent output E O first last after (thread, req, answer) ∧
+      current.rd = prior.rd ∧ current.wr = prior.wr ∧
+      (∀ y, ¬ ((reqArg req pointer).toNat ≤ y.toNat ∧
+        y.toNat < (reqArg req pointer).toNat + 8 * pufW ((declOf output.compiled.unit).count table).toNat) →
+        current.b y = prior.b y) ∧
+      WeltOhne prior output.image.Y (O.wirkt routine world args).1 table field ∧
+      ∀ k, k < ((declOf output.compiled.unit).count table).toNat →
+        Enc output.image.Y ((declOf output.compiled.unit).typ table field) ((O.wirkt routine world args).1.slots table k field)
+          (if writable then byteOf current (reqArg req pointer) k else wAt prior (output.image.Y.elem table field k)) := by
+  intro prior current after
+  obtain ⟨word, extra, response, readable, writableMap, outside, remaining, cells, outcome⟩ :=
+    answers.buffer routine gate selected transport pointer tableNumber writable table field
+      parameter identified bytes byteType world args req prior number registers unused represented packed
+      answer current (image_host_answer ordinary answered)
+  have noArea : gate.resultArea = none :=
+    Option.isNone_iff_eq_none.mp (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp transport).2).2
+  refine ⟨.ask waiting rfl ordinary answered rfl, ?_, readable, writableMap, outside, remaining, cells⟩
+  refine ⟨site, sourceMemory, routine, worldR world, envR args, atCall, afterCall, alive, key, observed,
+    carriers, gate, word, extra, selected, number, ArgsW.withIdle_words args types registers, response, .inl ⟨noArea, ?_⟩⟩
+  rw [wirkt_mitRuhe O]
+  exact outcome
+
 end Gabbro.Stage0
