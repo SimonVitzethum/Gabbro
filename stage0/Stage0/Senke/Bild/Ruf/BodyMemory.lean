@@ -4,6 +4,7 @@ public import Stage0.Senke.Bild.Ruf.RootAdmission
 public import Stage0.Senke.Bild.Mehr.Ort.Footprint
 public import Stage0.Senke.Bild.Mehr.Ort.CommitMemory
 public import Stage0.Senke.Bild.Ruf.ExpressionMemory
+import Stage0.Senke.Bild.ImageAddress
 import Lean.Elab.Tactic.Omega
 
 @[expose] public section
@@ -205,7 +206,7 @@ theorem image_body_flush [Kern] {src : String} {reserve : Nat} {options : Profil
         · subst thread
           exact .inr (fun loader => pastLoader (loader ▸ live))
         · exact .inl entry
-      exact .inr ⟨control, absent, live, phase.transport running declared (fun address visible =>
+      exact .inr ⟨control, absent, live, ImageRootPhase.transport phase running declared (fun address visible =>
         (preserved thread address visible).symm)⟩
 
 /-- A floating answer is an internal IR observation of the issuing
