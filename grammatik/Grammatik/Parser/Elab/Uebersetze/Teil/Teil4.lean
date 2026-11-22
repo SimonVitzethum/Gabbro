@@ -235,7 +235,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     | some n => .ok (.lit (Int.ofNat n))
     | none => .error "sizeof without a resolved declared size"
   | .built "lenof" [a] =>
-    if let some length := uLocalArraySliceObservation ctx blatt none a then .ok length
+    if let some length := uSliceObservation ctx blatt none a then .ok length
     else
       match uRechne ctx blatt a with
       | .error e => .error e
@@ -244,7 +244,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
     uArraySides ctx values (fun source smaller => uRechne ctx blatt source)
   | .ext .text [t] [] => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
   | .index a i =>
-    if let some element := uLocalArraySliceObservation ctx blatt (some i) a then .ok element
+    if let some element := uSliceObservation ctx blatt (some i) a then .ok element
     else if uTraegerIndex ctx a then blatt (.index a i) else
     match uRechne ctx blatt a with
     | .error e => .error e
@@ -330,7 +330,7 @@ theorem localArraySliceLength_erfuellbar (ctx : UCtx) (blatt : SExpr → Except 
     uRechne ctx blatt (.built "lenof" [.built "#slice" [.variable array, .variable first, .variable last]]) =
       .ok (.sub (.param last) (.param first)) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, bounds,
+  simp only [uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, bounds,
     locals, and_self, bind, Option.bind, ite_true]
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/

@@ -283,16 +283,16 @@ def uRelativeSlice (ctx : UCtx) (blatt : SExpr → Except String USide) (minimum
     some (begin, .sub finish begin, lastLo - firstHi)
   else none
 
-/-- The offset is always relative to the original lexical array.
+/-- The offset is always relative to the original carrier.
     A subslice only adds to this offset and replaces its visible length. -/
-structure ULocalArrayView where
-  array : String
+structure USliceView where
+  carrier : USide
   offset : USide
   length : USide
   minimum : Int
 
-def uLocalArrayView (ctx : UCtx) (blatt : SExpr → Except String USide) :
-    SExpr → Option ULocalArrayView
+def uSliceView (ctx : UCtx) (blatt : SExpr → Except String USide) :
+    SExpr → Option USliceView
   | .built "#slice" [.variable array, first, last] => do
     let some (.arr _ capacity) := uSliceLocalType ctx array | none
     if blatt (.variable array) = .ok (.param array) then
@@ -300,27 +300,31 @@ def uLocalArrayView (ctx : UCtx) (blatt : SExpr → Except String USide) :
         match uFixedLocalArrayExtent ctx blatt (.param array) first last with
         | some (_, count, start) => some (start, .lit (Int.ofNat count), (count : Int))
         | none => uRelativeSlice ctx blatt capacity first last
-      some ⟨array, begin, length, minimum⟩
+      some ⟨.param array, begin, length, minimum⟩
     else none
+  | .built "#slice" [.ext .text [text] [], first, last] => do
+    let bytes := text.toUTF8.toList
+    let (begin, length, minimum) ← uRelativeSlice ctx blatt bytes.length first last
+    some ⟨.text (bytes.map (fun byte => Int.ofNat byte.toNat)), begin, length, minimum⟩
   | .built "#slice" [base, first, last] => do
-    let view ← uLocalArrayView ctx blatt base
+    let view ← uSliceView ctx blatt base
     let (begin, length, minimum) ← uRelativeSlice ctx blatt view.minimum first last
-    some ⟨view.array, .add view.offset begin, length, minimum⟩
+    some ⟨view.carrier, .add view.offset begin, length, minimum⟩
   | _ => none
 termination_by source => sizeOf source
 decreasing_by all_goals simp_wf <;> omega
 
-/-- A slice projection performs one read of the original array, even
+/-- A slice projection performs one read of the original carrier, even
     when the source contains several consecutive slice operations. -/
-def uLocalArraySliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
+def uSliceObservation (ctx : UCtx) (blatt : SExpr → Except String USide)
     (index : Option SExpr) (source : SExpr) : Option USide := do
-  let view ← uLocalArrayView ctx blatt source
+  let view ← uSliceView ctx blatt source
   match index with
   | none => some view.length
   | some atIndex => do
     let (lo, hi, offset) ← uSliceInteger ctx blatt atIndex
     if 0 ≤ lo ∧ hi < view.minimum then
-      some (.idx (.param view.array) (.add view.offset offset))
+      some (.idx view.carrier (.add view.offset offset))
     else none
 
 end Gabbro.Grammatik.Parser.Uebersetze

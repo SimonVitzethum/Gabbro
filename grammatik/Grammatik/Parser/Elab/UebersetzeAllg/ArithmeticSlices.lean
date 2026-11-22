@@ -128,10 +128,10 @@ theorem arithmeticSliceObservations_erfuellbar (element : Ty) (capacity : Nat)
   have index : (0 : Int) ≤ Int.ofNat 0 ∧ Int.ofNat 0 < 4 - 2 := by decide
   refine ⟨scope, ?_, ?_⟩
   · change uWertBody scope (.built "lenof" [slice]) = _
-    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, and_self, bind, Option.bind] <;> rfl
   · change uWertBody scope (.index slice (.lit 0)) = _
-    simp only [slice, uWertBody, uRechne, uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent,
+    simp only [slice, uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent,
       arrayType, arrayRead, ite_true, begin, finish, fits, index, and_self, bind, Option.bind,
       uSliceInteger, uSliceIntegerConstant, uSchranke, Option.map_some] <;> rfl
 
@@ -155,7 +155,7 @@ theorem nestedLocalArraySlice_observations (ctx : UCtx) (blatt : SExpr → Excep
         .ok (.idx (.param array) (.add (.add begin innerBegin) offset)) := by
   dsimp only
   constructor <;> rw [uRechne] <;>
-    simp only [uLocalArraySliceObservation, uLocalArrayView, arrayType, arrayRead, independent,
+    simp only [uSliceObservation, uSliceView, arrayType, arrayRead, independent,
       outerBounds, innerBounds, position, indexBounds, and_self, bind, Option.bind, ite_true]
 
 /-- Both observations are accepted for a dynamically sized outer slice

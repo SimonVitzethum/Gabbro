@@ -1,6 +1,7 @@
 module
 
 import Stage0
+import Grammatik.Parser.Elab.UebersetzeAllg.StringSliceObservations
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Reachability
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Completion
 import Grammatik.Nebenlaeufigkeit.Async.Representation.Construction
@@ -76,6 +77,9 @@ import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_localArraySliceIndex
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_localArraySliceIndex
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.runtimeSliceObservations_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.textSliceObservations_erfuellbar
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertE_textSliceIndex
+#print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.eval_textSliceObservations
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.uSliceLocalType_unknown
 #print axioms Gabbro.Grammatik.Parser.Uebersetze.specTextSliceArgument_erfuellbar
 #print axioms Gabbro.Grammatik.Parser.UebersetzeAllg.specTextSliceArgument_low

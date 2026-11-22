@@ -263,6 +263,16 @@ theorem strBoundedSliceValue_exact {maximum : Nat} (value : Wert D (.str maximum
       (strBoundedSliceValue value first last bounds).1.length = last - first :=
   ⟨rfl, sliceValue_length value.1 first last bounds⟩
 
+/-- A valid relative byte position reads the same byte from the slice and
+    from the original value at the translated position. -/
+theorem strSliceValue_get {maximum : Nat} (value : Wert D (.str maximum))
+    (first last index : Nat) (bounds : SliceOk value.1.length first last)
+    (inside : index < last - first) :
+    strGetW (strSliceValue value first last bounds) index =
+      strGetW value (first + index : Nat) := by
+  simp only [strGetW, Int.natCast_nonneg, ite_true, Int.toNat_natCast, strSliceValue, sliceValue,
+    List.getElem?_take_of_lt inside, List.getElem?_drop]
+
 theorem checkStringSlice_result {maximum : Nat} (value result : Wert D (.str maximum)) (first last : Int)
     (checked : checkStringSlice value first last = some result) :
     (0 ≤ first ∧ first ≤ last ∧ last ≤ value.1.length) ∧

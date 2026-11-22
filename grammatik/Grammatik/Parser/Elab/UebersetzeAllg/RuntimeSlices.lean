@@ -162,7 +162,7 @@ theorem localArraySliceIndex_erfuellbar (ctx : UCtx) (blatt : SExpr → Except S
     uRechne ctx blatt (.index (.built "#slice" [.variable array, .variable first, .variable last])
       (.variable index)) = .ok (.idx (.param array) (.add (.param first) (.param index))) := by
   rw [uRechne]
-  simp only [uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, indexType, bounds,
+  simp only [uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger, arrayType, firstType, lastType, indexType, bounds,
     locals.1, locals.2.1, locals.2.2, indexBounds.2.2, indexBounds.1, indexBounds.2.1,
     and_self, bind, Option.bind, ite_true]
 
@@ -324,7 +324,7 @@ theorem mixedArraySliceObservations_erfuellbar (τ : Ty) (capacity : Nat) (enoug
     ⟨by decide, by decide, Int.ofNat_le.mpr enough⟩
   have position : (0 : Int) ≤ Int.ofNat 1 ∧ Int.ofNat 1 < Int.ofNat 4 - 1 := by decide
   refine ⟨scope, ?_, ?_⟩ <;>
-    simp only [uWertBody, uRechne, uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger,
+    simp only [uWertBody, uRechne, uSliceObservation, uSliceView, uRelativeSlice, uFixedLocalArrayExtent, uSliceInteger,
       uSliceIntegerConstant, uSchranke, Option.map_some, bind, Option.bind,
       arrayType, firstType, arrayRead, firstRead, bounds, position, and_self, ite_true]
 
@@ -343,7 +343,7 @@ theorem fixedSpanObservations_source (ctx : UCtx) (blatt : SExpr → Except Stri
       uRechne ctx blatt (.index span index) = .ok (.idx (.param array) (.add begin offset)) := by
   dsimp only
   constructor <;> rw [uRechne] <;>
-    simp only [uLocalArraySliceObservation, uLocalArrayView, uRelativeSlice, arrayType, arrayRead, extent, position, bounds, and_self,
+    simp only [uSliceObservation, uSliceView, uRelativeSlice, arrayType, arrayRead, extent, position, bounds, and_self,
       bind, Option.bind, ite_true]
 
 /-- The range premises allow more than one start and an index within the slice. -/

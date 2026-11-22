@@ -864,6 +864,9 @@ Successive slices of the same local array can be observed together. In
 ranges must fit within the minimum length of the outer slice. The resulting
 length is `l - k`. The element is read once at `i + k + n` in the original
 array.
+The same runtime observations work on a string literal. They use its
+exact UTF-8 byte count as the bound and read the original literal for
+indexed access. Both endpoints can vary within their checked ranges.
 
 
 
