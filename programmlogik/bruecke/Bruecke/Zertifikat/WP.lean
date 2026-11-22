@@ -41,21 +41,44 @@ theorem logikFn_aus {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D} {f : D.
     (h3 : ∀ passes, PflichtKeinHalt E.P passes E.Q E.S (GeteiltA E.P E.ws) f) : LogikFn E f :=
   fun passes => ⟨h1 passes, h2 passes, h3 passes⟩
 
-/-- Apply the exact weakest-precondition rules of the model to the goal, outermost first, until none
-    applies: symbolic execution of a lowered body in constructor form by the model's own rules. Every rule
-    is an equivalence, so the remaining goal says exactly what the program owes. -/
+open Lean in
+/-- The rule of the model for the outermost constructor of the body in a `wpEA`/`wpBA`/`wpSA` goal. -/
+meta def wpRegel? (t : Lean.Expr) : Option Name :=
+  let args := t.getAppArgs
+  if args.size < 4 then none else
+  match t.getAppFn.constName?, args[args.size - 4]!.getAppFn.constName? with
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.ret => some ``Gabbro.Grammatik.WP.wpEA_ret
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.cons => some ``Gabbro.Grammatik.WP.wpEA_cons
+  | some ``Gabbro.Grammatik.WP.wpEA, some ``Gabbro.Grammatik.Endblock.bind => some ``Gabbro.Grammatik.WP.wpEA_bind
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.cons => some ``Gabbro.Grammatik.WP.wpBA_cons
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.bind => some ``Gabbro.Grammatik.WP.wpBA_bind
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.nil => some ``Gabbro.Grammatik.WP.wpBA_nil
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.narrow => some ``Gabbro.Grammatik.WP.wpBA_narrow
+  | some ``Gabbro.Grammatik.WP.wpBA, some ``Gabbro.Grammatik.Block.check => some ``Gabbro.Grammatik.WP.wpBA_check
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ite => some ``Gabbro.Grammatik.WP.wpSA_ite
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.ret => some ``Gabbro.Grammatik.WP.wpSA_ret
+  | some ``Gabbro.Grammatik.WP.wpSA, some ``Gabbro.Grammatik.Stmt.locks => some ``Gabbro.Grammatik.WP.wpSA_locks
+  | _, _ => none
+
+/-- One step: the rule of the outermost constructor of the body (`wpRegel?`), applied by its
+    equivalence. Fails when no rule applies. -/
+syntax (name := gabbrovSchritt) "gabbrov_schritt" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic gabbrovSchritt] meta def evalGabbrovSchritt : Tactic := fun _ => withMainContext do
+  let t ← instantiateMVars (← getMainTarget)
+  match wpRegel? t with
+  | some regel => evalTactic (← `(tactic| refine ($(mkIdent regel) ..).mpr ?_))
+  | none => throwError "gabbrov_schritt: no rule for this goal"
+
+
+/-- Apply the exact weakest-precondition rules of the model, outermost first, as long as one applies,
+    and reduce the continuations `weiterEA`/`weiterBA` at a known outcome: symbolic execution of a
+    lowered body in constructor form by the model's own rules. Every rule is an equivalence, so the
+    remaining goals say exactly what the program owes. -/
 macro "gabbrov_wp" : tactic => `(tactic| repeat (first
-  | refine (Gabbro.Grammatik.WP.wpEA_ret ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpEA_cons ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpEA_bind ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpBA_cons ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpBA_bind ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpBA_nil ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpSA_ite ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpSA_ret ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpSA_locks ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpBA_narrow ..).mpr ?_
-  | refine (Gabbro.Grammatik.WP.wpBA_check ..).mpr ?_))
+  | gabbrov_schritt
+  | (simp only [Gabbro.Grammatik.WP.weiterEA, Gabbro.Grammatik.WP.weiterBA])))
 
 /-- **Compute a term and put its normal form into the goal**: `gabbrov_senke t` reduces `t` (all
     definitions unfolded, proofs and types kept) and rewrites `t` to the result. The rewrite is `rfl`, checked
@@ -65,10 +88,36 @@ macro "gabbrov_wp" : tactic => `(tactic| repeat (first
     files have). -/
 syntax (name := gabbrovSenke) "gabbrov_senke " term : tactic
 
+open Lean Meta in
+/-- The normal form of `e` computed by the KERNEL's reduction (fast where the elaborator's is slow):
+    weak head normal form, then the same in every explicit argument of a constructor that is neither a
+    proof nor a type. Implicit arguments, types and proofs are kept as they are. -/
+meta partial def kernNormal (e : Lean.Expr) : MetaM Lean.Expr := do
+  let e' ← match Kernel.whnf (← getEnv) (← getLCtx) e with
+    | .ok r => pure r
+    | .error _ => pure e
+  let f := e'.getAppFn
+  match f with
+  | .const n _ =>
+    match (← getEnv).find? n with
+    | some (.ctorInfo _) =>
+      let args := e'.getAppArgs
+      let info ← getFunInfoNArgs f args.size
+      let mut args' := args
+      for i in [:args.size] do
+        if h : i < info.paramInfo.size then
+          if info.paramInfo[i].isExplicit then
+            let a := args[i]!
+            unless (← isProof a) || (← isType a) do
+              args' := args'.set! i (← kernNormal a)
+      return mkAppN f args'
+    | _ => return e'
+  | _ => return e'
+
 open Lean Elab Tactic Meta in
 @[tactic gabbrovSenke] meta def evalGabbrovSenke : Tactic := fun stx => withMainContext do
   let e ← elabTerm stx[1] none
-  let e' ← withTransparency .all <| Meta.reduce e (explicitOnly := true) (skipTypes := true) (skipProofs := true)
+  let e' ← kernNormal e
   let goal ← getMainGoal
   let eq ← mkEq e e'
   let prf ← mkExpectedTypeHint (← mkEqRefl e) eq
@@ -76,21 +125,6 @@ open Lean Elab Tactic Meta in
   let g' ← goal.replaceTargetEq r.eNew r.eqProof
   replaceMainGoal (g' :: r.mvarIds)
 
-/-- **Run the model's semantics on a body in constructor form**: every application of `execEndHA`,
-    `execBlockHA`, `execStmtHA` in the goal is put into weak head normal form (all definitions unfolded).
-    The goal changes only up to definitional equality, which the kernel checks. -/
-syntax (name := gabbrovLauf) "gabbrov_lauf" : tactic
-
-open Lean Elab Tactic Meta in
-@[tactic gabbrovLauf] meta def evalGabbrovLauf : Tactic := fun _ => withMainContext do
-  let goal ← getMainGoal
-  let t ← instantiateMVars (← goal.getType)
-  let namen := [``Gabbro.Grammatik.execEndHA, ``Gabbro.Grammatik.execBlockHA, ``Gabbro.Grammatik.execStmtHA]
-  let t' ← Meta.transform t (post := fun e => do
-    if namen.any e.isAppOf then
-      return .done (← withTransparency .all <| whnf e)
-    else return .continue)
-  replaceMainGoal [← goal.replaceTargetDefEq t']
 
 #print axioms pflicht_oeffnen
 
