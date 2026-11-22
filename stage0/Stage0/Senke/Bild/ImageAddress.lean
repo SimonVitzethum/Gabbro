@@ -152,7 +152,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     CodeAt memory (BitVec.ofNat 64 (codeBase + 16 * (10 * output.starts.length + startLen + startLen * index)))
       (startC output.image.A root.1 output.image.depth 60 false) ∧
       2 < output.image.Ks ∧ output.image.depth + 1 < 2 ^ 31 := by
-  obtain ⟨_, body, sites, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
+  obtain ⟨functions, body, sites, layout, serialized, _, _, _⟩ := bild_lage output.emission output.funktionen_voll
     (fun base bound => layU_in output.compiled.unit output.tor base bound)
     (fun base => layU_dis output.compiled.unit output.tor base)
     (fun base => by simp only [layU]; omega)
@@ -179,7 +179,7 @@ theorem Emitted.root_stub_code [Kern] (output : Emitted src K options)
     omega
   · have depthBound : output.image.depth + 1 ≤ output.image.Ks := by
       rw [layout.hdepth]
-      have quotient := Nat.div_le_self (output.image.Ks - FB) (maxTop _)
+      have quotient := Nat.div_le_self (output.image.Ks - FB) (maxTop functions)
       have room := layout.hroom
       simp only [depthOf, FB] at quotient room ⊢
       omega
@@ -204,7 +204,7 @@ theorem Emitted.root_depth_start [Kern] (output : Emitted src K options)
     before.ths[index + 1]? = some (some (.next pointer)) →
     FrameOK (before.ms.1.view (index + 1)) pointer.fp output.image.Ks →
     ∃ after : imageTSO.St,
-      Runner.Mach.ProcessPrefix imageTSO actI before [] 5
+      Runner.Mach.ProcessPrefix imageTSO Runner.Beweis.actI before [] 5
         ⟨after, before.ths.set (index + 1) (some (.next (nxt pointer)))⟩ ∧
       after.1.m = before.ms.1.m ∧
       after.1.view (index + 1) = Runner.Mem.write (before.ms.1.view (index + 1))
