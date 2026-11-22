@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.Pruefer.Goal
 public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 
 @[expose] public section
 
@@ -55,7 +56,7 @@ theorem EntryPrefix.only_entry [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D}
     refine ⟨?_, fun _ => rfl⟩
     intro thread
     change decide (thread = 0) = true ↔ thread = 0
-    exact decide_eq_true_eq
+    exact ⟨of_decide_eq_true, decide_eq_true⟩
   | step _ _ _ prior => exact prior
 
 theorem EntryPrefix.reachable [DecidableEq D.Fn] {E : Einheit D} {O : Orakel D} {passes : Nat}
