@@ -452,11 +452,13 @@ theorem specFieldArgument_low {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))
     (selected : uRecordPosition schema.val.fields field = .ok ⟨target, position⟩)
     (value : Expr (declOf u) Γ Λ parent)
     (typed : lowWertE u Γ Λ fn er operand = .ok ⟨parent, value⟩) :
-    let aggregate := cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) value
+    let aggregate : Expr (declOf u) Γ Λ (.prod schema.val.identity (schema.val.fields.map (·.2))) :=
+      cast (congrArg (Expr (declOf u) Γ Λ) schema.property.symm) value
     uSpecValueArgument ctx target (.field base field) = .ok () ∧
       lowWertE u Γ Λ fn er (.field operand field) = .ok ⟨target, Expr.prodGet aggregate position⟩ ∧
       ∀ initial world env, eval initial (.prodGet aggregate position) world env =
-        prodGetW (F := (declOf u).Fn) (passt := (declOf u).passt) position
+        prodGetW (F := (declOf u).Fn) (passt := (declOf u).passt)
+          (fs := schema.val.fields.map (·.2)) position
           (eval initial aggregate world env) := by
   intro aggregate
   refine ⟨specFieldArgument_of_checked ctx base field read prechecked nominal selected, ?_, fun _ _ _ => rfl⟩
