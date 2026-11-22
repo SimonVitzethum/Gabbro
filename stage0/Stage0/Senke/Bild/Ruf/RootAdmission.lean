@@ -237,7 +237,7 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
       · rw [List.getElem?_append_left inside] at found
         exact empty i control found
       · rw [List.getElem?_append_right (Nat.le_of_not_gt inside)] at found
-        cases i - body.length <;> cases found
+        cases offset : i - body.length <;> rw [offset] at found <;> cases found
     · exact .inr ⟨snapshots, positions, committed, attach related, indices⟩
   · intro i
     rcases Nat.lt_trichotomy i before.ths.length with beforeSpawn | isChild | absent
@@ -263,9 +263,11 @@ theorem image_worker_activation [Kern] {src : String} {reserve : Nat} {options :
       exact .inr ⟨.next child, newBody, newSlot, root_after_activation prepared (.inl spawned) machine⟩
     · left
       have beyondBody : (body ++ [none]).length ≤ i := by
-        simpa only [List.length_append, List.length_singleton, length] using absent
-      have beyondThreads : (threads ++ [some (.next child)]).length ≤ i := by
-        simpa only [List.length_append, List.length_singleton, size] using absent
+        simpa only [List.length_append, List.length_singleton, length, Nat.succ_eq_add_one] using
+          Nat.succ_le_of_lt absent
+      have beyondThreads : (threads ++ [some (Res.next child)]).length ≤ i := by
+        simpa only [List.length_append, List.length_singleton, size, Nat.succ_eq_add_one] using
+          Nat.succ_le_of_lt absent
       rw [List.getElem?_eq_none_iff.mpr beyondBody, List.getElem?_eq_none_iff.mpr beyondThreads]
 
 end Gabbro.Stage0
