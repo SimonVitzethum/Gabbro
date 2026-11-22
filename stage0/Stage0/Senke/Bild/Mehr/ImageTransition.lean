@@ -34,7 +34,7 @@ theorem ImageRuntimeMatches.body_relation {src : String} {reserve : Nat} {option
   obtain ⟨footprint, body, privateBuffers, length, relation, slots⟩ := matched
   rcases relation with ⟨empty, world⟩ | ⟨snapshots, positions, committed, related, positionsMatch⟩
   · exact ⟨footprint, body, fun _ => none, fun _ => entry, _, privateBuffers, length,
-      MTRel.no_registered_threads (fun _ => entry) empty world, fun _ _ absent => by cases absent, slots⟩
+      MTRel.no_registered_threads (fun _ => entry) empty world, (fun _ _ absent => by cases absent), slots⟩
   · exact ⟨footprint, body, snapshots, positions, committed, privateBuffers, length, related, positionsMatch, slots⟩
 
 private theorem exitGroup_request {M : MemSys} {θ : Type} {act : θ → Res θ} {before : Cfg M θ}
