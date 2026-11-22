@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Values
 public import Grammatik.Nebenlaeufigkeit.Async.Segment.Answers
+import Grammatik.Nebenlaeufigkeit.Async.Segment.Renaming
 
 namespace Gabbro.Grammatik.Async.Segment
 
@@ -19,6 +20,20 @@ public structure BoundExpression (D : Deklaration) (Λ : List (Res D)) where
   liftedEval : ∀ storage (saved : Wert D storage) entry world environment,
     eval entry (lifted storage) world (Env.cons saved environment) =
       eval entry expression world environment
+
+/-- Derive both the lifted expression and its evidence from the canonical
+    typed term. The code generator supplies no evaluation claim. -/
+@[expose] public def BoundExpression.ofExpr {Λ : List (Res D)} {result : Ty}
+    (locals : List (String × Ty)) (expression : Expr D (locals.map Prod.snd) Λ result) :
+    BoundExpression D Λ where
+  locals := locals
+  result := result
+  expression := expression
+  lifted _ := expression.ren Var.there
+  liftedPlaces _ := (expression.ren_sound Var.there).1
+  liftedCost _ := (expression.ren_sound Var.there).2.1
+  liftedEval _ saved entry world environment :=
+    (expression.ren_sound Var.there).2.2 entry world environment (.cons saved environment) (fun _ => rfl)
 
 /-- One resolved lazy callee. Construction is a pure, ordinary expression;
     polling is an actual named G call. The two answer payloads are Ready's
