@@ -8,7 +8,8 @@ import Lean.Elab.Tactic.Omega
 
 namespace Gabbro.Stage0.Senke.Faeden
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg Runner
+open Gabbro.Grammatik Gabbro.Grammatik.Parser.UebersetzeAllg
+  Gabbro.Stage0.Senke.BildMehr Runner Runner.IR Runner.Mach Runner.Beweis
 
 def Zelle.carrier {D : Deklaration} : Senke.Zelle D → D.Tab ⊕ D.Glob
   | .glob global => .inr global
@@ -93,5 +94,60 @@ theorem imageProtectedFootprint_exclusive {src : String} {reserve : Nat} {option
   · exact ((Nat.not_le_of_lt (imageStackFootprint_before_world right))
       (protectedCellFootprint_bounds inLayout left).1).elim
   · exact locks.protected_exclusive cells left right
+
+theorem imageProtectedFootprint_lock_disjoint {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options} {source : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {thread : Nat} {address : W} {lock : (declOf output.compiled.unit).Lock}
+    (inLayout : LayIn output.image.Y.withIdle) (synchronized : LaySync output.image.Y.withIdle)
+    (order : output.image.Y.lo ≤ output.image.Y.hi)
+    (owned : imageProtectedFootprint output source thread address) :
+    ¬ LockBytes output.image.Y.withIdle lock address := by
+  rcases owned with stack | protected
+  · intro lockByte
+    have below := imageStackFootprint_before_world stack
+    exact (Nat.not_le_of_lt below) (order.trans ((synchronized.1 lock).1.trans lockByte.1))
+  · exact protectedCellFootprint_lock_disjoint inLayout synchronized protected
+
+/-- Changing the current source trace of the CAS issuer leaves every
+    pending store assigned to the same owning thread. The actual TSO
+    rule requires the issuer's buffer to have drained before answering. -/
+theorem privateBuffers_after_release [Kern] {src : String} {reserve : Nat} {options : Profil.Options}
+    {output : Emitted src reserve options}
+    {source target : RufMaschineG (declOf output.compiled.unit).mitRuhe}
+    {before after : imageTSO.St} {thread : Nat} {N : Nat} {states : _ → Zustand N}
+    {address expected word : W} {reply : Ans}
+    (answered : imageTSO.ans before thread (.cas address expected word) reply after)
+    (old : PrivateBuffers (imageProtectedFootprint output source) before.1)
+    (locks : ImageTicketStates output.image.Y.withIdle after.1.m target states)
+    (inLayout : LayIn output.image.Y.withIdle) (cells : LayDis output.image.Y.withIdle)
+    (others : ∀ issuer, issuer ≠ thread → ∀ lock,
+      lock ∈ offen (source.faeden issuer).spur → lock ∈ offen (target.faeden issuer).spur) :
+    PrivateBuffers (imageProtectedFootprint output source) after.1 ∧
+      PrivateBuffers (imageProtectedFootprint output target) after.1 ∧
+      projectSCState (imageProtectedFootprint output target) after =
+        projectSCState (imageProtectedFootprint output source) after := by
+  have drained : before.1.buf thread = [] := answered.1.1
+  have buffers : after.1.buf = before.1.buf := by
+    rcases answered.1.2 with ⟨_, _, same⟩ | ⟨_, _, _, _, changed⟩
+    · rw [same]
+    · exact congrArg TSt.buf changed
+  have oldAfter : PrivateBuffers (imageProtectedFootprint output source) after.1 := by
+    intro issuer store pending byte hit
+    rw [buffers] at pending
+    exact old issuer store pending byte hit
+  have newAfter : PrivateBuffers (imageProtectedFootprint output target) after.1 := by
+    intro issuer store pending byte hit
+    have different : issuer ≠ thread := by
+      intro same
+      rw [same, buffers, drained] at pending
+      cases pending
+    have previous := (oldAfter issuer store pending byte hit).1
+    have current : imageProtectedFootprint output target issuer byte := by
+      rcases previous with stack | ⟨cell, present, low, high, guarded, held⟩
+      · exact .inl stack
+      · exact .inr ⟨cell, present, low, high, guarded,
+          fun lock guards => others issuer different lock (held lock guards)⟩
+    exact ⟨current, fun _ assigned => imageProtectedFootprint_exclusive locks inLayout cells assigned current⟩
+  exact ⟨oldAfter, newAfter, projectSCState_reassign oldAfter newAfter⟩
 
 end Gabbro.Stage0.Senke.Faeden
